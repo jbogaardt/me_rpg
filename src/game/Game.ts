@@ -1,5 +1,6 @@
 import { Application, Container, Graphics, Text } from 'pixi.js';
 import { input } from './input';
+import { Player } from './Player';
 import { BLOCKED, MAP, TILE, findTile, tileAt } from './map';
 
 const COLORS: Record<string, number> = {
@@ -18,7 +19,7 @@ const NPC_LINES = [
 export class Game {
   private world = new Container();
   private ui = new Container();
-  private player = new Graphics().rect(-10, -10, 20, 20).fill(0xffd166);
+  private player = new Player();
   private npc = new Graphics().rect(-10, -10, 20, 20).fill(0xef476f);
   private dialogBox = new Graphics();
   private dialogText = new Text({ text: '', style: { fill: 0xffffff, fontSize: 18, wordWrap: true, wordWrapWidth: 560 } });
@@ -28,7 +29,8 @@ export class Game {
     this.buildMap();
     const p = findTile('@');
     const n = findTile('N');
-    this.player.position.set((p.col + 0.5) * TILE, (p.row + 0.5) * TILE);
+    this.world.sortableChildren = true;
+    this.player.position.set((p.col + 0.5) * TILE, (p.row + 0.9) * TILE); // feet position
     this.npc.position.set((n.col + 0.5) * TILE, (n.row + 0.5) * TILE);
     this.world.addChild(this.npc, this.player);
 
@@ -52,6 +54,7 @@ export class Game {
     MAP.forEach((row, r) =>
       [...row].forEach((ch, c) => g.rect(c * TILE, r * TILE, TILE, TILE).fill(COLORS[ch] ?? 0xff00ff)),
     );
+    g.zIndex = -1;
     this.world.addChild(g);
   }
 
@@ -66,27 +69,34 @@ export class Game {
   }
 
   private update(dt: number) {
-    if (this.lineIndex < 0) this.move(dt);
+    const moving = this.lineIndex < 0 && this.move(dt);
+    this.player.animate(dt * 1000, moving);
+    this.player.zIndex = this.player.y;
+    this.npc.zIndex = this.npc.y;
     this.handleInteract();
     input.endFrame();
   }
 
-  private move(dt: number) {
+  /** Returns true if the player is trying to move. */
+  private move(dt: number): boolean {
     const dx = (input.isDown('ArrowRight', 'KeyD') ? 1 : 0) - (input.isDown('ArrowLeft', 'KeyA') ? 1 : 0);
     const dy = (input.isDown('ArrowDown', 'KeyS') ? 1 : 0) - (input.isDown('ArrowUp', 'KeyW') ? 1 : 0);
-    if (!dx && !dy) return;
+    if (!dx && !dy) return false;
+    if (dx) this.player.face(dx > 0 ? 'right' : 'left');
+    else this.player.face(dy > 0 ? 'down' : 'up');
     const len = Math.hypot(dx, dy);
     const step = SPEED * dt;
     // Resolve axes separately so the player slides along walls.
     this.tryMove((dx / len) * step, 0);
     this.tryMove(0, (dy / len) * step);
+    return true;
   }
 
   private tryMove(mx: number, my: number) {
     const nx = this.player.x + mx;
     const ny = this.player.y + my;
-    const half = 10;
-    for (const [cx, cy] of [[-half, -half], [half, -half], [-half, half], [half, half]]) {
+    // Collision box is a small rectangle around the feet (player origin = feet).
+    for (const [cx, cy] of [[-6, -6], [6, -6], [-6, -1], [6, -1]]) {
       if (BLOCKED.has(tileAt(Math.floor((nx + cx) / TILE), Math.floor((ny + cy) / TILE)))) return;
     }
     this.player.position.set(nx, ny);

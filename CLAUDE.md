@@ -24,6 +24,7 @@ There is no linter or test runner yet.
 - `src/main.ts` creates the PixiJS `Application` (async `app.init`, wrapped in an IIFE — avoid top-level await) and hands it to `Game`.
 - `src/game/Game.ts` owns the scene: a `world` container (tile map, player, NPC) and a `ui` container (dialog box), updated from `app.ticker`. Movement uses per-axis tile collision; dialog state is `lineIndex` (-1 = no dialog, movement is frozen while talking).
 - `src/game/map.ts` defines the level as an ASCII grid (`MAP`) plus `BLOCKED` tile chars; `@` and `N` mark player/NPC spawns. Tile colors live in `COLORS` in `Game.ts`. Art is currently placeholder `Graphics` rects, no asset loading yet.
+- `src/game/playerArt.ts` holds the hero's pixel art as palette-keyed string rows (16x24 frames composed from head/torso/legs per facing; left = mirrored `side`). It is pure data with no Pixi imports. `src/game/Player.ts` renders those rows to nearest-neighbor canvas textures, handles walk animation, and draws the shadow/pendant aura. The `Player` container's origin is the *feet*, so collision and y-sorting (`zIndex = y` in `Game.update`) use it directly. Character theme: a boy stranded outside time, with a glowing clock pendant.
 - `src/game/input.ts` is a module-level keyboard singleton; `Game.update` must call `input.endFrame()` each tick to clear one-shot `wasPressed` state.
 
 ## Deployment
