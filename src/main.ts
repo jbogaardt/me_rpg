@@ -1,4 +1,4 @@
-import { Application } from 'pixi.js';
+import { Application, Assets, type Texture } from 'pixi.js';
 import { Game } from './game/Game';
 import { fetchMap, loadSheets } from './map/sheets';
 
@@ -9,5 +9,7 @@ import { fetchMap, loadSheets } from './map/sheets';
 
   const data = await fetchMap();
   const textures = await loadSheets(data.sheets);
-  new Game(app, data, textures).start();
+  const hero = await Assets.load<Texture>(`${import.meta.env.BASE_URL}sprites/healer_f.png`);
+  const npc = await Assets.load<Texture>(`${import.meta.env.BASE_URL}sprites/warrior_m.png`);
+  new Game(app, data, textures, hero, npc).start();
 })();

@@ -2,7 +2,7 @@ import { Application, Graphics, Text, type Texture } from 'pixi.js';
 import { MapView } from '../map/MapView';
 import { CELL, type MapData } from '../map/types';
 import { input } from './input';
-import { Player } from './Player';
+import { Character, type Direction } from './Character';
 
 const SPEED = 120; // pixels per second
 const NPC_LINES = [
@@ -13,8 +13,8 @@ const NPC_LINES = [
 export class Game {
   private world: MapView;
   private blocked: Set<number>;
-  private player = new Player();
-  private npc = new Graphics().rect(-10, -30, 20, 30).fill(0xef476f);
+  private player: Character;
+  private npc: Character;
   private ui = new Graphics(); // dialog box
   private dialogText = new Text({ text: '', style: { fill: 0xffffff, fontSize: 18, wordWrap: true, wordWrapWidth: 560 } });
   private lineIndex = -1;
@@ -24,7 +24,11 @@ export class Game {
     private app: Application,
     private data: MapData,
     textures: Map<string, Texture>,
+    heroSheet: Texture,
+    npcSheet: Texture,
   ) {
+    this.player = new Character(heroSheet, true);
+    this.npc = new Character(npcSheet);
     this.world = new MapView(data, textures);
     this.blocked = new Set(data.collision);
 
@@ -75,6 +79,7 @@ export class Game {
     this.player.animate(dt * 1000, moving);
     this.player.zIndex = this.player.y;
     this.npc.zIndex = this.npc.y;
+    this.npc.animate(dt * 1000, false);
     this.updateCamera();
     this.handleInteract();
     input.endFrame();
@@ -104,6 +109,7 @@ export class Game {
     const nx = this.player.x + mx;
     const ny = this.player.y + my;
     // Collision box is a small rectangle around the feet (player origin = feet).
+    if (this.npc.visible && Math.abs(nx - this.npc.x) < 14 && Math.abs(ny - this.npc.y) < 8) return;
     for (const [cx, cy] of [[-6, -6], [6, -6], [-6, -1], [6, -1]]) {
       if (this.isBlocked(Math.floor((nx + cx) / CELL), Math.floor((ny + cy) / CELL))) return;
     }
@@ -122,8 +128,14 @@ export class Game {
       }
     } else if (this.npc.visible && Math.hypot(this.player.x - this.npc.x, this.player.y - this.npc.y) < CELL * 1.5) {
       this.lineIndex = 0;
+      this.npc.face(this.directionToward(this.player.x - this.npc.x, this.player.y - this.npc.y));
       this.dialogText.text = NPC_LINES[0];
       this.ui.visible = true;
     }
+  }
+
+  private directionToward(dx: number, dy: number): Direction {
+    if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'right' : 'left';
+    return dy > 0 ? 'down' : 'up';
   }
 }
