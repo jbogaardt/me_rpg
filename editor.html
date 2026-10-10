@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Me RPG Map Editor</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: #111; color: #ddd; font: 13px system-ui, sans-serif; }
+      #app { display: flex; height: 100%; }
+      #side { width: 380px; flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px; overflow-y: auto; background: #1d1d2b; }
+      #map { flex: 1; min-width: 0; position: relative; overflow: hidden; }
+      h1 { font-size: 15px; margin: 0; }
+      .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+      button, select, input { font: inherit; background: #2c2c42; color: #eee; border: 1px solid #44445f; border-radius: 4px; padding: 4px 8px; }
+      button { cursor: pointer; }
+      button:hover { background: #3a3a58; }
+      button.active { background: #4d6bff; border-color: #7f95ff; }
+      input[type='number'] { width: 64px; }
+      #picker { height: 42vh; min-height: 200px; overflow: auto; border: 1px solid #44445f; background: repeating-conic-gradient(#2a2a2a 0% 25%, #333 0% 50%) 0 0 / 16px 16px; }
+      #wrap { position: relative; display: inline-block; cursor: crosshair; line-height: 0; }
+      #img { image-rendering: pixelated; user-select: none; -webkit-user-drag: none; }
+      #sel { position: absolute; border: 2px solid #ffe14d; background: rgba(255, 225, 77, 0.2); pointer-events: none; display: none; }
+      #status { color: #9fe6a0; min-height: 2.4em; }
+      .hint { color: #99a; font-size: 12px; line-height: 1.4; }
+      kbd { background: #333; border-radius: 3px; padding: 0 4px; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="side">
+        <h1>Overworld map editor</h1>
+        <div class="row" id="tools"></div>
+        <div class="hint" id="hint"></div>
+        <div class="row">
+          <select id="sheet"></select>
+          <label>Snap <input id="snap" type="number" min="1" max="128" value="32" /></label>
+          <select id="szoom"><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select>
+        </div>
+        <div id="picker"><div id="wrap"><img id="img" alt="tileset" /><div id="sel"></div></div></div>
+        <div class="hint">Drag to select a region, or just click a sprite to auto-select it. Ground snaps to the 32px grid.</div>
+        <div class="row">
+          <label>W <input id="mw" type="number" min="5" max="400" /></label>
+          <label>H <input id="mh" type="number" min="5" max="400" /></label>
+          <button id="resize">Resize</button>
+          <label><input id="showGrid" type="checkbox" checked /> Grid</label>
+          <label><input id="showCol" type="checkbox" checked /> Collision</label>
+        </div>
+        <div class="row">
+          <button id="save">Save to project</button>
+          <button id="download">Download JSON</button>
+          <button id="load">Load file…</button>
+          <button id="reload">Reload project map</button>
+          <button id="new">New</button>
+          <button id="undo">Undo</button>
+        </div>
+        <div id="status"></div>
+        <div class="hint">
+          Left click paints, right click erases. Pan: middle mouse or <kbd>Space</kbd>+drag. Zoom: wheel.
+          <kbd>1</kbd>–<kbd>5</kbd> switch tools, <kbd>Ctrl+Z</kbd> undo, <kbd>Ctrl+S</kbd> save.
+        </div>
+        <input id="file" type="file" accept="application/json,.json" hidden />
+      </aside>
+      <main id="map"></main>
+    </div>
+    <script type="module" src="/src/editor/main.ts"></script>
+  </body>
+</html>
