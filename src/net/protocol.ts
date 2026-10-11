@@ -15,7 +15,7 @@ import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -84,6 +84,7 @@ export interface SnapMsg {
   players: PlayerSnap[];
   mobs: MobSnap[];
   me: StatsSnap;
+  chests: number; // bit i set: chest i of the map is open
   events: { id: number; e: WorldEvent }[];
 }
 
@@ -93,6 +94,9 @@ export const encodeMessage = (m: Message): string => JSON.stringify(m);
 
 export const round1 = (n: number) => Math.round(n * 10) / 10;
 
+/** A map may hold up to 30 chests (one bit each in SnapMsg.chests). */
+export const MAX_CHESTS = 30;
+const MAX_CHEST_MASK = 2 ** MAX_CHESTS - 1;
 const MAX_MOBS = 256;
 const MAX_EVENTS = 64;
 const MAX_TEXT = 32;
@@ -205,7 +209,9 @@ export function parseMessage(raw: unknown): Message | null {
         mobs.includes(null) ||
         !rawEvents ||
         events.includes(null) ||
-        !numbers(m.me, 9)
+        !numbers(m.me, 9) ||
+        !isCount(m.chests) ||
+        m.chests > MAX_CHEST_MASK
       ) {
         return null;
       }
@@ -215,6 +221,7 @@ export function parseMessage(raw: unknown): Message | null {
         players: players as PlayerSnap[],
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
+        chests: m.chests,
         events: events as { id: number; e: WorldEvent }[],
       };
     }

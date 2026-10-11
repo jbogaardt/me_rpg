@@ -25,6 +25,8 @@ export type Progress = (fraction: number) => void;
 export interface Sprites {
   /** Composes character sheets from loaded sprite parts (hero gear, NPC looks, mob kinds). */
   wardrobe: Wardrobe;
+  /** Treasure chest art (public/tilesets/chests.png): 2 columns (open, closed) by one row per chest kind. */
+  chests: Texture;
 }
 
 const LPC_DIR = `${BASE}sprites/lpc/`;
@@ -50,7 +52,8 @@ export async function loadSprites(onProgress?: Progress): Promise<Sprites> {
   const manifest = await Assets.load<PartManifest>('sprites:parts');
   const wardrobe = new Wardrobe(manifest, LPC_DIR, `?v=${__BUILD_ID__}`);
   await wardrobe.load(requiredParts(), onProgress);
-  return { wardrobe };
+  Assets.add({ alias: 'sprites:chests', src: tilesetUrl('chests.png') });
+  return { wardrobe, chests: await Assets.load<Texture>('sprites:chests') };
 }
 
 export interface Zone {

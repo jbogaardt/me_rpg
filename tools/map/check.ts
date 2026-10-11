@@ -1,3 +1,4 @@
+import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
 import { MOB_KINDS } from '../../src/systems/combat';
 import { CELL, type MapData } from '../../src/map/types';
 import { coverage, sheet } from './image';
@@ -88,6 +89,13 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     if (!MOB_KINDS[m.kind])
       errors.push(`mob kind "${m.kind}" at (${m.col},${m.row}) isn't in MOB_KINDS (src/systems/combat.ts)`);
   }
+  const chestPoints: [string, { col: number; row: number }][] = d.chests.map((c) => {
+    if (!(CHEST_KINDS as readonly string[]).includes(c.kind))
+      errors.push(`chest at (${c.col},${c.row}) has unknown kind "${c.kind}" (CHEST_KINDS)`);
+    if (!CHEST_LOOTS[c.loot]) errors.push(`chest at (${c.col},${c.row}) has unknown loot "${c.loot}" (CHEST_LOOTS)`);
+    return [`chest ${c.loot}`, c];
+  });
+  if (d.chests.length > 30) errors.push('a map holds at most 30 chests');
   for (const [name, p] of points) {
     if (!inMap(p.col, p.row)) errors.push(`${name} (${p.col},${p.row}) is outside the map`);
     else if (blocked.has(p.row * W + p.col)) errors.push(`${name} (${p.col},${p.row}) is on a blocked cell`);
@@ -120,6 +128,12 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     if (inMap(p.col, p.row) && !blocked.has(p.row * W + p.col) && !reach[p.row * W + p.col]) {
       errors.push(`${name} (${p.col},${p.row}) can't be reached from the spawn`);
     }
+  }
+  // A chest is solid, so it is opened from a reachable cell beside it.
+  for (const [name, p] of chestPoints) {
+    const beside = [p.col + 1, p.col - 1].map((c) => [c, p.row]).concat([p.row + 1, p.row - 1].map((r) => [p.col, r]));
+    if (!beside.some(([c, r]) => inMap(c, r) && reach[r * W + c]))
+      errors.push(`${name} (${p.col},${p.row}) has no reachable cell beside it`);
   }
   const unreachable = d.width * d.height - blocked.size - reach.reduce((n, v) => n + v, 0);
   if (unreachable > 0) {

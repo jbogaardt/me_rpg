@@ -2,6 +2,7 @@ import {
   CELL,
   FLAT_Z,
   type CellPoint,
+  type ChestSpawn,
   type GroundCell,
   type MapData,
   type MapObject,
@@ -90,6 +91,7 @@ export class Zone {
   private spawnAt: CellPoint | null = null;
   private npcAt: CellPoint | null = null;
   private mobList: MobSpawn[] = [];
+  private chestList: ChestSpawn[] = [];
 
   constructor(
     readonly width: number,
@@ -380,6 +382,14 @@ export class Zone {
     return this;
   }
 
+  /** A treasure chest (solid, so its cell is blocked). `kind` is a CHEST_KINDS name, `loot` a key of CHEST_LOOTS (src/systems/chests.ts). */
+  chest(kind: string, loot: string, col: number, row: number) {
+    this.chestList.push({ kind, loot, col, row });
+    this.forced.set(row * this.width + col, true);
+    this.reasons.set(row * this.width + col, 'chest');
+    return this;
+  }
+
   /** Resolve everything into the game's map format. */
   toMapData(): MapData {
     if (!this.spawnAt) throw new Error('zone has no spawn(); the player needs a start cell');
@@ -450,6 +460,7 @@ export class Zone {
       spawn: this.spawnAt,
       npc: this.npcAt,
       mobs: this.mobList,
+      chests: this.chestList,
     };
   }
 }

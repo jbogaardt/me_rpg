@@ -4,6 +4,7 @@ import { Camera } from '../core/camera';
 import { input } from '../core/input';
 import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
+import { Chest } from '../entities/Chest';
 import { Character, DIR_VEC, directionToward, type Direction } from '../entities/Character';
 import { Ambient } from '../entities/ambient';
 import { boltEffect, Effects, floatText, slashEffect } from '../entities/effects';
@@ -15,6 +16,7 @@ import type { Hud } from '../hud/Hud';
 import { MapOverlay } from '../hud/MapOverlay';
 import type { Menu } from '../hud/Menu';
 import { MapView } from '../map/MapView';
+import { sheetGrid } from '../core/textures';
 import { CELL, type CellPoint } from '../map/types';
 import { glide } from '../net/interp';
 import {
@@ -42,6 +44,7 @@ import {
   type Hero,
   type Stats,
 } from '../systems/combat';
+import { CHEST_LOOTS, collect } from '../systems/chests';
 import { Collision } from '../systems/collision';
 import { equip } from '../systems/items';
 import {
@@ -71,6 +74,7 @@ const MAP_KEYS = ['KeyM']; // co-op only: toggles the map overlay
 
 const ATTACK_COOLDOWN = 0.35;
 const CAST_COOLDOWN = 0.45;
+const CHEST_REACH = CELL * 1.4; // how close the action key must be to a chest (feet to the chest's cell centre)
 const MELEE_REACH = 22; // radius of the sword's hit circle, centred just in front of the hero
 const INVULN_TIME = 0.8; // after being hit
 const BOLT_SPEED = 260;
@@ -112,6 +116,7 @@ export class OverworldScene implements Scene {
   private remotes = new Map<number, Player>(); // everyone else in a co-op game, by player number
   private npc: Character;
   private mobs: Mob[];
+  private chests: Chest[];
   private mobWorld: MobWorld;
   private wardrobe: Wardrobe;
   private heroBodies: [Character, ...Character[]]; // everything mobs may attack
@@ -164,13 +169,18 @@ export class OverworldScene implements Scene {
       if (!kind) throw new Error(`Zone "${zone.name}" spawns unknown mob kind "${m.kind}"`);
       return new Mob(kind, sprites.wardrobe.sheet(kind.look), ...this.cellToFeet(m));
     });
+    const chestFrames = sheetGrid(sprites.chests, 2, 4, CELL, CELL);
+    this.chests = data.chests.map((c) => {
+      if (!CHEST_LOOTS[c.loot]) throw new Error(`Zone "${zone.name}" has a chest with unknown loot "${c.loot}"`);
+      return new Chest(c, chestFrames);
+    });
     this.mobWorld = {
       heroes: this.heroBodies,
       slide: (body, mx, my) => this.collision.slide(body, mx, my, this.bodies()),
       strike: (mob, target) => this.hurtHero(mob, target),
       shoot: (mob, ux, uy) => this.mobShoot(mob, ux, uy),
     };
-    this.world.layer.addChild(this.npc, this.player, ...this.mobs.map((m) => m.body));
+    this.world.layer.addChild(this.npc, this.player, ...this.chests, ...this.mobs.map((m) => m.body));
   }
 
   get root(): Container {
@@ -261,8 +271,8 @@ export class OverworldScene implements Scene {
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
-    if (!menu.open) this.handleAction(cmd.act, () => this.attack(this.local));
-    for (const g of guests) if (g.cmd.act) this.attack(g.p);
+    if (!menu.open) this.handleAction(cmd.act, () => this.act(this.local));
+    for (const g of guests) if (g.cmd.act) this.act(g.p);
     if (host) this.broadcast(dt);
   }
 
@@ -428,6 +438,7 @@ export class OverworldScene implements Scene {
       n: ++this.snapSeq,
       players: this.players().map((p) => this.snapPlayer(p)),
       mobs: this.mobs.map((m) => m.snapshot()),
+      chests: this.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
       events: this.events.slice(-MAX_EVENTS_SENT).map(({ id, e }) => ({ id, e })),
     } as const;
     for (const [slot, remote] of this.remotes) {
@@ -474,6 +485,7 @@ export class OverworldScene implements Scene {
       }
     }
 
+    this.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
     if (snap.mobs.length === this.mobs.length) snap.mobs.forEach((m, i) => this.mobs[i]?.setRemote(m));
 
     const [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] = snap.me;
@@ -601,6 +613,30 @@ export class OverworldScene implements Scene {
       dialog.say(NPC_LINES);
     } else {
       attack();
+    }
+  }
+
+  /** A player's action button (host and solo): open a chest within reach, otherwise swing. */
+  private act(p: Player) {
+    const chest = this.chests.find(
+      (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
+    );
+    if (chest) this.openChest(p, chest);
+    else this.attack(p);
+  }
+
+  private openChest(p: Player, chest: Chest) {
+    const loot = CHEST_LOOTS[chest.loot];
+    if (!loot) return;
+    chest.setOpen(true);
+    const found = collect(p.hero, loot);
+    const [x, y] = [chest.x, chest.y - CELL];
+    this.fx('levelUp', x, y + 6);
+    this.text(x, y - 14, found.text, 0xffd34d);
+    if (found.gear) p.body.setSheet(this.wardrobe.sheet(playerOutfit(p.slot, p.hero)));
+    if (found.levels) {
+      this.text(p.body.x, p.body.y - 62, 'LEVEL UP!', 0xffb13f);
+      this.fx('levelUp', p.body.x, p.body.y - 14);
     }
   }
 
