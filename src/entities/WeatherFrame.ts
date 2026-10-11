@@ -1,9 +1,10 @@
 import { Container, Graphics } from 'pixi.js';
 import type { WeatherKind } from '../systems/weather';
 
-// A decorative frame around the screen that names the weather: an icon in each corner joined by a glowing line
-// (snowflakes for snow, drops for rain, a bolt for storms, dune swirls for sand). Drawn once per kind and size, then
-// just moved and faded, so it costs nothing per frame.
+// A decorative frame around the screen that names the weather: a glowing line with one icon at the middle of the right edge
+// (a snowflake for snow, a drop for rain, a bolt for storms, dune swirls for sand). The corners and top are left empty on
+// purpose: the HUD bars and the touch buttons sit there. Drawn once per kind and size, then just moved and faded, so it
+// costs nothing per frame.
 
 type Theme = 'ice' | 'rain' | 'storm' | 'sand';
 
@@ -22,8 +23,8 @@ const LINE: Record<Theme, { color: number; glow: number }> = {
   sand: { color: 0xe0a050, glow: 0x7a4a14 },
 };
 
-const INSET = 26; // world px from the screen edge to the line and the corner icons' centres
-const ICON = 26; // corner icon radius
+const INSET = 26; // world px from the screen edge to the line and the icon's centre
+const ICON = 26; // icon radius
 
 function snowflake(g: Graphics, cx: number, cy: number, r: number, color: number) {
   for (let k = 0; k < 6; k++) {
@@ -114,17 +115,11 @@ export class WeatherFrame {
       y2 = h - INSET;
     g.rect(x1, y1, x2 - x1, y2 - y1).stroke({ width: 14, color: glow, alpha: 0.45 });
     g.rect(x1, y1, x2 - x1, y2 - y1).stroke({ width: 6, color });
-    // Clear a round patch of line behind each icon so it reads as a medallion.
-    for (const [cx, cy] of [
-      [x1, y1],
-      [x2, y1],
-      [x1, y2],
-      [x2, y2],
-    ] as const) {
-      g.circle(cx, cy, ICON + 2)
-        .fill({ color: glow, alpha: 0.85 })
-        .stroke({ width: 2, color });
-      ICONS[theme](g, cx, cy, ICON, color);
-    }
+    // Clear a round patch of line behind the icon so it reads as a medallion.
+    const cy = (y1 + y2) / 2;
+    g.circle(x2, cy, ICON + 2)
+      .fill({ color: glow, alpha: 0.85 })
+      .stroke({ width: 2, color });
+    ICONS[theme](g, x2, cy, ICON, color);
   }
 }
