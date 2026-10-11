@@ -78,6 +78,8 @@ export interface PeerInput {
   ack: number;
   /** How far the friend can see, in world px from their player. */
   vr: number;
+  /** Where the friend aims, as a code for decodeAim (1..AIM_STEPS), when they aim with the mouse. */
+  am?: number;
   /** The Inventory action the friend is waiting on (see InputMsg.inv), if any. */
   inv?: InputMsg['inv'];
   /** False when nothing arrived recently: ignore `keys` (the counters stay valid). */
@@ -320,8 +322,17 @@ export class Session {
   peerInput(slot: number, now = performance.now()): PeerInput | null {
     const last = this.inputs.get(slot);
     if (!last) return null;
-    const { keys, act, mag, ack, vr, inv } = last.msg;
-    return { keys, act, mag, ack, vr, ...(inv ? { inv } : {}), fresh: now - last.at < INPUT_STALE_MS };
+    const { keys, act, mag, ack, vr, am, inv } = last.msg;
+    return {
+      keys,
+      act,
+      mag,
+      ack,
+      vr,
+      ...(am ? { am } : {}),
+      ...(inv ? { inv } : {}),
+      fresh: now - last.at < INPUT_STALE_MS,
+    };
   }
 
   /** Friend: the newest snapshot not yet taken, or null. */

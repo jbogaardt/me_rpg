@@ -1,3 +1,4 @@
+import { aimToward, loadAimMode, saveAimMode, type Aim, type AimMode } from './aim';
 import { FIXED_KEYS, TOUCH_CODES, loadBindings, saveBindings, type Action } from './bindings';
 import { input } from './input';
 
@@ -11,6 +12,21 @@ export const persistBindings = () => saveBindings(bindings);
 export const actionDown = (a: Action) => input.isHeld(...bindings.codes(a)) || input.isTouched(...TOUCH_CODES[a]);
 
 export const actionPressed = (a: Action) => input.wasHit(...bindings.codes(a)) || input.wasTouched(...TOUCH_CODES[a]);
+
+/** How the player aims (saved): along the way they last walked, or at the mouse / the last tap. */
+export const aimSetting = {
+  mode: loadAimMode(),
+  set(mode: AimMode) {
+    this.mode = mode;
+    saveAimMode(mode);
+  },
+};
+
+/** The direction to aim in from `from` (CSS px on screen), if the player aims with the mouse and has pointed somewhere. */
+export function pointerAim(from: { x: number; y: number }): Aim | null {
+  const at = aimSetting.mode === 'mouse' ? input.pointer() : null;
+  return at ? aimToward(from.x, from.y, at.x, at.y) : null;
+}
 
 /** The menu key (Esc / Tab, or the ☰ button) went down this frame. */
 export const menuPressed = () => input.wasPressed(...FIXED_KEYS.menu);

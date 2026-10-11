@@ -12,6 +12,7 @@
 //  - Both sides drop anything whose sequence number isn't newer than the last one seen.
 // Everything from the peer is untrusted input: parseMessage() validates the shape and ranges, never throws.
 
+import { AIM_STEPS } from '../core/aim';
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
 import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../systems/inventory';
@@ -21,7 +22,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { WEATHER_KINDS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 12;
+export const PROTOCOL_VERSION = 13;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -106,6 +107,7 @@ export interface InputMsg {
   mag: number; // times the magic button was pressed
   ack: number; // id of the newest world event this guest has shown (0: none yet)
   vr: number; // how far the guest can see, in world px from its player: the host sends it the mobs within this
+  am?: number; // mouse aiming only: where the guest points, 1..AIM_STEPS (core/aim.ts); absent: aim by walking
   /**
    * The oldest Inventory action the host has not confirmed yet: [number, ...InvOpWire]. Numbered 1, 2, 3...; the host
    * does each once and in order, and says how far it got in PackMsg.ack, so a lost packet only delays it.
@@ -467,11 +469,21 @@ export function parseMessage(raw: unknown): Message | null {
         isCount(m.mag) &&
         isCount(m.ack) &&
         isCount(m.vr) &&
-        m.vr <= MAX_VIEW
+        m.vr <= MAX_VIEW &&
+        (m.am === undefined || (isCount(m.am) && m.am >= 1 && m.am <= AIM_STEPS))
       )) {
         return null;
       }
-      const base = { k: 'in', n: m.n, keys: m.keys, act: m.act, mag: m.mag, ack: m.ack, vr: m.vr } as const;
+      const base = {
+        k: 'in',
+        n: m.n,
+        keys: m.keys,
+        act: m.act,
+        mag: m.mag,
+        ack: m.ack,
+        vr: m.vr,
+        ...(m.am === undefined ? {} : { am: m.am }),
+      } as const;
       if (m.inv === undefined) return base;
       const inv = m.inv;
       return numbers(inv, 4) &&

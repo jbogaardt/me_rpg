@@ -9,6 +9,7 @@ export interface Command {
   dy: number;
   act: boolean; // action button pressed (talk / attack)
   mag: boolean; // magic button pressed
+  aim?: { x: number; y: number }; // unit vector toward the mouse / last tap (mouse aiming only); absent: aim by walking
 }
 
 export const NO_COMMAND: Command = { dx: 0, dy: 0, act: false, mag: false };

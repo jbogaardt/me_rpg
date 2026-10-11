@@ -1,4 +1,4 @@
-import { DIR_VEC, dirIndex } from '../../core/direction';
+import { DIR_VEC, dirIndex, directionToward } from '../../core/direction';
 import type { Character } from '../../entities/Character';
 import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
@@ -116,11 +116,15 @@ export class Simulation {
   }
 
   /** Returns true if the player is trying to move. On ice the velocity lags behind the keys, so they slide. */
-  private move(p: Player, { dx, dy }: Command, dt: number): boolean {
+  private move(p: Player, { dx, dy, aim }: Command, dt: number): boolean {
     const { collision, data } = this.arena;
     const len = Math.hypot(dx, dy);
     const wish = len ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
-    if (len) {
+    if (aim) {
+      // Aiming with the mouse: the player looks and shoots toward it, whichever way they walk.
+      p.body.face(directionToward(aim.x, aim.y));
+      p.aim = aim;
+    } else if (len) {
       if (dx) p.body.face(dx > 0 ? 'right' : 'left');
       else p.body.face(dy > 0 ? 'down' : 'up');
       p.aim = wish;

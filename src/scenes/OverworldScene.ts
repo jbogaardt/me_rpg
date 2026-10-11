@@ -1,6 +1,7 @@
 import type { Container, Renderer } from 'pixi.js';
 import type { Sprites, Zone } from '../assets';
-import { actionDown, actionPressed, mapPressed, menuPressed } from '../core/controls';
+import type { Aim } from '../core/aim';
+import { actionDown, actionPressed, mapPressed, menuPressed, pointerAim } from '../core/controls';
 import { directionToward } from '../core/direction';
 import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
@@ -35,6 +36,8 @@ import { Visuals } from './overworld/Visuals';
 import { Zones, type ZoneLoader } from './overworld/Zones';
 
 export type { ZoneLoader };
+
+const aimOf = (aim: Aim | null) => (aim ? { aim } : {});
 
 const NPC_LINES = [
   'Greetings, traveler. This world is still being drawn.',
@@ -299,7 +302,7 @@ export class OverworldScene implements Scene {
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
     if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.guest.pressAction());
     if (!reading && cmd.mag) this.guest.pressMagic();
-    this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy));
+    this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy), cmd.aim);
   }
 
   /** Switch to `role` (a friend connected or everyone dropped), setting the world up for it. */
@@ -322,6 +325,7 @@ export class OverworldScene implements Scene {
       dy: (actionDown('down') ? 1 : 0) - (actionDown('up') ? 1 : 0),
       act: actionPressed('attack'),
       mag: actionPressed('magic'),
+      ...aimOf(pointerAim(this.zones.heroOnScreen())),
     };
   }
 
