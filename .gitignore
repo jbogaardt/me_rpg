@@ -38,3 +38,6 @@ desktop.ini
 maps/out/
 playwright-report/
 test-results/
+
+# Wrangler local state (relay/)
+.wrangler/
