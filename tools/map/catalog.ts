@@ -8,6 +8,8 @@ export const PLUS_SHEET = 'ground_plus.png'; // ground_tiles + a plain water til
 export const FROST_SHEET = 'frost_ground.png'; // sand -> snow, water -> ice
 export const FROST_OBJECTS = 'frost_objects.png'; // snow-dusted trees/bushes, blue-grey rocks
 export const DRY_OBJECTS = 'dry_objects.png'; // withered ochre trees/bushes
+export const TOWN_SHEET = 'town.png'; // the shop buildings, cut from the CC0 Town RPG Pack by tools/map/town.ts
+export const INTERIOR_SHEET = 'interior.png'; // shop interiors: floor, wall, counter, shelves, signs (tools/map/interior.ts)
 export const CLIFF_SHEET = 'Cliff_tileset.png'; // Avalon cliffs: a plateau blob, stairs, notches
 export const FROST_CLIFFS = 'frost_cliffs.png'; // cliffs with snow tops and blue-grey rock (recolor.ts)
 export const DRY_CLIFFS = 'dry_cliffs.png'; // cliffs with sandy tops and ochre rock (recolor.ts)
@@ -98,6 +100,22 @@ export const GROUND = {
       ],
     ],
   },
+  // Inside the shops (interior.png). `wall` alternates the crown row and the baseboard row.
+  planks: {
+    sheet: INTERIOR_SHEET,
+    tiles: [
+      [
+        [0, 0],
+        [32, 0],
+      ],
+      [
+        [32, 0],
+        [0, 0],
+      ],
+    ],
+  },
+  wall: { sheet: INTERIOR_SHEET, tiles: [[[64, 0]], [[96, 0]]] },
+  mat: { sheet: INTERIOR_SHEET, tiles: [[[128, 0]]] },
   stone: {
     sheet: GROUND_SHEET,
     tiles: [
@@ -285,7 +303,70 @@ const ROCKS = (sheet: string) => ({
 const rocks = ROCKS(OBJECT_SHEET);
 const frostRocks = ROCKS(FROST_OBJECTS);
 
+/** Where each shop building sits on town.png (2x the pack's art; both sizes are whole cells so the footprint is clean). */
+export const BUILDINGS = {
+  smithy: { x: 0, y: 0, w: 192, h: 224 },
+  apothecary: { x: 192, y: 0, w: 192, h: 224 },
+  armory: { x: 384, y: 0, w: 96, h: 288 },
+  ranger: { x: 480, y: 0, w: 96, h: 288 },
+};
+/** Where each piece of the shop interior sits on interior.png (2x the 16px drawing in tools/map/interior.ts). */
+export const INTERIOR = {
+  planksA: { x: 0, y: 0, w: 32, h: 32 },
+  planksB: { x: 32, y: 0, w: 32, h: 32 },
+  wallTop: { x: 64, y: 0, w: 32, h: 32 },
+  wallBase: { x: 96, y: 0, w: 32, h: 32 },
+  mat: { x: 128, y: 0, w: 32, h: 32 },
+  counter: { x: 0, y: 32, w: 128, h: 48 },
+  shelfSmithy: { x: 128, y: 32, w: 96, h: 64 },
+  shelfArmory: { x: 224, y: 32, w: 96, h: 64 },
+  shelfRanger: { x: 320, y: 32, w: 96, h: 64 },
+  shelfApothecary: { x: 416, y: 32, w: 96, h: 64 },
+  signSmithy: { x: 0, y: 96, w: 128, h: 64 },
+  signArmory: { x: 128, y: 96, w: 128, h: 64 },
+  signRanger: { x: 256, y: 96, w: 128, h: 64 },
+  signApothecary: { x: 384, y: 96, w: 128, h: 64 },
+};
+const furniture = (name: keyof typeof INTERIOR, band: number, about: string): Prefab => {
+  const { x, y, w, h } = INTERIOR[name];
+  return {
+    sheet: INTERIOR_SHEET,
+    w,
+    h,
+    parts: [part(x, y, w, h)],
+    solid: band > 0 ? { band, min: 0.3 } : null,
+    tag: 'furniture',
+    about,
+  };
+};
+
+const building = (name: keyof typeof BUILDINGS, about: string): Prefab => {
+  const { x, y, w, h } = BUILDINGS[name];
+  // Solid from the ground up: a building is a wall you walk around, not behind.
+  return { sheet: TOWN_SHEET, w, h, parts: [part(x, y, w, h)], solid: { band: h, min: 0.3 }, tag: 'building', about };
+};
+
 export const PREFABS = {
+  smithy: building(
+    'smithy',
+    'Blacksmith: a 6x7 hall with terracotta roof and an anvil over the door. Shopkeeper stands one row below.',
+  ),
+  apothecary: building('apothecary', 'Apothecary: a 6x7 hall with a green roof and a flask over the door.'),
+  armory: building('armory', 'Armorer: a 3x9 tall house with a slate roof and a shield over the door.'),
+  counter: furniture(
+    'counter',
+    32,
+    'Shop counter, 4x1.5 cells; its front row blocks and the top overlaps the cell behind it.',
+  ),
+  shelfSmithy: furniture('shelfSmithy', 64, 'Shelves of blades and shields, 3x2 cells, solid (against a wall).'),
+  shelfArmory: furniture('shelfArmory', 64, 'Shelves of helms and plate, 3x2 cells, solid.'),
+  shelfRanger: furniture('shelfRanger', 64, 'Shelves of bows and quivers, 3x2 cells, solid.'),
+  shelfApothecary: furniture('shelfApothecary', 64, 'Shelves of flasks, 3x2 cells, solid.'),
+  signSmithy: furniture('signSmithy', 0, 'Wall sign with an anvil, 4x2 cells, decoration.'),
+  signArmory: furniture('signArmory', 0, 'Wall sign with a shield, 4x2 cells, decoration.'),
+  signRanger: furniture('signRanger', 0, 'Wall sign with a bow, 4x2 cells, decoration.'),
+  signApothecary: furniture('signApothecary', 0, 'Wall sign with a flask, 4x2 cells, decoration.'),
+  ranger: building('ranger', "Ranger's lodge: a 3x9 tall house with a golden roof and a bow over the door."),
   treeA: tree(OBJECT_SHEET, 'A', 'Round leafy canopy (3x3 cells). Blocks its bottom two rows; top row is walk-behind.'),
   treeB: tree(
     OBJECT_SHEET,

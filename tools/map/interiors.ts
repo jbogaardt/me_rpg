@@ -1,0 +1,37 @@
+// The inside of a shop: one small room per shop, built the same way for all four. The zone spec in maps/shop_<id>.ts
+// says where the door leads back to (the cell below the building's door in the overworld).
+
+import { SHOPS } from '../../src/systems/shops';
+import type { PrefabName } from './catalog';
+import type { Zone } from './zone';
+
+export const SHOP_ROOM = { width: 11, height: 9 } as const;
+
+/** The cell inside the room where a player arrives (just above the doormat). */
+export const SHOP_ARRIVAL = { col: 4, row: 7 } as const;
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Fill `z` (11x9 cells) with a shop: wall and shelves along the back, the keeper behind a counter, a doormat at the
+ * front. `out` is where the door leads back to in the overworld.
+ */
+export function shopInterior(z: Zone, id: string, out: { zone: string; col: number; row: number }) {
+  if (!SHOPS[id]) throw new Error(`Unknown shop "${id}"`);
+  z.indoor();
+  z.fill('planks');
+  z.fill('wall', { col: 0, row: 0, w: SHOP_ROOM.width, h: 2 });
+  z.block({ col: 0, row: 0, w: SHOP_ROOM.width, h: 2 }, 'back wall');
+
+  z.prop(`sign${cap(id)}` as PrefabName, 3, 1);
+  z.prop(`shelf${cap(id)}` as PrefabName, 1, 3);
+  z.prop(`shelf${cap(id)}` as PrefabName, 7, 3);
+  z.prop('counter', 3, 5);
+  z.prop('barrel', 1, 7);
+  z.prop('barrel', 9, 7);
+
+  z.fill('mat', { col: 4, row: 8, w: 2, h: 1 });
+  z.door(4, 8, 2, out.zone, out.col, out.row);
+  z.spawn(SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
+  z.shop(id, 4, 4); // behind the counter
+}

@@ -6,13 +6,16 @@ export class Dialog {
   private text = document.getElementById('dialog-text')!;
   private lines: string[] = [];
   private index = -1; // -1 = closed
+  private done: (() => void) | null = null;
 
   get active(): boolean {
     return this.index >= 0;
   }
 
-  say(lines: string[]) {
+  /** Show `lines` one at a time; `onDone` runs once the last one is dismissed (not when the box is closed by force). */
+  say(lines: string[], onDone?: () => void) {
     this.lines = lines;
+    this.done = onDone ?? null;
     this.index = 0;
     this.text.textContent = lines[0] ?? '';
     this.box.hidden = false;
@@ -22,12 +25,18 @@ export class Dialog {
   advance() {
     if (!this.active) return;
     this.index++;
-    if (this.index >= this.lines.length) this.close();
-    else this.text.textContent = this.lines[this.index] ?? '';
+    if (this.index < this.lines.length) {
+      this.text.textContent = this.lines[this.index] ?? '';
+      return;
+    }
+    const done = this.done;
+    this.close();
+    done?.();
   }
 
   close() {
     this.index = -1;
+    this.done = null;
     this.box.hidden = true;
   }
 

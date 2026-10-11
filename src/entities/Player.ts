@@ -25,15 +25,16 @@ export class Player {
   knock = { x: 0, y: 0 };
   aim = { x: 0, y: 1 }; // unit vector of the last move (diagonals included): where magic bolts fly
   vel = { x: 0, y: 0 }; // px/s walking velocity; only differs from the held direction while sliding on ice
+  /** The zone this player is in (a key of the scene's zones). The host moves players between zones; a guest follows. */
+  zone = '';
   moving = false; // was trying to move this tick (drives the walk cycle, and the guest's copy of it)
 
   // Host: the last action counters honoured from a network player (see protocol.ts).
   seenAct = 0;
   seenMag = 0;
-  seenInv = 0; // the last pack action done for this player
-  invKey = ''; // what their gear and pack looked like when last sent
-  invUntil = 0; // keep sending their gear and pack until this time (a change rides in several snapshots)
-  invBeat = 0; // ... and at least once a second
+  seenInv = 0; // the last Inventory action done for this friend
+  /** Host: the answer to this friend's last trade request (they see it once, by its id). */
+  reply: { id: number; text: string; ok: boolean } | null = null;
   // Guest: where the host says this player is, and its FLAG bits.
   target: { x: number; y: number } | null = null;
   flags = 0;

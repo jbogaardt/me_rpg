@@ -1,30 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { newHero } from './combat';
+import { GEAR_SLOTS, newHero } from './combat';
 import { collect } from './chests';
 import {
   addToPack,
   applyInvOp,
-  applyLoadout,
   decodeOp,
   encodeOp,
-  ITEM_COUNT,
-  itemCode,
-  itemFromCode,
-  loadoutOf,
-  sameLoadout,
+  GROUND_LIFETIME,
+  GROUND_WARNING,
+  groundFading,
+  groundRemaining,
   type InvOp,
   BASE_PACK,
   dropFromPack,
   dropWorn,
   equipFromPack,
   fitsSlot,
-  GROUND_LIFETIME,
-  GROUND_WARNING,
-  groundFading,
-  groundRemaining,
   packSize,
   slotsFor,
   unequip,
+  gearCodes,
+  isBetter,
+  ITEM_IDS,
+  itemCode,
+  itemFromCode,
+  packCodes,
+  packEntries,
+  setGear,
+  setPack,
+  upgrade,
+  useFromPack,
+  wearFromPack,
+  wearIfBetter,
 } from './inventory';
 import { ITEMS } from './items';
 import { playerOutfit } from './looks';
@@ -173,21 +180,144 @@ describe('chest loot', () => {
     full.head = undefined;
     expect(collect(full, { item: ITEMS.nasalHelm }).gear).toBe(ITEMS.nasalHelm); // empty slot: no room needed
   });
+});
 
-  it('keeps the old upgrade-only rule for players without a pack screen', () => {
+const GEAR_NONE = GEAR_SLOTS.map(() => 0);
+
+describe('wearIfBetter', () => {
+  it('puts a better piece on and sends the old one to the pack', () => {
     const hero = newHero();
-    hero.head = ITEMS.kettleHat;
-    expect(collect(hero, { item: ITEMS.clothHood }, false).gear).toBeUndefined();
-    expect(collect(hero, { item: ITEMS.greatHelm }, false).gear).toBe(ITEMS.greatHelm);
+    expect(wearIfBetter(hero, ITEMS.bronzeSword)).toBe(true);
+    expect(hero.weapon).toBe(ITEMS.bronzeSword);
+    expect(hero.pack).toEqual([ITEMS.rustySword]);
+  });
+
+  it('fills an empty slot without touching the pack, and leaves a worse piece alone', () => {
+    const hero = newHero();
+    expect(wearIfBetter(hero, ITEMS.clothHood)).toBe(true);
+    expect(hero.head).toBe(ITEMS.clothHood);
     expect(hero.pack).toEqual([]);
+    expect(wearIfBetter(hero, ITEMS.clothHood)).toBe(false);
+    expect(wearIfBetter(hero, ITEMS.potion)).toBe(false);
   });
 });
 
-describe('inventory actions as data', () => {
+describe('wearFromPack', () => {
+  it('wears a piece from the pack, swapping with what is worn', () => {
+    const hero = newHero();
+    hero.weapon = ITEMS.bronzeSword;
+    hero.pack.push(ITEMS.rustySword);
+    expect(wearFromPack(hero, ITEMS.rustySword)).toEqual({ ok: true });
+    expect(hero.weapon).toBe(ITEMS.rustySword);
+    expect(hero.pack).toEqual([ITEMS.bronzeSword]);
+    expect(wearFromPack(hero, ITEMS.steelSword).ok).toBe(false); // not in the pack
+    hero.pack.push(ITEMS.potion);
+    expect(wearFromPack(hero, ITEMS.potion).ok).toBe(false); // not wearable
+  });
+});
+
+describe('isBetter and upgrade', () => {
+  it('compares against the worn piece in the same slot', () => {
+    const hero = newHero();
+    expect(isBetter(hero, ITEMS.steelSword)).toBe(true);
+    expect(isBetter(hero, ITEMS.rustySword)).toBe(false);
+    expect(upgrade(hero, ITEMS.steelSword)).toBe(3);
+    expect(upgrade(hero, ITEMS.clothHood)).toBe(1); // an empty slot is worth nothing
+    expect(upgrade(hero, ITEMS.potion)).toBe(0);
+  });
+});
+
+describe('packEntries', () => {
+  it('groups the same item and keeps first-seen order', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.potion, ITEMS.bronzeSword, ITEMS.potion);
+    expect(packEntries(hero)).toEqual([
+      { item: ITEMS.potion, count: 2 },
+      { item: ITEMS.bronzeSword, count: 1 },
+    ]);
+  });
+});
+
+describe('useFromPack', () => {
+  it('drinks a supply and uses it up', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.potion, ITEMS.potion);
+    hero.stats.hp = 5;
+    expect(useFromPack(hero, ITEMS.potion)?.text).toBe('+20 HP');
+    expect(hero.stats.hp).toBe(25);
+    expect(hero.pack).toEqual([ITEMS.potion]);
+  });
+
+  it('does not waste a supply on someone who needs nothing', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.potion);
+    expect(useFromPack(hero, ITEMS.potion)).toBeNull();
+    expect(hero.pack).toHaveLength(1);
+  });
+
+  it('restores MP too with an elixir, even at full HP', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.elixir);
+    hero.stats.mp = 0;
+    expect(useFromPack(hero, ITEMS.elixir)).not.toBeNull();
+    expect(hero.stats.mp).toBe(hero.stats.maxMp);
+  });
+
+  it('refuses gear and things not in the pack', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.bronzeSword);
+    hero.stats.hp = 1;
+    expect(useFromPack(hero, ITEMS.bronzeSword)).toBeNull();
+    expect(useFromPack(hero, ITEMS.elixir)).toBeNull();
+  });
+});
+
+describe('item codes', () => {
+  it('give every item its own code, and 0 means nothing', () => {
+    const codes = Object.values(ITEMS).map(itemCode);
+    expect(new Set(codes).size).toBe(codes.length);
+    expect(Math.min(...codes)).toBe(1);
+    expect(Math.max(...codes)).toBe(ITEM_IDS.length);
+    for (const item of Object.values(ITEMS)) expect(itemFromCode(itemCode(item))).toBe(item);
+    expect(itemFromCode(0)).toBeUndefined();
+    expect(itemFromCode(ITEM_IDS.length + 1)).toBeUndefined();
+  });
+
+  it("carry a hero's gear and pack to a copy of them", () => {
+    const hero = newHero();
+    wearIfBetter(hero, ITEMS.steelSword);
+    wearIfBetter(hero, ITEMS.greatHelm);
+    hero.bag = ITEMS.sack;
+    hero.pack.push(ITEMS.potion, ITEMS.potion);
+    const copy = newHero();
+    copy.cape = undefined; // the copy starts with something else on
+    setGear(copy, gearCodes(hero));
+    setPack(copy, packCodes(hero));
+    expect(copy).toMatchObject({
+      weapon: ITEMS.steelSword,
+      head: ITEMS.greatHelm,
+      cape: ITEMS.travelerCloak,
+      bag: ITEMS.sack,
+    });
+    expect(copy.pack).toEqual(hero.pack);
+  });
+
+  it('take pieces off that the host says are gone, but never leave the hero unarmed', () => {
+    const hero = newHero();
+    wearIfBetter(hero, ITEMS.clothHood);
+    setGear(hero, GEAR_NONE);
+    expect(hero.head).toBeUndefined();
+    expect(hero.cape).toBeUndefined();
+    expect(hero.weapon).toBe(ITEMS.rustySword);
+  });
+});
+
+describe('Inventory actions as data', () => {
   const ops: InvOp[] = [
     { t: 'equip', index: 3 },
     { t: 'equip', index: 0, slot: 'offhand' },
     { t: 'unequip', slot: 'cape' },
+    { t: 'use', index: 2 },
     { t: 'dropPack', index: 7 },
     { t: 'dropWorn', slot: 'bag' },
   ];
@@ -205,6 +335,7 @@ describe('inventory actions as data', () => {
       [1, 99, 0],
       [3, -1, 0],
       [2, 99, 0],
+      [4, -1, 0],
     ] as const) {
       expect(decodeOp([...wire]), wire.join()).toBeNull();
     }
@@ -219,6 +350,16 @@ describe('inventory actions as data', () => {
     expect(hero.cape).toBeUndefined();
   });
 
+  it('drinks a supply, and refuses when it would do nothing', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.potion);
+    expect(applyInvOp(hero, { t: 'use', index: 0 }).ok).toBe(false); // already at full health
+    expect(hero.pack).toHaveLength(1);
+    hero.stats.hp = 5;
+    expect(applyInvOp(hero, { t: 'use', index: 0 }).ok).toBe(true);
+    expect(hero.pack).toHaveLength(0);
+  });
+
   it('changes nothing when an action fails', () => {
     const hero = newHero();
     for (const op of [
@@ -229,30 +370,6 @@ describe('inventory actions as data', () => {
       expect(applyInvOp(hero, op).ok).toBe(false);
     }
     expect(hero).toEqual(newHero());
-  });
-});
-
-describe('item codes and loadouts', () => {
-  it('number every item from 1, and 0 means nothing', () => {
-    expect(itemCode(undefined)).toBe(0);
-    expect(itemFromCode(0)).toBeUndefined();
-    expect(itemFromCode(ITEM_COUNT + 1)).toBeUndefined();
-    for (const item of Object.values(ITEMS)) expect(itemFromCode(itemCode(item))).toBe(item);
-  });
-
-  it('copies what a hero wears and carries onto another', () => {
-    const a = newHero();
-    a.head = ITEMS.kettleHat;
-    a.bag = ITEMS.sack;
-    a.pack.push(ITEMS.steelSword, ITEMS.whetstone);
-    delete a.cape;
-    const b = newHero();
-    expect(sameLoadout(loadoutOf(a), loadoutOf(b))).toBe(false);
-    applyLoadout(b, loadoutOf(a));
-    expect(sameLoadout(loadoutOf(a), loadoutOf(b))).toBe(true);
-    expect(b.cape).toBeUndefined(); // an empty slot is cleared
-    expect(b.pack).toEqual([ITEMS.steelSword, ITEMS.whetstone]);
-    expect(b.weapon).toBe(ITEMS.rustySword);
   });
 });
 

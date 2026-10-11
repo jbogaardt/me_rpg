@@ -29,7 +29,7 @@ const SLOT_LABELS: Record<GearSlot, string> = {
 
 /** What the scene lets the screen do. Set while a scene is running. */
 export interface InventoryHandlers {
-  /** Do an action for the local player (the scene applies it here, or asks the host in a co-op game). */
+  /** Do an action for the local player (the scene does it here, or asks the host in a co-op game). */
   apply(op: InvOp): Result;
 }
 
@@ -41,6 +41,9 @@ const stats = (item: Item) =>
     item.defense ? `+${item.defense} DEF` : '',
     item.capacity ? `+${item.capacity} pack slots` : '',
     item.ranged ? 'ranged' : '',
+    item.use?.hp ? `+${item.use.hp} HP` : '',
+    item.use?.mp ? `+${item.use.mp} MP` : '',
+    item.value ? `worth ${item.value}g` : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -131,6 +134,7 @@ export class Inventory {
     const btn = (action: string, text: string) =>
       `<button type="button" class="mp-btn panel thin wood" data-action="${action}">${text}</button>`;
     if (sel.from === 'pack') {
+      if (item.use) buttons.push(btn('use', 'Drink'));
       const slots = slotsFor(item);
       if (slots[0]) buttons.push(btn('equip', slots[0] === 'weapon' ? 'Equip main hand' : 'Equip'));
       if (slots.includes('offhand') && item.slot === 'weapon') buttons.push(btn('equip-off', 'Equip off-hand'));
@@ -186,6 +190,7 @@ export class Inventory {
     if (sel.from === 'pack') {
       if (action === 'equip') op = { t: 'equip', index: sel.index };
       else if (action === 'equip-off') op = { t: 'equip', index: sel.index, slot: 'offhand' };
+      else if (action === 'use') op = { t: 'use', index: sel.index };
       else if (action === 'drop') op = { t: 'dropPack', index: sel.index };
     } else if (action === 'unequip') op = { t: 'unequip', slot: sel.slot };
     else if (action === 'drop') op = { t: 'dropWorn', slot: sel.slot };
@@ -195,10 +200,5 @@ export class Inventory {
     this.message = result.ok ? '' : result.reason;
     this.render();
     this.changed();
-  }
-
-  /** Redraw after the hero's gear changed from outside (the host's word in a co-op game). */
-  refresh() {
-    this.render();
   }
 }

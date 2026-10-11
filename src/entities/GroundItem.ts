@@ -58,9 +58,13 @@ export class GroundItem extends Container {
     this.age = groundRemaining(0) - seconds;
   }
 
-  /** Age, bob a little (and blink when it is nearly gone); the name shows while a player is `near`. */
-  update(dt: number, near: boolean) {
+  /** Let time pass (the host and solo only: a co-op guest is told how long is left). */
+  tick(dt: number) {
     this.age += dt;
+  }
+
+  /** Bob a little (and blink when it is nearly gone); the name shows while a player is `near`. */
+  update(dt: number, near: boolean) {
     this.alpha = groundFading(this.remaining) && Math.floor(this.age * 4) % 2 === 0 ? 0.35 : 1;
     this.t += dt * 3;
     this.bundle.y = Math.sin(this.t) * 1.5;

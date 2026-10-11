@@ -40,18 +40,19 @@ export class Menu {
     if (this.open) this.render(hero);
   }
 
-  /** The hero's gear changed from outside (the host's word in co-op): redraw the Inventory and Status tabs. */
-  refreshGear() {
-    if (!this.open) return;
-    this.inventory.refresh();
-    this.renderStatus();
-  }
-
   /** The inventory key: open the menu on the Inventory tab, or close it if that is already showing. */
   toggleInventory(hero: Hero) {
     if (this.open && TABS[this.tab] === 'inventory') this.close();
     else if (this.open) this.select(TABS.indexOf('inventory'));
     else this.toggle(hero, 'inventory');
+  }
+
+  /** Draw the open menu again for `hero` (a co-op guest's gold and pack change when the host's answer arrives). */
+  refresh(hero: Hero) {
+    this.hero = hero;
+    if (!this.open) return;
+    this.renderStatus();
+    if (TABS[this.tab] === 'inventory') this.inventory.show(hero);
   }
 
   /** Close the menu (a no-op if it is already closed). */
@@ -92,6 +93,7 @@ export class Menu {
       <dl>
         ${row('HP', `${Math.ceil(s.hp)} / ${s.maxHp}`)}
         ${row('MP', `${Math.floor(s.mp)} / ${s.maxMp}`)}
+        ${row('Gold', `${hero.gold} <small>g</small>`)}
         ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
         ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${gearAttack(hero)} gear)</small>`)}
         ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${gearDefense(hero)} gear)</small>`)}

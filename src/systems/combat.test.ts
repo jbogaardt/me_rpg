@@ -144,6 +144,7 @@ describe('MOB_KINDS', () => {
       attack: 1,
       defense: 0,
       xp: 1,
+      gold: 1,
       speed: 1,
       sight: 1,
     };

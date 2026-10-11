@@ -7,8 +7,11 @@ import {
   PROTOCOL_VERSION,
   round1,
   unpackKeys,
-  type GroundSnap,
+  type DoMsg,
   type InputMsg,
+  type LooksMsg,
+  type PackMsg,
+  type GroundSnap,
   type MobSnap,
   type PlayerSnap,
   type SnapMsg,
@@ -18,6 +21,8 @@ const mob: MobSnap = [100.5, 200, 2, 3, 20, 450, 1];
 const snap: SnapMsg = {
   k: 'snap',
   n: 7,
+  zone: 'overworld',
+  away: [3],
   players: [
     [0, 10, 20, 0, 1],
     [2, 30, 40, 3, 6],
@@ -26,7 +31,6 @@ const snap: SnapMsg = {
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10],
   chests: 5,
   ground: [[3, 40.5, 50, 2, 150]],
-  inv: { ack: 2, gear: [1, 0, 0, 0, 0, 0, 4, 0, 0], pack: [5, 6] },
   events: [
     { id: 4, e: { type: 'text', x: 5, y: 6, text: '+12 XP', color: 0xffb13f } },
     { id: 5, e: { type: 'slash', x: 1, y: 2, dir: 3 } },
@@ -61,20 +65,9 @@ describe('messages', () => {
 
   it('keeps a full four-player snapshot well under one network packet, with 20 mobs and events', () => {
     const everyone = Array.from({ length: 4 }, (_, slot): PlayerSnap => [slot, 1234.5, 2345.6, 3, 7]);
-    const big = {
-      ...snap,
-      players: everyone,
-      mobs: Array.from({ length: 20 }, () => mob),
-      ground: Array.from({ length: 4 }, (_, i): GroundSnap => [100 + i, 1234.5, 2345.6, 25, 179]),
-      inv: undefined,
-    };
+    const ground = Array.from({ length: 4 }, (_, i): GroundSnap => [100 + i, 1234.5, 2345.6, 25, 179]);
+    const big = { ...snap, players: everyone, mobs: Array.from({ length: 20 }, () => mob), ground };
     expect(encodeMessage(big).length).toBeLessThan(1400);
-    // The loadout rides along only after a change and once a second; even a full backpack stays near one packet.
-    const withInv = {
-      ...big,
-      inv: { ack: 12, gear: Array.from({ length: 9 }, () => 25), pack: Array.from({ length: 18 }, () => 30) },
-    };
-    expect(encodeMessage(withInv).length).toBeLessThan(1550);
   });
 
   it('accepts one to four players, in any order, and keeps their numbers', () => {
@@ -99,16 +92,25 @@ describe('messages', () => {
     }
   });
 
-  it('carries one pack action in an input, and rejects a malformed one', () => {
+  it('carries one Inventory action in an input, and rejects a malformed one', () => {
     const base = { k: 'in', n: 1, keys: 0, act: 0, mag: 0 };
     const ok = { ...base, inv: [3, 0, 2, -1] };
     expect(parseMessage(JSON.stringify(ok))).toEqual(ok);
-    for (const inv of [[0, 0, 2, 0], [1, 0, 2], [1, 0, 2, 0, 0], 'x', [1, 0, 'a', 0], [1.5, 0, 0, 0], [-1, 0, 0, 0]]) {
+    for (const inv of [
+      [0, 0, 2, 0],
+      [1, 0, 2],
+      [1, 0, 2, 0, 0],
+      'x',
+      [1, 0, 'a', 0],
+      [1.5, 0, 0, 0],
+      [-1, 0, 0, 0],
+      [1, 9999, 0, 0],
+    ]) {
       expect(parseMessage(JSON.stringify({ ...base, inv }))).toBeNull();
     }
   });
 
-  it('rejects a snapshot with bad ground items or inventory', () => {
+  it('rejects a snapshot with bad ground items', () => {
     const bad: Record<string, unknown>[] = [
       { ...snap, ground: undefined },
       { ...snap, ground: Array.from({ length: 17 }, (_, i) => [i, 1, 2, 1, 60]) }, // too many
@@ -118,10 +120,6 @@ describe('messages', () => {
       { ...snap, ground: [[1, 2, 3, 1]] }, // no time left given
       { ...snap, ground: [[1, 2, 3, 1, -1]] },
       { ...snap, ground: [[1, 2, 3, 1, 9999]] }, // longer than an item lasts
-      { ...snap, inv: { ack: -1, gear: snap.inv?.gear, pack: [] } },
-      { ...snap, inv: { ack: 0, gear: [1, 2], pack: [] } }, // one code per gear slot
-      { ...snap, inv: { ack: 0, gear: snap.inv?.gear, pack: [9999] } },
-      { ...snap, inv: { ack: 0, gear: snap.inv?.gear, pack: Array.from({ length: 33 }, () => 1) } },
     ];
     for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m).slice(0, 80)).toBeNull();
   });
@@ -159,6 +157,12 @@ describe('messages', () => {
       { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'hitSpark', x: 0, y: 0, dir: 'up' } }] },
       { ...snap, events: Array.from({ length: 65 }, (_, i) => ({ id: i, e: { type: 'defeat', player: 0 } })) },
       { ...snap, n: -1 },
+      { ...snap, zone: '' }, // no zone
+      { ...snap, zone: 5 },
+      { ...snap, zone: 'x'.repeat(40) },
+      { ...snap, away: 'x' },
+      { ...snap, away: [9] }, // no such player
+      { ...snap, away: [0, 1, 2, 3] }, // everyone away: nobody is here but the recipient
     ];
     for (const m of bad) expect(parseMessage(JSON.stringify(m))).toBeNull();
   });
@@ -166,6 +170,77 @@ describe('messages', () => {
   it('rounds to a tenth', () => {
     expect(round1(12.3456)).toBe(12.3);
     expect(round1(-0.04)).toBe(-0);
+  });
+});
+
+describe('trade, pack and looks messages', () => {
+  const ask: DoMsg = { k: 'do', n: 3, op: 'buy', item: 4, shop: 'smithy' };
+  const pack: PackMsg = {
+    k: 'pack',
+    n: 8,
+    gold: 120,
+    worn: [1, 0, 0, 0, 0, 0, 27, 0, 0],
+    items: [1, 28, 28],
+    ack: 2,
+    say: { id: 3, text: 'Bought it', ok: true },
+  };
+  const { say: _say, ...packNoSay } = pack;
+  const looks: LooksMsg = {
+    k: 'looks',
+    n: 9,
+    players: [
+      [0, 1, 0, 0, 0, 0, 0, 27, 0, 0],
+      [2, 5, 0, 0, 0, 0, 0, 0, 0, 0],
+    ],
+  };
+
+  it('round-trips', () => {
+    for (const m of [ask, pack, packNoSay, looks]) expect(parseMessage(encodeMessage(m))).toEqual(m);
+  });
+
+  it("keeps a full pack and everyone's gear small", () => {
+    const big = { ...pack, items: Array.from({ length: 60 }, () => 28) };
+    expect(encodeMessage(big).length).toBeLessThan(1200);
+    expect(
+      encodeMessage({ ...looks, players: [0, 1, 2, 3].map((p) => [p, 1, 2, 3, 4, 5, 6, 7, 8, 9]) }).length,
+    ).toBeLessThan(200);
+  });
+
+  it('rejects requests for things that do not exist', () => {
+    for (const patch of [
+      { op: 'steal' },
+      { item: 9999 },
+      { item: -1 },
+      { shop: 'x'.repeat(40) },
+      { shop: 5 },
+      { n: 'x' },
+    ]) {
+      expect(parseMessage(JSON.stringify({ ...ask, ...patch })), JSON.stringify(patch)).toBeNull();
+    }
+  });
+
+  it('rejects a malformed pack', () => {
+    const bad = [
+      { ...pack, gold: -1 },
+      { ...pack, gold: 1.5 },
+      { ...pack, worn: [1, 2] },
+      { ...pack, worn: [1, 0, 0, 0, 0, 0, 9999, 0, 0] },
+      { ...pack, items: [9999] },
+      { ...pack, items: Array.from({ length: 201 }, () => 1) },
+      { ...pack, say: { id: 1, text: 'x'.repeat(100), ok: true } },
+      { ...pack, say: { id: 1, text: 'hi' } },
+    ];
+    for (const m of bad) expect(parseMessage(JSON.stringify(m))).toBeNull();
+  });
+
+  it('rejects malformed looks', () => {
+    const bad = [
+      { ...looks, players: [] },
+      { ...looks, players: [[4, 0, 0, 0, 0, 0, 0, 0, 0, 0]] }, // no such player
+      { ...looks, players: [[0, 0, 0]] },
+      { ...looks, players: [[0, 9999, 0, 0, 0, 0, 0, 0, 0, 0]] },
+    ];
+    for (const m of bad) expect(parseMessage(JSON.stringify(m))).toBeNull();
   });
 });
 

@@ -2,8 +2,8 @@
 // bag on their back. Gear is worn in slots (GEAR_SLOTS); everything else sits in `hero.pack`. Every move here either
 // succeeds completely or changes nothing and says why.
 
-import { GEAR_SLOTS, type GearSlot, type Hero, type Item } from './combat';
-import { ITEMS } from './items';
+import { gainXp, GEAR_SLOTS, type GearSlot, type Hero, type Item } from './combat';
+import { ITEMS, type ItemId } from './items';
 
 /** Pack slots with no bag. A sack or backpack (slot `bag`, `capacity`) adds to it while worn. */
 export const BASE_PACK = 10;
@@ -135,12 +135,127 @@ export function iconKind(item: Item): IconKind {
   }
 }
 
-// --- Inventory actions as data (so a co-op guest can ask the host to do them) ---
+// --- Shops, supplies and the network. Money and what to buy are systems/shops.ts; these are the pack moves they use. ---
 
-/** Something a player does on the pack screen. */
+/** A piece's worth in its slot: attack for blades and bows, defense for armor and shields, both added for a mix. */
+const worth = (item: Item | undefined) => (item?.attack ?? 0) + (item?.defense ?? 0);
+
+/** Is `item` better than what the hero wears in its slot (an empty slot takes anything)? */
+export function isBetter(hero: Hero, item: Item): boolean {
+  if (!item.slot) return false;
+  const current = item.slot === 'weapon' ? hero.weapon : hero[item.slot];
+  return !current || worth(item) > worth(current);
+}
+
+/** How much better (positive) or worse (negative) `item` is than what the hero wears in its slot. */
+export const upgrade = (hero: Hero, item: Item): number =>
+  item.slot ? worth(item) - worth(item.slot === 'weapon' ? hero.weapon : hero[item.slot]) : 0;
+
+/** Does the hero wear exactly this item? */
+export const isWorn = (hero: Hero, item: Item): boolean =>
+  item.slot ? (item.slot === 'weapon' ? hero.weapon : hero[item.slot]) === item : false;
+
+export interface PackEntry {
+  item: Item;
+  count: number;
+}
+
+/** The pack grouped by item, in the order each kind first arrived. */
+export function packEntries(hero: Hero): PackEntry[] {
+  const entries: PackEntry[] = [];
+  for (const item of hero.pack) {
+    const entry = entries.find((e) => e.item === item);
+    if (entry) entry.count++;
+    else entries.push({ item, count: 1 });
+  }
+  return entries;
+}
+
+/** Take one of `item` out of the pack. Returns false if there was none. */
+export function takeFromPack(hero: Hero, item: Item): boolean {
+  const i = hero.pack.indexOf(item);
+  if (i < 0) return false;
+  hero.pack.splice(i, 1);
+  return true;
+}
+
+/** Wear one of `item` from the pack (in the slot it belongs to; what was worn goes into the pack in its place). */
+export function wearFromPack(hero: Hero, item: Item): Result {
+  const index = hero.pack.indexOf(item);
+  return index < 0 ? fail('You do not have that.') : equipFromPack(hero, index);
+}
+
+/**
+ * Put a bought or found piece on if it beats what is worn there, sending the old piece to the pack (the caller checked
+ * there is room for it). Returns true if it went on.
+ */
+export function wearIfBetter(hero: Hero, item: Item): boolean {
+  if (!item.slot || !isBetter(hero, item)) return false;
+  const old = item.slot === 'weapon' ? hero.weapon : hero[item.slot];
+  if (old) hero.pack.push(old);
+  hero[item.slot as Exclude<GearSlot, 'weapon'>] = item;
+  if (item.slot === 'weapon') hero.weapon = item;
+  return true;
+}
+
+export interface Used {
+  text: string; // short, shown floating over the hero
+  levels: number; // level-ups gained (always 0 for now)
+}
+
+/** Drink a supply from the pack. Null when there is none, it is not a supply, or it would do nothing. */
+export function useFromPack(hero: Hero, item: Item): Used | null {
+  const { use } = item;
+  const s = hero.stats;
+  if (!use || !hero.pack.includes(item)) return null;
+  if (s.hp >= s.maxHp && (!use.mp || s.mp >= s.maxMp)) return null;
+  takeFromPack(hero, item);
+  s.hp = Math.min(s.maxHp, s.hp + use.hp);
+  s.mp = Math.min(s.maxMp, s.mp + (use.mp ?? 0));
+  return { text: use.mp ? 'HP and MP restored' : `+${use.hp} HP`, levels: gainXp(s, 0) };
+}
+
+// --- Item codes: how a hero's gear and pack travel over the network (src/net/protocol.ts). A code is the item's
+// place in ITEMS plus one (0 means nothing), so the same build on both sides agrees on every code.
+
+export const ITEM_IDS = Object.keys(ITEMS) as ItemId[];
+export const ITEM_COUNT = ITEM_IDS.length;
+
+/** The code of an item (0 if it is not one of ITEMS). */
+export const itemCode = (item: Item): number => ITEM_IDS.findIndex((id) => ITEMS[id] === item) + 1;
+
+/** The item with this code, or undefined for 0 and unknown codes. */
+export const itemFromCode = (code: number): Item | undefined => {
+  const id = ITEM_IDS[code - 1];
+  return id ? ITEMS[id] : undefined;
+};
+
+/** What the hero wears, one code per slot in GEAR_SLOTS order. */
+export const gearCodes = (hero: Hero): number[] => GEAR_SLOTS.map((slot) => (hero[slot] ? itemCode(hero[slot]) : 0));
+
+/** Wear exactly what `codes` says (a guest's copy of the host's hero). The weapon slot is never left empty. */
+export function setGear(hero: Hero, codes: readonly number[]): void {
+  GEAR_SLOTS.forEach((slot, i) => {
+    const item = itemFromCode(codes[i] ?? 0);
+    if (slot === 'weapon') hero.weapon = item ?? hero.weapon;
+    else if (item) hero[slot] = item;
+    else delete hero[slot];
+  });
+}
+
+/** The pack as codes, and back (unknown codes are dropped). */
+export const packCodes = (hero: Hero): number[] => hero.pack.map(itemCode);
+export const setPack = (hero: Hero, codes: readonly number[]): void => {
+  hero.pack = codes.flatMap((c) => itemFromCode(c) ?? []);
+};
+
+// --- Pack actions as data (so a co-op guest can ask the host to do them) ---
+
+/** Something a player does on the Inventory screen. */
 export type InvOp =
   | { t: 'equip'; index: number; slot?: GearSlot } // pack item -> worn (default: its own slot)
   | { t: 'unequip'; slot: GearSlot }
+  | { t: 'use'; index: number } // drink a supply from the pack
   | { t: 'dropPack'; index: number }
   | { t: 'dropWorn'; slot: GearSlot };
 
@@ -155,16 +270,21 @@ export const groundRemaining = (age: number): number => Math.max(0, GROUND_LIFET
 /** Is an item with this long left about to go (so it should blink)? */
 export const groundFading = (remaining: number): boolean => remaining < GROUND_WARNING;
 
-/** Most items lying on the ground at once (they ride in every co-op snapshot). */
+/** Most items lying on the ground in one zone at once (they ride in every co-op snapshot). */
 export const MAX_GROUND = 16;
 
 /** Do an action. A drop hands the item back as `dropped` (the caller puts it on the ground). Changes nothing on failure. */
-export function applyInvOp(hero: Hero, op: InvOp): Result & { dropped?: Item } {
+export function applyInvOp(hero: Hero, op: InvOp): Result & { dropped?: Item; text?: string } {
   switch (op.t) {
     case 'equip':
       return equipFromPack(hero, op.index, op.slot);
     case 'unequip':
       return unequip(hero, op.slot);
+    case 'use': {
+      const item = hero.pack[op.index];
+      const used = item && useFromPack(hero, item);
+      return used ? { ok: true, text: used.text } : { ok: false, reason: 'You do not need that right now.' };
+    }
     case 'dropPack': {
       if (!hero.pack[op.index]) return fail('Nothing there.');
       return { ok: true, dropped: dropFromPack(hero, op.index) };
@@ -176,7 +296,7 @@ export function applyInvOp(hero: Hero, op: InvOp): Result & { dropped?: Item } {
   }
 }
 
-/** The wire form of an action: [kind, a, b] with numbers only (slots are GEAR_SLOTS indexes, -1 for none). */
+/** The wire form of an action: [kind, a, b], numbers only (slots are GEAR_SLOTS indexes, -1 for none). */
 export type InvOpWire = [number, number, number];
 
 export function encodeOp(op: InvOp): InvOpWire {
@@ -190,58 +310,29 @@ export function encodeOp(op: InvOp): InvOpWire {
       return [2, op.index, 0];
     case 'dropWorn':
       return [3, slot(op.slot), 0];
+    case 'use':
+      return [4, op.index, 0];
   }
 }
 
 /** Read a wire action back, or null when it is not one (values come from a peer, so nothing is trusted). */
 export function decodeOp([kind, a, b]: InvOpWire): InvOp | null {
   const slot = GEAR_SLOTS[a];
+  const index = Number.isInteger(a) && a >= 0 && a < 64;
   switch (kind) {
     case 0:
-      return Number.isInteger(a) && a >= 0 && a < 64 && b >= -1 && b < GEAR_SLOTS.length
+      return index && b >= -1 && b < GEAR_SLOTS.length
         ? { t: 'equip', index: a, ...(b >= 0 ? { slot: GEAR_SLOTS[b] } : {}) }
         : null;
     case 1:
       return slot ? { t: 'unequip', slot } : null;
     case 2:
-      return Number.isInteger(a) && a >= 0 && a < 64 ? { t: 'dropPack', index: a } : null;
+      return index ? { t: 'dropPack', index: a } : null;
     case 3:
       return slot ? { t: 'dropWorn', slot } : null;
+    case 4:
+      return index ? { t: 'use', index: a } : null;
     default:
       return null;
   }
 }
-
-// --- Item codes and loadouts ---
-
-/** Every item, in a fixed order: an item's code is its place here plus one (0 is "nothing"). */
-const ITEM_LIST: readonly Item[] = Object.values(ITEMS);
-export const ITEM_COUNT = ITEM_LIST.length;
-
-export const itemCode = (item: Item | undefined): number => (item ? ITEM_LIST.indexOf(item) + 1 : 0);
-export const itemFromCode = (code: number): Item | undefined => ITEM_LIST[code - 1];
-
-/** What a hero wears and carries. `gear` has one code per GEAR_SLOTS entry, `pack` one per carried item. */
-export interface Loadout {
-  gear: number[];
-  pack: number[];
-}
-
-export function loadoutOf(hero: Hero): Loadout {
-  return { gear: GEAR_SLOTS.map((slot) => itemCode(hero[slot])), pack: hero.pack.map(itemCode) };
-}
-
-/** Make `hero` wear and carry exactly this. An unknown code is skipped, and the weapon is kept when none is given. */
-export function applyLoadout(hero: Hero, loadout: Loadout): void {
-  for (const [i, slot] of GEAR_SLOTS.entries()) {
-    const item = itemFromCode(loadout.gear[i] ?? 0);
-    if (slot === 'weapon') {
-      if (item) hero.weapon = item;
-    } else if (item) hero[slot] = item;
-    else delete hero[slot];
-  }
-  hero.pack = loadout.pack.flatMap((code) => itemFromCode(code) ?? []);
-}
-
-export const sameLoadout = (a: Loadout, b: Loadout): boolean =>
-  a.gear.join() === b.gear.join() && a.pack.join() === b.pack.join();
