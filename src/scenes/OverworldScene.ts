@@ -6,7 +6,9 @@ import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import { Chest } from '../entities/Chest';
 import { GroundItem } from '../entities/GroundItem';
-import { Character, DIR_VEC, directionToward, type Direction } from '../entities/Character';
+import { DIR_VEC, DIRS, dirIndex, directionToward, type Direction } from '../core/direction';
+import { glide } from '../core/interp';
+import { Character } from '../entities/Character';
 import { Ambient } from '../entities/ambient';
 import { WeatherLayer } from '../entities/WeatherLayer';
 import { sampleBiome, Weather, type WeatherKind } from '../systems/weather';
@@ -23,10 +25,8 @@ import { MapView } from '../map/MapView';
 import { sheetGrid } from '../core/textures';
 import { CELL, type CellPoint, type MapData } from '../map/types';
 import { DEFAULT_VIEW, MobFeed } from '../net/feed';
-import { glide } from '../net/interp';
+import { decodeMob, encodeMob } from '../net/mobWire';
 import {
-  DIRS,
-  dirIndex,
   FLAG,
   MAX_VIEW,
   packKeys,
@@ -500,7 +500,7 @@ export class OverworldScene implements Scene {
     // which events they have not yet confirmed.
     const n = ++this.snapSeq;
     const players = this.players().map((p) => this.snapPlayer(p));
-    const states = this.mobs.map((m) => m.snapshot());
+    const states = this.mobs.map((m) => encodeMob(m.view()));
     const chests = this.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0);
     for (const [slot, remote] of this.remotes) {
       const peer = this.ui.session.peerInput(slot);
@@ -571,7 +571,7 @@ export class OverworldScene implements Scene {
     }
 
     this.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
-    for (const [index, ...state] of snap.mobs) this.mobs[index]?.setRemote(state); // only the mobs the host listed: the rest are out of sight
+    for (const [index, ...state] of snap.mobs) this.mobs[index]?.setRemote(decodeMob(state)); // only the mobs the host listed: the rest are out of sight
 
     const [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] = snap.me;
     if (maxHp > 0 && maxMp > 0)

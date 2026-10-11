@@ -11,16 +11,13 @@
 //  - Both sides drop anything whose sequence number isn't newer than the last one seen.
 // Everything from the peer is untrusted input: parseMessage() validates the shape and ranges, never throws.
 
-import type { Direction } from '../entities/Character';
+import { DIRS } from '../core/direction';
 import { MOB_STATES } from '../systems/combat';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
 export const PROTOCOL_VERSION = 6;
-
-export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
-export const dirIndex = (d: Direction) => DIRS.indexOf(d);
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;

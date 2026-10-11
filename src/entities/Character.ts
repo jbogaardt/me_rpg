@@ -1,22 +1,7 @@
 import { BitmapText, Container, Graphics, Sprite, type Texture } from 'pixi.js';
+import { type Direction } from '../core/direction';
 import { makeFrame } from '../core/textures';
-import { ANIMS, ANIM_NAMES, feetAnchor, frameRect, type AnimName, type Direction } from '../sprites/doll';
-
-export type { Direction };
-
-/** Unit vector for each facing. */
-export const DIR_VEC: Record<Direction, readonly [number, number]> = {
-  up: [0, -1],
-  down: [0, 1],
-  left: [-1, 0],
-  right: [1, 0],
-};
-
-/** The facing that best points along (dx, dy). */
-export function directionToward(dx: number, dy: number): Direction {
-  if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'right' : 'left';
-  return dy > 0 ? 'down' : 'up';
-}
+import { ANIMS, ANIM_NAMES, feetAnchor, frameRect, type AnimName } from '../sprites/doll';
 
 const DIRECTIONS: Direction[] = ['up', 'left', 'down', 'right'];
 

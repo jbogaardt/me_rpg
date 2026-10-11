@@ -1,5 +1,6 @@
 // Stats, gear and the damage/XP rules shared by the hero and mobs.
 
+import type { Direction } from '../core/direction';
 import type { Outfit } from '../sprites/doll';
 import { ITEMS } from './items';
 
@@ -291,6 +292,18 @@ export const TROLL: MobKind = {
 /** What a mob is doing, in the order used on the wire (src/net/protocol.ts). */
 export const MOB_STATES = ['idle', 'wander', 'chase', 'windup', 'recover', 'dead'] as const;
 export type MobState = (typeof MOB_STATES)[number];
+
+/** What a viewer needs to draw a mob: the host's mob as it is now. The network sends it (net/mobWire.ts); a co-op guest's copy of a mob is drawn from one. */
+export interface MobView {
+  x: number;
+  y: number;
+  facing: Direction;
+  state: MobState;
+  hp: number;
+  /** Seconds left in the state (the windup, the recovery, or the wait to respawn); only meaningful in those states. */
+  timer: number;
+  moving: boolean;
+}
 
 /** Mob kinds a map can spawn, by the `kind` used in MapData.mobs. */
 export const MOB_KINDS: Record<string, MobKind> = {

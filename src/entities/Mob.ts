@@ -1,9 +1,9 @@
 import { Graphics, type Texture } from 'pixi.js';
 import { CELL } from '../map/types';
-import { glide } from '../net/interp';
-import { DIRS, dirIndex, type MobFields } from '../net/protocol';
-import { MOB_STATES, mobTimings, type MobKind, type MobState } from '../systems/combat';
-import { Character, DIR_VEC, directionToward } from './Character';
+import { DIR_VEC, directionToward } from '../core/direction';
+import { glide } from '../core/interp';
+import { mobTimings, type MobKind, type MobState, type MobView } from '../systems/combat';
+import { Character } from './Character';
 
 /** What a mob needs from the game each tick. */
 export interface MobWorld {
@@ -194,28 +194,21 @@ export class Mob {
 
   // --- Co-op ---
 
-  /**
-   * Host: this mob's state for a snapshot. The timer only matters while it winds up, recovers or is dead (it drives the
-   * telegraph, the lunge and the fade), so it is 0 otherwise: a still mob then has an unchanging state the host can skip.
-   */
-  snapshot(): MobFields {
-    const { x, y } = this.body;
-    const timed = this.state === 'windup' || this.state === 'recover' || this.state === 'dead';
-    const timer = timed ? Math.max(0, Math.round(this.timer * 1000)) : 0;
-    return [
-      Math.round(x),
-      Math.round(y),
-      dirIndex(this.body.facing),
-      MOB_STATES.indexOf(this.state),
-      this.hp,
-      timer,
-      this.moving ? 1 : 0,
-    ];
+  /** This mob as a viewer sees it (a co-op host sends it to the guests, see net/mobWire.ts). */
+  view(): MobView {
+    return {
+      x: this.body.x,
+      y: this.body.y,
+      facing: this.body.facing,
+      state: this.state,
+      hp: this.hp,
+      timer: this.timer,
+      moving: this.moving,
+    };
   }
 
   /** Guest: take the host's latest word on this mob. The body glides there over the next frames (updateRemote). */
-  setRemote([x, y, dir, state, hp, timer, moving]: MobFields) {
-    const next = MOB_STATES[state] ?? 'idle';
+  setRemote({ x, y, facing, state: next, hp, timer, moving }: MobView) {
     const respawned = this.state === 'dead' && next !== 'dead';
     if (hp < this.hp) {
       this.flash = 0.15;
@@ -229,9 +222,9 @@ export class Mob {
       this.drawBar();
     }
     this.state = next;
-    this.timer = timer / 1000;
-    this.moving = moving === 1;
-    this.body.face(DIRS[dir] ?? 'down');
+    this.timer = timer;
+    this.moving = moving;
+    this.body.face(facing);
     if (!this.remote || respawned) {
       this.body.position.set(x, y);
       this.body.visible = true;
