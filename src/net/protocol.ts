@@ -104,7 +104,8 @@ export interface SnapMsg {
   mobs: MobSnap[]; // only the mobs near the recipient, and a still one only now and then
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
-  ground: GroundSnap[]; // items lying on the ground in that zone
+  /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
+  ground?: GroundSnap[];
   events: { id: number; e: WorldEvent }[];
 }
 
@@ -381,7 +382,11 @@ export function parseMessage(raw: unknown): Message | null {
           : null;
       const mobs = Array.isArray(m.mobs) && m.mobs.length <= MAX_MOBS ? m.mobs.map(parseMob) : null;
       const ground =
-        Array.isArray(m.ground) && m.ground.length <= MAX_GROUND ? (m.ground as unknown[]).map(parseGround) : null;
+        m.ground === undefined
+          ? []
+          : Array.isArray(m.ground) && m.ground.length <= MAX_GROUND
+            ? (m.ground as unknown[]).map(parseGround)
+            : null;
       const rawEvents = Array.isArray(m.events) && m.events.length <= MAX_EVENTS ? m.events : null;
       const events = (rawEvents ?? []).map((item: unknown) => {
         const { id, e } = (item ?? {}) as { id?: unknown; e?: unknown };
@@ -420,7 +425,7 @@ export function parseMessage(raw: unknown): Message | null {
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
         chests: m.chests,
-        ground: ground as GroundSnap[],
+        ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
         events: events as { id: number; e: WorldEvent }[],
       };
     }

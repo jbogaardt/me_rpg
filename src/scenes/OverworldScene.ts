@@ -111,6 +111,7 @@ const SNAPSHOT_HZ = 25; // host -> guest world state
 const INPUT_HZ = 30; // guest -> host controls (also sent at once when they change)
 const EVENT_KEEP = 0.6; // seconds a one-shot world event keeps riding in snapshots, to survive packet loss
 const MAX_EVENTS_SENT = 48;
+const GROUND_RESEND = 1; // seconds between full lists of the items on the ground, when nothing changed
 const TRADE_RESEND = 0.25; // seconds between a friend's repeats of trade commands the host has not yet acknowledged
 const MAX_TRADE_QUEUE = 60;
 const PACK_RESEND = 1; // seconds between repeats of a friend's pack and everyone's gear (a lost packet is not resent)
@@ -167,7 +168,7 @@ export class OverworldScene implements Scene {
   private snapTimer = 0;
   private snapSeq = 0;
   private events: { id: number; at: number; zone: string; e: WorldEvent }[] = []; // host: recent one-shot events
-  private feeds = new Map<number, { zone: string; feed: MobFeed }>(); // host: what each friend has been told about the mobs
+  private feeds = new Map<number, { zone: string; feed: MobFeed; ground: { sig: string; at: number } | null }>(); // host: what each friend has been told about the mobs
   private eventId = 0;
   private lastEvent = -1; // guest: newest event already shown
   private inputTimer = 0;
@@ -754,7 +755,10 @@ export class OverworldScene implements Scene {
     // the chests); what differs per friend is their own stats, which mobs are near them, and which events they have not
     // yet confirmed. A zone nobody is in costs nothing.
     const everyone = this.everyone();
-    const shared = new Map<string, { base: Omit<SnapMsg, 'me' | 'mobs' | 'events'>; states: MobFields[] }>();
+    const shared = new Map<
+      string,
+      { base: Omit<SnapMsg, 'me' | 'mobs' | 'events' | 'ground'>; states: MobFields[]; ground: GroundSnap[] }
+    >();
     const worldOf = (z: ZoneState) => {
       let world = shared.get(z.name);
       if (!world) {
@@ -766,15 +770,15 @@ export class OverworldScene implements Scene {
             away: everyone.filter((p) => p.zone !== z.name).map((p) => p.slot),
             players: everyone.filter((p) => p.zone === z.name).map((p) => this.snapPlayer(p)),
             chests: z.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
-            ground: z.ground.map((g): GroundSnap => [
-              g.id,
-              round1(g.x),
-              round1(g.y),
-              itemCode(g.item),
-              Math.ceil(g.remaining),
-            ]),
           },
           states: z.mobs.map((m) => encodeMob(m.view())),
+          ground: z.ground.map((g): GroundSnap => [
+            g.id,
+            round1(g.x),
+            round1(g.y),
+            itemCode(g.item),
+            Math.ceil(g.remaining),
+          ]),
         };
         shared.set(z.name, world);
       }
@@ -782,16 +786,28 @@ export class OverworldScene implements Scene {
     };
     for (const [slot, remote] of this.remotes) {
       const z = this.zoneOf(remote);
-      const { base, states } = worldOf(z);
+      const { base, states, ground } = worldOf(z);
       const peer = this.ui.session.peerInput(slot);
       let entry = this.feeds.get(slot);
-      if (!entry || entry.zone !== z.name) this.feeds.set(slot, (entry = { zone: z.name, feed: new MobFeed() }));
+      if (!entry || entry.zone !== z.name)
+        this.feeds.set(slot, (entry = { zone: z.name, feed: new MobFeed(), ground: null }));
       const mobs = entry.feed.select(states, remote.body, peer?.vr || DEFAULT_VIEW, this.clock);
       const events = this.events
         .filter((ev) => ev.zone === z.name && ev.id > (peer?.ack ?? 0))
         .slice(-MAX_EVENTS_SENT)
         .map(({ id, e }) => ({ id, e }));
-      this.ui.session.sendTo(slot, { ...base, mobs, events, me: this.snapStats(remote.hero.stats) });
+      // The ground changes rarely (an item dropped, picked up or gone): list it when it does, and once a second anyway
+      // (the countdown to crumbling, and a lost packet).
+      const sig = ground.map((g) => g.slice(0, 4).join()).join(';');
+      const listGround = !entry.ground || entry.ground.sig !== sig || this.clock - entry.ground.at >= GROUND_RESEND;
+      if (listGround) entry.ground = { sig, at: this.clock };
+      this.ui.session.sendTo(slot, {
+        ...base,
+        mobs,
+        events,
+        ...(listGround ? { ground } : {}),
+        me: this.snapStats(remote.hero.stats),
+      });
     }
   }
 
@@ -1059,7 +1075,7 @@ export class OverworldScene implements Scene {
     }
 
     this.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
-    this.syncGround(snap.ground);
+    if (snap.ground) this.syncGround(snap.ground); // absent: the same items as before
     for (const [index, ...state] of snap.mobs) this.mobs[index]?.setRemote(decodeMob(state)); // only the mobs the host listed: the rest are out of sight
 
     const [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] = snap.me;

@@ -136,9 +136,18 @@ describe('messages', () => {
     }
   });
 
+  it('takes a snapshot that leaves the ground out (unchanged) and keeps one that lists it', () => {
+    const { ground: _listed, ...without } = { ...snap, ground: [[100, 1, 2, 25, 179]] satisfies GroundSnap[] };
+    const parsed = parseMessage(JSON.stringify(without)) as SnapMsg;
+    expect(parsed).not.toBeNull();
+    expect('ground' in parsed).toBe(false); // absent stays absent: the guest keeps the items it has
+    const listed = { ...snap, ground: [[100, 1, 2, 25, 179]] satisfies GroundSnap[] };
+    expect((parseMessage(JSON.stringify(listed)) as SnapMsg).ground).toEqual(listed.ground);
+    expect((parseMessage(JSON.stringify({ ...snap, ground: [] })) as SnapMsg).ground).toEqual([]); // emptied: say so
+  });
+
   it('rejects a snapshot with bad ground items', () => {
     const bad: Record<string, unknown>[] = [
-      { ...snap, ground: undefined },
       { ...snap, ground: Array.from({ length: 17 }, (_, i) => [i, 1, 2, 1, 60]) }, // too many
       { ...snap, ground: [[1, 2, 3, 0, 60]] }, // nothing is not an item
       { ...snap, ground: [[1, 2, 3, 9999, 60]] }, // no such item
