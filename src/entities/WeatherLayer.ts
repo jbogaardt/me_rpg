@@ -5,7 +5,7 @@ import { Lightning, type Weather, type WeatherKind } from '../systems/weather';
 // Draws the current weather over the world: a tinted haze plus a fixed pool of tiny sprites (rain streaks, snow,
 // blown sand, wind gusts) that wrap around the camera's view. Nothing is allocated per frame.
 
-const POOL = 320;
+const POOL = 800;
 
 interface Style {
   count: number; // particles at full intensity
@@ -22,7 +22,7 @@ interface Style {
 const STYLES: Partial<Record<WeatherKind, Style>> = {
   wind: { count: 26, tint: 0xffffff, alpha: 0.55, w: [8, 14], h: [1, 1], vx: 260, fall: [-4, 6], sway: 0, tilt: true },
   rain: {
-    count: 260,
+    count: 420,
     tint: 0x4a7fd0,
     alpha: 0.95,
     w: [2, 3],
@@ -33,7 +33,7 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
     tilt: true,
   },
   storm: {
-    count: 320,
+    count: 560,
     tint: 0x5a8ce0,
     alpha: 1,
     w: [3, 4],
@@ -44,35 +44,35 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
     tilt: true,
   },
   snow: {
-    count: 220,
+    count: 520,
     tint: 0xffffff,
     alpha: 1,
-    w: [3, 5],
-    h: [3, 5],
+    w: [4, 6],
+    h: [4, 6],
     vx: 90,
     fall: [26, 48],
     sway: 10,
     tilt: false,
   },
   blizzard: {
-    count: 320,
+    count: 800,
     tint: 0xffffff,
     alpha: 1,
-    w: [3, 5],
-    h: [3, 5],
+    w: [4, 6],
+    h: [4, 6],
     vx: 240,
     fall: [60, 100],
     sway: 6,
     tilt: false,
   },
   sandstorm: {
-    count: 320,
+    count: 700,
     tint: 0xd89a3c,
     alpha: 1,
-    w: [4, 9],
-    h: [1, 3],
+    w: [2, 3],
+    h: [8, 16],
     vx: 320,
-    fall: [-6, 12],
+    fall: [-2, 2], // blows in from the sides, not down from the sky
     sway: 0,
     tilt: true,
   },
@@ -82,9 +82,9 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
 const HAZE: Partial<Record<WeatherKind, { tint: number; alpha: number }>> = {
   rain: { tint: 0x16233a, alpha: 0.34 },
   storm: { tint: 0x060a18, alpha: 0.58 },
-  snow: { tint: 0x5a6e90, alpha: 0.3 }, // dim the bright ground so white flakes stand out
+  snow: { tint: 0x5a6e90, alpha: 0.38 }, // dim the bright ground so white flakes stand out
   blizzard: { tint: 0x8498b8, alpha: 0.5 },
-  sandstorm: { tint: 0x7a4a14, alpha: 0.5 },
+  sandstorm: { tint: 0x8a5518, alpha: 0.55 },
 };
 
 interface Drop {
@@ -167,7 +167,11 @@ export class WeatherLayer {
       d.x += vx * dt;
       d.y += d.fall * dt;
       // Wrap around the view so the sky stays full whichever way the camera and wind move.
-      if (d.x < view.x - 8 || d.x > view.x + view.w + 8) this.spawn(d, style, view, false, vx > 0 ? 'left' : 'right');
+      // A camera jump (map change, respawn) strands drops far away: refill the whole view instead of one edge.
+      if (d.x < view.x - 96 || d.x > view.x + view.w + 96 || d.y < view.y - 96 || d.y > view.y + view.h + 96) {
+        this.spawn(d, style, view, true);
+      } else if (d.x < view.x - 8 || d.x > view.x + view.w + 8)
+        this.spawn(d, style, view, false, vx > 0 ? 'left' : 'right');
       else if (d.y > view.y + view.h + 8 || d.y < view.y - 12)
         this.spawn(d, style, view, false, d.fall >= 0 ? 'top' : 'bottom');
       const sway = d.sway ? Math.sin(this.clock * 1.6 + d.phase) * d.sway : 0;
