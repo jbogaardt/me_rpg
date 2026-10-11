@@ -91,6 +91,8 @@ const HP_REGEN_DELAY = 5;
 // Co-op networking (see src/net/protocol.ts)
 const SNAPSHOT_HZ = 25; // host -> guest world state
 const INPUT_HZ = 30; // guest -> host controls (also sent at once when they change)
+const LIGHTNING_RADIUS = 28; // px from where a bolt lands that still burns
+const LIGHTNING_DAMAGE = 0.35; // fraction of a player's max HP a direct hit takes (armour doesn't help)
 const EVENT_KEEP = 0.6; // seconds a one-shot world event keeps riding in snapshots, to survive packet loss
 const MAX_EVENTS_SENT = 48;
 
@@ -258,7 +260,10 @@ export class OverworldScene implements Scene {
       this.camera.view(this.screen.width, this.screen.height),
       this.role === 'client' ? undefined : () => this.strikeTarget(),
     );
-    if (strike) this.emit({ type: 'lightning', ...strike });
+    if (strike) {
+      this.emit({ type: 'lightning', ...strike });
+      this.lightningHits(strike);
+    }
     this.ambient.update(dt, this.player, [
       ...this.players().map((p) => p.body),
       ...this.mobs.filter((m) => m.alive).map((m) => m.body),
@@ -553,11 +558,20 @@ export class OverworldScene implements Scene {
     p.body.animate(dt * 1000, (p.flags & FLAG.moving) !== 0);
   }
 
-  /** Where the next lightning bolt lands: close to a random player, so it is in someone's view. */
+  /** Where the next lightning bolt lands: anywhere in a wide area around a random player, so it is unpredictable. */
   private strikeTarget() {
     const all = this.players();
     const p = all[Math.floor(Math.random() * all.length)] ?? this.local;
-    return { x: p.body.x + (Math.random() - 0.5) * 220, y: p.body.y - Math.random() * 60 };
+    return { x: p.body.x + (Math.random() - 0.5) * 840, y: p.body.y + (Math.random() - 0.5) * 600 };
+  }
+
+  /** A bolt burns whoever stands where it lands (only the host or a solo game decides this). */
+  private lightningHits({ x, y }: { x: number; y: number }) {
+    this.fx('hitSpark', x, y);
+    for (const p of this.players()) {
+      if (p.invuln > 0 || Math.hypot(p.body.x - x, p.body.y - y) > LIGHTNING_RADIUS) continue;
+      this.harm(p, Math.max(1, Math.round(p.hero.stats.maxHp * LIGHTNING_DAMAGE)), x, y);
+    }
   }
 
   private showEvent(e: WorldEvent) {
@@ -891,7 +905,11 @@ export class OverworldScene implements Scene {
   private hurtHero(mob: Mob, victim: Character) {
     const p = this.players().find((q) => q.body === victim);
     if (!p || p.invuln > 0) return;
-    const damage = rollDamage(mob.kind.attack, defensePower(p.hero));
+    this.harm(p, rollDamage(mob.kind.attack, defensePower(p.hero)), mob.body.x, mob.body.y);
+  }
+
+  /** Damage a player and knock them away from (fromX, fromY): the shared tail of a mob's hit and a lightning strike. */
+  private harm(p: Player, damage: number, fromX: number, fromY: number) {
     const s = p.hero.stats;
     s.hp -= damage;
     p.invuln = INVULN_TIME;
@@ -900,8 +918,8 @@ export class OverworldScene implements Scene {
     p.body.play('hurt');
     this.text(p.body.x, p.body.y - 54, String(damage), 0xff5a5a);
     this.fx('heroHurt', p.body.x, p.body.y - 14);
-    const dx = p.body.x - mob.body.x;
-    const dy = p.body.y - mob.body.y;
+    const dx = p.body.x - fromX;
+    const dy = p.body.y - fromY;
     const len = Math.hypot(dx, dy) || 1;
     p.knock = { x: (dx / len) * 220, y: (dy / len) * 220 };
     if (s.hp <= 0) this.defeat(p);
