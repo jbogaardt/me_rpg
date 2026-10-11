@@ -18,6 +18,14 @@ A Shade (the dark ninja) wanders the southeast field as a test enemy: it chases 
 attacks after a yellow-flashing windup. It respawns a few seconds after dying; if you fall, you wake
 at the spawn point with full HP/MP and keep your XP.
 
+Checks (all run in CI on every pull request):
+
+```bash
+npm run verify    # lint, format check, typecheck, unit tests, map check
+npm run test:e2e  # browser smoke tests against the production build (needs Chromium)
+npm run build     # typecheck, map check, production build
+```
+
 ## Maps
 
 Maps are built from code so an AI agent can author them: `maps/overworld.ts` describes the zone

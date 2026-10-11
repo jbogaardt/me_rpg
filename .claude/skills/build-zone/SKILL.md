@@ -32,7 +32,7 @@ ground first, then features, then overrides.
 | `z.forest(rect, {seed?})` | Dense trees that block exactly `rect`; canopy pokes ~18px above the rect's top as walk-behind. Let border rects run 3 cells past the map edge so no gaps show. |
 | `z.prop(name, col, row, {dx?, dy?})` | One prefab with the **bottom-left cell of its footprint** at (col,row): bottom edge on the bottom of `row`, centred in the cells its width spans. Collision is derived from the art automatically. |
 | `z.block(rect, reason)` / `z.unblock(rect)` | Manual collision overrides, applied last. Use `block` for water/cliffs; the reason silences the invisible-wall warning. Don't hand-block props. |
-| `z.spawn(c, r)`, `z.npc(c, r)`, `z.mob(kind, c, r)` | Player start, the NPC, enemy spawns (`kind` must be in `MOB_KINDS`, `src/game/combat.ts`). |
+| `z.spawn(c, r)`, `z.npc(c, r)`, `z.mob(kind, c, r)` | Player start, the NPC, enemy spawns (`kind` must be in `MOB_KINDS`, `src/systems/combat.ts`). |
 
 A `Rect` is `{ col, row, w, h }`.
 
@@ -63,6 +63,6 @@ need to exist in `public/tilesets/`.
 
 ## Limits today
 
-- The game loads only `public/maps/overworld.json` (`MAP_URL` in `src/map/sheets.ts`). A new zone file
+- The game loads only the `overworld` zone (`START_ZONE` in `src/main.ts`; `loadZone` in `src/assets.ts` loads any zone by name). A new zone file
   builds and checks fine, but travelling between zones needs game code (map transitions) first.
-- One NPC per map with fixed dialog (`NPC_LINES` in `src/game/Game.ts`).
+- One NPC per map with fixed dialog (`NPC_LINES` in `src/scenes/OverworldScene.ts`).
