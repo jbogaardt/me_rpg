@@ -17,6 +17,11 @@ export interface MapObject {
   z?: number; // sort key override; default is the bottom edge (py + h). Flat ground art (cliffs) uses a very low z
 }
 
+/** Sort key of flat ground-level art (cliffs); a plateau of level n adds n. Above the ground layer, below every y-sorted thing. */
+export const FLAT_Z = -1e8;
+/** Sort key of ground decals (footprints): above all flat art, below entities and objects. */
+export const DECAL_Z = FLAT_Z + 50;
+
 /** The sort key MapView and the previews use to order objects (and, via zIndex, entities) back to front. */
 export const sortKey = (o: MapObject) => o.z ?? o.py + o.h;
 

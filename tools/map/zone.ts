@@ -1,4 +1,4 @@
-import { CELL, type CellPoint, type GroundCell, type MapData, type MapObject, type MobSpawn } from '../../src/map/types';
+import { CELL, FLAT_Z, type CellPoint, type GroundCell, type MapData, type MapObject, type MobSpawn } from '../../src/map/types';
 import { CLIFF, GROUND, PREFABS, RINGS, STAMPS, TREES, type CliffKind, type GroundName, type PrefabName, type StampName } from './catalog';
 import { coverage, sheet as loadSheet } from './image';
 
@@ -33,8 +33,6 @@ function rng(seed: number) {
 
 /** Surface names in the order stored in MapData.surfaces (a cell's `surface` indexes this). */
 const SURFACES: string[] = Object.keys(GROUND);
-/** Sort key of flat ground-level art (cliffs): above the ground layer, below everything y-sorted. A plateau of level n adds n. */
-const FLAT_Z = -1e8;
 
 /** A hand-placed object that isn't a catalog prefab (cliff pieces cut from a sheet). */
 interface Extra {

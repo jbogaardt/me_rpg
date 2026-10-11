@@ -7,6 +7,7 @@ import { createTouchControls, type TouchControls } from './touch';
 import { attackPower, defensePower, gainXp, MOB_KINDS, newHero, rollDamage, spellPower, type Hero } from './combat';
 import { Mob, type MobWorld } from './Mob';
 import { boltEffect, Effects, floatText, slashEffect } from './effects';
+import { Ambient } from './ambient';
 import { Hud } from './Hud';
 import { Menu } from './Menu';
 
@@ -48,6 +49,7 @@ export class Game {
   private mobWorld: MobWorld;
   private hero: Hero = newHero();
   private effects: Effects;
+  private ambient: Ambient;
   private hud = new Hud();
   private menu = new Menu();
   private touch: TouchControls;
@@ -75,6 +77,7 @@ export class Game {
     this.world = new MapView(data, textures);
     this.blocked = new Set(data.collision);
     this.effects = new Effects(this.world);
+    this.ambient = new Ambient(this.world, data, app.renderer);
 
     // Entities are positioned by their feet so they y-sort with map objects.
     this.player.position.set(...this.cellToFeet(data.spawn));
@@ -176,6 +179,7 @@ export class Game {
     }
     this.handleAction();
     this.effects.update(dt);
+    this.ambient.update(dt, this.player, [this.player, ...this.mobs.filter((m) => m.alive).map((m) => m.body)]);
 
     this.npc.animate(dt * 1000, false);
     for (const body of this.bodies()) body.zIndex = body.y;
@@ -251,6 +255,7 @@ export class Game {
     this.effects.add(slashEffect(this.player.x + vx * 6, this.player.y - 12 + vy * 6, dir));
     const cx = this.player.x + vx * 16;
     const cy = this.player.y + vy * 16;
+    this.ambient.shake(cx, cy - 6, MELEE_REACH); // swinging at a tree or bush shakes leaves loose
     for (const mob of this.mobs) {
       if (mob.alive && Math.hypot(mob.body.x - cx, mob.body.y - cy) < MELEE_REACH) {
         this.hitMob(mob, rollDamage(attackPower(this.hero), mob.kind.defense), vx, vy);
