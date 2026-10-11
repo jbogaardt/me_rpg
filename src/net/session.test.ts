@@ -143,9 +143,11 @@ async function befriend(slot: number) {
   return link!;
 }
 
-const input = (n: number, keys = 0, act = 0, mag = 0): Message => ({ k: 'in', n, keys, act, mag, ack: 0, vr: 300 });
+const input = (n: number, keys = 0, act = 0, mag = 0): Message => ({ k: 'in', n, keys, act, mag });
 const snap = (n: number): SnapMsg => ({
   k: 'snap',
+  zone: 'overworld',
+  away: [],
   n,
   players: [[0, 1, 2, 0, 0]],
   mobs: [],
@@ -304,6 +306,48 @@ describe('hosting a game', () => {
     expect(session.peerInput(1, later)?.fresh).toBe(false);
   });
 
+  it("queues each friend's trade requests in order, dropping old and repeated ones", async () => {
+    const session = setup();
+    await session.createGame();
+    const first = await befriend(1);
+    const second = await befriend(2);
+    const ask = (n: number, op: 'buy' | 'use' = 'use'): Message => ({ k: 'do', n, op, item: 28, shop: '' });
+    first.receive(ask(1));
+    first.receive(ask(3, 'buy'));
+    first.receive(ask(2)); // older than 3: ignored
+    first.receive(ask(3)); // repeated: ignored
+    second.receive(ask(1)); // a different friend's own count
+    expect(session.takeTrades(1).map((t) => [t.n, t.op])).toEqual([
+      [1, 'use'],
+      [3, 'buy'],
+    ]);
+    expect(session.takeTrades(1)).toEqual([]);
+    expect(session.takeTrades(2)).toHaveLength(1);
+    links[2]?.receive(ask(1)); // seat 3's link, which nobody has connected on
+    expect(session.takeTrades(3)).toEqual([]);
+  });
+
+  it("takes a friend's trade commands only in order, and acknowledges what it took", async () => {
+    const session = setup();
+    await session.createGame();
+    const first = await befriend(1);
+    const second = await befriend(2);
+    const step = (n: number): Message => ({ k: 'tr', n, cmd: { c: 'ready', on: n % 2 === 1 } });
+    first.receive(step(2)); // out of order: waits for 1
+    expect(session.tradeAck(1)).toBe(0);
+    first.receive(step(1));
+    first.receive(step(1)); // repeated: ignored
+    first.receive(step(2)); // now it is next
+    first.receive(step(4)); // a gap: ignored
+    second.receive(step(1));
+    expect(session.tradeAck(1)).toBe(2);
+    expect(session.takeTradeSteps(1).map((m) => m.n)).toEqual([1, 2]);
+    expect(session.takeTradeSteps(1)).toEqual([]);
+    expect(session.takeTradeSteps(2)).toHaveLength(1);
+    links[2]?.receive(step(1)); // seat 3's link, which nobody has connected on
+    expect(session.takeTradeSteps(3)).toEqual([]);
+  });
+
   it('ignores controls that do not come from a connected friend’s own link', async () => {
     const session = setup();
     await session.createGame();
@@ -313,6 +357,8 @@ describe('hosting a game', () => {
     first.receive({
       k: 'snap',
       n: 1,
+      zone: 'overworld',
+      away: [],
       players: [[0, 1, 2, 0, 0]],
       mobs: [],
       me: [1, 0, 1, 1, 1, 1, 1, 1, 1],
@@ -624,6 +670,39 @@ describe('joining a game', () => {
     expect(link.sent.at(-1)).toMatchObject({ k: 'in', keys: 4 });
     link.receive(input(9, 1)); // controls only flow friend -> host
     expect(session.peerInput(0)).toBeNull();
+  });
+
+  it("receives its pack and everyone's gear, newest first, and asks the host to trade", async () => {
+    const session = setup();
+    relay.join.mockResolvedValue(invitation);
+    await session.joinGame('mighty-apples');
+    const link = links[0]!;
+    link.connect();
+    const pack = (n: number, gold: number): Message => ({
+      k: 'pack',
+      n,
+      gold,
+      worn: [1, 0, 0, 0, 0, 0, 0, 0, 0],
+      items: [],
+    });
+    link.receive(pack(4, 10));
+    link.receive(pack(2, 99)); // late: ignored
+    expect(session.takePack()).toMatchObject({ n: 4, gold: 10 });
+    expect(session.takePack()).toBeNull();
+    link.receive({ k: 'looks', n: 3, players: [[0, 1, 0, 0, 0, 0, 0, 0, 0, 0]] });
+    expect(session.takeLooks()?.n).toBe(3);
+    expect(session.takeLooks()).toBeNull();
+    expect(session.send({ k: 'do', n: 1, op: 'use', item: 28, shop: '' })).toBe(true);
+    expect(link.sent.at(-1)).toMatchObject({ k: 'do', op: 'use' });
+    link.receive({ k: 'do', n: 1, op: 'use', item: 28, shop: '' }); // requests only flow friend -> host
+    expect(session.takeTrades(0)).toEqual([]);
+
+    link.receive({ k: 'trade', n: 5, ack: 2, view: null });
+    link.receive({ k: 'trade', n: 3, ack: 1, view: null }); // late: ignored
+    expect(session.takeTrade()).toMatchObject({ n: 5, ack: 2 });
+    expect(session.takeTrade()).toBeNull();
+    link.receive({ k: 'tr', n: 1, cmd: { c: 'yes' } }); // commands only flow friend -> host
+    expect(session.takeTradeSteps(0)).toEqual([]);
   });
 
   it('reports a game that is not open as something to retype, not a failure', async () => {

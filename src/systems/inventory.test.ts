@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newHero } from './combat';
+import { GEAR_SLOTS, newHero } from './combat';
 import { collect } from './chests';
 import {
   addToPack,
@@ -8,11 +8,22 @@ import {
   dropWorn,
   equipFromPack,
   fitsSlot,
-  isBetter,
   packSize,
   slotsFor,
   unequip,
+  gearCodes,
+  isBetter,
+  ITEM_IDS,
+  itemCode,
+  itemFromCode,
+  packCodes,
+  packEntries,
+  setGear,
+  setPack,
+  upgrade,
   useFromPack,
+  wearFromPack,
+  wearIfBetter,
 } from './inventory';
 import { ITEMS } from './items';
 import { playerOutfit } from './looks';
@@ -161,50 +172,134 @@ describe('chest loot', () => {
     full.head = undefined;
     expect(collect(full, { item: ITEMS.nasalHelm }).gear).toBe(ITEMS.nasalHelm); // empty slot: no room needed
   });
+});
 
-  it('keeps the old upgrade-only rule for players without a pack screen', () => {
+const GEAR_NONE = GEAR_SLOTS.map(() => 0);
+
+describe('wearIfBetter', () => {
+  it('puts a better piece on and sends the old one to the pack', () => {
     const hero = newHero();
-    hero.head = ITEMS.kettleHat;
-    expect(collect(hero, { item: ITEMS.clothHood }, false).gear).toBeUndefined();
-    expect(collect(hero, { item: ITEMS.greatHelm }, false).gear).toBe(ITEMS.greatHelm);
+    expect(wearIfBetter(hero, ITEMS.bronzeSword)).toBe(true);
+    expect(hero.weapon).toBe(ITEMS.bronzeSword);
+    expect(hero.pack).toEqual([ITEMS.rustySword]);
+  });
+
+  it('fills an empty slot without touching the pack, and leaves a worse piece alone', () => {
+    const hero = newHero();
+    expect(wearIfBetter(hero, ITEMS.clothHood)).toBe(true);
+    expect(hero.head).toBe(ITEMS.clothHood);
     expect(hero.pack).toEqual([]);
+    expect(wearIfBetter(hero, ITEMS.clothHood)).toBe(false);
+    expect(wearIfBetter(hero, ITEMS.potion)).toBe(false);
+  });
+});
+
+describe('wearFromPack', () => {
+  it('wears a piece from the pack, swapping with what is worn', () => {
+    const hero = newHero();
+    hero.weapon = ITEMS.bronzeSword;
+    hero.pack.push(ITEMS.rustySword);
+    expect(wearFromPack(hero, ITEMS.rustySword)).toEqual({ ok: true });
+    expect(hero.weapon).toBe(ITEMS.rustySword);
+    expect(hero.pack).toEqual([ITEMS.bronzeSword]);
+    expect(wearFromPack(hero, ITEMS.steelSword).ok).toBe(false); // not in the pack
+    hero.pack.push(ITEMS.potion);
+    expect(wearFromPack(hero, ITEMS.potion).ok).toBe(false); // not wearable
+  });
+});
+
+describe('isBetter and upgrade', () => {
+  it('compares against the worn piece in the same slot', () => {
+    const hero = newHero();
+    expect(isBetter(hero, ITEMS.steelSword)).toBe(true);
+    expect(isBetter(hero, ITEMS.rustySword)).toBe(false);
+    expect(upgrade(hero, ITEMS.steelSword)).toBe(3);
+    expect(upgrade(hero, ITEMS.clothHood)).toBe(1); // an empty slot is worth nothing
+    expect(upgrade(hero, ITEMS.potion)).toBe(0);
+  });
+});
+
+describe('packEntries', () => {
+  it('groups the same item and keeps first-seen order', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.potion, ITEMS.bronzeSword, ITEMS.potion);
+    expect(packEntries(hero)).toEqual([
+      { item: ITEMS.potion, count: 2 },
+      { item: ITEMS.bronzeSword, count: 1 },
+    ]);
   });
 });
 
 describe('useFromPack', () => {
-  it('drinks a supply: it leaves the pack and heals, capped at the maximum', () => {
+  it('drinks a supply and uses it up', () => {
     const hero = newHero();
-    hero.stats.hp = 10;
-    hero.pack.push(ITEMS.potion);
-    expect(useFromPack(hero, 0)).toMatchObject({ ok: true, text: '+20 HP' });
-    expect(hero.stats.hp).toBe(30);
-    expect(hero.pack).toHaveLength(0);
+    hero.pack.push(ITEMS.potion, ITEMS.potion);
+    hero.stats.hp = 5;
+    expect(useFromPack(hero, ITEMS.potion)?.text).toBe('+20 HP');
+    expect(hero.stats.hp).toBe(25);
+    expect(hero.pack).toEqual([ITEMS.potion]);
   });
 
-  it('restores MP too for an elixir', () => {
+  it('does not waste a supply on someone who needs nothing', () => {
     const hero = newHero();
-    hero.stats.mp = 0;
+    hero.pack.push(ITEMS.potion);
+    expect(useFromPack(hero, ITEMS.potion)).toBeNull();
+    expect(hero.pack).toHaveLength(1);
+  });
+
+  it('restores MP too with an elixir, even at full HP', () => {
+    const hero = newHero();
     hero.pack.push(ITEMS.elixir);
-    expect(useFromPack(hero, 0)).toMatchObject({ ok: true, text: 'HP and MP restored' });
+    hero.stats.mp = 0;
+    expect(useFromPack(hero, ITEMS.elixir)).not.toBeNull();
     expect(hero.stats.mp).toBe(hero.stats.maxMp);
   });
 
-  it('keeps the supply when it would do nothing, and refuses gear', () => {
+  it('refuses gear and things not in the pack', () => {
     const hero = newHero();
-    hero.pack.push(ITEMS.potion, ITEMS.steelSword);
-    expect(useFromPack(hero, 0)).toMatchObject({ ok: false });
-    expect(useFromPack(hero, 1)).toMatchObject({ ok: false });
-    expect(useFromPack(hero, 5)).toMatchObject({ ok: false });
-    expect(hero.pack).toHaveLength(2);
+    hero.pack.push(ITEMS.bronzeSword);
+    hero.stats.hp = 1;
+    expect(useFromPack(hero, ITEMS.bronzeSword)).toBeNull();
+    expect(useFromPack(hero, ITEMS.elixir)).toBeNull();
   });
 });
 
-describe('isBetter', () => {
-  it('compares against the worn piece, and an empty slot takes anything', () => {
+describe('item codes', () => {
+  it('give every item its own code, and 0 means nothing', () => {
+    const codes = Object.values(ITEMS).map(itemCode);
+    expect(new Set(codes).size).toBe(codes.length);
+    expect(Math.min(...codes)).toBe(1);
+    expect(Math.max(...codes)).toBe(ITEM_IDS.length);
+    for (const item of Object.values(ITEMS)) expect(itemFromCode(itemCode(item))).toBe(item);
+    expect(itemFromCode(0)).toBeUndefined();
+    expect(itemFromCode(ITEM_IDS.length + 1)).toBeUndefined();
+  });
+
+  it("carry a hero's gear and pack to a copy of them", () => {
     const hero = newHero();
-    expect(isBetter(hero, ITEMS.bronzeSword)).toBe(true); // rusty sword is worse
-    expect(isBetter(hero, ITEMS.rustySword)).toBe(false);
-    expect(isBetter(hero, ITEMS.greatHelm)).toBe(true); // no helm yet
-    expect(isBetter(hero, ITEMS.potion)).toBe(false); // not gear
+    wearIfBetter(hero, ITEMS.steelSword);
+    wearIfBetter(hero, ITEMS.greatHelm);
+    hero.bag = ITEMS.sack;
+    hero.pack.push(ITEMS.potion, ITEMS.potion);
+    const copy = newHero();
+    copy.cape = undefined; // the copy starts with something else on
+    setGear(copy, gearCodes(hero));
+    setPack(copy, packCodes(hero));
+    expect(copy).toMatchObject({
+      weapon: ITEMS.steelSword,
+      head: ITEMS.greatHelm,
+      cape: ITEMS.travelerCloak,
+      bag: ITEMS.sack,
+    });
+    expect(copy.pack).toEqual(hero.pack);
+  });
+
+  it('take pieces off that the host says are gone, but never leave the hero unarmed', () => {
+    const hero = newHero();
+    wearIfBetter(hero, ITEMS.clothHood);
+    setGear(hero, GEAR_NONE);
+    expect(hero.head).toBeUndefined();
+    expect(hero.cape).toBeUndefined();
+    expect(hero.weapon).toBe(ITEMS.rustySword);
   });
 });

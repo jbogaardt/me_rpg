@@ -79,21 +79,7 @@ function recolorRoof(img: Image, y0: number, y1: number, hue: number, sat: numbe
   }
 }
 
-// --- The emblems over each door: 8x6 pixels, '#' ink, 'o' the background, 'x' accent. ---------------------------------------
-const EMBLEMS: Record<string, string[]> = {
-  smithy: ['########', '.######.', '..####..', '...##...', '..####..', '.######.'],
-  armory: ['.######.', '.#oooo#.', '.#oxxo#.', '.#oxxo#.', '..#oo#..', '...##...'],
-  apothecary: ['...##...', '...##...', '..####..', '.#xxxx#.', '.#xxxx#.', '..####..'],
-  ranger: ['.##.....', '#..#..#.', '#..#.##.', '#######>', '#..#.##.', '.##...#.'],
-};
-const INK: RGB = [58, 40, 34];
-const LIGHT: RGB = [236, 214, 150];
-const ACCENT: Record<string, RGB> = {
-  smithy: INK,
-  armory: [196, 64, 52],
-  apothecary: [64, 170, 92],
-  ranger: INK,
-};
+import { ACCENT, EMBLEMS, INK, LIGHT } from './emblems';
 
 /** Paint an emblem into the awning strip of a door (23x7 px at (x, y)), replacing the inn's red stripes. */
 function paintEmblem(img: Image, x: number, y: number, w: number, h: number, name: string, back = LIGHT, ink = INK) {

@@ -3,6 +3,7 @@
 // succeeds completely or changes nothing and says why.
 
 import { gainXp, GEAR_SLOTS, type GearSlot, type Hero, type Item } from './combat';
+import { ITEMS, type ItemId } from './items';
 
 /** Pack slots with no bag. A sack or backpack (slot `bag`, `capacity`) adds to it while worn. */
 export const BASE_PACK = 10;
@@ -98,31 +99,6 @@ export function itemTier(item: Item): number {
   return Math.max(1, Math.min(4, (item.attack ?? 0) + (item.defense ?? 0)));
 }
 
-/** A piece's worth in its slot: attack for blades and bows, defense for armor and shields, both added for a mix. */
-const worth = (item: Item | undefined) => (item?.attack ?? 0) + (item?.defense ?? 0);
-
-/** Is `item` better than what the hero wears in its slot (an empty slot takes anything)? */
-export function isBetter(hero: Hero, item: Item): boolean {
-  if (!item.slot) return false;
-  const current = item.slot === 'weapon' ? hero.weapon : hero[item.slot];
-  return !current || worth(item) > worth(current);
-}
-
-/** Drink the supply at `index` in the pack. Refused (and kept) when it is not a supply or would do nothing. */
-export type Used = { ok: true; text: string; levels: number } | { ok: false; reason: string };
-
-export function useFromPack(hero: Hero, index: number): Used {
-  const item = hero.pack[index];
-  const s = hero.stats;
-  if (!item?.use) return { ok: false, reason: 'That cannot be used.' };
-  if (s.hp >= s.maxHp && (!item.use.mp || s.mp >= s.maxMp))
-    return { ok: false, reason: 'You do not need that right now.' };
-  hero.pack.splice(index, 1);
-  s.hp = Math.min(s.maxHp, s.hp + item.use.hp);
-  s.mp = Math.min(s.maxMp, s.mp + (item.use.mp ?? 0));
-  return { ok: true, text: item.use.mp ? 'HP and MP restored' : `+${item.use.hp} HP`, levels: gainXp(s, 0) };
-}
-
 /** What `item` adds over what is worn in its slot: positive numbers are better. */
 export function compare(item: Item, worn: Item | undefined) {
   return {
@@ -133,22 +109,9 @@ export function compare(item: Item, worn: Item | undefined) {
 
 /** Which picture an item gets in the pack screen. */
 export type IconKind =
-  | 'sword'
-  | 'bow'
-  | 'potion'
-  | 'dagger'
-  | 'shield'
-  | 'helm'
-  | 'armor'
-  | 'greaves'
-  | 'boot'
-  | 'cape'
-  | 'tool'
-  | 'sack'
-  | 'backpack';
+  'sword' | 'bow' | 'dagger' | 'shield' | 'helm' | 'armor' | 'greaves' | 'boot' | 'cape' | 'tool' | 'sack' | 'backpack';
 
 export function iconKind(item: Item): IconKind {
-  if (item.use) return 'potion';
   if (item.ranged) return 'bow';
   switch (item.slot) {
     case 'offhand':
@@ -171,3 +134,117 @@ export function iconKind(item: Item): IconKind {
       return 'sword';
   }
 }
+
+// --- Shops, supplies and the network. Money and what to buy are systems/shops.ts; these are the pack moves they use. ---
+
+/** A piece's worth in its slot: attack for blades and bows, defense for armor and shields, both added for a mix. */
+const worth = (item: Item | undefined) => (item?.attack ?? 0) + (item?.defense ?? 0);
+
+/** Is `item` better than what the hero wears in its slot (an empty slot takes anything)? */
+export function isBetter(hero: Hero, item: Item): boolean {
+  if (!item.slot) return false;
+  const current = item.slot === 'weapon' ? hero.weapon : hero[item.slot];
+  return !current || worth(item) > worth(current);
+}
+
+/** How much better (positive) or worse (negative) `item` is than what the hero wears in its slot. */
+export const upgrade = (hero: Hero, item: Item): number =>
+  item.slot ? worth(item) - worth(item.slot === 'weapon' ? hero.weapon : hero[item.slot]) : 0;
+
+/** Does the hero wear exactly this item? */
+export const isWorn = (hero: Hero, item: Item): boolean =>
+  item.slot ? (item.slot === 'weapon' ? hero.weapon : hero[item.slot]) === item : false;
+
+export interface PackEntry {
+  item: Item;
+  count: number;
+}
+
+/** The pack grouped by item, in the order each kind first arrived. */
+export function packEntries(hero: Hero): PackEntry[] {
+  const entries: PackEntry[] = [];
+  for (const item of hero.pack) {
+    const entry = entries.find((e) => e.item === item);
+    if (entry) entry.count++;
+    else entries.push({ item, count: 1 });
+  }
+  return entries;
+}
+
+/** Take one of `item` out of the pack. Returns false if there was none. */
+export function takeFromPack(hero: Hero, item: Item): boolean {
+  const i = hero.pack.indexOf(item);
+  if (i < 0) return false;
+  hero.pack.splice(i, 1);
+  return true;
+}
+
+/** Wear one of `item` from the pack (in the slot it belongs to; what was worn goes into the pack in its place). */
+export function wearFromPack(hero: Hero, item: Item): Result {
+  const index = hero.pack.indexOf(item);
+  return index < 0 ? fail('You do not have that.') : equipFromPack(hero, index);
+}
+
+/**
+ * Put a bought or found piece on if it beats what is worn there, sending the old piece to the pack (the caller checked
+ * there is room for it). Returns true if it went on.
+ */
+export function wearIfBetter(hero: Hero, item: Item): boolean {
+  if (!item.slot || !isBetter(hero, item)) return false;
+  const old = item.slot === 'weapon' ? hero.weapon : hero[item.slot];
+  if (old) hero.pack.push(old);
+  hero[item.slot as Exclude<GearSlot, 'weapon'>] = item;
+  if (item.slot === 'weapon') hero.weapon = item;
+  return true;
+}
+
+export interface Used {
+  text: string; // short, shown floating over the hero
+  levels: number; // level-ups gained (always 0 for now)
+}
+
+/** Drink a supply from the pack. Null when there is none, it is not a supply, or it would do nothing. */
+export function useFromPack(hero: Hero, item: Item): Used | null {
+  const { use } = item;
+  const s = hero.stats;
+  if (!use || !hero.pack.includes(item)) return null;
+  if (s.hp >= s.maxHp && (!use.mp || s.mp >= s.maxMp)) return null;
+  takeFromPack(hero, item);
+  s.hp = Math.min(s.maxHp, s.hp + use.hp);
+  s.mp = Math.min(s.maxMp, s.mp + (use.mp ?? 0));
+  return { text: use.mp ? 'HP and MP restored' : `+${use.hp} HP`, levels: gainXp(s, 0) };
+}
+
+// --- Item codes: how a hero's gear and pack travel over the network (src/net/protocol.ts). A code is the item's
+// place in ITEMS plus one (0 means nothing), so the same build on both sides agrees on every code.
+
+export const ITEM_IDS = Object.keys(ITEMS) as ItemId[];
+export const ITEM_COUNT = ITEM_IDS.length;
+
+/** The code of an item (0 if it is not one of ITEMS). */
+export const itemCode = (item: Item): number => ITEM_IDS.findIndex((id) => ITEMS[id] === item) + 1;
+
+/** The item with this code, or undefined for 0 and unknown codes. */
+export const itemFromCode = (code: number): Item | undefined => {
+  const id = ITEM_IDS[code - 1];
+  return id ? ITEMS[id] : undefined;
+};
+
+/** What the hero wears, one code per slot in GEAR_SLOTS order. */
+export const gearCodes = (hero: Hero): number[] => GEAR_SLOTS.map((slot) => (hero[slot] ? itemCode(hero[slot]) : 0));
+
+/** Wear exactly what `codes` says (a guest's copy of the host's hero). The weapon slot is never left empty. */
+export function setGear(hero: Hero, codes: readonly number[]): void {
+  GEAR_SLOTS.forEach((slot, i) => {
+    const item = itemFromCode(codes[i] ?? 0);
+    if (slot === 'weapon') hero.weapon = item ?? hero.weapon;
+    else if (item) hero[slot] = item;
+    else delete hero[slot];
+  });
+}
+
+/** The pack as codes, and back (unknown codes are dropped). */
+export const packCodes = (hero: Hero): number[] => hero.pack.map(itemCode);
+export const setPack = (hero: Hero, codes: readonly number[]): void => {
+  hero.pack = codes.flatMap((c) => itemFromCode(c) ?? []);
+};

@@ -14,7 +14,6 @@ import {
   type Result,
 } from '../systems/inventory';
 import { iconSvg } from './itemIcons';
-import { bonuses } from './itemText';
 
 // The Inventory tab of the pause menu: what the hero wears (a slot each, including both hands, a tool and a bag),
 // and the pack of carried items. Tap or click a slot to pick it, then use the buttons under the grids; a double
@@ -42,13 +41,22 @@ export interface InventoryHandlers {
   gearChanged(): void;
   /** Put an item on the ground by the hero. */
   drop(item: Item): void;
-  /** A supply was drunk: `text` is what to float over the hero. */
-  used?(text: string): void;
 }
 
-const OK: Result = { ok: true };
-
 type Selection = { from: 'pack'; index: number } | { from: 'worn'; slot: GearSlot } | null;
+
+const stats = (item: Item) =>
+  [
+    item.attack ? `+${item.attack} ATK` : '',
+    item.defense ? `+${item.defense} DEF` : '',
+    item.capacity ? `+${item.capacity} pack slots` : '',
+    item.ranged ? 'ranged' : '',
+    item.use?.hp ? `+${item.use.hp} HP` : '',
+    item.use?.mp ? `+${item.use.mp} MP` : '',
+    item.value ? `worth ${item.value}g` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
 export class Inventory {
   private handlers: InventoryHandlers | null = null;
@@ -137,8 +145,8 @@ export class Inventory {
     const btn = (action: string, text: string) =>
       `<button type="button" class="mp-btn panel thin wood" data-action="${action}">${text}</button>`;
     if (sel.from === 'pack') {
-      const slots = slotsFor(item);
       if (item.use) buttons.push(btn('use', 'Drink'));
+      const slots = slotsFor(item);
       if (slots[0]) buttons.push(btn('equip', slots[0] === 'weapon' ? 'Equip main hand' : 'Equip'));
       if (slots.includes('offhand') && item.slot === 'weapon') buttons.push(btn('equip-off', 'Equip off-hand'));
     } else if (sel.slot !== 'weapon') {
@@ -149,7 +157,7 @@ export class Inventory {
     return `
       <div class="inv-item">
         <span class="icon tier${itemTier(item)}">${iconSvg(iconKind(item))}</span>
-        <div><strong>${item.name}</strong> <small>${where}</small><br /><small>${bonuses(item) || 'No bonus'}</small> ${versus}</div>
+        <div><strong>${item.name}</strong> <small>${where}</small><br /><small>${stats(item) || 'No bonus'}</small> ${versus}</div>
       </div>
       <div class="inv-actions">${buttons.join('')}</div>${msg}`;
   }
@@ -190,20 +198,18 @@ export class Inventory {
     const sel = this.selected;
     const h = this.handlers;
     if (!hero || !sel || !h) return;
-    let result: Result = OK;
+    let result: Result = { ok: true };
     if (action === 'equip' || action === 'equip-off') {
       if (sel.from === 'pack') {
         result = equipFromPack(hero, sel.index, action === 'equip-off' ? 'offhand' : undefined);
         if (result.ok) this.selected = null;
       }
     } else if (action === 'use') {
-      if (sel.from === 'pack') {
-        const used = useFromPack(hero, sel.index);
-        result = used.ok ? OK : used;
-        if (used.ok) {
-          this.selected = null;
-          h.used?.(used.text);
-        }
+      const supply = this.itemAt(sel);
+      if (sel.from === 'pack' && supply) {
+        const used = useFromPack(hero, supply);
+        result = used ? { ok: true } : { ok: false, reason: 'You do not need that right now.' };
+        if (used) this.selected = null;
       }
     } else if (action === 'unequip') {
       if (sel.from === 'worn') {

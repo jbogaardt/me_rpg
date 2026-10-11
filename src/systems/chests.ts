@@ -1,10 +1,10 @@
 // Treasure chests: what they look like and what is inside. Pure rules; the Pixi side is entities/Chest.ts.
-// Chests hold what the shops do not sell (rare gear, bags, tools, restoratives) and the odd purse.
 // Add a loot by naming it here, then place a chest with `z.chest(kind, loot, col, row)` (see the build-zone skill).
+// Chests hold what the shops do not sell (rare gear, restoratives) and the odd purse.
 
 import { gainXp, type Hero, type Item } from './combat';
-import { equip, ITEMS } from './items';
-import { addToPack, hasRoom, isBetter } from './inventory';
+import { addToPack, hasRoom, isBetter, wearIfBetter } from './inventory';
+import { ITEMS } from './items';
 
 /** Art variants, in the row order of public/tilesets/chests.png (each row: open frame, then closed frame). */
 export const CHEST_KINDS = ['wood', 'oak', 'iron', 'silver'] as const;
@@ -65,23 +65,16 @@ export interface Found {
 
 /**
  * Give the hero what is in a chest. Gear goes on if its slot is empty or it is an upgrade (the old piece goes to the
- * pack), otherwise into the pack; a full pack refuses it and the chest stays shut. With `stash` off (a co-op friend, who has no pack screen) it is worn only if it is an
- * upgrade, as before.
+ * pack), otherwise into the pack; a full pack refuses it and the chest stays shut.
  */
-export function collect(hero: Hero, loot: ChestLoot, stash = true): Found {
+export function collect(hero: Hero, loot: ChestLoot): Found {
   if ('item' in loot) {
     const { item } = loot;
-    if (!stash) {
-      if (!isBetter(hero, item)) return { text: `${item.name} (no better)`, levels: 0 };
-      equip(hero, item);
-      return { text: `${item.name}!`, gear: item, levels: 0 };
-    }
     const worn = item.slot && (item.slot === 'weapon' ? hero.weapon : hero[item.slot]);
     if (item.slot && (!worn || isBetter(hero, item))) {
       // Wear it; what it replaces goes to the pack (so a full pack, with nowhere to put that, refuses it).
       if (worn && !hasRoom(hero)) return { text: 'Pack full', refused: true, levels: 0 };
-      if (worn) addToPack(hero, worn);
-      equip(hero, item);
+      wearIfBetter(hero, item);
       return { text: `${item.name}!`, gear: item, levels: 0 };
     }
     if (!hasRoom(hero)) return { text: 'Pack full', refused: true, levels: 0 };

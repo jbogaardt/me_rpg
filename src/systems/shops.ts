@@ -1,13 +1,12 @@
 // Shops: who sells what, at what price, and the rules of buying and selling. Pure; the Pixi side places the
-// shopkeepers (OverworldScene) and the HTML side draws the counter (hud/ShopCounter.ts). A map places a shopkeeper with
+// shopkeepers (OverworldScene) and the HTML side draws the counter (hud/Shop.ts). A map places a shopkeeper with
 // `z.shop(id, col, row)` (see the build-zone skill) and the building behind them with `z.prop('smithy', ...)`.
 //
 // Each shop is a specialist: it sells a few kinds of things and only buys those kinds back. Money comes mostly from
-// enemies (see `MobKind.gold`); chests hold the odd purse and the gear that no shop stocks. What is bought goes through
-// the same pack as everything else (systems/inventory.ts), so it obeys the pack's size.
+// enemies (see `MobKind.gold`); chests hold the odd purse and the gear that no shop stocks.
 
 import type { GearSlot, Hero, Item } from './combat';
-import { addToPack, equipFromPack, hasRoom, isBetter } from './inventory';
+import { addToPack, hasRoom, isBetter, takeFromPack, wearIfBetter } from './inventory';
 import { ITEMS, type ItemId } from './items';
 
 /** A shop pays this share of an item's value when buying it back. */
@@ -17,6 +16,8 @@ export const buyPrice = (item: Item): number => item.value ?? 0;
 export const sellPrice = (item: Item): number => Math.max(1, Math.floor((item.value ?? 0) * SELL_RATE));
 
 export interface Shop {
+  /** Its key in SHOPS (what a map and the network call it). */
+  id: string;
   /** The shop's name, as the counter's title. */
   name: string;
   /** Short label floating over the shopkeeper. */
@@ -41,6 +42,7 @@ const isSupply = (item: Item) => item.use !== undefined;
 
 export const SHOPS: Record<string, Shop> = {
   smithy: {
+    id: 'smithy',
     name: "Brannoch's Forge",
     tag: 'Blacksmith',
     keeper: 'smith',
@@ -49,6 +51,7 @@ export const SHOPS: Record<string, Shop> = {
     buys: (item) => isBlade(item) || isSlot('offhand')(item),
   },
   armory: {
+    id: 'armory',
     name: "Halda's Armory",
     tag: 'Armorer',
     keeper: 'armorer',
@@ -67,6 +70,7 @@ export const SHOPS: Record<string, Shop> = {
     buys: isSlot('head', 'chest', 'legs'),
   },
   ranger: {
+    id: 'ranger',
     name: "The Ranger's Lodge",
     tag: 'Ranger',
     keeper: 'ranger',
@@ -84,12 +88,13 @@ export const SHOPS: Record<string, Shop> = {
     buys: (item) => isBow(item) || isSlot('feet', 'cape')(item),
   },
   apothecary: {
+    id: 'apothecary',
     name: "Wren's Apothecary",
     tag: 'Apothecary',
     keeper: 'apothecary',
-    greeting: ['Potions for the bruised, elixirs for the brave.', 'Drink them from the Inventory tab of your menu.'],
+    greeting: ['Potions for the bruised, elixirs for the brave.', 'Drink them from the Gear tab of your menu.'],
     stock: ['potion', 'elixir'],
-    buys: (item) => isSupply(item) || isSlot('tool')(item), // bandages and the like
+    buys: isSupply,
   },
 };
 
@@ -99,31 +104,31 @@ export const SHOP_IDS = Object.keys(SHOPS);
 export type Trade = { ok: true; text: string; worn?: Item } | { ok: false; text: string };
 
 /**
- * Buy one of a shop's items. It goes into the pack, and gear that beats what the hero wears is put on from there (the
- * piece it replaces stays in the pack). A full pack refuses the sale.
+ * Buy one of a shop's items. Gear that beats what the hero wears is put on (what it replaces goes into the pack);
+ * anything else goes into the pack.
  */
 export function buy(hero: Hero, shop: Shop, id: ItemId): Trade {
   const item: Item = ITEMS[id];
   if (!shop.stock.includes(id)) return { ok: false, text: `${shop.name} does not sell that` };
   const price = buyPrice(item);
   if (hero.gold < price) return { ok: false, text: `Not enough gold (${price - hero.gold} short)` };
-  if (!hasRoom(hero)) return { ok: false, text: 'Your pack is full' };
-  const upgrade = item.slot !== undefined && isBetter(hero, item);
-  addToPack(hero, item);
+  // Gear that beats what is worn goes on (the old piece takes a pack slot); anything else needs a free slot.
+  const old = item.slot ? (item.slot === 'weapon' ? hero.weapon : hero[item.slot]) : undefined;
+  const wears = item.slot !== undefined && isBetter(hero, item);
+  if ((!wears || old) && !hasRoom(hero)) return { ok: false, text: 'Your pack is full' };
   hero.gold -= price;
-  // The old piece takes the new one's place in the pack, so wearing never needs more room than the purchase did.
-  if (upgrade && equipFromPack(hero, hero.pack.length - 1).ok) {
+  if (wears) {
+    wearIfBetter(hero, item);
     return { ok: true, text: `Bought and wearing ${item.name}`, worn: item };
   }
+  addToPack(hero, item);
   return { ok: true, text: `Bought ${item.name}` };
 }
 
-/** Sell the item at `index` in the pack, if this shop deals in it. */
-export function sell(hero: Hero, shop: Shop, index: number): Trade {
-  const item = hero.pack[index];
-  if (!item) return { ok: false, text: 'You do not have that' };
+/** Sell one of `item` from the pack, if this shop deals in it. */
+export function sell(hero: Hero, shop: Shop, item: Item): Trade {
   if (!shop.buys(item)) return { ok: false, text: `${shop.name} has no use for that` };
-  hero.pack.splice(index, 1);
+  if (!takeFromPack(hero, item)) return { ok: false, text: 'You do not have that' };
   const price = sellPrice(item);
   hero.gold += price;
   return { ok: true, text: `Sold ${item.name} for ${price}g` };

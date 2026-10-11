@@ -1,4 +1,4 @@
-import { ACTIONS, ACTION_LABELS, FIXED_KEYS, SLOTS, codeLabel, type Action } from '../core/bindings';
+import { ACTIONS, ACTION_LABELS, SLOTS, codeLabel, type Action } from '../core/bindings';
 import { bindings, persistBindings } from '../core/controls';
 import { input } from '../core/input';
 import type { TouchControls } from '../core/touch';
@@ -62,12 +62,13 @@ export class Keybinds {
     const names = (a: Action) => bindings.codes(a).map(codeLabel).join(', ') || '—';
     for (const cell of document.querySelectorAll<HTMLElement>('#menu-controls [data-bound]')) {
       const what = cell.dataset.bound;
-      const first = (a: Action) => codeLabel(bindings.codes(a)[0] ?? '');
-      if (what === 'move') cell.textContent = (['up', 'left', 'down', 'right'] as const).map(first).join(' ');
-      else if (what === 'tabs')
-        cell.textContent = `${first('left')} / ${first('right')}`; // the move keys: see tabStep()
-      else if (what === 'menu' || what === 'map') cell.textContent = FIXED_KEYS[what].map(codeLabel).join(', ');
-      else cell.textContent = names(what as Action);
+      cell.textContent =
+        what === 'move'
+          ? (['up', 'left', 'down', 'right'] as const)
+              .map((a) => bindings.codes(a)[0] ?? '—')
+              .map(codeLabel)
+              .join(' ')
+          : names(what as Action);
     }
     for (const action of ACTIONS) {
       for (let slot = 0; slot < SLOTS; slot++) {

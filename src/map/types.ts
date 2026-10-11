@@ -46,6 +46,12 @@ export interface ShopSpawn extends CellPoint {
   shop: string;
 }
 
+/** Walking onto a door cell takes the player to another zone (`to.col`/`to.row` is where they appear). */
+export interface DoorSpawn extends CellPoint {
+  w: number; // cells wide, starting at `col` (a hall's door is two cells wide, a tower's one)
+  to: { zone: string; col: number; row: number };
+}
+
 /**
  * The on-disk map format (public/maps/<zone>.json). Generated from a zone spec in maps/ by
  * `npm run map -- build`; don't edit the JSON by hand.
@@ -68,6 +74,8 @@ export interface MapData {
   mobs: MobSpawn[];
   chests: ChestSpawn[]; // solid; opened with the action key
   shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
+  doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, and the way back out)
+  indoor: boolean; // no weather, no overlay map: a room rather than the open world
 }
 
 export function parseMap(json: unknown): MapData {
@@ -93,5 +101,7 @@ export function parseMap(json: unknown): MapData {
     mobs: d.mobs ?? [],
     chests: d.chests ?? [],
     shops: d.shops ?? [],
+    doors: d.doors ?? [],
+    indoor: d.indoor ?? false,
   };
 }

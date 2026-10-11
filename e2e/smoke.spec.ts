@@ -52,4 +52,21 @@ test.describe('touch', () => {
     await expect(page.locator('#touch-controls')).toBeVisible();
     await expect(page.locator('#dpad')).toBeVisible();
   });
+
+  test('taps on the menu, shop and trade screens keep their clicks (only game input is cancelled)', async ({
+    page,
+  }) => {
+    await boot(page);
+    const cancelled = (selector: string) =>
+      page.evaluate((sel) => {
+        const el = document.querySelector(sel)!;
+        const event = new Event('touchend', { bubbles: true, cancelable: true });
+        el.dispatchEvent(event);
+        return event.defaultPrevented;
+      }, selector);
+    expect(await cancelled('#dpad')).toBe(true); // game input: no zoom, no callout
+    for (const screen of ['#menu', '#shop', '#trade', '#trade-request']) {
+      expect(await cancelled(screen), screen).toBe(false); // their buttons need the browser's click
+    }
+  });
 });

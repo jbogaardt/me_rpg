@@ -94,6 +94,15 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     points.push([`shopkeeper ${sh.shop}`, sh]);
     if (!SHOPS[sh.shop]) errors.push(`shopkeeper at (${sh.col},${sh.row}) runs unknown shop "${sh.shop}" (SHOPS)`);
   }
+  const doorCells = new Set<number>();
+  for (const door of d.doors) {
+    for (let i = 0; i < door.w; i++) {
+      points.push([`door to ${door.to.zone}`, { col: door.col + i, row: door.row }]);
+      doorCells.add(door.row * W + door.col + i);
+    }
+    if (door.w < 1) errors.push(`door at (${door.col},${door.row}) is ${door.w} cells wide`);
+    if (!door.to.zone) errors.push(`door at (${door.col},${door.row}) leads nowhere`);
+  }
   const chestPoints: [string, { col: number; row: number }][] = d.chests.map((c) => {
     if (!(CHEST_KINDS as readonly string[]).includes(c.kind))
       errors.push(`chest at (${c.col},${c.row}) has unknown kind "${c.kind}" (CHEST_KINDS)`);
@@ -155,7 +164,9 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   cov.forEach((c, i) => {
     const below = i + W;
     // Foliage over an open cell is fine only as the walk-behind fringe just above something solid.
-    if (!blocked.has(i) && foliage[i] >= 0.5 && !(below < cov.length && blocked.has(below))) hidden.push(i);
+    if (!blocked.has(i) && foliage[i] >= 0.5 && !(below < cov.length && blocked.has(below)) && !doorCells.has(i)) {
+      hidden.push(i);
+    }
     if (blocked.has(i) && c < 0.15 && !reasons.has(i)) walls.push(i);
   });
   const list = (cells: number[]) =>
@@ -164,4 +175,37 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   if (walls.length) warnings.push(`invisible walls (blocked, almost no art) at ${list(walls)}`);
 
   return { errors, warnings };
+}
+
+/**
+ * Checks across zones: every door leads to a zone that exists, lands on an open cell that is not itself a door, and the
+ * other zone has a door back (travel is two-way). `maps` is every zone by name.
+ */
+export function checkDoors(maps: Map<string, MapData>): string[] {
+  const errors: string[] = [];
+  for (const [name, d] of maps) {
+    for (const door of d.doors) {
+      const where = `${name}: door at (${door.col},${door.row})`;
+      const target = maps.get(door.to.zone);
+      if (!target) {
+        errors.push(`${where} leads to unknown zone "${door.to.zone}"`);
+        continue;
+      }
+      const { col, row } = door.to;
+      const index = row * target.width + col;
+      if (col < 0 || row < 0 || col >= target.width || row >= target.height) {
+        errors.push(`${where} arrives outside "${door.to.zone}" at (${col},${row})`);
+      } else if (target.collision.includes(index)) {
+        errors.push(`${where} arrives on a blocked cell of "${door.to.zone}" (${col},${row})`);
+      } else if (target.doors.some((t) => row === t.row && col >= t.col && col < t.col + t.w)) {
+        errors.push(
+          `${where} arrives on a door of "${door.to.zone}" (${col},${row}), which would bounce the player back`,
+        );
+      }
+      if (!target.doors.some((t) => t.to.zone === name)) {
+        errors.push(`${where}: "${door.to.zone}" has no door back to "${name}"`);
+      }
+    }
+  }
+  return errors;
 }
