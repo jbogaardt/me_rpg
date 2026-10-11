@@ -21,10 +21,15 @@ export class Player {
   /** A bow being drawn: the arrow leaves when `timer` runs out (host and solo; a hit while drawing spoils it). */
   pendingShot: { timer: number; bow: Ranged; damage: number } | null = null;
   invuln = 0; // seconds of blinking immunity after a hit
+  grace = 0; // seconds of silent immunity on arriving in a zone (no blink: the door transition covers the arrival)
   sinceHit = Infinity; // seconds since last hurt (HP regenerates after a pause)
   knock = { x: 0, y: 0 };
   aim = { x: 0, y: 1 }; // unit vector of the last move (diagonals included): where magic bolts fly
   vel = { x: 0, y: 0 }; // px/s walking velocity; only differs from the held direction while sliding on ice
+  /** Immune to damage right now, from a recent hit (blinking) or from just having come through a door (not). */
+  get safe(): boolean {
+    return this.invuln > 0 || this.grace > 0;
+  }
   /** The zone this player is in (a key of the scene's zones). The host moves players between zones; a guest follows. */
   zone = '';
   moving = false; // was trying to move this tick (drives the walk cycle, and the guest's copy of it)

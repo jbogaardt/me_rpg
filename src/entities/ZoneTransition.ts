@@ -105,10 +105,15 @@ export class ZoneTransition {
     const { open, closing } = irisAt(this.t, this.held);
     if (!closing) this.dropShot();
     const c = closing ? this.centre : centre;
-    const r = open * coverRadius(c.x, c.y, w, h);
-    this.shade.clear().rect(0, 0, w, h).fill(0x000000);
-    if (r > 0.5) this.shade.circle(c.x, c.y, r).cut();
-    this.shade.visible = true;
+    const cover = coverRadius(c.x, c.y, w, h);
+    const r = open * cover;
+    // The black is a ring from the circle's edge out past the farthest corner (a stroke), not a rectangle with a hole
+    // cut in it: a hole that crosses the rectangle's edge (a circle larger than the screen, as at the start of the
+    // close and the end of the open) is not drawn as the shape it should be and flashes the whole screen black.
+    this.shade.clear();
+    if (r < 0.5) this.shade.rect(0, 0, w, h).fill(0x000000);
+    else if (r < cover) this.shade.circle(c.x, c.y, r + cover / 2).stroke({ width: cover, color: 0x000000 });
+    this.shade.visible = r < cover;
     if (!this.held && this.t >= transitionLength('iris')) this.finish();
     return STILL;
   }

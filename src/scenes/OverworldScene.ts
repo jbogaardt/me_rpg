@@ -99,7 +99,7 @@ const CAST_COOLDOWN = 0.45;
 const KEEPER_REACH = CELL * 2.3; // how close the action key must be to talk to a shopkeeper (across a counter)
 const PREFETCH_REACH = 5 * CELL; // a door this close starts loading the zone behind it
 const PREFETCH_EVERY = 0.5; // seconds between looking for doors to prefetch
-const ARRIVE_INVULN = 2; // seconds of blinking immunity on arriving in a zone (the transition takes ~1), so nothing waiting at the door ambushes you
+const ARRIVE_GRACE = 1.8; // seconds of silent immunity on arriving in a zone (the transition takes up to 1 s, and the world runs behind it), so nothing waiting at the door ambushes you
 const PICKUP_REACH = 26; // how close the action key must be to an item on the ground
 const CHEST_REACH = CELL * 1.4; // how close the action key must be to a chest (feet to the chest's cell centre)
 const MELEE_REACH = 22; // radius of the sword's hit circle, centred just in front of the hero
@@ -579,7 +579,7 @@ export class OverworldScene implements Scene {
     p.vel = { x: 0, y: 0 };
     p.knock = { x: 0, y: 0 };
     p.pendingShot = null;
-    p.invuln = Math.max(p.invuln, ARRIVE_INVULN);
+    p.grace = Math.max(p.grace, ARRIVE_GRACE);
     this.syncHeroBodies();
     if (p === this.local) this.showZone(dest);
   }
@@ -756,6 +756,7 @@ export class OverworldScene implements Scene {
       this.local.target = null;
       this.local.flags = 0;
       this.local.invuln = 0;
+      this.local.grace = 0;
       this.local.knock = { x: 0, y: 0 };
       this.local.vel = { x: 0, y: 0 };
       this.player.alpha = 1;
@@ -1233,8 +1234,7 @@ export class OverworldScene implements Scene {
   private lightningHits({ x, y }: { x: number; y: number }) {
     this.fx('hitSpark', x, y);
     for (const p of this.players()) {
-      if (p.zone !== this.zone.name || p.invuln > 0 || Math.hypot(p.body.x - x, p.body.y - y) > LIGHTNING_RADIUS)
-        continue;
+      if (p.zone !== this.zone.name || p.safe || Math.hypot(p.body.x - x, p.body.y - y) > LIGHTNING_RADIUS) continue;
       this.harm(p, Math.max(1, Math.round(p.hero.stats.maxHp * LIGHTNING_DAMAGE)), x, y);
     }
   }
@@ -1291,6 +1291,7 @@ export class OverworldScene implements Scene {
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
     p.invuln = Math.max(0, p.invuln - dt);
+    p.grace = Math.max(0, p.grace - dt);
     p.sinceHit += dt;
     if (p.pendingShot && (p.pendingShot.timer -= dt) <= 0) this.release(p);
     s.mp = Math.min(s.maxMp, s.mp + MP_REGEN * dt);
@@ -1623,7 +1624,7 @@ export class OverworldScene implements Scene {
       // Hits the first player it touches (one blinking with invulnerability lets it pass), stops at walls. The players
       // are looked up each step: someone may have joined or left while it flies.
       const hit = this.players().find(
-        (p) => p.invuln <= 0 && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14,
+        (p) => !p.safe && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14,
       );
       if (hit) this.hurtHero(mob, hit.body);
       return hit !== undefined;
@@ -1706,7 +1707,7 @@ export class OverworldScene implements Scene {
 
   private hurtHero(mob: Mob, victim: Character) {
     const p = this.players().find((q) => q.body === victim);
-    if (!p || p.invuln > 0) return;
+    if (!p || p.safe) return;
     this.harm(p, rollDamage(mob.kind.attack, defensePower(p.hero)), mob.body.x, mob.body.y);
   }
 
