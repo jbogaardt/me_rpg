@@ -76,18 +76,19 @@
             </p>
           </section>
           <section id="menu-online" hidden>
-            <h2>Multiplayer <small>2 players</small></h2>
+            <h2>Multiplayer <small>up to 4 players</small></h2>
             <div id="mp-mode" role="radiogroup" aria-label="Multiplayer mode">
               <button type="button" role="radio" data-mode="off" aria-checked="true">Solo / Off</button>
               <button type="button" role="radio" data-mode="host" aria-checked="false">Host</button>
               <button type="button" role="radio" data-mode="join" aria-checked="false">Join</button>
             </div>
             <p id="mp-status" class="mp-status"><span class="dot"></span><span class="label"></span></p>
+            <ul id="mp-roster" class="mp-roster" aria-label="Players" hidden></ul>
 
             <div id="mp-host" hidden>
               <button type="button" id="mp-create" class="mp-btn panel thin wood">Create Game</button>
               <div id="mp-share" hidden>
-                <label for="mp-code">Game code (tell your friend)</label>
+                <label for="mp-code">Game code (tell your friends)</label>
                 <output id="mp-code" class="mp-code" tabindex="0"></output>
                 <div class="mp-row">
                   <button type="button" id="mp-copy-code" class="mp-btn panel thin wood">Copy Code</button>
@@ -104,6 +105,7 @@
 
             <div id="mp-active" hidden>
               <p class="mp-connected"></p>
+              <button type="button" id="mp-start" class="mp-btn panel thin wood" hidden>Start Game</button>
               <button type="button" id="mp-disconnect" class="mp-btn panel thin wood">Disconnect</button>
             </div>
 

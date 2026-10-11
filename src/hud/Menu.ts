@@ -15,7 +15,7 @@ export class Menu {
   private tab = 0;
 
   constructor(session: Session) {
-    new Multiplayer(session); // owns the Online tab
+    new Multiplayer(session, () => this.close()); // owns the Online tab
     for (const [i, name] of TABS.entries()) {
       this.tabButton(name).addEventListener('click', () => this.select(i));
     }
@@ -28,6 +28,12 @@ export class Menu {
     const index = tab ? TABS.indexOf(tab) : -1;
     if (index >= 0) this.tab = index;
     if (this.open) this.render(hero);
+  }
+
+  /** Close the menu (a no-op if it is already closed). */
+  close() {
+    this.open = false;
+    this.root.hidden = true;
   }
 
   /** Called each frame while open. */

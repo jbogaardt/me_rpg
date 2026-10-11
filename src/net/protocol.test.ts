@@ -9,6 +9,7 @@ import {
   unpackKeys,
   type InputMsg,
   type MobSnap,
+  type PlayerSnap,
   type SnapMsg,
 } from './protocol';
 
@@ -17,8 +18,8 @@ const snap: SnapMsg = {
   k: 'snap',
   n: 7,
   players: [
-    [10, 20, 0, 1],
-    [30, 40, 3, 6],
+    [0, 10, 20, 0, 1],
+    [2, 30, 40, 3, 6],
   ],
   mobs: [mob, [1, 2, 0, 5, 0, 5000, 0]],
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10],
@@ -27,7 +28,7 @@ const snap: SnapMsg = {
     { id: 5, e: { type: 'slash', x: 1, y: 2, dir: 3 } },
     { id: 6, e: { type: 'bolt', x: 1, y: 2, vx: 260, vy: 0 } },
     { id: 10, e: { type: 'bolt', x: 5, y: 6, vx: -135, vy: 0, color: 0xb06cff } }, // an enemy's shot
-    { id: 7, e: { type: 'defeat', player: 1 } },
+    { id: 7, e: { type: 'defeat', player: 3 } },
     { id: 8, e: { type: 'fx', name: 'hitSpark', x: 3, y: 4, dir: 1.6 } },
     { id: 9, e: { type: 'fx', name: 'levelUp', x: 3, y: 4 } },
   ],
@@ -52,9 +53,18 @@ describe('messages', () => {
     for (const m of [input, hello, snap]) expect(parseMessage(encodeMessage(m))).toEqual(m);
   });
 
-  it('keeps a full snapshot well under one network packet per 20 mobs', () => {
-    const big = { ...snap, mobs: Array.from({ length: 20 }, () => mob) };
-    expect(encodeMessage(big).length).toBeLessThan(1200);
+  it('keeps a full four-player snapshot well under one network packet, with 20 mobs and events', () => {
+    const everyone = Array.from({ length: 4 }, (_, slot): PlayerSnap => [slot, 1234.5, 2345.6, 3, 7]);
+    const big = { ...snap, players: everyone, mobs: Array.from({ length: 20 }, () => mob) };
+    expect(encodeMessage(big).length).toBeLessThan(1400);
+  });
+
+  it('accepts one to four players, in any order, and keeps their numbers', () => {
+    for (const slots of [[0], [0, 3], [3, 0, 1], [0, 1, 2, 3]]) {
+      const players = slots.map((slot): PlayerSnap => [slot, 1, 2, 0, 0]);
+      const parsed = parseMessage(JSON.stringify({ ...snap, players }));
+      expect(parsed).toMatchObject({ k: 'snap', players });
+    }
   });
 
   it('rejects non-JSON, non-objects and unknown kinds', () => {
@@ -73,9 +83,22 @@ describe('messages', () => {
 
   it('rejects malformed snapshots', () => {
     const bad: Record<string, unknown>[] = [
-      { ...snap, players: [snap.players[0]] },
-      { ...snap, players: [[1, 2, 9, 0], snap.players[1]] }, // direction out of range
-      { ...snap, players: [[1, 2, 0, 99], snap.players[1]] }, // unknown flags
+      { ...snap, players: [] },
+      { ...snap, players: 'x' },
+      { ...snap, players: Array.from({ length: 5 }, (_, slot) => [slot, 1, 2, 0, 0]) }, // more than four players
+      {
+        ...snap,
+        players: [
+          [0, 1, 2, 0, 0],
+          [0, 3, 4, 1, 0],
+        ],
+      }, // the same player twice
+      { ...snap, players: [[4, 1, 2, 0, 0]] }, // player number out of range
+      { ...snap, players: [[-1, 1, 2, 0, 0]] },
+      { ...snap, players: [[0, 1, 2, 0]] }, // the old four-number shape
+      { ...snap, players: [[0, 1, 2, 9, 0]] }, // direction out of range
+      { ...snap, players: [[0, 1, 2, 0, 99]] }, // unknown flags
+      { ...snap, players: [[0, Infinity, 2, 0, 0]] },
       { ...snap, mobs: [[1, 2, 0, 99, 5, 0, 0]] }, // unknown state
       { ...snap, mobs: [[1, 2, 0, 0, 5, 0]] }, // short tuple
       { ...snap, mobs: [[Infinity, 2, 0, 0, 5, 0, 0]] },

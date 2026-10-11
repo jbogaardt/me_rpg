@@ -11,10 +11,11 @@
 
 import type { Direction } from '../entities/Character';
 import { MOB_STATES } from '../systems/combat';
+import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -33,11 +34,14 @@ export function unpackKeys(keys: number): { dx: number; dy: number } {
   };
 }
 
+/** Players in a game: the host (player 0) and up to MAX_GUESTS friends (players 1 to MAX_GUESTS). */
+export const MAX_PLAYERS = MAX_GUESTS + 1;
+
 /** PlayerSnap flag bits. */
 export const FLAG = { moving: 1, invuln: 2, swing: 4 } as const;
 
-/** [x, y, direction index, FLAG bits] */
-export type PlayerSnap = [number, number, number, number];
+/** [player number, x, y, direction index, FLAG bits] */
+export type PlayerSnap = [number, number, number, number, number];
 /** [x, y, direction index, MOB_STATES index, hp, windup/recover/respawn timer ms, moving 0|1] */
 export type MobSnap = [number, number, number, number, number, number, number];
 /** [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] */
@@ -53,7 +57,7 @@ export type WorldEvent =
   | { type: 'bolt'; x: number; y: number; vx: number; vy: number; color?: number } // `color` set: an enemy's shot (the guest only draws it)
   | { type: 'text'; x: number; y: number; text: string; color: number }
   | { type: 'fx'; name: FxName; x: number; y: number; dir?: number }
-  | { type: 'defeat'; player: number }; // the player (0 host, 1 guest) was knocked out and sent back to spawn
+  | { type: 'defeat'; player: number }; // this player (0 is the host) was knocked out and sent back to spawn
 
 export interface HelloMsg {
   k: 'hello';
@@ -70,11 +74,14 @@ export interface InputMsg {
   mag: number; // times the magic button was pressed
 }
 
-/** Host -> guest: the world. `players` is [host, guest]; `me` is the guest's stats. */
+/**
+ * Host -> guest: the world. `players` lists everyone connected, the host included, each tagged with their player
+ * number; `me` is the recipient's own stats.
+ */
 export interface SnapMsg {
   k: 'snap';
   n: number;
-  players: [PlayerSnap, PlayerSnap];
+  players: PlayerSnap[];
   mobs: MobSnap[];
   me: StatsSnap;
   events: { id: number; e: WorldEvent }[];
@@ -131,16 +138,16 @@ function parseEvent(raw: unknown): WorldEvent | null {
         ? { type: 'fx', name: e.name as FxName, x: e.x, y: e.y, dir: e.dir }
         : null;
     case 'defeat':
-      return isIndex(e.player, 2) ? { type: 'defeat', player: e.player } : null;
+      return isIndex(e.player, MAX_PLAYERS) ? { type: 'defeat', player: e.player } : null;
     default:
       return null;
   }
 }
 
 function parsePlayer(raw: unknown): PlayerSnap | null {
-  if (!numbers(raw, 4) || !raw.every((v, i) => (i < 2 ? isCoord(v) : isCount(v)))) return null;
-  const [x, y, dir, flags] = raw as PlayerSnap;
-  return isIndex(dir, DIRS.length) && flags <= 7 ? [x, y, dir, flags] : null;
+  if (!numbers(raw, 5) || !raw.every((v, i) => (i === 1 || i === 2 ? isCoord(v) : isCount(v)))) return null;
+  const [slot, x, y, dir, flags] = raw as PlayerSnap;
+  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 7 ? [slot, x, y, dir, flags] : null;
 }
 
 function parseMob(raw: unknown): MobSnap | null {
@@ -178,7 +185,10 @@ export function parseMessage(raw: unknown): Message | null {
         ? { k: 'in', n: m.n, keys: m.keys, act: m.act, mag: m.mag }
         : null;
     case 'snap': {
-      const players = Array.isArray(m.players) ? m.players.map(parsePlayer) : [];
+      const players =
+        Array.isArray(m.players) && m.players.length >= 1 && m.players.length <= MAX_PLAYERS
+          ? m.players.map(parsePlayer)
+          : null;
       const mobs = Array.isArray(m.mobs) && m.mobs.length <= MAX_MOBS ? m.mobs.map(parseMob) : null;
       const rawEvents = Array.isArray(m.events) && m.events.length <= MAX_EVENTS ? m.events : null;
       const events = (rawEvents ?? []).map((item: unknown) => {
@@ -186,11 +196,10 @@ export function parseMessage(raw: unknown): Message | null {
         const event = isCount(id) ? parseEvent(e) : null;
         return event && isCount(id) ? { id, e: event } : null;
       });
-      const [host, guest] = players;
       if (
-        !host ||
-        !guest ||
-        players.length !== 2 ||
+        !players ||
+        players.includes(null) ||
+        new Set(players.map((p) => p?.[0])).size !== players.length || // each player appears once
         !isCount(m.n) ||
         !mobs ||
         mobs.includes(null) ||
@@ -203,7 +212,7 @@ export function parseMessage(raw: unknown): Message | null {
       return {
         k: 'snap',
         n: m.n,
-        players: [host, guest],
+        players: players as PlayerSnap[],
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
         events: events as { id: number; e: WorldEvent }[],

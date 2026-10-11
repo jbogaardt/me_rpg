@@ -36,6 +36,20 @@ export interface LinkHandlers {
   message?(data: string): void;
 }
 
+/** What the session needs from a link, so tests can stand in a fake for the real WebRTC one. */
+export interface Link {
+  readonly role: LinkRole;
+  readonly status: LinkStatus;
+  createOffer(): Promise<string>;
+  acceptAnswer(answer: string): Promise<void>;
+  acceptOffer(offer: string): Promise<string>;
+  answerDelivered(): void;
+  send(data: string): boolean;
+  close(detail?: string): void;
+}
+
+export type LinkFactory = (role: LinkRole, handlers: LinkHandlers) => Link;
+
 /** Thrown when the link was closed while an async step was still running. Not an error to show the player. */
 export class LinkClosed extends Error {
   constructor() {
@@ -58,7 +72,7 @@ function gatheringComplete(pc: RTCPeerConnection, timeoutMs: number): Promise<vo
   });
 }
 
-export class PeerLink {
+export class PeerLink implements Link {
   private _status: LinkStatus = 'idle';
   private _detail = '';
   private pc: RTCPeerConnection | null = null;

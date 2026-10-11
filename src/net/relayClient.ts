@@ -1,4 +1,4 @@
-import { API_VERSION, isPayload, MAX_WAIT_S } from './relayApi';
+import { API_VERSION, isPayload, MAX_GUESTS, MAX_WAIT_S, type SeatAnswer } from './relayApi';
 
 // The game's side of the matchmaking relay (relay/): turns "make a game", "join this code" and "wait for my
 // friend" into HTTP calls, and every failure into words fit to show a player. It only ever carries the connection
@@ -30,8 +30,16 @@ export interface Room {
 }
 
 export interface Invitation {
+  /** The friend's player number: 1 to MAX_GUESTS (the host is 0). */
+  slot: number;
   offer: string;
   guestToken: string;
+}
+
+/** What a round of waiting for answers brought. `next` is where to continue from. */
+export interface Answers {
+  answers: SeatAnswer[];
+  next: number;
 }
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -61,51 +69,56 @@ export class RelayClient {
     private fetchFn: typeof fetch = (input, init) => fetch(input, init),
   ) {}
 
-  /** Host: store the offer under a fresh game code. */
-  async createRoom(offer: string, signal?: AbortSignal): Promise<Room> {
-    const res = await this.request('POST', '/rooms', { body: { offer }, signal });
+  /** Host: store one offer per seat under a fresh game code. */
+  async createRoom(offers: string[], signal?: AbortSignal): Promise<Room> {
+    const res = await this.request('POST', '/rooms', { body: { offers }, signal });
     if (res.status !== 201) throw this.failure(res);
     const body = await this.readJson(res);
     if (typeof body.code !== 'string' || typeof body.hostToken !== 'string') throw new RelayError('server');
     return { code: body.code, hostToken: body.hostToken };
   }
 
-  /** Friend: take the host's offer. `code` must already be in canonical form (see normalizeCode). */
+  /** Friend: take the next free seat. `code` must already be in canonical form (see normalizeCode). */
   async join(code: string, signal?: AbortSignal): Promise<Invitation> {
     const res = await this.request('POST', `/rooms/${encodeURIComponent(code)}/join`, { signal });
     if (res.status === 404) throw new RelayError('not_found');
     if (res.status !== 200) throw this.failure(res);
     const body = await this.readJson(res);
-    if (!isPayload(body.offer) || typeof body.guestToken !== 'string') throw new RelayError('server');
-    return { offer: body.offer, guestToken: body.guestToken };
+    const { slot, offer, guestToken } = body;
+    if (!isSlot(slot) || !isPayload(offer) || typeof guestToken !== 'string') throw new RelayError('server');
+    return { slot, offer, guestToken };
   }
 
-  /** Friend: hand back the answer. */
+  /** Friend: hand back the answer for the seat they were given. */
   async sendAnswer(code: string, guestToken: string, answer: string, signal?: AbortSignal): Promise<void> {
     const res = await this.request('POST', `/rooms/${encodeURIComponent(code)}/answer`, {
       body: { guestToken, answer },
       signal,
     });
-    if (res.status === 404) throw new RelayError('expired'); // the host gave up, or the code timed out, meanwhile
+    if (res.status === 404 || res.status === 403) throw new RelayError('expired'); // the host closed up, or the seat timed out
     if (res.status !== 204) throw this.failure(res);
   }
 
   /**
-   * Host: wait for the friend's answer. The relay holds each request open until the answer arrives, so it comes
-   * through within a moment of the friend sending it; this just asks again whenever a wait runs out. Rejects with
-   * the signal's reason if aborted.
+   * Host: wait for friends' answers after position `after`. The relay holds the request open until one arrives (up to
+   * LONG_POLL_S), so an answer comes through within a moment of being sent; an empty list just means "nothing yet", so
+   * call again with `next`. Rejects with the signal's reason if aborted, and with 'expired' once the room is gone.
    */
-  async waitForAnswer(room: Room, signal: AbortSignal): Promise<string> {
+  async waitForAnswers(room: Room, after: number, signal: AbortSignal): Promise<Answers> {
     let drops = 0;
     for (;;) {
       signal.throwIfAborted();
       let res: Response;
       try {
-        res = await this.request('GET', `/rooms/${encodeURIComponent(room.code)}/answer?wait=${LONG_POLL_S}`, {
-          token: room.hostToken,
-          signal,
-          timeoutMs: (LONG_POLL_S + 10) * 1000,
-        });
+        res = await this.request(
+          'GET',
+          `/rooms/${encodeURIComponent(room.code)}/answers?after=${after}&wait=${LONG_POLL_S}`,
+          {
+            token: room.hostToken,
+            signal,
+            timeoutMs: (LONG_POLL_S + 10) * 1000,
+          },
+        );
       } catch (err) {
         if (signal.aborted || !(err instanceof RelayError) || err.kind !== 'unreachable' || ++drops > POLL_RETRIES) {
           throw err;
@@ -113,17 +126,36 @@ export class RelayClient {
         await sleep(RETRY_DELAY_MS * drops, signal);
         continue;
       }
-      drops = 0;
-      if (res.status === 204) continue; // nothing yet: ask again
-      if (res.status === 404) throw new RelayError('expired');
+      if (res.status === 404 || res.status === 403) throw new RelayError('expired');
       if (res.status !== 200) throw this.failure(res);
       const body = await this.readJson(res);
-      if (!isPayload(body.answer)) throw new RelayError('server');
-      return body.answer;
+      const answers = parseAnswers(body.answers);
+      if (!answers || typeof body.next !== 'number' || !Number.isInteger(body.next) || body.next < after) {
+        throw new RelayError('server');
+      }
+      return { answers, next: body.next };
     }
   }
 
-  /** Host: tell the relay the code is no longer wanted. Best effort; the relay forgets it on its own soon anyway. */
+  /** Host: put a fresh offer in a seat whose friend left or never connected, so someone else can take it. */
+  async reopenSeat(room: Room, slot: number, offer: string, signal?: AbortSignal): Promise<void> {
+    const res = await this.request('PUT', `/rooms/${encodeURIComponent(room.code)}/seats/${slot}`, {
+      body: { offer },
+      token: room.hostToken,
+      signal,
+    });
+    if (res.status === 404 || res.status === 409) throw new RelayError('expired');
+    if (res.status !== 204) throw this.failure(res);
+  }
+
+  /** Host: no more friends. Best effort: the relay forgets the code on its own soon anyway. */
+  closeRoom(room: Room): void {
+    this.request('POST', `/rooms/${encodeURIComponent(room.code)}/close`, { token: room.hostToken }).catch(
+      () => undefined,
+    );
+  }
+
+  /** Host: tell the relay the code is no longer wanted. Best effort, like closeRoom. */
   cancel(room: Room): void {
     this.request('DELETE', `/rooms/${encodeURIComponent(room.code)}`, { token: room.hostToken }).catch(() => undefined);
   }
@@ -178,4 +210,18 @@ export class RelayClient {
       return {};
     }
   }
+}
+
+const isSlot = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= MAX_GUESTS;
+
+function parseAnswers(value: unknown): SeatAnswer[] | null {
+  if (!Array.isArray(value) || value.length > MAX_GUESTS * 4) return null;
+  const answers: SeatAnswer[] = [];
+  for (const item of value as unknown[]) {
+    const { slot, answer } = (item ?? {}) as { slot?: unknown; answer?: unknown };
+    if (!isSlot(slot) || !isPayload(answer)) return null;
+    answers.push({ slot, answer });
+  }
+  return answers;
 }

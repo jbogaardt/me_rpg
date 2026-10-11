@@ -4,7 +4,7 @@ import { createMemoryRelay } from './memory';
 
 // The real client talking to the real relay code (in memory) over a fetch that hands requests straight to it.
 
-const OFFER = 'zOFFER-abc_123';
+const OFFERS = ['zOFFER1-abc_123', 'zOFFER2-abc_123', 'zOFFER3-abc_123'];
 const ANSWER = 'zANSWER-def_456';
 
 function setup(overrides: { fetch?: typeof fetch } = {}) {
@@ -27,43 +27,62 @@ function setup(overrides: { fetch?: typeof fetch } = {}) {
 afterEach(() => vi.useRealTimers());
 
 describe('RelayClient', () => {
-  it('connects a host and a friend end to end', async () => {
+  it('connects a host and three friends end to end, each on their own seat', async () => {
     const { client } = setup();
-    const room = await client.createRoom(OFFER);
+    const room = await client.createRoom(OFFERS);
     expect(room.code).toMatch(/^[a-z]+-[a-z]+$/);
 
-    const waiting = client.waitForAnswer(room, new AbortController().signal);
-    const invitation = await client.join(room.code);
-    expect(invitation.offer).toBe(OFFER);
-    await client.sendAnswer(room.code, invitation.guestToken, ANSWER);
-    expect(await waiting).toBe(ANSWER);
+    const abort = new AbortController();
+    const seen: Record<number, string> = {};
+    let after = 0;
+    const host = (async () => {
+      while (Object.keys(seen).length < 3) {
+        const got = await client.waitForAnswers(room, after, abort.signal);
+        after = got.next;
+        for (const { slot, answer } of got.answers) seen[slot] = answer;
+      }
+    })();
+
+    for (const slot of [1, 2, 3]) {
+      const invitation = await client.join(room.code);
+      expect(invitation.slot).toBe(slot);
+      expect(invitation.offer).toBe(OFFERS[slot - 1]);
+      await client.sendAnswer(room.code, invitation.guestToken, `${ANSWER}${slot}`);
+    }
+    await host;
+    expect(seen).toEqual({ 1: `${ANSWER}1`, 2: `${ANSWER}2`, 3: `${ANSWER}3` });
+    await expect(client.join(room.code)).rejects.toMatchObject({ kind: 'not_found' }); // full
   });
 
-  it('keeps asking while the host waits, until the answer comes', async () => {
+  it('keeps asking while the host waits, until an answer comes', async () => {
     vi.useFakeTimers();
     const { client, relay } = setup();
-    const room = await client.createRoom(OFFER);
+    const room = await client.createRoom(OFFERS);
     const seen: string[] = [];
     const counting: typeof fetch = (input, init) => {
       seen.push(new Request(input).url);
       return relay.handle(new Request(input, { ...init, signal: undefined }));
     };
     const host = new RelayClient('https://relay.test', counting);
-    const waiting = host.waitForAnswer(room, new AbortController().signal);
 
-    await vi.advanceTimersByTimeAsync(21_000); // the relay's wait runs out, "not yet" comes back, the host asks again
-    expect(seen.length).toBeGreaterThanOrEqual(2);
+    // One round of waiting ends empty after the relay's wait runs out...
+    const idle = host.waitForAnswers(room, 0, new AbortController().signal);
+    await vi.advanceTimersByTimeAsync(21_000);
+    expect(await idle).toEqual({ answers: [], next: 0 });
 
+    // ...and the next round, started where the last left off, hears the answer as soon as it is sent.
+    const next = host.waitForAnswers(room, 0, new AbortController().signal);
     const invitation = await client.join(room.code);
     await client.sendAnswer(room.code, invitation.guestToken, ANSWER);
-    expect(await waiting).toBe(ANSWER);
+    expect(await next).toEqual({ answers: [{ slot: 1, answer: ANSWER }], next: 1 });
+    expect(seen.every((url) => url.includes('/answers?after=0&wait='))).toBe(true);
   });
 
   it('stops waiting when the host cancels, without calling it an error', async () => {
     const { client } = setup();
-    const room = await client.createRoom(OFFER);
+    const room = await client.createRoom(OFFERS);
     const abort = new AbortController();
-    const waiting = client.waitForAnswer(room, abort.signal);
+    const waiting = client.waitForAnswers(room, 0, abort.signal);
     abort.abort(new DOMException('cancelled', 'AbortError'));
     await expect(waiting).rejects.toMatchObject({ name: 'AbortError' });
   });
@@ -72,49 +91,77 @@ describe('RelayClient', () => {
     const { client } = setup();
     await expect(client.join('able-acorns')).rejects.toMatchObject({ kind: 'not_found' });
 
-    const room = await client.createRoom(OFFER);
+    const room = await client.createRoom(OFFERS);
     client.cancel(room);
     await new Promise((resolve) => setTimeout(resolve, 0));
-    await expect(client.waitForAnswer(room, new AbortController().signal)).rejects.toMatchObject({ kind: 'expired' });
+    await expect(client.waitForAnswers(room, 0, new AbortController().signal)).rejects.toMatchObject({
+      kind: 'expired',
+    });
   });
 
-  it('only lets one friend in', async () => {
+  it('refuses newcomers once the host has closed the game, but a friend already seated can finish', async () => {
     const { client } = setup();
-    const room = await client.createRoom(OFFER);
-    await client.join(room.code);
+    const room = await client.createRoom(OFFERS);
+    const early = await client.join(room.code);
+    client.closeRoom(room);
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await expect(client.join(room.code)).rejects.toMatchObject({ kind: 'not_found' });
+    await client.sendAnswer(room.code, early.guestToken, ANSWER);
+    const got = await client.waitForAnswers(room, 0, new AbortController().signal);
+    expect(got.answers).toEqual([{ slot: 1, answer: ANSWER }]);
+  });
+
+  it('lets the host reopen a seat so another friend can take it', async () => {
+    const { client } = setup();
+    const room = await client.createRoom(OFFERS.slice(0, 1));
+    const first = await client.join(room.code);
+    await client.sendAnswer(room.code, first.guestToken, ANSWER);
+    await expect(client.join(room.code)).rejects.toMatchObject({ kind: 'not_found' });
+
+    await client.reopenSeat(room, 1, 'zFRESH-offer_1');
+    const second = await client.join(room.code);
+    expect(second).toMatchObject({ slot: 1, offer: 'zFRESH-offer_1' });
+    await expect(client.reopenSeat(room, 2, 'zX')).rejects.toMatchObject({ kind: 'expired' }); // no seat 2
+  });
+
+  it('tells a friend whose seat timed out that it expired', async () => {
+    const { client } = setup();
+    const room = await client.createRoom(OFFERS);
+    const invitation = await client.join(room.code);
+    await expect(client.sendAnswer(room.code, 'not-the-token', ANSWER)).rejects.toMatchObject({ kind: 'expired' });
+    await client.sendAnswer(room.code, invitation.guestToken, ANSWER);
   });
 
   it('turns a rate limit and a server error into plain messages', async () => {
     const respond = (status: number) => setup({ fetch: () => Promise.resolve(new Response('{}', { status })) }).client;
-    await expect(respond(429).createRoom(OFFER)).rejects.toMatchObject({ kind: 'rate_limited' });
-    await expect(respond(500).createRoom(OFFER)).rejects.toMatchObject({ kind: 'server' });
+    await expect(respond(429).createRoom(OFFERS)).rejects.toMatchObject({ kind: 'rate_limited' });
+    await expect(respond(500).createRoom(OFFERS)).rejects.toMatchObject({ kind: 'server' });
     await expect(respond(403).join('able-acorns')).rejects.toMatchObject({ kind: 'server' });
-    await expect(respond(429).createRoom(OFFER)).rejects.toThrow(/Too many tries/);
+    await expect(respond(429).createRoom(OFFERS)).rejects.toThrow(/Too many tries/);
   });
 
   it('reports an unreachable server, and retries a waiting host through a brief drop', async () => {
     const down = setup({ fetch: () => Promise.reject(new TypeError('Failed to fetch')) }).client;
-    await expect(down.createRoom(OFFER)).rejects.toThrow(/Can’t reach the game server/);
+    await expect(down.createRoom(OFFERS)).rejects.toThrow(/Can’t reach the game server/);
 
     vi.useFakeTimers();
     let calls = 0;
     const flaky: typeof fetch = () => {
       calls++;
       if (calls <= 2) return Promise.reject(new TypeError('network changed'));
-      return Promise.resolve(Response.json({ answer: ANSWER }));
+      return Promise.resolve(Response.json({ answers: [{ slot: 2, answer: ANSWER }], next: 1 }));
     };
     const host = new RelayClient('https://relay.test', flaky);
-    const waiting = host.waitForAnswer({ code: 'able-acorns', hostToken: 't' }, new AbortController().signal);
+    const waiting = host.waitForAnswers({ code: 'able-acorns', hostToken: 't' }, 0, new AbortController().signal);
     await vi.advanceTimersByTimeAsync(5000);
-    expect(await waiting).toBe(ANSWER);
+    expect(await waiting).toEqual({ answers: [{ slot: 2, answer: ANSWER }], next: 1 });
     expect(calls).toBe(3);
   });
 
   it('gives up on a waiting host after a lasting outage', async () => {
     vi.useFakeTimers();
     const host = new RelayClient('https://relay.test', () => Promise.reject(new TypeError('offline')));
-    const waiting = host.waitForAnswer({ code: 'able-acorns', hostToken: 't' }, new AbortController().signal);
+    const waiting = host.waitForAnswers({ code: 'able-acorns', hostToken: 't' }, 0, new AbortController().signal);
     const outcome = expect(waiting).rejects.toBeInstanceOf(RelayError);
     await vi.advanceTimersByTimeAsync(30_000);
     await outcome;
@@ -123,9 +170,25 @@ describe('RelayClient', () => {
   it('does not trust a malformed reply', async () => {
     const odd = (body: unknown, status = 200) =>
       setup({ fetch: () => Promise.resolve(Response.json(body, { status })) }).client;
-    await expect(odd({ offer: 'has spaces', guestToken: 't' }).join('able-acorns')).rejects.toMatchObject({
+    const room = { code: 'able-acorns', hostToken: 't' };
+    const stop = new AbortController().signal;
+    await expect(odd({ slot: 1, offer: 'has spaces', guestToken: 't' }).join('able-acorns')).rejects.toMatchObject({
       kind: 'server',
     });
-    await expect(odd({ nonsense: true }, 201).createRoom(OFFER)).rejects.toMatchObject({ kind: 'server' });
+    await expect(odd({ slot: 9, offer: 'zA', guestToken: 't' }).join('able-acorns')).rejects.toMatchObject({
+      kind: 'server',
+    });
+    await expect(odd({ nonsense: true }, 201).createRoom(OFFERS)).rejects.toMatchObject({ kind: 'server' });
+    await expect(odd({ answers: 'x', next: 0 }).waitForAnswers(room, 0, stop)).rejects.toMatchObject({
+      kind: 'server',
+    });
+    await expect(
+      odd({ answers: [{ slot: 7, answer: 'zA' }], next: 1 }).waitForAnswers(room, 0, stop),
+    ).rejects.toMatchObject({
+      kind: 'server',
+    });
+    await expect(odd({ answers: [], next: -1 }).waitForAnswers(room, 0, stop)).rejects.toMatchObject({
+      kind: 'server',
+    });
   });
 });

@@ -190,11 +190,20 @@
 .mp-status[data-state='connected'] .dot { background: #4cae4c; }
 .mp-status[data-state='failed'] .dot, .mp-status[data-state='disconnected'] .dot { background: #c0392b; }
 .mp-btn { display: block; margin: 6px 0; padding: 0 10px; min-height: 40px; cursor: pointer; font: 700 14px var(--title); color: var(--gold); text-shadow: 0 1px 2px #000; }
+.mp-btn[hidden], .mp-roster[hidden] { display: none; }
 .mp-btn:disabled { filter: grayscale(0.7) brightness(0.7); cursor: default; }
 .mp-btn:not(:disabled):active { filter: brightness(1.3); }
 .mp-row { display: flex; gap: 6px; }
 .mp-row .mp-btn { flex: 1 1 0; }
 .mp-connected { margin: 8px 0; font: 700 18px var(--title); color: #2f6b2f; }
+.mp-roster { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 4px; }
+.mp-roster li { display: flex; align-items: center; gap: 8px; padding: 4px 8px; font-size: 16px; background: rgba(107, 84, 52, 0.1); border-radius: 3px; }
+.mp-roster .swatch { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--swatch, #8a8478); box-shadow: 0 0 0 1px var(--ink-soft); }
+.mp-roster .name { font-weight: 600; }
+.mp-roster .state { margin-left: auto; color: var(--ink-soft); font-size: 14px; }
+.mp-roster li[data-state='waiting'] { opacity: 0.6; }
+.mp-roster li[data-state='joining'] .state { color: #a86a10; }
+.mp-roster li[data-state='connected'] .state, .mp-roster li[data-state='you'] .state { color: #2f6b2f; }
 #mp-note { min-height: 1.3em; margin: 8px 0 0; font-size: 15px; color: var(--ink-soft); }
 #mp-note.error { color: #9b2a1c; font-weight: 600; }
 @media (max-width: 420px) {

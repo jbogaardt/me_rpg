@@ -15,28 +15,68 @@ export const HERO_BASE: Outfit = {
   feet: 'feet.boots_brown',
 };
 
-/** The hero's outfit for the gear they carry. */
+/** The hero's outfit for the gear they carry (player 0). */
 export function heroOutfit(hero: Pick<Hero, 'weapon' | 'armor'>): Outfit {
-  return withGear(withGear(HERO_BASE, hero.armor.look ?? {}), hero.weapon.look ?? {});
+  return playerOutfit(0, hero);
 }
 
-/** Player 2 in a co-op game, without gear: the villager look (a girl in a teal tunic). */
-export function guestBase(): Outfit {
-  const { weapon: _weapon, shield: _shield, ...base } = npcLook('villager');
-  return base;
+/**
+ * Who is who in a co-op game: player 0 is the host (the hero above), players 1 to 3 are friends. Each gets their own
+ * clothes, so four heroes on one screen are easy to tell apart.
+ */
+export const PLAYER_BASES: readonly Outfit[] = [
+  HERO_BASE,
+  // A girl with long black hair and a teal tunic (the look player 2 has always had).
+  {
+    body: 'body.f_brown',
+    head: 'head.human_f_brown',
+    hair: 'hair.long_black',
+    torso: 'torso.f_tunic_teal',
+    legs: 'legs.f_pants_white',
+    feet: 'feet.f_boots_brown',
+  },
+  // A boy with bronze skin, red spiky hair and a maroon tunic.
+  {
+    body: 'body.bronze',
+    head: 'head.human_bronze',
+    hair: 'hair.spiked_red',
+    torso: 'torso.tunic_maroon',
+    legs: 'legs.pants_charcoal',
+    feet: 'feet.boots_black',
+  },
+  // A girl with long blonde hair and a navy tunic.
+  {
+    body: 'body.f_light',
+    head: 'head.human_f_light',
+    hair: 'hair.long_blonde',
+    torso: 'torso.f_tunic_navy',
+    legs: 'legs.f_pants_tan',
+    feet: 'feet.f_boots_brown',
+  },
+];
+
+/** The ring under each player's feet and the tag over their head, by player number. */
+export const PLAYER_COLORS: readonly number[] = [0x4de3ff, 0xffb13f, 0xff6fb5, 0x8fe36a];
+
+/** "Player 1" for the host, "Player 2" for the first friend, and so on. */
+export const playerName = (slot: number) => `Player ${slot + 1}`;
+
+/** The short tag shown over a player's head in a co-op game. */
+export const playerTag = (slot: number) => `P${slot + 1}`;
+
+/** Player `slot`'s outfit for the gear they carry (their base clothes with gear laid over them). */
+export function playerOutfit(slot: number, hero: Pick<Hero, 'weapon' | 'armor'>): Outfit {
+  const base = PLAYER_BASES[slot];
+  if (!base) throw new Error(`There is no player ${slot} (players are 0 to ${PLAYER_BASES.length - 1})`);
+  return withGear(withGear(base, hero.armor.look ?? {}), hero.weapon.look ?? {});
 }
 
-/** Player 2's outfit for the gear they carry. */
-export function guestOutfit(hero: Pick<Hero, 'weapon' | 'armor'>): Outfit {
-  return withGear(withGear(guestBase(), hero.armor.look ?? {}), hero.weapon.look ?? {});
-}
-
-/** Every outfit a player can wear (starter gear and all items, as the hero or as player 2), so the game can load their parts up front. */
-export function allHeroOutfits(): Outfit[] {
+/** Every outfit a player can wear (all gear, as any player), so the game can load their parts up front. */
+export function allPlayerOutfits(): Outfit[] {
   const weapons = Object.values(ITEMS).filter((i) => i.slot === 'weapon');
   const armors = Object.values(ITEMS).filter((i) => i.slot === 'armor');
-  return weapons.flatMap((weapon) =>
-    armors.flatMap((armor) => [heroOutfit({ weapon, armor }), guestOutfit({ weapon, armor })]),
+  return PLAYER_BASES.flatMap((_base, slot) =>
+    weapons.flatMap((weapon) => armors.map((armor) => playerOutfit(slot, { weapon, armor }))),
   );
 }
 
