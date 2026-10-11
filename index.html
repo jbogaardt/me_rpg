@@ -27,6 +27,7 @@
       </div>
       <div id="hud-buttons">
         <!-- Shown only in a co-op game (src/hud/MapOverlay.ts). -->
+        <div id="inv-btn" role="button" aria-label="Inventory" data-key="KeyI">I</div>
         <div id="map-btn" role="button" aria-label="Map" data-key="KeyM" hidden>M</div>
         <div id="menu-btn" role="button" aria-label="Menu" data-key="Escape">☰</div>
       </div>
@@ -79,7 +80,7 @@
         <header>
           <nav>
             <div role="tab" data-tab="status" class="active">Status</div>
-            <div role="tab" data-tab="gear">Gear</div>
+            <div role="tab" data-tab="inventory">Inventory</div>
             <div role="tab" data-tab="controls">Controls</div>
             <div role="tab" data-tab="online">Online</div>
           </nav>
@@ -87,7 +88,7 @@
         </header>
         <div class="panel thin paper">
           <section id="menu-status"></section>
-          <section id="menu-gear" hidden></section>
+          <section id="menu-inventory" hidden></section>
           <section id="menu-controls" hidden>
             <div id="keybinds" hidden>
               <h3>Customize <small>keyboard &amp; mouse</small></h3>
@@ -106,8 +107,8 @@
                 <tr><td>Attack / shoot / talk</td><td data-bound="attack"></td><td>A</td></tr>
                 <tr><td>Next line</td><td data-bound="attack"></td><td>A or tap the box</td></tr>
                 <tr><td>Magic</td><td data-bound="magic"></td><td>B</td></tr>
-                <tr><td>Menu</td><td>Esc, I, Tab</td><td>☰</td></tr>
-                <tr><td>Shop</td><td data-bound="attack"></td><td>A (next to a shopkeeper)</td></tr>
+                <tr><td>Menu</td><td>Esc, Tab</td><td>☰</td></tr>
+                <tr><td>Inventory</td><td data-bound="inventory"></td><td>I button</td></tr>
                 <tr><td>Map (online)</td><td>M</td><td>M button</td></tr>
                 <tr><td>Menu tabs</td><td>← / →</td><td>Tap</td></tr>
               </tbody>

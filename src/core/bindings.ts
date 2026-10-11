@@ -2,7 +2,7 @@
 // `KeyboardEvent.code` ('KeyW', 'Space') or a mouse button ('Mouse0' = left, 'Mouse2' = right).
 // Touch controls are not rebindable; they press fixed codes (see touch.ts, TOUCH_CODES below).
 
-export const ACTIONS = ['up', 'down', 'left', 'right', 'attack', 'magic'] as const;
+export const ACTIONS = ['up', 'down', 'left', 'right', 'attack', 'magic', 'inventory'] as const;
 export type Action = (typeof ACTIONS)[number];
 export const SLOTS = 2;
 
@@ -13,6 +13,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   right: 'Move right',
   attack: 'Attack / talk',
   magic: 'Magic',
+  inventory: 'Inventory',
 };
 
 export type Slots = readonly [string, string]; // '' = unbound
@@ -24,6 +25,7 @@ export const DEFAULT_BINDINGS: Record<Action, Slots> = {
   right: ['KeyD', 'ArrowRight'],
   attack: ['Mouse0', 'Space'],
   magic: ['Mouse2', 'KeyK'],
+  inventory: ['KeyI', ''],
 };
 
 /** What the on-screen buttons press, whatever the keyboard is bound to. */
@@ -34,10 +36,11 @@ export const TOUCH_CODES: Record<Action, readonly string[]> = {
   right: ['ArrowRight'],
   attack: ['KeyJ'],
   magic: ['KeyK'],
+  inventory: ['KeyI'],
 };
 
 /** Fixed keys (menu, map, cancel); they can't be bound to an action. */
-export const RESERVED_CODES = ['Escape', 'Tab', 'KeyI', 'KeyM'];
+export const RESERVED_CODES = ['Escape', 'Tab', 'KeyM'];
 
 const STORAGE_KEY = 'me_rpg.controls';
 

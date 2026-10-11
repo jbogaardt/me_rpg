@@ -6,6 +6,7 @@ import { input } from '../core/input';
 import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import { Chest } from '../entities/Chest';
+import { GroundItem } from '../entities/GroundItem';
 import { Character, DIR_VEC, directionToward, type Direction } from '../entities/Character';
 import { Ambient } from '../entities/ambient';
 import { WeatherLayer } from '../entities/WeatherLayer';
@@ -53,7 +54,9 @@ import {
 } from '../systems/combat';
 import { CHEST_LOOTS, collect } from '../systems/chests';
 import { Collision } from '../systems/collision';
+import { isIce, stepVelocity } from '../systems/ice';
 import { equip } from '../systems/items';
+import { addToPack } from '../systems/inventory';
 import {
   heroOutfit,
   npcLook,
@@ -64,7 +67,7 @@ import {
   playerTag,
 } from '../systems/looks';
 import { SHOPS } from '../systems/shops';
-import { bagCodes, gearCodes, itemFromCode, setBag, setGear } from '../systems/inventory';
+import { packCodes, gearCodes, itemFromCode, setPack, setGear } from '../systems/inventory';
 import { localTrader, remoteTrader, type Outcome, type Trader } from '../systems/trader';
 import { SHOOT_RELEASE_MS } from '../sprites/doll';
 import type { Wardrobe } from '../sprites/Wardrobe';
@@ -78,11 +81,12 @@ const NPC_LINES = [
 const DEFEAT_LINES = ['You were struck down...', 'Time folds back, and you wake where you began.'];
 
 // Move/attack/magic are rebindable (core/bindings.ts); these are fixed. Touch: ☰ = Escape, M button = KeyM.
-const MENU_KEYS = ['Escape', 'KeyI', 'Tab'];
+const MENU_KEYS = ['Escape', 'Tab']; // the inventory key is a rebindable action ('inventory')
 const MAP_KEYS = ['KeyM']; // co-op only: toggles the map overlay
 
 const ATTACK_COOLDOWN = 0.35;
 const CAST_COOLDOWN = 0.45;
+const PICKUP_REACH = 26; // how close the action key must be to an item on the ground
 const CHEST_REACH = CELL * 1.4; // how close the action key must be to a chest (feet to the chest's cell centre)
 const MELEE_REACH = 22; // radius of the sword's hit circle, centred just in front of the hero
 const INVULN_TIME = 0.8; // after being hit
@@ -129,6 +133,7 @@ export class OverworldScene implements Scene {
   private keepers: { shop: string; body: Character }[]; // shopkeepers, by the shop they run (systems/shops.ts)
   private mobs: Mob[];
   private chests: Chest[];
+  private ground: GroundItem[] = []; // items dropped from the pack (solo and host only: guests do not see them)
   private mobWorld: MobWorld;
   private wardrobe: Wardrobe;
   private heroBodies: [Character, ...Character[]]; // everything mobs may attack
@@ -196,8 +201,8 @@ export class OverworldScene implements Scene {
       body.setTag(shop.tag, 0xffd34d);
       return { shop: spawn.shop, body };
     });
-    this.ui.menu.onGearChange = this.ui.shop.onGearChange = () => this.refreshLook();
-    this.ui.menu.trader = this.ui.shop.trader = () => this.trader();
+    this.ui.shop.onGearChange = () => this.refreshLook();
+    this.ui.shop.trader = () => this.trader();
     this.mobs = data.mobs.map((m) => {
       const kind = MOB_KINDS[m.kind];
       if (!kind) throw new Error(`Zone "${zone.name}" spawns unknown mob kind "${m.kind}"`);
@@ -242,11 +247,18 @@ export class OverworldScene implements Scene {
   }
 
   enter() {
+    this.ui.menu.inventory.attach({
+      locked: () => (this.role === 'client' ? 'In a co-op game your gear is kept by the host.' : null),
+      noDrop: () => (this.role === 'solo' ? null : 'Items cannot be dropped in a co-op game yet.'),
+      gearChanged: () => this.refreshLook(),
+      drop: (item) => this.dropItem(item),
+    });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
     if (this.ui.session.urlCode) this.ui.menu.toggle(this.hero, 'online');
   }
 
   exit() {
+    this.ui.menu.inventory.attach(null);
     this.overlay.setAvailable(false);
     this.ui.dialog.close();
     this.ui.shop.close();
@@ -275,6 +287,10 @@ export class OverworldScene implements Scene {
       if (shop.open) shop.close();
       else menu.toggle(this.hero);
     }
+    if (!dialog.active && actionPressed('inventory')) {
+      if (shop.open) shop.close();
+      else menu.toggleInventory(this.hero);
+    }
     if (menu.open || shop.open) {
       if (menu.open) menu.update();
       else shop.update();
@@ -296,6 +312,9 @@ export class OverworldScene implements Scene {
 
     this.npc.animate(dt * 1000, false);
     for (const k of this.keepers) k.body.animate(dt * 1000, false);
+    for (const item of this.ground) {
+      item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
+    }
     for (const body of this.bodies()) body.zIndex = body.y;
     hud.update(this.hero);
     if (this.overlay.open) {
@@ -454,6 +473,7 @@ export class OverworldScene implements Scene {
       this.local.flags = 0;
       this.local.invuln = 0;
       this.local.knock = { x: 0, y: 0 };
+      this.local.vel = { x: 0, y: 0 };
       this.player.alpha = 1;
       this.player.setOffset(0, 0);
       for (const mob of this.mobs) mob.release();
@@ -568,7 +588,7 @@ export class OverworldScene implements Scene {
       const body = {
         gold: p.hero.gold,
         worn: gearCodes(p.hero),
-        bag: bagCodes(p.hero),
+        items: packCodes(p.hero),
         ...(p.reply ? { say: p.reply } : {}),
       };
       const sig = JSON.stringify(body);
@@ -585,11 +605,11 @@ export class OverworldScene implements Scene {
   /** Guest: the host's word on this player's gold, pack and gear. */
   private applyPack(pack: PackMsg) {
     const hero = this.hero;
-    const sig = JSON.stringify([pack.gold, pack.worn, pack.bag]);
+    const sig = JSON.stringify([pack.gold, pack.worn, pack.items]);
     const worn = gearCodes(hero).join();
     hero.gold = pack.gold;
     setGear(hero, pack.worn);
-    setBag(hero, pack.bag);
+    setPack(hero, pack.items);
     if (gearCodes(hero).join() !== worn) this.refreshLook();
     if (pack.say && pack.say.id > this.lastSay) {
       this.lastSay = pack.say.id;
@@ -753,16 +773,24 @@ export class OverworldScene implements Scene {
     p.body.animate(dt * 1000, p.moving);
   }
 
-  /** Returns true if the player is trying to move. */
+  /** Returns true if the player is trying to move. On ice the velocity lags behind the keys, so they slide. */
   private move(p: Player, { dx, dy }: Command, dt: number): boolean {
-    if (!dx && !dy) return false;
-    if (dx) p.body.face(dx > 0 ? 'right' : 'left');
-    else p.body.face(dy > 0 ? 'down' : 'up');
     const len = Math.hypot(dx, dy);
-    p.aim = { x: dx / len, y: dy / len };
-    const step = SPEED * dt;
-    this.collision.slide(p.body, (dx / len) * step, (dy / len) * step, this.bodies());
-    return true;
+    const wish = len ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
+    if (len) {
+      if (dx) p.body.face(dx > 0 ? 'right' : 'left');
+      else p.body.face(dy > 0 ? 'down' : 'up');
+      p.aim = wish;
+    }
+    p.vel = stepVelocity(p.vel, wish, SPEED, dt, isIce(this.data, p.body.x, p.body.y - 1));
+    if (p.vel.x || p.vel.y) {
+      const [x, y] = [p.body.x, p.body.y];
+      this.collision.slide(p.body, p.vel.x * dt, p.vel.y * dt, this.bodies());
+      // Running into something stops the slide on that axis.
+      if (p.body.x === x) p.vel.x = 0;
+      if (p.body.y === y) p.vel.y = 0;
+    }
+    return len > 0;
   }
 
   /** The local player's action button: advance the dialog, talk when next to the NPC or a shopkeeper, otherwise `attack`. */
@@ -809,16 +837,51 @@ export class OverworldScene implements Scene {
     const chest = this.chests.find(
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
-    if (chest) this.openChest(p, chest);
+    if (chest) return this.openChest(p, chest);
+    const loose = p === this.local && this.nearestGround(p);
+    if (loose) this.pickUp(p, loose);
     else this.attack(p);
+  }
+
+  private nearestGround(p: Player): GroundItem | undefined {
+    let best: GroundItem | undefined;
+    let bestDist = PICKUP_REACH;
+    for (const g of this.ground) {
+      const d = Math.hypot(p.body.x - g.x, p.body.y - g.y);
+      if (d < bestDist) [best, bestDist] = [g, d];
+    }
+    return best;
+  }
+
+  /** Pick an item up off the ground into the pack (it stays put if the pack is full). */
+  private pickUp(p: Player, g: GroundItem) {
+    if (!addToPack(p.hero, g.item)) return this.effects.add(floatText(g.x, g.y - 22, 'Pack full', 0xff8a7a));
+    const [x, y, name] = [g.x, g.y, g.item.name];
+    this.ground.splice(this.ground.indexOf(g), 1);
+    g.destroy({ children: true }); // also takes it off the world layer
+    this.effects.add(floatText(x, y - 22, name, 0xffd34d));
+  }
+
+  /** Put an item on the ground a step ahead of the local hero (or at their feet if something is in the way). */
+  private dropItem(item: Item) {
+    const { x, y, facing } = this.player;
+    const [vx, vy] = DIR_VEC[facing];
+    const fits = this.collision.fitsMap(x + vx * 20, y + vy * 20);
+    const g = new GroundItem(item, fits ? x + vx * 20 : x, fits ? y + vy * 20 : y);
+    this.ground.push(g);
+    this.world.layer.addChild(g);
   }
 
   private openChest(p: Player, chest: Chest) {
     const loot = CHEST_LOOTS[chest.loot];
     if (!loot) return;
-    chest.setOpen(true);
     const found = collect(p.hero, loot);
     const [x, y] = [chest.x, chest.y - CELL];
+    if (found.refused) {
+      this.text(x, y - 14, found.text, 0xff8a7a);
+      return;
+    }
+    chest.setOpen(true);
     this.fx('levelUp', x, y + 6);
     this.text(x, y - 14, found.text, 0xffd34d);
     if (found.gear) p.body.setSheet(this.wardrobe.sheet(playerOutfit(p.slot, p.hero)));
@@ -1055,6 +1118,7 @@ export class OverworldScene implements Scene {
     p.body.face('down');
     p.aim = { x: 0, y: 1 };
     p.knock = { x: 0, y: 0 };
+    p.vel = { x: 0, y: 0 };
     p.invuln = 0;
     p.pendingShot = null;
     if (this.role === 'solo') this.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them

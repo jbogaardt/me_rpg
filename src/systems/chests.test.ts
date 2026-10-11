@@ -16,7 +16,7 @@ describe('collect', () => {
     const found = collect(hero, CHEST_LOOTS.bronzeSword!);
     expect(hero.weapon.name).toBe('Silver Sword');
     expect(found.gear).toBeUndefined();
-    expect(hero.bag.map((i) => i.name)).toEqual(['Rusty Sword', 'Bronze Sword']); // the replaced and the unused, both kept
+    expect(hero.pack.map((i) => i.name)).toEqual(['Rusty Sword', 'Bronze Sword']); // the replaced and the unused, both kept
   });
 
   it('puts each piece of gear in its own slot', () => {

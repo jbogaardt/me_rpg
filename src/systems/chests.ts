@@ -3,7 +3,7 @@
 // Chests hold what the shops do not sell (rare gear, restoratives) and the odd purse.
 
 import { gainXp, type Hero, type Item } from './combat';
-import { addToPack, isBetter, wear } from './inventory';
+import { addToPack, hasRoom, isBetter, wearIfBetter } from './inventory';
 import { ITEMS } from './items';
 
 /** Art variants, in the row order of public/tilesets/chests.png (each row: open frame, then closed frame). */
@@ -43,6 +43,10 @@ export const CHEST_LOOTS: Record<string, ChestLoot> = {
   foldedBoots: { item: ITEMS.foldedBoots },
   ironBoots: { item: ITEMS.ironBoots },
   steelBoots: { item: ITEMS.steelBoots },
+  whetstone: { item: ITEMS.whetstone },
+  bandageKit: { item: ITEMS.bandageKit },
+  sack: { item: ITEMS.sack },
+  backpack: { item: ITEMS.backpack },
   potion: { hp: 20 },
   elixir: { hp: 40, mp: 40 },
   relic: { xp: 40 },
@@ -54,19 +58,28 @@ export const CHEST_LOOTS: Record<string, ChestLoot> = {
 export interface Found {
   text: string; // short, shown floating over the chest
   gear?: Item; // set when the hero put something on (the caller recomposes the sprite)
+  /** The chest could not be emptied (the pack is full): leave it closed so the loot is still there. */
+  refused?: boolean;
   levels: number; // level-ups gained
 }
 
-/** Give the hero what is in a chest. Gear is worn when it is an upgrade (the old piece goes to the pack), else kept. */
+/**
+ * Give the hero what is in a chest. Gear goes on if its slot is empty or it is an upgrade (the old piece goes to the
+ * pack), otherwise into the pack; a full pack refuses it and the chest stays shut.
+ */
 export function collect(hero: Hero, loot: ChestLoot): Found {
   if ('item' in loot) {
     const { item } = loot;
-    if (!isBetter(hero, item)) {
-      addToPack(hero, item);
-      return { text: `${item.name} (to pack)`, levels: 0 };
+    const worn = item.slot && (item.slot === 'weapon' ? hero.weapon : hero[item.slot]);
+    if (item.slot && (!worn || isBetter(hero, item))) {
+      // Wear it; what it replaces goes to the pack (so a full pack, with nowhere to put that, refuses it).
+      if (worn && !hasRoom(hero)) return { text: 'Pack full', refused: true, levels: 0 };
+      wearIfBetter(hero, item);
+      return { text: `${item.name}!`, gear: item, levels: 0 };
     }
-    wear(hero, item);
-    return { text: `${item.name}!`, gear: item, levels: 0 };
+    if (!hasRoom(hero)) return { text: 'Pack full', refused: true, levels: 0 };
+    addToPack(hero, item);
+    return { text: `${item.name} (in pack)`, levels: 0 };
   }
   if ('gold' in loot) {
     hero.gold += loot.gold;

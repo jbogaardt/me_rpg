@@ -6,7 +6,7 @@
 // enemies (see `MobKind.gold`); chests hold the odd purse and the gear that no shop stocks.
 
 import type { GearSlot, Hero, Item } from './combat';
-import { addToPack, isBetter, takeFromPack, wear } from './inventory';
+import { addToPack, hasRoom, isBetter, takeFromPack, wearIfBetter } from './inventory';
 import { ITEMS, type ItemId } from './items';
 
 /** A shop pays this share of an item's value when buying it back. */
@@ -112,9 +112,13 @@ export function buy(hero: Hero, shop: Shop, id: ItemId): Trade {
   if (!shop.stock.includes(id)) return { ok: false, text: `${shop.name} does not sell that` };
   const price = buyPrice(item);
   if (hero.gold < price) return { ok: false, text: `Not enough gold (${price - hero.gold} short)` };
+  // Gear that beats what is worn goes on (the old piece takes a pack slot); anything else needs a free slot.
+  const old = item.slot ? (item.slot === 'weapon' ? hero.weapon : hero[item.slot]) : undefined;
+  const wears = item.slot !== undefined && isBetter(hero, item);
+  if ((!wears || old) && !hasRoom(hero)) return { ok: false, text: 'Your pack is full' };
   hero.gold -= price;
-  if (item.slot && isBetter(hero, item)) {
-    wear(hero, item);
+  if (wears) {
+    wearIfBetter(hero, item);
     return { ok: true, text: `Bought and wearing ${item.name}`, worn: item };
   }
   addToPack(hero, item);

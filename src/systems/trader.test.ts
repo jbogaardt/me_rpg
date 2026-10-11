@@ -18,7 +18,7 @@ describe('localTrader', () => {
 
   it('sells, wears and drinks from the pack', () => {
     const hero = newHero();
-    hero.bag.push(ITEMS.steelSword, ITEMS.potion);
+    hero.pack.push(ITEMS.steelSword, ITEMS.potion);
     const trader = localTrader(hero);
     expect(trader.sell(SHOPS.smithy!, ITEMS.steelSword)).toMatchObject({ ok: true });
     expect(hero.gold).toBe(60);

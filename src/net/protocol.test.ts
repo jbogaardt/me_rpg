@@ -136,8 +136,8 @@ describe('trade, pack and looks messages', () => {
     k: 'pack',
     n: 8,
     gold: 120,
-    worn: [1, 0, 0, 0, 0, 0, 27],
-    bag: [1, 28, 28],
+    worn: [1, 0, 0, 0, 0, 0, 27, 0, 0],
+    items: [1, 28, 28],
     say: { id: 3, text: 'Bought it', ok: true },
   };
   const { say: _say, ...packNoSay } = pack;
@@ -145,8 +145,8 @@ describe('trade, pack and looks messages', () => {
     k: 'looks',
     n: 9,
     players: [
-      [0, 1, 0, 0, 0, 0, 0, 27],
-      [2, 5, 0, 0, 0, 0, 0, 0],
+      [0, 1, 0, 0, 0, 0, 0, 27, 0, 0],
+      [2, 5, 0, 0, 0, 0, 0, 0, 0, 0],
     ],
   };
 
@@ -155,11 +155,11 @@ describe('trade, pack and looks messages', () => {
   });
 
   it("keeps a full pack and everyone's gear small", () => {
-    const big = { ...pack, bag: Array.from({ length: 60 }, () => 28) };
+    const big = { ...pack, items: Array.from({ length: 60 }, () => 28) };
     expect(encodeMessage(big).length).toBeLessThan(1200);
-    expect(encodeMessage({ ...looks, players: [0, 1, 2, 3].map((p) => [p, 1, 2, 3, 4, 5, 6, 7]) }).length).toBeLessThan(
-      200,
-    );
+    expect(
+      encodeMessage({ ...looks, players: [0, 1, 2, 3].map((p) => [p, 1, 2, 3, 4, 5, 6, 7, 8, 9]) }).length,
+    ).toBeLessThan(200);
   });
 
   it('rejects requests for things that do not exist', () => {
@@ -180,9 +180,9 @@ describe('trade, pack and looks messages', () => {
       { ...pack, gold: -1 },
       { ...pack, gold: 1.5 },
       { ...pack, worn: [1, 2] },
-      { ...pack, worn: [1, 0, 0, 0, 0, 0, 9999] },
-      { ...pack, bag: [9999] },
-      { ...pack, bag: Array.from({ length: 201 }, () => 1) },
+      { ...pack, worn: [1, 0, 0, 0, 0, 0, 9999, 0, 0] },
+      { ...pack, items: [9999] },
+      { ...pack, items: Array.from({ length: 201 }, () => 1) },
       { ...pack, say: { id: 1, text: 'x'.repeat(100), ok: true } },
       { ...pack, say: { id: 1, text: 'hi' } },
     ];
@@ -192,9 +192,9 @@ describe('trade, pack and looks messages', () => {
   it('rejects malformed looks', () => {
     const bad = [
       { ...looks, players: [] },
-      { ...looks, players: [[4, 0, 0, 0, 0, 0, 0, 0]] }, // no such player
+      { ...looks, players: [[4, 0, 0, 0, 0, 0, 0, 0, 0, 0]] }, // no such player
       { ...looks, players: [[0, 0, 0]] },
-      { ...looks, players: [[0, 9999, 0, 0, 0, 0, 0, 0]] },
+      { ...looks, players: [[0, 9999, 0, 0, 0, 0, 0, 0, 0, 0]] },
     ];
     for (const m of bad) expect(parseMessage(JSON.stringify(m))).toBeNull();
   });

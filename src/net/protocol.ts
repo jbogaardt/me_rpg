@@ -116,7 +116,7 @@ export interface PackMsg {
   n: number;
   gold: number;
   worn: number[]; // an item code per GEAR_SLOTS slot
-  bag: number[]; // item codes
+  items: number[]; // the pack, as item codes
   say?: { id: number; text: string; ok: boolean };
 }
 
@@ -139,7 +139,7 @@ const MAX_CHEST_MASK = 2 ** MAX_CHESTS - 1;
 const MAX_MOBS = 256;
 const MAX_EVENTS = 64;
 const MAX_TEXT = 32;
-const MAX_BAG = 200;
+const MAX_PACK = 200;
 const MAX_SHOP_ID = 24;
 const MAX_COORD = 1e6;
 
@@ -296,16 +296,16 @@ export function parseMessage(raw: unknown): Message | null {
       return isCount(m.n) &&
         isCount(m.gold) &&
         codes(m.worn, GEAR_SLOTS.length) &&
-        Array.isArray(m.bag) &&
-        m.bag.length <= MAX_BAG &&
-        m.bag.every(isCode) &&
+        Array.isArray(m.items) &&
+        m.items.length <= MAX_PACK &&
+        m.items.every(isCode) &&
         sayOk
         ? {
             k: 'pack',
             n: m.n,
             gold: m.gold,
             worn: m.worn,
-            bag: m.bag,
+            items: m.items,
             ...(say === undefined ? {} : { say: say as { id: number; text: string; ok: boolean } }),
           }
         : null;

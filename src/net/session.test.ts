@@ -653,12 +653,18 @@ describe('joining a game', () => {
     await session.joinGame('mighty-apples');
     const link = links[0]!;
     link.connect();
-    const pack = (n: number, gold: number): Message => ({ k: 'pack', n, gold, worn: [1, 0, 0, 0, 0, 0, 0], bag: [] });
+    const pack = (n: number, gold: number): Message => ({
+      k: 'pack',
+      n,
+      gold,
+      worn: [1, 0, 0, 0, 0, 0, 0, 0, 0],
+      items: [],
+    });
     link.receive(pack(4, 10));
     link.receive(pack(2, 99)); // late: ignored
     expect(session.takePack()).toMatchObject({ n: 4, gold: 10 });
     expect(session.takePack()).toBeNull();
-    link.receive({ k: 'looks', n: 3, players: [[0, 1, 0, 0, 0, 0, 0, 0]] });
+    link.receive({ k: 'looks', n: 3, players: [[0, 1, 0, 0, 0, 0, 0, 0, 0, 0]] });
     expect(session.takeLooks()?.n).toBe(3);
     expect(session.takeLooks()).toBeNull();
     expect(session.send({ k: 'do', n: 1, op: 'use', item: 28, shop: '' })).toBe(true);

@@ -72,16 +72,16 @@
 .bar.xp .fill { background-image: var(--grad-xp); }
 
 /* Square wooden buttons from the kit */
-.wood-btn, #menu-btn, #map-btn, #btn-a, #btn-b, #menu .close, #shop .close {
+.wood-btn, #menu-btn, #map-btn, #inv-btn, #btn-a, #btn-b, #menu .close, #shop .close {
   background: url('./ui/button.png') center / 100% 100% no-repeat;
   color: var(--gold); font-family: var(--title); font-weight: 700; text-align: center;
   text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
-#menu-btn, #map-btn, #menu .close, #shop .close { background-image: url('./ui/button-small.png'); }
-#menu-btn.pressed, #map-btn.pressed, #btn-a.pressed, #btn-b.pressed, #menu .close.pressed, #shop .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
+#menu-btn, #map-btn, #inv-btn, #menu .close, #shop .close { background-image: url('./ui/button-small.png'); }
+#menu-btn.pressed, #map-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #btn-b.pressed, #menu .close.pressed, #shop .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
 #hud-buttons { display: flex; gap: 6px; flex: none; }
-#menu-btn, #map-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
+#menu-btn, #map-btn, #inv-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
 #map-btn[hidden] { display: none; }
 
 /* --- Co-op map (src/hud/MapOverlay.ts): never takes input, so the game stays playable behind it --- */
@@ -278,4 +278,46 @@
 @media (max-width: 420px) {
   #menu section { font-size: 16px; }
   #menu table { font-size: 14px; }
+}
+
+/* --- Inventory tab --- */
+#menu .inv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; align-items: start; }
+#menu .inv-col h3 { margin-top: 6px; }
+#menu .inv-col h3 small { font: 600 14px var(--body); margin-left: 4px; }
+#menu .inv .bonus { color: #3f7a2e; }
+.inv-grid { display: grid; gap: 4px; }
+.inv-grid.worn { grid-template-columns: repeat(3, 54px); }
+.inv-grid.pack { grid-template-columns: repeat(5, minmax(0, 48px)); }
+.slot {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  padding: 0; font: inherit; color: var(--ink-soft); cursor: pointer;
+  background: rgba(60, 42, 22, 0.14); border: 2px solid rgba(107, 84, 52, 0.55); border-radius: 4px;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.inv-grid.worn .slot { height: 54px; }
+.inv-grid.pack .slot { aspect-ratio: 1; }
+.slot svg { width: 70%; height: 70%; }
+.slot .lbl { position: absolute; left: 0; right: 0; bottom: 1px; font-size: 10px; line-height: 1; text-align: center; opacity: 0.85; pointer-events: none; }
+.slot:not(.empty) .lbl { display: none; }
+.slot.empty { color: var(--ink-soft); }
+.slot.empty .lbl { bottom: 50%; transform: translateY(50%); font-size: 11px; }
+.slot:hover, .slot:focus-visible { border-color: var(--gold); outline: none; }
+.slot.picked { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(242, 211, 138, 0.9), inset 0 1px 4px rgba(0, 0, 0, 0.25); }
+.slot.tier1, .icon.tier1 { color: #b08968; }
+.slot.tier2, .icon.tier2 { color: #8fae8b; }
+.slot.tier3, .icon.tier3 { color: #6fa8d6; }
+.slot.tier4, .icon.tier4 { color: #d9b34f; }
+.inv-detail { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(107, 84, 52, 0.35); min-height: 74px; }
+.inv-detail .empty { margin-bottom: 4px; }
+.inv-item { display: flex; gap: 10px; align-items: center; }
+.inv-item .icon { flex: none; width: 36px; height: 36px; }
+.inv-item .icon svg { width: 100%; height: 100%; }
+.inv-item .versus { margin-left: 4px; }
+.inv-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.inv-actions .mp-btn { width: auto; margin: 0; padding: 4px 14px; }
+.inv-msg { margin: 6px 0 0; color: #9c2f1f; font-weight: 600; }
+@media (max-width: 620px) {
+  #menu .inv { grid-template-columns: 1fr; }
+  .inv-grid.worn { grid-template-columns: repeat(3, 1fr); max-width: 220px; }
+  .inv-grid.pack { grid-template-columns: repeat(5, 1fr); max-width: 280px; }
 }

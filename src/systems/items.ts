@@ -102,9 +102,18 @@ export const ITEMS = {
   // Cloaks
   travelerCloak: { name: "Traveler's Cloak", value: 30, slot: 'cape', defense: 1, look: { cape: 'cape.maroon' } },
 
-  // Supplies: kept in the pack and drunk from the Gear tab of the menu (the apothecary sells them).
+  // Supplies: kept in the pack and drunk from the Inventory screen (the apothecary sells them).
   potion: { name: 'Potion', value: 15, use: { hp: 20 } },
   elixir: { name: 'Elixir', value: 60, use: { hp: 40, mp: 40 } },
+
+  // Tools: one is held at a time. Until tools do things in the world they add a small edge.
+  whetstone: { name: 'Whetstone', value: 40, slot: 'tool', attack: 1, look: {} },
+  bandageKit: { name: 'Bandage Kit', value: 40, slot: 'tool', defense: 1, look: {} },
+
+  // (Tools and bags have no art on the doll, so their look is empty.)
+  // Bags: worn on the back, each adds pack slots (the pack holds BASE_PACK without one).
+  sack: { name: 'Sack', value: 50, slot: 'bag', capacity: 4, look: {} },
+  backpack: { name: 'Backpack', value: 150, slot: 'bag', capacity: 8, look: {} },
 } satisfies Record<string, Item>;
 
 export type ItemId = keyof typeof ITEMS;

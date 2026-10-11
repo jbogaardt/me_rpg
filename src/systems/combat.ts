@@ -15,8 +15,11 @@ export interface Stats {
   magic: number;
 }
 
-/** Where gear is worn. `offhand` takes a shield or a second (light) weapon; `cape` is the cloak over the shoulders. */
-export const GEAR_SLOTS = ['weapon', 'offhand', 'head', 'chest', 'legs', 'feet', 'cape'] as const;
+/**
+ * Where gear is worn. `offhand` takes a shield or a second (one-handed) weapon; `cape` is the cloak over the shoulders;
+ * `tool` is the one gadget in hand; `bag` is the sack or pack on the hero's back (it adds pack slots, see inventory.ts).
+ */
+export const GEAR_SLOTS = ['weapon', 'offhand', 'head', 'chest', 'legs', 'feet', 'cape', 'tool', 'bag'] as const;
 export type GearSlot = (typeof GEAR_SLOTS)[number];
 
 /** A weapon that shoots instead of swinging: the action key looses a projectile along the way the hero is heading. */
@@ -40,6 +43,8 @@ export interface Item {
   ranged?: Ranged;
   /** Set on supplies (no slot): drinking one restores this much HP and MP, from the pack. */
   use?: { hp: number; mp?: number };
+  /** Set on bags (slot `bag`): extra pack slots while it is worn. */
+  capacity?: number;
   /** Sprite parts this item puts on the hero (see sprites/parts.ts); drawn over the hero's base look. */
   look?: Outfit;
 }
@@ -54,9 +59,10 @@ export interface Hero extends Partial<Record<Exclude<GearSlot, 'weapon'>, Item>>
   name: string;
   stats: Stats;
   weapon: Item; // always armed; every other gear slot may be empty
+  /** Carried items that are not worn (see inventory.ts for the size limit). */
+  pack: Item[];
   spell: Spell;
   gold: number; // money: dropped by enemies, spent in shops
-  bag: Item[]; // the pack: everything owned but not worn (see systems/inventory.ts)
 }
 
 export interface MobKind {
@@ -102,9 +108,9 @@ export function newHero(): Hero {
     stats: { level: 1, xp: 0, hp: 30, maxHp: 30, mp: 20, maxMp: 20, attack: 5, defense: 1, magic: 8 },
     weapon: ITEMS.rustySword,
     cape: ITEMS.travelerCloak,
+    pack: [],
     spell: { name: 'Time Bolt', cost: 5, power: 6 },
     gold: 0,
-    bag: [],
   };
 }
 

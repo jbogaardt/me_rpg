@@ -37,9 +37,8 @@ export function localTrader(hero: Hero): Trader {
       return { ok: trade.ok, text: trade.text };
     },
     wear(item) {
-      return wearFromPack(hero, item)
-        ? { ok: true, text: `Wearing ${item.name}`, gear: true }
-        : { ok: false, text: 'You cannot wear that' };
+      const result = wearFromPack(hero, item);
+      return result.ok ? { ok: true, text: `Wearing ${item.name}`, gear: true } : { ok: false, text: result.reason };
     },
     use(item) {
       const used = useFromPack(hero, item);

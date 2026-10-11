@@ -133,6 +133,7 @@ export default defineZone({
 
     // --- Frostlands: a frozen lake in the middle, frosted groves to wander round ---------------------
     z.patch('ice', { col: 36, row: 8, w: 24, h: 12 });
+    z.glare(37, 9); // a shine in the lake's north-west corner
 
     ridge(56, 22, 7, false, 'frostRockB');
     ridge(61, 4, 5, true, 'frostRockC');
@@ -274,11 +275,14 @@ export default defineZone({
       z.prop(col === 17 ? 'flowersPurple' : 'flowerRed', col, row);
     z.mob('shade', 17, 31);
 
-    // Treasure chests: the shops sell the common gear, so chests hold what they don't (a restorative, rare armor)
+    // Treasure chests: the shops sell the common gear, so chests hold what they don't (a restorative, a bag, tools)
     // and purses of gold. A few coins by the start pay for a first purchase.
     z.chest('wood', 'coins', 10, 51);
+    z.chest('wood', 'sack', 8, 52); // more pack slots, close to the start
+    z.chest('wood', 'whetstone', 12, 49);
     z.chest('oak', 'elixir', 18, 30);
     z.chest('oak', 'purse', 16, 28);
+    z.chest('oak', 'bandageKit', 15, 30);
 
     z.plateau({ col: 72, row: 13, w: 7, h: 4 }, { kind: 'frost', stairs: [75] }); // Frostlands ledge
     z.prop('frostRockC', 77, 14);
@@ -286,6 +290,7 @@ export default defineZone({
     z.mob('frostbound', 75, 14);
     z.chest('silver', 'hoard', 73, 13);
     z.chest('silver', 'vikingHelm', 74, 13);
+    z.chest('silver', 'backpack', 73, 16);
 
     z.plateau({ col: 62, row: 37, w: 8, h: 4 }, { kind: 'dry', stairs: [64] }); // Scorched Waste mesa
     z.prop('dryBush', 68, 38);
