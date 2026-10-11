@@ -3,6 +3,7 @@ import { tabStep } from '../core/controls';
 import type { Session } from '../net/session';
 import type { TouchControls } from '../core/touch';
 import { Inventory } from './Inventory';
+import { AimSetting } from './AimSetting';
 import { Keybinds } from './Keybinds';
 import { Multiplayer } from './Multiplayer';
 
@@ -21,10 +22,12 @@ export class Menu {
   readonly inventory = new Inventory(document.getElementById('menu-inventory')!, () => this.renderStatus());
 
   private keybinds: Keybinds;
+  private aim: AimSetting;
 
   constructor(session: Session, touch: TouchControls) {
     new Multiplayer(session, () => this.close()); // owns the Online tab
     this.keybinds = new Keybinds(touch); // owns the key editor on the Controls tab
+    this.aim = new AimSetting(touch); // owns the aiming choice on the Controls tab
     for (const [i, name] of TABS.entries()) {
       this.tabButton(name).addEventListener('click', () => this.select(i));
     }
@@ -122,6 +125,7 @@ export class Menu {
     this.renderStatus();
     this.inventory.show(hero);
     this.keybinds.refresh();
+    this.aim.refresh();
     this.select(this.tab);
   }
 }

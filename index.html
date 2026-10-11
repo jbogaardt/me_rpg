@@ -124,6 +124,14 @@
           <section id="menu-status"></section>
           <section id="menu-inventory" hidden></section>
           <section id="menu-controls" hidden>
+            <div id="aim-setting">
+              <h3>Aim <small>weapons &amp; magic</small></h3>
+              <div id="aim-mode" role="radiogroup" aria-label="Aiming">
+                <button type="button" role="radio" data-aim="move" aria-checked="true">Way you walk</button>
+                <button type="button" role="radio" data-aim="mouse" aria-checked="false">Mouse</button>
+              </div>
+              <p id="aim-note" class="keybinds-note"></p>
+            </div>
             <div id="keybinds" hidden>
               <h3>Customize <small>keyboard &amp; mouse</small></h3>
               <table>
