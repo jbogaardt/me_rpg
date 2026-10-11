@@ -1,5 +1,17 @@
 import { defineZone } from '../tools/map/zone';
+import { SHOP_ARRIVAL } from '../tools/map/interiors';
 import { DRY_TREES, FROST_TREES } from '../tools/map/catalog';
+
+/**
+ * The village's shops: the building's bottom-left cell, where its door cells are, and the cell just below it where a
+ * player appears when they step back out (the shop interiors, maps/shop_*.ts, read this).
+ */
+export const SHOP_DOORS = {
+  smithy: { building: { col: 14, row: 45 }, door: { col: 16, w: 2 }, outside: { col: 16, row: 46 } },
+  armory: { building: { col: 21, row: 45 }, door: { col: 22, w: 1 }, outside: { col: 22, row: 46 } },
+  apothecary: { building: { col: 25, row: 45 }, door: { col: 27, w: 2 }, outside: { col: 27, row: 46 } },
+  ranger: { building: { col: 32, row: 45 }, door: { col: 33, w: 1 }, outside: { col: 33, row: 46 } },
+} as const;
 
 // The whole known world: three biomes around a grassy hub. Build with `npm run map -- build`;
 // preview in maps/out/overworld.png.
@@ -110,16 +122,12 @@ export default defineZone({
     z.spawn(8, 48);
     z.npc(12, 47);
 
-    // The village: four shops in a row on a cobbled square, shopkeepers one cell below each door. Mobs keep out of it.
+    // The village: four shops in a row on a cobbled square; walk into a door to go inside. Mobs keep out of it.
     z.patch('stone', { col: 13, row: 45, w: 23, h: 5 });
-    z.prop('smithy', 14, 45);
-    z.prop('armory', 21, 45);
-    z.prop('apothecary', 25, 45);
-    z.prop('ranger', 32, 45);
-    z.shop('smithy', 16, 46);
-    z.shop('armory', 22, 46);
-    z.shop('apothecary', 28, 46);
-    z.shop('ranger', 33, 46);
+    for (const [id, shop] of Object.entries(SHOP_DOORS)) {
+      z.prop(id as 'smithy' | 'armory' | 'apothecary' | 'ranger', shop.building.col, shop.building.row);
+      z.door(shop.door.col, shop.building.row, shop.door.w, `shop_${id}`, SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
+    }
     // Greenwood: level 1 fodder (goblins, a wolfkin, the odd shade).
     for (const [kind, col, row] of [
       ['goblin', 18, 35],

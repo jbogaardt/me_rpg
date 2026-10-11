@@ -22,6 +22,8 @@ const mob: MobSnap = [100.5, 200, 2, 3, 20, 450, 1];
 const snap: SnapMsg = {
   k: 'snap',
   n: 7,
+  zone: 'overworld',
+  away: [3],
   players: [
     [0, 10, 20, 0, 1],
     [2, 30, 40, 3, 6],
@@ -122,6 +124,12 @@ describe('messages', () => {
       { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'hitSpark', x: 0, y: 0, dir: 'up' } }] },
       { ...snap, events: Array.from({ length: 65 }, (_, i) => ({ id: i, e: { type: 'defeat', player: 0 } })) },
       { ...snap, n: -1 },
+      { ...snap, zone: '' }, // no zone
+      { ...snap, zone: 5 },
+      { ...snap, zone: 'x'.repeat(40) },
+      { ...snap, away: 'x' },
+      { ...snap, away: [9] }, // no such player
+      { ...snap, away: [0, 1, 2, 3] }, // everyone away: nobody is here but the recipient
     ];
     for (const m of bad) expect(parseMessage(JSON.stringify(m))).toBeNull();
   });

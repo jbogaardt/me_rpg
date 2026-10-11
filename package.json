@@ -15,7 +15,7 @@
     "test:e2e": "playwright test",
     "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run map -- check && npm run sprites -- check",
     "map": "tsx tools/map/cli.ts",
-    "tilesets": "tsx tools/map/recolor.ts && tsx tools/map/town.ts",
+    "tilesets": "tsx tools/map/recolor.ts && tsx tools/map/town.ts && tsx tools/map/interior.ts",
     "sprites": "tsx tools/sprites/cli.ts",
     "relay": "tsx tools/relay/dev-server.ts"
   },

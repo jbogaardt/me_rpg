@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseMap, type MapData } from '../../src/map/types';
-import { checkMap, type Report } from './check';
+import { checkDoors, checkMap, type Report } from './check';
 import { renderMap, ROOT, writePng, type RenderOptions } from './image';
 import { Zone, type ZoneSpec } from './zone';
 
@@ -59,6 +59,13 @@ function parseFlags(args: string[]) {
   return { pos, flags };
 }
 
+/** Door checks need every zone at once, so they run over all the specs whatever was asked for. */
+async function checkAllDoors(): Promise<string[]> {
+  const maps = new Map<string, MapData>();
+  for (const name of zoneNames([])) maps.set(name, generate(await loadZone(name)).data);
+  return checkDoors(maps);
+}
+
 async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   let failed = false;
@@ -81,6 +88,10 @@ async function main() {
       printReport(name, report);
       failed ||= report.errors.length > 0;
     }
+    for (const e of await checkAllDoors()) {
+      console.log(`  ✗ ${e}`);
+      failed = true;
+    }
   } else if (cmd === 'check') {
     for (const name of zoneNames(rest)) {
       const { data, report } = generate(await loadZone(name));
@@ -90,6 +101,10 @@ async function main() {
       }
       printReport(name, report);
       failed ||= report.errors.length > 0;
+    }
+    for (const e of await checkAllDoors()) {
+      console.log(`  ✗ ${e}`);
+      failed = true;
     }
   } else if (cmd === 'render') {
     const { pos, flags } = parseFlags(rest);

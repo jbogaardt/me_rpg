@@ -244,6 +244,9 @@
 #keybinds .bind.listening { color: var(--gold); background: #4a3418; border-color: var(--ink); }
 .keybinds-note { min-height: 1.3em; margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); }
 .keybinds-note.error { color: #9b2a1c; font-weight: 600; }
+/* --- Black cut when going through a door --- */
+#fade { position: fixed; inset: 0; z-index: 2; background: #000; opacity: 0; pointer-events: none; }
+
 /* --- Gold on the HUD --- */
 #hud-gold { display: flex; align-items: center; gap: 4px; flex: none; padding: 0 2px; color: var(--gold); font: 700 12px/14px var(--title); text-shadow: 0 1px 2px #000, 0 0 2px #000; }
 #hud-gold[hidden] { display: none; }

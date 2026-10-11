@@ -3,6 +3,7 @@ import {
   FLAT_Z,
   type CellPoint,
   type ChestSpawn,
+  type DoorSpawn,
   type ShopSpawn,
   type GroundCell,
   type MapData,
@@ -94,6 +95,8 @@ export class Zone {
   private mobList: MobSpawn[] = [];
   private chestList: ChestSpawn[] = [];
   private shopList: ShopSpawn[] = [];
+  private doorList: DoorSpawn[] = [];
+  private isIndoor = false;
 
   constructor(
     readonly width: number,
@@ -407,6 +410,23 @@ export class Zone {
     return this;
   }
 
+  /**
+   * A doorway: walking onto the `w` cells starting at (col, row) takes the player to cell (toCol, toRow) of another zone.
+   * The cells are opened up (a building's art would otherwise block them), so put the door where the art has one.
+   * The arrival cell should be next to the other zone's own door, not on it.
+   */
+  door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number) {
+    this.doorList.push({ col, row, w, to: { zone: toZone, col: toCol, row: toRow } });
+    for (let i = 0; i < w; i++) this.forced.set(row * this.width + col + i, false);
+    return this;
+  }
+
+  /** Mark the zone as a room: no weather, and no co-op overview map. */
+  indoor() {
+    this.isIndoor = true;
+    return this;
+  }
+
   /** Resolve everything into the game's map format. */
   toMapData(): MapData {
     if (!this.spawnAt) throw new Error('zone has no spawn(); the player needs a start cell');
@@ -479,6 +499,8 @@ export class Zone {
       mobs: this.mobList,
       chests: this.chestList,
       shops: this.shopList,
+      doors: this.doorList,
+      indoor: this.isIndoor,
     };
   }
 }

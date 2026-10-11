@@ -18,9 +18,11 @@ async function copyText(text: string): Promise<boolean> {
     const field = document.createElement('textarea');
     field.value = text;
     field.setAttribute('readonly', '');
-    Object.assign(field.style, { position: 'fixed', opacity: '0', pointerEvents: 'none' });
+    // 16px+: iOS Safari zooms the whole page when it focuses a smaller field, and the zoom sticks.
+    Object.assign(field.style, { position: 'fixed', opacity: '0', pointerEvents: 'none', fontSize: '16px' });
     document.body.append(field);
     field.select();
+    field.setSelectionRange(0, text.length); // select() alone selects nothing on iOS
     try {
       return document.execCommand('copy');
     } catch {
@@ -79,6 +81,8 @@ export class Multiplayer {
     // Tapping the code selects all of it, so a long-press or Ctrl+C copies it even without the buttons.
     this.codeOut.addEventListener('focus', () => window.getSelection()?.selectAllChildren(this.codeOut));
     this.codeIn.addEventListener('input', () => this.render());
+    // The on-screen keyboard can leave iOS panned or zoomed after it closes; put the page back.
+    this.codeIn.addEventListener('blur', () => window.scrollTo(0, 0));
     this.codeIn.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !this.joinGo.disabled) this.joinGo.click();
     });

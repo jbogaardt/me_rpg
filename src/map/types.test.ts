@@ -22,6 +22,8 @@ describe('parseMap', () => {
       mobs: [],
       chests: [],
       shops: [],
+      doors: [],
+      indoor: false,
     });
   });
 
