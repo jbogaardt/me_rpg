@@ -126,6 +126,12 @@ export class Zone {
     this.setGround(col, row, g.sheet, line[col % line.length], name);
   }
 
+  /** The ice tile with two glare lines on it: a shine in a lake's corner. Only meaningful on an ice patch. */
+  glare(col: number, row: number) {
+    this.setGround(col, row, GROUND.ice.sheet, [608, 96], 'ice');
+    return this;
+  }
+
   /** Cover the whole map (or a rect) with a repeating ground. */
   fill(name: GroundName, rect: Rect = { col: 0, row: 0, w: this.width, h: this.height }) {
     for (const { col, row } of this.cells(rect)) this.fillTile(name, col, row);

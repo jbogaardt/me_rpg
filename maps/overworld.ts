@@ -132,6 +132,7 @@ export default defineZone({
 
     // --- Frostlands: a frozen lake in the middle, frosted groves to wander round ---------------------
     z.patch('ice', { col: 36, row: 8, w: 24, h: 12 });
+    z.glare(37, 9); // a shine in the lake's north-west corner
 
     ridge(56, 22, 7, false, 'frostRockB');
     ridge(61, 4, 5, true, 'frostRockC');
