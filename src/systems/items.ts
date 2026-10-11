@@ -72,6 +72,15 @@ export const ITEMS = {
 
   // Cloaks
   travelerCloak: { name: "Traveler's Cloak", slot: 'cape', defense: 1, look: { cape: 'cape.maroon' } },
+
+  // Tools: one is held at a time. Until tools do things in the world they add a small edge.
+  whetstone: { name: 'Whetstone', slot: 'tool', attack: 1, look: {} },
+  bandageKit: { name: 'Bandage Kit', slot: 'tool', defense: 1, look: {} },
+
+  // (Tools and bags have no art on the doll, so their look is empty.)
+  // Bags: worn on the back, each adds pack slots (the pack holds BASE_PACK without one).
+  sack: { name: 'Sack', slot: 'bag', capacity: 4, look: {} },
+  backpack: { name: 'Backpack', slot: 'bag', capacity: 8, look: {} },
 } satisfies Record<string, Item>;
 
 export type ItemId = keyof typeof ITEMS;

@@ -63,7 +63,7 @@ describe('Bindings', () => {
   });
 
   it('never leaves two actions on one code by default', () => {
-    const all = ACTIONS.flatMap((a) => DEFAULT_BINDINGS[a]);
+    const all = ACTIONS.flatMap((a) => DEFAULT_BINDINGS[a]).filter((c) => c !== '');
     expect(new Set(all).size).toBe(all.length);
   });
 

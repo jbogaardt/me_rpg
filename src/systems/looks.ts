@@ -2,7 +2,7 @@
 // ids from sprites/parts.ts; mob kinds carry their own `look` (systems/combat.ts). Pixi-free.
 
 import { withGear, type Outfit } from '../sprites/doll';
-import { wornGear, type Hero } from './combat';
+import { GEAR_SLOTS, type Hero } from './combat';
 import { ITEMS } from './items';
 
 /** The hero without gear: a boy in a green tunic. Weapon and armor looks are drawn over this. */
@@ -68,7 +68,11 @@ export const playerTag = (slot: number) => `P${slot + 1}`;
 export function playerOutfit(slot: number, hero: Hero): Outfit {
   const base = PLAYER_BASES[slot];
   if (!base) throw new Error(`There is no player ${slot} (players are 0 to ${PLAYER_BASES.length - 1})`);
-  return wornGear(hero).reduce((outfit, item) => withGear(outfit, item.look ?? {}), base);
+  return GEAR_SLOTS.reduce((outfit, slot) => {
+    const item = hero[slot];
+    // A blade held in the off-hand has no art of its own, and must not replace the main hand's weapon.
+    return item && !(slot === 'offhand' && item.slot === 'weapon') ? withGear(outfit, item.look ?? {}) : outfit;
+  }, base);
 }
 
 /**

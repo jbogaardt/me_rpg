@@ -3,6 +3,7 @@
 
 import { gainXp, type Hero, type Item } from './combat';
 import { equip, ITEMS } from './items';
+import { addToPack, hasRoom } from './inventory';
 
 /** Art variants, in the row order of public/tilesets/chests.png (each row: open frame, then closed frame). */
 export const CHEST_KINDS = ['wood', 'oak', 'iron', 'silver'] as const;
@@ -40,6 +41,10 @@ export const CHEST_LOOTS: Record<string, ChestLoot> = {
   foldedBoots: { item: ITEMS.foldedBoots },
   ironBoots: { item: ITEMS.ironBoots },
   steelBoots: { item: ITEMS.steelBoots },
+  whetstone: { item: ITEMS.whetstone },
+  bandageKit: { item: ITEMS.bandageKit },
+  sack: { item: ITEMS.sack },
+  backpack: { item: ITEMS.backpack },
   potion: { hp: 20 },
   elixir: { hp: 40, mp: 40 },
   relic: { xp: 40 },
@@ -48,6 +53,8 @@ export const CHEST_LOOTS: Record<string, ChestLoot> = {
 export interface Found {
   text: string; // short, shown floating over the chest
   gear?: Item; // set when the hero put something on (the caller recomposes the sprite)
+  /** The chest could not be emptied (the pack is full): leave it closed so the loot is still there. */
+  refused?: boolean;
   levels: number; // level-ups gained
 }
 
@@ -61,13 +68,30 @@ export function isBetter(hero: Hero, item: Item): boolean {
   return !current || worth(item) > worth(current);
 }
 
-/** Give the hero what is in a chest. Gear is worn only when it is an upgrade (there is no inventory yet). */
-export function collect(hero: Hero, loot: ChestLoot): Found {
+/**
+ * Give the hero what is in a chest. Gear goes on if its slot is empty or it is an upgrade (the old piece goes to the
+ * pack), otherwise into the pack; a full pack refuses it and the chest stays shut. With `stash` off (a co-op friend, who has no pack screen) it is worn only if it is an
+ * upgrade, as before.
+ */
+export function collect(hero: Hero, loot: ChestLoot, stash = true): Found {
   if ('item' in loot) {
     const { item } = loot;
-    if (!isBetter(hero, item)) return { text: `${item.name} (no better)`, levels: 0 };
-    equip(hero, item);
-    return { text: `${item.name}!`, gear: item, levels: 0 };
+    if (!stash) {
+      if (!isBetter(hero, item)) return { text: `${item.name} (no better)`, levels: 0 };
+      equip(hero, item);
+      return { text: `${item.name}!`, gear: item, levels: 0 };
+    }
+    const worn = item.slot && (item.slot === 'weapon' ? hero.weapon : hero[item.slot]);
+    if (item.slot && (!worn || isBetter(hero, item))) {
+      // Wear it; what it replaces goes to the pack (so a full pack, with nowhere to put that, refuses it).
+      if (worn && !hasRoom(hero)) return { text: 'Pack full', refused: true, levels: 0 };
+      if (worn) addToPack(hero, worn);
+      equip(hero, item);
+      return { text: `${item.name}!`, gear: item, levels: 0 };
+    }
+    if (!hasRoom(hero)) return { text: 'Pack full', refused: true, levels: 0 };
+    addToPack(hero, item);
+    return { text: `${item.name} (in pack)`, levels: 0 };
   }
   const s = hero.stats;
   if ('xp' in loot) return { text: `+${loot.xp} XP`, levels: gainXp(s, loot.xp) };

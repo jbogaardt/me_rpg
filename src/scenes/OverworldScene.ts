@@ -6,6 +6,7 @@ import { input } from '../core/input';
 import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import { Chest } from '../entities/Chest';
+import { GroundItem } from '../entities/GroundItem';
 import { Character, DIR_VEC, directionToward, type Direction } from '../entities/Character';
 import { Ambient } from '../entities/ambient';
 import { WeatherLayer } from '../entities/WeatherLayer';
@@ -51,6 +52,7 @@ import {
 import { CHEST_LOOTS, collect } from '../systems/chests';
 import { Collision } from '../systems/collision';
 import { equip } from '../systems/items';
+import { addToPack } from '../systems/inventory';
 import {
   heroOutfit,
   npcLook,
@@ -72,11 +74,12 @@ const NPC_LINES = [
 const DEFEAT_LINES = ['You were struck down...', 'Time folds back, and you wake where you began.'];
 
 // Move/attack/magic are rebindable (core/bindings.ts); these are fixed. Touch: ☰ = Escape, M button = KeyM.
-const MENU_KEYS = ['Escape', 'KeyI', 'Tab'];
+const MENU_KEYS = ['Escape', 'Tab']; // the inventory key is a rebindable action ('inventory')
 const MAP_KEYS = ['KeyM']; // co-op only: toggles the map overlay
 
 const ATTACK_COOLDOWN = 0.35;
 const CAST_COOLDOWN = 0.45;
+const PICKUP_REACH = 26; // how close the action key must be to an item on the ground
 const CHEST_REACH = CELL * 1.4; // how close the action key must be to a chest (feet to the chest's cell centre)
 const MELEE_REACH = 22; // radius of the sword's hit circle, centred just in front of the hero
 const INVULN_TIME = 0.8; // after being hit
@@ -120,6 +123,7 @@ export class OverworldScene implements Scene {
   private npc: Character;
   private mobs: Mob[];
   private chests: Chest[];
+  private ground: GroundItem[] = []; // items dropped from the pack (solo and host only: guests do not see them)
   private mobWorld: MobWorld;
   private wardrobe: Wardrobe;
   private heroBodies: [Character, ...Character[]]; // everything mobs may attack
@@ -210,11 +214,18 @@ export class OverworldScene implements Scene {
   }
 
   enter() {
+    this.ui.menu.inventory.attach({
+      locked: () => (this.role === 'client' ? 'In a co-op game your gear is kept by the host.' : null),
+      noDrop: () => (this.role === 'solo' ? null : 'Items cannot be dropped in a co-op game yet.'),
+      gearChanged: () => this.player.setSheet(this.wardrobe.sheet(playerOutfit(this.local.slot, this.hero))),
+      drop: (item) => this.dropItem(item),
+    });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
     if (this.ui.session.urlCode) this.ui.menu.toggle(this.hero, 'online');
   }
 
   exit() {
+    this.ui.menu.inventory.attach(null);
     this.overlay.setAvailable(false);
     this.ui.dialog.close();
     if (this.ui.menu.open) this.ui.menu.toggle(this.hero);
@@ -239,6 +250,7 @@ export class OverworldScene implements Scene {
     this.overlay.setAvailable(online);
     if (online && !menu.open && !dialog.active && input.wasPressed(...MAP_KEYS)) this.overlay.toggle();
     if (!dialog.active && input.wasPressed(...MENU_KEYS)) menu.toggle(this.hero);
+    if (!dialog.active && actionPressed('inventory')) menu.toggleInventory(this.hero);
     if (menu.open) {
       menu.update();
       if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
@@ -257,6 +269,9 @@ export class OverworldScene implements Scene {
     ]);
 
     this.npc.animate(dt * 1000, false);
+    for (const item of this.ground) {
+      item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
+    }
     for (const body of this.bodies()) body.zIndex = body.y;
     hud.update(this.hero);
     if (this.overlay.open) {
@@ -644,16 +659,51 @@ export class OverworldScene implements Scene {
     const chest = this.chests.find(
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
-    if (chest) this.openChest(p, chest);
+    if (chest) return this.openChest(p, chest);
+    const loose = p === this.local && this.nearestGround(p);
+    if (loose) this.pickUp(p, loose);
     else this.attack(p);
+  }
+
+  private nearestGround(p: Player): GroundItem | undefined {
+    let best: GroundItem | undefined;
+    let bestDist = PICKUP_REACH;
+    for (const g of this.ground) {
+      const d = Math.hypot(p.body.x - g.x, p.body.y - g.y);
+      if (d < bestDist) [best, bestDist] = [g, d];
+    }
+    return best;
+  }
+
+  /** Pick an item up off the ground into the pack (it stays put if the pack is full). */
+  private pickUp(p: Player, g: GroundItem) {
+    if (!addToPack(p.hero, g.item)) return this.effects.add(floatText(g.x, g.y - 22, 'Pack full', 0xff8a7a));
+    const [x, y, name] = [g.x, g.y, g.item.name];
+    this.ground.splice(this.ground.indexOf(g), 1);
+    g.destroy({ children: true }); // also takes it off the world layer
+    this.effects.add(floatText(x, y - 22, name, 0xffd34d));
+  }
+
+  /** Put an item on the ground a step ahead of the local hero (or at their feet if something is in the way). */
+  private dropItem(item: Item) {
+    const { x, y, facing } = this.player;
+    const [vx, vy] = DIR_VEC[facing];
+    const fits = this.collision.fitsMap(x + vx * 20, y + vy * 20);
+    const g = new GroundItem(item, fits ? x + vx * 20 : x, fits ? y + vy * 20 : y);
+    this.ground.push(g);
+    this.world.layer.addChild(g);
   }
 
   private openChest(p: Player, chest: Chest) {
     const loot = CHEST_LOOTS[chest.loot];
     if (!loot) return;
-    chest.setOpen(true);
-    const found = collect(p.hero, loot);
+    const found = collect(p.hero, loot, p === this.local); // only the local player has a pack screen
     const [x, y] = [chest.x, chest.y - CELL];
+    if (found.refused) {
+      this.text(x, y - 14, found.text, 0xff8a7a);
+      return;
+    }
+    chest.setOpen(true);
     this.fx('levelUp', x, y + 6);
     this.text(x, y - 14, found.text, 0xffd34d);
     if (found.gear) p.body.setSheet(this.wardrobe.sheet(playerOutfit(p.slot, p.hero)));

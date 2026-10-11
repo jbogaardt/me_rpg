@@ -278,9 +278,12 @@ export default defineZone({
     z.chest('wood', 'shortBow', 6, 50); // a bow to try right at the start
     z.chest('wood', 'clothHood', 11, 45);
     z.chest('wood', 'leatherBoots', 5, 46);
+    z.chest('wood', 'sack', 8, 52); // more pack slots, close to the start
+    z.chest('wood', 'whetstone', 12, 49);
     z.chest('oak', 'elixir', 18, 30);
     z.chest('oak', 'woodenShield', 16, 28);
     z.chest('oak', 'leatherArmor', 14, 31);
+    z.chest('oak', 'bandageKit', 15, 30);
 
     z.plateau({ col: 72, row: 13, w: 7, h: 4 }, { kind: 'frost', stairs: [75] }); // Frostlands ledge
     z.prop('frostRockC', 77, 14);
@@ -289,6 +292,7 @@ export default defineZone({
     z.chest('silver', 'steelSword', 73, 13);
     z.chest('silver', 'recurveBow', 77, 16);
     z.chest('silver', 'vikingHelm', 74, 13);
+    z.chest('silver', 'backpack', 73, 16);
 
     z.plateau({ col: 62, row: 37, w: 8, h: 4 }, { kind: 'dry', stairs: [64] }); // Scorched Waste mesa
     z.prop('dryBush', 68, 38);
