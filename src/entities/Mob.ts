@@ -67,6 +67,7 @@ export class Mob {
     this.hp = Math.max(0, this.hp - damage);
     this.knock = { x: vx * 180, y: vy * 180 };
     this.flash = 0.15;
+    this.body.play('hurt', STAGGER * 1000);
     this.drawBar();
     if (this.hp <= 0) {
       this.state = 'dead';
@@ -119,6 +120,7 @@ export class Mob {
           this.state = 'windup';
           this.timer = WINDUP;
           this.body.face(directionToward(dx, dy));
+          this.body.play('slash', WINDUP * 1000); // the swing is the telegraph; the blow lands as it ends
         } else {
           moving = this.walk(dx / dist, dy / dist, this.kind.speed * dt, world);
         }
@@ -174,9 +176,9 @@ export class Mob {
     if (this.hp >= this.kind.maxHp || this.hp <= 0) return;
     const w = 20;
     this.bar
-      .rect(-w / 2 - 1, -43, w + 2, 4)
+      .rect(-w / 2 - 1, -56, w + 2, 4)
       .fill(0x000000)
-      .rect(-w / 2, -42, (w * this.hp) / this.kind.maxHp, 2)
+      .rect(-w / 2, -55, (w * this.hp) / this.kind.maxHp, 2)
       .fill(0xe7682f);
   }
 }

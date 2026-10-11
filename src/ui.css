@@ -158,6 +158,8 @@
 #menu th { text-align: left; color: var(--ink-soft); font-weight: 600; padding: 4px; }
 #menu td { padding: 5px 4px; border-top: 1px solid rgba(107, 84, 52, 0.35); }
 #menu td:first-child { font-weight: 600; }
+#menu .credit { margin: 12px 0 0; font-size: 13px; color: var(--ink-soft); }
+#menu .credit a { color: inherit; }
 @media (max-width: 420px) {
   #menu section { font-size: 16px; }
   #menu table { font-size: 14px; }

@@ -6,7 +6,7 @@ import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import { Character, DIR_VEC, directionToward } from '../entities/Character';
 import { Ambient } from '../entities/ambient';
-import { boltEffect, Effects, floatText, slashEffect } from '../entities/effects';
+import { boltEffect, Effects, floatText } from '../entities/effects';
 import { Mob, type MobWorld } from '../entities/Mob';
 import { particleEffect } from '../entities/ParticleEffect';
 import type { Dialog } from '../hud/Dialog';
@@ -16,6 +16,10 @@ import { MapView } from '../map/MapView';
 import { CELL, type CellPoint } from '../map/types';
 import { attackPower, defensePower, gainXp, MOB_KINDS, newHero, rollDamage, spellPower } from '../systems/combat';
 import { Collision } from '../systems/collision';
+import { equip } from '../systems/items';
+import { heroOutfit, npcLook, OVERWORLD_NPC } from '../systems/looks';
+import type { Wardrobe } from '../sprites/Wardrobe';
+import type { Item } from '../systems/combat';
 
 const SPEED = 120; // pixels per second
 const NPC_LINES = [
@@ -57,6 +61,7 @@ export class OverworldScene implements Scene {
   private mobs: Mob[];
   private mobWorld: MobWorld;
   private hero = newHero();
+  private wardrobe: Wardrobe;
   private effects: Effects;
   private ambient: Ambient;
   private spawn: CellPoint;
@@ -81,8 +86,9 @@ export class OverworldScene implements Scene {
     this.spawn = data.spawn;
     this.effects = new Effects(this.world.layer);
     this.ambient = new Ambient(this.world.layer, data);
-    this.player = new Character(sprites.hero, true);
-    this.npc = new Character(sprites.npc);
+    this.wardrobe = sprites.wardrobe;
+    this.player = new Character(this.wardrobe.sheet(heroOutfit(this.hero)), true);
+    this.npc = new Character(this.wardrobe.sheet(npcLook(OVERWORLD_NPC)));
 
     // Entities are positioned by their feet so they y-sort with map objects.
     this.player.position.set(...this.cellToFeet(data.spawn));
@@ -91,9 +97,7 @@ export class OverworldScene implements Scene {
     this.mobs = data.mobs.map((m) => {
       const kind = MOB_KINDS[m.kind];
       if (!kind) throw new Error(`Zone "${zone.name}" spawns unknown mob kind "${m.kind}"`);
-      const sheet = sprites.mobs.get(kind.sheet);
-      if (!sheet) throw new Error(`No sprite sheet loaded for mob kind "${m.kind}" (${kind.sheet})`);
-      return new Mob(kind, sheet, ...this.cellToFeet(m));
+      return new Mob(kind, sprites.wardrobe.sheet(kind.look), ...this.cellToFeet(m));
     });
     this.mobWorld = {
       hero: this.player,
@@ -207,9 +211,9 @@ export class OverworldScene implements Scene {
   private attack() {
     if (this.attackCooldown > 0) return;
     this.attackCooldown = ATTACK_COOLDOWN;
+    this.player.play('slash');
     const dir = this.player.facing;
     const [vx, vy] = DIR_VEC[dir];
-    this.effects.add(slashEffect(this.player.x + vx * 6, this.player.y - 12 + vy * 6, dir));
     const cx = this.player.x + vx * 16;
     const cy = this.player.y + vy * 16;
     this.ambient.shake(cx, cy - 6, MELEE_REACH); // swinging at a tree or bush shakes leaves loose
@@ -226,10 +230,11 @@ export class OverworldScene implements Scene {
     const { spell, stats } = this.hero;
     const { x, y } = this.player;
     if (stats.mp < spell.cost) {
-      this.effects.add(floatText(x, y - 40, 'No MP', 0x8fb3ff));
+      this.effects.add(floatText(x, y - 54, 'No MP', 0x8fb3ff));
       return;
     }
     stats.mp -= spell.cost;
+    this.player.play('cast');
     const [vx, vy] = DIR_VEC[this.player.facing];
     const hitY = 14; // the bolt flies at chest height, this far above the ground it tests against
     const trail = particleEffect('boltTrail', x + vx * 10, y - hitY + vy * 8);
@@ -263,12 +268,12 @@ export class OverworldScene implements Scene {
     const killed = mob.hit(damage, vx, vy);
     // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
     if (!bolt) this.effects.add(particleEffect('hitSpark', mob.body.x, mob.body.y - 14, { dir: Math.atan2(vy, vx) }));
-    this.effects.add(floatText(mob.body.x, mob.body.y - 40, String(damage), 0xffffff));
+    this.effects.add(floatText(mob.body.x, mob.body.y - 54, String(damage), 0xffffff));
     if (!killed) return;
     this.effects.add(particleEffect('mobPoof', mob.body.x, mob.body.y - 12));
-    this.effects.add(floatText(mob.body.x, mob.body.y - 52, `+${mob.kind.xp} XP`, 0xffb13f));
+    this.effects.add(floatText(mob.body.x, mob.body.y - 66, `+${mob.kind.xp} XP`, 0xffb13f));
     if (gainXp(this.hero.stats, mob.kind.xp)) {
-      this.effects.add(floatText(this.player.x, this.player.y - 48, 'LEVEL UP!', 0xffb13f));
+      this.effects.add(floatText(this.player.x, this.player.y - 62, 'LEVEL UP!', 0xffb13f));
       this.effects.add(particleEffect('levelUp', this.player.x, this.player.y - 14));
     }
   }
@@ -280,7 +285,8 @@ export class OverworldScene implements Scene {
     s.hp -= damage;
     this.invuln = INVULN_TIME;
     this.sinceHit = 0;
-    this.effects.add(floatText(this.player.x, this.player.y - 40, String(damage), 0xff5a5a));
+    this.player.play('hurt');
+    this.effects.add(floatText(this.player.x, this.player.y - 54, String(damage), 0xff5a5a));
     this.effects.add(particleEffect('heroHurt', this.player.x, this.player.y - 14));
     const dx = this.player.x - mob.body.x;
     const dy = this.player.y - mob.body.y;
@@ -300,6 +306,12 @@ export class OverworldScene implements Scene {
     this.invuln = 0;
     this.mobs.forEach((m) => m.reset());
     this.ui.dialog.say(DEFEAT_LINES);
+  }
+
+  /** Put gear on the hero: stats follow the item and the sprite is recomposed with its parts. */
+  equip(item: Item) {
+    equip(this.hero, item);
+    this.player.setSheet(this.wardrobe.sheet(heroOutfit(this.hero)));
   }
 
   /** Every character that blocks others. */

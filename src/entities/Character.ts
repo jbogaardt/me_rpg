@@ -1,7 +1,8 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
-import { sheetGrid } from '../core/textures';
+import { makeFrame } from '../core/textures';
+import { ANIMS, ANIM_NAMES, feetAnchor, frameRect, type AnimName, type Direction } from '../sprites/doll';
 
-export type Direction = 'down' | 'up' | 'left' | 'right';
+export type { Direction };
 
 /** Unit vector for each facing. */
 export const DIR_VEC: Record<Direction, readonly [number, number]> = {
@@ -17,39 +18,64 @@ export function directionToward(dx: number, dy: number): Direction {
   return dy > 0 ? 'down' : 'up';
 }
 
-// Character sheet layout (e.g. public/sprites/healer_f.png): 3 columns x 4 rows of 32x36 frames.
-// Columns are walk-A, standing, walk-B. Rows are back, right, front, left.
-const FRAME_W = 32;
-const FRAME_H = 36;
-const ROW: Record<Direction, number> = { up: 0, left: 3, down: 2, right: 1 };
-const WALK_CYCLE = [0, 1, 2, 1]; // columns
-const STAND = 1;
-const WALK_FRAME_MS = 140;
+const DIRECTIONS: Direction[] = ['up', 'left', 'down', 'right'];
+
+type FrameSet = Record<AnimName, Record<Direction, Texture[]>>;
+const frameCache = new WeakMap<Texture, FrameSet>();
+
+/** Every frame of a composed character sheet (see sprites/doll.ts), cut once per sheet and shared by its users. */
+function framesOf(sheet: Texture): FrameSet {
+  let set = frameCache.get(sheet);
+  if (set) return set;
+  set = {} as FrameSet;
+  for (const anim of ANIM_NAMES) {
+    const byDir = {} as Record<Direction, Texture[]>;
+    for (const dir of DIRECTIONS) {
+      byDir[dir] = Array.from({ length: ANIMS[anim].cols }, (_, col) => {
+        const r = frameRect(anim, dir, col);
+        const frame = makeFrame(sheet, r.x, r.y, r.w, r.h);
+        if (!frame) throw new Error(`Character sheet is too small for ${anim} frame ${col}`);
+        return frame;
+      });
+    }
+    set[anim] = byDir;
+  }
+  frameCache.set(sheet, set);
+  return set;
+}
 
 /**
- * An animated character (the hero, NPCs). The container's position is the point between the feet, so it can be
- * used directly for collision and depth sorting.
+ * An animated character (the hero, NPCs, mobs), drawn from a composed paper-doll sheet. The container's position
+ * is the point between the feet, so it can be used directly for collision and depth sorting. Looping animations
+ * (idle, walk) follow `animate(dt, moving)`; one-shot actions (slash, cast, hurt) are started with `play()` and
+ * take over until they finish.
  */
 export class Character extends Container {
-  private frames: Texture[][]; // [direction row][column]
+  private frames: FrameSet;
   private sprite: Sprite;
   private aura = new Graphics();
   private direction: Direction = 'down';
-  private walkTime = 0;
+  private loopTime = 0;
+  private loopAnim: AnimName = 'idle';
+  private action: { anim: AnimName; time: number; ms: number } | null = null;
   private auraTime = 0;
 
-  /** `aura` adds the hero's pulsing time-ring; NPCs just get a plain shadow. */
+  /** `aura` adds the hero's pulsing time-ring; everyone else just gets a plain shadow. */
   constructor(
     sheet: Texture,
     private withAura = false,
   ) {
     super();
-    this.frames = sheetGrid(sheet, 3, 4, FRAME_W, FRAME_H);
-    this.sprite = new Sprite(this.frame('down', STAND));
-    this.sprite.anchor.set(0.5, 1);
-    this.sprite.y = 2; // the art leaves ~2px under the feet in each frame
+    this.frames = framesOf(sheet);
+    this.sprite = new Sprite(this.frame('idle', 0));
+    this.sprite.anchor.set(0.5, feetAnchor('idle'));
     this.addChild(this.aura, this.sprite);
     this.drawAura(0);
+  }
+
+  /** Swap the whole look (equipment changed): the same pose continues on the new sheet. */
+  setSheet(sheet: Texture) {
+    this.frames = framesOf(sheet);
   }
 
   face(direction: Direction) {
@@ -67,27 +93,52 @@ export class Character extends Container {
 
   /** Nudge the body off its feet point, e.g. to lunge into an attack. */
   setOffset(dx: number, dy: number) {
-    this.sprite.position.set(dx, 2 + dy);
+    this.sprite.position.set(dx, dy);
   }
 
-  /** Advance animation; `moving` selects the walk cycle over the standing pose. */
+  /**
+   * Play a one-shot animation (slash, cast, hurt), stretched to `ms` if given. It replaces idle/walk until it ends;
+   * starting another action restarts from its first frame.
+   */
+  play(anim: AnimName, ms?: number) {
+    this.action = { anim, time: 0, ms: ms ?? ANIMS[anim].cycle.length * ANIMS[anim].ms };
+  }
+
+  /** Is a one-shot animation still playing? */
+  get acting(): boolean {
+    return this.action !== null;
+  }
+
+  /** Advance animation; `moving` selects the walk cycle over the idle one when no action is playing. */
   animate(dtMs: number, moving: boolean) {
     this.auraTime += dtMs;
     if (this.withAura) this.drawAura(this.auraTime);
-
-    let col = STAND;
-    if (moving) {
-      this.walkTime += dtMs;
-      col = WALK_CYCLE[Math.floor(this.walkTime / WALK_FRAME_MS) % WALK_CYCLE.length] ?? STAND;
-    } else {
-      this.walkTime = 0;
-    }
-    this.sprite.texture = this.frame(this.direction, col);
+    const { anim, col } = this.pose(dtMs, moving);
+    this.sprite.texture = this.frame(anim, col);
+    this.sprite.anchor.y = feetAnchor(anim); // 128px swing frames have their feet lower in the cell
   }
 
-  private frame(direction: Direction, col: number): Texture {
-    const texture = this.frames[ROW[direction]]?.[col];
-    if (!texture) throw new Error(`Missing character frame ${direction}/${col}`);
+  private pose(dtMs: number, moving: boolean): { anim: AnimName; col: number } {
+    const act = this.action;
+    if (act) {
+      act.time += dtMs;
+      const { cycle } = ANIMS[act.anim];
+      const step = Math.floor((act.time / act.ms) * cycle.length);
+      if (step < cycle.length) return { anim: act.anim, col: cycle[step] ?? 0 };
+      this.action = null;
+    }
+    const anim: AnimName = moving ? 'walk' : 'idle';
+    const { cycle, ms } = ANIMS[anim];
+    // Switching between idle and walk restarts the cycle, so a step always begins on the same foot.
+    if (anim !== this.loopAnim) this.loopTime = 0;
+    this.loopAnim = anim;
+    this.loopTime += dtMs;
+    return { anim, col: cycle[Math.floor(this.loopTime / ms) % cycle.length] ?? 0 };
+  }
+
+  private frame(anim: AnimName, col: number): Texture {
+    const texture = this.frames[anim][this.direction][col];
+    if (!texture) throw new Error(`Missing character frame ${anim}/${this.direction}/${col}`);
     return texture;
   }
 

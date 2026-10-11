@@ -1,0 +1,840 @@
+{
+ "beard.brown": [
+  {
+   "file": "beard.brown.0.png",
+   "z": 110
+  }
+ ],
+ "beard.gray": [
+  {
+   "file": "beard.gray.0.png",
+   "z": 110
+  }
+ ],
+ "body.bronze": [
+  {
+   "file": "body.bronze.0.png",
+   "z": 10
+  }
+ ],
+ "body.brown": [
+  {
+   "file": "body.brown.0.png",
+   "z": 10
+  }
+ ],
+ "body.dark_green": [
+  {
+   "file": "body.dark_green.0.png",
+   "z": 10
+  }
+ ],
+ "body.f_bronze": [
+  {
+   "file": "body.f_bronze.0.png",
+   "z": 10
+  }
+ ],
+ "body.f_brown": [
+  {
+   "file": "body.f_brown.0.png",
+   "z": 10
+  }
+ ],
+ "body.f_light": [
+  {
+   "file": "body.f_light.0.png",
+   "z": 10
+  }
+ ],
+ "body.f_olive": [
+  {
+   "file": "body.f_olive.0.png",
+   "z": 10
+  }
+ ],
+ "body.frost": [
+  {
+   "file": "body.frost.0.png",
+   "z": 10
+  }
+ ],
+ "body.fur_grey": [
+  {
+   "file": "body.fur_grey.0.png",
+   "z": 10
+  }
+ ],
+ "body.green": [
+  {
+   "file": "body.green.0.png",
+   "z": 10
+  }
+ ],
+ "body.light": [
+  {
+   "file": "body.light.0.png",
+   "z": 10
+  }
+ ],
+ "body.olive": [
+  {
+   "file": "body.olive.0.png",
+   "z": 10
+  }
+ ],
+ "body.shade": [
+  {
+   "file": "body.shade.0.png",
+   "z": 10
+  }
+ ],
+ "body.skeleton": [
+  {
+   "file": "body.skeleton.0.png",
+   "z": 10
+  }
+ ],
+ "body.zombie": [
+  {
+   "file": "body.zombie.0.png",
+   "z": 10
+  }
+ ],
+ "cape.brown": [
+  {
+   "file": "cape.brown.0.png",
+   "z": 85
+  },
+  {
+   "file": "cape.brown.1.png",
+   "z": 5
+  }
+ ],
+ "cape.charcoal": [
+  {
+   "file": "cape.charcoal.0.png",
+   "z": 85
+  },
+  {
+   "file": "cape.charcoal.1.png",
+   "z": 5
+  }
+ ],
+ "cape.forest": [
+  {
+   "file": "cape.forest.0.png",
+   "z": 85
+  },
+  {
+   "file": "cape.forest.1.png",
+   "z": 5
+  }
+ ],
+ "cape.maroon": [
+  {
+   "file": "cape.maroon.0.png",
+   "z": 85
+  },
+  {
+   "file": "cape.maroon.1.png",
+   "z": 5
+  }
+ ],
+ "cape.navy": [
+  {
+   "file": "cape.navy.0.png",
+   "z": 85
+  },
+  {
+   "file": "cape.navy.1.png",
+   "z": 5
+  }
+ ],
+ "cape.tan": [
+  {
+   "file": "cape.tan.0.png",
+   "z": 85
+  },
+  {
+   "file": "cape.tan.1.png",
+   "z": 5
+  }
+ ],
+ "cape.teal": [
+  {
+   "file": "cape.teal.0.png",
+   "z": 85
+  },
+  {
+   "file": "cape.teal.1.png",
+   "z": 5
+  }
+ ],
+ "cape.white": [
+  {
+   "file": "cape.white.0.png",
+   "z": 85
+  },
+  {
+   "file": "cape.white.1.png",
+   "z": 5
+  }
+ ],
+ "feet.boots_black": [
+  {
+   "file": "feet.boots_black.0.png",
+   "z": 25
+  }
+ ],
+ "feet.boots_brown": [
+  {
+   "file": "feet.boots_brown.0.png",
+   "z": 25
+  }
+ ],
+ "feet.f_boots_brown": [
+  {
+   "file": "feet.f_boots_brown.0.png",
+   "z": 25
+  }
+ ],
+ "hair.long_black": [
+  {
+   "file": "hair.long_black.0.png",
+   "z": 120
+  }
+ ],
+ "hair.long_blonde": [
+  {
+   "file": "hair.long_blonde.0.png",
+   "z": 120
+  }
+ ],
+ "hair.long_dark_brown": [
+  {
+   "file": "hair.long_dark_brown.0.png",
+   "z": 120
+  }
+ ],
+ "hair.long_gray": [
+  {
+   "file": "hair.long_gray.0.png",
+   "z": 120
+  }
+ ],
+ "hair.long_red": [
+  {
+   "file": "hair.long_red.0.png",
+   "z": 120
+  }
+ ],
+ "hair.long_white": [
+  {
+   "file": "hair.long_white.0.png",
+   "z": 120
+  }
+ ],
+ "hair.messy_black": [
+  {
+   "file": "hair.messy_black.0.png",
+   "z": 120
+  }
+ ],
+ "hair.messy_blonde": [
+  {
+   "file": "hair.messy_blonde.0.png",
+   "z": 120
+  }
+ ],
+ "hair.messy_dark_brown": [
+  {
+   "file": "hair.messy_dark_brown.0.png",
+   "z": 120
+  }
+ ],
+ "hair.messy_gray": [
+  {
+   "file": "hair.messy_gray.0.png",
+   "z": 120
+  }
+ ],
+ "hair.messy_red": [
+  {
+   "file": "hair.messy_red.0.png",
+   "z": 120
+  }
+ ],
+ "hair.messy_white": [
+  {
+   "file": "hair.messy_white.0.png",
+   "z": 120
+  }
+ ],
+ "hair.plain_black": [
+  {
+   "file": "hair.plain_black.0.png",
+   "z": 120
+  }
+ ],
+ "hair.plain_blonde": [
+  {
+   "file": "hair.plain_blonde.0.png",
+   "z": 120
+  }
+ ],
+ "hair.plain_dark_brown": [
+  {
+   "file": "hair.plain_dark_brown.0.png",
+   "z": 120
+  }
+ ],
+ "hair.plain_gray": [
+  {
+   "file": "hair.plain_gray.0.png",
+   "z": 120
+  }
+ ],
+ "hair.plain_red": [
+  {
+   "file": "hair.plain_red.0.png",
+   "z": 120
+  }
+ ],
+ "hair.plain_white": [
+  {
+   "file": "hair.plain_white.0.png",
+   "z": 120
+  }
+ ],
+ "hair.spiked_black": [
+  {
+   "file": "hair.spiked_black.0.png",
+   "z": 120
+  }
+ ],
+ "hair.spiked_blonde": [
+  {
+   "file": "hair.spiked_blonde.0.png",
+   "z": 120
+  }
+ ],
+ "hair.spiked_dark_brown": [
+  {
+   "file": "hair.spiked_dark_brown.0.png",
+   "z": 120
+  }
+ ],
+ "hair.spiked_gray": [
+  {
+   "file": "hair.spiked_gray.0.png",
+   "z": 120
+  }
+ ],
+ "hair.spiked_red": [
+  {
+   "file": "hair.spiked_red.0.png",
+   "z": 120
+  }
+ ],
+ "hair.spiked_white": [
+  {
+   "file": "hair.spiked_white.0.png",
+   "z": 120
+  }
+ ],
+ "head.frost": [
+  {
+   "file": "head.frost.0.png",
+   "z": 100
+  }
+ ],
+ "head.goblin": [
+  {
+   "file": "head.goblin.0.png",
+   "z": 100
+  }
+ ],
+ "head.human_bronze": [
+  {
+   "file": "head.human_bronze.0.png",
+   "z": 100
+  }
+ ],
+ "head.human_brown": [
+  {
+   "file": "head.human_brown.0.png",
+   "z": 100
+  }
+ ],
+ "head.human_f_bronze": [
+  {
+   "file": "head.human_f_bronze.0.png",
+   "z": 100
+  }
+ ],
+ "head.human_f_brown": [
+  {
+   "file": "head.human_f_brown.0.png",
+   "z": 100
+  }
+ ],
+ "head.human_f_light": [
+  {
+   "file": "head.human_f_light.0.png",
+   "z": 100
+  }
+ ],
+ "head.human_f_olive": [
+  {
+   "file": "head.human_f_olive.0.png",
+   "z": 100
+  }
+ ],
+ "head.human_light": [
+  {
+   "file": "head.human_light.0.png",
+   "z": 100
+  }
+ ],
+ "head.human_olive": [
+  {
+   "file": "head.human_olive.0.png",
+   "z": 100
+  }
+ ],
+ "head.orc": [
+  {
+   "file": "head.orc.0.png",
+   "z": 100
+  }
+ ],
+ "head.orc_dark": [
+  {
+   "file": "head.orc_dark.0.png",
+   "z": 100
+  }
+ ],
+ "head.shade": [
+  {
+   "file": "head.shade.0.png",
+   "z": 100
+  }
+ ],
+ "head.skeleton": [
+  {
+   "file": "head.skeleton.0.png",
+   "z": 100
+  }
+ ],
+ "head.troll": [
+  {
+   "file": "head.troll.0.png",
+   "z": 100
+  }
+ ],
+ "head.wolf": [
+  {
+   "file": "head.wolf.0.png",
+   "z": 100
+  }
+ ],
+ "head.zombie": [
+  {
+   "file": "head.zombie.0.png",
+   "z": 100
+  }
+ ],
+ "headwear.bandana_tan": [
+  {
+   "file": "headwear.bandana_tan.0.png",
+   "z": 120
+  }
+ ],
+ "headwear.barbarian": [
+  {
+   "file": "headwear.barbarian.0.png",
+   "z": 130
+  }
+ ],
+ "headwear.greathelm": [
+  {
+   "file": "headwear.greathelm.0.png",
+   "z": 130
+  }
+ ],
+ "headwear.hood_brown": [
+  {
+   "file": "headwear.hood_brown.0.png",
+   "z": 130
+  }
+ ],
+ "headwear.nasal": [
+  {
+   "file": "headwear.nasal.0.png",
+   "z": 130
+  }
+ ],
+ "headwear.wizard_navy": [
+  {
+   "file": "headwear.wizard_navy.0.png",
+   "z": 130
+  }
+ ],
+ "legs.f_pants_brown": [
+  {
+   "file": "legs.f_pants_brown.0.png",
+   "z": 20
+  }
+ ],
+ "legs.f_pants_charcoal": [
+  {
+   "file": "legs.f_pants_charcoal.0.png",
+   "z": 20
+  }
+ ],
+ "legs.f_pants_forest": [
+  {
+   "file": "legs.f_pants_forest.0.png",
+   "z": 20
+  }
+ ],
+ "legs.f_pants_maroon": [
+  {
+   "file": "legs.f_pants_maroon.0.png",
+   "z": 20
+  }
+ ],
+ "legs.f_pants_navy": [
+  {
+   "file": "legs.f_pants_navy.0.png",
+   "z": 20
+  }
+ ],
+ "legs.f_pants_tan": [
+  {
+   "file": "legs.f_pants_tan.0.png",
+   "z": 20
+  }
+ ],
+ "legs.f_pants_teal": [
+  {
+   "file": "legs.f_pants_teal.0.png",
+   "z": 20
+  }
+ ],
+ "legs.f_pants_white": [
+  {
+   "file": "legs.f_pants_white.0.png",
+   "z": 20
+  }
+ ],
+ "legs.pants_brown": [
+  {
+   "file": "legs.pants_brown.0.png",
+   "z": 20
+  }
+ ],
+ "legs.pants_charcoal": [
+  {
+   "file": "legs.pants_charcoal.0.png",
+   "z": 20
+  }
+ ],
+ "legs.pants_forest": [
+  {
+   "file": "legs.pants_forest.0.png",
+   "z": 20
+  }
+ ],
+ "legs.pants_maroon": [
+  {
+   "file": "legs.pants_maroon.0.png",
+   "z": 20
+  }
+ ],
+ "legs.pants_navy": [
+  {
+   "file": "legs.pants_navy.0.png",
+   "z": 20
+  }
+ ],
+ "legs.pants_tan": [
+  {
+   "file": "legs.pants_tan.0.png",
+   "z": 20
+  }
+ ],
+ "legs.pants_teal": [
+  {
+   "file": "legs.pants_teal.0.png",
+   "z": 20
+  }
+ ],
+ "legs.pants_white": [
+  {
+   "file": "legs.pants_white.0.png",
+   "z": 20
+  }
+ ],
+ "legs.plate_steel": [
+  {
+   "file": "legs.plate_steel.0.png",
+   "z": 20
+  }
+ ],
+ "shield.round_brown": [
+  {
+   "file": "shield.round_brown.0.png",
+   "z": 110
+  }
+ ],
+ "shield.round_silver": [
+  {
+   "file": "shield.round_silver.0.png",
+   "z": 110
+  }
+ ],
+ "torso.f_tunic_brown": [
+  {
+   "file": "torso.f_tunic_brown.0.png",
+   "z": 35
+  }
+ ],
+ "torso.f_tunic_charcoal": [
+  {
+   "file": "torso.f_tunic_charcoal.0.png",
+   "z": 35
+  }
+ ],
+ "torso.f_tunic_forest": [
+  {
+   "file": "torso.f_tunic_forest.0.png",
+   "z": 35
+  }
+ ],
+ "torso.f_tunic_maroon": [
+  {
+   "file": "torso.f_tunic_maroon.0.png",
+   "z": 35
+  }
+ ],
+ "torso.f_tunic_navy": [
+  {
+   "file": "torso.f_tunic_navy.0.png",
+   "z": 35
+  }
+ ],
+ "torso.f_tunic_tan": [
+  {
+   "file": "torso.f_tunic_tan.0.png",
+   "z": 35
+  }
+ ],
+ "torso.f_tunic_teal": [
+  {
+   "file": "torso.f_tunic_teal.0.png",
+   "z": 35
+  }
+ ],
+ "torso.f_tunic_white": [
+  {
+   "file": "torso.f_tunic_white.0.png",
+   "z": 35
+  }
+ ],
+ "torso.leather": [
+  {
+   "file": "torso.leather.0.png",
+   "z": 60
+  }
+ ],
+ "torso.legion_iron": [
+  {
+   "file": "torso.legion_iron.0.png",
+   "z": 60
+  }
+ ],
+ "torso.plate_gold": [
+  {
+   "file": "torso.plate_gold.0.png",
+   "z": 60
+  }
+ ],
+ "torso.plate_steel": [
+  {
+   "file": "torso.plate_steel.0.png",
+   "z": 60
+  }
+ ],
+ "torso.robe_blue": [
+  {
+   "file": "torso.robe_blue.0.png",
+   "z": 35
+  }
+ ],
+ "torso.robe_red": [
+  {
+   "file": "torso.robe_red.0.png",
+   "z": 35
+  }
+ ],
+ "torso.tunic_brown": [
+  {
+   "file": "torso.tunic_brown.0.png",
+   "z": 35
+  }
+ ],
+ "torso.tunic_charcoal": [
+  {
+   "file": "torso.tunic_charcoal.0.png",
+   "z": 35
+  }
+ ],
+ "torso.tunic_forest": [
+  {
+   "file": "torso.tunic_forest.0.png",
+   "z": 35
+  }
+ ],
+ "torso.tunic_maroon": [
+  {
+   "file": "torso.tunic_maroon.0.png",
+   "z": 35
+  }
+ ],
+ "torso.tunic_navy": [
+  {
+   "file": "torso.tunic_navy.0.png",
+   "z": 35
+  }
+ ],
+ "torso.tunic_tan": [
+  {
+   "file": "torso.tunic_tan.0.png",
+   "z": 35
+  }
+ ],
+ "torso.tunic_teal": [
+  {
+   "file": "torso.tunic_teal.0.png",
+   "z": 35
+  }
+ ],
+ "torso.tunic_white": [
+  {
+   "file": "torso.tunic_white.0.png",
+   "z": 35
+  }
+ ],
+ "weapon.arming_bronze": [
+  {
+   "file": "weapon.arming_bronze.0.png",
+   "z": 140
+  },
+  {
+   "file": "weapon.arming_bronze.1.png",
+   "z": 9
+  },
+  {
+   "file": "weapon.arming_bronze.2.png",
+   "z": 8
+  },
+  {
+   "file": "weapon.arming_bronze.3.png",
+   "z": 150
+  }
+ ],
+ "weapon.arming_gold": [
+  {
+   "file": "weapon.arming_gold.0.png",
+   "z": 140
+  },
+  {
+   "file": "weapon.arming_gold.1.png",
+   "z": 9
+  },
+  {
+   "file": "weapon.arming_gold.2.png",
+   "z": 8
+  },
+  {
+   "file": "weapon.arming_gold.3.png",
+   "z": 150
+  }
+ ],
+ "weapon.arming_iron": [
+  {
+   "file": "weapon.arming_iron.0.png",
+   "z": 140
+  },
+  {
+   "file": "weapon.arming_iron.1.png",
+   "z": 9
+  },
+  {
+   "file": "weapon.arming_iron.2.png",
+   "z": 8
+  },
+  {
+   "file": "weapon.arming_iron.3.png",
+   "z": 150
+  }
+ ],
+ "weapon.arming_silver": [
+  {
+   "file": "weapon.arming_silver.0.png",
+   "z": 140
+  },
+  {
+   "file": "weapon.arming_silver.1.png",
+   "z": 9
+  },
+  {
+   "file": "weapon.arming_silver.2.png",
+   "z": 8
+  },
+  {
+   "file": "weapon.arming_silver.3.png",
+   "z": 150
+  }
+ ],
+ "weapon.arming_steel": [
+  {
+   "file": "weapon.arming_steel.0.png",
+   "z": 140
+  },
+  {
+   "file": "weapon.arming_steel.1.png",
+   "z": 9
+  },
+  {
+   "file": "weapon.arming_steel.2.png",
+   "z": 8
+  },
+  {
+   "file": "weapon.arming_steel.3.png",
+   "z": 150
+  }
+ ],
+ "weapon.dagger": [
+  {
+   "file": "weapon.dagger.0.png",
+   "z": 140
+  },
+  {
+   "file": "weapon.dagger.1.png",
+   "z": 9
+  }
+ ],
+ "weapon.staff": [
+  {
+   "file": "weapon.staff.0.png",
+   "z": 140
+  },
+  {
+   "file": "weapon.staff.1.png",
+   "z": 9
+  }
+ ]
+}

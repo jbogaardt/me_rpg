@@ -5,5 +5,5 @@
     "noUncheckedIndexedAccess": false, // build scripts index freely; the game code is the strict part
     "types": ["node"]
   },
-  "include": ["./**/*.ts", "../maps/**/*.ts"]
+  "include": ["./**/*.ts", "../maps/**/*.ts", "../sprites/**/*.ts"]
 }

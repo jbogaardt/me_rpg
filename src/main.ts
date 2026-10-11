@@ -11,6 +11,7 @@ import { Hud } from './hud/Hud';
 import { Loading } from './hud/Loading';
 import { Menu } from './hud/Menu';
 import { OverworldScene } from './scenes/OverworldScene';
+import { ITEMS } from './systems/items';
 
 const START_ZONE = 'overworld';
 
@@ -59,12 +60,13 @@ void (async () => {
     const scenes = new SceneManager(app);
     const touch = createTouchControls(() => scenes.resize());
     const ui = { hud: new Hud(), menu: new Menu(), dialog: new Dialog(), touch };
-    scenes.change(new OverworldScene(zone, sprites, ui));
+    const overworld = new OverworldScene(zone, sprites, ui);
+    scenes.change(overworld);
     scenes.start();
     loading.done();
 
     // Dev-only handle for playtest scripts (see .claude/skills/playtest); stripped from production builds.
-    if (import.meta.env.DEV) Object.assign(window, { __game: { app, scenes } });
+    if (import.meta.env.DEV) Object.assign(window, { __game: { app, scenes, overworld, items: ITEMS } });
   } catch (err) {
     loading.fail(err);
     throw err;

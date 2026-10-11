@@ -119,15 +119,16 @@ export default defineZone({
       z.prop('flowersPurple', col, row);
     z.spawn(8, 48);
     z.npc(13, 47);
-    for (const [col, row] of [
-      [26, 38],
-      [40, 38],
-      [30, 46],
-      [24, 62],
-      [44, 58],
-      [15, 60],
-    ])
-      z.mob('shade', col, row);
+    // Greenwood: level 1 fodder (goblins, a wolfkin, the odd shade).
+    for (const [kind, col, row] of [
+      ['goblin', 26, 38],
+      ['goblin', 40, 38],
+      ['shade', 30, 46],
+      ['wolfkin', 24, 62],
+      ['shade', 44, 58],
+      ['goblin', 15, 60],
+    ] as const)
+      z.mob(kind, col, row);
 
     // --- Frostlands: a frozen lake in the middle, frosted groves to wander round ---------------------
     z.patch('ice', { col: 36, row: 8, w: 24, h: 12 });
@@ -181,14 +182,14 @@ export default defineZone({
       [66, 4],
     ])
       z.prop('frostRockSmall', col, row);
-    for (const [col, row] of [
-      [34, 6],
-      [62, 12],
-      [82, 12],
-      [50, 21],
-      [86, 22],
-    ])
-      z.mob('frostbound', col, row);
+    for (const [kind, col, row] of [
+      ['frostbound', 34, 6],
+      ['skeleton', 62, 12],
+      ['wolfkin', 82, 12],
+      ['frostbound', 50, 21],
+      ['troll', 86, 22],
+    ] as const)
+      z.mob(kind, col, row);
 
     // --- Scorched Waste: dunes, a buried skull, an oasis, withered groves ---------------------------
     z.stamp('skull', 62, 47);
@@ -250,14 +251,14 @@ export default defineZone({
       [60, 50],
     ])
       z.prop('rockSmall', col, row);
-    for (const [col, row] of [
-      [60, 55],
-      [70, 50],
-      [80, 46],
-      [66, 59],
-      [88, 50],
-    ])
-      z.mob('raider', col, row);
+    for (const [kind, col, row] of [
+      ['raider', 60, 55],
+      ['orc', 70, 50],
+      ['raider', 80, 46],
+      ['zombie', 66, 59],
+      ['orc', 88, 50],
+    ] as const)
+      z.mob(kind, col, row);
 
     // --- Plateaus: raised ground with stairs up the south face (one per biome) ----------------------------
     // `rect` is the walkable top; the rim and the two face rows around it block. See z.plateau in tools/map/zone.ts.

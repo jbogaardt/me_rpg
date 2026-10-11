@@ -61,7 +61,7 @@ describe('MOB_KINDS', () => {
     expect(kind.maxHp).toBeGreaterThan(0);
     expect(kind.speed).toBeGreaterThan(0);
     expect(kind.sight).toBeGreaterThan(0);
-    expect(kind.sheet).toMatch(/\.png$/);
+    expect(kind.look.body).toBeTruthy(); // every kind needs at least a body to be drawn
   });
 
   it('the starter hero can always hurt a starter mob', () => {
