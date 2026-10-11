@@ -1,4 +1,4 @@
-import type { Container } from 'pixi.js';
+import type { Container, Renderer } from 'pixi.js';
 import type { Sprites, Zone } from '../assets';
 import { actionDown, actionPressed, mapPressed, menuPressed } from '../core/controls';
 import { directionToward } from '../core/direction';
@@ -10,7 +10,6 @@ import type { Mob } from '../entities/Mob';
 import type { Command, Player } from '../entities/Player';
 import { NO_COMMAND } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
-import type { Fade } from '../hud/Fade';
 import type { Hud } from '../hud/Hud';
 import { MapOverlay } from '../hud/MapOverlay';
 import type { Menu } from '../hud/Menu';
@@ -51,7 +50,6 @@ export interface Ui {
   dialog: Dialog;
   touch: TouchControls;
   session: Session;
-  fade: Fade;
 }
 
 /**
@@ -86,9 +84,10 @@ export class OverworldScene implements Scene {
     sprites: Sprites,
     private ui: Ui,
     loadZone: ZoneLoader,
+    renderer: Renderer,
   ) {
     const arena = (this.arena = new Arena(sprites.wardrobe));
-    this.zones = new Zones(arena, sprites, loadZone, ui);
+    this.zones = new Zones(arena, sprites, loadZone, ui, renderer);
     const visuals = new Visuals(arena);
     const say = (lines: string[]) => ui.dialog.say(lines);
     // The simulation reports what a friend should see through the host link (which only records it while hosting).
@@ -108,7 +107,7 @@ export class OverworldScene implements Scene {
   }
 
   get root(): Container {
-    return this.zones.stage;
+    return this.zones.root;
   }
 
   // What playtest scripts poke at (see .claude/skills/playtest): the local player's body and hero, the zone's mobs and NPC,
@@ -234,6 +233,11 @@ export class OverworldScene implements Scene {
       );
     }
     z.camera.follow(arena.screen.width, arena.screen.height, this.player.x, this.player.y);
+    // A slide shifts the whole new zone in; the weather is the sky over the screen, so it stays put.
+    const shift = this.zones.transition.update(dt, arena.screen, this.zones.heroOnScreen());
+    z.world.position.x += shift.x;
+    z.world.position.y += shift.y;
+    z.weatherLayer?.view.position.set(-shift.x / z.camera.zoom, -shift.y / z.camera.zoom);
   }
 
   /**
@@ -250,8 +254,10 @@ export class OverworldScene implements Scene {
       this.trading.handleSteps(dt);
     }
     const raw = this.readCommand();
-    // Reading a dialog or the menu: the player stands still (a solo dialog freezes the whole world instead).
-    const reading = menu.open || shop.open || trade.open || dialog.active;
+    // Reading a dialog or the menu: the player stands still. So do they while a door transition plays, and only take the
+    // next door once it is over.
+    const busy = this.zones.transition.busy;
+    const reading = menu.open || shop.open || trade.open || dialog.active || busy;
     const cmd = reading ? { ...raw, dx: 0, dy: 0, mag: false } : raw;
     const guests = [...arena.remotes.values()].map((p) => ({ p, cmd: this.host.command(p) }));
     const commandOf = (p: Player) => (p === arena.local ? cmd : (guests.find((g) => g.p === p)?.cmd ?? NO_COMMAND));
@@ -271,7 +277,7 @@ export class OverworldScene implements Scene {
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
-    if (!menu.open && !shop.open && !trade.open) this.handleAction(cmd.act, () => this.act(arena.local));
+    if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.act(arena.local));
     for (const g of guests) if (g.cmd.act) arena.inZone(arena.zoneOf(g.p), () => this.act(g.p));
     if (!reading) this.zones.checkDoors(arena.local);
     for (const g of guests) this.zones.checkDoors(g.p);
@@ -287,8 +293,9 @@ export class OverworldScene implements Scene {
     const { menu, shop, dialog, trade } = this.ui;
     this.guest.update(dt);
     const cmd = this.readCommand();
-    const reading = menu.open || shop.open || trade.open || dialog.active;
-    if (!menu.open && !shop.open && !trade.open) this.handleAction(cmd.act, () => this.guest.pressAction());
+    const busy = this.zones.transition.busy;
+    const reading = menu.open || shop.open || trade.open || dialog.active || busy;
+    if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.guest.pressAction());
     if (!reading && cmd.mag) this.guest.pressMagic();
     this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy));
   }

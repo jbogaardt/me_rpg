@@ -2,7 +2,6 @@ import { DIRS, DIR_VEC } from '../../core/direction';
 import { glide } from '../../core/interp';
 import { floatText } from '../../entities/effects';
 import type { Player } from '../../entities/Player';
-import type { Fade } from '../../hud/Fade';
 import type { Menu } from '../../hud/Menu';
 import type { ShopCounter } from '../../hud/ShopCounter';
 import { decodeMob } from '../../net/mobWire';
@@ -45,7 +44,7 @@ export class GuestLink {
     private ground: Ground,
     private pack: PackSync,
     private trading: Trading,
-    private ui: { shop: ShopCounter; menu: Menu; fade: Fade },
+    private ui: { shop: ShopCounter; menu: Menu },
     /** Say something to the player at this keyboard (a dialog). */
     private announce: (lines: string[]) => void,
   ) {}
@@ -166,7 +165,7 @@ export class GuestLink {
     if (snap.zone !== arena.local.zone) {
       const dest = arena.zones.get(snap.zone);
       if (!dest) {
-        this.ui.fade.hold(true);
+        zones.holdForLoad();
         void zones.ensure(snap.zone);
         return; // nothing to draw it into yet: the next snapshot will find the zone loaded
       }
