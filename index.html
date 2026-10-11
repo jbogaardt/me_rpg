@@ -70,13 +70,23 @@
           <section id="menu-status"></section>
           <section id="menu-gear" hidden></section>
           <section id="menu-controls" hidden>
+            <div id="keybinds" hidden>
+              <h3>Customize <small>keyboard &amp; mouse</small></h3>
+              <table>
+                <thead><tr><th></th><th>Key or button</th></tr></thead>
+                <tbody></tbody>
+              </table>
+              <button type="button" id="keybinds-reset" class="mp-btn panel thin wood">Reset to Defaults</button>
+              <p id="keybinds-note" class="keybinds-note"></p>
+            </div>
+            <h3>Summary</h3>
             <table>
               <thead><tr><th></th><th>Keyboard</th><th>Touch</th></tr></thead>
               <tbody>
-                <tr><td>Move</td><td>WASD / arrows</td><td>D-pad</td></tr>
-                <tr><td>Attack / shoot / talk</td><td>Space, J, Enter, E</td><td>A</td></tr>
-                <tr><td>Next line</td><td>Space, J, Enter, E</td><td>A or tap the box</td></tr>
-                <tr><td>Magic</td><td>K, Q</td><td>B</td></tr>
+                <tr><td>Move</td><td data-bound="move"></td><td>D-pad</td></tr>
+                <tr><td>Attack / shoot / talk</td><td data-bound="attack"></td><td>A</td></tr>
+                <tr><td>Next line</td><td data-bound="attack"></td><td>A or tap the box</td></tr>
+                <tr><td>Magic</td><td data-bound="magic"></td><td>B</td></tr>
                 <tr><td>Menu</td><td>Esc, I, Tab</td><td>☰</td></tr>
                 <tr><td>Map (online)</td><td>M</td><td>M button</td></tr>
                 <tr><td>Menu tabs</td><td>← / →</td><td>Tap</td></tr>

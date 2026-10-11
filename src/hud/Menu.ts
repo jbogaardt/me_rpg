@@ -12,6 +12,8 @@ import {
 } from '../systems/combat';
 import { input } from '../core/input';
 import type { Session } from '../net/session';
+import type { TouchControls } from '../core/touch';
+import { Keybinds } from './Keybinds';
 import { Multiplayer } from './Multiplayer';
 
 // Pause menu (HTML overlay; markup in index.html). The game is frozen while it is open.
@@ -48,8 +50,11 @@ export class Menu {
   private root = document.getElementById('menu')!;
   private tab = 0;
 
-  constructor(session: Session) {
+  private keybinds: Keybinds;
+
+  constructor(session: Session, touch: TouchControls) {
     new Multiplayer(session, () => this.close()); // owns the Online tab
+    this.keybinds = new Keybinds(touch); // owns the key editor on the Controls tab
     for (const [i, name] of TABS.entries()) {
       this.tabButton(name).addEventListener('click', () => this.select(i));
     }
@@ -59,6 +64,7 @@ export class Menu {
   toggle(hero: Hero, tab?: string) {
     this.open = !this.open;
     this.root.hidden = !this.open;
+    if (!this.open) this.keybinds.cancel();
     const index = tab ? TABS.indexOf(tab) : -1;
     if (index >= 0) this.tab = index;
     if (this.open) this.render(hero);
@@ -68,6 +74,7 @@ export class Menu {
   close() {
     this.open = false;
     this.root.hidden = true;
+    this.keybinds.cancel();
   }
 
   /** Called each frame while open. */
@@ -110,6 +117,7 @@ export class Menu {
       </dl>
       <h3>Pack</h3>
       <p class="empty">Empty.</p>`;
+    this.keybinds.refresh();
     this.select(this.tab);
   }
 }

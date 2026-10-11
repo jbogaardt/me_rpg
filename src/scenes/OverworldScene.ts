@@ -1,6 +1,7 @@
 import type { Container } from 'pixi.js';
 import type { Sprites, Zone } from '../assets';
 import { Camera } from '../core/camera';
+import { actionDown, actionPressed } from '../core/controls';
 import { input } from '../core/input';
 import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
@@ -70,9 +71,7 @@ const NPC_LINES = [
 ];
 const DEFEAT_LINES = ['You were struck down...', 'Time folds back, and you wake where you began.'];
 
-// Keys (touch: A = KeyJ, B = KeyK, ☰ = Escape; see index.html).
-const ACTION_KEYS = ['Space', 'KeyJ', 'Enter', 'KeyE']; // talk when next to the NPC, otherwise attack
-const MAGIC_KEYS = ['KeyK', 'KeyQ'];
+// Move/attack/magic are rebindable (core/bindings.ts); these are fixed. Touch: ☰ = Escape, M button = KeyM.
 const MENU_KEYS = ['Escape', 'KeyI', 'Tab'];
 const MAP_KEYS = ['KeyM']; // co-op only: toggles the map overlay
 
@@ -580,10 +579,10 @@ export class OverworldScene implements Scene {
 
   private readCommand(): Command {
     return {
-      dx: (input.isDown('ArrowRight', 'KeyD') ? 1 : 0) - (input.isDown('ArrowLeft', 'KeyA') ? 1 : 0),
-      dy: (input.isDown('ArrowDown', 'KeyS') ? 1 : 0) - (input.isDown('ArrowUp', 'KeyW') ? 1 : 0),
-      act: input.wasPressed(...ACTION_KEYS),
-      mag: input.wasPressed(...MAGIC_KEYS),
+      dx: (actionDown('right') ? 1 : 0) - (actionDown('left') ? 1 : 0),
+      dy: (actionDown('down') ? 1 : 0) - (actionDown('up') ? 1 : 0),
+      act: actionPressed('attack'),
+      mag: actionPressed('magic'),
     };
   }
 
