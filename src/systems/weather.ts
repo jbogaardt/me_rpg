@@ -14,9 +14,6 @@ export const WEATHER_TABLE: Record<Biome, Partial<Record<WeatherKind, number>>> 
   tundra: { clear: 4, snow: 4, blizzard: 1, wind: 1 },
 };
 
-/** The weather that greets you on walking into a biome. */
-export const ARRIVAL: Record<Biome, WeatherKind> = { plains: 'rain', desert: 'sandstorm', tundra: 'snow' };
-
 /** How hard the wind blows (0 to 1) under each kind of weather; the sign comes from the event's direction. */
 export const WIND: Record<WeatherKind, number> = {
   clear: 0,
@@ -90,8 +87,6 @@ export class Weather {
 
   remaining = 0;
   private ending = true; // fading out; the next event is picked once it reaches nothing
-  private arriving = false; // a new biome was entered: its own weather comes next
-  private calm = false; // the arrival weather just ended: a clear spell comes next
   private pending: Biome | null = null;
   private pendingFor = 0;
 
@@ -122,7 +117,7 @@ export class Weather {
 
     if (this.ending) {
       this.intensity = Math.max(0, this.intensity - dt / RAMP);
-      if (this.intensity === 0) this.begin(this.next());
+      if (this.intensity === 0) this.begin(this.pick());
     } else {
       this.intensity = Math.min(1, this.intensity + dt / RAMP);
     }
@@ -141,8 +136,6 @@ export class Weather {
     if (this.pendingFor >= SETTLE) {
       this.biome = biome;
       this.pending = null;
-      this.arriving = true;
-      this.ending = true; // whatever was blowing fades out first
     }
   }
 
@@ -156,20 +149,6 @@ export class Weather {
   private duration(kind: WeatherKind): number {
     const [lo, hi] = DURATION[kind];
     return lo + this.rng() * (hi - lo);
-  }
-
-  /** Arrival weather first, then a clear spell, then the usual random draw. */
-  private next(): WeatherKind {
-    if (this.arriving) {
-      this.arriving = false;
-      this.calm = true;
-      return ARRIVAL[this.biome];
-    }
-    if (this.calm) {
-      this.calm = false;
-      return 'clear';
-    }
-    return this.pick();
   }
 
   private pick(): WeatherKind {

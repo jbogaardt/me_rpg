@@ -71,22 +71,14 @@ describe('Weather', () => {
   });
 });
 
-describe('arrival weather', () => {
-  it.each([
-    ['plains', 'tundra', 'snow'],
-    ['tundra', 'desert', 'sandstorm'],
-    ['desert', 'plains', 'rain'],
-  ] as const)('walking from %s into %s brings %s, then a clear spell', (from, to, kind) => {
-    const w = new Weather(from, mulberry32(4));
-    for (let t = 0; t < 30; t += 0.25) w.update(0.25, from);
-    const seen: WeatherKind[] = [];
-    for (let t = 0; t < 60 * 12; t += 0.25) {
-      w.update(0.25, to);
-      if (w.biome === to && w.intensity > 0.99 && seen[seen.length - 1] !== w.kind) seen.push(w.kind);
-      if (seen.length === 2) break;
-    }
-    expect(seen[0]).toBe(kind);
-    expect(seen[1]).toBe('clear');
+describe('crossing a biome border', () => {
+  it('starts nothing new: the old weather fades and the usual random draw follows', () => {
+    const w = new Weather('tundra', mulberry32(4));
+    w.force('snow');
+    for (let t = 0; t < 30; t += 0.25) w.update(0.25, 'desert');
+    expect(w.biome).toBe('desert');
+    expect(isAllowed('desert', w.kind)).toBe(true);
+    expect(w.kind).not.toBe('snow');
   });
 });
 
