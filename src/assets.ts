@@ -1,17 +1,27 @@
 import { Assets, type Texture } from 'pixi.js';
+import versions from 'virtual:asset-versions';
 import { parseMap, type MapData } from './map/types';
 import { allPlayerOutfits, NPC_LOOKS } from './systems/looks';
 import { MOB_KINDS } from './systems/combat';
 import { outfitParts, type Outfit, type PartManifest } from './sprites/doll';
 import { Wardrobe } from './sprites/Wardrobe';
 
-// All game assets go through the Pixi `Assets` cache: character part sheets (see sprites/Wardrobe.ts) loaded at boot,
-// and one bundle per zone (its map JSON, then the tilesets that JSON names) loaded when the zone is entered.
+// Game assets go through the Pixi `Assets` cache: the character part manifest at boot (the part layers themselves are
+// plain images loaded by sprites/Wardrobe.ts), and one bundle per zone (its map JSON, then the tilesets that JSON names)
+// loaded when the zone is entered.
 
 const BASE = import.meta.env.BASE_URL;
-const tilesetUrl = (file: string) => `${BASE}tilesets/${file}`;
-// The build id in the query string stops a CDN/browser from serving yesterday's map next to today's code.
-const zoneUrl = (zone: string) => `${BASE}maps/${zone}.json?v=${__BUILD_ID__}`;
+/**
+ * The URL of a file under public/, carrying a hash of its content (tools/assetVersions.ts): a deploy that changes a map
+ * or a sheet changes its URL, so a cache never pairs new code with old art, and one that leaves a file alone keeps it
+ * cached.
+ */
+const publicUrl = (path: string) => {
+  const v = versions[path];
+  return v ? `${BASE}${path}?v=${v}` : `${BASE}${path}`;
+};
+const tilesetUrl = (file: string) => publicUrl(`tilesets/${file}`);
+const zoneUrl = (zone: string) => publicUrl(`maps/${zone}.json`);
 
 /** A loaded bundle entry, or a clear error instead of an undefined texture later. */
 function pick(loaded: Record<string, Texture>, key: string): Texture {
@@ -29,7 +39,7 @@ export interface Sprites {
   chests: Texture;
 }
 
-const LPC_DIR = `${BASE}sprites/lpc/`;
+const LPC_DIR = 'sprites/lpc/';
 
 /** Every sprite part the game can show without further loading: hero gear, NPC looks and every mob kind. */
 function requiredParts(): Set<string> {
@@ -48,9 +58,9 @@ export async function initAssets() {
 
 /** Load the character part manifest and the art for everything in `requiredParts()`, then return the wardrobe. */
 export async function loadSprites(onProgress?: Progress): Promise<Sprites> {
-  Assets.add({ alias: 'sprites:parts', src: `${LPC_DIR}parts.json?v=${__BUILD_ID__}`, parser: 'json' });
+  Assets.add({ alias: 'sprites:parts', src: publicUrl(`${LPC_DIR}parts.json`), parser: 'json' });
   const manifest = await Assets.load<PartManifest>('sprites:parts');
-  const wardrobe = new Wardrobe(manifest, (file) => `${LPC_DIR}${file}?v=${__BUILD_ID__}`);
+  const wardrobe = new Wardrobe(manifest, (file) => publicUrl(LPC_DIR + file));
   await wardrobe.load(requiredParts(), onProgress);
   Assets.add({ alias: 'sprites:chests', src: tilesetUrl('chests.png') });
   return { wardrobe, chests: await Assets.load<Texture>('sprites:chests') };
