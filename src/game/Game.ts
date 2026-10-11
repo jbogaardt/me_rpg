@@ -3,8 +3,11 @@ import { MapView } from '../map/MapView';
 import { CELL, type MapData } from '../map/types';
 import { input } from './input';
 import { Character, type Direction } from './Character';
+import { createTouchControls, type TouchControls } from './touch';
 
 const SPEED = 120; // pixels per second
+const DIALOG_MAX_W = 600;
+const DIALOG_PAD = 20;
 const NPC_LINES = [
   'Greetings, traveler. This world is still being drawn.',
   'Soon there will be a story here. Come back later!',
@@ -16,9 +19,10 @@ export class Game {
   private player: Character;
   private npc: Character;
   private ui = new Graphics(); // dialog box
-  private dialogText = new Text({ text: '', style: { fill: 0xffffff, fontSize: 18, wordWrap: true, wordWrapWidth: 560 } });
+  private dialogText = new Text({ text: '', style: { fill: 0xffffff, fontSize: 18, wordWrap: true } });
   private lineIndex = -1;
   private zoom = 1;
+  private touch: TouchControls;
 
   constructor(
     private app: Application,
@@ -38,12 +42,12 @@ export class Game {
     else this.npc.visible = false;
     this.world.addChild(this.npc, this.player);
 
-    this.ui.rect(0, 0, 600, 80).fill({ color: 0x000000, alpha: 0.8 });
-    this.dialogText.position.set(20, 20);
+    this.dialogText.position.set(DIALOG_PAD, DIALOG_PAD);
     this.ui.addChild(this.dialogText);
     this.ui.visible = false;
 
     app.stage.addChild(this.world, this.ui);
+    this.touch = createTouchControls(() => this.layout());
     app.renderer.on('resize', () => this.layout());
     this.layout();
   }
@@ -57,8 +61,37 @@ export class Game {
     const { width, height } = this.app.screen;
     this.zoom = Math.max(1, Math.floor(Math.min(width / 640, height / 480)));
     this.world.scale.set(this.zoom);
-    this.ui.position.set(Math.round((width - 600) / 2), height - 100);
+    this.layoutDialog();
     this.updateCamera();
+  }
+
+  /** Size the dialog box to the screen and keep it clear of the on-screen touch controls. */
+  private layoutDialog() {
+    const { width, height } = this.app.screen;
+    const margin = 10;
+    let left = margin;
+    let right = width - margin;
+    let bottom = height - 20;
+    const [pad, button] = this.touch.rects();
+    if (pad && button) {
+      // Fit between the D-pad and the button if there's room (landscape), otherwise sit above them.
+      if (button.left - pad.right - 2 * margin >= 320) {
+        left = pad.right + margin;
+        right = button.left - margin;
+      } else {
+        bottom = Math.min(pad.top, button.top) - margin;
+      }
+    }
+    const w = Math.min(DIALOG_MAX_W, right - left);
+    this.dialogText.style.wordWrapWidth = w - 2 * DIALOG_PAD;
+    const h = Math.max(80, this.dialogText.height + 2 * DIALOG_PAD);
+    this.ui.clear().rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.8 });
+    this.ui.position.set(Math.round(left + (right - left - w) / 2), Math.round(bottom - h));
+  }
+
+  private showLine(text: string) {
+    this.dialogText.text = text;
+    this.layoutDialog(); // the box grows if the line wraps onto more rows
   }
 
   /** Follow the player, but never show past the map edge (center the map if it's smaller than the screen). */
@@ -124,12 +157,12 @@ export class Game {
         this.lineIndex = -1;
         this.ui.visible = false;
       } else {
-        this.dialogText.text = NPC_LINES[this.lineIndex];
+        this.showLine(NPC_LINES[this.lineIndex]);
       }
     } else if (this.npc.visible && Math.hypot(this.player.x - this.npc.x, this.player.y - this.npc.y) < CELL * 1.5) {
       this.lineIndex = 0;
       this.npc.face(this.directionToward(this.player.x - this.npc.x, this.player.y - this.npc.y));
-      this.dialogText.text = NPC_LINES[0];
+      this.showLine(NPC_LINES[0]);
       this.ui.visible = true;
     }
   }

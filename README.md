@@ -10,6 +10,7 @@ npm run dev
 ```
 
 Controls: WASD / arrow keys to move, Space / Enter / E to talk to the red NPC.
+On phones and tablets an on-screen D-pad (drag your thumb, 8-way) and **A** button appear instead.
 
 ## Map editor
 
