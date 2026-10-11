@@ -1,9 +1,14 @@
 import { Application, Graphics, Text, type Texture } from 'pixi.js';
 import { MapView } from '../map/MapView';
-import { CELL, type MapData } from '../map/types';
+import { CELL, type CellPoint, type MapData } from '../map/types';
 import { input } from './input';
-import { Character, type Direction } from './Character';
+import { Character, DIR_VEC, directionToward } from './Character';
 import { createTouchControls, type TouchControls } from './touch';
+import { attackPower, defensePower, gainXp, newHero, rollDamage, SHADE, spellPower, type Hero } from './combat';
+import { Mob, type MobWorld } from './Mob';
+import { boltEffect, Effects, floatText, slashEffect } from './effects';
+import { Hud } from './Hud';
+import { Menu } from './Menu';
 
 const SPEED = 120; // pixels per second
 const DIALOG_MAX_W = 600;
@@ -12,35 +17,79 @@ const NPC_LINES = [
   'Greetings, traveler. This world is still being drawn.',
   'Soon there will be a story here. Come back later!',
 ];
+const DEFEAT_LINES = ['You were struck down...', 'Time folds back, and you wake where you began.'];
+
+// Keys (touch: A = KeyJ, B = KeyK, ☰ = Escape; see index.html).
+const ACTION_KEYS = ['Space', 'KeyJ', 'Enter', 'KeyE']; // talk when next to the NPC, otherwise attack
+const MAGIC_KEYS = ['KeyK', 'KeyQ'];
+const MENU_KEYS = ['Escape', 'KeyI', 'Tab'];
+
+const ATTACK_COOLDOWN = 0.35;
+const CAST_COOLDOWN = 0.45;
+const MELEE_REACH = 22; // radius of the sword's hit circle, centred just in front of the hero
+const INVULN_TIME = 0.8; // after being hit
+const BOLT_SPEED = 260;
+const BOLT_RANGE = 7 * CELL;
+const MP_REGEN = 1.5; // per second
+const HP_REGEN = 1; // per second, once HP_REGEN_DELAY seconds pass without a hit
+const HP_REGEN_DELAY = 5;
+// Temporary test enemy placement until the map editor can place mobs.
+const MOB_SPAWNS: CellPoint[] = [{ col: 24, row: 15 }];
+
+export interface GameSprites {
+  hero: Texture;
+  npc: Texture;
+  mob: Texture;
+}
 
 export class Game {
   private world: MapView;
   private blocked: Set<number>;
   private player: Character;
   private npc: Character;
+  private mobs: Mob[];
+  private mobWorld: MobWorld;
+  private hero: Hero = newHero();
+  private effects: Effects;
+  private hud = new Hud();
+  private menu = new Menu();
+  private touch: TouchControls;
   private ui = new Graphics(); // dialog box
   private dialogText = new Text({ text: '', style: { fill: 0xffffff, fontSize: 18, wordWrap: true } });
-  private lineIndex = -1;
+  private lines: string[] = [];
+  private lineIndex = -1; // -1 = no dialog; the world is frozen while talking
   private zoom = 1;
-  private touch: TouchControls;
+
+  // Hero combat state
+  private attackCooldown = 0;
+  private castCooldown = 0;
+  private invuln = 0;
+  private sinceHit = HP_REGEN_DELAY;
+  private knock = { x: 0, y: 0 };
 
   constructor(
     private app: Application,
     private data: MapData,
     textures: Map<string, Texture>,
-    heroSheet: Texture,
-    npcSheet: Texture,
+    sprites: GameSprites,
   ) {
-    this.player = new Character(heroSheet, true);
-    this.npc = new Character(npcSheet);
+    this.player = new Character(sprites.hero, true);
+    this.npc = new Character(sprites.npc);
     this.world = new MapView(data, textures);
     this.blocked = new Set(data.collision);
+    this.effects = new Effects(this.world);
 
     // Entities are positioned by their feet so they y-sort with map objects.
-    this.player.position.set((data.spawn.col + 0.5) * CELL, (data.spawn.row + 0.9) * CELL);
-    if (data.npc) this.npc.position.set((data.npc.col + 0.5) * CELL, (data.npc.row + 0.9) * CELL);
+    this.player.position.set(...this.cellToFeet(data.spawn));
+    if (data.npc) this.npc.position.set(...this.cellToFeet(data.npc));
     else this.npc.visible = false;
-    this.world.addChild(this.npc, this.player);
+    this.mobs = MOB_SPAWNS.map((p) => new Mob(SHADE, sprites.mob, ...this.cellToFeet(p)));
+    this.mobWorld = {
+      hero: this.player,
+      slide: (body, mx, my) => this.slide(body, mx, my),
+      strike: (mob) => this.hurtHero(mob),
+    };
+    this.world.addChild(this.npc, this.player, ...this.mobs.map((m) => m.body));
 
     this.dialogText.position.set(DIALOG_PAD, DIALOG_PAD);
     this.ui.addChild(this.dialogText);
@@ -53,7 +102,11 @@ export class Game {
   }
 
   start() {
-    this.app.ticker.add((t) => this.update(t.deltaMS / 1000));
+    this.app.ticker.add((t) => this.update(Math.min(t.deltaMS / 1000, 0.1)));
+  }
+
+  private cellToFeet(p: CellPoint): [number, number] {
+    return [(p.col + 0.5) * CELL, (p.row + 0.9) * CELL];
   }
 
   /** Pick an integer zoom for the screen size and dock the dialog box at the bottom. */
@@ -72,14 +125,14 @@ export class Game {
     let left = margin;
     let right = width - margin;
     let bottom = height - 20;
-    const [pad, button] = this.touch.rects();
-    if (pad && button) {
-      // Fit between the D-pad and the button if there's room (landscape), otherwise sit above them.
-      if (button.left - pad.right - 2 * margin >= 320) {
+    const [pad, buttons] = this.touch.rects();
+    if (pad && buttons) {
+      // Fit between the D-pad and the buttons if there's room (landscape), otherwise sit above them.
+      if (buttons.left - pad.right - 2 * margin >= 320) {
         left = pad.right + margin;
-        right = button.left - margin;
+        right = buttons.left - margin;
       } else {
-        bottom = Math.min(pad.top, button.top) - margin;
+        bottom = Math.min(pad.top, buttons.top) - margin;
       }
     }
     const w = Math.min(DIALOG_MAX_W, right - left);
@@ -87,6 +140,13 @@ export class Game {
     const h = Math.max(80, this.dialogText.height + 2 * DIALOG_PAD);
     this.ui.clear().rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.8 });
     this.ui.position.set(Math.round(left + (right - left - w) / 2), Math.round(bottom - h));
+  }
+
+  private say(lines: string[]) {
+    this.lines = lines;
+    this.lineIndex = 0;
+    this.showLine(lines[0]);
+    this.ui.visible = true;
   }
 
   private showLine(text: string) {
@@ -108,14 +168,56 @@ export class Game {
   }
 
   private update(dt: number) {
-    const moving = this.lineIndex < 0 && this.move(dt);
-    this.player.animate(dt * 1000, moving);
-    this.player.zIndex = this.player.y;
-    this.npc.zIndex = this.npc.y;
+    if (this.lineIndex < 0 && input.wasPressed(...MENU_KEYS)) this.menu.toggle(this.hero);
+    if (this.menu.open) {
+      this.menu.update(); // the world is paused
+      input.endFrame();
+      return;
+    }
+
+    if (this.lineIndex < 0) {
+      this.updateHero(dt);
+      for (const mob of this.mobs) mob.update(dt, this.mobWorld);
+      if (input.wasPressed(...MAGIC_KEYS)) this.cast();
+    } else {
+      this.player.animate(dt * 1000, false);
+    }
+    this.handleAction();
+    this.effects.update(dt);
+
     this.npc.animate(dt * 1000, false);
+    for (const body of this.bodies()) body.zIndex = body.y;
+    this.hud.update(this.hero);
     this.updateCamera();
-    this.handleInteract();
     input.endFrame();
+  }
+
+  // --- Hero ---
+
+  private updateHero(dt: number) {
+    const s = this.hero.stats;
+    this.attackCooldown = Math.max(0, this.attackCooldown - dt);
+    this.castCooldown = Math.max(0, this.castCooldown - dt);
+    this.invuln = Math.max(0, this.invuln - dt);
+    this.sinceHit += dt;
+    s.mp = Math.min(s.maxMp, s.mp + MP_REGEN * dt);
+    if (this.sinceHit > HP_REGEN_DELAY) s.hp = Math.min(s.maxHp, s.hp + HP_REGEN * dt);
+
+    if (this.knock.x || this.knock.y) {
+      this.slide(this.player, this.knock.x * dt, this.knock.y * dt);
+      const decay = Math.exp(-12 * dt);
+      this.knock.x *= decay;
+      this.knock.y *= decay;
+      if (Math.hypot(this.knock.x, this.knock.y) < 5) this.knock = { x: 0, y: 0 };
+    }
+
+    const moving = this.move(dt);
+    // Lunge into a swing; blink while invulnerable.
+    const [fx, fy] = DIR_VEC[this.player.facing];
+    const swinging = this.attackCooldown > ATTACK_COOLDOWN - 0.1;
+    this.player.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
+    this.player.alpha = this.invuln > 0 && Math.floor(this.invuln * 16) % 2 === 0 ? 0.35 : 1;
+    this.player.animate(dt * 1000, moving);
   }
 
   /** Returns true if the player is trying to move. */
@@ -127,10 +229,109 @@ export class Game {
     else this.player.face(dy > 0 ? 'down' : 'up');
     const len = Math.hypot(dx, dy);
     const step = SPEED * dt;
-    // Resolve axes separately so the player slides along walls.
-    this.tryMove((dx / len) * step, 0);
-    this.tryMove(0, (dy / len) * step);
+    this.slide(this.player, (dx / len) * step, (dy / len) * step);
     return true;
+  }
+
+  private handleAction() {
+    if (!input.wasPressed(...ACTION_KEYS)) return;
+    if (this.lineIndex >= 0) {
+      this.lineIndex++;
+      if (this.lineIndex >= this.lines.length) {
+        this.lineIndex = -1;
+        this.ui.visible = false;
+      } else {
+        this.showLine(this.lines[this.lineIndex]);
+      }
+    } else if (this.npc.visible && Math.hypot(this.player.x - this.npc.x, this.player.y - this.npc.y) < CELL * 1.5) {
+      this.npc.face(directionToward(this.player.x - this.npc.x, this.player.y - this.npc.y));
+      this.say(NPC_LINES);
+    } else {
+      this.attack();
+    }
+  }
+
+  private attack() {
+    if (this.attackCooldown > 0) return;
+    this.attackCooldown = ATTACK_COOLDOWN;
+    const dir = this.player.facing;
+    const [vx, vy] = DIR_VEC[dir];
+    this.effects.add(slashEffect(this.player.x + vx * 6, this.player.y - 12 + vy * 6, dir));
+    const cx = this.player.x + vx * 16;
+    const cy = this.player.y + vy * 16;
+    for (const mob of this.mobs) {
+      if (mob.alive && Math.hypot(mob.body.x - cx, mob.body.y - cy) < MELEE_REACH) {
+        this.hitMob(mob, rollDamage(attackPower(this.hero), mob.kind.defense), vx, vy);
+      }
+    }
+  }
+
+  private cast() {
+    if (this.castCooldown > 0) return;
+    this.castCooldown = CAST_COOLDOWN;
+    const { spell, stats } = this.hero;
+    const { x, y } = this.player;
+    if (stats.mp < spell.cost) {
+      this.effects.add(floatText(x, y - 40, 'No MP', 0x8fb3ff));
+      return;
+    }
+    stats.mp -= spell.cost;
+    const [vx, vy] = DIR_VEC[this.player.facing];
+    const hitY = 14; // the bolt flies at chest height, this far above the ground it tests against
+    this.effects.add(
+      boltEffect(x + vx * 10, y - hitY + vy * 8, vx * BOLT_SPEED, vy * BOLT_SPEED, BOLT_RANGE, (bx, by) => {
+        if (this.isBlocked(Math.floor(bx / CELL), Math.floor((by + hitY) / CELL))) return true;
+        const mob = this.mobs.find((m) => m.alive && Math.abs(bx - m.body.x) < 12 && Math.abs(by + hitY - m.body.y) < 16);
+        if (!mob) return false;
+        this.hitMob(mob, rollDamage(spellPower(this.hero), mob.kind.defense), vx, vy);
+        return true;
+      }),
+    );
+  }
+
+  private hitMob(mob: Mob, damage: number, vx: number, vy: number) {
+    const killed = mob.hit(damage, vx, vy);
+    this.effects.add(floatText(mob.body.x, mob.body.y - 40, String(damage), 0xffffff));
+    if (!killed) return;
+    this.effects.add(floatText(mob.body.x, mob.body.y - 52, `+${mob.kind.xp} XP`, 0xffb13f));
+    if (gainXp(this.hero.stats, mob.kind.xp)) {
+      this.effects.add(floatText(this.player.x, this.player.y - 48, 'LEVEL UP!', 0xffb13f));
+    }
+  }
+
+  private hurtHero(mob: Mob) {
+    if (this.invuln > 0) return;
+    const damage = rollDamage(mob.kind.attack, defensePower(this.hero));
+    const s = this.hero.stats;
+    s.hp -= damage;
+    this.invuln = INVULN_TIME;
+    this.sinceHit = 0;
+    this.effects.add(floatText(this.player.x, this.player.y - 40, String(damage), 0xff5a5a));
+    const dx = this.player.x - mob.body.x;
+    const dy = this.player.y - mob.body.y;
+    const len = Math.hypot(dx, dy) || 1;
+    this.knock = { x: (dx / len) * 220, y: (dy / len) * 220 };
+    if (s.hp <= 0) this.defeat();
+  }
+
+  /** Out of HP: back to the spawn point, fully restored (XP and levels are kept). */
+  private defeat() {
+    const s = this.hero.stats;
+    s.hp = s.maxHp;
+    s.mp = s.maxMp;
+    this.player.position.set(...this.cellToFeet(this.data.spawn));
+    this.player.face('down');
+    this.knock = { x: 0, y: 0 };
+    this.invuln = 0;
+    this.mobs.forEach((m) => m.reset());
+    this.say(DEFEAT_LINES);
+  }
+
+  // --- Collision ---
+
+  /** Every character that blocks others. */
+  private bodies(): Character[] {
+    return [this.player, this.npc, ...this.mobs.filter((m) => m.alive).map((m) => m.body)];
   }
 
   private isBlocked(col: number, row: number): boolean {
@@ -138,37 +339,37 @@ export class Game {
     return this.blocked.has(row * this.data.width + col);
   }
 
-  private tryMove(mx: number, my: number) {
-    const nx = this.player.x + mx;
-    const ny = this.player.y + my;
-    // Collision box is a small rectangle around the feet (player origin = feet).
-    if (this.npc.visible && Math.abs(nx - this.npc.x) < 14 && Math.abs(ny - this.npc.y) < 8) return;
+  /** Whether feet at (x, y) fit the map. The collision box is a small rectangle around the feet. */
+  private fitsMap(x: number, y: number): boolean {
     for (const [cx, cy] of [[-6, -6], [6, -6], [-6, -1], [6, -1]]) {
-      if (this.isBlocked(Math.floor((nx + cx) / CELL), Math.floor((ny + cy) / CELL))) return;
+      if (this.isBlocked(Math.floor((x + cx) / CELL), Math.floor((y + cy) / CELL))) return false;
     }
-    this.player.position.set(nx, ny);
+    return true;
   }
 
-  private handleInteract() {
-    if (!input.wasPressed('Space', 'Enter', 'KeyE')) return;
-    if (this.lineIndex >= 0) {
-      this.lineIndex++;
-      if (this.lineIndex >= NPC_LINES.length) {
-        this.lineIndex = -1;
-        this.ui.visible = false;
-      } else {
-        this.showLine(NPC_LINES[this.lineIndex]);
-      }
-    } else if (this.npc.visible && Math.hypot(this.player.x - this.npc.x, this.player.y - this.npc.y) < CELL * 1.5) {
-      this.lineIndex = 0;
-      this.npc.face(this.directionToward(this.player.x - this.npc.x, this.player.y - this.npc.y));
-      this.showLine(NPC_LINES[0]);
-      this.ui.visible = true;
+  /** Whether `body` may step to (x, y): on open ground, and not pushing further into another character. */
+  private canMove(body: Character, x: number, y: number): boolean {
+    if (!this.fitsMap(x, y)) return false;
+    for (const other of this.bodies()) {
+      if (other === body || !other.visible) continue;
+      const overlaps = Math.abs(x - other.x) < 14 && Math.abs(y - other.y) < 8;
+      // Moving apart is always allowed, so bodies that end up overlapping (e.g. via knockback) can't get stuck.
+      if (overlaps && Math.hypot(x - other.x, y - other.y) < Math.hypot(body.x - other.x, body.y - other.y)) return false;
     }
+    return true;
   }
 
-  private directionToward(dx: number, dy: number): Direction {
-    if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'right' : 'left';
-    return dy > 0 ? 'down' : 'up';
+  /** Move with collision, resolving axes separately so bodies slide along walls. Returns true if it moved. */
+  private slide(body: Character, mx: number, my: number): boolean {
+    let moved = false;
+    if (mx && this.canMove(body, body.x + mx, body.y)) {
+      body.x += mx;
+      moved = true;
+    }
+    if (my && this.canMove(body, body.x, body.y + my)) {
+      body.y += my;
+      moved = true;
+    }
+    return moved;
   }
 }

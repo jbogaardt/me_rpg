@@ -9,47 +9,59 @@
     <style>
       html, body { margin: 0; height: 100%; background: #111; overflow: hidden; overscroll-behavior: none; }
       canvas { display: block; touch-action: none; }
-
-      /* On-screen controls (wired up in src/game/touch.ts; shown only on touch devices). */
-      #touch-controls {
-        position: fixed; inset: 0; pointer-events: none; z-index: 1;
-        user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
-      }
-      #touch-controls[hidden] { display: none; }
-      #dpad, #action-btn {
-        position: absolute; pointer-events: auto; touch-action: none; border-radius: 50%;
-        bottom: calc(20px + env(safe-area-inset-bottom));
-        background: rgba(255, 255, 255, 0.12); border: 2px solid rgba(255, 255, 255, 0.35);
-      }
-      #dpad { left: calc(20px + env(safe-area-inset-left)); width: 140px; height: 140px; }
-      #dpad-knob {
-        position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px;
-        border-radius: 50%; background: rgba(255, 255, 255, 0.3); pointer-events: none;
-      }
-      #dpad .arrow {
-        position: absolute; color: rgba(255, 255, 255, 0.55); font: 20px/1 sans-serif; pointer-events: none;
-      }
-      #dpad .up { top: 8px; left: 50%; transform: translateX(-50%); }
-      #dpad .down { bottom: 8px; left: 50%; transform: translateX(-50%); }
-      #dpad .left { left: 10px; top: 50%; transform: translateY(-50%); }
-      #dpad .right { right: 10px; top: 50%; transform: translateY(-50%); }
-      #dpad.up .up, #dpad.down .down, #dpad.left .left, #dpad.right .right { color: #ffb13f; }
-      #action-btn {
-        right: calc(28px + env(safe-area-inset-right)); width: 84px; height: 84px; margin-bottom: 28px;
-        color: rgba(255, 255, 255, 0.85); font: bold 30px/80px sans-serif; text-align: center;
-      }
-      #action-btn.pressed { background: rgba(231, 104, 47, 0.6); border-color: #e7682f; }
     </style>
   </head>
   <body>
+    <!-- Overlays over the canvas; styles in src/ui.css. [data-key] elements press that key while held (src/game/touch.ts). -->
+    <div id="hud">
+      <div id="hud-stats">
+        <div id="hud-level">Lv 1</div>
+        <div id="hud-hp" class="bar"><div class="fill"></div><span class="label"></span></div>
+        <div id="hud-mp" class="bar"><div class="fill"></div><span class="label"></span></div>
+        <div id="hud-xp" class="bar thin"><div class="fill"></div></div>
+      </div>
+      <div id="menu-btn" role="button" aria-label="Menu" data-key="Escape">☰</div>
+    </div>
+
     <div id="touch-controls" hidden>
       <div id="dpad">
         <span class="arrow up">▲</span><span class="arrow down">▼</span>
         <span class="arrow left">◀</span><span class="arrow right">▶</span>
         <div id="dpad-knob"></div>
       </div>
-      <div id="action-btn">A</div>
+      <div id="buttons">
+        <div id="btn-b" role="button" aria-label="Magic" data-key="KeyK">B</div>
+        <div id="btn-a" role="button" aria-label="Attack / talk" data-key="KeyJ">A</div>
+      </div>
     </div>
+
+    <div id="menu" hidden>
+      <div class="panel">
+        <header>
+          <nav>
+            <div role="tab" data-tab="status" class="active">Status</div>
+            <div role="tab" data-tab="gear">Gear</div>
+            <div role="tab" data-tab="controls">Controls</div>
+          </nav>
+          <div class="close" role="button" aria-label="Close menu" data-key="Escape">✕</div>
+        </header>
+        <section id="menu-status"></section>
+        <section id="menu-gear" hidden></section>
+        <section id="menu-controls" hidden>
+          <table>
+            <thead><tr><th></th><th>Keyboard</th><th>Touch</th></tr></thead>
+            <tbody>
+              <tr><td>Move</td><td>WASD / arrows</td><td>D-pad</td></tr>
+              <tr><td>Attack / talk</td><td>Space, J, Enter, E</td><td>A</td></tr>
+              <tr><td>Magic</td><td>K, Q</td><td>B</td></tr>
+              <tr><td>Menu</td><td>Esc, I, Tab</td><td>☰</td></tr>
+              <tr><td>Menu tabs</td><td>← / →</td><td>Tap</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -5,7 +5,7 @@ const pressed = new Set<string>();
 window.addEventListener('keydown', (e) => {
   if (!held.has(e.code)) pressed.add(e.code);
   held.add(e.code);
-  if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
+  if (e.code.startsWith('Arrow') || e.code === 'Space' || e.code === 'Tab') e.preventDefault();
 });
 window.addEventListener('keyup', (e) => held.delete(e.code));
 

@@ -1,5 +1,7 @@
 import { Application, Assets, type Texture } from 'pixi.js';
 import { Game } from './game/Game';
+import { SHADE } from './game/combat';
+import './ui.css';
 import { fetchMap, loadSheets } from './map/sheets';
 
 (async () => {
@@ -9,7 +11,7 @@ import { fetchMap, loadSheets } from './map/sheets';
 
   const data = await fetchMap();
   const textures = await loadSheets(data.sheets);
-  const hero = await Assets.load<Texture>(`${import.meta.env.BASE_URL}sprites/healer_f.png`);
-  const npc = await Assets.load<Texture>(`${import.meta.env.BASE_URL}sprites/warrior_m.png`);
-  new Game(app, data, textures, hero, npc).start();
+  const sprite = (file: string) => Assets.load<Texture>(`${import.meta.env.BASE_URL}sprites/${file}`);
+  const [hero, npc, mob] = await Promise.all([sprite('healer_f.png'), sprite('warrior_m.png'), sprite(SHADE.sheet)]);
+  new Game(app, data, textures, { hero, npc, mob }).start();
 })();

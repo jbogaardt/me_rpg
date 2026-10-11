@@ -1,7 +1,9 @@
 import { input } from './input';
 
-// On-screen controls for phones/tablets: a D-pad (drag your thumb for 8-way movement) and an action button.
-// The markup and styles live in index.html; they stay hidden until the device has a touchscreen.
+// On-screen controls: a D-pad (drag your thumb for 8-way movement) plus buttons. Any element with a
+// `data-key` attribute (the A/B buttons, the HUD menu button, the menu's close button) acts as that
+// keyboard key while held. Markup is in index.html, styles in src/ui.css; the D-pad and A/B cluster
+// stay hidden until the device has a touchscreen.
 
 const DEADZONE = 0.25; // fraction of the pad radius where the thumb does nothing
 const DIAGONAL = Math.sin(Math.PI / 8); // axis share needed to count, giving 8 equal 45° sectors
@@ -10,17 +12,39 @@ type PadDir = keyof typeof PAD_KEYS;
 
 export interface TouchControls {
   readonly active: boolean;
-  /** Screen rects (CSS px) the controls cover, so the HUD can stay clear of them. Empty when hidden. */
+  /** Screen rects (CSS px) of the D-pad and the button cluster, so the HUD can stay clear. Empty when hidden. */
   rects(): DOMRect[];
+}
+
+/** Make every `[data-key]` element press its key while a pointer (finger or mouse) holds it. */
+function bindKeyButtons() {
+  for (const el of document.querySelectorAll<HTMLElement>('[data-key]')) {
+    const code = el.dataset.key!;
+    const press = (down: boolean) => {
+      input.setVirtual(code, down);
+      el.classList.toggle('pressed', down);
+    };
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      el.setPointerCapture(e.pointerId);
+      press(true);
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) {
+      el.addEventListener(type, () => press(false));
+    }
+    // Long-presses shouldn't pop up the context menu or text selection.
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
 }
 
 /** `onShow` fires if the controls appear later than creation, so the caller can re-layout around them. */
 export function createTouchControls(onShow: () => void): TouchControls {
+  bindKeyButtons();
   const root = document.getElementById('touch-controls');
   const pad = document.getElementById('dpad');
   const knob = document.getElementById('dpad-knob');
-  const action = document.getElementById('action-btn');
-  if (!root || !pad || !knob || !action) return { active: false, rects: () => [] };
+  const buttons = document.getElementById('buttons');
+  if (!root || !pad || !knob || !buttons) return { active: false, rects: () => [] };
 
   // Show up front on touch devices, or as soon as a touch lands (e.g. a laptop with a touchscreen).
   let active = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
@@ -31,11 +55,8 @@ export function createTouchControls(onShow: () => void): TouchControls {
     root.hidden = false;
     onShow();
   });
-
-  // Long-presses shouldn't pop up the context menu or text selection.
   root.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  // --- D-pad ---
   let padPointer: number | null = null;
   const setDirs = (on: Set<PadDir>) => {
     for (const dir of Object.keys(PAD_KEYS) as PadDir[]) {
@@ -77,24 +98,10 @@ export function createTouchControls(onShow: () => void): TouchControls {
   pad.addEventListener('pointercancel', releasePad);
   pad.addEventListener('lostpointercapture', releasePad);
 
-  // --- Action button (talk / advance dialog) ---
-  const press = (down: boolean) => {
-    input.setVirtual('Enter', down);
-    action.classList.toggle('pressed', down);
-  };
-  action.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    action.setPointerCapture(e.pointerId);
-    press(true);
-  });
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) {
-    action.addEventListener(type, () => press(false));
-  }
-
   return {
     get active() {
       return active;
     },
-    rects: () => (active ? [pad.getBoundingClientRect(), action.getBoundingClientRect()] : []),
+    rects: () => (active ? [pad.getBoundingClientRect(), buttons.getBoundingClientRect()] : []),
   };
 }

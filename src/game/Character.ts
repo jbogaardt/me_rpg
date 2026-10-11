@@ -3,6 +3,15 @@ import { makeFrame } from '../map/MapView';
 
 export type Direction = 'down' | 'up' | 'left' | 'right';
 
+/** Unit vector for each facing. */
+export const DIR_VEC: Record<Direction, readonly [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+
+/** The facing that best points along (dx, dy). */
+export function directionToward(dx: number, dy: number): Direction {
+  if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'right' : 'left';
+  return dy > 0 ? 'down' : 'up';
+}
+
 // Character sheet layout (e.g. public/sprites/healer_f.png): 3 columns x 4 rows of 32x36 frames.
 // Columns are walk-A, standing, walk-B. Rows are back, right, front, left.
 const FRAME_W = 32;
@@ -40,6 +49,20 @@ export class Character extends Container {
 
   face(direction: Direction) {
     this.direction = direction;
+  }
+
+  get facing(): Direction {
+    return this.direction;
+  }
+
+  /** Colour the body (not the shadow), e.g. to flash on a hit. 0xffffff is untinted. */
+  setTint(color: number) {
+    this.sprite.tint = color;
+  }
+
+  /** Nudge the body off its feet point, e.g. to lunge into an attack. */
+  setOffset(dx: number, dy: number) {
+    this.sprite.position.set(dx, 2 + dy);
   }
 
   /** Advance animation; `moving` selects the walk cycle over the standing pose. */

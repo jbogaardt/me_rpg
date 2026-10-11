@@ -9,8 +9,14 @@ npm install
 npm run dev
 ```
 
-Controls: WASD / arrow keys to move, Space / Enter / E to talk to the red NPC.
-On phones and tablets an on-screen D-pad (drag your thumb, 8-way) and **A** button appear instead.
+Controls: WASD / arrow keys to move, Space / J / Enter / E to attack (or talk when next to the NPC),
+K / Q to cast Time Bolt (costs MP), Esc / I / Tab for the menu.
+On phones and tablets an on-screen D-pad (drag your thumb, 8-way) plus **A** (attack/talk), **B** (magic)
+and **☰** (menu) buttons appear.
+
+A Shade (the dark ninja) wanders the southeast field as a test enemy: it chases you on sight and
+attacks after a yellow-flashing windup. It respawns a few seconds after dying; if you fall, you wake
+at the spawn point with full HP/MP and keep your XP.
 
 ## Map editor
 
