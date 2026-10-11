@@ -27,6 +27,7 @@ There is no linter or test runner yet.
 - **Map editor**: `editor.html` + `src/editor/main.ts` (second Vite entry, served at `/editor.html`). Pick regions from a sheet, paint ground/objects/collision/spawn/NPC, undo, autosave to localStorage. `Save to project` POSTs to a dev-only Vite middleware (`vite.config.ts`) that writes `public/maps/overworld.json`; on the deployed site it downloads instead. Commit the JSON to publish map changes.
 - `src/game/Character.ts` renders the hero and NPCs from character sheets in `public/sprites/` (3 columns x 4 rows of 32x36 frames: walk-A, stand, walk-B; rows back/right/front/left). Swap characters by loading a different sheet of that layout in `main.ts`. The `Character` container's origin is the *feet*, so collision and y-sorting (`zIndex = y` in `Game.update`) use it directly. Character theme: a boy stranded outside time (the current hero/NPC sprites are placeholder sheets: healer_f / warrior_m).
 - `src/game/input.ts` is a module-level keyboard singleton; `Game.update` must call `input.endFrame()` each tick to clear one-shot `wasPressed` state.
+- **Touch controls**: `src/game/touch.ts` wires the on-screen D-pad and A button (markup/CSS in `index.html`, shown only on touch devices) into `input` as virtual key presses (`input.setVirtual`, arrow keys + Enter), so game code only ever reads key codes. `Game.layoutDialog` keeps the dialog box clear of the controls via `touch.rects()`.
 
 ## Deployment
 
