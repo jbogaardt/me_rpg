@@ -50,12 +50,14 @@ export function createTouchControls(onChange: () => void): TouchControls {
   // Start shown only when the primary pointer is a finger (phones, tablets). A touchscreen laptop or
   // desktop starts hidden; touching the screen shows the controls and typing a key hides them again.
   let active = false;
-  const setActive = (on: boolean) => {
+  // `notify` is false for the initial state: the caller hasn't finished constructing yet (its `touch`
+  // field isn't assigned), and it lays out once itself right after.
+  const setActive = (on: boolean, notify = true) => {
     if (on === active) return;
     active = on;
     root.hidden = !on;
     if (!on) releaseAll();
-    onChange();
+    if (notify) onChange();
   };
   window.addEventListener('pointerdown', (e) => e.pointerType === 'touch' && setActive(true), { capture: true });
   window.addEventListener('keydown', () => setActive(false));
@@ -106,7 +108,7 @@ export function createTouchControls(onChange: () => void): TouchControls {
   pad.addEventListener('pointerup', releasePad);
   pad.addEventListener('pointercancel', releasePad);
   pad.addEventListener('lostpointercapture', releasePad);
-  setActive(matchMedia('(pointer: coarse)').matches);
+  setActive(matchMedia('(pointer: coarse)').matches, false);
 
   return {
     get active() {
