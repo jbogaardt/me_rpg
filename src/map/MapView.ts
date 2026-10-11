@@ -1,6 +1,6 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import { makeFrame } from '../core/textures';
-import { darknessAlpha } from './darkness';
+import { DARK_SCALE, darknessAlpha } from './darkness';
 import { CELL, sortKey, type MapData } from './types';
 
 /**
@@ -50,14 +50,15 @@ export class MapView extends Container {
   }
 
   /**
-   * The edge of the world: a black fade over the open ground that is solid black in the unwalkable cells. One pixel per
+   * The edge of the world: a black fade over the open ground that is solid black in the unwalkable cells. A few pixels per
    * cell, stretched with linear filtering (the only texture here that is not nearest) so the fade is smooth. It sits
    * above everything, so a character darkens as it nears the edge.
    */
   private addDarkness() {
     const alpha = darknessAlpha(this.data);
     if (!alpha) return;
-    const { width, height } = this.data;
+    const width = this.data.width * DARK_SCALE,
+      height = this.data.height * DARK_SCALE;
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -71,7 +72,7 @@ export class MapView extends Container {
     const texture = Texture.from(canvas);
     texture.source.scaleMode = 'linear';
     const sprite = new Sprite(texture);
-    sprite.scale.set(CELL);
+    sprite.scale.set(CELL / DARK_SCALE);
     sprite.zIndex = 1e9;
     this.layer.addChild(sprite);
   }
