@@ -5,9 +5,10 @@
 //  - The guest sends its *state* (keys held) plus monotonically increasing counters for one-shot presses
 //    (attack, magic). A lost packet is corrected by the next one; a counter can't be missed, only delayed.
 //  - The host sends a snapshot each time: every player, but only the mobs near that guest (and a still mob only now and
-//    then, see feed.ts). Recent one-shot world events (hit numbers, slashes...) ride in consecutive snapshots with ids so
-//    the guest can show each exactly once; the guest's input messages carry the newest id it has seen (`ack`), so the host
-//    stops repeating what has arrived.
+//    then, see feed.ts). Recent one-shot world events near that guest (hit numbers, slashes...) ride in consecutive
+//    snapshots with ids so the guest can show each exactly once; the guest's input messages carry the newest id it has
+//    seen (`ack`), so the host stops repeating what has arrived. Events are flat tuples (`EventWire`) and as many as fit
+//    a size budget, so a snapshot stays one packet (a bigger one is split, and losing any piece loses all of it).
 //  - Both sides drop anything whose sequence number isn't newer than the last one seen.
 // Everything from the peer is untrusted input: parseMessage() validates the shape and ranges, never throws.
 
@@ -20,7 +21,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { WEATHER_KINDS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 11;
+export const PROTOCOL_VERSION = 12;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -54,6 +55,30 @@ export type StatsSnap = [number, number, number, number, number, number, number,
 /** One-shot particle effects a host may ask a guest to play (continuous ones, like the bolt trail, are local). */
 export const FX_NAMES = ['hitSpark', 'mobPoof', 'levelUp', 'heroHurt'] as const satisfies readonly ParticleEffectName[];
 export type FxName = (typeof FX_NAMES)[number];
+
+/**
+ * A WorldEvent on the wire: `[id, kind index in EVENT_KINDS, ...fields]`, positions and speeds in whole pixels.
+ *   slash  [id, 0, x, y, dir, p]
+ *   bolt   [id, 1, x, y, vx, vy, p (-1: none), color?]
+ *   draw   [id, 2, x, y, p]
+ *   arrow  [id, 3, x, y, vx, vy, range]
+ *   text   [id, 4, x, y, text, color]
+ *   fx     [id, 5, FX_NAMES index, x, y, dir (null: none)?, p?]
+ *   defeat [id, 6, player]
+ *   lightning [id, 7, x, y, seed]
+ */
+export type EventWire = (number | string | null)[];
+
+export const EVENT_KINDS = [
+  'slash',
+  'bolt',
+  'draw',
+  'arrow',
+  'text',
+  'fx',
+  'defeat',
+  'lightning',
+] as const satisfies readonly WorldEvent['type'][];
 
 /** Something that happened this tick and is only shown, never simulated, on the guest. */
 export type WorldEvent =
@@ -109,7 +134,7 @@ export interface SnapMsg {
   w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
   ground?: GroundSnap[];
-  events: { id: number; e: WorldEvent }[];
+  events: EventWire[]; // oldest first; see encodeEvent / decodeEvent
 }
 
 /** What a guest may ask the host to do with its own hero. The host checks every one (the guest only sends a wish). */
@@ -173,6 +198,24 @@ export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg
 
 export const encodeMessage = (m: Message): string => JSON.stringify(m);
 
+/**
+ * Two snapshots the guest received in one frame, as one. A snapshot leaves out mobs and ground that did not change, so
+ * taking only the newer would lose what the older one said: the older one's mobs the newer does not list are kept,
+ * its ground list stands if the newer has none, and its events are kept (each id once). A zone change starts afresh.
+ */
+export function mergeSnapshots(older: SnapMsg, newer: SnapMsg): SnapMsg {
+  if (older.zone !== newer.zone) return newer;
+  const listed = new Set(newer.mobs.map((m) => m[0]));
+  const ids = new Set(newer.events.map((w) => w[0]));
+  const ground = newer.ground ?? older.ground;
+  return {
+    ...newer,
+    mobs: [...older.mobs.filter((m) => !listed.has(m[0])), ...newer.mobs],
+    events: [...older.events.filter((w) => !ids.has(w[0])), ...newer.events],
+    ...(ground ? { ground } : {}),
+  };
+}
+
 export const round1 = (n: number) => Math.round(n * 10) / 10;
 
 /** A map may hold up to 30 chests (one bit each in SnapMsg.chests). */
@@ -200,65 +243,118 @@ const numbers = (v: unknown, length: number): v is number[] =>
 const isWeather = (v: unknown): v is WeatherSnap =>
   numbers(v, 3) && isIndex(v[0], WEATHER_KINDS.length) && isCount(v[1]) && v[1] <= 100 && (v[2] === 0 || v[2] === 1);
 
-function parseEvent(raw: unknown): WorldEvent | null {
-  const e = raw as Record<string, unknown> | null;
-  if (!e || typeof e !== 'object') return null;
+/** An event as it travels in a snapshot (see EventWire). */
+export function encodeEvent(id: number, e: WorldEvent): EventWire {
+  const r = Math.round;
   switch (e.type) {
     case 'slash':
-      return isCoord(e.x) && isCoord(e.y) && isIndex(e.dir, DIRS.length) && isIndex(e.p, MAX_PLAYERS)
-        ? { type: 'slash', x: e.x, y: e.y, dir: e.dir, p: e.p }
-        : null;
+      return [id, 0, r(e.x), r(e.y), e.dir, e.p];
     case 'bolt':
-      return isCoord(e.x) &&
-        isCoord(e.y) &&
-        isCoord(e.vx) &&
-        isCoord(e.vy) &&
-        (e.color === undefined || (isCount(e.color) && e.color <= 0xffffff)) &&
-        (e.p === undefined || isIndex(e.p, MAX_PLAYERS))
-        ? {
-            type: 'bolt',
-            x: e.x,
-            y: e.y,
-            vx: e.vx,
-            vy: e.vy,
-            ...(e.color === undefined ? {} : { color: e.color }),
-            ...(e.p === undefined ? {} : { p: e.p }),
-          }
-        : null;
+      return [id, 1, r(e.x), r(e.y), r(e.vx), r(e.vy), e.p ?? -1, ...(e.color === undefined ? [] : [e.color])];
     case 'draw':
-      return isCoord(e.x) && isCoord(e.y) && isIndex(e.p, MAX_PLAYERS)
-        ? { type: 'draw', x: e.x, y: e.y, p: e.p }
-        : null;
+      return [id, 2, r(e.x), r(e.y), e.p];
     case 'arrow':
-      return isCoord(e.x) && isCoord(e.y) && isCoord(e.vx) && isCoord(e.vy) && isCoord(e.range) && e.range >= 0
-        ? { type: 'arrow', x: e.x, y: e.y, vx: e.vx, vy: e.vy, range: e.range }
-        : null;
+      return [id, 3, r(e.x), r(e.y), r(e.vx), r(e.vy), r(e.range)];
     case 'text':
-      return isCoord(e.x) &&
-        isCoord(e.y) &&
-        typeof e.text === 'string' &&
-        e.text.length <= MAX_TEXT &&
-        isCount(e.color) &&
-        e.color <= 0xffffff
-        ? { type: 'text', x: e.x, y: e.y, text: e.text, color: e.color }
-        : null;
-    case 'fx':
-      return FX_NAMES.includes(e.name as FxName) &&
-        isCoord(e.x) &&
-        isCoord(e.y) &&
-        (e.dir === undefined || isCoord(e.dir)) &&
-        (e.p === undefined || isIndex(e.p, MAX_PLAYERS))
-        ? { type: 'fx', name: e.name as FxName, x: e.x, y: e.y, dir: e.dir, ...(e.p === undefined ? {} : { p: e.p }) }
-        : null;
-    case 'lightning':
-      return isCoord(e.x) && isCoord(e.y) && isCount(e.seed) && e.seed <= 0xffffffff
-        ? { type: 'lightning', x: e.x, y: e.y, seed: e.seed }
-        : null;
+      return [id, 4, r(e.x), r(e.y), e.text, e.color];
+    case 'fx': {
+      const tail =
+        e.p !== undefined
+          ? [e.dir === undefined ? null : round1(e.dir), e.p]
+          : e.dir !== undefined
+            ? [round1(e.dir)]
+            : [];
+      return [id, 5, FX_NAMES.indexOf(e.name), r(e.x), r(e.y), ...tail];
+    }
     case 'defeat':
-      return isIndex(e.player, MAX_PLAYERS) ? { type: 'defeat', player: e.player } : null;
-    default:
-      return null;
+      return [id, 6, e.player];
+    case 'lightning':
+      return [id, 7, r(e.x), r(e.y), e.seed];
   }
+}
+
+/** The event in a wire tuple, or null for anything malformed (it comes from the peer). */
+export function decodeEvent(raw: unknown): { id: number; e: WorldEvent } | null {
+  if (!Array.isArray(raw) || raw.length < 3 || raw.length > 8) return null;
+  const w = raw as unknown[];
+  const [id, kind] = w;
+  if (!isCount(id)) return null;
+  const at = (i: number) => w[i];
+  const len = (n: number, max = n) => w.length >= n && w.length <= max;
+  const xy = () => isCoord(at(2)) && isCoord(at(3));
+  const player = (v: unknown): v is number => isIndex(v, MAX_PLAYERS);
+  const colour = (v: unknown): v is number => isCount(v) && v <= 0xffffff;
+  const n = (i: number) => w[i] as number;
+  let e: WorldEvent | null = null;
+  switch (kind) {
+    case 0:
+      if (len(6) && xy() && isIndex(at(4), DIRS.length) && player(at(5)))
+        e = { type: 'slash', x: n(2), y: n(3), dir: n(4), p: n(5) };
+      break;
+    case 1: {
+      const [p, color] = [at(6), at(7)];
+      if (
+        len(7, 8) &&
+        xy() &&
+        isCoord(at(4)) &&
+        isCoord(at(5)) &&
+        (p === -1 || player(p)) &&
+        (color === undefined || colour(color))
+      )
+        e = {
+          type: 'bolt',
+          x: n(2),
+          y: n(3),
+          vx: n(4),
+          vy: n(5),
+          ...(p === -1 ? {} : { p }),
+          ...(color === undefined ? {} : { color }),
+        };
+      break;
+    }
+    case 2:
+      if (len(5) && xy() && player(at(4))) e = { type: 'draw', x: n(2), y: n(3), p: n(4) };
+      break;
+    case 3:
+      if (len(7) && xy() && isCoord(at(4)) && isCoord(at(5)) && isCoord(at(6)) && n(6) >= 0)
+        e = { type: 'arrow', x: n(2), y: n(3), vx: n(4), vy: n(5), range: n(6) };
+      break;
+    case 4: {
+      const text = at(4);
+      if (len(6) && xy() && typeof text === 'string' && text.length <= MAX_TEXT && colour(at(5)))
+        e = { type: 'text', x: n(2), y: n(3), text, color: n(5) };
+      break;
+    }
+    case 5: {
+      const [name, dir, p] = [FX_NAMES[n(2)], at(5), at(6)];
+      if (
+        len(5, 7) &&
+        isIndex(at(2), FX_NAMES.length) &&
+        name &&
+        isCoord(at(3)) &&
+        isCoord(at(4)) &&
+        (dir === undefined || dir === null || isCoord(dir)) &&
+        (p === undefined || player(p))
+      )
+        e = {
+          type: 'fx',
+          name,
+          x: n(3),
+          y: n(4),
+          ...(dir === undefined || dir === null ? {} : { dir }),
+          ...(p === undefined ? {} : { p }),
+        };
+      break;
+    }
+    case 6:
+      if (len(3) && player(at(2))) e = { type: 'defeat', player: n(2) };
+      break;
+    case 7:
+      if (len(5) && xy() && isCount(at(4)) && n(4) <= 0xffffffff)
+        e = { type: 'lightning', x: n(2), y: n(3), seed: n(4) };
+      break;
+  }
+  return e ? { id, e } : null;
 }
 
 const MAX_OFFER = 12;
@@ -398,10 +494,10 @@ export function parseMessage(raw: unknown): Message | null {
             ? (m.ground as unknown[]).map(parseGround)
             : null;
       const rawEvents = Array.isArray(m.events) && m.events.length <= MAX_EVENTS ? m.events : null;
-      const events = (rawEvents ?? []).map((item: unknown) => {
-        const { id, e } = (item ?? {}) as { id?: unknown; e?: unknown };
-        const event = isCount(id) ? parseEvent(e) : null;
-        return event && isCount(id) ? { id, e: event } : null;
+      // Kept as tuples, re-encoded from what was checked so the scene's decodeEvent can't meet anything unexpected.
+      const events = (rawEvents ?? []).map((raw: unknown) => {
+        const ev = decodeEvent(raw);
+        return ev ? encodeEvent(ev.id, ev.e) : null;
       });
       if (
         !players ||
@@ -438,7 +534,7 @@ export function parseMessage(raw: unknown): Message | null {
         chests: m.chests,
         w: m.w,
         ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
-        events: events as { id: number; e: WorldEvent }[],
+        events: events as EventWire[],
       };
     }
     case 'do':

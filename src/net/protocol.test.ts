@@ -1,8 +1,13 @@
 import { Weather } from '../systems/weather';
 import { describe, expect, it } from 'vitest';
 import type { TradeCommand, TradeViewWire } from '../systems/trade';
+import { MAX_GROUND } from '../systems/inventory';
+import { fitEvents, SNAP_BUDGET } from './feed';
 import {
+  decodeEvent,
+  encodeEvent,
   encodeMessage,
+  mergeSnapshots,
   packKeys,
   parseMessage,
   type Message,
@@ -17,6 +22,7 @@ import {
   type MobSnap,
   type PlayerSnap,
   type SnapMsg,
+  type WorldEvent,
 } from './protocol';
 
 const mob: MobSnap = [0, 100, 200, 2, 3, 20, 450, 1];
@@ -34,19 +40,21 @@ const snap: SnapMsg = {
   chests: 5,
   w: [0, 0, 1],
   ground: [[3, 40.5, 50, 2, 150]],
-  events: [
-    { id: 4, e: { type: 'text', x: 5, y: 6, text: '+12 XP', color: 0xffb13f } },
-    { id: 5, e: { type: 'slash', x: 1, y: 2, dir: 3, p: 2 } },
-    { id: 6, e: { type: 'bolt', x: 1, y: 2, vx: 260, vy: 0, p: 1 } },
-    { id: 11, e: { type: 'draw', x: 1, y: 2, p: 3 } },
-    { id: 12, e: { type: 'arrow', x: 1, y: 2, vx: 300, vy: 0, range: 256 } },
-    { id: 10, e: { type: 'bolt', x: 5, y: 6, vx: -135, vy: 0, color: 0xb06cff } }, // an enemy's shot
-    { id: 13, e: { type: 'lightning', x: 100.5, y: 200, seed: 123456789 } },
-    { id: 7, e: { type: 'defeat', player: 3 } },
-    { id: 8, e: { type: 'fx', name: 'hitSpark', x: 3, y: 4, dir: 1.6 } },
-    { id: 9, e: { type: 'fx', name: 'levelUp', x: 3, y: 4 } },
-    { id: 13, e: { type: 'fx', name: 'heroHurt', x: 3, y: 4, p: 1 } },
-  ],
+  events: (
+    [
+      [4, { type: 'text', x: 5, y: 6, text: '+12 XP', color: 0xffb13f }],
+      [5, { type: 'slash', x: 1, y: 2, dir: 3, p: 2 }],
+      [6, { type: 'bolt', x: 1, y: 2, vx: 260, vy: 0, p: 1 }],
+      [11, { type: 'draw', x: 1, y: 2, p: 3 }],
+      [12, { type: 'arrow', x: 1, y: 2, vx: 300, vy: 0, range: 256 }],
+      [10, { type: 'bolt', x: 5, y: 6, vx: -135, vy: 0, color: 0xb06cff }], // an enemy's shot
+      [14, { type: 'lightning', x: 100, y: 200, seed: 123456789 }],
+      [7, { type: 'defeat', player: 3 }],
+      [8, { type: 'fx', name: 'hitSpark', x: 3, y: 4, dir: 1.6 }],
+      [9, { type: 'fx', name: 'levelUp', x: 3, y: 4 }],
+      [13, { type: 'fx', name: 'heroHurt', x: 3, y: 4, p: 1 }],
+    ] satisfies [number, WorldEvent][]
+  ).map(([id, e]) => encodeEvent(id, e)),
 };
 
 describe('keys', () => {
@@ -69,23 +77,87 @@ describe('messages', () => {
   });
 
   it('keeps a busy four-player snapshot inside one network packet', () => {
-    // Four players, the eight mobs near this friend and six events not yet acknowledged (the guest's `ack` trims them within a
-    // round trip or two): a big fight. A message
-    // over about 1.2 KB is split in transit, and on this channel losing any piece loses the whole message.
+    // Four players, the eight mobs near this friend, a full ground list and a fight's worth of events not yet
+    // acknowledged, trimmed to the room the rest leaves (as the host does). A message over about 1.2 KB is split in
+    // transit, and on this channel losing any piece loses the whole message.
     const everyone = Array.from({ length: 4 }, (_, slot): PlayerSnap => [slot, 1234, 2345, 3, 7]);
     const near = Array.from({ length: 8 }, (_, i): MobSnap => [i, 1234 + i * 40, 2345, 3, 1, 20, 450, 1]);
-    const events = Array.from({ length: 6 }, (_, id) => ({
-      id: id + 1,
-      e:
-        id % 3 === 0
-          ? ({ type: 'text', x: 1500.4, y: 850.2, text: '12', color: 0xffffff } as const)
-          : id % 3 === 1
-            ? ({ type: 'fx', name: 'hitSpark', x: 1500.4, y: 886.2, dir: 1.6 } as const)
-            : ({ type: 'slash', x: 1500.4, y: 900.2, dir: 1, p: 2 } as const),
-    }));
-    const ground = Array.from({ length: 4 }, (_, i): GroundSnap => [100 + i, 1234.5, 2345.6, 25, 179]);
-    const big: SnapMsg = { ...snap, players: everyone, mobs: near, events, ground };
-    expect(encodeMessage(big).length).toBeLessThan(1200);
+    const ground = Array.from({ length: MAX_GROUND }, (_, i): GroundSnap => [100 + i, 1234, 2345, 25, 179]);
+    const fight = Array.from({ length: 48 }, (_, i) => {
+      const e: WorldEvent =
+        i % 3 === 0
+          ? { type: 'text', x: 1500.4, y: 850.2, text: '12', color: 0xffffff }
+          : i % 3 === 1
+            ? { type: 'fx', name: 'hitSpark', x: 1500.4, y: 886.2, dir: 1.6 }
+            : { type: 'slash', x: 1500.4, y: 900.2, dir: 1, p: 2 };
+      const wire = encodeEvent(100_000 + i, e);
+      return { wire, size: JSON.stringify(wire).length };
+    });
+    for (const g of [ground, ground.slice(0, 2)]) {
+      const big: SnapMsg = { ...snap, n: 123_456, players: everyone, mobs: near, ground: g, events: [] };
+      big.events = fitEvents(fight, SNAP_BUDGET - encodeMessage(big).length, 48);
+      expect(big.events.length).toBeGreaterThanOrEqual(6);
+      expect(encodeMessage(big).length).toBeLessThan(1200);
+    }
+  });
+
+  it('round-trips every kind of event, in whole pixels', () => {
+    for (const wire of snap.events) {
+      const ev = decodeEvent(wire);
+      expect(ev).not.toBeNull();
+      expect(encodeEvent(ev!.id, ev!.e)).toEqual(wire);
+    }
+    expect(encodeEvent(1, { type: 'slash', x: 10.6, y: 20.2, dir: 1, p: 0 })).toEqual([1, 0, 11, 20, 1, 0]);
+    expect(decodeEvent(encodeEvent(2, { type: 'fx', name: 'heroHurt', x: 1, y: 2, p: 3 }))).toEqual({
+      id: 2,
+      e: { type: 'fx', name: 'heroHurt', x: 1, y: 2, p: 3 },
+    });
+    expect(decodeEvent(encodeEvent(3, { type: 'bolt', x: 1, y: 2, vx: 3, vy: 4 }))?.e).toEqual({
+      type: 'bolt',
+      x: 1,
+      y: 2,
+      vx: 3,
+      vy: 4,
+    });
+  });
+
+  it('merges two snapshots that arrived in one frame, keeping what the older said that the newer leaves out', () => {
+    const older: SnapMsg = {
+      ...snap,
+      n: 1,
+      mobs: [
+        [1, 1, 1, 0, 0, 5, 0, 0],
+        [2, 2, 2, 0, 0, 5, 0, 0],
+      ],
+      events: [
+        [1, 6, 0],
+        [2, 6, 1],
+      ],
+    };
+    const newer: SnapMsg = {
+      ...snap,
+      n: 2,
+      mobs: [[2, 9, 9, 0, 0, 4, 0, 1]],
+      events: [
+        [2, 6, 1],
+        [3, 6, 2],
+      ],
+    };
+    delete newer.ground;
+    const merged = mergeSnapshots(older, newer);
+    expect(merged.n).toBe(2);
+    expect(merged.mobs).toEqual([
+      [1, 1, 1, 0, 0, 5, 0, 0],
+      [2, 9, 9, 0, 0, 4, 0, 1],
+    ]);
+    expect(merged.events).toEqual([
+      [1, 6, 0],
+      [2, 6, 1],
+      [3, 6, 2],
+    ]);
+    expect(merged.ground).toEqual(older.ground);
+    expect(mergeSnapshots(older, { ...newer, ground: [] }).ground).toEqual([]); // a newer list wins, even empty
+    expect(mergeSnapshots(older, { ...newer, zone: 'shop_smithy' })).toEqual({ ...newer, zone: 'shop_smithy' });
   });
 
   it('accepts one to four players, in any order, and keeps their numbers', () => {
@@ -111,11 +183,11 @@ describe('messages', () => {
 
   it('rejects a lightning event with a bad seed or place', () => {
     for (const e of [
-      { type: 'lightning', x: 1, y: 2, seed: -1 },
-      { type: 'lightning', x: 1, y: 2, seed: 2 ** 33 },
-      { type: 'lightning', x: 1, seed: 3 },
+      [1, 7, 1, 2, -1],
+      [1, 7, 1, 2, 2 ** 33],
+      [1, 7, 1, 3],
     ]) {
-      expect(parseMessage(JSON.stringify({ ...snap, events: [{ id: 1, e }] }))).toBeNull();
+      expect(parseMessage(JSON.stringify({ ...snap, events: [e] }))).toBeNull();
     }
   });
 
@@ -216,18 +288,22 @@ describe('messages', () => {
       { ...snap, mobs: [[0, Infinity, 2, 0, 0, 5, 0, 0]] },
       { ...snap, mobs: 'x' },
       { ...snap, me: [1, 2, 3] },
-      { ...snap, events: [{ id: 1, e: { type: 'text', x: 0, y: 0, text: 'x'.repeat(100), color: 0 } }] },
-      { ...snap, events: [{ id: 1, e: { type: 'nope' } }] },
-      { ...snap, events: [{ id: 1, e: { type: 'draw', x: 'a', y: 0, p: 0 } }] },
-      { ...snap, events: [{ id: 1, e: { type: 'draw', x: 0, y: 0 } }] }, // no player
-      { ...snap, events: [{ id: 1, e: { type: 'slash', x: 0, y: 0, dir: 0, p: 4 } }] }, // player out of range
-      { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'heroHurt', x: 0, y: 0, p: -1 } }] },
-      { ...snap, events: [{ id: 1, e: { type: 'arrow', x: 0, y: 0, vx: 1, vy: 0 } }] }, // no range
-      { ...snap, events: [{ id: 1, e: { type: 'arrow', x: 0, y: 0, vx: 1, vy: 0, range: -5 } }] },
-      { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'boltTrail', x: 0, y: 0 } }] }, // continuous effects stay local
-      { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'nope', x: 0, y: 0 } }] },
-      { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'hitSpark', x: 0, y: 0, dir: 'up' } }] },
-      { ...snap, events: Array.from({ length: 65 }, (_, i) => ({ id: i, e: { type: 'defeat', player: 0 } })) },
+      { ...snap, events: [[1, 4, 0, 0, 'x'.repeat(100), 0]] }, // text too long
+      { ...snap, events: [[1, 9, 0, 0]] }, // unknown kind
+      { ...snap, events: [{ id: 1, e: { type: 'defeat', player: 0 } }] }, // the old object form
+      { ...snap, events: [[1, 2, 'a', 0, 0]] },
+      { ...snap, events: [[1, 2, 0, 0]] }, // draw: no player
+      { ...snap, events: [[1, 0, 0, 0, 0, 4]] }, // slash: player out of range
+      { ...snap, events: [[1, 0, 0, 0, 0, 1, 7]] }, // slash: too long
+      { ...snap, events: [[-1, 6, 0]] }, // bad id
+      { ...snap, events: [[1, 5, 3, 0, 0, null, -1]] }, // fx: bad player
+      { ...snap, events: [[1, 3, 0, 0, 1, 0]] }, // arrow: no range
+      { ...snap, events: [[1, 3, 0, 0, 1, 0, -5]] },
+      { ...snap, events: [[1, 1, 0, 0, 1, 0, -1, 0x1000000]] }, // bolt: colour out of range
+      { ...snap, events: [[1, 5, 4, 0, 0]] }, // fx: no such one-shot effect (continuous ones stay local)
+      { ...snap, events: [[1, 5, 'hitSpark', 0, 0]] },
+      { ...snap, events: [[1, 5, 0, 0, 0, 'up']] },
+      { ...snap, events: Array.from({ length: 65 }, (_, i) => [i, 6, 0]) },
       { ...snap, n: -1 },
       { ...snap, zone: '' }, // no zone
       { ...snap, zone: 5 },
