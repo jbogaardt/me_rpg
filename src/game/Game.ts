@@ -1,4 +1,4 @@
-import { Application, Graphics, Text, type Texture } from 'pixi.js';
+import { Application, type Texture } from 'pixi.js';
 import { MapView } from '../map/MapView';
 import { CELL, type CellPoint, type MapData } from '../map/types';
 import { input } from './input';
@@ -12,7 +12,6 @@ import { Menu } from './Menu';
 
 const SPEED = 120; // pixels per second
 const DIALOG_MAX_W = 600;
-const DIALOG_PAD = 20;
 const NPC_LINES = [
   'Greetings, traveler. This world is still being drawn.',
   'Soon there will be a story here. Come back later!',
@@ -52,8 +51,8 @@ export class Game {
   private hud = new Hud();
   private menu = new Menu();
   private touch: TouchControls;
-  private ui = new Graphics(); // dialog box
-  private dialogText = new Text({ text: '', style: { fill: 0xffffff, fontSize: 18, wordWrap: true } });
+  private dialog = document.getElementById('dialog')!; // HTML box (index.html); tapping it advances
+  private dialogText = document.getElementById('dialog-text')!;
   private lines: string[] = [];
   private lineIndex = -1; // -1 = no dialog; the world is frozen while talking
   private zoom = 1;
@@ -92,11 +91,7 @@ export class Game {
     };
     this.world.addChild(this.npc, this.player, ...this.mobs.map((m) => m.body));
 
-    this.dialogText.position.set(DIALOG_PAD, DIALOG_PAD);
-    this.ui.addChild(this.dialogText);
-    this.ui.visible = false;
-
-    app.stage.addChild(this.world, this.ui);
+    app.stage.addChild(this.world);
     this.touch = createTouchControls(() => this.layout());
     app.renderer.on('resize', () => this.layout());
     this.layout();
@@ -119,7 +114,7 @@ export class Game {
     this.updateCamera();
   }
 
-  /** Size the dialog box to the screen and keep it clear of the on-screen touch controls. */
+  /** Size the dialog box to the screen and keep it clear of the on-screen touch controls. It grows upward with its text. */
   private layoutDialog() {
     const { width, height } = this.app.screen;
     const margin = 10;
@@ -137,22 +132,18 @@ export class Game {
       }
     }
     const w = Math.min(DIALOG_MAX_W, right - left);
-    this.dialogText.style.wordWrapWidth = w - 2 * DIALOG_PAD;
-    const h = Math.max(80, this.dialogText.height + 2 * DIALOG_PAD);
-    this.ui.clear().rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.8 });
-    this.ui.position.set(Math.round(left + (right - left - w) / 2), Math.round(bottom - h));
+    Object.assign(this.dialog.style, {
+      left: `${Math.round(left + (right - left - w) / 2)}px`,
+      width: `${w}px`,
+      bottom: `${Math.round(height - bottom)}px`,
+    });
   }
 
   private say(lines: string[]) {
     this.lines = lines;
     this.lineIndex = 0;
-    this.showLine(lines[0]);
-    this.ui.visible = true;
-  }
-
-  private showLine(text: string) {
-    this.dialogText.text = text;
-    this.layoutDialog(); // the box grows if the line wraps onto more rows
+    this.dialogText.textContent = lines[0];
+    this.dialog.hidden = false;
   }
 
   /** Follow the player, but never show past the map edge (center the map if it's smaller than the screen). */
@@ -240,9 +231,9 @@ export class Game {
       this.lineIndex++;
       if (this.lineIndex >= this.lines.length) {
         this.lineIndex = -1;
-        this.ui.visible = false;
+        this.dialog.hidden = true;
       } else {
-        this.showLine(this.lines[this.lineIndex]);
+        this.dialogText.textContent = this.lines[this.lineIndex];
       }
     } else if (this.npc.visible && Math.hypot(this.player.x - this.npc.x, this.player.y - this.npc.y) < CELL * 1.5) {
       this.npc.face(directionToward(this.player.x - this.npc.x, this.player.y - this.npc.y));

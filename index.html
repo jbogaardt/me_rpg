@@ -14,7 +14,7 @@
   <body>
     <!-- Overlays over the canvas; styles in src/ui.css. [data-key] elements press that key while held (src/game/touch.ts). -->
     <div id="hud">
-      <div id="hud-stats">
+      <div id="hud-stats" class="panel thin wood">
         <div id="hud-level">Lv 1</div>
         <div id="hud-hp" class="bar"><div class="fill"></div><span class="label"></span></div>
         <div id="hud-mp" class="bar"><div class="fill"></div><span class="label"></span></div>
@@ -25,8 +25,8 @@
 
     <div id="touch-controls" hidden>
       <div id="dpad">
-        <span class="arrow up">▲</span><span class="arrow down">▼</span>
-        <span class="arrow left">◀</span><span class="arrow right">▶</span>
+        <span class="arrow up"></span><span class="arrow down"></span>
+        <span class="arrow left"></span><span class="arrow right"></span>
         <div id="dpad-knob"></div>
       </div>
       <div id="buttons">
@@ -35,8 +35,13 @@
       </div>
     </div>
 
+    <div id="dialog" class="panel paper" role="button" aria-label="Next line" data-key="KeyJ" hidden>
+      <p id="dialog-text"></p>
+      <span class="more" aria-hidden="true"></span>
+    </div>
+
     <div id="menu" hidden>
-      <div class="panel">
+      <div class="panel wood">
         <header>
           <nav>
             <div role="tab" data-tab="status" class="active">Status</div>
@@ -45,20 +50,23 @@
           </nav>
           <div class="close" role="button" aria-label="Close menu" data-key="Escape">✕</div>
         </header>
-        <section id="menu-status"></section>
-        <section id="menu-gear" hidden></section>
-        <section id="menu-controls" hidden>
-          <table>
-            <thead><tr><th></th><th>Keyboard</th><th>Touch</th></tr></thead>
-            <tbody>
-              <tr><td>Move</td><td>WASD / arrows</td><td>D-pad</td></tr>
-              <tr><td>Attack / talk</td><td>Space, J, Enter, E</td><td>A</td></tr>
-              <tr><td>Magic</td><td>K, Q</td><td>B</td></tr>
-              <tr><td>Menu</td><td>Esc, I, Tab</td><td>☰</td></tr>
-              <tr><td>Menu tabs</td><td>← / →</td><td>Tap</td></tr>
-            </tbody>
-          </table>
-        </section>
+        <div class="panel thin paper">
+          <section id="menu-status"></section>
+          <section id="menu-gear" hidden></section>
+          <section id="menu-controls" hidden>
+            <table>
+              <thead><tr><th></th><th>Keyboard</th><th>Touch</th></tr></thead>
+              <tbody>
+                <tr><td>Move</td><td>WASD / arrows</td><td>D-pad</td></tr>
+                <tr><td>Attack / talk</td><td>Space, J, Enter, E</td><td>A</td></tr>
+                <tr><td>Next line</td><td>Space, J, Enter, E</td><td>A or tap the box</td></tr>
+                <tr><td>Magic</td><td>K, Q</td><td>B</td></tr>
+                <tr><td>Menu</td><td>Esc, I, Tab</td><td>☰</td></tr>
+                <tr><td>Menu tabs</td><td>← / →</td><td>Tap</td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
       </div>
     </div>
 

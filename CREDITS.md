@@ -5,3 +5,14 @@
 Overworld tilesets "Avalon / Grassland" by Len Pabin (inspired by Zyndikate), 2009. The sheets carry a
 GPL license stamp in their corner (GPL3 on most, GPL2 on the water sheet). Verify the exact license at the
 original source before redistributing, and keep this notice with the art.
+
+## UI (`src/ui/`, source in `art/rpg_gui_v1/`)
+
+"RPG GUI construction kit v1.0" by Lamoot, licensed [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)
+(https://opengameart.org/content/rpg-gui-construction-kit-v10). Modified: pieces cut from the sheet, the
+loose frame corners and rails stitched into closed frames (`tools/ui/cut-gui.ts`), and the wood and paper
+backgrounds re-encoded as JPEG. Bar colours are sampled from the kit's gradients.
+
+## Fonts
+
+Cinzel (Natanael Gama) and Crimson Text (Sebastian Kosch), SIL Open Font License 1.1, bundled via Fontsource.

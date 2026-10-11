@@ -1,6 +1,9 @@
 import { Application, Assets, type Texture } from 'pixi.js';
 import { Game } from './game/Game';
 import { MOB_KINDS } from './game/combat';
+import '@fontsource/cinzel/700.css';
+import '@fontsource/crimson-text/400.css';
+import '@fontsource/crimson-text/600.css';
 import './ui.css';
 import { fetchMap, loadSheets } from './map/sheets';
 
