@@ -12,10 +12,14 @@ const PRINT_SIDE = 3; // left/right offset from the path
 const LEAF_POOL = 64;
 const TELEPORT = 40; // a one-frame jump bigger than this (respawn) is not walking
 
-/** Which surfaces keep prints, and how. */
+/**
+ * Soft terrain that keeps prints, and how (life = seconds until gone, 2-3 s). Hard ground (grass, stone, cliffs)
+ * keeps none. `puddle` is ready for when the map pipeline gets a puddle ground; no map uses it yet.
+ */
 const PRINTS: Record<string, { tint: number; alpha: number; life: number }> = {
-  sand: { tint: 0x7a5c2c, alpha: 0.5, life: 10 },
-  snow: { tint: 0x6f86ab, alpha: 0.7, life: 16 },
+  sand: { tint: 0x7a5c2c, alpha: 0.5, life: 2.5 },
+  snow: { tint: 0x6f86ab, alpha: 0.7, life: 3 },
+  puddle: { tint: 0x2f5f78, alpha: 0.6, life: 2 },
 };
 
 /** Leaf colours by the sheet a canopy was cut from (recoloured sheets drop snow-dust or withered leaves). */
