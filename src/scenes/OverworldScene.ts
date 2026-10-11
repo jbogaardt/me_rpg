@@ -6,6 +6,8 @@ import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import { Character, DIR_VEC, directionToward, type Direction } from '../entities/Character';
 import { Ambient } from '../entities/ambient';
+import { WeatherLayer } from '../entities/WeatherLayer';
+import { sampleBiome, Weather, type WeatherKind } from '../systems/weather';
 import { boltEffect, Effects, floatText, slashEffect } from '../entities/effects';
 import { Mob, type MobWorld } from '../entities/Mob';
 import { particleEffect } from '../entities/ParticleEffect';
@@ -15,7 +17,7 @@ import type { Hud } from '../hud/Hud';
 import { MapOverlay } from '../hud/MapOverlay';
 import type { Menu } from '../hud/Menu';
 import { MapView } from '../map/MapView';
-import { CELL, type CellPoint } from '../map/types';
+import { CELL, type CellPoint, type MapData } from '../map/types';
 import { glide } from '../net/interp';
 import {
   DIRS,
@@ -117,6 +119,9 @@ export class OverworldScene implements Scene {
   private heroBodies: [Character, ...Character[]]; // everything mobs may attack
   private effects: Effects;
   private ambient: Ambient;
+  private weather = new Weather(); // local atmosphere only: not synced in co-op
+  private weatherLayer: WeatherLayer;
+  private data: MapData;
   private overlay: MapOverlay;
   private spawn: CellPoint;
   private screen = { width: 0, height: 0 };
@@ -148,6 +153,8 @@ export class OverworldScene implements Scene {
     this.spawn = data.spawn;
     this.effects = new Effects(this.world.layer);
     this.ambient = new Ambient(this.world.layer, data);
+    this.weatherLayer = new WeatherLayer(this.world.layer);
+    this.data = data;
     this.overlay = new MapOverlay(data);
     this.wardrobe = sprites.wardrobe;
     const hero = newHero();
@@ -184,6 +191,11 @@ export class OverworldScene implements Scene {
 
   private get hero(): Hero {
     return this.local.hero;
+  }
+
+  /** Start a kind of weather right now (playtest scripts); otherwise it changes at random. */
+  setWeather(kind: WeatherKind) {
+    this.weather.force(kind);
   }
 
   enter() {
@@ -225,6 +237,9 @@ export class OverworldScene implements Scene {
     else this.updateSimulation(dt);
 
     this.effects.update(dt);
+    this.weather.update(dt, sampleBiome(this.data, this.player.x, this.player.y - 1));
+    this.ambient.wind = this.weather.wind;
+    this.weatherLayer.update(dt, this.weather, this.camera.view(this.screen.width, this.screen.height));
     this.ambient.update(dt, this.player, [
       ...this.players().map((p) => p.body),
       ...this.mobs.filter((m) => m.alive).map((m) => m.body),

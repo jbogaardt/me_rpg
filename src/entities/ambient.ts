@@ -10,6 +10,8 @@ const PRINT_POOL = 96;
 const PRINT_STRIDE = 13; // pixels walked between prints
 const PRINT_SIDE = 3; // left/right offset from the path
 const LEAF_POOL = 64;
+const WIND_PUSH = 70; // px/s a falling leaf is blown at full wind
+const WIND_REACH = 260; // canopies this close to the hero (px) shed leaves in the wind
 const TELEPORT = 40; // a one-frame jump bigger than this (respawn) is not walking
 
 /**
@@ -85,6 +87,9 @@ export class Ambient {
   private canopies = new Map<number, MapObject[]>(); // spatial hash: cell -> canopy sprites (tagged tree/bush)
   private cooldown = new Map<MapObject, number>(); // per-canopy time until it can drop leaves again
   private clock = 0;
+  private gust = 0; // leaves owed to the wind
+  /** Signed wind, -1 (blowing left) to 1 (blowing right), set each frame by the weather. Canopies shed leaves in it. */
+  wind = 0;
   private printTex: Texture;
   private leafTex: Texture;
 
@@ -138,6 +143,7 @@ export class Ambient {
     for (const body of walkers) this.walk(body);
     this.rustle(hero);
     this.fadePrints(dt);
+    this.blow(dt, hero);
     this.fallLeaves(dt);
   }
 
@@ -255,6 +261,24 @@ export class Ambient {
     }
   }
 
+  /** Wind shakes leaves loose from canopies around the hero, more often the harder it blows. */
+  private blow(dt: number, hero: Character) {
+    const strength = Math.abs(this.wind);
+    if (strength < 0.15) {
+      this.gust = 0;
+      return;
+    }
+    this.gust += dt * strength * 6; // up to ~6 leaves a second in a gale
+    if (this.gust < 1) return;
+    const canopies = [...this.near(hero.x - WIND_REACH, hero.y - WIND_REACH, hero.x + WIND_REACH, hero.y + WIND_REACH)];
+    while (this.gust >= 1) {
+      this.gust -= 1;
+      const o = canopies[Math.floor(Math.random() * canopies.length)];
+      if (!o || !this.ready(o, 0.2)) continue;
+      this.dropLeaf(o, rand(o.px + 8, o.px + o.w - 8), o.py + o.h + rand(0, 10), rand(20, 52));
+    }
+  }
+
   private dropLeaf(o: MapObject, x: number, ground: number, height: number) {
     const sheet = this.data.sheets[o.s] ?? '';
     const palette = sheet.includes('frost') ? PALETTES.frost : sheet.includes('dry') ? PALETTES.dry : PALETTES.green;
@@ -288,6 +312,7 @@ export class Ambient {
     for (const l of this.leaves) {
       if (!l.alive) continue;
       l.t += dt;
+      if (l.t < l.fall) l.x0 += this.wind * WIND_PUSH * dt; // airborne leaves drift downwind
       if (l.t >= l.life) {
         l.alive = false;
         l.sprite.visible = false;

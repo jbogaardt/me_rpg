@@ -18,6 +18,19 @@ export function followOffset(screen: number, map: number, target: number, zoom: 
   return Math.round(offset);
 }
 
+/** A rectangle in world px. */
+export interface ViewRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** The part of the world on screen, given the world container's screen offset and zoom. */
+export function viewRect(screenW: number, screenH: number, offsetX: number, offsetY: number, zoom: number): ViewRect {
+  return { x: -offsetX / zoom, y: -offsetY / zoom, w: screenW / zoom, h: screenH / zoom };
+}
+
 /** Zooms and scrolls a world container to follow a point, clamped to the map. */
 export class Camera {
   zoom = 1;
@@ -31,6 +44,10 @@ export class Camera {
   resize(screenW: number, screenH: number) {
     this.zoom = pickZoom(screenW, screenH);
     this.world.scale.set(this.zoom);
+  }
+
+  view(screenW: number, screenH: number): ViewRect {
+    return viewRect(screenW, screenH, this.world.x, this.world.y, this.zoom);
   }
 
   follow(screenW: number, screenH: number, x: number, y: number) {

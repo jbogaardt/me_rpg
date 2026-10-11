@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { followOffset, pickZoom } from './camera';
+import { followOffset, pickZoom, viewRect } from './camera';
+
+describe('viewRect', () => {
+  it('is the screen in world px', () => {
+    expect(viewRect(1280, 960, -200, -100, 2)).toEqual({ x: 100, y: 50, w: 640, h: 480 });
+  });
+});
 
 describe('pickZoom', () => {
   it('uses the largest whole number that fits the 640x480 design view', () => {
