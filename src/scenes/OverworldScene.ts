@@ -12,6 +12,7 @@ import { particleEffect } from '../entities/ParticleEffect';
 import { NO_COMMAND, Player, type Command } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
 import type { Hud } from '../hud/Hud';
+import { MapOverlay } from '../hud/MapOverlay';
 import type { Menu } from '../hud/Menu';
 import { MapView } from '../map/MapView';
 import { CELL, type CellPoint } from '../map/types';
@@ -66,6 +67,7 @@ const DEFEAT_LINES = ['You were struck down...', 'Time folds back, and you wake 
 const ACTION_KEYS = ['Space', 'KeyJ', 'Enter', 'KeyE']; // talk when next to the NPC, otherwise attack
 const MAGIC_KEYS = ['KeyK', 'KeyQ'];
 const MENU_KEYS = ['Escape', 'KeyI', 'Tab'];
+const MAP_KEYS = ['KeyM']; // co-op only: toggles the map overlay
 
 const ATTACK_COOLDOWN = 0.35;
 const CAST_COOLDOWN = 0.45;
@@ -115,6 +117,7 @@ export class OverworldScene implements Scene {
   private heroBodies: [Character, ...Character[]]; // everything mobs may attack
   private effects: Effects;
   private ambient: Ambient;
+  private overlay: MapOverlay;
   private spawn: CellPoint;
   private screen = { width: 0, height: 0 };
 
@@ -145,6 +148,7 @@ export class OverworldScene implements Scene {
     this.spawn = data.spawn;
     this.effects = new Effects(this.world.layer);
     this.ambient = new Ambient(this.world.layer, data);
+    this.overlay = new MapOverlay(data);
     this.wardrobe = sprites.wardrobe;
     const hero = newHero();
     this.local = new Player(this.wardrobe.sheet(heroOutfit(hero)), hero);
@@ -188,6 +192,7 @@ export class OverworldScene implements Scene {
   }
 
   exit() {
+    this.overlay.setAvailable(false);
     this.ui.dialog.close();
     if (this.ui.menu.open) this.ui.menu.toggle(this.hero);
   }
@@ -208,6 +213,8 @@ export class OverworldScene implements Scene {
     this.syncRole(session.role);
     this.clock += dt;
     const online = this.role !== 'solo';
+    this.overlay.setAvailable(online);
+    if (online && !menu.open && !dialog.active && input.wasPressed(...MAP_KEYS)) this.overlay.toggle();
     if (!dialog.active && input.wasPressed(...MENU_KEYS)) menu.toggle(this.hero);
     if (menu.open) {
       menu.update();
@@ -226,6 +233,11 @@ export class OverworldScene implements Scene {
     this.npc.animate(dt * 1000, false);
     for (const body of this.bodies()) body.zIndex = body.y;
     hud.update(this.hero);
+    if (this.overlay.open) {
+      const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
+      // A player the host has not yet placed (their body is still hidden) has no position to show.
+      this.overlay.update(pin(this.local), [...this.remotes.values()].filter((p) => p.body.visible).map(pin));
+    }
     this.camera.follow(this.screen.width, this.screen.height, this.player.x, this.player.y);
   }
 

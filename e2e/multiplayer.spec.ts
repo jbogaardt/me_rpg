@@ -45,6 +45,7 @@ const seat = (host: Page, slot: number) => host.locator(`#mp-roster li[data-slot
 
 test('two players connect with a game code, play, and disconnect', async ({ browser }) => {
   const host = await open(browser, '/');
+  await expect(host.locator('#map-btn')).toBeHidden(); // the map is for co-op only
   const code = await createGame(host);
   // The host sees who can come: themselves and three empty seats.
   await expect(host.locator('#mp-roster li')).toHaveCount(4);
@@ -89,10 +90,22 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await join.keyboard.press('KeyK');
   await expect(join.locator('#hud-mp .label')).not.toHaveText('20 / 20');
 
+  // The co-op map: toggled with M, semi-transparent, with a pin for the friend once the host's snapshot arrives.
+  await expect(join.locator('#map-btn')).toBeVisible();
+  await join.keyboard.press('KeyM');
+  await expect(join.locator('#map-overlay')).toBeVisible();
+  await expect(join.locator('#map-overlay .pin.friend')).toBeVisible();
+  await join.keyboard.press('KeyM');
+  await expect(join.locator('#map-overlay')).toBeHidden();
+  await join.keyboard.press('KeyM'); // open again: leaving the game must close it
+  await expect(join.locator('#map-overlay')).toBeVisible();
+
   // Disconnect from the host's side: both ends report it and carry on solo.
   await host.locator('#mp-disconnect').click();
   await expect(host.locator('#mp-status .label')).toHaveText('Disconnected');
   await expect(join.locator('#mp-status .label')).toHaveText('Disconnected', { timeout: 15_000 });
+  await expect(join.locator('#map-overlay')).toBeHidden();
+  await expect(join.locator('#map-btn')).toBeHidden();
   await join.keyboard.press('Escape');
   await expect(join.locator('#menu-online')).toBeVisible();
   await expect(join.locator('#mp-note')).toContainText('disconnected');
@@ -165,6 +178,15 @@ test('up to four players: friends join, leave, and a new friend takes the empty 
   await expect(host.locator('#mp-share')).toBeHidden(); // full: nobody else can come
   await expect(host.locator('#mp-start')).toBeHidden();
   await expect(seat(last, 3)).toHaveAttribute('data-state', 'you');
+
+  // The co-op map shows a pin for every other player, each in their own colour, and a legend naming them.
+  await last.keyboard.press('Escape'); // close the menu
+  await last.keyboard.press('KeyM');
+  await expect(last.locator('#map-overlay')).toBeVisible();
+  await expect(last.locator('#map-overlay .pin.friend')).toHaveCount(3, { timeout: 30_000 });
+  await expect(last.locator('#map-overlay .legend')).toContainText('You');
+  await expect(last.locator('#map-overlay .legend')).toContainText('Player 1');
+  await last.keyboard.press('KeyM');
 
   // The host leaves: the game ends for everyone.
   await host.locator('#mp-disconnect').click();

@@ -24,7 +24,18 @@
         <div id="hud-hp" class="bar"><div class="fill"></div><span class="label"></span></div>
         <div id="hud-mp" class="bar mirror"><div class="fill"></div><span class="label"></span></div>
       </div>
-      <div id="menu-btn" role="button" aria-label="Menu" data-key="Escape">☰</div>
+      <div id="hud-buttons">
+        <!-- Shown only in a co-op game (src/hud/MapOverlay.ts). -->
+        <div id="map-btn" role="button" aria-label="Map" data-key="KeyM" hidden>M</div>
+        <div id="menu-btn" role="button" aria-label="Menu" data-key="Escape">☰</div>
+      </div>
+    </div>
+
+    <!-- Co-op map: the whole zone, semi-transparent, with a pin per player (each in that player's colour). -->
+    <div id="map-overlay" aria-hidden="true" hidden>
+      <img alt="" />
+      <span class="pin me"></span>
+      <div class="legend"></div>
     </div>
 
     <div id="touch-controls" hidden>
@@ -67,6 +78,7 @@
                 <tr><td>Next line</td><td>Space, J, Enter, E</td><td>A or tap the box</td></tr>
                 <tr><td>Magic</td><td>K, Q</td><td>B</td></tr>
                 <tr><td>Menu</td><td>Esc, I, Tab</td><td>☰</td></tr>
+                <tr><td>Map (online)</td><td>M</td><td>M button</td></tr>
                 <tr><td>Menu tabs</td><td>← / →</td><td>Tap</td></tr>
               </tbody>
             </table>
