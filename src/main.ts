@@ -7,9 +7,12 @@ import { initAssets, loadSprites, loadZone } from './assets';
 import { SceneManager } from './core/Scene';
 import { createTouchControls } from './core/touch';
 import { Dialog } from './hud/Dialog';
+import { Fade } from './hud/Fade';
 import { Hud } from './hud/Hud';
 import { Loading } from './hud/Loading';
 import { Menu } from './hud/Menu';
+import { ShopCounter } from './hud/ShopCounter';
+import { TradeUi } from './hud/Trade';
 import { Session } from './net/session';
 import { OverworldScene } from './scenes/OverworldScene';
 import { ITEMS } from './systems/items';
@@ -61,8 +64,17 @@ void (async () => {
     const scenes = new SceneManager(app);
     const touch = createTouchControls(() => scenes.resize());
     const session = new Session();
-    const ui = { hud: new Hud(), menu: new Menu(session, touch), dialog: new Dialog(), touch, session };
-    const overworld = new OverworldScene(zone, sprites, ui);
+    const ui = {
+      hud: new Hud(),
+      menu: new Menu(session, touch),
+      shop: new ShopCounter(),
+      trade: new TradeUi(),
+      dialog: new Dialog(),
+      touch,
+      session,
+      fade: new Fade(),
+    };
+    const overworld = new OverworldScene(zone, sprites, ui, loadZone);
     scenes.change(overworld);
     scenes.start();
     loading.done();

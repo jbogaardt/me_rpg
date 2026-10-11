@@ -18,7 +18,7 @@ new kind needs no new code unless it needs new behaviour.
    you need art that isn't packed yet (another helmet, hair, colour, monster head), use the `add-sprite-part` skill first.
    Weapons must have 128px swing art (arming sword family, dagger); others vanish or clip in the swing.
 2. **Kind** in `src/systems/combat.ts`: add a `MobKind` const and register it in `MOB_KINDS` (the key is what maps
-   use). Fields: `name`, `look`, `maxHp`, `attack`, `defense`, `xp` (on kill), `speed` (px/s while chasing), `sight`
+   use). Fields: `name`, `look`, `maxHp`, `attack`, `defense`, `xp` (on kill), `gold` (dropped on kill, rolled ±30%; keep it rising with `xp`, a test checks), `speed` (px/s while chasing), `sight`
    (px; starts chasing inside this). Optional pacing: `windup` (telegraph, default 0.45 s), `recover` (rest after an
    attack, 0.7 s) and `stagger` (stun when hit, 0.3 s): fast kinds shorten them, big kinds set `stagger` near 0 so
    the hero cannot stun-lock them. Optional `shot: { range, speed, color }` makes it a ranged attacker (it stops

@@ -6,7 +6,8 @@
 // always up, left, down, right (LPC order). Walk/idle/cast/hurt use 64px frames; the weapon swing uses 128px frames
 // because blades reach outside a 64px cell (the character is centred in them).
 
-export type Direction = 'down' | 'up' | 'left' | 'right';
+import type { Direction } from '../core/direction';
+export type { Direction };
 
 /** Row order inside every animation block. */
 export const DIR_ROW: Record<Direction, number> = { up: 0, left: 1, down: 2, right: 3 };

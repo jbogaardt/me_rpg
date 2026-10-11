@@ -2,7 +2,7 @@
 // `KeyboardEvent.code` ('KeyW', 'Space') or a mouse button ('Mouse0' = left, 'Mouse2' = right).
 // Touch controls are not rebindable; they press fixed codes (see touch.ts, TOUCH_CODES below).
 
-export const ACTIONS = ['up', 'down', 'left', 'right', 'attack', 'magic'] as const;
+export const ACTIONS = ['up', 'down', 'left', 'right', 'attack', 'magic', 'inventory'] as const;
 export type Action = (typeof ACTIONS)[number];
 export const SLOTS = 2;
 
@@ -13,6 +13,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   right: 'Move right',
   attack: 'Attack / talk',
   magic: 'Magic',
+  inventory: 'Inventory',
 };
 
 export type Slots = readonly [string, string]; // '' = unbound
@@ -24,6 +25,7 @@ export const DEFAULT_BINDINGS: Record<Action, Slots> = {
   right: ['KeyD', 'ArrowRight'],
   attack: ['Mouse0', 'Space'],
   magic: ['Mouse2', 'KeyK'],
+  inventory: ['KeyI', ''],
 };
 
 /** What the on-screen buttons press, whatever the keyboard is bound to. */
@@ -34,10 +36,18 @@ export const TOUCH_CODES: Record<Action, readonly string[]> = {
   right: ['ArrowRight'],
   attack: ['KeyJ'],
   magic: ['KeyK'],
+  inventory: ['KeyI'],
 };
 
-/** Fixed keys (menu, map, cancel); they can't be bound to an action. */
-export const RESERVED_CODES = ['Escape', 'Tab', 'KeyI', 'KeyM'];
+/**
+ * Keys that always do the same thing, whatever the bindings say: open or close the menu (or a shop counter), toggle the
+ * co-op map. The on-screen ☰ and M buttons press the first code of each (`data-key` in index.html; a test keeps them in
+ * step), and nothing else should hard-code these keys: ask `menuPressed()` / `mapPressed()` in controls.ts.
+ */
+export const FIXED_KEYS = { menu: ['Escape', 'Tab'], map: ['KeyM'] } as const;
+
+/** Codes no action can be bound to: the fixed keys. */
+export const RESERVED_CODES: readonly string[] = [...FIXED_KEYS.menu, ...FIXED_KEYS.map];
 
 const STORAGE_KEY = 'me_rpg.controls';
 

@@ -114,6 +114,105 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await expect(join.locator('#hud-mp .label')).not.toHaveText('20 / 20');
 });
 
+/** The pack grid's filled slots, in the open inventory. */
+const carried = (page: Page) => page.locator('#menu-inventory .inv-grid.pack .slot:not(.empty)');
+
+/** Open the inventory, take off or drop the worn cloak, and close it again. */
+async function dropCloak(page: Page) {
+  await page.keyboard.press('KeyI');
+  await expect(page.locator('#menu-inventory .inv-grid.worn [data-worn="cape"]:not(.empty)')).toBeVisible();
+  await page.locator('#menu-inventory [data-worn="cape"]').click();
+  await page.locator('#menu-inventory [data-action="drop"]').click();
+  await expect(page.locator('#menu-inventory [data-worn="cape"].empty')).toBeVisible();
+  await page.keyboard.press('KeyI');
+  await expect(page.locator('#menu')).toBeHidden();
+}
+
+test('both players can drop items and pick them up, and the host decides what is on the ground', async ({
+  browser,
+}) => {
+  const host = await open(browser, '/');
+  const code = await createGame(host);
+  const join = await open(browser, '/');
+  await joinWithCode(join, code);
+  await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 2', { timeout: 30_000 });
+  await host.locator('#mp-start').click();
+  await expect(host.locator('#menu')).toBeHidden();
+  await join.keyboard.press('Escape');
+  await expect(join.locator('#menu')).toBeHidden();
+
+  // The friend drops their cloak: it is gone from their body (the host did it, and the guest agrees)...
+  await dropCloak(join);
+  // ...and lying a step ahead of them, so the action key puts it in their pack.
+  await join.keyboard.press('Space');
+  await join.keyboard.press('KeyI');
+  await expect(carried(join)).toHaveCount(1, { timeout: 15_000 });
+  await join.keyboard.press('KeyI');
+
+  // The host drops theirs; the friend, standing close by, can pick that up too.
+  await dropCloak(host);
+  await join.keyboard.press('Space');
+  await join.keyboard.press('KeyI');
+  await expect(carried(join)).toHaveCount(2, { timeout: 15_000 });
+  await expect(join.locator('#menu-inventory .inv-col h3 small').last()).toHaveText('2 / 10');
+  await host.keyboard.press('KeyI');
+  await expect(carried(host)).toHaveCount(0); // the host's pack never got it
+});
+
+test('players next to each other can trade: ask, accept or deny, a shared window, cancel', async ({ browser }) => {
+  const host = await open(browser, '/');
+  await host.keyboard.press('Escape');
+  await expect(host.locator('#menu [data-tab="trade"]')).toBeHidden(); // trading is for co-op only
+  await host.keyboard.press('Escape');
+  const code = await createGame(host);
+  const friend = await open(browser, '/');
+  await joinWithCode(friend, code);
+  await expect(friend.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 1 (host)', {
+    timeout: 30_000,
+  });
+  await host.locator('#mp-start').click();
+  await expect(host.locator('#menu')).toBeHidden();
+  await host.keyboard.press('Escape');
+  await expect(host.locator('#menu [data-tab="trade"]')).toBeVisible();
+  await host.keyboard.press('Escape');
+
+  // The friend asks from the Trade tab (both stand at the spawn, so they are close enough).
+  await friend.locator('#menu [data-tab="trade"]').click();
+  const ask = friend.locator('#menu-trade button[data-with="0"]');
+  await expect(ask).toBeEnabled({ timeout: 15_000 });
+  await ask.click();
+  await expect(friend.locator('#menu')).toBeHidden(); // the menu gets out of the way
+  await expect(friend.locator('#trade-request')).toContainText('Waiting for Player 1');
+  await expect(host.locator('#trade-request')).toContainText('Player 2 wants to trade', { timeout: 15_000 });
+
+  // Denied: both prompts go away and the asker is told.
+  await host.locator('#trade-request [data-reply="no"]').click();
+  await expect(friend.locator('#trade-request')).toBeHidden({ timeout: 15_000 });
+  await expect(friend.locator('#trade-toast')).toContainText('said no');
+  await expect(host.locator('#trade-request')).toBeHidden();
+
+  // Asked again and accepted: the trade window opens for both, each seeing the other's offer area.
+  await friend.keyboard.press('Escape');
+  await friend.locator('#menu [data-tab="trade"]').click();
+  await friend.locator('#menu-trade button[data-with="0"]').click();
+  await host.locator('#trade-request [data-reply="yes"]').click();
+  await expect(host.locator('#trade')).toBeVisible({ timeout: 15_000 });
+  await expect(friend.locator('#trade')).toBeVisible({ timeout: 15_000 });
+  await expect(host.locator('#trade-title')).toHaveText('Trading with Player 2');
+  await expect(friend.locator('#trade-title')).toHaveText('Trading with Player 1');
+
+  // One side accepting is not enough, and the other sees the mark.
+  await friend.locator('#trade-accept').click();
+  await expect(host.locator('#trade-their-state')).toHaveText('✓ accepted', { timeout: 15_000 });
+  await expect(host.locator('#trade')).toBeVisible();
+
+  // Either side can cancel; the window closes for both.
+  await host.keyboard.press('Escape');
+  await expect(host.locator('#trade')).toBeHidden();
+  await expect(friend.locator('#trade')).toBeHidden({ timeout: 15_000 });
+  await expect(friend.locator('#trade-toast')).toContainText('cancelled');
+});
+
 test('up to four players: friends join, leave, and a new friend takes the empty seat', async ({ browser }) => {
   test.setTimeout(420_000); // five browser pages, and ICE gathering waits up to 10 s per seat when the STUN server is unreachable
   const host = await open(browser, '/');

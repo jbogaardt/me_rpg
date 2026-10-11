@@ -35,6 +35,10 @@ ground first, then features, then overrides.
 | `z.plateau(rect, {kind?, stairs?})` | Raised plateau. `rect` = walkable top (>= 4x4 cells). Rim rocks fill the 1-cell ring N/W/E and the rock face the 2 rows S of it (all blocked, plus the 4 corner cells of `rect`). `kind`: `'grass'` (default), `'frost'` (snow top; lay it on snow), `'dry'` (sand top). `stairs`: centre columns of 3-wide staircases cut into the south face (`rect.col+2 <= c <= rect.col+w-3`, so w >= 5; >= 3 columns apart). Stairs are the only way up; the top gets level +1 and the stair cells become ramps. Put props/mobs on top with the usual calls. |
 | `z.block(rect, reason)` / `z.unblock(rect)` | Manual collision overrides, applied last. Use `block` for water/cliffs; the reason silences the invisible-wall warning. Don't hand-block props. |
 | `z.spawn(c, r)`, `z.npc(c, r)`, `z.mob(kind, c, r)` | Player start, the NPC, enemy spawns (`kind` must be in `MOB_KINDS`, `src/systems/combat.ts`). |
+| `z.shop(id, c, r)` | A shopkeeper (`id` is a key of `SHOPS`, `src/systems/shops.ts`) standing on an open cell, normally inside a shop room (`tools/map/interiors.ts` builds one). |
+| `z.door(c, r, w, toZone, toCol, toRow)` | A doorway: walking onto the `w` cells from (c, r) takes the player to (toCol, toRow) of another zone. The cells are forced open (a building's art would block them) and must be reachable. The arrival cell must be open and must not itself be a door; the other zone needs a door back (`npm run map -- check` verifies all of this across zones). |
+| `z.indoor()` | Marks the zone a room: no weather, no footprints or leaves, no co-op overview map. |
+| `z.chest(kind, loot, c, r)` | A treasure chest (`loot` is a key of `CHEST_LOOTS`, `src/systems/chests.ts`). Shops sell the common gear, so chests hold what no shop stocks, restoratives and gold purses. |
 
 A `Rect` is `{ col, row, w, h }`.
 
@@ -44,9 +48,13 @@ A `Rect` is `{ col, row, w, h }`.
   via a ring. **`water` and `ice` rings blend into sand / snow, not grass**: lay a sand (or snow) patch first and put the
   water patch 1 cell inside its fill (the lake in `maps/overworld.ts`). `snow`/`ice` are recolours (see Biomes in CLAUDE.md);
   re-run `npm run tilesets` after editing `tools/map/recolor.ts`. Water/ice rects are walkable until you `block` the inner cells.
+- Interior pieces (`interior.png`, drawn by `tools/map/interior.ts`): ground `planks`, `wall`, `mat`; prefabs `counter` (4x1.5), `shelf<Shop>` (3x2) and `sign<Shop>` (4x2) for each of smithy/armory/ranger/apothecary.
 - Prefabs: trees `treeA`/`treeB` (+ `frostTree*`, `dryTree*`; 3x3, block bottom two rows, top row walk-behind), bushes
   `bush`/`frostBush`/`dryBush` (2x2), rocks `rock` (pale), `rockSmall`, `rockB`, `rockC` (+ `frostRock*`), `barrel`, and
   decorations `flowerRed`/`flowersPurple` (no collision). Mix variants to avoid repetition.
+- Buildings (`town.png`, from the CC0 Town RPG Pack, built by `tools/map/town.ts`): `smithy` and `apothecary` are 6x7-cell halls,
+  `armory` and `ranger` are 3x9-cell tall houses. Solid from the ground up (you walk around them, not behind). Leave one cell of
+  space between neighbours and a cobbled `stone` patch in front looks right (see the village in `maps/overworld.ts`).
 - The tilesets have **no** foliage ground/edge tiles; all vegetation is prefabs. There are no
   inner-corner or non-rectangular patch shapes yet.
 
@@ -73,8 +81,11 @@ Think in cells: for `plateau({col, row, w, h})` the top is cols `col..col+w-1`, 
   ≥50% covered by art, not directly above something solid, so the player would vanish inside a bush);
   "invisible walls" (blocked cell with almost no art and no `block` reason); cells with no ground.
 
+## Zones and doors
+
+Every `maps/<name>.ts` is a zone; the game starts in `overworld` (`START_ZONE`, `src/main.ts`) and loads others on demand when a player nears a door (`OverworldScene.ensureZone`). To add a building with an inside: `z.prop(...)` the building, `z.door(...)` on its door cells, and a new `maps/<room>.ts` with its own `z.door` back out (arrival cells must not be doors). The village in `maps/overworld.ts` (`SHOP_DOORS`) and `tools/map/interiors.ts` (`shopInterior`) are the worked example; a shop room is 11x9 with the keeper behind a counter.
+
 ## Limits today
 
-- The overworld is one big map with all biomes; the game loads only the `overworld` zone (`START_ZONE` in `src/main.ts`; `loadZone` in `src/assets.ts` loads any zone by name). A new zone file
-  builds and checks fine, but travelling between zones needs game code (map transitions) first.
-- One NPC per map with fixed dialog (`NPC_LINES` in `src/scenes/OverworldScene.ts`).
+- One NPC per overworld with fixed dialog (`NPC_LINES` in `src/scenes/OverworldScene.ts`); shopkeepers are per shop room.
+- Zones stay loaded once visited (they are small); no streaming of one big world.

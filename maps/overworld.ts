@@ -1,5 +1,17 @@
 import { defineZone } from '../tools/map/zone';
+import { SHOP_ARRIVAL } from '../tools/map/interiors';
 import { DRY_TREES, FROST_TREES } from '../tools/map/catalog';
+
+/**
+ * The village's shops: the building's bottom-left cell, where its door cells are, and the cell just below it where a
+ * player appears when they step back out (the shop interiors, maps/shop_*.ts, read this).
+ */
+export const SHOP_DOORS = {
+  smithy: { building: { col: 14, row: 45 }, door: { col: 16, w: 2 }, outside: { col: 16, row: 46 } },
+  armory: { building: { col: 21, row: 45 }, door: { col: 22, w: 1 }, outside: { col: 22, row: 46 } },
+  apothecary: { building: { col: 25, row: 45 }, door: { col: 27, w: 2 }, outside: { col: 27, row: 46 } },
+  ranger: { building: { col: 32, row: 45 }, door: { col: 33, w: 1 }, outside: { col: 33, row: 46 } },
+} as const;
 
 // The whole known world: three biomes around a grassy hub. Build with `npm run map -- build`;
 // preview in maps/out/overworld.png.
@@ -53,7 +65,6 @@ export default defineZone({
     z.forest({ col: 4, row: 58, w: 9, h: 6 });
     z.forest({ col: 16, row: 64, w: 12, h: 5 });
     z.forest({ col: 38, row: 61, w: 8, h: 7 });
-    z.forest({ col: 31, row: 38, w: 4, h: 4 });
 
     z.patch('sand', { col: 17, row: 50, w: 15, h: 11 }); // the beach
     z.patch('water', { col: 19, row: 52, w: 11, h: 7 });
@@ -66,7 +77,6 @@ export default defineZone({
     z.prop('rockB', 37, 49);
 
     z.prop('bush', 12, 40);
-    z.prop('bush', 26, 42);
     z.prop('bush', 44, 54, { dx: 2 });
     z.prop('bush', 9, 54);
     z.prop('treeA', 9, 37);
@@ -75,29 +85,22 @@ export default defineZone({
     z.prop('treeA', 7, 41);
     for (const [col, row] of [
       [10, 44],
-      [20, 40],
       [34, 54],
-      [24, 47],
       [41, 56],
       [6, 51],
     ])
       z.prop('flowerRed', col, row);
     for (const [col, row] of [
-      [15, 46],
-      [33, 40],
       [27, 62],
       [8, 61],
     ])
       z.prop('flowersPurple', col, row);
     for (const [col, row] of [
-      [18, 44],
-      [29, 48],
       [48, 52],
       [12, 54],
       [34, 66],
     ])
       z.prop('rock', col, row);
-    z.prop('rockSmall', 22, 38);
     z.prop('rockC', 46, 37);
 
     z.prop('bush', 46, 47);
@@ -106,7 +109,6 @@ export default defineZone({
     z.prop('treeB', 36, 58);
     z.prop('treeA', 48, 63);
     for (const [col, row] of [
-      [30, 41],
       [36, 58],
       [14, 58],
       [47, 44],
@@ -118,12 +120,19 @@ export default defineZone({
     ])
       z.prop('flowersPurple', col, row);
     z.spawn(8, 48);
-    z.npc(13, 47);
+    z.npc(12, 47);
+
+    // The village: four shops in a row on a cobbled square; walk into a door to go inside. Mobs keep out of it.
+    z.patch('stone', { col: 13, row: 45, w: 23, h: 5 });
+    for (const [id, shop] of Object.entries(SHOP_DOORS)) {
+      z.prop(id as 'smithy' | 'armory' | 'apothecary' | 'ranger', shop.building.col, shop.building.row);
+      z.door(shop.door.col, shop.building.row, shop.door.w, `shop_${id}`, SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
+    }
     // Greenwood: level 1 fodder (goblins, a wolfkin, the odd shade).
     for (const [kind, col, row] of [
-      ['goblin', 26, 38],
+      ['goblin', 18, 35],
       ['goblin', 40, 38],
-      ['shade', 30, 46],
+      ['shade', 38, 54],
       ['wolfkin', 24, 62],
       ['shade', 44, 58],
       ['goblin', 15, 60],
@@ -274,30 +283,29 @@ export default defineZone({
       z.prop(col === 17 ? 'flowersPurple' : 'flowerRed', col, row);
     z.mob('shade', 17, 31);
 
-    // Treasure chests: a gift near the start, a restorative in the woods, and gear guarded on the ledges.
-    z.chest('wood', 'bronzeSword', 10, 51);
-    z.chest('wood', 'shortBow', 6, 50); // a bow to try right at the start
-    z.chest('wood', 'clothHood', 11, 45);
-    z.chest('wood', 'leatherBoots', 5, 46);
+    // Treasure chests: the shops sell the common gear, so chests hold what they don't (a restorative, a bag, tools)
+    // and purses of gold. A few coins by the start pay for a first purchase.
+    z.chest('wood', 'coins', 10, 51);
+    z.chest('wood', 'sack', 8, 52); // more pack slots, close to the start
+    z.chest('wood', 'whetstone', 12, 49);
     z.chest('oak', 'elixir', 18, 30);
-    z.chest('oak', 'woodenShield', 16, 28);
-    z.chest('oak', 'leatherArmor', 14, 31);
+    z.chest('oak', 'purse', 16, 28);
+    z.chest('oak', 'bandageKit', 15, 30);
 
     z.plateau({ col: 72, row: 13, w: 7, h: 4 }, { kind: 'frost', stairs: [75] }); // Frostlands ledge
     z.prop('frostRockC', 77, 14);
     z.prop('frostBush', 73, 15);
     z.mob('frostbound', 75, 14);
-    z.chest('silver', 'steelSword', 73, 13);
-    z.chest('silver', 'recurveBow', 77, 16);
+    z.chest('silver', 'hoard', 73, 13);
     z.chest('silver', 'vikingHelm', 74, 13);
+    z.chest('silver', 'backpack', 73, 16);
 
     z.plateau({ col: 62, row: 37, w: 8, h: 4 }, { kind: 'dry', stairs: [64] }); // Scorched Waste mesa
     z.prop('dryBush', 68, 38);
     z.prop('rockSmall', 65, 39);
     z.mob('raider', 66, 38);
     z.chest('iron', 'legionArmor', 67, 40);
-    z.chest('iron', 'kiteShield', 63, 40);
-    z.chest('iron', 'ironGreaves', 69, 38);
+    z.chest('iron', 'purse', 63, 40);
     z.chest('iron', 'parryingDagger', 63, 38);
 
     // --- The grass hub between the biomes ------------------------------------------------------------

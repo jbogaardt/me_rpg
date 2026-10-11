@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import overworld from '../../maps/overworld';
-import { checkMap } from './check';
+import { checkDoors, checkMap } from './check';
 import { Zone } from './zone';
 
 /** A small open grass field; `edit` adds whatever the case under test needs. */
@@ -10,6 +10,77 @@ function field(edit: (z: Zone) => void) {
   edit(z);
   return checkMap(z.toMapData(), z.reasons);
 }
+
+/** A small field with a door at (2,2) leading to (col,row) of `zone`, and a way back from `zone`. */
+function pair(edit: (a: Zone, b: Zone) => void) {
+  const a = new Zone(12, 12);
+  const b = new Zone(12, 12);
+  for (const z of [a, b]) {
+    z.fill('grass');
+    z.spawn(6, 6);
+  }
+  edit(a, b);
+  return checkDoors(
+    new Map([
+      ['a', a.toMapData()],
+      ['b', b.toMapData()],
+    ]),
+  );
+}
+
+describe('checkDoors', () => {
+  it('accepts two zones with a door each way', () => {
+    expect(
+      pair((a, b) => {
+        a.door(2, 2, 2, 'b', 8, 8);
+        b.door(9, 9, 1, 'a', 2, 3);
+      }),
+    ).toEqual([]);
+  });
+
+  it('errors on a door to a zone that does not exist', () => {
+    const errors = pair((a) => a.door(2, 2, 1, 'nowhere', 1, 1));
+    expect(errors.join('\n')).toMatch(/unknown zone "nowhere"/);
+  });
+
+  it('errors on an arrival outside the map, on a wall, or on a door (which would bounce the player back)', () => {
+    const outside = pair((a, b) => {
+      a.door(2, 2, 1, 'b', 20, 1);
+      b.door(9, 9, 1, 'a', 2, 3);
+    });
+    expect(outside.join('\n')).toMatch(/arrives outside "b"/);
+    const wall = pair((a, b) => {
+      a.door(2, 2, 1, 'b', 5, 5);
+      b.block({ col: 5, row: 5, w: 1, h: 1 }, 'wall');
+      b.door(9, 9, 1, 'a', 2, 3);
+    });
+    expect(wall.join('\n')).toMatch(/blocked cell of "b"/);
+    const bounce = pair((a, b) => {
+      a.door(2, 2, 1, 'b', 9, 9);
+      b.door(9, 9, 1, 'a', 2, 3);
+    });
+    expect(bounce.join('\n')).toMatch(/arrives on a door of "b"/);
+  });
+
+  it('errors when the other zone has no way back', () => {
+    const errors = pair((a) => a.door(2, 2, 1, 'b', 8, 8));
+    expect(errors.join('\n')).toMatch(/"b" has no door back to "a"/);
+  });
+});
+
+describe('checkMap doors', () => {
+  it('accepts a reachable door and errors on one in a wall or off the map', () => {
+    expect(field((z) => (z.spawn(2, 2), z.door(5, 5, 2, 'x', 1, 1))).errors).toEqual([]);
+    const walled = field((z) => {
+      z.spawn(2, 2);
+      z.door(5, 5, 1, 'x', 1, 1);
+      z.block({ col: 4, row: 4, w: 3, h: 3 }, 'wall'); // blocked after the door was opened
+    });
+    expect(walled.errors.join('\n')).toMatch(/door to x .* blocked cell/);
+    const off = field((z) => (z.spawn(2, 2), z.door(11, 5, 3, 'x', 1, 1)));
+    expect(off.errors.join('\n')).toMatch(/door to x .* outside the map/);
+  });
+});
 
 describe('checkMap', () => {
   it('passes the real overworld without errors', () => {
@@ -33,6 +104,29 @@ describe('checkMap', () => {
       z.spawn(2, 2);
     });
     expect(r.errors.join('\n')).toMatch(/spawn .* blocked cell/);
+  });
+
+  it('accepts a shopkeeper in front of a shop building', () => {
+    const r = field((z) => {
+      z.spawn(2, 2);
+      z.prop('smithy', 6, 8);
+      z.shop('smithy', 8, 9);
+    });
+    expect(r.errors).toEqual([]);
+  });
+
+  it('errors on an unknown shop, and on a shopkeeper standing inside a building', () => {
+    const unknown = field((z) => {
+      z.spawn(2, 2);
+      z.shop('bakery', 4, 4);
+    });
+    expect(unknown.errors.join('\n')).toMatch(/unknown shop "bakery"/);
+    const inside = field((z) => {
+      z.spawn(2, 2);
+      z.prop('armory', 6, 10);
+      z.shop('armory', 7, 9);
+    });
+    expect(inside.errors.join('\n')).toMatch(/shopkeeper armory .* blocked cell/);
   });
 
   it('errors on an unknown mob kind', () => {

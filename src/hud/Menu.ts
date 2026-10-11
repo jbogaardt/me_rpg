@@ -1,18 +1,8 @@
-import {
-  attackPower,
-  defensePower,
-  GEAR_SLOTS,
-  gearAttack,
-  gearDefense,
-  spellPower,
-  xpToNext,
-  type GearSlot,
-  type Hero,
-  type Item,
-} from '../systems/combat';
-import { input } from '../core/input';
+import { attackPower, defensePower, gearAttack, gearDefense, spellPower, xpToNext, type Hero } from '../systems/combat';
+import { tabStep } from '../core/controls';
 import type { Session } from '../net/session';
 import type { TouchControls } from '../core/touch';
+import { Inventory } from './Inventory';
 import { Keybinds } from './Keybinds';
 import { Multiplayer } from './Multiplayer';
 
@@ -20,35 +10,15 @@ import { Multiplayer } from './Multiplayer';
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
 // The Online tab (multiplayer connection) is Multiplayer.ts. Online play does not pause the world behind the menu.
 
-const TABS = ['status', 'gear', 'controls', 'online'];
-
-const SLOT_LABELS: Record<GearSlot, string> = {
-  weapon: 'Weapon',
-  offhand: 'Off-hand',
-  head: 'Head',
-  chest: 'Chest',
-  legs: 'Legs',
-  feet: 'Feet',
-  cape: 'Cloak',
-};
-
-/** One line for a gear slot: the item and what it adds ("Short Bow +2 ATK, ranged"), or "Empty". */
-function describe(item: Item | undefined): string {
-  if (!item) return '<small>Empty</small>';
-  const bonuses = [
-    item.attack ? `+${item.attack} ATK` : '',
-    item.defense ? `+${item.defense} DEF` : '',
-    item.ranged ? 'ranged' : '',
-  ]
-    .filter(Boolean)
-    .join(', ');
-  return `${item.name} <small>${bonuses}</small>`;
-}
+const TABS = ['status', 'inventory', 'controls', 'online', 'trade']; // 'trade' (hud/Trade.ts) shows only in a co-op game
 
 export class Menu {
   open = false;
   private root = document.getElementById('menu')!;
   private tab = 0;
+  private hero: Hero | null = null;
+  /** The Inventory tab; the scene attaches its handlers while it runs. */
+  readonly inventory = new Inventory(document.getElementById('menu-inventory')!, () => this.renderStatus());
 
   private keybinds: Keybinds;
 
@@ -70,6 +40,21 @@ export class Menu {
     if (this.open) this.render(hero);
   }
 
+  /** The inventory key: open the menu on the Inventory tab, or close it if that is already showing. */
+  toggleInventory(hero: Hero) {
+    if (this.open && TABS[this.tab] === 'inventory') this.close();
+    else if (this.open) this.select(TABS.indexOf('inventory'));
+    else this.toggle(hero, 'inventory');
+  }
+
+  /** Draw the open menu again for `hero` (a co-op guest's gold and pack change when the host's answer arrives). */
+  refresh(hero: Hero) {
+    this.hero = hero;
+    if (!this.open) return;
+    this.renderStatus();
+    if (TABS[this.tab] === 'inventory') this.inventory.show(hero);
+  }
+
   /** Close the menu (a no-op if it is already closed). */
   close() {
     this.open = false;
@@ -79,8 +64,24 @@ export class Menu {
 
   /** Called each frame while open. */
   update() {
-    if (input.wasPressed('ArrowLeft', 'KeyA')) this.select((this.tab + TABS.length - 1) % TABS.length);
-    if (input.wasPressed('ArrowRight', 'KeyD')) this.select((this.tab + 1) % TABS.length);
+    const by = tabStep();
+    if (by) this.step(by);
+  }
+
+  /** The tab `by` places along from the current one, skipping tabs that are hidden. */
+  private step(by: number) {
+    let i = this.tab;
+    do i = (i + by + TABS.length) % TABS.length;
+    while (this.tabButton(TABS[i]!).hidden);
+    this.select(i);
+  }
+
+  /** Called every frame: the Trade tab is only there while online. Leaves it if it goes away under the player. */
+  setOnline(online: boolean) {
+    const button = this.tabButton('trade');
+    if (button.hidden === !online) return;
+    button.hidden = !online;
+    if (!online && TABS[this.tab] === 'trade') this.select(0);
   }
 
   private tabButton(name: string) {
@@ -89,13 +90,16 @@ export class Menu {
 
   private select(i: number) {
     this.tab = i;
+    if (TABS[i] === 'inventory' && this.hero) this.inventory.show(this.hero);
     for (const [j, name] of TABS.entries()) {
       this.tabButton(name).classList.toggle('active', i === j);
       document.getElementById(`menu-${name}`)!.hidden = i !== j;
     }
   }
 
-  private render(hero: Hero) {
+  private renderStatus() {
+    const hero = this.hero;
+    if (!hero) return;
     const s = hero.stats;
     const row = (label: string, value: string | number) => `<dt>${label}</dt><dd>${value}</dd>`;
     const next = xpToNext(s.level);
@@ -105,18 +109,18 @@ export class Menu {
       <dl>
         ${row('HP', `${Math.ceil(s.hp)} / ${s.maxHp}`)}
         ${row('MP', `${Math.floor(s.mp)} / ${s.maxMp}`)}
+        ${row('Gold', `${hero.gold} <small>g</small>`)}
         ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
         ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${gearAttack(hero)} gear)</small>`)}
         ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${gearDefense(hero)} gear)</small>`)}
         ${row('Magic', `${spellPower(hero)} <small>(${s.magic} + ${hero.spell.power} spell)</small>`)}
       </dl>`;
-    document.getElementById('menu-gear')!.innerHTML = `
-      <dl>
-        ${GEAR_SLOTS.map((slot) => row(SLOT_LABELS[slot], describe(hero[slot]))).join('')}
-        ${row('Spell', `${hero.spell.name} <small>${hero.spell.cost} MP</small>`)}
-      </dl>
-      <h3>Pack</h3>
-      <p class="empty">Empty.</p>`;
+  }
+
+  private render(hero: Hero) {
+    this.hero = hero;
+    this.renderStatus();
+    this.inventory.show(hero);
     this.keybinds.refresh();
     this.select(this.tab);
   }

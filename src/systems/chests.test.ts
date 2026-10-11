@@ -16,6 +16,7 @@ describe('collect', () => {
     const found = collect(hero, CHEST_LOOTS.bronzeSword!);
     expect(hero.weapon.name).toBe('Silver Sword');
     expect(found.gear).toBeUndefined();
+    expect(hero.pack.map((i) => i.name)).toEqual(['Rusty Sword', 'Bronze Sword']); // the replaced and the unused, both kept
   });
 
   it('puts each piece of gear in its own slot', () => {
@@ -59,6 +60,12 @@ describe('collect', () => {
     collect(hero, CHEST_LOOTS.elixir!);
     expect(hero.stats.hp).toBe(hero.stats.maxHp);
     expect(hero.stats.mp).toBe(20);
+  });
+
+  it('holds gold', () => {
+    const hero = newHero();
+    expect(collect(hero, CHEST_LOOTS.purse!).text).toBe('+90 gold');
+    expect(hero.gold).toBe(90);
   });
 
   it('awards XP and reports level-ups', () => {

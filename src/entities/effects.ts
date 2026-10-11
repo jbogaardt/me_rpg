@@ -1,5 +1,5 @@
 import { BitmapText, Container, Graphics } from 'pixi.js';
-import type { Direction } from './Character';
+import type { Direction } from '../core/direction';
 
 /** A short-lived world visual (slash, projectile, damage number). */
 export interface Effect {

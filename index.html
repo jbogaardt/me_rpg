@@ -19,13 +19,18 @@
       <div class="bar"><div class="fill"></div></div>
     </div>
 
+    <!-- Black cut when going through a door (src/hud/Fade.ts). -->
+    <div id="fade"></div>
+
     <div id="hud">
       <div id="hud-stats" class="panel thin wood">
         <div id="hud-hp" class="bar"><div class="fill"></div><span class="label"></span></div>
         <div id="hud-mp" class="bar mirror"><div class="fill"></div><span class="label"></span></div>
+        <div id="hud-gold" title="Gold"><i></i><span class="label">0</span></div>
       </div>
       <div id="hud-buttons">
         <!-- Shown only in a co-op game (src/hud/MapOverlay.ts). -->
+        <div id="inv-btn" role="button" aria-label="Inventory" data-key="KeyI">I</div>
         <div id="map-btn" role="button" aria-label="Map" data-key="KeyM" hidden>M</div>
         <div id="menu-btn" role="button" aria-label="Menu" data-key="Escape">☰</div>
       </div>
@@ -55,20 +60,71 @@
       <span class="more" aria-hidden="true"></span>
     </div>
 
+    <!-- A shopkeeper's counter (src/hud/Shop.ts). -->
+    <div id="shop" hidden>
+      <div class="panel wood">
+        <header>
+          <nav>
+            <div role="tab" data-tab="buy" class="active">Buy</div>
+            <div role="tab" data-tab="sell">Sell</div>
+          </nav>
+          <div class="close" role="button" aria-label="Close shop" data-key="Escape">✕</div>
+        </header>
+        <div class="panel thin paper">
+          <h2><span id="shop-title"></span><small id="shop-gold"></small></h2>
+          <p id="shop-note" role="status"></p>
+          <ul id="shop-list" class="item-list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player-to-player trading, co-op only (src/hud/Trade.ts): a request prompt, a flash of what happened, and the window. -->
+    <div id="trade-request" class="panel thin paper" role="alertdialog" aria-live="polite" hidden></div>
+    <div id="trade-toast" role="status" hidden></div>
+    <div id="trade" hidden>
+      <div class="panel wood">
+        <header>
+          <h2 id="trade-title">Trade</h2>
+          <div class="close" role="button" aria-label="Cancel trade" data-key="Escape">✕</div>
+        </header>
+        <div class="panel thin paper">
+          <div class="trade-cols">
+            <section>
+              <h3>You offer</h3>
+              <ul id="trade-mine-list" class="item-list"></ul>
+              <label class="trade-gold">Gold <input id="trade-gold" type="number" min="0" step="1" value="0" inputmode="numeric" /> <small id="trade-my-gold"></small></label>
+            </section>
+            <section>
+              <h3><span id="trade-their-name">They offer</span> <small id="trade-their-state"></small></h3>
+              <ul id="trade-theirs-list" class="item-list"></ul>
+              <p class="trade-gold"><b id="trade-their-gold">0 gold</b></p>
+            </section>
+          </div>
+          <h3>Your pack <small>tap Offer to put something on the table</small></h3>
+          <ul id="trade-pack" class="item-list"></ul>
+          <div class="trade-actions">
+            <button type="button" id="trade-accept" class="mp-btn panel thin wood">Accept</button>
+            <button type="button" id="trade-cancel" class="mp-btn panel thin wood">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="menu" hidden>
       <div class="panel wood">
         <header>
           <nav>
             <div role="tab" data-tab="status" class="active">Status</div>
-            <div role="tab" data-tab="gear">Gear</div>
+            <div role="tab" data-tab="inventory">Inventory</div>
             <div role="tab" data-tab="controls">Controls</div>
             <div role="tab" data-tab="online">Online</div>
+            <div role="tab" data-tab="trade" hidden>Trade</div>
           </nav>
           <div class="close" role="button" aria-label="Close menu" data-key="Escape">✕</div>
         </header>
         <div class="panel thin paper">
           <section id="menu-status"></section>
-          <section id="menu-gear" hidden></section>
+          <section id="menu-inventory" hidden></section>
           <section id="menu-controls" hidden>
             <div id="keybinds" hidden>
               <h3>Customize <small>keyboard &amp; mouse</small></h3>
@@ -87,9 +143,10 @@
                 <tr><td>Attack / shoot / talk</td><td data-bound="attack"></td><td>A</td></tr>
                 <tr><td>Next line</td><td data-bound="attack"></td><td>A or tap the box</td></tr>
                 <tr><td>Magic</td><td data-bound="magic"></td><td>B</td></tr>
-                <tr><td>Menu</td><td>Esc, I, Tab</td><td>☰</td></tr>
-                <tr><td>Map (online)</td><td>M</td><td>M button</td></tr>
-                <tr><td>Menu tabs</td><td>← / →</td><td>Tap</td></tr>
+                <tr><td>Menu</td><td data-bound="menu"></td><td>☰</td></tr>
+                <tr><td>Inventory</td><td data-bound="inventory"></td><td>I button</td></tr>
+                <tr><td>Map (online)</td><td data-bound="map"></td><td>M button</td></tr>
+                <tr><td>Menu tabs</td><td data-bound="tabs"></td><td>Tap</td></tr>
               </tbody>
             </table>
             <p class="credit">
@@ -97,6 +154,7 @@
               <a href="sprites/lpc/credits.csv" target="_blank" rel="noopener">Full credits</a>
             </p>
           </section>
+          <section id="menu-trade" hidden></section>
           <section id="menu-online" hidden>
             <h2>Multiplayer <small>up to 4 players</small></h2>
             <div id="mp-mode" role="radiogroup" aria-label="Multiplayer mode">

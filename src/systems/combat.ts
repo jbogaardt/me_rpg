@@ -1,5 +1,6 @@
 // Stats, gear and the damage/XP rules shared by the hero and mobs.
 
+import type { Direction } from '../core/direction';
 import type { Outfit } from '../sprites/doll';
 import { ITEMS } from './items';
 
@@ -15,8 +16,11 @@ export interface Stats {
   magic: number;
 }
 
-/** Where gear is worn. `offhand` takes a shield or a second (light) weapon; `cape` is the cloak over the shoulders. */
-export const GEAR_SLOTS = ['weapon', 'offhand', 'head', 'chest', 'legs', 'feet', 'cape'] as const;
+/**
+ * Where gear is worn. `offhand` takes a shield or a second (one-handed) weapon; `cape` is the cloak over the shoulders;
+ * `tool` is the one gadget in hand; `bag` is the sack or pack on the hero's back (it adds pack slots, see inventory.ts).
+ */
+export const GEAR_SLOTS = ['weapon', 'offhand', 'head', 'chest', 'legs', 'feet', 'cape', 'tool', 'bag'] as const;
 export type GearSlot = (typeof GEAR_SLOTS)[number];
 
 /** A weapon that shoots instead of swinging: the action key looses a projectile along the way the hero is heading. */
@@ -31,11 +35,17 @@ export interface Ranged {
 
 export interface Item {
   name: string;
+  /** Gold a shop asks for it (and, at a fraction, pays for it). */
+  value?: number;
   slot?: GearSlot;
   attack?: number;
   defense?: number;
   /** Set on bows: the weapon shoots (see `Ranged`) instead of swinging. */
   ranged?: Ranged;
+  /** Set on supplies (no slot): drinking one restores this much HP and MP, from the pack. */
+  use?: { hp: number; mp?: number };
+  /** Set on bags (slot `bag`): extra pack slots while it is worn. */
+  capacity?: number;
   /** Sprite parts this item puts on the hero (see sprites/parts.ts); drawn over the hero's base look. */
   look?: Outfit;
 }
@@ -50,7 +60,10 @@ export interface Hero extends Partial<Record<Exclude<GearSlot, 'weapon'>, Item>>
   name: string;
   stats: Stats;
   weapon: Item; // always armed; every other gear slot may be empty
+  /** Carried items that are not worn (see inventory.ts for the size limit). */
+  pack: Item[];
   spell: Spell;
+  gold: number; // money: dropped by enemies, spent in shops
 }
 
 export interface MobKind {
@@ -60,6 +73,7 @@ export interface MobKind {
   attack: number;
   defense: number;
   xp: number; // awarded on kill
+  gold: number; // dropped on kill, give or take 30% (see `rollGold`)
   speed: number; // pixels per second while chasing
   sight: number; // pixels: starts chasing inside this range
   /** Seconds of telegraph before the blow (or shot) lands. Default 0.45. */
@@ -95,7 +109,9 @@ export function newHero(): Hero {
     stats: { level: 1, xp: 0, hp: 30, maxHp: 30, mp: 20, maxMp: 20, attack: 5, defense: 1, magic: 8 },
     weapon: ITEMS.rustySword,
     cape: ITEMS.travelerCloak,
+    pack: [],
     spell: { name: 'Time Bolt', cost: 5, power: 6 },
+    gold: 0,
   };
 }
 
@@ -110,6 +126,7 @@ export const SHADE: MobKind = {
   attack: 6,
   defense: 0,
   xp: 12,
+  gold: 7,
   speed: 60,
   sight: 6 * 32,
   windup: 0.65,
@@ -133,6 +150,7 @@ export const RAIDER: MobKind = {
   attack: 9,
   defense: 1,
   xp: 22,
+  gold: 14,
   speed: 70,
   sight: 5.5 * 32,
   windup: 0.38,
@@ -155,6 +173,7 @@ export const FROSTBOUND: MobKind = {
   attack: 13,
   defense: 2,
   xp: 38,
+  gold: 24,
   speed: 62,
   sight: 6 * 32,
   windup: 0.4,
@@ -177,6 +196,7 @@ export const GOBLIN: MobKind = {
   attack: 4,
   defense: 0,
   xp: 6,
+  gold: 4,
   speed: 82,
   sight: 5 * 32,
   windup: 0.3,
@@ -192,6 +212,7 @@ export const WOLFKIN: MobKind = {
   attack: 7,
   defense: 0,
   xp: 12,
+  gold: 7,
   speed: 96,
   sight: 6 * 32,
   windup: 0.28,
@@ -207,6 +228,7 @@ export const SKELETON: MobKind = {
   attack: 8,
   defense: 1,
   xp: 16,
+  gold: 10,
   speed: 52,
   sight: 6.5 * 32,
   windup: 0.55,
@@ -222,6 +244,7 @@ export const ZOMBIE: MobKind = {
   attack: 7,
   defense: 0,
   xp: 14,
+  gold: 9,
   speed: 36,
   sight: 4 * 32,
 };
@@ -242,6 +265,7 @@ export const ORC: MobKind = {
   attack: 11,
   defense: 1,
   xp: 30,
+  gold: 18,
   speed: 58,
   sight: 5.5 * 32,
   windup: 0.4,
@@ -257,6 +281,7 @@ export const TROLL: MobKind = {
   attack: 15,
   defense: 3,
   xp: 60,
+  gold: 40,
   speed: 46,
   sight: 5 * 32,
   windup: 0.5,
@@ -267,6 +292,18 @@ export const TROLL: MobKind = {
 /** What a mob is doing, in the order used on the wire (src/net/protocol.ts). */
 export const MOB_STATES = ['idle', 'wander', 'chase', 'windup', 'recover', 'dead'] as const;
 export type MobState = (typeof MOB_STATES)[number];
+
+/** What a viewer needs to draw a mob: the host's mob as it is now. The network sends it (net/mobWire.ts); a co-op guest's copy of a mob is drawn from one. */
+export interface MobView {
+  x: number;
+  y: number;
+  facing: Direction;
+  state: MobState;
+  hp: number;
+  /** Seconds left in the state (the windup, the recovery, or the wait to respawn); only meaningful in those states. */
+  timer: number;
+  moving: boolean;
+}
 
 /** Mob kinds a map can spawn, by the `kind` used in MapData.mobs. */
 export const MOB_KINDS: Record<string, MobKind> = {
@@ -304,6 +341,9 @@ export function levelGains(level: number) {
     magic: 2 + tier,
   };
 }
+
+/** The gold an enemy drops this time: its usual amount, give or take 30%, and at least 1. */
+export const rollGold = (kind: MobKind): number => Math.max(1, Math.round(kind.gold * (0.7 + Math.random() * 0.6)));
 
 /** One hit: power with ±15% spread, minus defense, never below 1. */
 export function rollDamage(power: number, defense: number): number {
