@@ -8,6 +8,7 @@ export const PLUS_SHEET = 'ground_plus.png'; // ground_tiles + a plain water til
 export const FROST_SHEET = 'frost_ground.png'; // sand -> snow, water -> ice
 export const FROST_OBJECTS = 'frost_objects.png'; // snow-dusted trees/bushes, blue-grey rocks
 export const DRY_OBJECTS = 'dry_objects.png'; // withered ochre trees/bushes
+export const TOWN_SHEET = 'town.png'; // the shop buildings, cut from the CC0 Town RPG Pack by tools/map/town.ts
 export const CLIFF_SHEET = 'Cliff_tileset.png'; // Avalon cliffs: a plateau blob, stairs, notches
 export const FROST_CLIFFS = 'frost_cliffs.png'; // cliffs with snow tops and blue-grey rock (recolor.ts)
 export const DRY_CLIFFS = 'dry_cliffs.png'; // cliffs with sandy tops and ochre rock (recolor.ts)
@@ -285,7 +286,27 @@ const ROCKS = (sheet: string) => ({
 const rocks = ROCKS(OBJECT_SHEET);
 const frostRocks = ROCKS(FROST_OBJECTS);
 
+/** Where each shop building sits on town.png (2x the pack's art; both sizes are whole cells so the footprint is clean). */
+export const BUILDINGS = {
+  smithy: { x: 0, y: 0, w: 192, h: 224 },
+  apothecary: { x: 192, y: 0, w: 192, h: 224 },
+  armory: { x: 384, y: 0, w: 96, h: 288 },
+  ranger: { x: 480, y: 0, w: 96, h: 288 },
+};
+const building = (name: keyof typeof BUILDINGS, about: string): Prefab => {
+  const { x, y, w, h } = BUILDINGS[name];
+  // Solid from the ground up: a building is a wall you walk around, not behind.
+  return { sheet: TOWN_SHEET, w, h, parts: [part(x, y, w, h)], solid: { band: h, min: 0.3 }, tag: 'building', about };
+};
+
 export const PREFABS = {
+  smithy: building(
+    'smithy',
+    'Blacksmith: a 6x7 hall with terracotta roof and an anvil over the door. Shopkeeper stands one row below.',
+  ),
+  apothecary: building('apothecary', 'Apothecary: a 6x7 hall with a green roof and a flask over the door.'),
+  armory: building('armory', 'Armorer: a 3x9 tall house with a slate roof and a shield over the door.'),
+  ranger: building('ranger', "Ranger's lodge: a 3x9 tall house with a golden roof and a bow over the door."),
   treeA: tree(OBJECT_SHEET, 'A', 'Round leafy canopy (3x3 cells). Blocks its bottom two rows; top row is walk-behind.'),
   treeB: tree(
     OBJECT_SHEET,

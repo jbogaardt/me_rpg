@@ -32,18 +32,22 @@ function bar(id: string): Bar {
 export class Hud {
   private hp = bar('hud-hp');
   private mp = bar('hud-mp');
+  private gold = document.getElementById('hud-gold')!;
   private shown = '';
 
-  update(hero: Hero) {
+  /** `showGold` is false for a guest in a co-op game, whose money lives on the host (see CLAUDE.md, Co-op). */
+  update(hero: Hero, showGold = true) {
     const s = hero.stats;
     const hp = Math.ceil(s.hp);
     const mp = Math.floor(s.mp);
-    const key = `${hp}/${s.maxHp} ${mp}/${s.maxMp}`;
+    const key = `${hp}/${s.maxHp} ${mp}/${s.maxMp} ${showGold ? hero.gold : '-'}`;
     if (key === this.shown) return; // only touch the DOM when something changed
     this.shown = key;
     this.set(this.hp, hp, s.maxHp);
     this.hp.fill.style.backgroundColor = hpColor(hp / s.maxHp);
     this.set(this.mp, mp, s.maxMp);
+    this.gold.hidden = !showGold;
+    this.gold.querySelector('.label')!.textContent = String(hero.gold);
   }
 
   private set(b: Bar, value: number, max: number) {

@@ -1,14 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { GEAR_SLOTS, newHero } from './combat';
+import { GEAR_SLOTS, newHero, type Item } from './combat';
 import { equip, ITEMS } from './items';
 
-const items = Object.entries(ITEMS);
+const items: [string, Item][] = Object.entries(ITEMS);
+const gear = items.filter(([, item]) => !item.use); // everything but supplies
+const supplies = items.filter(([, item]) => item.use);
 
 describe('ITEMS', () => {
-  it.each(items)('%s goes in a real slot and does something', (_id, item) => {
+  it.each(supplies)('%s is a supply: no slot, and it heals something', (_id, item) => {
+    expect(item.slot).toBeUndefined();
+    expect(item.use?.hp).toBeGreaterThan(0);
+  });
+
+  it.each(items)('%s has a price a shop can use', (_id, item) => {
+    expect(item.value).toBeGreaterThan(0);
+  });
+
+  it.each(gear)('%s goes in a real slot and does something', (_id, item) => {
     expect(GEAR_SLOTS as readonly string[]).toContain(item.slot);
-    const worth = ('attack' in item ? item.attack : 0) + ('defense' in item ? item.defense : 0);
-    expect(worth + ('capacity' in item ? item.capacity : 0)).toBeGreaterThan(0);
+    expect((item.attack ?? 0) + (item.defense ?? 0) + (item.capacity ?? 0)).toBeGreaterThan(0);
   });
 
   it('has several pieces for every armor slot, and shields and blades for the off-hand', () => {
@@ -16,8 +26,8 @@ describe('ITEMS', () => {
       expect(items.filter(([, i]) => i.slot === slot).length, slot).toBeGreaterThanOrEqual(3);
     }
     const offhand = items.filter(([, i]) => i.slot === 'offhand');
-    expect(offhand.some(([, i]) => 'defense' in i)).toBe(true); // a shield
-    expect(offhand.some(([, i]) => 'attack' in i)).toBe(true); // a second weapon
+    expect(offhand.some(([, i]) => i.defense)).toBe(true); // a shield
+    expect(offhand.some(([, i]) => i.attack)).toBe(true); // a second weapon
   });
 
   it('keeps armor in the doll slot that matches where it is worn', () => {
@@ -32,19 +42,18 @@ describe('ITEMS', () => {
       tool: undefined, // tools and bags are not drawn on the doll
       bag: undefined,
     };
-    for (const [id, item] of items) {
-      const part = dollSlot[item.slot];
-      expect(Object.keys(item.look), id).toEqual(part ? [part] : []);
+    for (const [id, item] of gear) {
+      const part = dollSlot[item.slot as keyof typeof dollSlot];
+      expect(Object.keys(item.look ?? {}), id).toEqual(part ? [part] : []);
     }
   });
 
   it('lets only weapons shoot, and every bow reaches farther than the Time Bolt', () => {
-    const bows = items.filter(([, i]) => 'ranged' in i);
+    const bows = items.filter(([, i]) => i.ranged);
     expect(bows.length).toBeGreaterThanOrEqual(2);
     for (const [id, item] of bows) {
       expect(item.slot, id).toBe('weapon');
-      const { speed, range, cooldown } = (item as { ranged: { speed: number; range: number; cooldown: number } })
-        .ranged;
+      const { speed, range, cooldown } = item.ranged!;
       expect(speed).toBeGreaterThan(120); // faster than the hero walks
       expect(range).toBeGreaterThan(7 * 32); // the Time Bolt flies 7 cells
       expect(cooldown).toBeGreaterThan(0.35); // slower between shots than a sword

@@ -35,6 +35,8 @@ ground first, then features, then overrides.
 | `z.plateau(rect, {kind?, stairs?})` | Raised plateau. `rect` = walkable top (>= 4x4 cells). Rim rocks fill the 1-cell ring N/W/E and the rock face the 2 rows S of it (all blocked, plus the 4 corner cells of `rect`). `kind`: `'grass'` (default), `'frost'` (snow top; lay it on snow), `'dry'` (sand top). `stairs`: centre columns of 3-wide staircases cut into the south face (`rect.col+2 <= c <= rect.col+w-3`, so w >= 5; >= 3 columns apart). Stairs are the only way up; the top gets level +1 and the stair cells become ramps. Put props/mobs on top with the usual calls. |
 | `z.block(rect, reason)` / `z.unblock(rect)` | Manual collision overrides, applied last. Use `block` for water/cliffs; the reason silences the invisible-wall warning. Don't hand-block props. |
 | `z.spawn(c, r)`, `z.npc(c, r)`, `z.mob(kind, c, r)` | Player start, the NPC, enemy spawns (`kind` must be in `MOB_KINDS`, `src/systems/combat.ts`). |
+| `z.shop(id, c, r)` | A shopkeeper (`id` is a key of `SHOPS`, `src/systems/shops.ts`) standing on an open cell. Put the shop's building behind it with `z.prop('smithy' \| 'armory' \| 'apothecary' \| 'ranger', col, row)` and the keeper one cell below its door (the door is the middle of the footprint's bottom edge). |
+| `z.chest(kind, loot, c, r)` | A treasure chest (`loot` is a key of `CHEST_LOOTS`, `src/systems/chests.ts`). Shops sell the common gear, so chests hold what no shop stocks, restoratives and gold purses. |
 
 A `Rect` is `{ col, row, w, h }`.
 
@@ -47,6 +49,9 @@ A `Rect` is `{ col, row, w, h }`.
 - Prefabs: trees `treeA`/`treeB` (+ `frostTree*`, `dryTree*`; 3x3, block bottom two rows, top row walk-behind), bushes
   `bush`/`frostBush`/`dryBush` (2x2), rocks `rock` (pale), `rockSmall`, `rockB`, `rockC` (+ `frostRock*`), `barrel`, and
   decorations `flowerRed`/`flowersPurple` (no collision). Mix variants to avoid repetition.
+- Buildings (`town.png`, from the CC0 Town RPG Pack, built by `tools/map/town.ts`): `smithy` and `apothecary` are 6x7-cell halls,
+  `armory` and `ranger` are 3x9-cell tall houses. Solid from the ground up (you walk around them, not behind). Leave one cell of
+  space between neighbours and a cobbled `stone` patch in front looks right (see the village in `maps/overworld.ts`).
 - The tilesets have **no** foliage ground/edge tiles; all vegetation is prefabs. There are no
   inner-corner or non-rectangular patch shapes yet.
 

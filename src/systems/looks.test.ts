@@ -85,8 +85,9 @@ describe('player looks', () => {
   });
 
   it('lists every item on every player up front so the game can load all the art before play', () => {
-    expect(allPlayerOutfits()).toHaveLength(MAX_PLAYERS * Object.keys(ITEMS).length);
+    const gear = Object.values(ITEMS).flatMap((item) => ('look' in item ? [item] : [])); // supplies have no look
+    expect(allPlayerOutfits()).toHaveLength(MAX_PLAYERS * gear.length);
     const parts = new Set(allPlayerOutfits().flatMap(outfitParts));
-    for (const item of Object.values(ITEMS)) for (const id of Object.values(item.look)) expect(parts).toContain(id);
+    for (const item of gear) for (const id of Object.values(item.look)) expect(parts).toContain(id);
   });
 });

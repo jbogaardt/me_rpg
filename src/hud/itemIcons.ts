@@ -6,6 +6,8 @@ import type { IconKind } from '../systems/inventory';
 const ICONS: Record<IconKind, string> = {
   sword:
     '<path d="M12 1.5l2 2.5v9.5h-4V4z"/><rect x="6.5" y="13.5" width="11" height="2.5" rx="1"/><rect x="10.5" y="16" width="3" height="5"/><circle cx="12" cy="22" r="1.4"/>',
+  potion:
+    '<rect x="9.5" y="2.5" width="5" height="3" rx="1"/><path d="M10 5.5h4v3.5l4.5 7.2c1 1.8-.2 4.3-2.4 4.3H7.9c-2.2 0-3.4-2.5-2.4-4.3L10 9z"/><path d="M7.5 15.5h9" fill="none" stroke="#e8dcc0" stroke-width="1.4"/>',
   bow: '<path d="M6 2.5c11 3 11 16 0 19" fill="none" stroke-width="2.6"/><path d="M6 2.5v19" fill="none" stroke-width="1" stroke="#e8dcc0"/><path d="M8 12h12m-3-3l3 3-3 3" fill="none" stroke="#e8dcc0" stroke-width="1.2"/>',
   dagger:
     '<path d="M12 2l2.2 3.5V14h-4.4V5.5z"/><rect x="7.5" y="14" width="9" height="2.4" rx="1"/><rect x="10.8" y="16.4" width="2.4" height="5"/>',

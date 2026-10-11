@@ -85,6 +85,7 @@ export class Menu {
       <dl>
         ${row('HP', `${Math.ceil(s.hp)} / ${s.maxHp}`)}
         ${row('MP', `${Math.floor(s.mp)} / ${s.maxMp}`)}
+        ${row('Gold', `${hero.gold} <small>g</small>`)}
         ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
         ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${gearAttack(hero)} gear)</small>`)}
         ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${gearDefense(hero)} gear)</small>`)}

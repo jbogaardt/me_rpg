@@ -41,6 +41,11 @@ export interface ChestSpawn extends CellPoint {
   loot: string;
 }
 
+/** A shopkeeper standing at `col,row`; `shop` is a key of SHOPS (src/systems/shops.ts). The building is a map prop. */
+export interface ShopSpawn extends CellPoint {
+  shop: string;
+}
+
 /**
  * The on-disk map format (public/maps/<zone>.json). Generated from a zone spec in maps/ by
  * `npm run map -- build`; don't edit the JSON by hand.
@@ -62,6 +67,7 @@ export interface MapData {
   npc: CellPoint | null;
   mobs: MobSpawn[];
   chests: ChestSpawn[]; // solid; opened with the action key
+  shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
 }
 
 export function parseMap(json: unknown): MapData {
@@ -86,5 +92,6 @@ export function parseMap(json: unknown): MapData {
     npc: d.npc ?? null,
     mobs: d.mobs ?? [],
     chests: d.chests ?? [],
+    shops: d.shops ?? [],
   };
 }

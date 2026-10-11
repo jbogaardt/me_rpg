@@ -144,6 +144,7 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
     if (data.npc) mark(data.npc.col, data.npc.row, 0xff6b8a);
     for (const m of data.mobs) mark(m.col, m.row, 0xff9020);
     for (const c of data.chests) mark(c.col, c.row, 0xffe040);
+    for (const sh of data.shops) mark(sh.col, sh.row, 0x40c0ff);
   }
 
   let img = out;

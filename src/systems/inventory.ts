@@ -2,7 +2,7 @@
 // bag on their back. Gear is worn in slots (GEAR_SLOTS); everything else sits in `hero.pack`. Every move here either
 // succeeds completely or changes nothing and says why.
 
-import { GEAR_SLOTS, type GearSlot, type Hero, type Item } from './combat';
+import { gainXp, GEAR_SLOTS, type GearSlot, type Hero, type Item } from './combat';
 
 /** Pack slots with no bag. A sack or backpack (slot `bag`, `capacity`) adds to it while worn. */
 export const BASE_PACK = 10;
@@ -98,6 +98,31 @@ export function itemTier(item: Item): number {
   return Math.max(1, Math.min(4, (item.attack ?? 0) + (item.defense ?? 0)));
 }
 
+/** A piece's worth in its slot: attack for blades and bows, defense for armor and shields, both added for a mix. */
+const worth = (item: Item | undefined) => (item?.attack ?? 0) + (item?.defense ?? 0);
+
+/** Is `item` better than what the hero wears in its slot (an empty slot takes anything)? */
+export function isBetter(hero: Hero, item: Item): boolean {
+  if (!item.slot) return false;
+  const current = item.slot === 'weapon' ? hero.weapon : hero[item.slot];
+  return !current || worth(item) > worth(current);
+}
+
+/** Drink the supply at `index` in the pack. Refused (and kept) when it is not a supply or would do nothing. */
+export type Used = { ok: true; text: string; levels: number } | { ok: false; reason: string };
+
+export function useFromPack(hero: Hero, index: number): Used {
+  const item = hero.pack[index];
+  const s = hero.stats;
+  if (!item?.use) return { ok: false, reason: 'That cannot be used.' };
+  if (s.hp >= s.maxHp && (!item.use.mp || s.mp >= s.maxMp))
+    return { ok: false, reason: 'You do not need that right now.' };
+  hero.pack.splice(index, 1);
+  s.hp = Math.min(s.maxHp, s.hp + item.use.hp);
+  s.mp = Math.min(s.maxMp, s.mp + (item.use.mp ?? 0));
+  return { ok: true, text: item.use.mp ? 'HP and MP restored' : `+${item.use.hp} HP`, levels: gainXp(s, 0) };
+}
+
 /** What `item` adds over what is worn in its slot: positive numbers are better. */
 export function compare(item: Item, worn: Item | undefined) {
   return {
@@ -108,9 +133,22 @@ export function compare(item: Item, worn: Item | undefined) {
 
 /** Which picture an item gets in the pack screen. */
 export type IconKind =
-  'sword' | 'bow' | 'dagger' | 'shield' | 'helm' | 'armor' | 'greaves' | 'boot' | 'cape' | 'tool' | 'sack' | 'backpack';
+  | 'sword'
+  | 'bow'
+  | 'potion'
+  | 'dagger'
+  | 'shield'
+  | 'helm'
+  | 'armor'
+  | 'greaves'
+  | 'boot'
+  | 'cape'
+  | 'tool'
+  | 'sack'
+  | 'backpack';
 
 export function iconKind(item: Item): IconKind {
+  if (item.use) return 'potion';
   if (item.ranged) return 'bow';
   switch (item.slot) {
     case 'offhand':

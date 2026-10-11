@@ -1,5 +1,6 @@
 import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
 import { MOB_KINDS } from '../../src/systems/combat';
+import { SHOPS } from '../../src/systems/shops';
 import { CELL, type MapData } from '../../src/map/types';
 import { coverage, sheet } from './image';
 
@@ -88,6 +89,10 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     points.push([`mob ${m.kind}`, m]);
     if (!MOB_KINDS[m.kind])
       errors.push(`mob kind "${m.kind}" at (${m.col},${m.row}) isn't in MOB_KINDS (src/systems/combat.ts)`);
+  }
+  for (const sh of d.shops) {
+    points.push([`shopkeeper ${sh.shop}`, sh]);
+    if (!SHOPS[sh.shop]) errors.push(`shopkeeper at (${sh.col},${sh.row}) runs unknown shop "${sh.shop}" (SHOPS)`);
   }
   const chestPoints: [string, { col: number; row: number }][] = d.chests.map((c) => {
     if (!(CHEST_KINDS as readonly string[]).includes(c.kind))

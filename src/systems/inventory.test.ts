@@ -8,9 +8,11 @@ import {
   dropWorn,
   equipFromPack,
   fitsSlot,
+  isBetter,
   packSize,
   slotsFor,
   unequip,
+  useFromPack,
 } from './inventory';
 import { ITEMS } from './items';
 import { playerOutfit } from './looks';
@@ -166,5 +168,43 @@ describe('chest loot', () => {
     expect(collect(hero, { item: ITEMS.clothHood }, false).gear).toBeUndefined();
     expect(collect(hero, { item: ITEMS.greatHelm }, false).gear).toBe(ITEMS.greatHelm);
     expect(hero.pack).toEqual([]);
+  });
+});
+
+describe('useFromPack', () => {
+  it('drinks a supply: it leaves the pack and heals, capped at the maximum', () => {
+    const hero = newHero();
+    hero.stats.hp = 10;
+    hero.pack.push(ITEMS.potion);
+    expect(useFromPack(hero, 0)).toMatchObject({ ok: true, text: '+20 HP' });
+    expect(hero.stats.hp).toBe(30);
+    expect(hero.pack).toHaveLength(0);
+  });
+
+  it('restores MP too for an elixir', () => {
+    const hero = newHero();
+    hero.stats.mp = 0;
+    hero.pack.push(ITEMS.elixir);
+    expect(useFromPack(hero, 0)).toMatchObject({ ok: true, text: 'HP and MP restored' });
+    expect(hero.stats.mp).toBe(hero.stats.maxMp);
+  });
+
+  it('keeps the supply when it would do nothing, and refuses gear', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.potion, ITEMS.steelSword);
+    expect(useFromPack(hero, 0)).toMatchObject({ ok: false });
+    expect(useFromPack(hero, 1)).toMatchObject({ ok: false });
+    expect(useFromPack(hero, 5)).toMatchObject({ ok: false });
+    expect(hero.pack).toHaveLength(2);
+  });
+});
+
+describe('isBetter', () => {
+  it('compares against the worn piece, and an empty slot takes anything', () => {
+    const hero = newHero();
+    expect(isBetter(hero, ITEMS.bronzeSword)).toBe(true); // rusty sword is worse
+    expect(isBetter(hero, ITEMS.rustySword)).toBe(false);
+    expect(isBetter(hero, ITEMS.greatHelm)).toBe(true); // no helm yet
+    expect(isBetter(hero, ITEMS.potion)).toBe(false); // not gear
   });
 });

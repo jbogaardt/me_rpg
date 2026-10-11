@@ -23,6 +23,7 @@
       <div id="hud-stats" class="panel thin wood">
         <div id="hud-hp" class="bar"><div class="fill"></div><span class="label"></span></div>
         <div id="hud-mp" class="bar mirror"><div class="fill"></div><span class="label"></span></div>
+        <div id="hud-gold" title="Gold"><i></i><span class="label">0</span></div>
       </div>
       <div id="hud-buttons">
         <!-- Shown only in a co-op game (src/hud/MapOverlay.ts). -->
@@ -54,6 +55,24 @@
     <div id="dialog" class="panel paper" role="button" aria-label="Next line" data-key="KeyJ" hidden>
       <p id="dialog-text"></p>
       <span class="more" aria-hidden="true"></span>
+    </div>
+
+    <!-- A shopkeeper's counter (src/hud/ShopCounter.ts). -->
+    <div id="shop" hidden>
+      <div class="panel wood">
+        <header>
+          <nav>
+            <div role="tab" data-tab="buy" class="active">Buy</div>
+            <div role="tab" data-tab="sell">Sell</div>
+          </nav>
+          <div class="close" role="button" aria-label="Close shop" data-key="Escape">✕</div>
+        </header>
+        <div class="panel thin paper">
+          <h2><span id="shop-title"></span><small id="shop-gold"></small></h2>
+          <p id="shop-note" role="status"></p>
+          <ul id="shop-list" class="item-list"></ul>
+        </div>
+      </div>
     </div>
 
     <div id="menu" hidden>
