@@ -84,7 +84,45 @@ export interface MapData {
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
 }
 
+/**
+ * The map as stored on disk (public/maps/<zone>.json, written by tools/map/encode.ts): `MapData` packed small. Ground
+ * cells name an entry of `palette` (most cells share a few dozen stacks; -1 = no ground), and objects are flat
+ * `[part, px, py]` triples naming an entry of `parts` (`[sheet, x, y, w, h, tag, z]`, tag -1 for none, z null for the
+ * default; tags index `tags`). Everything else is as in `MapData`.
+ */
+export interface PackedMap extends Omit<MapData, 'version' | 'ground' | 'objects'> {
+  version: 3;
+  palette: GroundCell[];
+  ground: number[];
+  tags: string[];
+  parts: [s: number, x: number, y: number, w: number, h: number, tag: number, z: number | null][];
+  objects: number[];
+}
+
+/** Read a map file (current or the older unpacked version 2) into `MapData`, filling defaults for missing fields. */
 export function parseMap(json: unknown): MapData {
+  const p = json as Partial<PackedMap>;
+  if (p && p.version === 3 && Array.isArray(p.palette) && Array.isArray(p.ground) && Array.isArray(p.parts)) {
+    const palette = p.palette;
+    const parts = p.parts;
+    const tags = p.tags ?? [];
+    const flat = p.objects ?? [];
+    const objects: MapObject[] = [];
+    for (let i = 0; i + 2 < flat.length; i += 3) {
+      const part = parts[flat[i]!];
+      if (!part) throw new Error('Map file names an object part it does not have');
+      const [s, x, y, w, h, tag, z] = part;
+      const o: MapObject = { s, x, y, w, h, px: flat[i + 1]!, py: flat[i + 2]! };
+      if (tag >= 0 && tags[tag]) o.tag = tags[tag];
+      if (z !== null) o.z = z;
+      objects.push(o);
+    }
+    return unpacked({ ...p, version: 2, ground: p.ground.map((k) => palette[k] ?? null), objects });
+  }
+  return unpacked(json);
+}
+
+function unpacked(json: unknown): MapData {
   const d = json as Partial<MapData>;
   if (!d || d.version !== 2 || !d.width || !d.height || !Array.isArray(d.ground)) {
     throw new Error('Not a valid map file (expected version 2; rebuild with `npm run map -- build`)');

@@ -5,7 +5,7 @@ import { newHero, type Hero } from '../../systems/combat';
 import { heroOutfit, PLAYER_COLORS, playerName, playerOutfit, playerTag } from '../../systems/looks';
 import { Weather } from '../../systems/weather';
 import type { Wardrobe } from '../../sprites/Wardrobe';
-import type { ZoneState } from '../ZoneState';
+import type { ZoneMemory, ZoneState } from '../ZoneState';
 
 /**
  * What the parts of the overworld share: who is in the game (the local player at this keyboard, and the co-op friends),
@@ -26,6 +26,8 @@ export class Arena {
   screen = { width: 0, height: 0 };
   /** Every loaded zone, by name. */
   readonly zones = new Map<string, ZoneState>();
+  /** What the zones that were unloaded remember (opened chests, items on the ground), restored when they load again. */
+  readonly memory = new Map<string, ZoneMemory>();
   /** Everyone else in a co-op game, by player number. */
   readonly remotes = new Map<number, Player>();
   readonly local: Player;

@@ -7,15 +7,21 @@ import type { MobWorld } from '../../entities/Mob';
 import { arrivalFacing, cellFeet, doorAt, doorsNear } from '../../map/doors';
 import { CELL, type CellPoint } from '../../map/types';
 import { pickTransition } from '../../map/transition';
+import { GroundItem } from '../../entities/GroundItem';
 import { ZoneState } from '../ZoneState';
 import type { Arena } from './Arena';
 
 const PREFETCH_REACH = 5 * CELL; // a door this close starts loading the zone behind it
 const PREFETCH_EVERY = 0.5; // seconds between looking for doors to prefetch
+const RETIRE_EVERY = 2; // seconds between looking for zones to unload
+const RETIRE_AFTER = 20; // seconds a zone must have been out of everyone's way before it is unloaded
+const RETIRE_REACH = 12 * CELL; // a door to a zone this close to a player keeps that zone loaded
 const ARRIVE_GRACE = 1.8; // seconds of silent immunity on arriving in a zone (the transition takes up to 1 s, and the world runs behind it), so nothing waiting at the door ambushes you
 
 /** Loads a zone by name (assets.ts `loadZone`). The scene asks for the zones behind doors before the player gets there. */
 export type ZoneLoader = (name: string) => Promise<Zone>;
+/** Frees what `ZoneLoader` loaded (assets.ts `unloadZone`). */
+export type ZoneUnloader = (zone: Zone) => Promise<void>;
 
 /**
  * The zones of the world: loading them (the ones behind doors are fetched before the player gets there), taking players
@@ -33,11 +39,14 @@ export class Zones {
   makeMobWorld!: (z: ZoneState) => MobWorld;
   private loading = new Map<string, Promise<void>>(); // zones being loaded, so each is asked for once
   private prefetchTimer = 0;
+  private retireTimer = RETIRE_EVERY;
+  private unused = new Map<string, number>(); // seconds each loaded zone has been out of everyone's way
 
   constructor(
     private arena: Arena,
     private sprites: Sprites,
     private loadZone: ZoneLoader,
+    private unloadZone: ZoneUnloader,
     private ui: { shop: ShopCounter },
     renderer: Renderer,
   ) {
@@ -45,12 +54,55 @@ export class Zones {
     this.root.addChild(this.stage, this.transition.view);
   }
 
-  /** Build the running state of a loaded zone and keep it. */
+  /** Build the running state of a loaded zone and keep it (with what it remembers from before it was unloaded). */
   add(zone: Zone): ZoneState {
     const z = new ZoneState(zone, this.sprites);
     z.mobWorld = this.makeMobWorld(z);
     this.arena.zones.set(zone.name, z);
+    const memory = this.arena.memory.get(zone.name);
+    if (memory) {
+      for (const i of memory.opened) z.chests[i]?.setOpen(true);
+      for (const { item, x, y, id, age } of memory.ground) {
+        const g = new GroundItem(item, x, y, id, age);
+        z.ground.push(g);
+        z.world.layer.addChild(g);
+      }
+      this.arena.memory.delete(zone.name);
+    }
     return z;
+  }
+
+  /**
+   * Unload the zones nobody needs, so memory stays bounded however much of the world has been visited: a zone with no
+   * player in it, that is not the start (a defeat wakes you there), and that no player has been near a door into for
+   * RETIRE_AFTER seconds. What must last (opened chests, items on the ground) is remembered; its mobs start afresh.
+   * A guest only counts itself (it is shown the host's world one zone at a time).
+   */
+  retire(dt: number) {
+    this.retireTimer -= dt;
+    if (this.retireTimer > 0) return;
+    const { arena } = this;
+    const players = arena.role === 'client' ? [arena.local] : arena.everyone();
+    const wanted = new Set<string>([arena.home.name, arena.view.name]);
+    for (const p of players) {
+      const here = arena.zones.get(p.zone);
+      if (!here) continue;
+      wanted.add(here.name);
+      for (const door of doorsNear(here.data, p.body.x, p.body.y, RETIRE_REACH)) wanted.add(door.to.zone);
+    }
+    for (const z of [...arena.zones.values()]) {
+      const idle = wanted.has(z.name) ? 0 : (this.unused.get(z.name) ?? 0) + RETIRE_EVERY;
+      if (idle < RETIRE_AFTER) {
+        this.unused.set(z.name, idle);
+        continue;
+      }
+      this.unused.delete(z.name);
+      arena.memory.set(z.name, z.remember());
+      arena.zones.delete(z.name);
+      z.dispose();
+      void this.unloadZone(z.source).catch((err: unknown) => console.error(`Could not unload zone "${z.name}"`, err));
+    }
+    this.retireTimer = RETIRE_EVERY;
   }
 
   /** The first zone: where the game starts. The local player is put in it. */
@@ -166,11 +218,14 @@ export class Zones {
   show(dest: ZoneState) {
     const { arena } = this;
     if (dest === arena.view && dest.world.parent === this.stage) return;
+    // The zone left behind is no longer drawn: free its map's sprites (they are built again around the view if it is).
+    if (arena.view !== dest) arena.view.world.release();
     this.stage.removeChildren();
     this.stage.addChild(dest.world);
     arena.setView(dest);
     dest.camera.resize(arena.screen.width, arena.screen.height);
     dest.camera.follow(arena.screen.width, arena.screen.height, arena.player.x, arena.player.y);
+    dest.world.update(dest.camera.view(arena.screen.width, arena.screen.height));
     this.ui.shop.close();
   }
 

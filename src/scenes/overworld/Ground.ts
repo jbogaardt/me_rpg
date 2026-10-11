@@ -102,6 +102,14 @@ export class Ground {
         g.destroy({ children: true, context: true });
       }
     }
+    // Zones unloaded meanwhile keep their items in the arena's memory: set those aside too.
+    for (const [name, memory] of this.arena.memory) {
+      this.soloGround.set(
+        name,
+        memory.ground.map(({ item, x, y, age }) => ({ item, x, y, age })),
+      );
+      memory.ground = [];
+    }
   }
 
   /** Back to solo: the host's items go, and this machine's own come back (with the time they had left). */
@@ -116,6 +124,13 @@ export class Ground {
         z.ground.push(g);
         z.world.layer.addChild(g);
       }
+      this.soloGround.delete(z.name);
+    }
+    // A zone that is not loaded now gets its items back when it is (Zones.add reads the memory).
+    for (const [name, items] of this.soloGround) {
+      const memory = this.arena.memory.get(name) ?? { opened: [], ground: [] };
+      memory.ground = items.map((g) => ({ ...g, id: ++this.nextId }));
+      this.arena.memory.set(name, memory);
     }
     this.soloGround.clear();
   }

@@ -16,7 +16,7 @@
 
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
 import { PREFABS, type PrefabName } from './catalog';
-import { rng, SURFACES, Zone, type Rect, type ZoneApi } from './zone';
+import { rng, SURFACES, Zone, type Rect, type WoodsOptions, type ZoneApi } from './zone';
 
 /** Cells of trees on each side of a border between two biomes (and along the world's edge). */
 export const WALL = 3;
@@ -49,6 +49,12 @@ export interface WorldLayout {
   rows: string[]; // the layout, one string per row of squares, one character per square
   key: Record<string, string>; // layout character -> biome (zone) name
   gaps: Gap[];
+  /**
+   * How far (in squares) the borders wander from the square grid, so they look carved rather than stepped (default
+   * 0.7; 0 keeps the squares). They stay straight across the gaps.
+   */
+  wobble?: number;
+  seed?: number; // changes the borders' wander (default 1)
 }
 
 /** What a biome spec can do: the usual zone calls (in world cells), plus where it is and a scatter helper. */
@@ -57,10 +63,15 @@ export interface BiomeApi extends ZoneApi {
   readonly bounds: Rect;
   /** Is this world cell the biome's? */
   owns(col: number, row: number): boolean;
-  /** Is this cell the biome's, outside its walls and gaps, and not yet taken by something the spec placed? */
+  /** Is this cell the biome's, outside its walls and gaps, and not yet taken by something the spec placed or blocked? */
   free(col: number, row: number): boolean;
-  /** Keep these cells free of scattered props (roads, plazas, a frozen lake...). */
+  /** Keep scattered props off these cells (roads, plazas, a frozen lake...); points may still go there. */
   keepClear(area: Rect | Rect[]): void;
+  /**
+   * The free cell (see `free`) nearest (col, row): where to put a mob, chest or the spawn so that it lands in the
+   * biome's open ground however its border wanders. Throws if there is none within 30 cells.
+   */
+  near(col: number, row: number): [number, number];
   /**
    * Sprinkle props over the free cells of `rect` (default: the whole biome), deterministically: `count` of them, each
    * a random pick of `names`, with at least `margin` free cells around each (default 1, so paths stay open).
@@ -74,8 +85,8 @@ export interface BiomeApi extends ZoneApi {
 
 export interface BiomeSpec {
   name: string;
-  /** The trees of its walls. */
-  walls: { trees: PrefabName[] };
+  /** What its walls are made of: trees, and bushes and rocks for the corners no tree fits (`WoodsOptions`). */
+  walls: WoodsOptions;
   /** Wall the edge of the world too (default true). False when the spec closes that edge itself, e.g. with the sea. */
   worldEdge?: boolean;
   build(z: BiomeApi): void;
@@ -89,6 +100,144 @@ export function worldOf(layout: WorldLayout): World {
   let w = worlds.get(layout);
   if (!w) worlds.set(layout, (w = new World(layout)));
   return w;
+}
+
+/** Smooth value noise in -1..1 on a lattice of `scale` cells, from a seed. */
+function noise(seed: number, scale: number) {
+  const hash = (x: number, y: number) => {
+    let h = (x * 374761393 + y * 668265263 + seed * 2147483647) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return (((h ^ (h >>> 16)) >>> 0) / 4294967296) * 2 - 1;
+  };
+  const fade = (t: number) => t * t * (3 - 2 * t);
+  return (x: number, y: number) => {
+    const fx = x / scale,
+      fy = y / scale;
+    const x0 = Math.floor(fx),
+      y0 = Math.floor(fy);
+    const tx = fade(fx - x0),
+      ty = fade(fy - y0);
+    const a = hash(x0, y0) + (hash(x0 + 1, y0) - hash(x0, y0)) * tx;
+    const b = hash(x0, y0 + 1) + (hash(x0 + 1, y0 + 1) - hash(x0, y0 + 1)) * tx;
+    return a + (b - a) * ty;
+  };
+}
+
+/**
+ * Who owns each world cell: the layout's squares, with the borders wandering (`wobble`) so they look carved. Each cell
+ * looks up the square at a point pushed about by smooth noise, except near a gap, where the push fades out so the
+ * border runs straight across the corridor. Then every biome is made one piece: a stray island is given to whoever
+ * surrounds it.
+ */
+function carve(layout: WorldLayout, names: string[]): Int16Array {
+  const { rows, square: S, key } = layout;
+  const W = rows[0].length * S,
+    H = rows.length * S;
+  const amp = (layout.wobble ?? 0.7) * S;
+  const seed = layout.seed ?? 1;
+  // Three octaves: broad bends, bays and headlands, and a little roughness.
+  const octave = (n: number) => [
+    noise(seed * 11 + n, S * 1.1),
+    noise(seed * 11 + n + 3, S * 0.45),
+    noise(seed * 11 + n + 6, S * 0.18),
+  ];
+  const nx = octave(1),
+    ny = octave(2);
+  const push = (f: ((x: number, y: number) => number)[], x: number, y: number) =>
+    (f[0](x, y) * 0.62 + f[1](x, y) * 0.3 + f[2](x, y) * 0.08) * 1.8; // value noise rarely reaches its peaks
+  // Where the gaps cross a border (cell coordinates of the middle of each), and how far round them the border is calm.
+  const calm = layout.gaps.map((g) => {
+    const [dx, dy] = STEP[g.side];
+    const w = g.w ?? GAP;
+    const along = (g.offset ?? Math.floor((S - w) / 2)) + w / 2;
+    return {
+      x: dx ? g.at[0] * S + (dx > 0 ? S : 0) : g.at[0] * S + along,
+      y: dy ? g.at[1] * S + (dy > 0 ? S : 0) : g.at[1] * S + along,
+      r0: w / 2 + WALL + 6,
+    };
+  });
+  const owner = new Int16Array(W * H);
+  const sq = (x: number, y: number) =>
+    names.indexOf(
+      key[
+        rows[Math.min(rows.length - 1, Math.max(0, Math.floor(y / S)))][
+          Math.min(rows[0].length - 1, Math.max(0, Math.floor(x / S)))
+        ]
+      ],
+    );
+  for (let row = 0; row < H; row++) {
+    for (let col = 0; col < W; col++) {
+      const x = col + 0.5,
+        y = row + 0.5;
+      let k = 1;
+      for (const c of calm) {
+        const d = Math.hypot(x - c.x, y - c.y);
+        if (d < c.r0 + S) k = Math.min(k, Math.max(0, (d - c.r0) / S));
+      }
+      k = k * k * (3 - 2 * k);
+      const dx = push(nx, x, y) * amp * k;
+      const dy = push(ny, x, y) * amp * k;
+      owner[row * W + col] = sq(x + dx, y + dy);
+    }
+  }
+  // Smooth away spikes and pinholes: each cell takes the most common owner round it (twice). A straight border, like
+  // the one across a gap, stays as it is.
+  for (let pass = 0; pass < 2; pass++) {
+    const prev = owner.slice();
+    const votes = new Int32Array(names.length);
+    for (let row = 0; row < H; row++) {
+      for (let col = 0; col < W; col++) {
+        votes.fill(0);
+        for (let r = Math.max(0, row - 2); r <= Math.min(H - 1, row + 2); r++)
+          for (let c = Math.max(0, col - 2); c <= Math.min(W - 1, col + 2); c++) votes[prev[r * W + c]]++;
+        let best = prev[row * W + col];
+        for (let k = 0; k < names.length; k++) if (votes[k] > votes[best]) best = k;
+        owner[row * W + col] = best;
+      }
+    }
+  }
+  // One piece per biome: every part but the biggest goes to the biome that borders it most.
+  for (let pass = 0; pass < 3; pass++) {
+    const seen = new Int32Array(W * H).fill(-1);
+    const parts: { k: number; cells: number[] }[] = [];
+    for (let i = 0; i < W * H; i++) {
+      if (seen[i] >= 0) continue;
+      const k = owner[i];
+      const cells = [i];
+      seen[i] = parts.length;
+      for (let j = 0; j < cells.length; j++) {
+        const c = cells[j];
+        const cx = c % W;
+        for (const n of [cx > 0 ? c - 1 : -1, cx < W - 1 ? c + 1 : -1, c - W, c + W]) {
+          if (n < 0 || n >= W * H || seen[n] >= 0 || owner[n] !== k) continue;
+          seen[n] = parts.length;
+          cells.push(n);
+        }
+      }
+      parts.push({ k, cells });
+    }
+    const biggest = new Map<number, number>();
+    parts.forEach((p, i) => {
+      const b = biggest.get(p.k);
+      if (b === undefined || parts[b].cells.length < p.cells.length) biggest.set(p.k, i);
+    });
+    let changed = false;
+    parts.forEach((p, i) => {
+      if (biggest.get(p.k) === i) return;
+      const votes = new Map<number, number>();
+      for (const c of p.cells) {
+        const cx = c % W;
+        for (const n of [cx > 0 ? c - 1 : -1, cx < W - 1 ? c + 1 : -1, c - W, c + W])
+          if (n >= 0 && n < W * H && owner[n] !== p.k) votes.set(owner[n], (votes.get(owner[n]) ?? 0) + 1);
+      }
+      const to = [...votes].sort((a, b) => b[1] - a[1])[0]?.[0];
+      if (to === undefined) return;
+      for (const c of p.cells) owner[c] = to;
+      changed = true;
+    });
+    if (!changed) break;
+  }
+  return owner;
 }
 
 /** The layout as a grid of owners, and where each biome's map is cut. Pure geometry: no art, no specs. */
@@ -109,10 +258,7 @@ export class World {
     this.names = [...new Set(Object.values(key))];
     this.width = cols * S;
     this.height = rows.length * S;
-    this.owner = new Int16Array(this.width * this.height);
-    for (let row = 0; row < this.height; row++)
-      for (let col = 0; col < this.width; col++)
-        this.owner[row * this.width + col] = this.names.indexOf(key[rows[Math.floor(row / S)][Math.floor(col / S)]]);
+    this.owner = carve(layout, this.names);
     for (const [k, name] of this.names.entries()) {
       let c0 = Infinity,
         r0 = Infinity,
@@ -136,6 +282,12 @@ export class World {
     }
   }
 
+  /** The biome a layout square was drawn as (before the borders wander). */
+  squareOwner(sx: number, sy: number): number {
+    const ch = this.layout.rows[sy]?.[sx];
+    return ch === undefined ? -1 : this.names.indexOf(this.layout.key[ch]);
+  }
+
   ownerAt(col: number, row: number): number {
     return col < 0 || row < 0 || col >= this.width || row >= this.height ? -1 : this.owner[row * this.width + col];
   }
@@ -155,14 +307,14 @@ export class World {
     const S = this.layout.square;
     const found = this.layout.gaps.filter((g) => {
       const [dx, dy] = STEP[g.side];
-      const one = this.names[this.ownerAt(g.at[0] * S, g.at[1] * S)];
-      const two = this.names[this.ownerAt((g.at[0] + dx) * S, (g.at[1] + dy) * S)];
+      const one = this.names[this.squareOwner(g.at[0], g.at[1])];
+      const two = this.names[this.squareOwner(g.at[0] + dx, g.at[1] + dy)];
       return (one === a && two === b) || (one === b && two === a);
     });
     const g = found[n];
     if (!g) throw new Error(`no gap ${n} between ${a} and ${b}`);
     const [dx, dy] = STEP[g.side];
-    const fromA = this.names[this.ownerAt(g.at[0] * S, g.at[1] * S)] === a;
+    const fromA = this.names[this.squareOwner(g.at[0], g.at[1])] === a;
     const [sx, sy] = fromA ? g.at : [g.at[0] + dx, g.at[1] + dy];
     const side = fromA ? g.side : OPPOSITE[g.side];
     const w = g.w ?? GAP;
@@ -187,8 +339,8 @@ export class World {
     };
     r.w = Math.min(this.width, crop.col + crop.w) - (crop.col + crop.w < this.width ? MARGIN : 0) - r.col;
     r.h = Math.min(this.height, crop.row + crop.h) - (crop.row + crop.h < this.height ? MARGIN : 0) - r.row;
-    const { corridor } = this.gaps();
-    const walls = this.wall(k, true, corridor);
+    const { corridor, approach } = this.gaps();
+    const walls = this.wall(k, true, corridor, approach);
     const lines: string[] = [];
     const cols = Array.from({ length: r.w }, (_, i) => r.col + i);
     const tens = cols.map(() => ' ');
@@ -232,8 +384,8 @@ export class World {
     for (const g of this.layout.gaps) {
       const [sx, sy] = g.at;
       const [dx, dy] = STEP[g.side];
-      const a = this.ownerAt(sx * S, sy * S);
-      const b = this.ownerAt((sx + dx) * S, (sy + dy) * S);
+      const a = this.squareOwner(sx, sy);
+      const b = this.squareOwner(sx + dx, sy + dy);
       const where = `gap at square (${sx},${sy}) ${g.side}`;
       if (a < 0 || b < 0) throw new Error(`${where} leads off the world`);
       if (a === b) throw new Error(`${where} is inside ${this.names[a]}; a gap joins two biomes`);
@@ -246,7 +398,7 @@ export class World {
         const ac = dx ? sx * S + (dx > 0 ? S - 1 : 0) : sx * S + along;
         const ar = dy ? sy * S + (dy > 0 ? S - 1 : 0) : sy * S + along;
         for (let d = -WALL; d < WALL; d++) corridor.add((ar + dy * (d + 1)) * this.width + ac + dx * (d + 1));
-        for (let d = WALL; d < WALL + 3; d++)
+        for (let d = WALL; d < WALL + 4; d++)
           for (const side of [-1, 0, 1]) {
             for (const sign of [1, -1]) {
               const s = sign > 0 ? d : -d - 1;
@@ -276,15 +428,31 @@ export class World {
     return { corridor, approach, doors };
   }
 
-  /** Biome `k`'s wall cells: its cells within WALL of another biome (or of the world's edge, if `edge`). */
-  wall(k: number, edge: boolean, corridor: Set<number>): Uint8Array {
+  /** Biome `k`'s wall cells: its cells within WALL (a circle) of another biome (or of the world's edge, if `edge`). */
+  wall(k: number, edge: boolean, corridor: Set<number>, approach: Set<number> = new Set()): Uint8Array {
     const out = new Uint8Array(this.width * this.height);
+    const foreign = (c: number, r: number) => {
+      const o = this.ownerAt(c, r);
+      return (o < 0 && edge) || (o >= 0 && o !== k);
+    };
     for (let row = 0; row < this.height; row++) {
       for (let col = 0; col < this.width; col++) {
         const i = row * this.width + col;
         if (this.owner[i] !== k || corridor.has(i)) continue;
+        // Just past a gap the way stays open (unless the cell is on a border itself), even near a bend of a border.
+        if (
+          approach.has(i) &&
+          ![
+            [col + 1, row],
+            [col - 1, row],
+            [col, row + 1],
+            [col, row - 1],
+          ].some(([c, r]) => foreign(c, r))
+        )
+          continue;
         search: for (let dr = -WALL; dr <= WALL; dr++) {
           for (let dc = -WALL; dc <= WALL; dc++) {
+            if (dr * dr + dc * dc > (WALL + 0.25) ** 2) continue; // round, so the wall follows a curving border
             const o = this.ownerAt(col + dc, row + dr);
             if ((o < 0 && edge) || (o >= 0 && o !== k)) {
               out[i] = 1;
@@ -298,55 +466,11 @@ export class World {
   }
 }
 
-/**
- * Cover a cell mask with few, large rectangles (they may overlap): each uncovered cell, in reading order, gets the
- * largest rectangle inside the mask that contains it.
- */
-export function coverRects(mask: Uint8Array, width: number, height: number): Rect[] {
-  const at = (c: number, r: number) => c >= 0 && r >= 0 && c < width && r < height && mask[r * width + c] === 1;
-  const left = new Int32Array(mask.length),
-    right = new Int32Array(mask.length);
-  for (let r = 0; r < height; r++) {
-    for (let c = 0; c < width; c++) left[r * width + c] = at(c, r) ? (at(c - 1, r) ? left[r * width + c - 1] : c) : 0;
-    for (let c = width - 1; c >= 0; c--)
-      right[r * width + c] = at(c, r) ? (at(c + 1, r) ? right[r * width + c + 1] : c) : 0;
-  }
-  const covered = new Uint8Array(mask.length);
-  const rects: Rect[] = [];
-  for (let r = 0; r < height; r++) {
-    for (let c = 0; c < width; c++) {
-      if (!at(c, r) || covered[r * width + c]) continue;
-      let best: Rect = { col: c, row: r, w: 1, h: 1 };
-      let L1 = left[r * width + c],
-        R1 = right[r * width + c];
-      for (let t = r; t >= 0 && at(c, t); t--) {
-        if (t < r) {
-          L1 = Math.max(L1, left[t * width + c]);
-          R1 = Math.min(R1, right[t * width + c]);
-        }
-        let L = L1,
-          R = R1;
-        for (let b = r; b < height && at(c, b); b++) {
-          if (b > r) {
-            L = Math.max(L, left[b * width + c]);
-            R = Math.min(R, right[b * width + c]);
-          }
-          const area = (R - L + 1) * (b - t + 1);
-          if (area > best.w * best.h) best = { col: L, row: t, w: R - L + 1, h: b - t + 1 };
-        }
-      }
-      rects.push(best);
-      for (let y = best.row; y < best.row + best.h; y++)
-        for (let x = best.col; x < best.col + best.w; x++) covered[y * width + x] = 1;
-    }
-  }
-  return rects;
-}
-
 /** A biome's view of the world zone it builds into: forwards every call and remembers what it took up. */
 class BiomeWindow implements BiomeApi {
   readonly bounds: Rect;
-  private taken: Uint8Array;
+  private taken: Uint8Array; // something stands there (or the gaps need it)
+  private clear: Uint8Array; // keep scattered props off it (roads, plazas...)
 
   constructor(
     private z: Zone,
@@ -356,6 +480,7 @@ class BiomeWindow implements BiomeApi {
     reserved: Set<number>,
   ) {
     this.taken = new Uint8Array(world.width * world.height);
+    this.clear = new Uint8Array(world.width * world.height);
     for (const i of reserved) if (i >= 0 && i < this.taken.length) this.taken[i] = 1;
     let c0 = Infinity,
       r0 = Infinity,
@@ -379,6 +504,10 @@ class BiomeWindow implements BiomeApi {
   owns(col: number, row: number) {
     return this.world.ownerAt(col, row) === this.k;
   }
+  /** Free, and not kept clear: where scatter may put things. */
+  private roomy(col: number, row: number) {
+    return this.free(col, row) && !this.clear[row * this.world.width + col];
+  }
   free(col: number, row: number) {
     const i = row * this.world.width + col;
     return this.owns(col, row) && !this.walls[i] && !this.taken[i];
@@ -389,8 +518,19 @@ class BiomeWindow implements BiomeApi {
         if (col >= 0 && row >= 0 && col < this.world.width && row < this.world.height)
           this.taken[row * this.world.width + col] = 1;
   }
+  near(col: number, row: number): [number, number] {
+    for (let d = 0; d <= 30; d++)
+      for (let dr = -d; dr <= d; dr++)
+        for (let dc = -d; dc <= d; dc++)
+          if (Math.max(Math.abs(dr), Math.abs(dc)) === d && this.free(col + dc, row + dr)) return [col + dc, row + dr];
+    throw new Error(`${this.world.names[this.k]}: no free cell near (${col},${row})`);
+  }
   keepClear(area: Rect | Rect[]) {
-    for (const r of Array.isArray(area) ? area : [area]) this.take(r);
+    for (const r of Array.isArray(area) ? area : [area])
+      for (let row = r.row; row < r.row + r.h; row++)
+        for (let col = r.col; col < r.col + r.w; col++)
+          if (col >= 0 && row >= 0 && col < this.world.width && row < this.world.height)
+            this.clear[row * this.world.width + col] = 1;
   }
   private takePoint(col: number, row: number) {
     this.take({ col: col - 1, row: row - 1, w: 3, h: 3 });
@@ -424,6 +564,16 @@ class BiomeWindow implements BiomeApi {
   forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }) {
     this.z.forest(rect, opts);
     this.take(rect);
+  }
+  grove(area: Rect | Rect[], opts?: WoodsOptions) {
+    // Its own cells only, and not over anything placed already (a mob, a chest, the spawn) or the gaps' ways through.
+    const cells = new Set<number>();
+    for (const r of Array.isArray(area) ? area : [area])
+      for (let row = r.row; row < r.row + r.h; row++)
+        for (let col = r.col; col < r.col + r.w; col++)
+          if (this.free(col, row)) cells.add(row * this.world.width + col);
+    this.z.woods((c, r) => cells.has(r * this.world.width + c), opts);
+    for (const i of cells) this.taken[i] = 1;
   }
   plateau(rect: Rect, opts?: Parameters<Zone['plateau']>[1]) {
     this.z.plateau(rect, opts);
@@ -472,7 +622,7 @@ class BiomeWindow implements BiomeApi {
     const rand = rng(opts.seed ?? r.col * 31 + r.row * 977 + opts.count * 7 + names.length);
     const cells: [number, number][] = [];
     for (let row = r.row; row < r.row + r.h; row++)
-      for (let col = r.col; col < r.col + r.w; col++) if (this.free(col, row)) cells.push([col, row]);
+      for (let col = r.col; col < r.col + r.w; col++) if (this.roomy(col, row)) cells.push([col, row]);
     for (let i = cells.length - 1; i > 0; i--) {
       const j = Math.floor(rand() * (i + 1));
       [cells[i], cells[j]] = [cells[j], cells[i]];
@@ -485,7 +635,7 @@ class BiomeWindow implements BiomeApi {
       let ok = true;
       for (let y = f.row - m; y < f.row + f.h + m && ok; y++)
         for (let x = f.col - m; x < f.col + f.w + m && ok; x++)
-          ok = this.free(x, y) && (!opts.where || opts.where(x, y));
+          ok = this.roomy(x, y) && (!opts.where || opts.where(x, y));
       if (!ok) continue;
       this.prop(name, col, row);
       placed++;
@@ -519,16 +669,32 @@ export function buildWorld(layout: WorldLayout, specs: BiomeSpec[]): Map<string,
     const spec = byName.get(name)!;
     const edge = spec.worldEdge ?? true;
     const z = new Zone(W, H);
-    const walls = world.wall(k, edge, gaps.corridor);
-    for (const r of coverRects(walls, W, H)) {
-      // Run walls on the world's edge 3 cells past it, so no gap shows at the edge of the screen.
-      const grow = (touch: boolean) => (touch ? 3 : 0);
-      const n = grow(r.row === 0),
-        w = grow(r.col === 0),
-        s = grow(r.row + r.h === H),
-        e = grow(r.col + r.w === W);
-      z.forest({ col: r.col - w, row: r.row - n, w: r.w + w + e, h: r.h + n + s }, { trees: spec.walls.trees });
-    }
+    const walls = world.wall(k, edge, gaps.corridor, gaps.approach);
+    // The wall: its own trees over every wall cell, running on 3 cells past the world's edge so no gap shows there.
+    z.woods(
+      (c, r) => {
+        if (c >= 0 && r >= 0 && c < W && r < H) return walls[r * W + c] === 1;
+        const out = Math.max(-c, -r, c - W + 1, r - H + 1);
+        return (
+          edge && out <= 3 && world.ownerAt(Math.min(W - 1, Math.max(0, c)), Math.min(H - 1, Math.max(0, r))) === k
+        );
+      },
+      {
+        ...spec.walls,
+        seed: k * 7919 + 1,
+        // The row along the border blocks whatever stands on it: no slipping between two walls.
+        hard: (c, r) =>
+          [
+            [c + 1, r],
+            [c - 1, r],
+            [c, r + 1],
+            [c, r - 1],
+          ].some(([nc, nr]) => {
+            const o = world.ownerAt(nc, nr);
+            return (o < 0 && edge) || (o >= 0 && o !== k);
+          }),
+      },
+    );
     for (const d of gaps.doors) if (d.zone === name) z.door(d.col, d.row, 1, d.to.zone, d.to.col, d.to.row, d.dir);
     spec.build(new BiomeWindow(z, world, k, walls, reserved));
     return z;
@@ -537,12 +703,19 @@ export function buildWorld(layout: WorldLayout, specs: BiomeSpec[]): Map<string,
   const merged = Zone.compose(W, H, world.owner, zones);
   const full = merged.toMapData();
   const out = new Map<string, BuiltZone>();
-  world.names.forEach((name, k) => out.set(name, cut(world, full, merged.reasons, zones[k], k)));
+  world.names.forEach((name, k) => out.set(name, cut(world, full, merged.reasons, zones[k], k, merged.soft)));
   return out;
 }
 
 /** Biome `k`'s map: its crop of the composed world, the neighbours blocked, its own points moved to the crop's cells. */
-function cut(world: World, full: MapData, reasons: Map<number, string>, zone: Zone, k: number): BuiltZone {
+function cut(
+  world: World,
+  full: MapData,
+  reasons: Map<number, string>,
+  zone: Zone,
+  k: number,
+  soft: Map<number, boolean>,
+): BuiltZone {
   const name = world.names[k];
   const r = world.crop(name);
   const W = world.width;
@@ -624,6 +797,31 @@ function cut(world: World, full: MapData, reasons: Map<number, string>, zone: Zo
 
   const e = zone.entities();
   if (!e.spawn) throw new Error(`biome ${name} has no spawn(); every zone needs one (checks flood from it)`);
+  // A pocket of open ground closed off by woods and props (no way in from the spawn) is part of them: block it.
+  const blockedHere = new Set(collision);
+  const rampHere = new Set(ramps);
+  const seen = new Uint8Array(cells);
+  const start = (e.spawn.row - r.row) * r.w + e.spawn.col - r.col;
+  const stack = [start];
+  seen[start] = 1;
+  while (stack.length) {
+    const i = stack.pop()!;
+    const c = i % r.w;
+    for (const j of [c > 0 ? i - 1 : -1, c < r.w - 1 ? i + 1 : -1, i - r.w, i + r.w]) {
+      if (j < 0 || j >= cells || seen[j] || blockedHere.has(j)) continue;
+      if (level[j] !== level[i] && !rampHere.has(i) && !rampHere.has(j)) continue;
+      seen[j] = 1;
+      stack.push(j);
+    }
+  }
+  for (let i = 0; i < cells; i++) {
+    if (seen[i] || blockedHere.has(i)) continue;
+    const wi = (Math.floor(i / r.w) + r.row) * W + (i % r.w) + r.col;
+    if (world.owner[wi] !== k) continue;
+    collision.push(i);
+    localReasons.set(i, soft.has(wi) ? 'woods' : 'enclosed');
+  }
+  collision.sort((a, b) => a - b);
   const local = <T extends { col: number; row: number }>(p: T): T => ({ ...p, col: p.col - r.col, row: p.row - r.row });
   const data: MapData = {
     version: 2,

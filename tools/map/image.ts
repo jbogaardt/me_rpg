@@ -140,7 +140,9 @@ export function coverage(
 ): Float32Array {
   const W = data.width * CELL;
   const H = data.height * CELL;
-  const mask = new Uint8Array(W * H);
+  // One bit per world pixel (a big world is ~80M pixels): overlapping art counts once.
+  const bits = new Uint8Array(Math.ceil((W * H) / 8));
+  const out = new Float32Array(data.width * data.height);
   for (const o of data.objects) {
     const img = sheet(data.sheets[o.s]);
     const from = Math.max(0, o.h - band(o));
@@ -149,13 +151,13 @@ export function coverage(
       if (wy < 0 || wy >= H) continue;
       for (let x = 0; x < o.w; x++) {
         const wx = o.px + x;
-        if (wx >= 0 && wx < W && isArt(img, o.x + x, o.y + y)) mask[wy * W + wx] = 1;
+        if (wx < 0 || wx >= W || !isArt(img, o.x + x, o.y + y)) continue;
+        const p = wy * W + wx;
+        if (bits[p >> 3] & (1 << (p & 7))) continue;
+        bits[p >> 3] |= 1 << (p & 7);
+        out[Math.floor(wy / CELL) * data.width + Math.floor(wx / CELL)]++;
       }
     }
-  }
-  const out = new Float32Array(data.width * data.height);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) if (mask[y * W + x]) out[Math.floor(y / CELL) * data.width + Math.floor(x / CELL)]++;
   }
   return out.map((n) => n / (CELL * CELL));
 }

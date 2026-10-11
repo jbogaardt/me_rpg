@@ -1,85 +1,86 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { FROST_TREES } from '../tools/map/catalog';
-import { awayFrom, blob, ridge, road } from '../tools/map/helpers';
+import { awayFrom, blob, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
-// The Frostlands: the snowfields of the south-east. A frozen lake, frosted groves, a ledge with a hoard, and a long
-// snowy plain along the bottom of the world. Ways in: from the marsh (north), the Eastwood (west) and the town (south-
-// west). Frostbound, trolls and skeletons: level 4-7, the hardest place so far.
-// World cells: cols 196-237 at rows 70-111, widening south to cols 147-237 at rows 147-160 (see maps/world.ts).
+// The Frostlands: the snowfields of the south-east. Frozen lakes, frosted groves, a ledge with a hoard, and a long
+// snowy plain along the bottom of the world. Ways in: from the marsh (north), the Eastwood (west) and the town
+// (south-west). Frostbound, trolls and skeletons: level 4-7, the hardest place so far.
+// Squares x 28-33 at y 10-15, widening south to x 21-33 at y 21-22 (maps/world.ts).
 
 const W = worldOf(layout);
-const marsh = W.gap('frostlands', 'marsh');
-const east = W.gap('frostlands', 'eastwood');
-const town = W.gap('frostlands', 'town');
+const { at, area } = units(layout.square);
+const gap = (to: string): [number, number] => {
+  const g = W.gap('frostlands', to);
+  return [g.col, g.row];
+};
+const [marsh, east, town] = [gap('marsh'), gap('eastwood'), gap('town')];
+const SPINE = marsh[0]; // the north-south trail's column
 const TRAILS = [
-  ...road([
-    [east.col, east.row],
-    [marsh.col, east.row],
-  ]), // in from the Eastwood
-  ...road([
-    [marsh.col, marsh.row],
-    [marsh.col, 120],
-  ]), // down from the marsh, past the lake
-  ...road([
-    [town.col, town.row],
-    [200, town.row],
-    [200, 120],
-    [marsh.col, 120],
-  ]), // in from the town
+  ...trail([marsh, [SPINE, town[1]]]), // down from the marsh
+  ...trail([east, [SPINE, east[1]]]), // in from the Eastwood
+  ...trail([town, [SPINE, town[1]]]), // in from the town
 ];
 
 export default defineBiome({
   name: 'frostlands',
-  walls: { trees: FROST_TREES },
+  walls: { trees: FROST_TREES, fillers: ['frostBush', 'frostRockSmall'] },
   build(z) {
     z.fill('snow');
     z.paint('snow', z.bounds);
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
-    z.spawn(205, 98);
+    const near = (x: number, y: number) => z.near(...at(x, y));
+    z.spawn(...near(30.8, 14.2));
 
-    // --- A frozen lake, slippery ------------------------------------------------------------------------------
-    z.paint('ice', blob({ col: 176, row: 126, w: 22, h: 12 }));
-    z.keepClear({ col: 174, row: 124, w: 26, h: 16 });
+    // --- Frozen lakes, slippery ---------------------------------------------------------------------------------
+    for (const [x, y, w, h] of [
+      [24.6, 17.6, 4, 2.2],
+      [31, 11.2, 1.8, 1.2],
+      [22.4, 21.2, 2, 0.9],
+    ] as const) {
+      z.paint('ice', blob(area(x, y, w, h)));
+      z.keepClear(area(x - 0.2, y - 0.2, w + 0.4, h + 0.4));
+    }
 
     // --- A ledge in the east with a hoard, guarded ------------------------------------------------------------
-    z.plateau({ col: 220, row: 138, w: 9, h: 5 }, { kind: 'frost', stairs: [224] });
-    z.prop('frostRockC', 227, 139);
-    z.prop('frostBush', 221, 141);
-    z.chest('silver', 'hoard', 222, 139);
-    z.chest('silver', 'vikingHelm', 226, 141);
-    z.chest('silver', 'backpack', 227, 141);
-    z.mob('frostbound', 224, 140);
+    z.plateau({ col: 315, row: 200, w: 9, h: 5 }, { kind: 'frost', stairs: [319] });
+    z.prop('frostRockC', 322, 201);
+    z.prop('frostBush', 316, 203);
+    z.chest('silver', 'hoard', 317, 201);
+    z.chest('silver', 'vikingHelm', 321, 203);
+    z.chest('silver', 'backpack', 322, 203);
+    z.mob('frostbound', 319, 202);
 
-    for (const r of [
-      { col: 200, row: 78, w: 8, h: 8 },
-      { col: 220, row: 80, w: 9, h: 7 },
-      { col: 222, row: 104, w: 9, h: 7 },
-      { col: 180, row: 115, w: 9, h: 5 },
-      { col: 160, row: 150, w: 10, h: 5 },
-      { col: 205, row: 128, w: 8, h: 6 },
-    ])
-      z.forest(r, { trees: FROST_TREES });
-    ridge(z, 230, 92, 5, true, 'frostRockB');
-    ridge(z, 186, 146, 6, false, 'frostRockB');
-
-    for (const [kind, col, row] of [
-      ['frostbound', 210, 108],
-      ['frostbound', 190, 120],
-      ['skeleton', 226, 96],
-      ['troll', 215, 148],
-      ['wolfkin', 172, 145],
-      ['frostbound', 230, 122],
-      ['skeleton', 176, 154],
-      ['troll', 195, 152],
-      ['frostbound', 208, 76],
+    for (const [x, y, w, h] of [
+      [28.4, 10.6, 1.4, 1.4],
+      [32, 13.4, 1.4, 1.6],
+      [31.2, 17, 1.6, 1.2],
+      [26, 20.2, 1.6, 1],
+      [28.8, 21, 1.8, 1.2],
+      [25.4, 16.2, 1.4, 0.8],
+      [32.4, 19.6, 1.2, 1],
     ] as const)
-      z.mob(kind, col, row);
+      z.grove(blob(area(x, y, w, h)), { trees: FROST_TREES, fillers: ['frostBush', 'frostRockSmall'] });
 
-    z.scatter(['frostTreeA', 'frostTreeB'], { count: 35, where: open, seed: 41 });
-    z.scatter(['frostBush'], { count: 30, where: open, seed: 42 });
-    z.scatter(['frostRock', 'frostRockB', 'frostRockC', 'frostRockSmall'], { count: 30, where: open, seed: 43 });
+    for (const [kind, x, y] of [
+      ['frostbound', 29.4, 13],
+      ['frostbound', 26.6, 17.2],
+      ['skeleton', 32.6, 12],
+      ['troll', 31.6, 22],
+      ['wolfkin', 22.4, 22.4],
+      ['frostbound', 33, 17],
+      ['skeleton', 24.6, 20.6],
+      ['troll', 28, 19.4],
+      ['frostbound', 30.4, 10.6],
+      ['wolfkin', 27.2, 22.2],
+      ['skeleton', 29.8, 16.6],
+    ] as const)
+      z.mob(kind, ...near(x, y));
+
+    z.scatter(['frostTreeA', 'frostTreeB'], { count: 55, where: open, seed: 41 });
+    z.scatter(['frostBush'], { count: 45, where: open, seed: 42 });
+    z.scatter(['frostRock', 'frostRockB', 'frostRockC', 'frostRockSmall'], { count: 45, where: open, seed: 43 });
   },
 });

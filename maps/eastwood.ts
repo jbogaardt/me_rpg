@@ -1,29 +1,26 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { TREES } from '../tools/map/catalog';
-import { awayFrom, ridge, road } from '../tools/map/helpers';
+import { awayFrom, blob, pick, pond, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
-// The Eastwood: the second forest, east of the Greenwood. Deeper green and wilder: dense groves, a wooded hill with a
-// view, and a long tongue of forest running south with a chest at its end. Roads lead west to the Greenwood, north up
-// into the jungle and east into the Frostlands. Wolfkin, goblins, skeletons and shades: level 2-3.
-// World cells: cols 147-195, rows 77-111, narrowing south to row 146 (see maps/world.ts).
+// The Eastwood: the second forest, east of the Greenwood. Deeper green and wilder: dense groves, a woodland pond, a
+// wooded hill with a view, and a long tongue of forest running south with a chest at its end. Trails lead west to the
+// Greenwood, north up into the jungle and east into the Frostlands. Wolfkin, goblins, skeletons and shades: level 2-3.
+// Squares x 21-27, y 11-15, narrowing south to y 20 (maps/world.ts).
 
 const W = worldOf(layout);
-const west = W.gap('eastwood', 'greenwood');
-const east = W.gap('eastwood', 'frostlands');
-const north = W.gap('eastwood', 'jungle');
+const { at, area } = units(layout.square);
+const gap = (to: string): [number, number] => {
+  const g = W.gap('eastwood', to);
+  return [g.col, g.row];
+};
+const [west, east, north] = [gap('greenwood'), gap('frostlands'), gap('jungle')];
 const TRAILS = [
-  ...road([
-    [west.col, west.row],
-    [east.col, east.row],
-  ]), // Greenwood to Frostlands
-  ...road([
-    [north.col, north.row],
-    [north.col, west.row],
-  ]), // up to the jungle
-  ...road([
-    [154, west.row],
-    [154, 140],
+  ...trail([west, east]),
+  ...trail([north, [north[0], west[1]]]),
+  ...trail([
+    [222, west[1]],
+    [222, 196],
   ]), // south down the tongue
 ];
 
@@ -36,46 +33,54 @@ export default defineBiome({
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
-    z.spawn(165, 98);
+    const near = (x: number, y: number) => z.near(...at(x, y));
+    z.spawn(...near(23.4, 14));
 
     // --- A wooded hill with chests on top ---------------------------------------------------------------------
-    z.plateau({ col: 177, row: 81, w: 8, h: 5 }, { stairs: [180] });
-    z.prop('bush', 182, 82);
-    z.chest('oak', 'purse', 178, 82);
-    z.chest('oak', 'potion', 183, 84);
-    z.mob('skeleton', 180, 83);
+    z.plateau({ col: 252, row: 118, w: 9, h: 5 }, { stairs: [256] });
+    z.prop('bush', 258, 119);
+    z.chest('oak', 'purse', 253, 119);
+    z.chest('oak', 'potion', 259, 121);
+    z.mob('skeleton', 256, 120);
+
+    // --- A woodland pond --------------------------------------------------------------------------------------
+    const water = pond(z, area(25, 14.2, 1.6, 1), { shore: 'mud' });
+    z.keepClear(area(24.7, 13.9, 2.2, 1.6));
+    z.prop('lilyFlower', pick(water, 3).col + 2, pick(water, 3).row);
+    z.prop('reedsThin', pick(water, 8).col + 4, pick(water, 8).row);
 
     // --- The end of the tongue: a hidden clearing --------------------------------------------------------------
-    z.chest('iron', 'relic', 151, 142);
-    z.mob('wolfkin', 157, 134);
+    z.chest('iron', 'relic', ...near(21.6, 20));
+    z.mob('wolfkin', ...near(22.4, 19));
 
-    for (const r of [
-      { col: 158, row: 100, w: 8, h: 7 },
-      { col: 170, row: 99, w: 9, h: 6 },
-      { col: 183, row: 100, w: 7, h: 8 },
-      { col: 150, row: 82, w: 6, h: 7 },
-      { col: 158, row: 116, w: 7, h: 6 },
-      { col: 186, row: 82, w: 5, h: 5 },
-    ])
-      z.forest(r);
-    ridge(z, 162, 86, 5);
-    ridge(z, 190, 96, 4, true);
-
-    for (const [kind, col, row] of [
-      ['wolfkin', 152, 102],
-      ['wolfkin', 178, 108],
-      ['goblin', 166, 90],
-      ['goblin', 186, 90],
-      ['shade', 150, 125],
-      ['skeleton', 167, 110],
-      ['shade', 160, 128],
-      ['wolfkin', 175, 89],
+    for (const [x, y, w, h] of [
+      [21.4, 11.6, 1.4, 1.2],
+      [23.4, 14.4, 1.4, 1.2],
+      [26.2, 11.5, 1.2, 1],
+      [21.4, 15.2, 0.6, 1.6],
+      [23, 16.4, 1.4, 1.2],
+      [22.6, 18.2, 0.8, 1],
+      [26.5, 15.2, 0.9, 0.6],
     ] as const)
-      z.mob(kind, col, row);
+      z.grove(blob(area(x, y, w, h)), { trees: TREES });
 
-    z.scatter(['treeA', 'treeB'], { count: 13, where: open, seed: 31 });
-    z.scatter(['bush'], { count: 6, where: open, seed: 32 });
-    z.scatter(['rock', 'rockB', 'rockC', 'rockSmall'], { count: 16, where: open, seed: 33 });
-    z.scatter(['flowersPurple', 'flowerRed'], { count: 40, where: open, margin: 0, seed: 34 });
+    for (const [kind, x, y] of [
+      ['wolfkin', 21.6, 14],
+      ['wolfkin', 26.6, 14.8],
+      ['goblin', 23.8, 12],
+      ['goblin', 26.4, 12.8],
+      ['shade', 21.8, 17.2],
+      ['skeleton', 24.2, 15.4],
+      ['shade', 23.4, 18],
+      ['wolfkin', 25.2, 12.4],
+      ['goblin', 22.4, 16.2],
+      ['skeleton', 27.2, 14.2],
+    ] as const)
+      z.mob(kind, ...near(x, y));
+
+    z.scatter(['treeA', 'treeB'], { count: 40, where: open, seed: 31 });
+    z.scatter(['bush'], { count: 39, where: open, seed: 32 });
+    z.scatter(['rock', 'rockB', 'rockC', 'rockSmall'], { count: 24, where: open, seed: 33 });
+    z.scatter(['flowersPurple', 'flowerRed'], { count: 70, where: open, margin: 0, seed: 34 });
   },
 });

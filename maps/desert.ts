@@ -1,94 +1,104 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { DRY_TREES } from '../tools/map/catalog';
-import { awayFrom, blob, pond, ridge, road } from '../tools/map/helpers';
+import { awayFrom, blob, pick, pond, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
-// The desert: the whole north-west, stepping down to the Greenwood in a staircase of withered trees. Dunes, a buried
-// skull, red badlands, an oasis, and a mesa with the legion's lost gear. A trail runs from the Greenwood (south) to the
-// beach (east). Dune raiders, orcs and the odd zombie: level 3-5.
-// World cells: cols 0-97 at rows 0-27, stepping down to cols 0-20 at rows 77-83 (see maps/world.ts).
+// The desert: the whole north-west, stepping down to the Greenwood. Dunes, a buried skull, red badlands, an oasis, a
+// ring of standing rocks, and a mesa with the legion's lost gear. A trail runs from the Greenwood (south) to the beach
+// (east). Dune raiders, orcs and the odd zombie: level 3-5.
+// Squares x 0-13 at y 0-3, stepping down to x 0-2 at y 11 (maps/world.ts).
 
 const W = worldOf(layout);
-const south = W.gap('desert', 'greenwood');
-const east = W.gap('desert', 'beach');
-const TRAILS = road([
-  [south.col, south.row],
-  [south.col, 40],
-  [30, 40],
-  [30, east.row],
-  [east.col, east.row],
-]);
+const { at, area } = units(layout.square);
+const gap = (to: string): [number, number] => {
+  const g = W.gap('desert', to);
+  return [g.col, g.row];
+};
+const [south, east] = [gap('greenwood'), gap('beach')];
+const TRAILS = trail([south, [south[0], 62], [42, 62], [42, east[1]], east]);
 
 export default defineBiome({
   name: 'desert',
-  walls: { trees: DRY_TREES },
+  walls: { trees: DRY_TREES, fillers: ['dryBush', 'rockSmall'] },
   build(z) {
     z.fill('sand');
     z.paint('redDirt', [
-      ...blob({ col: 4, row: 3, w: 20, h: 12 }),
-      ...blob({ col: 58, row: 3, w: 24, h: 10 }),
-      ...blob({ col: 12, row: 50, w: 18, h: 12 }),
+      ...blob(area(0.6, 0.6, 3.2, 2.2)),
+      ...blob(area(9, 0.6, 3.4, 1.8)),
+      ...blob(area(1, 7.2, 2.4, 1.8)),
     ]);
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
-    z.spawn(14, 70);
+    const near = (x: number, y: number) => z.near(...at(x, y));
+    z.spawn(...near(1.6, 10));
 
     // --- A mesa in the badlands with the legion's lost gear ---------------------------------------------------
-    z.plateau({ col: 8, row: 5, w: 9, h: 5 }, { kind: 'dry', stairs: [12] });
-    z.prop('dryBush', 14, 6);
-    z.chest('iron', 'legionArmor', 15, 9);
-    z.chest('iron', 'purse', 9, 9);
-    z.chest('iron', 'parryingDagger', 9, 6);
-    z.mob('raider', 12, 7);
+    z.plateau({ col: 12, row: 8, w: 10, h: 5 }, { kind: 'dry', stairs: [16] });
+    z.prop('dryBush', 19, 9);
+    z.chest('iron', 'legionArmor', 20, 12);
+    z.chest('iron', 'purse', 13, 12);
+    z.chest('iron', 'parryingDagger', 13, 9);
+    z.mob('raider', 17, 10);
 
     // --- An oasis --------------------------------------------------------------------------------------------
-    const water = pond(z, { col: 52, row: 28, w: 12, h: 7 }, { shore: 'meadow' });
-    z.keepClear({ col: 48, row: 25, w: 20, h: 13 });
-    z.prop('dryTreeA', 49, 28);
-    z.prop('dryTreeB', 64, 35);
-    z.prop('reeds', water[5].col + 1, water[5].row);
-    z.prop('lilyFlower', water[2].col + 2, water[2].row);
-    z.prop('lilyPads', water[3].col + 6, water[3].row);
-    z.chest('wood', 'potion', 66, 30);
+    const water = pond(z, area(6.8, 4.1, 2, 1.1), { shore: 'meadow' });
+    z.keepClear(area(6.4, 3.7, 2.8, 1.9));
+    z.prop('dryTreeA', ...near(6.6, 4));
+    z.prop('dryTreeB', ...near(9, 5.2));
+    z.prop('reeds', pick(water, 6).col + 1, pick(water, 6).row);
+    z.prop('lilyFlower', pick(water, 3).col + 3, pick(water, 3).row);
+    z.prop('lilyPads', pick(water, 5).col + 10, pick(water, 5).row);
+    z.chest('wood', 'potion', ...near(9.3, 4.4));
+
+    // --- A ring of standing rocks ----------------------------------------------------------------------------
+    for (let i = 0; i < 9; i++) {
+      const t = (i / 9) * Math.PI * 2;
+      z.prop(i % 3 ? 'sandSpire' : 'sandBoulder', ...at(3.5 + Math.cos(t) * 0.6, 5 + Math.sin(t) * 0.45));
+    }
+    z.chest('oak', 'coins', ...near(3.5, 5));
 
     // --- Dunes, the skull, craters ---------------------------------------------------------------------------
-    z.stamp('skull', 44, 5);
-    z.stamp('dune', 72, 20);
-    z.stamp('dune', 10, 28);
-    z.stamp('dune', 38, 52);
-    z.stamp('crater', 86, 6);
-    z.stamp('crater', 22, 64);
-    z.stamp('pit', 40, 34);
-    z.stamp('pit', 75, 9);
-    z.stamp('pit', 6, 45);
+    z.stamp('skull', 64, 6);
+    z.stamp('dune', 110, 28);
+    z.stamp('dune', 14, 40);
+    z.stamp('dune', 60, 52);
+    z.stamp('crater', 124, 10);
+    z.stamp('crater', 30, 92);
+    z.stamp('pit', 58, 48);
+    z.stamp('pit', 104, 14);
+    z.stamp('pit', 8, 64);
     z.keepClear([
-      { col: 44, row: 5, w: 4, h: 5 },
-      { col: 86, row: 6, w: 3, h: 3 },
-      { col: 22, row: 64, w: 3, h: 3 },
+      { col: 64, row: 6, w: 4, h: 5 },
+      { col: 124, row: 10, w: 3, h: 3 },
+      { col: 30, row: 92, w: 3, h: 3 },
     ]);
-    z.forest({ col: 4, row: 20, w: 8, h: 4 }, { trees: DRY_TREES });
-    z.forest({ col: 42, row: 20, w: 6, h: 4 }, { trees: DRY_TREES });
-    z.forest({ col: 70, row: 34, w: 8, h: 4 }, { trees: DRY_TREES });
-    ridge(z, 60, 22, 6);
-    ridge(z, 38, 44, 5, true);
-
-    for (const [kind, col, row] of [
-      ['raider', 40, 14],
-      ['raider', 70, 12],
-      ['raider', 20, 46],
-      ['raider', 80, 30],
-      ['orc', 55, 18],
-      ['orc', 18, 30],
-      ['zombie', 58, 40],
-      ['raider', 6, 60],
-      ['orc', 30, 66],
+    for (const [x, y, w, h] of [
+      [0.6, 3.4, 1.2, 0.8],
+      [5, 2.6, 1.2, 0.7],
+      [10.4, 3.4, 1.2, 0.8],
+      [6.6, 5.6, 1.2, 0.6],
     ] as const)
-      z.mob(kind, col, row);
+      z.grove(blob(area(x, y, w, h)), { trees: DRY_TREES, fillers: ['dryBush', 'rockSmall'] });
 
-    z.scatter(['dryTreeA', 'dryTreeB'], { count: 14, where: open, seed: 53 });
-    z.scatter(['sandBoulder', 'sandBoulderB', 'sandSpire'], { count: 24, where: open, seed: 51 });
-    z.scatter(['dryBush'], { count: 40, where: open, seed: 52 });
-    z.scatter(['rockC', 'rockB', 'rockSmall'], { count: 20, where: open, seed: 54 });
+    for (const [kind, x, y] of [
+      ['raider', 5.6, 1.6],
+      ['raider', 10.6, 2.4],
+      ['raider', 2.6, 6.6],
+      ['raider', 11.6, 4.6],
+      ['orc', 8, 2.6],
+      ['orc', 2.6, 3.8],
+      ['zombie', 8.4, 5.6],
+      ['raider', 1, 8.8],
+      ['orc', 3.6, 9.4],
+      ['zombie', 12.6, 1.2],
+      ['orc', 6, 6.4],
+    ] as const)
+      z.mob(kind, ...near(x, y));
+
+    z.scatter(['dryTreeA', 'dryTreeB'], { count: 22, where: open, seed: 53 });
+    z.scatter(['sandBoulder', 'sandBoulderB', 'sandSpire'], { count: 36, where: open, seed: 51 });
+    z.scatter(['dryBush'], { count: 60, where: open, seed: 52 });
+    z.scatter(['rockC', 'rockB', 'rockSmall'], { count: 30, where: open, seed: 54 });
   },
 });

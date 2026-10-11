@@ -52,6 +52,7 @@ export interface ZoneApi {
   stamp(name: StampName, col: number, row: number): unknown;
   prop(name: PrefabName, col: number, row: number, nudge?: { dx?: number; dy?: number }): unknown;
   forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }): unknown;
+  grove(area: Rect | Rect[], opts?: WoodsOptions): unknown;
   plateau(rect: Rect, opts?: { kind?: CliffKind; stairs?: number[] }): unknown;
   block(rect: Rect, reason: string): unknown;
   unblock(rect: Rect): unknown;
@@ -64,6 +65,18 @@ export interface ZoneApi {
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number): unknown;
   indoor(): unknown;
 }
+
+/** What a grove (or a biome's wall) is made of: trees, then bushes and rocks for the corners trees can't fill. */
+export interface WoodsOptions {
+  trees?: PrefabName[];
+  fillers?: PrefabName[];
+  seed?: number;
+  /** Cells that block even where no art covers them (a biome's wall along its border: nobody slips through). */
+  hard?: (col: number, row: number) => boolean;
+}
+
+/** A wood's cell blocks when its art covers at least this much of it; barer cells at its edge stay walkable. */
+export const SOFT_COVER = 0.2;
 
 export interface ZoneSpec {
   name: string; // output: public/maps/<name>.json
@@ -120,6 +133,13 @@ export class WorldWindow implements ZoneApi {
   }
   forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }) {
     this.z.forest(this.rect(rect), opts);
+    return this;
+  }
+  grove(area: Rect | Rect[], opts?: WoodsOptions) {
+    this.z.grove(
+      (Array.isArray(area) ? area : [area]).map((r) => this.rect(r)),
+      opts,
+    );
     return this;
   }
   plateau(rect: Rect, opts: { kind?: CliffKind; stairs?: number[] } = {}) {
@@ -229,6 +249,8 @@ export class Zone {
   private terrain = new Map<TerrainName, Uint8Array>(); // per terrain: which cell corners it covers, (w+1) x (h+1)
   private cellMasks = new Map<TerrainName, Uint8Array>(); // per terrain: fixed corner masks per cell (see compose)
   private blocked = new Set<number>();
+  /** Cells of woods: blocked where their trees' art covers them (or always, when true), resolved in `toMapData`. */
+  readonly soft = new Map<number, boolean>();
   private forced = new Map<number, boolean>(); // block()/unblock() overrides, applied last
   readonly reasons = new Map<number, string>(); // why a cell was blocked by hand (silences check warnings)
   private spawnAt: CellPoint | null = null;
@@ -434,6 +456,83 @@ export class Zone {
   }
 
   /**
+   * A wood of any shape: the cells of `area` (one rect or many, e.g. a `blob`) are filled with trees that stand wholly
+   * inside it (a dense, staggered stand), then bushes and rocks for the corners no tree fits; its cells block where
+   * that art covers them (see `woods`).
+   */
+  grove(area: Rect | Rect[], opts: WoodsOptions = {}) {
+    const cells = new Set<number>();
+    for (const r of Array.isArray(area) ? area : [area])
+      for (const { col, row } of this.cells(r)) cells.add(row * this.width + col);
+    this.woods((c, r) => this.inMap(c, r) && cells.has(r * this.width + c), opts);
+    return this;
+  }
+
+  /**
+   * Fill the cells where `inside(col, row)` holds with trees (and fillers). Each tree stands wholly
+   * inside: the cells under its trunk and lower canopy (its solid band) are all inside, its walk-behind top may lean
+   * over the cell above. Trees go on a staggered lattice like `forest`'s, then any cell still bare gets the tree, bush
+   * or rock that fits over it. `inside` may say yes beyond the map's edge (a wall at the world's edge runs on past it).
+   * The cells are soft: `toMapData` blocks those the art covers (SOFT_COVER), and the `hard` ones whatever covers them,
+   * so the edge of a wood is as walkable as it looks.
+   */
+  woods(inside: (col: number, row: number) => boolean, opts: WoodsOptions = {}) {
+    const trees = opts.trees ?? TREES;
+    const fillers = opts.fillers ?? ['bush', 'rockSmall'];
+    const rand = rng(opts.seed ?? 4242);
+    const covered = new Set<number>();
+    const key = (c: number, r: number) => (r + 8) * (this.width + 16) + c + 8; // room for cells just off the map
+    const foot = (name: PrefabName, px: number, py: number) => {
+      const p = PREFABS[name];
+      const band = p.solid?.band ?? p.h;
+      const out: [number, number][] = [];
+      for (let r = Math.floor((py + p.h - band) / CELL); r <= Math.floor((py + p.h - 1) / CELL); r++)
+        for (let c = Math.floor(px / CELL); c <= Math.floor((px + p.w - 1) / CELL); c++) out.push([c, r]);
+      return out;
+    };
+    const tryPlace = (name: PrefabName, px: number, py: number) => {
+      const cells = foot(name, px, py);
+      if (!cells.every(([c, r]) => inside(c, r))) return false;
+      this.placed.push({ prefab: name, px, py, autoBlock: false });
+      for (const [c, r] of cells) covered.add(key(c, r));
+      return true;
+    };
+    // Where to look: every cell `inside`, on the map and a little round it.
+    const spots: [number, number][] = [];
+    for (let r = -6; r < this.height + 6; r++)
+      for (let c = -6; c < this.width + 6; c++) if (inside(c, r)) spots.push([c, r]);
+    if (!spots.length) return this;
+    const { w: TW, h: TH } = PREFABS.treeA;
+    const [minC, maxC] = [Math.min(...spots.map((s) => s[0])), Math.max(...spots.map((s) => s[0]))];
+    const [minR, maxR] = [Math.min(...spots.map((s) => s[1])), Math.max(...spots.map((s) => s[1]))];
+    // The lattice is anchored to the world, so neighbouring woods line up.
+    for (let i = Math.floor((minR * CELL - TH) / 52); i * 52 <= (maxR + 1) * CELL; i++) {
+      const stagger = i % 2 ? 23 : 0;
+      for (let j = Math.floor((minC * CELL - TW) / 46) - 1; j * 46 <= (maxC + 1) * CELL; j++) {
+        const px = j * 46 + stagger + Math.round((rand() - 0.5) * 8);
+        tryPlace(trees[Math.floor(rand() * trees.length)], px, i * 52 + Math.round((rand() - 0.5) * 6));
+      }
+    }
+    // Bare cells: the first tree, then bush, then rock that fits over each.
+    for (const [c, r] of spots) {
+      if (covered.has(key(c, r))) continue;
+      [...trees, ...fillers].some((name) => {
+        const p = PREFABS[name];
+        const wCells = Math.ceil(p.w / CELL);
+        for (let dc = 0; dc < wCells; dc++)
+          for (let dr = 0; dr < 2; dr++) {
+            const px = (c - dc) * CELL + Math.floor((wCells * CELL - p.w) / 2);
+            if (tryPlace(name, px, (r + dr + 1) * CELL - p.h)) return true;
+          }
+        return false;
+      });
+      if (opts.hard?.(c, r) && this.inMap(c, r)) this.reasons.set(r * this.width + c, 'the wall along a border');
+    }
+    for (const [c, r] of spots) if (this.inMap(c, r)) this.soft.set(r * this.width + c, opts.hard?.(c, r) ?? false);
+    return this;
+  }
+
+  /**
    * A raised plateau. `rect` is the walkable top in cells (at least 4x4); the rim rocks fill the 1-cell
    * ring around it (north/west/east) and the rock face the 2 rows south of it; all of that is blocked,
    * as are the four corner cells of `rect` where the rounded rim cuts in. Lay it on the ground that
@@ -630,6 +729,8 @@ export class Zone {
       out.levelAt[i] = z.levelAt[i];
       if (z.ramps.has(i)) out.ramps.add(i);
       if (z.blocked.has(i)) out.blocked.add(i);
+      const soft = z.soft.get(i);
+      if (soft !== undefined) out.soft.set(i, soft);
       const forced = z.forced.get(i);
       if (forced !== undefined) out.forced.set(i, forced);
       const why = z.reasons.get(i);
@@ -749,6 +850,11 @@ export class Zone {
         () => band,
       );
       cov.forEach((c, i) => c >= min && blocked.add(i));
+    }
+    // Woods: their cells block where the art (all of it, so a neighbouring prop counts too) covers them.
+    if (this.soft.size) {
+      const cov = coverage({ width: this.width, height: this.height, sheets, objects });
+      for (const [i, hard] of this.soft) if (hard || cov[i] >= SOFT_COVER) blocked.add(i);
     }
     for (const [i, on] of this.forced) {
       if (on) blocked.add(i);

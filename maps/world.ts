@@ -1,6 +1,7 @@
 import type { WorldLayout } from '../tools/map/world';
 
-// The open-air world, after the hand-drawn map: one character per 7x7 cells, 34 x 23 squares = 238 x 161 cells.
+// The open-air world, after the hand-drawn map: one character per 10x10 cells, 34 x 23 squares = 340 x 230 cells.
+// The borders wander off the squares (`wobble`, see tools/map/world.ts) so they look carved, not stepped.
 // Each letter is a biome, its own zone built by maps/<name>.ts in these world cells (see tools/map/world.ts). Biomes
 // own their squares exactly, so neighbouring borders always meet; every border is walled on both sides except at
 // the gaps below, which get a door on each side. `npm run map -- check` proves it (checkSeams).
@@ -8,7 +9,7 @@ import type { WorldLayout } from '../tools/map/world';
 //   col: 0         1         2         3
 //        0123456789012345678901234567890123
 export default {
-  square: 7,
+  square: 10,
   rows: [
     'DDDDDDDDDDDDDDBBBBBBJJJJWWWWWWWWWW', // 0
     'DDDDDDDDDDDDDDBBBBBBJJJJWWWWWWWWWW', // 1
@@ -51,8 +52,8 @@ export default {
   // runs into the wall of the turn (`npm run map -- layout <biome>` shows the walls, `=` the gaps).
   gaps: [
     { at: [17, 17], side: 'n' }, // town -> greenwood (north road)
-    { at: [11, 19], side: 'w', offset: 4 }, // town -> greenwood (west gate)
-    { at: [20, 21], side: 'e', offset: 4 }, // town -> frostlands
+    { at: [11, 19], side: 'w', offset: 6 }, // town -> greenwood (west gate)
+    { at: [20, 21], side: 'e', offset: 5 }, // town -> frostlands
     { at: [1, 11], side: 's' }, // desert -> greenwood
     { at: [15, 10], side: 's' }, // undead lands -> greenwood
     { at: [20, 13], side: 'e' }, // greenwood -> eastwood

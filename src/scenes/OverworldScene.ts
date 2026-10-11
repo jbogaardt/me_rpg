@@ -33,9 +33,9 @@ import { PackSync } from './overworld/PackSync';
 import { Simulation } from './overworld/Simulation';
 import { Trading } from './overworld/Trading';
 import { Visuals } from './overworld/Visuals';
-import { Zones, type ZoneLoader } from './overworld/Zones';
+import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
 
-export type { ZoneLoader };
+export type { ZoneLoader, ZoneUnloader };
 
 const aimOf = (aim: Aim | null) => (aim ? { aim } : {});
 
@@ -87,10 +87,11 @@ export class OverworldScene implements Scene {
     sprites: Sprites,
     private ui: Ui,
     loadZone: ZoneLoader,
+    unloadZone: ZoneUnloader,
     renderer: Renderer,
   ) {
     const arena = (this.arena = new Arena(sprites.wardrobe));
-    this.zones = new Zones(arena, sprites, loadZone, ui, renderer);
+    this.zones = new Zones(arena, sprites, loadZone, unloadZone, ui, renderer);
     const visuals = new Visuals(arena);
     const say = (lines: string[]) => ui.dialog.say(lines);
     // The simulation reports what a friend should see through the host link (which only records it while hosting).
@@ -198,6 +199,7 @@ export class OverworldScene implements Scene {
     if (arena.role === 'client') this.updateClient(dt);
     else this.updateSimulation(dt);
     this.zones.prefetch(dt);
+    this.zones.retire(dt);
 
     // What the local player sees: the zone they are in (a door above may just have changed it).
     const z = arena.zone;
@@ -243,6 +245,7 @@ export class OverworldScene implements Scene {
     z.world.position.x += shift.x;
     z.world.position.y += shift.y;
     z.weatherLayer?.view.position.set(-shift.x / z.camera.zoom, -shift.y / z.camera.zoom);
+    z.world.update(z.camera.view(arena.screen.width, arena.screen.height)); // build the map around the view
   }
 
   /**

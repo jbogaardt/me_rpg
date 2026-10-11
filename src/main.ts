@@ -3,7 +3,7 @@ import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import './ui.css';
-import { initAssets, loadSprites, loadZone } from './assets';
+import { initAssets, loadSprites, loadZone, unloadZone } from './assets';
 import { SceneManager } from './core/Scene';
 import { createTouchControls } from './core/touch';
 import { Dialog } from './hud/Dialog';
@@ -72,7 +72,7 @@ void (async () => {
       touch,
       session,
     };
-    const overworld = new OverworldScene(zone, sprites, ui, loadZone, app.renderer);
+    const overworld = new OverworldScene(zone, sprites, ui, loadZone, unloadZone, app.renderer);
     scenes.change(overworld);
     scenes.start();
     loading.done();

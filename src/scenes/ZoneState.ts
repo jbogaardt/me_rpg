@@ -11,11 +11,17 @@ import { sheetGrid } from '../core/textures';
 import { MapView } from '../map/MapView';
 import { CELL, type MapData } from '../map/types';
 import { cellFeet } from '../map/doors';
-import { MOB_KINDS } from '../systems/combat';
+import { MOB_KINDS, type Item } from '../systems/combat';
 import { CHEST_LOOTS } from '../systems/chests';
 import { Collision } from '../systems/collision';
 import { npcLook, OVERWORLD_NPC } from '../systems/looks';
 import { SHOPS } from '../systems/shops';
+
+/** What a zone remembers while it is unloaded (Arena.memory); its mobs simply start afresh. */
+export interface ZoneMemory {
+  opened: number[]; // indices of opened chests
+  ground: { item: Item; x: number; y: number; id: number; age: number }[];
+}
 
 export interface Keeper {
   shop: string; // a key of SHOPS
@@ -30,6 +36,8 @@ export interface Keeper {
 export class ZoneState {
   readonly name: string;
   readonly data: MapData;
+  /** What was loaded for it (map and tilesets), handed back when the zone is unloaded. */
+  readonly source: Zone;
   readonly world: MapView;
   readonly camera: Camera;
   readonly collision: Collision;
@@ -51,6 +59,7 @@ export class ZoneState {
     const { data } = zone;
     this.name = zone.name;
     this.data = data;
+    this.source = zone;
     this.world = new MapView(data, zone.textures);
     this.camera = new Camera(this.world, data.width * CELL, data.height * CELL);
     this.collision = new Collision(data.width, data.height, data.collision);
@@ -87,7 +96,18 @@ export class ZoneState {
     if (bodies.length) this.world.layer.addChild(...bodies); // Pixi's addChild() with nothing to add throws
   }
 
-  /** Free the zone's drawn world (the scene does this when it ends; the loaded tilesets stay in the asset cache). */
+  /** What must outlive the zone being unloaded: the chests opened and the items lying on the ground. */
+  remember(): ZoneMemory {
+    return {
+      opened: this.chests.flatMap((c, i) => (c.opened ? [i] : [])),
+      ground: this.ground.map((g) => ({ item: g.item, x: g.x, y: g.y, id: g.id, age: g.age })),
+    };
+  }
+
+  /**
+   * Free the zone's drawn world and everything in it: mobs, characters, effects (their sheets go back to the wardrobe).
+   * The tilesets are the asset cache's (assets.ts `unloadZone`).
+   */
   dispose() {
     this.world.destroy({ children: true });
   }

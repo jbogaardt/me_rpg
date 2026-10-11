@@ -73,20 +73,42 @@ export interface Zone {
   textures: Map<string, Texture>;
 }
 
-/** Load a zone: its map JSON (validated), then its tileset bundle. Progress covers the tilesets. */
+const added = new Set<string>(); // aliases registered with Assets (registering one twice only warns, but say it once)
+function register(alias: string, src: string, parser?: string) {
+  if (added.has(alias)) return;
+  Assets.add(parser ? { alias, src, parser } : { alias, src });
+  added.add(alias);
+}
+/** How many loaded zones use each tileset: a sheet is freed when the last zone using it is unloaded. */
+const tilesetUsers = new Map<string, number>();
+const tilesetAlias = (sheet: string) => `tileset:${sheet}`;
+
+/**
+ * Load a zone: its map JSON (validated), then the tilesets it names (shared with other zones: each is loaded once and
+ * counted, see `unloadZone`). Progress covers the tilesets.
+ */
 export async function loadZone(name: string, onProgress?: Progress): Promise<Zone> {
   const dataAlias = `zone:${name}:data`;
-  Assets.add({ alias: dataAlias, src: zoneUrl(name), parser: 'json' });
+  register(dataAlias, zoneUrl(name), 'json');
   const data = parseMap(await Assets.load(dataAlias));
-
-  const bundle = `zone:${name}`;
-  Assets.addBundle(bundle, Object.fromEntries(data.sheets.map((sheet) => [`${bundle}:${sheet}`, tilesetUrl(sheet)])));
-  const loaded = (await Assets.loadBundle(bundle, onProgress)) as Record<string, Texture>;
-  return { name, data, textures: new Map(data.sheets.map((sheet) => [sheet, pick(loaded, `${bundle}:${sheet}`)])) };
+  for (const sheet of data.sheets) {
+    register(tilesetAlias(sheet), tilesetUrl(sheet));
+    tilesetUsers.set(sheet, (tilesetUsers.get(sheet) ?? 0) + 1); // counted before loading, so no unload frees it meanwhile
+  }
+  const loaded = await Assets.load<Texture>(data.sheets.map(tilesetAlias), onProgress);
+  return { name, data, textures: new Map(data.sheets.map((sheet) => [sheet, pick(loaded, tilesetAlias(sheet))])) };
 }
 
-/** Free a zone's map and tilesets. Don't unload a zone whose tilesets another loaded zone shares. */
-export async function unloadZone(name: string) {
-  await Assets.unloadBundle(`zone:${name}`);
-  await Assets.unload(`zone:${name}:data`);
+/** Free a zone's map, and every tileset no other loaded zone uses. */
+export async function unloadZone(zone: Zone) {
+  await Assets.unload(`zone:${zone.name}:data`);
+  for (const sheet of zone.data.sheets) {
+    const users = (tilesetUsers.get(sheet) ?? 1) - 1;
+    if (users > 0) {
+      tilesetUsers.set(sheet, users);
+      continue;
+    }
+    tilesetUsers.delete(sheet);
+    await Assets.unload(tilesetAlias(sheet));
+  }
 }

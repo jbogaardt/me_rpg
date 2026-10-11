@@ -10,6 +10,7 @@ import path from 'node:path';
 import { parseMap } from '../../src/map/types';
 import { generateAll, loadLayout, zoneNames } from './all';
 import { type Report } from './check';
+import { mapJson } from './encode';
 import { renderMap, ROOT, writePng, type RenderOptions } from './image';
 import { World } from './world';
 
@@ -47,7 +48,7 @@ async function main() {
       const { data, report } = zone;
       const file = jsonPath(name);
       if (cmd === 'build') {
-        fs.writeFileSync(file, JSON.stringify(data));
+        fs.writeFileSync(file, mapJson(data));
         writePng(path.join(OUT_DIR, `${name}.png`), renderMap(data));
         writePng(
           path.join(OUT_DIR, `${name}.debug.png`),
@@ -57,7 +58,7 @@ async function main() {
         console.log(
           `  previews: ${rel(path.join(OUT_DIR, `${name}.png`))}, ${rel(path.join(OUT_DIR, `${name}.debug.png`))}`,
         );
-      } else if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== JSON.stringify(data)) {
+      } else if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== mapJson(data)) {
         report.errors.unshift(`${rel(file)} is out of date with maps/${name}.ts; run \`npm run map -- build\``);
       }
       printReport(name, report);
@@ -107,6 +108,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
+  console.error(err instanceof Error ? (process.env.DEBUG ? err.stack : err.message) : err);
   process.exitCode = 1;
 });

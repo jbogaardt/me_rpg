@@ -1,80 +1,82 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { DEAD_TREES } from '../tools/map/catalog';
-import { awayFrom, blob, pond, road } from '../tools/map/helpers';
+import { awayFrom, blob, pond, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
-// The undead lands: ash and dead trees north of the Greenwood. A graveyard of standing stones on cracked flags,
-// black chasms, a pool of lava. Roads lead south to the Greenwood, north to the beach and east into the jungle.
+// The undead lands: ash and dead trees north of the Greenwood. A graveyard of standing stones on cracked flags, black
+// chasms, a pool of lava. Trails lead south to the Greenwood, north to the beach and east into the jungle.
 // Skeletons, zombies and shades: level 3-4.
-// World cells: cols 77-153 at rows 42-76, plus cols 126-153 at rows 35-41 (see maps/world.ts).
+// Squares x 11-21 at y 6-10, plus x 18-21 at y 5 (maps/world.ts).
 
 const W = worldOf(layout);
-const south = W.gap('undead', 'greenwood');
-const north = W.gap('undead', 'beach');
-const east = W.gap('undead', 'jungle');
+const { at, area } = units(layout.square);
+const gap = (to: string): [number, number] => {
+  const g = W.gap('undead', to);
+  return [g.col, g.row];
+};
+const [south, north, east] = [gap('greenwood'), gap('beach'), gap('jungle')];
 const TRAILS = [
-  ...road([
-    [north.col, north.row],
-    [north.col, east.row],
-    [east.col, east.row],
-  ]), // beach to jungle
-  ...road([
-    [south.col, south.row],
-    [south.col, east.row],
-    [north.col, east.row],
-  ]), // up from the Greenwood
+  ...trail([north, [north[0], east[1]], east]),
+  ...trail([south, [south[0], east[1]], [north[0], east[1]]]),
 ];
-const GRAVEYARD = { col: 84, row: 60, w: 16, h: 10 };
+const KIT = { trees: DEAD_TREES, fillers: ['deadBush', 'darkSpire'] } as const;
 
 export default defineBiome({
   name: 'undead',
-  walls: { trees: DEAD_TREES },
+  walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');
     z.paint('ash', z.bounds);
-    z.paint('soot', [...blob({ col: 82, row: 44, w: 16, h: 10 }), ...blob({ col: 128, row: 62, w: 16, h: 10 })]);
+    z.paint('soot', [...blob(area(11.4, 6.2, 2.6, 1.6)), ...blob(area(18, 8.8, 2.6, 1.4))]);
     z.paint('mud', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
-    z.spawn(112, 66);
+    const near = (x: number, y: number) => z.near(...at(x, y));
+    z.spawn(...near(16, 9.2));
 
     // --- The graveyard: rows of standing stones on cracked flags --------------------------------------------------
-    z.fill('crackedStone', GRAVEYARD);
-    z.paint('ash', GRAVEYARD, { erase: true });
-    z.paint('soot', GRAVEYARD, { erase: true });
-    z.keepClear({ col: 83, row: 59, w: 18, h: 12 });
-    for (let c = 86; c <= 97; c += 3) for (const r of [62, 65, 68]) z.prop('menhir', c, r);
-    z.chest('iron', 'legionHelm', 85, 69);
-    z.chest('wood', 'coins', 98, 61);
-    z.mob('skeleton', 92, 64);
+    const yard = blob(area(12, 8.1, 2.8, 1.6), 9, 0.25);
+    for (const r of yard) z.fill('crackedStone', r);
+    z.paint('ash', yard, { erase: true });
+    z.keepClear(area(11.8, 7.9, 3.2, 2));
+    for (let c = 126; c <= 144; c += 3) for (const r of [85, 89, 93]) z.prop('menhir', c, r);
+    z.chest('iron', 'legionHelm', ...near(12.4, 9.5));
+    z.chest('wood', 'coins', ...near(14.6, 8.3));
+    z.mob('skeleton', ...near(13.4, 8.8));
+    z.mob('skeleton', ...near(14, 9.4));
 
     // --- Chasms and a lava pool ------------------------------------------------------------------------------
-    pond(z, { col: 113, row: 45, w: 10, h: 6 }, { water: 'abyss' });
-    pond(z, { col: 140, row: 66, w: 7, h: 5 }, { water: 'abyss' });
-    pond(z, { col: 86, row: 46, w: 8, h: 5 }, { water: 'lava', shore: 'mud' });
-    z.keepClear([
-      { col: 111, row: 43, w: 14, h: 10 },
-      { col: 138, row: 64, w: 11, h: 9 },
-      { col: 83, row: 43, w: 14, h: 11 },
-    ]);
-    z.chest('iron', 'relic', 146, 39);
+    pond(z, area(16, 6.3, 1.8, 1), { water: 'abyss' });
+    pond(z, area(19.6, 9, 1, 0.8), { water: 'abyss' });
+    pond(z, area(12.6, 6.4, 1.3, 0.8), { water: 'lava', shore: 'mud' });
+    z.keepClear([area(15.8, 6.1, 2.2, 1.4), area(19.4, 8.8, 1.4, 1.2), area(12.3, 6.1, 1.9, 1.4)]);
+    z.chest('iron', 'relic', ...near(20.4, 5.4));
 
-    for (const [kind, col, row] of [
-      ['skeleton', 104, 52],
-      ['skeleton', 140, 48],
-      ['skeleton', 126, 70],
-      ['zombie', 82, 56],
-      ['zombie', 120, 62],
-      ['zombie', 100, 46],
-      ['shade', 146, 56],
-      ['shade', 128, 46],
-      ['zombie', 132, 39],
-      ['skeleton', 90, 72],
+    for (const [x, y, w, h] of [
+      [11.4, 9.6, 1, 0.6],
+      [17.2, 9.4, 1.2, 0.7],
+      [20, 6.6, 0.8, 1],
+      [14.4, 6.2, 0.9, 0.6],
     ] as const)
-      z.mob(kind, col, row);
+      z.grove(blob(area(x, y, w, h)), { trees: [...KIT.trees], fillers: [...KIT.fillers] });
 
-    z.scatter(['deadTreeA', 'deadTreeB'], { count: 26, where: open, seed: 71 });
-    z.scatter(['deadBush'], { count: 14, where: open, seed: 72 });
-    z.scatter(['darkBoulder', 'darkBoulderB', 'darkSpire', 'menhir'], { count: 15, where: open, seed: 73 });
+    for (const [kind, x, y] of [
+      ['skeleton', 15, 7.4],
+      ['skeleton', 20.6, 7.2],
+      ['skeleton', 18, 10],
+      ['zombie', 11.6, 7.6],
+      ['zombie', 17.4, 8.6],
+      ['zombie', 15.2, 6.8],
+      ['shade', 21, 8.6],
+      ['shade', 18.6, 6.4],
+      ['zombie', 19.4, 5.6],
+      ['skeleton', 13, 10.2],
+      ['shade', 16.6, 10.2],
+    ] as const)
+      z.mob(kind, ...near(x, y));
+
+    z.scatter(['deadTreeA', 'deadTreeB'], { count: 40, where: open, seed: 71 });
+    z.scatter(['deadBush'], { count: 35, where: open, seed: 72 });
+    z.scatter(['darkBoulder', 'darkBoulderB', 'darkSpire', 'menhir'], { count: 30, where: open, seed: 73 });
   },
 });
