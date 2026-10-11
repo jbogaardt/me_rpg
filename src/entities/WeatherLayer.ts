@@ -25,8 +25,8 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
     count: 420,
     tint: 0x4a7fd0,
     alpha: 0.95,
-    w: [2, 3],
-    h: [10, 16],
+    w: [1, 2],
+    h: [7, 11],
     vx: 120,
     fall: [300, 360],
     sway: 0,
@@ -69,8 +69,8 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
     count: 700,
     tint: 0xd89a3c,
     alpha: 1,
-    w: [2, 3],
-    h: [8, 16],
+    w: [1, 2],
+    h: [5, 9],
     vx: 320,
     fall: [-2, 2], // blows in from the sides, not down from the sky
     sway: 0,
@@ -80,11 +80,11 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
 
 /** The colour and strength of the haze over the whole view (strong enough to read against bright ground). */
 const HAZE: Partial<Record<WeatherKind, { tint: number; alpha: number }>> = {
-  rain: { tint: 0x16233a, alpha: 0.34 },
+  rain: { tint: 0x16233a, alpha: 0.24 },
   storm: { tint: 0x060a18, alpha: 0.58 },
   snow: { tint: 0x5a6e90, alpha: 0.38 }, // dim the bright ground so white flakes stand out
   blizzard: { tint: 0x8498b8, alpha: 0.5 },
-  sandstorm: { tint: 0x8a5518, alpha: 0.55 },
+  sandstorm: { tint: 0x8a5518, alpha: 0.38 },
 };
 
 interface Drop {
