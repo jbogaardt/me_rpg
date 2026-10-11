@@ -5,15 +5,15 @@ import { PARTS } from '../../sprites/parts';
 import { SLOTS, outfitLayers, outfitParts, type Outfit, type PartManifest } from '../../src/sprites/doll';
 import { MOB_KINDS } from '../../src/systems/combat';
 import { ITEMS } from '../../src/systems/items';
-import { allHeroOutfits, heroOutfit, HERO_BASE, NPC_LOOKS } from '../../src/systems/looks';
+import { allPlayerOutfits, heroOutfit, HERO_BASE, NPC_LOOKS, PLAYER_BASES } from '../../src/systems/looks';
 import { newHero } from '../../src/systems/combat';
 import { ROOT } from '../map/image';
 
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/sprites/lpc/parts.json'), 'utf8')) as PartManifest;
 
 const outfits: [string, Outfit][] = [
-  ['hero base', HERO_BASE],
-  ...allHeroOutfits().map((o, i): [string, Outfit] => [`hero gear #${i}`, o]),
+  ...PLAYER_BASES.map((o, i): [string, Outfit] => [`player ${i} base`, o]),
+  ...allPlayerOutfits().map((o, i): [string, Outfit] => [`player gear #${i}`, o]),
   ...Object.entries(NPC_LOOKS).map(([n, o]): [string, Outfit] => [`npc ${n}`, o]),
   ...Object.entries(MOB_KINDS).map(([n, k]): [string, Outfit] => [`mob ${n}`, k.look]),
 ];

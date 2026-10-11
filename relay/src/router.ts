@@ -1,4 +1,4 @@
-import { isPayload, MAX_PAYLOAD_CHARS, MAX_WAIT_S, type CreateRoomResponse } from '../../src/net/relayApi';
+import { API_VERSION, isOfferList, MAX_BODY_CHARS, MAX_WAIT_S, type CreateRoomResponse } from '../../src/net/relayApi';
 import { normalizeCode, randomCode } from '../../src/net/roomCode';
 import { fail, json } from './room';
 
@@ -18,7 +18,6 @@ export const LIMITS: Record<Bucket, { max: number; windowMs: number }> = {
 };
 
 const CODE_ATTEMPTS = 12; // a taken code is just retried; with a handful of live rooms one try nearly always works
-const MAX_BODY_CHARS = MAX_PAYLOAD_CHARS + 200;
 
 export interface RelayDeps {
   room(code: string): RoomStub;
@@ -43,7 +42,7 @@ function withCors(response: Response, origin: string | null): Response {
   return new Response(response.body, { status: response.status, headers });
 }
 
-const ROOMS = /^\/v1\/rooms(?:\/([^/]+)(?:\/(join|answer))?)?\/?$/;
+const ROOMS = new RegExp(`^/${API_VERSION}/rooms(?:/([^/]+)(?:/(join|answers?|close|seats/[1-9]))?)?/?$`);
 
 export async function handleRequest(req: Request, deps: RelayDeps): Promise<Response> {
   const origin = req.headers.get('origin');
@@ -54,7 +53,7 @@ export async function handleRequest(req: Request, deps: RelayDeps): Promise<Resp
       new Response(null, {
         status: 204,
         headers: {
-          'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
+          'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'access-control-allow-headers': 'authorization, content-type',
           'access-control-max-age': '86400',
         },
@@ -95,10 +94,19 @@ async function route(req: Request, deps: RelayDeps): Promise<Response> {
     if (body === null) return fail(413, 'too_large');
     return room.fetch(forward(req, '/answer', body));
   }
-  if (action === 'answer' && req.method === 'GET') {
+  if (action === 'answers' && req.method === 'GET') {
     const wait = Math.min(Number(url.searchParams.get('wait') ?? 0), MAX_WAIT_S);
-    return room.fetch(forward(req, `/answer?wait=${Number.isFinite(wait) ? wait : 0}`));
+    const after = Number(url.searchParams.get('after') ?? 0);
+    return room.fetch(
+      forward(req, `/answers?after=${Number.isFinite(after) ? after : 0}&wait=${Number.isFinite(wait) ? wait : 0}`),
+    );
   }
+  if (action?.startsWith('seats/') && req.method === 'PUT') {
+    const body = await boundedBody(req);
+    if (body === null) return fail(413, 'too_large');
+    return room.fetch(forward(req, `/${action}`, body));
+  }
+  if (action === 'close' && req.method === 'POST') return room.fetch(forward(req, '/close'));
   if (!action && req.method === 'DELETE') return room.fetch(forward(req, '/'));
   return fail(405, 'bad_request');
 }
@@ -128,9 +136,9 @@ function forward(req: Request, path: string, body?: string): Request {
   return new Request(`https://room.internal${path}`, { method: req.method, headers, body });
 }
 
-function offerIn(body: string): unknown {
+function offersIn(body: string): unknown {
   try {
-    return (JSON.parse(body) as { offer?: unknown } | null)?.offer;
+    return (JSON.parse(body) as { offers?: unknown } | null)?.offers;
   } catch {
     return undefined;
   }
@@ -141,7 +149,7 @@ async function createRoom(req: Request, deps: RelayDeps, client: string): Promis
   if (!(await deps.allow(client, 'create'))) return fail(429, 'rate_limited');
   const body = await boundedBody(req);
   if (body === null) return fail(413, 'too_large');
-  if (!isPayload(offerIn(body))) return fail(400, 'bad_request'); // garbage never reaches a room
+  if (!isOfferList(offersIn(body))) return fail(400, 'bad_request'); // garbage never reaches a room
 
   for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
     const code = randomCode((n) => deps.randomInt(n));

@@ -1,5 +1,6 @@
 import type { Texture } from 'pixi.js';
 import type { Hero } from '../systems/combat';
+import { PLAYER_COLORS } from '../systems/looks';
 import { Character } from './Character';
 
 /** What a player wants to do this tick, from the keyboard / touch controls or from the network. */
@@ -29,11 +30,19 @@ export class Player {
   target: { x: number; y: number } | null = null;
   flags = 0;
 
+  /** `slot` is the player's number in a co-op game (0 is the host, and the only player when solo). */
   constructor(
     sheet: Texture,
     public hero: Hero,
-    aura = true,
+    public slot = 0,
   ) {
-    this.body = new Character(sheet, aura);
+    this.body = new Character(sheet, true);
+    this.setSlot(slot);
+  }
+
+  /** Become another player number (a guest is seated by the host); the ring changes colour to match. */
+  setSlot(slot: number) {
+    this.slot = slot;
+    this.body.setAuraColor(PLAYER_COLORS[slot] ?? 0x4de3ff);
   }
 }

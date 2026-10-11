@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
+import { BitmapText, Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import { makeFrame } from '../core/textures';
 import { ANIMS, ANIM_NAMES, feetAnchor, frameRect, type AnimName, type Direction } from '../sprites/doll';
 
@@ -59,6 +59,8 @@ export class Character extends Container {
   private loopAnim: AnimName = 'idle';
   private action: { anim: AnimName; time: number; ms: number } | null = null;
   private auraTime = 0;
+  private auraColor = 0x4de3ff;
+  private tag: BitmapText | null = null;
 
   /** `aura` adds the hero's pulsing time-ring; everyone else just gets a plain shadow. */
   constructor(
@@ -143,12 +145,37 @@ export class Character extends Container {
   }
 
   /** Shadow, plus (for the hero) a pulsing ring of time-energy underfoot. */
+  /** The colour of the pulsing ring (a different one per player in co-op). */
+  setAuraColor(color: number) {
+    this.auraColor = color;
+    this.drawAura(this.auraTime);
+  }
+
+  /**
+   * A small coloured label over the head ("P2"), so players can tell each other apart. Null removes it. The label
+   * uses the 'FloatText' bitmap font installed in main.ts.
+   */
+  setTag(text: string | null, color = 0xffffff) {
+    if (text === null) {
+      this.tag?.destroy();
+      this.tag = null;
+      return;
+    }
+    if (!this.tag) {
+      this.tag = new BitmapText({ text, anchor: 0.5, style: { fontFamily: 'FloatText', fontSize: 8 } });
+      this.tag.position.set(0, -68);
+      this.addChild(this.tag);
+    }
+    this.tag.text = text;
+    this.tag.tint = color;
+  }
+
   private drawAura(timeMs: number) {
     const pulse = (Math.sin(timeMs / 400) + 1) / 2;
     this.aura.clear().ellipse(0, 0, 10, 4).fill({ color: 0x000000, alpha: 0.35 });
     if (!this.withAura) return;
     this.aura
       .ellipse(0, 0, 13 + pulse * 3, 5 + pulse * 1.5)
-      .stroke({ color: 0x4de3ff, alpha: 0.15 + pulse * 0.35, width: 1 });
+      .stroke({ color: this.auraColor, alpha: 0.15 + pulse * 0.35, width: 1 });
   }
 }

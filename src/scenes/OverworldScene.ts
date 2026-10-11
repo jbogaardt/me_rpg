@@ -1,4 +1,4 @@
-import type { Container, Texture } from 'pixi.js';
+import type { Container } from 'pixi.js';
 import type { Sprites, Zone } from '../assets';
 import { Camera } from '../core/camera';
 import { input } from '../core/input';
@@ -44,7 +44,15 @@ import {
 } from '../systems/combat';
 import { Collision } from '../systems/collision';
 import { equip } from '../systems/items';
-import { guestOutfit, heroOutfit, npcLook, OVERWORLD_NPC } from '../systems/looks';
+import {
+  heroOutfit,
+  npcLook,
+  OVERWORLD_NPC,
+  PLAYER_COLORS,
+  playerName,
+  playerOutfit,
+  playerTag,
+} from '../systems/looks';
 import type { Wardrobe } from '../sprites/Wardrobe';
 import type { Item } from '../systems/combat';
 
@@ -90,16 +98,18 @@ export interface Ui {
 /**
  * The overworld: one zone with the hero, an NPC and mobs. Runs in one of three roles (`Session.role`):
  *  - solo: the plain single-player game.
- *  - host: the same simulation, plus a second player driven by the guest's controls; it broadcasts snapshots.
+ *  - host: the same simulation, plus up to three more players driven by their friends' controls; it sends each
+ *    friend a snapshot of the world.
  *  - client: no simulation; it sends the local controls to the host and draws what the host's snapshots say.
- * `local` is the player at this keyboard in every role; `remote` is the other player (none when solo).
+ * `local` is the player at this keyboard in every role; `remotes` are the others by player number (none when solo).
+ * Player 0 is the host; friends are 1 to 3.
  */
 export class OverworldScene implements Scene {
   private world: MapView;
   private camera: Camera;
   private collision: Collision;
   private local: Player;
-  private remote: Player | null = null;
+  private remotes = new Map<number, Player>(); // everyone else in a co-op game, by player number
   private npc: Character;
   private mobs: Mob[];
   private mobWorld: MobWorld;
@@ -223,31 +233,36 @@ export class OverworldScene implements Scene {
     this.npc.animate(dt * 1000, false);
     for (const body of this.bodies()) body.zIndex = body.y;
     hud.update(this.hero);
-    if (this.overlay.open) this.overlay.update(this.player, this.remote?.body.visible ? this.remote.body : null);
+    if (this.overlay.open) {
+      const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
+      // A player the host has not yet placed (their body is still hidden) has no position to show.
+      this.overlay.update(pin(this.local), [...this.remotes.values()].filter((p) => p.body.visible).map(pin));
+    }
     this.camera.follow(this.screen.width, this.screen.height, this.player.x, this.player.y);
   }
 
-  /** Solo and host: the authoritative game. The host additionally runs the guest's player and sends snapshots. */
+  /** Solo and host: the authoritative game. The host additionally runs its friends' players and sends them snapshots. */
   private updateSimulation(dt: number) {
     const { menu, dialog } = this.ui;
     const host = this.role === 'host';
+    if (host) this.reconcileGuests();
     const raw = this.readCommand();
     // Reading a dialog or the menu: the player stands still (a solo dialog freezes the whole world instead).
     const reading = menu.open || dialog.active;
     const cmd = reading ? { ...raw, dx: 0, dy: 0, mag: false } : raw;
-    const guest = this.remote ? this.remoteCommand(this.remote) : NO_COMMAND;
+    const guests = [...this.remotes.values()].map((p) => ({ p, cmd: this.remoteCommand(p) }));
 
     if (host || !dialog.active) {
       this.updatePlayer(this.local, cmd, dt);
-      if (this.remote) this.updatePlayer(this.remote, guest, dt);
+      for (const g of guests) this.updatePlayer(g.p, g.cmd, dt);
       for (const mob of this.mobs) mob.update(dt, this.mobWorld);
       if (cmd.mag) this.cast(this.local);
-      if (this.remote && guest.mag) this.cast(this.remote);
+      for (const g of guests) if (g.cmd.mag) this.cast(g.p);
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
     if (!menu.open) this.handleAction(cmd.act, () => this.attack(this.local));
-    if (this.remote && guest.act) this.attack(this.remote);
+    for (const g of guests) if (g.cmd.act) this.attack(g.p);
     if (host) this.broadcast(dt);
   }
 
@@ -268,7 +283,7 @@ export class OverworldScene implements Scene {
 
   // --- Roles ---
 
-  /** Switch to `role` (a peer connected or dropped), setting the world up for it. */
+  /** Switch to `role` (a friend connected or everyone dropped), setting the world up for it. */
   private syncRole(role: Role) {
     if (role === this.role) return;
     if (this.role !== 'solo') this.leaveCoop();
@@ -277,54 +292,82 @@ export class OverworldScene implements Scene {
     this.role = role;
   }
 
-  private addRemote(sheet: Texture, hero: Hero) {
-    const remote = new Player(sheet, hero);
+  /** Everyone mobs may attack, and everyone who blocks others: the local player, then the rest. */
+  private syncHeroBodies() {
+    this.heroBodies.splice(
+      0,
+      this.heroBodies.length,
+      this.local.body,
+      ...[...this.remotes.values()].map((p) => p.body),
+    );
+  }
+
+  /** In a co-op game every player wears a coloured tag ("P2") over their head, so friends can tell each other apart. */
+  private applyTags() {
+    for (const p of this.players()) p.body.setTag(playerTag(p.slot), PLAYER_COLORS[p.slot]);
+  }
+
+  /** Put another player in the world. Their stats are theirs alone: they start as a fresh hero. */
+  private addRemote(slot: number): Player {
+    const hero = newHero();
+    hero.name = playerName(slot);
+    const remote = new Player(this.wardrobe.sheet(playerOutfit(slot, hero)), hero, slot);
     this.world.layer.addChild(remote.body);
-    this.remote = remote;
-    this.heroBodies.splice(1);
-    this.heroBodies.push(remote.body);
+    this.remotes.set(slot, remote);
+    this.syncHeroBodies();
+    this.applyTags();
     return remote;
   }
 
+  /** Take a player out of the world, with a notice floating where they stood. */
+  private removeRemote(slot: number, notice: (p: Player) => void) {
+    const remote = this.remotes.get(slot);
+    if (!remote) return;
+    notice(remote);
+    this.remotes.delete(slot);
+    this.world.layer.removeChild(remote.body);
+    this.ambient.forget(remote.body);
+    remote.body.destroy({ children: true });
+    this.syncHeroBodies();
+  }
+
   private enterHost() {
-    const hero = newHero();
-    hero.name = 'Player 2';
-    const guest = this.addRemote(this.wardrobe.sheet(guestOutfit(hero)), hero);
-    guest.body.position.set(...this.cellToFeet(this.spawn));
     this.events = [];
     this.snapTimer = 0;
+    this.reconcileGuests();
   }
 
   private enterClient() {
-    // This machine's hero becomes Player 2 in the host's world. The solo hero is put back on disconnect.
+    // This machine's hero becomes the player the host seated it as. The solo hero is put back on disconnect.
+    const slot = this.ui.session.slot;
     this.solo = { stats: { ...this.hero.stats }, name: this.hero.name };
-    this.hero.name = 'Player 2';
-    this.player.setSheet(this.wardrobe.sheet(guestOutfit(this.hero)));
-    const host = this.addRemote(this.wardrobe.sheet(heroOutfit(newHero())), newHero());
-    host.body.visible = false; // until the first snapshot says where it is
+    this.local.setSlot(slot);
+    this.hero.name = playerName(slot);
+    this.player.setSheet(this.wardrobe.sheet(playerOutfit(slot, this.hero)));
     this.local.target = null;
     this.lastEvent = -1;
     this.actCount = this.magCount = this.inputSeq = 0;
     this.sent = { keys: -1, act: -1, mag: -1 };
     this.inputTimer = 0;
+    this.applyTags();
   }
 
   private leaveCoop() {
-    const { remote } = this;
-    if (remote) {
-      this.world.layer.removeChild(remote.body);
-      this.ambient.forget(remote.body);
-      remote.body.destroy({ children: true });
+    const left = this.role === 'host' ? undefined : 'Disconnected';
+    for (const slot of [...this.remotes.keys()]) {
+      this.removeRemote(slot, (p) => {
+        if (this.role === 'host')
+          this.effects.add(floatText(p.body.x, p.body.y - 54, `${playerName(slot)} left`, 0xffffff));
+      });
     }
-    this.remote = null;
-    this.heroBodies.splice(1);
+    this.local.body.setTag(null);
 
-    const left = this.role === 'host' ? 'Player 2 left' : 'Disconnected';
     if (this.role === 'client') {
       // Back to the solo hero, standing where it ended up, with the mobs carrying on on their own.
       if (this.solo) Object.assign(this.hero.stats, this.solo.stats);
       this.hero.name = this.solo?.name ?? 'Hero';
       this.solo = null;
+      this.local.setSlot(0);
       this.player.setSheet(this.wardrobe.sheet(heroOutfit(this.hero)));
       this.local.target = null;
       this.local.flags = 0;
@@ -334,15 +377,32 @@ export class OverworldScene implements Scene {
       this.player.setOffset(0, 0);
       for (const mob of this.mobs) mob.release();
     }
-    this.role = 'solo'; // so the notice below isn't broadcast
-    this.effects.add(floatText(this.player.x, this.player.y - 54, left, 0xffffff));
+    this.role = 'solo'; // so nothing below is broadcast
+    if (left) this.effects.add(floatText(this.player.x, this.player.y - 54, left, 0xffffff));
   }
 
   // --- Co-op: host side ---
 
-  /** The guest's controls for this tick. Action presses arrive as a running count, so none is lost or doubled. */
+  /** Host: players follow the session's connected seats. A friend who connected appears at the spawn; one who left goes. */
+  private reconcileGuests() {
+    const connected = this.ui.session.connectedSlots();
+    for (const slot of connected) {
+      if (this.remotes.has(slot)) continue;
+      const remote = this.addRemote(slot);
+      // Spread newcomers along the spawn cell so they don't stand exactly on top of each other.
+      const [x, y] = this.cellToFeet(this.spawn);
+      remote.body.position.set(x + (slot - 2) * 8, y);
+      this.text(remote.body.x, remote.body.y - 54, `${playerName(slot)} joined`, PLAYER_COLORS[slot] ?? 0xffffff);
+    }
+    for (const slot of [...this.remotes.keys()]) {
+      if (connected.includes(slot)) continue;
+      this.removeRemote(slot, (p) => this.text(p.body.x, p.body.y - 54, `${playerName(slot)} left`, 0xffffff));
+    }
+  }
+
+  /** A friend's controls for this tick. Action presses arrive as a running count, so none is lost or doubled. */
   private remoteCommand(p: Player): Command {
-    const peer = this.ui.session.peerInput();
+    const peer = this.ui.session.peerInput(p.slot);
     if (!peer) return NO_COMMAND;
     const { dx, dy } = peer.fresh ? unpackKeys(peer.keys) : { dx: 0, dy: 0 };
     const act = peer.act > p.seenAct;
@@ -352,31 +412,33 @@ export class OverworldScene implements Scene {
     return { dx, dy, act, mag };
   }
 
-  /** Something the guest should also see (it is shown there, never simulated). Only a host records these. */
+  /** Something every friend should also see (it is shown there, never simulated). Only a host records these. */
   private emit(e: WorldEvent) {
     if (this.role === 'host') this.events.push({ id: ++this.eventId, at: this.clock, e });
   }
 
   private broadcast(dt: number) {
-    const { remote } = this;
     this.snapTimer += dt;
-    if (!remote || this.snapTimer < 1 / SNAPSHOT_HZ) return;
+    if (this.remotes.size === 0 || this.snapTimer < 1 / SNAPSHOT_HZ) return;
     this.snapTimer = 0;
     this.events = this.events.filter((ev) => this.clock - ev.at < EVENT_KEEP);
-    this.ui.session.send({
+    // The world is the same for everyone; only `me` (the recipient's own stats) differs.
+    const shared = {
       k: 'snap',
       n: ++this.snapSeq,
-      players: [this.snapPlayer(this.local), this.snapPlayer(remote)],
+      players: this.players().map((p) => this.snapPlayer(p)),
       mobs: this.mobs.map((m) => m.snapshot()),
-      me: this.snapStats(remote.hero.stats),
       events: this.events.slice(-MAX_EVENTS_SENT).map(({ id, e }) => ({ id, e })),
-    });
+    } as const;
+    for (const [slot, remote] of this.remotes) {
+      this.ui.session.sendTo(slot, { ...shared, me: this.snapStats(remote.hero.stats) });
+    }
   }
 
   private snapPlayer(p: Player): PlayerSnap {
     const swinging = p.attackCooldown > ATTACK_COOLDOWN - 0.1;
     const flags = (p.moving ? FLAG.moving : 0) | (p.invuln > 0 ? FLAG.invuln : 0) | (swinging ? FLAG.swing : 0);
-    return [round1(p.body.x), round1(p.body.y), dirIndex(p.body.facing), flags];
+    return [p.slot, round1(p.body.x), round1(p.body.y), dirIndex(p.body.facing), flags];
   }
 
   private snapStats(s: Stats): StatsSnap {
@@ -396,11 +458,21 @@ export class OverworldScene implements Scene {
   }
 
   private applySnapshot(snap: SnapMsg) {
-    const { remote } = this;
-    if (!remote) return;
-    const [hostPlayer, guestPlayer] = snap.players;
-    this.setPlayerState(remote, hostPlayer);
-    this.setPlayerState(this.local, guestPlayer);
+    // Everyone the host lists is in the game; anyone it no longer lists has left.
+    const present = new Set<number>();
+    for (const state of snap.players) {
+      const slot = state[0];
+      present.add(slot);
+      if (slot === this.local.slot) this.setPlayerState(this.local, state);
+      else this.setPlayerState(this.remotes.get(slot) ?? this.addHiddenRemote(slot), state);
+    }
+    for (const slot of [...this.remotes.keys()]) {
+      if (!present.has(slot)) {
+        this.removeRemote(slot, (p) =>
+          this.effects.add(floatText(p.body.x, p.body.y - 54, `${playerName(slot)} left`, 0xffffff)),
+        );
+      }
+    }
 
     if (snap.mobs.length === this.mobs.length) snap.mobs.forEach((m, i) => this.mobs[i]?.setRemote(m));
 
@@ -417,7 +489,14 @@ export class OverworldScene implements Scene {
     this.lastEvent = newest;
   }
 
-  private setPlayerState(p: Player, [x, y, dir, flags]: PlayerSnap) {
+  /** A player the host just told us about: made now, shown once the state arrives (setPlayerState). */
+  private addHiddenRemote(slot: number): Player {
+    const remote = this.addRemote(slot);
+    remote.body.visible = false;
+    return remote;
+  }
+
+  private setPlayerState(p: Player, [, x, y, dir, flags]: PlayerSnap) {
     p.body.face(DIRS[dir] ?? 'down');
     p.flags = flags;
     if (!p.target) p.body.position.set(x, y); // first word from the host: appear there
@@ -457,7 +536,7 @@ export class OverworldScene implements Scene {
         if (e.name === 'heroHurt') this.playerNear(e.x, e.y + 14)?.body.play('hurt');
         break;
       case 'defeat':
-        if (e.player === 1) this.ui.dialog.say(DEFEAT_LINES); // this machine is the guest
+        if (e.player === this.local.slot) this.ui.dialog.say(DEFEAT_LINES); // that's this machine's player
         break;
     }
   }
@@ -601,10 +680,10 @@ export class OverworldScene implements Scene {
     if (!shot) return;
     const x = mob.body.x + ux * 10;
     const y = mob.body.y - BOLT_HEIGHT + uy * 8;
-    const targets = this.players();
     this.foeBolt(x, y, ux * shot.speed, uy * shot.speed, shot.color, (bx, by) => {
-      // Hits the first player it touches (one blinking with invulnerability lets it pass), stops at walls.
-      const hit = targets.find(
+      // Hits the first player it touches (one blinking with invulnerability lets it pass), stops at walls. The players
+      // are looked up each step: someone may have joined or left while it flies.
+      const hit = this.players().find(
         (p) => p.invuln <= 0 && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14,
       );
       if (hit) this.hurtHero(mob, hit.body);
@@ -705,7 +784,7 @@ export class OverworldScene implements Scene {
     p.invuln = 0;
     if (this.role === 'solo') this.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them
     if (p === this.local) this.ui.dialog.say(DEFEAT_LINES);
-    else this.emit({ type: 'defeat', player: 1 });
+    else this.emit({ type: 'defeat', player: p.slot });
   }
 
   /** The player standing nearest (x, y) within a swing's reach, to play a pose on when the host reports an action there. */
@@ -719,15 +798,15 @@ export class OverworldScene implements Scene {
     return best;
   }
 
-  /** The local player, then the other one if there is one. */
+  /** The local player, then everyone else in the game. */
   private players(): Player[] {
-    return this.remote ? [this.local, this.remote] : [this.local];
+    return [this.local, ...this.remotes.values()];
   }
 
   /** Put gear on the hero: stats follow the item and the sprite is recomposed with its parts. */
   equip(item: Item) {
     equip(this.hero, item);
-    this.player.setSheet(this.wardrobe.sheet(this.role === 'client' ? guestOutfit(this.hero) : heroOutfit(this.hero)));
+    this.player.setSheet(this.wardrobe.sheet(playerOutfit(this.local.slot, this.hero)));
   }
 
   /** Every character that blocks others. */

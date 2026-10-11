@@ -1,6 +1,6 @@
 import { Assets, type Texture } from 'pixi.js';
 import { parseMap, type MapData } from './map/types';
-import { allHeroOutfits, NPC_LOOKS } from './systems/looks';
+import { allPlayerOutfits, NPC_LOOKS } from './systems/looks';
 import { MOB_KINDS } from './systems/combat';
 import { outfitParts, type Outfit, type PartManifest } from './sprites/doll';
 import { Wardrobe } from './sprites/Wardrobe';
@@ -32,7 +32,7 @@ const LPC_DIR = `${BASE}sprites/lpc/`;
 /** Every sprite part the game can show without further loading: hero gear, NPC looks and every mob kind. */
 function requiredParts(): Set<string> {
   const outfits: Outfit[] = [
-    ...allHeroOutfits(),
+    ...allPlayerOutfits(),
     ...Object.values(NPC_LOOKS),
     ...Object.values(MOB_KINDS).map((k) => k.look),
   ];
