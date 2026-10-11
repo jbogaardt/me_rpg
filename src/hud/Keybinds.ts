@@ -59,6 +59,12 @@ export class Keybinds {
   /** Called when the menu opens: touch devices can't customise, so the editor is hidden for them. */
   refresh() {
     this.root.hidden = this.touch.active;
+    // The editor already lists the rebindable actions: with it showing, the summary keeps only the fixed controls, so
+    // nothing is shown twice. Touch devices have no editor, so they get the whole summary (with the touch column).
+    for (const row of document.querySelectorAll<HTMLElement>('#menu-controls tr[data-edited]')) {
+      row.hidden = !this.touch.active;
+    }
+    document.getElementById('controls-summary-title')!.textContent = this.touch.active ? 'Summary' : 'Other controls';
     const names = (a: Action) => bindings.codes(a).map(codeLabel).join(', ') || '—';
     for (const cell of document.querySelectorAll<HTMLElement>('#menu-controls [data-bound]')) {
       const what = cell.dataset.bound;
