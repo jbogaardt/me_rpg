@@ -10,9 +10,9 @@ export function makeFrame(sheet: Texture, x: number, y: number, w: number, h: nu
 }
 
 /**
- * Renders a MapData: a ground layer plus y-sorted objects. Shared by the game and the map editor
- * so the editor is WYSIWYG. The game adds its own entities as children and sets their zIndex to
- * their feet y so they sort with the objects.
+ * Renders a MapData: a ground layer plus y-sorted objects. The game adds its own entities as
+ * children and sets their zIndex to their feet y so they sort with the objects.
+ * (tools/map/image.ts draws the same way in Node for map previews.)
  */
 export class MapView extends Container {
   private ground = new Container();

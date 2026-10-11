@@ -1,15 +1,6 @@
 import { Assets, type Texture } from 'pixi.js';
 import { parseMap, type MapData } from './types';
 
-/** Tileset images available to the map editor. Drop a PNG in public/tilesets/ and list it here. */
-export const SHEET_FILES = [
-  'ground_tiles.png',
-  'Cliff_tileset.png',
-  'object-layer.png',
-  'Extra_Unfinished4.png',
-  'graphics-tiles-waterflow.png',
-];
-
 export const tilesetUrl = (name: string) => `${import.meta.env.BASE_URL}tilesets/${name}`;
 export const MAP_URL = `${import.meta.env.BASE_URL}maps/overworld.json`;
 

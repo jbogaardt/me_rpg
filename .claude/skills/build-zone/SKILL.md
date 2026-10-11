@@ -66,5 +66,3 @@ need to exist in `public/tilesets/`.
 - The game loads only `public/maps/overworld.json` (`MAP_URL` in `src/map/sheets.ts`). A new zone file
   builds and checks fine, but travelling between zones needs game code (map transitions) first.
 - One NPC per map with fixed dialog (`NPC_LINES` in `src/game/Game.ts`).
-- The legacy click editor (`editor.html`) edits the JSON directly; anything saved from it is
-  overwritten by the next build and fails `map check`. Change the spec instead.

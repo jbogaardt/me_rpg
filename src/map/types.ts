@@ -42,21 +42,6 @@ export interface MapData {
   mobs: MobSpawn[];
 }
 
-export function createEmptyMap(width: number, height: number): MapData {
-  return {
-    version: 1,
-    width,
-    height,
-    sheets: [],
-    ground: new Array(width * height).fill(null),
-    objects: [],
-    collision: [],
-    spawn: { col: Math.min(2, width - 1), row: Math.min(2, height - 1) },
-    npc: null,
-    mobs: [],
-  };
-}
-
 export function parseMap(json: unknown): MapData {
   const d = json as Partial<MapData>;
   if (!d || d.version !== 1 || !d.width || !d.height || !Array.isArray(d.ground)) {
@@ -74,24 +59,4 @@ export function parseMap(json: unknown): MapData {
     npc: d.npc ?? null,
     mobs: d.mobs ?? [],
   };
-}
-
-/** Returns a copy of `map` resized to the new dimensions, keeping what still fits. */
-export function resizeMap(map: MapData, width: number, height: number): MapData {
-  const next = createEmptyMap(width, height);
-  next.sheets = map.sheets;
-  next.objects = map.objects;
-  for (let r = 0; r < Math.min(height, map.height); r++) {
-    for (let c = 0; c < Math.min(width, map.width); c++) {
-      next.ground[r * width + c] = map.ground[r * map.width + c] ?? null;
-    }
-  }
-  next.collision = map.collision
-    .map((i) => ({ col: i % map.width, row: Math.floor(i / map.width) }))
-    .filter((p) => p.col < width && p.row < height)
-    .map((p) => p.row * width + p.col);
-  next.spawn = { col: Math.min(map.spawn.col, width - 1), row: Math.min(map.spawn.row, height - 1) };
-  next.npc = map.npc && map.npc.col < width && map.npc.row < height ? map.npc : null;
-  next.mobs = map.mobs.filter((m) => m.col < width && m.row < height);
-  return next;
 }
