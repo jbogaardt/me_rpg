@@ -118,6 +118,7 @@ const ICE_TILES: [number, number][] = [
   [640, 32],
   [608, 64],
   [640, 64],
+  [608, 96], // the glare tile: two shine lines, placed by `z.glare` in the lake's corner
 ];
 const setPx = (img: Image, x: number, y: number, c: RGB) => {
   const i = (y * img.width + x) * 4;
@@ -139,6 +140,7 @@ ICE_TILES.forEach(([tx, ty], k) => {
       tile[y][x] = [ICE_BASE[0] + n + band, ICE_BASE[1] + n + band, ICE_BASE[2] + n * 0.5 + band];
     }
   }
+  const GLARE = k === 6;
   const put = (x: number, y: number, c: RGB) => {
     if (x >= 3 && x < 29 && y >= 3 && y < 29) tile[y][x] = c;
   };
@@ -155,12 +157,25 @@ ICE_TILES.forEach(([tx, ty], k) => {
         crack(x, y, ang + (rnd() < 0.5 ? 1 : -1) * 1.0, Math.floor(len / 2), false);
     }
   };
-  for (let c = 0; c < (k === 0 || k === 3 ? 1 : 0); c++)
+  for (let c = 0; c < (k === 0 || k === 3 ? 1 : 0) && !GLARE; c++)
     crack(6 + rnd() * 20, 6 + rnd() * 20, rnd() * Math.PI * 2, 14 + Math.floor(rnd() * 8), true);
   // Glints: short bright slashes.
-  for (let g = 0; g < (k % 3 === 1 ? 0 : 1); g++) {
+  for (let g = 0; g < (k % 3 === 1 || GLARE ? 0 : 1); g++) {
     const [gx, gy] = [5 + Math.floor(rnd() * 20), 5 + Math.floor(rnd() * 20)];
     for (let i = 0; i < 4; i++) put(gx + i, gy - i, [244, 252, 255]);
+  }
+  if (GLARE) {
+    // Two parallel diagonal streaks, a long one and a short one, each with a soft edge.
+    for (const [x0, y0, len] of [
+      [8, 22, 14],
+      [18, 26, 8],
+    ] as const) {
+      for (let i = 0; i < len; i++) {
+        put(x0 + i, y0 - i, [252, 255, 255]);
+        put(x0 + i + 1, y0 - i, [214, 238, 246]);
+        put(x0 + i - 1, y0 - i, [214, 238, 246]);
+      }
+    }
   }
   for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) setPx(frostGround, tx + x, ty + y, tile[y][x]);
 });
