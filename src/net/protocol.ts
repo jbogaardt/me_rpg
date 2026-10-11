@@ -12,11 +12,12 @@
 import type { Direction } from '../entities/Character';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
 import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../systems/inventory';
+import type { Note, SideWire, TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 8;
+export const PROTOCOL_VERSION = 9;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -141,7 +142,27 @@ export interface LooksMsg {
   players: number[][];
 }
 
-export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg;
+/**
+ * Guest -> host: one step of a player-to-player trade (systems/trade.ts). Unlike the rest, these are reliable by
+ * hand: commands are numbered 1, 2, 3...; the host takes only the next number and the guest repeats every command
+ * the host's `ack` has not yet covered, so a lost packet only delays a click.
+ */
+export interface TrMsg {
+  k: 'tr';
+  n: number;
+  cmd: TradeCommand;
+}
+
+/** Host -> guest: this player's trade (null when none), the newest note for them, and `ack`: the last `tr` the host took in order. */
+export interface TradeMsg {
+  k: 'trade';
+  n: number;
+  ack: number;
+  view: TradeViewWire | null;
+  note?: Note;
+}
+
+export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg | TrMsg | TradeMsg;
 
 export const encodeMessage = (m: Message): string => JSON.stringify(m);
 
@@ -155,6 +176,7 @@ const MAX_EVENTS = 64;
 const MAX_TEXT = 32;
 const MAX_PACK = 200;
 const MAX_SHOP_ID = 24;
+const MAX_NOTE = 80;
 const MAX_ZONE_NAME = 32;
 const MAX_COORD = 1e6;
 const MAX_PACK_ACTIONS = 64; // an Inventory action's pack index or slot
@@ -209,6 +231,60 @@ function parseEvent(raw: unknown): WorldEvent | null {
     default:
       return null;
   }
+}
+
+const MAX_OFFER = 12;
+const MAX_GOLD = Number.MAX_SAFE_INTEGER;
+
+function parseTradeCommand(raw: unknown): TradeCommand | null {
+  const c = raw as Record<string, unknown> | null;
+  if (!c || typeof c !== 'object') return null;
+  switch (c.c) {
+    case 'ask':
+      return isIndex(c.with, MAX_PLAYERS) ? { c: 'ask', with: c.with } : null;
+    case 'yes':
+    case 'no':
+    case 'cancel':
+      return { c: c.c };
+    case 'offer':
+      return Array.isArray(c.items) &&
+        c.items.length <= MAX_OFFER &&
+        c.items.every(isCode) &&
+        isCount(c.gold) &&
+        c.gold <= MAX_GOLD
+        ? { c: 'offer', items: c.items, gold: c.gold }
+        : null;
+    case 'ready':
+      return typeof c.on === 'boolean' ? { c: 'ready', on: c.on } : null;
+    default:
+      return null;
+  }
+}
+
+function parseSide(raw: unknown): SideWire | null {
+  const s = raw as Record<string, unknown> | null;
+  if (!s || typeof s !== 'object') return null;
+  return Array.isArray(s.items) &&
+    s.items.length <= MAX_OFFER &&
+    s.items.every(isCode) &&
+    isCount(s.gold) &&
+    typeof s.ready === 'boolean'
+    ? { items: s.items, gold: s.gold, ready: s.ready }
+    : null;
+}
+
+/** The view, or null for a malformed one (a `view: null` message is handled by the caller before this). */
+function parseTradeView(raw: unknown): TradeViewWire | null {
+  const v = raw as Record<string, unknown> | null;
+  if (!v || typeof v !== 'object') return null;
+  const mine = parseSide(v.mine);
+  const theirs = parseSide(v.theirs);
+  return (v.phase === 'asking' || v.phase === 'incoming' || v.phase === 'open') &&
+    isIndex(v.with, MAX_PLAYERS) &&
+    mine &&
+    theirs
+    ? { phase: v.phase, with: v.with, mine, theirs }
+    : null;
 }
 
 function parsePlayer(raw: unknown): PlayerSnap | null {
@@ -367,6 +443,32 @@ export function parseMessage(raw: unknown): Message | null {
           (p: unknown) => numbers(p, 1 + GEAR_SLOTS.length) && isIndex(p[0], MAX_PLAYERS) && p.slice(1).every(isCode),
         );
       return ok && isCount(m.n) ? { k: 'looks', n: m.n, players: players as number[][] } : null;
+    }
+    case 'tr': {
+      const cmd = parseTradeCommand(m.cmd);
+      return isCount(m.n) && m.n >= 1 && cmd ? { k: 'tr', n: m.n, cmd } : null;
+    }
+    case 'trade': {
+      const view = m.view === null ? null : parseTradeView(m.view);
+      const viewOk = m.view === null || view !== null;
+      const note = m.note as { id?: unknown; text?: unknown; ok?: unknown } | undefined;
+      const noteOk =
+        note === undefined ||
+        (typeof note === 'object' &&
+          note !== null &&
+          isCount(note.id) &&
+          typeof note.text === 'string' &&
+          note.text.length <= MAX_NOTE &&
+          typeof note.ok === 'boolean');
+      return isCount(m.n) && isCount(m.ack) && viewOk && noteOk
+        ? {
+            k: 'trade',
+            n: m.n,
+            ack: m.ack,
+            view,
+            ...(note === undefined ? {} : { note: note as unknown as Note }),
+          }
+        : null;
     }
     default:
       return null;

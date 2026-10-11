@@ -12,6 +12,7 @@ import { Hud } from './hud/Hud';
 import { Loading } from './hud/Loading';
 import { Menu } from './hud/Menu';
 import { ShopCounter } from './hud/ShopCounter';
+import { TradeUi } from './hud/Trade';
 import { Session } from './net/session';
 import { OverworldScene } from './scenes/OverworldScene';
 import { ITEMS } from './systems/items';
@@ -67,6 +68,7 @@ void (async () => {
       hud: new Hud(),
       menu: new Menu(session, touch),
       shop: new ShopCounter(),
+      trade: new TradeUi(),
       dialog: new Dialog(),
       touch,
       session,

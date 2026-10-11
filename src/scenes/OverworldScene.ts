@@ -16,6 +16,7 @@ import type { Dialog } from '../hud/Dialog';
 import { Fade } from '../hud/Fade';
 import type { Hud } from '../hud/Hud';
 import type { ShopCounter } from '../hud/ShopCounter';
+import type { TradeUi } from '../hud/Trade';
 import { MapOverlay } from '../hud/MapOverlay';
 import type { Menu } from '../hud/Menu';
 import { arrivalFacing, cellFeet, doorAt, doorsNear } from '../map/doors';
@@ -37,7 +38,7 @@ import {
   type WorldEvent,
 } from '../net/protocol';
 import type { Role, Session } from '../net/session';
-import type { DoMsg, LooksMsg, PackMsg } from '../net/protocol';
+import type { DoMsg, LooksMsg, PackMsg, TradeMsg, TrMsg } from '../net/protocol';
 import {
   attackPower,
   defensePower,
@@ -72,10 +73,12 @@ import {
   type InvOpWire,
   type Result,
 } from '../systems/inventory';
+import { TRADE_START, TradeBook, viewFromWire, viewToWire, type TradeCommand, type TradeView } from '../systems/trade';
 import { localTrader, remoteTrader, type Outcome, type Trader } from '../systems/trader';
 import { SHOOT_RELEASE_MS } from '../sprites/doll';
 import type { Wardrobe } from '../sprites/Wardrobe';
 import type { Item } from '../systems/combat';
+import type { Note } from '../systems/trade';
 
 const SPEED = 120; // pixels per second
 const NPC_LINES = [
@@ -110,6 +113,8 @@ const SNAPSHOT_HZ = 25; // host -> guest world state
 const INPUT_HZ = 30; // guest -> host controls (also sent at once when they change)
 const EVENT_KEEP = 0.6; // seconds a one-shot world event keeps riding in snapshots, to survive packet loss
 const MAX_EVENTS_SENT = 48;
+const TRADE_RESEND = 0.25; // seconds between a friend's repeats of trade commands the host has not yet acknowledged
+const MAX_TRADE_QUEUE = 60;
 const PACK_RESEND = 1; // seconds between repeats of a friend's pack and everyone's gear (a lost packet is not resent)
 
 /** The HTML overlays shared by every scene. They are created once in main.ts. */
@@ -117,6 +122,7 @@ export interface Ui {
   hud: Hud;
   menu: Menu;
   shop: ShopCounter;
+  trade: TradeUi;
   dialog: Dialog;
   touch: TouchControls;
   session: Session;
@@ -183,6 +189,18 @@ export class OverworldScene implements Scene {
   private lastPackSig = ''; // guest: the last pack the host sent, to redraw the menu only when it changed
   private lastSay = -1; // guest: the newest answer from the host already shown
 
+  // Player-to-player trading (systems/trade.ts): the host runs the book; a guest sends commands and shows the host's view.
+  private tradeBook: TradeBook;
+  private tradeSeq = 0; // guest: numbers its trade commands (1, 2, 3...)
+  private tradeQueue: TrMsg[] = []; // guest: commands the host has not acknowledged yet (repeated until it does)
+  private tradeTimer = 0;
+  private tradeView: TradeView | null = null; // guest: the host's word on this player's trade
+  private tradeNote: Note | null = null; // guest: the newest note the host sent
+  private lastNote = -1; // the newest trade note already shown
+  private tradeMsgSeq = 0; // host: numbers trade messages
+  private sentTrade = new Map<number, string>(); // host: what each friend was last told about their trade
+  private tradeWasOpen = false;
+
   constructor(
     zone: Zone,
     private sprites: Sprites,
@@ -203,6 +221,16 @@ export class OverworldScene implements Scene {
     this.syncHeroBodies();
     this.ui.shop.onGearChange = () => this.refreshLook();
     this.ui.shop.trader = () => this.trader();
+    this.ui.trade.send = (cmd) => this.tradeCommand(cmd);
+    this.ui.trade.onAsked = () => this.ui.menu.close();
+    this.tradeBook = new TradeBook({
+      hero: (slot) => this.players().find((p) => p.slot === slot)?.hero,
+      distance: (a, b) => {
+        const [pa, pb] = [a, b].map((slot) => this.players().find((p) => p.slot === slot));
+        return pa && pb ? Math.hypot(pa.body.x - pb.body.x, pa.body.y - pb.body.y) : null;
+      },
+      name: playerName,
+    });
   }
 
   /** Build the running state of a loaded zone and keep it. */
@@ -312,23 +340,26 @@ export class OverworldScene implements Scene {
   }
 
   update(dt: number) {
-    const { menu, shop, dialog, hud, session } = this.ui;
+    const { menu, shop, dialog, hud, session, trade } = this.ui;
     this.syncRole(session.role);
     this.clock += dt;
     const online = this.role !== 'solo';
     this.overlay.setAvailable(online && this.zone === this.home);
+    menu.setOnline(online);
+    this.syncTrade(dt, online);
     if (online && !menu.open && !dialog.active && input.wasPressed(...MAP_KEYS)) this.overlay.toggle();
     if (!dialog.active && input.wasPressed(...MENU_KEYS)) {
-      if (shop.open) shop.close();
+      if (trade.open) this.tradeCommand({ c: 'cancel' });
+      else if (shop.open) shop.close();
       else menu.toggle(this.hero);
     }
-    if (!dialog.active && actionPressed('inventory')) {
+    if (!dialog.active && actionPressed('inventory') && !trade.open) {
       if (shop.open) shop.close();
       else menu.toggleInventory(this.hero);
     }
-    if (menu.open || shop.open) {
+    if (menu.open || shop.open || trade.open) {
       if (menu.open) menu.update();
-      else shop.update();
+      else if (shop.open) shop.update();
       hud.update(this.hero); // gold changes at the counter
       if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
     }
@@ -375,15 +406,16 @@ export class OverworldScene implements Scene {
    * Only zones with a player in them are simulated; the rest stand still until someone walks in.
    */
   private updateSimulation(dt: number) {
-    const { menu, shop, dialog } = this.ui;
+    const { menu, shop, dialog, trade } = this.ui;
     const host = this.role === 'host';
     if (host) {
       this.reconcileGuests();
       this.handleTrades();
+      this.handleTradeSteps(dt);
     }
     const raw = this.readCommand();
     // Reading a dialog or the menu: the player stands still (a solo dialog freezes the whole world instead).
-    const reading = menu.open || shop.open || dialog.active;
+    const reading = menu.open || shop.open || trade.open || dialog.active;
     const cmd = reading ? { ...raw, dx: 0, dy: 0, mag: false } : raw;
     const guests = [...this.remotes.values()].map((p) => ({ p, cmd: this.remoteCommand(p) }));
     const commandOf = (p: Player) => (p === this.local ? cmd : (guests.find((g) => g.p === p)?.cmd ?? NO_COMMAND));
@@ -403,7 +435,7 @@ export class OverworldScene implements Scene {
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
-    if (!menu.open && !shop.open) this.handleAction(cmd.act, () => this.act(this.local));
+    if (!menu.open && !shop.open && !trade.open) this.handleAction(cmd.act, () => this.act(this.local));
     for (const g of guests) if (g.cmd.act) this.inZone(this.zoneOf(g.p), () => this.act(g.p));
     if (!reading) this.checkDoors();
     for (const g of guests) this.checkDoorsFor(g.p);
@@ -415,19 +447,21 @@ export class OverworldScene implements Scene {
 
   /** Guest: no simulation. Show what the host last said, and tell it what this player is doing. */
   private updateClient(dt: number) {
-    const { menu, shop, dialog, session } = this.ui;
+    const { menu, shop, dialog, session, trade } = this.ui;
     const snap = session.takeSnapshot();
     if (snap) this.applySnapshot(snap);
     const pack = session.takePack();
     if (pack) this.applyPack(pack);
     const looks = session.takeLooks();
     if (looks) this.applyLooks(looks);
+    const tradeState = session.takeTrade();
+    if (tradeState) this.applyTrade(tradeState);
     for (const p of this.players()) this.drawRemotePlayer(p, dt);
     for (const mob of this.mobs) mob.updateRemote(dt);
 
     const cmd = this.readCommand();
-    const reading = menu.open || shop.open || dialog.active;
-    if (!menu.open && !shop.open) this.handleAction(cmd.act, () => this.actCount++);
+    const reading = menu.open || shop.open || trade.open || dialog.active;
+    if (!menu.open && !shop.open && !trade.open) this.handleAction(cmd.act, () => this.actCount++);
     if (!reading && cmd.mag) this.magCount++;
     this.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy));
   }
@@ -571,6 +605,8 @@ export class OverworldScene implements Scene {
     this.inZone(where, () => notice(remote));
     this.remotes.delete(slot);
     this.sentPack.delete(slot);
+    this.sentTrade.delete(slot);
+    this.tradeBook.drop(slot);
     remote.body.parent?.removeChild(remote.body);
     where.ambient?.forget(remote.body);
     remote.body.destroy({ children: true });
@@ -595,6 +631,7 @@ export class OverworldScene implements Scene {
     this.local.setSlot(slot);
     this.hero.name = playerName(slot);
     this.lastSay = -1;
+    this.resetTrade();
     this.ui.shop.close();
     this.player.setSheet(this.wardrobe.sheet(playerOutfit(slot, this.hero)));
     this.local.target = null;
@@ -644,6 +681,7 @@ export class OverworldScene implements Scene {
       });
     }
     this.local.body.setTag(null);
+    this.resetTrade();
 
     if (this.role === 'client') {
       // Back to the solo hero, standing where it ended up, with the mobs carrying on on their own.
@@ -810,7 +848,103 @@ export class OverworldScene implements Scene {
         this.ui.session.sendTo(slot, { k: 'pack', n: ++this.packSeq, ...body });
       }
       if (periodic || looksChanged) this.ui.session.sendTo(slot, { k: 'looks', n: ++this.packSeq, players: looks });
+      this.sendTrade(slot, periodic);
     }
+  }
+
+  /** Host: tell a friend about their trade (and which of their commands it has taken) when it changes, and now and then. */
+  private sendTrade(slot: number, periodic: boolean) {
+    const view = this.tradeBook.viewFor(slot);
+    const note = this.tradeBook.noteFor(slot);
+    const body = {
+      ack: this.ui.session.tradeAck(slot),
+      view: view ? viewToWire(view) : null,
+      ...(note ? { note } : {}),
+    };
+    const sig = JSON.stringify(body);
+    if (!periodic && sig === this.sentTrade.get(slot)) return;
+    this.sentTrade.set(slot, sig);
+    this.ui.session.sendTo(slot, { k: 'trade', n: ++this.tradeMsgSeq, ...body });
+  }
+
+  // --- Trading between players ---
+
+  /** Host: do what the friends asked of the trade book, then let it end trades whose players walked apart. */
+  private handleTradeSteps(dt: number) {
+    for (const p of this.remotes.values()) {
+      for (const step of this.ui.session.takeTradeSteps(p.slot)) this.tradeBook.apply(p.slot, step.cmd);
+    }
+    this.tradeBook.update(dt);
+  }
+
+  /** A command from this player's trade UI: the host's book takes it directly; a friend sends it to the host. */
+  private tradeCommand(cmd: TradeCommand) {
+    if (this.role === 'host') {
+      this.tradeBook.apply(0, cmd);
+    } else if (this.role === 'client' && this.tradeQueue.length < MAX_TRADE_QUEUE) {
+      const msg: TrMsg = { k: 'tr', n: ++this.tradeSeq, cmd };
+      this.tradeQueue.push(msg);
+      this.ui.session.send(msg);
+    }
+  }
+
+  /** Guest: the host's word on this player's trade; whatever it has taken in order no longer needs repeating. */
+  private applyTrade(msg: TradeMsg) {
+    this.tradeView = msg.view ? viewFromWire(msg.view) : null;
+    this.tradeNote = msg.note ?? null;
+    this.tradeQueue = this.tradeQueue.filter((m) => m.n > msg.ack);
+  }
+
+  /** Every frame online: feed the trade screens, show notes, and (guest) repeat commands the host has not acknowledged. */
+  private syncTrade(dt: number, online: boolean) {
+    const { trade, menu, shop } = this.ui;
+    if (!online) return;
+    const guest = this.role === 'client';
+    if (guest) {
+      this.tradeTimer += dt;
+      if (this.tradeTimer >= TRADE_RESEND && this.tradeQueue.length) {
+        this.tradeTimer = 0;
+        for (const msg of this.tradeQueue) this.ui.session.send(msg);
+      }
+    }
+    const view = guest ? this.tradeView : this.tradeBook.viewFor(0);
+    const note = guest ? this.tradeNote : this.tradeBook.noteFor(0);
+    if (note && note.id > this.lastNote) {
+      this.lastNote = note.id;
+      trade.toast(note.text, note.ok);
+    }
+    const contacts = [...this.remotes.values()]
+      .filter((p) => p.body.visible)
+      .map((p) => ({
+        slot: p.slot,
+        color: PLAYER_COLORS[p.slot] ?? 0xffffff,
+        near: Math.hypot(p.body.x - this.player.x, p.body.y - this.player.y) <= TRADE_START,
+      }));
+    trade.sync({ hero: this.hero, view, pending: guest && this.tradeQueue.length > 0, contacts });
+    if (trade.open) {
+      menu.close(); // the window takes over
+      shop.close();
+    }
+    if (this.tradeWasOpen && !trade.open) {
+      // A trade ended: gold and pack may have changed under the other screens.
+      menu.refresh(this.hero);
+      shop.refresh(this.hero);
+    }
+    this.tradeWasOpen = trade.open;
+  }
+
+  /** Forget all trade state (a co-op game starts or ends). */
+  private resetTrade() {
+    this.tradeBook.clear();
+    this.tradeSeq = 0;
+    this.tradeQueue = [];
+    this.tradeView = null;
+    this.tradeNote = null;
+    this.lastNote = -1;
+    this.tradeTimer = 0;
+    this.sentTrade.clear();
+    this.tradeWasOpen = false;
+    this.ui.trade.reset();
   }
 
   // --- Co-op: guest side ---

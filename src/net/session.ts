@@ -9,6 +9,8 @@ import {
   type Message,
   type PackMsg,
   type SnapMsg,
+  type TradeMsg,
+  type TrMsg,
 } from './protocol';
 import { MAX_GUESTS } from './relayApi';
 import { RelayClient, RelayError, type Room } from './relayClient';
@@ -64,6 +66,7 @@ export function statusLabel(mode: Mode, status: LinkStatus): string {
 
 const HELLO_RETRY_MS = 1000; // the channel is unreliable, so the version handshake repeats until answered
 const MAX_QUEUED_TRADES = 8; // requests a friend may have waiting for the host (the rest are dropped; they ask again)
+const MAX_QUEUED_TRADE_STEPS = 64; // trade commands a friend may have waiting (they arrive in order and are handled each frame)
 const INPUT_STALE_MS = 500; // a guest that stops sending counts as standing still
 
 export interface PeerInput {
@@ -125,6 +128,10 @@ export class Session {
   private newestPack = -1;
   private looks: LooksMsg | null = null; // friend: the newest list of what everyone wears
   private newestLooks = -1;
+  private tradeSteps = new Map<number, TrMsg[]>(); // host: each friend's trade commands, in order, not yet handled
+  private nextTradeStep = new Map<number, number>(); // host: the number of the next command to take from each friend
+  private trade: TradeMsg | null = null; // friend: the newest trade state from the host, not yet taken
+  private newestTradeMsg = -1;
 
   constructor(
     hash = window.location.hash,
@@ -326,6 +333,25 @@ export class Session {
     return list;
   }
 
+  /** Host: this friend's trade commands since the last call, in order (each is taken once, only in sequence). */
+  takeTradeSteps(slot: number): TrMsg[] {
+    const list = this.tradeSteps.get(slot) ?? [];
+    this.tradeSteps.delete(slot);
+    return list;
+  }
+
+  /** Host: the last of this friend's trade commands taken in order (what the host acknowledges). */
+  tradeAck(slot: number): number {
+    return (this.nextTradeStep.get(slot) ?? 1) - 1;
+  }
+
+  /** Friend: the newest trade state from the host not yet taken, or null. */
+  takeTrade(): TradeMsg | null {
+    const trade = this.trade;
+    this.trade = null;
+    return trade;
+  }
+
   /** Friend: the newest purse and pack from the host not yet taken, or null. */
   takePack(): PackMsg | null {
     const pack = this.pack;
@@ -407,6 +433,8 @@ export class Session {
       this.newestInput.delete(slot);
       this.trades.delete(slot);
       this.newestTrade.delete(slot);
+      this.tradeSteps.delete(slot);
+      this.nextTradeStep.delete(slot);
       this.beginHandshake(link);
       if (this.lobbyOpen && this.connectedSlots().length >= MAX_GUESTS) this.closeLobby(); // full: nobody else can come
     } else if (status === 'failed' || status === 'disconnected' || status === 'idle') {
@@ -416,6 +444,8 @@ export class Session {
       this.newestInput.delete(slot);
       this.trades.delete(slot);
       this.newestTrade.delete(slot);
+      this.tradeSteps.delete(slot);
+      this.nextTradeStep.delete(slot);
       link.close();
       if (this.lobbyOpen && this.room) {
         void this.refillSeat(attempt, slot);
@@ -467,7 +497,7 @@ export class Session {
       this.beginHandshake(link);
     } else {
       this.endHandshake(link);
-      this.snapshot = this.pack = this.looks = null;
+      this.snapshot = this.pack = this.looks = this.trade = null;
     }
     if (status === 'disconnected' || status === 'failed' || status === 'idle') this.guestLink = null;
     this.notify();
@@ -516,6 +546,23 @@ export class Session {
         this.trades.set(slot, queue.slice(-MAX_QUEUED_TRADES));
         break;
       }
+      case 'tr': {
+        const seat = this.seats.get(slot);
+        if (this.mode !== 'host' || seat?.link !== link || seat.phase !== 'connected') break;
+        // Only the next command in order counts; the friend repeats the ones the host has not acknowledged.
+        if (message.n !== (this.nextTradeStep.get(slot) ?? 1)) break;
+        this.nextTradeStep.set(slot, message.n + 1);
+        const queue = this.tradeSteps.get(slot) ?? [];
+        queue.push(message);
+        this.tradeSteps.set(slot, queue.slice(-MAX_QUEUED_TRADE_STEPS));
+        break;
+      }
+      case 'trade':
+        if (this.guestLink === link && message.n > this.newestTradeMsg) {
+          this.newestTradeMsg = message.n;
+          this.trade = message;
+        }
+        break;
       case 'pack':
         if (this.guestLink === link && message.n > this.newestPack) {
           this.newestPack = message.n;
@@ -540,7 +587,7 @@ export class Session {
       link,
       setInterval(() => link.send(hello), HELLO_RETRY_MS),
     );
-    if (link === this.guestLink) this.newestSnapshot = this.newestPack = this.newestLooks = -1;
+    if (link === this.guestLink) this.newestSnapshot = this.newestPack = this.newestLooks = this.newestTradeMsg = -1;
   }
 
   private endHandshake(link: Link) {
@@ -612,7 +659,7 @@ export class Session {
     this.trades.clear();
     this.newestTrade.clear();
     this.snapshot = this.pack = this.looks = null;
-    this.newestSnapshot = this.newestPack = this.newestLooks = -1;
+    this.newestSnapshot = this.newestPack = this.newestLooks = this.newestTradeMsg = -1;
   }
 
   private notify() {

@@ -328,6 +328,27 @@ describe('hosting a game', () => {
     expect(session.takeTrades(3)).toEqual([]);
   });
 
+  it("takes a friend's trade commands only in order, and acknowledges what it took", async () => {
+    const session = setup();
+    await session.createGame();
+    const first = await befriend(1);
+    const second = await befriend(2);
+    const step = (n: number): Message => ({ k: 'tr', n, cmd: { c: 'ready', on: n % 2 === 1 } });
+    first.receive(step(2)); // out of order: waits for 1
+    expect(session.tradeAck(1)).toBe(0);
+    first.receive(step(1));
+    first.receive(step(1)); // repeated: ignored
+    first.receive(step(2)); // now it is next
+    first.receive(step(4)); // a gap: ignored
+    second.receive(step(1));
+    expect(session.tradeAck(1)).toBe(2);
+    expect(session.takeTradeSteps(1).map((m) => m.n)).toEqual([1, 2]);
+    expect(session.takeTradeSteps(1)).toEqual([]);
+    expect(session.takeTradeSteps(2)).toHaveLength(1);
+    links[2]?.receive(step(1)); // seat 3's link, which nobody has connected on
+    expect(session.takeTradeSteps(3)).toEqual([]);
+  });
+
   it('ignores controls that do not come from a connected friend’s own link', async () => {
     const session = setup();
     await session.createGame();
@@ -678,6 +699,13 @@ describe('joining a game', () => {
     expect(link.sent.at(-1)).toMatchObject({ k: 'do', op: 'use' });
     link.receive({ k: 'do', n: 1, op: 'use', item: 28, shop: '' }); // requests only flow friend -> host
     expect(session.takeTrades(0)).toEqual([]);
+
+    link.receive({ k: 'trade', n: 5, ack: 2, view: null });
+    link.receive({ k: 'trade', n: 3, ack: 1, view: null }); // late: ignored
+    expect(session.takeTrade()).toMatchObject({ n: 5, ack: 2 });
+    expect(session.takeTrade()).toBeNull();
+    link.receive({ k: 'tr', n: 1, cmd: { c: 'yes' } }); // commands only flow friend -> host
+    expect(session.takeTradeSteps(0)).toEqual([]);
   });
 
   it('reports a game that is not open as something to retype, not a failure', async () => {
