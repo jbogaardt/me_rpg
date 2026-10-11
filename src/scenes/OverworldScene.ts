@@ -23,11 +23,13 @@ import type { Menu } from '../hud/Menu';
 import { MapView } from '../map/MapView';
 import { sheetGrid } from '../core/textures';
 import { CELL, type CellPoint, type MapData } from '../map/types';
+import { DEFAULT_VIEW, MobFeed } from '../net/feed';
 import { glide } from '../net/interp';
 import {
   DIRS,
   dirIndex,
   FLAG,
+  MAX_VIEW,
   packKeys,
   round1,
   unpackKeys,
@@ -141,6 +143,7 @@ export class OverworldScene implements Scene {
   private overlay: MapOverlay;
   private spawn: CellPoint;
   private screen = { width: 0, height: 0 };
+  private bodyList: Character[] = [];
 
   // Co-op
   private role: Role = 'solo';
@@ -148,13 +151,14 @@ export class OverworldScene implements Scene {
   private snapTimer = 0;
   private snapSeq = 0;
   private events: { id: number; at: number; e: WorldEvent }[] = []; // host: recent one-shot events
+  private feeds = new Map<number, MobFeed>(); // host: what each friend has been told about the mobs
   private eventId = 0;
   private lastEvent = -1; // guest: newest event already shown
   private inputTimer = 0;
   private inputSeq = 0;
   private actCount = 0; // guest: action / magic presses so far, sent as counters
   private magCount = 0;
-  private sent = { keys: -1, act: -1, mag: -1 };
+  private sent = { keys: -1, act: -1, mag: -1, ack: -1, vr: -1 };
   private solo: { stats: Stats; name: string } | null = null; // guest: the solo hero, restored on disconnect
 
   constructor(
@@ -301,6 +305,7 @@ export class OverworldScene implements Scene {
     for (const item of this.ground) {
       item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
     }
+    this.refreshBodies(); // after this frame's joins, leaves and deaths
     for (const body of this.bodies()) body.zIndex = body.y;
     hud.update(this.hero, this.role !== 'client');
     if (this.overlay.open) {
@@ -316,6 +321,7 @@ export class OverworldScene implements Scene {
     const { menu, shop, dialog } = this.ui;
     const host = this.role === 'host';
     if (host) this.reconcileGuests();
+    this.refreshBodies();
     const raw = this.readCommand();
     // Reading a dialog or the menu: the player stands still (a solo dialog freezes the whole world instead).
     const reading = menu.open || shop.open || dialog.active;
@@ -395,6 +401,7 @@ export class OverworldScene implements Scene {
     if (!remote) return;
     notice(remote);
     this.remotes.delete(slot);
+    this.feeds.delete(slot);
     this.world.layer.removeChild(remote.body);
     this.ambient.forget(remote.body);
     remote.body.destroy({ children: true });
@@ -403,6 +410,7 @@ export class OverworldScene implements Scene {
 
   private enterHost() {
     this.events = [];
+    this.feeds.clear();
     this.snapTimer = 0;
     this.reconcileGuests();
   }
@@ -417,7 +425,7 @@ export class OverworldScene implements Scene {
     this.local.target = null;
     this.lastEvent = -1;
     this.actCount = this.magCount = this.inputSeq = 0;
-    this.sent = { keys: -1, act: -1, mag: -1 };
+    this.sent = { keys: -1, act: -1, mag: -1, ack: -1, vr: -1 };
     this.inputTimer = 0;
     this.applyTags();
   }
@@ -493,24 +501,37 @@ export class OverworldScene implements Scene {
     if (this.remotes.size === 0 || this.snapTimer < 1 / SNAPSHOT_HZ) return;
     this.snapTimer = 0;
     this.events = this.events.filter((ev) => this.clock - ev.at < EVENT_KEEP);
-    // The world is the same for everyone; only `me` (the recipient's own stats) differs.
-    const shared = {
-      k: 'snap',
-      n: ++this.snapSeq,
-      players: this.players().map((p) => this.snapPlayer(p)),
-      mobs: this.mobs.map((m) => m.snapshot()),
-      chests: this.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
-      events: this.events.slice(-MAX_EVENTS_SENT).map(({ id, e }) => ({ id, e })),
-    } as const;
+    // The world is the same for everyone; what differs per friend is their own stats, which mobs are near them, and
+    // which events they have not yet confirmed.
+    const n = ++this.snapSeq;
+    const players = this.players().map((p) => this.snapPlayer(p));
+    const states = this.mobs.map((m) => m.snapshot());
+    const chests = this.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0);
     for (const [slot, remote] of this.remotes) {
-      this.ui.session.sendTo(slot, { ...shared, me: this.snapStats(remote.hero.stats) });
+      const peer = this.ui.session.peerInput(slot);
+      let feed = this.feeds.get(slot);
+      if (!feed) this.feeds.set(slot, (feed = new MobFeed()));
+      const mobs = feed.select(states, remote.body, peer?.vr || DEFAULT_VIEW, this.clock);
+      const events = this.events
+        .filter((ev) => ev.id > (peer?.ack ?? 0))
+        .slice(-MAX_EVENTS_SENT)
+        .map(({ id, e }) => ({ id, e }));
+      this.ui.session.sendTo(slot, {
+        k: 'snap',
+        n,
+        players,
+        mobs,
+        chests,
+        events,
+        me: this.snapStats(remote.hero.stats),
+      });
     }
   }
 
   private snapPlayer(p: Player): PlayerSnap {
     const swinging = this.isSwinging(p);
     const flags = (p.moving ? FLAG.moving : 0) | (p.invuln > 0 ? FLAG.invuln : 0) | (swinging ? FLAG.swing : 0);
-    return [p.slot, round1(p.body.x), round1(p.body.y), dirIndex(p.body.facing), flags];
+    return [p.slot, Math.round(p.body.x), Math.round(p.body.y), dirIndex(p.body.facing), flags];
   }
 
   private snapStats(s: Stats): StatsSnap {
@@ -522,11 +543,19 @@ export class OverworldScene implements Scene {
   /** Send the controls: when they change, and otherwise at INPUT_HZ so a lost packet is soon corrected. */
   private sendInput(dt: number, keys: number) {
     this.inputTimer += dt;
-    const changed = keys !== this.sent.keys || this.actCount !== this.sent.act || this.magCount !== this.sent.mag;
+    const ack = Math.max(0, this.lastEvent);
+    const view = this.camera.view(this.screen.width, this.screen.height);
+    const vr = Math.min(MAX_VIEW, Math.ceil(Math.hypot(view.w, view.h) / 2));
+    const changed =
+      keys !== this.sent.keys ||
+      this.actCount !== this.sent.act ||
+      this.magCount !== this.sent.mag ||
+      ack !== this.sent.ack ||
+      vr !== this.sent.vr;
     if (!changed && this.inputTimer < 1 / INPUT_HZ) return;
     this.inputTimer = 0;
-    const msg = { k: 'in', n: ++this.inputSeq, keys, act: this.actCount, mag: this.magCount } as const;
-    if (this.ui.session.send(msg)) this.sent = { keys, act: this.actCount, mag: this.magCount };
+    const msg = { k: 'in', n: ++this.inputSeq, keys, act: this.actCount, mag: this.magCount, ack, vr } as const;
+    if (this.ui.session.send(msg)) this.sent = { keys, act: this.actCount, mag: this.magCount, ack, vr };
   }
 
   private applySnapshot(snap: SnapMsg) {
@@ -547,7 +576,7 @@ export class OverworldScene implements Scene {
     }
 
     this.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
-    if (snap.mobs.length === this.mobs.length) snap.mobs.forEach((m, i) => this.mobs[i]?.setRemote(m));
+    for (const [index, ...state] of snap.mobs) this.mobs[index]?.setRemote(state); // only the mobs the host listed: the rest are out of sight
 
     const [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] = snap.me;
     if (maxHp > 0 && maxMp > 0)
@@ -591,10 +620,10 @@ export class OverworldScene implements Scene {
     switch (e.type) {
       case 'slash':
         this.swing(e.x, e.y, DIRS[e.dir] ?? 'down');
-        this.playerNear(e.x, e.y)?.body.play('slash');
+        this.playerNumbered(e.p)?.body.play('slash');
         break;
       case 'draw':
-        this.playerNear(e.x, e.y)?.body.play('shoot');
+        this.playerNumbered(e.p)?.body.play('shoot');
         break;
       case 'arrow':
         this.flyArrow(e.x, e.y, e.vx, e.vy, e.range);
@@ -602,7 +631,7 @@ export class OverworldScene implements Scene {
       case 'bolt':
         if (e.color === undefined) {
           this.shoot(e.x, e.y, e.vx, e.vy);
-          this.playerNear(e.x, e.y + BOLT_HEIGHT)?.body.play('cast');
+          this.playerNumbered(e.p)?.body.play('cast');
         } else {
           this.foeBolt(e.x, e.y, e.vx, e.vy, e.color); // an enemy's shot: only drawn here, the host decides what it hits
         }
@@ -612,7 +641,7 @@ export class OverworldScene implements Scene {
         break;
       case 'fx':
         this.effects.add(particleEffect(e.name, e.x, e.y, { dir: e.dir }));
-        if (e.name === 'heroHurt') this.playerNear(e.x, e.y + 14)?.body.play('hurt');
+        if (e.name === 'heroHurt') this.playerNumbered(e.p)?.body.play('hurt');
         break;
       case 'defeat':
         if (e.player === this.local.slot) this.ui.dialog.say(DEFEAT_LINES); // that's this machine's player
@@ -789,7 +818,7 @@ export class OverworldScene implements Scene {
     const dir = p.body.facing;
     const [vx, vy] = DIR_VEC[dir];
     this.swing(p.body.x, p.body.y, dir);
-    this.emit({ type: 'slash', x: round1(p.body.x), y: round1(p.body.y), dir: dirIndex(dir) });
+    this.emit({ type: 'slash', x: round1(p.body.x), y: round1(p.body.y), dir: dirIndex(dir), p: p.slot });
     const cx = p.body.x + vx * 16;
     const cy = p.body.y + vy * 16;
     for (const mob of this.mobs) {
@@ -805,7 +834,7 @@ export class OverworldScene implements Scene {
     p.attackCooldown = bow.cooldown;
     p.pendingShot = { timer: SHOOT_RELEASE_MS / 1000, bow, damage: attackPower(p.hero) };
     p.body.play('shoot');
-    this.emit({ type: 'draw', x: round1(p.body.x), y: round1(p.body.y) });
+    this.emit({ type: 'draw', x: round1(p.body.x), y: round1(p.body.y), p: p.slot });
   }
 
   /** The bow's string is let go: the arrow leaves along the player's aim, at chest height. */
@@ -858,13 +887,18 @@ export class OverworldScene implements Scene {
     stats.mp -= spell.cost;
     p.body.play('cast');
     const { x: vx, y: vy } = p.aim;
-    this.shoot(x + vx * 10, y - BOLT_HEIGHT + vy * 8, vx * BOLT_SPEED, vy * BOLT_SPEED, (mob) => {
-      this.hitMob(mob, rollDamage(spellPower(p.hero), mob.kind.defense), vx, vy, true);
-    });
+    this.shoot(
+      x + vx * 10,
+      y - BOLT_HEIGHT + vy * 8,
+      vx * BOLT_SPEED,
+      vy * BOLT_SPEED,
+      (mob) => this.hitMob(mob, rollDamage(spellPower(p.hero), mob.kind.defense), vx, vy, true),
+      p.slot,
+    );
   }
 
-  /** Launch a bolt. `onHit` applies the damage (the host); without it the bolt is only for show (the guest). */
-  private shoot(x: number, y: number, vx: number, vy: number, onHit?: (mob: Mob) => void) {
+  /** Launch a bolt cast by player `p`. `onHit` applies the damage (the host); without it the bolt is only for show (the guest). */
+  private shoot(x: number, y: number, vx: number, vy: number, onHit?: (mob: Mob) => void, p?: number) {
     const trail = particleEffect('boltTrail', x, y);
     this.effects.add(trail);
     this.effects.add(
@@ -884,7 +918,7 @@ export class OverworldScene implements Scene {
         },
       ),
     );
-    this.emit({ type: 'bolt', x: round1(x), y: round1(y), vx, vy });
+    this.emit({ type: 'bolt', x: round1(x), y: round1(y), vx, vy, ...(p === undefined ? {} : { p }) });
   }
 
   /** A ranged mob lets go of a shot along (ux, uy), from its hands at chest height. */
@@ -941,9 +975,16 @@ export class OverworldScene implements Scene {
   }
 
   /** A one-shot particle effect, also shown to the guest. `dir` is an angle in radians. */
-  private fx(name: FxName, x: number, y: number, dir?: number) {
+  private fx(name: FxName, x: number, y: number, dir?: number, p?: number) {
     this.effects.add(particleEffect(name, x, y, { dir }));
-    this.emit({ type: 'fx', name, x: round1(x), y: round1(y), ...(dir === undefined ? {} : { dir: round1(dir) }) });
+    this.emit({
+      type: 'fx',
+      name,
+      x: round1(x),
+      y: round1(y),
+      ...(dir === undefined ? {} : { dir: round1(dir) }),
+      ...(p === undefined ? {} : { p }),
+    });
   }
 
   /** A floating number or word, also shown to the guest. */
@@ -982,7 +1023,7 @@ export class OverworldScene implements Scene {
     p.pendingShot = null; // a hit spoils the shot
     p.body.play('hurt');
     this.text(p.body.x, p.body.y - 54, String(damage), 0xff5a5a);
-    this.fx('heroHurt', p.body.x, p.body.y - 14);
+    this.fx('heroHurt', p.body.x, p.body.y - 14, undefined, p.slot);
     const dx = p.body.x - mob.body.x;
     const dy = p.body.y - mob.body.y;
     const len = Math.hypot(dx, dy) || 1;
@@ -1007,15 +1048,9 @@ export class OverworldScene implements Scene {
     else this.emit({ type: 'defeat', player: p.slot });
   }
 
-  /** The player standing nearest (x, y) within a swing's reach, to play a pose on when the host reports an action there. */
-  private playerNear(x: number, y: number): Player | undefined {
-    let best: Player | undefined;
-    let bestDist = 24;
-    for (const p of this.players()) {
-      const dist = Math.hypot(p.body.x - x, p.body.y - y);
-      if (dist < bestDist) [best, bestDist] = [p, dist];
-    }
-    return best;
+  /** The player with this number, if they are in the game. */
+  private playerNumbered(slot: number | undefined): Player | undefined {
+    return this.players().find((p) => p.slot === slot);
   }
 
   /** The local player, then everyone else in the game. */
@@ -1029,9 +1064,16 @@ export class OverworldScene implements Scene {
     this.refreshLook();
   }
 
-  /** Every character that blocks others. */
+  /**
+   * Every character that blocks others. Built once per frame (`refreshBodies`): every mob step asks for it, and a mob that
+   * dies mid-frame simply stops blocking from the next one.
+   */
   private bodies(): Character[] {
-    return [
+    return this.bodyList;
+  }
+
+  private refreshBodies() {
+    this.bodyList = [
       ...this.players().map((p) => p.body),
       this.npc,
       ...this.keepers.map((k) => k.body),
