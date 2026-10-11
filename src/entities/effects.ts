@@ -26,7 +26,7 @@ export class Effects {
     this.list = [];
     const alive = current.filter((e) => {
       if (e.update(dt)) return true;
-      e.view.destroy({ children: true }); // views can nest (particle effects); textures are shared, so kept
+      e.view.destroy({ children: true, context: true }); // nested views go too (particles); textures are shared, so kept
       return false;
     });
     this.list = alive.concat(this.list);

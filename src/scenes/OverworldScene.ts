@@ -610,7 +610,7 @@ export class OverworldScene implements Scene {
     this.tradeBook.drop(slot);
     remote.body.parent?.removeChild(remote.body);
     where.ambient?.forget(remote.body);
-    remote.body.destroy({ children: true });
+    remote.body.destroy({ children: true, context: true });
     this.syncHeroBodies();
   }
 
@@ -654,7 +654,7 @@ export class OverworldScene implements Scene {
       );
       for (const g of [...z.ground]) {
         z.ground.splice(z.ground.indexOf(g), 1);
-        g.destroy({ children: true });
+        g.destroy({ children: true, context: true });
       }
     }
   }
@@ -664,7 +664,7 @@ export class OverworldScene implements Scene {
     for (const z of this.zones.values()) {
       for (const g of [...z.ground]) {
         z.ground.splice(z.ground.indexOf(g), 1);
-        g.destroy({ children: true });
+        g.destroy({ children: true, context: true });
       }
       for (const { item, x, y, age } of this.soloGround.get(z.name) ?? []) {
         const g = new GroundItem(item, x, y, ++this.groundId, age);
@@ -1314,7 +1314,7 @@ export class OverworldScene implements Scene {
 
   private removeGround(g: GroundItem) {
     this.ground.splice(this.ground.indexOf(g), 1);
-    g.destroy({ children: true }); // also takes it off the world layer
+    g.destroy({ children: true, context: true }); // also takes it off the world layer
   }
 
   /** Host and solo: let time pass for the items on the ground here; one that has lain too long puffs away. */

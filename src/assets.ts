@@ -50,7 +50,7 @@ export async function initAssets() {
 export async function loadSprites(onProgress?: Progress): Promise<Sprites> {
   Assets.add({ alias: 'sprites:parts', src: `${LPC_DIR}parts.json?v=${__BUILD_ID__}`, parser: 'json' });
   const manifest = await Assets.load<PartManifest>('sprites:parts');
-  const wardrobe = new Wardrobe(manifest, LPC_DIR, `?v=${__BUILD_ID__}`);
+  const wardrobe = new Wardrobe(manifest, (file) => `${LPC_DIR}${file}?v=${__BUILD_ID__}`);
   await wardrobe.load(requiredParts(), onProgress);
   Assets.add({ alias: 'sprites:chests', src: tilesetUrl('chests.png') });
   return { wardrobe, chests: await Assets.load<Texture>('sprites:chests') };
