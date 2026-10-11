@@ -1,4 +1,4 @@
-import { input } from '../core/input';
+import { tabStep } from '../core/controls';
 import type { Hero, Item } from '../systems/combat';
 import { isWorn, packEntries, upgrade } from '../systems/inventory';
 import { ITEMS, type ItemId } from '../systems/items';
@@ -52,7 +52,7 @@ export class ShopCounter {
 
   /** Called each frame while open: Left/Right switch tabs, like the menu. */
   update() {
-    if (input.wasPressed('ArrowLeft', 'KeyA', 'ArrowRight', 'KeyD')) this.select(this.tab === 'buy' ? 'sell' : 'buy');
+    if (tabStep()) this.select(this.tab === 'buy' ? 'sell' : 'buy');
   }
 
   private tabButton(name: Tab) {

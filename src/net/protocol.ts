@@ -4,8 +4,10 @@
 // to survive loss and reordering:
 //  - The guest sends its *state* (keys held) plus monotonically increasing counters for one-shot presses
 //    (attack, magic). A lost packet is corrected by the next one; a counter can't be missed, only delayed.
-//  - The host sends a full snapshot each time, and recent one-shot world events (hit numbers, slashes...) ride in
-//    several consecutive snapshots with ids so the guest can show each exactly once.
+//  - The host sends a snapshot each time: every player, but only the mobs near that guest (and a still mob only now and
+//    then, see feed.ts). Recent one-shot world events (hit numbers, slashes...) ride in consecutive snapshots with ids so
+//    the guest can show each exactly once; the guest's input messages carry the newest id it has seen (`ack`), so the host
+//    stops repeating what has arrived.
 //  - Both sides drop anything whose sequence number isn't newer than the last one seen.
 // Everything from the peer is untrusted input: parseMessage() validates the shape and ranges, never throws.
 
@@ -17,7 +19,7 @@ import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 8;
+export const PROTOCOL_VERSION = 9;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -44,8 +46,10 @@ export const FLAG = { moving: 1, invuln: 2, swing: 4 } as const;
 
 /** [player number, x, y, direction index, FLAG bits] */
 export type PlayerSnap = [number, number, number, number, number];
-/** [x, y, direction index, MOB_STATES index, hp, windup/recover/respawn timer ms, moving 0|1] */
-export type MobSnap = [number, number, number, number, number, number, number];
+/** [x, y, direction index, MOB_STATES index, hp, windup/recover/respawn timer ms (0 in other states), moving 0|1] */
+export type MobFields = [number, number, number, number, number, number, number];
+/** A mob's state tagged with its index in the map's mob list (a snapshot lists only some of the mobs). */
+export type MobSnap = [index: number, ...state: MobFields];
 /** [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] */
 export type StatsSnap = [number, number, number, number, number, number, number, number, number];
 
@@ -55,12 +59,12 @@ export type FxName = (typeof FX_NAMES)[number];
 
 /** Something that happened this tick and is only shown, never simulated, on the guest. */
 export type WorldEvent =
-  | { type: 'slash'; x: number; y: number; dir: number }
-  | { type: 'bolt'; x: number; y: number; vx: number; vy: number; color?: number } // `color` set: an enemy's shot (the guest only draws it)
-  | { type: 'draw'; x: number; y: number } // the player standing here begins drawing a bow (the arrow comes later, as `arrow`)
+  | { type: 'slash'; x: number; y: number; dir: number; p: number } // `p`: the player (number) who swung
+  | { type: 'bolt'; x: number; y: number; vx: number; vy: number; p?: number; color?: number } // `p`: the player who cast it; `color` set instead: an enemy's shot (the guest only draws it)
+  | { type: 'draw'; x: number; y: number; p: number } // player `p` begins drawing a bow (the arrow comes later, as `arrow`)
   | { type: 'arrow'; x: number; y: number; vx: number; vy: number; range: number } // a player's arrow (the guest only draws it)
   | { type: 'text'; x: number; y: number; text: string; color: number }
-  | { type: 'fx'; name: FxName; x: number; y: number; dir?: number }
+  | { type: 'fx'; name: FxName; x: number; y: number; dir?: number; p?: number } // `p`: the player it happened to (heroHurt)
   | { type: 'defeat'; player: number }; // this player (0 is the host) was knocked out and sent back to spawn
 
 export interface HelloMsg {
@@ -76,6 +80,8 @@ export interface InputMsg {
   keys: number; // KEY bits held
   act: number; // times the action button was pressed
   mag: number; // times the magic button was pressed
+  ack: number; // id of the newest world event this guest has shown (0: none yet)
+  vr: number; // how far the guest can see, in world px from its player: the host sends it the mobs within this
 }
 
 /**
@@ -90,7 +96,7 @@ export interface SnapMsg {
   /** Players in the game who are in other zones right now (so the recipient does not think they left). */
   away: number[];
   players: PlayerSnap[];
-  mobs: MobSnap[];
+  mobs: MobSnap[]; // only the mobs near the recipient, and a still one only now and then
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
   events: { id: number; e: WorldEvent }[];
@@ -169,6 +175,8 @@ const MAX_SHOP_ID = 24;
 const MAX_NOTE = 80;
 const MAX_ZONE_NAME = 32;
 const MAX_COORD = 1e6;
+/** The largest view radius a guest may ask for (world px): a 4K window at zoom 1 is about 2300. */
+export const MAX_VIEW = 4096;
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isCoord = (v: unknown): v is number => isNum(v) && Math.abs(v) <= MAX_COORD;
@@ -182,19 +190,30 @@ function parseEvent(raw: unknown): WorldEvent | null {
   if (!e || typeof e !== 'object') return null;
   switch (e.type) {
     case 'slash':
-      return isCoord(e.x) && isCoord(e.y) && isIndex(e.dir, DIRS.length)
-        ? { type: 'slash', x: e.x, y: e.y, dir: e.dir }
+      return isCoord(e.x) && isCoord(e.y) && isIndex(e.dir, DIRS.length) && isIndex(e.p, MAX_PLAYERS)
+        ? { type: 'slash', x: e.x, y: e.y, dir: e.dir, p: e.p }
         : null;
     case 'bolt':
       return isCoord(e.x) &&
         isCoord(e.y) &&
         isCoord(e.vx) &&
         isCoord(e.vy) &&
-        (e.color === undefined || (isCount(e.color) && e.color <= 0xffffff))
-        ? { type: 'bolt', x: e.x, y: e.y, vx: e.vx, vy: e.vy, ...(e.color === undefined ? {} : { color: e.color }) }
+        (e.color === undefined || (isCount(e.color) && e.color <= 0xffffff)) &&
+        (e.p === undefined || isIndex(e.p, MAX_PLAYERS))
+        ? {
+            type: 'bolt',
+            x: e.x,
+            y: e.y,
+            vx: e.vx,
+            vy: e.vy,
+            ...(e.color === undefined ? {} : { color: e.color }),
+            ...(e.p === undefined ? {} : { p: e.p }),
+          }
         : null;
     case 'draw':
-      return isCoord(e.x) && isCoord(e.y) ? { type: 'draw', x: e.x, y: e.y } : null;
+      return isCoord(e.x) && isCoord(e.y) && isIndex(e.p, MAX_PLAYERS)
+        ? { type: 'draw', x: e.x, y: e.y, p: e.p }
+        : null;
     case 'arrow':
       return isCoord(e.x) && isCoord(e.y) && isCoord(e.vx) && isCoord(e.vy) && isCoord(e.range) && e.range >= 0
         ? { type: 'arrow', x: e.x, y: e.y, vx: e.vx, vy: e.vy, range: e.range }
@@ -212,8 +231,9 @@ function parseEvent(raw: unknown): WorldEvent | null {
       return FX_NAMES.includes(e.name as FxName) &&
         isCoord(e.x) &&
         isCoord(e.y) &&
-        (e.dir === undefined || isCoord(e.dir))
-        ? { type: 'fx', name: e.name as FxName, x: e.x, y: e.y, dir: e.dir }
+        (e.dir === undefined || isCoord(e.dir)) &&
+        (e.p === undefined || isIndex(e.p, MAX_PLAYERS))
+        ? { type: 'fx', name: e.name as FxName, x: e.x, y: e.y, dir: e.dir, ...(e.p === undefined ? {} : { p: e.p }) }
         : null;
     case 'defeat':
       return isIndex(e.player, MAX_PLAYERS) ? { type: 'defeat', player: e.player } : null;
@@ -283,9 +303,10 @@ function parsePlayer(raw: unknown): PlayerSnap | null {
 }
 
 function parseMob(raw: unknown): MobSnap | null {
-  if (!numbers(raw, 7)) return null;
-  const [x, y, dir, state, hp, timer, moving] = raw as MobSnap;
+  if (!numbers(raw, 8)) return null;
+  const [index, x, y, dir, state, hp, timer, moving] = raw as MobSnap;
   const ok =
+    isIndex(index, MAX_MOBS) &&
     isCoord(x) &&
     isCoord(y) &&
     isIndex(dir, DIRS.length) &&
@@ -293,7 +314,7 @@ function parseMob(raw: unknown): MobSnap | null {
     isCount(hp) &&
     isCount(timer) &&
     (moving === 0 || moving === 1);
-  return ok ? [x, y, dir, state, hp, timer, moving] : null;
+  return ok ? [index, x, y, dir, state, hp, timer, moving] : null;
 }
 
 const isCode = (v: unknown): v is number => isCount(v) && v <= ITEM_COUNT;
@@ -316,8 +337,15 @@ export function parseMessage(raw: unknown): Message | null {
         ? { k: 'hello', v: m.v, build: m.build }
         : null;
     case 'in':
-      return isCount(m.n) && isCount(m.keys) && m.keys <= 15 && isCount(m.act) && isCount(m.mag)
-        ? { k: 'in', n: m.n, keys: m.keys, act: m.act, mag: m.mag }
+      return isCount(m.n) &&
+        isCount(m.keys) &&
+        m.keys <= 15 &&
+        isCount(m.act) &&
+        isCount(m.mag) &&
+        isCount(m.ack) &&
+        isCount(m.vr) &&
+        m.vr <= MAX_VIEW
+        ? { k: 'in', n: m.n, keys: m.keys, act: m.act, mag: m.mag, ack: m.ack, vr: m.vr }
         : null;
     case 'snap': {
       const players =

@@ -73,6 +73,10 @@ export interface PeerInput {
   keys: number;
   act: number;
   mag: number;
+  /** The newest world event the friend has shown (events up to this id need not be sent again). */
+  ack: number;
+  /** How far the friend can see, in world px from their player. */
+  vr: number;
   /** False when nothing arrived recently: ignore `keys` (the counters stay valid). */
   fresh: boolean;
 }
@@ -313,7 +317,14 @@ export class Session {
   peerInput(slot: number, now = performance.now()): PeerInput | null {
     const last = this.inputs.get(slot);
     if (!last) return null;
-    return { keys: last.msg.keys, act: last.msg.act, mag: last.msg.mag, fresh: now - last.at < INPUT_STALE_MS };
+    return {
+      keys: last.msg.keys,
+      act: last.msg.act,
+      mag: last.msg.mag,
+      ack: last.msg.ack,
+      vr: last.msg.vr,
+      fresh: now - last.at < INPUT_STALE_MS,
+    };
   }
 
   /** Friend: the newest snapshot not yet taken, or null. */

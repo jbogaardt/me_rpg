@@ -143,7 +143,7 @@ async function befriend(slot: number) {
   return link!;
 }
 
-const input = (n: number, keys = 0, act = 0, mag = 0): Message => ({ k: 'in', n, keys, act, mag });
+const input = (n: number, keys = 0, act = 0, mag = 0): Message => ({ k: 'in', n, keys, act, mag, ack: 0, vr: 300 });
 const snap = (n: number): SnapMsg => ({
   k: 'snap',
   zone: 'overworld',

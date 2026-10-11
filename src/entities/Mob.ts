@@ -1,7 +1,7 @@
 import { Graphics, type Texture } from 'pixi.js';
 import { CELL } from '../map/types';
 import { glide } from '../net/interp';
-import { DIRS, dirIndex, round1, type MobSnap } from '../net/protocol';
+import { DIRS, dirIndex, type MobFields } from '../net/protocol';
 import { MOB_STATES, mobTimings, type MobKind, type MobState } from '../systems/combat';
 import { Character, DIR_VEC, directionToward } from './Character';
 
@@ -194,13 +194,17 @@ export class Mob {
 
   // --- Co-op ---
 
-  /** Host: this mob's state for a snapshot. */
-  snapshot(): MobSnap {
+  /**
+   * Host: this mob's state for a snapshot. The timer only matters while it winds up, recovers or is dead (it drives the
+   * telegraph, the lunge and the fade), so it is 0 otherwise: a still mob then has an unchanging state the host can skip.
+   */
+  snapshot(): MobFields {
     const { x, y } = this.body;
-    const timer = Math.max(0, Math.round(this.timer * 1000));
+    const timed = this.state === 'windup' || this.state === 'recover' || this.state === 'dead';
+    const timer = timed ? Math.max(0, Math.round(this.timer * 1000)) : 0;
     return [
-      round1(x),
-      round1(y),
+      Math.round(x),
+      Math.round(y),
       dirIndex(this.body.facing),
       MOB_STATES.indexOf(this.state),
       this.hp,
@@ -210,7 +214,7 @@ export class Mob {
   }
 
   /** Guest: take the host's latest word on this mob. The body glides there over the next frames (updateRemote). */
-  setRemote([x, y, dir, state, hp, timer, moving]: MobSnap) {
+  setRemote([x, y, dir, state, hp, timer, moving]: MobFields) {
     const next = MOB_STATES[state] ?? 'idle';
     const respawned = this.state === 'dead' && next !== 'dead';
     if (hp < this.hp) {
