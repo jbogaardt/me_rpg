@@ -51,6 +51,7 @@
             <div role="tab" data-tab="status" class="active">Status</div>
             <div role="tab" data-tab="gear">Gear</div>
             <div role="tab" data-tab="controls">Controls</div>
+            <div role="tab" data-tab="online">Online</div>
           </nav>
           <div class="close" role="button" aria-label="Close menu" data-key="Escape">✕</div>
         </header>
@@ -69,6 +70,44 @@
                 <tr><td>Menu tabs</td><td>← / →</td><td>Tap</td></tr>
               </tbody>
             </table>
+          </section>
+          <section id="menu-online" hidden>
+            <h2>Multiplayer <small>2-player P2P</small></h2>
+            <div id="mp-mode" role="radiogroup" aria-label="Multiplayer mode">
+              <button type="button" role="radio" data-mode="off" aria-checked="true">Solo / Off</button>
+              <button type="button" role="radio" data-mode="host" aria-checked="false">Host</button>
+              <button type="button" role="radio" data-mode="join" aria-checked="false">Join</button>
+            </div>
+            <p id="mp-status" class="mp-status"><span class="dot"></span><span class="label"></span></p>
+
+            <div id="mp-host" hidden>
+              <button type="button" id="mp-gen-host" class="mp-btn panel thin wood">Generate Host Code</button>
+              <label for="mp-offer">Host code (send this to your friend)</label>
+              <textarea id="mp-offer" readonly rows="4" spellcheck="false" placeholder="Press Generate Host Code"></textarea>
+              <div class="mp-row">
+                <button type="button" id="mp-copy-offer" class="mp-btn panel thin wood" disabled>Copy Offer Code</button>
+                <button type="button" id="mp-copy-link" class="mp-btn panel thin wood" disabled>Copy Join Link</button>
+              </div>
+              <label for="mp-answer-in">Paste Client Answer Code</label>
+              <textarea id="mp-answer-in" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="The code your friend sends back"></textarea>
+              <button type="button" id="mp-establish" class="mp-btn panel thin wood" disabled>Establish Connection</button>
+            </div>
+
+            <div id="mp-join" hidden>
+              <label for="mp-offer-in">Host's offer code or join link</label>
+              <textarea id="mp-offer-in" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Paste the code from the host"></textarea>
+              <button type="button" id="mp-gen-answer" class="mp-btn panel thin wood" disabled>Generate Answer</button>
+              <label for="mp-answer">Your answer code (send this back to the host)</label>
+              <textarea id="mp-answer" readonly rows="4" spellcheck="false" placeholder="Press Generate Answer"></textarea>
+              <button type="button" id="mp-copy-answer" class="mp-btn panel thin wood" disabled>Copy Answer Code</button>
+            </div>
+
+            <div id="mp-active" hidden>
+              <p class="mp-connected"></p>
+              <button type="button" id="mp-disconnect" class="mp-btn panel thin wood">Disconnect</button>
+            </div>
+
+            <p id="mp-note" role="status"></p>
           </section>
         </div>
       </div>

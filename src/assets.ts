@@ -13,6 +13,7 @@ const zoneUrl = (zone: string) => `${BASE}maps/${zone}.json?v=${__BUILD_ID__}`;
 
 export const HERO_SHEET = 'healer_f.png'; // placeholder characters; swap a sheet of the same layout to re-skin
 export const NPC_SHEET = 'warrior_m.png';
+export const GUEST_SHEET = 'warrior_f.png'; // player 2 in co-op
 
 /** A loaded bundle entry, or a clear error instead of an undefined texture later. */
 function pick(loaded: Record<string, Texture>, key: string): Texture {
@@ -25,6 +26,8 @@ export type Progress = (fraction: number) => void;
 
 export interface Sprites {
   hero: Texture;
+  /** Player 2 in a co-op game. */
+  guest: Texture;
   npc: Texture;
   /** Mob sheets by MobKind.sheet file name. */
   mobs: Map<string, Texture>;
@@ -41,6 +44,7 @@ export async function initAssets() {
           name: 'sprites',
           assets: [
             { alias: 'hero', src: spriteUrl(HERO_SHEET) },
+            { alias: 'guest', src: spriteUrl(GUEST_SHEET) },
             { alias: 'npc', src: spriteUrl(NPC_SHEET) },
             ...mobSheets().map((file) => ({ alias: `mob:${file}`, src: spriteUrl(file) })),
           ],
@@ -54,6 +58,7 @@ export async function loadSprites(onProgress?: Progress): Promise<Sprites> {
   const loaded = (await Assets.loadBundle('sprites', onProgress)) as Record<string, Texture>;
   return {
     hero: pick(loaded, 'hero'),
+    guest: pick(loaded, 'guest'),
     npc: pick(loaded, 'npc'),
     mobs: new Map(mobSheets().map((f) => [f, pick(loaded, `mob:${f}`)])),
   };

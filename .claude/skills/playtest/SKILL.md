@@ -33,6 +33,15 @@ await page.screenshot({ path: 'shot.png' }); // then Read the PNG to look at it
 
 Keys: arrows/WASD move, Space/J/Enter/E action (talk or attack), K/Q cast, Esc/I/Tab menu.
 
+## Two-player (co-op) test
+
+`e2e/multiplayer.spec.ts` opens two browser contexts and does the whole manual handshake (Menu → Online → Host →
+Generate Host Code; the joiner opens `/#offer=<code>`, Generate Answer; paste it back, Establish Connection). For an
+ad-hoc script do the same with two pages on the dev server, then drive them: in dev, `scenes.current.role` is
+`'host'`/`'client'` and `.remote` is the other player. Launch Chromium with
+`--disable-features=WebRtcHideLocalIpsWithMdns` so two contexts on one machine connect over plain host candidates;
+with no internet the STUN server is unreachable and each side waits out the 10 s gathering cap.
+
 ## Gotchas learned the hard way
 
 - **Short-lived visuals (damage numbers, slashes, bolts) are easy to miss** in a screenshot: headless software GL
