@@ -11,6 +11,7 @@
 
 import type { Direction } from '../entities/Character';
 import { MOB_STATES } from '../systems/combat';
+import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
 export const PROTOCOL_VERSION = 1;
@@ -42,11 +43,16 @@ export type MobSnap = [number, number, number, number, number, number, number];
 /** [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] */
 export type StatsSnap = [number, number, number, number, number, number, number, number, number];
 
+/** One-shot particle effects a host may ask a guest to play (continuous ones, like the bolt trail, are local). */
+export const FX_NAMES = ['hitSpark', 'mobPoof', 'levelUp', 'heroHurt'] as const satisfies readonly ParticleEffectName[];
+export type FxName = (typeof FX_NAMES)[number];
+
 /** Something that happened this tick and is only shown, never simulated, on the guest. */
 export type WorldEvent =
   | { type: 'slash'; x: number; y: number; dir: number }
   | { type: 'bolt'; x: number; y: number; vx: number; vy: number }
   | { type: 'text'; x: number; y: number; text: string; color: number }
+  | { type: 'fx'; name: FxName; x: number; y: number; dir?: number }
   | { type: 'defeat'; player: number }; // the player (0 host, 1 guest) was knocked out and sent back to spawn
 
 export interface HelloMsg {
@@ -112,6 +118,13 @@ function parseEvent(raw: unknown): WorldEvent | null {
         isCount(e.color) &&
         e.color <= 0xffffff
         ? { type: 'text', x: e.x, y: e.y, text: e.text, color: e.color }
+        : null;
+    case 'fx':
+      return FX_NAMES.includes(e.name as FxName) &&
+        isCoord(e.x) &&
+        isCoord(e.y) &&
+        (e.dir === undefined || isCoord(e.dir))
+        ? { type: 'fx', name: e.name as FxName, x: e.x, y: e.y, dir: e.dir }
         : null;
     case 'defeat':
       return isIndex(e.player, 2) ? { type: 'defeat', player: e.player } : null;

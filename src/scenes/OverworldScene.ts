@@ -8,6 +8,7 @@ import { Character, DIR_VEC, directionToward, type Direction } from '../entities
 import { Ambient } from '../entities/ambient';
 import { boltEffect, Effects, floatText, slashEffect } from '../entities/effects';
 import { Mob, type MobWorld } from '../entities/Mob';
+import { particleEffect } from '../entities/ParticleEffect';
 import { NO_COMMAND, Player, type Command } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
 import type { Hud } from '../hud/Hud';
@@ -24,6 +25,7 @@ import {
   unpackKeys,
   type PlayerSnap,
   type SnapMsg,
+  type FxName,
   type StatsSnap,
   type WorldEvent,
 } from '../net/protocol';
@@ -430,6 +432,9 @@ export class OverworldScene implements Scene {
       case 'text':
         this.effects.add(floatText(e.x, e.y, e.text, e.color));
         break;
+      case 'fx':
+        this.effects.add(particleEffect(e.name, e.x, e.y, { dir: e.dir }));
+        break;
       case 'defeat':
         if (e.player === 1) this.ui.dialog.say(DEFEAT_LINES); // this machine is the guest
         break;
@@ -533,24 +538,44 @@ export class OverworldScene implements Scene {
     stats.mp -= spell.cost;
     const [vx, vy] = DIR_VEC[p.body.facing];
     this.shoot(x + vx * 10, y - BOLT_HEIGHT + vy * 8, vx * BOLT_SPEED, vy * BOLT_SPEED, (mob) => {
-      this.hitMob(mob, rollDamage(spellPower(p.hero), mob.kind.defense), vx, vy);
+      this.hitMob(mob, rollDamage(spellPower(p.hero), mob.kind.defense), vx, vy, true);
     });
   }
 
   /** Launch a bolt. `onHit` applies the damage (the host); without it the bolt is only for show (the guest). */
   private shoot(x: number, y: number, vx: number, vy: number, onHit?: (mob: Mob) => void) {
+    const trail = particleEffect('boltTrail', x, y);
+    this.effects.add(trail);
     this.effects.add(
-      boltEffect(x, y, vx, vy, BOLT_RANGE, (bx, by) => {
-        if (this.collision.isBlocked(Math.floor(bx / CELL), Math.floor((by + BOLT_HEIGHT) / CELL))) return true;
-        const mob = this.mobs.find(
-          (m) => m.alive && Math.abs(bx - m.body.x) < 12 && Math.abs(by + BOLT_HEIGHT - m.body.y) < 16,
-        );
-        if (!mob) return false;
-        onHit?.(mob);
-        return true;
-      }),
+      boltEffect(
+        x,
+        y,
+        vx,
+        vy,
+        BOLT_RANGE,
+        (bx, by) => {
+          trail.moveTo(bx, by);
+          if (this.collision.isBlocked(Math.floor(bx / CELL), Math.floor((by + BOLT_HEIGHT) / CELL))) return true;
+          const mob = this.mobs.find(
+            (m) => m.alive && Math.abs(bx - m.body.x) < 12 && Math.abs(by + BOLT_HEIGHT - m.body.y) < 16,
+          );
+          if (!mob) return false;
+          onHit?.(mob);
+          return true;
+        },
+        (bx, by, hit) => {
+          trail.stop();
+          if (hit) this.effects.add(particleEffect('boltImpact', bx, by));
+        },
+      ),
     );
     this.emit({ type: 'bolt', x: round1(x), y: round1(y), vx, vy });
+  }
+
+  /** A one-shot particle effect, also shown to the guest. `dir` is an angle in radians. */
+  private fx(name: FxName, x: number, y: number, dir?: number) {
+    this.effects.add(particleEffect(name, x, y, { dir }));
+    this.emit({ type: 'fx', name, x: round1(x), y: round1(y), ...(dir === undefined ? {} : { dir: round1(dir) }) });
   }
 
   /** A floating number or word, also shown to the guest. */
@@ -560,13 +585,18 @@ export class OverworldScene implements Scene {
   }
 
   /** Every player takes the kill's XP (in solo, just the one). */
-  private hitMob(mob: Mob, damage: number, vx: number, vy: number) {
+  private hitMob(mob: Mob, damage: number, vx: number, vy: number, bolt = false) {
     const killed = mob.hit(damage, vx, vy);
+    // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
+    if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14, Math.atan2(vy, vx));
     this.text(mob.body.x, mob.body.y - 40, String(damage), 0xffffff);
     if (!killed) return;
+    this.fx('mobPoof', mob.body.x, mob.body.y - 12);
     this.text(mob.body.x, mob.body.y - 52, `+${mob.kind.xp} XP`, 0xffb13f);
     for (const p of this.players()) {
-      if (gainXp(p.hero.stats, mob.kind.xp)) this.text(p.body.x, p.body.y - 48, 'LEVEL UP!', 0xffb13f);
+      if (!gainXp(p.hero.stats, mob.kind.xp)) continue;
+      this.text(p.body.x, p.body.y - 48, 'LEVEL UP!', 0xffb13f);
+      this.fx('levelUp', p.body.x, p.body.y - 14);
     }
   }
 
@@ -579,6 +609,7 @@ export class OverworldScene implements Scene {
     p.invuln = INVULN_TIME;
     p.sinceHit = 0;
     this.text(p.body.x, p.body.y - 40, String(damage), 0xff5a5a);
+    this.fx('heroHurt', p.body.x, p.body.y - 14);
     const dx = p.body.x - mob.body.x;
     const dy = p.body.y - mob.body.y;
     const len = Math.hypot(dx, dy) || 1;

@@ -27,6 +27,8 @@ const snap: SnapMsg = {
     { id: 5, e: { type: 'slash', x: 1, y: 2, dir: 3 } },
     { id: 6, e: { type: 'bolt', x: 1, y: 2, vx: 260, vy: 0 } },
     { id: 7, e: { type: 'defeat', player: 1 } },
+    { id: 8, e: { type: 'fx', name: 'hitSpark', x: 3, y: 4, dir: 1.6 } },
+    { id: 9, e: { type: 'fx', name: 'levelUp', x: 3, y: 4 } },
   ],
 };
 
@@ -80,6 +82,9 @@ describe('messages', () => {
       { ...snap, me: [1, 2, 3] },
       { ...snap, events: [{ id: 1, e: { type: 'text', x: 0, y: 0, text: 'x'.repeat(100), color: 0 } }] },
       { ...snap, events: [{ id: 1, e: { type: 'nope' } }] },
+      { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'boltTrail', x: 0, y: 0 } }] }, // continuous effects stay local
+      { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'nope', x: 0, y: 0 } }] },
+      { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'hitSpark', x: 0, y: 0, dir: 'up' } }] },
       { ...snap, events: Array.from({ length: 65 }, (_, i) => ({ id: i, e: { type: 'defeat', player: 0 } })) },
       { ...snap, n: -1 },
     ];
