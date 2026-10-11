@@ -269,7 +269,20 @@ export const MOB_KINDS: Record<string, MobKind> = {
 export const attackPower = (h: Hero) => h.stats.attack + (h.weapon.attack ?? 0);
 export const defensePower = (h: Hero) => h.stats.defense + (h.armor.defense ?? 0);
 export const spellPower = (h: Hero) => h.stats.magic + h.spell.power;
-export const xpToNext = (level: number) => 20 * level;
+/** XP to go from `level` to the next. Grows faster than linearly: 20 at level 1, 224 at 5, 632 at 10. */
+export const xpToNext = (level: number) => Math.round(20 * level ** 1.5);
+
+/** Stat gains for reaching `level`. They step up every four levels so power keeps pace with the XP curve. */
+export function levelGains(level: number) {
+  const tier = Math.floor(level / 4);
+  return {
+    maxHp: 6 + 2 * tier,
+    maxMp: 4 + tier,
+    attack: 2 + tier,
+    defense: 1 + Math.floor(tier / 2),
+    magic: 2 + tier,
+  };
+}
 
 /** One hit: power with ±15% spread, minus defense, never below 1. */
 export function rollDamage(power: number, defense: number): number {
@@ -283,11 +296,12 @@ export function gainXp(s: Stats, amount: number): number {
   while (s.xp >= xpToNext(s.level)) {
     s.xp -= xpToNext(s.level);
     s.level++;
-    s.maxHp += 6;
-    s.maxMp += 4;
-    s.attack += 2;
-    s.defense += 1;
-    s.magic += 2;
+    const gains = levelGains(s.level);
+    s.maxHp += gains.maxHp;
+    s.maxMp += gains.maxMp;
+    s.attack += gains.attack;
+    s.defense += gains.defense;
+    s.magic += gains.magic;
     levels++;
   }
   if (levels) {
