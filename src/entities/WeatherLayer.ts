@@ -1,11 +1,12 @@
-import { Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Particle, ParticleContainer, Sprite, Texture } from 'pixi.js';
 import type { ViewRect } from '../core/camera';
 import { mulberry32 } from '../systems/particles';
-import { WeatherFrame } from './WeatherFrame';
 import { Lightning, type Weather, type WeatherKind } from '../systems/weather';
 
-// Draws the current weather over the world: a tinted haze plus a fixed pool of tiny sprites (rain streaks, snow,
-// blown sand, wind gusts) that wrap around the camera's view. Nothing is allocated per frame.
+// Draws the current weather over the world: a tinted haze (some kinds) plus a fixed pool of tiny particles (rain
+// streaks, snow, blown sand, wind gusts) that wrap around the camera's view. The particles are one ParticleContainer,
+// so they cost one draw call however many there are, and nothing is allocated per frame. Weather is a backdrop: keep it
+// light on the eye and on the frame rate (no full-screen frame, no heavy dimming).
 
 const POOL = 800;
 
@@ -52,26 +53,27 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
     sway: 0,
     tilt: true,
   },
+  // Snow is a fast, fine backdrop: many small quick flakes, evenly spread (see Drop.u/v), not big drifting blobs.
   snow: {
-    count: 520,
+    count: 230,
     tint: 0xffffff,
     alpha: 1,
-    w: [4, 6],
-    h: [4, 6],
-    vx: 90,
-    fall: [26, 48],
-    sway: 10,
+    w: [3, 5],
+    h: [3, 5],
+    vx: 160,
+    fall: [75, 125],
+    sway: 5,
     tilt: false,
   },
   blizzard: {
-    count: 800,
+    count: 340,
     tint: 0xffffff,
     alpha: 1,
-    w: [4, 6],
-    h: [4, 6],
-    vx: 240,
-    fall: [60, 100],
-    sway: 6,
+    w: [3, 4],
+    h: [3, 4],
+    vx: 320,
+    fall: [95, 150],
+    sway: 3,
     tilt: false,
   },
   sandstorm: {
@@ -91,13 +93,18 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
 const HAZE: Partial<Record<WeatherKind, { tint: number; alpha: number }>> = {
   rain: { tint: 0x16233a, alpha: 0.24 },
   storm: { tint: 0x060a18, alpha: 0.58 },
-  snow: { tint: 0x5a6e90, alpha: 0.38 }, // dim the bright ground so white flakes stand out
-  blizzard: { tint: 0x8498b8, alpha: 0.5 },
+  // Snow has no haze at all (a full-screen layer is the costliest thing here); a blizzard gets a thin cool tint. Weather
+  // must not dim the game or slow it down.
+  blizzard: { tint: 0x7f93b4, alpha: 0.18 },
   sandstorm: { tint: 0x8a5518, alpha: 0.38 },
 };
 
 interface Drop {
-  sprite: Sprite;
+  particle: Particle;
+  /** Where in the view this drop falls from / enters, as fractions of its width and height. They follow a low-discrepancy
+   * sequence by index, so the drops in play (always the first `active`) cover the view evenly instead of clumping. */
+  u: number;
+  v: number;
   x: number;
   y: number;
   fall: number;
@@ -105,12 +112,18 @@ interface Drop {
   sway: number;
 }
 
+// The R2 sequence: successive points fill the unit square evenly (no clumps, no gaps), whatever how many are used.
+const R2_U = 0.7548776662466927;
+const R2_V = 0.5698402909980532;
+const frac = (n: number) => n - Math.floor(n);
+
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const between = ([a, b]: [number, number]) => rand(a, b);
 
 export class WeatherLayer {
   readonly view = new Container();
   private haze: Sprite;
+  private particles: ParticleContainer;
   private drops: Drop[] = [];
   private active = 0; // drops currently in play (the rest are hidden)
   private kind: WeatherKind = 'clear';
@@ -118,7 +131,6 @@ export class WeatherLayer {
   private flash: Sprite;
   private bolt = new Graphics();
   private lightning = new Lightning();
-  private frame = new WeatherFrame();
   private glow = 0; // 1 right after a strike, fading to 0
 
   /** `layer` is the map's y-sorted layer; the weather sorts just under the top effects. */
@@ -130,14 +142,27 @@ export class WeatherLayer {
     this.flash = new Sprite(pixel);
     this.flash.visible = false;
     this.flash.tint = 0xeef4ff;
-    for (let i = 0; i < POOL; i++) {
-      const sprite = new Sprite(pixel);
-      sprite.anchor.set(0.5);
-      sprite.visible = false;
-      this.view.addChild(sprite);
-      this.drops.push({ sprite, x: 0, y: 0, fall: 0, phase: 0, sway: 0 });
-    }
-    this.view.addChild(this.flash, this.bolt, this.frame.view);
+    const particles = Array.from(
+      { length: POOL },
+      () => new Particle({ texture: pixel, anchorX: 0.5, anchorY: 0.5, scaleX: 0, scaleY: 0 }),
+    );
+    this.particles = new ParticleContainer({
+      texture: pixel,
+      particles,
+      dynamicProperties: { position: true, rotation: true, vertex: true, color: true, uvs: false },
+    });
+    this.particles.update(); // uploads the static buffers on first render; the pool never changes after this
+    this.drops = particles.map((particle, i) => ({
+      particle,
+      u: frac(0.5 + i * R2_U),
+      v: frac(0.5 + i * R2_V),
+      x: 0,
+      y: 0,
+      fall: 0,
+      phase: 0,
+      sway: 0,
+    }));
+    this.view.addChild(this.particles, this.flash, this.bolt);
     this.view.zIndex = 1e9 - 1;
     layer.addChild(this.view);
   }
@@ -161,7 +186,6 @@ export class WeatherLayer {
       this.haze.height = view.h;
     }
 
-    this.frame.update(weather.kind, weather.intensity, view.x, view.y, view.w, view.h);
     const strike = this.strikes(dt, weather, pick);
     this.showFlash(view);
 
@@ -169,7 +193,7 @@ export class WeatherLayer {
     while (this.active < want) this.spawn(this.drops[this.active++]!, style!, view, true);
     while (this.active > want) {
       const d = this.drops[--this.active];
-      if (d) d.sprite.visible = false;
+      if (d) d.particle.scaleX = d.particle.scaleY = 0; // hidden: nothing to draw
     }
     if (!style) return strike;
 
@@ -188,16 +212,17 @@ export class WeatherLayer {
       else if (d.y > view.y + view.h + 8 || d.y < view.y - 12)
         this.spawn(d, style, view, false, d.fall >= 0 ? 'top' : 'bottom');
       const sway = d.sway ? Math.sin(this.clock * 1.6 + d.phase) * d.sway : 0;
-      d.sprite.position.set(d.x + sway, d.y);
-      d.sprite.rotation = style.tilt ? Math.atan2(-vx, d.fall) : 0;
+      d.particle.x = d.x + sway;
+      d.particle.y = d.y;
+      d.particle.rotation = style.tilt ? Math.atan2(-vx, d.fall) : 0;
     }
     return strike;
   }
 
-  /** Put a drop in play: anywhere in the view, or (when it wrapped) on the edge it re-enters from. */
+  /** Put a drop in play: at its own place in the view, or (when it wrapped) on the edge it re-enters from. */
   private spawn(d: Drop, style: Style, view: ViewRect, anywhere: boolean, edge?: 'left' | 'right' | 'top' | 'bottom') {
-    d.x = view.x + Math.random() * view.w;
-    d.y = view.y + Math.random() * view.h;
+    d.x = view.x + d.u * view.w;
+    d.y = view.y + d.v * view.h;
     if (!anywhere) {
       if (edge === 'left') d.x = view.x - 4;
       else if (edge === 'right') d.x = view.x + view.w + 4;
@@ -207,12 +232,12 @@ export class WeatherLayer {
     d.fall = between(style.fall);
     d.phase = rand(0, Math.PI * 2);
     d.sway = style.sway ? rand(style.sway * 0.4, style.sway) : 0;
-    const s = d.sprite;
-    s.width = between(style.w);
-    s.height = between(style.h);
-    s.tint = style.tint;
-    s.alpha = style.alpha * rand(0.7, 1);
-    s.visible = true;
+    const p = d.particle;
+    const unit = p.texture.width;
+    p.scaleX = between(style.w) / unit;
+    p.scaleY = between(style.h) / unit;
+    p.tint = style.tint;
+    p.alpha = style.alpha * rand(0.7, 1);
   }
 
   /**
