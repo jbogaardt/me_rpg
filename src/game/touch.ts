@@ -2,8 +2,9 @@ import { input } from './input';
 
 // On-screen controls: a D-pad (drag your thumb for 8-way movement) plus buttons. Any element with a
 // `data-key` attribute (the A/B buttons, the HUD menu button, the menu's close button) acts as that
-// keyboard key while held. Markup is in index.html, styles in src/ui.css; the D-pad and A/B cluster
-// stay hidden until the device has a touchscreen.
+// keyboard key while held. Markup is in index.html, styles in src/ui.css. The D-pad and A/B cluster
+// follow the input actually in use: shown on phones/tablets or after a touch, hidden again as soon as
+// a physical key is pressed (keyboard play works either way).
 
 const DEADZONE = 0.25; // fraction of the pad radius where the thumb does nothing
 const DIAGONAL = Math.sin(Math.PI / 8); // axis share needed to count, giving 8 equal 45° sectors
@@ -37,8 +38,8 @@ function bindKeyButtons() {
   }
 }
 
-/** `onShow` fires if the controls appear later than creation, so the caller can re-layout around them. */
-export function createTouchControls(onShow: () => void): TouchControls {
+/** `onChange` fires when the controls appear or disappear, so the caller can re-layout around them. */
+export function createTouchControls(onChange: () => void): TouchControls {
   bindKeyButtons();
   const root = document.getElementById('touch-controls');
   const pad = document.getElementById('dpad');
@@ -46,15 +47,18 @@ export function createTouchControls(onShow: () => void): TouchControls {
   const buttons = document.getElementById('buttons');
   if (!root || !pad || !knob || !buttons) return { active: false, rects: () => [] };
 
-  // Show up front on touch devices, or as soon as a touch lands (e.g. a laptop with a touchscreen).
-  let active = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-  root.hidden = !active;
-  window.addEventListener('pointerdown', (e) => {
-    if (active || e.pointerType !== 'touch') return;
-    active = true;
-    root.hidden = false;
-    onShow();
-  });
+  // Start shown only when the primary pointer is a finger (phones, tablets). A touchscreen laptop or
+  // desktop starts hidden; touching the screen shows the controls and typing a key hides them again.
+  let active = false;
+  const setActive = (on: boolean) => {
+    if (on === active) return;
+    active = on;
+    root.hidden = !on;
+    if (!on) releaseAll();
+    onChange();
+  };
+  window.addEventListener('pointerdown', (e) => e.pointerType === 'touch' && setActive(true), { capture: true });
+  window.addEventListener('keydown', () => setActive(false));
   root.addEventListener('contextmenu', (e) => e.preventDefault());
 
   let padPointer: number | null = null;
@@ -87,6 +91,11 @@ export function createTouchControls(onShow: () => void): TouchControls {
     setDirs(new Set());
     knob.style.transform = '';
   };
+  const releaseAll = () => {
+    padPointer = null;
+    setDirs(new Set());
+    knob.style.transform = '';
+  };
   pad.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     padPointer = e.pointerId;
@@ -97,6 +106,7 @@ export function createTouchControls(onShow: () => void): TouchControls {
   pad.addEventListener('pointerup', releasePad);
   pad.addEventListener('pointercancel', releasePad);
   pad.addEventListener('lostpointercapture', releasePad);
+  setActive(matchMedia('(pointer: coarse)').matches);
 
   return {
     get active() {
