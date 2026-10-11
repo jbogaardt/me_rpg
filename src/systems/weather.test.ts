@@ -77,7 +77,7 @@ describe('arrival weather', () => {
     ['tundra', 'desert', 'sandstorm'],
     ['desert', 'plains', 'rain'],
   ] as const)('walking from %s into %s brings %s, then a clear spell', (from, to, kind) => {
-    const w = new Weather(from, mulberry32(4));
+    const w = new Weather(from, () => 0); // a roll of 0 always wins the arrival chance
     for (let t = 0; t < 30; t += 0.25) w.update(0.25, from);
     const seen: WeatherKind[] = [];
     for (let t = 0; t < 60 * 12; t += 0.25) {
@@ -87,6 +87,17 @@ describe('arrival weather', () => {
     }
     expect(seen[0]).toBe(kind);
     expect(seen[1]).toBe('clear');
+  });
+});
+
+describe('arrival chance', () => {
+  it('sometimes brings nothing special when you walk into a biome', () => {
+    const w = new Weather('plains', () => 0.99); // a high roll loses the chance
+    for (let t = 0; t < 30; t += 0.25) w.update(0.25, 'plains');
+    for (let t = 0; t < 60 * 6; t += 0.25) {
+      w.update(0.25, 'tundra');
+      if (w.biome === 'tundra' && w.intensity > 0.99) expect(w.kind).not.toBe('snow');
+    }
   });
 });
 

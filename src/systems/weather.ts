@@ -14,7 +14,10 @@ export const WEATHER_TABLE: Record<Biome, Partial<Record<WeatherKind, number>>> 
   tundra: { clear: 4, snow: 4, blizzard: 1, wind: 1 },
 };
 
-/** The weather that greets you on walking into a biome. */
+/** Odds that walking into a new biome brings its own weather; otherwise it's the usual random draw. */
+export const ARRIVAL_CHANCE = 0.05;
+
+/** The weather that can greet you on walking into a biome. */
 export const ARRIVAL: Record<Biome, WeatherKind> = { plains: 'rain', desert: 'sandstorm', tundra: 'snow' };
 
 /** How hard the wind blows (0 to 1) under each kind of weather; the sign comes from the event's direction. */
@@ -141,7 +144,7 @@ export class Weather {
     if (this.pendingFor >= SETTLE) {
       this.biome = biome;
       this.pending = null;
-      this.arriving = true;
+      this.arriving = this.rng() < ARRIVAL_CHANCE;
       this.ending = true; // whatever was blowing fades out first
     }
   }
