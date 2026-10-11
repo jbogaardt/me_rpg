@@ -128,4 +128,50 @@ for (const box of ROCKS) frost = recolor(frost, frostRock(FROST_SHADOW), box);
 writePng(dir('frost_objects.png'), frost);
 
 writePng(dir('dry_objects.png'), recolor(OBJ, dryFoliage(DRY_SHADOW), TREES_BOX));
-console.log('wrote ground_plus.png, frost_ground.png, frost_objects.png, dry_objects.png');
+
+// --- Cliffs: the plateau art has a grass top and brown rock. Frost: snow top + blue-grey rock; dry: sand top. ------
+// The lit grass is recoloured to the biome's ground tile (keeping some texture), so the plateau's walkable
+// top blends with the snow/sand ground it is placed on; everything else (rock, moss) is recoloured as rock.
+const CLIFFS = readPng(dir('Cliff_tileset.png'));
+const SAND_BOX: Box = { x: 32, y: 160, w: 96, h: 96 }; // the plain sand tiles (snow in frost_ground)
+const GRASS_BOX: Box = { x: 64, y: 384, w: 128, h: 32 }; // a clean strip of plateau grass
+
+/** Mean colour and overall contrast (std of the green channel) of the opaque pixels in a box. */
+function stats(img: Image, box: Box): { mean: RGB; std: number } {
+  const sum: RGB = [0, 0, 0];
+  let n = 0, sq = 0;
+  for (let y = box.y; y < box.y + box.h; y++) {
+    for (let x = box.x; x < box.x + box.w; x++) {
+      const i = (y * img.width + x) * 4;
+      if (img.data[i + 3] < 255) continue;
+      for (let c = 0; c < 3; c++) sum[c] += img.data[i + c];
+      sq += img.data[i + 1] ** 2;
+      n++;
+    }
+  }
+  const m: RGB = [sum[0] / n, sum[1] / n, sum[2] / n];
+  return { mean: m, std: Math.sqrt(sq / n - m[1] ** 2) };
+}
+
+/** Plateau grass (lit): yellow-greens through teal highlights. Darker green is moss on the rock face. */
+const isTop = (c: RGB) => {
+  const [h, s, l] = toHsl(c);
+  return h > 55 && h < 175 && s > 0.08 && l > 0.5;
+};
+// Move the grass to the ground's mean colour and scale its contrast towards the ground's (snow is nearly flat), so
+// the fringe melts into the ground instead of showing as a lighter band.
+const topToGround = (src: { mean: RGB; std: number }, dst: { mean: RGB; std: number }) => {
+  const k = clamp((1.3 * dst.std) / src.std, 0.2, 0.6);
+  return (c: RGB): RGB => [0, 1, 2].map((i) => dst.mean[i] + (c[i] - src.mean[i]) * k) as RGB;
+};
+const grassStats = stats(CLIFFS, GRASS_BOX);
+const frostTop = topToGround(grassStats, stats(readPng(dir('frost_ground.png')), SAND_BOX));
+const dryTop = topToGround(grassStats, stats(plus, SAND_BOX));
+const dryRock = (c: RGB): RGB => {
+  const [h, s, l] = toHsl(c);
+  return h > 55 ? fromHsl(34 + (l - 0.3) * 40, 0.4, clamp(l * 0.95)) : fromHsl(h - 6, Math.min(1, s * 1.1), l * 0.97); // moss -> scrub
+};
+
+writePng(dir('frost_cliffs.png'), recolor(CLIFFS, (c) => (isTop(c) ? frostTop(c) : frostRock(FROST_SHADOW)(c))));
+writePng(dir('dry_cliffs.png'), recolor(CLIFFS, (c) => (isTop(c) ? dryTop(c) : dryRock(c))));
+console.log('wrote ground_plus.png, frost_ground.png, frost_objects.png, dry_objects.png, frost_cliffs.png, dry_cliffs.png');
