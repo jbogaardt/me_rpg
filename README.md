@@ -51,11 +51,11 @@ To try it on one machine: `npm run relay`, then `VITE_RELAY_URL=http://localhost
 
 ## Maps
 
-Maps are built from code so an AI agent can author them: `maps/overworld.ts` describes the zone
-(ground, forests, bushes, rocks, spawn, NPC, enemies) and
+Maps are built from code so an AI agent can author them: `maps/<zone>.ts` describes each zone (frostlands, greenwood,
+scorched, town, shops; ground, forests, bushes, rocks, spawn, NPC, enemies) and
 
 ```bash
-npm run map -- build    # -> public/maps/overworld.json + previews in maps/out/, then checks
+npm run map -- build    # -> public/maps/<zone>.json + previews in maps/out/, then checks
 ```
 
 compiles it, deriving collision from the art and blending ground edges. Ask Claude to change the map

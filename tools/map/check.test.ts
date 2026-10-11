@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import overworld from '../../maps/overworld';
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { checkDoors, checkMap } from './check';
-import { Zone } from './zone';
+import { buildSpec, Zone, type ZoneSpec } from './zone';
 
 /** A small open grass field; `edit` adds whatever the case under test needs. */
 function field(edit: (z: Zone) => void) {
@@ -83,10 +85,40 @@ describe('checkMap doors', () => {
 });
 
 describe('checkMap', () => {
-  it('passes the real overworld without errors', () => {
-    const z = new Zone(overworld.width, overworld.height);
-    overworld.build(z);
-    expect(checkMap(z.toMapData(), z.reasons).errors).toEqual([]);
+  it('passes every real zone without errors, and every door has a way back', async () => {
+    const dir = path.resolve(import.meta.dirname, '../../maps');
+    const data = new Map<string, ReturnType<Zone['toMapData']>>();
+    for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+      const spec = ((await import(pathToFileURL(path.join(dir, file)).href)) as { default?: ZoneSpec }).default;
+      if (!spec) continue;
+      const z = new Zone(spec.width, spec.height);
+      buildSpec(spec, z);
+      expect(checkMap(z.toMapData(), z.reasons).errors, file).toEqual([]);
+      data.set(file.replace(/\.ts$/, ''), z.toMapData());
+    }
+    expect(data.has('greenwood')).toBe(true);
+    expect(checkDoors(data)).toEqual([]);
+  });
+
+  it('reads world cells through an origin, but leaves door destinations alone', () => {
+    const z = new Zone(10, 10);
+    z.fill('grass');
+    buildSpec(
+      {
+        name: 'window',
+        width: 10,
+        height: 10,
+        origin: { col: 5, row: 7 },
+        build(w) {
+          w.spawn(6, 8); // world cells
+          w.door(7, 16, 3, 'elsewhere', 4, 4);
+        },
+      },
+      z,
+    );
+    const d = z.toMapData();
+    expect(d.spawn).toEqual({ col: 1, row: 1 });
+    expect(d.doors[0]).toMatchObject({ col: 2, row: 9, w: 3, to: { zone: 'elsewhere', col: 4, row: 4 } });
   });
 
   it('accepts a simple valid zone', () => {

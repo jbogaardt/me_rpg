@@ -78,12 +78,13 @@ export class ZoneState {
       if (!CHEST_LOOTS[c.loot]) throw new Error(`Zone "${zone.name}" has a chest with unknown loot "${c.loot}"`);
       return new Chest(c, chestFrames);
     });
-    this.world.layer.addChild(
+    const bodies = [
       ...(this.npc ? [this.npc] : []),
       ...this.keepers.map((k) => k.body),
       ...this.chests,
       ...this.mobs.map((m) => m.body),
-    );
+    ];
+    if (bodies.length) this.world.layer.addChild(...bodies); // Pixi's addChild() with nothing to add throws
   }
 
   /** Free the zone's drawn world (the scene does this when it ends; the loaded tilesets stay in the asset cache). */

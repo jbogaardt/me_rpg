@@ -3,7 +3,7 @@
 
 import { SHOPS } from '../../src/systems/shops';
 import type { PrefabName } from './catalog';
-import type { Zone } from './zone';
+import type { ZoneApi } from './zone';
 
 export const SHOP_ROOM = { width: 11, height: 9 } as const;
 
@@ -16,7 +16,7 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
  * Fill `z` (11x9 cells) with a shop: wall and shelves along the back, the keeper behind a counter, a doormat at the
  * front. `out` is where the door leads back to in the overworld.
  */
-export function shopInterior(z: Zone, id: string, out: { zone: string; col: number; row: number }) {
+export function shopInterior(z: ZoneApi, id: string, out: { zone: string; col: number; row: number }) {
   if (!SHOPS[id]) throw new Error(`Unknown shop "${id}"`);
   z.indoor();
   z.fill('planks');

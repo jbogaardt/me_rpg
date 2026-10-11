@@ -25,7 +25,7 @@ describe('assetVersions', () => {
 
   it('covers every file the game fetches from public/', () => {
     const table = assetVersions(path.resolve(import.meta.dirname, '../public'));
-    expect(table['maps/overworld.json']).toBeDefined();
+    expect(table['maps/greenwood.json']).toBeDefined();
     expect(table['tilesets/chests.png']).toBeDefined();
     expect(table['sprites/lpc/parts.json']).toBeDefined();
   });

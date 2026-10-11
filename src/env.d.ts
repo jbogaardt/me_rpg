@@ -7,7 +7,7 @@ interface ImportMetaEnv {
 }
 
 declare module 'virtual:asset-versions' {
-  /** Content hash per file the game fetches from public/ (`maps/overworld.json` -> hash); empty in the dev server. */
+  /** Content hash per file the game fetches from public/ (`maps/greenwood.json` -> hash); empty in the dev server. */
   const versions: Readonly<Record<string, string>>;
   export default versions;
 }

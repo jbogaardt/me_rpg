@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { parseMap, type MapData } from '../../src/map/types';
 import { checkDoors, checkMap, type Report } from './check';
 import { renderMap, ROOT, writePng, type RenderOptions } from './image';
-import { Zone, type ZoneSpec } from './zone';
+import { buildSpec, Zone, type ZoneSpec } from './zone';
 
 const MAPS_DIR = path.join(ROOT, 'maps');
 const OUT_DIR = path.join(MAPS_DIR, 'out');
@@ -37,7 +37,7 @@ function zoneNames(args: string[]): string[] {
 
 function generate(spec: ZoneSpec): { data: MapData; report: Report } {
   const z = new Zone(spec.width, spec.height);
-  spec.build(z);
+  buildSpec(spec, z);
   const data = z.toMapData();
   return { data, report: checkMap(data, z.reasons) };
 }

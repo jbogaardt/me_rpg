@@ -22,13 +22,25 @@ export function doorsNear(data: Pick<MapData, 'doors'>, x: number, y: number, ra
 export type Facing = 'up' | 'down' | 'left' | 'right';
 
 /**
- * Which way a player faces on arriving at `arrival` in a zone, having come from `from`: away from that zone's door
- * back to `from` (they just walked in through it). Down when it has no such door.
+ * Which way a player faces on arriving at `arrival` in a zone, having come from `from`: away from that zone's nearest
+ * door back to `from` (they just walked in through it), so an east-edge door has them face right. Down when it has no
+ * such door.
  */
-export function arrivalFacing(dest: Pick<MapData, 'doors'>, from: string, arrival: { row: number }): Facing {
-  const back = dest.doors.find((d) => d.to.zone === from);
-  if (!back) return 'down';
-  return arrival.row < back.row ? 'up' : 'down';
+export function arrivalFacing(
+  dest: Pick<MapData, 'doors'>,
+  from: string,
+  arrival: { col: number; row: number },
+): Facing {
+  let best: { dx: number; dy: number } | undefined;
+  for (const d of dest.doors) {
+    if (d.to.zone !== from) continue;
+    const dx = arrival.col - Math.max(d.col, Math.min(arrival.col, d.col + d.w - 1));
+    const dy = arrival.row - d.row;
+    if (!best || Math.abs(dx) + Math.abs(dy) < Math.abs(best.dx) + Math.abs(best.dy)) best = { dx, dy };
+  }
+  if (!best) return 'down';
+  if (Math.abs(best.dx) > Math.abs(best.dy)) return best.dx < 0 ? 'left' : 'right';
+  return best.dy < 0 ? 'up' : 'down';
 }
 
 /** Feet position (world px) of a cell, matching how the scene places characters. */

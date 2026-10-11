@@ -101,7 +101,7 @@ export class OverworldScene implements Scene {
     this.pack.sendSoon = () => this.guest.sendSoon();
 
     this.zones.addHome(zone);
-    this.overlay = new MapOverlay(zone.data);
+    this.overlay = new MapOverlay();
     ui.shop.onGearChange = () => arena.refreshLook();
     ui.shop.trader = () => this.pack.trader();
   }
@@ -170,7 +170,9 @@ export class OverworldScene implements Scene {
     this.syncRole(session.role);
     arena.clock += dt;
     const online = arena.role !== 'solo';
-    this.overlay.setAvailable(online && arena.zone === arena.home);
+    // The map shows the open-air zone you are in; rooms have none.
+    this.overlay.setAvailable(online && !arena.zone.data.indoor);
+    if (!arena.zone.data.indoor) this.overlay.setZone(arena.zone.data);
     menu.setOnline(online);
     this.trading.sync(dt, online);
     if (online && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
@@ -228,7 +230,7 @@ export class OverworldScene implements Scene {
         pin(arena.local),
         arena
           .players()
-          .filter((p) => p !== arena.local && p.body.visible)
+          .filter((p) => p !== arena.local && p.body.visible && p.zone === arena.zone.name)
           .map(pin),
       );
     }

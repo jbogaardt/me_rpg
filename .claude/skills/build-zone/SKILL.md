@@ -11,7 +11,7 @@ Maps are code. `maps/<zone>.ts` is the source of truth; `npm run map -- build` c
 
 ## Loop
 
-1. Edit `maps/<zone>.ts` (see `maps/overworld.ts` for a complete example).
+1. Edit `maps/<zone>.ts` (see `maps/greenwood.ts` for a complete example).
 2. `npm run map -- build` - prints errors (✗, must fix) and warnings (!, fix or justify).
 3. **Look at the result.** Read `maps/out/<zone>.png` (what players see) and
    `maps/out/<zone>.debug.png` (red = blocked, grid every cell, thicker every 5; green = spawn,
@@ -46,7 +46,7 @@ A `Rect` is `{ col, row, w, h }`.
 
 - Ground: `grass`, `sand`, `snow`, `water`, `ice`, `stone`. `patch(name, rect)` blends sand/snow/stone into grass
   via a ring. **`water` and `ice` rings blend into sand / snow, not grass**: lay a sand (or snow) patch first and put the
-  water patch 1 cell inside its fill (the lake in `maps/overworld.ts`). `snow`/`ice` are recolours (see Biomes in CLAUDE.md);
+  water patch 1 cell inside its fill (the lake in `maps/frostlands.ts`). `snow`/`ice` are recolours (see Biomes in CLAUDE.md);
   re-run `npm run tilesets` after editing `tools/map/recolor.ts`. Water/ice rects are walkable until you `block` the inner cells.
 - Interior pieces (`interior.png`, drawn by `tools/map/interior.ts`): ground `planks`, `wall`, `mat`; prefabs `counter` (4x1.5), `shelf<Shop>` (3x2) and `sign<Shop>` (4x2) for each of smithy/armory/ranger/apothecary.
 - Prefabs: trees `treeA`/`treeB` (+ `frostTree*`, `dryTree*`; 3x3, block bottom two rows, top row walk-behind), bushes
@@ -54,7 +54,7 @@ A `Rect` is `{ col, row, w, h }`.
   decorations `flowerRed`/`flowersPurple` (no collision). Mix variants to avoid repetition.
 - Buildings (`town.png`, from the CC0 Town RPG Pack, built by `tools/map/town.ts`): `smithy` and `apothecary` are 6x7-cell halls,
   `armory` and `ranger` are 3x9-cell tall houses. Solid from the ground up (you walk around them, not behind). Leave one cell of
-  space between neighbours and a cobbled `stone` patch in front looks right (see the village in `maps/overworld.ts`).
+  space between neighbours and a cobbled `stone` patch in front looks right (see the square in `maps/town.ts`).
 - The tilesets have **no** foliage ground/edge tiles; all vegetation is prefabs. There are no
   inner-corner or non-rectangular patch shapes yet.
 
@@ -83,9 +83,11 @@ Think in cells: for `plateau({col, row, w, h})` the top is cols `col..col+w-1`, 
 
 ## Zones and doors
 
-Every `maps/<name>.ts` is a zone; the game starts in `overworld` (`START_ZONE`, `src/main.ts`) and loads others on demand when a player nears a door (`OverworldScene.ensureZone`). To add a building with an inside: `z.prop(...)` the building, `z.door(...)` on its door cells, and a new `maps/<room>.ts` with its own `z.door` back out (arrival cells must not be doors). The village in `maps/overworld.ts` (`SHOP_DOORS`) and `tools/map/interiors.ts` (`shopInterior`) are the worked example; a shop room is 11x9 with the keeper behind a counter.
+Every `maps/<name>.ts` is a zone; the game starts in `greenwood` (`START_ZONE`, `src/main.ts`) and loads others on demand when a player nears a door (`Zones.ensure`). To add a building with an inside: `z.prop(...)` the building, `z.door(...)` on its door cells, and a new `maps/<room>.ts` with `z.indoor()` and its own `z.door` back out (arrival cells must not be doors). The town (`maps/town.ts`, `SHOP_DOORS`) and `tools/map/interiors.ts` (`shopInterior`) are the worked example; a shop room is 11x9 with the keeper behind a counter.
+
+**Neighbouring open-air zones** (the biomes) share one world grid: give each `defineZone` an `origin: { col, row }` (its top-left cell on that grid) and write the spec in *world* cells; the JSON is written in the zone's own cells. Door destinations (`toCol`, `toRow`) are always cells of the destination zone's own grid, so `z.door(32, 27, 4, 'frostlands', 33, 24)` in greenwood (world row 27 = its top row) leads to local (33, 24) of frostlands. Leave a gap in the tree border for the door. A door is a horizontal row of cells, so a vertical edge (east/west) uses a stack of one-cell doors, one per row, each arriving on the same row on the far side, a couple of cells in from the door. Walking off the edge slides into the next zone; the town gate and shops use the iris.
 
 ## Limits today
 
-- One NPC per overworld with fixed dialog (`NPC_LINES` in `src/scenes/OverworldScene.ts`); shopkeepers are per shop room.
+- One NPC per zone with fixed dialog (`NPC_LINES` in `src/scenes/OverworldScene.ts`); shopkeepers are per shop room.
 - Zones stay loaded once visited (they are small); no streaming of one big world.

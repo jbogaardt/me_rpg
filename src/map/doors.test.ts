@@ -46,9 +46,16 @@ describe('doorsNear', () => {
 
 describe('arrivalFacing', () => {
   it('faces away from the door the player came in by', () => {
-    const inside = { doors: [door(4, 8, 2, 'overworld')] };
-    expect(arrivalFacing(inside, 'overworld', { row: 7 })).toBe('up'); // in the shop, walking in from the mat
-    expect(arrivalFacing(outside, 'shop_smithy', { row: 46 })).toBe('down'); // back out in front of the building
-    expect(arrivalFacing({ doors: [] }, 'x', { row: 3 })).toBe('down');
+    const inside = { doors: [door(4, 8, 2, 'town')] };
+    expect(arrivalFacing(inside, 'town', { col: 4, row: 7 })).toBe('up'); // in the shop, walking in from the mat
+    expect(arrivalFacing(outside, 'shop_smithy', { col: 16, row: 46 })).toBe('down'); // back out in front of the building
+    expect(arrivalFacing({ doors: [] }, 'x', { col: 0, row: 3 })).toBe('down');
+  });
+
+  it('faces along the row when the way back is a door on the east or west edge', () => {
+    const west = { doors: [4, 5, 6].map((r) => door(0, r, 1, 'greenwood')) }; // the zone's west edge
+    expect(arrivalFacing(west, 'greenwood', { col: 2, row: 5 })).toBe('right');
+    const east = { doors: [4, 5, 6].map((r) => door(45, r, 1, 'scorched')) };
+    expect(arrivalFacing(east, 'scorched', { col: 43, row: 5 })).toBe('left');
   });
 });

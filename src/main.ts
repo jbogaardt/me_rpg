@@ -16,7 +16,7 @@ import { Session } from './net/session';
 import { OverworldScene } from './scenes/OverworldScene';
 import { ITEMS } from './systems/items';
 
-const START_ZONE = 'overworld';
+const START_ZONE = 'greenwood';
 
 void (async () => {
   const loading = new Loading();

@@ -32,11 +32,126 @@ export interface Rect {
   h: number;
 }
 
+/** The builder calls a zone spec uses (a `Zone`, or a `WorldWindow` onto one). */
+export interface ZoneApi {
+  readonly width: number;
+  readonly height: number;
+  fill(name: GroundName, rect?: Rect): unknown;
+  patch(name: GroundName, rect: Rect): unknown;
+  stamp(name: StampName, col: number, row: number): unknown;
+  prop(name: PrefabName, col: number, row: number, nudge?: { dx?: number; dy?: number }): unknown;
+  forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }): unknown;
+  plateau(rect: Rect, opts?: { kind?: CliffKind; stairs?: number[] }): unknown;
+  block(rect: Rect, reason: string): unknown;
+  unblock(rect: Rect): unknown;
+  glare(col: number, row: number): unknown;
+  spawn(col: number, row: number): unknown;
+  npc(col: number, row: number): unknown;
+  mob(kind: string, col: number, row: number): unknown;
+  chest(kind: string, loot: string, col: number, row: number): unknown;
+  shop(shop: string, col: number, row: number): unknown;
+  door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number): unknown;
+  indoor(): unknown;
+}
+
 export interface ZoneSpec {
   name: string; // output: public/maps/<name>.json
   width: number;
   height: number;
-  build(z: Zone): void;
+  /**
+   * Which cell of the world grid this zone's top-left cell sits on. With it, `build` uses world coordinates (the zones of
+   * one open-air world line up on a shared grid, so an edge door at the same row on both sides really meets), and the
+   * JSON is written in the zone's own cells (0,0 = its top-left). Door destinations (`toCol`, `toRow`) are always cells of
+   * the destination zone's own grid.
+   */
+  origin?: { col: number; row: number };
+  build(z: ZoneApi): void;
+}
+
+/** A `Zone` seen through a shifted window: every cell the spec names is a world cell, and lands `origin` cells earlier. */
+export class WorldWindow implements ZoneApi {
+  constructor(
+    private z: Zone,
+    private o: { col: number; row: number },
+  ) {}
+  get width() {
+    return this.z.width;
+  }
+  get height() {
+    return this.z.height;
+  }
+  private rect(r: Rect): Rect {
+    return { ...r, col: r.col - this.o.col, row: r.row - this.o.row };
+  }
+  fill(name: GroundName, rect?: Rect) {
+    this.z.fill(name, rect && this.rect(rect));
+    return this;
+  }
+  patch(name: GroundName, rect: Rect) {
+    this.z.patch(name, this.rect(rect));
+    return this;
+  }
+  stamp(name: StampName, col: number, row: number) {
+    this.z.stamp(name, col - this.o.col, row - this.o.row);
+    return this;
+  }
+  prop(name: PrefabName, col: number, row: number, nudge?: { dx?: number; dy?: number }) {
+    this.z.prop(name, col - this.o.col, row - this.o.row, nudge);
+    return this;
+  }
+  forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }) {
+    this.z.forest(this.rect(rect), opts);
+    return this;
+  }
+  plateau(rect: Rect, opts: { kind?: CliffKind; stairs?: number[] } = {}) {
+    this.z.plateau(this.rect(rect), { ...opts, stairs: opts.stairs?.map((c) => c - this.o.col) });
+    return this;
+  }
+  block(rect: Rect, reason: string) {
+    this.z.block(this.rect(rect), reason);
+    return this;
+  }
+  unblock(rect: Rect) {
+    this.z.unblock(this.rect(rect));
+    return this;
+  }
+  glare(col: number, row: number) {
+    this.z.glare(col - this.o.col, row - this.o.row);
+    return this;
+  }
+  spawn(col: number, row: number) {
+    this.z.spawn(col - this.o.col, row - this.o.row);
+    return this;
+  }
+  npc(col: number, row: number) {
+    this.z.npc(col - this.o.col, row - this.o.row);
+    return this;
+  }
+  mob(kind: string, col: number, row: number) {
+    this.z.mob(kind, col - this.o.col, row - this.o.row);
+    return this;
+  }
+  chest(kind: string, loot: string, col: number, row: number) {
+    this.z.chest(kind, loot, col - this.o.col, row - this.o.row);
+    return this;
+  }
+  shop(shop: string, col: number, row: number) {
+    this.z.shop(shop, col - this.o.col, row - this.o.row);
+    return this;
+  }
+  door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number) {
+    this.z.door(col - this.o.col, row - this.o.row, w, toZone, toCol, toRow); // the destination is the other zone's own cell
+    return this;
+  }
+  indoor() {
+    this.z.indoor();
+    return this;
+  }
+}
+
+/** Run a zone spec's `build` on `z`, through its origin window if it has one. */
+export function buildSpec(spec: ZoneSpec, z: Zone) {
+  spec.build(spec.origin ? new WorldWindow(z, spec.origin) : z);
 }
 
 /** Declare a zone. Files in maps/ default-export one of these; `npm run map -- build` turns it into JSON. */

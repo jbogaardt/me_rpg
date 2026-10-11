@@ -2,7 +2,7 @@ import { mapPercent, minimapPixels } from '../map/minimap';
 import type { MapData } from '../map/types';
 import { PLAYER_COLORS, playerName } from '../systems/looks';
 
-// A semi-transparent map of the whole zone with a pin for you and one for each co-op friend (every player in their
+// A semi-transparent map of the zone you are in with a pin for you and one for each co-op friend (every player in their
 // own colour, like their tag in the game), so players can find each other. Online play only: the scene makes it `available` while connected and the M key (or the
 // HUD map button on touch) toggles it. HTML rather than canvas, like the rest of the UI; markup in index.html,
 // styles in src/ui.css. It never takes pointer input, so the game keeps running (and stays playable) behind it.
@@ -26,8 +26,14 @@ export class MapOverlay {
   private placed = ''; // last pin positions written, so the DOM is only touched when a pin moves
   private listed = ''; // who the legend currently lists
 
-  constructor(private data: MapData) {
-    // Painted once on a detached canvas and shown as an image, so the page keeps a single <canvas> (the game's).
+  private data: MapData | undefined; // the zone currently painted
+
+  /** Show this zone's terrain (repainted only when the zone changes). */
+  setZone(data: MapData) {
+    if (data === this.data) return;
+    this.data = data;
+    this.placed = '';
+    // Painted on a detached canvas and shown as an image, so the page keeps a single <canvas> (the game's).
     const canvas = document.createElement('canvas');
     canvas.width = data.width;
     canvas.height = data.height;
@@ -51,8 +57,10 @@ export class MapOverlay {
 
   /** Move the pins: yours, and one for each other player whose position is known. */
   update(me: Pin, others: Pin[]) {
-    const mine = mapPercent(this.data, me.x, me.y);
-    const theirs = others.map((p) => ({ slot: p.slot, ...mapPercent(this.data, p.x, p.y) }));
+    const data = this.data;
+    if (!data) return;
+    const mine = mapPercent(data, me.x, me.y);
+    const theirs = others.map((p) => ({ slot: p.slot, ...mapPercent(data, p.x, p.y) }));
     const key = [mine, ...theirs].map((p) => `${p.left.toFixed(1)},${p.top.toFixed(1)}`).join(';') + `|${me.slot}`;
     const who = [me.slot, ...others.map((p) => p.slot)].join(',');
     if (key === this.placed && who === this.listed) return;
