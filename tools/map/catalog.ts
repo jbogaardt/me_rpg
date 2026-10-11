@@ -8,6 +8,9 @@ export const PLUS_SHEET = 'ground_plus.png'; // ground_tiles + a plain water til
 export const FROST_SHEET = 'frost_ground.png'; // sand -> snow, water -> ice
 export const FROST_OBJECTS = 'frost_objects.png'; // snow-dusted trees/bushes, blue-grey rocks
 export const DRY_OBJECTS = 'dry_objects.png'; // withered ochre trees/bushes
+export const CLIFF_SHEET = 'Cliff_tileset.png'; // Avalon cliffs: a plateau blob, stairs, notches
+export const FROST_CLIFFS = 'frost_cliffs.png'; // cliffs with snow tops and blue-grey rock (recolor.ts)
+export const DRY_CLIFFS = 'dry_cliffs.png'; // cliffs with sandy tops and ochre rock (recolor.ts)
 
 /** Baked-in drop-shadow colour on object-layer.png. Ignored when measuring how much a cell is covered. */
 export const SHADOW_RGB = [152, 169, 150] as const;
@@ -150,6 +153,8 @@ export interface Prefab {
    * bottom `band` pixels are blocked. The art above the band is walk-behind. Null = decoration only.
    */
   solid: { band: number; min: number } | null;
+  /** What the object is, copied to MapObject.tag so game systems (leaf fall, rustling...) can find it. */
+  tag?: string;
   about: string;
 }
 
@@ -160,13 +165,13 @@ const treeParts = {
   B: [part(220, 103, 66, 89, 28, 0), part(192, 125, 28, 67, 0, 22)],
 };
 const tree = (sheet: string, which: 'A' | 'B', about: string): Prefab => ({
-  sheet, w: 94, h: 89, parts: treeParts[which], solid: { band: 64, min: 0.5 }, about,
+  sheet, w: 94, h: 89, parts: treeParts[which], solid: { band: 64, min: 0.5 }, tag: 'tree', about,
 });
 const bush = (sheet: string, about: string): Prefab => ({
-  sheet, w: 62, h: 57, parts: [part(160, 71, 62, 57)], solid: { band: 40, min: 0.5 }, about,
+  sheet, w: 62, h: 57, parts: [part(160, 71, 62, 57)], solid: { band: 40, min: 0.5 }, tag: 'bush', about,
 });
 const rock = (sheet: string, x: number, y: number, w: number, h: number, about: string): Prefab => ({
-  sheet, w, h, parts: [part(x, y, w, h)], solid: { band: h, min: 0.3 }, about,
+  sheet, w, h, parts: [part(x, y, w, h)], solid: { band: h, min: 0.3 }, tag: 'rock', about,
 });
 const ROCKS = (sheet: string) => ({
   rock: rock(sheet, 290, 32, 30, 32, 'Boulder, one cell.'),
@@ -193,14 +198,34 @@ export const PREFABS = {
   frostRockB: frostRocks.rockB,
   frostRockC: frostRocks.rockC,
   barrel: {
-    sheet: OBJECT_SHEET, w: 28, h: 40, parts: [part(321, 18, 28, 40)], solid: { band: 24, min: 0.3 },
+    sheet: OBJECT_SHEET, w: 28, h: 40, parts: [part(321, 18, 28, 40)], solid: { band: 24, min: 0.3 }, tag: 'barrel',
     about: 'Wooden barrel (1 cell wide).',
   },
-  flowerRed: { sheet: OBJECT_SHEET, w: 16, h: 15, parts: [part(352, 40, 16, 15)], solid: null, about: 'Red flower, decoration only.' },
-  flowersPurple: { sheet: OBJECT_SHEET, w: 18, h: 28, parts: [part(366, 33, 18, 28)], solid: null, about: 'Pair of purple flowers, decoration only.' },
+  flowerRed: { sheet: OBJECT_SHEET, w: 16, h: 15, parts: [part(352, 40, 16, 15)], solid: null, tag: 'flower', about: 'Red flower, decoration only.' },
+  flowersPurple: { sheet: OBJECT_SHEET, w: 18, h: 28, parts: [part(366, 33, 18, 28)], solid: null, tag: 'flower', about: 'Pair of purple flowers, decoration only.' },
 } satisfies Record<string, Prefab>;
 
 export type PrefabName = keyof typeof PREFABS;
 export const TREES: PrefabName[] = ['treeA', 'treeB'];
 export const FROST_TREES: PrefabName[] = ['frostTreeA', 'frostTreeB'];
 export const DRY_TREES: PrefabName[] = ['dryTreeA', 'dryTreeB'];
+
+/**
+ * Cliff kit: the plateau blob on Cliff_tileset.png (x 44-213, y 15-223) cut along its 64x64 grass hole
+ * into a 3x3 grid whose middle row/column repeat in 32px chunks, so a plateau can be any size >= 4x4 cells.
+ * `zone.plateau(rect)` assembles it; rect is the *walkable top* in cells. Measured from the art:
+ *   - the hole's top-left corner sits at world ((rect.col+1)*32, (rect.row+1)*32), so
+ *   - the rim rocks fall in the 1-cell ring N/W/E of rect and the rock face covers the 2 rows below it,
+ *   - the lighter fringe grass inside the rim is walkable (same grass as the ground).
+ * Stairs piece (x 320-416, y 128-222) replaces three 32px face columns; its steps span the middle one.
+ */
+export const CLIFF = {
+  /** Source column boundaries: left rim | repeat A | repeat B | right rim. */
+  xs: [44, 96, 128, 160, 213],
+  /** Source row boundaries: top rim | repeat A | repeat B | fringe + face. */
+  ys: [15, 64, 96, 128, 223],
+  stairs: { x: 320, y: 128, w: 96, h: 94 },
+  /** Cliff sheet per biome. Frost/dry are recolours with identical coordinates (tools/map/recolor.ts). */
+  sheets: { grass: CLIFF_SHEET, frost: FROST_CLIFFS, dry: DRY_CLIFFS },
+};
+export type CliffKind = keyof typeof CLIFF.sheets;

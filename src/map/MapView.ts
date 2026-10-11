@@ -1,5 +1,5 @@
 import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
-import { CELL, type GroundCell, type MapData, type MapObject } from './types';
+import { CELL, sortKey, type GroundCell, type MapData, type MapObject } from './types';
 
 /** A sub-rectangle of a sheet as its own texture, clamped to the image. Null if fully outside. */
 export function makeFrame(sheet: Texture, x: number, y: number, w: number, h: number): Texture | null {
@@ -26,7 +26,7 @@ export class MapView extends Container {
   ) {
     super();
     this.sortableChildren = true;
-    this.ground.zIndex = -1e9;
+    this.ground.zIndex = -1e9; // objects with a custom z (flat cliff art) sit above this but below everything y-sorted
     this.addChild(this.ground);
     this.rebuild(data);
   }
@@ -85,7 +85,7 @@ export class MapView extends Container {
     if (!texture) return;
     const sprite = new Sprite(texture);
     sprite.position.set(o.px, o.py);
-    sprite.zIndex = o.py + o.h;
+    sprite.zIndex = sortKey(o);
     this.addChild(sprite);
     this.objectSprites.set(o, sprite);
   }

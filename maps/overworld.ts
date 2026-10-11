@@ -63,7 +63,7 @@ export default defineZone({
     z.prop('bush', 26, 42);
     z.prop('bush', 44, 54, { dx: 2 });
     z.prop('bush', 9, 54);
-    z.prop('treeA', 14, 36);
+    z.prop('treeA', 9, 37);
     z.prop('treeB', 33, 57);
     z.prop('treeB', 45, 40);
     z.prop('treeA', 7, 41);
@@ -95,8 +95,7 @@ export default defineZone({
     z.prop('frostTreeA', 53, 6);
     z.prop('frostTreeB', 66, 14);
     z.prop('frostBush', 22, 20);
-    z.prop('frostBush', 78, 11);
-    z.forest({ col: 6, row: 6, w: 11, h: 6 }, frost);
+        z.forest({ col: 6, row: 6, w: 11, h: 6 }, frost);
     z.forest({ col: 6, row: 17, w: 8, h: 5 }, frost);
     z.forest({ col: 22, row: 14, w: 7, h: 5 }, frost);
     z.forest({ col: 24, row: 5, w: 8, h: 4 }, frost);
@@ -115,7 +114,7 @@ export default defineZone({
     z.prop('frostBush', 52, 22);
     z.prop('frostBush', 88, 8);
     z.prop('frostBush', 17, 22);
-    for (const [col, row] of [[20, 9], [31, 17], [64, 13], [75, 16], [58, 22], [90, 20], [10, 13], [84, 9]]) z.prop('frostRock', col, row);
+    for (const [col, row] of [[20, 9], [31, 17], [64, 13], [58, 22], [90, 20], [10, 13], [84, 9]]) z.prop('frostRock', col, row);
     for (const [col, row] of [[27, 22], [72, 10], [46, 5], [14, 9]]) z.prop('frostRockC', col, row);
     for (const [col, row] of [[34, 15], [66, 4]]) z.prop('frostRockSmall', col, row);
     for (const [col, row] of [[34, 6], [62, 12], [82, 12], [50, 21], [86, 22]]) z.mob('frostbound', col, row);
@@ -151,9 +150,27 @@ export default defineZone({
     z.prop('dryTreeA', 70, 49);
     z.prop('dryTreeB', 57, 66);
     for (const [col, row] of [[70, 56], [78, 46], [90, 46], [60, 66], [52, 52], [92, 56]]) z.prop('rockC', col, row);
-    for (const [col, row] of [[67, 41], [64, 55], [56, 63], [92, 66]]) z.prop('rockB', col, row);
+    for (const [col, row] of [[64, 55], [56, 63], [92, 66]]) z.prop('rockB', col, row);
     for (const [col, row] of [[72, 48], [89, 42], [60, 50]]) z.prop('rockSmall', col, row);
     for (const [col, row] of [[60, 55], [70, 50], [80, 46], [66, 59], [88, 50]]) z.mob('raider', col, row);
+
+    // --- Plateaus: raised ground with stairs up the south face (one per biome) ----------------------------
+    // `rect` is the walkable top; the rim and the two face rows around it block. See z.plateau in tools/map/zone.ts.
+    z.plateau({ col: 14, row: 28, w: 6, h: 5 }, { stairs: [16] }); // Greenwood overlook
+    z.prop('rockSmall', 18, 29);
+    z.prop('bush', 15, 31);
+    for (const [col, row] of [[16, 29], [18, 31], [17, 30]]) z.prop(col === 17 ? 'flowersPurple' : 'flowerRed', col, row);
+    z.mob('shade', 17, 31);
+
+    z.plateau({ col: 72, row: 13, w: 7, h: 4 }, { kind: 'frost', stairs: [75] }); // Frostlands ledge
+    z.prop('frostRockC', 77, 14);
+    z.prop('frostBush', 73, 15);
+    z.mob('frostbound', 75, 14);
+
+    z.plateau({ col: 62, row: 37, w: 8, h: 4 }, { kind: 'dry', stairs: [64] }); // Scorched Waste mesa
+    z.prop('dryBush', 68, 38);
+    z.prop('rockSmall', 65, 39);
+    z.mob('raider', 66, 38);
 
     // --- The grass hub between the biomes ------------------------------------------------------------
     z.forest({ col: 62, row: 28, w: 8, h: 4 });

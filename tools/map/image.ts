@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { PNG } from 'pngjs';
-import { CELL, type MapData } from '../../src/map/types';
+import { CELL, sortKey, type MapData } from '../../src/map/types';
 import { SHADOWS } from './catalog';
 
 export const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -107,7 +107,7 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
   data.ground.forEach((g, i) => {
     if (g) blit(sheet(data.sheets[g[0]]), g[1], g[2], CELL, CELL, (i % data.width) * CELL, Math.floor(i / data.width) * CELL);
   });
-  const objects = data.objects.map((o, i) => ({ o, i })).sort((a, b) => a.o.py + a.o.h - (b.o.py + b.o.h) || a.i - b.i);
+  const objects = data.objects.map((o, i) => ({ o, i })).sort((a, b) => sortKey(a.o) - sortKey(b.o) || a.i - b.i);
   for (const { o } of objects) blit(sheet(data.sheets[o.s]), o.x, o.y, o.w, o.h, o.px, o.py);
 
   const tint = (x0: number, y0: number, w: number, h: number, rgb: number, alpha: number) => {
