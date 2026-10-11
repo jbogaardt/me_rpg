@@ -146,6 +146,8 @@ async function befriend(slot: number) {
 const input = (n: number, keys = 0, act = 0, mag = 0): Message => ({ k: 'in', n, keys, act, mag });
 const snap = (n: number): SnapMsg => ({
   k: 'snap',
+  zone: 'overworld',
+  away: [],
   n,
   players: [[0, 1, 2, 0, 0]],
   mobs: [],
@@ -334,6 +336,8 @@ describe('hosting a game', () => {
     first.receive({
       k: 'snap',
       n: 1,
+      zone: 'overworld',
+      away: [],
       players: [[0, 1, 2, 0, 0]],
       mobs: [],
       me: [1, 0, 1, 1, 1, 1, 1, 1, 1],

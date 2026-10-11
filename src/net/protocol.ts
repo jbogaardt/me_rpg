@@ -16,7 +16,7 @@ import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -78,12 +78,16 @@ export interface InputMsg {
 }
 
 /**
- * Host -> guest: the world. `players` lists everyone connected, the host included, each tagged with their player
- * number; `me` is the recipient's own stats.
+ * Host -> guest: the world the guest is standing in. `players` lists everyone in that zone, the host included, each
+ * tagged with their player number; `me` is the recipient's own stats.
  */
 export interface SnapMsg {
   k: 'snap';
   n: number;
+  /** The zone the recipient is in. Everything below is about that zone only (players elsewhere are just in `away`). */
+  zone: string;
+  /** Players in the game who are in other zones right now (so the recipient does not think they left). */
+  away: number[];
   players: PlayerSnap[];
   mobs: MobSnap[];
   me: StatsSnap;
@@ -141,6 +145,7 @@ const MAX_EVENTS = 64;
 const MAX_TEXT = 32;
 const MAX_PACK = 200;
 const MAX_SHOP_ID = 24;
+const MAX_ZONE_NAME = 32;
 const MAX_COORD = 1e6;
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -255,6 +260,12 @@ export function parseMessage(raw: unknown): Message | null {
         players.includes(null) ||
         new Set(players.map((p) => p?.[0])).size !== players.length || // each player appears once
         !isCount(m.n) ||
+        typeof m.zone !== 'string' ||
+        m.zone.length < 1 ||
+        m.zone.length > MAX_ZONE_NAME ||
+        !Array.isArray(m.away) ||
+        m.away.length >= MAX_PLAYERS ||
+        !m.away.every((a: unknown) => isIndex(a, MAX_PLAYERS)) ||
         !mobs ||
         mobs.includes(null) ||
         !rawEvents ||
@@ -268,6 +279,8 @@ export function parseMessage(raw: unknown): Message | null {
       return {
         k: 'snap',
         n: m.n,
+        zone: m.zone,
+        away: m.away,
         players: players as PlayerSnap[],
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,

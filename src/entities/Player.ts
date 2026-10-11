@@ -25,6 +25,8 @@ export class Player {
   knock = { x: 0, y: 0 };
   aim = { x: 0, y: 1 }; // unit vector of the last move (diagonals included): where magic bolts fly
   vel = { x: 0, y: 0 }; // px/s walking velocity; only differs from the held direction while sliding on ice
+  /** The zone this player is in (a key of the scene's zones). The host moves players between zones; a guest follows. */
+  zone = '';
   moving = false; // was trying to move this tick (drives the walk cycle, and the guest's copy of it)
 
   // Host: the last action counters honoured from a network player (see protocol.ts).
