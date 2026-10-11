@@ -7,7 +7,10 @@ import {
   PROTOCOL_VERSION,
   round1,
   unpackKeys,
+  type DoMsg,
   type InputMsg,
+  type LooksMsg,
+  type PackMsg,
   type MobSnap,
   type PlayerSnap,
   type SnapMsg,
@@ -124,6 +127,76 @@ describe('messages', () => {
   it('rounds to a tenth', () => {
     expect(round1(12.3456)).toBe(12.3);
     expect(round1(-0.04)).toBe(-0);
+  });
+});
+
+describe('trade, pack and looks messages', () => {
+  const ask: DoMsg = { k: 'do', n: 3, op: 'buy', item: 4, shop: 'smithy' };
+  const pack: PackMsg = {
+    k: 'pack',
+    n: 8,
+    gold: 120,
+    worn: [1, 0, 0, 0, 0, 0, 27],
+    bag: [1, 28, 28],
+    say: { id: 3, text: 'Bought it', ok: true },
+  };
+  const { say: _say, ...packNoSay } = pack;
+  const looks: LooksMsg = {
+    k: 'looks',
+    n: 9,
+    players: [
+      [0, 1, 0, 0, 0, 0, 0, 27],
+      [2, 5, 0, 0, 0, 0, 0, 0],
+    ],
+  };
+
+  it('round-trips', () => {
+    for (const m of [ask, pack, packNoSay, looks]) expect(parseMessage(encodeMessage(m))).toEqual(m);
+  });
+
+  it("keeps a full pack and everyone's gear small", () => {
+    const big = { ...pack, bag: Array.from({ length: 60 }, () => 28) };
+    expect(encodeMessage(big).length).toBeLessThan(1200);
+    expect(encodeMessage({ ...looks, players: [0, 1, 2, 3].map((p) => [p, 1, 2, 3, 4, 5, 6, 7]) }).length).toBeLessThan(
+      200,
+    );
+  });
+
+  it('rejects requests for things that do not exist', () => {
+    for (const patch of [
+      { op: 'steal' },
+      { item: 9999 },
+      { item: -1 },
+      { shop: 'x'.repeat(40) },
+      { shop: 5 },
+      { n: 'x' },
+    ]) {
+      expect(parseMessage(JSON.stringify({ ...ask, ...patch })), JSON.stringify(patch)).toBeNull();
+    }
+  });
+
+  it('rejects a malformed pack', () => {
+    const bad = [
+      { ...pack, gold: -1 },
+      { ...pack, gold: 1.5 },
+      { ...pack, worn: [1, 2] },
+      { ...pack, worn: [1, 0, 0, 0, 0, 0, 9999] },
+      { ...pack, bag: [9999] },
+      { ...pack, bag: Array.from({ length: 201 }, () => 1) },
+      { ...pack, say: { id: 1, text: 'x'.repeat(100), ok: true } },
+      { ...pack, say: { id: 1, text: 'hi' } },
+    ];
+    for (const m of bad) expect(parseMessage(JSON.stringify(m))).toBeNull();
+  });
+
+  it('rejects malformed looks', () => {
+    const bad = [
+      { ...looks, players: [] },
+      { ...looks, players: [[4, 0, 0, 0, 0, 0, 0, 0]] }, // no such player
+      { ...looks, players: [[0, 0, 0]] },
+      { ...looks, players: [[0, 9999, 0, 0, 0, 0, 0, 0]] },
+    ];
+    for (const m of bad) expect(parseMessage(JSON.stringify(m))).toBeNull();
   });
 });
 

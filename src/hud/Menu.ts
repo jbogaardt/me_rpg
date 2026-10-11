@@ -10,7 +10,8 @@ import {
   type Hero,
   type Item,
 } from '../systems/combat';
-import { packEntries, useFromPack, wearFromPack } from '../systems/inventory';
+import { packEntries } from '../systems/inventory';
+import type { Trader } from '../systems/trader';
 import { sellPrice } from '../systems/shops';
 import { input } from '../core/input';
 import { bonuses } from './itemText';
@@ -50,6 +51,10 @@ export class Menu {
   private hero: Hero | null = null;
   /** Called after the pack changed what the hero wears, so the scene can redraw the hero. */
   onGearChange: () => void = () => {};
+  /** Who wears and drinks things from the pack: this machine, or (for a co-op guest) the host. Set by the scene. */
+  trader: () => Trader = () => {
+    throw new Error('Menu has no trader');
+  };
 
   constructor(session: Session, touch: TouchControls) {
     new Multiplayer(session, () => this.close()); // owns the Online tab
@@ -67,9 +72,16 @@ export class Menu {
     button.blur(); // so the action key (Space) cannot press it again
     const entry = packEntries(this.hero)[Number(button.dataset.pack)];
     if (!entry) return;
-    if (button.dataset.act === 'wear' && wearFromPack(this.hero, entry.item)) this.onGearChange();
-    else if (button.dataset.act === 'use') useFromPack(this.hero, entry.item);
+    const trader = this.trader();
+    if (button.dataset.act === 'wear' && trader.wear(entry.item)?.gear) this.onGearChange();
+    else if (button.dataset.act === 'use') trader.use(entry.item);
     this.render(this.hero);
+  }
+
+  /** Draw the menu again (a co-op guest's pack changes when the host's answer arrives). */
+  refresh(hero: Hero) {
+    this.hero = hero;
+    if (this.open) this.render(hero);
   }
 
   /** Open or close the menu. When opening, `tab` (e.g. 'online') picks the page to show. */

@@ -37,6 +37,7 @@ import {
   type WorldEvent,
 } from '../net/protocol';
 import type { Role, Session } from '../net/session';
+import type { DoMsg, LooksMsg, PackMsg } from '../net/protocol';
 import {
   attackPower,
   defensePower,
@@ -63,6 +64,8 @@ import {
   playerTag,
 } from '../systems/looks';
 import { SHOPS } from '../systems/shops';
+import { bagCodes, gearCodes, itemFromCode, setBag, setGear } from '../systems/inventory';
+import { localTrader, remoteTrader, type Outcome, type Trader } from '../systems/trader';
 import { SHOOT_RELEASE_MS } from '../sprites/doll';
 import type { Wardrobe } from '../sprites/Wardrobe';
 import type { Item } from '../systems/combat';
@@ -95,6 +98,7 @@ const SNAPSHOT_HZ = 25; // host -> guest world state
 const INPUT_HZ = 30; // guest -> host controls (also sent at once when they change)
 const EVENT_KEEP = 0.6; // seconds a one-shot world event keeps riding in snapshots, to survive packet loss
 const MAX_EVENTS_SENT = 48;
+const PACK_RESEND = 1; // seconds between repeats of a friend's pack and everyone's gear (a lost packet is not resent)
 
 /** The HTML overlays shared by every scene. They are created once in main.ts. */
 export interface Ui {
@@ -150,7 +154,14 @@ export class OverworldScene implements Scene {
   private actCount = 0; // guest: action / magic presses so far, sent as counters
   private magCount = 0;
   private sent = { keys: -1, act: -1, mag: -1 };
-  private solo: { stats: Stats; name: string } | null = null; // guest: the solo hero, restored on disconnect
+  private solo: Hero | null = null; // guest: the solo hero (stats, gold, pack, gear), put back on disconnect
+  private doSeq = 0; // guest: numbers its requests to the host
+  private packSeq = 0; // host: numbers the pack and looks messages
+  private packTimer = 0;
+  private sentPack = new Map<number, string>(); // host: what each friend was last told about their pack
+  private sentLooks = '';
+  private lastPackSig = ''; // guest: the last pack the host sent, to redraw the menu only when it changed
+  private lastSay = -1; // guest: the newest answer from the host already shown
 
   constructor(
     zone: Zone,
@@ -186,6 +197,7 @@ export class OverworldScene implements Scene {
       return { shop: spawn.shop, body };
     });
     this.ui.menu.onGearChange = this.ui.shop.onGearChange = () => this.refreshLook();
+    this.ui.menu.trader = this.ui.shop.trader = () => this.trader();
     this.mobs = data.mobs.map((m) => {
       const kind = MOB_KINDS[m.kind];
       if (!kind) throw new Error(`Zone "${zone.name}" spawns unknown mob kind "${m.kind}"`);
@@ -266,7 +278,7 @@ export class OverworldScene implements Scene {
     if (menu.open || shop.open) {
       if (menu.open) menu.update();
       else shop.update();
-      hud.update(this.hero, this.role !== 'client'); // gold changes at the counter
+      hud.update(this.hero); // gold changes at the counter
       if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
     }
 
@@ -285,7 +297,7 @@ export class OverworldScene implements Scene {
     this.npc.animate(dt * 1000, false);
     for (const k of this.keepers) k.body.animate(dt * 1000, false);
     for (const body of this.bodies()) body.zIndex = body.y;
-    hud.update(this.hero, this.role !== 'client');
+    hud.update(this.hero);
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.
@@ -298,7 +310,10 @@ export class OverworldScene implements Scene {
   private updateSimulation(dt: number) {
     const { menu, shop, dialog } = this.ui;
     const host = this.role === 'host';
-    if (host) this.reconcileGuests();
+    if (host) {
+      this.reconcileGuests();
+      this.handleTrades();
+    }
     const raw = this.readCommand();
     // Reading a dialog or the menu: the player stands still (a solo dialog freezes the whole world instead).
     const reading = menu.open || shop.open || dialog.active;
@@ -316,7 +331,10 @@ export class OverworldScene implements Scene {
     }
     if (!menu.open && !shop.open) this.handleAction(cmd.act, () => this.act(this.local));
     for (const g of guests) if (g.cmd.act) this.act(g.p);
-    if (host) this.broadcast(dt);
+    if (host) {
+      this.broadcast(dt);
+      this.sendPacks(dt);
+    }
   }
 
   /** Guest: no simulation. Show what the host last said, and tell it what this player is doing. */
@@ -324,6 +342,10 @@ export class OverworldScene implements Scene {
     const { menu, shop, dialog, session } = this.ui;
     const snap = session.takeSnapshot();
     if (snap) this.applySnapshot(snap);
+    const pack = session.takePack();
+    if (pack) this.applyPack(pack);
+    const looks = session.takeLooks();
+    if (looks) this.applyLooks(looks);
     for (const p of this.players()) this.drawRemotePlayer(p, dt);
     for (const mob of this.mobs) mob.updateRemote(dt);
 
@@ -378,6 +400,7 @@ export class OverworldScene implements Scene {
     if (!remote) return;
     notice(remote);
     this.remotes.delete(slot);
+    this.sentPack.delete(slot);
     this.world.layer.removeChild(remote.body);
     this.ambient.forget(remote.body);
     remote.body.destroy({ children: true });
@@ -393,9 +416,13 @@ export class OverworldScene implements Scene {
   private enterClient() {
     // This machine's hero becomes the player the host seated it as. The solo hero is put back on disconnect.
     const slot = this.ui.session.slot;
-    this.solo = { stats: { ...this.hero.stats }, name: this.hero.name };
+    // The host owns this player's character from now on: a fresh hero whose stats, gold, pack and gear it keeps and sends.
+    this.solo = this.local.hero;
+    this.local.hero = newHero();
     this.local.setSlot(slot);
     this.hero.name = playerName(slot);
+    this.lastSay = -1;
+    this.ui.shop.close();
     this.player.setSheet(this.wardrobe.sheet(playerOutfit(slot, this.hero)));
     this.local.target = null;
     this.lastEvent = -1;
@@ -417,9 +444,10 @@ export class OverworldScene implements Scene {
 
     if (this.role === 'client') {
       // Back to the solo hero, standing where it ended up, with the mobs carrying on on their own.
-      if (this.solo) Object.assign(this.hero.stats, this.solo.stats);
-      this.hero.name = this.solo?.name ?? 'Hero';
+      if (this.solo) this.local.hero = this.solo;
       this.solo = null;
+      this.ui.shop.close();
+      this.ui.menu.refresh(this.hero);
       this.local.setSlot(0);
       this.player.setSheet(this.wardrobe.sheet(heroOutfit(this.hero)));
       this.local.target = null;
@@ -499,7 +527,92 @@ export class OverworldScene implements Scene {
     return [s.level, s.xp, round1(s.hp), s.maxHp, round1(s.mp), s.maxMp, s.attack, s.defense, s.magic];
   }
 
+  /** Host: carry out what each friend asked to do with their own gold and pack. The guest only sends wishes; these checks are the rules. */
+  private handleTrades() {
+    for (const p of this.remotes.values()) {
+      for (const request of this.ui.session.takeTrades(p.slot)) {
+        const out = this.tradeFor(p, request);
+        p.reply = { id: request.n, text: out.text, ok: out.ok };
+        if (out.gear) p.body.setSheet(this.wardrobe.sheet(playerOutfit(p.slot, p.hero)));
+      }
+    }
+  }
+
+  private tradeFor(p: Player, { op, item: code, shop: shopId }: DoMsg): Outcome {
+    const item = itemFromCode(code);
+    if (!item) return { ok: false, text: 'Unknown item' };
+    const trader = localTrader(p.hero);
+    if (op === 'wear') return trader.wear(item) ?? { ok: false, text: '' };
+    if (op === 'use') return trader.use(item) ?? { ok: false, text: '' };
+    // Buying and selling happen at a counter: the player has to be standing at that shop's keeper.
+    const shop = SHOPS[shopId];
+    const keeper = this.keepers.find((k) => k.shop === shopId);
+    if (!shop || !keeper) return { ok: false, text: 'Unknown shop' };
+    if (Math.hypot(p.body.x - keeper.body.x, p.body.y - keeper.body.y) > CELL * 3) {
+      return { ok: false, text: 'Too far from the counter' };
+    }
+    return (op === 'buy' ? trader.buy(shop, item) : trader.sell(shop, item)) ?? { ok: false, text: '' };
+  }
+
+  /** Host: tell each friend about their gold and pack when they change, and now and then in case a packet was lost. */
+  private sendPacks(dt: number) {
+    if (this.remotes.size === 0) return;
+    this.packTimer += dt;
+    const periodic = this.packTimer >= PACK_RESEND;
+    if (periodic) this.packTimer = 0;
+    const looks = this.players().map((p) => [p.slot, ...gearCodes(p.hero)]);
+    const looksSig = JSON.stringify(looks);
+    const looksChanged = looksSig !== this.sentLooks;
+    this.sentLooks = looksSig;
+    for (const [slot, p] of this.remotes) {
+      const body = {
+        gold: p.hero.gold,
+        worn: gearCodes(p.hero),
+        bag: bagCodes(p.hero),
+        ...(p.reply ? { say: p.reply } : {}),
+      };
+      const sig = JSON.stringify(body);
+      if (periodic || sig !== this.sentPack.get(slot)) {
+        this.sentPack.set(slot, sig);
+        this.ui.session.sendTo(slot, { k: 'pack', n: ++this.packSeq, ...body });
+      }
+      if (periodic || looksChanged) this.ui.session.sendTo(slot, { k: 'looks', n: ++this.packSeq, players: looks });
+    }
+  }
+
   // --- Co-op: guest side ---
+
+  /** Guest: the host's word on this player's gold, pack and gear. */
+  private applyPack(pack: PackMsg) {
+    const hero = this.hero;
+    const sig = JSON.stringify([pack.gold, pack.worn, pack.bag]);
+    const worn = gearCodes(hero).join();
+    hero.gold = pack.gold;
+    setGear(hero, pack.worn);
+    setBag(hero, pack.bag);
+    if (gearCodes(hero).join() !== worn) this.refreshLook();
+    if (pack.say && pack.say.id > this.lastSay) {
+      this.lastSay = pack.say.id;
+      this.ui.shop.report({ ok: pack.say.ok, text: pack.say.text });
+    }
+    if (sig === this.lastPackSig) return;
+    this.lastPackSig = sig;
+    this.ui.shop.refresh(hero); // the answer to a click, or a drop from a chest
+    this.ui.menu.refresh(hero);
+  }
+
+  /** Guest: what the other players wear. */
+  private applyLooks({ players }: LooksMsg) {
+    for (const [slot = -1, ...codes] of players) {
+      const remote = this.remotes.get(slot);
+      if (!remote) continue;
+      const before = gearCodes(remote.hero).join();
+      setGear(remote.hero, codes);
+      if (gearCodes(remote.hero).join() !== before) {
+        remote.body.setSheet(this.wardrobe.sheet(playerOutfit(slot, remote.hero)));
+      }
+    }
+  }
 
   /** Send the controls: when they change, and otherwise at INPUT_HZ so a lost packet is soon corrected. */
   private sendInput(dt: number, keys: number) {
@@ -670,16 +783,20 @@ export class OverworldScene implements Scene {
     }
   }
 
-  /** A shopkeeper greets the player, then the counter opens. A guest's gold lives on the host, so guests only chat for now. */
+  /** A shopkeeper greets the player, then the counter opens (for a guest the host settles each trade). */
   private talkToKeeper({ shop: id, body }: { shop: string; body: Character }) {
     const shop = SHOPS[id];
     if (!shop) return;
     body.face(directionToward(this.player.x - body.x, this.player.y - body.y));
-    if (this.role === 'client') {
-      this.ui.dialog.say([shop.greeting[0] ?? '', 'The counter is only open to whoever is hosting the game, for now.']);
-      return;
-    }
     this.ui.dialog.say(shop.greeting, () => this.ui.shop.show(shop, this.hero));
+  }
+
+  /** Who carries out trades for the local player: this machine, or the host (a guest's gold and pack are the host's). */
+  private trader(): Trader {
+    if (this.role !== 'client') return localTrader(this.hero);
+    return remoteTrader(({ op, item, shop }) => {
+      this.ui.session.send({ k: 'do', n: ++this.doSeq, op, item, shop });
+    });
   }
 
   /** Redraw the local hero for what it now wears (after the menu or a shop changed it). */

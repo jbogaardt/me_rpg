@@ -29,6 +29,8 @@ export class Player {
   // Host: the last action counters honoured from a network player (see protocol.ts).
   seenAct = 0;
   seenMag = 0;
+  /** Host: the answer to this friend's last trade request (they see it once, by its id). */
+  reply: { id: number; text: string; ok: boolean } | null = null;
   // Guest: where the host says this player is, and its FLAG bits.
   target: { x: number; y: number } | null = null;
   flags = 0;

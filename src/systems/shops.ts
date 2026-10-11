@@ -16,6 +16,8 @@ export const buyPrice = (item: Item): number => item.value ?? 0;
 export const sellPrice = (item: Item): number => Math.max(1, Math.floor((item.value ?? 0) * SELL_RATE));
 
 export interface Shop {
+  /** Its key in SHOPS (what a map and the network call it). */
+  id: string;
   /** The shop's name, as the counter's title. */
   name: string;
   /** Short label floating over the shopkeeper. */
@@ -40,6 +42,7 @@ const isSupply = (item: Item) => item.use !== undefined;
 
 export const SHOPS: Record<string, Shop> = {
   smithy: {
+    id: 'smithy',
     name: "Brannoch's Forge",
     tag: 'Blacksmith',
     keeper: 'smith',
@@ -48,6 +51,7 @@ export const SHOPS: Record<string, Shop> = {
     buys: (item) => isBlade(item) || isSlot('offhand')(item),
   },
   armory: {
+    id: 'armory',
     name: "Halda's Armory",
     tag: 'Armorer',
     keeper: 'armorer',
@@ -66,6 +70,7 @@ export const SHOPS: Record<string, Shop> = {
     buys: isSlot('head', 'chest', 'legs'),
   },
   ranger: {
+    id: 'ranger',
     name: "The Ranger's Lodge",
     tag: 'Ranger',
     keeper: 'ranger',
@@ -83,6 +88,7 @@ export const SHOPS: Record<string, Shop> = {
     buys: (item) => isBow(item) || isSlot('feet', 'cape')(item),
   },
   apothecary: {
+    id: 'apothecary',
     name: "Wren's Apothecary",
     tag: 'Apothecary',
     keeper: 'apothecary',

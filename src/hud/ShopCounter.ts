@@ -1,8 +1,9 @@
 import { input } from '../core/input';
 import type { Hero, Item } from '../systems/combat';
-import { isWorn, packEntries, upgrade, useFromPack, wearFromPack } from '../systems/inventory';
+import { isWorn, packEntries, upgrade } from '../systems/inventory';
 import { ITEMS, type ItemId } from '../systems/items';
-import { buy, buyPrice, sell, sellPrice, type Shop as ShopDef } from '../systems/shops';
+import { buyPrice, sellPrice, type Shop as ShopDef } from '../systems/shops';
+import type { Outcome, Trader } from '../systems/trader';
 import { bonuses } from './itemText';
 
 // A shopkeeper's counter (HTML overlay; markup in index.html, styles in src/ui.css). Two tabs: what the shop sells,
@@ -22,6 +23,10 @@ export class ShopCounter {
   private tab: Tab = 'buy';
   /** Called when a trade or the pack changed what the hero wears, so the scene can redraw the hero. */
   onGearChange: () => void = () => {};
+  /** Who carries out trades: this machine, or (for a co-op guest) the host. Set by the scene. */
+  trader: () => Trader = () => {
+    throw new Error('ShopCounter has no trader');
+  };
 
   constructor() {
     for (const name of TABS) this.tabButton(name).addEventListener('click', () => this.select(name));
@@ -60,6 +65,19 @@ export class ShopCounter {
     this.render();
   }
 
+  /** Show what a trade came to, and redraw the hero if what it wears changed. */
+  report({ ok, text, gear }: Outcome) {
+    this.say(text, !ok);
+    if (gear) this.onGearChange();
+  }
+
+  /** Draw the counter again (a guest's gold and pack change when the host's answer arrives). */
+  refresh(hero: Hero) {
+    if (!this.open) return;
+    this.hero = hero;
+    this.render();
+  }
+
   private say(text: string, error = false) {
     this.note.textContent = text;
     this.note.classList.toggle('error', error);
@@ -72,22 +90,13 @@ export class ShopCounter {
     button.blur(); // so the action key (Space) cannot press it again
     const { act, id, pack } = button.dataset;
     const entry = pack === undefined ? undefined : packEntries(hero)[Number(pack)];
-    if (act === 'buy' && id) {
-      const trade = buy(hero, shop, id as ItemId);
-      this.say(trade.text, !trade.ok);
-      if (trade.ok && trade.worn) this.onGearChange();
-    } else if (entry && act === 'sell') {
-      const trade = sell(hero, shop, entry.item);
-      this.say(trade.text, !trade.ok);
-    } else if (entry && act === 'wear') {
-      if (wearFromPack(hero, entry.item)) {
-        this.say(`Wearing ${entry.item.name}`);
-        this.onGearChange();
-      }
-    } else if (entry && act === 'use') {
-      const used = useFromPack(hero, entry.item);
-      this.say(used ? used.text : 'You do not need that right now', !used);
-    }
+    const trader = this.trader();
+    let outcome = null;
+    if (act === 'buy' && id) outcome = trader.buy(shop, ITEMS[id as ItemId]);
+    else if (entry && act === 'sell') outcome = trader.sell(shop, entry.item);
+    else if (entry && act === 'wear') outcome = trader.wear(entry.item);
+    else if (entry && act === 'use') outcome = trader.use(entry.item);
+    if (outcome) this.report(outcome);
     this.render();
   }
 

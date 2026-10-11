@@ -1,8 +1,8 @@
 // The pack: everything the hero owns but does not wear. Pure rules (the menu and the shops draw them).
 // Items are shared objects (ITEMS), so two potions are the same object twice in the pack; `packEntries` groups them.
 
-import { gainXp, type Hero, type Item } from './combat';
-import { equip } from './items';
+import { GEAR_SLOTS, gainXp, type Hero, type Item } from './combat';
+import { equip, ITEMS, type ItemId } from './items';
 
 /** A piece's worth in its slot: attack for blades and bows, defense for armor and shields, both added for a mix. */
 const worth = (item: Item | undefined) => (item?.attack ?? 0) + (item?.defense ?? 0);
@@ -78,3 +78,37 @@ export function useFromPack(hero: Hero, item: Item): Used | null {
   s.mp = Math.min(s.maxMp, s.mp + (use.mp ?? 0));
   return { text: use.mp ? 'HP and MP restored' : `+${use.hp} HP`, levels: gainXp(s, 0) };
 }
+
+// --- Item codes: how a hero's gear and pack travel over the network (src/net/protocol.ts). A code is the item's
+// place in ITEMS plus one (0 means nothing), so the same build on both sides agrees on every code.
+
+export const ITEM_IDS = Object.keys(ITEMS) as ItemId[];
+export const ITEM_COUNT = ITEM_IDS.length;
+
+/** The code of an item (0 if it is not one of ITEMS). */
+export const itemCode = (item: Item): number => ITEM_IDS.findIndex((id) => ITEMS[id] === item) + 1;
+
+/** The item with this code, or undefined for 0 and unknown codes. */
+export const itemFromCode = (code: number): Item | undefined => {
+  const id = ITEM_IDS[code - 1];
+  return id ? ITEMS[id] : undefined;
+};
+
+/** What the hero wears, one code per slot in GEAR_SLOTS order. */
+export const gearCodes = (hero: Hero): number[] => GEAR_SLOTS.map((slot) => (hero[slot] ? itemCode(hero[slot]) : 0));
+
+/** Wear exactly what `codes` says (a guest's copy of the host's hero). The weapon slot is never left empty. */
+export function setGear(hero: Hero, codes: readonly number[]): void {
+  GEAR_SLOTS.forEach((slot, i) => {
+    const item = itemFromCode(codes[i] ?? 0);
+    if (slot === 'weapon') hero.weapon = item ?? hero.weapon;
+    else if (item) hero[slot] = item;
+    else delete hero[slot];
+  });
+}
+
+/** The pack as codes, and back (unknown codes are dropped). */
+export const bagCodes = (hero: Hero): number[] => hero.bag.map(itemCode);
+export const setBag = (hero: Hero, codes: readonly number[]): void => {
+  hero.bag = codes.flatMap((c) => itemFromCode(c) ?? []);
+};

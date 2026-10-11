@@ -16,6 +16,10 @@ describe('SHOPS', () => {
     }
   });
 
+  it('are filed under their own id', () => {
+    for (const [key, shop] of Object.entries(SHOPS)) expect(shop.id).toBe(key);
+  });
+
   it('never sells the same thing from two shops', () => {
     const sold = Object.values(SHOPS).flatMap((s) => s.stock);
     expect(new Set(sold).size).toBe(sold.length);

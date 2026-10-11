@@ -10,12 +10,13 @@
 // Everything from the peer is untrusted input: parseMessage() validates the shape and ranges, never throws.
 
 import type { Direction } from '../entities/Character';
-import { MOB_STATES } from '../systems/combat';
+import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
+import { ITEM_COUNT } from '../systems/inventory';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 5;
+export const PROTOCOL_VERSION = 6;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -90,7 +91,43 @@ export interface SnapMsg {
   events: { id: number; e: WorldEvent }[];
 }
 
-export type Message = HelloMsg | InputMsg | SnapMsg;
+/** What a guest may ask the host to do with its own hero. The host checks every one (the guest only sends a wish). */
+export const TRADE_OPS = ['buy', 'sell', 'wear', 'use'] as const;
+export type TradeOp = (typeof TRADE_OPS)[number];
+
+/**
+ * Guest -> host: do something with my gold and pack. `item` is an item code (systems/inventory.ts); `shop` names the
+ * shop for `buy` and `sell` (the guest must be standing at its keeper). Lost messages are simply asked again by the player.
+ */
+export interface DoMsg {
+  k: 'do';
+  n: number; // sequence: only a newer one than the last seen counts
+  op: TradeOp;
+  item: number;
+  shop: string;
+}
+
+/**
+ * Host -> guest: the guest's own purse and pack, sent when it changes and now and then in case a packet is lost.
+ * `say` is the host's answer to the guest's last `do` (shown once; its id is that message's `n`).
+ */
+export interface PackMsg {
+  k: 'pack';
+  n: number;
+  gold: number;
+  worn: number[]; // an item code per GEAR_SLOTS slot
+  bag: number[]; // item codes
+  say?: { id: number; text: string; ok: boolean };
+}
+
+/** Host -> guest: what every player wears, `[player number, ...one item code per GEAR_SLOTS slot]`, so everyone's look is right. */
+export interface LooksMsg {
+  k: 'looks';
+  n: number;
+  players: number[][];
+}
+
+export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg;
 
 export const encodeMessage = (m: Message): string => JSON.stringify(m);
 
@@ -102,6 +139,8 @@ const MAX_CHEST_MASK = 2 ** MAX_CHESTS - 1;
 const MAX_MOBS = 256;
 const MAX_EVENTS = 64;
 const MAX_TEXT = 32;
+const MAX_BAG = 200;
+const MAX_SHOP_ID = 24;
 const MAX_COORD = 1e6;
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -176,6 +215,9 @@ function parseMob(raw: unknown): MobSnap | null {
   return ok ? [x, y, dir, state, hp, timer, moving] : null;
 }
 
+const isCode = (v: unknown): v is number => isCount(v) && v <= ITEM_COUNT;
+const codes = (v: unknown, length: number): v is number[] => numbers(v, length) && v.every(isCode);
+
 /** Parse and validate a raw channel message. Returns null for anything malformed. */
 export function parseMessage(raw: unknown): Message | null {
   if (typeof raw !== 'string' || raw.length > 64_000) return null;
@@ -232,6 +274,53 @@ export function parseMessage(raw: unknown): Message | null {
         chests: m.chests,
         events: events as { id: number; e: WorldEvent }[],
       };
+    }
+    case 'do':
+      return isCount(m.n) &&
+        TRADE_OPS.includes(m.op as TradeOp) &&
+        isCode(m.item) &&
+        typeof m.shop === 'string' &&
+        m.shop.length <= MAX_SHOP_ID
+        ? { k: 'do', n: m.n, op: m.op as TradeOp, item: m.item, shop: m.shop }
+        : null;
+    case 'pack': {
+      const say = m.say as { id?: unknown; text?: unknown; ok?: unknown } | undefined;
+      const sayOk =
+        say === undefined ||
+        (typeof say === 'object' &&
+          say !== null &&
+          isCount(say.id) &&
+          typeof say.text === 'string' &&
+          say.text.length <= 64 &&
+          typeof say.ok === 'boolean');
+      return isCount(m.n) &&
+        isCount(m.gold) &&
+        codes(m.worn, GEAR_SLOTS.length) &&
+        Array.isArray(m.bag) &&
+        m.bag.length <= MAX_BAG &&
+        m.bag.every(isCode) &&
+        sayOk
+        ? {
+            k: 'pack',
+            n: m.n,
+            gold: m.gold,
+            worn: m.worn,
+            bag: m.bag,
+            ...(say === undefined ? {} : { say: say as { id: number; text: string; ok: boolean } }),
+          }
+        : null;
+    }
+    case 'looks': {
+      const players = m.players;
+      const ok =
+        isCount(m.n) &&
+        Array.isArray(players) &&
+        players.length >= 1 &&
+        players.length <= MAX_PLAYERS &&
+        players.every(
+          (p: unknown) => numbers(p, 1 + GEAR_SLOTS.length) && isIndex(p[0], MAX_PLAYERS) && p.slice(1).every(isCode),
+        );
+      return ok && isCount(m.n) ? { k: 'looks', n: m.n, players: players as number[][] } : null;
     }
     default:
       return null;
