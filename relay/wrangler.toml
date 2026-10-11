@@ -1,7 +1,12 @@
-# The matchmaking relay for 2-player games. Deployed by .github/workflows/deploy-relay.yml; see relay/README.md.
+# The matchmaking relay for 2-player games. Cloudflare deploys it from main (Workers Builds); see relay/README.md.
 name = "me-rpg-relay"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
+
+# Served at https://me-rpg-relay.<account subdomain>.workers.dev. No per-version preview URLs: they would be
+# extra public addresses for the same relay.
+workers_dev = true
+preview_urls = false
 
 [vars]
 # Browser origins allowed to call the relay (the deployed game). localhost is always allowed for development.
