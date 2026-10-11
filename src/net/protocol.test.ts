@@ -12,6 +12,7 @@ import {
   type InputMsg,
   type LooksMsg,
   type PackMsg,
+  type GroundSnap,
   type MobSnap,
   type PlayerSnap,
   type SnapMsg,
@@ -30,6 +31,7 @@ const snap: SnapMsg = {
   mobs: [mob, [7, 1, 2, 0, 5, 0, 5000, 0]],
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10],
   chests: 5,
+  ground: [[3, 40.5, 50, 2, 150]],
   events: [
     { id: 4, e: { type: 'text', x: 5, y: 6, text: '+12 XP', color: 0xffb13f } },
     { id: 5, e: { type: 'slash', x: 1, y: 2, dir: 3, p: 2 } },
@@ -78,7 +80,8 @@ describe('messages', () => {
             ? ({ type: 'fx', name: 'hitSpark', x: 1500.4, y: 886.2, dir: 1.6 } as const)
             : ({ type: 'slash', x: 1500.4, y: 900.2, dir: 1, p: 2 } as const),
     }));
-    const big: SnapMsg = { ...snap, players: everyone, mobs: near, events };
+    const ground = Array.from({ length: 4 }, (_, i): GroundSnap => [100 + i, 1234.5, 2345.6, 25, 179]);
+    const big: SnapMsg = { ...snap, players: everyone, mobs: near, events, ground };
     expect(encodeMessage(big).length).toBeLessThan(1200);
   });
 
@@ -113,6 +116,38 @@ describe('messages', () => {
     ]) {
       expect(parseMessage(JSON.stringify({ ...base, ...patch }))).toBeNull();
     }
+  });
+
+  it('carries one Inventory action in an input, and rejects a malformed one', () => {
+    const base = { k: 'in', n: 1, keys: 0, act: 0, mag: 0, ack: 0, vr: 300 };
+    const ok = { ...base, inv: [3, 0, 2, -1] };
+    expect(parseMessage(JSON.stringify(ok))).toEqual(ok);
+    for (const inv of [
+      [0, 0, 2, 0],
+      [1, 0, 2],
+      [1, 0, 2, 0, 0],
+      'x',
+      [1, 0, 'a', 0],
+      [1.5, 0, 0, 0],
+      [-1, 0, 0, 0],
+      [1, 9999, 0, 0],
+    ]) {
+      expect(parseMessage(JSON.stringify({ ...base, inv }))).toBeNull();
+    }
+  });
+
+  it('rejects a snapshot with bad ground items', () => {
+    const bad: Record<string, unknown>[] = [
+      { ...snap, ground: undefined },
+      { ...snap, ground: Array.from({ length: 17 }, (_, i) => [i, 1, 2, 1, 60]) }, // too many
+      { ...snap, ground: [[1, 2, 3, 0, 60]] }, // nothing is not an item
+      { ...snap, ground: [[1, 2, 3, 9999, 60]] }, // no such item
+      { ...snap, ground: [[1, Infinity, 3, 1, 60]] },
+      { ...snap, ground: [[1, 2, 3, 1]] }, // no time left given
+      { ...snap, ground: [[1, 2, 3, 1, -1]] },
+      { ...snap, ground: [[1, 2, 3, 1, 9999]] }, // longer than an item lasts
+    ];
+    for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m).slice(0, 80)).toBeNull();
   });
 
   it('rejects malformed snapshots', () => {
@@ -177,6 +212,7 @@ describe('trade, pack and looks messages', () => {
     gold: 120,
     worn: [1, 0, 0, 0, 0, 0, 27, 0, 0],
     items: [1, 28, 28],
+    ack: 2,
     say: { id: 3, text: 'Bought it', ok: true },
   };
   const { say: _say, ...packNoSay } = pack;

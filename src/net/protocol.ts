@@ -13,13 +13,13 @@
 
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
-import { ITEM_COUNT } from '../systems/inventory';
+import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../systems/inventory';
 import type { Note, SideWire, TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 9;
+export const PROTOCOL_VERSION = 10;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -79,12 +79,20 @@ export interface InputMsg {
   mag: number; // times the magic button was pressed
   ack: number; // id of the newest world event this guest has shown (0: none yet)
   vr: number; // how far the guest can see, in world px from its player: the host sends it the mobs within this
+  /**
+   * The oldest Inventory action the host has not confirmed yet: [number, ...InvOpWire]. Numbered 1, 2, 3...; the host
+   * does each once and in order, and says how far it got in PackMsg.ack, so a lost packet only delays it.
+   */
+  inv?: [number, ...InvOpWire];
 }
 
 /**
  * Host -> guest: the world the guest is standing in. `players` lists everyone in that zone, the host included, each
  * tagged with their player number; `me` is the recipient's own stats.
  */
+/** [id, x, y, item code, seconds before it crumbles away] of an item lying on the ground. */
+export type GroundSnap = [number, number, number, number, number];
+
 export interface SnapMsg {
   k: 'snap';
   n: number;
@@ -96,6 +104,7 @@ export interface SnapMsg {
   mobs: MobSnap[]; // only the mobs near the recipient, and a still one only now and then
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
+  ground: GroundSnap[]; // items lying on the ground in that zone
   events: { id: number; e: WorldEvent }[];
 }
 
@@ -125,6 +134,7 @@ export interface PackMsg {
   gold: number;
   worn: number[]; // an item code per GEAR_SLOTS slot
   items: number[]; // the pack, as item codes
+  ack: number; // how many of this guest's Inventory actions (InputMsg.inv) the host has done
   say?: { id: number; text: string; ok: boolean };
 }
 
@@ -174,6 +184,7 @@ const MAX_ZONE_NAME = 32;
 const MAX_COORD = 1e6;
 /** The largest view radius a guest may ask for (world px): a 4K window at zoom 1 is about 2300. */
 export const MAX_VIEW = 4096;
+const MAX_PACK_ACTIONS = 64; // an Inventory action's pack index or slot
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isCoord = (v: unknown): v is number => isNum(v) && Math.abs(v) <= MAX_COORD;
@@ -299,6 +310,13 @@ function parsePlayer(raw: unknown): PlayerSnap | null {
   return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 7 ? [slot, x, y, dir, flags] : null;
 }
 
+function parseGround(raw: unknown): GroundSnap | null {
+  if (!numbers(raw, 5)) return null;
+  const [id, x, y, code, left] = raw as GroundSnap;
+  const ok = isCount(id) && isCoord(x) && isCoord(y) && isIndex(code, ITEM_COUNT + 1) && code > 0;
+  return ok && left >= 0 && left <= GROUND_LIFETIME ? [id, x, y, code, left] : null;
+}
+
 function parseMob(raw: unknown): MobSnap | null {
   if (!numbers(raw, 8)) return null;
   const [index, x, y, dir, state, hp, timer, moving] = raw as MobSnap;
@@ -333,8 +351,9 @@ export function parseMessage(raw: unknown): Message | null {
       return isCount(m.v) && typeof m.build === 'string' && m.build.length <= 64
         ? { k: 'hello', v: m.v, build: m.build }
         : null;
-    case 'in':
-      return isCount(m.n) &&
+    case 'in': {
+      if (!(
+        isCount(m.n) &&
         isCount(m.keys) &&
         m.keys <= 15 &&
         isCount(m.act) &&
@@ -342,14 +361,27 @@ export function parseMessage(raw: unknown): Message | null {
         isCount(m.ack) &&
         isCount(m.vr) &&
         m.vr <= MAX_VIEW
-        ? { k: 'in', n: m.n, keys: m.keys, act: m.act, mag: m.mag, ack: m.ack, vr: m.vr }
+      )) {
+        return null;
+      }
+      const base = { k: 'in', n: m.n, keys: m.keys, act: m.act, mag: m.mag, ack: m.ack, vr: m.vr } as const;
+      if (m.inv === undefined) return base;
+      const inv = m.inv;
+      return numbers(inv, 4) &&
+        isCount(inv[0]) &&
+        inv[0] > 0 &&
+        inv.slice(1).every((v) => Math.abs(v) <= MAX_PACK_ACTIONS)
+        ? { ...base, inv: [inv[0], inv[1] as number, inv[2] as number, inv[3] as number] }
         : null;
+    }
     case 'snap': {
       const players =
         Array.isArray(m.players) && m.players.length >= 1 && m.players.length <= MAX_PLAYERS
           ? m.players.map(parsePlayer)
           : null;
       const mobs = Array.isArray(m.mobs) && m.mobs.length <= MAX_MOBS ? m.mobs.map(parseMob) : null;
+      const ground =
+        Array.isArray(m.ground) && m.ground.length <= MAX_GROUND ? (m.ground as unknown[]).map(parseGround) : null;
       const rawEvents = Array.isArray(m.events) && m.events.length <= MAX_EVENTS ? m.events : null;
       const events = (rawEvents ?? []).map((item: unknown) => {
         const { id, e } = (item ?? {}) as { id?: unknown; e?: unknown };
@@ -371,6 +403,8 @@ export function parseMessage(raw: unknown): Message | null {
         mobs.includes(null) ||
         !rawEvents ||
         events.includes(null) ||
+        !ground ||
+        ground.includes(null) ||
         !numbers(m.me, 9) ||
         !isCount(m.chests) ||
         m.chests > MAX_CHEST_MASK
@@ -386,6 +420,7 @@ export function parseMessage(raw: unknown): Message | null {
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
         chests: m.chests,
+        ground: ground as GroundSnap[],
         events: events as { id: number; e: WorldEvent }[],
       };
     }
@@ -413,6 +448,7 @@ export function parseMessage(raw: unknown): Message | null {
         Array.isArray(m.items) &&
         m.items.length <= MAX_PACK &&
         m.items.every(isCode) &&
+        isCount(m.ack) &&
         sayOk
         ? {
             k: 'pack',
@@ -420,6 +456,7 @@ export function parseMessage(raw: unknown): Message | null {
             gold: m.gold,
             worn: m.worn,
             items: m.items,
+            ack: m.ack,
             ...(say === undefined ? {} : { say: say as { id: number; text: string; ok: boolean } }),
           }
         : null;

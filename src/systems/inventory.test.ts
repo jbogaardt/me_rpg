@@ -3,6 +3,14 @@ import { GEAR_SLOTS, newHero } from './combat';
 import { collect } from './chests';
 import {
   addToPack,
+  applyInvOp,
+  decodeOp,
+  encodeOp,
+  GROUND_LIFETIME,
+  GROUND_WARNING,
+  groundFading,
+  groundRemaining,
+  type InvOp,
   BASE_PACK,
   dropFromPack,
   dropWorn,
@@ -301,5 +309,78 @@ describe('item codes', () => {
     expect(hero.head).toBeUndefined();
     expect(hero.cape).toBeUndefined();
     expect(hero.weapon).toBe(ITEMS.rustySword);
+  });
+});
+
+describe('Inventory actions as data', () => {
+  const ops: InvOp[] = [
+    { t: 'equip', index: 3 },
+    { t: 'equip', index: 0, slot: 'offhand' },
+    { t: 'unequip', slot: 'cape' },
+    { t: 'use', index: 2 },
+    { t: 'dropPack', index: 7 },
+    { t: 'dropWorn', slot: 'bag' },
+  ];
+
+  it('survives the wire', () => {
+    for (const op of ops) expect(decodeOp(encodeOp(op))).toEqual(op);
+  });
+
+  it('refuses junk from a peer', () => {
+    for (const wire of [
+      [9, 0, 0],
+      [0, -1, -1],
+      [0, 1.5, -1],
+      [0, 1, 99],
+      [1, 99, 0],
+      [3, -1, 0],
+      [2, 99, 0],
+      [4, -1, 0],
+    ] as const) {
+      expect(decodeOp([...wire]), wire.join()).toBeNull();
+    }
+  });
+
+  it('does the action and hands back what was dropped', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.kettleHat);
+    expect(applyInvOp(hero, { t: 'dropPack', index: 0 })).toEqual({ ok: true, dropped: ITEMS.kettleHat });
+    expect(hero.pack).toEqual([]);
+    expect(applyInvOp(hero, { t: 'dropWorn', slot: 'cape' })).toEqual({ ok: true, dropped: ITEMS.travelerCloak });
+    expect(hero.cape).toBeUndefined();
+  });
+
+  it('drinks a supply, and refuses when it would do nothing', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.potion);
+    expect(applyInvOp(hero, { t: 'use', index: 0 }).ok).toBe(false); // already at full health
+    expect(hero.pack).toHaveLength(1);
+    hero.stats.hp = 5;
+    expect(applyInvOp(hero, { t: 'use', index: 0 }).ok).toBe(true);
+    expect(hero.pack).toHaveLength(0);
+  });
+
+  it('changes nothing when an action fails', () => {
+    const hero = newHero();
+    for (const op of [
+      { t: 'dropPack', index: 0 },
+      { t: 'dropWorn', slot: 'weapon' },
+      { t: 'unequip', slot: 'head' },
+    ] as const) {
+      expect(applyInvOp(hero, op).ok).toBe(false);
+    }
+    expect(hero).toEqual(newHero());
+  });
+});
+
+describe('items on the ground', () => {
+  it('last three minutes, and blink for the last stretch', () => {
+    expect(GROUND_LIFETIME).toBe(180);
+    expect(groundRemaining(0)).toBe(180);
+    expect(groundRemaining(100)).toBe(80);
+    expect(groundRemaining(500)).toBe(0);
+    expect(groundFading(GROUND_LIFETIME - 100)).toBe(false);
+    expect(groundFading(GROUND_WARNING - 1)).toBe(true);
+    expect(groundFading(0)).toBe(true);
   });
 });

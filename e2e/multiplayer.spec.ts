@@ -114,6 +114,51 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await expect(join.locator('#hud-mp .label')).not.toHaveText('20 / 20');
 });
 
+/** The pack grid's filled slots, in the open inventory. */
+const carried = (page: Page) => page.locator('#menu-inventory .inv-grid.pack .slot:not(.empty)');
+
+/** Open the inventory, take off or drop the worn cloak, and close it again. */
+async function dropCloak(page: Page) {
+  await page.keyboard.press('KeyI');
+  await expect(page.locator('#menu-inventory .inv-grid.worn [data-worn="cape"]:not(.empty)')).toBeVisible();
+  await page.locator('#menu-inventory [data-worn="cape"]').click();
+  await page.locator('#menu-inventory [data-action="drop"]').click();
+  await expect(page.locator('#menu-inventory [data-worn="cape"].empty')).toBeVisible();
+  await page.keyboard.press('KeyI');
+  await expect(page.locator('#menu')).toBeHidden();
+}
+
+test('both players can drop items and pick them up, and the host decides what is on the ground', async ({
+  browser,
+}) => {
+  const host = await open(browser, '/');
+  const code = await createGame(host);
+  const join = await open(browser, '/');
+  await joinWithCode(join, code);
+  await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 2', { timeout: 30_000 });
+  await host.locator('#mp-start').click();
+  await expect(host.locator('#menu')).toBeHidden();
+  await join.keyboard.press('Escape');
+  await expect(join.locator('#menu')).toBeHidden();
+
+  // The friend drops their cloak: it is gone from their body (the host did it, and the guest agrees)...
+  await dropCloak(join);
+  // ...and lying a step ahead of them, so the action key puts it in their pack.
+  await join.keyboard.press('Space');
+  await join.keyboard.press('KeyI');
+  await expect(carried(join)).toHaveCount(1, { timeout: 15_000 });
+  await join.keyboard.press('KeyI');
+
+  // The host drops theirs; the friend, standing close by, can pick that up too.
+  await dropCloak(host);
+  await join.keyboard.press('Space');
+  await join.keyboard.press('KeyI');
+  await expect(carried(join)).toHaveCount(2, { timeout: 15_000 });
+  await expect(join.locator('#menu-inventory .inv-col h3 small').last()).toHaveText('2 / 10');
+  await host.keyboard.press('KeyI');
+  await expect(carried(host)).toHaveCount(0); // the host's pack never got it
+});
+
 test('players next to each other can trade: ask, accept or deny, a shared window, cancel', async ({ browser }) => {
   const host = await open(browser, '/');
   await host.keyboard.press('Escape');

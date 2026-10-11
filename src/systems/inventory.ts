@@ -248,3 +248,91 @@ export const packCodes = (hero: Hero): number[] => hero.pack.map(itemCode);
 export const setPack = (hero: Hero, codes: readonly number[]): void => {
   hero.pack = codes.flatMap((c) => itemFromCode(c) ?? []);
 };
+
+// --- Pack actions as data (so a co-op guest can ask the host to do them) ---
+
+/** Something a player does on the Inventory screen. */
+export type InvOp =
+  | { t: 'equip'; index: number; slot?: GearSlot } // pack item -> worn (default: its own slot)
+  | { t: 'unequip'; slot: GearSlot }
+  | { t: 'use'; index: number } // drink a supply from the pack
+  | { t: 'dropPack'; index: number }
+  | { t: 'dropWorn'; slot: GearSlot };
+
+/** Seconds an item lies on the ground before it crumbles away. */
+export const GROUND_LIFETIME = 180;
+/** It starts to blink this many seconds before it goes. */
+export const GROUND_WARNING = 20;
+
+/** Seconds left for an item that has lain `age` seconds (never negative). */
+export const groundRemaining = (age: number): number => Math.max(0, GROUND_LIFETIME - age);
+
+/** Is an item with this long left about to go (so it should blink)? */
+export const groundFading = (remaining: number): boolean => remaining < GROUND_WARNING;
+
+/** Most items lying on the ground in one zone at once (they ride in every co-op snapshot). */
+export const MAX_GROUND = 16;
+
+/** Do an action. A drop hands the item back as `dropped` (the caller puts it on the ground). Changes nothing on failure. */
+export function applyInvOp(hero: Hero, op: InvOp): Result & { dropped?: Item; text?: string } {
+  switch (op.t) {
+    case 'equip':
+      return equipFromPack(hero, op.index, op.slot);
+    case 'unequip':
+      return unequip(hero, op.slot);
+    case 'use': {
+      const item = hero.pack[op.index];
+      const used = item && useFromPack(hero, item);
+      return used ? { ok: true, text: used.text } : { ok: false, reason: 'You do not need that right now.' };
+    }
+    case 'dropPack': {
+      if (!hero.pack[op.index]) return fail('Nothing there.');
+      return { ok: true, dropped: dropFromPack(hero, op.index) };
+    }
+    case 'dropWorn': {
+      const r = dropWorn(hero, op.slot);
+      return r.ok ? { ok: true, dropped: r.item } : r;
+    }
+  }
+}
+
+/** The wire form of an action: [kind, a, b], numbers only (slots are GEAR_SLOTS indexes, -1 for none). */
+export type InvOpWire = [number, number, number];
+
+export function encodeOp(op: InvOp): InvOpWire {
+  const slot = (g: GearSlot | undefined) => (g ? GEAR_SLOTS.indexOf(g) : -1);
+  switch (op.t) {
+    case 'equip':
+      return [0, op.index, slot(op.slot)];
+    case 'unequip':
+      return [1, slot(op.slot), 0];
+    case 'dropPack':
+      return [2, op.index, 0];
+    case 'dropWorn':
+      return [3, slot(op.slot), 0];
+    case 'use':
+      return [4, op.index, 0];
+  }
+}
+
+/** Read a wire action back, or null when it is not one (values come from a peer, so nothing is trusted). */
+export function decodeOp([kind, a, b]: InvOpWire): InvOp | null {
+  const slot = GEAR_SLOTS[a];
+  const index = Number.isInteger(a) && a >= 0 && a < 64;
+  switch (kind) {
+    case 0:
+      return index && b >= -1 && b < GEAR_SLOTS.length
+        ? { t: 'equip', index: a, ...(b >= 0 ? { slot: GEAR_SLOTS[b] } : {}) }
+        : null;
+    case 1:
+      return slot ? { t: 'unequip', slot } : null;
+    case 2:
+      return index ? { t: 'dropPack', index: a } : null;
+    case 3:
+      return slot ? { t: 'dropWorn', slot } : null;
+    case 4:
+      return index ? { t: 'use', index: a } : null;
+    default:
+      return null;
+  }
+}

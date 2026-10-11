@@ -32,6 +32,7 @@ import {
   packKeys,
   round1,
   unpackKeys,
+  type GroundSnap,
   type PlayerSnap,
   type SnapMsg,
   type FxName,
@@ -55,10 +56,25 @@ import {
 import { CHEST_LOOTS, collect } from '../systems/chests';
 import { isIce, stepVelocity } from '../systems/ice';
 import { equip } from '../systems/items';
-import { addToPack } from '../systems/inventory';
 import { heroOutfit, PLAYER_COLORS, playerName, playerOutfit, playerTag } from '../systems/looks';
 import { SHOPS } from '../systems/shops';
-import { packCodes, gearCodes, itemFromCode, setPack, setGear } from '../systems/inventory';
+import {
+  addToPack,
+  applyInvOp,
+  decodeOp,
+  encodeOp,
+  gearCodes,
+  GROUND_LIFETIME,
+  itemCode,
+  itemFromCode,
+  MAX_GROUND,
+  packCodes,
+  setGear,
+  setPack,
+  type InvOp,
+  type InvOpWire,
+  type Result,
+} from '../systems/inventory';
 import { TRADE_START, TradeBook, viewFromWire, viewToWire, type TradeCommand, type TradeView } from '../systems/trade';
 import { localTrader, remoteTrader, type Outcome, type Trader } from '../systems/trader';
 import { SHOOT_RELEASE_MS } from '../sprites/doll';
@@ -158,7 +174,11 @@ export class OverworldScene implements Scene {
   private inputSeq = 0;
   private actCount = 0; // guest: action / magic presses so far, sent as counters
   private magCount = 0;
-  private sent = { keys: -1, act: -1, mag: -1, ack: -1, vr: -1 };
+  private sent = { keys: -1, act: -1, mag: -1, ack: -1, vr: -1, inv: 0 };
+  private groundId = 0; // host and solo: numbers the items on the ground (guests are told the numbers)
+  private pendingOps: { seq: number; op: InvOp }[] = []; // guest: Inventory actions the host has not confirmed yet
+  private invSeq = 0;
+  private soloGround = new Map<string, { item: Item; x: number; y: number; age: number }[]>(); // a guest's solo items
   private solo: Hero | null = null; // guest: the solo hero (stats, gold, pack, gear), put back on disconnect
   private doSeq = 0; // guest: numbers its requests to the host
   private packSeq = 0; // host: numbers the pack and looks messages
@@ -296,12 +316,7 @@ export class OverworldScene implements Scene {
   }
 
   enter() {
-    this.ui.menu.inventory.attach({
-      locked: () => (this.role === 'client' ? 'In a co-op game your gear is kept by the host.' : null),
-      noDrop: () => (this.role === 'solo' ? null : 'Items cannot be dropped in a co-op game yet.'),
-      gearChanged: () => this.refreshLook(),
-      drop: (item) => this.dropItem(item),
-    });
+    this.ui.menu.inventory.attach({ apply: (op) => this.doInvOp(op) });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
     if (this.ui.session.urlCode) this.ui.menu.toggle(this.hero, 'online');
   }
@@ -411,6 +426,7 @@ export class OverworldScene implements Scene {
           const present = this.players();
           for (const p of present) this.updatePlayer(p, commandOf(p), dt);
           for (const mob of z.mobs) mob.update(dt, z.mobWorld);
+          this.ageGround(dt);
           for (const p of present) if (commandOf(p).mag) this.cast(p);
           if (z !== here) z.effects.update(dt); // the local zone's effects are updated with the rest of what is drawn
         });
@@ -610,6 +626,9 @@ export class OverworldScene implements Scene {
     // The host owns this player's character from now on: a fresh hero whose stats, gold, pack and gear it keeps and sends.
     this.solo = this.local.hero;
     this.local.hero = newHero();
+    this.stashGround(); // the host's world has its own items on the ground
+    this.pendingOps = [];
+    this.invSeq = 0;
     this.local.setSlot(slot);
     this.hero.name = playerName(slot);
     this.lastSay = -1;
@@ -619,9 +638,40 @@ export class OverworldScene implements Scene {
     this.local.target = null;
     this.lastEvent = -1;
     this.actCount = this.magCount = this.inputSeq = 0;
-    this.sent = { keys: -1, act: -1, mag: -1, ack: -1, vr: -1 };
+    this.sent = { keys: -1, act: -1, mag: -1, ack: -1, vr: -1, inv: 0 };
     this.inputTimer = 0;
     this.applyTags();
+  }
+
+  /** Guest: set this machine's own items on the ground aside, and clear every zone for the host's. */
+  private stashGround() {
+    this.soloGround.clear();
+    for (const z of this.zones.values()) {
+      this.soloGround.set(
+        z.name,
+        z.ground.map((g) => ({ item: g.item, x: g.x, y: g.y, age: g.age })),
+      );
+      for (const g of [...z.ground]) {
+        z.ground.splice(z.ground.indexOf(g), 1);
+        g.destroy({ children: true });
+      }
+    }
+  }
+
+  /** Back to solo: the host's items go, and this machine's own come back (with the time they had left). */
+  private restoreGround() {
+    for (const z of this.zones.values()) {
+      for (const g of [...z.ground]) {
+        z.ground.splice(z.ground.indexOf(g), 1);
+        g.destroy({ children: true });
+      }
+      for (const { item, x, y, age } of this.soloGround.get(z.name) ?? []) {
+        const g = new GroundItem(item, x, y, ++this.groundId, age);
+        z.ground.push(g);
+        z.world.layer.addChild(g);
+      }
+    }
+    this.soloGround.clear();
   }
 
   private leaveCoop() {
@@ -638,6 +688,8 @@ export class OverworldScene implements Scene {
       // Back to the solo hero, standing where it ended up, with the mobs carrying on on their own.
       if (this.solo) this.local.hero = this.solo;
       this.solo = null;
+      this.restoreGround();
+      this.pendingOps = [];
       this.ui.shop.close();
       this.ui.menu.refresh(this.hero);
       this.local.setSlot(0);
@@ -714,6 +766,13 @@ export class OverworldScene implements Scene {
             away: everyone.filter((p) => p.zone !== z.name).map((p) => p.slot),
             players: everyone.filter((p) => p.zone === z.name).map((p) => this.snapPlayer(p)),
             chests: z.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
+            ground: z.ground.map((g): GroundSnap => [
+              g.id,
+              round1(g.x),
+              round1(g.y),
+              itemCode(g.item),
+              Math.ceil(g.remaining),
+            ]),
           },
           states: z.mobs.map((m) => encodeMob(m.view())),
         };
@@ -754,6 +813,7 @@ export class OverworldScene implements Scene {
         p.reply = { id: request.n, text: out.text, ok: out.ok };
         if (out.gear) p.body.setSheet(this.wardrobe.sheet(playerOutfit(p.slot, p.hero)));
       }
+      this.inZone(this.zoneOf(p), () => this.applyPeerInv(p));
     }
   }
 
@@ -788,6 +848,7 @@ export class OverworldScene implements Scene {
         gold: p.hero.gold,
         worn: gearCodes(p.hero),
         items: packCodes(p.hero),
+        ack: p.seenInv,
         ...(p.reply ? { say: p.reply } : {}),
       };
       const sig = JSON.stringify(body);
@@ -903,8 +964,12 @@ export class OverworldScene implements Scene {
     const sig = JSON.stringify([pack.gold, pack.worn, pack.items]);
     const worn = gearCodes(hero).join();
     hero.gold = pack.gold;
-    setGear(hero, pack.worn);
-    setPack(hero, pack.items);
+    this.pendingOps = this.pendingOps.filter((o) => o.seq > pack.ack);
+    if (this.pendingOps.length === 0) {
+      // Take the host's word for the gear and pack, once it has done every action sent (until then ours is ahead of it).
+      setGear(hero, pack.worn);
+      setPack(hero, pack.items);
+    }
     if (gearCodes(hero).join() !== worn) this.refreshLook();
     if (pack.say && pack.say.id > this.lastSay) {
       this.lastSay = pack.say.id;
@@ -935,16 +1000,29 @@ export class OverworldScene implements Scene {
     const ack = Math.max(0, this.lastEvent);
     const view = this.camera.view(this.screen.width, this.screen.height);
     const vr = Math.min(MAX_VIEW, Math.ceil(Math.hypot(view.w, view.h) / 2));
+    const pending = this.pendingOps[0]; // the oldest action the host has not confirmed, repeated until it does
     const changed =
       keys !== this.sent.keys ||
       this.actCount !== this.sent.act ||
       this.magCount !== this.sent.mag ||
       ack !== this.sent.ack ||
-      vr !== this.sent.vr;
+      vr !== this.sent.vr ||
+      (pending?.seq ?? 0) !== this.sent.inv;
     if (!changed && this.inputTimer < 1 / INPUT_HZ) return;
     this.inputTimer = 0;
-    const msg = { k: 'in', n: ++this.inputSeq, keys, act: this.actCount, mag: this.magCount, ack, vr } as const;
-    if (this.ui.session.send(msg)) this.sent = { keys, act: this.actCount, mag: this.magCount, ack, vr };
+    const msg = {
+      k: 'in',
+      n: ++this.inputSeq,
+      keys,
+      act: this.actCount,
+      mag: this.magCount,
+      ack,
+      vr,
+      ...(pending ? { inv: [pending.seq, ...encodeOp(pending.op)] as [number, ...InvOpWire] } : {}),
+    } as const;
+    if (this.ui.session.send(msg)) {
+      this.sent = { keys, act: this.actCount, mag: this.magCount, ack, vr, inv: pending?.seq ?? 0 };
+    }
   }
 
   private applySnapshot(snap: SnapMsg) {
@@ -981,6 +1059,7 @@ export class OverworldScene implements Scene {
     }
 
     this.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
+    this.syncGround(snap.ground);
     for (const [index, ...state] of snap.mobs) this.mobs[index]?.setRemote(decodeMob(state)); // only the mobs the host listed: the rest are out of sight
 
     const [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] = snap.me;
@@ -1178,8 +1257,8 @@ export class OverworldScene implements Scene {
   }
 
   /** Redraw the local hero for what it now wears (after the menu or a shop changed it). */
-  private refreshLook() {
-    this.player.setSheet(this.wardrobe.sheet(playerOutfit(this.local.slot, this.hero)));
+  private refreshLook(p: Player = this.local) {
+    p.body.setSheet(this.wardrobe.sheet(playerOutfit(p.slot, p.hero)));
   }
 
   /** A player's action button (host and solo): open a chest within reach, otherwise swing. */
@@ -1188,7 +1267,7 @@ export class OverworldScene implements Scene {
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
     if (chest) return this.openChest(p, chest);
-    const loose = p === this.local && this.nearestGround(p);
+    const loose = this.nearestGround(p);
     if (loose) this.pickUp(p, loose);
     else this.attack(p);
   }
@@ -1203,23 +1282,83 @@ export class OverworldScene implements Scene {
     return best;
   }
 
-  /** Pick an item up off the ground into the pack (it stays put if the pack is full). */
+  /** Pick an item up off the ground into the player's pack (it stays put if the pack is full). */
   private pickUp(p: Player, g: GroundItem) {
-    if (!addToPack(p.hero, g.item)) return this.effects.add(floatText(g.x, g.y - 22, 'Pack full', 0xff8a7a));
     const [x, y, name] = [g.x, g.y, g.item.name];
-    this.ground.splice(this.ground.indexOf(g), 1);
-    g.destroy({ children: true }); // also takes it off the world layer
-    this.effects.add(floatText(x, y - 22, name, 0xffd34d));
+    if (!addToPack(p.hero, g.item)) return this.text(x, y - 22, 'Pack full', 0xff8a7a);
+    this.removeGround(g);
+    this.text(x, y - 22, name, 0xffd34d);
   }
 
-  /** Put an item on the ground a step ahead of the local hero (or at their feet if something is in the way). */
-  private dropItem(item: Item) {
-    const { x, y, facing } = this.player;
-    const [vx, vy] = DIR_VEC[facing];
-    const fits = this.collision.fitsMap(x + vx * 20, y + vy * 20);
-    const g = new GroundItem(item, fits ? x + vx * 20 : x, fits ? y + vy * 20 : y);
+  private addGround(item: Item, x: number, y: number, id = ++this.groundId, age = 0) {
+    const g = new GroundItem(item, x, y, id, age);
     this.ground.push(g);
     this.world.layer.addChild(g);
+  }
+
+  private removeGround(g: GroundItem) {
+    this.ground.splice(this.ground.indexOf(g), 1);
+    g.destroy({ children: true }); // also takes it off the world layer
+  }
+
+  /** Host and solo: let time pass for the items on the ground here; one that has lain too long puffs away. */
+  private ageGround(dt: number) {
+    for (const g of [...this.ground]) {
+      g.tick(dt);
+      if (g.remaining > 0) continue;
+      this.fx('mobPoof', g.x, g.y - 8);
+      this.removeGround(g);
+    }
+  }
+
+  /** Put an item on the ground a step ahead of a player (or at their feet if something is in the way). */
+  private dropItem(p: Player, item: Item) {
+    const { x, y, facing } = p.body;
+    const [vx, vy] = DIR_VEC[facing];
+    const fits = this.collision.fitsMap(x + vx * 20, y + vy * 20);
+    this.addGround(item, fits ? x + vx * 20 : x, fits ? y + vy * 20 : y);
+  }
+
+  /** An Inventory action by the local player: done here, or (a co-op guest) done here at once and also sent to the host. */
+  private doInvOp(op: InvOp): Result {
+    const dropping = op.t === 'dropPack' || op.t === 'dropWorn';
+    if (dropping && this.ground.length >= MAX_GROUND) return { ok: false, reason: 'Too many items are lying around.' };
+    const result = applyInvOp(this.hero, op);
+    if (!result.ok) return result;
+    this.refreshLook();
+    if (this.role === 'client') {
+      this.pendingOps.push({ seq: ++this.invSeq, op });
+      this.inputTimer = 1; // send it now
+    } else if (result.dropped) {
+      this.dropItem(this.local, result.dropped);
+    }
+    return result;
+  }
+
+  /** Host: do the Inventory action a friend is asking for (each is numbered, and done once and in order). */
+  private applyPeerInv(p: Player) {
+    const msg = this.ui.session.peerInput(p.slot)?.inv;
+    if (!msg || msg[0] !== p.seenInv + 1) return;
+    p.seenInv = msg[0];
+    const op = decodeOp([msg[1], msg[2], msg[3]]);
+    if (!op) return;
+    if ((op.t === 'dropPack' || op.t === 'dropWorn') && this.ground.length >= MAX_GROUND) return;
+    const result = applyInvOp(p.hero, op);
+    if (!result.ok) return;
+    this.refreshLook(p);
+    if (result.dropped) this.dropItem(p, result.dropped);
+  }
+
+  /** Guest: show the items the host says are on the ground in this zone (and no others). */
+  private syncGround(list: GroundSnap[]) {
+    const ids = new Set(list.map((g) => g[0]));
+    for (const g of [...this.ground]) if (!ids.has(g.id)) this.removeGround(g);
+    for (const [id, x, y, code, left] of list) {
+      const known = this.ground.find((g) => g.id === id);
+      const item = itemFromCode(code);
+      if (known) known.setRemaining(left);
+      else if (item) this.addGround(item, x, y, id, GROUND_LIFETIME - left);
+    }
   }
 
   private openChest(p: Player, chest: Chest) {
