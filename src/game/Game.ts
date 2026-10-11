@@ -4,7 +4,7 @@ import { CELL, type CellPoint, type MapData } from '../map/types';
 import { input } from './input';
 import { Character, DIR_VEC, directionToward } from './Character';
 import { createTouchControls, type TouchControls } from './touch';
-import { attackPower, defensePower, gainXp, newHero, rollDamage, SHADE, spellPower, type Hero } from './combat';
+import { attackPower, defensePower, gainXp, MOB_KINDS, newHero, rollDamage, spellPower, type Hero } from './combat';
 import { Mob, type MobWorld } from './Mob';
 import { boltEffect, Effects, floatText, slashEffect } from './effects';
 import { Hud } from './Hud';
@@ -33,13 +33,11 @@ const BOLT_RANGE = 7 * CELL;
 const MP_REGEN = 1.5; // per second
 const HP_REGEN = 1; // per second, once HP_REGEN_DELAY seconds pass without a hit
 const HP_REGEN_DELAY = 5;
-// Temporary test enemy placement until the map editor can place mobs.
-const MOB_SPAWNS: CellPoint[] = [{ col: 24, row: 15 }];
 
 export interface GameSprites {
   hero: Texture;
   npc: Texture;
-  mob: Texture;
+  mobs: Map<string, Texture>; // by MobKind sheet file
 }
 
 export class Game {
@@ -83,7 +81,10 @@ export class Game {
     this.player.position.set(...this.cellToFeet(data.spawn));
     if (data.npc) this.npc.position.set(...this.cellToFeet(data.npc));
     else this.npc.visible = false;
-    this.mobs = MOB_SPAWNS.map((p) => new Mob(SHADE, sprites.mob, ...this.cellToFeet(p)));
+    this.mobs = data.mobs.map((m) => {
+      const kind = MOB_KINDS[m.kind];
+      return new Mob(kind, sprites.mobs.get(kind.sheet)!, ...this.cellToFeet(m));
+    });
     this.mobWorld = {
       hero: this.player,
       slide: (body, mx, my) => this.slide(body, mx, my),

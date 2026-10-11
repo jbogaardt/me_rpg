@@ -32,3 +32,6 @@ desktop.ini
 *.xcf
 *.aseprite~
 *.blend1
+
+# Map previews rendered by `npm run map` (regenerate any time)
+maps/out/

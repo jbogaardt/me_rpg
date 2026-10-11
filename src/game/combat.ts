@@ -65,6 +65,9 @@ export const SHADE: MobKind = {
   sight: 5 * 32,
 };
 
+/** Mob kinds a map can spawn, by the `kind` used in MapData.mobs. */
+export const MOB_KINDS: Record<string, MobKind> = { shade: SHADE };
+
 export const attackPower = (h: Hero) => h.stats.attack + (h.weapon.attack ?? 0);
 export const defensePower = (h: Hero) => h.stats.defense + (h.armor.defense ?? 0);
 export const spellPower = (h: Hero) => h.stats.magic + h.spell.power;

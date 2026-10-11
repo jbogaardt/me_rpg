@@ -18,9 +18,18 @@ A Shade (the dark ninja) wanders the southeast field as a test enemy: it chases 
 attacks after a yellow-flashing windup. It respawns a few seconds after dying; if you fall, you wake
 at the spawn point with full HP/MP and keep your XP.
 
-## Map editor
+## Maps
 
-With `npm run dev`, open `/editor.html` to build the overworld: pick tiles/objects from the tilesets, paint them, set collision and spawn, then **Save to project** (writes `public/maps/overworld.json`). Commit that file to deploy the change.
+Maps are built from code so an AI agent can author them: `maps/overworld.ts` describes the zone
+(ground, forests, bushes, rocks, spawn, NPC, enemies) and
+
+```bash
+npm run map -- build    # -> public/maps/overworld.json + previews in maps/out/, then checks
+```
+
+compiles it, deriving collision from the art and blending ground edges. Ask Claude to change the map
+in plain words; the `build-zone` skill (`.claude/skills/build-zone/`) tells it how. Commit the spec and
+the generated JSON together; the deploy fails if they disagree.
 
 ## Deploy
 

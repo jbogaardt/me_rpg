@@ -20,7 +20,15 @@ export interface CellPoint {
   row: number;
 }
 
-/** The on-disk overworld format (public/maps/overworld.json). Edit it with /editor.html. */
+/** An enemy spawn point; `kind` is a key of MOB_KINDS (src/game/combat.ts). */
+export interface MobSpawn extends CellPoint {
+  kind: string;
+}
+
+/**
+ * The on-disk map format (public/maps/<zone>.json). Generated from a zone spec in maps/ by
+ * `npm run map -- build`; don't edit the JSON by hand.
+ */
 export interface MapData {
   version: 1;
   width: number; // in cells
@@ -31,6 +39,7 @@ export interface MapData {
   collision: number[]; // blocked cell indices (row * width + col)
   spawn: CellPoint;
   npc: CellPoint | null;
+  mobs: MobSpawn[];
 }
 
 export function createEmptyMap(width: number, height: number): MapData {
@@ -44,6 +53,7 @@ export function createEmptyMap(width: number, height: number): MapData {
     collision: [],
     spawn: { col: Math.min(2, width - 1), row: Math.min(2, height - 1) },
     npc: null,
+    mobs: [],
   };
 }
 
@@ -62,6 +72,7 @@ export function parseMap(json: unknown): MapData {
     collision: d.collision ?? [],
     spawn: d.spawn ?? { col: 1, row: 1 },
     npc: d.npc ?? null,
+    mobs: d.mobs ?? [],
   };
 }
 
@@ -81,5 +92,6 @@ export function resizeMap(map: MapData, width: number, height: number): MapData 
     .map((p) => p.row * width + p.col);
   next.spawn = { col: Math.min(map.spawn.col, width - 1), row: Math.min(map.spawn.row, height - 1) };
   next.npc = map.npc && map.npc.col < width && map.npc.row < height ? map.npc : null;
+  next.mobs = map.mobs.filter((m) => m.col < width && m.row < height);
   return next;
 }

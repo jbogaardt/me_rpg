@@ -1,6 +1,6 @@
 import { Application, Assets, type Texture } from 'pixi.js';
 import { Game } from './game/Game';
-import { SHADE } from './game/combat';
+import { MOB_KINDS } from './game/combat';
 import './ui.css';
 import { fetchMap, loadSheets } from './map/sheets';
 
@@ -12,6 +12,9 @@ import { fetchMap, loadSheets } from './map/sheets';
   const data = await fetchMap();
   const textures = await loadSheets(data.sheets);
   const sprite = (file: string) => Assets.load<Texture>(`${import.meta.env.BASE_URL}sprites/${file}`);
-  const [hero, npc, mob] = await Promise.all([sprite('healer_f.png'), sprite('warrior_m.png'), sprite(SHADE.sheet)]);
-  new Game(app, data, textures, { hero, npc, mob }).start();
+  for (const m of data.mobs) if (!MOB_KINDS[m.kind]) throw new Error(`Map spawns unknown mob kind "${m.kind}"`);
+  const mobSheets = [...new Set(data.mobs.map((m) => MOB_KINDS[m.kind].sheet))];
+  const [hero, npc, ...mobTextures] = await Promise.all([sprite('healer_f.png'), sprite('warrior_m.png'), ...mobSheets.map(sprite)]);
+  const mobs = new Map(mobSheets.map((file, i) => [file, mobTextures[i]]));
+  new Game(app, data, textures, { hero, npc, mobs }).start();
 })();
