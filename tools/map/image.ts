@@ -173,7 +173,7 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
   const W = data.width * CELL;
   const H = data.height * CELL;
   const out: Image = { width: W, height: H, data: Buffer.alloc(W * H * 4) };
-  for (let i = 0; i < W * H; i++) out.data.writeUInt32BE(0x1a1a2eff, i * 4); // game background
+  for (let i = 0; i < W * H; i++) out.data.writeUInt32BE(0x05050aff, i * 4); // game background
   const blit = (img: Image, sx: number, sy: number, w: number, h: number, dx: number, dy: number) => {
     for (let y = 0; y < h; y++) {
       const ty = dy + y;

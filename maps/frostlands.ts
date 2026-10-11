@@ -16,13 +16,13 @@ export default defineZone({
     z.fill('grass');
     z.patch('snow', { col: -2, row: -2, w: 100, h: 28 }); // rows 0-24; the blended edge is row 25
 
-    // --- World border: three cells of frosted trees; a gap in the south is the way to the Greenwood ----------------
+    // --- World border: three cells of darkness; a gap in the south is the way to the Greenwood ----------------
     const frost = { trees: FROST_TREES };
-    z.forest({ col: -3, row: -3, w: 102, h: 6 }, frost); // north
-    z.forest({ col: -3, row: -3, w: 5, h: 30 }, frost); // west
-    z.forest({ col: 94, row: -3, w: 5, h: 30 }, frost); // east
-    z.forest({ col: -3, row: 24, w: 34, h: 3 }, frost); // south, west of the gap
-    z.forest({ col: 37, row: 24, w: 62, h: 3 }, frost); // south, east of the gap
+    z.dark({ col: -3, row: -3, w: 102, h: 6 }); // north
+    z.dark({ col: -3, row: -3, w: 5, h: 30 }); // west
+    z.dark({ col: 94, row: -3, w: 5, h: 30 }); // east
+    z.dark({ col: -3, row: 24, w: 34, h: 3 }); // south, west of the gap
+    z.dark({ col: 37, row: 24, w: 62, h: 3 }); // south, east of the gap
     z.door(32, 26, 4, 'greenwood', 33, 3); // down to the Greenwood (arrive 3 rows inside its north edge)
 
     // --- A frozen lake in the middle, frosted groves to wander round ------------------------------------------

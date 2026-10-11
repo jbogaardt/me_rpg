@@ -17,13 +17,13 @@ export default defineZone({
   build(z) {
     z.fill('grass');
 
-    // --- World border: three cells of trees, with gaps for the three ways out -----------------------------------
-    z.forest({ col: -3, row: 24, w: 5, h: 51 }); // west
-    z.forest({ col: -3, row: 70, w: 56, h: 5 }); // south
-    z.forest({ col: -3, row: 27, w: 16, h: 3 }); // north, west of the overlook (its rim closes the rest)
-    z.forest({ col: 21, row: 27, w: 10, h: 3 }); // north, between the overlook and the gap
-    z.forest({ col: 37, row: 27, w: 16, h: 3 }); // north, east of the gap (and the corner)
-    z.forest({ col: 47, row: 34, w: 6, h: 38 }); // east, below the gap
+    // --- World border: three cells of darkness, with gaps for the three ways out -----------------------------------
+    z.dark({ col: -3, row: 24, w: 5, h: 51 }); // west
+    z.dark({ col: -3, row: 70, w: 56, h: 5 }); // south
+    z.dark({ col: -3, row: 27, w: 16, h: 3 }); // north, west of the overlook (its rim closes the rest)
+    z.dark({ col: 21, row: 27, w: 10, h: 3 }); // north, between the overlook and the gap
+    z.dark({ col: 37, row: 27, w: 16, h: 3 }); // north, east of the gap (and the corner)
+    z.dark({ col: 47, row: 34, w: 6, h: 38 }); // east, below the gap
     z.door(32, 27, 4, 'frostlands', 33, 24); // up to the Frostlands
     for (let row = 30; row <= 33; row++) z.door(49, row, 1, 'scorched', 2, row - 27); // across to the Scorched Waste
 

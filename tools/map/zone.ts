@@ -41,6 +41,7 @@ export interface ZoneApi {
   stamp(name: StampName, col: number, row: number): unknown;
   prop(name: PrefabName, col: number, row: number, nudge?: { dx?: number; dy?: number }): unknown;
   forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }): unknown;
+  dark(rect: Rect): unknown;
   plateau(rect: Rect, opts?: { kind?: CliffKind; stairs?: number[] }): unknown;
   block(rect: Rect, reason: string): unknown;
   unblock(rect: Rect): unknown;
@@ -101,6 +102,10 @@ export class WorldWindow implements ZoneApi {
   }
   forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }) {
     this.z.forest(this.rect(rect), opts);
+    return this;
+  }
+  dark(rect: Rect) {
+    this.z.dark(this.rect(rect));
     return this;
   }
   plateau(rect: Rect, opts: { kind?: CliffKind; stairs?: number[] } = {}) {
@@ -373,6 +378,24 @@ export class Zone {
       }
     }
     for (const { col, row } of this.cells(rect)) this.blocked.add(row * this.width + col);
+    return this;
+  }
+
+  /** Darkness: the cells have no ground (the background shows) and are blocked. For the edge of the world. */
+  dark(rect: Rect) {
+    for (const { col, row } of this.cells(rect)) {
+      const i = row * this.width + col;
+      this.ground[i] = null;
+      this.forced.set(i, true);
+      this.reasons.set(i, 'darkness');
+    }
+    // Whatever was placed here (props near the old tree border) would float in the void.
+    this.placed = this.placed.filter((o) => {
+      const p = PREFABS[o.prefab];
+      const col = Math.floor((o.px + p.w / 2) / CELL),
+        row = Math.floor((o.py + p.h - 1) / CELL);
+      return !(col >= rect.col && col < rect.col + rect.w && row >= rect.row && row < rect.row + rect.h);
+    });
     return this;
   }
 
