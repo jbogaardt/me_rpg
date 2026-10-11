@@ -1,6 +1,8 @@
-const held = new Set<string>();
+const held = new Set<string>(); // physical: keyboard codes plus 'Mouse0'/'Mouse1'/'Mouse2' (mouse only on the game canvas)
 const virtual = new Set<string>(); // keys held by on-screen touch controls (see touch.ts)
 const pressed = new Set<string>();
+const virtualPressed = new Set<string>();
+let capture: ((code: string) => void) | null = null;
 
 /** Form fields (the menu's multiplayer code boxes) take typing, not game input. */
 function isTextField(target: EventTarget | null): boolean {
@@ -13,26 +15,74 @@ function isTextField(target: EventTarget | null): boolean {
   );
 }
 
+function press(code: string) {
+  if (!held.has(code)) pressed.add(code);
+  held.add(code);
+}
+
 window.addEventListener('keydown', (e) => {
+  if (capture) {
+    // Rebinding: the next key goes to the menu, not the game (so Escape can cancel without closing it).
+    e.preventDefault();
+    if (e.repeat) return;
+    const done = capture;
+    capture = null;
+    done(e.code);
+    return;
+  }
   // Typing or pasting a code must not move the hero, flip menu tabs (A/D) or close the menu (I). Escape still closes it.
   if (isTextField(e.target) && e.code !== 'Escape') return;
-  if (!held.has(e.code)) pressed.add(e.code);
-  held.add(e.code);
+  press(e.code);
   // Keep the page from scrolling, but let Space/Enter click a focused button.
   const onButton = e.target instanceof HTMLButtonElement;
   if (e.code.startsWith('Arrow') || e.code === 'Tab' || (e.code === 'Space' && !onButton)) e.preventDefault();
 });
 window.addEventListener('keyup', (e) => held.delete(e.code));
+window.addEventListener('blur', () => held.clear()); // a key released in another window must not stay held
+
+// Mouse buttons count only when pressed on the game canvas (menu, HUD and touch buttons are other elements), and only a
+// real mouse: fingers use the on-screen controls.
+window.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' && e.target instanceof HTMLCanvasElement) press(`Mouse${e.button}`);
+});
+window.addEventListener('pointerup', (e) => {
+  if (e.pointerType === 'mouse') held.delete(`Mouse${e.button}`);
+});
+window.addEventListener('pointercancel', () => {
+  for (const code of [...held]) if (code.startsWith('Mouse')) held.delete(code);
+});
+// No browser context menu or middle-click autoscroll over the game: those buttons are controls.
+window.addEventListener('contextmenu', (e) => e.target instanceof HTMLCanvasElement && e.preventDefault());
+window.addEventListener(
+  'mousedown',
+  (e) => e.button === 1 && e.target instanceof HTMLCanvasElement && e.preventDefault(),
+);
 
 export const input = {
   isDown: (...codes: string[]) => codes.some((c) => held.has(c) || virtual.has(c)),
   /** True once per key press; cleared by endFrame(). */
-  wasPressed: (...codes: string[]) => codes.some((c) => pressed.has(c)),
+  wasPressed: (...codes: string[]) => codes.some((c) => pressed.has(c) || virtualPressed.has(c)),
+  /** Like isDown/wasPressed but only the keyboard and mouse, not the on-screen buttons. */
+  isHeld: (...codes: string[]) => codes.some((c) => held.has(c)),
+  wasHit: (...codes: string[]) => codes.some((c) => pressed.has(c)),
+  /** Same, for the on-screen buttons only. */
+  isTouched: (...codes: string[]) => codes.some((c) => virtual.has(c)),
+  wasTouched: (...codes: string[]) => codes.some((c) => virtualPressed.has(c)),
   /** Hold or release a key from an on-screen control, as if it were typed on the keyboard. */
   setVirtual(code: string, down: boolean) {
-    if (down && !virtual.has(code) && !held.has(code)) pressed.add(code);
+    if (down && !virtual.has(code)) virtualPressed.add(code);
     if (down) virtual.add(code);
     else virtual.delete(code);
   },
-  endFrame: () => pressed.clear(),
+  /** Hand the next key press (any key, Escape included) to `done` instead of the game. Returns a cancel function. */
+  captureKey(done: (code: string) => void): () => void {
+    capture = done;
+    return () => {
+      if (capture === done) capture = null;
+    };
+  },
+  endFrame() {
+    pressed.clear();
+    virtualPressed.clear();
+  },
 };

@@ -232,6 +232,17 @@
 .mp-roster li[data-state='connected'] .state, .mp-roster li[data-state='you'] .state { color: #2f6b2f; }
 #mp-note { min-height: 1.3em; margin: 8px 0 0; font-size: 15px; color: var(--ink-soft); }
 #mp-note.error { color: #9b2a1c; font-weight: 600; }
+/* --- Controls tab: key/mouse editor (src/hud/Keybinds.ts) --- */
+#keybinds[hidden] { display: none; }
+#keybinds td:last-child { white-space: nowrap; }
+#keybinds .bind {
+  width: calc(50% - 3px); margin-right: 6px; padding: 5px 4px; font: 700 14px var(--title); color: var(--ink); cursor: pointer;
+  background: rgba(255, 250, 235, 0.55); border: 1px solid var(--gold-dim); border-radius: 3px;
+}
+#keybinds .bind:hover { background: rgba(255, 250, 235, 0.9); }
+#keybinds .bind.listening { color: var(--gold); background: #4a3418; border-color: var(--ink); }
+.keybinds-note { min-height: 1.3em; margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); }
+.keybinds-note.error { color: #9b2a1c; font-weight: 600; }
 @media (max-width: 420px) {
   #menu section { font-size: 16px; }
   #menu table { font-size: 14px; }

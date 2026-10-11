@@ -61,7 +61,7 @@ void (async () => {
     const scenes = new SceneManager(app);
     const touch = createTouchControls(() => scenes.resize());
     const session = new Session();
-    const ui = { hud: new Hud(), menu: new Menu(session), dialog: new Dialog(), touch, session };
+    const ui = { hud: new Hud(), menu: new Menu(session, touch), dialog: new Dialog(), touch, session };
     const overworld = new OverworldScene(zone, sprites, ui);
     scenes.change(overworld);
     scenes.start();
