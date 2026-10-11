@@ -18,9 +18,10 @@ import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../syst
 import type { Note, SideWire, TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
+import { WEATHER_KINDS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 11;
+export const PROTOCOL_VERSION = 12;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -64,6 +65,7 @@ export type FxName = (typeof FX_NAMES)[number];
  *   text   [id, 4, x, y, text, color]
  *   fx     [id, 5, FX_NAMES index, x, y, dir (null: none)?, p?]
  *   defeat [id, 6, player]
+ *   lightning [id, 7, x, y, seed]
  */
 export type EventWire = (number | string | null)[];
 
@@ -75,6 +77,7 @@ export const EVENT_KINDS = [
   'text',
   'fx',
   'defeat',
+  'lightning',
 ] as const satisfies readonly WorldEvent['type'][];
 
 /** Something that happened this tick and is only shown, never simulated, on the guest. */
@@ -85,6 +88,7 @@ export type WorldEvent =
   | { type: 'arrow'; x: number; y: number; vx: number; vy: number; range: number } // a player's arrow (the guest only draws it)
   | { type: 'text'; x: number; y: number; text: string; color: number }
   | { type: 'fx'; name: FxName; x: number; y: number; dir?: number; p?: number } // `p`: the player it happened to (heroHurt)
+  | { type: 'lightning'; x: number; y: number; seed: number } // a bolt lands here (the seed shapes it the same everywhere)
   | { type: 'defeat'; player: number }; // this player (0 is the host) was knocked out and sent back to spawn
 
 export interface HelloMsg {
@@ -127,6 +131,7 @@ export interface SnapMsg {
   mobs: MobSnap[]; // only the mobs near the recipient, and a still one only now and then
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
+  w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
   ground?: GroundSnap[];
   events: EventWire[]; // oldest first; see encodeEvent / decodeEvent
@@ -235,6 +240,9 @@ const isIndex = (v: unknown, length: number): v is number => isCount(v) && v < l
 const numbers = (v: unknown, length: number): v is number[] =>
   Array.isArray(v) && v.length === length && v.every(isNum);
 
+const isWeather = (v: unknown): v is WeatherSnap =>
+  numbers(v, 3) && isIndex(v[0], WEATHER_KINDS.length) && isCount(v[1]) && v[1] <= 100 && (v[2] === 0 || v[2] === 1);
+
 /** An event as it travels in a snapshot (see EventWire). */
 export function encodeEvent(id: number, e: WorldEvent): EventWire {
   const r = Math.round;
@@ -260,6 +268,8 @@ export function encodeEvent(id: number, e: WorldEvent): EventWire {
     }
     case 'defeat':
       return [id, 6, e.player];
+    case 'lightning':
+      return [id, 7, r(e.x), r(e.y), e.seed];
   }
 }
 
@@ -338,6 +348,10 @@ export function decodeEvent(raw: unknown): { id: number; e: WorldEvent } | null 
     }
     case 6:
       if (len(3) && player(at(2))) e = { type: 'defeat', player: n(2) };
+      break;
+    case 7:
+      if (len(5) && xy() && isCount(at(4)) && n(4) <= 0xffffffff)
+        e = { type: 'lightning', x: n(2), y: n(3), seed: n(4) };
       break;
   }
   return e ? { id, e } : null;
@@ -503,6 +517,7 @@ export function parseMessage(raw: unknown): Message | null {
         !ground ||
         ground.includes(null) ||
         !numbers(m.me, 9) ||
+        !isWeather(m.w) ||
         !isCount(m.chests) ||
         m.chests > MAX_CHEST_MASK
       ) {
@@ -517,6 +532,7 @@ export function parseMessage(raw: unknown): Message | null {
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
         chests: m.chests,
+        w: m.w,
         ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
         events: events as EventWire[],
       };

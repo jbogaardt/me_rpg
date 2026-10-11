@@ -43,10 +43,10 @@ export class MobFeed {
 /**
  * Does a friend at `viewer`, seeing `view` px, need to hear about this event? Like mobs, only what happens within their
  * view (plus the margin) is sent; a shot counts if it could fly into view (`boltRange`: how far a bolt flies; an arrow
- * carries its own range). A defeat has no place and always counts.
+ * carries its own range). A defeat has no place, and lightning flashes the whole sky, so both always count.
  */
 export function eventInView(e: WorldEvent, viewer: { x: number; y: number }, view: number, boltRange: number): boolean {
-  if (e.type === 'defeat') return true;
+  if (e.type === 'defeat' || e.type === 'lightning') return true;
   const travel = e.type === 'arrow' ? e.range : e.type === 'bolt' ? boltRange : 0;
   return Math.hypot(e.x - viewer.x, e.y - viewer.y) <= view + VIEW_MARGIN + travel;
 }

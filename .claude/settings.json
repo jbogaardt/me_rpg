@@ -6,6 +6,20 @@
           {
             "type": "command",
             "command": "[ -d node_modules ] || npm ci --no-audit --no-fund"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/sync-main.sh\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-main.sh\""
           }
         ]
       }

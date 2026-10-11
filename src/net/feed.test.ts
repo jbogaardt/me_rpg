@@ -83,8 +83,9 @@ describe('eventInView', () => {
     expect(eventInView({ ...arrow, range: 50 }, viewer, DEFAULT_VIEW, BOLT)).toBe(false);
   });
 
-  it('always sends a defeat', () => {
+  it('always sends a defeat and lightning (its flash lights the whole sky)', () => {
     expect(eventInView({ type: 'defeat', player: 2 }, viewer, DEFAULT_VIEW, BOLT)).toBe(true);
+    expect(eventInView({ type: 'lightning', x: 9000, y: 9000, seed: 5 }, viewer, DEFAULT_VIEW, BOLT)).toBe(true);
   });
 });
 

@@ -160,6 +160,7 @@ test('both players can drop items and pick them up, and the host decides what is
 });
 
 test('players next to each other can trade: ask, accept or deny, a shared window, cancel', async ({ browser }) => {
+  test.setTimeout(300_000); // two browsers, and the suite runs two workers at once: 40 s alone, over 2 min when loaded
   const host = await open(browser, '/');
   await host.keyboard.press('Escape');
   await expect(host.locator('#menu [data-tab="trade"]')).toBeHidden(); // trading is for co-op only
@@ -280,6 +281,8 @@ test('up to four players: friends join, leave, and a new friend takes the empty 
 
   // The co-op map shows a pin for every other player, each in their own colour, and a legend naming them.
   await last.keyboard.press('Escape'); // close the menu
+  // The M button only shows once this page is really in the game; pressing M earlier (a slow machine) does nothing.
+  await expect(last.locator('#map-btn')).toBeVisible({ timeout: 30_000 });
   await last.keyboard.press('KeyM');
   await expect(last.locator('#map-overlay')).toBeVisible();
   await expect(last.locator('#map-overlay .pin.friend')).toHaveCount(3, { timeout: 30_000 });
