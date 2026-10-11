@@ -1,13 +1,25 @@
 import {
   CELL,
+  FLAT_Z,
   type CellPoint,
   type GroundCell,
   type MapData,
   type MapObject,
   type MobSpawn,
 } from '../../src/map/types';
-import { GROUND, PREFABS, RINGS, TREES, type GroundName, type PrefabName } from './catalog';
-import { coverage } from './image';
+import {
+  CLIFF,
+  GROUND,
+  PREFABS,
+  RINGS,
+  STAMPS,
+  TREES,
+  type CliffKind,
+  type GroundName,
+  type PrefabName,
+  type StampName,
+} from './catalog';
+import { coverage, sheet as loadSheet } from './image';
 
 /** A rectangle of cells. May extend past the map edge (e.g. for border forests); it's clipped where needed. */
 export interface Rect {
@@ -38,6 +50,22 @@ function rng(seed: number) {
   };
 }
 
+/** Surface names in the order stored in MapData.surfaces (a cell's `surface` indexes this). */
+const SURFACES: string[] = Object.keys(GROUND);
+
+/** A hand-placed object that isn't a catalog prefab (cliff pieces cut from a sheet). */
+interface Extra {
+  sheet: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  px: number;
+  py: number;
+  tag: string;
+  z: number;
+}
+
 interface Placed {
   prefab: PrefabName;
   px: number; // world top-left of the prefab box
@@ -52,6 +80,10 @@ interface Placed {
 export class Zone {
   private ground: ({ sheet: string; x: number; y: number } | null)[];
   private placed: Placed[] = [];
+  private extras: Extra[] = [];
+  private surfaceAt: number[]; // per cell: index into SURFACES
+  private levelAt: number[]; // per cell: height (0 = ground)
+  private ramps = new Set<number>();
   private blocked = new Set<number>();
   private forced = new Map<number, boolean>(); // block()/unblock() overrides, applied last
   readonly reasons = new Map<number, string>(); // why a cell was blocked by hand (silences check warnings)
@@ -64,6 +96,8 @@ export class Zone {
     readonly height: number,
   ) {
     this.ground = new Array<(typeof this.ground)[number]>(width * height).fill(null);
+    this.surfaceAt = new Array<number>(width * height).fill(0);
+    this.levelAt = new Array<number>(width * height).fill(0);
   }
 
   private inMap(col: number, row: number) {
@@ -78,14 +112,16 @@ export class Zone {
     return out;
   }
 
-  private setGround(col: number, row: number, sheet: string, [x, y]: [number, number]) {
-    if (this.inMap(col, row)) this.ground[row * this.width + col] = { sheet, x, y };
+  private setGround(col: number, row: number, sheet: string, [x, y]: [number, number], surface?: GroundName) {
+    if (!this.inMap(col, row)) return;
+    this.ground[row * this.width + col] = { sheet, x, y };
+    if (surface) this.surfaceAt[row * this.width + col] = SURFACES.indexOf(surface);
   }
 
   private fillTile(name: GroundName, col: number, row: number) {
     const g = GROUND[name];
     const line = g.tiles[row % g.tiles.length];
-    this.setGround(col, row, g.sheet, line[col % line.length]);
+    this.setGround(col, row, g.sheet, line[col % line.length], name);
   }
 
   /** Cover the whole map (or a rect) with a repeating ground. */
@@ -127,8 +163,35 @@ export class Zone {
             : e
               ? ring.e
               : null;
-      if (edge) this.setGround(col, row, ring.sheet, edge);
+      // Water/ice shores blend into sand/snow, so those ring cells keep the surface already there.
+      if (edge) this.setGround(col, row, ring.sheet, edge, name === 'water' || name === 'ice' ? undefined : name);
       else this.fillTile(name, col, row);
+    }
+    return this;
+  }
+
+  /**
+   * Copy a pre-painted ground decoration (see STAMPS) with its top-left cell at (col, row). Only source
+   * cells that are fully opaque are copied, so irregular shapes stay irregular; everything else keeps
+   * the ground underneath. Doesn't block movement.
+   */
+  stamp(name: StampName, col: number, row: number) {
+    const st = STAMPS[name];
+    const img = loadSheet(st.sheet);
+    for (let j = 0; j < st.h / CELL; j++) {
+      for (let i = 0; i < st.w / CELL; i++) {
+        const sx = st.x + i * CELL,
+          sy = st.y + j * CELL;
+        let opaque = true;
+        for (let y = sy; y < sy + CELL && opaque; y++) {
+          for (let x = sx; x < sx + CELL; x++)
+            if (img.data[(y * img.width + x) * 4 + 3] < 255) {
+              opaque = false;
+              break;
+            }
+        }
+        if (opaque) this.setGround(col + i, row + j, st.sheet, [sx, sy], 'sand');
+      }
     }
     return this;
   }
@@ -155,7 +218,8 @@ export class Zone {
    * a ~18px walk-behind fringe poking out of its top edge. Extend the rect past the map edge for
    * borders so no gaps show at the edge of the world.
    */
-  forest(rect: Rect, opts: { seed?: number } = {}) {
+  forest(rect: Rect, opts: { seed?: number; trees?: PrefabName[] } = {}) {
+    const trees = opts.trees ?? TREES;
     const rand = rng(opts.seed ?? rect.col * 7919 + rect.row * 104729 + rect.w * 31 + rect.h);
     const { w: TW, h: TH } = PREFABS.treeA;
     const L = rect.col * CELL,
@@ -177,10 +241,111 @@ export class Zone {
         const edge = j === 0 || j === cols - 1;
         // Outer trees sit exactly on the rect's sides; inner ones get a little jitter so it looks natural.
         const px = Math.round(Math.min(R - TW, Math.max(L, L + j * dx + (edge ? 0 : stagger + (rand() - 0.5) * 8))));
-        this.placed.push({ prefab: TREES[Math.floor(rand() * TREES.length)], px, py, autoBlock: false });
+        this.placed.push({ prefab: trees[Math.floor(rand() * trees.length)], px, py, autoBlock: false });
       }
     }
     for (const { col, row } of this.cells(rect)) this.blocked.add(row * this.width + col);
+    return this;
+  }
+
+  /**
+   * A raised plateau. `rect` is the walkable top in cells (at least 4x4); the rim rocks fill the 1-cell
+   * ring around it (north/west/east) and the rock face the 2 rows south of it; all of that is blocked,
+   * as are the four corner cells of `rect` where the rounded rim cuts in. Lay it on the ground that
+   * should form the top (grass; snow for `kind: 'frost'`; sand for `'dry'`).
+   * Stairs are the only way up: `stairs` lists the centre columns of 3-wide staircases cut into the south
+   * face (each needs rect.col+2 <= column <= rect.col+w-3, so w >= 5, and >= 3 columns between stairs).
+   * The top becomes level (existing level + 1); the stair cells are ramps connecting it to the level below.
+   */
+  plateau(rect: Rect, opts: { kind?: CliffKind; stairs?: number[] } = {}) {
+    const { col, row, w, h } = rect;
+    if (w < 4 || h < 4) throw new Error(`plateau needs at least 4x4 cells of walkable top, got ${w}x${h}`);
+    const stairCols = [...(opts.stairs ?? [])].sort((a, b) => a - b);
+    stairCols.forEach((c, i) => {
+      if (c < col + 2 || c > col + w - 3)
+        throw new Error(`stairs column ${c} must be within ${col + 2}..${col + w - 3} of this plateau`);
+      if (i && c - stairCols[i - 1] < 3)
+        throw new Error(`stairs at columns ${stairCols[i - 1]} and ${c} overlap (need 3+ apart)`);
+    });
+    const sheet = CLIFF.sheets[opts.kind ?? 'grass'];
+    const { xs, ys } = CLIFF;
+    const level = Math.max(...this.cells(rect).map(({ col: c, row: r }) => this.levelAt[r * this.width + c])) + 1;
+    const nx = w - 2,
+      ny = h - 2;
+    const hx = (col + 1) * CELL,
+      hy = (row + 1) * CELL; // world position of the art's 64x64 hole corner
+    const underStairs = (i: number) => stairCols.some((c) => i >= c - 1 - (col + 1) && i <= c + 1 - (col + 1));
+
+    // Source slices per axis: [source start, size, world start]. Middle slices repeat A/B chunks.
+    const cols = [
+      { sx: xs[0], sw: xs[1] - xs[0], wx: hx - (xs[1] - xs[0]), chunk: -1 },
+      ...Array.from({ length: nx }, (_, i) => ({ sx: xs[1] + (i % 2) * CELL, sw: CELL, wx: hx + i * CELL, chunk: i })),
+      { sx: xs[3], sw: xs[4] - xs[3], wx: hx + nx * CELL, chunk: -1 },
+    ];
+    const rows = [
+      { sy: ys[0], sh: ys[1] - ys[0], wy: hy - (ys[1] - ys[0]), mid: false, last: false },
+      ...Array.from({ length: ny }, (_, j) => ({
+        sy: ys[1] + (j % 2) * CELL,
+        sh: CELL,
+        wy: hy + j * CELL,
+        mid: true,
+        last: false,
+      })),
+      { sy: ys[3], sh: ys[4] - ys[3], wy: hy + ny * CELL, mid: false, last: true },
+    ];
+    rows.forEach((r) => {
+      cols.forEach((c) => {
+        if (r.mid && c.chunk >= 0) return; // the hole: shows the ground (the walkable top)
+        if (r.last && c.chunk >= 0 && underStairs(c.chunk)) return; // replaced by a staircase
+        this.extras.push({
+          sheet,
+          x: c.sx,
+          y: r.sy,
+          w: c.sw,
+          h: r.sh,
+          px: c.wx,
+          py: r.wy,
+          tag: 'cliff',
+          z: FLAT_Z + level,
+        });
+      });
+    });
+    const st = CLIFF.stairs;
+    for (const c of stairCols) {
+      this.extras.push({
+        sheet,
+        x: st.x,
+        y: st.y,
+        w: st.w,
+        h: st.h,
+        px: (c - 1) * CELL,
+        py: hy + ny * CELL,
+        tag: 'cliff',
+        z: FLAT_Z + level,
+      });
+    }
+
+    // Collision: rim ring, two face rows, rounded corners of the top; stairs open the face.
+    const why = 'plateau rim';
+    this.block({ col: col - 1, row: row - 1, w: w + 2, h: 1 }, why);
+    this.block({ col: col - 1, row: row + h, w: w + 2, h: 2 }, why);
+    this.block({ col: col - 1, row, w: 1, h }, why);
+    this.block({ col: col + w, row, w: 1, h }, why);
+    for (const [c, r] of [
+      [col, row],
+      [col + w - 1, row],
+      [col, row + h - 1],
+      [col + w - 1, row + h - 1],
+    ])
+      this.block({ col: c, row: r, w: 1, h: 1 }, why);
+    for (const { col: c, row: r } of this.cells(rect)) this.levelAt[r * this.width + c] = level;
+    for (const c of stairCols) {
+      this.unblock({ col: c, row: row + h, w: 1, h: 2 });
+      for (const r of [row + h, row + h + 1]) {
+        this.levelAt[r * this.width + c] = level;
+        this.ramps.add(r * this.width + c);
+      }
+    }
     return this;
   }
 
@@ -226,6 +391,9 @@ export class Zone {
     const ground: (GroundCell | null)[] = this.ground.map((g) => (g ? [sheetIndex(g.sheet), g.x, g.y] : null));
 
     const objects: MapObject[] = [];
+    for (const e of this.extras) {
+      objects.push({ s: sheetIndex(e.sheet), x: e.x, y: e.y, w: e.w, h: e.h, px: e.px, py: e.py, tag: e.tag, z: e.z });
+    }
     const autoParts: { o: MapObject; band: number; min: number }[] = [];
     for (const p of this.placed) {
       const prefab = PREFABS[p.prefab];
@@ -239,6 +407,7 @@ export class Zone {
           px: p.px + part.dx,
           py: p.py + part.dy,
         };
+        if (prefab.tag) o.tag = prefab.tag;
         objects.push(o);
         // All parts end on the prefab's bottom, so the band is measured from each part's own bottom.
         if (p.autoBlock && prefab.solid) autoParts.push({ o, ...prefab.solid });
@@ -267,13 +436,17 @@ export class Zone {
     }
 
     return {
-      version: 1,
+      version: 2,
       width: this.width,
       height: this.height,
       sheets,
       ground,
       objects,
       collision: [...blocked].sort((a, b) => a - b),
+      surfaces: SURFACES,
+      surface: this.surfaceAt,
+      level: this.levelAt,
+      ramps: [...this.ramps].sort((a, b) => a - b),
       spawn: this.spawnAt,
       npc: this.npcAt,
       mobs: this.mobList,

@@ -1,18 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { parseMap } from './types';
 
-const minimal = { version: 1, width: 2, height: 2, ground: [null, null, null, null] };
+const minimal = { version: 2, width: 2, height: 2, ground: [null, null, null, null] };
 
 describe('parseMap', () => {
   it('fills defaults for optional fields', () => {
     expect(parseMap(minimal)).toEqual({
-      version: 1,
+      version: 2,
       width: 2,
       height: 2,
       sheets: [],
       ground: [null, null, null, null],
       objects: [],
       collision: [],
+      surfaces: ['grass'],
+      surface: [0, 0, 0, 0],
+      level: [0, 0, 0, 0],
+      ramps: [],
       spawn: { col: 1, row: 1 },
       npc: null,
       mobs: [],
@@ -28,9 +32,9 @@ describe('parseMap', () => {
 
   it.each([
     ['null', null],
-    ['an unknown version', { ...minimal, version: 2 }],
-    ['no size', { version: 1, ground: [] }],
-    ['no ground array', { version: 1, width: 1, height: 1 }],
+    ['an unknown version', { ...minimal, version: 1 }],
+    ['no size', { version: 2, ground: [] }],
+    ['no ground array', { version: 2, width: 1, height: 1 }],
   ])('rejects %s', (_name, json) => {
     expect(() => parseMap(json)).toThrow(/valid map/);
   });

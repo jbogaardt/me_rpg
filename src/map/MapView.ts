@@ -1,6 +1,6 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
 import { makeFrame } from '../core/textures';
-import { CELL, type MapData } from './types';
+import { CELL, sortKey, type MapData } from './types';
 
 /**
  * Renders a MapData as two layers inside one render group (so the camera moving or zooming it is a single GPU
@@ -40,7 +40,7 @@ export class MapView extends Container {
       if (!texture) continue;
       const sprite = new Sprite(texture);
       sprite.position.set(o.px, o.py);
-      sprite.zIndex = o.py + o.h;
+      sprite.zIndex = sortKey(o);
       sprite.cullable = true;
       this.layer.addChild(sprite);
     }
