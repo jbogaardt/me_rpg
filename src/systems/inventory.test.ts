@@ -18,6 +18,10 @@ import {
   dropWorn,
   equipFromPack,
   fitsSlot,
+  GROUND_LIFETIME,
+  GROUND_WARNING,
+  groundFading,
+  groundRemaining,
   packSize,
   slotsFor,
   unequip,
@@ -249,5 +253,17 @@ describe('item codes and loadouts', () => {
     expect(b.cape).toBeUndefined(); // an empty slot is cleared
     expect(b.pack).toEqual([ITEMS.steelSword, ITEMS.whetstone]);
     expect(b.weapon).toBe(ITEMS.rustySword);
+  });
+});
+
+describe('items on the ground', () => {
+  it('last three minutes, and blink for the last stretch', () => {
+    expect(GROUND_LIFETIME).toBe(180);
+    expect(groundRemaining(0)).toBe(180);
+    expect(groundRemaining(100)).toBe(80);
+    expect(groundRemaining(500)).toBe(0);
+    expect(groundFading(GROUND_LIFETIME - 100)).toBe(false);
+    expect(groundFading(GROUND_WARNING - 1)).toBe(true);
+    expect(groundFading(0)).toBe(true);
   });
 });

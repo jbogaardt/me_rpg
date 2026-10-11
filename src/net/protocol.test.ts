@@ -25,7 +25,7 @@ const snap: SnapMsg = {
   mobs: [mob, [1, 2, 0, 5, 0, 5000, 0]],
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10],
   chests: 5,
-  ground: [[3, 40.5, 50, 2]],
+  ground: [[3, 40.5, 50, 2, 150]],
   inv: { ack: 2, gear: [1, 0, 0, 0, 0, 0, 4, 0, 0], pack: [5, 6] },
   events: [
     { id: 4, e: { type: 'text', x: 5, y: 6, text: '+12 XP', color: 0xffb13f } },
@@ -65,7 +65,7 @@ describe('messages', () => {
       ...snap,
       players: everyone,
       mobs: Array.from({ length: 20 }, () => mob),
-      ground: Array.from({ length: 4 }, (_, i): GroundSnap => [100 + i, 1234.5, 2345.6, 25]),
+      ground: Array.from({ length: 4 }, (_, i): GroundSnap => [100 + i, 1234.5, 2345.6, 25, 179]),
       inv: undefined,
     };
     expect(encodeMessage(big).length).toBeLessThan(1400);
@@ -111,10 +111,13 @@ describe('messages', () => {
   it('rejects a snapshot with bad ground items or inventory', () => {
     const bad: Record<string, unknown>[] = [
       { ...snap, ground: undefined },
-      { ...snap, ground: Array.from({ length: 17 }, (_, i) => [i, 1, 2, 1]) }, // too many
-      { ...snap, ground: [[1, 2, 3, 0]] }, // nothing is not an item
-      { ...snap, ground: [[1, 2, 3, 9999]] }, // no such item
-      { ...snap, ground: [[1, Infinity, 3, 1]] },
+      { ...snap, ground: Array.from({ length: 17 }, (_, i) => [i, 1, 2, 1, 60]) }, // too many
+      { ...snap, ground: [[1, 2, 3, 0, 60]] }, // nothing is not an item
+      { ...snap, ground: [[1, 2, 3, 9999, 60]] }, // no such item
+      { ...snap, ground: [[1, Infinity, 3, 1, 60]] },
+      { ...snap, ground: [[1, 2, 3, 1]] }, // no time left given
+      { ...snap, ground: [[1, 2, 3, 1, -1]] },
+      { ...snap, ground: [[1, 2, 3, 1, 9999]] }, // longer than an item lasts
       { ...snap, inv: { ack: -1, gear: snap.inv?.gear, pack: [] } },
       { ...snap, inv: { ack: 0, gear: [1, 2], pack: [] } }, // one code per gear slot
       { ...snap, inv: { ack: 0, gear: snap.inv?.gear, pack: [9999] } },

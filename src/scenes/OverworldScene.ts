@@ -64,6 +64,7 @@ import {
   itemCode,
   itemFromCode,
   loadoutOf,
+  GROUND_LIFETIME,
   MAX_GROUND,
   sameLoadout,
   type InvOp,
@@ -174,7 +175,7 @@ export class OverworldScene implements Scene {
     stats: Stats;
     name: string;
     loadout: Loadout;
-    ground: { item: Item; x: number; y: number }[];
+    ground: { item: Item; x: number; y: number; age: number }[];
   } | null = null; // guest: the solo hero, restored on disconnect
 
   constructor(
@@ -290,8 +291,9 @@ export class OverworldScene implements Scene {
     ]);
 
     this.npc.animate(dt * 1000, false);
-    for (const item of this.ground) {
+    for (const item of [...this.ground]) {
       item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
+      if (this.role !== 'client' && item.remaining <= 0) this.crumble(item); // a guest waits for the host's word
     }
     for (const body of this.bodies()) body.zIndex = body.y;
     hud.update(this.hero);
@@ -407,7 +409,7 @@ export class OverworldScene implements Scene {
       stats: { ...this.hero.stats },
       name: this.hero.name,
       loadout: loadoutOf(this.hero),
-      ground: this.ground.map((g) => ({ item: g.item, x: g.x, y: g.y })),
+      ground: this.ground.map((g) => ({ item: g.item, x: g.x, y: g.y, age: g.age })),
     };
     // In the host's game this player starts over with a fresh hero's gear; the host's snapshots say what they hold.
     applyLoadout(this.hero, loadoutOf(newHero()));
@@ -442,7 +444,7 @@ export class OverworldScene implements Scene {
       if (this.solo) {
         applyLoadout(this.hero, this.solo.loadout);
         this.clearGround();
-        for (const g of this.solo.ground) this.addGround(g.item, g.x, g.y);
+        for (const g of this.solo.ground) this.addGround(g.item, g.x, g.y, undefined, g.age);
       }
       this.pendingOps = [];
       this.solo = null;
@@ -510,7 +512,13 @@ export class OverworldScene implements Scene {
       players: this.players().map((p) => this.snapPlayer(p)),
       mobs: this.mobs.map((m) => m.snapshot()),
       chests: this.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
-      ground: this.ground.map((g): GroundSnap => [g.id, round1(g.x), round1(g.y), itemCode(g.item)]),
+      ground: this.ground.map((g): GroundSnap => [
+        g.id,
+        round1(g.x),
+        round1(g.y),
+        itemCode(g.item),
+        Math.ceil(g.remaining),
+      ]),
       events: this.events.slice(-MAX_EVENTS_SENT).map(({ id, e }) => ({ id, e })),
     } as const;
     for (const [slot, remote] of this.remotes) {
@@ -604,9 +612,11 @@ export class OverworldScene implements Scene {
   private syncGround(list: GroundSnap[]) {
     const ids = new Set(list.map((g) => g[0]));
     for (const g of [...this.ground]) if (!ids.has(g.id)) this.removeGround(g);
-    for (const [id, x, y, code] of list) {
+    for (const [id, x, y, code, left] of list) {
+      const known = this.ground.find((g) => g.id === id);
       const item = itemFromCode(code);
-      if (item && !this.ground.some((g) => g.id === id)) this.addGround(item, x, y, id);
+      if (known) known.setRemaining(left);
+      else if (item) this.addGround(item, x, y, id, GROUND_LIFETIME - left);
     }
   }
 
@@ -778,8 +788,8 @@ export class OverworldScene implements Scene {
     this.text(x, y - 22, name, 0xffd34d);
   }
 
-  private addGround(item: Item, x: number, y: number, id = ++this.groundId) {
-    const g = new GroundItem(item, x, y, id);
+  private addGround(item: Item, x: number, y: number, id = ++this.groundId, age = 0) {
+    const g = new GroundItem(item, x, y, id, age);
     this.ground.push(g);
     this.world.layer.addChild(g);
   }
@@ -787,6 +797,12 @@ export class OverworldScene implements Scene {
   private removeGround(g: GroundItem) {
     this.ground.splice(this.ground.indexOf(g), 1);
     g.destroy({ children: true }); // also takes it off the world layer
+  }
+
+  /** A dropped item has lain too long: it puffs away. */
+  private crumble(g: GroundItem) {
+    this.fx('mobPoof', g.x, g.y - 8);
+    this.removeGround(g);
   }
 
   private clearGround() {

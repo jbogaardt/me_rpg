@@ -144,6 +144,17 @@ export type InvOp =
   | { t: 'dropPack'; index: number }
   | { t: 'dropWorn'; slot: GearSlot };
 
+/** Seconds an item lies on the ground before it crumbles away. */
+export const GROUND_LIFETIME = 180;
+/** It starts to blink this many seconds before it goes. */
+export const GROUND_WARNING = 20;
+
+/** Seconds left for an item that has lain `age` seconds (never negative). */
+export const groundRemaining = (age: number): number => Math.max(0, GROUND_LIFETIME - age);
+
+/** Is an item with this long left about to go (so it should blink)? */
+export const groundFading = (remaining: number): boolean => remaining < GROUND_WARNING;
+
 /** Most items lying on the ground at once (they ride in every co-op snapshot). */
 export const MAX_GROUND = 16;
 

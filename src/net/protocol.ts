@@ -11,7 +11,7 @@
 
 import type { Direction } from '../entities/Character';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
-import { ITEM_COUNT, MAX_GROUND, type InvOpWire, type Loadout } from '../systems/inventory';
+import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire, type Loadout } from '../systems/inventory';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
@@ -82,8 +82,8 @@ export interface InputMsg {
   inv?: [number, ...InvOpWire];
 }
 
-/** [id, x, y, item code] of an item lying on the ground. */
-export type GroundSnap = [number, number, number, number];
+/** [id, x, y, item code, seconds before it crumbles away] of an item lying on the ground. */
+export type GroundSnap = [number, number, number, number, number];
 
 /** The recipient's own gear and pack, and how many of their pack actions the host has done. */
 export interface InvSnap extends Loadout {
@@ -181,9 +181,10 @@ function parsePlayer(raw: unknown): PlayerSnap | null {
 }
 
 function parseGround(raw: unknown): GroundSnap | null {
-  if (!numbers(raw, 4)) return null;
-  const [id, x, y, code] = raw as GroundSnap;
-  return isCount(id) && isCoord(x) && isCoord(y) && isIndex(code, ITEM_COUNT + 1) && code > 0 ? [id, x, y, code] : null;
+  if (!numbers(raw, 5)) return null;
+  const [id, x, y, code, left] = raw as GroundSnap;
+  const ok = isCount(id) && isCoord(x) && isCoord(y) && isIndex(code, ITEM_COUNT + 1) && code > 0;
+  return ok && left >= 0 && left <= GROUND_LIFETIME ? [id, x, y, code, left] : null;
 }
 
 function parseInv(raw: unknown): InvSnap | null {
