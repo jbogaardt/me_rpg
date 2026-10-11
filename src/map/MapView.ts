@@ -1,34 +1,50 @@
-import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
-import { CELL, type GroundCell, type MapData, type MapObject } from './types';
-
-/** A sub-rectangle of a sheet as its own texture, clamped to the image. Null if fully outside. */
-export function makeFrame(sheet: Texture, x: number, y: number, w: number, h: number): Texture | null {
-  w = Math.min(w, sheet.width - x);
-  h = Math.min(h, sheet.height - y);
-  if (w <= 0 || h <= 0) return null;
-  return new Texture({ source: sheet.source, frame: new Rectangle(x, y, w, h) });
-}
+import { Container, Sprite, type Texture } from 'pixi.js';
+import { makeFrame } from '../core/textures';
+import { CELL, type MapData } from './types';
 
 /**
- * Renders a MapData: a ground layer plus y-sorted objects. The game adds its own entities as
- * children and sets their zIndex to their feet y so they sort with the objects.
+ * Renders a MapData as two layers inside one render group (so the camera moving or zooming it is a single GPU
+ * transform):
+ *  - `ground`: the 32px ground cells. It never changes, so it is its own render group and its draw list is
+ *    built once instead of every frame.
+ *  - `layer`: map objects (trees, rocks...) plus whatever the scene adds (characters, effects). Children are
+ *    y-sorted by `zIndex`; the scene sets `zIndex` to a character's feet y so it sorts with the objects.
+ *    Map objects are cullable, so ones off screen aren't drawn.
  * (tools/map/image.ts draws the same way in Node for map previews.)
  */
 export class MapView extends Container {
-  private ground = new Container();
-  private groundSprites: (Sprite | null)[] = [];
-  private objectSprites = new Map<MapObject, Sprite>();
+  readonly ground = new Container({ isRenderGroup: true });
+  readonly layer = new Container({ sortableChildren: true });
   private frames = new Map<string, Texture | null>();
 
   constructor(
-    public data: MapData,
+    readonly data: MapData,
     private textures: Map<string, Texture>,
   ) {
-    super();
-    this.sortableChildren = true;
-    this.ground.zIndex = -1e9;
-    this.addChild(this.ground);
-    this.rebuild(data);
+    super({ isRenderGroup: true });
+    this.ground.cullableChildren = false; // static and cheap to draw; not worth a per-frame bounds check
+    this.addChild(this.ground, this.layer);
+
+    data.ground.forEach((cell, i) => {
+      if (!cell) return;
+      const [s, x, y] = cell;
+      const texture = this.frame(s, x, y, CELL, CELL);
+      if (!texture) return;
+      const sprite = new Sprite(texture);
+      sprite.position.set((i % data.width) * CELL, Math.floor(i / data.width) * CELL);
+      this.ground.addChild(sprite);
+    });
+
+    for (const o of data.objects) {
+      const texture = this.frame(o.s, o.x, o.y, o.w, o.h);
+      if (!texture) continue;
+      const sprite = new Sprite(texture);
+      sprite.position.set(o.px, o.py);
+      sprite.zIndex = o.py + o.h;
+      sprite.cullable = true;
+      this.layer.addChild(sprite);
+    }
+    this.frames.clear(); // only needed while building; the sprites keep their textures
   }
 
   private frame(s: number, x: number, y: number, w: number, h: number): Texture | null {
@@ -38,55 +54,5 @@ export class MapView extends Container {
       this.frames.set(key, sheet ? makeFrame(sheet, x, y, w, h) : null);
     }
     return this.frames.get(key) ?? null;
-  }
-
-  rebuild(data: MapData = this.data) {
-    this.data = data;
-    this.frames.clear();
-    this.ground.removeChildren().forEach((c) => c.destroy());
-    this.objectSprites.forEach((sp) => sp.destroy());
-    this.objectSprites.clear();
-    this.groundSprites = new Array(data.width * data.height).fill(null);
-    data.ground.forEach((cell, i) => cell && this.drawGround(i, cell));
-    data.objects.forEach((o) => this.drawObject(o));
-  }
-
-  setGround(col: number, row: number, cell: GroundCell | null) {
-    const i = row * this.data.width + col;
-    this.groundSprites[i]?.destroy();
-    this.groundSprites[i] = null;
-    this.data.ground[i] = cell;
-    if (cell) this.drawGround(i, cell);
-  }
-
-  addObject(o: MapObject) {
-    this.data.objects.push(o);
-    this.drawObject(o);
-  }
-
-  removeObject(o: MapObject) {
-    const i = this.data.objects.indexOf(o);
-    if (i >= 0) this.data.objects.splice(i, 1);
-    this.objectSprites.get(o)?.destroy();
-    this.objectSprites.delete(o);
-  }
-
-  private drawGround(i: number, [s, x, y]: GroundCell) {
-    const texture = this.frame(s, x, y, CELL, CELL);
-    if (!texture) return;
-    const sprite = new Sprite(texture);
-    sprite.position.set((i % this.data.width) * CELL, Math.floor(i / this.data.width) * CELL);
-    this.ground.addChild(sprite);
-    this.groundSprites[i] = sprite;
-  }
-
-  private drawObject(o: MapObject) {
-    const texture = this.frame(o.s, o.x, o.y, o.w, o.h);
-    if (!texture) return;
-    const sprite = new Sprite(texture);
-    sprite.position.set(o.px, o.py);
-    sprite.zIndex = o.py + o.h;
-    this.addChild(sprite);
-    this.objectSprites.set(o, sprite);
   }
 }

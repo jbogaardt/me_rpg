@@ -1,8 +1,8 @@
-import { attackPower, defensePower, spellPower, xpToNext, type Hero } from './combat';
-import { input } from './input';
+import { attackPower, defensePower, spellPower, xpToNext, type Hero } from '../systems/combat';
+import { input } from '../core/input';
 
 // Pause menu (HTML overlay; markup in index.html). The game is frozen while it is open.
-// Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by Game.
+// Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
 
 const TABS = ['status', 'gear', 'controls'];
 

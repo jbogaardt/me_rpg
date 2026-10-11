@@ -29,6 +29,18 @@
 .wood { background: url('./ui/wood.jpg') center / 256px; }
 .paper { background: url('./ui/paper.jpg') center / 256px; color: var(--ink); }
 
+/* --- Loading overlay (hidden by Loading.ts once the first scene is ready) --- */
+#loading {
+  position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; background: #1a1a2e; color: var(--gold); font: 700 20px/1.3 'Cinzel', Georgia, serif;
+  padding: 0 24px; text-align: center;
+}
+#loading[hidden] { display: none; }
+#loading .bar { width: min(260px, 70vw); }
+#loading .fill { --frac: 0; background-image: var(--grad-xp); }
+#loading.failed .bar { display: none; }
+#loading.failed { color: #ff8a7a; font-size: 16px; }
+
 /* --- HUD --- */
 #hud {
   position: fixed; z-index: 2; pointer-events: none;

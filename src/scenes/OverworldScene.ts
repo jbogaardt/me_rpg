@@ -1,17 +1,21 @@
-import { Application, type Texture } from 'pixi.js';
+import type { Container } from 'pixi.js';
+import type { Sprites, Zone } from '../assets';
+import { Camera } from '../core/camera';
+import { input } from '../core/input';
+import type { Scene } from '../core/Scene';
+import type { TouchControls } from '../core/touch';
+import { Character, DIR_VEC, directionToward } from '../entities/Character';
+import { boltEffect, Effects, floatText, slashEffect } from '../entities/effects';
+import { Mob, type MobWorld } from '../entities/Mob';
+import type { Dialog } from '../hud/Dialog';
+import type { Hud } from '../hud/Hud';
+import type { Menu } from '../hud/Menu';
 import { MapView } from '../map/MapView';
-import { CELL, type CellPoint, type MapData } from '../map/types';
-import { input } from './input';
-import { Character, DIR_VEC, directionToward } from './Character';
-import { createTouchControls, type TouchControls } from './touch';
-import { attackPower, defensePower, gainXp, MOB_KINDS, newHero, rollDamage, spellPower, type Hero } from './combat';
-import { Mob, type MobWorld } from './Mob';
-import { boltEffect, Effects, floatText, slashEffect } from './effects';
-import { Hud } from './Hud';
-import { Menu } from './Menu';
+import { CELL, type CellPoint } from '../map/types';
+import { attackPower, defensePower, gainXp, MOB_KINDS, newHero, rollDamage, spellPower } from '../systems/combat';
+import { Collision } from '../systems/collision';
 
 const SPEED = 120; // pixels per second
-const DIALOG_MAX_W = 600;
 const NPC_LINES = [
   'Greetings, traveler. This world is still being drawn.',
   'Soon there will be a story here. Come back later!',
@@ -33,29 +37,27 @@ const MP_REGEN = 1.5; // per second
 const HP_REGEN = 1; // per second, once HP_REGEN_DELAY seconds pass without a hit
 const HP_REGEN_DELAY = 5;
 
-export interface GameSprites {
-  hero: Texture;
-  npc: Texture;
-  mobs: Map<string, Texture>; // by MobKind sheet file
+/** The HTML overlays shared by every scene. They are created once in main.ts. */
+export interface Ui {
+  hud: Hud;
+  menu: Menu;
+  dialog: Dialog;
+  touch: TouchControls;
 }
 
-export class Game {
+/** The overworld: one zone with the hero, an NPC and mobs. */
+export class OverworldScene implements Scene {
   private world: MapView;
-  private blocked: Set<number>;
+  private camera: Camera;
+  private collision: Collision;
   private player: Character;
   private npc: Character;
   private mobs: Mob[];
   private mobWorld: MobWorld;
-  private hero: Hero = newHero();
+  private hero = newHero();
   private effects: Effects;
-  private hud = new Hud();
-  private menu = new Menu();
-  private touch: TouchControls;
-  private dialog = document.getElementById('dialog')!; // HTML box (index.html); tapping it advances
-  private dialogText = document.getElementById('dialog-text')!;
-  private lines: string[] = [];
-  private lineIndex = -1; // -1 = no dialog; the world is frozen while talking
-  private zoom = 1;
+  private spawn: CellPoint;
+  private screen = { width: 0, height: 0 };
 
   // Hero combat state
   private attackCooldown = 0;
@@ -65,16 +67,22 @@ export class Game {
   private knock = { x: 0, y: 0 };
 
   constructor(
-    private app: Application,
-    private data: MapData,
-    textures: Map<string, Texture>,
-    sprites: GameSprites,
+    zone: Zone,
+    sprites: Sprites,
+    private ui: Ui,
   ) {
+    const { data } = zone;
+    for (const m of data.mobs) {
+      if (!MOB_KINDS[m.kind]) throw new Error(`Zone "${zone.name}" spawns unknown mob kind "${m.kind}"`);
+    }
+
+    this.world = new MapView(data, zone.textures);
+    this.camera = new Camera(this.world, data.width * CELL, data.height * CELL);
+    this.collision = new Collision(data.width, data.height, data.collision);
+    this.spawn = data.spawn;
+    this.effects = new Effects(this.world.layer);
     this.player = new Character(sprites.hero, true);
     this.npc = new Character(sprites.npc);
-    this.world = new MapView(data, textures);
-    this.blocked = new Set(data.collision);
-    this.effects = new Effects(this.world);
 
     // Entities are positioned by their feet so they y-sort with map objects.
     this.player.position.set(...this.cellToFeet(data.spawn));
@@ -82,106 +90,62 @@ export class Game {
     else this.npc.visible = false;
     this.mobs = data.mobs.map((m) => {
       const kind = MOB_KINDS[m.kind];
-      return new Mob(kind, sprites.mobs.get(kind.sheet)!, ...this.cellToFeet(m));
+      const sheet = sprites.mobs.get(kind.sheet);
+      if (!sheet) throw new Error(`No sprite sheet loaded for mob kind "${m.kind}" (${kind.sheet})`);
+      return new Mob(kind, sheet, ...this.cellToFeet(m));
     });
     this.mobWorld = {
       hero: this.player,
-      slide: (body, mx, my) => this.slide(body, mx, my),
+      slide: (body, mx, my) => this.collision.slide(body, mx, my, this.bodies()),
       strike: (mob) => this.hurtHero(mob),
     };
-    this.world.addChild(this.npc, this.player, ...this.mobs.map((m) => m.body));
-
-    app.stage.addChild(this.world);
-    this.touch = createTouchControls(() => this.layout());
-    app.renderer.on('resize', () => this.layout());
-    this.layout();
+    this.world.layer.addChild(this.npc, this.player, ...this.mobs.map((m) => m.body));
   }
 
-  start() {
-    this.app.ticker.add((t) => this.update(Math.min(t.deltaMS / 1000, 0.1)));
+  get root(): Container {
+    return this.world;
+  }
+
+  enter() {}
+
+  exit() {
+    this.ui.dialog.close();
+    if (this.ui.menu.open) this.ui.menu.toggle(this.hero);
+  }
+
+  resize(width: number, height: number) {
+    this.screen = { width, height };
+    this.camera.resize(width, height);
+    this.ui.dialog.layout(this.screen, this.ui.touch.rects());
+    this.camera.follow(width, height, this.player.x, this.player.y);
   }
 
   private cellToFeet(p: CellPoint): [number, number] {
     return [(p.col + 0.5) * CELL, (p.row + 0.9) * CELL];
   }
 
-  /** Pick an integer zoom for the screen size and dock the dialog box at the bottom. */
-  private layout() {
-    const { width, height } = this.app.screen;
-    this.zoom = Math.max(1, Math.floor(Math.min(width / 640, height / 480)));
-    this.world.scale.set(this.zoom);
-    this.layoutDialog();
-    this.updateCamera();
-  }
-
-  /** Size the dialog box to the screen and keep it clear of the on-screen touch controls. It grows upward with its text. */
-  private layoutDialog() {
-    const { width, height } = this.app.screen;
-    const margin = 10;
-    let left = margin;
-    let right = width - margin;
-    let bottom = height - 20;
-    const [pad, buttons] = this.touch.rects();
-    if (pad && buttons) {
-      // Fit between the D-pad and the buttons if there's room (landscape), otherwise sit above them.
-      if (buttons.left - pad.right - 2 * margin >= 320) {
-        left = pad.right + margin;
-        right = buttons.left - margin;
-      } else {
-        bottom = Math.min(pad.top, buttons.top) - margin;
-      }
-    }
-    const w = Math.min(DIALOG_MAX_W, right - left);
-    Object.assign(this.dialog.style, {
-      left: `${Math.round(left + (right - left - w) / 2)}px`,
-      width: `${w}px`,
-      bottom: `${Math.round(height - bottom)}px`,
-    });
-  }
-
-  private say(lines: string[]) {
-    this.lines = lines;
-    this.lineIndex = 0;
-    this.dialogText.textContent = lines[0];
-    this.dialog.hidden = false;
-  }
-
-  /** Follow the player, but never show past the map edge (center the map if it's smaller than the screen). */
-  private updateCamera() {
-    const { width, height } = this.app.screen;
-    const mapW = this.data.width * CELL * this.zoom;
-    const mapH = this.data.height * CELL * this.zoom;
-    const follow = (screen: number, map: number, target: number) =>
-      map <= screen ? (screen - map) / 2 : Math.min(0, Math.max(screen - map, screen / 2 - target * this.zoom));
-    this.world.position.set(
-      Math.round(follow(width, mapW, this.player.x)),
-      Math.round(follow(height, mapH, this.player.y)),
-    );
-  }
-
-  private update(dt: number) {
-    if (this.lineIndex < 0 && input.wasPressed(...MENU_KEYS)) this.menu.toggle(this.hero);
-    if (this.menu.open) {
-      this.menu.update(); // the world is paused
-      input.endFrame();
+  update(dt: number) {
+    const { menu, dialog, hud } = this.ui;
+    if (!dialog.active && input.wasPressed(...MENU_KEYS)) menu.toggle(this.hero);
+    if (menu.open) {
+      menu.update(); // the world is paused
       return;
     }
 
-    if (this.lineIndex < 0) {
+    if (!dialog.active) {
       this.updateHero(dt);
       for (const mob of this.mobs) mob.update(dt, this.mobWorld);
       if (input.wasPressed(...MAGIC_KEYS)) this.cast();
     } else {
-      this.player.animate(dt * 1000, false);
+      this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
     this.handleAction();
     this.effects.update(dt);
 
     this.npc.animate(dt * 1000, false);
     for (const body of this.bodies()) body.zIndex = body.y;
-    this.hud.update(this.hero);
-    this.updateCamera();
-    input.endFrame();
+    hud.update(this.hero);
+    this.camera.follow(this.screen.width, this.screen.height, this.player.x, this.player.y);
   }
 
   // --- Hero ---
@@ -196,7 +160,7 @@ export class Game {
     if (this.sinceHit > HP_REGEN_DELAY) s.hp = Math.min(s.maxHp, s.hp + HP_REGEN * dt);
 
     if (this.knock.x || this.knock.y) {
-      this.slide(this.player, this.knock.x * dt, this.knock.y * dt);
+      this.collision.slide(this.player, this.knock.x * dt, this.knock.y * dt, this.bodies());
       const decay = Math.exp(-12 * dt);
       this.knock.x *= decay;
       this.knock.y *= decay;
@@ -221,23 +185,18 @@ export class Game {
     else this.player.face(dy > 0 ? 'down' : 'up');
     const len = Math.hypot(dx, dy);
     const step = SPEED * dt;
-    this.slide(this.player, (dx / len) * step, (dy / len) * step);
+    this.collision.slide(this.player, (dx / len) * step, (dy / len) * step, this.bodies());
     return true;
   }
 
   private handleAction() {
     if (!input.wasPressed(...ACTION_KEYS)) return;
-    if (this.lineIndex >= 0) {
-      this.lineIndex++;
-      if (this.lineIndex >= this.lines.length) {
-        this.lineIndex = -1;
-        this.dialog.hidden = true;
-      } else {
-        this.dialogText.textContent = this.lines[this.lineIndex];
-      }
+    const { dialog } = this.ui;
+    if (dialog.active) {
+      dialog.advance();
     } else if (this.npc.visible && Math.hypot(this.player.x - this.npc.x, this.player.y - this.npc.y) < CELL * 1.5) {
       this.npc.face(directionToward(this.player.x - this.npc.x, this.player.y - this.npc.y));
-      this.say(NPC_LINES);
+      dialog.say(NPC_LINES);
     } else {
       this.attack();
     }
@@ -272,8 +231,10 @@ export class Game {
     const hitY = 14; // the bolt flies at chest height, this far above the ground it tests against
     this.effects.add(
       boltEffect(x + vx * 10, y - hitY + vy * 8, vx * BOLT_SPEED, vy * BOLT_SPEED, BOLT_RANGE, (bx, by) => {
-        if (this.isBlocked(Math.floor(bx / CELL), Math.floor((by + hitY) / CELL))) return true;
-        const mob = this.mobs.find((m) => m.alive && Math.abs(bx - m.body.x) < 12 && Math.abs(by + hitY - m.body.y) < 16);
+        if (this.collision.isBlocked(Math.floor(bx / CELL), Math.floor((by + hitY) / CELL))) return true;
+        const mob = this.mobs.find(
+          (m) => m.alive && Math.abs(bx - m.body.x) < 12 && Math.abs(by + hitY - m.body.y) < 16,
+        );
         if (!mob) return false;
         this.hitMob(mob, rollDamage(spellPower(this.hero), mob.kind.defense), vx, vy);
         return true;
@@ -311,57 +272,16 @@ export class Game {
     const s = this.hero.stats;
     s.hp = s.maxHp;
     s.mp = s.maxMp;
-    this.player.position.set(...this.cellToFeet(this.data.spawn));
+    this.player.position.set(...this.cellToFeet(this.spawn));
     this.player.face('down');
     this.knock = { x: 0, y: 0 };
     this.invuln = 0;
     this.mobs.forEach((m) => m.reset());
-    this.say(DEFEAT_LINES);
+    this.ui.dialog.say(DEFEAT_LINES);
   }
-
-  // --- Collision ---
 
   /** Every character that blocks others. */
   private bodies(): Character[] {
     return [this.player, this.npc, ...this.mobs.filter((m) => m.alive).map((m) => m.body)];
-  }
-
-  private isBlocked(col: number, row: number): boolean {
-    if (col < 0 || row < 0 || col >= this.data.width || row >= this.data.height) return true;
-    return this.blocked.has(row * this.data.width + col);
-  }
-
-  /** Whether feet at (x, y) fit the map. The collision box is a small rectangle around the feet. */
-  private fitsMap(x: number, y: number): boolean {
-    for (const [cx, cy] of [[-6, -6], [6, -6], [-6, -1], [6, -1]]) {
-      if (this.isBlocked(Math.floor((x + cx) / CELL), Math.floor((y + cy) / CELL))) return false;
-    }
-    return true;
-  }
-
-  /** Whether `body` may step to (x, y): on open ground, and not pushing further into another character. */
-  private canMove(body: Character, x: number, y: number): boolean {
-    if (!this.fitsMap(x, y)) return false;
-    for (const other of this.bodies()) {
-      if (other === body || !other.visible) continue;
-      const overlaps = Math.abs(x - other.x) < 14 && Math.abs(y - other.y) < 8;
-      // Moving apart is always allowed, so bodies that end up overlapping (e.g. via knockback) can't get stuck.
-      if (overlaps && Math.hypot(x - other.x, y - other.y) < Math.hypot(body.x - other.x, body.y - other.y)) return false;
-    }
-    return true;
-  }
-
-  /** Move with collision, resolving axes separately so bodies slide along walls. Returns true if it moved. */
-  private slide(body: Character, mx: number, my: number): boolean {
-    let moved = false;
-    if (mx && this.canMove(body, body.x + mx, body.y)) {
-      body.x += mx;
-      moved = true;
-    }
-    if (my && this.canMove(body, body.x, body.y + my)) {
-      body.y += my;
-      moved = true;
-    }
-    return moved;
   }
 }

@@ -1,4 +1,4 @@
-import type { Hero } from './combat';
+import type { Hero } from '../systems/combat';
 
 // Health / mana bars, mirrored on one line (XP and level are in the pause menu). HTML rather than
 // canvas so the text stays sharp on high-DPI phones and can respect notch safe areas; markup and

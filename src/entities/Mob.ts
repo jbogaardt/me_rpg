@@ -1,7 +1,7 @@
 import { Graphics, type Texture } from 'pixi.js';
 import { CELL } from '../map/types';
 import { Character, DIR_VEC, directionToward } from './Character';
-import type { MobKind } from './combat';
+import type { MobKind } from '../systems/combat';
 
 /** What a mob needs from the game each tick. */
 export interface MobWorld {

@@ -1,4 +1,4 @@
-import { MOB_KINDS } from '../../src/game/combat';
+import { MOB_KINDS } from '../../src/systems/combat';
 import { CELL, type MapData } from '../../src/map/types';
 import { coverage, sheet } from './image';
 

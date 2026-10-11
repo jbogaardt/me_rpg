@@ -1,5 +1,5 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
-import { makeFrame } from '../map/MapView';
+import { sheetGrid } from '../core/textures';
 
 export type Direction = 'down' | 'up' | 'left' | 'right';
 
@@ -36,9 +36,7 @@ export class Character extends Container {
   /** `aura` adds the hero's pulsing time-ring; NPCs just get a plain shadow. */
   constructor(sheet: Texture, private withAura = false) {
     super();
-    this.frames = [0, 1, 2, 3].map((row) =>
-      [0, 1, 2].map((col) => makeFrame(sheet, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H)!),
-    );
+    this.frames = sheetGrid(sheet, 3, 4, FRAME_W, FRAME_H);
     this.sprite = new Sprite(this.frames[ROW.down][STAND]);
     this.sprite.anchor.set(0.5, 1);
     this.sprite.y = 2; // the art leaves ~2px under the feet in each frame
