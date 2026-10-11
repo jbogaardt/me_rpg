@@ -1,7 +1,8 @@
-import { BitmapText, Container, Graphics, Sprite, type Texture } from 'pixi.js';
+import { BitmapText, Container, Graphics, Sprite, type DestroyOptions, type Texture } from 'pixi.js';
 import { type Direction } from '../core/direction';
 import { makeFrame } from '../core/textures';
 import { ANIMS, ANIM_NAMES, feetAnchor, frameRect, type AnimName } from '../sprites/doll';
+import { releaseSheet } from '../sprites/Wardrobe';
 
 const DIRECTIONS: Direction[] = ['up', 'left', 'down', 'right'];
 
@@ -34,9 +35,14 @@ function framesOf(sheet: Texture): FrameSet {
  * is the point between the feet, so it can be used directly for collision and depth sorting. Looping animations
  * (idle, walk) follow `animate(dt, moving)`; one-shot actions (slash, cast, hurt) are started with `play()` and
  * take over until they finish.
+ *
+ * It owns the reference on its sheet that `Wardrobe.sheet` took: it gives it back when it swaps sheets or is destroyed.
  */
 export class Character extends Container {
+  private sheet: Texture;
   private frames: FrameSet;
+  private shownAnim: AnimName = 'idle'; // the frame on screen, so a new sheet can show the same one at once
+  private shownCol = 0;
   private sprite: Sprite;
   private aura = new Graphics();
   private direction: Direction = 'down';
@@ -53,6 +59,7 @@ export class Character extends Container {
     private withAura = false,
   ) {
     super();
+    this.sheet = sheet;
     this.frames = framesOf(sheet);
     this.sprite = new Sprite(this.frame('idle', 0));
     this.sprite.anchor.set(0.5, feetAnchor('idle'));
@@ -62,7 +69,16 @@ export class Character extends Container {
 
   /** Swap the whole look (equipment changed): the same pose continues on the new sheet. */
   setSheet(sheet: Texture) {
+    const old = this.sheet;
+    this.sheet = sheet;
     this.frames = framesOf(sheet);
+    this.sprite.texture = this.frame(this.shownAnim, this.shownCol); // off the old sheet now: it may be freed
+    releaseSheet(old);
+  }
+
+  override destroy(options?: DestroyOptions) {
+    releaseSheet(this.sheet);
+    super.destroy(options);
   }
 
   face(direction: Direction) {
@@ -101,6 +117,8 @@ export class Character extends Container {
     this.auraTime += dtMs;
     if (this.withAura) this.drawAura(this.auraTime);
     const { anim, col } = this.pose(dtMs, moving);
+    this.shownAnim = anim;
+    this.shownCol = col;
     this.sprite.texture = this.frame(anim, col);
     this.sprite.anchor.y = feetAnchor(anim); // 128px swing frames have their feet lower in the cell
   }

@@ -1,7 +1,13 @@
-/** Set in vite.config.ts: changes on every build. */
+/** Set in vite.config.ts: changes on every build (the co-op version handshake compares it). */
 declare const __BUILD_ID__: string;
 
 interface ImportMetaEnv {
   /** Matchmaking relay base URL override (see src/net/relayConfig.ts). */
   readonly VITE_RELAY_URL?: string;
+}
+
+declare module 'virtual:asset-versions' {
+  /** Content hash per file the game fetches from public/ (`maps/overworld.json` -> hash); empty in the dev server. */
+  const versions: Readonly<Record<string, string>>;
+  export default versions;
 }

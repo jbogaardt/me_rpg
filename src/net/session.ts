@@ -1,6 +1,7 @@
 import { LinkClosed, PeerLink, type Link, type LinkFactory, type LinkStatus } from './PeerLink';
 import {
   encodeMessage,
+  mergeSnapshots,
   parseMessage,
   PROTOCOL_VERSION,
   type DoMsg,
@@ -537,7 +538,8 @@ export class Session {
       case 'snap':
         if (this.guestLink === link && message.n > this.newestSnapshot) {
           this.newestSnapshot = message.n;
-          this.snapshot = message;
+          // Two in one frame: keep what the older one said that the newer leaves out (unchanged mobs, the ground).
+          this.snapshot = this.snapshot ? mergeSnapshots(this.snapshot, message) : message;
         }
         break;
       case 'do': {
