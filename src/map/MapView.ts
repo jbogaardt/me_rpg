@@ -50,7 +50,8 @@ export class MapView extends Container {
   private frame(s: number, x: number, y: number, w: number, h: number): Texture | null {
     const key = `${s}:${x}:${y}:${w}:${h}`;
     if (!this.frames.has(key)) {
-      const sheet = this.textures.get(this.data.sheets[s]);
+      const name = this.data.sheets[s];
+      const sheet = name ? this.textures.get(name) : undefined;
       this.frames.set(key, sheet ? makeFrame(sheet, x, y, w, h) : null);
     }
     return this.frames.get(key) ?? null;

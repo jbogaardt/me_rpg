@@ -23,12 +23,15 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   d.ground.forEach((g, i) => {
     if (!g) return;
     const img = sheet(d.sheets[g[0]]);
-    if (g[1] + CELL > img.width || g[2] + CELL > img.height) errors.push(`ground ${at(i)} reads outside ${d.sheets[g[0]]}`);
+    if (g[1] + CELL > img.width || g[2] + CELL > img.height)
+      errors.push(`ground ${at(i)} reads outside ${d.sheets[g[0]]}`);
   });
-  if (d.ground.some((g) => !g)) warnings.push(`${d.ground.filter((g) => !g).length} cells have no ground (they show the background colour)`);
+  if (d.ground.some((g) => !g))
+    warnings.push(`${d.ground.filter((g) => !g).length} cells have no ground (they show the background colour)`);
   for (const o of d.objects) {
     const img = sheet(d.sheets[o.s]);
-    if (o.x + o.w > img.width || o.y + o.h > img.height) errors.push(`object at px ${o.px},${o.py} reads outside ${d.sheets[o.s]}`);
+    if (o.x + o.w > img.width || o.y + o.h > img.height)
+      errors.push(`object at px ${o.px},${o.py} reads outside ${d.sheets[o.s]}`);
   }
 
   // Points of interest are inside the map and on open ground.
@@ -36,7 +39,8 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   if (d.npc) points.push(['npc', d.npc]);
   for (const m of d.mobs) {
     points.push([`mob ${m.kind}`, m]);
-    if (!MOB_KINDS[m.kind]) errors.push(`mob kind "${m.kind}" at (${m.col},${m.row}) isn't in MOB_KINDS (src/game/combat.ts)`);
+    if (!MOB_KINDS[m.kind])
+      errors.push(`mob kind "${m.kind}" at (${m.col},${m.row}) isn't in MOB_KINDS (src/systems/combat.ts)`);
   }
   for (const [name, p] of points) {
     if (!inMap(p.col, p.row)) errors.push(`${name} (${p.col},${p.row}) is outside the map`);
@@ -50,8 +54,14 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     reach[stack[0]] = 1;
     while (stack.length) {
       const i = stack.pop()!;
-      const c = i % W, r = Math.floor(i / W);
-      for (const [nc, nr] of [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]]) {
+      const c = i % W,
+        r = Math.floor(i / W);
+      for (const [nc, nr] of [
+        [c + 1, r],
+        [c - 1, r],
+        [c, r + 1],
+        [c, r - 1],
+      ]) {
         const j = nr * W + nc;
         if (inMap(nc, nr) && !reach[j] && !blocked.has(j)) {
           reach[j] = 1;
@@ -81,7 +91,8 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     if (!blocked.has(i) && c >= 0.5 && !(below < cov.length && blocked.has(below))) hidden.push(i);
     if (blocked.has(i) && c < 0.15 && !reasons.has(i)) walls.push(i);
   });
-  const list = (cells: number[]) => cells.slice(0, 12).map(at).join(' ') + (cells.length > 12 ? ` …(+${cells.length - 12})` : '');
+  const list = (cells: number[]) =>
+    cells.slice(0, 12).map(at).join(' ') + (cells.length > 12 ? ` …(+${cells.length - 12})` : '');
   if (hidden.length) warnings.push(`player can walk into foliage at ${list(hidden)}`);
   if (walls.length) warnings.push(`invisible walls (blocked, almost no art) at ${list(walls)}`);
 

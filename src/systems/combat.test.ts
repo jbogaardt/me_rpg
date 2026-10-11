@@ -1,0 +1,71 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { attackPower, defensePower, gainXp, MOB_KINDS, newHero, rollDamage, spellPower, xpToNext } from './combat';
+
+afterEach(() => vi.restoreAllMocks());
+
+describe('rollDamage', () => {
+  it('spreads power by ±15% and subtracts defense', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0); // low roll: 0.85x
+    expect(rollDamage(20, 0)).toBe(17);
+    vi.spyOn(Math, 'random').mockReturnValue(0.999); // high roll: ~1.15x
+    expect(rollDamage(20, 0)).toBe(23);
+    expect(rollDamage(20, 5)).toBe(18);
+  });
+
+  it('never deals less than 1', () => {
+    expect(rollDamage(1, 50)).toBe(1);
+    expect(rollDamage(0, 0)).toBe(1);
+  });
+});
+
+describe('gainXp', () => {
+  it('accumulates XP below the threshold without levelling', () => {
+    const { stats } = newHero();
+    expect(gainXp(stats, 5)).toBe(0);
+    expect(stats).toMatchObject({ level: 1, xp: 5, maxHp: 30 });
+  });
+
+  it('levels up, carries the remainder and restores HP/MP', () => {
+    const { stats } = newHero();
+    stats.hp = 3;
+    stats.mp = 0;
+    expect(gainXp(stats, xpToNext(1) + 4)).toBe(1);
+    expect(stats).toMatchObject({ level: 2, xp: 4, maxHp: 36, maxMp: 24, attack: 7, defense: 2, magic: 10 });
+    expect(stats.hp).toBe(36);
+    expect(stats.mp).toBe(24);
+  });
+
+  it('can gain several levels from one big reward', () => {
+    const { stats } = newHero();
+    expect(gainXp(stats, xpToNext(1) + xpToNext(2) + xpToNext(3))).toBe(3);
+    expect(stats.level).toBe(4);
+    expect(stats.xp).toBe(0);
+  });
+
+  it('needs more XP at higher levels', () => {
+    expect(xpToNext(5)).toBeGreaterThan(xpToNext(4));
+  });
+});
+
+describe('power helpers', () => {
+  it('add gear and spell bonuses to the base stats', () => {
+    const hero = newHero();
+    expect(attackPower(hero)).toBe(hero.stats.attack + (hero.weapon.attack ?? 0));
+    expect(defensePower(hero)).toBe(hero.stats.defense + (hero.armor.defense ?? 0));
+    expect(spellPower(hero)).toBe(hero.stats.magic + hero.spell.power);
+  });
+});
+
+describe('MOB_KINDS', () => {
+  it.each(Object.entries(MOB_KINDS))('%s is a playable enemy', (_key, kind) => {
+    expect(kind.maxHp).toBeGreaterThan(0);
+    expect(kind.speed).toBeGreaterThan(0);
+    expect(kind.sight).toBeGreaterThan(0);
+    expect(kind.sheet).toMatch(/\.png$/);
+  });
+
+  it('the starter hero can always hurt a starter mob', () => {
+    const hero = newHero();
+    for (const kind of Object.values(MOB_KINDS)) expect(attackPower(hero) - kind.defense).toBeGreaterThan(0);
+  });
+});

@@ -14,6 +14,13 @@ const zoneUrl = (zone: string) => `${BASE}maps/${zone}.json?v=${__BUILD_ID__}`;
 export const HERO_SHEET = 'healer_f.png'; // placeholder characters; swap a sheet of the same layout to re-skin
 export const NPC_SHEET = 'warrior_m.png';
 
+/** A loaded bundle entry, or a clear error instead of an undefined texture later. */
+function pick(loaded: Record<string, Texture>, key: string): Texture {
+  const texture = loaded[key];
+  if (!texture) throw new Error(`Asset "${key}" did not load`);
+  return texture;
+}
+
 export type Progress = (fraction: number) => void;
 
 export interface Sprites {
@@ -45,7 +52,11 @@ export async function initAssets() {
 
 export async function loadSprites(onProgress?: Progress): Promise<Sprites> {
   const loaded = (await Assets.loadBundle('sprites', onProgress)) as Record<string, Texture>;
-  return { hero: loaded.hero, npc: loaded.npc, mobs: new Map(mobSheets().map((f) => [f, loaded[`mob:${f}`]])) };
+  return {
+    hero: pick(loaded, 'hero'),
+    npc: pick(loaded, 'npc'),
+    mobs: new Map(mobSheets().map((f) => [f, pick(loaded, `mob:${f}`)])),
+  };
 }
 
 export interface Zone {
@@ -62,12 +73,9 @@ export async function loadZone(name: string, onProgress?: Progress): Promise<Zon
   const data = parseMap(await Assets.load(dataAlias));
 
   const bundle = `zone:${name}`;
-  Assets.addBundle(
-    bundle,
-    Object.fromEntries(data.sheets.map((sheet) => [`${bundle}:${sheet}`, tilesetUrl(sheet)])),
-  );
+  Assets.addBundle(bundle, Object.fromEntries(data.sheets.map((sheet) => [`${bundle}:${sheet}`, tilesetUrl(sheet)])));
   const loaded = (await Assets.loadBundle(bundle, onProgress)) as Record<string, Texture>;
-  return { name, data, textures: new Map(data.sheets.map((sheet) => [sheet, loaded[`${bundle}:${sheet}`]])) };
+  return { name, data, textures: new Map(data.sheets.map((sheet) => [sheet, pick(loaded, `${bundle}:${sheet}`)])) };
 }
 
 /** Free a zone's map and tilesets. Don't unload a zone whose tilesets another loaded zone shares. */

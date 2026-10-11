@@ -4,7 +4,12 @@ import { sheetGrid } from '../core/textures';
 export type Direction = 'down' | 'up' | 'left' | 'right';
 
 /** Unit vector for each facing. */
-export const DIR_VEC: Record<Direction, readonly [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+export const DIR_VEC: Record<Direction, readonly [number, number]> = {
+  up: [0, -1],
+  down: [0, 1],
+  left: [-1, 0],
+  right: [1, 0],
+};
 
 /** The facing that best points along (dx, dy). */
 export function directionToward(dx: number, dy: number): Direction {
@@ -34,10 +39,13 @@ export class Character extends Container {
   private auraTime = 0;
 
   /** `aura` adds the hero's pulsing time-ring; NPCs just get a plain shadow. */
-  constructor(sheet: Texture, private withAura = false) {
+  constructor(
+    sheet: Texture,
+    private withAura = false,
+  ) {
     super();
     this.frames = sheetGrid(sheet, 3, 4, FRAME_W, FRAME_H);
-    this.sprite = new Sprite(this.frames[ROW.down][STAND]);
+    this.sprite = new Sprite(this.frame('down', STAND));
     this.sprite.anchor.set(0.5, 1);
     this.sprite.y = 2; // the art leaves ~2px under the feet in each frame
     this.addChild(this.aura, this.sprite);
@@ -70,11 +78,17 @@ export class Character extends Container {
     let col = STAND;
     if (moving) {
       this.walkTime += dtMs;
-      col = WALK_CYCLE[Math.floor(this.walkTime / WALK_FRAME_MS) % WALK_CYCLE.length];
+      col = WALK_CYCLE[Math.floor(this.walkTime / WALK_FRAME_MS) % WALK_CYCLE.length] ?? STAND;
     } else {
       this.walkTime = 0;
     }
-    this.sprite.texture = this.frames[ROW[this.direction]][col];
+    this.sprite.texture = this.frame(this.direction, col);
+  }
+
+  private frame(direction: Direction, col: number): Texture {
+    const texture = this.frames[ROW[direction]]?.[col];
+    if (!texture) throw new Error(`Missing character frame ${direction}/${col}`);
+    return texture;
   }
 
   /** Shadow, plus (for the hero) a pulsing ring of time-energy underfoot. */

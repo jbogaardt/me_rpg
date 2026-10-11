@@ -1,4 +1,11 @@
-import { CELL, type CellPoint, type GroundCell, type MapData, type MapObject, type MobSpawn } from '../../src/map/types';
+import {
+  CELL,
+  type CellPoint,
+  type GroundCell,
+  type MapData,
+  type MapObject,
+  type MobSpawn,
+} from '../../src/map/types';
 import { GROUND, PREFABS, RINGS, TREES, type GroundName, type PrefabName } from './catalog';
 import { coverage } from './image';
 
@@ -56,7 +63,7 @@ export class Zone {
     readonly width: number,
     readonly height: number,
   ) {
-    this.ground = new Array(width * height).fill(null);
+    this.ground = new Array<(typeof this.ground)[number]>(width * height).fill(null);
   }
 
   private inMap(col: number, row: number) {
@@ -78,7 +85,7 @@ export class Zone {
   private fillTile(name: GroundName, col: number, row: number) {
     const g = GROUND[name];
     const line = g.tiles[row % g.tiles.length];
-    this.setGround(col, row, g.sheet, line[col % line.length] as [number, number]);
+    this.setGround(col, row, g.sheet, line[col % line.length]);
   }
 
   /** Cover the whole map (or a rect) with a repeating ground. */
@@ -99,8 +106,27 @@ export class Zone {
     const c1 = rect.col + rect.w - 1;
     const r1 = rect.row + rect.h - 1;
     for (const { col, row } of this.cells(rect)) {
-      const n = row === rect.row, s = row === r1, w = col === rect.col, e = col === c1;
-      const edge = n ? (w ? ring.nw : e ? ring.ne : ring.n) : s ? (w ? ring.sw : e ? ring.se : ring.s) : w ? ring.w : e ? ring.e : null;
+      const n = row === rect.row,
+        s = row === r1,
+        w = col === rect.col,
+        e = col === c1;
+      const edge = n
+        ? w
+          ? ring.nw
+          : e
+            ? ring.ne
+            : ring.n
+        : s
+          ? w
+            ? ring.sw
+            : e
+              ? ring.se
+              : ring.s
+          : w
+            ? ring.w
+            : e
+              ? ring.e
+              : null;
       if (edge) this.setGround(col, row, ring.sheet, edge);
       else this.fillTile(name, col, row);
     }
@@ -132,9 +158,13 @@ export class Zone {
   forest(rect: Rect, opts: { seed?: number } = {}) {
     const rand = rng(opts.seed ?? rect.col * 7919 + rect.row * 104729 + rect.w * 31 + rect.h);
     const { w: TW, h: TH } = PREFABS.treeA;
-    const L = rect.col * CELL, R = (rect.col + rect.w) * CELL;
-    const T = rect.row * CELL, B = (rect.row + rect.h) * CELL;
-    const FRINGE = 18, ROW_STEP = 52, COL_STEP = 46;
+    const L = rect.col * CELL,
+      R = (rect.col + rect.w) * CELL;
+    const T = rect.row * CELL,
+      B = (rect.row + rect.h) * CELL;
+    const FRINGE = 18,
+      ROW_STEP = 52,
+      COL_STEP = 46;
     const bottomY = B - TH;
     const topY = Math.min(bottomY, T - FRINGE);
     const rows = Math.max(1, Math.ceil((bottomY - topY) / ROW_STEP) + 1);
@@ -179,7 +209,7 @@ export class Zone {
     return this;
   }
 
-  /** An enemy spawn; `kind` is a key of MOB_KINDS in src/game/combat.ts. */
+  /** An enemy spawn; `kind` is a key of MOB_KINDS in src/systems/combat.ts. */
   mob(kind: string, col: number, row: number) {
     this.mobList.push({ kind, col, row });
     return this;
@@ -200,7 +230,15 @@ export class Zone {
     for (const p of this.placed) {
       const prefab = PREFABS[p.prefab];
       for (const part of prefab.parts) {
-        const o: MapObject = { s: sheetIndex(prefab.sheet), x: part.x, y: part.y, w: part.w, h: part.h, px: p.px + part.dx, py: p.py + part.dy };
+        const o: MapObject = {
+          s: sheetIndex(prefab.sheet),
+          x: part.x,
+          y: part.y,
+          w: part.w,
+          h: part.h,
+          px: p.px + part.dx,
+          py: p.py + part.dy,
+        };
         objects.push(o);
         // All parts end on the prefab's bottom, so the band is measured from each part's own bottom.
         if (p.autoBlock && prefab.solid) autoParts.push({ o, ...prefab.solid });
@@ -217,7 +255,10 @@ export class Zone {
     }
     for (const group of groups.values()) {
       const { band, min } = group[0];
-      const cov = coverage({ width: this.width, height: this.height, sheets, objects: group.map((a) => a.o) }, () => band);
+      const cov = coverage(
+        { width: this.width, height: this.height, sheets, objects: group.map((a) => a.o) },
+        () => band,
+      );
       cov.forEach((c, i) => c >= min && blocked.add(i));
     }
     for (const [i, on] of this.forced) {

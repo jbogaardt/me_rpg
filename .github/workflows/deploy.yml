@@ -21,9 +21,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npm run verify # never publish a build that fails lint, types, tests or the map checks
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -20,7 +20,7 @@ export interface CellPoint {
   row: number;
 }
 
-/** An enemy spawn point; `kind` is a key of MOB_KINDS (src/game/combat.ts). */
+/** An enemy spawn point; `kind` is a key of MOB_KINDS (src/systems/combat.ts). */
 export interface MobSpawn extends CellPoint {
   kind: string;
 }

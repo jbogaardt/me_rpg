@@ -14,7 +14,7 @@ export class Dialog {
   say(lines: string[]) {
     this.lines = lines;
     this.index = 0;
-    this.text.textContent = lines[0];
+    this.text.textContent = lines[0] ?? '';
     this.box.hidden = false;
   }
 
@@ -23,7 +23,7 @@ export class Dialog {
     if (!this.active) return;
     this.index++;
     if (this.index >= this.lines.length) this.close();
-    else this.text.textContent = this.lines[this.index];
+    else this.text.textContent = this.lines[this.index] ?? '';
   }
 
   close() {

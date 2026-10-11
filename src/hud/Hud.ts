@@ -11,8 +11,9 @@ function hpColor(frac: number): string {
   const t = Math.max(0, Math.min(1, frac)) * (HP_STOPS.length - 1);
   const i = Math.min(HP_STOPS.length - 2, Math.floor(t));
   const mix = (shift: number) => {
-    const a = (HP_STOPS[i] >> shift) & 255;
-    const b = (HP_STOPS[i + 1] >> shift) & 255;
+    const from = HP_STOPS[i] ?? 0;
+    const a = (from >> shift) & 255;
+    const b = ((HP_STOPS[i + 1] ?? from) >> shift) & 255;
     return Math.round(a + (b - a) * (t - i));
   };
   return `rgb(${mix(16)}, ${mix(8)}, ${mix(0)})`;

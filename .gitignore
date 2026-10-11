@@ -36,3 +36,5 @@ desktop.ini
 
 # Map previews rendered by `npm run map` (regenerate any time)
 maps/out/
+playwright-report/
+test-results/

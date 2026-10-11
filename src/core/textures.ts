@@ -17,7 +17,7 @@ const gridCache = new WeakMap<Texture, Map<string, Texture[][]>>();
 export function sheetGrid(sheet: Texture, cols: number, rows: number, frameW: number, frameH: number): Texture[][] {
   const key = `${cols}x${rows}:${frameW}x${frameH}`;
   let byKey = gridCache.get(sheet);
-  if (!byKey) gridCache.set(sheet, (byKey = new Map()));
+  if (!byKey) gridCache.set(sheet, (byKey = new Map<string, Texture[][]>()));
   let grid = byKey.get(key);
   if (!grid) {
     grid = Array.from({ length: rows }, (_, r) =>

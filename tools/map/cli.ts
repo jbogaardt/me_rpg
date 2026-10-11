@@ -20,14 +20,19 @@ const rel = (p: string) => path.relative(process.cwd(), p);
 async function loadZone(name: string): Promise<ZoneSpec> {
   const file = path.join(MAPS_DIR, `${name}.ts`);
   if (!fs.existsSync(file)) throw new Error(`No zone spec ${rel(file)}`);
-  const spec = (await import(pathToFileURL(file).href)).default as ZoneSpec;
+  const mod = (await import(pathToFileURL(file).href)) as { default?: ZoneSpec };
+  const spec = mod.default;
   if (spec?.name !== name) throw new Error(`${rel(file)} must default-export defineZone({ name: '${name}', ... })`);
   return spec;
 }
 
 function zoneNames(args: string[]): string[] {
   if (args.length) return args;
-  return fs.readdirSync(MAPS_DIR).filter((f) => f.endsWith('.ts')).map((f) => f.slice(0, -3)).sort();
+  return fs
+    .readdirSync(MAPS_DIR)
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => f.slice(0, -3))
+    .sort();
 }
 
 function generate(spec: ZoneSpec): { data: MapData; report: Report } {
@@ -63,9 +68,16 @@ async function main() {
       const { data, report } = generate(await loadZone(name));
       fs.writeFileSync(jsonPath(name), JSON.stringify(data));
       writePng(path.join(OUT_DIR, `${name}.png`), renderMap(data));
-      writePng(path.join(OUT_DIR, `${name}.debug.png`), renderMap(data, { collision: true, grid: true, markers: true }));
-      console.log(`${name}: ${rel(jsonPath(name))} (${data.objects.length} objects, ${data.collision.length} blocked cells)`);
-      console.log(`  previews: ${rel(path.join(OUT_DIR, `${name}.png`))}, ${rel(path.join(OUT_DIR, `${name}.debug.png`))}`);
+      writePng(
+        path.join(OUT_DIR, `${name}.debug.png`),
+        renderMap(data, { collision: true, grid: true, markers: true }),
+      );
+      console.log(
+        `${name}: ${rel(jsonPath(name))} (${data.objects.length} objects, ${data.collision.length} blocked cells)`,
+      );
+      console.log(
+        `  previews: ${rel(path.join(OUT_DIR, `${name}.png`))}, ${rel(path.join(OUT_DIR, `${name}.debug.png`))}`,
+      );
       printReport(name, report);
       failed ||= report.errors.length > 0;
     }
@@ -82,7 +94,10 @@ async function main() {
   } else if (cmd === 'render') {
     const { pos, flags } = parseFlags(rest);
     const name = pos[0];
-    if (!name) throw new Error('usage: npm run map -- render <zone> [--crop col,row,w,h] [--scale n] [--debug] [--out file.png]');
+    if (!name)
+      throw new Error(
+        'usage: npm run map -- render <zone> [--crop col,row,w,h] [--scale n] [--debug] [--out file.png]',
+      );
     const data = parseMap(JSON.parse(fs.readFileSync(jsonPath(name), 'utf8')));
     const opts: RenderOptions = { scale: Number(flags.get('--scale') ?? 1) };
     if (flags.has('--debug')) Object.assign(opts, { collision: true, grid: true, markers: true });
@@ -91,7 +106,9 @@ async function main() {
       const [col, row, w, h] = crop.split(',').map(Number);
       opts.crop = { col, row, w, h };
     }
-    const out = flags.get('--out') ?? path.join(OUT_DIR, `${name}${crop ? `.${crop.replace(/,/g, '-')}` : ''}${opts.collision ? '.debug' : ''}.png`);
+    const out =
+      flags.get('--out') ??
+      path.join(OUT_DIR, `${name}${crop ? `.${crop.replace(/,/g, '-')}` : ''}${opts.collision ? '.debug' : ''}.png`);
     writePng(out, renderMap(data, opts));
     console.log(rel(out));
   } else {

@@ -14,7 +14,7 @@ import { OverworldScene } from './scenes/OverworldScene';
 
 const START_ZONE = 'overworld';
 
-(async () => {
+void (async () => {
   const loading = new Loading();
   try {
     // Pixel art: every texture loaded from here on is sampled with nearest-neighbour filtering.

@@ -72,10 +72,6 @@ export class OverworldScene implements Scene {
     private ui: Ui,
   ) {
     const { data } = zone;
-    for (const m of data.mobs) {
-      if (!MOB_KINDS[m.kind]) throw new Error(`Zone "${zone.name}" spawns unknown mob kind "${m.kind}"`);
-    }
-
     this.world = new MapView(data, zone.textures);
     this.camera = new Camera(this.world, data.width * CELL, data.height * CELL);
     this.collision = new Collision(data.width, data.height, data.collision);
@@ -90,6 +86,7 @@ export class OverworldScene implements Scene {
     else this.npc.visible = false;
     this.mobs = data.mobs.map((m) => {
       const kind = MOB_KINDS[m.kind];
+      if (!kind) throw new Error(`Zone "${zone.name}" spawns unknown mob kind "${m.kind}"`);
       const sheet = sprites.mobs.get(kind.sheet);
       if (!sheet) throw new Error(`No sprite sheet loaded for mob kind "${m.kind}" (${kind.sheet})`);
       return new Mob(kind, sheet, ...this.cellToFeet(m));

@@ -22,7 +22,14 @@ export default defineZone({
     z.prop('treeB', 20, 9, { dx: 1 });
     z.prop('treeB', 11, 17, { dx: 1 });
 
-    for (const [col, row] of [[18, 6], [26, 10], [10, 12], [8, 20], [30, 20]]) z.prop('rock', col, row);
+    for (const [col, row] of [
+      [18, 6],
+      [26, 10],
+      [10, 12],
+      [8, 20],
+      [30, 20],
+    ])
+      z.prop('rock', col, row);
 
     z.spawn(6, 6);
     z.npc(14, 9);
