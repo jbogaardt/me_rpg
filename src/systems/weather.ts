@@ -7,11 +7,12 @@ import { CELL } from '../map/types';
 export type Biome = 'plains' | 'desert' | 'tundra';
 export type WeatherKind = 'clear' | 'wind' | 'rain' | 'storm' | 'snow' | 'blizzard' | 'sandstorm';
 
-/** What can happen where, with relative odds. A desert never rains; the tundra only snows. */
+/** What can happen where, with relative odds. Every biome has its own storm that runs all the time: the tundra
+ * snows, the desert has sandstorms and the plains get rain. Nothing else mixes in, so there is only ever one. */
 export const WEATHER_TABLE: Record<Biome, Partial<Record<WeatherKind, number>>> = {
-  plains: { clear: 5, wind: 3, rain: 2, storm: 1 },
-  desert: { clear: 6, wind: 2, sandstorm: 2 },
-  tundra: { clear: 4, snow: 4, blizzard: 1, wind: 1 },
+  plains: { rain: 2, storm: 1 },
+  desert: { sandstorm: 1 },
+  tundra: { snow: 4, blizzard: 1 },
 };
 
 /** How hard the wind blows (0 to 1) under each kind of weather; the sign comes from the event's direction. */

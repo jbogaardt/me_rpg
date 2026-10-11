@@ -22,7 +22,7 @@ describe('WEATHER_TABLE', () => {
     expect(isAllowed('desert', 'snow')).toBe(false);
     expect(isAllowed('tundra', 'snow')).toBe(true);
     expect(isAllowed('desert', 'sandstorm')).toBe(true);
-    expect(isAllowed('plains', 'wind')).toBe(true);
+    expect(isAllowed('plains', 'sandstorm')).toBe(false);
   });
 });
 
@@ -68,6 +68,20 @@ describe('Weather', () => {
     expect(w.wind).toBeLessThan(0);
     w.force('clear');
     expect(Math.abs(w.wind)).toBe(0);
+  });
+});
+
+describe('biome storms', () => {
+  it.each([
+    ['tundra', ['snow', 'blizzard']],
+    ['desert', ['sandstorm']],
+    ['plains', ['rain', 'storm']],
+  ] as const)('%s always has its own storm and nothing else', (biome, kinds) => {
+    const w = new Weather(biome, mulberry32(9));
+    for (let t = 0; t < 60 * 20; t += 0.25) {
+      w.update(0.25, biome);
+      if (t > 10) expect(kinds as readonly WeatherKind[]).toContain(w.kind);
+    }
   });
 });
 
