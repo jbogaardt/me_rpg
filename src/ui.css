@@ -9,7 +9,6 @@
   --title: 'Cinzel', Georgia, serif;
   --body: 'Crimson Text', Georgia, serif;
   /* Bar fills, sampled from the kit's gradients.png */
-  --grad-mp: linear-gradient(90deg, #363c4e, #586c78, #7796a5, #90b8d1, #a8d3fc);
   --grad-xp: linear-gradient(90deg, #7c230f, #b3632a, #dc9e4c, #f5d175, #fdfca6);
 }
 
@@ -35,21 +34,30 @@
   position: fixed; z-index: 2; pointer-events: none;
   top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
   right: calc(8px + env(safe-area-inset-right));
-  display: flex; justify-content: space-between; align-items: flex-start;
+  display: flex; justify-content: space-between; align-items: center;
 }
-#hud-stats { --bar-w: 132px; display: grid; gap: 4px; padding: 3px 4px 4px; }
-#hud-level { font: 700 13px var(--title); color: var(--gold); text-shadow: 0 1px 2px #000; letter-spacing: 0.04em; }
+/* HP and MP as mirror-image bars on one line: HP drains toward the left edge, MP toward the right.
+   XP and level are in the pause menu. */
+#hud-stats { display: flex; gap: 6px; flex: 0 1 400px; min-width: 0; margin-right: 8px; padding: 3px 4px; }
+#hud-stats .bar { flex: 1 1 0; min-width: 0; }
 .bar {
-  position: relative; width: var(--bar-w); height: 14px; overflow: hidden;
+  position: relative; height: 14px; overflow: hidden;
   background: #17120c; border: 1px solid var(--gold-dim); border-radius: 2px; box-shadow: inset 0 1px 3px #000;
 }
-.bar.thin { height: 6px; }
-/* MP/XP gradients span the whole track (dark when low, bright when full); HP is coloured by Hud.ts. */
-.bar .fill { height: 100%; width: 100%; background-size: var(--bar-w) 100%; transition: width 0.15s, background-color 0.15s; }
-.bar .label { position: absolute; inset: 0; color: #fff; font: 600 11px/14px var(--body); text-align: center; text-shadow: 0 1px 2px #000, 0 0 2px #000; }
+/* The fill always spans the track (so MP/XP gradients run dark→bright across the whole bar) and is
+   clipped to --frac (set by Hud.ts / Menu.ts); HP is coloured by Hud.ts. */
+.bar .fill {
+  height: 100%; clip-path: inset(0 calc(100% - var(--frac, 1) * 100%) 0 0);
+  transition: clip-path 0.15s, background-color 0.15s;
+}
+.bar.mirror .fill { clip-path: inset(0 0 0 calc(100% - var(--frac, 1) * 100%)); }
+.bar .label { position: absolute; inset: 0; color: #fff; font: 600 11px/14px var(--body); text-align: center; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 2px #000; }
+#hud-hp .label::before { content: 'HP '; font-weight: 700; }
+#hud-mp .label::before { content: 'MP '; font-weight: 700; }
 #hud-hp .fill { background-image: linear-gradient(rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.25)); }
-#hud-mp .fill { background-image: var(--grad-mp); }
-#hud-xp .fill { background-image: var(--grad-xp); }
+#hud-mp .fill { background-image: linear-gradient(270deg, #363c4e, #586c78, #7796a5, #90b8d1, #a8d3fc); }
+.bar.xp { height: 8px; margin-top: 3px; }
+.bar.xp .fill { background-image: var(--grad-xp); }
 
 /* Square wooden buttons from the kit */
 .wood-btn, #menu-btn, #btn-a, #btn-b, #menu .close {

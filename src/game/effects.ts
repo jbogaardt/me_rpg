@@ -20,11 +20,16 @@ export class Effects {
   }
 
   update(dt: number) {
-    this.list = this.list.filter((e) => {
+    // Updating can add effects (a bolt hit spawns damage / XP / LEVEL UP text), so collect those in a
+    // fresh list and keep them, rather than letting the filtered result overwrite them.
+    const current = this.list;
+    this.list = [];
+    const alive = current.filter((e) => {
       if (e.update(dt)) return true;
       e.view.destroy();
       return false;
     });
+    this.list = alive.concat(this.list);
   }
 }
 

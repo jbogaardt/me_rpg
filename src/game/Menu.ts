@@ -44,12 +44,14 @@ export class Menu {
   private render(hero: Hero) {
     const s = hero.stats;
     const row = (label: string, value: string | number) => `<dt>${label}</dt><dd>${value}</dd>`;
+    const next = xpToNext(s.level);
+    const xpFrac = Math.max(0, Math.min(1, s.xp / next));
     document.getElementById('menu-status')!.innerHTML = `
       <h2>${hero.name} <small>Level ${s.level}</small></h2>
       <dl>
         ${row('HP', `${Math.ceil(s.hp)} / ${s.maxHp}`)}
         ${row('MP', `${Math.floor(s.mp)} / ${s.maxMp}`)}
-        ${row('XP', `${s.xp} / ${xpToNext(s.level)}`)}
+        ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
         ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${hero.weapon.attack ?? 0} weapon)</small>`)}
         ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${hero.armor.defense ?? 0} armor)</small>`)}
         ${row('Magic', `${spellPower(hero)} <small>(${s.magic} + ${hero.spell.power} spell)</small>`)}
