@@ -23,10 +23,14 @@ import type { Menu } from '../hud/Menu';
 import { arrivalFacing, cellFeet, doorAt, doorsNear } from '../map/doors';
 import { CELL, type CellPoint } from '../map/types';
 import { ZoneState, type Keeper } from './ZoneState';
-import { DEFAULT_VIEW, MobFeed } from '../net/feed';
+import { DEFAULT_VIEW, eventInView, fitEvents, MobFeed, SNAP_BUDGET } from '../net/feed';
 import { decodeMob, encodeMob } from '../net/mobWire';
 import {
+  decodeEvent,
+  encodeEvent,
+  encodeMessage,
   FLAG,
+  type EventWire,
   type MobFields,
   MAX_VIEW,
   packKeys,
@@ -167,7 +171,8 @@ export class OverworldScene implements Scene {
   private clock = 0; // seconds; drives the guest's invulnerability blink and event ages
   private snapTimer = 0;
   private snapSeq = 0;
-  private events: { id: number; at: number; zone: string; e: WorldEvent }[] = []; // host: recent one-shot events
+  // host: recent one-shot events, encoded once for every friend that is sent them
+  private events: { id: number; at: number; zone: string; e: WorldEvent; wire: EventWire; size: number }[] = [];
   private feeds = new Map<number, { zone: string; feed: MobFeed; ground: { sig: string; at: number } | null }>(); // host: what each friend has been told about the mobs
   private eventId = 0;
   private lastEvent = -1; // guest: newest event already shown
@@ -743,7 +748,16 @@ export class OverworldScene implements Scene {
 
   /** Something every friend should also see (it is shown there, never simulated). Only a host records these. */
   private emit(e: WorldEvent) {
-    if (this.role === 'host') this.events.push({ id: ++this.eventId, at: this.clock, zone: this.zone.name, e });
+    if (this.role !== 'host') return;
+    const wire = encodeEvent(++this.eventId, e);
+    this.events.push({
+      id: this.eventId,
+      at: this.clock,
+      zone: this.zone.name,
+      e,
+      wire,
+      size: JSON.stringify(wire).length,
+    });
   }
 
   private broadcast(dt: number) {
@@ -774,8 +788,8 @@ export class OverworldScene implements Scene {
           states: z.mobs.map((m) => encodeMob(m.view())),
           ground: z.ground.map((g): GroundSnap => [
             g.id,
-            round1(g.x),
-            round1(g.y),
+            Math.round(g.x),
+            Math.round(g.y),
             itemCode(g.item),
             Math.ceil(g.remaining),
           ]),
@@ -791,23 +805,26 @@ export class OverworldScene implements Scene {
       let entry = this.feeds.get(slot);
       if (!entry || entry.zone !== z.name)
         this.feeds.set(slot, (entry = { zone: z.name, feed: new MobFeed(), ground: null }));
-      const mobs = entry.feed.select(states, remote.body, peer?.vr || DEFAULT_VIEW, this.clock);
-      const events = this.events
-        .filter((ev) => ev.zone === z.name && ev.id > (peer?.ack ?? 0))
-        .slice(-MAX_EVENTS_SENT)
-        .map(({ id, e }) => ({ id, e }));
+      const view = peer?.vr || DEFAULT_VIEW;
+      const mobs = entry.feed.select(states, remote.body, view, this.clock);
+      // Events near this friend that they have not confirmed, as many as fit beside the rest of the snapshot.
+      const unseen = this.events.filter(
+        (ev) => ev.zone === z.name && ev.id > (peer?.ack ?? 0) && eventInView(ev.e, remote.body, view, BOLT_RANGE),
+      );
       // The ground changes rarely (an item dropped, picked up or gone): list it when it does, and once a second anyway
       // (the countdown to crumbling, and a lost packet).
       const sig = ground.map((g) => g.slice(0, 4).join()).join(';');
       const listGround = !entry.ground || entry.ground.sig !== sig || this.clock - entry.ground.at >= GROUND_RESEND;
       if (listGround) entry.ground = { sig, at: this.clock };
-      this.ui.session.sendTo(slot, {
+      const snap: SnapMsg = {
         ...base,
         mobs,
-        events,
+        events: [],
         ...(listGround ? { ground } : {}),
         me: this.snapStats(remote.hero.stats),
-      });
+      };
+      if (unseen.length) snap.events = fitEvents(unseen, SNAP_BUDGET - encodeMessage(snap).length, MAX_EVENTS_SENT);
+      this.ui.session.sendTo(slot, snap);
     }
   }
 
@@ -1083,10 +1100,11 @@ export class OverworldScene implements Scene {
       Object.assign(this.hero.stats, { level, xp, hp, maxHp, mp, maxMp, attack, defense, magic });
 
     let newest = this.lastEvent;
-    for (const { id, e } of snap.events) {
-      if (id <= this.lastEvent) continue; // already shown (events repeat across snapshots)
-      newest = Math.max(newest, id);
-      this.showEvent(e);
+    for (const wire of snap.events) {
+      const ev = decodeEvent(wire); // checked by parseMessage already
+      if (!ev || ev.id <= this.lastEvent) continue; // already shown (events repeat across snapshots)
+      newest = Math.max(newest, ev.id);
+      this.showEvent(ev.e);
     }
     this.lastEvent = newest;
   }
