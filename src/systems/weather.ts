@@ -29,11 +29,11 @@ export const WIND: Record<WeatherKind, number> = {
 const DURATION: Record<WeatherKind, [number, number]> = {
   clear: [40, 110],
   wind: [30, 70],
-  rain: [40, 90],
-  storm: [25, 50],
-  snow: [45, 100],
-  blizzard: [25, 50],
-  sandstorm: [25, 55],
+  rain: [150, 210],
+  storm: [150, 210],
+  snow: [150, 210],
+  blizzard: [120, 180],
+  sandstorm: [90, 150],
 };
 
 const RAMP = 6; // seconds to fade a weather in or out
@@ -85,7 +85,7 @@ export class Weather {
   windDir: 1 | -1 = 1;
   biome: Biome;
 
-  private remaining = 0;
+  remaining = 0;
   private ending = true; // fading out; the next event is picked once it reaches nothing
   private pending: Biome | null = null;
   private pendingFor = 0;
@@ -159,5 +159,29 @@ export class Weather {
       if (roll < 0) return kind;
     }
     return 'clear';
+  }
+}
+
+/**
+ * Decides when lightning strikes during a storm: a random gap of a few seconds, and sometimes a quick double
+ * strike. `update` returns true on the frame a strike should be shown.
+ */
+export class Lightning {
+  private wait: number;
+
+  constructor(private rng: () => number = Math.random) {
+    this.wait = this.gap();
+  }
+
+  update(dt: number, stormy: boolean): boolean {
+    if (!stormy) return false;
+    this.wait -= dt;
+    if (this.wait > 0) return false;
+    this.wait = this.rng() < 0.3 ? 0.15 + this.rng() * 0.2 : this.gap();
+    return true;
+  }
+
+  private gap() {
+    return 3 + this.rng() * 7;
   }
 }
