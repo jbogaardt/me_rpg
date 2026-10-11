@@ -1,5 +1,6 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { ViewRect } from '../core/camera';
+import { WeatherFrame } from './WeatherFrame';
 import { Lightning, type Weather, type WeatherKind } from '../systems/weather';
 
 // Draws the current weather over the world: a tinted haze plus a fixed pool of tiny sprites (rain streaks, snow,
@@ -109,6 +110,7 @@ export class WeatherLayer {
   private flash: Sprite;
   private bolt = new Graphics();
   private lightning = new Lightning();
+  private frame = new WeatherFrame();
   private glow = 0; // 1 right after a strike, fading to 0
 
   /** `layer` is the map's y-sorted layer; the weather sorts just under the top effects. */
@@ -127,7 +129,7 @@ export class WeatherLayer {
       this.view.addChild(sprite);
       this.drops.push({ sprite, x: 0, y: 0, fall: 0, phase: 0, sway: 0 });
     }
-    this.view.addChild(this.flash, this.bolt);
+    this.view.addChild(this.flash, this.bolt, this.frame.view);
     this.view.zIndex = 1e9 - 1;
     layer.addChild(this.view);
   }
@@ -150,6 +152,7 @@ export class WeatherLayer {
       this.haze.height = view.h;
     }
 
+    this.frame.update(weather.kind, weather.intensity, view.x, view.y, view.w, view.h);
     this.strikes(dt, weather, view);
 
     const want = style ? Math.min(POOL, Math.round(style.count * weather.intensity)) : 0;
