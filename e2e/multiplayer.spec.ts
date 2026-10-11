@@ -280,6 +280,8 @@ test('up to four players: friends join, leave, and a new friend takes the empty 
 
   // The co-op map shows a pin for every other player, each in their own colour, and a legend naming them.
   await last.keyboard.press('Escape'); // close the menu
+  // The M button only shows once this page is really in the game; pressing M earlier (a slow machine) does nothing.
+  await expect(last.locator('#map-btn')).toBeVisible({ timeout: 30_000 });
   await last.keyboard.press('KeyM');
   await expect(last.locator('#map-overlay')).toBeVisible();
   await expect(last.locator('#map-overlay .pin.friend')).toHaveCount(3, { timeout: 30_000 });
