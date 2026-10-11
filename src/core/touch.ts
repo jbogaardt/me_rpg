@@ -38,9 +38,33 @@ function bindKeyButtons() {
   }
 }
 
+/**
+ * iOS Safari ignores `user-scalable=no`: pinching, or tapping buttons in quick succession (a double-tap), zooms the page
+ * and leaves the fixed controls off screen. Block both; `touch-action: manipulation` on html/body (index.html) covers
+ * the double-tap, these cover pinch gestures and a second tap that lands on a non-interactive gap.
+ */
+function blockPageZoom() {
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+    document.addEventListener(type, (e) => e.preventDefault());
+  }
+  document.addEventListener('touchmove', (e) => e.touches.length > 1 && e.preventDefault(), { passive: false });
+  let lastTouchEnd = 0;
+  document.addEventListener(
+    'touchend',
+    (e) => {
+      const now = Date.now();
+      // A second touch within 350 ms is the double-tap zoom; keep real form fields and links tappable.
+      if (now - lastTouchEnd < 350 && e.target instanceof HTMLCanvasElement) e.preventDefault();
+      lastTouchEnd = now;
+    },
+    { passive: false },
+  );
+}
+
 /** `onChange` fires when the controls appear or disappear, so the caller can re-layout around them. */
 export function createTouchControls(onChange: () => void): TouchControls {
   bindKeyButtons();
+  blockPageZoom();
   const root = document.getElementById('touch-controls');
   const pad = document.getElementById('dpad');
   const knob = document.getElementById('dpad-knob');
