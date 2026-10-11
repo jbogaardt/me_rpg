@@ -17,9 +17,10 @@ import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../syst
 import type { Note, SideWire, TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
+import { WEATHER_KINDS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 10;
+export const PROTOCOL_VERSION = 11;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -62,6 +63,7 @@ export type WorldEvent =
   | { type: 'arrow'; x: number; y: number; vx: number; vy: number; range: number } // a player's arrow (the guest only draws it)
   | { type: 'text'; x: number; y: number; text: string; color: number }
   | { type: 'fx'; name: FxName; x: number; y: number; dir?: number; p?: number } // `p`: the player it happened to (heroHurt)
+  | { type: 'lightning'; x: number; y: number; seed: number } // a bolt lands here (the seed shapes it the same everywhere)
   | { type: 'defeat'; player: number }; // this player (0 is the host) was knocked out and sent back to spawn
 
 export interface HelloMsg {
@@ -104,6 +106,7 @@ export interface SnapMsg {
   mobs: MobSnap[]; // only the mobs near the recipient, and a still one only now and then
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
+  w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
   ground?: GroundSnap[];
   events: { id: number; e: WorldEvent }[];
@@ -194,6 +197,9 @@ const isIndex = (v: unknown, length: number): v is number => isCount(v) && v < l
 const numbers = (v: unknown, length: number): v is number[] =>
   Array.isArray(v) && v.length === length && v.every(isNum);
 
+const isWeather = (v: unknown): v is WeatherSnap =>
+  numbers(v, 3) && isIndex(v[0], WEATHER_KINDS.length) && isCount(v[1]) && v[1] <= 100 && (v[2] === 0 || v[2] === 1);
+
 function parseEvent(raw: unknown): WorldEvent | null {
   const e = raw as Record<string, unknown> | null;
   if (!e || typeof e !== 'object') return null;
@@ -243,6 +249,10 @@ function parseEvent(raw: unknown): WorldEvent | null {
         (e.dir === undefined || isCoord(e.dir)) &&
         (e.p === undefined || isIndex(e.p, MAX_PLAYERS))
         ? { type: 'fx', name: e.name as FxName, x: e.x, y: e.y, dir: e.dir, ...(e.p === undefined ? {} : { p: e.p }) }
+        : null;
+    case 'lightning':
+      return isCoord(e.x) && isCoord(e.y) && isCount(e.seed) && e.seed <= 0xffffffff
+        ? { type: 'lightning', x: e.x, y: e.y, seed: e.seed }
         : null;
     case 'defeat':
       return isIndex(e.player, MAX_PLAYERS) ? { type: 'defeat', player: e.player } : null;
@@ -411,6 +421,7 @@ export function parseMessage(raw: unknown): Message | null {
         !ground ||
         ground.includes(null) ||
         !numbers(m.me, 9) ||
+        !isWeather(m.w) ||
         !isCount(m.chests) ||
         m.chests > MAX_CHEST_MASK
       ) {
@@ -425,6 +436,7 @@ export function parseMessage(raw: unknown): Message | null {
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
         chests: m.chests,
+        w: m.w,
         ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
         events: events as { id: number; e: WorldEvent }[],
       };

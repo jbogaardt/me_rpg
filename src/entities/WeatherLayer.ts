@@ -1,11 +1,20 @@
-import { Container, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { ViewRect } from '../core/camera';
-import type { Weather, WeatherKind } from '../systems/weather';
+import { mulberry32 } from '../systems/particles';
+import { WeatherFrame } from './WeatherFrame';
+import { Lightning, type Weather, type WeatherKind } from '../systems/weather';
 
 // Draws the current weather over the world: a tinted haze plus a fixed pool of tiny sprites (rain streaks, snow,
 // blown sand, wind gusts) that wrap around the camera's view. Nothing is allocated per frame.
 
-const POOL = 320;
+const POOL = 800;
+
+/** Where a lightning bolt lands (world px) and the seed that shapes it. */
+export interface Strike {
+  x: number;
+  y: number;
+  seed: number;
+}
 
 interface Style {
   count: number; // particles at full intensity
@@ -22,47 +31,57 @@ interface Style {
 const STYLES: Partial<Record<WeatherKind, Style>> = {
   wind: { count: 26, tint: 0xffffff, alpha: 0.55, w: [8, 14], h: [1, 1], vx: 260, fall: [-4, 6], sway: 0, tilt: true },
   rain: {
-    count: 260,
-    tint: 0x3a66a8,
-    alpha: 0.9,
+    count: 420,
+    tint: 0x4a7fd0,
+    alpha: 0.95,
     w: [1, 2],
-    h: [6, 10],
+    h: [7, 11],
     vx: 120,
-    fall: [280, 340],
+    fall: [300, 360],
     sway: 0,
     tilt: true,
   },
   storm: {
-    count: 320,
-    tint: 0x28468c,
+    count: 560,
+    tint: 0x5a8ce0,
     alpha: 1,
-    w: [2, 2],
-    h: [9, 14],
-    vx: 150,
-    fall: [340, 420],
+    w: [3, 4],
+    h: [18, 28],
+    vx: 170,
+    fall: [420, 520],
     sway: 0,
     tilt: true,
   },
-  snow: { count: 150, tint: 0xc4d8f2, alpha: 1, w: [2, 3], h: [2, 3], vx: 90, fall: [22, 42], sway: 8, tilt: false },
-  blizzard: {
-    count: 320,
-    tint: 0xb4cbee,
+  snow: {
+    count: 520,
+    tint: 0xffffff,
     alpha: 1,
-    w: [2, 3],
-    h: [2, 3],
+    w: [4, 6],
+    h: [4, 6],
+    vx: 90,
+    fall: [26, 48],
+    sway: 10,
+    tilt: false,
+  },
+  blizzard: {
+    count: 800,
+    tint: 0xffffff,
+    alpha: 1,
+    w: [4, 6],
+    h: [4, 6],
     vx: 240,
-    fall: [55, 95],
-    sway: 5,
+    fall: [60, 100],
+    sway: 6,
     tilt: false,
   },
   sandstorm: {
-    count: 320,
-    tint: 0x946020,
-    alpha: 0.95,
-    w: [2, 5],
-    h: [1, 2],
-    vx: 300,
-    fall: [-6, 12],
+    count: 700,
+    tint: 0xb87a30,
+    alpha: 1,
+    w: [1, 2],
+    h: [5, 9],
+    vx: 320,
+    fall: [-2, 2], // blows in from the sides, not down from the sky
     sway: 0,
     tilt: true,
   },
@@ -70,11 +89,11 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
 
 /** The colour and strength of the haze over the whole view (strong enough to read against bright ground). */
 const HAZE: Partial<Record<WeatherKind, { tint: number; alpha: number }>> = {
-  rain: { tint: 0x16233a, alpha: 0.28 },
-  storm: { tint: 0x0b1224, alpha: 0.48 },
-  snow: { tint: 0xd0def2, alpha: 0.12 },
-  blizzard: { tint: 0xdce8fa, alpha: 0.4 },
-  sandstorm: { tint: 0xa06a20, alpha: 0.4 },
+  rain: { tint: 0x16233a, alpha: 0.24 },
+  storm: { tint: 0x060a18, alpha: 0.58 },
+  snow: { tint: 0x5a6e90, alpha: 0.38 }, // dim the bright ground so white flakes stand out
+  blizzard: { tint: 0x8498b8, alpha: 0.5 },
+  sandstorm: { tint: 0x8a5518, alpha: 0.38 },
 };
 
 interface Drop {
@@ -96,6 +115,11 @@ export class WeatherLayer {
   private active = 0; // drops currently in play (the rest are hidden)
   private kind: WeatherKind = 'clear';
   private clock = 0;
+  private flash: Sprite;
+  private bolt = new Graphics();
+  private lightning = new Lightning();
+  private frame = new WeatherFrame();
+  private glow = 0; // 1 right after a strike, fading to 0
 
   /** `layer` is the map's y-sorted layer; the weather sorts just under the top effects. */
   constructor(layer: Container) {
@@ -103,6 +127,9 @@ export class WeatherLayer {
     this.haze = new Sprite(pixel);
     this.haze.visible = false;
     this.view.addChild(this.haze);
+    this.flash = new Sprite(pixel);
+    this.flash.visible = false;
+    this.flash.tint = 0xeef4ff;
     for (let i = 0; i < POOL; i++) {
       const sprite = new Sprite(pixel);
       sprite.anchor.set(0.5);
@@ -110,11 +137,13 @@ export class WeatherLayer {
       this.view.addChild(sprite);
       this.drops.push({ sprite, x: 0, y: 0, fall: 0, phase: 0, sway: 0 });
     }
+    this.view.addChild(this.flash, this.bolt, this.frame.view);
     this.view.zIndex = 1e9 - 1;
     layer.addChild(this.view);
   }
 
-  update(dt: number, weather: Weather, view: ViewRect) {
+  /** Returns the lightning strike rolled this frame, if any (only when `pick` is given: a host or solo game). */
+  update(dt: number, weather: Weather, view: ViewRect, pick?: () => { x: number; y: number }): Strike | null {
     this.clock += dt;
     const style = STYLES[weather.kind];
     if (weather.kind !== this.kind) {
@@ -132,13 +161,17 @@ export class WeatherLayer {
       this.haze.height = view.h;
     }
 
+    this.frame.update(weather.kind, weather.intensity, view.x, view.y, view.w, view.h);
+    const strike = this.strikes(dt, weather, pick);
+    this.showFlash(view);
+
     const want = style ? Math.min(POOL, Math.round(style.count * weather.intensity)) : 0;
     while (this.active < want) this.spawn(this.drops[this.active++]!, style!, view, true);
     while (this.active > want) {
       const d = this.drops[--this.active];
       if (d) d.sprite.visible = false;
     }
-    if (!style) return;
+    if (!style) return strike;
 
     const wind = weather.wind;
     for (let i = 0; i < this.active; i++) {
@@ -147,13 +180,18 @@ export class WeatherLayer {
       d.x += vx * dt;
       d.y += d.fall * dt;
       // Wrap around the view so the sky stays full whichever way the camera and wind move.
-      if (d.x < view.x - 8 || d.x > view.x + view.w + 8) this.spawn(d, style, view, false, vx > 0 ? 'left' : 'right');
+      // A camera jump (map change, respawn) strands drops far away: refill the whole view instead of one edge.
+      if (d.x < view.x - 96 || d.x > view.x + view.w + 96 || d.y < view.y - 96 || d.y > view.y + view.h + 96) {
+        this.spawn(d, style, view, true);
+      } else if (d.x < view.x - 8 || d.x > view.x + view.w + 8)
+        this.spawn(d, style, view, false, vx > 0 ? 'left' : 'right');
       else if (d.y > view.y + view.h + 8 || d.y < view.y - 12)
         this.spawn(d, style, view, false, d.fall >= 0 ? 'top' : 'bottom');
       const sway = d.sway ? Math.sin(this.clock * 1.6 + d.phase) * d.sway : 0;
       d.sprite.position.set(d.x + sway, d.y);
       d.sprite.rotation = style.tilt ? Math.atan2(-vx, d.fall) : 0;
     }
+    return strike;
   }
 
   /** Put a drop in play: anywhere in the view, or (when it wrapped) on the edge it re-enters from. */
@@ -175,5 +213,55 @@ export class WeatherLayer {
     s.tint = style.tint;
     s.alpha = style.alpha * rand(0.7, 1);
     s.visible = true;
+  }
+
+  /**
+   * Lightning during a storm. The host (or a solo game) rolls the strikes: `pick` chooses where one lands and the
+   * strike is returned so a co-op host can tell its friends; a guest passes no `pick` and waits for `strike()`.
+   */
+  private strikes(dt: number, weather: Weather, pick?: () => { x: number; y: number }): Strike | null {
+    let strike: Strike | null = null;
+    const stormy = weather.kind === 'storm' && weather.intensity > 0.5;
+    if (pick && this.lightning.update(dt, stormy)) {
+      strike = { ...pick(), seed: Math.floor(Math.random() * 1e9) };
+      this.strike(strike);
+    }
+    this.glow = Math.max(0, this.glow - dt * 3.5);
+    return strike;
+  }
+
+  /** Flash the sky and draw a jagged bolt landing at world (x, y); the same seed draws the same bolt everywhere. */
+  strike({ x: targetX, y: targetY, seed }: Strike) {
+    this.glow = 1;
+    const rng = mulberry32(seed);
+    const bolt = this.bolt;
+    bolt.clear();
+    let x = targetX + (rng() - 0.5) * 60;
+    let y = targetY - 260;
+    const path: [number, number][] = [[x, y]];
+    while (y < targetY) {
+      y = Math.min(targetY, y + 12 + rng() * 14);
+      x += (rng() - 0.5) * 28;
+      path.push([y >= targetY ? targetX : x, y]);
+    }
+    for (const [width, color] of [
+      [7, 0x9ab8ff],
+      [3, 0xffffff],
+    ] as const) {
+      bolt.moveTo(path[0]![0], path[0]![1]);
+      for (const [px, py] of path) bolt.lineTo(px, py);
+      bolt.stroke({ width, color, join: 'round', cap: 'round' });
+    }
+  }
+
+  private showFlash(view: ViewRect) {
+    this.flash.visible = this.bolt.visible = this.glow > 0;
+    if (this.glow > 0) {
+      this.flash.position.set(view.x, view.y);
+      this.flash.width = view.w;
+      this.flash.height = view.h;
+      this.flash.alpha = this.glow * 0.55;
+      this.bolt.alpha = Math.min(1, this.glow * 1.5);
+    }
   }
 }
