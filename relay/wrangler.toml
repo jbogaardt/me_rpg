@@ -3,6 +3,11 @@ name = "me-rpg-relay"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
 
+# Served at https://me-rpg-relay.<account subdomain>.workers.dev. No per-version preview URLs: they would be
+# extra public addresses for the same relay.
+workers_dev = true
+preview_urls = false
+
 [vars]
 # Browser origins allowed to call the relay (the deployed game). localhost is always allowed for development.
 ALLOWED_ORIGINS = "https://jbogaardt.github.io"

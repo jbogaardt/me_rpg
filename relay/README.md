@@ -55,24 +55,23 @@ Open the game in two browser windows: Menu > Online > Host > Create Game, then J
 
 ## Deploying it (one time, free, works from a phone)
 
-You need a Cloudflare account (free) and to add two secrets to the GitHub repo. After that every change to
-`relay/` deploys itself.
+Cloudflare builds and deploys the relay straight from this repo (Workers Builds), and redeploys it whenever the
+repo's `main` branch changes. It is running at **https://me-rpg-relay.jbogaardt.workers.dev**; if you ever need
+to set it up again (new account, new repo):
 
-1. **Make a Cloudflare account** at https://dash.cloudflare.com/sign-up (the free plan is enough).
-2. **Pick a `workers.dev` name.** In the dashboard open **Workers & Pages** (called **Compute** in newer
-   dashboards). The first time, it asks you to choose a subdomain; this becomes the relay's address. Wrangler
-   can't do this step for you in CI.
-3. **Create an API token.** Profile icon > **My Profile** > **API Tokens** > **Create Token** > use the
-   **Edit Cloudflare Workers** template > for Account Resources choose your account > **Continue** > **Create
-   Token**. Copy the token now; it is shown once.
-4. **Find your Account ID.** It is on the **Workers & Pages** overview page (right-hand side), and is the long hex
-   string in the dashboard URL.
-5. **Add both as GitHub secrets.** The repo > **Settings** > **Secrets and variables** > **Actions** > **New
-   repository secret**: `CLOUDFLARE_API_TOKEN` (the token) and `CLOUDFLARE_ACCOUNT_ID` (the ID).
-6. **Run the deploy.** Repo > **Actions** > **Deploy relay (Cloudflare)** > **Run workflow**. When it finishes, its
-   summary shows the relay's URL, like `https://me-rpg-relay.<your-subdomain>.workers.dev`.
-7. **Point the game at it.** Put that URL in `DEPLOYED_RELAY_URL` in `src/net/relayConfig.ts` and push (or ask
-   Claude to). Until you do, the Online tab says online play isn't set up yet.
+1. Make a free Cloudflare account at https://dash.cloudflare.com/sign-up.
+2. Dashboard > **Workers & Pages** > **Create application** > connect your GitHub account and pick this repo.
+3. On the "Set up your application" page:
+   - **Project name:** `me-rpg-relay` (it must match `name` in `wrangler.toml`).
+   - **Build command:** empty. **Deploy command:** `npx wrangler deploy`.
+   - **Advanced settings > Path** (the root directory): `relay`. This is the important one; left as `/` it would
+     try to deploy the whole game.
+   - **Enable Preview builds:** off. **API token:** leave on "Create new token".
+   - Cloudflare asks you to choose a `workers.dev` name if the account has none; it becomes part of the address.
+4. **Deploy.** The log ends with the relay's address. Put it in `DEPLOYED_RELAY_URL` in `src/net/relayConfig.ts`
+   and push. Open `<address>/health` in a browser to check: it should say `me_rpg relay ok`.
 
-If the game is served from somewhere other than `https://jbogaardt.github.io`, change `ALLOWED_ORIGINS` in
-`wrangler.toml` to match.
+The game's site must be listed in `ALLOWED_ORIGINS` in `wrangler.toml` (currently `https://jbogaardt.github.io`).
+
+Every push to `main` triggers a build here, even ones that don't touch `relay/`. They are quick and free, but you
+can limit it under the project's **Settings > Build** with a build watch path of `relay/*`.
