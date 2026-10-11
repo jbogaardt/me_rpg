@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mulberry32 } from './particles';
-import { isAllowed, sampleBiome, Weather, WEATHER_TABLE, type Biome, type WeatherKind } from './weather';
+import { isAllowed, Lightning, sampleBiome, Weather, WEATHER_TABLE, type Biome, type WeatherKind } from './weather';
 
 function run(biome: Biome, seconds: number, seed = 1): Set<WeatherKind> {
   const w = new Weather(biome, mulberry32(seed));
@@ -68,6 +68,35 @@ describe('Weather', () => {
     expect(w.wind).toBeLessThan(0);
     w.force('clear');
     expect(Math.abs(w.wind)).toBe(0);
+  });
+});
+
+describe('Lightning', () => {
+  it('stays quiet outside a storm and strikes every few seconds inside one', () => {
+    const l = new Lightning(mulberry32(5));
+    let quiet = 0;
+    for (let t = 0; t < 60; t += 0.1) if (l.update(0.1, false)) quiet++;
+    expect(quiet).toBe(0);
+    let strikes = 0;
+    for (let t = 0; t < 120; t += 0.1) if (l.update(0.1, true)) strikes++;
+    expect(strikes).toBeGreaterThan(8);
+    expect(strikes).toBeLessThan(60);
+  });
+});
+
+describe('long events', () => {
+  it('rain, storms and snow last about three minutes', () => {
+    for (const kind of ['rain', 'storm', 'snow'] as const) {
+      const biome = kind === 'snow' ? 'tundra' : 'plains';
+      const w = new Weather(biome, mulberry32(2));
+      w.force(kind);
+      let t = 0;
+      while (w.remaining > 0) {
+        w.update(0.25, biome);
+        t += 0.25;
+      }
+      expect(t).toBeGreaterThanOrEqual(150);
+    }
   });
 });
 
