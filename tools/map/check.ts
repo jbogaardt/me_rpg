@@ -28,8 +28,10 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     if (g[1] + CELL > img.width || g[2] + CELL > img.height)
       errors.push(`ground ${at(i)} reads outside ${d.sheets[g[0]]}`);
   });
-  if (d.ground.some((g) => !g))
-    warnings.push(`${d.ground.filter((g) => !g).length} cells have no ground (they show the background colour)`);
+  if (d.ground.some((g, i) => !g && reasons.get(i) !== 'darkness'))
+    warnings.push(
+      `${d.ground.filter((g, i) => !g && reasons.get(i) !== 'darkness').length} cells have no ground (they show the background colour)`,
+    );
   for (const o of d.objects) {
     const img = sheet(d.sheets[o.s]);
     if (o.x + o.w > img.width || o.y + o.h > img.height)

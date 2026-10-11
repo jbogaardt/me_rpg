@@ -41,6 +41,7 @@ export interface ZoneApi {
   stamp(name: StampName, col: number, row: number): unknown;
   prop(name: PrefabName, col: number, row: number, nudge?: { dx?: number; dy?: number }): unknown;
   forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }): unknown;
+  darkness(rect: Rect): unknown;
   plateau(rect: Rect, opts?: { kind?: CliffKind; stairs?: number[] }): unknown;
   block(rect: Rect, reason: string): unknown;
   unblock(rect: Rect): unknown;
@@ -101,6 +102,10 @@ export class WorldWindow implements ZoneApi {
   }
   forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }) {
     this.z.forest(this.rect(rect), opts);
+    return this;
+  }
+  darkness(rect: Rect) {
+    this.z.darkness(this.rect(rect));
     return this;
   }
   plateau(rect: Rect, opts: { kind?: CliffKind; stairs?: number[] } = {}) {
@@ -373,6 +378,18 @@ export class Zone {
       }
     }
     for (const { col, row } of this.cells(rect)) this.blocked.add(row * this.width + col);
+    return this;
+  }
+
+  /** Impassable darkness: no ground is painted, so the (black) background shows. Used for the world border. */
+  darkness(rect: Rect) {
+    for (const { col, row } of this.cells(rect)) {
+      const i = row * this.width + col;
+      this.ground[i] = null;
+      this.blocked.add(i);
+      this.forced.set(i, true);
+      this.reasons.set(i, 'darkness');
+    }
     return this;
   }
 

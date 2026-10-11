@@ -17,14 +17,14 @@ export default defineZone({
     z.fill('grass');
     z.patch('sand', { col: 50, row: 35, w: 50, h: 40 }); // cols 51+, rows 36+
 
-    // --- World border: three cells of trees, matched to the ground behind them; a gap in the west --------------
+    // --- World border: darkness, matched to the ground behind them; a gap in the west --------------
     const dry = { trees: DRY_TREES };
-    z.forest({ col: 50, row: 27, w: 49, h: 3 }); // north
-    z.forest({ col: 47, row: 34, w: 6, h: 2 }); // west, green part (below the gap)
-    z.forest({ col: 47, row: 36, w: 6, h: 36 }, dry); // west, desert
-    z.forest({ col: 94, row: 24, w: 5, h: 14 }); // east, green
-    z.forest({ col: 94, row: 36, w: 5, h: 39 }, dry); // east, desert
-    z.forest({ col: 52, row: 70, w: 47, h: 5 }, dry); // south
+    z.darkness({ col: 50, row: 27, w: 49, h: 3 }); // north
+    z.darkness({ col: 47, row: 34, w: 6, h: 2 }); // west, green part (below the gap)
+    z.darkness({ col: 47, row: 36, w: 6, h: 36 }); // west, desert
+    z.darkness({ col: 94, row: 24, w: 5, h: 14 }); // east, green
+    z.darkness({ col: 94, row: 36, w: 5, h: 39 }); // east, desert
+    z.darkness({ col: 52, row: 70, w: 47, h: 5 }); // south
     for (let row = 30; row <= 33; row++) z.door(50, row, 1, 'greenwood', 47, row - 27); // back west to the Greenwood
 
     // --- The grass hub on the way in -----------------------------------------------------------------------------

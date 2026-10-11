@@ -28,12 +28,12 @@ export default defineZone({
       z.door(shop.door.col, shop.building.row, shop.door.w, `shop_${id}`, SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
     }
 
-    // --- Border trees, with a gap in the south that leads out to the Greenwood --------------------------------
-    z.forest({ col: -3, row: -3, w: 36, h: 4 }); // north (the shops stand in front of it)
-    z.forest({ col: -3, row: -3, w: 6, h: 26 }); // west
-    z.forest({ col: 27, row: -3, w: 6, h: 26 }); // east
-    z.forest({ col: -3, row: 17, w: 16, h: 6 }); // south, west of the gap
-    z.forest({ col: 17, row: 17, w: 16, h: 6 }); // south, east of the gap
+    // --- Border darkness, with a gap in the south that leads out to the Greenwood --------------------------------
+    z.darkness({ col: -3, row: -3, w: 36, h: 4 }); // north (the shops stand in front of it)
+    z.darkness({ col: -3, row: -3, w: 6, h: 26 }); // west
+    z.darkness({ col: 27, row: -3, w: 6, h: 26 }); // east
+    z.darkness({ col: -3, row: 17, w: 16, h: 6 }); // south, west of the gap
+    z.darkness({ col: 17, row: 17, w: 16, h: 6 }); // south, east of the gap
     z.door(13, 19, 4, 'greenwood', 23, 14); // out to the Greenwood, just below its gate
 
     // --- Life in the square -------------------------------------------------------------------------------------
