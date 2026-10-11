@@ -5,7 +5,9 @@ import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import type { Chest } from '../entities/Chest';
 import { GroundItem } from '../entities/GroundItem';
-import { Character, DIR_VEC, directionToward, type Direction } from '../entities/Character';
+import { DIR_VEC, DIRS, dirIndex, directionToward, type Direction } from '../core/direction';
+import { glide } from '../core/interp';
+import { Character } from '../entities/Character';
 import { sampleBiome, Weather, type WeatherKind } from '../systems/weather';
 import { arrowEffect, boltEffect, floatText, slashEffect } from '../entities/effects';
 import type { Mob, MobWorld } from '../entities/Mob';
@@ -22,10 +24,8 @@ import { arrivalFacing, cellFeet, doorAt, doorsNear } from '../map/doors';
 import { CELL, type CellPoint } from '../map/types';
 import { ZoneState, type Keeper } from './ZoneState';
 import { DEFAULT_VIEW, MobFeed } from '../net/feed';
-import { glide } from '../net/interp';
+import { decodeMob, encodeMob } from '../net/mobWire';
 import {
-  DIRS,
-  dirIndex,
   FLAG,
   type MobFields,
   MAX_VIEW,
@@ -715,7 +715,7 @@ export class OverworldScene implements Scene {
             players: everyone.filter((p) => p.zone === z.name).map((p) => this.snapPlayer(p)),
             chests: z.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
           },
-          states: z.mobs.map((m) => m.snapshot()),
+          states: z.mobs.map((m) => encodeMob(m.view())),
         };
         shared.set(z.name, world);
       }
@@ -981,7 +981,7 @@ export class OverworldScene implements Scene {
     }
 
     this.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
-    for (const [index, ...state] of snap.mobs) this.mobs[index]?.setRemote(state); // only the mobs the host listed: the rest are out of sight
+    for (const [index, ...state] of snap.mobs) this.mobs[index]?.setRemote(decodeMob(state)); // only the mobs the host listed: the rest are out of sight
 
     const [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] = snap.me;
     if (maxHp > 0 && maxMp > 0)
