@@ -1,6 +1,6 @@
 import { CELL, type CellPoint, type GroundCell, type MapData, type MapObject, type MobSpawn } from '../../src/map/types';
-import { GROUND, PREFABS, RINGS, TREES, type GroundName, type PrefabName } from './catalog';
-import { coverage } from './image';
+import { GROUND, PREFABS, RINGS, STAMPS, TREES, type GroundName, type PrefabName, type StampName } from './catalog';
+import { coverage, sheet as loadSheet } from './image';
 
 /** A rectangle of cells. May extend past the map edge (e.g. for border forests); it's clipped where needed. */
 export interface Rect {
@@ -108,6 +108,27 @@ export class Zone {
   }
 
   /**
+   * Copy a pre-painted ground decoration (see STAMPS) with its top-left cell at (col, row). Only source
+   * cells that are fully opaque are copied, so irregular shapes stay irregular; everything else keeps
+   * the ground underneath. Doesn't block movement.
+   */
+  stamp(name: StampName, col: number, row: number) {
+    const st = STAMPS[name];
+    const img = loadSheet(st.sheet);
+    for (let j = 0; j < st.h / CELL; j++) {
+      for (let i = 0; i < st.w / CELL; i++) {
+        const sx = st.x + i * CELL, sy = st.y + j * CELL;
+        let opaque = true;
+        for (let y = sy; y < sy + CELL && opaque; y++) {
+          for (let x = sx; x < sx + CELL; x++) if (img.data[(y * img.width + x) * 4 + 3] < 255) { opaque = false; break; }
+        }
+        if (opaque) this.setGround(col + i, row + j, st.sheet, [sx, sy]);
+      }
+    }
+    return this;
+  }
+
+  /**
    * Place a prefab with the bottom-left cell of its footprint at (col, row): its bottom edge sits on
    * the bottom of `row`, and it's centred in the cells its width spans. dx/dy nudge it in pixels.
    * Collision comes from the art (see Prefab.solid), so don't block() props by hand.
@@ -129,7 +150,8 @@ export class Zone {
    * a ~18px walk-behind fringe poking out of its top edge. Extend the rect past the map edge for
    * borders so no gaps show at the edge of the world.
    */
-  forest(rect: Rect, opts: { seed?: number } = {}) {
+  forest(rect: Rect, opts: { seed?: number; trees?: PrefabName[] } = {}) {
+    const trees = opts.trees ?? TREES;
     const rand = rng(opts.seed ?? rect.col * 7919 + rect.row * 104729 + rect.w * 31 + rect.h);
     const { w: TW, h: TH } = PREFABS.treeA;
     const L = rect.col * CELL, R = (rect.col + rect.w) * CELL;
@@ -147,7 +169,7 @@ export class Zone {
         const edge = j === 0 || j === cols - 1;
         // Outer trees sit exactly on the rect's sides; inner ones get a little jitter so it looks natural.
         const px = Math.round(Math.min(R - TW, Math.max(L, L + j * dx + (edge ? 0 : stagger + (rand() - 0.5) * 8))));
-        this.placed.push({ prefab: TREES[Math.floor(rand() * TREES.length)], px, py, autoBlock: false });
+        this.placed.push({ prefab: trees[Math.floor(rand() * trees.length)], px, py, autoBlock: false });
       }
     }
     for (const { col, row } of this.cells(rect)) this.blocked.add(row * this.width + col);
