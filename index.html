@@ -51,6 +51,7 @@
             <div role="tab" data-tab="status" class="active">Status</div>
             <div role="tab" data-tab="gear">Gear</div>
             <div role="tab" data-tab="controls">Controls</div>
+            <div role="tab" data-tab="online">Online</div>
           </nav>
           <div class="close" role="button" aria-label="Close menu" data-key="Escape">✕</div>
         </header>
@@ -73,6 +74,40 @@
               Character art by the Liberated Pixel Cup contributors (CC-BY-SA, GPL and others).
               <a href="sprites/lpc/credits.csv" target="_blank" rel="noopener">Full credits</a>
             </p>
+          </section>
+          <section id="menu-online" hidden>
+            <h2>Multiplayer <small>2 players</small></h2>
+            <div id="mp-mode" role="radiogroup" aria-label="Multiplayer mode">
+              <button type="button" role="radio" data-mode="off" aria-checked="true">Solo / Off</button>
+              <button type="button" role="radio" data-mode="host" aria-checked="false">Host</button>
+              <button type="button" role="radio" data-mode="join" aria-checked="false">Join</button>
+            </div>
+            <p id="mp-status" class="mp-status"><span class="dot"></span><span class="label"></span></p>
+
+            <div id="mp-host" hidden>
+              <button type="button" id="mp-create" class="mp-btn panel thin wood">Create Game</button>
+              <div id="mp-share" hidden>
+                <label for="mp-code">Game code (tell your friend)</label>
+                <output id="mp-code" class="mp-code" tabindex="0"></output>
+                <div class="mp-row">
+                  <button type="button" id="mp-copy-code" class="mp-btn panel thin wood">Copy Code</button>
+                  <button type="button" id="mp-copy-link" class="mp-btn panel thin wood">Copy Join Link</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="mp-join" hidden>
+              <label for="mp-code-in">Your friend's game code</label>
+              <input id="mp-code-in" type="text" class="mp-code-in" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="go" maxlength="40" placeholder="mighty-apples" />
+              <button type="button" id="mp-join-go" class="mp-btn panel thin wood" disabled>Join Game</button>
+            </div>
+
+            <div id="mp-active" hidden>
+              <p class="mp-connected"></p>
+              <button type="button" id="mp-disconnect" class="mp-btn panel thin wood">Disconnect</button>
+            </div>
+
+            <p id="mp-note" role="status"></p>
           </section>
         </div>
       </div>

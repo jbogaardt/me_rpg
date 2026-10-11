@@ -41,6 +41,13 @@ npm run sprites -- build      # needs the clone (or LPC_DIR=<path>); `npm run sp
 Hero gear is in `src/systems/items.ts`, NPC looks in `src/systems/looks.ts`, mob looks on each `MobKind`
 (`src/systems/combat.ts`). The art is under CC-BY-SA / GPL / OGA-BY terms; see `CREDITS.md`.
 
+## Two players
+
+Menu > Online: one player taps **Host > Create Game** and reads out the short code (like `mighty-apples`);
+the other taps **Join** and types it (or opens the join link). Gameplay runs directly between the phones;
+a small Cloudflare relay (`relay/`, setup in `relay/README.md`) only swaps the connection details that start a game.
+To try it on one machine: `npm run relay`, then `VITE_RELAY_URL=http://localhost:8787 npm run dev` and open two windows.
+
 ## Maps
 
 Maps are built from code so an AI agent can author them: `maps/overworld.ts` describes the zone

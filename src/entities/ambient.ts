@@ -141,6 +141,11 @@ export class Ambient {
     this.fallLeaves(dt);
   }
 
+  /** Stop tracking a body that has left the world (a disconnected player). */
+  forget(body: Character) {
+    this.walkers.delete(body);
+  }
+
   /** A swing or impact at (x, y): every canopy within `radius` drops a shower of leaves. */
   shake(x: number, y: number, radius: number) {
     for (const o of this.near(x - radius, y - radius, x + radius, y + radius)) {

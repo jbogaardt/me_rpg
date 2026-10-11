@@ -39,3 +39,6 @@ maps/out/
 playwright-report/
 test-results/
 sprites/out/
+
+# Wrangler local state (relay/)
+.wrangler/

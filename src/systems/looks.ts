@@ -20,11 +20,24 @@ export function heroOutfit(hero: Pick<Hero, 'weapon' | 'armor'>): Outfit {
   return withGear(withGear(HERO_BASE, hero.armor.look ?? {}), hero.weapon.look ?? {});
 }
 
-/** Every outfit a hero can wear (starter gear and all items), so the game can load their parts up front. */
+/** Player 2 in a co-op game, without gear: the villager look (a girl in a teal tunic). */
+export function guestBase(): Outfit {
+  const { weapon: _weapon, shield: _shield, ...base } = npcLook('villager');
+  return base;
+}
+
+/** Player 2's outfit for the gear they carry. */
+export function guestOutfit(hero: Pick<Hero, 'weapon' | 'armor'>): Outfit {
+  return withGear(withGear(guestBase(), hero.armor.look ?? {}), hero.weapon.look ?? {});
+}
+
+/** Every outfit a player can wear (starter gear and all items, as the hero or as player 2), so the game can load their parts up front. */
 export function allHeroOutfits(): Outfit[] {
   const weapons = Object.values(ITEMS).filter((i) => i.slot === 'weapon');
   const armors = Object.values(ITEMS).filter((i) => i.slot === 'armor');
-  return weapons.flatMap((weapon) => armors.map((armor) => heroOutfit({ weapon, armor })));
+  return weapons.flatMap((weapon) =>
+    armors.flatMap((armor) => [heroOutfit({ weapon, armor }), guestOutfit({ weapon, armor })]),
+  );
 }
 
 /** NPC looks by name. Each pairs a body with a matching head (and body-shaped garments); hair, hats and weapons mix freely. */
