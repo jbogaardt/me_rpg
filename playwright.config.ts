@@ -15,8 +15,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
     launchOptions: {
       executablePath,
-      // Software GL so WebGL works in headless CI.
-      args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'],
+      // Software GL so WebGL works in headless CI. The mDNS flag keeps WebRTC host candidates as plain IPs, so the
+      // two-player test can connect two contexts on one machine without a multicast resolver.
+      args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--disable-features=WebRtcHideLocalIpsWithMdns'],
     },
   },
   webServer: {

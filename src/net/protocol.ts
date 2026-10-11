@@ -1,0 +1,198 @@
+// The messages two players exchange once the data channel is open. Pure data and validation, no Pixi or WebRTC.
+//
+// The channel is unordered and unreliable ({ ordered: false, maxRetransmits: 0 }), so every message is built
+// to survive loss and reordering:
+//  - The guest sends its *state* (keys held) plus monotonically increasing counters for one-shot presses
+//    (attack, magic). A lost packet is corrected by the next one; a counter can't be missed, only delayed.
+//  - The host sends a full snapshot each time, and recent one-shot world events (hit numbers, slashes...) ride in
+//    several consecutive snapshots with ids so the guest can show each exactly once.
+//  - Both sides drop anything whose sequence number isn't newer than the last one seen.
+// Everything from the peer is untrusted input: parseMessage() validates the shape and ranges, never throws.
+
+import type { Direction } from '../entities/Character';
+import { MOB_STATES } from '../systems/combat';
+
+/** Bump when a message changes shape; peers on different versions refuse to play together. */
+export const PROTOCOL_VERSION = 1;
+
+export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
+export const dirIndex = (d: Direction) => DIRS.indexOf(d);
+
+/** Held-key bits in InputMsg.keys. */
+export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
+
+export function packKeys(dx: number, dy: number): number {
+  return (dy < 0 ? KEY.up : 0) | (dy > 0 ? KEY.down : 0) | (dx < 0 ? KEY.left : 0) | (dx > 0 ? KEY.right : 0);
+}
+
+export function unpackKeys(keys: number): { dx: number; dy: number } {
+  return {
+    dx: (keys & KEY.right ? 1 : 0) - (keys & KEY.left ? 1 : 0),
+    dy: (keys & KEY.down ? 1 : 0) - (keys & KEY.up ? 1 : 0),
+  };
+}
+
+/** PlayerSnap flag bits. */
+export const FLAG = { moving: 1, invuln: 2, swing: 4 } as const;
+
+/** [x, y, direction index, FLAG bits] */
+export type PlayerSnap = [number, number, number, number];
+/** [x, y, direction index, MOB_STATES index, hp, windup/recover/respawn timer ms, moving 0|1] */
+export type MobSnap = [number, number, number, number, number, number, number];
+/** [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] */
+export type StatsSnap = [number, number, number, number, number, number, number, number, number];
+
+/** Something that happened this tick and is only shown, never simulated, on the guest. */
+export type WorldEvent =
+  | { type: 'slash'; x: number; y: number; dir: number }
+  | { type: 'bolt'; x: number; y: number; vx: number; vy: number }
+  | { type: 'text'; x: number; y: number; text: string; color: number }
+  | { type: 'defeat'; player: number }; // the player (0 host, 1 guest) was knocked out and sent back to spawn
+
+export interface HelloMsg {
+  k: 'hello';
+  v: number;
+  build: string;
+}
+
+/** Guest -> host: what the guest's player is doing. */
+export interface InputMsg {
+  k: 'in';
+  n: number; // sequence
+  keys: number; // KEY bits held
+  act: number; // times the action button was pressed
+  mag: number; // times the magic button was pressed
+}
+
+/** Host -> guest: the world. `players` is [host, guest]; `me` is the guest's stats. */
+export interface SnapMsg {
+  k: 'snap';
+  n: number;
+  players: [PlayerSnap, PlayerSnap];
+  mobs: MobSnap[];
+  me: StatsSnap;
+  events: { id: number; e: WorldEvent }[];
+}
+
+export type Message = HelloMsg | InputMsg | SnapMsg;
+
+export const encodeMessage = (m: Message): string => JSON.stringify(m);
+
+export const round1 = (n: number) => Math.round(n * 10) / 10;
+
+const MAX_MOBS = 256;
+const MAX_EVENTS = 64;
+const MAX_TEXT = 32;
+const MAX_COORD = 1e6;
+
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isCoord = (v: unknown): v is number => isNum(v) && Math.abs(v) <= MAX_COORD;
+const isCount = (v: unknown): v is number => isNum(v) && Number.isInteger(v) && v >= 0 && v <= Number.MAX_SAFE_INTEGER;
+const isIndex = (v: unknown, length: number): v is number => isCount(v) && v < length;
+const numbers = (v: unknown, length: number): v is number[] =>
+  Array.isArray(v) && v.length === length && v.every(isNum);
+
+function parseEvent(raw: unknown): WorldEvent | null {
+  const e = raw as Record<string, unknown> | null;
+  if (!e || typeof e !== 'object') return null;
+  switch (e.type) {
+    case 'slash':
+      return isCoord(e.x) && isCoord(e.y) && isIndex(e.dir, DIRS.length)
+        ? { type: 'slash', x: e.x, y: e.y, dir: e.dir }
+        : null;
+    case 'bolt':
+      return isCoord(e.x) && isCoord(e.y) && isCoord(e.vx) && isCoord(e.vy)
+        ? { type: 'bolt', x: e.x, y: e.y, vx: e.vx, vy: e.vy }
+        : null;
+    case 'text':
+      return isCoord(e.x) &&
+        isCoord(e.y) &&
+        typeof e.text === 'string' &&
+        e.text.length <= MAX_TEXT &&
+        isCount(e.color) &&
+        e.color <= 0xffffff
+        ? { type: 'text', x: e.x, y: e.y, text: e.text, color: e.color }
+        : null;
+    case 'defeat':
+      return isIndex(e.player, 2) ? { type: 'defeat', player: e.player } : null;
+    default:
+      return null;
+  }
+}
+
+function parsePlayer(raw: unknown): PlayerSnap | null {
+  if (!numbers(raw, 4) || !raw.every((v, i) => (i < 2 ? isCoord(v) : isCount(v)))) return null;
+  const [x, y, dir, flags] = raw as PlayerSnap;
+  return isIndex(dir, DIRS.length) && flags <= 7 ? [x, y, dir, flags] : null;
+}
+
+function parseMob(raw: unknown): MobSnap | null {
+  if (!numbers(raw, 7)) return null;
+  const [x, y, dir, state, hp, timer, moving] = raw as MobSnap;
+  const ok =
+    isCoord(x) &&
+    isCoord(y) &&
+    isIndex(dir, DIRS.length) &&
+    isIndex(state, MOB_STATES.length) &&
+    isCount(hp) &&
+    isCount(timer) &&
+    (moving === 0 || moving === 1);
+  return ok ? [x, y, dir, state, hp, timer, moving] : null;
+}
+
+/** Parse and validate a raw channel message. Returns null for anything malformed. */
+export function parseMessage(raw: unknown): Message | null {
+  if (typeof raw !== 'string' || raw.length > 64_000) return null;
+  let m: Record<string, unknown>;
+  try {
+    m = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  if (!m || typeof m !== 'object') return null;
+
+  switch (m.k) {
+    case 'hello':
+      return isCount(m.v) && typeof m.build === 'string' && m.build.length <= 64
+        ? { k: 'hello', v: m.v, build: m.build }
+        : null;
+    case 'in':
+      return isCount(m.n) && isCount(m.keys) && m.keys <= 15 && isCount(m.act) && isCount(m.mag)
+        ? { k: 'in', n: m.n, keys: m.keys, act: m.act, mag: m.mag }
+        : null;
+    case 'snap': {
+      const players = Array.isArray(m.players) ? m.players.map(parsePlayer) : [];
+      const mobs = Array.isArray(m.mobs) && m.mobs.length <= MAX_MOBS ? m.mobs.map(parseMob) : null;
+      const rawEvents = Array.isArray(m.events) && m.events.length <= MAX_EVENTS ? m.events : null;
+      const events = (rawEvents ?? []).map((item: unknown) => {
+        const { id, e } = (item ?? {}) as { id?: unknown; e?: unknown };
+        const event = isCount(id) ? parseEvent(e) : null;
+        return event && isCount(id) ? { id, e: event } : null;
+      });
+      const [host, guest] = players;
+      if (
+        !host ||
+        !guest ||
+        players.length !== 2 ||
+        !isCount(m.n) ||
+        !mobs ||
+        mobs.includes(null) ||
+        !rawEvents ||
+        events.includes(null) ||
+        !numbers(m.me, 9)
+      ) {
+        return null;
+      }
+      return {
+        k: 'snap',
+        n: m.n,
+        players: [host, guest],
+        mobs: mobs as MobSnap[],
+        me: m.me as StatsSnap,
+        events: events as { id: number; e: WorldEvent }[],
+      };
+    }
+    default:
+      return null;
+  }
+}

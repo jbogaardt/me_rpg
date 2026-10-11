@@ -89,6 +89,10 @@ export const FROSTBOUND: MobKind = {
   sight: 6 * 32,
 };
 
+/** What a mob is doing, in the order used on the wire (src/net/protocol.ts). */
+export const MOB_STATES = ['idle', 'wander', 'chase', 'windup', 'recover', 'dead'] as const;
+export type MobState = (typeof MOB_STATES)[number];
+
 /** Mob kinds a map can spawn, by the `kind` used in MapData.mobs. */
 export const MOB_KINDS: Record<string, MobKind> = { shade: SHADE, raider: RAIDER, frostbound: FROSTBOUND };
 

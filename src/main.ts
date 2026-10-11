@@ -10,6 +10,7 @@ import { Dialog } from './hud/Dialog';
 import { Hud } from './hud/Hud';
 import { Loading } from './hud/Loading';
 import { Menu } from './hud/Menu';
+import { Session } from './net/session';
 import { OverworldScene } from './scenes/OverworldScene';
 
 const START_ZONE = 'overworld';
@@ -58,7 +59,8 @@ void (async () => {
 
     const scenes = new SceneManager(app);
     const touch = createTouchControls(() => scenes.resize());
-    const ui = { hud: new Hud(), menu: new Menu(), dialog: new Dialog(), touch };
+    const session = new Session();
+    const ui = { hud: new Hud(), menu: new Menu(session), dialog: new Dialog(), touch, session };
     scenes.change(new OverworldScene(zone, sprites, ui));
     scenes.start();
     loading.done();

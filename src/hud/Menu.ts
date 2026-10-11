@@ -1,25 +1,32 @@
 import { attackPower, defensePower, spellPower, xpToNext, type Hero } from '../systems/combat';
 import { input } from '../core/input';
+import type { Session } from '../net/session';
+import { Multiplayer } from './Multiplayer';
 
 // Pause menu (HTML overlay; markup in index.html). The game is frozen while it is open.
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
+// The Online tab (multiplayer connection) is Multiplayer.ts. Online play does not pause the world behind the menu.
 
-const TABS = ['status', 'gear', 'controls'];
+const TABS = ['status', 'gear', 'controls', 'online'];
 
 export class Menu {
   open = false;
   private root = document.getElementById('menu')!;
   private tab = 0;
 
-  constructor() {
+  constructor(session: Session) {
+    new Multiplayer(session); // owns the Online tab
     for (const [i, name] of TABS.entries()) {
       this.tabButton(name).addEventListener('click', () => this.select(i));
     }
   }
 
-  toggle(hero: Hero) {
+  /** Open or close the menu. When opening, `tab` (e.g. 'online') picks the page to show. */
+  toggle(hero: Hero, tab?: string) {
     this.open = !this.open;
     this.root.hidden = !this.open;
+    const index = tab ? TABS.indexOf(tab) : -1;
+    if (index >= 0) this.tab = index;
     if (this.open) this.render(hero);
   }
 

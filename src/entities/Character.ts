@@ -52,6 +52,12 @@ export class Character extends Container {
     this.drawAura(0);
   }
 
+  /** Swap the look (another sheet of the same layout). */
+  setSheet(sheet: Texture) {
+    this.frames = sheetGrid(sheet, 3, 4, FRAME_W, FRAME_H);
+    this.sprite.texture = this.frame(this.direction, STAND);
+  }
+
   face(direction: Direction) {
     this.direction = direction;
   }
