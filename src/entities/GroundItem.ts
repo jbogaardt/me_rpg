@@ -16,6 +16,8 @@ export class GroundItem extends Container {
     readonly item: Item,
     x: number,
     y: number,
+    /** Names this item in co-op snapshots (the host numbers them). */
+    readonly id = 0,
   ) {
     super();
     const color = TIER_COLORS[itemTier(item)] ?? TIER_COLORS[1]!;

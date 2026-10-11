@@ -40,6 +40,13 @@ export class Menu {
     if (this.open) this.render(hero);
   }
 
+  /** The hero's gear changed from outside (the host's word in co-op): redraw the Inventory and Status tabs. */
+  refreshGear() {
+    if (!this.open) return;
+    this.inventory.refresh();
+    this.renderStatus();
+  }
+
   /** The inventory key: open the menu on the Inventory tab, or close it if that is already showing. */
   toggleInventory(hero: Hero) {
     if (this.open && TABS[this.tab] === 'inventory') this.close();

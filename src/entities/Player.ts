@@ -30,6 +30,10 @@ export class Player {
   // Host: the last action counters honoured from a network player (see protocol.ts).
   seenAct = 0;
   seenMag = 0;
+  seenInv = 0; // the last pack action done for this player
+  invKey = ''; // what their gear and pack looked like when last sent
+  invUntil = 0; // keep sending their gear and pack until this time (a change rides in several snapshots)
+  invBeat = 0; // ... and at least once a second
   // Guest: where the host says this player is, and its FLAG bits.
   target: { x: number; y: number } | null = null;
   flags = 0;

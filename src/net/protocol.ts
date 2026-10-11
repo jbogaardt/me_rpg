@@ -10,12 +10,13 @@
 // Everything from the peer is untrusted input: parseMessage() validates the shape and ranges, never throws.
 
 import type { Direction } from '../entities/Character';
-import { MOB_STATES } from '../systems/combat';
+import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
+import { ITEM_COUNT, MAX_GROUND, type InvOpWire, type Loadout } from '../systems/inventory';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 5;
+export const PROTOCOL_VERSION = 6;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -74,6 +75,19 @@ export interface InputMsg {
   keys: number; // KEY bits held
   act: number; // times the action button was pressed
   mag: number; // times the magic button was pressed
+  /**
+   * The oldest pack action the host has not acknowledged yet: [number, ...InvOpWire]. Numbered 1, 2, 3...; the host
+   * does each once and in order, and says how far it got in SnapMsg.inv.ack, so a lost packet only delays it.
+   */
+  inv?: [number, ...InvOpWire];
+}
+
+/** [id, x, y, item code] of an item lying on the ground. */
+export type GroundSnap = [number, number, number, number];
+
+/** The recipient's own gear and pack, and how many of their pack actions the host has done. */
+export interface InvSnap extends Loadout {
+  ack: number;
 }
 
 /**
@@ -87,6 +101,9 @@ export interface SnapMsg {
   mobs: MobSnap[];
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
+  ground: GroundSnap[]; // items dropped on the ground (shared by everyone)
+  /** The recipient's own gear and pack: sent for a moment after a change and once a second, not in every snapshot. */
+  inv?: InvSnap;
   events: { id: number; e: WorldEvent }[];
 }
 
@@ -103,6 +120,7 @@ const MAX_MOBS = 256;
 const MAX_EVENTS = 64;
 const MAX_TEXT = 32;
 const MAX_COORD = 1e6;
+const MAX_PACK_WIRE = 32;
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isCoord = (v: unknown): v is number => isNum(v) && Math.abs(v) <= MAX_COORD;
@@ -162,6 +180,22 @@ function parsePlayer(raw: unknown): PlayerSnap | null {
   return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 7 ? [slot, x, y, dir, flags] : null;
 }
 
+function parseGround(raw: unknown): GroundSnap | null {
+  if (!numbers(raw, 4)) return null;
+  const [id, x, y, code] = raw as GroundSnap;
+  return isCount(id) && isCoord(x) && isCoord(y) && isIndex(code, ITEM_COUNT + 1) && code > 0 ? [id, x, y, code] : null;
+}
+
+function parseInv(raw: unknown): InvSnap | null {
+  const v = raw as Record<string, unknown> | null;
+  if (!v || typeof v !== 'object' || !isCount(v.ack)) return null;
+  const codes = (list: unknown, max: number) =>
+    Array.isArray(list) && list.length <= max && list.every((c) => isIndex(c, ITEM_COUNT + 1)) ? list : null;
+  const gear = codes(v.gear, GEAR_SLOTS.length);
+  const pack = codes(v.pack, MAX_PACK_WIRE);
+  return gear && gear.length === GEAR_SLOTS.length && pack ? { ack: v.ack, gear, pack } : null;
+}
+
 function parseMob(raw: unknown): MobSnap | null {
   if (!numbers(raw, 7)) return null;
   const [x, y, dir, state, hp, timer, moving] = raw as MobSnap;
@@ -192,10 +226,15 @@ export function parseMessage(raw: unknown): Message | null {
       return isCount(m.v) && typeof m.build === 'string' && m.build.length <= 64
         ? { k: 'hello', v: m.v, build: m.build }
         : null;
-    case 'in':
-      return isCount(m.n) && isCount(m.keys) && m.keys <= 15 && isCount(m.act) && isCount(m.mag)
-        ? { k: 'in', n: m.n, keys: m.keys, act: m.act, mag: m.mag }
+    case 'in': {
+      if (!(isCount(m.n) && isCount(m.keys) && m.keys <= 15 && isCount(m.act) && isCount(m.mag))) return null;
+      const base = { k: 'in', n: m.n, keys: m.keys, act: m.act, mag: m.mag } as const;
+      if (m.inv === undefined) return base;
+      const inv = m.inv;
+      return numbers(inv, 4) && isCount(inv[0]) && inv[0] > 0
+        ? { ...base, inv: [inv[0], inv[1] as number, inv[2] as number, inv[3] as number] }
         : null;
+    }
     case 'snap': {
       const players =
         Array.isArray(m.players) && m.players.length >= 1 && m.players.length <= MAX_PLAYERS
@@ -208,7 +247,13 @@ export function parseMessage(raw: unknown): Message | null {
         const event = isCount(id) ? parseEvent(e) : null;
         return event && isCount(id) ? { id, e: event } : null;
       });
+      const ground =
+        Array.isArray(m.ground) && m.ground.length <= MAX_GROUND ? (m.ground as unknown[]).map(parseGround) : null;
+      const inv = m.inv === undefined ? undefined : parseInv(m.inv);
       if (
+        !ground ||
+        ground.includes(null) ||
+        inv === null ||
         !players ||
         players.includes(null) ||
         new Set(players.map((p) => p?.[0])).size !== players.length || // each player appears once
@@ -230,6 +275,8 @@ export function parseMessage(raw: unknown): Message | null {
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
         chests: m.chests,
+        ground: ground as GroundSnap[],
+        ...(inv ? { inv } : {}),
         events: events as { id: number; e: WorldEvent }[],
       };
     }

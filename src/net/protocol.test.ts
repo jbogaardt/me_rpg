@@ -7,6 +7,7 @@ import {
   PROTOCOL_VERSION,
   round1,
   unpackKeys,
+  type GroundSnap,
   type InputMsg,
   type MobSnap,
   type PlayerSnap,
@@ -24,6 +25,8 @@ const snap: SnapMsg = {
   mobs: [mob, [1, 2, 0, 5, 0, 5000, 0]],
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10],
   chests: 5,
+  ground: [[3, 40.5, 50, 2]],
+  inv: { ack: 2, gear: [1, 0, 0, 0, 0, 0, 4, 0, 0], pack: [5, 6] },
   events: [
     { id: 4, e: { type: 'text', x: 5, y: 6, text: '+12 XP', color: 0xffb13f } },
     { id: 5, e: { type: 'slash', x: 1, y: 2, dir: 3 } },
@@ -58,8 +61,20 @@ describe('messages', () => {
 
   it('keeps a full four-player snapshot well under one network packet, with 20 mobs and events', () => {
     const everyone = Array.from({ length: 4 }, (_, slot): PlayerSnap => [slot, 1234.5, 2345.6, 3, 7]);
-    const big = { ...snap, players: everyone, mobs: Array.from({ length: 20 }, () => mob) };
+    const big = {
+      ...snap,
+      players: everyone,
+      mobs: Array.from({ length: 20 }, () => mob),
+      ground: Array.from({ length: 4 }, (_, i): GroundSnap => [100 + i, 1234.5, 2345.6, 25]),
+      inv: undefined,
+    };
     expect(encodeMessage(big).length).toBeLessThan(1400);
+    // The loadout rides along only after a change and once a second; even a full backpack stays near one packet.
+    const withInv = {
+      ...big,
+      inv: { ack: 12, gear: Array.from({ length: 9 }, () => 25), pack: Array.from({ length: 18 }, () => 30) },
+    };
+    expect(encodeMessage(withInv).length).toBeLessThan(1550);
   });
 
   it('accepts one to four players, in any order, and keeps their numbers', () => {
@@ -82,6 +97,30 @@ describe('messages', () => {
     for (const patch of [{ keys: 16 }, { keys: -1 }, { n: 1.5 }, { act: 'x' }, { mag: null }, { n: undefined }]) {
       expect(parseMessage(JSON.stringify({ ...base, ...patch }))).toBeNull();
     }
+  });
+
+  it('carries one pack action in an input, and rejects a malformed one', () => {
+    const base = { k: 'in', n: 1, keys: 0, act: 0, mag: 0 };
+    const ok = { ...base, inv: [3, 0, 2, -1] };
+    expect(parseMessage(JSON.stringify(ok))).toEqual(ok);
+    for (const inv of [[0, 0, 2, 0], [1, 0, 2], [1, 0, 2, 0, 0], 'x', [1, 0, 'a', 0], [1.5, 0, 0, 0], [-1, 0, 0, 0]]) {
+      expect(parseMessage(JSON.stringify({ ...base, inv }))).toBeNull();
+    }
+  });
+
+  it('rejects a snapshot with bad ground items or inventory', () => {
+    const bad: Record<string, unknown>[] = [
+      { ...snap, ground: undefined },
+      { ...snap, ground: Array.from({ length: 17 }, (_, i) => [i, 1, 2, 1]) }, // too many
+      { ...snap, ground: [[1, 2, 3, 0]] }, // nothing is not an item
+      { ...snap, ground: [[1, 2, 3, 9999]] }, // no such item
+      { ...snap, ground: [[1, Infinity, 3, 1]] },
+      { ...snap, inv: { ack: -1, gear: snap.inv?.gear, pack: [] } },
+      { ...snap, inv: { ack: 0, gear: [1, 2], pack: [] } }, // one code per gear slot
+      { ...snap, inv: { ack: 0, gear: snap.inv?.gear, pack: [9999] } },
+      { ...snap, inv: { ack: 0, gear: snap.inv?.gear, pack: Array.from({ length: 33 }, () => 1) } },
+    ];
+    for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m).slice(0, 80)).toBeNull();
   });
 
   it('rejects malformed snapshots', () => {

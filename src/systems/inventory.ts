@@ -3,6 +3,7 @@
 // succeeds completely or changes nothing and says why.
 
 import { GEAR_SLOTS, type GearSlot, type Hero, type Item } from './combat';
+import { ITEMS } from './items';
 
 /** Pack slots with no bag. A sack or backpack (slot `bag`, `capacity`) adds to it while worn. */
 export const BASE_PACK = 10;
@@ -133,3 +134,103 @@ export function iconKind(item: Item): IconKind {
       return 'sword';
   }
 }
+
+// --- Inventory actions as data (so a co-op guest can ask the host to do them) ---
+
+/** Something a player does on the pack screen. */
+export type InvOp =
+  | { t: 'equip'; index: number; slot?: GearSlot } // pack item -> worn (default: its own slot)
+  | { t: 'unequip'; slot: GearSlot }
+  | { t: 'dropPack'; index: number }
+  | { t: 'dropWorn'; slot: GearSlot };
+
+/** Most items lying on the ground at once (they ride in every co-op snapshot). */
+export const MAX_GROUND = 16;
+
+/** Do an action. A drop hands the item back as `dropped` (the caller puts it on the ground). Changes nothing on failure. */
+export function applyInvOp(hero: Hero, op: InvOp): Result & { dropped?: Item } {
+  switch (op.t) {
+    case 'equip':
+      return equipFromPack(hero, op.index, op.slot);
+    case 'unequip':
+      return unequip(hero, op.slot);
+    case 'dropPack': {
+      if (!hero.pack[op.index]) return fail('Nothing there.');
+      return { ok: true, dropped: dropFromPack(hero, op.index) };
+    }
+    case 'dropWorn': {
+      const r = dropWorn(hero, op.slot);
+      return r.ok ? { ok: true, dropped: r.item } : r;
+    }
+  }
+}
+
+/** The wire form of an action: [kind, a, b] with numbers only (slots are GEAR_SLOTS indexes, -1 for none). */
+export type InvOpWire = [number, number, number];
+
+export function encodeOp(op: InvOp): InvOpWire {
+  const slot = (g: GearSlot | undefined) => (g ? GEAR_SLOTS.indexOf(g) : -1);
+  switch (op.t) {
+    case 'equip':
+      return [0, op.index, slot(op.slot)];
+    case 'unequip':
+      return [1, slot(op.slot), 0];
+    case 'dropPack':
+      return [2, op.index, 0];
+    case 'dropWorn':
+      return [3, slot(op.slot), 0];
+  }
+}
+
+/** Read a wire action back, or null when it is not one (values come from a peer, so nothing is trusted). */
+export function decodeOp([kind, a, b]: InvOpWire): InvOp | null {
+  const slot = GEAR_SLOTS[a];
+  switch (kind) {
+    case 0:
+      return Number.isInteger(a) && a >= 0 && a < 64 && b >= -1 && b < GEAR_SLOTS.length
+        ? { t: 'equip', index: a, ...(b >= 0 ? { slot: GEAR_SLOTS[b] } : {}) }
+        : null;
+    case 1:
+      return slot ? { t: 'unequip', slot } : null;
+    case 2:
+      return Number.isInteger(a) && a >= 0 && a < 64 ? { t: 'dropPack', index: a } : null;
+    case 3:
+      return slot ? { t: 'dropWorn', slot } : null;
+    default:
+      return null;
+  }
+}
+
+// --- Item codes and loadouts ---
+
+/** Every item, in a fixed order: an item's code is its place here plus one (0 is "nothing"). */
+const ITEM_LIST: readonly Item[] = Object.values(ITEMS);
+export const ITEM_COUNT = ITEM_LIST.length;
+
+export const itemCode = (item: Item | undefined): number => (item ? ITEM_LIST.indexOf(item) + 1 : 0);
+export const itemFromCode = (code: number): Item | undefined => ITEM_LIST[code - 1];
+
+/** What a hero wears and carries. `gear` has one code per GEAR_SLOTS entry, `pack` one per carried item. */
+export interface Loadout {
+  gear: number[];
+  pack: number[];
+}
+
+export function loadoutOf(hero: Hero): Loadout {
+  return { gear: GEAR_SLOTS.map((slot) => itemCode(hero[slot])), pack: hero.pack.map(itemCode) };
+}
+
+/** Make `hero` wear and carry exactly this. An unknown code is skipped, and the weapon is kept when none is given. */
+export function applyLoadout(hero: Hero, loadout: Loadout): void {
+  for (const [i, slot] of GEAR_SLOTS.entries()) {
+    const item = itemFromCode(loadout.gear[i] ?? 0);
+    if (slot === 'weapon') {
+      if (item) hero.weapon = item;
+    } else if (item) hero[slot] = item;
+    else delete hero[slot];
+  }
+  hero.pack = loadout.pack.flatMap((code) => itemFromCode(code) ?? []);
+}
+
+export const sameLoadout = (a: Loadout, b: Loadout): boolean =>
+  a.gear.join() === b.gear.join() && a.pack.join() === b.pack.join();

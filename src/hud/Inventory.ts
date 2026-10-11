@@ -2,14 +2,11 @@ import { GEAR_SLOTS, type GearSlot, type Hero, type Item } from '../systems/comb
 import {
   BASE_PACK,
   compare,
-  dropFromPack,
-  dropWorn,
-  equipFromPack,
   iconKind,
   itemTier,
   packSize,
   slotsFor,
-  unequip,
+  type InvOp,
   type Result,
 } from '../systems/inventory';
 import { iconSvg } from './itemIcons';
@@ -30,16 +27,10 @@ const SLOT_LABELS: Record<GearSlot, string> = {
   bag: 'Bag',
 };
 
-/** What the scene lets the screen do. Set while a scene is running (guests and loading have none). */
+/** What the scene lets the screen do. Set while a scene is running. */
 export interface InventoryHandlers {
-  /** Why the pack cannot be changed now (a co-op guest), or null. */
-  locked(): string | null;
-  /** Why items cannot be dropped now, or null. */
-  noDrop(): string | null;
-  /** The worn gear changed: redraw the hero. */
-  gearChanged(): void;
-  /** Put an item on the ground by the hero. */
-  drop(item: Item): void;
+  /** Do an action for the local player (the scene applies it here, or asks the host in a co-op game). */
+  apply(op: InvOp): Result;
 }
 
 type Selection = { from: 'pack'; index: number } | { from: 'worn'; slot: GearSlot } | null;
@@ -81,9 +72,8 @@ export class Inventory {
   private render() {
     const hero = this.hero;
     if (!hero) return;
-    const locked = this.handlers?.locked();
-    if (!this.handlers || locked) {
-      this.root.innerHTML = `<p class="empty">${locked ?? 'The pack is not available right now.'}</p>`;
+    if (!this.handlers) {
+      this.root.innerHTML = `<p class="empty">The pack is not available right now.</p>`;
       return;
     }
     const size = packSize(hero);
@@ -189,38 +179,26 @@ export class Inventory {
   }
 
   private run(action: string) {
-    const hero = this.hero;
     const sel = this.selected;
     const h = this.handlers;
-    if (!hero || !sel || !h) return;
-    let result: Result = { ok: true };
-    if (action === 'equip' || action === 'equip-off') {
-      if (sel.from === 'pack') {
-        result = equipFromPack(hero, sel.index, action === 'equip-off' ? 'offhand' : undefined);
-        if (result.ok) this.selected = null;
-      }
-    } else if (action === 'unequip') {
-      if (sel.from === 'worn') {
-        result = unequip(hero, sel.slot);
-        if (result.ok) this.selected = null;
-      }
-    } else if (action === 'drop') {
-      const why = h.noDrop();
-      if (why) result = { ok: false, reason: why };
-      else if (sel.from === 'pack') {
-        const item = dropFromPack(hero, sel.index);
-        if (item) h.drop(item);
-        this.selected = null;
-      } else {
-        const r = dropWorn(hero, sel.slot);
-        result = r;
-        if (r.ok && r.item) h.drop(r.item);
-        if (r.ok) this.selected = null;
-      }
-    }
+    if (!this.hero || !sel || !h) return;
+    let op: InvOp | null = null;
+    if (sel.from === 'pack') {
+      if (action === 'equip') op = { t: 'equip', index: sel.index };
+      else if (action === 'equip-off') op = { t: 'equip', index: sel.index, slot: 'offhand' };
+      else if (action === 'drop') op = { t: 'dropPack', index: sel.index };
+    } else if (action === 'unequip') op = { t: 'unequip', slot: sel.slot };
+    else if (action === 'drop') op = { t: 'dropWorn', slot: sel.slot };
+    if (!op) return;
+    const result = h.apply(op);
+    if (result.ok) this.selected = null;
     this.message = result.ok ? '' : result.reason;
-    if (result.ok) h.gearChanged();
     this.render();
     this.changed();
+  }
+
+  /** Redraw after the hero's gear changed from outside (the host's word in a co-op game). */
+  refresh() {
+    this.render();
   }
 }

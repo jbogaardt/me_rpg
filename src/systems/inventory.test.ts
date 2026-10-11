@@ -3,6 +3,16 @@ import { newHero } from './combat';
 import { collect } from './chests';
 import {
   addToPack,
+  applyInvOp,
+  applyLoadout,
+  decodeOp,
+  encodeOp,
+  ITEM_COUNT,
+  itemCode,
+  itemFromCode,
+  loadoutOf,
+  sameLoadout,
+  type InvOp,
   BASE_PACK,
   dropFromPack,
   dropWorn,
@@ -166,5 +176,78 @@ describe('chest loot', () => {
     expect(collect(hero, { item: ITEMS.clothHood }, false).gear).toBeUndefined();
     expect(collect(hero, { item: ITEMS.greatHelm }, false).gear).toBe(ITEMS.greatHelm);
     expect(hero.pack).toEqual([]);
+  });
+});
+
+describe('inventory actions as data', () => {
+  const ops: InvOp[] = [
+    { t: 'equip', index: 3 },
+    { t: 'equip', index: 0, slot: 'offhand' },
+    { t: 'unequip', slot: 'cape' },
+    { t: 'dropPack', index: 7 },
+    { t: 'dropWorn', slot: 'bag' },
+  ];
+
+  it('survives the wire', () => {
+    for (const op of ops) expect(decodeOp(encodeOp(op))).toEqual(op);
+  });
+
+  it('refuses junk from a peer', () => {
+    for (const wire of [
+      [9, 0, 0],
+      [0, -1, -1],
+      [0, 1.5, -1],
+      [0, 1, 99],
+      [1, 99, 0],
+      [3, -1, 0],
+      [2, 99, 0],
+    ] as const) {
+      expect(decodeOp([...wire]), wire.join()).toBeNull();
+    }
+  });
+
+  it('does the action and hands back what was dropped', () => {
+    const hero = newHero();
+    hero.pack.push(ITEMS.kettleHat);
+    expect(applyInvOp(hero, { t: 'dropPack', index: 0 })).toEqual({ ok: true, dropped: ITEMS.kettleHat });
+    expect(hero.pack).toEqual([]);
+    expect(applyInvOp(hero, { t: 'dropWorn', slot: 'cape' })).toEqual({ ok: true, dropped: ITEMS.travelerCloak });
+    expect(hero.cape).toBeUndefined();
+  });
+
+  it('changes nothing when an action fails', () => {
+    const hero = newHero();
+    for (const op of [
+      { t: 'dropPack', index: 0 },
+      { t: 'dropWorn', slot: 'weapon' },
+      { t: 'unequip', slot: 'head' },
+    ] as const) {
+      expect(applyInvOp(hero, op).ok).toBe(false);
+    }
+    expect(hero).toEqual(newHero());
+  });
+});
+
+describe('item codes and loadouts', () => {
+  it('number every item from 1, and 0 means nothing', () => {
+    expect(itemCode(undefined)).toBe(0);
+    expect(itemFromCode(0)).toBeUndefined();
+    expect(itemFromCode(ITEM_COUNT + 1)).toBeUndefined();
+    for (const item of Object.values(ITEMS)) expect(itemFromCode(itemCode(item))).toBe(item);
+  });
+
+  it('copies what a hero wears and carries onto another', () => {
+    const a = newHero();
+    a.head = ITEMS.kettleHat;
+    a.bag = ITEMS.sack;
+    a.pack.push(ITEMS.steelSword, ITEMS.whetstone);
+    delete a.cape;
+    const b = newHero();
+    expect(sameLoadout(loadoutOf(a), loadoutOf(b))).toBe(false);
+    applyLoadout(b, loadoutOf(a));
+    expect(sameLoadout(loadoutOf(a), loadoutOf(b))).toBe(true);
+    expect(b.cape).toBeUndefined(); // an empty slot is cleared
+    expect(b.pack).toEqual([ITEMS.steelSword, ITEMS.whetstone]);
+    expect(b.weapon).toBe(ITEMS.rustySword);
   });
 });
