@@ -8,6 +8,7 @@ import { Character, DIR_VEC, directionToward } from '../entities/Character';
 import { Ambient } from '../entities/ambient';
 import { boltEffect, Effects, floatText, slashEffect } from '../entities/effects';
 import { Mob, type MobWorld } from '../entities/Mob';
+import { particleEffect } from '../entities/ParticleEffect';
 import type { Dialog } from '../hud/Dialog';
 import type { Hud } from '../hud/Hud';
 import type { Menu } from '../hud/Menu';
@@ -231,26 +232,44 @@ export class OverworldScene implements Scene {
     stats.mp -= spell.cost;
     const [vx, vy] = DIR_VEC[this.player.facing];
     const hitY = 14; // the bolt flies at chest height, this far above the ground it tests against
+    const trail = particleEffect('boltTrail', x + vx * 10, y - hitY + vy * 8);
+    this.effects.add(trail);
     this.effects.add(
-      boltEffect(x + vx * 10, y - hitY + vy * 8, vx * BOLT_SPEED, vy * BOLT_SPEED, BOLT_RANGE, (bx, by) => {
-        if (this.collision.isBlocked(Math.floor(bx / CELL), Math.floor((by + hitY) / CELL))) return true;
-        const mob = this.mobs.find(
-          (m) => m.alive && Math.abs(bx - m.body.x) < 12 && Math.abs(by + hitY - m.body.y) < 16,
-        );
-        if (!mob) return false;
-        this.hitMob(mob, rollDamage(spellPower(this.hero), mob.kind.defense), vx, vy);
-        return true;
-      }),
+      boltEffect(
+        x + vx * 10,
+        y - hitY + vy * 8,
+        vx * BOLT_SPEED,
+        vy * BOLT_SPEED,
+        BOLT_RANGE,
+        (bx, by) => {
+          trail.moveTo(bx, by);
+          if (this.collision.isBlocked(Math.floor(bx / CELL), Math.floor((by + hitY) / CELL))) return true;
+          const mob = this.mobs.find(
+            (m) => m.alive && Math.abs(bx - m.body.x) < 12 && Math.abs(by + hitY - m.body.y) < 16,
+          );
+          if (!mob) return false;
+          this.hitMob(mob, rollDamage(spellPower(this.hero), mob.kind.defense), vx, vy, true);
+          return true;
+        },
+        (bx, by, hit) => {
+          trail.stop();
+          if (hit) this.effects.add(particleEffect('boltImpact', bx, by));
+        },
+      ),
     );
   }
 
-  private hitMob(mob: Mob, damage: number, vx: number, vy: number) {
+  private hitMob(mob: Mob, damage: number, vx: number, vy: number, bolt = false) {
     const killed = mob.hit(damage, vx, vy);
+    // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
+    if (!bolt) this.effects.add(particleEffect('hitSpark', mob.body.x, mob.body.y - 14, { dir: Math.atan2(vy, vx) }));
     this.effects.add(floatText(mob.body.x, mob.body.y - 40, String(damage), 0xffffff));
     if (!killed) return;
+    this.effects.add(particleEffect('mobPoof', mob.body.x, mob.body.y - 12));
     this.effects.add(floatText(mob.body.x, mob.body.y - 52, `+${mob.kind.xp} XP`, 0xffb13f));
     if (gainXp(this.hero.stats, mob.kind.xp)) {
       this.effects.add(floatText(this.player.x, this.player.y - 48, 'LEVEL UP!', 0xffb13f));
+      this.effects.add(particleEffect('levelUp', this.player.x, this.player.y - 14));
     }
   }
 
@@ -262,6 +281,7 @@ export class OverworldScene implements Scene {
     this.invuln = INVULN_TIME;
     this.sinceHit = 0;
     this.effects.add(floatText(this.player.x, this.player.y - 40, String(damage), 0xff5a5a));
+    this.effects.add(particleEffect('heroHurt', this.player.x, this.player.y - 14));
     const dx = this.player.x - mob.body.x;
     const dy = this.player.y - mob.body.y;
     const len = Math.hypot(dx, dy) || 1;

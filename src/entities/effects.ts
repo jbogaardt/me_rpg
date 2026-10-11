@@ -26,7 +26,7 @@ export class Effects {
     this.list = [];
     const alive = current.filter((e) => {
       if (e.update(dt)) return true;
-      e.view.destroy();
+      e.view.destroy({ children: true }); // views can nest (particle effects); textures are shared, so kept
       return false;
     });
     this.list = alive.concat(this.list);
@@ -59,7 +59,8 @@ export function slashEffect(x: number, y: number, dir: Direction): Effect {
 
 /**
  * A glowing projectile. `step` is called with its position every frame and returns true when it hit
- * something, which ends it; it also ends after travelling `range` pixels.
+ * something, which ends it; it also ends after travelling `range` pixels. `onEnd` gets the final position
+ * and whether it hit something.
  */
 export function boltEffect(
   x: number,
@@ -68,6 +69,7 @@ export function boltEffect(
   vy: number,
   range: number,
   step: (x: number, y: number) => boolean,
+  onEnd?: (x: number, y: number, hit: boolean) => void,
 ): Effect {
   const g = new Graphics({ position: { x, y } })
     .circle(0, 0, 5)
@@ -85,7 +87,10 @@ export function boltEffect(
       travelled += Math.hypot(vx, vy) * dt;
       g.zIndex = g.y + 14; // it flies at chest height; sort by the ground point under it
       g.scale.set(1 + 0.2 * Math.sin(t * 30));
-      return travelled < range && !step(g.x, g.y);
+      const hit = travelled < range && step(g.x, g.y);
+      const alive = travelled < range && !hit;
+      if (!alive) onEnd?.(g.x, g.y, hit);
+      return alive;
     },
   };
 }
