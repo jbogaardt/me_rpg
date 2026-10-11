@@ -67,11 +67,11 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
   },
   sandstorm: {
     count: 320,
-    tint: 0x946020,
-    alpha: 0.95,
-    w: [2, 5],
-    h: [1, 2],
-    vx: 300,
+    tint: 0xd89a3c,
+    alpha: 1,
+    w: [4, 9],
+    h: [1, 3],
+    vx: 320,
     fall: [-6, 12],
     sway: 0,
     tilt: true,
@@ -84,7 +84,7 @@ const HAZE: Partial<Record<WeatherKind, { tint: number; alpha: number }>> = {
   storm: { tint: 0x060a18, alpha: 0.58 },
   snow: { tint: 0x5a6e90, alpha: 0.3 }, // dim the bright ground so white flakes stand out
   blizzard: { tint: 0x8498b8, alpha: 0.5 },
-  sandstorm: { tint: 0xa06a20, alpha: 0.4 },
+  sandstorm: { tint: 0x7a4a14, alpha: 0.5 },
 };
 
 interface Drop {
