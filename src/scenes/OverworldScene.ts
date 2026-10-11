@@ -584,6 +584,7 @@ export class OverworldScene implements Scene {
     if (dx) p.body.face(dx > 0 ? 'right' : 'left');
     else p.body.face(dy > 0 ? 'down' : 'up');
     const len = Math.hypot(dx, dy);
+    p.aim = { x: dx / len, y: dy / len };
     const step = SPEED * dt;
     this.collision.slide(p.body, (dx / len) * step, (dy / len) * step, this.bodies());
     return true;
@@ -638,7 +639,7 @@ export class OverworldScene implements Scene {
     }
     stats.mp -= spell.cost;
     p.body.play('cast');
-    const [vx, vy] = DIR_VEC[p.body.facing];
+    const { x: vx, y: vy } = p.aim;
     this.shoot(x + vx * 10, y - BOLT_HEIGHT + vy * 8, vx * BOLT_SPEED, vy * BOLT_SPEED, (mob) => {
       this.hitMob(mob, rollDamage(spellPower(p.hero), mob.kind.defense), vx, vy, true);
     });
@@ -780,6 +781,7 @@ export class OverworldScene implements Scene {
     s.mp = s.maxMp;
     p.body.position.set(...this.cellToFeet(this.spawn));
     p.body.face('down');
+    p.aim = { x: 0, y: 1 };
     p.knock = { x: 0, y: 0 };
     p.invuln = 0;
     if (this.role === 'solo') this.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them

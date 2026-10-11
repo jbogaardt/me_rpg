@@ -21,6 +21,7 @@ export class Player {
   invuln = 0; // seconds of blinking immunity after a hit
   sinceHit = Infinity; // seconds since last hurt (HP regenerates after a pause)
   knock = { x: 0, y: 0 };
+  aim = { x: 0, y: 1 }; // unit vector of the last move (diagonals included): where magic bolts fly
   moving = false; // was trying to move this tick (drives the walk cycle, and the guest's copy of it)
 
   // Host: the last action counters honoured from a network player (see protocol.ts).
