@@ -251,7 +251,14 @@ export class OverworldScene implements Scene {
     this.effects.update(dt);
     if (this.role !== 'client') this.weather.update(dt); // a guest shows the host's weather (see applySnapshot)
     this.ambient.wind = this.weather.wind;
-    this.weatherLayer.update(dt, this.weather, this.camera.view(this.screen.width, this.screen.height));
+    // Solo and host roll the lightning (near a random player, so someone sees it land); a guest only draws the host's.
+    const strike = this.weatherLayer.update(
+      dt,
+      this.weather,
+      this.camera.view(this.screen.width, this.screen.height),
+      this.role === 'client' ? undefined : () => this.strikeTarget(),
+    );
+    if (strike) this.emit({ type: 'lightning', ...strike });
     this.ambient.update(dt, this.player, [
       ...this.players().map((p) => p.body),
       ...this.mobs.filter((m) => m.alive).map((m) => m.body),
@@ -546,8 +553,18 @@ export class OverworldScene implements Scene {
     p.body.animate(dt * 1000, (p.flags & FLAG.moving) !== 0);
   }
 
+  /** Where the next lightning bolt lands: close to a random player, so it is in someone's view. */
+  private strikeTarget() {
+    const all = this.players();
+    const p = all[Math.floor(Math.random() * all.length)] ?? this.local;
+    return { x: p.body.x + (Math.random() - 0.5) * 220, y: p.body.y - Math.random() * 60 };
+  }
+
   private showEvent(e: WorldEvent) {
     switch (e.type) {
+      case 'lightning':
+        this.weatherLayer.strike(e);
+        break;
       case 'slash':
         this.swing(e.x, e.y, DIRS[e.dir] ?? 'down');
         this.playerNear(e.x, e.y)?.body.play('slash');

@@ -1,5 +1,6 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { ViewRect } from '../core/camera';
+import { mulberry32 } from '../systems/particles';
 import { WeatherFrame } from './WeatherFrame';
 import { Lightning, type Weather, type WeatherKind } from '../systems/weather';
 
@@ -7,6 +8,13 @@ import { Lightning, type Weather, type WeatherKind } from '../systems/weather';
 // blown sand, wind gusts) that wrap around the camera's view. Nothing is allocated per frame.
 
 const POOL = 800;
+
+/** Where a lightning bolt lands (world px) and the seed that shapes it. */
+export interface Strike {
+  x: number;
+  y: number;
+  seed: number;
+}
 
 interface Style {
   count: number; // particles at full intensity
@@ -134,7 +142,8 @@ export class WeatherLayer {
     layer.addChild(this.view);
   }
 
-  update(dt: number, weather: Weather, view: ViewRect) {
+  /** Returns the lightning strike rolled this frame, if any (only when `pick` is given: a host or solo game). */
+  update(dt: number, weather: Weather, view: ViewRect, pick?: () => { x: number; y: number }): Strike | null {
     this.clock += dt;
     const style = STYLES[weather.kind];
     if (weather.kind !== this.kind) {
@@ -153,7 +162,8 @@ export class WeatherLayer {
     }
 
     this.frame.update(weather.kind, weather.intensity, view.x, view.y, view.w, view.h);
-    this.strikes(dt, weather, view);
+    const strike = this.strikes(dt, weather, pick);
+    this.showFlash(view);
 
     const want = style ? Math.min(POOL, Math.round(style.count * weather.intensity)) : 0;
     while (this.active < want) this.spawn(this.drops[this.active++]!, style!, view, true);
@@ -161,7 +171,7 @@ export class WeatherLayer {
       const d = this.drops[--this.active];
       if (d) d.sprite.visible = false;
     }
-    if (!style) return;
+    if (!style) return strike;
 
     const wind = weather.wind;
     for (let i = 0; i < this.active; i++) {
@@ -181,6 +191,7 @@ export class WeatherLayer {
       d.sprite.position.set(d.x + sway, d.y);
       d.sprite.rotation = style.tilt ? Math.atan2(-vx, d.fall) : 0;
     }
+    return strike;
   }
 
   /** Put a drop in play: anywhere in the view, or (when it wrapped) on the edge it re-enters from. */
@@ -204,32 +215,46 @@ export class WeatherLayer {
     s.visible = true;
   }
 
-  /** Lightning during a storm: a jagged bolt from the sky and a white flash that fades quickly. */
-  private strikes(dt: number, weather: Weather, view: ViewRect) {
+  /**
+   * Lightning during a storm. The host (or a solo game) rolls the strikes: `pick` chooses where one lands and the
+   * strike is returned so a co-op host can tell its friends; a guest passes no `pick` and waits for `strike()`.
+   */
+  private strikes(dt: number, weather: Weather, pick?: () => { x: number; y: number }): Strike | null {
+    let strike: Strike | null = null;
     const stormy = weather.kind === 'storm' && weather.intensity > 0.5;
-    if (this.lightning.update(dt, stormy)) {
-      this.glow = 1;
-      const bolt = this.bolt;
-      bolt.clear();
-      let x = view.x + view.w * (0.1 + Math.random() * 0.8);
-      let y = view.y;
-      const bottom = view.y + view.h * (0.45 + Math.random() * 0.4);
-      const path: [number, number][] = [[x, y]];
-      while (y < bottom) {
-        y += 12 + Math.random() * 14;
-        x += (Math.random() - 0.5) * 28;
-        path.push([x, y]);
-      }
-      for (const [width, color] of [
-        [7, 0x9ab8ff],
-        [3, 0xffffff],
-      ] as const) {
-        bolt.moveTo(path[0]![0], path[0]![1]);
-        for (const [px, py] of path) bolt.lineTo(px, py);
-        bolt.stroke({ width, color, join: 'round', cap: 'round' });
-      }
+    if (pick && this.lightning.update(dt, stormy)) {
+      strike = { ...pick(), seed: Math.floor(Math.random() * 1e9) };
+      this.strike(strike);
     }
     this.glow = Math.max(0, this.glow - dt * 3.5);
+    return strike;
+  }
+
+  /** Flash the sky and draw a jagged bolt landing at world (x, y); the same seed draws the same bolt everywhere. */
+  strike({ x: targetX, y: targetY, seed }: Strike) {
+    this.glow = 1;
+    const rng = mulberry32(seed);
+    const bolt = this.bolt;
+    bolt.clear();
+    let x = targetX + (rng() - 0.5) * 60;
+    let y = targetY - 260;
+    const path: [number, number][] = [[x, y]];
+    while (y < targetY) {
+      y = Math.min(targetY, y + 12 + rng() * 14);
+      x += (rng() - 0.5) * 28;
+      path.push([y >= targetY ? targetX : x, y]);
+    }
+    for (const [width, color] of [
+      [7, 0x9ab8ff],
+      [3, 0xffffff],
+    ] as const) {
+      bolt.moveTo(path[0]![0], path[0]![1]);
+      for (const [px, py] of path) bolt.lineTo(px, py);
+      bolt.stroke({ width, color, join: 'round', cap: 'round' });
+    }
+  }
+
+  private showFlash(view: ViewRect) {
     this.flash.visible = this.bolt.visible = this.glow > 0;
     if (this.glow > 0) {
       this.flash.position.set(view.x, view.y);

@@ -16,7 +16,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { WEATHER_KINDS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -60,6 +60,7 @@ export type WorldEvent =
   | { type: 'arrow'; x: number; y: number; vx: number; vy: number; range: number } // a player's arrow (the guest only draws it)
   | { type: 'text'; x: number; y: number; text: string; color: number }
   | { type: 'fx'; name: FxName; x: number; y: number; dir?: number }
+  | { type: 'lightning'; x: number; y: number; seed: number } // a bolt lands here (the seed shapes it the same everywhere)
   | { type: 'defeat'; player: number }; // this player (0 is the host) was knocked out and sent back to spawn
 
 export interface HelloMsg {
@@ -153,6 +154,10 @@ function parseEvent(raw: unknown): WorldEvent | null {
         isCoord(e.y) &&
         (e.dir === undefined || isCoord(e.dir))
         ? { type: 'fx', name: e.name as FxName, x: e.x, y: e.y, dir: e.dir }
+        : null;
+    case 'lightning':
+      return isCoord(e.x) && isCoord(e.y) && isCount(e.seed) && e.seed <= 0xffffffff
+        ? { type: 'lightning', x: e.x, y: e.y, seed: e.seed }
         : null;
     case 'defeat':
       return isIndex(e.player, MAX_PLAYERS) ? { type: 'defeat', player: e.player } : null;

@@ -33,6 +33,7 @@ const snap: SnapMsg = {
     { id: 11, e: { type: 'draw', x: 1, y: 2 } },
     { id: 12, e: { type: 'arrow', x: 1, y: 2, vx: 300, vy: 0, range: 256 } },
     { id: 10, e: { type: 'bolt', x: 5, y: 6, vx: -135, vy: 0, color: 0xb06cff } }, // an enemy's shot
+    { id: 13, e: { type: 'lightning', x: 100.5, y: 200, seed: 123456789 } },
     { id: 7, e: { type: 'defeat', player: 3 } },
     { id: 8, e: { type: 'fx', name: 'hitSpark', x: 3, y: 4, dir: 1.6 } },
     { id: 9, e: { type: 'fx', name: 'levelUp', x: 3, y: 4 } },
@@ -83,6 +84,16 @@ describe('messages', () => {
     expect(guest.kind).toBe('storm');
     expect(guest.windDir).toBe(-1);
     expect(guest.intensity).toBe(1);
+  });
+
+  it('rejects a lightning event with a bad seed or place', () => {
+    for (const e of [
+      { type: 'lightning', x: 1, y: 2, seed: -1 },
+      { type: 'lightning', x: 1, y: 2, seed: 2 ** 33 },
+      { type: 'lightning', x: 1, seed: 3 },
+    ]) {
+      expect(parseMessage(JSON.stringify({ ...snap, events: [{ id: 1, e }] }))).toBeNull();
+    }
   });
 
   it('rejects a snapshot whose weather is out of range', () => {
