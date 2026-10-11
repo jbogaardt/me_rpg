@@ -13,9 +13,10 @@ import type { Direction } from '../entities/Character';
 import { MOB_STATES } from '../systems/combat';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
+import { WEATHER_KINDS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 5;
+export const PROTOCOL_VERSION = 6;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -87,6 +88,7 @@ export interface SnapMsg {
   mobs: MobSnap[];
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
+  w: WeatherSnap; // the host's weather, so everyone sees the same sky
   events: { id: number; e: WorldEvent }[];
 }
 
@@ -110,6 +112,9 @@ const isCount = (v: unknown): v is number => isNum(v) && Number.isInteger(v) && 
 const isIndex = (v: unknown, length: number): v is number => isCount(v) && v < length;
 const numbers = (v: unknown, length: number): v is number[] =>
   Array.isArray(v) && v.length === length && v.every(isNum);
+
+const isWeather = (v: unknown): v is WeatherSnap =>
+  numbers(v, 3) && isIndex(v[0], WEATHER_KINDS.length) && isCount(v[1]) && v[1] <= 100 && (v[2] === 0 || v[2] === 1);
 
 function parseEvent(raw: unknown): WorldEvent | null {
   const e = raw as Record<string, unknown> | null;
@@ -218,6 +223,7 @@ export function parseMessage(raw: unknown): Message | null {
         !rawEvents ||
         events.includes(null) ||
         !numbers(m.me, 9) ||
+        !isWeather(m.w) ||
         !isCount(m.chests) ||
         m.chests > MAX_CHEST_MASK
       ) {
@@ -230,6 +236,7 @@ export function parseMessage(raw: unknown): Message | null {
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
         chests: m.chests,
+        w: m.w,
         events: events as { id: number; e: WorldEvent }[],
       };
     }

@@ -54,3 +54,24 @@ describe('Lightning', () => {
     expect(strikes).toBeLessThan(60);
   });
 });
+
+describe('co-op weather sync', () => {
+  it('a guest ends up with exactly the host weather', () => {
+    const host = new Weather(mulberry32(7));
+    host.force('blizzard');
+    host.windDir = -1;
+    host.update(1);
+    const guest = new Weather(mulberry32(99));
+    guest.setRemote(host.snapshot());
+    expect(guest.kind).toBe('blizzard');
+    expect(guest.windDir).toBe(-1);
+    expect(guest.intensity).toBeCloseTo(host.intensity, 2);
+  });
+
+  it('survives a bad snapshot without breaking', () => {
+    const guest = new Weather(mulberry32(1));
+    guest.setRemote([99, 500, 1]);
+    expect(guest.kind).toBe('clear');
+    expect(guest.intensity).toBe(1);
+  });
+});

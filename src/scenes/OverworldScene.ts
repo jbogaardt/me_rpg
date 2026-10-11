@@ -249,7 +249,7 @@ export class OverworldScene implements Scene {
     else this.updateSimulation(dt);
 
     this.effects.update(dt);
-    this.weather.update(dt);
+    if (this.role !== 'client') this.weather.update(dt); // a guest shows the host's weather (see applySnapshot)
     this.ambient.wind = this.weather.wind;
     this.weatherLayer.update(dt, this.weather, this.camera.view(this.screen.width, this.screen.height));
     this.ambient.update(dt, this.player, [
@@ -456,6 +456,7 @@ export class OverworldScene implements Scene {
       n: ++this.snapSeq,
       players: this.players().map((p) => this.snapPlayer(p)),
       mobs: this.mobs.map((m) => m.snapshot()),
+      w: this.weather.snapshot(),
       chests: this.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
       events: this.events.slice(-MAX_EVENTS_SENT).map(({ id, e }) => ({ id, e })),
     } as const;
@@ -503,6 +504,7 @@ export class OverworldScene implements Scene {
       }
     }
 
+    this.weather.setRemote(snap.w);
     this.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
     if (snap.mobs.length === this.mobs.length) snap.mobs.forEach((m, i) => this.mobs[i]?.setRemote(m));
 

@@ -3,6 +3,20 @@
 
 export type WeatherKind = 'clear' | 'wind' | 'rain' | 'storm' | 'snow' | 'blizzard' | 'sandstorm';
 
+/** Kinds in a fixed order: a kind travels over the network as its index here. */
+export const WEATHER_KINDS: readonly WeatherKind[] = [
+  'clear',
+  'wind',
+  'rain',
+  'storm',
+  'snow',
+  'blizzard',
+  'sandstorm',
+];
+
+/** [kind index, intensity in percent, 1 if the wind blows right]: what a co-op host tells its friends. */
+export type WeatherSnap = [number, number, number];
+
 /** Weather covers the whole map at once, wherever you stand: every kind can happen anywhere, with relative odds. */
 export const WEATHER_TABLE: Partial<Record<WeatherKind, number>> = {
   clear: 5,
@@ -62,6 +76,18 @@ export class Weather {
     this.intensity = 1;
     this.ending = false;
     this.remaining = this.duration(kind);
+  }
+
+  /** Co-op host: the weather as it is right now, for the snapshot. */
+  snapshot(): WeatherSnap {
+    return [WEATHER_KINDS.indexOf(this.kind), Math.round(this.intensity * 100), this.windDir === 1 ? 1 : 0];
+  }
+
+  /** Co-op guest: show the host's weather instead of rolling our own (the host fades it in and out). */
+  setRemote([kind, percent, right]: WeatherSnap) {
+    this.kind = WEATHER_KINDS[kind] ?? 'clear';
+    this.intensity = Math.min(1, Math.max(0, percent / 100));
+    this.windDir = right ? 1 : -1;
   }
 
   update(dt: number) {

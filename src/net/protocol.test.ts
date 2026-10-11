@@ -1,3 +1,4 @@
+import { Weather } from '../systems/weather';
 import { describe, expect, it } from 'vitest';
 import { approach, glide } from './interp';
 import {
@@ -24,6 +25,7 @@ const snap: SnapMsg = {
   mobs: [mob, [1, 2, 0, 5, 0, 5000, 0]],
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10],
   chests: 5,
+  w: [0, 0, 1],
   events: [
     { id: 4, e: { type: 'text', x: 5, y: 6, text: '+12 XP', color: 0xffb13f } },
     { id: 5, e: { type: 'slash', x: 1, y: 2, dir: 3 } },
@@ -67,6 +69,25 @@ describe('messages', () => {
       const players = slots.map((slot): PlayerSnap => [slot, 1, 2, 0, 0]);
       const parsed = parseMessage(JSON.stringify({ ...snap, players }));
       expect(parsed).toMatchObject({ k: 'snap', players });
+    }
+  });
+
+  it('carries the host weather to a guest through the wire format', () => {
+    const host = new Weather(() => 0.5);
+    host.force('storm');
+    host.windDir = -1;
+    const received = parseMessage(encodeMessage({ ...snap, w: host.snapshot() }));
+    expect(received?.k).toBe('snap');
+    const guest = new Weather(() => 0.5);
+    if (received?.k === 'snap') guest.setRemote(received.w);
+    expect(guest.kind).toBe('storm');
+    expect(guest.windDir).toBe(-1);
+    expect(guest.intensity).toBe(1);
+  });
+
+  it('rejects a snapshot whose weather is out of range', () => {
+    for (const w of [[7, 0, 1], [0, 101, 1], [0, 0, 2], [0, 0], 'rain', null, [0.5, 0, 1]]) {
+      expect(parseMessage(JSON.stringify({ ...snap, w }))).toBeNull();
     }
   });
 
