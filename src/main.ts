@@ -7,7 +7,6 @@ import { initAssets, loadSprites, loadZone } from './assets';
 import { SceneManager } from './core/Scene';
 import { createTouchControls } from './core/touch';
 import { Dialog } from './hud/Dialog';
-import { Fade } from './hud/Fade';
 import { Hud } from './hud/Hud';
 import { Loading } from './hud/Loading';
 import { Menu } from './hud/Menu';
@@ -72,9 +71,8 @@ void (async () => {
       dialog: new Dialog(),
       touch,
       session,
-      fade: new Fade(),
     };
-    const overworld = new OverworldScene(zone, sprites, ui, loadZone);
+    const overworld = new OverworldScene(zone, sprites, ui, loadZone, app.renderer);
     scenes.change(overworld);
     scenes.start();
     loading.done();

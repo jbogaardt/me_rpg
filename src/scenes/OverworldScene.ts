@@ -1,4 +1,4 @@
-import { Container } from 'pixi.js';
+import { Container, type Renderer } from 'pixi.js';
 import type { Sprites, Zone } from '../assets';
 import { actionDown, actionPressed, mapPressed, menuPressed } from '../core/controls';
 import type { Scene } from '../core/Scene';
@@ -12,15 +12,16 @@ import { Weather, type WeatherKind } from '../systems/weather';
 import { arrowEffect, boltEffect, floatText, slashEffect } from '../entities/effects';
 import type { Mob, MobWorld } from '../entities/Mob';
 import { particleEffect } from '../entities/ParticleEffect';
+import { ZoneTransition } from '../entities/ZoneTransition';
 import { NO_COMMAND, Player, type Command } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
-import { Fade } from '../hud/Fade';
 import type { Hud } from '../hud/Hud';
 import type { ShopCounter } from '../hud/ShopCounter';
 import type { TradeUi } from '../hud/Trade';
 import { MapOverlay } from '../hud/MapOverlay';
 import type { Menu } from '../hud/Menu';
 import { arrivalFacing, cellFeet, doorAt, doorsNear } from '../map/doors';
+import { pickTransition } from '../map/transition';
 import { CELL, type CellPoint } from '../map/types';
 import { ZoneState, type Keeper } from './ZoneState';
 import { DEFAULT_VIEW, MobFeed } from '../net/feed';
@@ -94,7 +95,7 @@ const CAST_COOLDOWN = 0.45;
 const KEEPER_REACH = CELL * 2.3; // how close the action key must be to talk to a shopkeeper (across a counter)
 const PREFETCH_REACH = 5 * CELL; // a door this close starts loading the zone behind it
 const PREFETCH_EVERY = 0.5; // seconds between looking for doors to prefetch
-const ARRIVE_INVULN = 1.2; // seconds of blinking immunity on arriving in a zone, so nothing waiting at the door ambushes you
+const ARRIVE_INVULN = 2; // seconds of blinking immunity on arriving in a zone (the transition takes ~1), so nothing waiting at the door ambushes you
 const PICKUP_REACH = 26; // how close the action key must be to an item on the ground
 const CHEST_REACH = CELL * 1.4; // how close the action key must be to a chest (feet to the chest's cell centre)
 const MELEE_REACH = 22; // radius of the sword's hit circle, centred just in front of the hero
@@ -127,7 +128,6 @@ export interface Ui {
   dialog: Dialog;
   touch: TouchControls;
   session: Session;
-  fade: Fade;
 }
 
 type MobHeroes = MobWorld['heroes'];
@@ -145,7 +145,9 @@ export type ZoneLoader = (name: string) => Promise<Zone>;
  * Player 0 is the host; friends are 1 to 3.
  */
 export class OverworldScene implements Scene {
+  private top = new Container(); // the scene's root: the stage, and the door transition over it
   private stage = new Container(); // holds the local player's zone, which is the only one drawn
+  private transition: ZoneTransition; // the iris or slide when the local player goes through a door
   private zones = new Map<string, ZoneState>(); // every loaded zone
   private loading = new Map<string, Promise<void>>(); // zones being loaded, so each is asked for once
   private home: ZoneState; // where the game starts and where a defeated player wakes
@@ -208,8 +210,11 @@ export class OverworldScene implements Scene {
     private sprites: Sprites,
     private ui: Ui,
     private loadZone: ZoneLoader,
+    renderer: Renderer,
   ) {
     this.wardrobe = sprites.wardrobe;
+    this.transition = new ZoneTransition(renderer);
+    this.top.addChild(this.stage, this.transition.view);
     this.home = this.zone = this.view = this.addZone(zone);
     this.overlay = new MapOverlay(zone.data);
     const hero = newHero();
@@ -301,7 +306,7 @@ export class OverworldScene implements Scene {
   }
 
   get root(): Container {
-    return this.stage;
+    return this.top;
   }
 
   /** The local player's body and hero (also what playtest scripts poke; see .claude/skills/playtest). */
@@ -411,6 +416,17 @@ export class OverworldScene implements Scene {
       );
     }
     z.camera.follow(this.screen.width, this.screen.height, this.player.x, this.player.y);
+    // A slide shifts the whole new zone in; the weather is the sky over the screen, so it stays put.
+    const shift = this.transition.update(dt, this.screen, this.heroOnScreen());
+    z.world.position.x += shift.x;
+    z.world.position.y += shift.y;
+    z.weatherLayer?.view.position.set(-shift.x / z.camera.zoom, -shift.y / z.camera.zoom);
+  }
+
+  /** Where the local player is on screen (CSS px): the middle of their body, which the door iris closes and opens on. */
+  private heroOnScreen(): { x: number; y: number } {
+    const { world, camera } = this.view;
+    return { x: world.x + this.player.x * camera.zoom, y: world.y + (this.player.y - 20) * camera.zoom };
   }
 
   /**
@@ -426,8 +442,9 @@ export class OverworldScene implements Scene {
       this.handleTradeSteps(dt);
     }
     const raw = this.readCommand();
-    // Reading a dialog or the menu: the player stands still (a solo dialog freezes the whole world instead).
-    const reading = menu.open || shop.open || trade.open || dialog.active;
+    // Reading a dialog or the menu: the player stands still (a solo dialog freezes the whole world instead). So do
+    // they while a door transition plays, and only take the next door once it is over.
+    const reading = menu.open || shop.open || trade.open || dialog.active || this.transition.busy;
     const cmd = reading ? { ...raw, dx: 0, dy: 0, mag: false } : raw;
     const guests = [...this.remotes.values()].map((p) => ({ p, cmd: this.remoteCommand(p) }));
     const commandOf = (p: Player) => (p === this.local ? cmd : (guests.find((g) => g.p === p)?.cmd ?? NO_COMMAND));
@@ -447,7 +464,9 @@ export class OverworldScene implements Scene {
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
-    if (!menu.open && !shop.open && !trade.open) this.handleAction(cmd.act, () => this.act(this.local));
+    if (!menu.open && !shop.open && !trade.open && !this.transition.busy) {
+      this.handleAction(cmd.act, () => this.act(this.local));
+    }
     for (const g of guests) if (g.cmd.act) this.inZone(this.zoneOf(g.p), () => this.act(g.p));
     if (!reading) this.checkDoors();
     for (const g of guests) this.checkDoorsFor(g.p);
@@ -472,8 +491,10 @@ export class OverworldScene implements Scene {
     for (const mob of this.mobs) mob.updateRemote(dt);
 
     const cmd = this.readCommand();
-    const reading = menu.open || shop.open || trade.open || dialog.active;
-    if (!menu.open && !shop.open && !trade.open) this.handleAction(cmd.act, () => this.actCount++);
+    const reading = menu.open || shop.open || trade.open || dialog.active || this.transition.busy;
+    if (!menu.open && !shop.open && !trade.open && !this.transition.busy) {
+      this.handleAction(cmd.act, () => this.actCount++);
+    }
     if (!reading && cmd.mag) this.magCount++;
     this.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy));
   }
@@ -536,9 +557,13 @@ export class OverworldScene implements Scene {
     else void this.ensureZone(door.to.zone); // not loaded yet: the player waits in the doorway and the next frame tries again
   }
 
-  /** Move a player through `door` into `dest`, which is loaded. The local player's view follows them. */
-  private travel(p: Player, dest: ZoneState, to: CellPoint) {
+  /**
+   * Move a player through a door into `dest`, which is loaded. The local player's view follows them, through an iris
+   * or a slide (`door` false: not through a door, e.g. waking after a defeat, which always irises).
+   */
+  private travel(p: Player, dest: ZoneState, to: CellPoint, door = true) {
     const from = this.zoneOf(p);
+    if (p === this.local) this.beginTrip(from, dest, door);
     from.world.layer.removeChild(p.body);
     from.ambient?.forget(p.body);
     dest.world.layer.addChild(p.body);
@@ -554,7 +579,24 @@ export class OverworldScene implements Scene {
     if (p === this.local) this.showZone(dest);
   }
 
-  /** Draw `dest` as the world the local player is in: swap it onto the stage and cut through black. */
+  /**
+   * The local player is about to leave `from` for `dest`: picture the view they are leaving and start the transition
+   * (map/transition.ts picks an iris for rooms, a slide for walking off a map edge into more open air).
+   */
+  private beginTrip(from: ZoneState, dest: ZoneState, door = true) {
+    const pick = pickTransition(from.data, dest.data, this.player.x, this.player.y);
+    const kind = door ? pick.kind : 'iris';
+    this.transition.begin(
+      kind,
+      pick.dir,
+      this.stage,
+      this.screen,
+      this.heroOnScreen(),
+      kind === 'slide' ? [this.player, ...(from.weatherLayer ? [from.weatherLayer.view] : [])] : [],
+    );
+  }
+
+  /** Draw `dest` as the world the local player is in: swap it onto the stage (the transition covers the cut). */
   private showZone(dest: ZoneState) {
     if (dest === this.view && dest.world.parent === this.stage) return;
     this.stage.removeChildren();
@@ -564,7 +606,6 @@ export class OverworldScene implements Scene {
     dest.camera.resize(this.screen.width, this.screen.height);
     dest.camera.follow(this.screen.width, this.screen.height, this.player.x, this.player.y);
     this.ui.shop.close();
-    this.ui.fade.flash();
   }
 
   // --- Roles ---
@@ -1059,7 +1100,9 @@ export class OverworldScene implements Scene {
     if (snap.zone !== this.local.zone) {
       const dest = this.zones.get(snap.zone);
       if (!dest) {
-        this.ui.fade.hold(true);
+        // Close on the zone they are leaving and stay shut until the next one has loaded.
+        if (!this.transition.busy) this.transition.begin('iris', 'down', null, this.screen, this.heroOnScreen());
+        this.transition.hold(true);
         void this.ensureZone(snap.zone);
         return; // nothing to draw it into yet: the next snapshot will find the zone loaded
       }
@@ -1107,13 +1150,15 @@ export class OverworldScene implements Scene {
 
   /** Guest: the host moved this player to `dest`; show it. Everyone else is placed again by the snapshot's list. */
   private followToZone(dest: ZoneState) {
+    // Already shut while the zone loaded: just open on it. Otherwise picture the zone being left and go.
+    if (this.transition.holding) this.transition.hold(false);
+    else this.beginTrip(this.zoneOf(this.local), dest);
     this.zoneOf(this.local).world.layer.removeChild(this.player);
     this.zoneOf(this.local).ambient?.forget(this.player);
     dest.world.layer.addChild(this.player);
     this.local.zone = dest.name;
     this.local.target = null; // appear where the host says, not gliding from the old zone
     this.showZone(dest);
-    this.ui.fade.hold(false);
     this.syncHeroBodies();
   }
 
@@ -1673,7 +1718,7 @@ export class OverworldScene implements Scene {
       p.body.position.set(...cellFeet(this.home.data.spawn));
       p.body.face('down');
     } else {
-      this.travel(p, this.home, this.home.data.spawn); // wake at the start of the world, whatever zone it was in
+      this.travel(p, this.home, this.home.data.spawn, false); // wake at the start of the world, whatever zone it was in
     }
     p.aim = { x: 0, y: 1 };
     p.knock = { x: 0, y: 0 };
