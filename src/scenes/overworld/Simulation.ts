@@ -1,4 +1,4 @@
-import { DIR_VEC, dirIndex } from '../../core/direction';
+import { DIR_VEC, dirIndex, directionToward } from '../../core/direction';
 import type { Character } from '../../entities/Character';
 import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
@@ -116,11 +116,16 @@ export class Simulation {
   }
 
   /** Returns true if the player is trying to move. On ice the velocity lags behind the keys, so they slide. */
-  private move(p: Player, { dx, dy }: Command, dt: number): boolean {
+  private move(p: Player, { dx, dy, aim }: Command, dt: number): boolean {
     const { collision, data } = this.arena;
     const len = Math.hypot(dx, dy);
     const wish = len ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
-    if (len) {
+    p.mouseAim = aim !== undefined;
+    if (aim) {
+      // Aiming with the mouse: the hero keeps looking where they walk, and turns to it only to attack or cast.
+      p.aim = aim;
+      if (len) p.body.face(dx ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up');
+    } else if (len) {
       if (dx) p.body.face(dx > 0 ? 'right' : 'left');
       else p.body.face(dy > 0 ? 'down' : 'up');
       p.aim = wish;
@@ -143,9 +148,15 @@ export class Simulation {
 
   // --- Attacks ---
 
+  /** With mouse aiming, turn toward the mouse for this attack or cast. */
+  private faceAim(p: Player) {
+    if (p.mouseAim) p.body.face(directionToward(p.aim.x, p.aim.y));
+  }
+
   /** The action button's attack: swing the sword, or start drawing the bow. */
   attack(p: Player) {
     if (p.attackCooldown > 0) return;
+    this.faceAim(p);
     const bow = p.hero.weapon.ranged;
     if (bow) {
       this.draw(p, bow);
@@ -201,6 +212,7 @@ export class Simulation {
       return;
     }
     stats.mp -= spell.cost;
+    this.faceAim(p);
     p.body.play('cast');
     const { x: vx, y: vy } = p.aim;
     const [bx, by] = [x + vx * 10, y - BOLT_HEIGHT + vy * 8];

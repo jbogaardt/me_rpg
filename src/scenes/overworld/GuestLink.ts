@@ -1,3 +1,4 @@
+import { encodeAim, type Aim } from '../../core/aim';
 import { DIRS, DIR_VEC } from '../../core/direction';
 import { glide } from '../../core/interp';
 import { floatText } from '../../entities/effects';
@@ -129,7 +130,7 @@ export class GuestLink {
   }
 
   /** Send the controls: when they change, and otherwise at INPUT_HZ so a lost packet is soon corrected. */
-  sendInput(dt: number, keys: number) {
+  sendInput(dt: number, keys: number, aim?: Aim) {
     const { arena } = this;
     this.inputTimer += dt;
     const ack = Math.max(0, this.lastEvent);
@@ -153,6 +154,7 @@ export class GuestLink {
       mag: this.magCount,
       ack,
       vr,
+      ...(aim ? { am: encodeAim(aim) } : {}),
       ...(pending ? { inv: [pending.seq, ...encodeOp(pending.op)] as [number, ...InvOpWire] } : {}),
     } as const;
     if (this.session.send(msg)) {

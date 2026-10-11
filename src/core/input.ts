@@ -48,6 +48,13 @@ window.addEventListener('pointerdown', (e) => {
 window.addEventListener('pointerup', (e) => {
   if (e.pointerType === 'mouse') held.delete(`Mouse${e.button}`);
 });
+// Where the pointer last was over the game (CSS px): the mouse as it moves, or the spot a finger last tapped. Used to aim.
+let aimPoint: { x: number; y: number } | null = null;
+const trackAimPoint = (e: PointerEvent) => {
+  if (e.target instanceof HTMLCanvasElement) aimPoint = { x: e.clientX, y: e.clientY };
+};
+window.addEventListener('pointermove', (e) => e.pointerType === 'mouse' && trackAimPoint(e));
+window.addEventListener('pointerdown', trackAimPoint);
 window.addEventListener('pointercancel', () => {
   for (const code of [...held]) if (code.startsWith('Mouse')) held.delete(code);
 });
@@ -68,6 +75,8 @@ export const input = {
   /** Same, for the on-screen buttons only. */
   isTouched: (...codes: string[]) => codes.some((c) => virtual.has(c)),
   wasTouched: (...codes: string[]) => codes.some((c) => virtualPressed.has(c)),
+  /** The mouse pointer, or the last tap, over the game in CSS px; null before there has been one. */
+  pointer: (): { x: number; y: number } | null => aimPoint,
   /** Hold or release a key from an on-screen control, as if it were typed on the keyboard. */
   setVirtual(code: string, down: boolean) {
     if (down && !virtual.has(code)) virtualPressed.add(code);

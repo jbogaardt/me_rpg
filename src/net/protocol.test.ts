@@ -217,9 +217,17 @@ describe('messages', () => {
       { ack: 'x' },
       { vr: 5000 },
       { vr: undefined },
+      { am: 0 },
+      { am: 65 },
+      { am: 'x' },
     ]) {
       expect(parseMessage(JSON.stringify({ ...base, ...patch }))).toBeNull();
     }
+  });
+
+  it('carries the mouse aim of an input when there is one', () => {
+    const msg = { k: 'in', n: 1, keys: 0, act: 0, mag: 0, ack: 0, vr: 300, am: 17 };
+    expect(parseMessage(JSON.stringify(msg))).toEqual(msg);
   });
 
   it('carries one Inventory action in an input, and rejects a malformed one', () => {

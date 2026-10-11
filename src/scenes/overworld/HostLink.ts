@@ -1,3 +1,4 @@
+import { decodeAim } from '../../core/aim';
 import { dirIndex } from '../../core/direction';
 import { NO_COMMAND, type Command, type Player } from '../../entities/Player';
 import { cellFeet } from '../../map/doors';
@@ -124,7 +125,7 @@ export class HostLink {
     const mag = peer.mag > p.seenMag;
     p.seenAct = peer.act;
     p.seenMag = peer.mag;
-    return { dx, dy, act, mag };
+    return { dx, dy, act, mag, ...(peer.fresh && peer.am ? { aim: decodeAim(peer.am) } : {}) };
   }
 
   /** Every SNAPSHOT_HZ: tell each friend about the world they are standing in. */
