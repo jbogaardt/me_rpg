@@ -1,4 +1,4 @@
-import { Application, Assets, type Texture } from 'pixi.js';
+import { Application, Assets, BitmapFont, BitmapFontManager, TextureStyle, type Texture } from 'pixi.js';
 import { Game } from './game/Game';
 import { MOB_KINDS } from './game/combat';
 import '@fontsource/cinzel/700.css';
@@ -8,9 +8,31 @@ import './ui.css';
 import { fetchMap, loadSheets } from './map/sheets';
 
 (async () => {
+  // Pixel art: every texture loaded from here on is sampled with nearest-neighbour filtering.
+  TextureStyle.defaultOptions.scaleMode = 'nearest';
+
   const app = new Application();
-  await app.init({ background: '#1a1a2e', resizeTo: window, antialias: false, roundPixels: true });
+  await app.init({
+    background: '#1a1a2e',
+    resizeTo: window,
+    antialias: false,
+    roundPixels: true,
+    // Render at the device's pixel density so the canvas stays crisp on phones and retina screens.
+    // app.screen and layout stay in CSS pixels (autoDensity).
+    resolution: window.devicePixelRatio || 1,
+    autoDensity: true,
+  });
   document.body.appendChild(app.canvas);
+
+  // Glyph atlas for floating combat text (white + black outline, tinted per use). The world layer is
+  // scaled up by the camera zoom, so the atlas is generated at a high resolution.
+  BitmapFont.install({
+    name: 'FloatText',
+    resolution: 4,
+    chars: BitmapFontManager.ASCII,
+    textureStyle: { scaleMode: 'linear' },
+    style: { fontFamily: 'monospace', fontSize: 10, fontWeight: 'bold', fill: 0xffffff, stroke: { color: 0x000000, width: 3, join: 'round' } },
+  });
 
   const data = await fetchMap();
   const textures = await loadSheets(data.sheets);

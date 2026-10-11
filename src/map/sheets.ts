@@ -8,9 +8,7 @@ export async function loadSheets(names: string[]): Promise<Map<string, Texture>>
   const textures = new Map<string, Texture>();
   await Promise.all(
     names.map(async (name) => {
-      const texture = await Assets.load<Texture>(tilesetUrl(name));
-      texture.source.scaleMode = 'nearest';
-      textures.set(name, texture);
+      textures.set(name, await Assets.load<Texture>(tilesetUrl(name))); // nearest-neighbour via TextureStyle default (main.ts)
     }),
   );
   return textures;

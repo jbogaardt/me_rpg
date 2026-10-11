@@ -36,7 +36,6 @@ export class Character extends Container {
   /** `aura` adds the hero's pulsing time-ring; NPCs just get a plain shadow. */
   constructor(sheet: Texture, private withAura = false) {
     super();
-    sheet.source.scaleMode = 'nearest';
     this.frames = [0, 1, 2, 3].map((row) =>
       [0, 1, 2].map((col) => makeFrame(sheet, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H)!),
     );

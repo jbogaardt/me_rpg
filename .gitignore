@@ -14,8 +14,9 @@ npm-debug.log*
 !.env.example
 *.local
 
-# Claude Code personal settings (skills in .claude/ and .agents/ are shared)
+# Claude Code personal settings (skills in .claude/ are shared; .agents/ is a duplicate made by `npx skills add`)
 .claude/settings.local.json
+.agents/
 CLAUDE.local.md
 
 # Editors / OS

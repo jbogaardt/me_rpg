@@ -20,6 +20,10 @@ The game is intended to become Zelda-like: real-time action combat, item collect
 
 There is no linter or test runner yet.
 
+## PixiJS skills
+
+Vendored in `.claude/skills/` (`.agents/` is a gitignored duplicate). **Before changing anything in `src/` that touches PixiJS, load the `pixijs` skill** and follow the sub-skill it routes to (application, assets, scene-*, ticker, performance, math). Only the sub-skills this game uses are vendored; for anything else the router falls back to the live docs (`https://pixijs.download/release/docs/llms.txt`), or re-add a skill with `npx skills add pixijs/pixijs-skills`. Project conventions that follow them: `TextureStyle.defaultOptions.scaleMode = 'nearest'` and `resolution: devicePixelRatio` + `autoDensity` are set once in `main.ts` (don't set scale modes per texture); dynamic in-world text uses `BitmapText` with the pre-installed `FloatText` font, not `Text`.
+
 ## Architecture
 
 - `src/main.ts` creates the PixiJS `Application` (async `app.init`, wrapped in an IIFE — avoid top-level await) and hands it to `Game`.

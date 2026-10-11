@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { BitmapText, Container, Graphics } from 'pixi.js';
 import type { Direction } from './Character';
 
 /** A short-lived world visual (slash, projectile, damage number). */
@@ -92,12 +92,8 @@ export function boltEffect(
 
 /** A number or word that floats up from (x, y) and fades. */
 export function floatText(x: number, y: number, text: string, color: number): Effect {
-  const label = new Text({
-    text,
-    anchor: 0.5,
-    resolution: 4, // the world layer is scaled up by the camera zoom
-    style: { fontFamily: 'monospace', fontSize: 10, fontWeight: 'bold', fill: color, stroke: { color: 0x000000, width: 3 } },
-  });
+  // Uses the 'FloatText' bitmap font installed in main.ts: no canvas re-render per number.
+  const label = new BitmapText({ text, anchor: 0.5, tint: color, style: { fontFamily: 'FloatText', fontSize: 10 } });
   label.position.set(x, y);
   label.zIndex = 1e9;
   const duration = 0.8;
