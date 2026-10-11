@@ -2,7 +2,7 @@ import { Container, Graphics, Rectangle, Sprite, type Renderer } from 'pixi.js';
 import type { Direction } from '../core/direction';
 import { coverRadius, IRIS_CLOSE, irisAt, slideAt, transitionLength, type TransitionKind } from '../map/transition';
 
-const BACKGROUND = 0x05050a; // the app's clear colour (main.ts), behind a map smaller than the screen
+const BACKGROUND = 0x0b0d1c; // the app's clear colour (main.ts), behind a map smaller than the screen
 
 interface Point {
   x: number;

@@ -1,7 +1,7 @@
 import type { MapData } from './types';
 
 /** How many cells (a fraction is fine) the fade reaches into the walkable ground. */
-export const FADE_CELLS = 0.5;
+export const FADE_CELLS = 1.5;
 
 /** Cells that are solid with no ground are the darkness at the edge of the world (`z.dark` in tools/map/zone.ts). */
 export function darkCells(data: MapData): Set<number> {
@@ -42,7 +42,7 @@ export function darknessAlpha(data: MapData, scale = DARK_SCALE): Float32Array |
           best = Math.min(best, Math.hypot(Math.max(c - px, 0, px - c - 1), Math.max(r - py, 0, py - r - 1)));
         }
       }
-      if (best < FADE_CELLS) out[sy * SW + sx] = Math.pow(1 - best / FADE_CELLS, 1.5);
+      if (best < FADE_CELLS) out[sy * SW + sx] = Math.pow(1 - best / FADE_CELLS, 1.2);
     }
   }
   return out;

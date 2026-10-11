@@ -27,7 +27,7 @@ void (async () => {
 
     const app = new Application();
     await app.init({
-      background: '#05050a',
+      background: '#0b0d1c',
       resizeTo: window,
       antialias: false,
       roundPixels: true,

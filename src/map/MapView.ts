@@ -66,7 +66,7 @@ export class MapView extends Container {
     if (!ctx) return;
     const img = ctx.createImageData(width, height);
     alpha.forEach((a, i) => {
-      img.data.set([5, 5, 10, Math.round(a * 255)], i * 4);
+      img.data.set([11, 13, 28, Math.round(a * 255)], i * 4);
     });
     ctx.putImageData(img, 0, 0);
     const texture = Texture.from(canvas);
