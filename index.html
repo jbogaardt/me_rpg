@@ -75,6 +75,38 @@
       </div>
     </div>
 
+    <!-- Player-to-player trading, co-op only (src/hud/Trade.ts): a request prompt, a flash of what happened, and the window. -->
+    <div id="trade-request" class="panel thin paper" role="alertdialog" aria-live="polite" hidden></div>
+    <div id="trade-toast" role="status" hidden></div>
+    <div id="trade" hidden>
+      <div class="panel wood">
+        <header>
+          <h2 id="trade-title">Trade</h2>
+          <div class="close" role="button" aria-label="Cancel trade" data-key="Escape">✕</div>
+        </header>
+        <div class="panel thin paper">
+          <div class="trade-cols">
+            <section>
+              <h3>You offer</h3>
+              <ul id="trade-mine-list" class="item-list"></ul>
+              <label class="trade-gold">Gold <input id="trade-gold" type="number" min="0" step="1" value="0" inputmode="numeric" /> <small id="trade-my-gold"></small></label>
+            </section>
+            <section>
+              <h3><span id="trade-their-name">They offer</span> <small id="trade-their-state"></small></h3>
+              <ul id="trade-theirs-list" class="item-list"></ul>
+              <p class="trade-gold"><b id="trade-their-gold">0 gold</b></p>
+            </section>
+          </div>
+          <h3>Your pack <small>tap Offer to put something on the table</small></h3>
+          <ul id="trade-pack" class="item-list"></ul>
+          <div class="trade-actions">
+            <button type="button" id="trade-accept" class="mp-btn panel thin wood">Accept</button>
+            <button type="button" id="trade-cancel" class="mp-btn panel thin wood">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="menu" hidden>
       <div class="panel wood">
         <header>
@@ -83,6 +115,7 @@
             <div role="tab" data-tab="inventory">Inventory</div>
             <div role="tab" data-tab="controls">Controls</div>
             <div role="tab" data-tab="online">Online</div>
+            <div role="tab" data-tab="trade" hidden>Trade</div>
           </nav>
           <div class="close" role="button" aria-label="Close menu" data-key="Escape">✕</div>
         </header>
@@ -118,6 +151,7 @@
               <a href="sprites/lpc/credits.csv" target="_blank" rel="noopener">Full credits</a>
             </p>
           </section>
+          <section id="menu-trade" hidden></section>
           <section id="menu-online" hidden>
             <h2>Multiplayer <small>up to 4 players</small></h2>
             <div id="mp-mode" role="radiogroup" aria-label="Multiplayer mode">

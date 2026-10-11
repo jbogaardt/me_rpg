@@ -10,7 +10,7 @@ import { Multiplayer } from './Multiplayer';
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
 // The Online tab (multiplayer connection) is Multiplayer.ts. Online play does not pause the world behind the menu.
 
-const TABS = ['status', 'inventory', 'controls', 'online'];
+const TABS = ['status', 'inventory', 'controls', 'online', 'trade']; // 'trade' (hud/Trade.ts) shows only in a co-op game
 
 export class Menu {
   open = false;
@@ -64,8 +64,24 @@ export class Menu {
 
   /** Called each frame while open. */
   update() {
-    if (input.wasPressed('ArrowLeft', 'KeyA')) this.select((this.tab + TABS.length - 1) % TABS.length);
-    if (input.wasPressed('ArrowRight', 'KeyD')) this.select((this.tab + 1) % TABS.length);
+    if (input.wasPressed('ArrowLeft', 'KeyA')) this.step(-1);
+    if (input.wasPressed('ArrowRight', 'KeyD')) this.step(1);
+  }
+
+  /** The tab `by` places along from the current one, skipping tabs that are hidden. */
+  private step(by: number) {
+    let i = this.tab;
+    do i = (i + by + TABS.length) % TABS.length;
+    while (this.tabButton(TABS[i]!).hidden);
+    this.select(i);
+  }
+
+  /** Called every frame: the Trade tab is only there while online. Leaves it if it goes away under the player. */
+  setOnline(online: boolean) {
+    const button = this.tabButton('trade');
+    if (button.hidden === !online) return;
+    button.hidden = !online;
+    if (!online && TABS[this.tab] === 'trade') this.select(0);
   }
 
   private tabButton(name: string) {

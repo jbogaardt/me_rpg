@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import type { TradeCommand, TradeViewWire } from '../systems/trade';
 import { approach, glide } from './interp';
 import {
   encodeMessage,
   packKeys,
   parseMessage,
+  type Message,
   PROTOCOL_VERSION,
   round1,
   unpackKeys,
@@ -217,5 +219,47 @@ describe('smoothing', () => {
     expect(p.x).toBeLessThan(10);
     glide(p, 500, 500, 1 / 60);
     expect(p).toEqual({ x: 500, y: 500 });
+  });
+});
+
+describe('trade messages', () => {
+  const side = { items: [1, 2], gold: 5, ready: false };
+  const view: TradeViewWire = { phase: 'open', with: 1, mine: side, theirs: { ...side, ready: true } };
+
+  it('round-trips each command and a trade state', () => {
+    const cmds: TradeCommand[] = [
+      { c: 'ask', with: 2 },
+      { c: 'yes' },
+      { c: 'no' },
+      { c: 'offer', items: [1, 2], gold: 10 },
+      { c: 'ready', on: true },
+      { c: 'cancel' },
+    ];
+    for (const cmd of cmds) {
+      const m: Message = { k: 'tr', n: 1, cmd };
+      expect(parseMessage(encodeMessage(m))).toEqual(m);
+    }
+    const states: Message[] = [
+      { k: 'trade', n: 1, ack: 3, view },
+      { k: 'trade', n: 2, ack: 3, view: null, note: { id: 4, text: 'Trade complete', ok: true } },
+    ];
+    for (const m of states) expect(parseMessage(encodeMessage(m))).toEqual(m);
+  });
+
+  it('rejects malformed trade traffic', () => {
+    const bad: unknown[] = [
+      { k: 'tr', n: 0, cmd: { c: 'yes' } }, // commands are numbered from 1
+      { k: 'tr', n: 1, cmd: { c: 'ask', with: 9 } },
+      { k: 'tr', n: 1, cmd: { c: 'offer', items: [1], gold: -1 } },
+      { k: 'tr', n: 1, cmd: { c: 'offer', items: [999999], gold: 1 } },
+      { k: 'tr', n: 1, cmd: { c: 'offer', items: new Array(13).fill(1), gold: 1 } },
+      { k: 'tr', n: 1, cmd: { c: 'ready', on: 'yes' } },
+      { k: 'tr', n: 1, cmd: { c: 'steal' } },
+      { k: 'trade', n: 1, ack: 0, view: { ...view, phase: 'bogus' } },
+      { k: 'trade', n: 1, ack: 0, view: { ...view, mine: { items: [1], gold: 'x', ready: true } } },
+      { k: 'trade', n: 1, ack: 0, view: undefined },
+      { k: 'trade', n: 1, ack: 0, view: null, note: { id: 1, text: 'x'.repeat(200), ok: true } },
+    ];
+    for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m)).toBeNull();
   });
 });
