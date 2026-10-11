@@ -1,5 +1,5 @@
 import { attackPower, defensePower, gearAttack, gearDefense, spellPower, xpToNext, type Hero } from '../systems/combat';
-import { input } from '../core/input';
+import { tabStep } from '../core/controls';
 import type { Session } from '../net/session';
 import type { TouchControls } from '../core/touch';
 import { Inventory } from './Inventory';
@@ -56,8 +56,8 @@ export class Menu {
 
   /** Called each frame while open. */
   update() {
-    if (input.wasPressed('ArrowLeft', 'KeyA')) this.select((this.tab + TABS.length - 1) % TABS.length);
-    if (input.wasPressed('ArrowRight', 'KeyD')) this.select((this.tab + 1) % TABS.length);
+    const step = tabStep();
+    if (step) this.select((this.tab + step + TABS.length) % TABS.length);
   }
 
   private tabButton(name: string) {

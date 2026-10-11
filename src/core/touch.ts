@@ -1,3 +1,4 @@
+import { TOUCH_CODES } from './bindings';
 import { input } from './input';
 
 // On-screen controls: a D-pad (drag your thumb for 8-way movement) plus buttons. Any element with a
@@ -8,7 +9,12 @@ import { input } from './input';
 
 const DEADZONE = 0.25; // fraction of the pad radius where the thumb does nothing
 const DIAGONAL = Math.sin(Math.PI / 8); // axis share needed to count, giving 8 equal 45° sectors
-const PAD_KEYS = { right: 'ArrowRight', left: 'ArrowLeft', down: 'ArrowDown', up: 'ArrowUp' } as const;
+const PAD_KEYS = {
+  right: TOUCH_CODES.right[0]!,
+  left: TOUCH_CODES.left[0]!,
+  down: TOUCH_CODES.down[0]!,
+  up: TOUCH_CODES.up[0]!,
+};
 type PadDir = keyof typeof PAD_KEYS;
 
 export interface TouchControls {

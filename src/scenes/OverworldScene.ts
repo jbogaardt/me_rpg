@@ -1,8 +1,7 @@
 import type { Container } from 'pixi.js';
 import type { Sprites, Zone } from '../assets';
 import { Camera } from '../core/camera';
-import { actionDown, actionPressed } from '../core/controls';
-import { input } from '../core/input';
+import { actionDown, actionPressed, mapPressed, menuPressed } from '../core/controls';
 import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import { Chest } from '../entities/Chest';
@@ -78,10 +77,6 @@ const NPC_LINES = [
   'Soon there will be a story here. Come back later!',
 ];
 const DEFEAT_LINES = ['You were struck down...', 'Time folds back, and you wake where you began.'];
-
-// Move/attack/magic are rebindable (core/bindings.ts); these are fixed. Touch: ☰ = Escape, M button = KeyM.
-const MENU_KEYS = ['Escape', 'Tab']; // the inventory key is a rebindable action ('inventory')
-const MAP_KEYS = ['KeyM']; // co-op only: toggles the map overlay
 
 const ATTACK_COOLDOWN = 0.35;
 const CAST_COOLDOWN = 0.45;
@@ -275,8 +270,8 @@ export class OverworldScene implements Scene {
     this.clock += dt;
     const online = this.role !== 'solo';
     this.overlay.setAvailable(online);
-    if (online && !menu.open && !dialog.active && input.wasPressed(...MAP_KEYS)) this.overlay.toggle();
-    if (!dialog.active && input.wasPressed(...MENU_KEYS)) {
+    if (online && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
+    if (!dialog.active && menuPressed()) {
       if (shop.open) shop.close();
       else menu.toggle(this.hero);
     }
