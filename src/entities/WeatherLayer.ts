@@ -67,7 +67,7 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
   },
   sandstorm: {
     count: 700,
-    tint: 0xd89a3c,
+    tint: 0x8b5a2b,
     alpha: 1,
     w: [1, 2],
     h: [5, 9],
