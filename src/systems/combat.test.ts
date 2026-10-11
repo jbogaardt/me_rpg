@@ -5,10 +5,12 @@ import {
   gainXp,
   levelGains,
   MOB_KINDS,
+  mobTimings,
   newHero,
   rollDamage,
   spellPower,
   xpToNext,
+  type MobKind,
 } from './combat';
 
 afterEach(() => vi.restoreAllMocks());
@@ -91,6 +93,48 @@ describe('MOB_KINDS', () => {
     expect(kind.speed).toBeGreaterThan(0);
     expect(kind.sight).toBeGreaterThan(0);
     expect(kind.look.body).toBeTruthy(); // every kind needs at least a body to be drawn
+  });
+
+  it.each(Object.entries(MOB_KINDS))('%s has sane pacing', (_key, kind) => {
+    const { windup, recover, stagger } = mobTimings(kind);
+    // The telegraph must stay readable: a hero needs about a third of a second to see it and step away.
+    expect(windup).toBeGreaterThanOrEqual(0.25);
+    expect(recover).toBeGreaterThan(0);
+    expect(stagger).toBeGreaterThanOrEqual(0);
+    expect(stagger).toBeLessThan(windup + recover); // a stun never outlasts a whole attack cycle
+  });
+
+  it.each(Object.entries(MOB_KINDS).filter(([, k]) => k.shot))(
+    '%s fires dodgeable shots from within sight',
+    (_key, kind) => {
+      const shot = kind.shot!;
+      const HERO_SPEED = 120; // OverworldScene SPEED
+      expect(shot.range).toBeGreaterThan(0);
+      expect(shot.range).toBeLessThanOrEqual(kind.sight); // it must be able to start shooting once it sees the hero
+      expect(shot.speed).toBeGreaterThan(0);
+      expect(shot.speed).toBeLessThan(HERO_SPEED * 1.6); // a sidestep after release still works
+      expect(shot.color).toBeLessThanOrEqual(0xffffff);
+      expect(kind.windup ?? 0.45).toBeGreaterThanOrEqual(0.5); // ranged attacks telegraph longer than a swing
+    },
+  );
+
+  it('mobTimings falls back to the shared defaults', () => {
+    const plain: MobKind = {
+      name: 'x',
+      look: { body: 'body.light' },
+      maxHp: 1,
+      attack: 1,
+      defense: 0,
+      xp: 1,
+      speed: 1,
+      sight: 1,
+    };
+    expect(mobTimings(plain)).toEqual({ windup: 0.45, recover: 0.7, stagger: 0.3 });
+    expect(mobTimings({ ...plain, windup: 0.3, stagger: 0 })).toEqual({
+      windup: 0.3,
+      recover: 0.7,
+      stagger: 0,
+    });
   });
 
   it('the starter hero can always hurt a starter mob', () => {

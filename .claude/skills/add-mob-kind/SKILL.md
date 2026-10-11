@@ -19,7 +19,11 @@ new kind needs no new code unless it needs new behaviour.
    Weapons must have 128px swing art (arming sword family, dagger); others vanish or clip in the swing.
 2. **Kind** in `src/systems/combat.ts`: add a `MobKind` const and register it in `MOB_KINDS` (the key is what maps
    use). Fields: `name`, `look`, `maxHp`, `attack`, `defense`, `xp` (on kill), `speed` (px/s while chasing), `sight`
-   (px; starts chasing inside this). The starter hero deals about `5 + 2 = 7` per swing and has 30 HP, so a kind's
+   (px; starts chasing inside this). Optional pacing: `windup` (telegraph, default 0.45 s), `recover` (rest after an
+   attack, 0.7 s) and `stagger` (stun when hit, 0.3 s): fast kinds shorten them, big kinds set `stagger` near 0 so
+   the hero cannot stun-lock them. Optional `shot: { range, speed, color }` makes it a ranged attacker (it stops
+   `range` px away, telegraphs with the cast pose, then fires a projectile worth its `attack` damage; keep `range <=
+   sight`, `speed` below ~190 so it can be dodged, and `windup >= 0.5`; unit tests check these). The starter hero deals about `5 + 2 = 7` per swing and has 30 HP, so a kind's
    `attack`/`maxHp` should be playable against that (the unit test requires the hero can always hurt a kind:
    `defense < 7`). Existing kinds span level 1 fodder (goblin 14 HP / wolfkin 22 HP) to a troll (96 HP, 15 attack).
 3. **Place it**: `z.mob('<key>', col, row)` in `maps/<zone>.ts`, then follow the `build-zone` skill
@@ -31,5 +35,7 @@ new kind needs no new code unless it needs new behaviour.
 
 - Damage is `power ± 15%` minus defense, min 1 (`rollDamage`). A kind with `defense` ≥ the hero's attack power is
   unkillable at level 1; keep it below.
-- The windup (0.45 s), recover (0.7 s), reach and leash are shared constants at the top of `Mob.ts`; changing them
-  changes every kind.
+- Windup, recover and stagger default to 0.45 s / 0.7 s / 0.3 s and are overridable per kind (`mobTimings` in
+  `combat.ts`); reach, leash and the shooter's back-off distance are shared constants at the top of `Mob.ts`.
+- A stagger shorter than the hero's attack cooldown (0.35 s) lets a mob act between hits; the lower it is, the harder
+  the fight. Ranged kinds are hardest when two or more shoot at once, so place them singly among melee mobs.

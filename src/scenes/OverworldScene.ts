@@ -158,6 +158,7 @@ export class OverworldScene implements Scene {
       heroes: this.heroBodies,
       slide: (body, mx, my) => this.collision.slide(body, mx, my, this.bodies()),
       strike: (mob, target) => this.hurtHero(mob, target),
+      shoot: (mob, ux, uy) => this.mobShoot(mob, ux, uy),
     };
     this.world.layer.addChild(this.npc, this.player, ...this.mobs.map((m) => m.body));
   }
@@ -441,8 +442,12 @@ export class OverworldScene implements Scene {
         this.playerNear(e.x, e.y)?.body.play('slash');
         break;
       case 'bolt':
-        this.shoot(e.x, e.y, e.vx, e.vy);
-        this.playerNear(e.x, e.y + BOLT_HEIGHT)?.body.play('cast');
+        if (e.color === undefined) {
+          this.shoot(e.x, e.y, e.vx, e.vy);
+          this.playerNear(e.x, e.y + BOLT_HEIGHT)?.body.play('cast');
+        } else {
+          this.foeBolt(e.x, e.y, e.vx, e.vy, e.color); // an enemy's shot: only drawn here, the host decides what it hits
+        }
         break;
       case 'text':
         this.effects.add(floatText(e.x, e.y, e.text, e.color));
@@ -588,6 +593,59 @@ export class OverworldScene implements Scene {
       ),
     );
     this.emit({ type: 'bolt', x: round1(x), y: round1(y), vx, vy });
+  }
+
+  /** A ranged mob lets go of a shot along (ux, uy), from its hands at chest height. */
+  private mobShoot(mob: Mob, ux: number, uy: number) {
+    const { shot } = mob.kind;
+    if (!shot) return;
+    const x = mob.body.x + ux * 10;
+    const y = mob.body.y - BOLT_HEIGHT + uy * 8;
+    const targets = this.players();
+    this.foeBolt(x, y, ux * shot.speed, uy * shot.speed, shot.color, (bx, by) => {
+      // Hits the first player it touches (one blinking with invulnerability lets it pass), stops at walls.
+      const hit = targets.find(
+        (p) => p.invuln <= 0 && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14,
+      );
+      if (hit) this.hurtHero(mob, hit.body);
+      return hit !== undefined;
+    });
+    this.emit({
+      type: 'bolt',
+      x: round1(x),
+      y: round1(y),
+      vx: round1(ux * shot.speed),
+      vy: round1(uy * shot.speed),
+      color: shot.color,
+    });
+  }
+
+  /**
+   * An enemy projectile. `onStep` decides whether it hit a player (the host); without it the bolt is only for show
+   * (the guest, which draws what the host reports). It always stops at walls.
+   */
+  private foeBolt(
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    color: number,
+    onStep?: (x: number, y: number) => boolean,
+  ) {
+    this.effects.add(
+      boltEffect(
+        x,
+        y,
+        vx,
+        vy,
+        BOLT_RANGE,
+        (bx, by) =>
+          this.collision.isBlocked(Math.floor(bx / CELL), Math.floor((by + BOLT_HEIGHT) / CELL)) ||
+          (onStep?.(bx, by) ?? false),
+        (bx, by, hit) => hit && this.effects.add(particleEffect('hitSpark', bx, by)),
+        color,
+      ),
+    );
   }
 
   /** A one-shot particle effect, also shown to the guest. `dir` is an angle in radians. */

@@ -2,7 +2,7 @@ import { Graphics, type Texture } from 'pixi.js';
 import { CELL } from '../map/types';
 import { glide } from '../net/interp';
 import { DIRS, dirIndex, round1, type MobSnap } from '../net/protocol';
-import { MOB_STATES, type MobKind, type MobState } from '../systems/combat';
+import { MOB_STATES, mobTimings, type MobKind, type MobState } from '../systems/combat';
 import { Character, DIR_VEC, directionToward } from './Character';
 
 /** What a mob needs from the game each tick. */
@@ -11,17 +11,19 @@ export interface MobWorld {
   heroes: readonly [Character, ...Character[]];
   /** Move a body by (mx, my) with collision, one axis at a time. Returns true if it moved at all. */
   slide(body: Character, mx: number, my: number): boolean;
-  /** The mob's attack connected with `target`. */
+  /** The mob's melee attack connected with `target`. */
   strike(mob: Mob, target: Character): void;
+  /** A ranged mob fires along the unit vector (ux, uy); the scene flies the projectile and decides what it hits. */
+  shoot(mob: Mob, ux: number, uy: number): void;
 }
 
 type State = MobState;
 
 const REACH = 20; // starts an attack when this close (feet to feet)
-const WINDUP = 0.45; // seconds of telegraph before the hit lands, so the hero can dodge
-const RECOVER = 0.7;
-const STAGGER = 0.3; // pause after being hit (interrupts a windup)
+// Windup (telegraph before the blow lands, so the hero can dodge), recover and stagger (the pause after being hit,
+// which interrupts a windup) are per kind: see `mobTimings` in systems/combat.ts.
 const LUNGE = 0.12;
+const KEEP_AWAY = 0.4; // a shooter backs off when the hero is closer than this fraction of its range
 const RESPAWN = 6;
 const FADE = 0.4;
 const LEASH = 4 * CELL; // wanders no further than this from home
@@ -52,6 +54,7 @@ export class Mob {
   private moving = false;
   private remote: { x: number; y: number } | null = null; // guest only: where the host says this mob is
   private bar = new Graphics();
+  private readonly t: ReturnType<typeof mobTimings>;
 
   constructor(
     readonly kind: MobKind,
@@ -59,6 +62,7 @@ export class Mob {
     private homeX: number,
     private homeY: number,
   ) {
+    this.t = mobTimings(kind);
     this.body = new Character(sheet);
     this.body.addChild(this.bar);
     this.hp = kind.maxHp;
@@ -100,7 +104,7 @@ export class Mob {
     this.hp = Math.max(0, this.hp - damage);
     this.knock = { x: vx * 180, y: vy * 180 };
     this.flash = 0.15;
-    this.body.play('hurt', STAGGER * 1000);
+    this.body.play('hurt', this.t.stagger * 1000);
     this.drawBar();
     if (this.hp <= 0) {
       this.state = 'dead';
@@ -108,7 +112,7 @@ export class Mob {
       return true;
     }
     this.state = 'recover';
-    this.timer = STAGGER;
+    this.timer = this.t.stagger;
     return false;
   }
 
@@ -145,24 +149,38 @@ export class Mob {
         if (this.state === 'wander') moving = this.walk(this.dir.x, this.dir.y, this.kind.speed * 0.5 * dt, world);
         if (this.timer <= 0) this.pickWander();
         break;
-      case 'chase':
+      case 'chase': {
+        const { shot } = this.kind;
         if (dist > this.kind.sight * 1.5) {
           this.state = 'idle';
           this.timer = 1;
-        } else if (dist < REACH) {
+        } else if (shot ? dist <= shot.range : dist < REACH) {
+          // A shooter first backs away if the hero is on top of it (unless it is cornered, then it just shoots).
+          if (
+            shot &&
+            dist < shot.range * KEEP_AWAY &&
+            this.walk(-dx / dist, -dy / dist, this.kind.speed * 0.8 * dt, world)
+          ) {
+            this.body.face(directionToward(dx, dy));
+            moving = true;
+            break;
+          }
           this.state = 'windup';
-          this.timer = WINDUP;
+          this.timer = this.t.windup;
           this.body.face(directionToward(dx, dy));
-          this.body.play('slash', WINDUP * 1000); // the swing is the telegraph; the blow lands as it ends
+          this.body.play(shot ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph; the blow lands as it ends
         } else {
           moving = this.walk(dx / dist, dy / dist, this.kind.speed * dt, world);
         }
         break;
+      }
       case 'windup':
         if (this.timer <= 0) {
-          if (dist < REACH + 8) world.strike(this, target);
+          if (this.kind.shot)
+            world.shoot(this, dx / (dist || 1), dy / (dist || 1)); // aimed as it lets go
+          else if (dist < REACH + 8) world.strike(this, target);
           this.state = 'recover';
-          this.timer = RECOVER;
+          this.timer = this.t.recover;
         }
         break;
       case 'recover':
@@ -197,9 +215,11 @@ export class Mob {
     const respawned = this.state === 'dead' && next !== 'dead';
     if (hp < this.hp) {
       this.flash = 0.15;
-      if (hp > 0) this.body.play('hurt', 300); // matches STAGGER
+      if (hp > 0) this.body.play('hurt', this.t.stagger * 1000);
     }
-    if (next === 'windup' && this.state !== 'windup') this.body.play('slash', WINDUP * 1000); // the swing is the telegraph
+    if (next === 'windup' && this.state !== 'windup') {
+      this.body.play(this.kind.shot ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph
+    }
     if (hp !== this.hp) {
       this.hp = hp;
       this.drawBar();
@@ -232,7 +252,7 @@ export class Mob {
   private present(dt: number, moving: boolean) {
     // Telegraph: blink yellow and draw back during the windup, then lunge forward as it strikes.
     const [fx, fy] = DIR_VEC[this.body.facing];
-    const lunging = this.state === 'recover' && this.timer > RECOVER - LUNGE;
+    const lunging = !this.kind.shot && this.state === 'recover' && this.timer > this.t.recover - LUNGE;
     if (this.state === 'windup') this.body.setOffset(-fx * 2, -fy * 2);
     else if (lunging) this.body.setOffset(fx * 5, fy * 5);
     else this.body.setOffset(0, 0);

@@ -26,6 +26,7 @@ const snap: SnapMsg = {
     { id: 4, e: { type: 'text', x: 5, y: 6, text: '+12 XP', color: 0xffb13f } },
     { id: 5, e: { type: 'slash', x: 1, y: 2, dir: 3 } },
     { id: 6, e: { type: 'bolt', x: 1, y: 2, vx: 260, vy: 0 } },
+    { id: 10, e: { type: 'bolt', x: 5, y: 6, vx: -135, vy: 0, color: 0xb06cff } }, // an enemy's shot
     { id: 7, e: { type: 'defeat', player: 1 } },
     { id: 8, e: { type: 'fx', name: 'hitSpark', x: 3, y: 4, dir: 1.6 } },
     { id: 9, e: { type: 'fx', name: 'levelUp', x: 3, y: 4 } },

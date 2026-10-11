@@ -47,6 +47,31 @@ export interface MobKind {
   xp: number; // awarded on kill
   speed: number; // pixels per second while chasing
   sight: number; // pixels: starts chasing inside this range
+  /** Seconds of telegraph before the blow (or shot) lands. Default 0.45. */
+  windup?: number;
+  /** Seconds the mob is busy after attacking before it chases again. Default 0.7. */
+  recover?: number;
+  /** Seconds a hit stuns it (it cannot act, so a short one lets it fight back between swings). Default 0.3. */
+  stagger?: number;
+  /** A ranged attacker: stops `range` px from the hero, telegraphs, then fires a projectile instead of swinging. */
+  shot?: MobShot;
+}
+
+export interface MobShot {
+  range: number; // pixels: starts a shot from this close (must not exceed `sight`, or it never gets to fire)
+  speed: number; // pixels per second; the hero walks at 120, so keep it dodgeable
+  color: number; // 0xRRGGBB glow of the projectile, so each kind's shot reads differently
+}
+
+const DEFAULT_TIMINGS = { windup: 0.45, recover: 0.7, stagger: 0.3 };
+
+/** How long a kind telegraphs, rests after an attack, and is stunned by a hit (seconds). */
+export function mobTimings(kind: MobKind): { windup: number; recover: number; stagger: number } {
+  return {
+    windup: kind.windup ?? DEFAULT_TIMINGS.windup,
+    recover: kind.recover ?? DEFAULT_TIMINGS.recover,
+    stagger: kind.stagger ?? DEFAULT_TIMINGS.stagger,
+  };
 }
 
 export function newHero(): Hero {
@@ -62,7 +87,7 @@ export function newHero(): Hero {
 // Mob kinds. `look` is a paper-doll outfit (part ids from sprites/parts.ts); the numbers are tuned against the
 // starter hero (about 7 damage per swing, 30 HP). Add a kind with the add-mob-kind skill.
 
-/** The original test enemy, now a charcoal skeleton. Easy: fine for level 1. */
+/** The original test enemy, now a caster: hangs back and hurls slow violet bolts you can sidestep. Level 1. */
 export const SHADE: MobKind = {
   name: 'Shade',
   look: { body: 'body.shade', head: 'head.shade', weapon: 'weapon.dagger' },
@@ -71,7 +96,10 @@ export const SHADE: MobKind = {
   defense: 0,
   xp: 12,
   speed: 60,
-  sight: 5 * 32,
+  sight: 6 * 32,
+  windup: 0.65,
+  recover: 1.3,
+  shot: { range: 5.5 * 32, speed: 135, color: 0xb06cff },
 };
 
 /** Desert enemy: tougher than the shade, tuned for roughly levels 2-4. */
@@ -92,6 +120,9 @@ export const RAIDER: MobKind = {
   xp: 22,
   speed: 70,
   sight: 5.5 * 32,
+  windup: 0.38,
+  recover: 0.5,
+  stagger: 0.2,
 };
 
 /** Frost enemy: an armoured, icy skeleton; the hardest so far, tuned for roughly levels 4-6. */
@@ -111,6 +142,9 @@ export const FROSTBOUND: MobKind = {
   xp: 38,
   speed: 62,
   sight: 6 * 32,
+  windup: 0.4,
+  recover: 0.6,
+  stagger: 0.1, // armoured: a hit barely interrupts it
 };
 
 /** Level 1 fodder: fragile and quick, hits lightly. */
@@ -130,6 +164,9 @@ export const GOBLIN: MobKind = {
   xp: 6,
   speed: 82,
   sight: 5 * 32,
+  windup: 0.3,
+  recover: 0.45,
+  stagger: 0.18,
 };
 
 /** A fast hunter with no gear, spotting the hero from far away. */
@@ -142,9 +179,12 @@ export const WOLFKIN: MobKind = {
   xp: 12,
   speed: 96,
   sight: 6 * 32,
+  windup: 0.28,
+  recover: 0.4,
+  stagger: 0.12,
 };
 
-/** Undead soldier: slowish, a little armoured, hits for more than its HP suggests. */
+/** Undead archer: keeps its distance and flicks bone shards, slowly but hard. */
 export const SKELETON: MobKind = {
   name: 'Skeleton',
   look: { body: 'body.skeleton', head: 'head.skeleton', weapon: 'weapon.arming_iron', shield: 'shield.round_brown' },
@@ -153,7 +193,10 @@ export const SKELETON: MobKind = {
   defense: 1,
   xp: 16,
   speed: 52,
-  sight: 5 * 32,
+  sight: 6.5 * 32,
+  windup: 0.55,
+  recover: 1,
+  shot: { range: 6 * 32, speed: 175, color: 0xe9e2c8 },
 };
 
 /** Shambling and tanky for its level, but very slow. */
@@ -186,6 +229,9 @@ export const ORC: MobKind = {
   xp: 30,
   speed: 58,
   sight: 5.5 * 32,
+  windup: 0.4,
+  recover: 0.55,
+  stagger: 0.08,
 };
 
 /** The toughest so far: huge HP and defense, slow, hits very hard with bare fists. */
@@ -198,6 +244,9 @@ export const TROLL: MobKind = {
   xp: 60,
   speed: 46,
   sight: 5 * 32,
+  windup: 0.5,
+  recover: 0.8,
+  stagger: 0.04, // too big to be stunned: it just keeps swinging
 };
 
 /** What a mob is doing, in the order used on the wire (src/net/protocol.ts). */
