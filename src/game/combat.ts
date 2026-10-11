@@ -65,8 +65,32 @@ export const SHADE: MobKind = {
   sight: 5 * 32,
 };
 
+/** Desert enemy (placeholder ranger sheet): tougher than the shade, tuned for roughly levels 2-4. */
+export const RAIDER: MobKind = {
+  name: 'Dune Raider',
+  sheet: 'ranger_m.png',
+  maxHp: 40,
+  attack: 9,
+  defense: 1,
+  xp: 22,
+  speed: 70,
+  sight: 5.5 * 32,
+};
+
+/** Frost enemy (placeholder mage sheet): the hardest so far, tuned for roughly levels 4-6. */
+export const FROSTBOUND: MobKind = {
+  name: 'Frostbound',
+  sheet: 'mage_m.png',
+  maxHp: 64,
+  attack: 13,
+  defense: 2,
+  xp: 38,
+  speed: 62,
+  sight: 6 * 32,
+};
+
 /** Mob kinds a map can spawn, by the `kind` used in MapData.mobs. */
-export const MOB_KINDS: Record<string, MobKind> = { shade: SHADE };
+export const MOB_KINDS: Record<string, MobKind> = { shade: SHADE, raider: RAIDER, frostbound: FROSTBOUND };
 
 export const attackPower = (h: Hero) => h.stats.attack + (h.weapon.attack ?? 0);
 export const defensePower = (h: Hero) => h.stats.defense + (h.armor.defense ?? 0);

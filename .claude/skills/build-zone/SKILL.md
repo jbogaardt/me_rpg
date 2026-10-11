@@ -29,8 +29,9 @@ ground first, then features, then overrides.
 |---|---|
 | `z.fill(ground, rect?)` | Repeating ground over the map or a rect. |
 | `z.patch(ground, rect)` | Ground patch blended into grass: the rect's outer ring becomes edge/corner tiles (sand has them), so the visible fill is the inner `(w-2)x(h-2)`. Min 3x3, rectangles only. |
-| `z.forest(rect, {seed?})` | Dense trees that block exactly `rect`; canopy pokes ~18px above the rect's top as walk-behind. Let border rects run 3 cells past the map edge so no gaps show. |
+| `z.forest(rect, {seed?, trees?})` | Dense trees that block exactly `rect` (`trees`: `TREES` default, `FROST_TREES`, `DRY_TREES`); canopy pokes ~18px above the rect's top as walk-behind. Let border rects run 3 cells past the map edge so no gaps show. |
 | `z.prop(name, col, row, {dx?, dy?})` | One prefab with the **bottom-left cell of its footprint** at (col,row): bottom edge on the bottom of `row`, centred in the cells its width spans. Collision is derived from the art automatically. |
+| `z.stamp(name, col, row)` | Copies a pre-painted ground decoration (`skull`, `dune`, `crater`, `pit`) top-left at (col,row); opaque source cells only. No collision. |
 | `z.block(rect, reason)` / `z.unblock(rect)` | Manual collision overrides, applied last. Use `block` for water/cliffs; the reason silences the invisible-wall warning. Don't hand-block props. |
 | `z.spawn(c, r)`, `z.npc(c, r)`, `z.mob(kind, c, r)` | Player start, the NPC, enemy spawns (`kind` must be in `MOB_KINDS`, `src/game/combat.ts`). |
 
@@ -38,9 +39,13 @@ A `Rect` is `{ col, row, w, h }`.
 
 ## Assets (`tools/map/catalog.ts`)
 
-- Ground: `grass`, `sand` (+ sand edge ring for `patch`).
-- Prefabs: `treeA`, `treeB` (94x89 canopies, 3x3 cells; block bottom two rows, top row walk-behind),
-  `bush` (2x2), `rock`, `rockSmall` (1 cell). Mix `treeA`/`treeB` to avoid repetition.
+- Ground: `grass`, `sand`, `snow`, `water`, `ice`, `stone`. `patch(name, rect)` blends sand/snow/stone into grass
+  via a ring. **`water` and `ice` rings blend into sand / snow, not grass**: lay a sand (or snow) patch first and put the
+  water patch 1 cell inside its fill (the lake in `maps/overworld.ts`). `snow`/`ice` are recolours (see Biomes in CLAUDE.md);
+  re-run `npm run tilesets` after editing `tools/map/recolor.ts`. Water/ice rects are walkable until you `block` the inner cells.
+- Prefabs: trees `treeA`/`treeB` (+ `frostTree*`, `dryTree*`; 3x3, block bottom two rows, top row walk-behind), bushes
+  `bush`/`frostBush`/`dryBush` (2x2), rocks `rock` (pale), `rockSmall`, `rockB`, `rockC` (+ `frostRock*`), `barrel`, and
+  decorations `flowerRed`/`flowersPurple` (no collision). Mix variants to avoid repetition.
 - The tilesets have **no** foliage ground/edge tiles; all vegetation is prefabs. There are no
   inner-corner or non-rectangular patch shapes yet.
 
@@ -63,6 +68,6 @@ need to exist in `public/tilesets/`.
 
 ## Limits today
 
-- The game loads only `public/maps/overworld.json` (`MAP_URL` in `src/map/sheets.ts`). A new zone file
+- The overworld is one big map with all biomes; the game loads only `public/maps/overworld.json` (`MAP_URL` in `src/map/sheets.ts`). A new zone file
   builds and checks fine, but travelling between zones needs game code (map transitions) first.
 - One NPC per map with fixed dialog (`NPC_LINES` in `src/game/Game.ts`).
