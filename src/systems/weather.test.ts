@@ -22,7 +22,7 @@ describe('WEATHER_TABLE', () => {
     expect(isAllowed('desert', 'snow')).toBe(false);
     expect(isAllowed('tundra', 'snow')).toBe(true);
     expect(isAllowed('desert', 'sandstorm')).toBe(true);
-    expect(isAllowed('plains', 'sandstorm')).toBe(false);
+    expect(isAllowed('plains', 'wind')).toBe(true);
   });
 });
 
@@ -71,17 +71,22 @@ describe('Weather', () => {
   });
 });
 
-describe('biome storms', () => {
+describe('arrival weather', () => {
   it.each([
-    ['tundra', ['snow', 'blizzard']],
-    ['desert', ['sandstorm']],
-    ['plains', ['rain', 'storm']],
-  ] as const)('%s always has its own storm and nothing else', (biome, kinds) => {
-    const w = new Weather(biome, mulberry32(9));
-    for (let t = 0; t < 60 * 20; t += 0.25) {
-      w.update(0.25, biome);
-      if (t > 10) expect(kinds as readonly WeatherKind[]).toContain(w.kind);
+    ['plains', 'tundra', 'snow'],
+    ['tundra', 'desert', 'sandstorm'],
+    ['desert', 'plains', 'rain'],
+  ] as const)('walking from %s into %s brings %s, then a clear spell', (from, to, kind) => {
+    const w = new Weather(from, mulberry32(4));
+    for (let t = 0; t < 30; t += 0.25) w.update(0.25, from);
+    const seen: WeatherKind[] = [];
+    for (let t = 0; t < 60 * 12; t += 0.25) {
+      w.update(0.25, to);
+      if (w.biome === to && w.intensity > 0.99 && seen[seen.length - 1] !== w.kind) seen.push(w.kind);
+      if (seen.length === 2) break;
     }
+    expect(seen[0]).toBe(kind);
+    expect(seen[1]).toBe('clear');
   });
 });
 

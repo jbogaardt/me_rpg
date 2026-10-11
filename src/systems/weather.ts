@@ -7,13 +7,15 @@ import { CELL } from '../map/types';
 export type Biome = 'plains' | 'desert' | 'tundra';
 export type WeatherKind = 'clear' | 'wind' | 'rain' | 'storm' | 'snow' | 'blizzard' | 'sandstorm';
 
-/** What can happen where, with relative odds. Every biome has its own storm that runs all the time: the tundra
- * snows, the desert has sandstorms and the plains get rain. Nothing else mixes in, so there is only ever one. */
+/** What can happen where, with relative odds. A desert never rains; the tundra only snows. */
 export const WEATHER_TABLE: Record<Biome, Partial<Record<WeatherKind, number>>> = {
-  plains: { rain: 2, storm: 1 },
-  desert: { sandstorm: 1 },
-  tundra: { snow: 4, blizzard: 1 },
+  plains: { clear: 5, wind: 3, rain: 2, storm: 1 },
+  desert: { clear: 6, wind: 2, sandstorm: 2 },
+  tundra: { clear: 4, snow: 4, blizzard: 1, wind: 1 },
 };
+
+/** The weather that greets you on walking into a biome. */
+export const ARRIVAL: Record<Biome, WeatherKind> = { plains: 'rain', desert: 'sandstorm', tundra: 'snow' };
 
 /** How hard the wind blows (0 to 1) under each kind of weather; the sign comes from the event's direction. */
 export const WIND: Record<WeatherKind, number> = {
@@ -88,6 +90,8 @@ export class Weather {
 
   remaining = 0;
   private ending = true; // fading out; the next event is picked once it reaches nothing
+  private arriving = false; // a new biome was entered: its own weather comes next
+  private calm = false; // the arrival weather just ended: a clear spell comes next
   private pending: Biome | null = null;
   private pendingFor = 0;
 
@@ -118,7 +122,7 @@ export class Weather {
 
     if (this.ending) {
       this.intensity = Math.max(0, this.intensity - dt / RAMP);
-      if (this.intensity === 0) this.begin(this.pick());
+      if (this.intensity === 0) this.begin(this.next());
     } else {
       this.intensity = Math.min(1, this.intensity + dt / RAMP);
     }
@@ -137,6 +141,8 @@ export class Weather {
     if (this.pendingFor >= SETTLE) {
       this.biome = biome;
       this.pending = null;
+      this.arriving = true;
+      this.ending = true; // whatever was blowing fades out first
     }
   }
 
@@ -150,6 +156,20 @@ export class Weather {
   private duration(kind: WeatherKind): number {
     const [lo, hi] = DURATION[kind];
     return lo + this.rng() * (hi - lo);
+  }
+
+  /** Arrival weather first, then a clear spell, then the usual random draw. */
+  private next(): WeatherKind {
+    if (this.arriving) {
+      this.arriving = false;
+      this.calm = true;
+      return ARRIVAL[this.biome];
+    }
+    if (this.calm) {
+      this.calm = false;
+      return 'clear';
+    }
+    return this.pick();
   }
 
   private pick(): WeatherKind {
