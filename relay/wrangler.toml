@@ -1,0 +1,22 @@
+# The matchmaking relay for 2-player games. Deployed by .github/workflows/deploy-relay.yml; see relay/README.md.
+name = "me-rpg-relay"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+[vars]
+# Browser origins allowed to call the relay (the deployed game). localhost is always allowed for development.
+ALLOWED_ORIGINS = "https://jbogaardt.github.io"
+
+# One Durable Object per game code, plus a per-client request counter for rate limiting.
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[durable_objects.bindings]]
+name = "LIMITER"
+class_name = "Limiter"
+
+# SQLite-backed classes are the ones available on Cloudflare's free plan.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room", "Limiter"]

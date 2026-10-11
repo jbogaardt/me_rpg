@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeSignal, encodeSignal, extractCode, joinLink, offerFromHash } from './signal';
+import { decodeSignal, encodeSignal } from './signal';
 
 // Shaped like a real data-channel offer with candidates (the repetition is realistic: every candidate repeats
 // the same attribute names and addresses).
@@ -30,7 +30,7 @@ const SDP = [
 
 const b64url = (text: string) => btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-describe('offer/answer codes', () => {
+describe('offer/answer encoding', () => {
   it('round-trips a description', async () => {
     const code = await encodeSignal({ type: 'offer', sdp: SDP });
     expect(await decodeSignal(code)).toEqual({ type: 'offer', sdp: SDP });
@@ -52,44 +52,18 @@ describe('offer/answer codes', () => {
     expect(await decodeSignal(raw)).toEqual({ type: 'answer', sdp: SDP });
   });
 
-  it('accepts a pasted join link, surrounding whitespace and line breaks', async () => {
-    const code = await encodeSignal({ type: 'offer', sdp: SDP });
-    const link = joinLink('https://example.com/me_rpg/', code);
-    expect((await decodeSignal(`  ${link}\n`, 'offer')).type).toBe('offer');
-    const wrapped = code.replace(/(.{40})/g, '$1\n');
-    expect((await decodeSignal(wrapped, 'offer')).sdp).toBe(SDP);
-  });
-
   it('tells an offer from an answer', async () => {
     const offer = await encodeSignal({ type: 'offer', sdp: SDP });
     const answer = await encodeSignal({ type: 'answer', sdp: SDP });
-    await expect(decodeSignal(offer, 'answer')).rejects.toThrow(/offer code/);
-    await expect(decodeSignal(answer, 'offer')).rejects.toThrow(/answer code/);
+    await expect(decodeSignal(offer, 'answer')).rejects.toThrow(/damaged/);
+    await expect(decodeSignal(answer, 'offer')).rejects.toThrow(/damaged/);
   });
 
   it('rejects garbage with a readable message', async () => {
-    await expect(decodeSignal('')).rejects.toThrow(/Paste a code/);
-    for (const bad of ['hello world', 'zzzz', 'z', 'x1234', 'r' + b64url('{"t":"offer"}')]) {
-      await expect(decodeSignal(bad)).rejects.toThrow(/not a valid code/);
+    for (const bad of ['', 'hello world', 'zzzz', 'z', 'x1234', 'r' + b64url('{"t":"offer"}')]) {
+      await expect(decodeSignal(bad)).rejects.toThrow(/damaged/);
     }
     const truncated = (await encodeSignal({ type: 'offer', sdp: SDP })).slice(0, 80);
-    await expect(decodeSignal(truncated)).rejects.toThrow(/not a valid code/);
-  });
-});
-
-describe('URL helpers', () => {
-  it('finds the offer in a hash', () => {
-    expect(offerFromHash('#offer=zABC-_')).toBe('zABC-_');
-    expect(offerFromHash('#other=1')).toBeNull();
-    expect(offerFromHash('')).toBeNull();
-  });
-
-  it('extracts a bare code or the code from a link', () => {
-    expect(extractCode(' zABC ')).toBe('zABC');
-    expect(extractCode('https://x.io/g/#offer=zABC')).toBe('zABC');
-  });
-
-  it('builds the join link', () => {
-    expect(joinLink('https://x.io/g/', 'zABC')).toBe('https://x.io/g/#offer=zABC');
+    await expect(decodeSignal(truncated)).rejects.toThrow(/damaged/);
   });
 });

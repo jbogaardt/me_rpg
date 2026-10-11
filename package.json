@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "npm run typecheck && npm run map -- check && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tools && tsc --noEmit -p e2e",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tools && tsc --noEmit -p e2e && tsc --noEmit -p relay",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run map -- check",
     "map": "tsx tools/map/cli.ts",
-    "tilesets": "tsx tools/map/recolor.ts"
+    "tilesets": "tsx tools/map/recolor.ts",
+    "relay": "tsx tools/relay/dev-server.ts"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.3.0",
@@ -23,6 +24,7 @@
     "pixi.js": "^8.22.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261011.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "~1.56.1",
     "@types/node": "^26.6.5",

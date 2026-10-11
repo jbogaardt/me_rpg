@@ -1,9 +1,9 @@
-import { joinLink } from '../net/signal';
+import { joinLink } from '../net/roomCode';
 import { statusLabel, type Mode, type Session } from '../net/session';
 
-// The "Online" tab of the menu (markup in index.html, styles in src/ui.css): pick Solo / Host / Join and walk
-// through the manual copy-and-paste handshake. It only drives the Session and mirrors its state; the game loop
-// reads the Session itself.
+// The "Online" tab of the menu (markup in index.html, styles in src/ui.css): pick Solo / Host / Join. A host taps
+// Create Game and reads out the short code; a friend types it and taps Join Game. It only drives the Session and
+// mirrors its state; the game loop reads the Session itself.
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -38,79 +38,63 @@ export class Multiplayer {
   private activePanel = $('mp-active');
   private connected = document.querySelector<HTMLElement>('#mp-active .mp-connected')!;
 
-  private genHost = $<HTMLButtonElement>('mp-gen-host');
-  private offerOut = $<HTMLTextAreaElement>('mp-offer');
-  private copyOffer = $<HTMLButtonElement>('mp-copy-offer');
+  private create = $<HTMLButtonElement>('mp-create');
+  private share = $('mp-share');
+  private codeOut = $('mp-code');
+  private copyCode = $<HTMLButtonElement>('mp-copy-code');
   private copyLink = $<HTMLButtonElement>('mp-copy-link');
-  private answerIn = $<HTMLTextAreaElement>('mp-answer-in');
-  private establish = $<HTMLButtonElement>('mp-establish');
 
-  private offerIn = $<HTMLTextAreaElement>('mp-offer-in');
-  private genAnswer = $<HTMLButtonElement>('mp-gen-answer');
-  private answerOut = $<HTMLTextAreaElement>('mp-answer');
-  private copyAnswer = $<HTMLButtonElement>('mp-copy-answer');
+  private codeIn = $<HTMLInputElement>('mp-code-in');
+  private joinGo = $<HTMLButtonElement>('mp-join-go');
   private disconnect = $<HTMLButtonElement>('mp-disconnect');
 
-  private copied = '';
+  private copied = new Map<HTMLButtonElement, string>();
 
   constructor(private session: Session) {
     for (const button of this.modeButtons) {
       button.addEventListener('click', () => session.setMode(button.dataset.mode as Mode));
     }
 
-    this.genHost.addEventListener('click', () => void this.generateHostCode());
-    this.establish.addEventListener('click', () => void this.session.acceptAnswer(this.answerIn.value));
-    this.genAnswer.addEventListener('click', () => void this.generateAnswer());
+    this.create.addEventListener('click', () => void this.session.createGame());
+    this.joinGo.addEventListener('click', () => void this.session.joinGame(this.codeIn.value));
     this.disconnect.addEventListener('click', () => session.disconnect());
-    this.copyOffer.addEventListener('click', () => void this.copy(this.copyOffer, this.offerOut.value));
+    this.copyCode.addEventListener('click', () => void this.copy(this.copyCode, session.code ?? ''));
     this.copyLink.addEventListener('click', () => {
       const base = window.location.origin + window.location.pathname;
-      void this.copy(this.copyLink, joinLink(base, this.offerOut.value));
+      void this.copy(this.copyLink, joinLink(base, session.code ?? ''));
     });
-    this.copyAnswer.addEventListener('click', () => void this.copy(this.copyAnswer, this.answerOut.value));
 
-    // Tapping a generated code selects all of it, so a long-press or Ctrl+C copies the whole thing.
-    for (const field of [this.offerOut, this.answerOut]) field.addEventListener('focus', () => field.select());
-    // The buttons enable as soon as there is something to act on.
-    for (const field of [this.answerIn, this.offerIn]) field.addEventListener('input', () => this.render());
+    // Tapping the code selects all of it, so a long-press or Ctrl+C copies it even without the buttons.
+    this.codeOut.addEventListener('focus', () => window.getSelection()?.selectAllChildren(this.codeOut));
+    this.codeIn.addEventListener('input', () => this.render());
+    this.codeIn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !this.joinGo.disabled) this.joinGo.click();
+    });
 
-    // Opened from a join link: the offer is already filled in.
-    if (session.urlOffer) this.offerIn.value = session.urlOffer;
+    // Opened from a join link: the code is already filled in.
+    if (session.urlCode) this.codeIn.value = session.urlCode;
     session.onChange(() => this.render());
     this.render();
   }
 
-  private async generateHostCode() {
-    this.offerOut.value = '';
-    this.answerIn.value = '';
-    this.offerOut.value = (await this.session.createHostCode()) ?? '';
-    this.render();
-  }
-
-  private async generateAnswer() {
-    this.answerOut.value = '';
-    this.answerOut.value = (await this.session.createAnswer(this.offerIn.value)) ?? '';
-    this.render();
-  }
-
   private async copy(button: HTMLButtonElement, text: string) {
-    const original = this.copied || button.textContent || '';
-    this.copied = original;
+    const original = this.copied.get(button) ?? button.textContent ?? '';
+    this.copied.set(button, original);
     const ok = await copyText(text);
     button.textContent = ok ? 'Copied!' : 'Select the code and copy it';
     window.setTimeout(() => {
       button.textContent = original;
-      this.copied = '';
+      this.copied.delete(button);
     }, 1500);
   }
 
   private render() {
-    const { mode, status, detail } = this.session;
+    const { mode, status, detail, code } = this.session;
     const connected = status === 'connected';
     const idle = status === 'idle';
-    // A finished or abandoned attempt leaves no stale codes behind.
-    if (idle || status === 'failed' || status === 'disconnected') this.offerOut.value = this.answerOut.value = '';
-    if (connected) this.offerIn.value = this.answerIn.value = '';
+    const working = status === 'gathering' || status === 'connecting';
+    // A finished or abandoned attempt leaves no stale code behind.
+    if (connected) this.codeIn.value = '';
 
     for (const button of this.modeButtons) {
       button.setAttribute('aria-checked', String(button.dataset.mode === mode));
@@ -124,12 +108,11 @@ export class Multiplayer {
     this.connected.textContent =
       this.session.role === 'client' ? 'Connected to Player 1 (host)' : 'Connected to Player 2';
 
-    const working = status === 'gathering' || status === 'connecting';
-    this.genHost.disabled = working || connected;
-    this.copyOffer.disabled = this.copyLink.disabled = !this.offerOut.value;
-    this.establish.disabled = status !== 'awaiting' || !this.answerIn.value.trim();
-    this.genAnswer.disabled = working || connected || !this.offerIn.value.trim();
-    this.copyAnswer.disabled = !this.answerOut.value;
+    this.share.hidden = !code;
+    this.codeOut.textContent = code ?? '';
+    // Starting a second game while one is being set up would just replace it, so wait until it is waiting or over.
+    this.create.disabled = !this.session.available || working || connected;
+    this.joinGo.disabled = !this.session.available || working || connected || !this.codeIn.value.trim();
 
     const failed = status === 'failed' || status === 'disconnected' || (idle && detail !== '');
     this.note.textContent = detail || this.hint();
@@ -138,17 +121,16 @@ export class Multiplayer {
 
   /** What to do next, for the current step. */
   private hint(): string {
-    const { mode, status } = this.session;
+    const { mode, status, code } = this.session;
     if (status === 'connected') return 'The game is live. Close this menu to play.';
     if (mode === 'off') return 'Playing solo. Choose Host to start a game, or Join to enter a friend’s.';
+    if (!this.session.available) return 'Online play isn’t set up for this copy of the game yet.';
     if (mode === 'host') {
-      if (status === 'awaiting')
-        return 'Send the host code (or join link) to your friend, then paste their answer code below.';
+      if (code) return 'Tell your friend this code, or send them the join link. It works once, for 5 minutes.';
       if (status === 'connecting') return 'Connecting…';
-      return 'Generate a code, then send it to your friend.';
+      return 'Create a game to get a code for your friend.';
     }
-    if (status === 'awaiting') return 'Send the answer code back to the host. The game starts when they connect.';
-    if (status === 'connecting') return 'Connecting…';
-    return 'Paste the host’s code or join link, then generate your answer.';
+    if (status === 'gathering' || status === 'awaiting' || status === 'connecting') return 'Connecting…';
+    return 'Type the game code your friend gave you, then join.';
   }
 }

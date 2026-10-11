@@ -26,6 +26,13 @@ npm run test:e2e  # browser smoke tests against the production build (needs Chro
 npm run build     # typecheck, map check, production build
 ```
 
+## Two players
+
+Menu > Online: one player taps **Host > Create Game** and reads out the short code (like `mighty-apples`);
+the other taps **Join** and types it (or opens the join link). Gameplay runs directly between the phones;
+a small Cloudflare relay (`relay/`, setup in `relay/README.md`) only swaps the connection details that start a game.
+To try it on one machine: `npm run relay`, then `VITE_RELAY_URL=http://localhost:8787 npm run dev` and open two windows.
+
 ## Maps
 
 Maps are built from code so an AI agent can author them: `maps/overworld.ts` describes the zone

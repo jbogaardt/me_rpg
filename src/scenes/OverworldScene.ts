@@ -167,8 +167,8 @@ export class OverworldScene implements Scene {
   }
 
   enter() {
-    // Opened from a join link (#offer=...): show the Online tab with the host's code already filled in.
-    if (this.ui.session.urlOffer) this.ui.menu.toggle(this.hero, 'online');
+    // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
+    if (this.ui.session.urlCode) this.ui.menu.toggle(this.hero, 'online');
   }
 
   exit() {

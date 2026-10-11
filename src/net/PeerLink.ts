@@ -1,13 +1,14 @@
 import { decodeSignal, encodeSignal, type SignalType } from './signal';
 
-// One peer-to-peer link over a native RTCPeerConnection + RTCDataChannel, with *manual* signaling: no server ever
-// sees the connection. The host makes an offer, the joiner pastes it and makes an answer, the host pastes that
-// back, and the data channel opens. Each code is a complete session description (all ICE candidates gathered
-// before it is encoded), so one copy-paste in each direction is enough. See signal.ts for the code format.
+// One peer-to-peer link over a native RTCPeerConnection + RTCDataChannel. The two sides never share a server for
+// gameplay: they swap one offer and one answer (through the matchmaking relay, see session.ts and relayClient.ts)
+// and the data channel then opens directly between the phones. The host makes an offer, the joiner turns it into an
+// answer, the host applies that, and the channel opens. Each is a complete session description (all ICE candidates
+// gathered before it is encoded) in the compact text format of signal.ts, so one exchange in each direction is enough.
 //
 // A link is single-use: after it ends ('failed' or 'disconnected') make a new one.
 
-/** Public STUN only, to learn each side's public address. There is no relay (TURN), so two players behind strict/symmetric NATs can't connect. */
+/** Public STUN only, to learn each side's public address. There is no gameplay relay (TURN), so two players behind strict/symmetric NATs can't connect. */
 export const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }];
 
 /** Fast, UDP-like game traffic: no retransmits, no ordering. The protocol (protocol.ts) is built for that. */
@@ -24,10 +25,9 @@ const MAX_BUFFERED = 256 * 1024; // don't queue more than this behind a stalled 
 export type LinkRole = 'host' | 'join';
 
 /**
- * idle: nothing started. gathering: collecting ICE candidates. awaiting: code ready, waiting for the other
- * side. connecting: the host applied the answer and ICE is running (the joiner goes awaiting -> connected).
- * connected: channel open. failed: never connected. disconnected: was
- * connected, now over.
+ * idle: nothing started. gathering: collecting ICE candidates. awaiting: offer/answer ready, waiting for the other
+ * side. connecting: both descriptions are exchanged and ICE is running. connected: channel open. failed: never
+ * connected. disconnected: was connected, now over.
  */
 export type LinkStatus = 'idle' | 'gathering' | 'awaiting' | 'connecting' | 'connected' | 'disconnected' | 'failed';
 
@@ -58,7 +58,7 @@ function gatheringComplete(pc: RTCPeerConnection, timeoutMs: number): Promise<vo
   });
 }
 
-export class ManualWebRTC {
+export class PeerLink {
   private _status: LinkStatus = 'idle';
   private _detail = '';
   private pc: RTCPeerConnection | null = null;
@@ -83,7 +83,7 @@ export class ManualWebRTC {
 
   // --- Host: offer, then answer ---
 
-  /** Host step 1: create the data channel and an offer; resolves to the offer code once all candidates are in. */
+  /** Host step 1: create the data channel and an offer; resolves to the offer once all candidates are in. */
   async createOffer(): Promise<string> {
     const pc = this.begin();
     this.attach(pc.createDataChannel(CHANNEL_LABEL, CHANNEL_OPTIONS));
@@ -95,13 +95,13 @@ export class ManualWebRTC {
     });
   }
 
-  /** Host step 2: apply the joiner's answer code; the channel opens a moment later. */
-  async acceptAnswer(code: string): Promise<void> {
+  /** Host step 2: apply the joiner's answer; the channel opens a moment later. */
+  async acceptAnswer(answer: string): Promise<void> {
     const pc = this.pc;
     if (!pc || this.role !== 'host' || this._status !== 'awaiting') {
-      throw new Error('Generate a host code first.');
+      throw new Error('Create a game first.');
     }
-    const signal = await decodeSignal(code, 'answer');
+    const signal = await decodeSignal(answer, 'answer');
     await this.guard(pc, async () => {
       await pc.setRemoteDescription({ type: 'answer', sdp: signal.sdp });
       this.setStatus('connecting');
@@ -111,9 +111,9 @@ export class ManualWebRTC {
 
   // --- Joiner: answer ---
 
-  /** Joiner: apply the host's offer code; resolves to the answer code to send back. */
-  async acceptOffer(code: string): Promise<string> {
-    const signal = await decodeSignal(code, 'offer'); // bad input throws before anything starts
+  /** Joiner: apply the host's offer; resolves to the answer to send back. */
+  async acceptOffer(offer: string): Promise<string> {
+    const signal = await decodeSignal(offer, 'offer'); // bad input throws before anything starts
     const pc = this.begin();
     pc.ondatachannel = (e) => this.attach(e.channel);
     return this.guard(pc, async () => {
@@ -123,6 +123,13 @@ export class ManualWebRTC {
       this.setStatus('awaiting');
       return answer;
     });
+  }
+
+  /** Joiner: the answer reached the host through the relay. From here the connection is on its way (or times out). */
+  answerDelivered() {
+    if (this.role !== 'join' || this._status !== 'awaiting') return;
+    this.setStatus('connecting');
+    this.startConnectTimer();
   }
 
   // --- Traffic ---
@@ -155,8 +162,8 @@ export class ManualWebRTC {
     this.setStatus('gathering');
 
     // ICE can start probing before the answer has been applied (the joiner already knows the host's candidates) and
-    // can time out while the players are still copying codes around, so it only counts once the host has applied the
-    // answer ('connecting') or the channel is up.
+    // can time out while the host is still waiting for a friend, so it only counts once both sides have exchanged
+    // descriptions ('connecting') or the channel is up.
     const lost = () => {
       if (this.pc !== pc || (this._status !== 'connecting' && this._status !== 'connected')) return;
       this.end(
@@ -227,7 +234,7 @@ export class ManualWebRTC {
       if (this._status === 'connecting') {
         this.end(
           'failed',
-          'Could not connect. A firewall or strict NAT may be blocking the direct link (there is no relay server).',
+          'Could not connect. A firewall or strict network may be blocking the direct link between your phones.',
         );
       }
     }, CONNECT_TIMEOUT_MS);
