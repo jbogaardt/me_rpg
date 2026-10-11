@@ -29,24 +29,54 @@ export const GROUND = {
   grass: {
     sheet: GROUND_SHEET,
     tiles: [
-      [[32, 64], [64, 64]],
-      [[32, 96], [64, 96]],
+      [
+        [32, 64],
+        [64, 64],
+      ],
+      [
+        [32, 96],
+        [64, 96],
+      ],
     ],
   },
   sand: {
     sheet: GROUND_SHEET,
     tiles: [
-      [[32, 160], [64, 160], [96, 160]],
-      [[32, 192], [64, 192], [96, 192]],
-      [[32, 224], [64, 224], [96, 224]],
+      [
+        [32, 160],
+        [64, 160],
+        [96, 160],
+      ],
+      [
+        [32, 192],
+        [64, 192],
+        [96, 192],
+      ],
+      [
+        [32, 224],
+        [64, 224],
+        [96, 224],
+      ],
     ],
   },
   snow: {
     sheet: FROST_SHEET,
     tiles: [
-      [[32, 160], [64, 160], [96, 160]],
-      [[32, 192], [64, 192], [96, 192]],
-      [[32, 224], [64, 224], [96, 224]],
+      [
+        [32, 160],
+        [64, 160],
+        [96, 160],
+      ],
+      [
+        [32, 192],
+        [64, 192],
+        [96, 192],
+      ],
+      [
+        [32, 224],
+        [64, 224],
+        [96, 224],
+      ],
     ],
   },
   water: { sheet: PLUS_SHEET, tiles: [[[480, 320]]] },
@@ -54,8 +84,14 @@ export const GROUND = {
   stone: {
     sheet: GROUND_SHEET,
     tiles: [
-      [[32, 288], [64, 288]],
-      [[32, 320], [64, 320]],
+      [
+        [32, 288],
+        [64, 288],
+      ],
+      [
+        [32, 320],
+        [64, 320],
+      ],
     ],
   },
 } satisfies Record<string, GroundFill>;
@@ -78,37 +114,62 @@ export interface Ring {
 export const RINGS: Partial<Record<GroundName, Ring>> = {
   sand: {
     sheet: GROUND_SHEET,
-    nw: [192, 128], n: [224, 128], ne: [256, 128],
-    w: [192, 160], e: [256, 160],
-    sw: [192, 192], s: [224, 192], se: [256, 192],
+    nw: [192, 128],
+    n: [224, 128],
+    ne: [256, 128],
+    w: [192, 160],
+    e: [256, 160],
+    sw: [192, 192],
+    s: [224, 192],
+    se: [256, 192],
   },
   // Snow: the sand ring recoloured, so it blends into grass the same way.
   snow: {
     sheet: FROST_SHEET,
-    nw: [192, 128], n: [224, 128], ne: [256, 128],
-    w: [192, 160], e: [256, 160],
-    sw: [192, 192], s: [224, 192], se: [256, 192],
+    nw: [192, 128],
+    n: [224, 128],
+    ne: [256, 128],
+    w: [192, 160],
+    e: [256, 160],
+    sw: [192, 192],
+    s: [224, 192],
+    se: [256, 192],
   },
   // Lakes and ponds: the shore blends into *sand* (water) or *snow* (ice), not grass, so wrap them in a
   // sand/snow patch first.
   water: {
     sheet: PLUS_SHEET,
-    nw: [384, 256], n: [416, 256], ne: [448, 256],
-    w: [384, 288], e: [448, 288],
-    sw: [384, 320], s: [416, 320], se: [448, 320],
+    nw: [384, 256],
+    n: [416, 256],
+    ne: [448, 256],
+    w: [384, 288],
+    e: [448, 288],
+    sw: [384, 320],
+    s: [416, 320],
+    se: [448, 320],
   },
   ice: {
     sheet: FROST_SHEET,
-    nw: [384, 256], n: [416, 256], ne: [448, 256],
-    w: [384, 288], e: [448, 288],
-    sw: [384, 320], s: [416, 320], se: [448, 320],
+    nw: [384, 256],
+    n: [416, 256],
+    ne: [448, 256],
+    w: [384, 288],
+    e: [448, 288],
+    sw: [384, 320],
+    s: [416, 320],
+    se: [448, 320],
   },
   // Cobblestone plaza with a grassy fringe.
   stone: {
     sheet: GROUND_SHEET,
-    nw: [192, 256], n: [224, 256], ne: [256, 256],
-    w: [192, 288], e: [256, 288],
-    sw: [192, 320], s: [224, 320], se: [256, 320],
+    nw: [192, 256],
+    n: [224, 256],
+    ne: [256, 256],
+    w: [192, 288],
+    e: [256, 288],
+    sw: [192, 320],
+    s: [224, 320],
+    se: [256, 320],
   },
 };
 
@@ -125,7 +186,14 @@ export interface Stamp {
   about: string;
 }
 export const STAMPS = {
-  skull: { sheet: GROUND_SHEET, x: 256, y: 512, w: 128, h: 160, about: 'Giant buried skull on sand (4x5 cells, irregular outline).' },
+  skull: {
+    sheet: GROUND_SHEET,
+    x: 256,
+    y: 512,
+    w: 128,
+    h: 160,
+    about: 'Giant buried skull on sand (4x5 cells, irregular outline).',
+  },
   dune: { sheet: GROUND_SHEET, x: 32, y: 512, w: 96, h: 160, about: 'Shallow sand hollow (3x4 cells).' },
   crater: { sheet: GROUND_SHEET, x: 416, y: 512, w: 96, h: 96, about: 'Wide sand crater (3x3 cells).' },
   pit: { sheet: GROUND_SHEET, x: 416, y: 640, w: 32, h: 32, about: 'Small sand pit (1 cell).' },
@@ -165,13 +233,31 @@ const treeParts = {
   B: [part(220, 103, 66, 89, 28, 0), part(192, 125, 28, 67, 0, 22)],
 };
 const tree = (sheet: string, which: 'A' | 'B', about: string): Prefab => ({
-  sheet, w: 94, h: 89, parts: treeParts[which], solid: { band: 64, min: 0.5 }, tag: 'tree', about,
+  sheet,
+  w: 94,
+  h: 89,
+  parts: treeParts[which],
+  solid: { band: 64, min: 0.5 },
+  tag: 'tree',
+  about,
 });
 const bush = (sheet: string, about: string): Prefab => ({
-  sheet, w: 62, h: 57, parts: [part(160, 71, 62, 57)], solid: { band: 40, min: 0.5 }, tag: 'bush', about,
+  sheet,
+  w: 62,
+  h: 57,
+  parts: [part(160, 71, 62, 57)],
+  solid: { band: 40, min: 0.5 },
+  tag: 'bush',
+  about,
 });
 const rock = (sheet: string, x: number, y: number, w: number, h: number, about: string): Prefab => ({
-  sheet, w, h, parts: [part(x, y, w, h)], solid: { band: h, min: 0.3 }, tag: 'rock', about,
+  sheet,
+  w,
+  h,
+  parts: [part(x, y, w, h)],
+  solid: { band: h, min: 0.3 },
+  tag: 'rock',
+  about,
 });
 const ROCKS = (sheet: string) => ({
   rock: rock(sheet, 290, 32, 30, 32, 'Boulder, one cell.'),
@@ -184,7 +270,11 @@ const frostRocks = ROCKS(FROST_OBJECTS);
 
 export const PREFABS = {
   treeA: tree(OBJECT_SHEET, 'A', 'Round leafy canopy (3x3 cells). Blocks its bottom two rows; top row is walk-behind.'),
-  treeB: tree(OBJECT_SHEET, 'B', 'Second canopy variant, same size and collision as treeA. Mix the two to avoid repetition.'),
+  treeB: tree(
+    OBJECT_SHEET,
+    'B',
+    'Second canopy variant, same size and collision as treeA. Mix the two to avoid repetition.',
+  ),
   frostTreeA: tree(FROST_OBJECTS, 'A', 'treeA wearing snow (frost zone).'),
   frostTreeB: tree(FROST_OBJECTS, 'B', 'treeB wearing snow (frost zone).'),
   dryTreeA: tree(DRY_OBJECTS, 'A', 'treeA withered to ochre (desert edge).'),
@@ -198,11 +288,32 @@ export const PREFABS = {
   frostRockB: frostRocks.rockB,
   frostRockC: frostRocks.rockC,
   barrel: {
-    sheet: OBJECT_SHEET, w: 28, h: 40, parts: [part(321, 18, 28, 40)], solid: { band: 24, min: 0.3 }, tag: 'barrel',
+    sheet: OBJECT_SHEET,
+    w: 28,
+    h: 40,
+    parts: [part(321, 18, 28, 40)],
+    solid: { band: 24, min: 0.3 },
+    tag: 'barrel',
     about: 'Wooden barrel (1 cell wide).',
   },
-  flowerRed: { sheet: OBJECT_SHEET, w: 16, h: 15, parts: [part(352, 40, 16, 15)], solid: null, tag: 'flower', about: 'Red flower, decoration only.' },
-  flowersPurple: { sheet: OBJECT_SHEET, w: 18, h: 28, parts: [part(366, 33, 18, 28)], solid: null, tag: 'flower', about: 'Pair of purple flowers, decoration only.' },
+  flowerRed: {
+    sheet: OBJECT_SHEET,
+    w: 16,
+    h: 15,
+    parts: [part(352, 40, 16, 15)],
+    solid: null,
+    tag: 'flower',
+    about: 'Red flower, decoration only.',
+  },
+  flowersPurple: {
+    sheet: OBJECT_SHEET,
+    w: 18,
+    h: 28,
+    parts: [part(366, 33, 18, 28)],
+    solid: null,
+    tag: 'flower',
+    about: 'Pair of purple flowers, decoration only.',
+  },
 } satisfies Record<string, Prefab>;
 
 export type PrefabName = keyof typeof PREFABS;

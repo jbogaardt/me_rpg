@@ -1,5 +1,24 @@
-import { CELL, FLAT_Z, type CellPoint, type GroundCell, type MapData, type MapObject, type MobSpawn } from '../../src/map/types';
-import { CLIFF, GROUND, PREFABS, RINGS, STAMPS, TREES, type CliffKind, type GroundName, type PrefabName, type StampName } from './catalog';
+import {
+  CELL,
+  FLAT_Z,
+  type CellPoint,
+  type GroundCell,
+  type MapData,
+  type MapObject,
+  type MobSpawn,
+} from '../../src/map/types';
+import {
+  CLIFF,
+  GROUND,
+  PREFABS,
+  RINGS,
+  STAMPS,
+  TREES,
+  type CliffKind,
+  type GroundName,
+  type PrefabName,
+  type StampName,
+} from './catalog';
 import { coverage, sheet as loadSheet } from './image';
 
 /** A rectangle of cells. May extend past the map edge (e.g. for border forests); it's clipped where needed. */
@@ -76,9 +95,9 @@ export class Zone {
     readonly width: number,
     readonly height: number,
   ) {
-    this.ground = new Array(width * height).fill(null);
-    this.surfaceAt = new Array(width * height).fill(0);
-    this.levelAt = new Array(width * height).fill(0);
+    this.ground = new Array<(typeof this.ground)[number]>(width * height).fill(null);
+    this.surfaceAt = new Array<number>(width * height).fill(0);
+    this.levelAt = new Array<number>(width * height).fill(0);
   }
 
   private inMap(col: number, row: number) {
@@ -102,7 +121,7 @@ export class Zone {
   private fillTile(name: GroundName, col: number, row: number) {
     const g = GROUND[name];
     const line = g.tiles[row % g.tiles.length];
-    this.setGround(col, row, g.sheet, line[col % line.length] as [number, number], name);
+    this.setGround(col, row, g.sheet, line[col % line.length], name);
   }
 
   /** Cover the whole map (or a rect) with a repeating ground. */
@@ -123,8 +142,27 @@ export class Zone {
     const c1 = rect.col + rect.w - 1;
     const r1 = rect.row + rect.h - 1;
     for (const { col, row } of this.cells(rect)) {
-      const n = row === rect.row, s = row === r1, w = col === rect.col, e = col === c1;
-      const edge = n ? (w ? ring.nw : e ? ring.ne : ring.n) : s ? (w ? ring.sw : e ? ring.se : ring.s) : w ? ring.w : e ? ring.e : null;
+      const n = row === rect.row,
+        s = row === r1,
+        w = col === rect.col,
+        e = col === c1;
+      const edge = n
+        ? w
+          ? ring.nw
+          : e
+            ? ring.ne
+            : ring.n
+        : s
+          ? w
+            ? ring.sw
+            : e
+              ? ring.se
+              : ring.s
+          : w
+            ? ring.w
+            : e
+              ? ring.e
+              : null;
       // Water/ice shores blend into sand/snow, so those ring cells keep the surface already there.
       if (edge) this.setGround(col, row, ring.sheet, edge, name === 'water' || name === 'ice' ? undefined : name);
       else this.fillTile(name, col, row);
@@ -142,10 +180,15 @@ export class Zone {
     const img = loadSheet(st.sheet);
     for (let j = 0; j < st.h / CELL; j++) {
       for (let i = 0; i < st.w / CELL; i++) {
-        const sx = st.x + i * CELL, sy = st.y + j * CELL;
+        const sx = st.x + i * CELL,
+          sy = st.y + j * CELL;
         let opaque = true;
         for (let y = sy; y < sy + CELL && opaque; y++) {
-          for (let x = sx; x < sx + CELL; x++) if (img.data[(y * img.width + x) * 4 + 3] < 255) { opaque = false; break; }
+          for (let x = sx; x < sx + CELL; x++)
+            if (img.data[(y * img.width + x) * 4 + 3] < 255) {
+              opaque = false;
+              break;
+            }
         }
         if (opaque) this.setGround(col + i, row + j, st.sheet, [sx, sy], 'sand');
       }
@@ -179,9 +222,13 @@ export class Zone {
     const trees = opts.trees ?? TREES;
     const rand = rng(opts.seed ?? rect.col * 7919 + rect.row * 104729 + rect.w * 31 + rect.h);
     const { w: TW, h: TH } = PREFABS.treeA;
-    const L = rect.col * CELL, R = (rect.col + rect.w) * CELL;
-    const T = rect.row * CELL, B = (rect.row + rect.h) * CELL;
-    const FRINGE = 18, ROW_STEP = 52, COL_STEP = 46;
+    const L = rect.col * CELL,
+      R = (rect.col + rect.w) * CELL;
+    const T = rect.row * CELL,
+      B = (rect.row + rect.h) * CELL;
+    const FRINGE = 18,
+      ROW_STEP = 52,
+      COL_STEP = 46;
     const bottomY = B - TH;
     const topY = Math.min(bottomY, T - FRINGE);
     const rows = Math.max(1, Math.ceil((bottomY - topY) / ROW_STEP) + 1);
@@ -215,14 +262,18 @@ export class Zone {
     if (w < 4 || h < 4) throw new Error(`plateau needs at least 4x4 cells of walkable top, got ${w}x${h}`);
     const stairCols = [...(opts.stairs ?? [])].sort((a, b) => a - b);
     stairCols.forEach((c, i) => {
-      if (c < col + 2 || c > col + w - 3) throw new Error(`stairs column ${c} must be within ${col + 2}..${col + w - 3} of this plateau`);
-      if (i && c - stairCols[i - 1] < 3) throw new Error(`stairs at columns ${stairCols[i - 1]} and ${c} overlap (need 3+ apart)`);
+      if (c < col + 2 || c > col + w - 3)
+        throw new Error(`stairs column ${c} must be within ${col + 2}..${col + w - 3} of this plateau`);
+      if (i && c - stairCols[i - 1] < 3)
+        throw new Error(`stairs at columns ${stairCols[i - 1]} and ${c} overlap (need 3+ apart)`);
     });
     const sheet = CLIFF.sheets[opts.kind ?? 'grass'];
     const { xs, ys } = CLIFF;
     const level = Math.max(...this.cells(rect).map(({ col: c, row: r }) => this.levelAt[r * this.width + c])) + 1;
-    const nx = w - 2, ny = h - 2;
-    const hx = (col + 1) * CELL, hy = (row + 1) * CELL; // world position of the art's 64x64 hole corner
+    const nx = w - 2,
+      ny = h - 2;
+    const hx = (col + 1) * CELL,
+      hy = (row + 1) * CELL; // world position of the art's 64x64 hole corner
     const underStairs = (i: number) => stairCols.some((c) => i >= c - 1 - (col + 1) && i <= c + 1 - (col + 1));
 
     // Source slices per axis: [source start, size, world start]. Middle slices repeat A/B chunks.
@@ -233,19 +284,45 @@ export class Zone {
     ];
     const rows = [
       { sy: ys[0], sh: ys[1] - ys[0], wy: hy - (ys[1] - ys[0]), mid: false, last: false },
-      ...Array.from({ length: ny }, (_, j) => ({ sy: ys[1] + (j % 2) * CELL, sh: CELL, wy: hy + j * CELL, mid: true, last: false })),
+      ...Array.from({ length: ny }, (_, j) => ({
+        sy: ys[1] + (j % 2) * CELL,
+        sh: CELL,
+        wy: hy + j * CELL,
+        mid: true,
+        last: false,
+      })),
       { sy: ys[3], sh: ys[4] - ys[3], wy: hy + ny * CELL, mid: false, last: true },
     ];
     rows.forEach((r) => {
       cols.forEach((c) => {
         if (r.mid && c.chunk >= 0) return; // the hole: shows the ground (the walkable top)
         if (r.last && c.chunk >= 0 && underStairs(c.chunk)) return; // replaced by a staircase
-        this.extras.push({ sheet, x: c.sx, y: r.sy, w: c.sw, h: r.sh, px: c.wx, py: r.wy, tag: 'cliff', z: FLAT_Z + level });
+        this.extras.push({
+          sheet,
+          x: c.sx,
+          y: r.sy,
+          w: c.sw,
+          h: r.sh,
+          px: c.wx,
+          py: r.wy,
+          tag: 'cliff',
+          z: FLAT_Z + level,
+        });
       });
     });
     const st = CLIFF.stairs;
     for (const c of stairCols) {
-      this.extras.push({ sheet, x: st.x, y: st.y, w: st.w, h: st.h, px: (c - 1) * CELL, py: hy + ny * CELL, tag: 'cliff', z: FLAT_Z + level });
+      this.extras.push({
+        sheet,
+        x: st.x,
+        y: st.y,
+        w: st.w,
+        h: st.h,
+        px: (c - 1) * CELL,
+        py: hy + ny * CELL,
+        tag: 'cliff',
+        z: FLAT_Z + level,
+      });
     }
 
     // Collision: rim ring, two face rows, rounded corners of the top; stairs open the face.
@@ -254,7 +331,13 @@ export class Zone {
     this.block({ col: col - 1, row: row + h, w: w + 2, h: 2 }, why);
     this.block({ col: col - 1, row, w: 1, h }, why);
     this.block({ col: col + w, row, w: 1, h }, why);
-    for (const [c, r] of [[col, row], [col + w - 1, row], [col, row + h - 1], [col + w - 1, row + h - 1]]) this.block({ col: c, row: r, w: 1, h: 1 }, why);
+    for (const [c, r] of [
+      [col, row],
+      [col + w - 1, row],
+      [col, row + h - 1],
+      [col + w - 1, row + h - 1],
+    ])
+      this.block({ col: c, row: r, w: 1, h: 1 }, why);
     for (const { col: c, row: r } of this.cells(rect)) this.levelAt[r * this.width + c] = level;
     for (const c of stairCols) {
       this.unblock({ col: c, row: row + h, w: 1, h: 2 });
@@ -291,7 +374,7 @@ export class Zone {
     return this;
   }
 
-  /** An enemy spawn; `kind` is a key of MOB_KINDS in src/game/combat.ts. */
+  /** An enemy spawn; `kind` is a key of MOB_KINDS in src/systems/combat.ts. */
   mob(kind: string, col: number, row: number) {
     this.mobList.push({ kind, col, row });
     return this;
@@ -315,7 +398,15 @@ export class Zone {
     for (const p of this.placed) {
       const prefab = PREFABS[p.prefab];
       for (const part of prefab.parts) {
-        const o: MapObject = { s: sheetIndex(prefab.sheet), x: part.x, y: part.y, w: part.w, h: part.h, px: p.px + part.dx, py: p.py + part.dy };
+        const o: MapObject = {
+          s: sheetIndex(prefab.sheet),
+          x: part.x,
+          y: part.y,
+          w: part.w,
+          h: part.h,
+          px: p.px + part.dx,
+          py: p.py + part.dy,
+        };
         if (prefab.tag) o.tag = prefab.tag;
         objects.push(o);
         // All parts end on the prefab's bottom, so the band is measured from each part's own bottom.
@@ -333,7 +424,10 @@ export class Zone {
     }
     for (const group of groups.values()) {
       const { band, min } = group[0];
-      const cov = coverage({ width: this.width, height: this.height, sheets, objects: group.map((a) => a.o) }, () => band);
+      const cov = coverage(
+        { width: this.width, height: this.height, sheets, objects: group.map((a) => a.o) },
+        () => band,
+      );
       cov.forEach((c, i) => c >= min && blocked.add(i));
     }
     for (const [i, on] of this.forced) {

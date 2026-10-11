@@ -6,13 +6,19 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Me RPG</title>
+    <link rel="icon" href="data:," />
     <style>
       html, body { margin: 0; height: 100%; background: #111; overflow: hidden; overscroll-behavior: none; }
       canvas { display: block; touch-action: none; }
     </style>
   </head>
   <body>
-    <!-- Overlays over the canvas; styles in src/ui.css. [data-key] elements press that key while held (src/game/touch.ts). -->
+    <!-- Overlays over the canvas; styles in src/ui.css. [data-key] elements press that key while held (src/core/touch.ts). -->
+    <div id="loading">
+      <div class="label">Loading…</div>
+      <div class="bar"><div class="fill"></div></div>
+    </div>
+
     <div id="hud">
       <div id="hud-stats" class="panel thin wood">
         <div id="hud-hp" class="bar"><div class="fill"></div><span class="label"></span></div>

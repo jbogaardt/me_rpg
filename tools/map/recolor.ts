@@ -12,8 +12,11 @@ const dir = (f: string) => path.join(ROOT, 'public/tilesets', f);
 type RGB = [number, number, number];
 
 function toHsl([r, g, b]: RGB): [number, number, number] {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
   const l = (max + min) / 2;
   if (max === min) return [0, 0, l];
   const d = max - min;
@@ -23,7 +26,7 @@ function toHsl([r, g, b]: RGB): [number, number, number] {
 }
 
 function fromHsl(h: number, s: number, l: number): RGB {
-  h = ((h % 360) + 360) % 360 / 360;
+  h = (((h % 360) + 360) % 360) / 360;
   if (s === 0) return [l * 255, l * 255, l * 255];
   const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
   const p = 2 * l - q;
@@ -39,9 +42,18 @@ const smooth = (a: number, b: number, x: number) => {
   const t = clamp((x - a) / (b - a));
   return t * t * (3 - 2 * t);
 };
-const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const mix = (a: RGB, b: RGB, t: number): RGB => [
+  a[0] + (b[0] - a[0]) * t,
+  a[1] + (b[1] - a[1]) * t,
+  a[2] + (b[2] - a[2]) * t,
+];
 
-interface Box { x: number; y: number; w: number; h: number }
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 /** Apply `fn` to every opaque pixel (optionally only inside `box`); `fn` returns the new colour. */
 function recolor(img: Image, fn: (c: RGB) => RGB | null, box?: Box): Image {
@@ -83,13 +95,19 @@ const ice = (c: RGB): RGB | null => {
 const plus = readPng(dir('ground_tiles.png'));
 for (let y = 320; y < 352; y++) {
   for (let x = 480; x < 512; x++) {
-    const n = (((x * 7919) ^ (y * 104729)) >>> 3) % 9 - 4; // fixed pseudo-noise, no PRNG state
+    const n = ((((x * 7919) ^ (y * 104729)) >>> 3) % 9) - 4; // fixed pseudo-noise, no PRNG state
     const i = (y * plus.width + x) * 4;
-    plus.data[i] = 47 + n; plus.data[i + 1] = 116 + n; plus.data[i + 2] = 130 + n; plus.data[i + 3] = 255;
+    plus.data[i] = 47 + n;
+    plus.data[i + 1] = 116 + n;
+    plus.data[i + 2] = 130 + n;
+    plus.data[i + 3] = 255;
   }
 }
 writePng(dir('ground_plus.png'), plus);
-writePng(dir('frost_ground.png'), recolor(plus, (c) => snow(c) ?? ice(c)));
+writePng(
+  dir('frost_ground.png'),
+  recolor(plus, (c) => snow(c) ?? ice(c)),
+);
 
 // --- Tree/bush/rock sheets ------------------------------------------------------------------------------
 const OBJ = readPng(dir('object-layer.png'));
@@ -99,26 +117,32 @@ const ROCKS: Box[] = [
   { x: 288, y: 64, w: 134, h: 34 }, // four brown rocks
 ];
 
-const frostFoliage = (shadow: RGB) => (c: RGB): RGB | null => {
-  if (isShadow(c)) return shadow;
-  const [h, s, l] = toHsl(c);
-  if (h < 50 || h > 170 || s < 0.1) return null;
-  const base = fromHsl(172 + (h - 100) * 0.25, 0.24 + s * 0.2, clamp(l * 0.95 + 0.1));
-  return mix(base, [236, 245, 252], smooth(0.36, 0.56, l) * 0.88); // lit leaves wear snow
-};
-const frostRock = (shadow: RGB) => (c: RGB): RGB | null => {
-  if (isShadow(c)) return shadow;
-  const [, , l] = toHsl(c);
-  return fromHsl(212, 0.16, clamp(l * 1.05 + 0.04));
-};
+const frostFoliage =
+  (shadow: RGB) =>
+  (c: RGB): RGB | null => {
+    if (isShadow(c)) return shadow;
+    const [h, s, l] = toHsl(c);
+    if (h < 50 || h > 170 || s < 0.1) return null;
+    const base = fromHsl(172 + (h - 100) * 0.25, 0.24 + s * 0.2, clamp(l * 0.95 + 0.1));
+    return mix(base, [236, 245, 252], smooth(0.36, 0.56, l) * 0.88); // lit leaves wear snow
+  };
+const frostRock =
+  (shadow: RGB) =>
+  (c: RGB): RGB | null => {
+    if (isShadow(c)) return shadow;
+    const [, , l] = toHsl(c);
+    return fromHsl(212, 0.16, clamp(l * 1.05 + 0.04));
+  };
 
-const dryFoliage = (shadow: RGB) => (c: RGB): RGB | null => {
-  if (isShadow(c)) return shadow;
-  const [h, s, l] = toHsl(c);
-  if (h < 50 || h > 170 || s < 0.1) return null;
-  // withered scrub: ochre where lit, brown in shade
-  return fromHsl(34 + (l - 0.3) * 40, 0.5 + s * 0.15, clamp(l * 0.92 + 0.02));
-};
+const dryFoliage =
+  (shadow: RGB) =>
+  (c: RGB): RGB | null => {
+    if (isShadow(c)) return shadow;
+    const [h, s, l] = toHsl(c);
+    if (h < 50 || h > 170 || s < 0.1) return null;
+    // withered scrub: ochre where lit, brown in shade
+    return fromHsl(34 + (l - 0.3) * 40, 0.5 + s * 0.15, clamp(l * 0.92 + 0.02));
+  };
 
 const FROST_SHADOW: RGB = [...SHADOW_FROST];
 const DRY_SHADOW: RGB = [...SHADOW_DRY];
@@ -139,7 +163,8 @@ const GRASS_BOX: Box = { x: 64, y: 384, w: 128, h: 32 }; // a clean strip of pla
 /** Mean colour and overall contrast (std of the green channel) of the opaque pixels in a box. */
 function stats(img: Image, box: Box): { mean: RGB; std: number } {
   const sum: RGB = [0, 0, 0];
-  let n = 0, sq = 0;
+  let n = 0,
+    sq = 0;
   for (let y = box.y; y < box.y + box.h; y++) {
     for (let x = box.x; x < box.x + box.w; x++) {
       const i = (y * img.width + x) * 4;
@@ -172,6 +197,14 @@ const dryRock = (c: RGB): RGB => {
   return h > 55 ? fromHsl(34 + (l - 0.3) * 40, 0.4, clamp(l * 0.95)) : fromHsl(h - 6, Math.min(1, s * 1.1), l * 0.97); // moss -> scrub
 };
 
-writePng(dir('frost_cliffs.png'), recolor(CLIFFS, (c) => (isTop(c) ? frostTop(c) : frostRock(FROST_SHADOW)(c))));
-writePng(dir('dry_cliffs.png'), recolor(CLIFFS, (c) => (isTop(c) ? dryTop(c) : dryRock(c))));
-console.log('wrote ground_plus.png, frost_ground.png, frost_objects.png, dry_objects.png, frost_cliffs.png, dry_cliffs.png');
+writePng(
+  dir('frost_cliffs.png'),
+  recolor(CLIFFS, (c) => (isTop(c) ? frostTop(c) : frostRock(FROST_SHADOW)(c))),
+);
+writePng(
+  dir('dry_cliffs.png'),
+  recolor(CLIFFS, (c) => (isTop(c) ? dryTop(c) : dryRock(c))),
+);
+console.log(
+  'wrote ground_plus.png, frost_ground.png, frost_objects.png, dry_objects.png, frost_cliffs.png, dry_cliffs.png',
+);

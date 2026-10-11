@@ -2,6 +2,7 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "lib": ["ES2022"],
+    "noUncheckedIndexedAccess": false, // build scripts index freely; the game code is the strict part
     "types": ["node"]
   },
   "include": ["./**/*.ts", "../maps/**/*.ts"]

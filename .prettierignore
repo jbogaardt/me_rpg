@@ -1,0 +1,15 @@
+dist/
+node_modules/
+public/
+art/
+maps/out/
+.claude/
+e2e/report/
+test-results/
+playwright-report/
+package-lock.json
+skills-lock.json
+# Hand-formatted: compact one-rule-per-line CSS, markup and prose
+*.css
+*.html
+*.md

@@ -34,7 +34,7 @@ ground first, then features, then overrides.
 | `z.stamp(name, col, row)` | Copies a pre-painted ground decoration (`skull`, `dune`, `crater`, `pit`) top-left at (col,row); opaque source cells only. No collision. |
 | `z.plateau(rect, {kind?, stairs?})` | Raised plateau. `rect` = walkable top (>= 4x4 cells). Rim rocks fill the 1-cell ring N/W/E and the rock face the 2 rows S of it (all blocked, plus the 4 corner cells of `rect`). `kind`: `'grass'` (default), `'frost'` (snow top; lay it on snow), `'dry'` (sand top). `stairs`: centre columns of 3-wide staircases cut into the south face (`rect.col+2 <= c <= rect.col+w-3`, so w >= 5; >= 3 columns apart). Stairs are the only way up; the top gets level +1 and the stair cells become ramps. Put props/mobs on top with the usual calls. |
 | `z.block(rect, reason)` / `z.unblock(rect)` | Manual collision overrides, applied last. Use `block` for water/cliffs; the reason silences the invisible-wall warning. Don't hand-block props. |
-| `z.spawn(c, r)`, `z.npc(c, r)`, `z.mob(kind, c, r)` | Player start, the NPC, enemy spawns (`kind` must be in `MOB_KINDS`, `src/game/combat.ts`). |
+| `z.spawn(c, r)`, `z.npc(c, r)`, `z.mob(kind, c, r)` | Player start, the NPC, enemy spawns (`kind` must be in `MOB_KINDS`, `src/systems/combat.ts`). |
 
 A `Rect` is `{ col, row, w, h }`.
 
@@ -75,6 +75,6 @@ Think in cells: for `plateau({col, row, w, h})` the top is cols `col..col+w-1`, 
 
 ## Limits today
 
-- The overworld is one big map with all biomes; the game loads only `public/maps/overworld.json` (`MAP_URL` in `src/map/sheets.ts`). A new zone file
+- The overworld is one big map with all biomes; the game loads only the `overworld` zone (`START_ZONE` in `src/main.ts`; `loadZone` in `src/assets.ts` loads any zone by name). A new zone file
   builds and checks fine, but travelling between zones needs game code (map transitions) first.
-- One NPC per map with fixed dialog (`NPC_LINES` in `src/game/Game.ts`).
+- One NPC per map with fixed dialog (`NPC_LINES` in `src/scenes/OverworldScene.ts`).

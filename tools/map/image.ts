@@ -105,7 +105,16 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
     }
   };
   data.ground.forEach((g, i) => {
-    if (g) blit(sheet(data.sheets[g[0]]), g[1], g[2], CELL, CELL, (i % data.width) * CELL, Math.floor(i / data.width) * CELL);
+    if (g)
+      blit(
+        sheet(data.sheets[g[0]]),
+        g[1],
+        g[2],
+        CELL,
+        CELL,
+        (i % data.width) * CELL,
+        Math.floor(i / data.width) * CELL,
+      );
   });
   const objects = data.objects.map((o, i) => ({ o, i })).sort((a, b) => sortKey(a.o) - sortKey(b.o) || a.i - b.i);
   for (const { o } of objects) blit(sheet(data.sheets[o.s]), o.x, o.y, o.w, o.h, o.px, o.py);
@@ -122,7 +131,8 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
     }
   };
   if (opts.collision) {
-    for (const i of data.collision) tint((i % data.width) * CELL, Math.floor(i / data.width) * CELL, CELL, CELL, 0xff2020, 0.45);
+    for (const i of data.collision)
+      tint((i % data.width) * CELL, Math.floor(i / data.width) * CELL, CELL, CELL, 0xff2020, 0.45);
   }
   if (opts.grid) {
     for (let c = 0; c <= data.width; c++) tint(c * CELL, 0, 1, H, 0x000000, c % 5 === 0 ? 0.6 : 0.25);
@@ -144,13 +154,18 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
       if (sy < 0 || sy >= H) continue;
       for (let x = 0; x < img.width; x++) {
         const sx = col * CELL + x;
-        if (sx >= 0 && sx < W) out.data.copy(img.data, (y * img.width + x) * 4, (sy * W + sx) * 4, (sy * W + sx) * 4 + 4);
+        if (sx >= 0 && sx < W)
+          out.data.copy(img.data, (y * img.width + x) * 4, (sy * W + sx) * 4, (sy * W + sx) * 4 + 4);
       }
     }
   }
   const k = Math.max(1, Math.floor(opts.scale ?? 1));
   if (k === 1) return img;
-  const big: Image = { width: img.width * k, height: img.height * k, data: Buffer.alloc(img.width * img.height * k * k * 4) };
+  const big: Image = {
+    width: img.width * k,
+    height: img.height * k,
+    data: Buffer.alloc(img.width * img.height * k * k * 4),
+  };
   for (let y = 0; y < big.height; y++) {
     for (let x = 0; x < big.width; x++) {
       const si = (Math.floor(y / k) * img.width + Math.floor(x / k)) * 4;

@@ -30,7 +30,7 @@ export interface CellPoint {
   row: number;
 }
 
-/** An enemy spawn point; `kind` is a key of MOB_KINDS (src/game/combat.ts). */
+/** An enemy spawn point; `kind` is a key of MOB_KINDS (src/systems/combat.ts). */
 export interface MobSpawn extends CellPoint {
   kind: string;
 }
@@ -72,8 +72,8 @@ export function parseMap(json: unknown): MapData {
     objects: d.objects ?? [],
     collision: d.collision ?? [],
     surfaces: d.surfaces ?? ['grass'],
-    surface: d.surface ?? new Array(cells).fill(0),
-    level: d.level ?? new Array(cells).fill(0),
+    surface: d.surface ?? new Array<number>(cells).fill(0),
+    level: d.level ?? new Array<number>(cells).fill(0),
     ramps: d.ramps ?? [],
     spawn: d.spawn ?? { col: 1, row: 1 },
     npc: d.npc ?? null,
