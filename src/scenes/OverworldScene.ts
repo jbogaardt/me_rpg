@@ -9,7 +9,7 @@ import { Chest } from '../entities/Chest';
 import { Character, DIR_VEC, directionToward, type Direction } from '../entities/Character';
 import { Ambient } from '../entities/ambient';
 import { WeatherLayer } from '../entities/WeatherLayer';
-import { sampleBiome, Weather, type WeatherKind } from '../systems/weather';
+import { Weather, type WeatherKind } from '../systems/weather';
 import { arrowEffect, boltEffect, Effects, floatText, slashEffect } from '../entities/effects';
 import { Mob, type MobWorld } from '../entities/Mob';
 import { particleEffect } from '../entities/ParticleEffect';
@@ -249,7 +249,7 @@ export class OverworldScene implements Scene {
     else this.updateSimulation(dt);
 
     this.effects.update(dt);
-    this.weather.update(dt, sampleBiome(this.data, this.player.x, this.player.y - 1));
+    this.weather.update(dt);
     this.ambient.wind = this.weather.wind;
     this.weatherLayer.update(dt, this.weather, this.camera.view(this.screen.width, this.screen.height));
     this.ambient.update(dt, this.player, [
