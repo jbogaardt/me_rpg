@@ -1,4 +1,4 @@
-# The matchmaking relay for 2-player games. Deployed by .github/workflows/deploy-relay.yml; see relay/README.md.
+# The matchmaking relay for 2-player games. Cloudflare deploys it from main (Workers Builds); see relay/README.md.
 name = "me-rpg-relay"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
