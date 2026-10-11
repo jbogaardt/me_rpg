@@ -120,10 +120,11 @@ export class Simulation {
     const { collision, data } = this.arena;
     const len = Math.hypot(dx, dy);
     const wish = len ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
+    p.mouseAim = aim !== undefined;
     if (aim) {
-      // Aiming with the mouse: the player looks and shoots toward it, whichever way they walk.
-      p.body.face(directionToward(aim.x, aim.y));
+      // Aiming with the mouse: the hero keeps looking where they walk, and turns to it only to attack or cast.
       p.aim = aim;
+      if (len) p.body.face(dx ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up');
     } else if (len) {
       if (dx) p.body.face(dx > 0 ? 'right' : 'left');
       else p.body.face(dy > 0 ? 'down' : 'up');
@@ -147,9 +148,15 @@ export class Simulation {
 
   // --- Attacks ---
 
+  /** With mouse aiming, turn toward the mouse for this attack or cast. */
+  private faceAim(p: Player) {
+    if (p.mouseAim) p.body.face(directionToward(p.aim.x, p.aim.y));
+  }
+
   /** The action button's attack: swing the sword, or start drawing the bow. */
   attack(p: Player) {
     if (p.attackCooldown > 0) return;
+    this.faceAim(p);
     const bow = p.hero.weapon.ranged;
     if (bow) {
       this.draw(p, bow);
@@ -205,6 +212,7 @@ export class Simulation {
       return;
     }
     stats.mp -= spell.cost;
+    this.faceAim(p);
     p.body.play('cast');
     const { x: vx, y: vy } = p.aim;
     const [bx, by] = [x + vx * 10, y - BOLT_HEIGHT + vy * 8];

@@ -26,6 +26,7 @@ export class Player {
   sinceHit = Infinity; // seconds since last hurt (HP regenerates after a pause)
   knock = { x: 0, y: 0 };
   aim = { x: 0, y: 1 }; // unit vector of the last move (diagonals included): where magic bolts fly
+  mouseAim = false; // `aim` comes from the mouse: the hero turns toward it only when attacking or casting
   vel = { x: 0, y: 0 }; // px/s walking velocity; only differs from the held direction while sliding on ice
   /** Immune to damage right now, from a recent hit (blinking) or from just having come through a door (not). */
   get safe(): boolean {
