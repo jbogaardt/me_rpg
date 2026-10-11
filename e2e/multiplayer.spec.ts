@@ -160,6 +160,7 @@ test('both players can drop items and pick them up, and the host decides what is
 });
 
 test('players next to each other can trade: ask, accept or deny, a shared window, cancel', async ({ browser }) => {
+  test.setTimeout(300_000); // two browsers, and the suite runs two workers at once: 40 s alone, over 2 min when loaded
   const host = await open(browser, '/');
   await host.keyboard.press('Escape');
   await expect(host.locator('#menu [data-tab="trade"]')).toBeHidden(); // trading is for co-op only
