@@ -47,18 +47,27 @@ function blockPageZoom() {
   for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
     document.addEventListener(type, (e) => e.preventDefault());
   }
-  document.addEventListener('touchmove', (e) => e.touches.length > 1 && e.preventDefault(), { passive: false });
-  let lastTouchEnd = 0;
-  document.addEventListener(
-    'touchend',
-    (e) => {
-      const now = Date.now();
-      // A second touch within 350 ms is the double-tap zoom; keep real form fields and links tappable.
-      if (now - lastTouchEnd < 350 && e.target instanceof HTMLCanvasElement) e.preventDefault();
-      lastTouchEnd = now;
-    },
-    { passive: false },
-  );
+  // Outside the menu (whose buttons and code box need the browser's taps, focus and synthesized clicks) a touch is only
+  // ever game input, which reads pointer events (those still fire). Cancelling the touch's default action disables
+  // double-tap zoom, pinch and the long-press callout on the canvas, D-pad, buttons and the gaps between them.
+  const keepDefault = (target: EventTarget | null) =>
+    target instanceof Element && !!target.closest('#menu, input, textarea, select, a');
+  for (const type of ['touchstart', 'touchmove'] as const) {
+    document.addEventListener(type, (e) => !keepDefault(e.target) && e.preventDefault(), { passive: false });
+  }
+  document.addEventListener('touchend', (e) => !keepDefault(e.target) && e.preventDefault(), { passive: false });
+
+  // Safety net: if the page still ends up zoomed (scale > 1), reset it by re-applying the viewport tag.
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  const viewport = window.visualViewport;
+  if (meta && viewport) {
+    const content = meta.content;
+    viewport.addEventListener('resize', () => {
+      if (viewport.scale <= 1.01 || document.activeElement instanceof HTMLInputElement) return;
+      meta.content = `${content}, minimum-scale=1`;
+      requestAnimationFrame(() => (meta.content = content));
+    });
+  }
 }
 
 /** `onChange` fires when the controls appear or disappear, so the caller can re-layout around them. */
