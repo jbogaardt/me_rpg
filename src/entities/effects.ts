@@ -60,7 +60,7 @@ export function slashEffect(x: number, y: number, dir: Direction): Effect {
 /**
  * A glowing projectile. `step` is called with its position every frame and returns true when it hit
  * something, which ends it; it also ends after travelling `range` pixels. `onEnd` gets the final position
- * and whether it hit something.
+ * and whether it hit something. `glow` is the colour of the halo (cyan for the hero's Time Bolt).
  */
 export function boltEffect(
   x: number,
@@ -70,12 +70,13 @@ export function boltEffect(
   range: number,
   step: (x: number, y: number) => boolean,
   onEnd?: (x: number, y: number, hit: boolean) => void,
+  glow = 0x4de3ff,
 ): Effect {
   const g = new Graphics({ position: { x, y } })
     .circle(0, 0, 5)
-    .fill({ color: 0x4de3ff, alpha: 0.35 })
+    .fill({ color: glow, alpha: 0.35 })
     .circle(0, 0, 2.5)
-    .fill(0xe8fdff);
+    .fill(glow === 0x4de3ff ? 0xe8fdff : 0xfff4ec);
   let travelled = 0;
   let t = 0;
   return {

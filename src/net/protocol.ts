@@ -14,7 +14,7 @@ import { MOB_STATES } from '../systems/combat';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -50,7 +50,7 @@ export type FxName = (typeof FX_NAMES)[number];
 /** Something that happened this tick and is only shown, never simulated, on the guest. */
 export type WorldEvent =
   | { type: 'slash'; x: number; y: number; dir: number }
-  | { type: 'bolt'; x: number; y: number; vx: number; vy: number }
+  | { type: 'bolt'; x: number; y: number; vx: number; vy: number; color?: number } // `color` set: an enemy's shot (the guest only draws it)
   | { type: 'text'; x: number; y: number; text: string; color: number }
   | { type: 'fx'; name: FxName; x: number; y: number; dir?: number }
   | { type: 'defeat'; player: number }; // the player (0 host, 1 guest) was knocked out and sent back to spawn
@@ -107,8 +107,12 @@ function parseEvent(raw: unknown): WorldEvent | null {
         ? { type: 'slash', x: e.x, y: e.y, dir: e.dir }
         : null;
     case 'bolt':
-      return isCoord(e.x) && isCoord(e.y) && isCoord(e.vx) && isCoord(e.vy)
-        ? { type: 'bolt', x: e.x, y: e.y, vx: e.vx, vy: e.vy }
+      return isCoord(e.x) &&
+        isCoord(e.y) &&
+        isCoord(e.vx) &&
+        isCoord(e.vy) &&
+        (e.color === undefined || (isCount(e.color) && e.color <= 0xffffff))
+        ? { type: 'bolt', x: e.x, y: e.y, vx: e.vx, vy: e.vy, ...(e.color === undefined ? {} : { color: e.color }) }
         : null;
     case 'text':
       return isCoord(e.x) &&
