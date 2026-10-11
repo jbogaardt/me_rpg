@@ -23,6 +23,16 @@ import {
   type StampName,
 } from './catalog';
 import { coverage, sheet as loadSheet } from './image';
+import {
+  decompose,
+  TERRAIN_NAMES,
+  TERRAIN_SHEET,
+  TERRAINS,
+  tileTable,
+  variant,
+  FULL,
+  type TerrainName,
+} from './terrain';
 
 /** A rectangle of cells. May extend past the map edge (e.g. for border forests); it's clipped where needed. */
 export interface Rect {
@@ -38,6 +48,7 @@ export interface ZoneApi {
   readonly height: number;
   fill(name: GroundName, rect?: Rect): unknown;
   patch(name: GroundName, rect: Rect): unknown;
+  paint(name: TerrainName, area: Rect | Rect[], opts?: { erase?: boolean }): unknown;
   stamp(name: StampName, col: number, row: number): unknown;
   prop(name: PrefabName, col: number, row: number, nudge?: { dx?: number; dy?: number }): unknown;
   forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }): unknown;
@@ -89,6 +100,14 @@ export class WorldWindow implements ZoneApi {
   }
   patch(name: GroundName, rect: Rect) {
     this.z.patch(name, this.rect(rect));
+    return this;
+  }
+  paint(name: TerrainName, area: Rect | Rect[], opts?: { erase?: boolean }) {
+    this.z.paint(
+      name,
+      (Array.isArray(area) ? area : [area]).map((r) => this.rect(r)),
+      opts,
+    );
     return this;
   }
   stamp(name: StampName, col: number, row: number) {
@@ -158,7 +177,7 @@ export function buildSpec(spec: ZoneSpec, z: Zone) {
 export const defineZone = (spec: ZoneSpec) => spec;
 
 /** Small deterministic PRNG so builds are reproducible. */
-function rng(seed: number) {
+export function rng(seed: number) {
   let s = seed >>> 0 || 1;
   return () => {
     s ^= s << 13;
@@ -168,8 +187,13 @@ function rng(seed: number) {
   };
 }
 
-/** Surface names in the order stored in MapData.surfaces (a cell's `surface` indexes this). */
-const SURFACES: string[] = Object.keys(GROUND);
+/**
+ * Surface names in the order stored in MapData.surfaces (a cell's `surface` indexes this): the grounds, what the
+ * terrains are made of, and `beyond` (a cell of the neighbouring biome, seen but never walked; see world.ts).
+ */
+export const SURFACES: string[] = [
+  ...new Set([...Object.keys(GROUND), ...Object.values(TERRAINS).map((t) => t.surface), 'beyond']),
+];
 
 /** A hand-placed object that isn't a catalog prefab (cliff pieces cut from a sheet). */
 interface Extra {
@@ -202,6 +226,8 @@ export class Zone {
   private surfaceAt: number[]; // per cell: index into SURFACES
   private levelAt: number[]; // per cell: height (0 = ground)
   private ramps = new Set<number>();
+  private terrain = new Map<TerrainName, Uint8Array>(); // per terrain: which cell corners it covers, (w+1) x (h+1)
+  private cellMasks = new Map<TerrainName, Uint8Array>(); // per terrain: fixed corner masks per cell (see compose)
   private blocked = new Set<number>();
   private forced = new Map<number, boolean>(); // block()/unblock() overrides, applied last
   readonly reasons = new Map<number, string>(); // why a cell was blocked by hand (silences check warnings)
@@ -250,6 +276,37 @@ export class Zone {
   glare(col: number, row: number) {
     this.setGround(col, row, GROUND.ice.sheet, [608, 96], 'ice');
     return this;
+  }
+
+  /**
+   * Paint a terrain (see tools/map/terrain.ts) over the cells of `area`: they show it fully, and its soft edge reaches
+   * half a cell past them, so any union of rects works (stepped borders, inner corners). `erase` takes it away again
+   * (a path through a bog). Water-like terrains don't block by themselves: `block` the same rects.
+   */
+  paint(name: TerrainName, area: Rect | Rect[], opts: { erase?: boolean } = {}) {
+    const W = this.width + 1;
+    let v = this.terrain.get(name);
+    if (!v) this.terrain.set(name, (v = new Uint8Array(W * (this.height + 1))));
+    for (const r of Array.isArray(area) ? area : [area]) {
+      const c0 = Math.max(0, r.col),
+        r0 = Math.max(0, r.row);
+      const c1 = Math.min(this.width, r.col + r.w),
+        r1 = Math.min(this.height, r.row + r.h);
+      for (let row = r0; row <= r1 && r1 > r0; row++)
+        for (let col = c0; col <= c1 && c1 > c0; col++) v[row * W + col] = opts.erase ? 0 : 1;
+    }
+    return this;
+  }
+
+  /** The corner mask of `name` on a cell (bit 3 top-left .. bit 0 bottom-right). */
+  private cornerMask(name: TerrainName, col: number, row: number): number {
+    const fixed = this.cellMasks.get(name);
+    if (fixed) return fixed[row * this.width + col];
+    const v = this.terrain.get(name);
+    if (!v) return 0;
+    const W = this.width + 1;
+    const i = row * W + col;
+    return (v[i] << 3) | (v[i + 1] << 2) | (v[i + W] << 1) | v[i + W + 1];
   }
 
   /** Cover the whole map (or a rect) with a repeating ground. */
@@ -530,8 +587,8 @@ export class Zone {
    * The cells are opened up (a building's art would otherwise block them), so put the door where the art has one.
    * The arrival cell should be next to the other zone's own door, not on it.
    */
-  door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number) {
-    this.doorList.push({ col, row, w, to: { zone: toZone, col: toCol, row: toRow } });
+  door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number, dir?: DoorSpawn['dir']) {
+    this.doorList.push({ col, row, w, to: { zone: toZone, col: toCol, row: toRow }, ...(dir ? { dir } : {}) });
     for (let i = 0; i < w; i++) this.forced.set(row * this.width + col + i, false);
     return this;
   }
@@ -542,6 +599,88 @@ export class Zone {
     return this;
   }
 
+  /** What the spec placed besides terrain and props: the start, NPC, mobs, chests, shopkeepers and doors. */
+  entities() {
+    return {
+      spawn: this.spawnAt,
+      npc: this.npcAt,
+      mobs: this.mobList,
+      chests: this.chestList,
+      shops: this.shopList,
+      doors: this.doorList,
+      indoor: this.isIndoor,
+    };
+  }
+
+  /**
+   * One world from several zones of the same size, each owning some cells (`owner[i]` = index into `zones`, -1 for
+   * none): a cell takes its ground, collision, height and stairs from its owner; a terrain corner is painted when the
+   * owner of any cell touching it painted it (so a neighbour's sand fades softly across the seam; an opaque terrain,
+   * which brings its own sea, is taken from the cell's owner alone); a prop or tree is
+   * kept when the cell its foot stands on is its own zone's (or off the map, like a border forest's overhang). Points
+   * (spawn, mobs, doors...) are not carried over: read them from each zone's `entities()`.
+   */
+  static compose(width: number, height: number, owner: Int16Array, zones: Zone[]): Zone {
+    const out = new Zone(width, height);
+    for (let i = 0; i < width * height; i++) {
+      const z = zones[owner[i]];
+      if (!z) continue;
+      out.ground[i] = z.ground[i];
+      out.surfaceAt[i] = z.surfaceAt[i];
+      out.levelAt[i] = z.levelAt[i];
+      if (z.ramps.has(i)) out.ramps.add(i);
+      if (z.blocked.has(i)) out.blocked.add(i);
+      const forced = z.forced.get(i);
+      if (forced !== undefined) out.forced.set(i, forced);
+      const why = z.reasons.get(i);
+      if (why) out.reasons.set(i, why);
+    }
+    const W = width + 1;
+    const names = new Set(zones.flatMap((z) => [...z.terrain.keys()]));
+    for (const name of names) {
+      if ('opaque' in TERRAINS[name]) {
+        // Opaque terrain carries its own sea: each cell shows only what its owner painted, so it stops at the border.
+        const masks = new Uint8Array(width * height);
+        for (let i = 0; i < masks.length; i++)
+          masks[i] = zones[owner[i]]?.cornerMask(name, i % width, Math.floor(i / width)) ?? 0;
+        out.cellMasks.set(name, masks);
+        continue;
+      }
+      const v = new Uint8Array(W * (height + 1));
+      for (let row = 0; row <= height; row++) {
+        for (let col = 0; col <= width; col++) {
+          for (const [c, r] of [
+            [col - 1, row - 1],
+            [col, row - 1],
+            [col - 1, row],
+            [col, row],
+          ]) {
+            if (c < 0 || r < 0 || c >= width || r >= height) continue;
+            if (zones[owner[r * width + c]]?.terrain.get(name)?.[row * W + col]) {
+              v[row * W + col] = 1;
+              break;
+            }
+          }
+        }
+      }
+      out.terrain.set(name, v);
+    }
+    const ownsFoot = (k: number, px: number, py: number) => {
+      const col = Math.floor(px / CELL),
+        row = Math.floor(py / CELL);
+      return col < 0 || row < 0 || col >= width || row >= height || owner[row * width + col] === k;
+    };
+    zones.forEach((z, k) => {
+      for (const p of z.placed) {
+        const prefab = PREFABS[p.prefab];
+        if (ownsFoot(k, p.px + prefab.w / 2, p.py + prefab.h - 1)) out.placed.push(p);
+      }
+      for (const e of z.extras) if (ownsFoot(k, e.px + e.w / 2, e.py + e.h / 2)) out.extras.push(e);
+    });
+    out.spawnAt = zones[0]?.spawnAt ?? { col: 0, row: 0 };
+    return out;
+  }
+
   /** Resolve everything into the game's map format. */
   toMapData(): MapData {
     if (!this.spawnAt) throw new Error('zone has no spawn(); the player needs a start cell');
@@ -550,7 +689,26 @@ export class Zone {
       const i = sheets.indexOf(name);
       return i >= 0 ? i : sheets.push(name) - 1;
     };
-    const ground: (GroundCell | null)[] = this.ground.map((g) => (g ? [sheetIndex(g.sheet), g.x, g.y] : null));
+    const surface = [...this.surfaceAt];
+    const ground: (GroundCell | null)[] = this.ground.map((g, i) => {
+      const col = i % this.width,
+        row = Math.floor(i / this.width);
+      let layers: number[] = g ? [sheetIndex(g.sheet), g.x, g.y] : [];
+      for (const name of TERRAIN_NAMES) {
+        const m = this.cornerMask(name, col, row);
+        if (!m) continue;
+        const table = tileTable(name);
+        // A full tile hides everything under it, so the stack starts again there.
+        if (m === FULL) layers = [];
+        for (const part of decompose(table, m)) {
+          const [x, y] = part === FULL ? variant(table.get(FULL)!, col, row) : table.get(part)![0];
+          layers.push(sheetIndex(TERRAIN_SHEET), x, y);
+        }
+        // Mostly covered: the cell is made of it now (footprints, ice, the co-op map).
+        if ([8, 4, 2, 1].filter((b) => m & b).length >= 3) surface[i] = SURFACES.indexOf(TERRAINS[name].surface);
+      }
+      return layers.length ? (layers as GroundCell) : null;
+    });
 
     const objects: MapObject[] = [];
     for (const e of this.extras) {
@@ -606,7 +764,7 @@ export class Zone {
       objects,
       collision: [...blocked].sort((a, b) => a - b),
       surfaces: SURFACES,
-      surface: this.surfaceAt,
+      surface,
       level: this.levelAt,
       ramps: [...this.ramps].sort((a, b) => a - b),
       spawn: this.spawnAt,

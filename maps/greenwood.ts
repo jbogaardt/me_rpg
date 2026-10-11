@@ -1,154 +1,123 @@
-import { defineZone } from '../tools/map/zone';
+import { defineBiome, worldOf } from '../tools/map/world';
+import { TREES } from '../tools/map/catalog';
+import { awayFrom, blob, pond, ridge, road } from '../tools/map/helpers';
+import layout from './world';
 
-// The Greenwood: the south-west of the world and where the game starts. A meadow with groves, a beach lake, old ruins,
-// an overlook with chests, and the gate to the town. Goblins, wolfkin and shades live here.
-// It sits on the world grid at cols 0-49, rows 27-71 (see `origin` in tools/map/zone.ts), so the coordinates below are
-// world coordinates. Exits: north (cols 32-35) up to the Frostlands, east (rows 30-33) across to the Scorched Waste, and
-// the town gate (cols 22-24 at row 36).
-//
-// Build with `npm run map -- build`; preview in maps/out/greenwood.png.
-export const GATE = { door: { col: 22, row: 36, w: 3 }, outside: { col: 23, row: 41 } } as const;
+// The Greenwood: the big forest of the south-west and where the game starts. Meadows and groves round a crossroads,
+// an overlook with chests, old ruins, a lake, and roads to everywhere: north into the desert and the undead lands,
+// east into the Eastwood, south to the town (two gates). Goblins, wolfkin and shades: level 1-2.
+// World cells (maps/world.ts, 7 per square): the body is cols 0-146, rows 77-118; a western arm runs down to row 160
+// and a northern glade up to row 42. Build with `npm run map -- build`; `npm run map -- layout greenwood` shows its walls.
 
-export default defineZone({
+const W = worldOf(layout);
+const at = (b: string, n = 0) => {
+  const g = W.gap('greenwood', b, n);
+  return [g.col, g.row] as [number, number];
+};
+
+/** The roads, dirt on the grass: kept clear of scattered props. */
+const ROADS = [
+  ...road([[8, 93], at('eastwood')]), // the east-west road (the Eastwood gap is on it)
+  ...road([at('desert'), [at('desert')[0], 93]]), // north to the desert
+  ...road([at('undead'), [at('undead')[0], 93]]), // north to the undead lands
+  ...road([[at('town')[0], 93], at('town')]), // south to the town's north road
+  ...road([[56, 93], [56, at('town', 1)[1]], at('town', 1)]), // south-west, to its west gate
+];
+
+export default defineBiome({
   name: 'greenwood',
-  width: 50,
-  height: 45,
-  origin: { col: 0, row: 27 },
+  walls: { trees: TREES },
   build(z) {
     z.fill('grass');
+    z.paint('dirt', ROADS);
+    z.keepClear(ROADS);
+    const open = awayFrom(ROADS);
 
-    // --- World border: three cells of trees, with gaps for the three ways out -----------------------------------
-    z.forest({ col: -3, row: 24, w: 5, h: 51 }); // west
-    z.forest({ col: -3, row: 70, w: 56, h: 5 }); // south
-    z.forest({ col: -3, row: 27, w: 16, h: 3 }); // north, west of the overlook (its rim closes the rest)
-    z.forest({ col: 21, row: 27, w: 10, h: 3 }); // north, between the overlook and the gap
-    z.forest({ col: 37, row: 27, w: 16, h: 3 }); // north, east of the gap (and the corner)
-    z.forest({ col: 47, row: 34, w: 6, h: 38 }); // east, below the gap
-    z.door(32, 27, 4, 'frostlands', 33, 24); // up to the Frostlands
-    for (let row = 30; row <= 33; row++) z.door(49, row, 1, 'scorched', 2, row - 27); // across to the Scorched Waste
+    // --- The crossroads: where the game starts ---------------------------------------------------------------
+    z.spawn(98, 99);
+    z.npc(102, 99);
+    z.chest('wood', 'coins', 95, 101);
+    z.chest('wood', 'sack', 97, 102); // more pack slots, close to the start
+    z.prop('barrel', 104, 100);
+    z.prop('barrel', 105, 101);
+    z.keepClear({ col: 92, row: 97, w: 16, h: 8 });
 
-    // --- Groves, a beach lake, an old cobbled plaza -------------------------------------------------------------
-    z.forest({ col: 22, row: 29, w: 9, h: 6 });
-    z.forest({ col: 36, row: 31, w: 8, h: 5 });
-    z.forest({ col: 4, row: 29, w: 8, h: 5 });
-    z.forest({ col: 4, row: 58, w: 9, h: 6 });
-    z.forest({ col: 16, row: 64, w: 12, h: 5 });
-    z.forest({ col: 38, row: 61, w: 8, h: 7 });
+    // --- An overlook in the west: raised ground with stairs, and chests on top ---------------------------------
+    z.plateau({ col: 16, row: 100, w: 8, h: 5 }, { stairs: [19] });
+    z.prop('rockSmall', 17, 103);
+    z.chest('oak', 'elixir', 21, 101);
+    z.chest('oak', 'purse', 18, 101);
+    z.chest('oak', 'bandageKit', 22, 103);
+    z.mob('shade', 19, 102);
 
-    z.patch('sand', { col: 17, row: 50, w: 15, h: 11 }); // the beach
-    z.patch('water', { col: 19, row: 52, w: 11, h: 7 });
-    z.block({ col: 20, row: 53, w: 9, h: 5 }, 'lake');
+    // --- Old ruins: a cobbled square with what is left of it ---------------------------------------------------
+    z.patch('stone', { col: 34, row: 100, w: 11, h: 8 });
+    z.keepClear({ col: 33, row: 99, w: 13, h: 10 });
+    z.prop('barrel', 36, 102);
+    z.prop('rockC', 41, 101);
+    z.prop('rockB', 35, 105);
+    z.prop('menhir', 39, 104);
+    z.chest('wood', 'whetstone', 42, 105);
+    z.mob('goblin', 38, 103);
 
-    z.patch('stone', { col: 36, row: 44, w: 9, h: 7 }); // ruins
-    z.prop('barrel', 38, 46);
-    z.prop('barrel', 42, 49);
-    z.prop('rockC', 41, 45);
-    z.prop('rockB', 37, 49);
+    // --- The old lake in the south-west, a sandy shore round it ------------------------------------------------
+    const lake = pond(z, { col: 14, row: 126, w: 18, h: 10 }, { shore: 'sand' });
+    z.keepClear({ col: 11, row: 123, w: 24, h: 16 });
+    z.prop('lilyFlower', lake[3].col + 2, lake[3].row);
+    z.prop('lilyPads', lake[5].col + 8, lake[5].row);
+    z.prop('lilyRed', lake[6].col + 12, lake[6].row);
+    z.prop('reeds', lake[8].col + 1, lake[8].row);
 
-    z.prop('bush', 12, 40);
-    z.prop('bush', 44, 54, { dx: 2 });
-    z.prop('bush', 9, 54);
-    z.prop('treeA', 9, 37);
-    z.prop('treeB', 33, 57);
-    z.prop('treeB', 45, 40);
-    z.prop('treeA', 7, 41);
-    for (const [col, row] of [
-      [10, 44],
-      [34, 54],
-      [41, 56],
-      [6, 51],
+    // --- A grassy hill in the far south-west --------------------------------------------------------------------
+    z.plateau({ col: 22, row: 146, w: 7, h: 5 }, { stairs: [25] });
+    z.chest('oak', 'relic', 24, 147);
+    z.mob('wolfkin', 26, 149);
+
+    // --- The northern glade, between the desert and the undead lands --------------------------------------------
+    z.paint('meadow', blob({ col: 50, row: 56, w: 18, h: 14 }));
+    z.chest('oak', 'potion', 60, 58);
+    z.mob('shade', 62, 66);
+
+    // --- Groves, so the meadow is not one big field -----------------------------------------------------------
+    for (const r of [
+      { col: 25, row: 82, w: 9, h: 5 },
+      { col: 60, row: 80, w: 12, h: 6 },
+      { col: 82, row: 82, w: 10, h: 5 },
+      { col: 126, row: 80, w: 12, h: 7 },
+      { col: 64, row: 104, w: 10, h: 7 },
+      { col: 100, row: 108, w: 12, h: 6 },
+      { col: 130, row: 100, w: 8, h: 10 },
+      { col: 6, row: 112, w: 8, h: 8 },
+      { col: 40, row: 120, w: 10, h: 8 },
+      { col: 84, row: 121, w: 10, h: 4 },
+      { col: 32, row: 148, w: 12, h: 6 },
+      { col: 8, row: 150, w: 10, h: 5 },
+      { col: 48, row: 60, w: 6, h: 4 },
     ])
-      z.prop('flowerRed', col, row);
-    for (const [col, row] of [
-      [27, 62],
-      [8, 61],
-    ])
-      z.prop('flowersPurple', col, row);
-    for (const [col, row] of [
-      [48, 52],
-      [12, 54],
-      [34, 66],
-    ])
-      z.prop('rock', col, row);
-    z.prop('rockC', 46, 37);
+      z.forest(r);
+    ridge(z, 74, 112, 6);
+    ridge(z, 30, 112, 4, true);
 
-    z.prop('bush', 46, 47);
-    z.prop('bush', 34, 52);
-    z.prop('treeA', 5, 44);
-    z.prop('treeB', 36, 58);
-    z.prop('treeA', 48, 63);
-    for (const [col, row] of [
-      [36, 58],
-      [14, 58],
-      [47, 44],
-    ])
-      z.prop('flowerRed', col, row);
-    for (const [col, row] of [
-      [19, 62],
-      [40, 52],
-    ])
-      z.prop('flowersPurple', col, row);
-
-    // --- The gate to the town: a grove with a gap, and a small cobbled plaza in front of it ---------------------
-    z.forest({ col: 13, row: 36, w: 9, h: 3 });
-    z.forest({ col: 25, row: 36, w: 11, h: 3 });
-    z.patch('stone', { col: 19, row: 39, w: 9, h: 6 }); // fill is cols 20-26, rows 40-43
-    z.prop('barrel', 20, 40);
-    z.prop('barrel', 26, 40);
-    z.door(GATE.door.col, GATE.door.row, GATE.door.w, 'town', 14, 16); // into the town, just above its south gate
-    // The meadow where the village used to be.
-    z.prop('treeA', 15, 44);
-    z.prop('treeB', 30, 45);
-    z.prop('bush', 14, 41);
-    z.prop('bush', 32, 40);
-    z.prop('bush', 28, 47);
-    for (const [col, row] of [
-      [16, 47],
-      [24, 46],
-      [31, 43],
-      [20, 48],
-    ])
-      z.prop('flowerRed', col, row);
-    for (const [col, row] of [
-      [18, 42],
-      [27, 49],
-    ])
-      z.prop('flowersPurple', col, row);
-    z.prop('rock', 22, 47);
-
-    z.spawn(8, 48);
-    z.npc(12, 47);
-
-    // Level 1 fodder (goblins, a wolfkin, the odd shade).
+    // Level 1-2 fodder: goblins near the start, wolfkin and shades further out.
     for (const [kind, col, row] of [
-      ['goblin', 18, 35],
-      ['goblin', 40, 38],
-      ['shade', 38, 54],
-      ['wolfkin', 24, 62],
-      ['shade', 44, 58],
-      ['goblin', 15, 60],
+      ['goblin', 80, 99],
+      ['goblin', 112, 88],
+      ['goblin', 44, 88],
+      ['goblin', 118, 104],
+      ['goblin', 30, 96],
+      ['wolfkin', 136, 90],
+      ['wolfkin', 12, 140],
+      ['wolfkin', 48, 132],
+      ['wolfkin', 90, 128],
+      ['shade', 76, 116],
+      ['shade', 36, 86],
+      ['shade', 52, 150],
     ] as const)
       z.mob(kind, col, row);
 
-    // --- An overlook: raised ground with stairs up the south face -----------------------------------------------
-    z.plateau({ col: 14, row: 28, w: 6, h: 5 }, { stairs: [16] });
-    z.prop('rockSmall', 18, 29);
-    z.prop('bush', 15, 31);
-    for (const [col, row] of [
-      [16, 29],
-      [18, 31],
-      [17, 30],
-    ])
-      z.prop(col === 17 ? 'flowersPurple' : 'flowerRed', col, row);
-    z.mob('shade', 17, 31);
-
-    // Treasure chests: the shops sell the common gear, so chests hold what they don't (a restorative, a bag, tools)
-    // and purses of gold. A few coins by the start pay for a first purchase.
-    z.chest('wood', 'coins', 10, 51);
-    z.chest('wood', 'sack', 8, 52); // more pack slots, close to the start
-    z.chest('wood', 'whetstone', 12, 49);
-    z.chest('oak', 'elixir', 18, 30);
-    z.chest('oak', 'purse', 16, 28);
-    z.chest('oak', 'bandageKit', 15, 30);
+    z.scatter(['treeA', 'treeB'], { count: 45, where: open, seed: 11 });
+    z.scatter(['bush'], { count: 60, where: open, seed: 12 });
+    z.scatter(['rock', 'rockSmall', 'rockB', 'rockC'], { count: 35, where: open, seed: 13 });
+    z.scatter(['flowerRed', 'flowersPurple'], { count: 120, where: open, margin: 0, seed: 14 });
   },
 });

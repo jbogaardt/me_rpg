@@ -188,11 +188,12 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
     }
   };
   data.ground.forEach((g, i) => {
-    if (g)
+    if (!g) return;
+    for (let k = 0; k + 2 < g.length; k += 3)
       blit(
-        sheet(data.sheets[g[0]]),
-        g[1],
-        g[2],
+        sheet(data.sheets[g[k]]),
+        g[k + 1],
+        g[k + 2],
         CELL,
         CELL,
         (i % data.width) * CELL,

@@ -45,13 +45,17 @@ export function nearestEdge(w: number, h: number, x: number, y: number): { dir: 
 /**
  * The transition for a trip from `from` (the player's feet at x, y) to `to`: an iris when either zone is a room (or
  * the trip does not start at a map edge, e.g. waking at the spawn after a defeat), otherwise a slide toward the edge.
+ * `through` is the way the door taken goes across the world, when it says (a gap between two biomes, which can be
+ * anywhere in the map): open air to open air, that is the slide.
  */
 export function pickTransition(
   from: Pick<MapData, 'indoor' | 'width' | 'height'>,
   to: Pick<MapData, 'indoor'>,
   x: number,
   y: number,
+  through?: Direction,
 ): { kind: TransitionKind; dir: Direction } {
+  if (through && !from.indoor && !to.indoor) return { kind: 'slide', dir: through };
   const edge = nearestEdge(from.width * CELL, from.height * CELL, x, y);
   const slide = !from.indoor && !to.indoor && edge.distance <= EDGE_REACH;
   return { kind: slide ? 'slide' : 'iris', dir: edge.dir };

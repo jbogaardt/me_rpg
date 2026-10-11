@@ -27,12 +27,14 @@ export class MapView extends Container {
 
     data.ground.forEach((cell, i) => {
       if (!cell) return;
-      const [s, x, y] = cell;
-      const texture = this.frame(s, x, y, CELL, CELL);
-      if (!texture) return;
-      const sprite = new Sprite(texture);
-      sprite.position.set((i % data.width) * CELL, Math.floor(i / data.width) * CELL);
-      this.ground.addChild(sprite);
+      // A cell is one or more [sheet, x, y] layers, bottom first.
+      for (let k = 0; k + 2 < cell.length; k += 3) {
+        const texture = this.frame(cell[k]!, cell[k + 1]!, cell[k + 2]!, CELL, CELL);
+        if (!texture) continue;
+        const sprite = new Sprite(texture);
+        sprite.position.set((i % data.width) * CELL, Math.floor(i / data.width) * CELL);
+        this.ground.addChild(sprite);
+      }
     });
 
     for (const o of data.objects) {

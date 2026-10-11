@@ -134,7 +134,10 @@ export class Zones {
    */
   private beginTrip(from: ZoneState, dest: ZoneState, door = true) {
     const { arena } = this;
-    const pick = pickTransition(from.data, dest.data, arena.player.x, arena.player.y);
+    // The door being taken (a guest's view of its own body may lag the host's by a step, so look a little around).
+    const { x, y } = arena.player;
+    const through = doorsNear(from.data, x, y - 1, CELL).find((d) => d.to.zone === dest.name && d.dir)?.dir;
+    const pick = pickTransition(from.data, dest.data, x, y, through);
     const kind = door ? pick.kind : 'iris';
     this.transition.begin(
       kind,

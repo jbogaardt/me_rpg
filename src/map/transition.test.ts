@@ -46,6 +46,9 @@ describe('door transitions', () => {
     expect(pickTransition(outdoor, outdoor, 20 * CELL, 29.9 * CELL)).toEqual({ kind: 'slide', dir: 'down' });
     // Far from any edge (waking at the spawn after a defeat): no side to slide from.
     expect(pickTransition(outdoor, outdoor, 20 * CELL, 15 * CELL).kind).toBe('iris');
+    // A gap between two biomes says which way it goes, wherever it is in the map.
+    expect(pickTransition(outdoor, outdoor, 20 * CELL, 15 * CELL, 'up')).toEqual({ kind: 'slide', dir: 'up' });
+    expect(pickTransition(outdoor, room, 20 * CELL, 15 * CELL, 'up').kind).toBe('iris');
   });
 
   it('closes the iris on the old view, stays dark, then opens on the new one', () => {

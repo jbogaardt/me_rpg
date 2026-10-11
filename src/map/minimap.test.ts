@@ -8,7 +8,7 @@ const map = parseMap({
   width: 3,
   height: 2,
   ground: new Array(6).fill(null),
-  surfaces: ['grass', 'sand', 'water', 'snow', 'lava'],
+  surfaces: ['grass', 'sand', 'water', 'snow', 'quicksilver'],
   surface: [0, 1, 2, 3, 0, 4],
   collision: [2, 4],
 });

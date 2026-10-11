@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { generateAll } from './all';
 import { checkDoors, checkMap } from './check';
-import { buildSpec, Zone, type ZoneSpec } from './zone';
+import { buildSpec, Zone } from './zone';
 
 /** A small open grass field; `edit` adds whatever the case under test needs. */
 function field(edit: (z: Zone) => void) {
@@ -85,20 +83,12 @@ describe('checkMap doors', () => {
 });
 
 describe('checkMap', () => {
-  it('passes every real zone without errors, and every door has a way back', async () => {
-    const dir = path.resolve(import.meta.dirname, '../../maps');
-    const data = new Map<string, ReturnType<Zone['toMapData']>>();
-    for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
-      const spec = ((await import(pathToFileURL(path.join(dir, file)).href)) as { default?: ZoneSpec }).default;
-      if (!spec) continue;
-      const z = new Zone(spec.width, spec.height);
-      buildSpec(spec, z);
-      expect(checkMap(z.toMapData(), z.reasons).errors, file).toEqual([]);
-      data.set(file.replace(/\.ts$/, ''), z.toMapData());
-    }
-    expect(data.has('greenwood')).toBe(true);
-    expect(checkDoors(data)).toEqual([]);
-  });
+  it('passes every real zone without errors; the borders between biomes match and every door has a way back', async () => {
+    const { zones, errors } = await generateAll();
+    for (const [name, { report }] of zones) expect(report.errors, name).toEqual([]);
+    expect(zones.has('greenwood')).toBe(true);
+    expect(errors).toEqual([]); // checkSeams and checkDoors over every zone
+  }, 120_000);
 
   it('reads world cells through an origin, but leaves door destinations alone', () => {
     const z = new Zone(10, 10);

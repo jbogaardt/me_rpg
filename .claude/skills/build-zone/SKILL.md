@@ -11,7 +11,8 @@ Maps are code. `maps/<zone>.ts` is the source of truth; `npm run map -- build` c
 
 ## Loop
 
-1. Edit `maps/<zone>.ts` (see `maps/greenwood.ts` for a complete example).
+1. Edit `maps/<zone>.ts` (see `maps/greenwood.ts` for a complete example). For a biome, first look at
+   `npm run map -- layout <biome>`: its walls (`#`), gaps (`=`) and open ground (`.`) in world cells.
 2. `npm run map -- build` - prints errors (✗, must fix) and warnings (!, fix or justify).
 3. **Look at the result.** Read `maps/out/<zone>.png` (what players see) and
    `maps/out/<zone>.debug.png` (red = blocked, grid every cell, thicker every 5; green = spawn,
@@ -28,6 +29,7 @@ ground first, then features, then overrides.
 | Call | Does |
 |---|---|
 | `z.fill(ground, rect?)` | Repeating ground over the map or a rect. |
+| `z.paint(terrain, rects, {erase?})` | Autotiled terrain from the LPC atlas (see Terrain below) over the cells of one rect or many: full inside, soft edges and inner corners half a cell past them, so any union of rects works. Doesn't block: `block` water/lava/pits yourself. |
 | `z.patch(ground, rect)` | Ground patch blended into grass: the rect's outer ring becomes edge/corner tiles (sand has them), so the visible fill is the inner `(w-2)x(h-2)`. Min 3x3, rectangles only. |
 | `z.forest(rect, {seed?, trees?})` | Dense trees that block exactly `rect` (`trees`: `TREES` default, `FROST_TREES`, `DRY_TREES`); canopy pokes ~18px above the rect's top as walk-behind. Let border rects run 3 cells past the map edge so no gaps show. |
 | `z.prop(name, col, row, {dx?, dy?})` | One prefab with the **bottom-left cell of its footprint** at (col,row): bottom edge on the bottom of `row`, centred in the cells its width spans. Collision is derived from the art automatically. |
@@ -42,15 +44,30 @@ ground first, then features, then overrides.
 
 A `Rect` is `{ col, row, w, h }`.
 
+Biome specs (`defineBiome`, below) also get `z.bounds` (the biome's box), `z.owns(c, r)`, `z.free(c, r)`,
+`z.keepClear(rects)` (no scattered props there: roads, plazas, lakes) and
+`z.scatter(prefabs, { count, rect?, seed?, margin?, where? })`, which sprinkles props deterministically on free cells
+(not walls, gaps or anything already placed) with `margin` free cells round each. Scatter big things (trees) first;
+the build prints `scatter placed N of M` when there was no room, so lower the count. Helpers in `tools/map/helpers.ts`:
+`road(points)` (3-wide roads through nodes; a gap's corridor `worldOf(layout).gap(a, b)` is a node), `blob(rect)` (a
+rounded patch as rects), `pond(z, rect, { water, shore })` (blob of water, blocked, with a shore), `awayFrom(rects)`
+(a `where` filter), `ridge`.
+
 ## Assets (`tools/map/catalog.ts`)
 
-- Ground: `grass`, `sand`, `snow`, `water`, `ice`, `stone`. `patch(name, rect)` blends sand/snow/stone into grass
+- Terrain (`z.paint`, `TERRAINS` in `tools/map/terrain.ts`): `dirt` (paths), `sand`, `meadow`/`darkGrass` (deeper greens),
+  `snow`, `mud`, `redDirt`, `ash`/`soot` (undead), `road` (bricks), `pond`, `bog`, `ice` (slippery), `lava`, `pit`/`abyss`;
+  and the opaque `coast`/`snowCoast` (land painted over a `sea` fill). Later entries draw over earlier ones, and a full
+  tile hides what is under it, so paint the biome's base terrain first and erase it (`{ erase: true }`) under a plaza.
+- Ground fills: `grass`, `sand`, `snow`, `water`, `ice`, `stone`, and from the LPC atlas `sea`, `cobble`, `flagstone`, `crackedStone`. `patch(name, rect)` blends sand/snow/stone into grass
   via a ring. **`water` and `ice` rings blend into sand / snow, not grass**: lay a sand (or snow) patch first and put the
   water patch 1 cell inside its fill (the lake in `maps/frostlands.ts`). `snow`/`ice` are recolours (see Biomes in CLAUDE.md);
   re-run `npm run tilesets` after editing `tools/map/recolor.ts`. Water/ice rects are walkable until you `block` the inner cells.
 - Interior pieces (`interior.png`, drawn by `tools/map/interior.ts`): ground `planks`, `wall`, `mat`; prefabs `counter` (4x1.5), `shelf<Shop>` (3x2) and `sign<Shop>` (4x2) for each of smithy/armory/ranger/apothecary.
-- Prefabs: trees `treeA`/`treeB` (+ `frostTree*`, `dryTree*`; 3x3, block bottom two rows, top row walk-behind), bushes
-  `bush`/`frostBush`/`dryBush` (2x2), rocks `rock` (pale), `rockSmall`, `rockB`, `rockC` (+ `frostRock*`), `barrel`, and
+- Prefabs: trees `treeA`/`treeB` (+ `frostTree*`, `dryTree*`, `jungleTree*`, `deadTree*`, `swampTree*`; 3x3, block bottom two rows, top row walk-behind), bushes
+  `bush`/`frostBush`/`dryBush`/`jungleBush`/`deadBush`/`swampBush` (2x2), LPC `sandBoulder(B)`/`darkBoulder(B)` (2 wide),
+  `sandSpire`/`darkSpire`/`menhir` (1 wide), `reeds` (3 wide)/`reedsThin` (4.5 cells tall: everything they cover must be
+  water or wall), `lilyPads`/`lilyFlower`/`lilyFlowerB`/`lilyRed` (on water), rocks `rock` (pale), `rockSmall`, `rockB`, `rockC` (+ `frostRock*`), `barrel`, and
   decorations `flowerRed`/`flowersPurple` (no collision). Mix variants to avoid repetition.
 - Buildings (`town.png`, from the CC0 Town RPG Pack, built by `tools/map/town.ts`): `smithy` and `apothecary` are 6x7-cell halls,
   `armory` and `ranger` are 3x9-cell tall houses. Solid from the ground up (you walk around them, not behind). Leave one cell of
@@ -85,9 +102,22 @@ Think in cells: for `plateau({col, row, w, h})` the top is cols `col..col+w-1`, 
 
 Every `maps/<name>.ts` is a zone; the game starts in `greenwood` (`START_ZONE`, `src/main.ts`) and loads others on demand when a player nears a door (`Zones.ensure`). To add a building with an inside: `z.prop(...)` the building, `z.door(...)` on its door cells, and a new `maps/<room>.ts` with `z.indoor()` and its own `z.door` back out (arrival cells must not be doors). The town (`maps/town.ts`, `SHOP_DOORS`) and `tools/map/interiors.ts` (`shopInterior`) are the worked example; a shop room is 11x9 with the keeper behind a counter.
 
-**Neighbouring open-air zones** (the biomes) share one world grid: give each `defineZone` an `origin: { col, row }` (its top-left cell on that grid) and write the spec in *world* cells; the JSON is written in the zone's own cells. Door destinations (`toCol`, `toRow`) are always cells of the destination zone's own grid, so `z.door(32, 27, 4, 'frostlands', 33, 24)` in greenwood (world row 27 = its top row) leads to local (33, 24) of frostlands. Leave a gap in the tree border for the door. A door is a horizontal row of cells, so a vertical edge (east/west) uses a stack of one-cell doors, one per row, each arriving on the same row on the far side, a couple of cells in from the door. Walking off the edge slides into the next zone; the town gate and shops use the iris.
+**The biomes** (the open-air world) are laid out in `maps/world.ts`: one character per 7x7-cell square, so every
+border between two biomes is shared exactly, plus the list of **gaps**. Each biome is `maps/<name>.ts` with
+`defineBiome({ name, walls: { trees }, worldEdge?, build })`, written in *world* cells. You don't draw borders: the
+build walls every biome in with 3 cells of its `walls.trees` along each border (and the world's edge, unless
+`worldEdge: false`, as the beach closes it with the sea), opens a 3-wide corridor at each gap with doors on both sides
+leading straight across, and cuts each biome's map out of the composed world with 14 cells of its neighbours around it
+(drawn, blocked). `checkSeams` then fails the build if any border is open on one side only, open without a pair of
+doors, or if anything is open on the world's edge. To join two biomes, add a gap `{ at: [squareCol, squareRow], side }`
+(keep it at least 3 cells from a turn in the border), then run a `road` into `worldOf(layout).gap(a, b)` on both sides.
+To reshape the world, edit the layout's characters; a new biome needs a key letter and a `maps/<name>.ts`.
+Door destinations in other zones (`toCol`, `toRow`) are always cells of the destination zone's own map: convert a world
+cell with `worldOf(layout).toLocal(zone, col, row)` (the shop rooms use `shopExit` in `maps/town.ts`). Crossing a gap
+slides the screen the way the gap goes; rooms use the iris.
 
 ## Limits today
 
 - One NPC per zone with fixed dialog (`NPC_LINES` in `src/scenes/OverworldScene.ts`); shopkeepers are per shop room.
-- Zones stay loaded once visited (they are small); no streaming of one big world.
+- Zones stay loaded once visited; no streaming of one big world.
+- Content positions are absolute world cells: changing `square` in `maps/world.ts` means re-placing them.

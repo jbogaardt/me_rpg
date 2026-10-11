@@ -5,7 +5,7 @@
 
 import path from 'node:path';
 import { readPng, ROOT, writePng, type Image } from './image';
-import { SHADOW_RGB, SHADOW_FROST, SHADOW_DRY } from './catalog';
+import { SHADOW_RGB, SHADOW_FROST, SHADOW_DRY, SHADOW_JUNGLE, SHADOW_DEAD, SHADOW_SWAMP } from './catalog';
 
 const dir = (f: string) => path.join(ROOT, 'public/tilesets', f);
 
@@ -216,6 +216,23 @@ const dryFoliage =
     return fromHsl(34 + (l - 0.3) * 40, 0.5 + s * 0.15, clamp(l * 0.92 + 0.02));
   };
 
+// Jungle: deep, saturated greens. Dead (the undead lands): ashen, bloodless grey-violet. Swamp: murky olive.
+const tint =
+  (shadow: RGB, fn: (h: number, s: number, l: number) => RGB) =>
+  (c: RGB): RGB | null => {
+    if (isShadow(c)) return shadow;
+    const [h, s, l] = toHsl(c);
+    if (h < 50 || h > 170 || s < 0.1) return null;
+    return fn(h, s, l);
+  };
+const jungleFoliage = tint([...SHADOW_JUNGLE], (h, s, l) =>
+  fromHsl(138 + (h - 100) * 0.3, clamp(s * 0.8 + 0.12, 0, 0.62), clamp(l * 0.7)),
+);
+const deadFoliage = tint([...SHADOW_DEAD], (_h, s, l) => fromHsl(275, 0.06 + s * 0.08, clamp(l * 0.82 + 0.04)));
+const swampFoliage = tint([...SHADOW_SWAMP], (h, s, l) =>
+  fromHsl(78 + (h - 100) * 0.2, 0.2 + s * 0.15, clamp(l * 0.74)),
+);
+
 const FROST_SHADOW: RGB = [...SHADOW_FROST];
 const DRY_SHADOW: RGB = [...SHADOW_DRY];
 
@@ -224,6 +241,9 @@ for (const box of ROCKS) frost = recolor(frost, frostRock(FROST_SHADOW), box);
 writePng(dir('frost_objects.png'), frost);
 
 writePng(dir('dry_objects.png'), recolor(OBJ, dryFoliage(DRY_SHADOW), TREES_BOX));
+writePng(dir('jungle_objects.png'), recolor(OBJ, jungleFoliage, TREES_BOX));
+writePng(dir('dead_objects.png'), recolor(OBJ, deadFoliage, TREES_BOX));
+writePng(dir('swamp_objects.png'), recolor(OBJ, swampFoliage, TREES_BOX));
 
 // --- Cliffs: the plateau art has a grass top and brown rock. Frost: snow top + blue-grey rock; dry: sand top. ------
 // The lit grass is recoloured to the biome's ground tile (keeping some texture), so the plateau's walkable
@@ -278,5 +298,5 @@ writePng(
   recolor(CLIFFS, (c) => (isTop(c) ? dryTop(c) : dryRock(c))),
 );
 console.log(
-  'wrote ground_plus.png, frost_ground.png, frost_objects.png, dry_objects.png, frost_cliffs.png, dry_cliffs.png',
+  'wrote ground_plus.png, frost_ground.png, frost_objects.png, dry_objects.png, jungle_objects.png, dead_objects.png, swamp_objects.png, frost_cliffs.png, dry_cliffs.png',
 );

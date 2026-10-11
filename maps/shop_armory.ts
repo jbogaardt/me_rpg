@@ -1,12 +1,12 @@
 import { defineZone } from '../tools/map/zone';
 import { SHOP_ROOM, shopInterior } from '../tools/map/interiors';
-import { SHOP_DOORS } from './town';
+import { shopExit } from './town';
 
 // Inside the armory (see tools/map/interiors.ts). The way back out leads to the cell below its door in the overworld.
 export default defineZone({
   name: 'shop_armory',
   ...SHOP_ROOM,
   build(z) {
-    shopInterior(z, 'armory', { zone: 'town', ...SHOP_DOORS.armory.outside });
+    shopInterior(z, 'armory', shopExit('armory'));
   },
 });

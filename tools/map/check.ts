@@ -1,7 +1,7 @@
 import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
 import { MOB_KINDS } from '../../src/systems/combat';
 import { SHOPS } from '../../src/systems/shops';
-import { CELL, type MapData } from '../../src/map/types';
+import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
 import { coverage, sheet } from './image';
 
 export interface Report {
@@ -24,12 +24,16 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   // Assets exist and every rect is inside its sheet.
   d.ground.forEach((g, i) => {
     if (!g) return;
-    const img = sheet(d.sheets[g[0]]);
-    if (g[1] + CELL > img.width || g[2] + CELL > img.height)
-      errors.push(`ground ${at(i)} reads outside ${d.sheets[g[0]]}`);
+    for (let k = 0; k + 2 < g.length; k += 3) {
+      const img = sheet(d.sheets[g[k]]);
+      if (g[k + 1] + CELL > img.width || g[k + 2] + CELL > img.height)
+        errors.push(`ground ${at(i)} reads outside ${d.sheets[g[k]]}`);
+    }
   });
-  if (d.ground.some((g) => !g))
-    warnings.push(`${d.ground.filter((g) => !g).length} cells have no ground (they show the background colour)`);
+  // Cells of a neighbouring biome far off the edge of the screen are left bare on purpose (tools/map/world.ts).
+  const beyond = d.surfaces.indexOf('beyond');
+  const bare = d.ground.filter((g, i) => !g && d.surface[i] !== beyond).length;
+  if (bare) warnings.push(`${bare} cells have no ground (they show the background colour)`);
   for (const o of d.objects) {
     const img = sheet(d.sheets[o.s]);
     if (o.x + o.w > img.width || o.y + o.h > img.height)
@@ -208,4 +212,77 @@ export function checkDoors(maps: Map<string, MapData>): string[] {
     }
   }
   return errors;
+}
+
+/** The parts of the world layout (tools/map/world.ts `World`) the seam check needs. */
+export interface SeamWorld {
+  width: number;
+  height: number;
+  names: string[];
+  owner: Int16Array; // per world cell: index into `names`
+  crop(name: string): { col: number; row: number; w: number; h: number };
+}
+
+/**
+ * The borders between biomes match: for every two neighbouring world cells owned by different biomes, both sides are
+ * walled (blocked in their own maps), or both are doors leading straight across to each other. Nothing else may be
+ * open there, and every cell on the edge of the world is blocked. `maps` holds every zone by name.
+ */
+export function checkSeams(world: SeamWorld, maps: Map<string, MapData>): string[] {
+  const errors = new Map<string, string[]>();
+  const fail = (what: string, at: string) => errors.set(what, [...(errors.get(what) ?? []), at]);
+  const views = world.names.map((name) => {
+    const d = maps.get(name);
+    if (!d) throw new Error(`no map for biome ${name}`);
+    const crop = world.crop(name);
+    const blocked = new Set(d.collision);
+    const doors = new Map<number, DoorSpawn>();
+    for (const door of d.doors) for (let k = 0; k < door.w; k++) doors.set(door.row * d.width + door.col + k, door);
+    return { name, d, crop, blocked, doors };
+  });
+  const cell = (k: number, col: number, row: number) => {
+    const v = views[k];
+    const i = (row - v.crop.row) * v.d.width + col - v.crop.col;
+    return { v, blocked: v.blocked.has(i), door: v.doors.get(i) };
+  };
+  const W = world.width;
+  for (let row = 0; row < world.height; row++) {
+    for (let col = 0; col < W; col++) {
+      const a = world.owner[row * W + col];
+      if (row === 0 || col === 0 || row === world.height - 1 || col === W - 1) {
+        if (!cell(a, col, row).blocked) fail(`${world.names[a]}: open on the edge of the world`, `(${col},${row})`);
+      }
+      for (const [dc, dr, dir] of [
+        [1, 0, 'right'],
+        [0, 1, 'down'],
+      ] as const) {
+        const [bc, br] = [col + dc, row + dr];
+        if (bc >= W || br >= world.height) continue;
+        const b = world.owner[br * W + bc];
+        if (a === b) continue;
+        const A = cell(a, col, row),
+          B = cell(b, bc, br);
+        const seam = `${A.v.name}|${B.v.name}`;
+        const at = `(${col},${row})`;
+        if (A.blocked && B.blocked) continue;
+        if (A.blocked !== B.blocked) {
+          fail(`${seam}: the walls don't match (open on the ${A.blocked ? B.v.name : A.v.name} side only)`, at);
+          continue;
+        }
+        // Both open: a gap, so both must be doors straight across to each other.
+        const across = (door: DoorSpawn | undefined, to: (typeof views)[number], c: number, r: number, way: string) => {
+          if (!door || door.to.zone !== to.name) return false;
+          const wc = door.to.col + to.crop.col,
+            wr = door.to.row + to.crop.row;
+          return dc ? wr === r && (way === 'right' ? wc > c : wc < c) : wc === c && (way === 'down' ? wr > r : wr < r);
+        };
+        const back = dir === 'right' ? 'left' : 'up';
+        if (!across(A.door, B.v, col, row, dir) || !across(B.door, A.v, bc, br, back))
+          fail(`${seam}: open across the border without a pair of doors straight across`, at);
+      }
+    }
+  }
+  return [...errors].map(
+    ([what, at]) => `${what} at ${at.slice(0, 6).join(' ')}${at.length > 6 ? ` …(+${at.length - 6})` : ''}`,
+  );
 }

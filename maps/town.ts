@@ -1,61 +1,94 @@
-import { defineZone } from '../tools/map/zone';
+import { defineBiome, worldOf } from '../tools/map/world';
+import { TREES } from '../tools/map/catalog';
+import { awayFrom, pond, road } from '../tools/map/helpers';
 import { SHOP_ARRIVAL } from '../tools/map/interiors';
+import layout from './world';
 
 /**
- * The town's shops: the building's bottom-left cell, where its door cells are, and the cell just below it where a player
- * appears when they step back out (the shop interiors, maps/shop_*.ts, read this).
+ * The town's shops (world cells): the building's bottom-left cell, where its door cells are, and the cell just below it
+ * where a player appears when they step back out (the shop interiors, maps/shop_*.ts, read this through `shopExit`).
  */
 export const SHOP_DOORS = {
-  smithy: { building: { col: 4, row: 9 }, door: { col: 6, w: 2 }, outside: { col: 6, row: 10 } },
-  armory: { building: { col: 11, row: 9 }, door: { col: 12, w: 1 }, outside: { col: 12, row: 10 } },
-  apothecary: { building: { col: 15, row: 9 }, door: { col: 17, w: 2 }, outside: { col: 17, row: 10 } },
-  ranger: { building: { col: 22, row: 9 }, door: { col: 23, w: 1 }, outside: { col: 23, row: 10 } },
+  smithy: { building: { col: 104, row: 138 }, door: { col: 106, w: 2 }, outside: { col: 106, row: 139 } },
+  armory: { building: { col: 112, row: 138 }, door: { col: 113, w: 1 }, outside: { col: 113, row: 139 } },
+  apothecary: { building: { col: 127, row: 138 }, door: { col: 129, w: 2 }, outside: { col: 129, row: 139 } },
+  ranger: { building: { col: 135, row: 138 }, door: { col: 136, w: 1 }, outside: { col: 136, row: 139 } },
 } as const;
+export type ShopId = keyof typeof SHOP_DOORS;
 
-// The town: four shops in a row on a cobbled square; walk into a door to go inside. No enemies. You come in from the
-// Greenwood's gate at the south; the gap in the trees below the square (cols 13-16) leads back out.
-//
-// Build with `npm run map -- build`; preview in maps/out/town.png.
-export default defineZone({
+const W = worldOf(layout);
+/** Where the door out of shop `id` leads: the cell below its building's door, in the town's own cells. */
+export const shopExit = (id: ShopId) => ({
+  zone: 'town',
+  ...W.toLocal('town', SHOP_DOORS[id].outside.col, SHOP_DOORS[id].outside.row),
+});
+
+const north = W.gap('town', 'greenwood', 0);
+const west = W.gap('town', 'greenwood', 1);
+const east = W.gap('town', 'frostlands');
+/** Dirt streets from the three gates to the square, kept clear of props. */
+const STREETS = [
+  ...road([
+    [north.col, north.row],
+    [north.col, 140],
+  ]), // the north road, from the Greenwood
+  ...road([
+    [west.col, west.row],
+    [100, west.row],
+    [100, 140],
+  ]), // the west gate
+  ...road([
+    [124, 144],
+    [124, east.row],
+    [east.col, east.row],
+  ]), // the east road, out to the Frostlands
+];
+const SQUARE = { col: 100, row: 139, w: 42, h: 8 }; // cobbled, with a grassy fringe
+
+// The town: four shops along a cobbled square, dirt streets from its three gates (north and west into the Greenwood,
+// east into the Frostlands), a pond and gardens. No enemies. Walk into a shop's door to go inside.
+// World cells: cols 70-146, rows 119-160, stepped on the west (see maps/world.ts; `npm run map -- layout town`).
+export default defineBiome({
   name: 'town',
-  width: 30,
-  height: 20,
+  walls: { trees: TREES },
   build(z) {
     z.fill('grass');
-    z.patch('stone', { col: 3, row: 9, w: 23, h: 5 });
+    z.patch('stone', SQUARE);
+    z.paint('dirt', STREETS);
+    z.keepClear([...STREETS, SQUARE, { col: 102, row: 128, w: 38, h: 11 }]);
+    const open = awayFrom([...STREETS, SQUARE]);
+
     for (const [id, shop] of Object.entries(SHOP_DOORS)) {
-      z.prop(id as 'smithy' | 'armory' | 'apothecary' | 'ranger', shop.building.col, shop.building.row);
+      z.prop(id as ShopId, shop.building.col, shop.building.row);
       z.door(shop.door.col, shop.building.row, shop.door.w, `shop_${id}`, SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
     }
+    z.spawn(118, 142);
 
-    // --- Border trees, with a gap in the south that leads out to the Greenwood --------------------------------
-    z.forest({ col: -3, row: -3, w: 36, h: 4 }); // north (the shops stand in front of it)
-    z.forest({ col: -3, row: -3, w: 6, h: 26 }); // west
-    z.forest({ col: 27, row: -3, w: 6, h: 26 }); // east
-    z.forest({ col: -3, row: 17, w: 16, h: 6 }); // south, west of the gap
-    z.forest({ col: 17, row: 17, w: 16, h: 6 }); // south, east of the gap
-    z.door(13, 19, 4, 'greenwood', 23, 14); // out to the Greenwood, just below its gate
-
-    // --- Life in the square -------------------------------------------------------------------------------------
-    z.prop('barrel', 8, 13);
-    z.prop('barrel', 26, 15);
-    z.prop('bush', 8, 16);
-    z.prop('bush', 21, 16);
-    z.prop('treeA', 4, 17);
-    z.prop('treeB', 24, 17);
+    // --- Life in the square -----------------------------------------------------------------------------------
     for (const [col, row] of [
-      [9, 15],
-      [12, 16],
-      [18, 15],
-      [22, 16],
+      [102, 141],
+      [103, 144],
+      [117, 140],
+      [139, 144],
+      [110, 144],
     ])
-      z.prop('flowerRed', col, row);
+      z.prop('barrel', col, row);
     for (const [col, row] of [
-      [7, 14],
-      [20, 14],
+      [108, 143],
+      [132, 143],
+      [126, 141],
     ])
       z.prop('flowersPurple', col, row);
 
-    z.spawn(14, 15);
+    // --- A pond and gardens in the west of town ---------------------------------------------------------------
+    const water = pond(z, { col: 80, row: 148, w: 10, h: 6 }, { shore: 'sand' });
+    z.keepClear({ col: 78, row: 146, w: 14, h: 10 });
+    z.prop('lilyFlower', water[2].col + 1, water[2].row);
+    z.prop('lilyPads', water[3].col + 5, water[3].row);
+    z.prop('reedsThin', water[5].col + 7, water[5].row);
+
+    z.scatter(['treeA', 'treeB'], { count: 14, where: open, seed: 21 });
+    z.scatter(['bush'], { count: 20, where: open, seed: 22 });
+    z.scatter(['flowerRed', 'flowersPurple'], { count: 80, where: open, margin: 0, seed: 23 });
   },
 });

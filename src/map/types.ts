@@ -1,8 +1,12 @@
 /** Size of one map cell in world pixels. All tileset art is cut on this grid. */
 export const CELL = 32;
 
-/** A ground cell: which tileset sheet (index into MapData.sheets) and the top-left of its 32x32 source region. */
-export type GroundCell = [sheet: number, x: number, y: number];
+/**
+ * A ground cell: which tileset sheet (index into MapData.sheets) and the top-left of its 32x32 source region. More
+ * triples may follow: layers drawn over the first one, bottom to top (the soft, see-through edges of a terrain such
+ * as sand or bog painted over grass; tools/map/terrain.ts).
+ */
+export type GroundCell = [sheet: number, x: number, y: number, ...layers: number[]];
 
 /** A free-standing sprite (tree, rock...) cut from a sheet and placed at a world position. */
 export interface MapObject {
@@ -50,6 +54,8 @@ export interface ShopSpawn extends CellPoint {
 export interface DoorSpawn extends CellPoint {
   w: number; // cells wide, starting at `col` (a hall's door is two cells wide, a tower's one)
   to: { zone: string; col: number; row: number };
+  /** The way a player walking through it is going across the world, on a gap between two biomes: the screen slides that way. */
+  dir?: 'up' | 'down' | 'left' | 'right';
 }
 
 /**
@@ -74,7 +80,7 @@ export interface MapData {
   mobs: MobSpawn[];
   chests: ChestSpawn[]; // solid; opened with the action key
   shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
-  doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, and the way back out)
+  doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
 }
 

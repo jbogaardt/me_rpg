@@ -13,6 +13,17 @@ const SURFACE_COLORS: Record<string, Rgb> = {
   ice: [168, 212, 238],
   water: [56, 108, 178],
   stone: [138, 142, 148],
+  sea: [40, 96, 150],
+  cobble: [128, 130, 140],
+  flagstone: [210, 204, 170],
+  crackedStone: [126, 118, 110],
+  mud: [110, 78, 46],
+  dirt: [176, 140, 92],
+  ash: [92, 88, 96],
+  bog: [52, 58, 30],
+  lava: [226, 92, 30],
+  pit: [40, 30, 26],
+  beyond: [26, 26, 46], // a neighbouring biome: seen from here but not part of this zone
 };
 const UNKNOWN: Rgb = [120, 120, 120];
 /** Blocked cells (trees, rocks, cliffs, walls) are drawn darker so the shape of the land shows. Water is blocked everywhere. */

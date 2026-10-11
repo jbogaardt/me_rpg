@@ -22,6 +22,8 @@ const PRINTS: Record<string, { tint: number; alpha: number; life: number }> = {
   sand: { tint: 0x7a5c2c, alpha: 0.5, life: 2.5 },
   snow: { tint: 0x6f86ab, alpha: 0.7, life: 3 },
   puddle: { tint: 0x2f5f78, alpha: 0.6, life: 2 },
+  mud: { tint: 0x3b2614, alpha: 0.55, life: 2.5 },
+  ash: { tint: 0x2a272e, alpha: 0.5, life: 2.5 },
 };
 
 /** Leaf colours by the sheet a canopy was cut from (recoloured sheets drop snow-dust or withered leaves). */
@@ -29,7 +31,13 @@ const PALETTES = {
   frost: [0x5f95a3, 0x4a7a8a, 0x8fbcc8],
   dry: [0x8a5a1a, 0x6b4414, 0xb07a24],
   green: [0x3f7a2a, 0x2f6a24, 0x578f2c, 0xc9a23a],
+  jungle: [0x1f6a32, 0x2a7f3c, 0x175a2a],
+  dead: [0x6e6874, 0x57525c, 0x8a8290],
+  swamp: [0x5a6a2c, 0x4a5824, 0x76843a],
 };
+/** Which palette a sheet's canopies drop: the first PALETTES key in its file name, else green. */
+const paletteOf = (sheet: string) =>
+  PALETTES[(Object.keys(PALETTES) as (keyof typeof PALETTES)[]).find((k) => sheet.includes(k)) ?? 'green'];
 
 interface Walker {
   x: number;
@@ -281,7 +289,7 @@ export class Ambient {
 
   private dropLeaf(o: MapObject, x: number, ground: number, height: number) {
     const sheet = this.data.sheets[o.s] ?? '';
-    const palette = sheet.includes('frost') ? PALETTES.frost : sheet.includes('dry') ? PALETTES.dry : PALETTES.green;
+    const palette = paletteOf(sheet);
     const l = this.leaves[this.nextLeaf++ % LEAF_POOL];
     if (!l) return;
     l.alive = true;

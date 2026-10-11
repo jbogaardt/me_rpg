@@ -8,8 +8,12 @@ export const PLUS_SHEET = 'ground_plus.png'; // ground_tiles + a plain water til
 export const FROST_SHEET = 'frost_ground.png'; // sand -> snow, water -> ice
 export const FROST_OBJECTS = 'frost_objects.png'; // snow-dusted trees/bushes, blue-grey rocks
 export const DRY_OBJECTS = 'dry_objects.png'; // withered ochre trees/bushes
+export const JUNGLE_OBJECTS = 'jungle_objects.png'; // deep green jungle trees/bushes
+export const DEAD_OBJECTS = 'dead_objects.png'; // ashen grey trees/bushes of the undead lands
+export const SWAMP_OBJECTS = 'swamp_objects.png'; // murky olive marsh trees/bushes
 export const TOWN_SHEET = 'town.png'; // the shop buildings, cut from the CC0 Town RPG Pack by tools/map/town.ts
 export const INTERIOR_SHEET = 'interior.png'; // shop interiors: floor, wall, counter, shelves, signs (tools/map/interior.ts)
+export const TERRAIN_SHEET = 'lpc_terrain.png'; // the LPC terrain atlas (art/lpc_terrain/): autotiled terrains, see terrain.ts
 export const CLIFF_SHEET = 'Cliff_tileset.png'; // Avalon cliffs: a plateau blob, stairs, notches
 export const FROST_CLIFFS = 'frost_cliffs.png'; // cliffs with snow tops and blue-grey rock (recolor.ts)
 export const DRY_CLIFFS = 'dry_cliffs.png'; // cliffs with sandy tops and ochre rock (recolor.ts)
@@ -19,7 +23,10 @@ export const SHADOW_RGB = [152, 169, 150] as const;
 /** Shadow colours of the recoloured sheets (tools/map/recolor.ts), tuned to read on snow and on sand. */
 export const SHADOW_FROST = [150, 162, 178] as const;
 export const SHADOW_DRY = [183, 163, 125] as const;
-export const SHADOWS = [SHADOW_RGB, SHADOW_FROST, SHADOW_DRY] as const;
+export const SHADOW_JUNGLE = [96, 128, 92] as const;
+export const SHADOW_DEAD = [104, 98, 110] as const;
+export const SHADOW_SWAMP = [112, 118, 84] as const;
+export const SHADOWS = [SHADOW_RGB, SHADOW_FROST, SHADOW_DRY, SHADOW_JUNGLE, SHADOW_DEAD, SHADOW_SWAMP] as const;
 
 /** A repeating ground fill: `tiles[row % rows][col % cols]` gives the source [x, y] of each map cell. */
 export interface GroundFill {
@@ -82,6 +89,28 @@ export const GROUND = {
     ],
   },
   water: { sheet: PLUS_SHEET, tiles: [[[480, 320]]] },
+  // From the LPC terrain atlas. `sea` is the open water the `coast`/`snowCoast` terrains paint their land over.
+  sea: { sheet: TERRAIN_SHEET, tiles: [[[672, 352]]] },
+  cobble: {
+    sheet: TERRAIN_SHEET,
+    tiles: [
+      [
+        [224, 384],
+        [192, 384],
+      ],
+    ],
+  },
+  flagstone: { sheet: TERRAIN_SHEET, tiles: [[[224, 416]]] },
+  crackedStone: {
+    sheet: TERRAIN_SHEET,
+    tiles: [
+      [
+        [96, 544],
+        [128, 544],
+        [160, 544],
+      ],
+    ],
+  },
   // Painted ice (cracks and glints), six variants made by tools/map/recolor.ts in the sheet's empty corner.
   ice: {
     sheet: FROST_SHEET,
@@ -301,6 +330,15 @@ const ROCKS = (sheet: string) => ({
   rockC: rock(sheet, 352, 64, 32, 32, 'Wide craggy rock, one cell.'),
 });
 const rocks = ROCKS(OBJECT_SHEET);
+const lily = (x: number, y: number, w: number, h: number, about: string): Prefab => ({
+  sheet: TERRAIN_SHEET,
+  w,
+  h,
+  parts: [part(x, y, w, h)],
+  solid: null,
+  tag: 'flower',
+  about,
+});
 const frostRocks = ROCKS(FROST_OBJECTS);
 
 /** Where each shop building sits on town.png (2x the pack's art; both sizes are whole cells so the footprint is clean). */
@@ -377,7 +415,16 @@ export const PREFABS = {
   frostTreeB: tree(FROST_OBJECTS, 'B', 'treeB wearing snow (frost zone).'),
   dryTreeA: tree(DRY_OBJECTS, 'A', 'treeA withered to ochre (desert edge).'),
   dryTreeB: tree(DRY_OBJECTS, 'B', 'treeB withered to ochre (desert edge).'),
+  jungleTreeA: tree(JUNGLE_OBJECTS, 'A', 'treeA in deep jungle green.'),
+  jungleTreeB: tree(JUNGLE_OBJECTS, 'B', 'treeB in deep jungle green.'),
+  deadTreeA: tree(DEAD_OBJECTS, 'A', 'treeA drained to ashen grey (undead lands).'),
+  deadTreeB: tree(DEAD_OBJECTS, 'B', 'treeB drained to ashen grey (undead lands).'),
+  swampTreeA: tree(SWAMP_OBJECTS, 'A', 'treeA in murky olive (marsh, wetlands).'),
+  swampTreeB: tree(SWAMP_OBJECTS, 'B', 'treeB in murky olive (marsh, wetlands).'),
   bush: bush(OBJECT_SHEET, 'Small round bush (2x2 cells).'),
+  jungleBush: bush(JUNGLE_OBJECTS, 'Deep green bush (2x2).'),
+  deadBush: bush(DEAD_OBJECTS, 'Ashen grey bush (2x2).'),
+  swampBush: bush(SWAMP_OBJECTS, 'Olive marsh bush (2x2).'),
   frostBush: bush(FROST_OBJECTS, 'Snow-dusted bush (2x2).'),
   dryBush: bush(DRY_OBJECTS, 'Withered scrub (2x2).'),
   ...rocks,
@@ -385,6 +432,44 @@ export const PREFABS = {
   frostRockSmall: frostRocks.rockSmall,
   frostRockB: frostRocks.rockB,
   frostRockC: frostRocks.rockC,
+  // From the LPC terrain atlas (lpc_terrain.png).
+  sandBoulder: rock(TERRAIN_SHEET, 770, 625, 61, 43, 'Big sandstone boulder (2 cells wide).'),
+  sandBoulderB: rock(TERRAIN_SHEET, 834, 628, 58, 41, 'Second sandstone boulder (2 cells wide).'),
+  sandSpire: rock(TERRAIN_SHEET, 898, 622, 29, 44, 'Tall sandstone rock (1 cell).'),
+  darkBoulder: rock(TERRAIN_SHEET, 770, 689, 61, 43, 'Big dark basalt boulder (2 cells wide).'),
+  darkBoulderB: rock(TERRAIN_SHEET, 834, 692, 58, 41, 'Second dark boulder (2 cells wide).'),
+  darkSpire: rock(TERRAIN_SHEET, 898, 686, 29, 44, 'Tall dark rock (1 cell).'),
+  menhir: {
+    sheet: TERRAIN_SHEET,
+    w: 24,
+    h: 59,
+    parts: [part(995, 643, 24, 59)],
+    solid: { band: 24, min: 0.3 },
+    tag: 'rock',
+    about: 'Standing stone, 1 cell, about 2 tall (graves, old rings).',
+  },
+  reeds: {
+    sheet: TERRAIN_SHEET,
+    w: 96,
+    h: 144,
+    parts: [part(32, 816, 96, 144)],
+    solid: { band: 44, min: 0.5 },
+    tag: 'reeds',
+    about: 'A tall bed of reeds standing in water (3 cells wide, 4.5 tall); its watery foot row blocks.',
+  },
+  reedsThin: {
+    sheet: TERRAIN_SHEET,
+    w: 32,
+    h: 144,
+    parts: [part(0, 816, 32, 144)],
+    solid: { band: 44, min: 0.5 },
+    tag: 'reeds',
+    about: 'A narrow clump of reeds in water (1 cell wide).',
+  },
+  lilyFlower: lily(192, 544, 32, 32, 'Lily pads with a pink flower; lay on water.'),
+  lilyFlowerB: lily(224, 545, 31, 31, 'Lily pads with a white flower; lay on water.'),
+  lilyPads: lily(256, 544, 32, 24, 'Plain lily pads; lay on water.'),
+  lilyRed: lily(288, 544, 32, 30, 'Lily pads with a red flower; lay on water.'),
   barrel: {
     sheet: OBJECT_SHEET,
     w: 28,
@@ -418,6 +503,9 @@ export type PrefabName = keyof typeof PREFABS;
 export const TREES: PrefabName[] = ['treeA', 'treeB'];
 export const FROST_TREES: PrefabName[] = ['frostTreeA', 'frostTreeB'];
 export const DRY_TREES: PrefabName[] = ['dryTreeA', 'dryTreeB'];
+export const JUNGLE_TREES: PrefabName[] = ['jungleTreeA', 'jungleTreeB'];
+export const DEAD_TREES: PrefabName[] = ['deadTreeA', 'deadTreeB'];
+export const SWAMP_TREES: PrefabName[] = ['swampTreeA', 'swampTreeB'];
 
 /**
  * Cliff kit: the plateau blob on Cliff_tileset.png (x 44-213, y 15-223) cut along its 64x64 grass hole
