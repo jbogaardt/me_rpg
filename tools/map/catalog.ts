@@ -3,9 +3,21 @@
 
 export const GROUND_SHEET = 'ground_tiles.png';
 export const OBJECT_SHEET = 'object-layer.png';
+// Derived by tools/map/recolor.ts (`npm run tilesets`): same layout as the originals, recoloured.
+export const PLUS_SHEET = 'ground_plus.png'; // ground_tiles + a plain water tile matching the lake ring
+export const FROST_SHEET = 'frost_ground.png'; // sand -> snow, water -> ice
+export const FROST_OBJECTS = 'frost_objects.png'; // snow-dusted trees/bushes, blue-grey rocks
+export const DRY_OBJECTS = 'dry_objects.png'; // withered ochre trees/bushes
+export const CLIFF_SHEET = 'Cliff_tileset.png'; // Avalon cliffs: a plateau blob, stairs, notches
+export const FROST_CLIFFS = 'frost_cliffs.png'; // cliffs with snow tops and blue-grey rock (recolor.ts)
+export const DRY_CLIFFS = 'dry_cliffs.png'; // cliffs with sandy tops and ochre rock (recolor.ts)
 
 /** Baked-in drop-shadow colour on object-layer.png. Ignored when measuring how much a cell is covered. */
 export const SHADOW_RGB = [152, 169, 150] as const;
+/** Shadow colours of the recoloured sheets (tools/map/recolor.ts), tuned to read on snow and on sand. */
+export const SHADOW_FROST = [150, 162, 178] as const;
+export const SHADOW_DRY = [183, 163, 125] as const;
+export const SHADOWS = [SHADOW_RGB, SHADOW_FROST, SHADOW_DRY] as const;
 
 /** A repeating ground fill: `tiles[row % rows][col % cols]` gives the source [x, y] of each map cell. */
 export interface GroundFill {
@@ -47,6 +59,41 @@ export const GROUND = {
       ],
     ],
   },
+  snow: {
+    sheet: FROST_SHEET,
+    tiles: [
+      [
+        [32, 160],
+        [64, 160],
+        [96, 160],
+      ],
+      [
+        [32, 192],
+        [64, 192],
+        [96, 192],
+      ],
+      [
+        [32, 224],
+        [64, 224],
+        [96, 224],
+      ],
+    ],
+  },
+  water: { sheet: PLUS_SHEET, tiles: [[[480, 320]]] },
+  ice: { sheet: FROST_SHEET, tiles: [[[480, 320]]] },
+  stone: {
+    sheet: GROUND_SHEET,
+    tiles: [
+      [
+        [32, 288],
+        [64, 288],
+      ],
+      [
+        [32, 320],
+        [64, 320],
+      ],
+    ],
+  },
 } satisfies Record<string, GroundFill>;
 
 export type GroundName = keyof typeof GROUND;
@@ -76,7 +123,82 @@ export const RINGS: Partial<Record<GroundName, Ring>> = {
     s: [224, 192],
     se: [256, 192],
   },
+  // Snow: the sand ring recoloured, so it blends into grass the same way.
+  snow: {
+    sheet: FROST_SHEET,
+    nw: [192, 128],
+    n: [224, 128],
+    ne: [256, 128],
+    w: [192, 160],
+    e: [256, 160],
+    sw: [192, 192],
+    s: [224, 192],
+    se: [256, 192],
+  },
+  // Lakes and ponds: the shore blends into *sand* (water) or *snow* (ice), not grass, so wrap them in a
+  // sand/snow patch first.
+  water: {
+    sheet: PLUS_SHEET,
+    nw: [384, 256],
+    n: [416, 256],
+    ne: [448, 256],
+    w: [384, 288],
+    e: [448, 288],
+    sw: [384, 320],
+    s: [416, 320],
+    se: [448, 320],
+  },
+  ice: {
+    sheet: FROST_SHEET,
+    nw: [384, 256],
+    n: [416, 256],
+    ne: [448, 256],
+    w: [384, 288],
+    e: [448, 288],
+    sw: [384, 320],
+    s: [416, 320],
+    se: [448, 320],
+  },
+  // Cobblestone plaza with a grassy fringe.
+  stone: {
+    sheet: GROUND_SHEET,
+    nw: [192, 256],
+    n: [224, 256],
+    ne: [256, 256],
+    w: [192, 288],
+    e: [256, 288],
+    sw: [192, 320],
+    s: [224, 320],
+    se: [256, 320],
+  },
 };
+
+/**
+ * Pre-painted ground decorations (dunes, a giant skull...) copied cell by cell with `zone.stamp`.
+ * Cells that aren't fully opaque in the source are skipped, so the shapes stay irregular.
+ */
+export interface Stamp {
+  sheet: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  about: string;
+}
+export const STAMPS = {
+  skull: {
+    sheet: GROUND_SHEET,
+    x: 256,
+    y: 512,
+    w: 128,
+    h: 160,
+    about: 'Giant buried skull on sand (4x5 cells, irregular outline).',
+  },
+  dune: { sheet: GROUND_SHEET, x: 32, y: 512, w: 96, h: 160, about: 'Shallow sand hollow (3x4 cells).' },
+  crater: { sheet: GROUND_SHEET, x: 416, y: 512, w: 96, h: 96, about: 'Wide sand crater (3x3 cells).' },
+  pit: { sheet: GROUND_SHEET, x: 416, y: 640, w: 32, h: 32, about: 'Small sand pit (1 cell).' },
+} satisfies Record<string, Stamp>;
+export type StampName = keyof typeof STAMPS;
 
 /** One source rect of a prefab, drawn at (dx, dy) inside the prefab's w x h box. */
 export interface PrefabPart {
@@ -99,53 +221,122 @@ export interface Prefab {
    * bottom `band` pixels are blocked. The art above the band is walk-behind. Null = decoration only.
    */
   solid: { band: number; min: number } | null;
+  /** What the object is, copied to MapObject.tag so game systems (leaf fall, rustling...) can find it. */
+  tag?: string;
   about: string;
 }
 
 const part = (x: number, y: number, w: number, h: number, dx = 0, dy = 0): PrefabPart => ({ x, y, w, h, dx, dy });
 
+const treeParts = {
+  A: [part(96, 103, 64, 89), part(160, 127, 30, 65, 64, 24)],
+  B: [part(220, 103, 66, 89, 28, 0), part(192, 125, 28, 67, 0, 22)],
+};
+const tree = (sheet: string, which: 'A' | 'B', about: string): Prefab => ({
+  sheet,
+  w: 94,
+  h: 89,
+  parts: treeParts[which],
+  solid: { band: 64, min: 0.5 },
+  tag: 'tree',
+  about,
+});
+const bush = (sheet: string, about: string): Prefab => ({
+  sheet,
+  w: 62,
+  h: 57,
+  parts: [part(160, 71, 62, 57)],
+  solid: { band: 40, min: 0.5 },
+  tag: 'bush',
+  about,
+});
+const rock = (sheet: string, x: number, y: number, w: number, h: number, about: string): Prefab => ({
+  sheet,
+  w,
+  h,
+  parts: [part(x, y, w, h)],
+  solid: { band: h, min: 0.3 },
+  tag: 'rock',
+  about,
+});
+const ROCKS = (sheet: string) => ({
+  rock: rock(sheet, 290, 32, 30, 32, 'Boulder, one cell.'),
+  rockSmall: rock(sheet, 290, 65, 28, 30, 'Smaller rock, one cell.'),
+  rockB: rock(sheet, 320, 64, 32, 32, 'Tall craggy rock, one cell.'),
+  rockC: rock(sheet, 352, 64, 32, 32, 'Wide craggy rock, one cell.'),
+});
+const rocks = ROCKS(OBJECT_SHEET);
+const frostRocks = ROCKS(FROST_OBJECTS);
+
 export const PREFABS = {
-  treeA: {
-    sheet: OBJECT_SHEET,
-    w: 94,
-    h: 89,
-    parts: [part(96, 103, 64, 89), part(160, 127, 30, 65, 64, 24)],
-    solid: { band: 64, min: 0.5 },
-    about: 'Round leafy canopy (3x3 cells). Blocks its bottom two rows; top row is walk-behind.',
-  },
-  treeB: {
-    sheet: OBJECT_SHEET,
-    w: 94,
-    h: 89,
-    parts: [part(220, 103, 66, 89, 28, 0), part(192, 125, 28, 67, 0, 22)],
-    solid: { band: 64, min: 0.5 },
-    about: 'Second canopy variant, same size and collision as treeA. Mix the two to avoid repetition.',
-  },
-  bush: {
-    sheet: OBJECT_SHEET,
-    w: 62,
-    h: 57,
-    parts: [part(160, 71, 62, 57)],
-    solid: { band: 40, min: 0.5 },
-    about: 'Small round bush (2x2 cells).',
-  },
-  rock: {
-    sheet: OBJECT_SHEET,
-    w: 30,
-    h: 32,
-    parts: [part(290, 32, 30, 32)],
-    solid: { band: 32, min: 0.3 },
-    about: 'Boulder, one cell.',
-  },
-  rockSmall: {
+  treeA: tree(OBJECT_SHEET, 'A', 'Round leafy canopy (3x3 cells). Blocks its bottom two rows; top row is walk-behind.'),
+  treeB: tree(
+    OBJECT_SHEET,
+    'B',
+    'Second canopy variant, same size and collision as treeA. Mix the two to avoid repetition.',
+  ),
+  frostTreeA: tree(FROST_OBJECTS, 'A', 'treeA wearing snow (frost zone).'),
+  frostTreeB: tree(FROST_OBJECTS, 'B', 'treeB wearing snow (frost zone).'),
+  dryTreeA: tree(DRY_OBJECTS, 'A', 'treeA withered to ochre (desert edge).'),
+  dryTreeB: tree(DRY_OBJECTS, 'B', 'treeB withered to ochre (desert edge).'),
+  bush: bush(OBJECT_SHEET, 'Small round bush (2x2 cells).'),
+  frostBush: bush(FROST_OBJECTS, 'Snow-dusted bush (2x2).'),
+  dryBush: bush(DRY_OBJECTS, 'Withered scrub (2x2).'),
+  ...rocks,
+  frostRock: frostRocks.rock,
+  frostRockSmall: frostRocks.rockSmall,
+  frostRockB: frostRocks.rockB,
+  frostRockC: frostRocks.rockC,
+  barrel: {
     sheet: OBJECT_SHEET,
     w: 28,
-    h: 30,
-    parts: [part(290, 65, 28, 30)],
-    solid: { band: 30, min: 0.3 },
-    about: 'Smaller rock, one cell.',
+    h: 40,
+    parts: [part(321, 18, 28, 40)],
+    solid: { band: 24, min: 0.3 },
+    tag: 'barrel',
+    about: 'Wooden barrel (1 cell wide).',
+  },
+  flowerRed: {
+    sheet: OBJECT_SHEET,
+    w: 16,
+    h: 15,
+    parts: [part(352, 40, 16, 15)],
+    solid: null,
+    tag: 'flower',
+    about: 'Red flower, decoration only.',
+  },
+  flowersPurple: {
+    sheet: OBJECT_SHEET,
+    w: 18,
+    h: 28,
+    parts: [part(366, 33, 18, 28)],
+    solid: null,
+    tag: 'flower',
+    about: 'Pair of purple flowers, decoration only.',
   },
 } satisfies Record<string, Prefab>;
 
 export type PrefabName = keyof typeof PREFABS;
 export const TREES: PrefabName[] = ['treeA', 'treeB'];
+export const FROST_TREES: PrefabName[] = ['frostTreeA', 'frostTreeB'];
+export const DRY_TREES: PrefabName[] = ['dryTreeA', 'dryTreeB'];
+
+/**
+ * Cliff kit: the plateau blob on Cliff_tileset.png (x 44-213, y 15-223) cut along its 64x64 grass hole
+ * into a 3x3 grid whose middle row/column repeat in 32px chunks, so a plateau can be any size >= 4x4 cells.
+ * `zone.plateau(rect)` assembles it; rect is the *walkable top* in cells. Measured from the art:
+ *   - the hole's top-left corner sits at world ((rect.col+1)*32, (rect.row+1)*32), so
+ *   - the rim rocks fall in the 1-cell ring N/W/E of rect and the rock face covers the 2 rows below it,
+ *   - the lighter fringe grass inside the rim is walkable (same grass as the ground).
+ * Stairs piece (x 320-416, y 128-222) replaces three 32px face columns; its steps span the middle one.
+ */
+export const CLIFF = {
+  /** Source column boundaries: left rim | repeat A | repeat B | right rim. */
+  xs: [44, 96, 128, 160, 213],
+  /** Source row boundaries: top rim | repeat A | repeat B | fringe + face. */
+  ys: [15, 64, 96, 128, 223],
+  stairs: { x: 320, y: 128, w: 96, h: 94 },
+  /** Cliff sheet per biome. Frost/dry are recolours with identical coordinates (tools/map/recolor.ts). */
+  sheets: { grass: CLIFF_SHEET, frost: FROST_CLIFFS, dry: DRY_CLIFFS },
+};
+export type CliffKind = keyof typeof CLIFF.sheets;

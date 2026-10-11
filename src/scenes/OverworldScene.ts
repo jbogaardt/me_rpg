@@ -5,6 +5,7 @@ import { input } from '../core/input';
 import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import { Character, DIR_VEC, directionToward } from '../entities/Character';
+import { Ambient } from '../entities/ambient';
 import { boltEffect, Effects, floatText, slashEffect } from '../entities/effects';
 import { Mob, type MobWorld } from '../entities/Mob';
 import type { Dialog } from '../hud/Dialog';
@@ -56,6 +57,7 @@ export class OverworldScene implements Scene {
   private mobWorld: MobWorld;
   private hero = newHero();
   private effects: Effects;
+  private ambient: Ambient;
   private spawn: CellPoint;
   private screen = { width: 0, height: 0 };
 
@@ -77,6 +79,7 @@ export class OverworldScene implements Scene {
     this.collision = new Collision(data.width, data.height, data.collision);
     this.spawn = data.spawn;
     this.effects = new Effects(this.world.layer);
+    this.ambient = new Ambient(this.world.layer, data);
     this.player = new Character(sprites.hero, true);
     this.npc = new Character(sprites.npc);
 
@@ -138,6 +141,7 @@ export class OverworldScene implements Scene {
     }
     this.handleAction();
     this.effects.update(dt);
+    this.ambient.update(dt, this.player, [this.player, ...this.mobs.filter((m) => m.alive).map((m) => m.body)]);
 
     this.npc.animate(dt * 1000, false);
     for (const body of this.bodies()) body.zIndex = body.y;
@@ -207,6 +211,7 @@ export class OverworldScene implements Scene {
     this.effects.add(slashEffect(this.player.x + vx * 6, this.player.y - 12 + vy * 6, dir));
     const cx = this.player.x + vx * 16;
     const cy = this.player.y + vy * 16;
+    this.ambient.shake(cx, cy - 6, MELEE_REACH); // swinging at a tree or bush shakes leaves loose
     for (const mob of this.mobs) {
       if (mob.alive && Math.hypot(mob.body.x - cx, mob.body.y - cy) < MELEE_REACH) {
         this.hitMob(mob, rollDamage(attackPower(this.hero), mob.kind.defense), vx, vy);

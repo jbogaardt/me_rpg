@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { PNG } from 'pngjs';
-import { CELL, type MapData } from '../../src/map/types';
-import { SHADOW_RGB } from './catalog';
+import { CELL, sortKey, type MapData } from '../../src/map/types';
+import { SHADOWS } from './catalog';
 
 export const ROOT = path.resolve(import.meta.dirname, '../..');
 
@@ -44,7 +44,7 @@ export function isArt(img: Image, x: number, y: number): boolean {
   const i = (y * img.width + x) * 4;
   const d = img.data;
   if (d[i + 3] < 16) return false;
-  return !(d[i] === SHADOW_RGB[0] && d[i + 1] === SHADOW_RGB[1] && d[i + 2] === SHADOW_RGB[2]);
+  return !SHADOWS.some((c) => d[i] === c[0] && d[i + 1] === c[1] && d[i + 2] === c[2]);
 }
 
 /**
@@ -116,7 +116,7 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
         Math.floor(i / data.width) * CELL,
       );
   });
-  const objects = data.objects.map((o, i) => ({ o, i })).sort((a, b) => a.o.py + a.o.h - (b.o.py + b.o.h) || a.i - b.i);
+  const objects = data.objects.map((o, i) => ({ o, i })).sort((a, b) => sortKey(a.o) - sortKey(b.o) || a.i - b.i);
   for (const { o } of objects) blit(sheet(data.sheets[o.s]), o.x, o.y, o.w, o.h, o.px, o.py);
 
   const tint = (x0: number, y0: number, w: number, h: number, rgb: number, alpha: number) => {
