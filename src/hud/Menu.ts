@@ -10,7 +10,10 @@ import {
   type Hero,
   type Item,
 } from '../systems/combat';
+import { packEntries, useFromPack, wearFromPack } from '../systems/inventory';
+import { sellPrice } from '../systems/shops';
 import { input } from '../core/input';
+import { bonuses } from './itemText';
 import type { Session } from '../net/session';
 import type { TouchControls } from '../core/touch';
 import { Keybinds } from './Keybinds';
@@ -35,14 +38,7 @@ const SLOT_LABELS: Record<GearSlot, string> = {
 /** One line for a gear slot: the item and what it adds ("Short Bow +2 ATK, ranged"), or "Empty". */
 function describe(item: Item | undefined): string {
   if (!item) return '<small>Empty</small>';
-  const bonuses = [
-    item.attack ? `+${item.attack} ATK` : '',
-    item.defense ? `+${item.defense} DEF` : '',
-    item.ranged ? 'ranged' : '',
-  ]
-    .filter(Boolean)
-    .join(', ');
-  return `${item.name} <small>${bonuses}</small>`;
+  return `${item.name} <small>${bonuses(item)}</small>`;
 }
 
 export class Menu {
@@ -51,6 +47,9 @@ export class Menu {
   private tab = 0;
 
   private keybinds: Keybinds;
+  private hero: Hero | null = null;
+  /** Called after the pack changed what the hero wears, so the scene can redraw the hero. */
+  onGearChange: () => void = () => {};
 
   constructor(session: Session, touch: TouchControls) {
     new Multiplayer(session, () => this.close()); // owns the Online tab
@@ -58,10 +57,24 @@ export class Menu {
     for (const [i, name] of TABS.entries()) {
       this.tabButton(name).addEventListener('click', () => this.select(i));
     }
+    document.getElementById('menu-gear')!.addEventListener('click', (e) => this.packClick(e));
+  }
+
+  /** Wear or drink an item from the pack (the buttons beside it carry the entry's number). */
+  private packClick(e: Event) {
+    const button = (e.target as HTMLElement).closest<HTMLElement>('button[data-pack]');
+    if (!button || !this.hero) return;
+    button.blur(); // so the action key (Space) cannot press it again
+    const entry = packEntries(this.hero)[Number(button.dataset.pack)];
+    if (!entry) return;
+    if (button.dataset.act === 'wear' && wearFromPack(this.hero, entry.item)) this.onGearChange();
+    else if (button.dataset.act === 'use') useFromPack(this.hero, entry.item);
+    this.render(this.hero);
   }
 
   /** Open or close the menu. When opening, `tab` (e.g. 'online') picks the page to show. */
   toggle(hero: Hero, tab?: string) {
+    this.hero = hero;
     this.open = !this.open;
     this.root.hidden = !this.open;
     if (!this.open) this.keybinds.cancel();
@@ -95,6 +108,22 @@ export class Menu {
     }
   }
 
+  /** The pack as a list: each kind once, with a button to wear it (gear) or drink it (supplies). */
+  private packHtml(hero: Hero): string {
+    const entries = packEntries(hero);
+    if (!entries.length) return '<p class="empty">Empty. Buy or find something and it will be kept here.</p>';
+    const rows = entries.map(({ item, count }, i) => {
+      const act = item.slot
+        ? `<button type="button" class="item-btn" data-pack="${i}" data-act="wear">Wear</button>`
+        : item.use
+          ? `<button type="button" class="item-btn" data-pack="${i}" data-act="use">Drink</button>`
+          : '';
+      const worth = item.value ? `<span class="price">sells ${sellPrice(item)}g</span>` : '';
+      return `<li><div class="info"><b>${item.name}${count > 1 ? ` ×${count}` : ''}</b> <small>${bonuses(item)}</small></div>${worth}${act}</li>`;
+    });
+    return `<ul class="item-list">${rows.join('')}</ul>`;
+  }
+
   private render(hero: Hero) {
     const s = hero.stats;
     const row = (label: string, value: string | number) => `<dt>${label}</dt><dd>${value}</dd>`;
@@ -105,6 +134,7 @@ export class Menu {
       <dl>
         ${row('HP', `${Math.ceil(s.hp)} / ${s.maxHp}`)}
         ${row('MP', `${Math.floor(s.mp)} / ${s.maxMp}`)}
+        ${row('Gold', `${hero.gold} <small>g</small>`)}
         ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
         ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${gearAttack(hero)} gear)</small>`)}
         ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${gearDefense(hero)} gear)</small>`)}
@@ -116,7 +146,7 @@ export class Menu {
         ${row('Spell', `${hero.spell.name} <small>${hero.spell.cost} MP</small>`)}
       </dl>
       <h3>Pack</h3>
-      <p class="empty">Empty.</p>`;
+      ${this.packHtml(hero)}`;
     this.keybinds.refresh();
     this.select(this.tab);
   }

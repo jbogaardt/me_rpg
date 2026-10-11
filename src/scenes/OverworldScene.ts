@@ -16,6 +16,7 @@ import { particleEffect } from '../entities/ParticleEffect';
 import { NO_COMMAND, Player, type Command } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
 import type { Hud } from '../hud/Hud';
+import type { ShopCounter } from '../hud/ShopCounter';
 import { MapOverlay } from '../hud/MapOverlay';
 import type { Menu } from '../hud/Menu';
 import { MapView } from '../map/MapView';
@@ -43,6 +44,7 @@ import {
   MOB_KINDS,
   newHero,
   rollDamage,
+  rollGold,
   spellPower,
   type Hero,
   type Ranged,
@@ -60,6 +62,7 @@ import {
   playerOutfit,
   playerTag,
 } from '../systems/looks';
+import { SHOPS } from '../systems/shops';
 import { SHOOT_RELEASE_MS } from '../sprites/doll';
 import type { Wardrobe } from '../sprites/Wardrobe';
 import type { Item } from '../systems/combat';
@@ -97,6 +100,7 @@ const MAX_EVENTS_SENT = 48;
 export interface Ui {
   hud: Hud;
   menu: Menu;
+  shop: ShopCounter;
   dialog: Dialog;
   touch: TouchControls;
   session: Session;
@@ -118,6 +122,7 @@ export class OverworldScene implements Scene {
   private local: Player;
   private remotes = new Map<number, Player>(); // everyone else in a co-op game, by player number
   private npc: Character;
+  private keepers: { shop: string; body: Character }[]; // shopkeepers, by the shop they run (systems/shops.ts)
   private mobs: Mob[];
   private chests: Chest[];
   private mobWorld: MobWorld;
@@ -172,6 +177,15 @@ export class OverworldScene implements Scene {
     this.player.position.set(...this.cellToFeet(data.spawn));
     if (data.npc) this.npc.position.set(...this.cellToFeet(data.npc));
     else this.npc.visible = false;
+    this.keepers = data.shops.map((spawn) => {
+      const shop = SHOPS[spawn.shop];
+      if (!shop) throw new Error(`Zone "${zone.name}" has a shopkeeper for unknown shop "${spawn.shop}"`);
+      const body = new Character(sprites.wardrobe.sheet(npcLook(shop.keeper)));
+      body.position.set(...this.cellToFeet(spawn));
+      body.setTag(shop.tag, 0xffd34d);
+      return { shop: spawn.shop, body };
+    });
+    this.ui.menu.onGearChange = this.ui.shop.onGearChange = () => this.refreshLook();
     this.mobs = data.mobs.map((m) => {
       const kind = MOB_KINDS[m.kind];
       if (!kind) throw new Error(`Zone "${zone.name}" spawns unknown mob kind "${m.kind}"`);
@@ -188,7 +202,13 @@ export class OverworldScene implements Scene {
       strike: (mob, target) => this.hurtHero(mob, target),
       shoot: (mob, ux, uy) => this.mobShoot(mob, ux, uy),
     };
-    this.world.layer.addChild(this.npc, this.player, ...this.chests, ...this.mobs.map((m) => m.body));
+    this.world.layer.addChild(
+      this.npc,
+      ...this.keepers.map((k) => k.body),
+      this.player,
+      ...this.chests,
+      ...this.mobs.map((m) => m.body),
+    );
   }
 
   get root(): Container {
@@ -217,6 +237,7 @@ export class OverworldScene implements Scene {
   exit() {
     this.overlay.setAvailable(false);
     this.ui.dialog.close();
+    this.ui.shop.close();
     if (this.ui.menu.open) this.ui.menu.toggle(this.hero);
   }
 
@@ -232,15 +253,20 @@ export class OverworldScene implements Scene {
   }
 
   update(dt: number) {
-    const { menu, dialog, hud, session } = this.ui;
+    const { menu, shop, dialog, hud, session } = this.ui;
     this.syncRole(session.role);
     this.clock += dt;
     const online = this.role !== 'solo';
     this.overlay.setAvailable(online);
     if (online && !menu.open && !dialog.active && input.wasPressed(...MAP_KEYS)) this.overlay.toggle();
-    if (!dialog.active && input.wasPressed(...MENU_KEYS)) menu.toggle(this.hero);
-    if (menu.open) {
-      menu.update();
+    if (!dialog.active && input.wasPressed(...MENU_KEYS)) {
+      if (shop.open) shop.close();
+      else menu.toggle(this.hero);
+    }
+    if (menu.open || shop.open) {
+      if (menu.open) menu.update();
+      else shop.update();
+      hud.update(this.hero, this.role !== 'client'); // gold changes at the counter
       if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
     }
 
@@ -257,8 +283,9 @@ export class OverworldScene implements Scene {
     ]);
 
     this.npc.animate(dt * 1000, false);
+    for (const k of this.keepers) k.body.animate(dt * 1000, false);
     for (const body of this.bodies()) body.zIndex = body.y;
-    hud.update(this.hero);
+    hud.update(this.hero, this.role !== 'client');
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.
@@ -269,12 +296,12 @@ export class OverworldScene implements Scene {
 
   /** Solo and host: the authoritative game. The host additionally runs its friends' players and sends them snapshots. */
   private updateSimulation(dt: number) {
-    const { menu, dialog } = this.ui;
+    const { menu, shop, dialog } = this.ui;
     const host = this.role === 'host';
     if (host) this.reconcileGuests();
     const raw = this.readCommand();
     // Reading a dialog or the menu: the player stands still (a solo dialog freezes the whole world instead).
-    const reading = menu.open || dialog.active;
+    const reading = menu.open || shop.open || dialog.active;
     const cmd = reading ? { ...raw, dx: 0, dy: 0, mag: false } : raw;
     const guests = [...this.remotes.values()].map((p) => ({ p, cmd: this.remoteCommand(p) }));
 
@@ -287,22 +314,22 @@ export class OverworldScene implements Scene {
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
-    if (!menu.open) this.handleAction(cmd.act, () => this.act(this.local));
+    if (!menu.open && !shop.open) this.handleAction(cmd.act, () => this.act(this.local));
     for (const g of guests) if (g.cmd.act) this.act(g.p);
     if (host) this.broadcast(dt);
   }
 
   /** Guest: no simulation. Show what the host last said, and tell it what this player is doing. */
   private updateClient(dt: number) {
-    const { menu, dialog, session } = this.ui;
+    const { menu, shop, dialog, session } = this.ui;
     const snap = session.takeSnapshot();
     if (snap) this.applySnapshot(snap);
     for (const p of this.players()) this.drawRemotePlayer(p, dt);
     for (const mob of this.mobs) mob.updateRemote(dt);
 
     const cmd = this.readCommand();
-    const reading = menu.open || dialog.active;
-    if (!menu.open) this.handleAction(cmd.act, () => this.actCount++);
+    const reading = menu.open || shop.open || dialog.active;
+    if (!menu.open && !shop.open) this.handleAction(cmd.act, () => this.actCount++);
     if (!reading && cmd.mag) this.magCount++;
     this.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy));
   }
@@ -625,18 +652,39 @@ export class OverworldScene implements Scene {
     return true;
   }
 
-  /** The local player's action button: advance the dialog, talk when next to the NPC, otherwise `attack`. */
+  /** The local player's action button: advance the dialog, talk when next to the NPC or a shopkeeper, otherwise `attack`. */
   private handleAction(pressed: boolean, attack: () => void) {
     if (!pressed) return;
     const { dialog } = this.ui;
+    const near = (body: Character) => Math.hypot(this.player.x - body.x, this.player.y - body.y) < CELL * 1.5;
+    const keeper = this.keepers.find((k) => near(k.body));
     if (dialog.active) {
       dialog.advance();
-    } else if (this.npc.visible && Math.hypot(this.player.x - this.npc.x, this.player.y - this.npc.y) < CELL * 1.5) {
+    } else if (keeper) {
+      this.talkToKeeper(keeper);
+    } else if (this.npc.visible && near(this.npc)) {
       this.npc.face(directionToward(this.player.x - this.npc.x, this.player.y - this.npc.y));
       dialog.say(NPC_LINES);
     } else {
       attack();
     }
+  }
+
+  /** A shopkeeper greets the player, then the counter opens. A guest's gold lives on the host, so guests only chat for now. */
+  private talkToKeeper({ shop: id, body }: { shop: string; body: Character }) {
+    const shop = SHOPS[id];
+    if (!shop) return;
+    body.face(directionToward(this.player.x - body.x, this.player.y - body.y));
+    if (this.role === 'client') {
+      this.ui.dialog.say([shop.greeting[0] ?? '', 'The counter is only open to whoever is hosting the game, for now.']);
+      return;
+    }
+    this.ui.dialog.say(shop.greeting, () => this.ui.shop.show(shop, this.hero));
+  }
+
+  /** Redraw the local hero for what it now wears (after the menu or a shop changed it). */
+  private refreshLook() {
+    this.player.setSheet(this.wardrobe.sheet(playerOutfit(this.local.slot, this.hero)));
   }
 
   /** A player's action button (host and solo): open a chest within reach, otherwise swing. */
@@ -852,7 +900,10 @@ export class OverworldScene implements Scene {
     if (!killed) return;
     this.fx('mobPoof', mob.body.x, mob.body.y - 12);
     this.text(mob.body.x, mob.body.y - 66, `+${mob.kind.xp} XP`, 0xffb13f);
+    const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
+    this.text(mob.body.x, mob.body.y - 78, `+${gold}g`, 0xffd34d);
     for (const p of this.players()) {
+      p.hero.gold += gold;
       if (!gainXp(p.hero.stats, mob.kind.xp)) continue;
       this.text(p.body.x, p.body.y - 62, 'LEVEL UP!', 0xffb13f);
       this.fx('levelUp', p.body.x, p.body.y - 14);
@@ -913,11 +964,16 @@ export class OverworldScene implements Scene {
   /** Put gear on the hero: stats follow the item and the sprite is recomposed with its parts. */
   equip(item: Item) {
     equip(this.hero, item);
-    this.player.setSheet(this.wardrobe.sheet(playerOutfit(this.local.slot, this.hero)));
+    this.refreshLook();
   }
 
   /** Every character that blocks others. */
   private bodies(): Character[] {
-    return [...this.players().map((p) => p.body), this.npc, ...this.mobs.filter((m) => m.alive).map((m) => m.body)];
+    return [
+      ...this.players().map((p) => p.body),
+      this.npc,
+      ...this.keepers.map((k) => k.body),
+      ...this.mobs.filter((m) => m.alive).map((m) => m.body),
+    ];
   }
 }

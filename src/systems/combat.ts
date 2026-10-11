@@ -31,11 +31,15 @@ export interface Ranged {
 
 export interface Item {
   name: string;
+  /** Gold a shop asks for it (and, at a fraction, pays for it). */
+  value?: number;
   slot?: GearSlot;
   attack?: number;
   defense?: number;
   /** Set on bows: the weapon shoots (see `Ranged`) instead of swinging. */
   ranged?: Ranged;
+  /** Set on supplies (no slot): drinking one restores this much HP and MP, from the pack. */
+  use?: { hp: number; mp?: number };
   /** Sprite parts this item puts on the hero (see sprites/parts.ts); drawn over the hero's base look. */
   look?: Outfit;
 }
@@ -51,6 +55,8 @@ export interface Hero extends Partial<Record<Exclude<GearSlot, 'weapon'>, Item>>
   stats: Stats;
   weapon: Item; // always armed; every other gear slot may be empty
   spell: Spell;
+  gold: number; // money: dropped by enemies, spent in shops
+  bag: Item[]; // the pack: everything owned but not worn (see systems/inventory.ts)
 }
 
 export interface MobKind {
@@ -60,6 +66,7 @@ export interface MobKind {
   attack: number;
   defense: number;
   xp: number; // awarded on kill
+  gold: number; // dropped on kill, give or take 30% (see `rollGold`)
   speed: number; // pixels per second while chasing
   sight: number; // pixels: starts chasing inside this range
   /** Seconds of telegraph before the blow (or shot) lands. Default 0.45. */
@@ -96,6 +103,8 @@ export function newHero(): Hero {
     weapon: ITEMS.rustySword,
     cape: ITEMS.travelerCloak,
     spell: { name: 'Time Bolt', cost: 5, power: 6 },
+    gold: 0,
+    bag: [],
   };
 }
 
@@ -110,6 +119,7 @@ export const SHADE: MobKind = {
   attack: 6,
   defense: 0,
   xp: 12,
+  gold: 7,
   speed: 60,
   sight: 6 * 32,
   windup: 0.65,
@@ -133,6 +143,7 @@ export const RAIDER: MobKind = {
   attack: 9,
   defense: 1,
   xp: 22,
+  gold: 14,
   speed: 70,
   sight: 5.5 * 32,
   windup: 0.38,
@@ -155,6 +166,7 @@ export const FROSTBOUND: MobKind = {
   attack: 13,
   defense: 2,
   xp: 38,
+  gold: 24,
   speed: 62,
   sight: 6 * 32,
   windup: 0.4,
@@ -177,6 +189,7 @@ export const GOBLIN: MobKind = {
   attack: 4,
   defense: 0,
   xp: 6,
+  gold: 4,
   speed: 82,
   sight: 5 * 32,
   windup: 0.3,
@@ -192,6 +205,7 @@ export const WOLFKIN: MobKind = {
   attack: 7,
   defense: 0,
   xp: 12,
+  gold: 7,
   speed: 96,
   sight: 6 * 32,
   windup: 0.28,
@@ -207,6 +221,7 @@ export const SKELETON: MobKind = {
   attack: 8,
   defense: 1,
   xp: 16,
+  gold: 10,
   speed: 52,
   sight: 6.5 * 32,
   windup: 0.55,
@@ -222,6 +237,7 @@ export const ZOMBIE: MobKind = {
   attack: 7,
   defense: 0,
   xp: 14,
+  gold: 9,
   speed: 36,
   sight: 4 * 32,
 };
@@ -242,6 +258,7 @@ export const ORC: MobKind = {
   attack: 11,
   defense: 1,
   xp: 30,
+  gold: 18,
   speed: 58,
   sight: 5.5 * 32,
   windup: 0.4,
@@ -257,6 +274,7 @@ export const TROLL: MobKind = {
   attack: 15,
   defense: 3,
   xp: 60,
+  gold: 40,
   speed: 46,
   sight: 5 * 32,
   windup: 0.5,
@@ -304,6 +322,9 @@ export function levelGains(level: number) {
     magic: 2 + tier,
   };
 }
+
+/** The gold an enemy drops this time: its usual amount, give or take 30%, and at least 1. */
+export const rollGold = (kind: MobKind): number => Math.max(1, Math.round(kind.gold * (0.7 + Math.random() * 0.6)));
 
 /** One hit: power with ±15% spread, minus defense, never below 1. */
 export function rollDamage(power: number, defense: number): number {

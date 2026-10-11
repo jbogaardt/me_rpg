@@ -1,8 +1,10 @@
 // Treasure chests: what they look like and what is inside. Pure rules; the Pixi side is entities/Chest.ts.
 // Add a loot by naming it here, then place a chest with `z.chest(kind, loot, col, row)` (see the build-zone skill).
+// Chests hold what the shops do not sell (rare gear, restoratives) and the odd purse.
 
 import { gainXp, type Hero, type Item } from './combat';
-import { equip, ITEMS } from './items';
+import { addToPack, isBetter, wear } from './inventory';
+import { ITEMS } from './items';
 
 /** Art variants, in the row order of public/tilesets/chests.png (each row: open frame, then closed frame). */
 export const CHEST_KINDS = ['wood', 'oak', 'iron', 'silver'] as const;
@@ -11,7 +13,8 @@ export type ChestKind = (typeof CHEST_KINDS)[number];
 export type ChestLoot =
   | { item: Item } // a piece of gear: put on if it beats what the hero wears
   | { hp: number; mp?: number } // a restorative (HP and MP given back)
-  | { xp: number };
+  | { xp: number }
+  | { gold: number };
 
 export const CHEST_LOOTS: Record<string, ChestLoot> = {
   bronzeSword: { item: ITEMS.bronzeSword },
@@ -43,6 +46,9 @@ export const CHEST_LOOTS: Record<string, ChestLoot> = {
   potion: { hp: 20 },
   elixir: { hp: 40, mp: 40 },
   relic: { xp: 40 },
+  coins: { gold: 30 },
+  purse: { gold: 90 },
+  hoard: { gold: 200 },
 };
 
 export interface Found {
@@ -51,23 +57,20 @@ export interface Found {
   levels: number; // level-ups gained
 }
 
-/** A piece of gear's worth in its slot: attack for blades and bows, defense for armor and shields, both added for a mix. */
-const worth = (item: Item | undefined) => (item?.attack ?? 0) + (item?.defense ?? 0);
-
-/** Is `item` better than what the hero wears in its slot (an empty slot takes anything)? */
-export function isBetter(hero: Hero, item: Item): boolean {
-  if (!item.slot) return false;
-  const current = hero[item.slot];
-  return !current || worth(item) > worth(current);
-}
-
-/** Give the hero what is in a chest. Gear is worn only when it is an upgrade (there is no inventory yet). */
+/** Give the hero what is in a chest. Gear is worn when it is an upgrade (the old piece goes to the pack), else kept. */
 export function collect(hero: Hero, loot: ChestLoot): Found {
   if ('item' in loot) {
     const { item } = loot;
-    if (!isBetter(hero, item)) return { text: `${item.name} (no better)`, levels: 0 };
-    equip(hero, item);
+    if (!isBetter(hero, item)) {
+      addToPack(hero, item);
+      return { text: `${item.name} (to pack)`, levels: 0 };
+    }
+    wear(hero, item);
     return { text: `${item.name}!`, gear: item, levels: 0 };
+  }
+  if ('gold' in loot) {
+    hero.gold += loot.gold;
+    return { text: `+${loot.gold} gold`, levels: 0 };
   }
   const s = hero.stats;
   if ('xp' in loot) return { text: `+${loot.xp} XP`, levels: gainXp(s, loot.xp) };

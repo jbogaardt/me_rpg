@@ -21,6 +21,7 @@ describe('parseMap', () => {
       npc: null,
       mobs: [],
       chests: [],
+      shops: [],
     });
   });
 

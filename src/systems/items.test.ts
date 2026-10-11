@@ -1,13 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { GEAR_SLOTS, newHero } from './combat';
+import type { Outfit } from '../sprites/doll';
+import { GEAR_SLOTS, newHero, type GearSlot, type Item } from './combat';
 import { equip, ITEMS } from './items';
 
-const items = Object.entries(ITEMS);
+const everything = Object.entries(ITEMS);
+// Gear: everything with a slot (supplies, the potions, have none).
+const items = everything.filter(([, i]) => 'slot' in i) as unknown as [
+  string,
+  Item & { slot: GearSlot; look: Outfit },
+][];
 
 describe('ITEMS', () => {
+  it.each(everything)('%s has a price', (_id, item) => {
+    expect(item.value).toBeGreaterThan(0);
+  });
+
+  it('keeps supplies out of the gear slots and gives them something to restore', () => {
+    for (const [id, item] of everything.filter(([, i]) => !('slot' in i))) {
+      expect(((item as Item).use?.hp ?? 0) > 0, id).toBe(true);
+    }
+  });
+
   it.each(items)('%s goes in a real slot and does something', (_id, item) => {
     expect(GEAR_SLOTS as readonly string[]).toContain(item.slot);
-    expect(('attack' in item ? item.attack : 0) + ('defense' in item ? item.defense : 0)).toBeGreaterThan(0);
+    expect((item.attack ?? 0) + (item.defense ?? 0)).toBeGreaterThan(0);
   });
 
   it('has several pieces for every armor slot, and shields and blades for the off-hand', () => {

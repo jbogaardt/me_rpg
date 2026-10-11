@@ -77,7 +77,8 @@ export function playerOutfit(slot: number, hero: Hero): Outfit {
  * game loads them all up front, and the tests check them).
  */
 export function allPlayerOutfits(): Outfit[] {
-  return PLAYER_BASES.flatMap((base) => Object.values(ITEMS).map((item) => withGear(base, item.look ?? {})));
+  const worn = Object.values(ITEMS).flatMap((item) => ('look' in item ? [item.look] : []));
+  return PLAYER_BASES.flatMap((base) => worn.map((look) => withGear(base, look)));
 }
 
 /** NPC looks by name. Each pairs a body with a matching head (and body-shaped garments); hair, hats and weapons mix freely. */
@@ -126,6 +127,45 @@ export const NPC_LOOKS: Record<string, Outfit> = {
     torso: 'torso.f_tunic_teal',
     legs: 'legs.f_pants_white',
     feet: 'feet.f_boots_brown',
+  },
+  // The shopkeepers (see SHOPS in systems/shops.ts).
+  smith: {
+    body: 'body.bronze',
+    head: 'head.human_bronze',
+    hair: 'hair.plain_black',
+    beard: 'beard.brown',
+    torso: 'torso.tunic_charcoal',
+    legs: 'legs.pants_charcoal',
+    feet: 'feet.boots_black',
+    cape: 'cape.brown',
+  },
+  armorer: {
+    body: 'body.f_olive',
+    head: 'head.human_f_olive',
+    hair: 'hair.long_red',
+    torso: 'torso.f_tunic_charcoal',
+    legs: 'legs.f_pants_charcoal',
+    feet: 'feet.f_boots_brown',
+    headwear: 'headwear.kettle',
+    shield: 'shield.round_silver',
+  },
+  ranger: {
+    body: 'body.light',
+    head: 'head.human_light',
+    hair: 'hair.messy_red',
+    torso: 'torso.tunic_forest',
+    legs: 'legs.pants_forest',
+    feet: 'feet.boots_brown',
+    headwear: 'headwear.hood_brown',
+    cape: 'cape.forest',
+  },
+  apothecary: {
+    body: 'body.brown',
+    head: 'head.human_brown',
+    hair: 'hair.plain_white',
+    beard: 'beard.gray',
+    torso: 'torso.robe_red',
+    weapon: 'weapon.staff',
   },
   farmhand: {
     body: 'body.light',

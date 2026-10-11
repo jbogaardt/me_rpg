@@ -3,6 +3,7 @@ import {
   FLAT_Z,
   type CellPoint,
   type ChestSpawn,
+  type ShopSpawn,
   type GroundCell,
   type MapData,
   type MapObject,
@@ -92,6 +93,7 @@ export class Zone {
   private npcAt: CellPoint | null = null;
   private mobList: MobSpawn[] = [];
   private chestList: ChestSpawn[] = [];
+  private shopList: ShopSpawn[] = [];
 
   constructor(
     readonly width: number,
@@ -390,6 +392,15 @@ export class Zone {
     return this;
   }
 
+  /**
+   * A shopkeeper (`shop` is a key of SHOPS, src/systems/shops.ts) standing at (col, row), the cell below the door of its
+   * building (`z.prop('smithy', ...)`). Characters block each other, so leave the cell open.
+   */
+  shop(shop: string, col: number, row: number) {
+    this.shopList.push({ shop, col, row });
+    return this;
+  }
+
   /** Resolve everything into the game's map format. */
   toMapData(): MapData {
     if (!this.spawnAt) throw new Error('zone has no spawn(); the player needs a start cell');
@@ -461,6 +472,7 @@ export class Zone {
       npc: this.npcAt,
       mobs: this.mobList,
       chests: this.chestList,
+      shops: this.shopList,
     };
   }
 }

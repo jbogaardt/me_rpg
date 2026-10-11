@@ -35,6 +35,29 @@ describe('checkMap', () => {
     expect(r.errors.join('\n')).toMatch(/spawn .* blocked cell/);
   });
 
+  it('accepts a shopkeeper in front of a shop building', () => {
+    const r = field((z) => {
+      z.spawn(2, 2);
+      z.prop('smithy', 6, 8);
+      z.shop('smithy', 8, 9);
+    });
+    expect(r.errors).toEqual([]);
+  });
+
+  it('errors on an unknown shop, and on a shopkeeper standing inside a building', () => {
+    const unknown = field((z) => {
+      z.spawn(2, 2);
+      z.shop('bakery', 4, 4);
+    });
+    expect(unknown.errors.join('\n')).toMatch(/unknown shop "bakery"/);
+    const inside = field((z) => {
+      z.spawn(2, 2);
+      z.prop('armory', 6, 10);
+      z.shop('armory', 7, 9);
+    });
+    expect(inside.errors.join('\n')).toMatch(/shopkeeper armory .* blocked cell/);
+  });
+
   it('errors on an unknown mob kind', () => {
     const r = field((z) => {
       z.spawn(2, 2);

@@ -2,6 +2,8 @@
 // so equipping something changes how the hero looks. Add an item here and, if it needs new art, add the part to
 // sprites/parts.ts and run `npm run sprites -- build`.
 //
+// Every item has a `value` in gold: what a shop charges for it. A shop pays 40% of that when buying it back (systems/shops.ts).
+//
 // Slots (see GEAR_SLOTS): weapon, offhand (a shield, or a second blade), head, chest, legs, feet and cape. A piece
 // replaces the hero's base clothes in the doll slots its `look` sets, so an empty slot shows the base clothes.
 
@@ -12,14 +14,21 @@ const bow = (speed: number, range: number, cooldown: number) => ({ speed, range,
 
 export const ITEMS = {
   // Melee weapons (one `weapon` part each). Swings use the LPC 128px slash art, so only the sword family fits for now.
-  rustySword: { name: 'Rusty Sword', slot: 'weapon', attack: 2, look: { weapon: 'weapon.arming_iron' } },
-  bronzeSword: { name: 'Bronze Sword', slot: 'weapon', attack: 3, look: { weapon: 'weapon.arming_bronze' } },
-  steelSword: { name: 'Steel Sword', slot: 'weapon', attack: 5, look: { weapon: 'weapon.arming_steel' } },
-  silverSword: { name: 'Silver Sword', slot: 'weapon', attack: 7, look: { weapon: 'weapon.arming_silver' } },
+  rustySword: { name: 'Rusty Sword', value: 4, slot: 'weapon', attack: 2, look: { weapon: 'weapon.arming_iron' } },
+  bronzeSword: { name: 'Bronze Sword', value: 40, slot: 'weapon', attack: 3, look: { weapon: 'weapon.arming_bronze' } },
+  steelSword: { name: 'Steel Sword', value: 150, slot: 'weapon', attack: 5, look: { weapon: 'weapon.arming_steel' } },
+  silverSword: {
+    name: 'Silver Sword',
+    value: 400,
+    slot: 'weapon',
+    attack: 7,
+    look: { weapon: 'weapon.arming_silver' },
+  },
   // Ranged weapons: the action key shoots an arrow the way the hero is heading. Weaker than a sword of the same tier
   // (the price of staying out of reach), and a little slower between shots.
   shortBow: {
     name: 'Short Bow',
+    value: 35,
     slot: 'weapon',
     attack: 2,
     ranged: bow(300, 8 * 32, 0.6),
@@ -27,6 +36,7 @@ export const ITEMS = {
   },
   recurveBow: {
     name: 'Recurve Bow',
+    value: 120,
     slot: 'weapon',
     attack: 4,
     ranged: bow(340, 9 * 32, 0.55),
@@ -34,6 +44,7 @@ export const ITEMS = {
   },
   greatBow: {
     name: 'Great Bow',
+    value: 300,
     slot: 'weapon',
     attack: 6,
     ranged: bow(380, 10 * 32, 0.7),
@@ -41,37 +52,59 @@ export const ITEMS = {
   },
 
   // Off-hand: a shield (defense) or a second blade (attack), worn alongside whatever the main hand holds.
-  woodenShield: { name: 'Wooden Shield', slot: 'offhand', defense: 1, look: { shield: 'shield.round_brown' } },
-  ironShield: { name: 'Iron Shield', slot: 'offhand', defense: 2, look: { shield: 'shield.round_black' } },
-  kiteShield: { name: 'Kite Shield', slot: 'offhand', defense: 3, look: { shield: 'shield.kite_gray' } },
-  parryingDagger: { name: 'Parrying Dagger', slot: 'offhand', attack: 2, look: { shield: 'shield.dagger_left' } },
+  woodenShield: {
+    name: 'Wooden Shield',
+    value: 25,
+    slot: 'offhand',
+    defense: 1,
+    look: { shield: 'shield.round_brown' },
+  },
+  ironShield: { name: 'Iron Shield', value: 90, slot: 'offhand', defense: 2, look: { shield: 'shield.round_black' } },
+  kiteShield: { name: 'Kite Shield', value: 200, slot: 'offhand', defense: 3, look: { shield: 'shield.kite_gray' } },
+  parryingDagger: {
+    name: 'Parrying Dagger',
+    value: 70,
+    slot: 'offhand',
+    attack: 2,
+    look: { shield: 'shield.dagger_left' },
+  },
 
   // Helmets
-  clothHood: { name: 'Cloth Hood', slot: 'head', defense: 1, look: { headwear: 'headwear.hood_brown' } },
-  nasalHelm: { name: 'Nasal Helm', slot: 'head', defense: 1, look: { headwear: 'headwear.nasal' } },
-  kettleHat: { name: 'Kettle Hat', slot: 'head', defense: 2, look: { headwear: 'headwear.kettle' } },
-  vikingHelm: { name: 'Viking Helm', slot: 'head', defense: 2, look: { headwear: 'headwear.barbarian' } },
-  legionHelm: { name: 'Legion Helm', slot: 'head', defense: 2, look: { headwear: 'headwear.legion' } },
-  greatHelm: { name: 'Great Helm', slot: 'head', defense: 3, look: { headwear: 'headwear.greathelm' } },
+  clothHood: { name: 'Cloth Hood', value: 15, slot: 'head', defense: 1, look: { headwear: 'headwear.hood_brown' } },
+  nasalHelm: { name: 'Nasal Helm', value: 40, slot: 'head', defense: 1, look: { headwear: 'headwear.nasal' } },
+  kettleHat: { name: 'Kettle Hat', value: 80, slot: 'head', defense: 2, look: { headwear: 'headwear.kettle' } },
+  vikingHelm: { name: 'Viking Helm', value: 90, slot: 'head', defense: 2, look: { headwear: 'headwear.barbarian' } },
+  legionHelm: { name: 'Legion Helm', value: 100, slot: 'head', defense: 2, look: { headwear: 'headwear.legion' } },
+  greatHelm: { name: 'Great Helm', value: 220, slot: 'head', defense: 3, look: { headwear: 'headwear.greathelm' } },
 
   // Chestplates
-  leatherArmor: { name: 'Leather Armor', slot: 'chest', defense: 2, look: { torso: 'torso.leather' } },
-  legionArmor: { name: 'Legion Armor', slot: 'chest', defense: 3, look: { torso: 'torso.legion_iron' } },
-  plateArmor: { name: 'Plate Armor', slot: 'chest', defense: 4, look: { torso: 'torso.plate_steel' } },
+  leatherArmor: { name: 'Leather Armor', value: 60, slot: 'chest', defense: 2, look: { torso: 'torso.leather' } },
+  legionArmor: { name: 'Legion Armor', value: 180, slot: 'chest', defense: 3, look: { torso: 'torso.legion_iron' } },
+  plateArmor: { name: 'Plate Armor', value: 420, slot: 'chest', defense: 4, look: { torso: 'torso.plate_steel' } },
 
   // Leggings
-  paddedLeggings: { name: 'Padded Leggings', slot: 'legs', defense: 1, look: { legs: 'legs.leggings_charcoal' } },
-  ironGreaves: { name: 'Iron Greaves', slot: 'legs', defense: 1, look: { legs: 'legs.plate_iron' } },
-  steelGreaves: { name: 'Steel Greaves', slot: 'legs', defense: 2, look: { legs: 'legs.plate_steel' } },
+  paddedLeggings: {
+    name: 'Padded Leggings',
+    value: 25,
+    slot: 'legs',
+    defense: 1,
+    look: { legs: 'legs.leggings_charcoal' },
+  },
+  ironGreaves: { name: 'Iron Greaves', value: 80, slot: 'legs', defense: 1, look: { legs: 'legs.plate_iron' } },
+  steelGreaves: { name: 'Steel Greaves', value: 160, slot: 'legs', defense: 2, look: { legs: 'legs.plate_steel' } },
 
   // Boots
-  leatherBoots: { name: 'Leather Boots', slot: 'feet', defense: 1, look: { feet: 'feet.boots_black' } },
-  foldedBoots: { name: 'Folded Boots', slot: 'feet', defense: 1, look: { feet: 'feet.boots_fold_tan' } },
-  ironBoots: { name: 'Iron Boots', slot: 'feet', defense: 1, look: { feet: 'feet.plate_iron' } },
-  steelBoots: { name: 'Steel Boots', slot: 'feet', defense: 2, look: { feet: 'feet.plate_steel' } },
+  leatherBoots: { name: 'Leather Boots', value: 20, slot: 'feet', defense: 1, look: { feet: 'feet.boots_black' } },
+  foldedBoots: { name: 'Folded Boots', value: 25, slot: 'feet', defense: 1, look: { feet: 'feet.boots_fold_tan' } },
+  ironBoots: { name: 'Iron Boots', value: 70, slot: 'feet', defense: 1, look: { feet: 'feet.plate_iron' } },
+  steelBoots: { name: 'Steel Boots', value: 140, slot: 'feet', defense: 2, look: { feet: 'feet.plate_steel' } },
 
   // Cloaks
-  travelerCloak: { name: "Traveler's Cloak", slot: 'cape', defense: 1, look: { cape: 'cape.maroon' } },
+  travelerCloak: { name: "Traveler's Cloak", value: 30, slot: 'cape', defense: 1, look: { cape: 'cape.maroon' } },
+
+  // Supplies: kept in the pack and drunk from the Gear tab of the menu (the apothecary sells them).
+  potion: { name: 'Potion', value: 15, use: { hp: 20 } },
+  elixir: { name: 'Elixir', value: 60, use: { hp: 40, mp: 40 } },
 } satisfies Record<string, Item>;
 
 export type ItemId = keyof typeof ITEMS;
