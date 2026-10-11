@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { attackPower, defensePower, gainXp, MOB_KINDS, newHero, rollDamage, spellPower, xpToNext } from './combat';
+import {
+  attackPower,
+  defensePower,
+  gainXp,
+  levelGains,
+  MOB_KINDS,
+  newHero,
+  rollDamage,
+  spellPower,
+  xpToNext,
+} from './combat';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -42,8 +52,27 @@ describe('gainXp', () => {
     expect(stats.xp).toBe(0);
   });
 
-  it('needs more XP at higher levels', () => {
-    expect(xpToNext(5)).toBeGreaterThan(xpToNext(4));
+  it('needs more XP at higher levels, and the step between levels grows too', () => {
+    expect([1, 2, 5, 10].map(xpToNext)).toEqual([20, 57, 224, 632]);
+    for (let level = 1; level < 30; level++) {
+      const step = xpToNext(level + 1) - xpToNext(level);
+      expect(step).toBeGreaterThan(xpToNext(level) - xpToNext(Math.max(1, level - 1)));
+    }
+  });
+
+  it('gives bigger stat gains as levels go up', () => {
+    expect(levelGains(2)).toEqual({ maxHp: 6, maxMp: 4, attack: 2, defense: 1, magic: 2 });
+    expect(levelGains(4)).toEqual({ maxHp: 8, maxMp: 5, attack: 3, defense: 1, magic: 3 });
+    expect(levelGains(8)).toEqual({ maxHp: 10, maxMp: 6, attack: 4, defense: 2, magic: 4 });
+  });
+
+  it('applies the gains of each level it passes through', () => {
+    const { stats } = newHero();
+    gainXp(
+      stats,
+      [1, 2, 3].reduce((sum, level) => sum + xpToNext(level), 0),
+    ); // 1 -> 4
+    expect(stats).toMatchObject({ level: 4, maxHp: 30 + 6 + 6 + 8, attack: 5 + 2 + 2 + 3, defense: 1 + 1 + 1 + 1 });
   });
 });
 

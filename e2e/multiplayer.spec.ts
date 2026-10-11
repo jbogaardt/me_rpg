@@ -33,6 +33,7 @@ async function createGame(host: Page): Promise<string> {
 
 test('two players connect with a game code, play, and disconnect', async ({ browser }) => {
   const host = await open(browser, '/');
+  await expect(host.locator('#map-btn')).toBeHidden(); // the map is for co-op only
   const code = await createGame(host);
 
   // The friend types the code the way people do on a phone: capitals and a space instead of the hyphen.
@@ -64,10 +65,22 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await join.keyboard.press('KeyK');
   await expect(join.locator('#hud-mp .label')).not.toHaveText('20 / 20');
 
+  // The co-op map: toggled with M, semi-transparent, with a pin for the friend once the host's snapshot arrives.
+  await expect(join.locator('#map-btn')).toBeVisible();
+  await join.keyboard.press('KeyM');
+  await expect(join.locator('#map-overlay')).toBeVisible();
+  await expect(join.locator('#map-overlay .pin.friend')).toBeVisible();
+  await join.keyboard.press('KeyM');
+  await expect(join.locator('#map-overlay')).toBeHidden();
+  await join.keyboard.press('KeyM'); // open again: leaving the game must close it
+  await expect(join.locator('#map-overlay')).toBeVisible();
+
   // Disconnect from the host's side: both ends report it and carry on solo.
   await host.locator('#mp-disconnect').click();
   await expect(host.locator('#mp-status .label')).toHaveText('Disconnected');
   await expect(join.locator('#mp-status .label')).toHaveText('Disconnected', { timeout: 15_000 });
+  await expect(join.locator('#map-overlay')).toBeHidden();
+  await expect(join.locator('#map-btn')).toBeHidden();
   await join.keyboard.press('Escape');
   await expect(join.locator('#menu-online')).toBeVisible();
   await expect(join.locator('#mp-note')).toContainText('disconnected');
