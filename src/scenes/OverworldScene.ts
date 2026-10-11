@@ -50,6 +50,7 @@ import {
 } from '../systems/combat';
 import { CHEST_LOOTS, collect } from '../systems/chests';
 import { Collision } from '../systems/collision';
+import { isIce, stepVelocity } from '../systems/ice';
 import { equip } from '../systems/items';
 import {
   heroOutfit,
@@ -399,6 +400,7 @@ export class OverworldScene implements Scene {
       this.local.flags = 0;
       this.local.invuln = 0;
       this.local.knock = { x: 0, y: 0 };
+      this.local.vel = { x: 0, y: 0 };
       this.player.alpha = 1;
       this.player.setOffset(0, 0);
       for (const mob of this.mobs) mob.release();
@@ -613,16 +615,24 @@ export class OverworldScene implements Scene {
     p.body.animate(dt * 1000, p.moving);
   }
 
-  /** Returns true if the player is trying to move. */
+  /** Returns true if the player is trying to move. On ice the velocity lags behind the keys, so they slide. */
   private move(p: Player, { dx, dy }: Command, dt: number): boolean {
-    if (!dx && !dy) return false;
-    if (dx) p.body.face(dx > 0 ? 'right' : 'left');
-    else p.body.face(dy > 0 ? 'down' : 'up');
     const len = Math.hypot(dx, dy);
-    p.aim = { x: dx / len, y: dy / len };
-    const step = SPEED * dt;
-    this.collision.slide(p.body, (dx / len) * step, (dy / len) * step, this.bodies());
-    return true;
+    const wish = len ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
+    if (len) {
+      if (dx) p.body.face(dx > 0 ? 'right' : 'left');
+      else p.body.face(dy > 0 ? 'down' : 'up');
+      p.aim = wish;
+    }
+    p.vel = stepVelocity(p.vel, wish, SPEED, dt, isIce(this.data, p.body.x, p.body.y - 1));
+    if (p.vel.x || p.vel.y) {
+      const [x, y] = [p.body.x, p.body.y];
+      this.collision.slide(p.body, p.vel.x * dt, p.vel.y * dt, this.bodies());
+      // Running into something stops the slide on that axis.
+      if (p.body.x === x) p.vel.x = 0;
+      if (p.body.y === y) p.vel.y = 0;
+    }
+    return len > 0;
   }
 
   /** The local player's action button: advance the dialog, talk when next to the NPC, otherwise `attack`. */
@@ -887,6 +897,7 @@ export class OverworldScene implements Scene {
     p.body.face('down');
     p.aim = { x: 0, y: 1 };
     p.knock = { x: 0, y: 0 };
+    p.vel = { x: 0, y: 0 };
     p.invuln = 0;
     p.pendingShot = null;
     if (this.role === 'solo') this.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them

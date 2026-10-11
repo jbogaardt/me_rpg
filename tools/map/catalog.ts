@@ -80,7 +80,24 @@ export const GROUND = {
     ],
   },
   water: { sheet: PLUS_SHEET, tiles: [[[480, 320]]] },
-  ice: { sheet: FROST_SHEET, tiles: [[[480, 320]]] },
+  // Painted ice (cracks and glints), six variants made by tools/map/recolor.ts in the sheet's empty corner.
+  ice: {
+    sheet: FROST_SHEET,
+    tiles: [
+      [
+        [608, 0],
+        [640, 0],
+      ],
+      [
+        [640, 32],
+        [608, 32],
+      ],
+      [
+        [608, 64],
+        [640, 64],
+      ],
+    ],
+  },
   stone: {
     sheet: GROUND_SHEET,
     tiles: [

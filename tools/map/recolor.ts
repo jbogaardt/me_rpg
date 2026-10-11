@@ -87,7 +87,8 @@ const ice = (c: RGB): RGB | null => {
   const [h, s, l] = toHsl(c);
   const w = smooth(105, 130, h) * smooth(0.12, 0.3, s) * (h < 230 ? 1 : 0);
   if (w <= 0) return null;
-  return mix(c, fromHsl(198, 0.55 - 0.25 * l, clamp(0.46 + (l - 0.2) * 0.9, 0.5, 0.92)), w);
+  // Pale, frosty cyan (not pond blue), so the shore tiles match the painted ice tiles below.
+  return mix(c, fromHsl(190, 0.5 - 0.2 * l, clamp(0.72 + (l - 0.2) * 0.5, 0.7, 0.9)), w);
 };
 
 // ground_plus.png = the original sheet plus a plain water tile that matches the lake ring's inner edge
@@ -104,10 +105,66 @@ for (let y = 320; y < 352; y++) {
   }
 }
 writePng(dir('ground_plus.png'), plus);
-writePng(
-  dir('frost_ground.png'),
-  recolor(plus, (c) => snow(c) ?? ice(c)),
-);
+const frostGround = recolor(plus, (c) => snow(c) ?? ice(c));
+
+// Painted ice: the solid tile the lake ring ends in, plus cracks and glints. Six variants (2 wide x 3 tall,
+// see `ice` in catalog.ts) at the sheet's empty top-right corner; every mark stays clear of the tile edge so
+// they tile seamlessly and the ring's inner edge still meets them.
+const ICE_BASE = ice([47, 116, 130]) ?? [200, 230, 240];
+const ICE_TILES: [number, number][] = [
+  [608, 0],
+  [640, 0],
+  [608, 32],
+  [640, 32],
+  [608, 64],
+  [640, 64],
+];
+const setPx = (img: Image, x: number, y: number, c: RGB) => {
+  const i = (y * img.width + x) * 4;
+  [img.data[i], img.data[i + 1], img.data[i + 2], img.data[i + 3]] = [
+    clamp(Math.round(c[0]), 0, 255),
+    clamp(Math.round(c[1]), 0, 255),
+    clamp(Math.round(c[2]), 0, 255),
+    255,
+  ];
+};
+const lcg = (seed: number) => () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+ICE_TILES.forEach(([tx, ty], k) => {
+  const rnd = lcg(1234 + k * 977);
+  const tile = Array.from({ length: 32 }, () => Array.from({ length: 32 }, (): RGB => [0, 0, 0]));
+  for (let y = 0; y < 32; y++) {
+    for (let x = 0; x < 32; x++) {
+      const n = ((((x * 7919 + k * 31) ^ (y * 104729)) >>> 3) % 9) - 4;
+      const band = Math.sin((x + y) * 0.35 + k) * 2.5; // faint diagonal sheen
+      tile[y][x] = [ICE_BASE[0] + n + band, ICE_BASE[1] + n + band, ICE_BASE[2] + n * 0.5 + band];
+    }
+  }
+  const put = (x: number, y: number, c: RGB) => {
+    if (x >= 3 && x < 29 && y >= 3 && y < 29) tile[y][x] = c;
+  };
+  // Cracks: jittery walks, a dark line with a bright lip beside it, and sometimes a branch.
+  const crack = (x: number, y: number, ang: number, len: number, branch: boolean) => {
+    for (let i = 0; i < len; i++) {
+      ang += (rnd() - 0.5) * 0.5;
+      x += Math.cos(ang);
+      y += Math.sin(ang);
+      const [px, py] = [Math.round(x), Math.round(y)];
+      put(px + 1, py, [ICE_BASE[0] + 38, ICE_BASE[1] + 24, ICE_BASE[2] + 16]);
+      put(px, py, [ICE_BASE[0] - 70, ICE_BASE[1] - 52, ICE_BASE[2] - 28]);
+      if (branch && i === Math.floor(len / 2))
+        crack(x, y, ang + (rnd() < 0.5 ? 1 : -1) * 1.0, Math.floor(len / 2), false);
+    }
+  };
+  for (let c = 0; c < (k === 0 || k === 3 ? 1 : 0); c++)
+    crack(6 + rnd() * 20, 6 + rnd() * 20, rnd() * Math.PI * 2, 14 + Math.floor(rnd() * 8), true);
+  // Glints: short bright slashes.
+  for (let g = 0; g < (k % 3 === 1 ? 0 : 1); g++) {
+    const [gx, gy] = [5 + Math.floor(rnd() * 20), 5 + Math.floor(rnd() * 20)];
+    for (let i = 0; i < 4; i++) put(gx + i, gy - i, [244, 252, 255]);
+  }
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) setPx(frostGround, tx + x, ty + y, tile[y][x]);
+});
+writePng(dir('frost_ground.png'), frostGround);
 
 // --- Tree/bush/rock sheets ------------------------------------------------------------------------------
 const OBJ = readPng(dir('object-layer.png'));
