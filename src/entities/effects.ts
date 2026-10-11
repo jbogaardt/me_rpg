@@ -109,14 +109,23 @@ export function arrowEffect(
   step: (x: number, y: number) => boolean,
   onEnd?: (x: number, y: number, hit: boolean) => void,
 ): Effect {
-  const g = new Graphics({ position: { x, y }, rotation: Math.atan2(vy, vx) })
-    .moveTo(-9, 0)
-    .lineTo(3, 0)
-    .stroke({ width: 1.5, color: 0xb98a55 }) // shaft
-    .poly([3, -2, 7, 0, 3, 2])
-    .fill(0xe8edf2) // head
-    .poly([-9, 0, -12, -2.5, -7, 0, -12, 2.5])
-    .fill(0xf4efe4); // fletching
+  // Drawn big and bright, over a dark outline, so it reads against grass, sand and snow alike: a gold glow, a streak
+  // fading out behind it, then the shaft, head and fletching.
+  const g = new Graphics({ position: { x, y }, rotation: Math.atan2(vy, vx) });
+  g.ellipse(2, 0, 14, 5).fill({ color: 0xffd98a, alpha: 0.22 }); // glow
+  for (const [from, to, alpha] of [
+    [-12, -20, 0.5],
+    [-20, -28, 0.3],
+    [-28, -36, 0.14],
+  ] as const) {
+    g.moveTo(from, 0).lineTo(to, 0).stroke({ width: 2.5, color: 0xfff1c9, alpha }); // streak
+  }
+  g.moveTo(-14, 0).lineTo(5, 0).stroke({ width: 5, color: 0x24150a, alpha: 0.85 }); // outline of the shaft
+  g.poly([4, -4.5, 12, 0, 4, 4.5]).fill(0x24150a); // outline of the head
+  g.poly([-14, 0, -19, -5, -10, 0, -19, 5]).fill(0x24150a); // outline of the fletching
+  g.moveTo(-14, 0).lineTo(5, 0).stroke({ width: 2.5, color: 0xf2c36b }); // shaft
+  g.poly([4, -3.2, 11, 0, 4, 3.2]).fill(0xffffff); // head
+  g.poly([-14, 0, -18, -4, -11, 0, -18, 4]).fill(0xff8a7a); // fletching: red, which the greens and tans lack
   let travelled = 0;
   return {
     view: g,
