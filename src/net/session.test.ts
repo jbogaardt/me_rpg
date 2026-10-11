@@ -150,6 +150,7 @@ const snap = (n: number): SnapMsg => ({
   players: [[0, 1, 2, 0, 0]],
   mobs: [],
   me: [1, 0, 30, 30, 20, 20, 5, 1, 8],
+  chests: 0,
   events: [],
 });
 
@@ -315,6 +316,7 @@ describe('hosting a game', () => {
       players: [[0, 1, 2, 0, 0]],
       mobs: [],
       me: [1, 0, 1, 1, 1, 1, 1, 1, 1],
+      chests: 0,
       events: [],
     });
     expect(session.takeSnapshot()).toBeNull(); // snapshots only flow host -> friend

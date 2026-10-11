@@ -23,6 +23,7 @@ const snap: SnapMsg = {
   ],
   mobs: [mob, [1, 2, 0, 5, 0, 5000, 0]],
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10],
+  chests: 5,
   events: [
     { id: 4, e: { type: 'text', x: 5, y: 6, text: '+12 XP', color: 0xffb13f } },
     { id: 5, e: { type: 'slash', x: 1, y: 2, dir: 3 } },

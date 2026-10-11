@@ -273,15 +273,21 @@ export default defineZone({
       z.prop(col === 17 ? 'flowersPurple' : 'flowerRed', col, row);
     z.mob('shade', 17, 31);
 
+    // Treasure chests: a gift near the start, a restorative in the woods, and gear guarded on the ledges.
+    z.chest('wood', 'bronzeSword', 10, 51);
+    z.chest('oak', 'elixir', 18, 30);
+
     z.plateau({ col: 72, row: 13, w: 7, h: 4 }, { kind: 'frost', stairs: [75] }); // Frostlands ledge
     z.prop('frostRockC', 77, 14);
     z.prop('frostBush', 73, 15);
     z.mob('frostbound', 75, 14);
+    z.chest('silver', 'steelSword', 73, 13);
 
     z.plateau({ col: 62, row: 37, w: 8, h: 4 }, { kind: 'dry', stairs: [64] }); // Scorched Waste mesa
     z.prop('dryBush', 68, 38);
     z.prop('rockSmall', 65, 39);
     z.mob('raider', 66, 38);
+    z.chest('iron', 'legionArmor', 67, 40);
 
     // --- The grass hub between the biomes ------------------------------------------------------------
     z.forest({ col: 62, row: 28, w: 8, h: 4 });

@@ -20,6 +20,7 @@ describe('parseMap', () => {
       spawn: { col: 1, row: 1 },
       npc: null,
       mobs: [],
+      chests: [],
     });
   });
 
