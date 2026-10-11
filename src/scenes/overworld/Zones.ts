@@ -12,7 +12,7 @@ import type { Arena } from './Arena';
 
 const PREFETCH_REACH = 5 * CELL; // a door this close starts loading the zone behind it
 const PREFETCH_EVERY = 0.5; // seconds between looking for doors to prefetch
-const ARRIVE_INVULN = 2; // seconds of blinking immunity on arriving in a zone (the transition takes ~1), so nothing waiting at the door ambushes you
+const ARRIVE_GRACE = 1.8; // seconds of silent immunity on arriving in a zone (the transition takes up to 1 s, and the world runs behind it), so nothing waiting at the door ambushes you
 
 /** Loads a zone by name (assets.ts `loadZone`). The scene asks for the zones behind doors before the player gets there. */
 export type ZoneLoader = (name: string) => Promise<Zone>;
@@ -123,7 +123,7 @@ export class Zones {
     p.vel = { x: 0, y: 0 };
     p.knock = { x: 0, y: 0 };
     p.pendingShot = null;
-    p.invuln = Math.max(p.invuln, ARRIVE_INVULN);
+    p.grace = Math.max(p.grace, ARRIVE_GRACE);
     arena.syncHeroBodies();
     if (p === arena.local) this.show(dest);
   }

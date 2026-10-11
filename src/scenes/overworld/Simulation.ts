@@ -92,6 +92,7 @@ export class Simulation {
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
     p.invuln = Math.max(0, p.invuln - dt);
+    p.grace = Math.max(0, p.grace - dt);
     p.sinceHit += dt;
     if (p.pendingShot && (p.pendingShot.timer -= dt) <= 0) this.release(p);
     s.mp = Math.min(s.maxMp, s.mp + MP_REGEN * dt);
@@ -220,7 +221,7 @@ export class Simulation {
       // are looked up each step: someone may have joined or left while it flies.
       const hit = this.arena
         .players()
-        .find((p) => p.invuln <= 0 && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14);
+        .find((p) => !p.safe && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14);
       if (hit) this.hurtHero(mob, hit.body);
       return hit !== undefined;
     });
@@ -249,7 +250,7 @@ export class Simulation {
     const { x, y } = strike;
     this.fx('hitSpark', x, y);
     for (const p of this.arena.players()) {
-      if (p.invuln > 0 || Math.hypot(p.body.x - x, p.body.y - y) > LIGHTNING_RADIUS) continue;
+      if (p.safe || Math.hypot(p.body.x - x, p.body.y - y) > LIGHTNING_RADIUS) continue;
       this.harm(p, Math.max(1, Math.round(p.hero.stats.maxHp * LIGHTNING_DAMAGE)), x, y);
     }
   }
@@ -277,7 +278,7 @@ export class Simulation {
 
   private hurtHero(mob: Mob, victim: Character) {
     const p = this.arena.players().find((q) => q.body === victim);
-    if (!p || p.invuln > 0) return;
+    if (!p || p.safe) return;
     this.harm(p, rollDamage(mob.kind.attack, defensePower(p.hero)), mob.body.x, mob.body.y);
   }
 

@@ -90,6 +90,7 @@ export class GuestLink {
     local.target = null;
     local.flags = 0;
     local.invuln = 0;
+    local.grace = 0;
     local.knock = { x: 0, y: 0 };
     local.vel = { x: 0, y: 0 };
     local.body.alpha = 1;
