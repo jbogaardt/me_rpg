@@ -22,8 +22,8 @@ const LINE: Record<Theme, { color: number; glow: number }> = {
   sand: { color: 0xe0a050, glow: 0x7a4a14 },
 };
 
-const INSET = 22; // world px from the screen edge to the line and the corner icons' centres
-const ICON = 20; // corner icon radius
+const INSET = 19; // world px from the screen edge to the line and the corner icons' centres
+const ICON = 16; // corner icon radius
 
 function snowflake(g: Graphics, cx: number, cy: number, r: number, color: number) {
   for (let k = 0; k < 6; k++) {
@@ -39,7 +39,7 @@ function snowflake(g: Graphics, cx: number, cy: number, r: number, color: number
       );
     }
   }
-  g.stroke({ width: 3, color, cap: 'round' });
+  g.stroke({ width: 2.5, color, cap: 'round' });
 }
 
 function drop(g: Graphics, cx: number, cy: number, r: number, color: number) {
@@ -71,7 +71,7 @@ function bolt(g: Graphics, cx: number, cy: number, r: number, color: number) {
 
 function swirl(g: Graphics, cx: number, cy: number, r: number, color: number) {
   for (const k of [1, 0.65, 0.3]) g.moveTo(cx + r * k, cy).arc(cx, cy, r * k, 0, Math.PI * (1.2 + k * 0.6));
-  g.stroke({ width: 3, color, cap: 'round' });
+  g.stroke({ width: 2.5, color, cap: 'round' });
 }
 
 const ICONS: Record<Theme, (g: Graphics, cx: number, cy: number, r: number, color: number) => void> = {
@@ -112,8 +112,8 @@ export class WeatherFrame {
       y1 = INSET,
       x2 = w - INSET,
       y2 = h - INSET;
-    g.rect(x1, y1, x2 - x1, y2 - y1).stroke({ width: 10, color: glow, alpha: 0.45 });
-    g.rect(x1, y1, x2 - x1, y2 - y1).stroke({ width: 4, color });
+    g.rect(x1, y1, x2 - x1, y2 - y1).stroke({ width: 8, color: glow, alpha: 0.45 });
+    g.rect(x1, y1, x2 - x1, y2 - y1).stroke({ width: 3.5, color });
     // Clear a round patch of line behind each icon so it reads as a medallion.
     for (const [cx, cy] of [
       [x1, y1],
