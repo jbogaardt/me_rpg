@@ -38,15 +38,16 @@ run `npm run sprites -- check`, which is all `verify`/`build` need.
 4. **Look at it**: `npm run sprites -- preview body.light head.human_light hair.messy_dark_brown <new part> --anim walk`
    (also `--anim slash|idle|cast|hurt`, `--scale 3`, `--out file.png`), then Read `sprites/out/preview.png`. Check the
    swing (`--anim slash`) for weapons: if the blade is missing there, the weapon uses an unsupported oversize swing.
-5. **Use it**: a hero item (`src/systems/items.ts`, `look: { torso: '...' }`), an NPC (`NPC_LOOKS` in
+5. **Use it**: a hero item (`src/systems/items.ts`, `slot: 'chest'`, `look: { torso: '...' }`; an off-hand item sets `shield`, and `{ mirror: true }` on the part flips a right-handed item such as the dagger into the left hand; place it in a chest with `CHEST_LOOTS`), an NPC (`NPC_LOOKS` in
    `src/systems/looks.ts`) or a mob (`look` on a `MobKind`, see `add-mob-kind`). `npm run verify` fails on an unknown
    part, a part in the wrong slot, or a character without body and head.
 
 ## Limits (see CLAUDE.md for the full list)
 
 - Weapons need 128px swing art (`slash_128`): the arming sword family and the dagger work; longsword, mace, axe, scythe,
-  rapier, saber, glowsword and polearms use 192px "oversize" swings and are not packed yet. Bows/spears/staves have
-  no slash row and only show held (staff) or not at all.
+  rapier, saber, glowsword and polearms use 192px "oversize" swings and are not packed yet. Spears/staves have
+  no slash row and only show held (staff) or not at all. Bows have `shoot` art (13 frames) and `hurt` only, so they show
+  only while the hero draws one.
 - Items with no idle art reuse the first walk frame; weapons/shields have no cast art and vanish during it.
 - Each part is ~50 KB and all used parts load at boot (~4 MB now): add what the game uses, not the whole library.
 - **Credits**: `credits.csv` is regenerated from what is in the catalog; never ship art that is not in it. The art is

@@ -1,3 +1,4 @@
+import { ITEMS } from './items';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   attackPower,
@@ -82,8 +83,25 @@ describe('power helpers', () => {
   it('add gear and spell bonuses to the base stats', () => {
     const hero = newHero();
     expect(attackPower(hero)).toBe(hero.stats.attack + (hero.weapon.attack ?? 0));
-    expect(defensePower(hero)).toBe(hero.stats.defense + (hero.armor.defense ?? 0));
+    expect(defensePower(hero)).toBe(hero.stats.defense + (hero.cape?.defense ?? 0));
     expect(spellPower(hero)).toBe(hero.stats.magic + hero.spell.power);
+  });
+
+  it('count every piece of gear: armor and shields add defense, a second blade adds attack', () => {
+    const hero = newHero();
+    const [attack, defense] = [attackPower(hero), defensePower(hero)];
+    Object.assign(hero, {
+      head: ITEMS.greatHelm,
+      chest: ITEMS.plateArmor,
+      legs: ITEMS.steelGreaves,
+      feet: ITEMS.steelBoots,
+      offhand: ITEMS.parryingDagger,
+    });
+    expect(defensePower(hero)).toBe(defense + 3 + 4 + 2 + 2);
+    expect(attackPower(hero)).toBe(attack + 2);
+    hero.offhand = ITEMS.kiteShield;
+    expect(attackPower(hero)).toBe(attack);
+    expect(defensePower(hero)).toBe(defense + 3 + 4 + 2 + 2 + 3);
   });
 });
 

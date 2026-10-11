@@ -15,11 +15,27 @@ export interface Stats {
   magic: number;
 }
 
+/** Where gear is worn. `offhand` takes a shield or a second (light) weapon; `cape` is the cloak over the shoulders. */
+export const GEAR_SLOTS = ['weapon', 'offhand', 'head', 'chest', 'legs', 'feet', 'cape'] as const;
+export type GearSlot = (typeof GEAR_SLOTS)[number];
+
+/** A weapon that shoots instead of swinging: the action key looses a projectile along the way the hero is heading. */
+export interface Ranged {
+  /** Arrow speed, pixels per second (the hero walks at 120). */
+  speed: number;
+  /** How far an arrow flies before it drops, in pixels. */
+  range: number;
+  /** Seconds between shots. */
+  cooldown: number;
+}
+
 export interface Item {
   name: string;
-  slot?: 'weapon' | 'armor';
+  slot?: GearSlot;
   attack?: number;
   defense?: number;
+  /** Set on bows: the weapon shoots (see `Ranged`) instead of swinging. */
+  ranged?: Ranged;
   /** Sprite parts this item puts on the hero (see sprites/parts.ts); drawn over the hero's base look. */
   look?: Outfit;
 }
@@ -30,11 +46,10 @@ export interface Spell {
   power: number; // added to the caster's magic stat
 }
 
-export interface Hero {
+export interface Hero extends Partial<Record<Exclude<GearSlot, 'weapon'>, Item>> {
   name: string;
   stats: Stats;
-  weapon: Item;
-  armor: Item;
+  weapon: Item; // always armed; every other gear slot may be empty
   spell: Spell;
 }
 
@@ -79,7 +94,7 @@ export function newHero(): Hero {
     name: 'Hero',
     stats: { level: 1, xp: 0, hp: 30, maxHp: 30, mp: 20, maxMp: 20, attack: 5, defense: 1, magic: 8 },
     weapon: ITEMS.rustySword,
-    armor: ITEMS.travelerCloak,
+    cape: ITEMS.travelerCloak,
     spell: { name: 'Time Bolt', cost: 5, power: 6 },
   };
 }
@@ -266,8 +281,14 @@ export const MOB_KINDS: Record<string, MobKind> = {
   troll: TROLL,
 };
 
-export const attackPower = (h: Hero) => h.stats.attack + (h.weapon.attack ?? 0);
-export const defensePower = (h: Hero) => h.stats.defense + (h.armor.defense ?? 0);
+/** The gear a hero is wearing, in slot order. */
+export const wornGear = (h: Hero): Item[] => GEAR_SLOTS.flatMap((slot) => h[slot] ?? []);
+/** Attack from the weapon and anything held in the off-hand (a second blade adds its edge). */
+export const gearAttack = (h: Hero) => wornGear(h).reduce((sum, i) => sum + (i.attack ?? 0), 0);
+/** Defense from every piece of armor and a shield. */
+export const gearDefense = (h: Hero) => wornGear(h).reduce((sum, i) => sum + (i.defense ?? 0), 0);
+export const attackPower = (h: Hero) => h.stats.attack + gearAttack(h);
+export const defensePower = (h: Hero) => h.stats.defense + gearDefense(h);
 export const spellPower = (h: Hero) => h.stats.magic + h.spell.power;
 /** XP to go from `level` to the next. Grows faster than linearly: 20 at level 1, 224 at 5, 632 at 10. */
 export const xpToNext = (level: number) => Math.round(20 * level ** 1.5);

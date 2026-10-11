@@ -275,19 +275,29 @@ export default defineZone({
 
     // Treasure chests: a gift near the start, a restorative in the woods, and gear guarded on the ledges.
     z.chest('wood', 'bronzeSword', 10, 51);
+    z.chest('wood', 'shortBow', 6, 50); // a bow to try right at the start
+    z.chest('wood', 'clothHood', 11, 45);
+    z.chest('wood', 'leatherBoots', 5, 46);
     z.chest('oak', 'elixir', 18, 30);
+    z.chest('oak', 'woodenShield', 16, 28);
+    z.chest('oak', 'leatherArmor', 14, 31);
 
     z.plateau({ col: 72, row: 13, w: 7, h: 4 }, { kind: 'frost', stairs: [75] }); // Frostlands ledge
     z.prop('frostRockC', 77, 14);
     z.prop('frostBush', 73, 15);
     z.mob('frostbound', 75, 14);
     z.chest('silver', 'steelSword', 73, 13);
+    z.chest('silver', 'recurveBow', 77, 16);
+    z.chest('silver', 'vikingHelm', 74, 13);
 
     z.plateau({ col: 62, row: 37, w: 8, h: 4 }, { kind: 'dry', stairs: [64] }); // Scorched Waste mesa
     z.prop('dryBush', 68, 38);
     z.prop('rockSmall', 65, 39);
     z.mob('raider', 66, 38);
     z.chest('iron', 'legionArmor', 67, 40);
+    z.chest('iron', 'kiteShield', 63, 40);
+    z.chest('iron', 'ironGreaves', 69, 38);
+    z.chest('iron', 'parryingDagger', 63, 38);
 
     // --- The grass hub between the biomes ------------------------------------------------------------
     z.forest({ col: 62, row: 28, w: 8, h: 4 });

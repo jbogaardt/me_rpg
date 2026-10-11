@@ -9,7 +9,7 @@ import { Character, DIR_VEC, directionToward, type Direction } from '../entities
 import { Ambient } from '../entities/ambient';
 import { WeatherLayer } from '../entities/WeatherLayer';
 import { sampleBiome, Weather, type WeatherKind } from '../systems/weather';
-import { boltEffect, Effects, floatText, slashEffect } from '../entities/effects';
+import { arrowEffect, boltEffect, Effects, floatText, slashEffect } from '../entities/effects';
 import { Mob, type MobWorld } from '../entities/Mob';
 import { particleEffect } from '../entities/ParticleEffect';
 import { NO_COMMAND, Player, type Command } from '../entities/Player';
@@ -44,6 +44,7 @@ import {
   rollDamage,
   spellPower,
   type Hero,
+  type Ranged,
   type Stats,
 } from '../systems/combat';
 import { CHEST_LOOTS, collect } from '../systems/chests';
@@ -58,6 +59,7 @@ import {
   playerOutfit,
   playerTag,
 } from '../systems/looks';
+import { SHOOT_RELEASE_MS } from '../sprites/doll';
 import type { Wardrobe } from '../sprites/Wardrobe';
 import type { Item } from '../systems/combat';
 
@@ -462,7 +464,7 @@ export class OverworldScene implements Scene {
   }
 
   private snapPlayer(p: Player): PlayerSnap {
-    const swinging = p.attackCooldown > ATTACK_COOLDOWN - 0.1;
+    const swinging = this.isSwinging(p);
     const flags = (p.moving ? FLAG.moving : 0) | (p.invuln > 0 ? FLAG.invuln : 0) | (swinging ? FLAG.swing : 0);
     return [p.slot, round1(p.body.x), round1(p.body.y), dirIndex(p.body.facing), flags];
   }
@@ -547,6 +549,12 @@ export class OverworldScene implements Scene {
         this.swing(e.x, e.y, DIRS[e.dir] ?? 'down');
         this.playerNear(e.x, e.y)?.body.play('slash');
         break;
+      case 'draw':
+        this.playerNear(e.x, e.y)?.body.play('shoot');
+        break;
+      case 'arrow':
+        this.flyArrow(e.x, e.y, e.vx, e.vy, e.range);
+        break;
       case 'bolt':
         if (e.color === undefined) {
           this.shoot(e.x, e.y, e.vx, e.vy);
@@ -585,6 +593,7 @@ export class OverworldScene implements Scene {
     p.castCooldown = Math.max(0, p.castCooldown - dt);
     p.invuln = Math.max(0, p.invuln - dt);
     p.sinceHit += dt;
+    if (p.pendingShot && (p.pendingShot.timer -= dt) <= 0) this.release(p);
     s.mp = Math.min(s.maxMp, s.mp + MP_REGEN * dt);
     if (p.sinceHit > HP_REGEN_DELAY) s.hp = Math.min(s.maxHp, s.hp + HP_REGEN * dt);
 
@@ -599,7 +608,7 @@ export class OverworldScene implements Scene {
     p.moving = this.move(p, cmd, dt);
     // Lunge into a swing; blink while invulnerable.
     const [fx, fy] = DIR_VEC[p.body.facing];
-    const swinging = p.attackCooldown > ATTACK_COOLDOWN - 0.1;
+    const swinging = this.isSwinging(p);
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
     p.body.alpha = p.invuln > 0 && Math.floor(p.invuln * 16) % 2 === 0 ? 0.35 : 1;
     p.body.animate(dt * 1000, p.moving);
@@ -655,8 +664,18 @@ export class OverworldScene implements Scene {
     }
   }
 
+  /** In the first moments of a sword swing, which lunges the body forward (a bow does not). */
+  private isSwinging(p: Player): boolean {
+    return !p.hero.weapon.ranged && p.attackCooldown > ATTACK_COOLDOWN - 0.1;
+  }
+
   private attack(p: Player) {
     if (p.attackCooldown > 0) return;
+    const bow = p.hero.weapon.ranged;
+    if (bow) {
+      this.draw(p, bow);
+      return;
+    }
     p.attackCooldown = ATTACK_COOLDOWN;
     p.body.play('slash');
     const dir = p.body.facing;
@@ -670,6 +689,46 @@ export class OverworldScene implements Scene {
         this.hitMob(mob, rollDamage(attackPower(p.hero), mob.kind.defense), vx, vy);
       }
     }
+  }
+
+  /** Start drawing a bow: the arrow flies when the string is let go (`release`), a moment into the animation. */
+  private draw(p: Player, bow: Ranged) {
+    if (p.pendingShot) return;
+    p.attackCooldown = bow.cooldown;
+    p.pendingShot = { timer: SHOOT_RELEASE_MS / 1000, bow, damage: attackPower(p.hero) };
+    p.body.play('shoot');
+    this.emit({ type: 'draw', x: round1(p.body.x), y: round1(p.body.y) });
+  }
+
+  /** The bow's string is let go: the arrow leaves along the player's aim, at chest height. */
+  private release(p: Player) {
+    const shot = p.pendingShot;
+    p.pendingShot = null;
+    if (!shot) return;
+    const { x: ux, y: uy } = p.aim;
+    const x = p.body.x + ux * 10;
+    const y = p.body.y - BOLT_HEIGHT + uy * 8;
+    const [vx, vy] = [ux * shot.bow.speed, uy * shot.bow.speed];
+    this.flyArrow(x, y, vx, vy, shot.bow.range, (mob) => {
+      this.hitMob(mob, rollDamage(shot.damage, mob.kind.defense), ux, uy);
+    });
+    this.emit({ type: 'arrow', x: round1(x), y: round1(y), vx: round1(vx), vy: round1(vy), range: shot.bow.range });
+  }
+
+  /** An arrow in flight. `onHit` applies the damage (the host); without it the arrow is only for show (the guest). */
+  private flyArrow(x: number, y: number, vx: number, vy: number, range: number, onHit?: (mob: Mob) => void) {
+    this.effects.add(arrowEffect(x, y, vx, vy, range, (ax, ay) => this.projectileStep(ax, ay, onHit)));
+  }
+
+  /** Did a player's projectile at (x, y) run into a wall or an enemy? An enemy it hits is handed to `onHit`. */
+  private projectileStep(x: number, y: number, onHit?: (mob: Mob) => void): boolean {
+    if (this.collision.isBlocked(Math.floor(x / CELL), Math.floor((y + BOLT_HEIGHT) / CELL))) return true;
+    const mob = this.mobs.find(
+      (m) => m.alive && Math.abs(x - m.body.x) < 12 && Math.abs(y + BOLT_HEIGHT - m.body.y) < 16,
+    );
+    if (!mob) return false;
+    onHit?.(mob);
+    return true;
   }
 
   /** A sword swing by a player standing at (x, y) facing `dir`: the arc, and leaves shaken from any canopy it reaches. */
@@ -709,13 +768,7 @@ export class OverworldScene implements Scene {
         BOLT_RANGE,
         (bx, by) => {
           trail.moveTo(bx, by);
-          if (this.collision.isBlocked(Math.floor(bx / CELL), Math.floor((by + BOLT_HEIGHT) / CELL))) return true;
-          const mob = this.mobs.find(
-            (m) => m.alive && Math.abs(bx - m.body.x) < 12 && Math.abs(by + BOLT_HEIGHT - m.body.y) < 16,
-          );
-          if (!mob) return false;
-          onHit?.(mob);
-          return true;
+          return this.projectileStep(bx, by, onHit);
         },
         (bx, by, hit) => {
           trail.stop();
@@ -815,6 +868,7 @@ export class OverworldScene implements Scene {
     s.hp -= damage;
     p.invuln = INVULN_TIME;
     p.sinceHit = 0;
+    p.pendingShot = null; // a hit spoils the shot
     p.body.play('hurt');
     this.text(p.body.x, p.body.y - 54, String(damage), 0xff5a5a);
     this.fx('heroHurt', p.body.x, p.body.y - 14);
@@ -835,6 +889,7 @@ export class OverworldScene implements Scene {
     p.aim = { x: 0, y: 1 };
     p.knock = { x: 0, y: 0 };
     p.invuln = 0;
+    p.pendingShot = null;
     if (this.role === 'solo') this.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them
     if (p === this.local) this.ui.dialog.say(DEFEAT_LINES);
     else this.emit({ type: 'defeat', player: p.slot });

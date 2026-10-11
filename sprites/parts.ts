@@ -70,12 +70,19 @@ add('torso.legion_iron', 'torso/armour/torso_armour_legion', 'iron');
 add('torso.plate_steel', 'torso/armour/torso_armour_plate', 'steel');
 add('torso.plate_gold', 'torso/armour/torso_armour_plate', 'gold');
 add('legs.plate_steel', 'legs/legs_armour', 'steel');
+add('legs.plate_iron', 'legs/legs_armour', 'iron');
+add('legs.leggings_charcoal', 'legs/leggings/legs_leggings', 'charcoal');
 add('feet.boots_brown', 'feet/boots/feet_boots_basic', 'brown');
 add('feet.boots_black', 'feet/boots/feet_boots_basic', 'black');
 add('feet.f_boots_brown', 'feet/boots/feet_boots_basic', 'brown', { body: 'female' });
+add('feet.boots_fold_tan', 'feet/boots/feet_boots_fold', 'tan');
+add('feet.plate_iron', 'feet/feet_armour', 'iron');
+add('feet.plate_steel', 'feet/feet_armour', 'steel');
 add('headwear.nasal', 'headwear/helmets/helmets/hat_helmet_nasal', 'iron');
 add('headwear.barbarian', 'headwear/helmets/helmets/hat_helmet_barbarian_viking', 'iron');
 add('headwear.greathelm', 'headwear/helmets/helmets/hat_helmet_greathelm', 'steel');
+add('headwear.legion', 'headwear/helmets/helmets/hat_helmet_legion', 'iron');
+add('headwear.kettle', 'headwear/helmets/helmets/hat_helmet_kettle', 'iron', { color2: 'brown' }); // colour 2: the lining
 add('headwear.wizard_navy', 'headwear/hats/magic/hat_magic_wizard', 'navy');
 add('headwear.hood_brown', 'headwear/coverings/hoods/hat_hood_cloth', 'brown');
 add('headwear.bandana_tan', 'headwear/coverings/bandana/hat_bandana', 'tan');
@@ -88,5 +95,14 @@ for (const metal of ['iron', 'bronze', 'steel', 'silver', 'gold']) {
 }
 add('weapon.dagger', 'weapons/sword/weapon_sword_dagger');
 add('weapon.staff', 'weapons/magic/weapon_magic_simple'); // held only: it has no swing art (NPC prop)
+// Bows: drawn only in the `shoot` and `hurt` poses (LPC has no held-bow art for walking), so the bow appears as the
+// hero draws it. Wood colours or metals (`light`, `medium`, `red`, `dark`; `bronze`, `iron`, `steel`, ...).
+add('weapon.bow_light', 'weapons/ranged/bow/weapon_ranged_bow_normal', 'light');
+add('weapon.bow_recurve', 'weapons/ranged/bow/weapon_ranged_bow_recurve', 'medium');
+add('weapon.bow_great', 'weapons/ranged/bow/weapon_ranged_bow_great', 'dark');
 add('shield.round_brown', 'weapons/shields/shield_round', 'brown');
 add('shield.round_silver', 'weapons/shields/shield_round', 'silver');
+add('shield.round_black', 'weapons/shields/shield_round', 'black');
+add('shield.kite_gray', 'weapons/shields/shield_kite', 'kite gray gray');
+// An off-hand weapon: the dagger flipped into the left hand (it swings along with the main weapon, like dual wielding).
+add('shield.dagger_left', 'weapons/sword/weapon_sword_dagger', undefined, { mirror: true });

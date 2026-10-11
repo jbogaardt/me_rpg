@@ -1,4 +1,15 @@
-import { attackPower, defensePower, spellPower, xpToNext, type Hero } from '../systems/combat';
+import {
+  attackPower,
+  defensePower,
+  GEAR_SLOTS,
+  gearAttack,
+  gearDefense,
+  spellPower,
+  xpToNext,
+  type GearSlot,
+  type Hero,
+  type Item,
+} from '../systems/combat';
 import { input } from '../core/input';
 import type { Session } from '../net/session';
 import { Multiplayer } from './Multiplayer';
@@ -8,6 +19,29 @@ import { Multiplayer } from './Multiplayer';
 // The Online tab (multiplayer connection) is Multiplayer.ts. Online play does not pause the world behind the menu.
 
 const TABS = ['status', 'gear', 'controls', 'online'];
+
+const SLOT_LABELS: Record<GearSlot, string> = {
+  weapon: 'Weapon',
+  offhand: 'Off-hand',
+  head: 'Head',
+  chest: 'Chest',
+  legs: 'Legs',
+  feet: 'Feet',
+  cape: 'Cloak',
+};
+
+/** One line for a gear slot: the item and what it adds ("Short Bow +2 ATK, ranged"), or "Empty". */
+function describe(item: Item | undefined): string {
+  if (!item) return '<small>Empty</small>';
+  const bonuses = [
+    item.attack ? `+${item.attack} ATK` : '',
+    item.defense ? `+${item.defense} DEF` : '',
+    item.ranged ? 'ranged' : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
+  return `${item.name} <small>${bonuses}</small>`;
+}
 
 export class Menu {
   open = false;
@@ -65,14 +99,13 @@ export class Menu {
         ${row('HP', `${Math.ceil(s.hp)} / ${s.maxHp}`)}
         ${row('MP', `${Math.floor(s.mp)} / ${s.maxMp}`)}
         ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
-        ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${hero.weapon.attack ?? 0} weapon)</small>`)}
-        ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${hero.armor.defense ?? 0} armor)</small>`)}
+        ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${gearAttack(hero)} gear)</small>`)}
+        ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${gearDefense(hero)} gear)</small>`)}
         ${row('Magic', `${spellPower(hero)} <small>(${s.magic} + ${hero.spell.power} spell)</small>`)}
       </dl>`;
     document.getElementById('menu-gear')!.innerHTML = `
       <dl>
-        ${row('Weapon', `${hero.weapon.name} <small>+${hero.weapon.attack ?? 0} ATK</small>`)}
-        ${row('Armor', `${hero.armor.name} <small>+${hero.armor.defense ?? 0} DEF</small>`)}
+        ${GEAR_SLOTS.map((slot) => row(SLOT_LABELS[slot], describe(hero[slot]))).join('')}
         ${row('Spell', `${hero.spell.name} <small>${hero.spell.cost} MP</small>`)}
       </dl>
       <h3>Pack</h3>

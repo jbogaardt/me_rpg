@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_PLAYERS } from '../net/protocol';
+import { outfitParts } from '../sprites/doll';
 import { newHero } from './combat';
 import { ITEMS } from './items';
 import {
   allPlayerOutfits,
   heroOutfit,
+  HERO_BASE,
   PLAYER_BASES,
   PLAYER_COLORS,
   playerName,
@@ -33,7 +35,7 @@ describe('player looks', () => {
 
   it('lays each player’s gear over their own clothes', () => {
     const hero = newHero();
-    hero.armor = ITEMS.plateArmor;
+    hero.chest = ITEMS.plateArmor;
     hero.weapon = ITEMS.silverSword;
     for (const slot of [0, 1, 2, 3]) {
       const outfit = playerOutfit(slot, hero);
@@ -42,6 +44,35 @@ describe('player looks', () => {
       expect(outfit.hair).toBe(PLAYER_BASES[slot]?.hair); // ...and the player keeps their own face and hair
       expect(outfit.body).toBe(PLAYER_BASES[slot]?.body);
     }
+  });
+
+  it('draws every slot of gear at once: armor over the clothes, a shield in the off-hand, a bow in the hand', () => {
+    const hero = newHero();
+    Object.assign(hero, {
+      weapon: ITEMS.greatBow,
+      offhand: ITEMS.parryingDagger,
+      head: ITEMS.greatHelm,
+      chest: ITEMS.plateArmor,
+      legs: ITEMS.steelGreaves,
+      feet: ITEMS.steelBoots,
+    });
+    const o = heroOutfit(hero);
+    expect(o).toMatchObject({
+      weapon: 'weapon.bow_great',
+      shield: 'shield.dagger_left',
+      headwear: 'headwear.greathelm',
+      torso: 'torso.plate_steel',
+      legs: 'legs.plate_steel',
+      feet: 'feet.plate_steel',
+      cape: 'cape.maroon',
+    });
+    expect(o.hair).toBe(HERO_BASE.hair);
+  });
+
+  it('shows the base clothes where nothing is worn', () => {
+    const hero = newHero();
+    expect(heroOutfit(hero)).toMatchObject({ torso: HERO_BASE.torso, legs: HERO_BASE.legs, feet: HERO_BASE.feet });
+    expect(heroOutfit(hero).headwear).toBeUndefined();
   });
 
   it('keeps player 0 the original hero', () => {
@@ -53,9 +84,9 @@ describe('player looks', () => {
     expect(() => playerOutfit(-1, newHero())).toThrow(/no player -1/);
   });
 
-  it('lists every outfit up front so the game can load all the art before play', () => {
-    const weapons = Object.values(ITEMS).filter((i) => i.slot === 'weapon').length;
-    const armors = Object.values(ITEMS).filter((i) => i.slot === 'armor').length;
-    expect(allPlayerOutfits()).toHaveLength(MAX_PLAYERS * weapons * armors);
+  it('lists every item on every player up front so the game can load all the art before play', () => {
+    expect(allPlayerOutfits()).toHaveLength(MAX_PLAYERS * Object.keys(ITEMS).length);
+    const parts = new Set(allPlayerOutfits().flatMap(outfitParts));
+    for (const item of Object.values(ITEMS)) for (const id of Object.values(item.look)) expect(parts).toContain(id);
   });
 });

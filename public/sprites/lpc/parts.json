@@ -193,10 +193,28 @@
    "z": 25
   }
  ],
+ "feet.boots_fold_tan": [
+  {
+   "file": "feet.boots_fold_tan.0.png",
+   "z": 25
+  }
+ ],
  "feet.f_boots_brown": [
   {
    "file": "feet.f_boots_brown.0.png",
    "z": 25
+  }
+ ],
+ "feet.plate_iron": [
+  {
+   "file": "feet.plate_iron.0.png",
+   "z": 15
+  }
+ ],
+ "feet.plate_steel": [
+  {
+   "file": "feet.plate_steel.0.png",
+   "z": 15
   }
  ],
  "hair.long_black": [
@@ -469,6 +487,18 @@
    "z": 130
   }
  ],
+ "headwear.kettle": [
+  {
+   "file": "headwear.kettle.0.png",
+   "z": 135
+  }
+ ],
+ "headwear.legion": [
+  {
+   "file": "headwear.legion.0.png",
+   "z": 130
+  }
+ ],
  "headwear.nasal": [
   {
    "file": "headwear.nasal.0.png",
@@ -529,6 +559,12 @@
    "z": 20
   }
  ],
+ "legs.leggings_charcoal": [
+  {
+   "file": "legs.leggings_charcoal.0.png",
+   "z": 20
+  }
+ ],
  "legs.pants_brown": [
   {
    "file": "legs.pants_brown.0.png",
@@ -577,10 +613,38 @@
    "z": 20
   }
  ],
+ "legs.plate_iron": [
+  {
+   "file": "legs.plate_iron.0.png",
+   "z": 20
+  }
+ ],
  "legs.plate_steel": [
   {
    "file": "legs.plate_steel.0.png",
    "z": 20
+  }
+ ],
+ "shield.dagger_left": [
+  {
+   "file": "shield.dagger_left.0.png",
+   "z": 140
+  },
+  {
+   "file": "shield.dagger_left.1.png",
+   "z": 9
+  }
+ ],
+ "shield.kite_gray": [
+  {
+   "file": "shield.kite_gray.0.png",
+   "z": 110
+  }
+ ],
+ "shield.round_black": [
+  {
+   "file": "shield.round_black.0.png",
+   "z": 110
   }
  ],
  "shield.round_brown": [
@@ -815,6 +879,36 @@
   {
    "file": "weapon.arming_steel.3.png",
    "z": 150
+  }
+ ],
+ "weapon.bow_great": [
+  {
+   "file": "weapon.bow_great.0.png",
+   "z": -1
+  },
+  {
+   "file": "weapon.bow_great.1.png",
+   "z": 140
+  }
+ ],
+ "weapon.bow_light": [
+  {
+   "file": "weapon.bow_light.0.png",
+   "z": -1
+  },
+  {
+   "file": "weapon.bow_light.1.png",
+   "z": 140
+  }
+ ],
+ "weapon.bow_recurve": [
+  {
+   "file": "weapon.bow_recurve.0.png",
+   "z": -1
+  },
+  {
+   "file": "weapon.bow_recurve.1.png",
+   "z": 140
   }
  ],
  "weapon.dagger": [

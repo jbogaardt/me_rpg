@@ -57,7 +57,7 @@ describe('hero gear looks', () => {
 
   it('armor replaces base clothes in the slots it sets and leaves the rest', () => {
     const hero = newHero();
-    hero.armor = ITEMS.plateArmor;
+    hero.chest = ITEMS.plateArmor;
     const o = heroOutfit(hero);
     expect(o.torso).toBe('torso.plate_steel');
     expect(o.hair).toBe(HERO_BASE.hair);

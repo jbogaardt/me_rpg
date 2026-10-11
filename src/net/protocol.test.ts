@@ -28,6 +28,8 @@ const snap: SnapMsg = {
     { id: 4, e: { type: 'text', x: 5, y: 6, text: '+12 XP', color: 0xffb13f } },
     { id: 5, e: { type: 'slash', x: 1, y: 2, dir: 3 } },
     { id: 6, e: { type: 'bolt', x: 1, y: 2, vx: 260, vy: 0 } },
+    { id: 11, e: { type: 'draw', x: 1, y: 2 } },
+    { id: 12, e: { type: 'arrow', x: 1, y: 2, vx: 300, vy: 0, range: 256 } },
     { id: 10, e: { type: 'bolt', x: 5, y: 6, vx: -135, vy: 0, color: 0xb06cff } }, // an enemy's shot
     { id: 7, e: { type: 'defeat', player: 3 } },
     { id: 8, e: { type: 'fx', name: 'hitSpark', x: 3, y: 4, dir: 1.6 } },
@@ -107,6 +109,9 @@ describe('messages', () => {
       { ...snap, me: [1, 2, 3] },
       { ...snap, events: [{ id: 1, e: { type: 'text', x: 0, y: 0, text: 'x'.repeat(100), color: 0 } }] },
       { ...snap, events: [{ id: 1, e: { type: 'nope' } }] },
+      { ...snap, events: [{ id: 1, e: { type: 'draw', x: 'a', y: 0 } }] },
+      { ...snap, events: [{ id: 1, e: { type: 'arrow', x: 0, y: 0, vx: 1, vy: 0 } }] }, // no range
+      { ...snap, events: [{ id: 1, e: { type: 'arrow', x: 0, y: 0, vx: 1, vy: 0, range: -5 } }] },
       { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'boltTrail', x: 0, y: 0 } }] }, // continuous effects stay local
       { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'nope', x: 0, y: 0 } }] },
       { ...snap, events: [{ id: 1, e: { type: 'fx', name: 'hitSpark', x: 0, y: 0, dir: 'up' } }] },

@@ -4,7 +4,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { ANIMS, DOLL_HEIGHT, DOLL_WIDTH, type AnimName } from '../../src/sprites/doll';
+import { ANIMS, DIR_ROW, DOLL_HEIGHT, DOLL_WIDTH, type AnimName } from '../../src/sprites/doll';
 import { type Image } from '../map/image';
 import { PNG } from 'pngjs';
 
@@ -18,6 +18,8 @@ export interface PartSpec {
   color?: string;
   /** Second colour group when the item has one (human heads: eye colour). */
   color2?: string;
+  /** Flip every frame (and swap the left and right rows), so a right-handed item is held in the left hand. */
+  mirror?: boolean;
 }
 
 export interface Credit {
@@ -77,6 +79,7 @@ const SOURCE_ANIM: Record<AnimName, string> = {
   cast: 'spellcast',
   hurt: 'hurt',
   slash: 'slash',
+  shoot: 'shoot',
 };
 
 export class Lpc {
@@ -229,7 +232,7 @@ export class Lpc {
           }
         }
       }
-      if (any) layers.push({ z: layer.zPos, image: out.image });
+      if (any) layers.push({ z: layer.zPos, image: spec.mirror ? mirrorDoll(out.image) : out.image });
     }
     if (!layers.length) throw new Error(`${where}: no art found for this body type`);
 
@@ -253,6 +256,27 @@ export class Lpc {
   private credits(def: ItemDef, usedPaths: string[]): Credit[] {
     return (def.credits ?? []).filter((c) => usedPaths.some((p) => p.startsWith(c.file.replace(/\/?$/, '/'))));
   }
+}
+
+/** A doll-sheet layer seen in a mirror: each frame flipped left to right, and the left and right rows swapped. */
+function mirrorDoll(src: Image): Image {
+  const out = new Sheet(src.width, src.height);
+  for (const a of Object.values(ANIMS)) {
+    for (let row = 0; row < a.rows; row++) {
+      // Left (1) and right (3) trade places; up and down stay where they are.
+      const from = a.rows === 1 ? 0 : row === DIR_ROW.left ? DIR_ROW.right : row === DIR_ROW.right ? DIR_ROW.left : row;
+      for (let col = 0; col < a.cols; col++) {
+        for (let y = 0; y < a.size; y++) {
+          for (let x = 0; x < a.size; x++) {
+            const si = ((a.y + from * a.size + y) * src.width + col * a.size + (a.size - 1 - x)) * 4;
+            const di = ((a.y + row * a.size + y) * src.width + col * a.size + x) * 4;
+            src.data.copy(out.image.data, di, si, si + 4);
+          }
+        }
+      }
+    }
+  }
+  return out.image;
 }
 
 /** A blank RGBA canvas with the few blit operations the packer needs. */

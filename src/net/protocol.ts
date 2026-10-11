@@ -15,7 +15,7 @@ import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 
 export const DIRS: readonly Direction[] = ['down', 'up', 'left', 'right'];
 export const dirIndex = (d: Direction) => DIRS.indexOf(d);
@@ -55,6 +55,8 @@ export type FxName = (typeof FX_NAMES)[number];
 export type WorldEvent =
   | { type: 'slash'; x: number; y: number; dir: number }
   | { type: 'bolt'; x: number; y: number; vx: number; vy: number; color?: number } // `color` set: an enemy's shot (the guest only draws it)
+  | { type: 'draw'; x: number; y: number } // the player standing here begins drawing a bow (the arrow comes later, as `arrow`)
+  | { type: 'arrow'; x: number; y: number; vx: number; vy: number; range: number } // a player's arrow (the guest only draws it)
   | { type: 'text'; x: number; y: number; text: string; color: number }
   | { type: 'fx'; name: FxName; x: number; y: number; dir?: number }
   | { type: 'defeat'; player: number }; // this player (0 is the host) was knocked out and sent back to spawn
@@ -124,6 +126,12 @@ function parseEvent(raw: unknown): WorldEvent | null {
         isCoord(e.vy) &&
         (e.color === undefined || (isCount(e.color) && e.color <= 0xffffff))
         ? { type: 'bolt', x: e.x, y: e.y, vx: e.vx, vy: e.vy, ...(e.color === undefined ? {} : { color: e.color }) }
+        : null;
+    case 'draw':
+      return isCoord(e.x) && isCoord(e.y) ? { type: 'draw', x: e.x, y: e.y } : null;
+    case 'arrow':
+      return isCoord(e.x) && isCoord(e.y) && isCoord(e.vx) && isCoord(e.vy) && isCoord(e.range) && e.range >= 0
+        ? { type: 'arrow', x: e.x, y: e.y, vx: e.vx, vy: e.vy, range: e.range }
         : null;
     case 'text':
       return isCoord(e.x) &&

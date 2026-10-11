@@ -2,7 +2,7 @@
 // Add a loot by naming it here, then place a chest with `z.chest(kind, loot, col, row)` (see the build-zone skill).
 
 import { gainXp, type Hero, type Item } from './combat';
-import { ITEMS } from './items';
+import { equip, ITEMS } from './items';
 
 /** Art variants, in the row order of public/tilesets/chests.png (each row: open frame, then closed frame). */
 export const CHEST_KINDS = ['wood', 'oak', 'iron', 'silver'] as const;
@@ -17,9 +17,29 @@ export const CHEST_LOOTS: Record<string, ChestLoot> = {
   bronzeSword: { item: ITEMS.bronzeSword },
   steelSword: { item: ITEMS.steelSword },
   silverSword: { item: ITEMS.silverSword },
+  shortBow: { item: ITEMS.shortBow },
+  recurveBow: { item: ITEMS.recurveBow },
+  greatBow: { item: ITEMS.greatBow },
+  woodenShield: { item: ITEMS.woodenShield },
+  ironShield: { item: ITEMS.ironShield },
+  kiteShield: { item: ITEMS.kiteShield },
+  parryingDagger: { item: ITEMS.parryingDagger },
+  clothHood: { item: ITEMS.clothHood },
+  nasalHelm: { item: ITEMS.nasalHelm },
+  kettleHat: { item: ITEMS.kettleHat },
+  vikingHelm: { item: ITEMS.vikingHelm },
+  legionHelm: { item: ITEMS.legionHelm },
+  greatHelm: { item: ITEMS.greatHelm },
   leatherArmor: { item: ITEMS.leatherArmor },
   legionArmor: { item: ITEMS.legionArmor },
   plateArmor: { item: ITEMS.plateArmor },
+  paddedLeggings: { item: ITEMS.paddedLeggings },
+  ironGreaves: { item: ITEMS.ironGreaves },
+  steelGreaves: { item: ITEMS.steelGreaves },
+  leatherBoots: { item: ITEMS.leatherBoots },
+  foldedBoots: { item: ITEMS.foldedBoots },
+  ironBoots: { item: ITEMS.ironBoots },
+  steelBoots: { item: ITEMS.steelBoots },
   potion: { hp: 20 },
   elixir: { hp: 40, mp: 40 },
   relic: { xp: 40 },
@@ -31,18 +51,22 @@ export interface Found {
   levels: number; // level-ups gained
 }
 
-const isBetter = (hero: Hero, item: Item) =>
-  item.slot === 'weapon'
-    ? (item.attack ?? 0) > (hero.weapon.attack ?? 0)
-    : item.slot === 'armor' && (item.defense ?? 0) > (hero.armor.defense ?? 0);
+/** A piece of gear's worth in its slot: attack for blades and bows, defense for armor and shields, both added for a mix. */
+const worth = (item: Item | undefined) => (item?.attack ?? 0) + (item?.defense ?? 0);
+
+/** Is `item` better than what the hero wears in its slot (an empty slot takes anything)? */
+export function isBetter(hero: Hero, item: Item): boolean {
+  if (!item.slot) return false;
+  const current = hero[item.slot];
+  return !current || worth(item) > worth(current);
+}
 
 /** Give the hero what is in a chest. Gear is worn only when it is an upgrade (there is no inventory yet). */
 export function collect(hero: Hero, loot: ChestLoot): Found {
   if ('item' in loot) {
     const { item } = loot;
     if (!isBetter(hero, item)) return { text: `${item.name} (no better)`, levels: 0 };
-    if (item.slot === 'weapon') hero.weapon = item;
-    else hero.armor = item;
+    equip(hero, item);
     return { text: `${item.name}!`, gear: item, levels: 0 };
   }
   const s = hero.stats;

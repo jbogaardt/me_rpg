@@ -18,10 +18,36 @@ describe('collect', () => {
     expect(found.gear).toBeUndefined();
   });
 
-  it('puts armor in the armor slot', () => {
+  it('puts each piece of gear in its own slot', () => {
     const hero = newHero();
     collect(hero, CHEST_LOOTS.leatherArmor!);
-    expect(hero.armor.name).toBe('Leather Armor');
+    collect(hero, CHEST_LOOTS.greatHelm!);
+    collect(hero, CHEST_LOOTS.steelGreaves!);
+    collect(hero, CHEST_LOOTS.ironBoots!);
+    collect(hero, CHEST_LOOTS.kiteShield!);
+    expect([hero.chest, hero.head, hero.legs, hero.feet, hero.offhand].map((i) => i?.name)).toEqual([
+      'Leather Armor',
+      'Great Helm',
+      'Steel Greaves',
+      'Iron Boots',
+      'Kite Shield',
+    ]);
+    expect(hero.weapon.name).toBe('Rusty Sword'); // none of that touched the weapon
+    expect(hero.cape?.name).toBe("Traveler's Cloak");
+  });
+
+  it('takes anything for an empty slot but only upgrades for a filled one', () => {
+    const hero = newHero();
+    expect(collect(hero, CHEST_LOOTS.clothHood!).gear?.name).toBe('Cloth Hood'); // the head starts bare
+    expect(collect(hero, CHEST_LOOTS.legionHelm!).gear?.name).toBe('Legion Helm');
+    expect(collect(hero, CHEST_LOOTS.nasalHelm!).gear).toBeUndefined();
+    expect(hero.head?.name).toBe('Legion Helm');
+  });
+
+  it('wields a bow in place of a sword', () => {
+    const hero = newHero();
+    expect(collect(hero, CHEST_LOOTS.recurveBow!).gear?.ranged).toBeDefined();
+    expect(hero.weapon.name).toBe('Recurve Bow');
   });
 
   it('restores HP and MP without going over the maximum', () => {

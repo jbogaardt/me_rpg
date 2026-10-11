@@ -2,7 +2,7 @@
 // ids from sprites/parts.ts; mob kinds carry their own `look` (systems/combat.ts). Pixi-free.
 
 import { withGear, type Outfit } from '../sprites/doll';
-import type { Hero } from './combat';
+import { wornGear, type Hero } from './combat';
 import { ITEMS } from './items';
 
 /** The hero without gear: a boy in a green tunic. Weapon and armor looks are drawn over this. */
@@ -16,7 +16,7 @@ export const HERO_BASE: Outfit = {
 };
 
 /** The hero's outfit for the gear they carry (player 0). */
-export function heroOutfit(hero: Pick<Hero, 'weapon' | 'armor'>): Outfit {
+export function heroOutfit(hero: Hero): Outfit {
   return playerOutfit(0, hero);
 }
 
@@ -65,19 +65,19 @@ export const playerName = (slot: number) => `Player ${slot + 1}`;
 export const playerTag = (slot: number) => `P${slot + 1}`;
 
 /** Player `slot`'s outfit for the gear they carry (their base clothes with gear laid over them). */
-export function playerOutfit(slot: number, hero: Pick<Hero, 'weapon' | 'armor'>): Outfit {
+export function playerOutfit(slot: number, hero: Hero): Outfit {
   const base = PLAYER_BASES[slot];
   if (!base) throw new Error(`There is no player ${slot} (players are 0 to ${PLAYER_BASES.length - 1})`);
-  return withGear(withGear(base, hero.armor.look ?? {}), hero.weapon.look ?? {});
+  return wornGear(hero).reduce((outfit, item) => withGear(outfit, item.look ?? {}), base);
 }
 
-/** Every outfit a player can wear (all gear, as any player), so the game can load their parts up front. */
+/**
+ * Every outfit a player can wear, as any player: each item of gear on its own over each base look. Gear in different
+ * slots draws different parts, so this covers every part a player can show without listing every combination (the
+ * game loads them all up front, and the tests check them).
+ */
 export function allPlayerOutfits(): Outfit[] {
-  const weapons = Object.values(ITEMS).filter((i) => i.slot === 'weapon');
-  const armors = Object.values(ITEMS).filter((i) => i.slot === 'armor');
-  return PLAYER_BASES.flatMap((_base, slot) =>
-    weapons.flatMap((weapon) => armors.map((armor) => playerOutfit(slot, { weapon, armor }))),
-  );
+  return PLAYER_BASES.flatMap((base) => Object.values(ITEMS).map((item) => withGear(base, item.look ?? {})));
 }
 
 /** NPC looks by name. Each pairs a body with a matching head (and body-shaped garments); hair, hats and weapons mix freely. */

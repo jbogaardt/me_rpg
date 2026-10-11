@@ -96,6 +96,43 @@ export function boltEffect(
   };
 }
 
+/**
+ * An arrow in flight, pointing the way it flies. `step`, `range` and `onEnd` work as for `boltEffect`; an arrow that
+ * hit something is gone at once, one that merely ran out of range just drops.
+ */
+export function arrowEffect(
+  x: number,
+  y: number,
+  vx: number,
+  vy: number,
+  range: number,
+  step: (x: number, y: number) => boolean,
+  onEnd?: (x: number, y: number, hit: boolean) => void,
+): Effect {
+  const g = new Graphics({ position: { x, y }, rotation: Math.atan2(vy, vx) })
+    .moveTo(-9, 0)
+    .lineTo(3, 0)
+    .stroke({ width: 1.5, color: 0xb98a55 }) // shaft
+    .poly([3, -2, 7, 0, 3, 2])
+    .fill(0xe8edf2) // head
+    .poly([-9, 0, -12, -2.5, -7, 0, -12, 2.5])
+    .fill(0xf4efe4); // fletching
+  let travelled = 0;
+  return {
+    view: g,
+    update(dt) {
+      g.x += vx * dt;
+      g.y += vy * dt;
+      travelled += Math.hypot(vx, vy) * dt;
+      g.zIndex = g.y + 14; // it flies at chest height, like the bolt
+      const hit = travelled < range && step(g.x, g.y);
+      const alive = travelled < range && !hit;
+      if (!alive) onEnd?.(g.x, g.y, hit);
+      return alive;
+    },
+  };
+}
+
 /** A number or word that floats up from (x, y) and fades. */
 export function floatText(x: number, y: number, text: string, color: number): Effect {
   // Uses the 'FloatText' bitmap font installed in main.ts: no canvas re-render per number.

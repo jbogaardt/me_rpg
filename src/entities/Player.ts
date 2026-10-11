@@ -1,5 +1,5 @@
 import type { Texture } from 'pixi.js';
-import type { Hero } from '../systems/combat';
+import type { Hero, Ranged } from '../systems/combat';
 import { PLAYER_COLORS } from '../systems/looks';
 import { Character } from './Character';
 
@@ -18,6 +18,8 @@ export class Player {
   readonly body: Character;
   attackCooldown = 0;
   castCooldown = 0;
+  /** A bow being drawn: the arrow leaves when `timer` runs out (host and solo; a hit while drawing spoils it). */
+  pendingShot: { timer: number; bow: Ranged; damage: number } | null = null;
   invuln = 0; // seconds of blinking immunity after a hit
   sinceHit = Infinity; // seconds since last hurt (HP regenerates after a pause)
   knock = { x: 0, y: 0 };

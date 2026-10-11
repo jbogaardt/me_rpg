@@ -3,7 +3,7 @@
 //
 //   LPC_DIR=<clone> npm run sprites -- build [id...]   pack parts -> public/sprites/lpc/ (+ parts.json, credits.csv)
 //   npm run sprites -- check                            manifest and files match the catalog (no clone needed; runs in `npm run build`)
-//   npm run sprites -- preview <id>... [--anim walk|idle|cast|hurt|slash] [--out file.png] [--scale n]
+//   npm run sprites -- preview <id>... [--anim walk|idle|cast|hurt|slash|shoot] [--out file.png] [--scale n]
 //
 // The LPC generator is https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator (clone it;
 // LPC_DIR defaults to ../Universal-LPC-Spritesheet-Character-Generator next to this repo).
@@ -11,7 +11,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { PARTS } from '../../sprites/parts';
-import { ANIMS, DIR_ROW, outfitLayers, type AnimName, type PartManifest } from '../../src/sprites/doll';
+import {
+  ANIMS,
+  DIR_ROW,
+  DOLL_HEIGHT,
+  DOLL_WIDTH,
+  outfitLayers,
+  type AnimName,
+  type PartManifest,
+} from '../../src/sprites/doll';
 import { readPng, ROOT, writePng, type Image } from '../map/image';
 import { Lpc, type Credit } from './lpc';
 
@@ -124,7 +132,7 @@ function preview(args: string[]) {
   const outfit = Object.fromEntries(args.map((id) => [slotOf(id), id]));
   const layers = outfitLayers(outfit, manifest);
 
-  const sheet = { width: 768, height: 832 + 512, data: Buffer.alloc(768 * (832 + 512) * 4) };
+  const sheet = { width: DOLL_WIDTH, height: DOLL_HEIGHT, data: Buffer.alloc(DOLL_WIDTH * DOLL_HEIGHT * 4) };
   for (const l of layers) over(sheet, readPng(path.join(OUT, l.file)));
   const a = ANIMS[anim];
   const rows = a.rows === 1 ? 1 : 4;

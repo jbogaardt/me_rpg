@@ -11,7 +11,7 @@ export type Direction = 'down' | 'up' | 'left' | 'right';
 /** Row order inside every animation block. */
 export const DIR_ROW: Record<Direction, number> = { up: 0, left: 1, down: 2, right: 3 };
 
-export type AnimName = 'walk' | 'idle' | 'cast' | 'hurt' | 'slash';
+export type AnimName = 'walk' | 'idle' | 'cast' | 'hurt' | 'slash' | 'shoot';
 
 export interface AnimBlock {
   /** Top-left of the block on the sheet. */
@@ -36,12 +36,18 @@ export const ANIMS: Record<AnimName, AnimBlock> = {
   cast: { y: 512, size: 64, cols: 7, rows: 4, cycle: [0, 1, 2, 3, 4, 5, 6], ms: 60, once: true },
   hurt: { y: 768, size: 64, cols: 6, rows: 1, cycle: [0, 1, 2, 3, 4, 5], ms: 70, once: true },
   slash: { y: 832, size: 128, cols: 6, rows: 4, cycle: [0, 1, 2, 3, 4, 5], ms: 55, once: true },
+  // LPC bow draw: 13 frames, the string is drawn back over columns 3-8 and let go at column 9. The shot plays from the
+  // full draw (column 5), so the arrow leaves `SHOOT_RELEASE_MS` after the button is pressed.
+  shoot: { y: 1344, size: 64, cols: 13, rows: 4, cycle: [5, 6, 7, 8, 9, 10, 11, 12], ms: 50, once: true },
 };
+
+/** Milliseconds from the start of the `shoot` animation to the frame where the string is let go (column 9). */
+export const SHOOT_RELEASE_MS = ANIMS.shoot.cycle.indexOf(9) * ANIMS.shoot.ms;
 
 export const ANIM_NAMES = Object.keys(ANIMS) as AnimName[];
 
-export const DOLL_WIDTH = 768; // 6 slash frames of 128
-export const DOLL_HEIGHT = 832 + 4 * 128;
+export const DOLL_WIDTH = 832; // 13 shoot frames of 64 (the 6 slash frames of 128 are narrower)
+export const DOLL_HEIGHT = 1344 + 4 * 64;
 
 /** Pixel rectangle of one frame on the sheet. */
 export function frameRect(anim: AnimName, dir: Direction, col: number) {
