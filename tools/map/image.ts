@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { PNG } from 'pngjs';
 import { CELL, sortKey, type MapData } from '../../src/map/types';
 import { SHADOWS } from './catalog';
@@ -20,9 +21,91 @@ export function readPng(file: string): Image {
 
 export function writePng(file: string, img: Image) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const png = new PNG({ width: img.width, height: img.height });
+  fs.writeFileSync(file, encodePng(img));
+}
+
+/**
+ * The smallest of a few lossless encodings: art with 256 colours or fewer (all of ours) becomes an indexed PNG with a
+ * transparency chunk, which is several times smaller than 8-bit RGBA; anything richer stays RGBA. Fully transparent
+ * pixels are stored as transparent black (their colour is invisible, and the browser drops it anyway).
+ */
+export function encodePng(img: Image): Buffer {
+  const indexed = encodeIndexed(img);
+  if (indexed) return indexed;
+  const png = new PNG({ width: img.width, height: img.height, deflateLevel: 9 });
   img.data.copy(png.data);
-  fs.writeFileSync(file, PNG.sync.write(png));
+  return PNG.sync.write(png);
+}
+
+function encodeIndexed({ width, height, data }: Image): Buffer | null {
+  const rgba = (i: number) => (data[i + 3] ? data.readUInt32BE(i) : 0);
+  const counts = new Map<number, number>();
+  for (let i = 0; i < data.length; i += 4) {
+    const c = rgba(i);
+    counts.set(c, (counts.get(c) ?? 0) + 1);
+    if (counts.size > 256) return null;
+  }
+  // Translucent colours first, so the tRNS chunk can stop at the last one; then the most used, which deflates best.
+  const alpha = (c: number) => c & 0xff;
+  const palette = [...counts.keys()].sort(
+    (a, b) => Number(alpha(a) === 255) - Number(alpha(b) === 255) || counts.get(b)! - counts.get(a)! || a - b,
+  );
+  const index = new Map(palette.map((c, i) => [c, i]));
+  const depth = palette.length <= 2 ? 1 : palette.length <= 4 ? 2 : palette.length <= 16 ? 4 : 8;
+  const perByte = 8 / depth;
+  const stride = Math.ceil(width / perByte);
+  const raw = Buffer.alloc((stride + 1) * height); // each row: filter type 0, then packed indices
+  for (let y = 0; y < height; y++) {
+    const row = y * (stride + 1) + 1;
+    for (let x = 0; x < width; x++) {
+      const i = index.get(rgba((y * width + x) * 4))!;
+      raw[row + Math.floor(x / perByte)] |= i << (8 - depth * (1 + (x % perByte)));
+    }
+  }
+
+  const plte = Buffer.alloc(palette.length * 3);
+  palette.forEach((c, i) => plte.writeUIntBE(c >>> 8, i * 3, 3));
+  const translucent = palette.filter((c) => alpha(c) !== 255).length;
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.writeUInt8(depth, 8);
+  header.writeUInt8(3, 9); // colour type 3: palette
+  const strategies = [zlib.constants.Z_DEFAULT_STRATEGY, zlib.constants.Z_FILTERED, zlib.constants.Z_RLE];
+  const idat = strategies
+    .map((strategy) => zlib.deflateSync(raw, { level: 9, memLevel: 9, strategy }))
+    .reduce((best, b) => (b.length < best.length ? b : best));
+  return Buffer.concat([
+    PNG_SIGNATURE,
+    chunk('IHDR', header),
+    chunk('PLTE', plte),
+    ...(translucent ? [chunk('tRNS', Buffer.from(palette.slice(0, translucent).map(alpha)))] : []),
+    chunk('IDAT', idat),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function crc32(buf: Buffer): number {
+  let c = 0xffffffff;
+  for (const byte of buf) c = CRC_TABLE[(c ^ byte) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function chunk(type: string, body: Buffer): Buffer {
+  const out = Buffer.alloc(body.length + 12);
+  out.writeUInt32BE(body.length, 0);
+  out.write(type, 4, 'ascii');
+  body.copy(out, 8);
+  out.writeUInt32BE(crc32(out.subarray(4, 8 + body.length)), 8 + body.length);
+  return out;
 }
 
 export type Sheets = Map<string, Image>;
