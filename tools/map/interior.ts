@@ -195,6 +195,27 @@ function sign(kind: string): Canvas {
   return c;
 }
 
+/** A reading stand with an open book on a slanted desk, 1 cell wide and 1.5 tall. */
+function lectern(): Canvas {
+  const c = new Canvas(16, 24);
+  const PAGE: RGB = [236, 236, 226];
+  c.rect(3, 21, 10, 3, BEAM_DARK); // foot
+  c.rect(6, 10, 4, 11, PLANK); // post
+  c.rect(6, 10, 1, 11, PLANK_DARK);
+  c.rect(1, 4, 14, 6, BEAM); // desk
+  c.rect(1, 3, 14, 2, PLANK_LIGHT);
+  c.rect(1, 9, 14, 1, BEAM_DARK);
+  c.rect(2, 0, 6, 5, PAGE); // the open book
+  c.rect(8, 0, 6, 5, PAGE);
+  c.rect(7, 0, 1, 5, INK);
+  c.rect(3, 1, 4, 1, [150, 120, 90]);
+  c.rect(3, 3, 3, 1, [150, 120, 90]);
+  c.rect(9, 1, 4, 1, [150, 120, 90]);
+  c.rect(9, 3, 3, 1, [150, 120, 90]);
+  c.rect(7, 5, 1, 4, [140, 90, 200]); // ribbon
+  return c;
+}
+
 // --- Lay the pieces out on the sheet (positions in INTERIOR, catalog.ts) and double them. ---------------------------
 const pieces: Record<keyof typeof INTERIOR, Canvas> = {
   planksA: planks(1),
@@ -213,6 +234,7 @@ const pieces: Record<keyof typeof INTERIOR, Canvas> = {
   signRanger: sign('ranger'),
   signApothecary: sign('apothecary'),
   signWizard: sign('wizard'),
+  lectern: lectern(),
 };
 
 const width = Math.max(...Object.values(INTERIOR).map((p) => p.x + p.w));

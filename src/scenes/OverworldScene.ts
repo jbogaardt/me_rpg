@@ -24,6 +24,7 @@ import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
 import type { Hero, Item } from '../systems/combat';
 import { equip } from '../systems/items';
+import { lecternIn, lecternPages } from '../systems/lectern';
 import { petSound } from '../systems/pets';
 import { SHOPS } from '../systems/shops';
 import type { ComboKey } from '../systems/spells';
@@ -382,11 +383,15 @@ export class OverworldScene implements Scene {
     const { arena } = this;
     const near = (body: { x: number; y: number }, reach = CELL * 1.5) =>
       Math.hypot(this.player.x - body.x, this.player.y - body.y) < reach;
+    const stand = lecternIn(arena.zone.name);
+    const lectern = stand && near({ x: stand.x, y: stand.y - CELL / 2 }, CELL * 1.5);
     const keeper = arena.keepers.find((k) => near(k.body, KEEPER_REACH));
     const npc = arena.npc;
     const pet = arena.pets.find((p) => near(p));
     if (dialog.active) {
       dialog.advance();
+    } else if (lectern) {
+      dialog.say(lecternPages());
     } else if (keeper) {
       this.talkToKeeper(keeper);
     } else if (pet) {

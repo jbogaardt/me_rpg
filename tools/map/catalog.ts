@@ -367,6 +367,7 @@ export const INTERIOR = {
   signApothecary: { x: 384, y: 96, w: 128, h: 64 },
   shelfWizard: { x: 512, y: 32, w: 96, h: 64 },
   signWizard: { x: 512, y: 96, w: 128, h: 64 },
+  lectern: { x: 0, y: 160, w: 32, h: 48 },
 };
 const furniture = (name: keyof typeof INTERIOR, band: number, about: string): Prefab => {
   const { x, y, w, h } = INTERIOR[name];
@@ -409,6 +410,11 @@ export const PREFABS = {
   signArmory: furniture('signArmory', 0, 'Wall sign with a shield, 4x2 cells, decoration.'),
   signRanger: furniture('signRanger', 0, 'Wall sign with a bow, 4x2 cells, decoration.'),
   signApothecary: furniture('signApothecary', 0, 'Wall sign with a flask, 4x2 cells, decoration.'),
+  lectern: furniture(
+    'lectern',
+    32,
+    'A reading stand with an open book, 1x1.5 cells, solid. The wizard room lists the combos on it (systems/lectern.ts).',
+  ),
   signWizard: furniture('signWizard', 0, 'Wall sign with a star, 4x2 cells, decoration.'),
   ranger: building('ranger', "Ranger's lodge: a 3x9 tall house with a golden roof and a bow over the door."),
   treeA: tree(OBJECT_SHEET, 'A', 'Round leafy canopy (3x3 cells). Blocks its bottom two rows; top row is walk-behind.'),
