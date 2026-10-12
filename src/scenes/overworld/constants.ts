@@ -17,7 +17,7 @@ export const LIGHTNING_RADIUS = 28; // px from where a bolt lands that still bur
 export const LIGHTNING_DAMAGE = 0.35; // fraction of a player's max HP a direct hit takes (armour doesn't help)
 
 export const KEEPER_REACH = CELL * 2.3; // how close the action key must be to talk to a shopkeeper (across a counter)
-export const SIGN_REACH = CELL * 2; // how close (to its foot) the action key reads a signpost the hero faces
+export const SIGN_REACH = CELL * 1.5; // how close (to its foot) the action key reads a signpost: like an NPC, facing does not matter
 export const PICKUP_REACH = 26; // how close the action key must be to an item on the ground
 export const SITE_REACH = CELL * 1.3; // how close the action key must be to a quest site
 export const CHEST_REACH = CELL * 1.4; // how close the action key must be to a chest (feet to the chest's cell centre)
