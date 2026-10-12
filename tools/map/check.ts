@@ -1,5 +1,6 @@
 import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
 import { MOB_KINDS } from '../../src/systems/combat';
+import { PET_KINDS } from '../../src/systems/pets';
 import { SHOPS } from '../../src/systems/shops';
 import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
@@ -101,6 +102,10 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   for (const sh of d.shops) {
     points.push([`shopkeeper ${sh.shop}`, sh]);
     if (!SHOPS[sh.shop]) errors.push(`shopkeeper at (${sh.col},${sh.row}) runs unknown shop "${sh.shop}" (SHOPS)`);
+  }
+  for (const p of d.pets) {
+    points.push([`pet ${p.kind}`, p]);
+    if (!PET_KINDS[p.kind]) errors.push(`pet at (${p.col},${p.row}) is an unknown kind "${p.kind}" (PET_KINDS)`);
   }
   const doorCells = new Set<number>();
   for (const door of d.doors) {

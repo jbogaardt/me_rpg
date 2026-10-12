@@ -22,6 +22,7 @@ describe('parseMap', () => {
       mobs: [],
       chests: [],
       shops: [],
+      pets: [],
       doors: [],
       indoor: false,
       climate: 'temperate',

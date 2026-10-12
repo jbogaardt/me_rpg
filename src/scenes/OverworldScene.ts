@@ -23,6 +23,7 @@ import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
 import type { Hero, Item } from '../systems/combat';
 import { equip } from '../systems/items';
+import { petSound } from '../systems/pets';
 import { SHOPS } from '../systems/shops';
 import type { Precip } from '../systems/weather';
 import { Arena } from './overworld/Arena';
@@ -224,6 +225,10 @@ export class OverworldScene implements Scene {
 
     z.npc?.animate(dt * 1000, false);
     for (const k of z.keepers) k.body.animate(dt * 1000, false);
+    for (const pet of z.pets) {
+      pet.update(dt);
+      pet.zIndex = pet.y;
+    }
     for (const item of z.ground) {
       item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
     }
@@ -337,14 +342,18 @@ export class OverworldScene implements Scene {
     if (!pressed) return;
     const { dialog } = this.ui;
     const { arena } = this;
-    const near = (body: Character, reach = CELL * 1.5) =>
+    const near = (body: { x: number; y: number }, reach = CELL * 1.5) =>
       Math.hypot(this.player.x - body.x, this.player.y - body.y) < reach;
     const keeper = arena.keepers.find((k) => near(k.body, KEEPER_REACH));
     const npc = arena.npc;
+    const pet = arena.pets.find((p) => near(p));
     if (dialog.active) {
       dialog.advance();
     } else if (keeper) {
       this.talkToKeeper(keeper);
+    } else if (pet) {
+      pet.attend(this.player.x, this.player.y);
+      dialog.say([petSound(pet.kind, pet.talks++)]);
     } else if (npc?.visible && near(npc)) {
       npc.face(directionToward(this.player.x - npc.x, this.player.y - npc.y));
       dialog.say(NPC_LINES);

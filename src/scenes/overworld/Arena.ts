@@ -89,6 +89,9 @@ export class Arena {
   get npc() {
     return this.zone.npc;
   }
+  get pets() {
+    return this.zone.pets;
+  }
   get keepers() {
     return this.zone.keepers;
   }

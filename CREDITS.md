@@ -67,3 +67,14 @@ backgrounds re-encoded as JPEG. Bar colours are sampled from the kit's gradients
 ## Fonts
 
 Cinzel (Natanael Gama) and Crimson Text (Sebastian Kosch), SIL Open Font License 1.1, bundled via Fontsource.
+
+## Pets (`public/sprites/pets/`)
+
+- `dogs.png`, `cats.png`: "[LPC] Cats and Dogs" by bluecarrot16, https://opengameart.org/content/lpc-cats-and-dogs
+  (four colours each; offered under CC-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0 and OGA-BY 3.0). Used unmodified.
+- `rat.png` (the rat, cropped from the sheet): "[LPC] Rat, Cat and Dog" by Tuomo Untinen (OpenGameArt user Reemax),
+  https://opengameart.org/content/lpc-rat-cat-and-dog (CC-BY 3.0, CC-BY-SA 3.0, GPL 2.0, GPL 3.0). Used unmodified.
+
+Both are multi-licensed: this game uses them under CC-BY 3.0 (credit the author, name the work, link the page), which
+the lines above do. Checked against the pages' listings through search results; the licence texts themselves were not
+opened.
