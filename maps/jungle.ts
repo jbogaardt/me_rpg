@@ -1,4 +1,5 @@
 import { defineBiome, worldOf } from '../tools/map/world';
+import { JUNGLE_TREES } from '../tools/map/catalog';
 import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
@@ -31,7 +32,7 @@ const TRAILS = [
   ...trail([undead, marsh]), // undead lands to the marsh
   ...trail([[south[0], undead[1]], south]), // down to the Eastwood
 ];
-const KIT = { trees: ['jungleTreeA', 'jungleTreeB'], fillers: ['jungleBush', 'rockSmall'] } as const;
+const KIT = { trees: [...JUNGLE_TREES], fillers: ['jungleBush', 'rockSmall'] } as const;
 
 export default defineBiome({
   name: 'jungle',
@@ -90,7 +91,7 @@ export default defineBiome({
     ] as const)
       z.mob(kind, ...near(x, y));
 
-    z.scatter(['jungleTreeA', 'jungleTreeB'], { count: 45, where: open, seed: 81 });
+    z.scatter([...JUNGLE_TREES], { count: 45, where: open, seed: 81 });
     z.scatter(['jungleBush'], { count: 50, where: open, seed: 82 });
     z.scatter(['rockB', 'rockC'], { count: 12, where: open, seed: 83 });
   },

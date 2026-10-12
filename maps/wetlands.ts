@@ -1,4 +1,5 @@
 import { defineBiome, worldOf } from '../tools/map/world';
+import { SWAMP_TREES } from '../tools/map/catalog';
 import { awayFrom, blob, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
@@ -15,7 +16,7 @@ const gap = (to: string): [number, number] => {
 };
 const [west, south] = [gap('jungle'), gap('marsh')];
 const TRAILS = trail([west, [south[0], west[1]], south]);
-const KIT = { trees: ['swampTreeA', 'swampTreeB'], fillers: ['swampBush', 'rockSmall'] } as const;
+const KIT = { trees: [...SWAMP_TREES], fillers: ['swampBush', 'rockSmall'] } as const;
 
 export default defineBiome({
   name: 'wetlands',
@@ -78,7 +79,7 @@ export default defineBiome({
     ] as const)
       z.mob(kind, ...near(x, y));
 
-    z.scatter(['swampTreeA', 'swampTreeB'], { count: 35, where: open, seed: 91 });
+    z.scatter([...SWAMP_TREES], { count: 35, where: open, seed: 91 });
     z.scatter(['swampBush', 'bush'], { count: 40, where: open, seed: 92 });
     z.scatter(['flowersPurple', 'flowerRed'], { count: 60, where: open, margin: 0, seed: 93 });
   },

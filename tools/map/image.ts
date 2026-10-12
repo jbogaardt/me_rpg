@@ -3,7 +3,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { PNG } from 'pngjs';
 import { CELL, sortKey, type MapData } from '../../src/map/types';
-import { SHADOWS } from './catalog';
+import { SHADOWS } from './shadows';
 
 export const ROOT = path.resolve(import.meta.dirname, '../..');
 
@@ -127,6 +127,7 @@ export function isArt(img: Image, x: number, y: number): boolean {
   const i = (y * img.width + x) * 4;
   const d = img.data;
   if (d[i + 3] < 16) return false;
+  if (d[i + 3] < 128) return false; // the LPC trees' baked shadows are translucent
   return !SHADOWS.some((c) => d[i] === c[0] && d[i + 1] === c[1] && d[i + 2] === c[2]);
 }
 

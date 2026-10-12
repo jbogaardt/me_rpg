@@ -1,4 +1,5 @@
 import { defineBiome, worldOf } from '../tools/map/world';
+import { SWAMP_TREES } from '../tools/map/catalog';
 import { blob, trail, units } from '../tools/map/helpers';
 import { distanceField, fbm, maskRects, noise, smoothMask } from '../tools/map/noise';
 import type { Rect } from '../tools/map/zone';
@@ -31,7 +32,7 @@ const DRY: Rect[] = [
     { swing: 0.5 },
   ), // the spit out to it
 ];
-const KIT = { trees: ['swampTreeA', 'swampTreeB'], fillers: ['swampBush', 'rockSmall'] } as const;
+const KIT = { trees: [...SWAMP_TREES], fillers: ['swampBush', 'rockSmall'] } as const;
 
 export default defineBiome({
   name: 'marsh',
@@ -143,6 +144,6 @@ export default defineBiome({
         if (isWater(col, row) && isWater(col + 1, row) && isWater(col, row + 1) && (col + row) % 3 === 0)
           z.prop(lilies[n++ % 4], col, row);
     z.scatter(['swampBush'], { count: 14, seed: 95 });
-    z.scatter(['swampTreeA', 'swampTreeB'], { count: 6, seed: 96, margin: 2 });
+    z.scatter([...SWAMP_TREES], { count: 6, seed: 96, margin: 2 });
   },
 });

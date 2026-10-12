@@ -79,7 +79,7 @@ export default defineBiome({
     ] as const)
       z.mob(kind, ...near(x, y));
 
-    z.scatter(['treeA', 'treeB'], { count: 40, where: open, seed: 31 });
+    z.scatter([...TREES], { count: 40, where: open, seed: 31 });
     z.scatter(['bush'], { count: 39, where: open, seed: 32 });
     z.scatter(['rock', 'rockB', 'rockC', 'rockSmall'], { count: 24, where: open, seed: 33 });
     z.scatter(['flowersPurple', 'flowerRed'], { count: 70, where: open, margin: 0, seed: 34 });
