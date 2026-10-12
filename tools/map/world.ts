@@ -79,7 +79,7 @@ export interface BiomeApi extends ZoneApi {
   keepClear(area: Rect | Rect[]): void;
   /**
    * Lay the biome's ground terrain over its own cells, but stop short of the borders: the terrain's edge lies between
-   * `inset[0]` and `inset[1]` cells from the nearest other biome (default 4 to 11, wandering with noise), so the shared
+   * `inset[0]` and `inset[1]` cells from the nearest other biome (default 3 to 7, wandering with noise), so the shared
    * ground shows between it and the wall and the two grounds on either side of a border never meet in a straight line.
    */
   ground(name: TerrainName, opts?: { inset?: [number, number]; scale?: number; seed?: number }): void;
@@ -567,7 +567,7 @@ class BiomeWindow implements BiomeApi {
     return this.dist[row * this.world.width + col] ?? 0;
   }
   ground(name: TerrainName, opts: { inset?: [number, number]; scale?: number; seed?: number } = {}) {
-    const [lo, hi] = opts.inset ?? [WALL + 1, WALL + 8];
+    const [lo, hi] = opts.inset ?? [WALL, WALL + 4];
     const edge = fbm(opts.seed ?? this.k * 97 + name.length * 13 + 3, opts.scale ?? 14);
     const b = this.bounds;
     const mask = new Uint8Array(b.w * b.h);

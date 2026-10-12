@@ -303,7 +303,7 @@ const SWAMP_BOX: Box = { x: 27 * 32, y: 0, w: 3 * 32, h: 6 * 32 };
 const murk = (c: RGB): RGB | null => {
   const [h, s, l] = toHsl(c);
   if (h < 160 || h > 220 || s < 0.25) return null; // only the blue-cyan water, not the earthy bank
-  return fromHsl(78 + (h - 190) * 0.3, clamp(0.26 + s * 0.2, 0, 0.5), clamp(l * 0.82, 0.12, 0.5));
+  return fromHsl(150 + (h - 190) * 0.25, clamp(0.28 + s * 0.15, 0, 0.5), clamp(l * 0.86, 0.14, 0.5)); // green-teal, still water
 };
 writePng(dir('lpc_swamp.png'), recolor(readPng(dir('lpc_terrain.png')), murk, SWAMP_BOX));
 

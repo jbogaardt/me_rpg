@@ -39,7 +39,8 @@ export default defineBiome({
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');
-    z.ground('darkGrass');
+    z.ground('meadow', { inset: [3, 6] }); // pale grass, then mid green, then the deep jungle: no bright halo at the edge
+    z.ground('darkGrass', { inset: [6, 11] });
     z.paint('mud', [...TRAILS, ...blob(area(25, 9.6, 1.4, 0.6))]);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);

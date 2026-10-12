@@ -1,6 +1,6 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { blob, trail, units } from '../tools/map/helpers';
-import { distanceField, fbm, maskRects, smoothMask } from '../tools/map/noise';
+import { distanceField, fbm, maskRects, noise, smoothMask } from '../tools/map/noise';
 import type { Rect } from '../tools/map/zone';
 import layout from './world';
 
@@ -39,7 +39,8 @@ export default defineBiome({
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');
-    z.ground('darkGrass', { inset: [2, 5] }); // marsh grass, with the mud and the water laid over it
+    z.ground('meadow', { inset: [2, 4] }); // marsh grass, darker inland, with the mud and the water laid over it
+    z.ground('darkGrass', { inset: [4, 8] });
 
     // --- Pools: noise decides where the water is, the causeways where it is not ------------------------------------
     const b = z.bounds;
@@ -52,12 +53,16 @@ export default defineBiome({
     const away = distanceField(dry, b.w, b.h);
     const pools = fbm(5, 6);
     const bank = fbm(11, 5); // how wide the bank is round the causeways: one to three cells
+    const ragged = noise(23, 2.4); // fine noise on the shore, so the edges of a pool are not straight runs
     let water: Uint8Array = new Uint8Array(b.w * b.h);
     for (let row = b.row; row < b.row + b.h; row++)
       for (let col = b.col; col < b.col + b.w; col++)
         if (z.free(col, row) && z.borderDistance(col, row) >= 4 + (bank(col, row) + 1))
           water[idx(col, row)] =
-            pools(col, row) > -0.18 && away[idx(col, row)] > 1 + 1.6 * ((bank(col + 40, row) + 1) / 2) ? 1 : 0;
+            pools(col, row) + 0.22 * ragged(col, row) > -0.18 &&
+            away[idx(col, row)] > 1 + 1.6 * ((bank(col + 40, row) + 1) / 2)
+              ? 1
+              : 0;
     water = smoothMask(water, b.w, b.h, 1);
     // No land that the causeways cannot reach: a mud island you cannot step on would be an invisible wall.
     const seen = new Uint8Array(b.w * b.h);
