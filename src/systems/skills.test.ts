@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MOB_KINDS, newHero } from './combat';
+import { ComboReader } from '../core/combo';
+import { MOB_KINDS, newHero, spellPower } from './combat';
 import { ITEM_COUNT } from './inventory';
 import { ITEMS } from './items';
 import {
@@ -26,7 +27,7 @@ import {
   setLoadout,
   type SkillId,
 } from './skills';
-import { COMBO_KEYS } from './spells';
+import { COMBO_KEYS, type ComboKey } from './spells';
 
 const allWeaponCombos = Object.values(ITEMS).flatMap((i) => ('focus' in i ? i.focus.combos.map((c) => c.keys) : []));
 
@@ -236,5 +237,40 @@ describe('the trials’ enemies', () => {
       expect(kind.attack, name).toBeGreaterThanOrEqual(atLeast);
       expect(kind.defense, name).toBeLessThan(7); // a hero can always hurt them
     }
+  });
+});
+
+describe('wands and tomes together with skills', () => {
+  const casters = Object.values(ITEMS).filter((i) => 'focus' in i);
+
+  it('every combo of a caster plus both ready skills can be tapped back to back, in any order, with no false firing', () => {
+    for (const item of casters) {
+      const hero = newHero();
+      hero.weapon = item;
+      for (const id of SKILL_IDS) learn(hero, id);
+      const list = heroCombos(hero);
+      expect(list.length, item.name).toBe(item.focus.combos.length + LOADOUT_SLOTS);
+      const keys = list.map((c) => c.keys);
+      for (const [a, ka] of keys.entries()) {
+        for (const [b, kb] of keys.entries()) {
+          const reader = new ComboReader();
+          const fired: number[] = [];
+          for (const k of ka + kb) {
+            const i = reader.press(k as ComboKey, keys);
+            if (i >= 0) fired.push(i);
+          }
+          expect(fired, `${item.name}: ${ka} then ${kb}`).toEqual([a, b]);
+        }
+      }
+    }
+  });
+
+  it('keep casting their own spells with any skills ready: a wand’s damage still comes from its own power', () => {
+    const hero = newHero();
+    hero.weapon = ITEMS.stormcallerWand;
+    const before = spellPower(hero);
+    for (const id of SKILL_IDS) learn(hero, id);
+    expect(spellPower(hero)).toBe(before); // skills add no hidden changes to the wand's strength
+    expect(spellPower(hero)).toBeGreaterThan(spellPower(newHero())); // and the wand's power counts for the skills that use spell power
   });
 });
