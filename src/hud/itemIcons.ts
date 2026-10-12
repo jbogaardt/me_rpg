@@ -1,4 +1,6 @@
-import type { IconKind } from '../systems/inventory';
+import type { Item } from '../systems/combat';
+import { CROPS, isCrop } from '../systems/crops';
+import { iconKind, type IconKind } from '../systems/inventory';
 
 // Small flat icons for the pack screen, drawn as inline SVG in `currentColor` (the slot's tier colour) with a dark
 // outline. Items have no art of their own: the sprites only exist as paper-doll layers.
@@ -29,4 +31,18 @@ const ICONS: Record<IconKind, string> = {
 /** Markup for an icon; colour it with CSS `color`. */
 export function iconSvg(kind: IconKind): string {
   return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="#2b1d0e" stroke-width="1.1" stroke-linejoin="round">${ICONS[kind]}</svg>`;
+}
+
+/**
+ * The picture for an item: a crop's produce or seeds are cut from the crops sheet (a window of it, scaled with the
+ * box it sits in; `--crops-url` is set once the sheet's URL is known, see main.ts), everything else is a flat icon.
+ */
+export function itemIcon(item: Item): string {
+  const id = item.crop ?? item.seed;
+  if (!id || !isCrop(id)) return iconSvg(iconKind(item));
+  const k = CROPS[id];
+  // Ripe produce: a window of the ripe frame. Seeds: the sprout. In the sheet's 32px cells; background positions are
+  // percentages of the free space, so (cells / 31) in each direction on a sheet 32 cells wide and tall.
+  const y = k.base + (item.crop ? 192 + k.icon : 64 + 32);
+  return `<span class="crop-icon" aria-hidden="true" style="--px:${(k.col / 31) * 100}%;--py:${(y / 32 / 31) * 100}%"></span>`;
 }

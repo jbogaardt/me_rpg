@@ -51,6 +51,8 @@ export default defineBiome({
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(24, 7.2));
     z.pet('rat', ...near(25.2, 7.8));
+    z.plot(...near(23.3, 7.8), 'corn'); // wild crops, ripe now and growing back after they are picked
+    z.plot(...near(23.7, 7.9), 'strawberry');
 
     // --- A lagoon with reeds ----------------------------------------------------------------------------------
     const water = pond(z, area(24.6, 5.4, 2.2, 1.4), { shore: 'mud' });

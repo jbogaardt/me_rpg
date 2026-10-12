@@ -15,6 +15,7 @@
 import { AIM_STEPS } from '../core/aim';
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
+import { MAX_PLOTS, PLOT_CODES } from '../systems/crops';
 import { questFromWire } from '../systems/quests';
 import { loadoutFromCode, MAX_HERO_COMBOS, MAX_SKILL_MASK } from '../systems/skills';
 import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../systems/inventory';
@@ -24,7 +25,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 20; // v20: food and water on StatsSnap
+export const PROTOCOL_VERSION = 21; // v21: SnapMsg.plots (crops); v20: food and water on StatsSnap
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -148,6 +149,8 @@ export interface SnapMsg {
   mobs: MobSnap[]; // only the mobs near the recipient, and a still one only now and then
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
+  /** One number per plot of crops in the zone (systems/crops.ts `plotCode`: 0 bare soil, else crop and stage). */
+  plots: number[];
   w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
   ground?: GroundSnap[];
@@ -566,6 +569,9 @@ export function parseMessage(raw: unknown): Message | null {
         ground.includes(null) ||
         !numbers(m.me, 11) ||
         !isWeather(m.w) ||
+        !Array.isArray(m.plots) ||
+        m.plots.length > MAX_PLOTS ||
+        !m.plots.every((c: unknown) => isIndex(c, PLOT_CODES)) ||
         !isCount(m.chests) ||
         m.chests > MAX_CHEST_MASK
       ) {
@@ -580,6 +586,7 @@ export function parseMessage(raw: unknown): Message | null {
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
         chests: m.chests,
+        plots: m.plots,
         w: m.w,
         ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
         events: events as EventWire[],

@@ -13,11 +13,10 @@ export function buffTexts(item: Item): string[] {
   ].filter(Boolean);
 }
 
-/** What an item adds, as a short line ("+3 ATK, ranged", "+20 HP"); empty for an item with no effect. */
-/** The button for using a supply: food is eaten, potions and water are drunk. */
-export const useVerb = (item: Item) =>
-  item.use?.food && !item.use.water && !item.use.hp && !item.use.mp ? 'Eat' : 'Drink';
+/** The button for using a supply: food is eaten (a stew with water too), potions and water are drunk. */
+export const useVerb = (item: Item) => (item.use?.food && !item.use.hp && !item.use.mp ? 'Eat' : 'Drink');
 
+/** What an item adds, as a short line ("+3 ATK, ranged", "+20 HP"); empty for an item with no effect. */
 export function bonuses(item: Item): string {
   return [
     item.attack ? `+${item.attack} ATK` : '',

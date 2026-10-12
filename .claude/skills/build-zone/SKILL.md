@@ -43,6 +43,7 @@ ground first, then features, then overrides.
 | `z.sign(c, r, ways)` | A signpost at a fork in the road: `ways` maps `up`/`down`/`left`/`right` to a zone key (`ZONE_NAMES`) or a `z.place` name on this map; the action key reads them (`systems/signs.ts`). In a biome, give the junction: it stands on the nearest free cell beside the road, never on it. Put one at every new fork. |
 | `z.indoor()` | Marks the zone a room: no weather, no footprints or leaves, no co-op overview map. |
 | `z.chest(kind, loot, c, r)` | A treasure chest (`loot` is a key of `CHEST_LOOTS`, `src/systems/chests.ts`). Shops sell the common gear, so chests hold what no shop stocks, restoratives and gold purses. |
+| `z.plot(c, r, crop?)` | A plot of soil for crops (`systems/crops.ts`, does not block): with `crop` (a key of `CROPS`) a wild plant that is ripe at the start and grows back after it is picked; without, a bare farm plot for the player's seeds. Needs open, reachable ground. |
 
 A `Rect` is `{ col, row, w, h }`.
 

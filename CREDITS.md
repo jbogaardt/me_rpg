@@ -28,6 +28,16 @@ Zimmerman (Sharm), Leonard Pabin, Chris Phillips, Barbara Rivera and Talosaurus.
 licence is in [`art/lpc_trees/CREDITS-trees.txt`](art/lpc_trees/CREDITS-trees.txt), kept with the art. Selected trees and
 bushes are cut out and repacked by `tools/map/trees.ts`; the frost and swamp sheets are recolours of the green one.
 
+## Crops (`public/tilesets/crops.png`, source in `art/crops/`)
+
+"[LPC] Crops" (https://opengameart.org/content/lpc-crops) by bluecarrot16, Daniel Eddeland (daneeklu), Joshua Taylor and
+Richard Kettering (Jetrel), commissioned by castelonia. CC-BY-SA 3.0 or GPL 3.0 (individual items also carry the
+licences listed in [`art/crops/CREDITS-crops.txt`](art/crops/CREDITS-crops.txt), kept with the art). Based on the
+[LPC] Farming tilesets by Daniel Eddeland (https://opengameart.org/content/rpg-item-set), the Fruit and Veggie Inventory
+by Joshua Taylor (https://opengameart.org/content/fruit-and-veggie-inventory, CC-BY-SA 3.0 / GPL 3.0) and the RPG item
+set by Richard Kettering (CC0). Used unmodified (v2.1 of the sheet); `tools/map/crops.ts` only re-encodes it as an
+indexed PNG. Adaptations of it must stay under CC-BY-SA 3.0 or later, or the GPL.
+
 ## Shop buildings (`public/tilesets/town.png`, source in `art/town_rpg_pack/`)
 
 "Town RPG Pack" by Luis Zuno ([@ansimuz](https://ansimuz.com)), [CC0](https://creativecommons.org/publicdomain/zero/1.0/)

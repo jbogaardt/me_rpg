@@ -40,6 +40,7 @@ import type { ComboKey } from '../systems/spells';
 import type { Precip } from '../systems/weather';
 import { Arena } from './overworld/Arena';
 import { CHEST_REACH, KEEPER_REACH, PICKUP_REACH, SIGN_REACH, SITE_REACH } from './overworld/constants';
+import { Farming } from './overworld/Farming';
 import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
 import { HostLink } from './overworld/HostLink';
@@ -99,6 +100,7 @@ export class OverworldScene implements Scene {
   private zones: Zones;
   private sim: Simulation;
   private ground: Ground;
+  private farming: Farming;
   private pack: PackSync;
   private trading: Trading;
   private training: Training;
@@ -130,6 +132,7 @@ export class OverworldScene implements Scene {
     this.sim = new Simulation(arena, visuals, this.zones, (e) => this.host.emit(e), say);
     this.zones.makeMobWorld = (z) => this.sim.mobWorldFor(z);
     this.ground = new Ground(arena, this.sim);
+    this.farming = new Farming(arena, this.sim);
     this.pack = new PackSync(arena, ui.session, ui, this.ground);
     this.trading = new Trading(arena, ui.session, ui);
     this.host = new HostLink(arena, ui.session, this.sim, this.pack, this.trading);
@@ -323,6 +326,7 @@ export class OverworldScene implements Scene {
           for (const mob of z.mobs) mob.update(dt, z.mobWorld);
           this.ground.age(dt);
           sim.weather(dt);
+          this.farming.update();
           for (const p of present) {
             const combo = commandOf(p).combo;
             if (combo !== undefined) sim.combo(p, combo);
@@ -484,6 +488,7 @@ export class OverworldScene implements Scene {
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
     if (chest) return this.openChest(p, chest);
+    if (this.farming.tend(p)) return;
     const site = this.arena.sites.find(
       (s) =>
         Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH &&

@@ -242,6 +242,25 @@ export const ITEMS = {
     rare: true,
     look: {},
   },
+
+  // Crops (systems/crops.ts): eaten from the pack (food, and a little water for the juicy ones), grown from seeds in a
+  // farm plot or picked from a wild one. Seeds are sold by the apothecary.
+  potato: { name: 'Potato', value: 6, crop: 'potato', use: { food: 12 } },
+  carrot: { name: 'Carrot', value: 5, crop: 'carrot', use: { food: 10 } },
+  radish: { name: 'Radish', value: 4, crop: 'radish', use: { food: 8 } },
+  cabbage: { name: 'Cabbage', value: 8, crop: 'cabbage', use: { food: 14 } },
+  tomato: { name: 'Tomato', value: 6, crop: 'tomato', use: { food: 9, water: 5 } },
+  pumpkin: { name: 'Pumpkin', value: 12, crop: 'pumpkin', use: { food: 24 } },
+  corn: { name: 'Corn', value: 8, crop: 'corn', use: { food: 16 } },
+  strawberry: { name: 'Strawberry', value: 6, crop: 'strawberry', use: { food: 7, water: 5 } },
+  potatoSeeds: { name: 'Potato Seeds', value: 3, seed: 'potato' },
+  carrotSeeds: { name: 'Carrot Seeds', value: 2, seed: 'carrot' },
+  radishSeeds: { name: 'Radish Seeds', value: 2, seed: 'radish' },
+  cabbageSeeds: { name: 'Cabbage Seeds', value: 4, seed: 'cabbage' },
+  tomatoSeeds: { name: 'Tomato Seeds', value: 3, seed: 'tomato' },
+  pumpkinSeeds: { name: 'Pumpkin Seeds', value: 6, seed: 'pumpkin' },
+  cornSeeds: { name: 'Corn Seeds', value: 4, seed: 'corn' },
+  strawberrySeeds: { name: 'Strawberry Seeds', value: 3, seed: 'strawberry' },
 } satisfies Record<string, Item>;
 
 export type ItemId = keyof typeof ITEMS;

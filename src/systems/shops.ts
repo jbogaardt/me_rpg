@@ -39,7 +39,7 @@ const isSlot =
 const isBow = (item: Item) => item.ranged !== undefined;
 const isCaster = (item: Item) => item.focus !== undefined;
 const isBlade = (item: Item) => item.slot === 'weapon' && !isBow(item) && !isCaster(item);
-const isSupply = (item: Item) => item.use !== undefined;
+const isSupply = (item: Item) => item.use !== undefined || item.seed !== undefined; // potions, produce and seeds
 
 export const SHOPS: Record<string, Shop> = {
   smithy: {
@@ -93,8 +93,22 @@ export const SHOPS: Record<string, Shop> = {
     name: "Wren's Apothecary",
     tag: 'Apothecary',
     keeper: 'apothecary',
-    greeting: ['Potions for the bruised, elixirs for the brave.', 'Drink them from the Gear tab of your menu.'],
-    stock: ['potion', 'elixir'],
+    greeting: [
+      'Potions for the bruised, elixirs for the brave.',
+      'And seeds, if you have a patch of soil: plant them in a bare plot with the action key.',
+    ],
+    stock: [
+      'potion',
+      'elixir',
+      'radishSeeds',
+      'carrotSeeds',
+      'potatoSeeds',
+      'strawberrySeeds',
+      'cabbageSeeds',
+      'tomatoSeeds',
+      'cornSeeds',
+      'pumpkinSeeds',
+    ],
     buys: isSupply,
   },
   wizard: {

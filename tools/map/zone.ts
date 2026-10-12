@@ -3,6 +3,7 @@ import {
   FLAT_Z,
   type CellPoint,
   type ChestSpawn,
+  type PlotSpawn,
   type DoorSpawn,
   type ShopSpawn,
   type GroundCell,
@@ -68,6 +69,7 @@ export interface ZoneApi {
   npc(col: number, row: number): unknown;
   mob(kind: string, col: number, row: number): unknown;
   chest(kind: string, loot: string, col: number, row: number): unknown;
+  plot(col: number, row: number, crop?: string): unknown;
   shop(shop: string, col: number, row: number): unknown;
   pet(kind: string, col: number, row: number): unknown;
   giver(giver: string, col: number, row: number): unknown;
@@ -191,6 +193,10 @@ export class WorldWindow implements ZoneApi {
     this.z.chest(kind, loot, col - this.o.col, row - this.o.row);
     return this;
   }
+  plot(col: number, row: number, crop?: string) {
+    this.z.plot(col - this.o.col, row - this.o.row, crop);
+    return this;
+  }
   shop(shop: string, col: number, row: number) {
     this.z.shop(shop, col - this.o.col, row - this.o.row);
     return this;
@@ -311,6 +317,7 @@ export class Zone {
   private npcAt: CellPoint | null = null;
   private mobList: MobSpawn[] = [];
   private chestList: ChestSpawn[] = [];
+  private plotList: PlotSpawn[] = [];
   private shopList: ShopSpawn[] = [];
   private petList: PetSpawn[] = [];
   private giverList: GiverSpawn[] = [];
@@ -752,6 +759,15 @@ export class Zone {
   }
 
   /**
+   * A plot of soil for crops (does not block). With `crop` (a key of CROPS, src/systems/crops.ts) a wild plant that is ripe
+   * at the start and grows back after it is picked; without, a bare farm plot for the player's seeds.
+   */
+  plot(col: number, row: number, crop?: string) {
+    this.plotList.push({ col, row, ...(crop ? { crop } : {}) });
+    return this;
+  }
+
+  /**
    * A shopkeeper (`shop` is a key of SHOPS, src/systems/shops.ts) standing at (col, row), the cell below the door of its
    * building (`z.prop('smithy', ...)`). Characters block each other, so leave the cell open.
    */
@@ -819,6 +835,7 @@ export class Zone {
       npc: this.npcAt,
       mobs: this.mobList,
       chests: this.chestList,
+      plots: this.plotList,
       shops: this.shopList,
       pets: this.petList,
       givers: this.giverList,
@@ -1004,6 +1021,7 @@ export class Zone {
       npc: this.npcAt,
       mobs: this.mobList,
       chests: this.chestList,
+      plots: this.plotList,
       shops: this.shopList,
       pets: this.petList,
       givers: this.giverList,

@@ -3,7 +3,7 @@ import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import './ui.css';
-import { initAssets, loadSprites, loadZone, unloadZone } from './assets';
+import { cropsUrl, initAssets, loadSprites, loadZone, unloadZone } from './assets';
 import { SceneManager } from './core/Scene';
 import { createTouchControls } from './core/touch';
 import { Dialog } from './hud/Dialog';
@@ -61,6 +61,7 @@ void (async () => {
       loadZone(START_ZONE, (fraction) => loading.progress(fraction)),
     ]);
 
+    document.documentElement.style.setProperty('--crops-url', `url("${cropsUrl()}")`); // the pack's crop icons
     const scenes = new SceneManager(app);
     const touch = createTouchControls(() => scenes.resize());
     const session = new Session();

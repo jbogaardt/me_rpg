@@ -40,6 +40,9 @@ export default defineBiome({
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(23.4, 14));
     z.pet('dog_black', ...near(24.6, 14.6));
+    z.plot(...near(22.7, 14.7), 'potato'); // wild crops, ripe now and growing back after they are picked
+    z.plot(...near(23.0, 14.9), 'pumpkin');
+    z.plot(...near(22.4, 14.9), 'tomato');
 
     // --- A wooded hill with chests on top ---------------------------------------------------------------------
     z.plateau({ col: 252, row: 118, w: 9, h: 5 }, { stairs: [256] });

@@ -1,5 +1,6 @@
 import { isTrialZone } from '../../src/systems/skills';
 import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
+import { isCrop, MAX_PLOTS } from '../../src/systems/crops';
 import { MOB_KINDS } from '../../src/systems/combat';
 import { PET_KINDS } from '../../src/systems/pets';
 import { GIVERS, SITE_KINDS } from '../../src/systems/quests';
@@ -140,6 +141,12 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     return [`chest ${c.loot}`, c];
   });
   if (d.chests.length > 30) errors.push('a map holds at most 30 chests');
+  for (const pl of d.plots) {
+    if (pl.crop !== undefined && !isCrop(pl.crop))
+      errors.push(`plot at (${pl.col},${pl.row}) has unknown crop "${pl.crop}" (CROPS)`);
+    points.push([`plot ${pl.crop ?? 'farm'}`, pl]); // walkable: must be on open, reachable ground
+  }
+  if (d.plots.length > MAX_PLOTS) errors.push(`a map holds at most ${MAX_PLOTS} plots`);
   // A signpost names at least two ways (a fork), each a zone or a place on this map, and is read from beside it.
   const placeNames = new Set(d.places.map((p) => p.name));
   for (const sg of d.signs) {

@@ -1,15 +1,6 @@
 import { GEAR_SLOTS, type GearSlot, type Hero, type Item } from '../systems/combat';
-import {
-  BASE_PACK,
-  compare,
-  iconKind,
-  itemTier,
-  packSize,
-  slotsFor,
-  type InvOp,
-  type Result,
-} from '../systems/inventory';
-import { iconSvg } from './itemIcons';
+import { BASE_PACK, compare, itemTier, packSize, slotsFor, type InvOp, type Result } from '../systems/inventory';
+import { itemIcon } from './itemIcons';
 import { buffTexts } from './itemText';
 import { combosHtml, useVerb } from './itemText';
 
@@ -92,7 +83,7 @@ export class Inventory {
     const slotButton = (item: Item | undefined, attrs: string, label: string, picked: boolean) =>
       `<button type="button" class="slot ${item ? `tier${itemTier(item)}` : 'empty'}${picked ? ' picked' : ''}" ${attrs}
         aria-label="${item ? item.name : `${label} (empty)`}" title="${item ? item.name : label}">
-        ${item ? iconSvg(iconKind(item)) : ''}<span class="lbl">${label}</span></button>`;
+        ${item ? itemIcon(item) : ''}<span class="lbl">${label}</span></button>`;
 
     const worn = GEAR_SLOTS.map((slot) =>
       slotButton(hero[slot], `data-worn="${slot}"`, SLOT_LABELS[slot], sel?.from === 'worn' && sel.slot === slot),
@@ -152,7 +143,7 @@ export class Inventory {
     const where = sel.from === 'worn' ? SLOT_LABELS[sel.slot] : 'In pack';
     return `
       <div class="inv-item">
-        <span class="icon tier${itemTier(item)}">${iconSvg(iconKind(item))}</span>
+        <span class="icon tier${itemTier(item)}">${itemIcon(item)}</span>
         <div><strong>${item.name}</strong> <small>${where}</small><br /><small>${stats(item) || 'No bonus'}</small> ${versus}${combosHtml(item)}</div>
       </div>
       <div class="inv-actions">${buttons.join('')}</div>${msg}`;

@@ -29,8 +29,9 @@ export function packMap(d: MapData): PackedMap {
     if (k === undefined) partIndex.set(key, (k = parts.push(part) - 1));
     objects.push(k, o.px, o.py);
   }
-  const { version: _v, ground: _g, objects: _o, ...rest } = d;
-  return { version: 3, ...rest, palette, ground, tags, parts, objects };
+  const { version: _v, ground: _g, objects: _o, plots, ...rest } = d;
+  // A zone with no plots leaves the field out (parseMap fills it in), so older maps stay byte-for-byte what they were.
+  return { version: 3, ...rest, ...(plots.length ? { plots } : {}), palette, ground, tags, parts, objects };
 }
 
 /** The file contents for a map. */

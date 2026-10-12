@@ -77,6 +77,10 @@ export interface Item {
   focus?: Focus;
   /** Set on supplies (no slot): drinking or eating one restores this much HP, MP, food and water, from the pack. */
   use?: { hp?: number; mp?: number; food?: number; water?: number };
+  /** Set on a harvested crop (a key of CROPS, systems/crops.ts): the pack shows that plant. Eaten, it has a `use`. */
+  crop?: string;
+  /** Set on seeds (a key of CROPS): the action key beside a bare plot plants one. */
+  seed?: string;
   /** Set on bags (slot `bag`): extra pack slots while it is worn. */
   capacity?: number;
   /** Sprite parts this item puts on the hero (see sprites/parts.ts); drawn over the hero's base look. */

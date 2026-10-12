@@ -1,8 +1,7 @@
 import { MOB_KINDS } from '../systems/combat';
 import { ITEMS } from '../systems/items';
-import { iconKind } from '../systems/inventory';
 import { SITE_KINDS, type Quest } from '../systems/quests';
-import { iconSvg } from './itemIcons';
+import { itemIcon } from './itemIcons';
 
 /** Pictures for the quest page: what the thing a quest wants looks like, so the player knows it when they see it. */
 
@@ -39,7 +38,7 @@ export function questArt(q: Quest, portrait: (mobKind: string) => string | null)
     caption = SITE_KINDS[o.site]?.name ?? '';
   } else {
     const item = ITEMS[o.item];
-    picture = `<span class="item-art tier${'rare' in item ? 4 : 1}">${iconSvg(iconKind(item))}</span>`;
+    picture = `<span class="item-art tier${'rare' in item ? 4 : 1}">${itemIcon(item)}</span>`;
     caption = item.name;
   }
   return picture ? `<figure class="quest-art">${picture}<figcaption>${caption}</figcaption></figure>` : '';

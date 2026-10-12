@@ -161,6 +161,7 @@ export class HostLink {
             away: everyone.filter((p) => p.zone !== z.name).map((p) => p.slot),
             players: everyone.filter((p) => p.zone === z.name).map((p) => this.snapPlayer(p)),
             chests: z.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
+            plots: z.plots.map((pl) => pl.code(arena.clock)),
             w: z.weather?.snapshot() ?? NO_WEATHER,
           },
           states: z.mobs.map((m) => encodeMob(m.view())),

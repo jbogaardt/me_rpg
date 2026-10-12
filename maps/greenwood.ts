@@ -57,6 +57,11 @@ export default defineBiome({
     z.prop('barrel', ...near(14.8, 14.6));
     z.prop('barrel', ...near(14.9, 14.7));
     z.keepClear(area(13.2, 14.4, 2.2, 1.5));
+    // Wild crops by the crossroads: ripe now, and they grow back after they are picked (systems/crops.ts).
+    z.plot(...near(13.0, 15.8), 'carrot');
+    z.plot(...near(13.3, 15.9), 'radish');
+    z.plot(...near(13.6, 15.8), 'potato');
+    z.plot(...near(12.5, 15.2), 'cabbage');
 
     // --- An overlook in the west: raised ground with stairs, and chests on top ---------------------------------
     z.plateau({ col: 30, row: 152, w: 9, h: 5 }, { stairs: [34] });

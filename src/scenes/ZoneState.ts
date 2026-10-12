@@ -3,6 +3,7 @@ import { Camera } from '../core/camera';
 import { Ambient } from '../entities/ambient';
 import { Character } from '../entities/Character';
 import { Chest } from '../entities/Chest';
+import { Plot } from '../entities/Plot';
 import { Effects } from '../entities/effects';
 import type { GroundItem } from '../entities/GroundItem';
 import { Pet } from '../entities/Pet';
@@ -17,6 +18,7 @@ import { CELL, type MapData } from '../map/types';
 import { cellFeet } from '../map/doors';
 import { MOB_KINDS, type Item } from '../systems/combat';
 import { CHEST_LOOTS } from '../systems/chests';
+import type { CropId } from '../systems/crops';
 import { Collision } from '../systems/collision';
 import { npcLook, OVERWORLD_NPC } from '../systems/looks';
 import { PET_KINDS } from '../systems/pets';
@@ -27,6 +29,7 @@ import { isTrialZone } from '../systems/skills';
 /** What a zone remembers while it is unloaded (Arena.memory); its mobs simply start afresh. */
 export interface ZoneMemory {
   opened: number[]; // indices of opened chests
+  plots: { crop: CropId | null; since: number }[]; // what grows in each plot, and since when (the arena clock)
   ground: { item: Item; x: number; y: number; id: number; age: number }[];
 }
 
@@ -68,13 +71,16 @@ export class ZoneState {
   readonly pets: Pet[];
   readonly mobs: Mob[];
   readonly chests: Chest[];
+  /** Soil for crops: wild plants and bare farm plots (systems/crops.ts). The host and solo grow them; a guest only shows them. */
+  readonly plots: Plot[];
   readonly ground: GroundItem[] = [];
   /** The bodies of the players here, which mobs hunt and which block others. The scene keeps it in step. */
   readonly heroBodies: Character[] = [];
   /** Set by the scene, which owns the combat rules mobs call back into. */
   mobWorld!: MobWorld;
 
-  constructor(zone: Zone, sprites: Sprites) {
+  /** `clock` is the arena's, so a wild plot starts ripe and a planted one keeps counting. */
+  constructor(zone: Zone, sprites: Sprites, clock = 0) {
     const { data } = zone;
     this.name = zone.name;
     this.data = data;
@@ -130,6 +136,7 @@ export class ZoneState {
       if (!CHEST_LOOTS[c.loot]) throw new Error(`Zone "${zone.name}" has a chest with unknown loot "${c.loot}"`);
       return new Chest(c, chestFrames);
     });
+    this.plots = data.plots.map((spawn) => new Plot(spawn, sprites.crops, clock));
     const bodies = [
       ...(this.npc ? [this.npc] : []),
       ...this.keepers.map((k) => k.body),
@@ -137,6 +144,7 @@ export class ZoneState {
       ...this.sites,
       ...this.pets,
       ...this.chests,
+      ...this.plots,
       ...this.mobs.map((m) => m.body),
     ];
     if (bodies.length) this.world.layer.addChild(...bodies); // Pixi's addChild() with nothing to add throws
@@ -147,10 +155,11 @@ export class ZoneState {
     this.camera.follow(screenW, screenH, x, y, zoneBounds(this.data), dt, snap);
   }
 
-  /** What must outlive the zone being unloaded: the chests opened and the items lying on the ground. */
+  /** What must outlive the zone being unloaded: the chests opened, what grows in the plots and the items lying on the ground. */
   remember(): ZoneMemory {
     return {
       opened: this.chests.flatMap((c, i) => (c.opened ? [i] : [])),
+      plots: this.plots.map((p) => ({ crop: p.state.crop, since: p.state.since })),
       ground: this.ground.map((g) => ({ item: g.item, x: g.x, y: g.y, id: g.id, age: g.age })),
     };
   }

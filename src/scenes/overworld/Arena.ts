@@ -107,6 +107,9 @@ export class Arena {
   get chests() {
     return this.zone.chests;
   }
+  get plots() {
+    return this.zone.plots;
+  }
   get ground() {
     return this.zone.ground;
   }

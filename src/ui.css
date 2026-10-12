@@ -345,6 +345,9 @@
 .inv-grid.worn .slot { height: 54px; }
 .inv-grid.pack .slot { aspect-ratio: 1; }
 .slot svg { width: 70%; height: 70%; }
+/* A crop's picture: a 32px window of the crops sheet, scaled to the box (itemIcons.ts; --crops-url is set in main.ts). */
+.crop-icon { display: block; width: 100%; aspect-ratio: 1; background: var(--crops-url) no-repeat; background-size: 3200% 3200%; background-position: var(--px) var(--py); image-rendering: pixelated; }
+.slot .crop-icon { width: 80%; margin: auto; }
 .slot .lbl { position: absolute; left: 0; right: 0; bottom: 1px; font-size: 10px; line-height: 1; text-align: center; opacity: 0.85; pointer-events: none; }
 .slot:not(.empty) .lbl { display: none; }
 .slot.empty { color: var(--ink-soft); }

@@ -57,12 +57,16 @@ export class Zones {
 
   /** Build the running state of a loaded zone and keep it (with what it remembers from before it was unloaded). */
   add(zone: Zone): ZoneState {
-    const z = new ZoneState(zone, this.sprites);
+    const z = new ZoneState(zone, this.sprites, this.arena.clock);
     z.mobWorld = this.makeMobWorld(z);
     this.arena.zones.set(zone.name, z);
     const memory = this.arena.memory.get(zone.name);
     if (memory) {
       for (const i of memory.opened) z.chests[i]?.setOpen(true);
+      memory.plots.forEach((m, i) => {
+        const plot = z.plots[i];
+        if (plot) Object.assign(plot.state, m);
+      });
       for (const { item, x, y, id, age } of memory.ground) {
         const g = new GroundItem(item, x, y, id, age);
         z.ground.push(g);

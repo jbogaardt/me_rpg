@@ -38,6 +38,7 @@ const snap: SnapMsg = {
   mobs: [mob, [7, 1, 2, 0, 5, 0, 5000, 0]],
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10, 80.5, 64],
   chests: 5,
+  plots: [0, 4, 13],
   w: [0, 0, 0, 1],
   ground: [[3, 40.5, 50, 2, 150]],
   events: (
@@ -310,6 +311,9 @@ describe('messages', () => {
       { ...snap, mobs: [[0, Infinity, 2, 0, 0, 5, 0, 0]] },
       { ...snap, mobs: 'x' },
       { ...snap, me: [1, 2, 3] },
+      { ...snap, plots: [999] }, // not a plot code
+      { ...snap, plots: new Array(25).fill(0) }, // more plots than a map holds
+      { ...snap, plots: 'x' },
       { ...snap, events: [[1, 4, 0, 0, 'x'.repeat(100), 0]] }, // text too long
       { ...snap, events: [[1, 9, 0, 0]] }, // unknown kind
       { ...snap, events: [{ id: 1, e: { type: 'defeat', player: 0 } }] }, // the old object form

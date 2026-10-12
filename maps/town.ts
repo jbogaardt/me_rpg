@@ -85,6 +85,10 @@ export default defineBiome({
     ] as const)
       z.grove(blob(area(x, y, w, h)), { trees: TREES });
 
+    // --- The allotments: bare plots of soil for the player's own seeds (the apothecary sells them, systems/crops.ts) ---
+    z.keepClear([{ col: 181, row: 186, w: 11, h: 7 }]);
+    for (const row of [188, 191]) for (const col of [183, 185, 187, 189]) z.plot(...z.near(col, row));
+
     z.scatter([...TREES], { count: 24, where: open, seed: 21 });
     z.scatter(['bush'], { count: 16, where: open, seed: 22 });
     z.scatter(['flowerRed', 'flowersPurple'], { count: 150, where: open, margin: 0, seed: 23 });
@@ -104,5 +108,6 @@ export default defineBiome({
     // --- Names for the map: each shows once the player has explored round it ---------------------------------------
     z.place('Market Square', 168, 206);
     z.place('The Lanternrest Pond', 116, 206);
+    z.place('The Allotments', 186, 187);
   },
 });
