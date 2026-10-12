@@ -1,5 +1,6 @@
 import type { Texture } from 'pixi.js';
 import type { Hero, Ranged } from '../systems/combat';
+import type { SkillId } from '../systems/skills';
 import { PLAYER_COLORS } from '../systems/looks';
 import { Character } from './Character';
 
@@ -19,6 +20,12 @@ export class Player {
   readonly body: Character;
   attackCooldown = 0;
   castCooldown = 0; // seconds before the next combo
+  /** Arcane Edge (systems/skills.ts): the next `charges` attacks carry extra magic, for `timer` more seconds. */
+  edge = { charges: 0, timer: 0 };
+  /** The skill this player is being tested for in a training ground (host and solo; null when not in a trial). */
+  trial: SkillId | null = null;
+  /** Seconds until a player who passed their trial is sent back to the trainer (0: not waiting). */
+  trialExit = 0;
   ward = 0; // seconds of protection left from a Ward spell (immune to damage, tinted)
   /** A bow being drawn: the arrow leaves when `timer` runs out (host and solo; a hit while drawing spoils it). */
   pendingShot: { timer: number; bow: Ranged; damage: number } | null = null;

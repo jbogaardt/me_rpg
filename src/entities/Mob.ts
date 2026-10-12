@@ -69,6 +69,9 @@ export class Mob {
     this.reset();
   }
 
+  /** Comes back after a while when defeated. A training ground's enemies do not (the trial is over when they are all down). */
+  respawns = true;
+
   get alive() {
     return this.state !== 'dead';
   }
@@ -118,9 +121,9 @@ export class Mob {
 
   update(dt: number, world: MobWorld) {
     if (this.state === 'dead') {
-      this.timer -= dt;
+      this.timer = Math.max(0, this.timer - dt);
       this.fade();
-      if (this.timer <= 0) this.reset();
+      if (this.timer <= 0 && this.respawns) this.reset();
       return;
     }
 

@@ -12,6 +12,8 @@ import {
   type Hero,
 } from '../systems/combat';
 import { tabStep } from '../core/controls';
+import { SKILLS } from '../systems/skills';
+import { arrows } from '../systems/spells';
 import type { Session } from '../net/session';
 import type { TouchControls } from '../core/touch';
 import { Inventory } from './Inventory';
@@ -121,6 +123,9 @@ export class Menu {
     const s = hero.stats;
     const row = (label: string, value: string | number) => `<dt>${label}</dt><dd>${value}</dd>`;
     const next = xpToNext(s.level);
+    const skills = hero.skills
+      .map((id) => `${arrows(SKILLS[id].keys)} ${SKILLS[id].name} <small>${SKILLS[id].cost} MP</small>`)
+      .join('<br />');
     const xpFrac = Math.max(0, Math.min(1, s.xp / next));
     document.getElementById('menu-status')!.innerHTML = `
       <h2>${hero.name} <small>Level ${s.level}</small></h2>
@@ -131,6 +136,7 @@ export class Menu {
         ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
         ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${gearAttack(hero)} gear)</small>`)}
         ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${gearDefense(hero)} gear)</small>`)}
+        ${skills ? row('Skills', skills) : ''}
         ${row('Magic', `${spellPower(hero)} <small>(${s.magic} + ${hero.weapon.focus?.power ?? 0} ${hero.weapon.focus?.kind ?? 'weapon'}${gearMagic(hero) ? ` + ${gearMagic(hero)} gear` : ''})</small>`)}
         ${speedFactor(hero) > 1 ? row('Speed', `+${Math.round((speedFactor(hero) - 1) * 100)}% <small>gear</small>`) : ''}
         ${gearRegen(hero) ? row('Mending', `${gearRegen(hero)} <small>HP/s gear</small>`) : ''}

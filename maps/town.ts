@@ -16,8 +16,9 @@ export const SHOP_DOORS = {
   smithy: { building: { col: 148, row: ROW }, door: { col: 150, w: 2 }, outside: { col: 150, row: ROW + 1 } },
   armory: { building: { col: 156, row: ROW }, door: { col: 157, w: 1 }, outside: { col: 157, row: ROW + 1 } },
   apothecary: { building: { col: 162, row: ROW }, door: { col: 164, w: 2 }, outside: { col: 164, row: ROW + 1 } },
-  wizard: { building: { col: 170, row: ROW }, door: { col: 172, w: 2 }, outside: { col: 172, row: ROW + 1 } },
   ranger: { building: { col: 178, row: ROW }, door: { col: 179, w: 1 }, outside: { col: 179, row: ROW + 1 } },
+  // The wizard's house stands off to the east, clear of the north road (which runs straight down the middle to the market).
+  wizard: { building: { col: 184, row: ROW }, door: { col: 186, w: 2 }, outside: { col: 186, row: ROW + 1 } },
 } as const;
 export type ShopId = keyof typeof SHOP_DOORS;
 
@@ -49,7 +50,7 @@ export default defineBiome({
   build(z) {
     z.fill('grass');
     z.paint('dirt', [...STREETS, ...blob(MARKET, 5, 0.25)]);
-    z.keepClear([...STREETS, MARKET, { col: 146, row: 190, w: 36, h: 11 }]);
+    z.keepClear([...STREETS, MARKET, { col: 146, row: 190, w: 36, h: 11 }, { col: 182, row: 191, w: 9, h: 11 }]);
     const open = awayFrom([...STREETS, MARKET]);
 
     for (const [id, shop] of Object.entries(SHOP_DOORS)) {

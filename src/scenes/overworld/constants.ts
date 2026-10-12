@@ -33,4 +33,5 @@ export const CHAIN_RANGE = 5.5 * CELL;
 export const DASH_DISTANCE = 4.5 * CELL;
 export const DASH_GRACE = 0.35; // seconds of immunity after a Blink
 export const WARD_TINT = 0xa8d8ff; // a warded player is tinted pale blue
+export const EDGE_TINT = 0xe3c4ff; // a hero with Arcane Edge charges is tinted violet
 export const HELP_RADIUS = 4 * CELL; // Mend and Ward reach friends this close

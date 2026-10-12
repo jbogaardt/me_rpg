@@ -22,6 +22,7 @@ import { npcLook, OVERWORLD_NPC } from '../systems/looks';
 import { PET_KINDS } from '../systems/pets';
 import { GIVERS } from '../systems/quests';
 import { SHOPS } from '../systems/shops';
+import { isTrialZone } from '../systems/skills';
 
 /** What a zone remembers while it is unloaded (Arena.memory); its mobs simply start afresh. */
 export interface ZoneMemory {
@@ -120,7 +121,9 @@ export class ZoneState {
     this.mobs = data.mobs.map((m) => {
       const kind = MOB_KINDS[m.kind];
       if (!kind) throw new Error(`Zone "${zone.name}" spawns unknown mob kind "${m.kind}"`);
-      return new Mob(kind, sprites.wardrobe.sheet(kind.look), ...cellFeet(m));
+      const mob = new Mob(kind, sprites.wardrobe.sheet(kind.look), ...cellFeet(m));
+      mob.respawns = !isTrialZone(zone.name);
+      return mob;
     });
     const chestFrames = sheetGrid(sprites.chests, 2, 4, CELL, CELL);
     this.chests = data.chests.map((c) => {

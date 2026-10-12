@@ -697,6 +697,7 @@ describe('joining a game', () => {
       gold,
       worn: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       quests: [0, 0, 0],
+      skills: 0,
       ack: 0,
       items: [],
     });

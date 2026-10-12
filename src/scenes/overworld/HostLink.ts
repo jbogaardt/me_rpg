@@ -212,7 +212,8 @@ export class HostLink {
       (p.moving ? FLAG.moving : 0) |
       (p.invuln > 0 ? FLAG.invuln : 0) |
       (swinging ? FLAG.swing : 0) |
-      (p.ward > 0 ? FLAG.ward : 0);
+      (p.ward > 0 ? FLAG.ward : 0) |
+      (p.edge.charges > 0 ? FLAG.edge : 0);
     return [p.slot, Math.round(p.body.x), Math.round(p.body.y), dirIndex(p.body.facing), flags];
   }
 

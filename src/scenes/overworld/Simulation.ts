@@ -13,6 +13,7 @@ import {
   goldFor,
   rollDamage,
   rollGold,
+  spellPower,
   speedFactor,
   xpFor,
   type Ranged,
@@ -20,6 +21,7 @@ import {
 import { isIce, stepVelocity } from '../../systems/ice';
 import { GIVERS, QUEST_GIVER, recordKill, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
+import { EDGE_SHARE } from '../../systems/skills';
 import type { Strike } from '../../entities/WeatherLayer';
 import type { ZoneState } from '../ZoneState';
 import type { Arena } from './Arena';
@@ -36,6 +38,7 @@ import {
   MELEE_REACH,
   MP_REGEN,
   SPEED,
+  EDGE_TINT,
   WARD_TINT,
 } from './constants';
 import type { Visuals } from './Visuals';
@@ -50,6 +53,8 @@ import type { Zones } from './Zones';
  */
 export class Simulation {
   private casting: Casting;
+  /** Set by the scene: a training ground handles a defeat in a trial itself (returns true when it did). */
+  trialDefeat: (p: Player) => boolean = () => false;
 
   constructor(
     private arena: Arena,
@@ -109,6 +114,8 @@ export class Simulation {
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
     p.ward = Math.max(0, p.ward - dt);
+    p.edge.timer = Math.max(0, p.edge.timer - dt);
+    if (p.edge.timer === 0) p.edge.charges = 0;
     p.invuln = Math.max(0, p.invuln - dt);
     p.grace = Math.max(0, p.grace - dt);
     p.sinceHit += dt;
@@ -132,7 +139,7 @@ export class Simulation {
     const swinging = this.isSwinging(p);
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
     p.body.alpha = p.invuln > 0 && Math.floor(p.invuln * 16) % 2 === 0 ? 0.35 : 1;
-    p.body.setTint(p.ward > 0 ? WARD_TINT : 0xffffff);
+    p.body.setTint(p.ward > 0 ? WARD_TINT : p.edge.charges > 0 ? EDGE_TINT : 0xffffff);
     p.body.animate(dt * 1000, p.moving);
   }
 
@@ -196,11 +203,23 @@ export class Simulation {
     this.emit({ type: 'slash', x: round1(p.body.x), y: round1(p.body.y), dir: dirIndex(dir), p: p.slot });
     const cx = p.body.x + vx * 16;
     const cy = p.body.y + vy * 16;
+    const edge = this.takeEdge(p); // Arcane Edge: this swing carries extra magic
     for (const mob of this.arena.mobs) {
       if (mob.alive && Math.hypot(mob.body.x - cx, mob.body.y - cy) < MELEE_REACH) {
-        this.hitMob(mob, rollDamage(attackPower(p.hero), mob.kind.defense), vx, vy);
+        this.hitMob(mob, rollDamage(attackPower(p.hero) + edge, mob.kind.defense), vx, vy);
+        if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
       }
     }
+  }
+
+  /**
+   * Arcane Edge (systems/skills.ts): spend one charge on an attack and say how much magic damage it adds (0 with none left).
+   * Used by every attack: a sword swing, an arrow's release and a wand's bolt.
+   */
+  takeEdge(p: Player): number {
+    if (p.edge.charges <= 0) return 0;
+    if (--p.edge.charges === 0) p.edge.timer = 0;
+    return Math.max(1, Math.round(spellPower(p.hero) * EDGE_SHARE));
   }
 
   /** Start drawing a bow: the arrow flies when the string is let go (`release`), a moment into the animation. */
@@ -221,8 +240,10 @@ export class Simulation {
     const x = p.body.x + ux * 10;
     const y = p.body.y - BOLT_HEIGHT + uy * 8;
     const [vx, vy] = [ux * shot.bow.speed, uy * shot.bow.speed];
+    const edge = this.takeEdge(p); // Arcane Edge: this arrow carries extra magic
     this.visuals.arrow(x, y, vx, vy, shot.bow.range, (mob) => {
-      this.hitMob(mob, rollDamage(shot.damage, mob.kind.defense), ux, uy);
+      this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy);
+      if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
     });
     this.emit({ type: 'arrow', x: round1(x), y: round1(y), vx: round1(vx), vy: round1(vy), range: shot.bow.range });
   }
@@ -292,7 +313,8 @@ export class Simulation {
   // --- Damage ---
 
   /** Every player takes the kill's XP and gold (in solo, just the one). */
-  hitMob(mob: Mob, damage: number, vx: number, vy: number, bolt = false) {
+  hitMob(mob: Mob, rawDamage: number, vx: number, vy: number, bolt = false) {
+    const damage = Math.round(rawDamage * this.casting.markFactor(mob)); // a foe marked by Spirit Mark takes more
     const killed = mob.hit(damage, vx, vy);
     // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
     if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14, Math.atan2(vy, vx));
@@ -348,6 +370,7 @@ export class Simulation {
 
   /** Out of HP: back to the spawn point, fully restored (XP and levels are kept). */
   private defeat(p: Player) {
+    if (this.trialDefeat(p)) return;
     const { arena } = this;
     const { home } = arena;
     const s = p.hero.stats;
@@ -365,6 +388,7 @@ export class Simulation {
     p.invuln = 0;
     p.pendingShot = null;
     p.ward = 0;
+    p.edge = { charges: 0, timer: 0 };
     if (arena.role === 'solo') for (const z of arena.zones.values()) z.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them
     if (p === arena.local) this.announce(DEFEAT_LINES);
     else this.emit({ type: 'defeat', player: p.slot });

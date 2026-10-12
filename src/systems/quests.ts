@@ -28,6 +28,8 @@ export interface Giver {
 
 export const GIVERS: Record<string, Giver> = {
   maren: { name: 'Warden Maren', look: 'warden', tag: 'Maren', zone: 'town' },
+  // The training wizard (systems/skills.ts): teaches spells that any weapon can carry. Not part of the quest chain.
+  orin: { name: 'Orin the Trainer', look: 'trainer', tag: 'Trainer', zone: 'shop_wizard' },
 };
 
 /** The giver whose chain QUESTS is (there is one story so far). */

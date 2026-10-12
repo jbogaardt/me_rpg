@@ -353,6 +353,7 @@ describe('trade, pack and looks messages', () => {
     items: [1, 28, 28],
     ack: 2,
     quests: [4, 1, 5],
+    skills: 1,
     say: { id: 3, text: 'Bought it', ok: true },
   };
   const { say: _say, ...packNoSay } = pack;
@@ -368,7 +369,8 @@ describe('trade, pack and looks messages', () => {
   it('round-trips', () => {
     const talk: DoMsg = { k: 'do', n: 4, op: 'talk', item: 0, shop: 'maren' };
     const told: PackMsg = { ...pack, say: { id: 4, text: '', ok: true, story: 'road.offer' } };
-    for (const m of [ask, talk, told, pack, packNoSay, looks]) expect(parseMessage(encodeMessage(m))).toEqual(m);
+    const train: DoMsg = { k: 'do', n: 5, op: 'train', item: 0, shop: 'orin' };
+    for (const m of [ask, talk, train, told, pack, packNoSay, looks]) expect(parseMessage(encodeMessage(m))).toEqual(m);
   });
 
   it("keeps a full pack and everyone's gear small", () => {
@@ -401,6 +403,8 @@ describe('trade, pack and looks messages', () => {
       { ...pack, quests: [99, 0, 0] },
       { ...pack, quests: [1, 0] },
       { ...pack, quests: undefined },
+      { ...pack, skills: 4 },
+      { ...pack, skills: undefined },
       { ...pack, say: { id: 1, text: '', ok: true, story: 'No Way!' } },
       { ...pack, items: [9999] },
       { ...pack, items: Array.from({ length: 201 }, () => 1) },

@@ -68,5 +68,10 @@ export function progress(typed: string, keys: string): number {
   return 0;
 }
 
+const WORDS: Record<string, string> = { u: 'up', d: 'down', l: 'left', r: 'right' };
+
+/** "ruld" as words: "right, up, left, down". */
+export const directionWords = (keys: string): string => [...keys].map((k) => WORDS[k] ?? k).join(', ');
+
 /** A combo as one line: "↑↑←→ Arcane Bolt (4 MP)". */
 export const comboLine = (c: Combo): string => `${arrows(c.keys)} ${SPELLS[c.spell].name} (${c.cost} MP)`;

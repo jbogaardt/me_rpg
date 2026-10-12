@@ -18,12 +18,14 @@ export const ZONE_NAMES: Record<string, string> = {
   shop_apothecary: "The Apothecary's Shop",
   shop_ranger: "The Ranger's Lodge",
   shop_wizard: "The Wizard's Sanctum",
+  training_novice: 'The Novice Training Hall',
+  training_adept: 'The Adept Training Hall',
 };
 
 /** The name of a zone, or the zone's own key for one with no name. */
 export const zoneName = (zone: string): string => ZONE_NAMES[zone] ?? zone;
 
-/** Which open-air zones touch (a gap in the border between them, maps/world.ts). A shop room joins only the town. */
+/** Which open-air zones touch (a gap in the border between them, maps/world.ts). A shop room joins only the town (the training halls are reached by the trainer's magic, not on foot, so they are not linked). */
 export const ZONE_LINKS: readonly (readonly [string, string])[] = [
   ['town', 'greenwood'],
   ['town', 'frostlands'],

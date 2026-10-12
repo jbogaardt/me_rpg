@@ -15,8 +15,10 @@ describe('places against the built maps', () => {
   });
 
   it('links exactly the zones the maps have doors between', () => {
-    for (const zone of Object.keys(ZONE_NAMES)) {
-      expect(neighbours(zone).sort(), zone).toEqual([...new Set(doorsOf(zone))].sort());
+    // The training halls are reached by the trainer's magic, not on foot, so only their way out is a door.
+    const walkable = (zone: string) => !zone.startsWith('training_');
+    for (const zone of Object.keys(ZONE_NAMES).filter(walkable)) {
+      expect(neighbours(zone).sort(), zone).toEqual([...new Set(doorsOf(zone))].filter(walkable).sort());
     }
     expect(ZONE_LINKS.length).toBeGreaterThan(10);
   });
