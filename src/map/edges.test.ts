@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { limitOffset } from '../core/camera';
-import { edgeLimits, FADE_CELLS, HOLD_CELLS } from './edges';
+import { edgeLimits, FADE_CELLS, HOLD_CELLS, zoneRegion } from './edges';
 import { CELL, type DoorSpawn } from './types';
 
 const east = (row: number): DoorSpawn => ({ col: 100, row, w: 1, to: { zone: 'next', col: 1, row }, dir: 'right' });
@@ -49,5 +49,36 @@ describe('limitOffset', () => {
     expect(limitOffset(-400, 640, 1, undefined, 1200)).toBe(-400); // already inside
     expect(limitOffset(-100, 640, 1, 300, undefined)).toBe(-300); // near edge held at 300
     expect(limitOffset(-2000, 640, 2, undefined, 1200)).toBe(-1760); // zoom 2: the far edge is at (640 - offset) / 2
+  });
+});
+
+describe('zoneRegion', () => {
+  // 60 x 60 map whose own cells are columns 10..49 and rows 10..49 (the rest is a neighbour's margin).
+  const w = 60;
+  const surface = Array.from({ length: w * w }, (_, i) => {
+    const c = i % w;
+    const r = Math.floor(i / w);
+    return c >= 10 && c < 50 && r >= 10 && r < 50 ? 0 : 1;
+  });
+  const data = { width: w, height: w, surfaces: ['grass', 'beyond'], surface };
+  const region = zoneRegion(data);
+
+  it('holds the view at the zone edge everywhere, not only at a gap', () => {
+    const l = edgeLimits([], 45 * CELL, 30 * CELL, region);
+    expect(l.right).toBe(50 * CELL);
+    expect(l.left).toBe(10 * CELL);
+    expect(l.top).toBe(10 * CELL);
+    expect(l.bottom).toBe(50 * CELL);
+  });
+
+  it('never leaves the player off-screen', () => {
+    const l = edgeLimits([], 49.5 * CELL, 30 * CELL, region);
+    expect(l.right!).toBeGreaterThanOrEqual(49.5 * CELL + 2 * CELL);
+  });
+
+  it('still pins the border at a gap, and eases to the zone edge away from it', () => {
+    const doors = [{ ...east(30), col: 49 }];
+    expect(edgeLimits(doors, 45 * CELL, 30.5 * CELL, region).right).toBe(50 * CELL);
+    expect(edgeLimits(doors, 45 * CELL, 45 * CELL, region).right).toBe(50 * CELL);
   });
 });

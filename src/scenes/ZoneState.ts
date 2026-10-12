@@ -11,7 +11,7 @@ import { Mob, type MobWorld } from '../entities/Mob';
 import { WeatherLayer } from '../entities/WeatherLayer';
 import { CLIMATES, DEFAULT_CLIMATE, isClimate, Weather } from '../systems/weather';
 import { sheetGrid } from '../core/textures';
-import { edgeLimits } from '../map/edges';
+import { edgeLimits, zoneRegion } from '../map/edges';
 import { MapView } from '../map/MapView';
 import { CELL, type MapData } from '../map/types';
 import { cellFeet } from '../map/doors';
@@ -144,7 +144,7 @@ export class ZoneState {
 
   /** Centre the camera on (x, y): the map's edge and a gap's border (map/edges.ts) stop it, so a crossing is at the screen's edge. */
   follow(screenW: number, screenH: number, x: number, y: number) {
-    this.camera.follow(screenW, screenH, x, y, edgeLimits(this.data.doors, x, y));
+    this.camera.follow(screenW, screenH, x, y, edgeLimits(this.data.doors, x, y, zoneRegion(this.data)));
   }
 
   /** What must outlive the zone being unloaded: the chests opened and the items lying on the ground. */
