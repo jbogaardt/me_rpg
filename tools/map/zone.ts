@@ -76,6 +76,10 @@ export interface WoodsOptions {
   seed?: number;
   /** Cells that block even where no art covers them (a biome's wall along its border: nobody slips through). */
   hard?: (col: number, row: number) => boolean;
+  /** Fill every bare cell with a tree, bush or rock too (a dense thicket); by default only a wall's border row is. */
+  fill?: boolean;
+  /** Share of lattice spots a grove plants (default GROVE_DENSITY); walls always plant them all. */
+  density?: number;
 }
 
 /** A wood's cell blocks when its art covers at least this much of it; barer cells at its edge stay walkable. */
@@ -247,8 +251,9 @@ interface Placed {
  * earlier ones, so lay down ground first, then features, then overrides.
  */
 /** Spacing of the staggered lattice trees stand on in woods: wide enough that crowns overlap only a little. */
-const WOOD_COL = 64;
-const WOOD_ROW = 56;
+const WOOD_COL = 90;
+const WOOD_ROW = 84;
+const GROVE_DENSITY = 0.4; // share of lattice spots a grove plants
 
 export class Zone {
   private ground: ({ sheet: string; x: number; y: number } | null)[];
@@ -522,12 +527,18 @@ export class Zone {
       const stagger = i % 2 ? WOOD_COL / 2 : 0;
       for (let j = Math.floor((minC * CELL - TW) / WOOD_COL) - 1; j * WOOD_COL <= (maxC + 1) * CELL; j++) {
         const px = j * WOOD_COL + stagger + Math.round((rand() - 0.5) * 8);
-        tryPlace(trees[Math.floor(rand() * trees.length)], px, i * WOOD_ROW + Math.round((rand() - 0.5) * 6));
+        const pick = trees[Math.floor(rand() * trees.length)];
+        const py = i * WOOD_ROW + Math.round((rand() - 0.5) * 6);
+        // A grove is a scatter of trees, not a thicket: most lattice spots stay empty. A wall (`hard`) keeps them all.
+        if (opts.hard || rand() < (opts.density ?? GROVE_DENSITY)) tryPlace(pick, px, py);
       }
     }
     // Bare cells: the first tree, then bush, then rock that fits over each.
     for (const [c, r] of spots) {
       if (covered.has(key(c, r))) continue;
+      // Only the wall's border row must be filled (it blocks whatever covers it); elsewhere gaps between trees stay open.
+      if (opts.hard && !opts.hard(c, r)) continue;
+      if (!opts.hard && !opts.fill) continue;
       [...trees, ...fillers].some((name) => {
         const p = PREFABS[name];
         const wCells = Math.ceil(p.w / CELL);
