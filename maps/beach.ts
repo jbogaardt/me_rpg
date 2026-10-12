@@ -63,8 +63,7 @@ export default defineBiome({
     }
     z.chest('wood', 'bandageKit', ...near(13.8, 5.4));
 
-    // --- Grass where the beach meets the jungle -------------------------------------------------------------
-    z.paint('meadow', blob(area(18.2, 3.4, 2.4, 1.6)));
+    // --- A copse where the beach meets the jungle -----------------------------------------------------------
     z.grove(blob(area(18.8, 4.2, 1.2, 0.6)), { trees: TREES });
 
     for (const [kind, x, y] of [

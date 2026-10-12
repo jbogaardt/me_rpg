@@ -285,8 +285,9 @@ const WOOD_COL = 90;
 const WOOD_ROW = 84;
 const FILLER_SHARE = 0.2; // share of bare wall cells a bush or rock may fill
 const GROVE_DENSITY = 0.4;
-const WALL_DENSITY = 0.55; // share of lattice spots a wall plants
-const WALL_FILL = 0.5; // share of bare cells on a wall's border row that get a tree (the rest still block, unseen)
+/** The reason a border cell of a wall carries when nothing would fit over it (`checkMap` fails it). */
+export const BARE_WALL = 'a bare wall cell (nothing fits over it)';
+const WALL_DENSITY = 0.55; // share of lattice spots a wall plants (its border row is then filled, see `woods`)
 
 export class Zone {
   private ground: ({ sheet: string; x: number; y: number } | null)[];
@@ -572,23 +573,31 @@ export class Zone {
       }
     }
     // Bare cells: the first tree, then bush, then rock that fits over each.
+    const fits = (name: PrefabName, c: number, r: number) => {
+      const p = PREFABS[name];
+      const wCells = Math.ceil(p.w / CELL);
+      for (let dc = 0; dc < wCells; dc++)
+        for (let dr = 0; dr < 2; dr++) {
+          const px = (c - dc) * CELL + Math.floor((wCells * CELL - p.w) / 2);
+          if (tryPlace(name, px, (r + dr + 1) * CELL - p.h)) return true;
+        }
+      return false;
+    };
     for (const [c, r] of spots) {
       if (covered.has(key(c, r))) continue;
-      // Only the wall's border row must be filled (it blocks whatever covers it); elsewhere gaps between trees stay open.
-      if (opts.hard && (!opts.hard(c, r) || rand() > WALL_FILL)) continue;
+      // A wall's border row blocks whatever covers it, so every cell of it gets art: nobody walks into a bare wall.
+      // Elsewhere gaps between trees stay open.
+      const border = opts.hard?.(c, r) ?? false;
+      if (opts.hard && !border) continue;
       if (!opts.hard && !opts.fill) continue;
-      [...trees, ...fillers].some((name) => {
-        const p = PREFABS[name];
-        if (!trees.includes(name) && rand() > FILLER_SHARE) return false; // a wall is mostly trees, with the odd bush or rock
-        const wCells = Math.ceil(p.w / CELL);
-        for (let dc = 0; dc < wCells; dc++)
-          for (let dr = 0; dr < 2; dr++) {
-            const px = (c - dc) * CELL + Math.floor((wCells * CELL - p.w) / 2);
-            if (tryPlace(name, px, (r + dr + 1) * CELL - p.h)) return true;
-          }
-        return false;
-      });
-      if (opts.hard?.(c, r) && this.inMap(c, r)) this.reasons.set(r * this.width + c, 'the wall along a border');
+      // Mostly trees, with the odd bush or rock; on the border row, whatever fits (a bush, else a rock).
+      const placed = [...trees, ...fillers].some(
+        (name) => (trees.includes(name) || rand() <= FILLER_SHARE) && fits(name, c, r),
+      );
+      const filled = placed || (border && fillers.some((name) => fits(name, c, r)));
+      // `checkMap` fails a bare one: a wall nobody can see.
+      if (border && this.inMap(c, r))
+        this.reasons.set(r * this.width + c, filled ? 'the wall along a border' : BARE_WALL);
     }
     for (const [c, r] of spots) if (this.inMap(c, r)) this.soft.set(r * this.width + c, opts.hard?.(c, r) ?? false);
     return this;

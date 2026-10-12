@@ -8,6 +8,7 @@ import { SHOPS } from '../../src/systems/shops';
 import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
 import { coverage, sheet } from './image';
+import { BARE_WALL } from './zone';
 import { walkFrom } from './walk';
 
 export interface Report {
@@ -209,6 +210,11 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     }
     if (blocked.has(i) && c < 0.15 && !reasons.has(i)) walls.push(i);
   });
+  const bareWall = [...reasons].filter(([, why]) => why === BARE_WALL).map(([i]) => i);
+  if (bareWall.length)
+    errors.push(
+      `a wall's border row has cells with nothing drawn on them at ${bareWall.slice(0, 12).map(at).join(' ')}`,
+    );
   const list = (cells: number[]) =>
     cells.slice(0, 12).map(at).join(' ') + (cells.length > 12 ? ` …(+${cells.length - 12})` : '');
   if (hidden.length) warnings.push(`player can walk into foliage at ${list(hidden)}`);

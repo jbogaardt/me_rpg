@@ -78,7 +78,6 @@ export default defineBiome({
     z.prop('lilyFlower', pick(water, 3).col + 2, pick(water, 3).row);
     z.prop('lilyPads', pick(water, 5).col + 8, pick(water, 5).row);
     reedsAt(z, water, 8, 'e', 'reedStalks');
-    z.paint('meadow', blob(area(15, 21.4, 4, 1.2)));
     for (const [x, y, w, h] of [
       [12.4, 18.8, 1.4, 1],
       [19, 18.2, 1.2, 1.2],

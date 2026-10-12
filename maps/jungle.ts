@@ -3,7 +3,7 @@ import { JUNGLE_TREES } from '../tools/map/catalog';
 import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
-// The jungle: a tall band of deep green in the middle of the north, from the sea down to the Eastwood. Thick groves,
+// The jungle: a tall band of jungle trees in the middle of the north, from the sea down to the Eastwood. Thick groves,
 // muddy trails, a lagoon with reeds, overgrown ruins. Every neighbour has a way in: the beach, the wetlands, the undead
 // lands, the marsh and the Eastwood. Orcs, trolls, wolfkin and goblins: level 4-6.
 // Squares x 20-23 at y 0-3, x 21-26 at y 4, x 22-27 at y 5-10 (maps/world.ts).
@@ -40,8 +40,6 @@ export default defineBiome({
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');
-    z.ground('meadow', { inset: [3, 6] }); // pale grass, then mid green, then the deep jungle: no bright halo at the edge
-    z.ground('darkGrass', { inset: [6, 11] });
     z.paint('mud', [...TRAILS, ...blob(area(25, 9.6, 1.4, 0.6))]);
     z.keepClear(TRAILS);
 
@@ -63,7 +61,6 @@ export default defineBiome({
 
     // --- Overgrown ruins with a chest ---------------------------------------------------------------------------
     for (const r of blob(area(25.4, 9.2, 1.2, 0.7), 3, 0.3)) z.fill('flagstone', r);
-    z.paint('darkGrass', blob(area(25.4, 9.2, 1.2, 0.7), 3, 0.3), { erase: true });
     z.keepClear(area(25.2, 9, 1.6, 1.1));
     z.prop('menhir', ...at(25.5, 9.3));
     z.prop('menhir', ...at(26.4, 9.3));

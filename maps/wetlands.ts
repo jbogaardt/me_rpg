@@ -24,7 +24,6 @@ export default defineBiome({
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');
-    z.ground('meadow');
     z.paint('mud', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);

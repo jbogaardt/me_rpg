@@ -40,8 +40,6 @@ export default defineBiome({
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');
-    z.ground('meadow', { inset: [2, 4] }); // marsh grass, darker inland, with the mud and the water laid over it
-    z.ground('darkGrass', { inset: [4, 8] });
 
     // --- Pools: noise decides where the water is, the causeways where it is not ------------------------------------
     const b = z.bounds;

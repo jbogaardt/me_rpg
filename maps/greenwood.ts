@@ -85,7 +85,7 @@ export default defineBiome({
     z.prop('lilyPads', pick(lake, 7).col + 9, pick(lake, 7).row);
     z.prop('lilyRed', pick(lake, 9).col + 15, pick(lake, 9).row);
     reedsAt(z, lake, 13, 'w');
-    const small = pond(z, area(6, 21, 1.4, 0.9), { shore: 'meadow' });
+    const small = pond(z, area(6, 21, 1.4, 0.9), { shore: 'sand' });
     z.keepClear(area(5.7, 20.7, 2, 1.5));
     z.prop('lilyPads', pick(small, 3).col + 3, pick(small, 3).row);
 
@@ -95,7 +95,6 @@ export default defineBiome({
     z.mob('wolfkin', 42, 198);
 
     // --- The northern glade, between the desert and the undead lands --------------------------------------------
-    z.paint('meadow', blob(area(6.4, 7.4, 3.6, 2.8)));
     z.chest('oak', 'potion', ...near(8.2, 8.2));
     z.mob('shade', ...near(7.6, 9));
     z.mob('goblin', ...near(8.6, 9.6));

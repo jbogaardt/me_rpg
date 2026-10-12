@@ -3,7 +3,7 @@ import { TREES } from '../tools/map/catalog';
 import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
-// The Eastwood: the second forest, east of the Greenwood. Deeper green and wilder: dense groves, a woodland pond, a
+// The Eastwood: the second forest, east of the Greenwood. Wilder: dense groves, a woodland pond, a
 // wooded hill with a view, and a long tongue of forest running south with a chest at its end. Trails lead west to the
 // Greenwood, north up into the jungle and east into the Frostlands. Wolfkin, goblins, skeletons and shades: level 2-3.
 // Squares x 21-27, y 11-15, narrowing south to y 20 (maps/world.ts).
@@ -30,7 +30,6 @@ export default defineBiome({
   walls: { trees: TREES },
   build(z) {
     z.fill('grass');
-    z.ground('meadow'); // deeper green than the Greenwood's
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
 
