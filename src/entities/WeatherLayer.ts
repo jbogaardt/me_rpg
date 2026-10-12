@@ -1,7 +1,7 @@
 import { Container, Graphics, Particle, ParticleContainer, Sprite, Texture } from 'pixi.js';
 import type { ViewRect } from '../core/camera';
 import { mulberry32 } from '../systems/particles';
-import { Lightning, type Weather, type WeatherKind } from '../systems/weather';
+import type { Precip, Weather } from '../systems/weather';
 
 // Draws the current weather over the world: a tinted haze (some kinds) plus a fixed pool of tiny particles (rain
 // streaks, snow, blown sand, wind gusts) that wrap around the camera's view. The particles are one ParticleContainer,
@@ -29,8 +29,11 @@ interface Style {
   tilt: boolean; // point along the motion (streaks)
 }
 
-const STYLES: Partial<Record<WeatherKind, Style>> = {
-  wind: { count: 26, tint: 0xffffff, alpha: 0.55, w: [8, 14], h: [1, 1], vx: 260, fall: [-4, 6], sway: 0, tilt: true },
+/** What a layer can show: each precipitation, and `gust` (wind with nothing falling). */
+type Look = Precip | 'gust';
+
+const STYLES: Partial<Record<Look, Style>> = {
+  gust: { count: 26, tint: 0xffffff, alpha: 0.55, w: [8, 14], h: [1, 1], vx: 260, fall: [-4, 6], sway: 0, tilt: true },
   rain: {
     count: 420,
     tint: 0x4a7fd0,
@@ -76,7 +79,19 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
     sway: 3,
     tilt: false,
   },
-  sandstorm: {
+  // Ash drifts down grey and slow over the undead lands.
+  ash: {
+    count: 210,
+    tint: 0xc9c2cf,
+    alpha: 0.9,
+    w: [2, 4],
+    h: [2, 4],
+    vx: 140,
+    fall: [35, 80],
+    sway: 7,
+    tilt: false,
+  },
+  sand: {
     count: 700,
     tint: 0xb87a30,
     alpha: 1,
@@ -90,13 +105,14 @@ const STYLES: Partial<Record<WeatherKind, Style>> = {
 };
 
 /** The colour and strength of the haze over the whole view (strong enough to read against bright ground). */
-const HAZE: Partial<Record<WeatherKind, { tint: number; alpha: number }>> = {
+const HAZE: Partial<Record<Look, { tint: number; alpha: number }>> = {
   rain: { tint: 0x16233a, alpha: 0.24 },
   storm: { tint: 0x060a18, alpha: 0.58 },
   // Snow has no haze at all (a full-screen layer is the costliest thing here); a blizzard gets a thin cool tint. Weather
   // must not dim the game or slow it down.
   blizzard: { tint: 0x7f93b4, alpha: 0.18 },
-  sandstorm: { tint: 0x8a5518, alpha: 0.38 },
+  sand: { tint: 0x8a5518, alpha: 0.38 },
+  ash: { tint: 0x2c2832, alpha: 0.16 },
 };
 
 interface Drop {
@@ -126,11 +142,10 @@ export class WeatherLayer {
   private particles: ParticleContainer;
   private drops: Drop[] = [];
   private active = 0; // drops currently in play (the rest are hidden)
-  private kind: WeatherKind = 'clear';
+  private look: Look | null = null;
   private clock = 0;
   private flash: Sprite;
   private bolt = new Graphics();
-  private lightning = new Lightning();
   private glow = 0; // 1 right after a strike, fading to 0
 
   /** `layer` is the map's y-sorted layer; the weather sorts just under the top effects. */
@@ -167,16 +182,18 @@ export class WeatherLayer {
     layer.addChild(this.view);
   }
 
-  /** Returns the lightning strike rolled this frame, if any (only when `pick` is given: a host or solo game). */
-  update(dt: number, weather: Weather, view: ViewRect, pick?: () => { x: number; y: number }): Strike | null {
+  /** Draw `weather` over `view` (world px). Lightning is decided elsewhere (the simulation) and shown by `strike`. */
+  update(dt: number, weather: Weather, view: ViewRect) {
     this.clock += dt;
-    const style = STYLES[weather.kind];
-    if (weather.kind !== this.kind) {
-      this.kind = weather.kind;
-      this.active = 0; // intensity is ~0 whenever the kind changes, so restarting the pool is invisible
+    const look: Look | null = weather.precip ?? (weather.windLevel > 0 ? 'gust' : null);
+    const style = look ? STYLES[look] : undefined;
+    if (look !== this.look) {
+      this.look = look;
+      for (const d of this.drops) d.particle.scaleX = d.particle.scaleY = 0; // nothing of the old weather stays on screen
+      this.active = 0; // the pool starts again with the new style
     }
 
-    const haze = HAZE[weather.kind];
+    const haze = look ? HAZE[look] : undefined;
     this.haze.visible = !!haze && weather.intensity > 0;
     if (haze && this.haze.visible) {
       this.haze.tint = haze.tint;
@@ -186,16 +203,18 @@ export class WeatherLayer {
       this.haze.height = view.h;
     }
 
-    const strike = this.strikes(dt, weather, pick);
+    this.glow = Math.max(0, this.glow - dt * 3.5);
     this.showFlash(view);
 
-    const want = style ? Math.min(POOL, Math.round(style.count * weather.intensity)) : 0;
+    // A breeze is a few gust streaks; a gale is more of them. Anything falling is at full strength.
+    const density = look === 'gust' ? Math.max(0.35, weather.windLevel) : 1;
+    const want = style ? Math.min(POOL, Math.round(style.count * density * weather.intensity)) : 0;
     while (this.active < want) this.spawn(this.drops[this.active++]!, style!, view, true);
     while (this.active > want) {
       const d = this.drops[--this.active];
       if (d) d.particle.scaleX = d.particle.scaleY = 0; // hidden: nothing to draw
     }
-    if (!style) return strike;
+    if (!style) return;
 
     const wind = weather.wind;
     for (let i = 0; i < this.active; i++) {
@@ -216,7 +235,6 @@ export class WeatherLayer {
       d.particle.y = d.y;
       d.particle.rotation = style.tilt ? Math.atan2(-vx, d.fall) : 0;
     }
-    return strike;
   }
 
   /** Put a drop in play: at its own place in the view, or (when it wrapped) on the edge it re-enters from. */
@@ -238,21 +256,6 @@ export class WeatherLayer {
     p.scaleY = between(style.h) / unit;
     p.tint = style.tint;
     p.alpha = style.alpha * rand(0.7, 1);
-  }
-
-  /**
-   * Lightning during a storm. The host (or a solo game) rolls the strikes: `pick` chooses where one lands and the
-   * strike is returned so a co-op host can tell its friends; a guest passes no `pick` and waits for `strike()`.
-   */
-  private strikes(dt: number, weather: Weather, pick?: () => { x: number; y: number }): Strike | null {
-    let strike: Strike | null = null;
-    const stormy = weather.kind === 'storm' && weather.intensity > 0.5;
-    if (pick && this.lightning.update(dt, stormy)) {
-      strike = { ...pick(), seed: Math.floor(Math.random() * 1e9) };
-      this.strike(strike);
-    }
-    this.glow = Math.max(0, this.glow - dt * 3.5);
-    return strike;
   }
 
   /** Flash the sky and draw a jagged bolt landing at world (x, y); the same seed draws the same bolt everywhere. */

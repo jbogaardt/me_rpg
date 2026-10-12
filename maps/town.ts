@@ -43,6 +43,7 @@ const STREETS = [
 // Squares x 10-20, y 17-22 of maps/world.ts (`npm run map -- layout town`).
 export default defineBiome({
   name: 'town',
+  climate: 'temperate',
   walls: { trees: TREES },
   build(z) {
     z.fill('grass');

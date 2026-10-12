@@ -24,6 +24,7 @@ describe('parseMap', () => {
       shops: [],
       doors: [],
       indoor: false,
+      climate: 'temperate',
     });
   });
 
@@ -32,6 +33,13 @@ describe('parseMap', () => {
     expect(data.spawn).toEqual({ col: 0, row: 1 });
     expect(data.npc).toEqual({ col: 1, row: 0 });
     expect(data.collision).toEqual([3]);
+  });
+
+  it("keeps the zone's climate, and a door's direction", () => {
+    const doors = [{ col: 1, row: 0, w: 1, to: { zone: 'b', col: 3, row: 0 }, dir: 'right' }];
+    const data = parseMap({ ...minimal, climate: 'frost', doors });
+    expect(data.climate).toBe('frost');
+    expect(data.doors[0]?.dir).toBe('right');
   });
 
   it.each([

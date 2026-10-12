@@ -23,6 +23,7 @@ const KIT = { trees: DEAD_TREES, fillers: ['deadBush', 'darkSpire'] } as const;
 
 export default defineBiome({
   name: 'undead',
+  climate: 'undead',
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');

@@ -26,6 +26,7 @@ const TRAILS = [
 
 export default defineBiome({
   name: 'eastwood',
+  climate: 'temperate',
   walls: { trees: TREES },
   build(z) {
     z.fill('grass');

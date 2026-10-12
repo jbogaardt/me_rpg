@@ -3,7 +3,6 @@ import { Player } from '../../entities/Player';
 import type { Role } from '../../net/session';
 import { newHero, type Hero } from '../../systems/combat';
 import { heroOutfit, PLAYER_COLORS, playerName, playerOutfit, playerTag } from '../../systems/looks';
-import { Weather } from '../../systems/weather';
 import type { Wardrobe } from '../../sprites/Wardrobe';
 import type { ZoneMemory, ZoneState } from '../ZoneState';
 
@@ -20,8 +19,6 @@ export class Arena {
   role: Role = 'solo';
   /** Seconds since the scene started: drives the guest's invulnerability blink and the ages of world events. */
   clock = 0;
-  /** The host's weather, sent to every friend. */
-  readonly weather = new Weather();
   /** The window size in CSS px (set by the scene on resize). */
   screen = { width: 0, height: 0 };
   /** Every loaded zone, by name. */

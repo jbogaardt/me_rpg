@@ -11,7 +11,7 @@ import { GroundItem } from '../../entities/GroundItem';
 import { ZoneState } from '../ZoneState';
 import type { Arena } from './Arena';
 
-const PREFETCH_REACH = 5 * CELL; // a door this close starts loading the zone behind it
+const PREFETCH_REACH = 14 * CELL; // a door this close starts loading the zone behind it (the camera stops at a gap's border, so the player walks the last stretch to the screen's edge)
 const PREFETCH_EVERY = 0.5; // seconds between looking for doors to prefetch
 const RETIRE_EVERY = 2; // seconds between looking for zones to unload
 const RETIRE_AFTER = 20; // seconds a zone must have been out of everyone's way before it is unloaded
@@ -197,7 +197,7 @@ export class Zones {
       this.stage,
       arena.screen,
       this.heroOnScreen(),
-      kind === 'slide' ? [arena.player, ...(from.weatherLayer ? [from.weatherLayer.view] : [])] : [],
+      kind === 'slide' ? [arena.player] : [],
     );
   }
 
@@ -224,7 +224,7 @@ export class Zones {
     this.stage.addChild(dest.world);
     arena.setView(dest);
     dest.camera.resize(arena.screen.width, arena.screen.height);
-    dest.camera.follow(arena.screen.width, arena.screen.height, arena.player.x, arena.player.y);
+    dest.follow(arena.screen.width, arena.screen.height, arena.player.x, arena.player.y);
     dest.world.update(dest.camera.view(arena.screen.width, arena.screen.height));
     this.ui.shop.close();
   }

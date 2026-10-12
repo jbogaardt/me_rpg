@@ -19,6 +19,7 @@ const TRAILS = trail([south, [south[0], 62], [42, 62], [42, east[1]], east]);
 
 export default defineBiome({
   name: 'desert',
+  climate: 'desert',
   walls: { trees: DRY_TREES, fillers: ['dryBush', 'rockSmall'] },
   build(z) {
     z.fill('sand');

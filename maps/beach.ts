@@ -21,6 +21,7 @@ const shore = (col: number) => Math.round(11 + 2.6 * Math.sin(col / 8.3) + 1.6 *
 
 export default defineBiome({
   name: 'beach',
+  climate: 'coast',
   walls: { trees: TREES },
   worldEdge: false, // the sea closes the north
   build(z) {

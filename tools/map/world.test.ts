@@ -14,6 +14,7 @@ const LAYOUT: WorldLayout = {
 const field = (name: string, spawn: [number, number], extra?: BiomeSpec['build']): BiomeSpec =>
   defineBiome({
     name,
+    climate: 'temperate',
     walls: { trees: TREES },
     build(z) {
       z.fill('grass');
@@ -101,11 +102,11 @@ describe('buildWorld', () => {
     const east = built.get('east')!;
     const toEast = west.doors.filter((d) => d.to.zone === 'east');
     expect(toEast.map((d) => [d.col, d.row, d.to.col, d.to.row, d.dir])).toEqual([
-      [13, 9, 16, 9, 'right'],
-      [13, 10, 16, 10, 'right'],
-      [13, 11, 16, 11, 'right'],
+      [13, 9, 15, 9, 'right'],
+      [13, 10, 15, 10, 'right'],
+      [13, 11, 15, 11, 'right'],
     ]);
-    expect(east.doors.filter((d) => d.to.zone === 'west').every((d) => d.col === 14 && d.to.col === 11)).toBe(true);
+    expect(east.doors.filter((d) => d.to.zone === 'west').every((d) => d.col === 14 && d.to.col === 12)).toBe(true);
     // The neighbour's cells are drawn but blocked, and marked as beyond.
     const i = 5 * west.width + 20;
     expect(west.collision).toContain(i);

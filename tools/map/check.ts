@@ -1,6 +1,7 @@
 import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
 import { MOB_KINDS } from '../../src/systems/combat';
 import { SHOPS } from '../../src/systems/shops';
+import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
 import { coverage, sheet } from './image';
 
@@ -85,6 +86,8 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     }
     if (levels.size < 2) warnings.push(`stairs at ${at(start)} don't border a different level, so they lead nowhere`);
   }
+
+  if (!isClimate(d.climate)) errors.push(`climate "${d.climate}" isn't in CLIMATES (src/systems/weather.ts)`);
 
   // Points of interest are inside the map and on open ground.
   const points: [string, { col: number; row: number }][] = [['spawn', d.spawn]];

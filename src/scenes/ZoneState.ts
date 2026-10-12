@@ -7,7 +7,9 @@ import { Effects } from '../entities/effects';
 import type { GroundItem } from '../entities/GroundItem';
 import { Mob, type MobWorld } from '../entities/Mob';
 import { WeatherLayer } from '../entities/WeatherLayer';
+import { CLIMATES, DEFAULT_CLIMATE, isClimate, Weather } from '../systems/weather';
 import { sheetGrid } from '../core/textures';
+import { edgeLimits } from '../map/edges';
 import { MapView } from '../map/MapView';
 import { CELL, type MapData } from '../map/types';
 import { cellFeet } from '../map/doors';
@@ -45,6 +47,8 @@ export class ZoneState {
   /** Footprints and falling leaves: only in the open air, and only worth updating where someone is looking. */
   readonly ambient: Ambient | null;
   readonly weatherLayer: WeatherLayer | null;
+  /** This biome's own weather (precipitation and wind by its climate); rooms have none. Host and solo roll it, a guest is told. */
+  readonly weather: Weather | null;
   readonly npc: Character | null;
   readonly keepers: Keeper[];
   readonly mobs: Mob[];
@@ -66,6 +70,7 @@ export class ZoneState {
     this.effects = new Effects(this.world.layer);
     this.ambient = data.indoor ? null : new Ambient(this.world.layer, data);
     this.weatherLayer = data.indoor ? null : new WeatherLayer(this.world.layer);
+    this.weather = data.indoor ? null : new Weather(CLIMATES[isClimate(data.climate) ? data.climate : DEFAULT_CLIMATE]);
 
     this.npc = data.npc ? new Character(sprites.wardrobe.sheet(npcLook(OVERWORLD_NPC))) : null;
     this.npc?.position.set(...cellFeet(data.npc!));
@@ -94,6 +99,11 @@ export class ZoneState {
       ...this.mobs.map((m) => m.body),
     ];
     if (bodies.length) this.world.layer.addChild(...bodies); // Pixi's addChild() with nothing to add throws
+  }
+
+  /** Centre the camera on (x, y): the map's edge and a gap's border (map/edges.ts) stop it, so a crossing is at the screen's edge. */
+  follow(screenW: number, screenH: number, x: number, y: number) {
+    this.camera.follow(screenW, screenH, x, y, edgeLimits(this.data.doors, x, y));
   }
 
   /** What must outlive the zone being unloaded: the chests opened and the items lying on the ground. */

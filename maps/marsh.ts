@@ -32,6 +32,7 @@ const KIT = { trees: ['swampTreeA', 'swampTreeB'], fillers: ['swampBush', 'rockS
 
 export default defineBiome({
   name: 'marsh',
+  climate: 'swamp',
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');

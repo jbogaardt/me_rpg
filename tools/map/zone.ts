@@ -22,6 +22,7 @@ import {
   type PrefabName,
   type StampName,
 } from './catalog';
+import { DEFAULT_CLIMATE, type ClimateName } from '../../src/systems/weather';
 import { coverage, sheet as loadSheet } from './image';
 import {
   decompose,
@@ -64,6 +65,7 @@ export interface ZoneApi {
   shop(shop: string, col: number, row: number): unknown;
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number): unknown;
   indoor(): unknown;
+  climate(name: ClimateName): unknown;
 }
 
 /** What a grove (or a biome's wall) is made of: trees, then bushes and rocks for the corners trees can't fill. */
@@ -186,6 +188,10 @@ export class WorldWindow implements ZoneApi {
     this.z.indoor();
     return this;
   }
+  climate(name: ClimateName) {
+    this.z.climate(name);
+    return this;
+  }
 }
 
 /** Run a zone spec's `build` on `z`, through its origin window if it has one. */
@@ -260,6 +266,7 @@ export class Zone {
   private shopList: ShopSpawn[] = [];
   private doorList: DoorSpawn[] = [];
   private isIndoor = false;
+  private weather: ClimateName = DEFAULT_CLIMATE;
 
   constructor(
     readonly width: number,
@@ -708,6 +715,7 @@ export class Zone {
       shops: this.shopList,
       doors: this.doorList,
       indoor: this.isIndoor,
+      climate: this.weather,
     };
   }
 
@@ -780,6 +788,12 @@ export class Zone {
     });
     out.spawnAt = zones[0]?.spawnAt ?? { col: 0, row: 0 };
     return out;
+  }
+
+  /** The zone's weather: which precipitation can fall and how the wind blows there (see CLIMATES, systems/weather.ts). */
+  climate(name: ClimateName) {
+    this.weather = name;
+    return this;
   }
 
   /** Resolve everything into the game's map format. */
@@ -880,6 +894,7 @@ export class Zone {
       shops: this.shopList,
       doors: this.doorList,
       indoor: this.isIndoor,
+      climate: this.weather,
     };
   }
 }
