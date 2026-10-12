@@ -70,5 +70,8 @@ Cinzel (Natanael Gama) and Crimson Text (Sebastian Kosch), SIL Open Font License
 
 ## Pets (`public/sprites/pets/dogs.png`, `cats.png`)
 
-Dog and cat sprite sheets (32x32 frames) supplied by the project owner. **Original author and licence still to be confirmed**:
-add them here (and check the licence allows a public repo and redistribution) before relying on this art long term.
+Dog and cat sprite sheets (32x32 frames, four directions, walk and sleeping frames) from OpenGameArt, most likely
+"[LPC] Cats and Dogs" by bluecarrot16, https://opengameart.org/node/69399 (offered under CC-BY 3.0 / CC-BY-SA 3.0 /
+GPL 2.0 / GPL 3.0 / OGA-BY 3.0; credit the author and link the page). Used unmodified. **Still to confirm** against the
+page's own licence list that this is the exact set the sheets came from; if it is the CC-BY-SA variant, the same
+share-alike note as the characters above applies.
