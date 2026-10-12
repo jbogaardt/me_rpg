@@ -123,10 +123,16 @@ export class HostLink {
     if (!peer) return NO_COMMAND;
     const { dx, dy } = peer.fresh ? unpackKeys(peer.keys) : { dx: 0, dy: 0 };
     const act = peer.act > p.seenAct;
-    const mag = peer.mag > p.seenMag;
+    const combo = peer.cb > p.seenCombo ? peer.ci : undefined;
     p.seenAct = peer.act;
-    p.seenMag = peer.mag;
-    return { dx, dy, act, mag, ...(peer.fresh && peer.am ? { aim: decodeAim(peer.am) } : {}) };
+    p.seenCombo = peer.cb;
+    return {
+      dx,
+      dy,
+      act,
+      ...(combo === undefined ? {} : { combo }),
+      ...(peer.fresh && peer.am ? { aim: decodeAim(peer.am) } : {}),
+    };
   }
 
   /** Every SNAPSHOT_HZ: tell each friend about the world they are standing in. */
@@ -202,7 +208,11 @@ export class HostLink {
 
   private snapPlayer(p: Player): PlayerSnap {
     const swinging = this.sim.isSwinging(p);
-    const flags = (p.moving ? FLAG.moving : 0) | (p.invuln > 0 ? FLAG.invuln : 0) | (swinging ? FLAG.swing : 0);
+    const flags =
+      (p.moving ? FLAG.moving : 0) |
+      (p.invuln > 0 ? FLAG.invuln : 0) |
+      (swinging ? FLAG.swing : 0) |
+      (p.ward > 0 ? FLAG.ward : 0);
     return [p.slot, Math.round(p.body.x), Math.round(p.body.y), dirIndex(p.body.facing), flags];
   }
 

@@ -73,7 +73,8 @@ const INPUT_STALE_MS = 500; // a guest that stops sending counts as standing sti
 export interface PeerInput {
   keys: number;
   act: number;
-  mag: number;
+  cb: number;
+  ci: number;
   /** The newest world event the friend has shown (events up to this id need not be sent again). */
   ack: number;
   /** How far the friend can see, in world px from their player. */
@@ -322,11 +323,12 @@ export class Session {
   peerInput(slot: number, now = performance.now()): PeerInput | null {
     const last = this.inputs.get(slot);
     if (!last) return null;
-    const { keys, act, mag, ack, vr, am, inv } = last.msg;
+    const { keys, act, cb, ci, ack, vr, am, inv } = last.msg;
     return {
       keys,
       act,
-      mag,
+      cb,
+      ci,
       ack,
       vr,
       ...(am ? { am } : {}),

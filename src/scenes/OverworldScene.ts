@@ -1,6 +1,7 @@
 import type { Container, Renderer } from 'pixi.js';
 import type { Sprites, Zone } from '../assets';
 import type { Aim } from '../core/aim';
+import { ComboReader } from '../core/combo';
 import { actionDown, actionPressed, mapPressed, menuPressed, pointerAim } from '../core/controls';
 import { directionToward } from '../core/direction';
 import type { Scene } from '../core/Scene';
@@ -24,6 +25,7 @@ import type { Hero, Item } from '../systems/combat';
 import { equip } from '../systems/items';
 import { petSound } from '../systems/pets';
 import { SHOPS } from '../systems/shops';
+import type { ComboKey } from '../systems/spells';
 import type { Precip } from '../systems/weather';
 import { Arena } from './overworld/Arena';
 import { CHEST_REACH, KEEPER_REACH, PICKUP_REACH } from './overworld/constants';
@@ -39,6 +41,14 @@ import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
 export type { ZoneLoader, ZoneUnloader };
 
 const aimOf = (aim: Aim | null) => (aim ? { aim } : {});
+
+/** The direction presses a combo is made of, in the order a frame with several is read. */
+const COMBO_PRESSES: readonly (readonly [ComboKey, 'up' | 'down' | 'left' | 'right'])[] = [
+  ['u', 'up'],
+  ['d', 'down'],
+  ['l', 'left'],
+  ['r', 'right'],
+];
 
 const NPC_LINES = [
   'Greetings, traveler. This world is still being drawn.',
@@ -82,6 +92,8 @@ export class OverworldScene implements Scene {
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
+  private combos = new ComboReader();
+  private comboSet: Item | null = null; // the weapon the reader is following (a different one starts it afresh)
 
   constructor(
     zone: Zone,
@@ -225,7 +237,7 @@ export class OverworldScene implements Scene {
       item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
     }
     for (const body of arena.bodies()) body.zIndex = body.y;
-    hud.update(this.hero);
+    hud.update(this.hero, this.combos.typed);
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.
@@ -257,12 +269,12 @@ export class OverworldScene implements Scene {
       this.pack.handleRequests();
       this.trading.handleSteps(dt);
     }
-    const raw = this.readCommand();
     // Reading a dialog or the menu: the player stands still. So do they while a door transition plays, and only take the
     // next door once it is over.
     const busy = this.zones.transition.busy;
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
-    const cmd = reading ? { ...raw, dx: 0, dy: 0, mag: false } : raw;
+    const raw = this.readCommand(dt, reading);
+    const cmd = reading ? { ...raw, dx: 0, dy: 0 } : raw;
     const guests = [...arena.remotes.values()].map((p) => ({ p, cmd: this.host.command(p) }));
     const commandOf = (p: Player) => (p === arena.local ? cmd : (guests.find((g) => g.p === p)?.cmd ?? NO_COMMAND));
     const here = arena.zone;
@@ -275,7 +287,10 @@ export class OverworldScene implements Scene {
           for (const mob of z.mobs) mob.update(dt, z.mobWorld);
           this.ground.age(dt);
           sim.weather(dt);
-          for (const p of present) if (commandOf(p).mag) sim.cast(p);
+          for (const p of present) {
+            const combo = commandOf(p).combo;
+            if (combo !== undefined) sim.combo(p, combo);
+          }
           if (z !== here) z.effects.update(dt); // the local zone's effects are updated with the rest of what is drawn
         });
       }
@@ -297,11 +312,11 @@ export class OverworldScene implements Scene {
   private updateClient(dt: number) {
     const { menu, shop, dialog, trade } = this.ui;
     this.guest.update(dt);
-    const cmd = this.readCommand();
     const busy = this.zones.transition.busy;
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
+    const cmd = this.readCommand(dt, reading);
     if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.guest.pressAction());
-    if (!reading && cmd.mag) this.guest.pressMagic();
+    if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);
     this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy), cmd.aim);
   }
 
@@ -319,14 +334,37 @@ export class OverworldScene implements Scene {
 
   // --- What the action key does ---
 
-  private readCommand(): Command {
+  /** The local player's controls this frame. While `reading` (a menu, a dialog) nothing typed counts toward a combo. */
+  private readCommand(dt: number, reading: boolean): Command {
+    const combo = this.readCombo(dt, reading);
     return {
       dx: (actionDown('right') ? 1 : 0) - (actionDown('left') ? 1 : 0),
       dy: (actionDown('down') ? 1 : 0) - (actionDown('up') ? 1 : 0),
       act: actionPressed('attack'),
-      mag: actionPressed('magic'),
+      ...(combo === undefined ? {} : { combo }),
       ...aimOf(pointerAim(this.zones.heroOnScreen())),
     };
+  }
+
+  /**
+   * Feed the direction presses of this frame to the combo reader and say which combo of the wand or tome in hand was
+   * just finished, if any. Presses are the move actions as bound, and the on-screen pad (the D-pad also moves the hero).
+   */
+  private readCombo(dt: number, reading: boolean): number | undefined {
+    const combos = this.hero.weapon.focus?.combos.map((c) => c.keys) ?? [];
+    if (reading || this.comboSet !== this.hero.weapon) {
+      this.combos.reset();
+      this.comboSet = this.hero.weapon;
+    }
+    if (reading) return undefined;
+    this.combos.tick(dt);
+    let done: number | undefined;
+    for (const [key, action] of COMBO_PRESSES) {
+      if (!actionPressed(action)) continue;
+      const i = this.combos.press(key, combos);
+      if (i >= 0) done = i;
+    }
+    return done;
   }
 
   /** The local player's action button: advance the dialog, talk when next to the NPC or a shopkeeper, otherwise `attack`. */

@@ -3,6 +3,7 @@
 import type { Direction } from '../core/direction';
 import type { Outfit } from '../sprites/doll';
 import { ITEMS } from './items';
+import type { Focus } from './spells';
 
 export interface Stats {
   level: number;
@@ -42,6 +43,8 @@ export interface Item {
   defense?: number;
   /** Set on bows: the weapon shoots (see `Ranged`) instead of swinging. */
   ranged?: Ranged;
+  /** Set on wands and tomes (weapons): the plain attack is a free bolt, and a combo of directions casts a spell. */
+  focus?: Focus;
   /** Set on supplies (no slot): drinking one restores this much HP and MP, from the pack. */
   use?: { hp: number; mp?: number };
   /** Set on bags (slot `bag`): extra pack slots while it is worn. */
@@ -50,19 +53,12 @@ export interface Item {
   look?: Outfit;
 }
 
-export interface Spell {
-  name: string;
-  cost: number; // MP
-  power: number; // added to the caster's magic stat
-}
-
 export interface Hero extends Partial<Record<Exclude<GearSlot, 'weapon'>, Item>> {
   name: string;
   stats: Stats;
   weapon: Item; // always armed; every other gear slot may be empty
   /** Carried items that are not worn (see inventory.ts for the size limit). */
   pack: Item[];
-  spell: Spell;
   gold: number; // money: dropped by enemies, spent in shops
 }
 
@@ -110,7 +106,6 @@ export function newHero(): Hero {
     weapon: ITEMS.rustySword,
     cape: ITEMS.travelerCloak,
     pack: [],
-    spell: { name: 'Time Bolt', cost: 5, power: 6 },
     gold: 0,
   };
 }
@@ -326,7 +321,8 @@ export const gearAttack = (h: Hero) => wornGear(h).reduce((sum, i) => sum + (i.a
 export const gearDefense = (h: Hero) => wornGear(h).reduce((sum, i) => sum + (i.defense ?? 0), 0);
 export const attackPower = (h: Hero) => h.stats.attack + gearAttack(h);
 export const defensePower = (h: Hero) => h.stats.defense + gearDefense(h);
-export const spellPower = (h: Hero) => h.stats.magic + h.spell.power;
+/** The strength behind a combo's damage and healing: the magic stat, plus what the wand or tome adds (nothing otherwise). */
+export const spellPower = (h: Hero) => h.stats.magic + (h.weapon.focus?.power ?? 0);
 /** XP to go from `level` to the next. Grows faster than linearly: 20 at level 1, 224 at 5, 632 at 10. */
 export const xpToNext = (level: number) => Math.round(20 * level ** 1.5);
 

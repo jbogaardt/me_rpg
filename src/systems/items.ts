@@ -8,9 +8,19 @@
 // replaces the hero's base clothes in the doll slots its `look` sets, so an empty slot shows the base clothes.
 
 import type { Hero, Item } from './combat';
+import type { Combo, SpellId } from './spells';
 
-/** A bow's flight: arrows are free, so they are slower to follow up than a sword but reach well past a Time Bolt. */
+/** A bow's flight: arrows are free, so they are slower to follow up than a sword but reach well past a wand's bolt. */
 const bow = (speed: number, range: number, cooldown: number) => ({ speed, range, cooldown });
+
+/** One combo of a wand or tome: the directions to tap, the spell, its mana cost and strength (see systems/spells.ts). */
+const combo = (keys: string, spell: SpellId, cost: number, power: number, count?: number): Combo => ({
+  keys,
+  spell,
+  cost,
+  power,
+  ...(count === undefined ? {} : { count }),
+});
 
 export const ITEMS = {
   // Melee weapons (one `weapon` part each). Swings use the LPC 128px slash art, so only the sword family fits for now.
@@ -114,6 +124,72 @@ export const ITEMS = {
   // Bags: worn on the back, each adds pack slots (the pack holds BASE_PACK without one).
   sack: { name: 'Sack', value: 50, slot: 'bag', capacity: 4, look: {} },
   backpack: { name: 'Backpack', value: 150, slot: 'bag', capacity: 8, look: {} },
+
+  // Wands and tomes (the wizard sells them): weapons whose plain attack is a free, weak bolt and whose combos (a string
+  // of directions, W W A D) cast far stronger spells for mana. A wand is quick and sharp; a tome is slow and heavy.
+  // They have no art on the hero yet, so `look` is empty. New items go at the end (item codes are positions).
+  apprenticeWand: {
+    name: 'Apprentice Wand',
+    value: 70,
+    slot: 'weapon',
+    attack: 2,
+    look: {},
+    focus: {
+      kind: 'wand',
+      power: 3,
+      cooldown: 0.4,
+      combos: [combo('uulr', 'bolt', 4, 1.8), combo('uldr', 'fan', 8, 1.1, 3), combo('ddrr', 'dash', 5, 1)],
+    },
+  },
+  stormcallerWand: {
+    name: 'Stormcaller Wand',
+    value: 280,
+    slot: 'weapon',
+    attack: 5,
+    look: {},
+    focus: {
+      kind: 'wand',
+      power: 7,
+      cooldown: 0.32,
+      combos: [
+        combo('uulr', 'bolt', 5, 2.4),
+        combo('uldr', 'fan', 10, 1.2, 5),
+        combo('lrlr', 'chain', 12, 1.6, 3),
+        combo('ddrr', 'dash', 5, 1.6),
+      ],
+    },
+  },
+  noviceTome: {
+    name: 'Novice Tome',
+    value: 90,
+    slot: 'weapon',
+    attack: 1,
+    look: {},
+    focus: {
+      kind: 'tome',
+      power: 4,
+      cooldown: 0.7,
+      combos: [combo('uulr', 'nova', 10, 1.6), combo('dudu', 'heal', 8, 2), combo('lrrl', 'ward', 9, 3)],
+    },
+  },
+  arcaneGrimoire: {
+    name: 'Arcane Grimoire',
+    value: 320,
+    slot: 'weapon',
+    attack: 3,
+    look: {},
+    focus: {
+      kind: 'tome',
+      power: 9,
+      cooldown: 0.6,
+      combos: [
+        combo('uulr', 'nova', 14, 2.6),
+        combo('rdlu', 'blast', 16, 3.2),
+        combo('dudu', 'heal', 12, 3.5),
+        combo('lrrl', 'ward', 12, 5),
+      ],
+    },
+  },
 } satisfies Record<string, Item>;
 
 export type ItemId = keyof typeof ITEMS;

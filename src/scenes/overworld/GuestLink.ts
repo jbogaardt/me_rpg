@@ -12,7 +12,7 @@ import { newHero, type Hero } from '../../systems/combat';
 import { encodeOp, type InvOpWire } from '../../systems/inventory';
 import { heroOutfit, playerName } from '../../systems/looks';
 import type { Arena } from './Arena';
-import { DEFEAT_LINES } from './constants';
+import { DEFEAT_LINES, WARD_TINT } from './constants';
 import type { Ground } from './Ground';
 import type { PackSync } from './PackSync';
 import type { Trading } from './Trading';
@@ -32,9 +32,10 @@ export class GuestLink {
   private lastEvent = -1; // newest event already shown
   private inputTimer = 0;
   private inputSeq = 0;
-  private actCount = 0; // action / magic presses so far, sent as counters
-  private magCount = 0;
-  private sent = { keys: -1, act: -1, mag: -1, ack: -1, vr: -1, inv: 0 };
+  private actCount = 0; // action presses so far, sent as a counter
+  private comboCount = 0; // combos cast so far (a counter too), and which one the last was
+  private comboIndex = 0;
+  private sent = { keys: -1, act: -1, cb: -1, ack: -1, vr: -1, inv: 0 };
   private solo: Hero | null = null; // the solo hero (stats, gold, pack, gear), put back on disconnect
 
   constructor(
@@ -67,8 +68,8 @@ export class GuestLink {
     arena.refreshLook();
     local.target = null;
     this.lastEvent = -1;
-    this.actCount = this.magCount = this.inputSeq = 0;
-    this.sent = { keys: -1, act: -1, mag: -1, ack: -1, vr: -1, inv: 0 };
+    this.actCount = this.comboCount = this.comboIndex = this.inputSeq = 0;
+    this.sent = { keys: -1, act: -1, cb: -1, ack: -1, vr: -1, inv: 0 };
     this.inputTimer = 0;
     arena.applyTags();
   }
@@ -105,8 +106,10 @@ export class GuestLink {
     this.actCount++;
   }
 
-  pressMagic() {
-    this.magCount++;
+  /** The player finished combo number `index` of their wand or tome (counted, so a lost packet cannot lose it). */
+  castCombo(index: number) {
+    this.comboIndex = index;
+    this.comboCount++;
   }
 
   /** Send the next input message now rather than at the next regular send (an Inventory action is waiting). */
@@ -140,7 +143,7 @@ export class GuestLink {
     const changed =
       keys !== this.sent.keys ||
       this.actCount !== this.sent.act ||
-      this.magCount !== this.sent.mag ||
+      this.comboCount !== this.sent.cb ||
       ack !== this.sent.ack ||
       vr !== this.sent.vr ||
       (pending?.seq ?? 0) !== this.sent.inv;
@@ -151,14 +154,15 @@ export class GuestLink {
       n: ++this.inputSeq,
       keys,
       act: this.actCount,
-      mag: this.magCount,
+      cb: this.comboCount,
+      ci: this.comboIndex,
       ack,
       vr,
       ...(aim ? { am: encodeAim(aim) } : {}),
       ...(pending ? { inv: [pending.seq, ...encodeOp(pending.op)] as [number, ...InvOpWire] } : {}),
     } as const;
     if (this.session.send(msg)) {
-      this.sent = { keys, act: this.actCount, mag: this.magCount, ack, vr, inv: pending?.seq ?? 0 };
+      this.sent = { keys, act: this.actCount, cb: this.comboCount, ack, vr, inv: pending?.seq ?? 0 };
     }
   }
 
@@ -240,6 +244,7 @@ export class GuestLink {
     const [fx, fy] = DIR_VEC[p.body.facing];
     const swinging = (p.flags & FLAG.swing) !== 0;
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
+    p.body.setTint(p.flags & FLAG.ward ? WARD_TINT : 0xffffff);
     p.body.alpha = p.flags & FLAG.invuln && Math.floor(this.arena.clock * 16) % 2 === 0 ? 0.35 : 1;
     p.body.animate(dt * 1000, (p.flags & FLAG.moving) !== 0);
   }

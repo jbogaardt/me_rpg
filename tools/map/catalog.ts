@@ -347,6 +347,7 @@ export const BUILDINGS = {
   apothecary: { x: 192, y: 0, w: 192, h: 224 },
   armory: { x: 384, y: 0, w: 96, h: 288 },
   ranger: { x: 480, y: 0, w: 96, h: 288 },
+  wizard: { x: 576, y: 0, w: 192, h: 224 },
 };
 /** Where each piece of the shop interior sits on interior.png (2x the 16px drawing in tools/map/interior.ts). */
 export const INTERIOR = {
@@ -364,6 +365,8 @@ export const INTERIOR = {
   signArmory: { x: 128, y: 96, w: 128, h: 64 },
   signRanger: { x: 256, y: 96, w: 128, h: 64 },
   signApothecary: { x: 384, y: 96, w: 128, h: 64 },
+  shelfWizard: { x: 512, y: 32, w: 96, h: 64 },
+  signWizard: { x: 512, y: 96, w: 128, h: 64 },
 };
 const furniture = (name: keyof typeof INTERIOR, band: number, about: string): Prefab => {
   const { x, y, w, h } = INTERIOR[name];
@@ -390,6 +393,7 @@ export const PREFABS = {
     'Blacksmith: a 6x7 hall with terracotta roof and an anvil over the door. Shopkeeper stands one row below.',
   ),
   apothecary: building('apothecary', 'Apothecary: a 6x7 hall with a green roof and a flask over the door.'),
+  wizard: building('wizard', "Wizard's sanctum: a 6x7 hall with a violet roof and a star over the door."),
   armory: building('armory', 'Armorer: a 3x9 tall house with a slate roof and a shield over the door.'),
   counter: furniture(
     'counter',
@@ -400,10 +404,12 @@ export const PREFABS = {
   shelfArmory: furniture('shelfArmory', 64, 'Shelves of helms and plate, 3x2 cells, solid.'),
   shelfRanger: furniture('shelfRanger', 64, 'Shelves of bows and quivers, 3x2 cells, solid.'),
   shelfApothecary: furniture('shelfApothecary', 64, 'Shelves of flasks, 3x2 cells, solid.'),
+  shelfWizard: furniture('shelfWizard', 64, 'Shelves of tomes and wands, 3x2 cells, solid.'),
   signSmithy: furniture('signSmithy', 0, 'Wall sign with an anvil, 4x2 cells, decoration.'),
   signArmory: furniture('signArmory', 0, 'Wall sign with a shield, 4x2 cells, decoration.'),
   signRanger: furniture('signRanger', 0, 'Wall sign with a bow, 4x2 cells, decoration.'),
   signApothecary: furniture('signApothecary', 0, 'Wall sign with a flask, 4x2 cells, decoration.'),
+  signWizard: furniture('signWizard', 0, 'Wall sign with a star, 4x2 cells, decoration.'),
   ranger: building('ranger', "Ranger's lodge: a 3x9 tall house with a golden roof and a bow over the door."),
   treeA: tree(OBJECT_SHEET, 'A', 'Round leafy canopy (3x3 cells). Blocks its bottom two rows; top row is walk-behind.'),
   treeB: tree(

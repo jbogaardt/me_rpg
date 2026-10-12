@@ -143,7 +143,16 @@ async function befriend(slot: number) {
   return link!;
 }
 
-const input = (n: number, keys = 0, act = 0, mag = 0): Message => ({ k: 'in', n, keys, act, mag, ack: 0, vr: 300 });
+const input = (n: number, keys = 0, act = 0, cb = 0): Message => ({
+  k: 'in',
+  n,
+  keys,
+  act,
+  cb,
+  ci: 0,
+  ack: 0,
+  vr: 300,
+});
 const snap = (n: number): SnapMsg => ({
   k: 'snap',
   zone: 'overworld',
@@ -288,8 +297,8 @@ describe('hosting a game', () => {
 
     first.receive(input(1, 4, 2, 0));
     third.receive(input(1, 8, 0, 5));
-    expect(session.peerInput(1)).toMatchObject({ keys: 4, act: 2, mag: 0, fresh: true });
-    expect(session.peerInput(3)).toMatchObject({ keys: 8, act: 0, mag: 5, fresh: true });
+    expect(session.peerInput(1)).toMatchObject({ keys: 4, act: 2, cb: 0, ci: 0, fresh: true });
+    expect(session.peerInput(3)).toMatchObject({ keys: 8, act: 0, cb: 5, ci: 0, fresh: true });
     expect(session.peerInput(2)).toBeNull();
   });
 

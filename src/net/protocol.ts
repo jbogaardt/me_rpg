@@ -3,7 +3,7 @@
 // The channel is unordered and unreliable ({ ordered: false, maxRetransmits: 0 }), so every message is built
 // to survive loss and reordering:
 //  - The guest sends its *state* (keys held) plus monotonically increasing counters for one-shot presses
-//    (attack, magic). A lost packet is corrected by the next one; a counter can't be missed, only delayed.
+//    (attack, combo casts). A lost packet is corrected by the next one; a counter can't be missed, only delayed.
 //  - The host sends a snapshot each time: every player, but only the mobs near that guest (and a still mob only now and
 //    then, see feed.ts). Recent one-shot world events near that guest (hit numbers, slashes...) ride in consecutive
 //    snapshots with ids so the guest can show each exactly once; the guest's input messages carry the newest id it has
@@ -22,7 +22,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 14;
+export const PROTOCOL_VERSION = 15;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -42,7 +42,7 @@ export function unpackKeys(keys: number): { dx: number; dy: number } {
 export const MAX_PLAYERS = MAX_GUESTS + 1;
 
 /** PlayerSnap flag bits. */
-export const FLAG = { moving: 1, invuln: 2, swing: 4 } as const;
+export const FLAG = { moving: 1, invuln: 2, swing: 4, ward: 8 } as const;
 
 /** [player number, x, y, direction index, FLAG bits] */
 export type PlayerSnap = [number, number, number, number, number];
@@ -54,7 +54,19 @@ export type MobSnap = [index: number, ...state: MobFields];
 export type StatsSnap = [number, number, number, number, number, number, number, number, number];
 
 /** One-shot particle effects a host may ask a guest to play (continuous ones, like the bolt trail, are local). */
-export const FX_NAMES = ['hitSpark', 'mobPoof', 'levelUp', 'heroHurt'] as const satisfies readonly ParticleEffectName[];
+export const FX_NAMES = [
+  'hitSpark',
+  'mobPoof',
+  'levelUp',
+  'heroHurt',
+  'castGlow',
+  'nova',
+  'blast',
+  'zap',
+  'heal',
+  'ward',
+  'blink',
+] as const satisfies readonly ParticleEffectName[];
 export type FxName = (typeof FX_NAMES)[number];
 
 /**
@@ -104,7 +116,8 @@ export interface InputMsg {
   n: number; // sequence
   keys: number; // KEY bits held
   act: number; // times the action button was pressed
-  mag: number; // times the magic button was pressed
+  cb: number; // combos cast so far (a counter, like `act`)
+  ci: number; // which of the weapon's combos the latest one was (an index into its `focus.combos`)
   ack: number; // id of the newest world event this guest has shown (0: none yet)
   vr: number; // how far the guest can see, in world px from its player: the host sends it the mobs within this
   am?: number; // mouse aiming only: where the guest points, 1..AIM_STEPS (core/aim.ts); absent: aim by walking
@@ -233,6 +246,8 @@ const MAX_ZONE_NAME = 32;
 const MAX_COORD = 1e6;
 /** The largest view radius a guest may ask for (world px): a 4K window at zoom 1 is about 2300. */
 export const MAX_VIEW = 4096;
+/** The most combos a wand or tome may have, for checking a guest's `ci`. */
+const MAX_COMBOS = 8;
 const MAX_PACK_ACTIONS = 64; // an Inventory action's pack index or slot
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -422,7 +437,7 @@ function parseTradeView(raw: unknown): TradeViewWire | null {
 function parsePlayer(raw: unknown): PlayerSnap | null {
   if (!numbers(raw, 5) || !raw.every((v, i) => (i === 1 || i === 2 ? isCoord(v) : isCount(v)))) return null;
   const [slot, x, y, dir, flags] = raw as PlayerSnap;
-  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 7 ? [slot, x, y, dir, flags] : null;
+  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 15 ? [slot, x, y, dir, flags] : null;
 }
 
 function parseGround(raw: unknown): GroundSnap | null {
@@ -472,7 +487,9 @@ export function parseMessage(raw: unknown): Message | null {
         isCount(m.keys) &&
         m.keys <= 15 &&
         isCount(m.act) &&
-        isCount(m.mag) &&
+        isCount(m.cb) &&
+        isCount(m.ci) &&
+        m.ci < MAX_COMBOS &&
         isCount(m.ack) &&
         isCount(m.vr) &&
         m.vr <= MAX_VIEW &&
@@ -485,7 +502,8 @@ export function parseMessage(raw: unknown): Message | null {
         n: m.n,
         keys: m.keys,
         act: m.act,
-        mag: m.mag,
+        cb: m.cb,
+        ci: m.ci,
         ack: m.ack,
         vr: m.vr,
         ...(m.am === undefined ? {} : { am: m.am }),

@@ -8,29 +8,31 @@ async function boot(page: Page) {
   await expect(page.locator('#hud-mp .label')).toHaveText('20 / 20');
 }
 
-test('right click casts', async ({ page }) => {
+test('right click no longer casts anything', async ({ page }) => {
   await boot(page);
   await page.locator('canvas').click({ button: 'right' });
-  await expect(page.locator('#hud-mp .label')).not.toHaveText('20 / 20');
+  await page.waitForTimeout(300);
+  await expect(page.locator('#hud-mp .label')).toHaveText('20 / 20');
+  await expect(page.locator('#combo-hud')).toBeHidden(); // a sword has no combos
 });
 
-test('a rebound key casts and the old one no longer does', async ({ page }) => {
+test('a rebound key opens the inventory and the old one no longer does', async ({ page }) => {
   await boot(page);
   await page.keyboard.press('Escape');
   await page.locator('#menu [data-tab="controls"]').click();
   await expect(page.locator('#keybinds')).toBeVisible();
-  const row = page.locator('#keybinds tbody tr', { hasText: 'Magic' });
-  await row.locator('button').nth(1).click(); // the K slot
+  const row = page.locator('#keybinds tbody tr', { hasText: 'Inventory' });
+  await row.locator('button').nth(0).click(); // the I slot
   await page.keyboard.press('KeyF');
-  await expect(row.locator('button').nth(1)).toHaveText('F');
+  await expect(row.locator('button').nth(0)).toHaveText('F');
   await page.keyboard.press('Escape');
   await expect(page.locator('#menu')).toBeHidden();
 
-  await page.keyboard.press('KeyK');
+  await page.keyboard.press('KeyI');
   await page.waitForTimeout(300);
-  await expect(page.locator('#hud-mp .label')).toHaveText('20 / 20');
+  await expect(page.locator('#menu')).toBeHidden();
   await page.keyboard.press('KeyF');
-  await expect(page.locator('#hud-mp .label')).not.toHaveText('20 / 20');
+  await expect(page.locator('#menu')).toBeVisible();
 });
 
 test('Esc cancels an edit without closing the menu, and reserved keys are refused', async ({ page }) => {

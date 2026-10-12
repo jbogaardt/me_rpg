@@ -4,7 +4,7 @@ import { CELL } from '../../map/types';
 
 export const SPEED = 120; // pixels per second
 export const ATTACK_COOLDOWN = 0.35;
-export const CAST_COOLDOWN = 0.45;
+export const COMBO_COOLDOWN = 0.5; // seconds between two combos
 export const MELEE_REACH = 22; // radius of the sword's hit circle, centred just in front of the hero
 export const INVULN_TIME = 0.8; // after being hit
 export const BOLT_SPEED = 260;
@@ -21,3 +21,15 @@ export const PICKUP_REACH = 26; // how close the action key must be to an item o
 export const CHEST_REACH = CELL * 1.4; // how close the action key must be to a chest (feet to the chest's cell centre)
 
 export const DEFEAT_LINES = ['You were struck down...', 'Time folds back, and you wake where you began.'];
+
+// Spells (Casting.ts)
+export const SPELL_SPEED = 300; // a combo's bolts fly faster than a wand's plain bolt
+export const FAN_STEP = 0.22; // radians between the bolts of a Spark Fan
+export const NOVA_RADIUS = 3.2 * CELL;
+export const BLAST_REACH = 4.5 * CELL; // how far ahead a Meteor lands (nearer if a wall is in the way)
+export const BLAST_RADIUS = 2.2 * CELL;
+export const CHAIN_RANGE = 5.5 * CELL;
+export const DASH_DISTANCE = 4.5 * CELL;
+export const DASH_GRACE = 0.35; // seconds of immunity after a Blink
+export const WARD_TINT = 0xa8d8ff; // a warded player is tinted pale blue
+export const HELP_RADIUS = 4 * CELL; // Mend and Ward reach friends this close

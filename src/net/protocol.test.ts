@@ -71,7 +71,7 @@ describe('keys', () => {
 
 describe('messages', () => {
   it('round-trips each message kind', () => {
-    const input: InputMsg = { k: 'in', n: 3, keys: packKeys(1, -1), act: 2, mag: 0, ack: 12, vr: 340 };
+    const input: InputMsg = { k: 'in', n: 3, keys: packKeys(1, -1), act: 2, cb: 0, ci: 0, ack: 12, vr: 340 };
     const hello = { k: 'hello', v: PROTOCOL_VERSION, build: 'abc' } as const;
     for (const m of [input, hello, snap]) expect(parseMessage(encodeMessage(m))).toEqual(m);
   });
@@ -217,14 +217,15 @@ describe('messages', () => {
   });
 
   it('rejects malformed input messages', () => {
-    const base = { k: 'in', n: 1, keys: 3, act: 0, mag: 0, ack: 0, vr: 300 };
+    const base = { k: 'in', n: 1, keys: 3, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
     expect(parseMessage(JSON.stringify(base))).not.toBeNull();
     for (const patch of [
       { keys: 16 },
       { keys: -1 },
       { n: 1.5 },
       { act: 'x' },
-      { mag: null },
+      { cb: null },
+      { ci: 8 },
       { n: undefined },
       { ack: -1 },
       { ack: 'x' },
@@ -239,12 +240,12 @@ describe('messages', () => {
   });
 
   it('carries the mouse aim of an input when there is one', () => {
-    const msg = { k: 'in', n: 1, keys: 0, act: 0, mag: 0, ack: 0, vr: 300, am: 17 };
+    const msg = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300, am: 17 };
     expect(parseMessage(JSON.stringify(msg))).toEqual(msg);
   });
 
   it('carries one Inventory action in an input, and rejects a malformed one', () => {
-    const base = { k: 'in', n: 1, keys: 0, act: 0, mag: 0, ack: 0, vr: 300 };
+    const base = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
     const ok = { ...base, inv: [3, 0, 2, -1] };
     expect(parseMessage(JSON.stringify(ok))).toEqual(ok);
     for (const inv of [
@@ -321,7 +322,7 @@ describe('messages', () => {
       { ...snap, events: [[1, 3, 0, 0, 1, 0]] }, // arrow: no range
       { ...snap, events: [[1, 3, 0, 0, 1, 0, -5]] },
       { ...snap, events: [[1, 1, 0, 0, 1, 0, -1, 0x1000000]] }, // bolt: colour out of range
-      { ...snap, events: [[1, 5, 4, 0, 0]] }, // fx: no such one-shot effect (continuous ones stay local)
+      { ...snap, events: [[1, 5, 11, 0, 0]] }, // fx: no such one-shot effect (continuous ones stay local)
       { ...snap, events: [[1, 5, 'hitSpark', 0, 0]] },
       { ...snap, events: [[1, 5, 0, 0, 0, 'up']] },
       { ...snap, events: Array.from({ length: 65 }, (_, i) => [i, 6, 0]) },

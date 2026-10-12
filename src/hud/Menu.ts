@@ -116,7 +116,7 @@ export class Menu {
         ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
         ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${gearAttack(hero)} gear)</small>`)}
         ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${gearDefense(hero)} gear)</small>`)}
-        ${row('Magic', `${spellPower(hero)} <small>(${s.magic} + ${hero.spell.power} spell)</small>`)}
+        ${row('Magic', `${spellPower(hero)} <small>(${s.magic} + ${hero.weapon.focus?.power ?? 0} ${hero.weapon.focus?.kind ?? 'weapon'})</small>`)}
       </dl>`;
   }
 

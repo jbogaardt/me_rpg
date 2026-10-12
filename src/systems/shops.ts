@@ -2,7 +2,7 @@
 // shopkeepers (OverworldScene) and the HTML side draws the counter (hud/Shop.ts). A map places a shopkeeper with
 // `z.shop(id, col, row)` (see the build-zone skill) and the building behind them with `z.prop('smithy', ...)`.
 //
-// Each shop is a specialist: it sells a few kinds of things and only buys those kinds back. Money comes mostly from
+// Each shop is a specialist: it sells a few kinds of things and only buys those kinds back (the wizard: wands and tomes). Money comes mostly from
 // enemies (see `MobKind.gold`); chests hold the odd purse and the gear that no shop stocks.
 
 import type { GearSlot, Hero, Item } from './combat';
@@ -37,7 +37,8 @@ const isSlot =
   (item: Item) =>
     item.slot !== undefined && slots.includes(item.slot);
 const isBow = (item: Item) => item.ranged !== undefined;
-const isBlade = (item: Item) => item.slot === 'weapon' && !isBow(item);
+const isCaster = (item: Item) => item.focus !== undefined;
+const isBlade = (item: Item) => item.slot === 'weapon' && !isBow(item) && !isCaster(item);
 const isSupply = (item: Item) => item.use !== undefined;
 
 export const SHOPS: Record<string, Shop> = {
@@ -95,6 +96,18 @@ export const SHOPS: Record<string, Shop> = {
     greeting: ['Potions for the bruised, elixirs for the brave.', 'Drink them from the Gear tab of your menu.'],
     stock: ['potion', 'elixir'],
     buys: isSupply,
+  },
+  wizard: {
+    id: 'wizard',
+    name: "Orlen's Sanctum",
+    tag: 'Wizard',
+    keeper: 'wizard',
+    greeting: [
+      'Wands for the quick, tomes for the patient.',
+      'Tap the right arrows in the right order and the weapon does the rest.',
+    ],
+    stock: ['apprenticeWand', 'stormcallerWand', 'noviceTome', 'arcaneGrimoire'],
+    buys: isCaster,
   },
 };
 

@@ -49,11 +49,13 @@ describe('ITEMS', () => {
     };
     for (const [id, item] of items) {
       const part = dollSlot[item.slot];
-      expect(Object.keys(item.look), id).toEqual(part ? [part] : []);
+      // Wands and tomes have no art on the hero yet, so their look is empty.
+      const drawn = 'focus' in item || !part ? [] : [part];
+      expect(Object.keys(item.look), id).toEqual(drawn);
     }
   });
 
-  it('lets only weapons shoot, and every bow reaches farther than the Time Bolt', () => {
+  it('lets only weapons shoot, and every bow reaches farther than a bolt', () => {
     const bows = items.filter(([, i]) => 'ranged' in i);
     expect(bows.length).toBeGreaterThanOrEqual(2);
     for (const [id, item] of bows) {
@@ -61,7 +63,7 @@ describe('ITEMS', () => {
       const { speed, range, cooldown } = (item as { ranged: { speed: number; range: number; cooldown: number } })
         .ranged;
       expect(speed).toBeGreaterThan(120); // faster than the hero walks
-      expect(range).toBeGreaterThan(7 * 32); // the Time Bolt flies 7 cells
+      expect(range).toBeGreaterThan(7 * 32); // a wand's bolt flies 7 cells
       expect(cooldown).toBeGreaterThan(0.35); // slower between shots than a sword
     }
   });

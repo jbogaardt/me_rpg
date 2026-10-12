@@ -82,13 +82,10 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await expect(stranger.locator('#mp-note')).toContainText(/isn.t open/);
   await stranger.context().close(); // free the machine for the rest of the test
 
-  // The game runs behind the open menu: the friend's input reaches the host, and the host's world (here the
-  // friend's own MP, which only the host tracks) comes back in snapshots.
+  // The game runs behind the open menu.
   await join.keyboard.press('Escape'); // close the menu
   await expect(join.locator('#menu')).toBeHidden();
   await expect(join.locator('#hud-mp .label')).toHaveText('20 / 20');
-  await join.keyboard.press('KeyK');
-  await expect(join.locator('#hud-mp .label')).not.toHaveText('20 / 20');
 
   // The co-op map: toggled with M, semi-transparent, with a pin for the friend once the host's snapshot arrives.
   await expect(join.locator('#map-btn')).toBeVisible();
@@ -110,8 +107,6 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await expect(join.locator('#menu-online')).toBeVisible();
   await expect(join.locator('#mp-note')).toContainText('disconnected');
   await join.keyboard.press('Escape');
-  await join.keyboard.press('KeyK'); // solo again: the player's own simulation casts and spends MP
-  await expect(join.locator('#hud-mp .label')).not.toHaveText('20 / 20');
 });
 
 /** The pack grid's filled slots, in the open inventory. */
@@ -239,13 +234,8 @@ test('up to four players: friends join, leave, and a new friend takes the empty 
   await expect(seat(host, 3)).toHaveAttribute('data-state', 'waiting');
   await expect(host.locator('#mp-code')).toHaveText(code); // still open: one seat left
 
-  // Each friend is a separate player on the host: the second friend's spells spend their own MP, not the first's.
   await first.keyboard.press('Escape');
   await second.keyboard.press('Escape');
-  await expect(second.locator('#hud-mp .label')).toHaveText('20 / 20');
-  await second.keyboard.press('KeyK');
-  await expect(second.locator('#hud-mp .label')).not.toHaveText('20 / 20');
-  await expect(first.locator('#hud-mp .label')).toHaveText('20 / 20');
 
   // The first friend leaves: the game goes on for everyone else, and the seat opens up again.
   await first.keyboard.press('Escape');
@@ -266,8 +256,6 @@ test('up to four players: friends join, leave, and a new friend takes the empty 
   });
   await expect(seat(newcomer, 1)).toHaveAttribute('data-state', 'you');
   await newcomer.keyboard.press('Escape');
-  await newcomer.keyboard.press('KeyK');
-  await expect(newcomer.locator('#hud-mp .label')).not.toHaveText('20 / 20');
 
   // Fill the last seat: the code closes by itself.
   const last = await open(browser, '/');

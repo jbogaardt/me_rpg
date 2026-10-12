@@ -10,6 +10,7 @@ import {
   type Result,
 } from '../systems/inventory';
 import { iconSvg } from './itemIcons';
+import { combosHtml } from './itemText';
 
 // The Inventory tab of the pause menu: what the hero wears (a slot each, including both hands, a tool and a bag),
 // and the pack of carried items. Tap or click a slot to pick it, then use the buttons under the grids; a double
@@ -41,6 +42,7 @@ const stats = (item: Item) =>
     item.defense ? `+${item.defense} DEF` : '',
     item.capacity ? `+${item.capacity} pack slots` : '',
     item.ranged ? 'ranged' : '',
+    item.focus ? item.focus.kind : '',
     item.use?.hp ? `+${item.use.hp} HP` : '',
     item.use?.mp ? `+${item.use.mp} MP` : '',
     item.value ? `worth ${item.value}g` : '',
@@ -146,7 +148,7 @@ export class Inventory {
     return `
       <div class="inv-item">
         <span class="icon tier${itemTier(item)}">${iconSvg(iconKind(item))}</span>
-        <div><strong>${item.name}</strong> <small>${where}</small><br /><small>${stats(item) || 'No bonus'}</small> ${versus}</div>
+        <div><strong>${item.name}</strong> <small>${where}</small><br /><small>${stats(item) || 'No bonus'}</small> ${versus}${combosHtml(item)}</div>
       </div>
       <div class="inv-actions">${buttons.join('')}</div>${msg}`;
   }

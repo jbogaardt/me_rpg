@@ -126,6 +126,7 @@ function tower(name: string, hue: number, sat: number): Image {
 const pieces: Record<keyof typeof BUILDINGS, Image> = {
   smithy: hall('smithy', 14, 1), // the inn's own terracotta
   apothecary: hall('apothecary', 135, 0.55), // mossy green
+  wizard: hall('wizard', 275, 0.55), // violet
   armory: tower('armory', 215, 0.3), // slate
   ranger: tower('ranger', 40, 0.85), // golden thatch
 };

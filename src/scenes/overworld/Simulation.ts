@@ -4,17 +4,16 @@ import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
 import { cellFeet } from '../../map/doors';
 import { round1, type FxName, type WorldEvent } from '../../net/protocol';
-import { attackPower, defensePower, gainXp, rollDamage, rollGold, spellPower, type Ranged } from '../../systems/combat';
+import { attackPower, defensePower, gainXp, rollDamage, rollGold, type Ranged } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import type { Strike } from '../../entities/WeatherLayer';
 import type { ZoneState } from '../ZoneState';
 import type { Arena } from './Arena';
+import { Casting } from './Casting';
 import {
   ATTACK_COOLDOWN,
   BOLT_HEIGHT,
-  BOLT_SPEED,
-  CAST_COOLDOWN,
   DEFEAT_LINES,
   HP_REGEN,
   HP_REGEN_DELAY,
@@ -24,6 +23,7 @@ import {
   MELEE_REACH,
   MP_REGEN,
   SPEED,
+  WARD_TINT,
 } from './constants';
 import type { Visuals } from './Visuals';
 import type { Zones } from './Zones';
@@ -36,6 +36,8 @@ import type { Zones } from './Zones';
  * works in the arena's current zone (`Arena.inZone`).
  */
 export class Simulation {
+  private casting: Casting;
+
   constructor(
     private arena: Arena,
     private visuals: Visuals,
@@ -44,7 +46,9 @@ export class Simulation {
     private emit: (e: WorldEvent) => void,
     /** Say something to the player at this keyboard (a dialog). */
     private announce: (lines: string[]) => void,
-  ) {}
+  ) {
+    this.casting = new Casting(arena, visuals, this, emit);
+  }
 
   /** What a zone's mobs may ask of the world each tick. */
   mobWorldFor(z: ZoneState): MobWorld {
@@ -91,6 +95,7 @@ export class Simulation {
     const s = p.hero.stats;
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
+    p.ward = Math.max(0, p.ward - dt);
     p.invuln = Math.max(0, p.invuln - dt);
     p.grace = Math.max(0, p.grace - dt);
     p.sinceHit += dt;
@@ -112,6 +117,7 @@ export class Simulation {
     const swinging = this.isSwinging(p);
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
     p.body.alpha = p.invuln > 0 && Math.floor(p.invuln * 16) % 2 === 0 ? 0.35 : 1;
+    p.body.setTint(p.ward > 0 ? WARD_TINT : 0xffffff);
     p.body.animate(dt * 1000, p.moving);
   }
 
@@ -141,9 +147,10 @@ export class Simulation {
     return len > 0;
   }
 
-  /** In the first moments of a sword swing, which lunges the body forward (a bow does not). */
+  /** In the first moments of a sword swing, which lunges the body forward (a bow, wand or tome does not). */
   isSwinging(p: Player): boolean {
-    return !p.hero.weapon.ranged && p.attackCooldown > ATTACK_COOLDOWN - 0.1;
+    const { ranged, focus } = p.hero.weapon;
+    return !ranged && !focus && p.attackCooldown > ATTACK_COOLDOWN - 0.1;
   }
 
   // --- Attacks ---
@@ -157,7 +164,11 @@ export class Simulation {
   attack(p: Player) {
     if (p.attackCooldown > 0) return;
     this.faceAim(p);
-    const bow = p.hero.weapon.ranged;
+    const { ranged: bow, focus } = p.hero.weapon;
+    if (focus) {
+      this.casting.basic(p, focus);
+      return;
+    }
     if (bow) {
       this.draw(p, bow);
       return;
@@ -201,25 +212,9 @@ export class Simulation {
     this.emit({ type: 'arrow', x: round1(x), y: round1(y), vx: round1(vx), vy: round1(vy), range: shot.bow.range });
   }
 
-  /** The magic button: a Time Bolt for MP, along the player's aim. */
-  cast(p: Player) {
-    if (p.castCooldown > 0) return;
-    p.castCooldown = CAST_COOLDOWN;
-    const { spell, stats } = p.hero;
-    const { x, y } = p.body;
-    if (stats.mp < spell.cost) {
-      this.text(x, y - 54, 'No MP', 0x8fb3ff);
-      return;
-    }
-    stats.mp -= spell.cost;
-    this.faceAim(p);
-    p.body.play('cast');
-    const { x: vx, y: vy } = p.aim;
-    const [bx, by] = [x + vx * 10, y - BOLT_HEIGHT + vy * 8];
-    this.visuals.bolt(bx, by, vx * BOLT_SPEED, vy * BOLT_SPEED, (mob) =>
-      this.hitMob(mob, rollDamage(spellPower(p.hero), mob.kind.defense), vx, vy, true),
-    );
-    this.emit({ type: 'bolt', x: round1(bx), y: round1(by), vx: vx * BOLT_SPEED, vy: vy * BOLT_SPEED, p: p.slot });
+  /** The player tapped out combo `index` of their wand or tome: cast its spell if there is the mana for it. */
+  combo(p: Player, index: number) {
+    this.casting.combo(p, index);
   }
 
   /** A ranged mob lets go of a shot along (ux, uy), from its hands at chest height. */
@@ -282,7 +277,7 @@ export class Simulation {
   // --- Damage ---
 
   /** Every player takes the kill's XP and gold (in solo, just the one). */
-  private hitMob(mob: Mob, damage: number, vx: number, vy: number, bolt = false) {
+  hitMob(mob: Mob, damage: number, vx: number, vy: number, bolt = false) {
     const killed = mob.hit(damage, vx, vy);
     // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
     if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14, Math.atan2(vy, vx));
@@ -341,6 +336,7 @@ export class Simulation {
     p.vel = { x: 0, y: 0 };
     p.invuln = 0;
     p.pendingShot = null;
+    p.ward = 0;
     if (arena.role === 'solo') for (const z of arena.zones.values()) z.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them
     if (p === arena.local) this.announce(DEFEAT_LINES);
     else this.emit({ type: 'defeat', player: p.slot });

@@ -10,9 +10,10 @@ npm run dev
 ```
 
 Controls: WASD / arrow keys to move, Space / J / Enter / E to attack (or talk when next to the NPC),
-K / Q to cast Time Bolt (costs MP), Esc / I / Tab for the menu.
-On phones and tablets an on-screen D-pad (drag your thumb, 8-way) plus **A** (attack/talk), **B** (magic)
-and **☰** (menu) buttons appear.
+Esc / I / Tab for the menu. With a wand or tome from the wizard's shop in hand, tap a string of four
+directions (for example W W A D) to cast a spell for MP; it is stronger than the plain attack.
+On phones and tablets an on-screen D-pad (drag your thumb, 8-way) plus **A** (attack/talk)
+and **☰** (menu) buttons appear; flick the D-pad (up, up, left, right) to cast a combo.
 
 Enemies (shades, goblins, wolfkin, skeletons, zombies, orcs, trolls, raiders, frostbound) wander near
 their spawn, chase you on sight and attack after a yellow-flashing swing windup. They respawn a few

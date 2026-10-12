@@ -80,11 +80,13 @@ describe('gainXp', () => {
 });
 
 describe('power helpers', () => {
-  it('add gear and spell bonuses to the base stats', () => {
+  it('add gear and weapon bonuses to the base stats', () => {
     const hero = newHero();
     expect(attackPower(hero)).toBe(hero.stats.attack + (hero.weapon.attack ?? 0));
     expect(defensePower(hero)).toBe(hero.stats.defense + (hero.cape?.defense ?? 0));
-    expect(spellPower(hero)).toBe(hero.stats.magic + hero.spell.power);
+    expect(spellPower(hero)).toBe(hero.stats.magic); // a sword adds nothing to spells
+    hero.weapon = ITEMS.apprenticeWand;
+    expect(spellPower(hero)).toBe(hero.stats.magic + 3);
   });
 
   it('count every piece of gear: armor and shields add defense, a second blade adds attack', () => {

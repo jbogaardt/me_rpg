@@ -12,20 +12,19 @@ function memory() {
 }
 
 describe('Bindings', () => {
-  it('defaults to left click attack, right click magic and the usual movement keys', () => {
+  it('defaults to left click attack and the usual movement keys', () => {
     const b = new Bindings();
     expect(b.codes('attack')).toContain('Mouse0');
-    expect(b.codes('magic')).toContain('Mouse2');
     expect(b.codes('up')).toEqual(['KeyW', 'ArrowUp']);
     expect(b.isDefault()).toBe(true);
   });
 
   it('takes a key away from the action that had it', () => {
     const b = new Bindings();
-    expect(b.set('magic', 1, 'Space')).toBeNull();
-    expect(b.codes('magic')).toEqual(['Mouse2', 'Space']);
+    expect(b.set('inventory', 1, 'Space')).toBeNull();
+    expect(b.codes('inventory')).toEqual(['KeyI', 'Space']);
     expect(b.codes('attack')).toEqual(['Mouse0']);
-    expect(b.actionFor('Space')).toBe('magic');
+    expect(b.actionFor('Space')).toBe('inventory');
   });
 
   it('refuses the reserved menu keys', () => {
@@ -55,7 +54,7 @@ describe('Bindings', () => {
 
   it('falls back to defaults for junk, reserved keys and duplicates in storage', () => {
     expect(loadBindings({ getItem: () => 'not json' }).isDefault()).toBe(true);
-    expect(new Bindings({ attack: 'x', magic: [1, 2] }).isDefault()).toBe(true);
+    expect(new Bindings({ attack: 'x', inventory: [1, 2], magic: ['Mouse2', 'KeyK'] }).isDefault()).toBe(true);
     expect(new Bindings({ attack: ['Escape', 'Space'] }).codes('attack')).toEqual(DEFAULT_BINDINGS.attack);
     const dup = new Bindings({ up: ['KeyW', ''], down: ['KeyW', ''] });
     expect(dup.codes('up')).toEqual(['KeyW']);

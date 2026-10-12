@@ -19,10 +19,11 @@ test('boots into the overworld without errors', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('casting spends MP', async ({ page }) => {
+test('tapping a combo without a wand or tome does nothing', async ({ page }) => {
   await boot(page);
-  await page.keyboard.press('KeyK');
-  await expect(page.locator('#hud-mp .label')).not.toHaveText('20 / 20');
+  for (const key of ['KeyW', 'KeyW', 'KeyA', 'KeyD']) await page.keyboard.press(key);
+  await page.waitForTimeout(200);
+  await expect(page.locator('#hud-mp .label')).toHaveText('20 / 20');
 });
 
 test('the pause menu opens and closes', async ({ page }) => {

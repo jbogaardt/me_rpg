@@ -16,6 +16,7 @@ export const SHOP_DOORS = {
   smithy: { building: { col: 148, row: ROW }, door: { col: 150, w: 2 }, outside: { col: 150, row: ROW + 1 } },
   armory: { building: { col: 156, row: ROW }, door: { col: 157, w: 1 }, outside: { col: 157, row: ROW + 1 } },
   apothecary: { building: { col: 162, row: ROW }, door: { col: 164, w: 2 }, outside: { col: 164, row: ROW + 1 } },
+  wizard: { building: { col: 170, row: ROW }, door: { col: 172, w: 2 }, outside: { col: 172, row: ROW + 1 } },
   ranger: { building: { col: 178, row: ROW }, door: { col: 179, w: 1 }, outside: { col: 179, row: ROW + 1 } },
 } as const;
 export type ShopId = keyof typeof SHOP_DOORS;
@@ -38,7 +39,7 @@ const STREETS = [
   ...trail([[186, ROW + 6], [186, east[1]], east]), // the east road, out to the Frostlands
 ];
 
-// The town: four shops along a market square, trails from its three gates (north and west into the Greenwood, east
+// The town: five shops along a market square, trails from its three gates (north and west into the Greenwood, east
 // into the Frostlands), a pond and gardens. No enemies. Walk into a shop's door to go inside.
 // Squares x 10-20, y 17-22 of maps/world.ts (`npm run map -- layout town`).
 export default defineBiome({

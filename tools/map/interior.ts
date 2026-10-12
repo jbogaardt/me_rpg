@@ -120,9 +120,10 @@ const COLORS = {
   r: [196, 64, 52] as RGB,
   b: [74, 130, 200] as RGB,
   l: [64, 170, 92] as RGB,
+  p: [140, 90, 200] as RGB, // violet
   e: [236, 236, 226] as RGB, // glass shine
 };
-type Shelf = 'smithy' | 'armory' | 'ranger' | 'apothecary';
+type Shelf = 'smithy' | 'armory' | 'ranger' | 'apothecary' | 'wizard';
 /** Each shelf holds a row of one kind of ware, 6x8 pixels each, three to a shelf. */
 const WARES: Record<Shelf, string[][]> = {
   smithy: [
@@ -136,6 +137,10 @@ const WARES: Record<Shelf, string[][]> = {
   ranger: [
     ['.ww.....', 'w..w....', 'w..w.s..', 'w..wss..', 'w..w.s..', 'w..w....', '.ww.....', '........'],
     ['.bbb....', 'bbbbb...', 'bwwwb...', '.www....', '.www....', '........', '........', '........'],
+  ],
+  wizard: [
+    ['........', '.pppppp.', '.pgggwp.', '.pppppp.', '.pwwwwp.', '.pppppp.', '........', '........'],
+    ['......g.', '.....ggg', '....w.g.', '...w....', '..w.....', '.w......', '........', '........'],
   ],
   apothecary: [
     ['..ee....', '..ii....', '.irri...', 'irrrri..', 'irrrri..', '.iiii...', '........', '........'],
@@ -202,10 +207,12 @@ const pieces: Record<keyof typeof INTERIOR, Canvas> = {
   shelfArmory: shelf('armory'),
   shelfRanger: shelf('ranger'),
   shelfApothecary: shelf('apothecary'),
+  shelfWizard: shelf('wizard'),
   signSmithy: sign('smithy'),
   signArmory: sign('armory'),
   signRanger: sign('ranger'),
   signApothecary: sign('apothecary'),
+  signWizard: sign('wizard'),
 };
 
 const width = Math.max(...Object.values(INTERIOR).map((p) => p.x + p.w));
