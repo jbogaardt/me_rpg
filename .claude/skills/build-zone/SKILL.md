@@ -61,8 +61,8 @@ filter), `ridge`.
 
 ## Assets (`tools/map/catalog.ts`)
 
-- **One ground per biome.** Green biomes use the `grass` fill alone: don't lay `meadow`/`darkGrass` layers or blobs over it (two grass swatches clash, and plateau cliffs carry the `grass` rim). A biome's own ground terrain goes on with `z.ground(name, { inset: [1, 2] })` so its edge hides under the walls.
-- Terrain (`z.paint`, `TERRAINS` in `tools/map/terrain.ts`): `dirt` (paths), `sand`, `meadow`/`darkGrass` (deeper greens; not in the open-air biomes, see above),
+- **A biome's ground is a palette of at most two.** Two grounds are fine when their colours are close and the edge between them is soft (an autotiled edge on a `blob`/`z.ground` shape; never a bare rect or a cell-stepped line). Similarity and edging matter most. `meadow`/`darkGrass` are too far from the `grass` fill to pair with it, so green biomes use `grass` alone until a palette-matched second grass exists (recoloured in `recolor.ts`). A plateau's top must match the ground round it (its cliff art carries the `grass` rim). A biome's own ground terrain goes on with `z.ground(name, { inset: [1, 2] })` so its edge hides under the walls.
+- Terrain (`z.paint`, `TERRAINS` in `tools/map/terrain.ts`): `dirt` (paths), `sand`, `meadow`/`darkGrass` (deeper greens; too far from `grass` to pair with it, see above),
   `snow`, `mud`, `redDirt`, `ash`/`soot` (undead), `road` (bricks), `pond`, `murk` (swamp water, same soft bank), `ice` (slippery), `lava`, `pit`/`abyss`;
   and the opaque `coast`/`snowCoast` (land painted over a `sea` fill). Later entries draw over earlier ones, and a full
   tile hides what is under it, so paint the biome's base terrain first and erase it (`{ erase: true }`) under a plaza.
