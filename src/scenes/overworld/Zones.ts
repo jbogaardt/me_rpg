@@ -6,7 +6,6 @@ import type { ShopCounter } from '../../hud/ShopCounter';
 import type { MobWorld } from '../../entities/Mob';
 import { arrivalFacing, cellFeet, doorAt, doorsNear } from '../../map/doors';
 import { CELL, type CellPoint } from '../../map/types';
-import { pickTransition } from '../../map/transition';
 import { zoneTint } from '../../systems/places';
 import { GroundItem } from '../../entities/GroundItem';
 import { ZoneState } from '../ZoneState';
@@ -161,13 +160,12 @@ export class Zones {
   }
 
   /**
-   * Move a player through a door into `dest`, which is loaded. The local player's view follows them, through an iris or a
-   * slide (`door` false: not through a door, e.g. waking after a defeat, which always irises).
+   * Move a player through a door into `dest`, which is loaded. The local player's view follows them through the iris.
    */
-  travel(p: Player, dest: ZoneState, to: CellPoint, door = true) {
+  travel(p: Player, dest: ZoneState, to: CellPoint) {
     const { arena } = this;
     const from = arena.zoneOf(p);
-    if (p === arena.local) this.beginTrip(from, dest, door);
+    if (p === arena.local) this.beginTrip(dest);
     from.world.layer.removeChild(p.body);
     from.ambient?.forget(p.body);
     dest.world.layer.addChild(p.body);
@@ -184,17 +182,12 @@ export class Zones {
   }
 
   /**
-   * The local player is about to leave `from` for `dest`: picture the view they are leaving and start the transition
-   * (map/transition.ts picks an iris for rooms, a warp for walking into the next open-air zone).
+   * The local player is about to leave for `dest`: picture the view they are leaving and start the transition
+   * (map/transition.ts: the one iris, for every door).
    */
-  private beginTrip(from: ZoneState, dest: ZoneState, door = true) {
+  private beginTrip(dest: ZoneState) {
     const { arena } = this;
-    // The door being taken (a guest's view of its own body may lag the host's by a step, so look a little around).
-    const { x, y } = arena.player;
-    const through = doorsNear(from.data, x, y - 1, CELL).find((d) => d.to.zone === dest.name && d.dir)?.dir;
-    const pick = pickTransition(from.data, dest.data, through);
-    const kind = door ? pick.kind : 'iris';
-    this.transition.begin(kind, pick.dir, this.stage, arena.screen, this.heroOnScreen(), zoneTint(dest.name));
+    this.transition.begin(this.stage, arena.screen, this.heroOnScreen(), zoneTint(dest.name));
   }
 
   /** Where the local player is on screen (CSS px): the middle of their body, which the door iris closes and opens on. */
@@ -206,7 +199,7 @@ export class Zones {
 
   /** Guest: the host moved this player to a zone that is not loaded yet: close on the one they are leaving and stay shut. */
   holdForLoad() {
-    if (!this.transition.busy) this.transition.begin('iris', 'down', null, this.arena.screen, this.heroOnScreen());
+    if (!this.transition.busy) this.transition.begin(null, this.arena.screen, this.heroOnScreen());
     this.transition.hold(true);
   }
 
@@ -232,7 +225,7 @@ export class Zones {
     const { arena } = this;
     // Already shut while the zone loaded: just open on it. Otherwise picture the zone being left and go.
     if (this.transition.holding) this.transition.hold(false);
-    else this.beginTrip(arena.zoneOf(arena.local), dest);
+    else this.beginTrip(dest);
     arena.zoneOf(arena.local).world.layer.removeChild(arena.player);
     arena.zoneOf(arena.local).ambient?.forget(arena.player);
     dest.world.layer.addChild(arena.player);

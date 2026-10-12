@@ -51,7 +51,7 @@ export class Training {
         s.hp = s.maxHp;
         s.mp = s.maxMp;
         p.trial = skill.id;
-        this.zones.travel(p, dest, dest.data.spawn, false);
+        this.zones.travel(p, dest, dest.data.spawn);
         this.sim.text(p.body.x, p.body.y - 66, `${skill.name}: slot 2`, 0xcfe8ff); // it takes the second slot for the trial
       })
       .finally(() => this.starting.delete(p));
@@ -109,7 +109,7 @@ export class Training {
     s.mp = s.maxMp;
     p.trial = null;
     p.trialExit = 0;
-    this.zones.travel(p, dest, TRAINER_RETURN, false);
+    this.zones.travel(p, dest, TRAINER_RETURN);
   }
 
   /** A player was beaten in a trial (called by the simulation's defeat): they wake in the trainer's room. True when handled. */
@@ -122,7 +122,7 @@ export class Training {
     s.mp = s.maxMp;
     p.trial = null;
     p.trialExit = 0;
-    this.zones.travel(p, dest, TRAINER_RETURN, false);
+    this.zones.travel(p, dest, TRAINER_RETURN);
     p.aim = { x: 0, y: 1 };
     p.knock = { x: 0, y: 0 };
     p.vel = { x: 0, y: 0 };

@@ -381,7 +381,7 @@ export class Simulation {
       p.body.position.set(...cellFeet(home.data.spawn));
       p.body.face('down');
     } else {
-      this.zones.travel(p, home, home.data.spawn, false); // wake at the start of the world, whatever zone it was in
+      this.zones.travel(p, home, home.data.spawn); // wake at the start of the world, whatever zone it was in
     }
     p.aim = { x: 0, y: 1 };
     p.knock = { x: 0, y: 0 };

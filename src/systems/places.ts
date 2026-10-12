@@ -82,7 +82,7 @@ export function nextZone(from: string, goals: readonly string[]): string | null 
   return best;
 }
 
-/** The colour a zone flashes when you walk into it (the warp transition, entities/ZoneTransition.ts). */
+/** The colour a zone flashes when you walk into it (the rim of the door transition's circle, entities/ZoneTransition.ts). */
 export const ZONE_TINTS: Readonly<Record<string, number>> = {
   greenwood: 0xc8f28a,
   town: 0xffdc9a,
@@ -96,4 +96,5 @@ export const ZONE_TINTS: Readonly<Record<string, number>> = {
   frostlands: 0xd6f2ff,
 };
 
-export const zoneTint = (zone: string): number => ZONE_TINTS[zone] ?? 0xffffff;
+export const zoneTint = (zone: string): number =>
+  ZONE_TINTS[zone] ?? (zone.startsWith('shop_') ? 0xffdc9a : zone.startsWith('training_') ? 0xb394d6 : 0xffffff);
