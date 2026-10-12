@@ -37,10 +37,9 @@ export default defineBiome({
     z.spawn(...near(16, 9.2));
     z.pet('cat_black', ...near(17.2, 9.9));
 
-    // --- The graveyard: rows of standing stones on cracked flags --------------------------------------------------
+    // --- The graveyard: rows of standing stones on trodden soot --------------------------------------------------
     const yard = blob(area(12, 8.1, 2.8, 1.6), 9, 0.25);
-    for (const r of yard) z.fill('crackedStone', r);
-    z.paint('ash', yard, { erase: true });
+    z.paint('soot', yard); // trodden dark ground, soft-edged into the ash
     z.keepClear(area(11.8, 7.9, 3.2, 2));
     for (let c = 126; c <= 144; c += 3) for (const r of [85, 89, 93]) z.prop('menhir', c, r);
     z.chest('iron', 'legionHelm', ...near(12.4, 9.5));

@@ -53,7 +53,7 @@ export const TERRAINS = {
   darkGrass: { lpc: 'Dark Grass', surface: 'grass', about: 'Deep green grass (jungle, marsh).' },
   snow: { lpc: 'Snow', surface: 'snow', about: 'Snow with a soft edge.' },
   sand: { lpc: 'Sand', surface: 'sand', about: 'Pale sand with a soft edge.' },
-  redDirt: { lpc: 'Red Dirt', surface: 'dirt', about: 'Rust-red earth (badlands, mesas).' },
+  redDirt: { lpc: 'Red Dirt', surface: 'clay', about: 'Rust-red earth (badlands, mesas).' },
   ash: { lpc: 'Grey Dirt', surface: 'ash', about: 'Grey ash and gravel (the undead lands).' },
   soot: {
     lpc: 'Black Dirt',

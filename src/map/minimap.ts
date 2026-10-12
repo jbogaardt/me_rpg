@@ -19,6 +19,7 @@ const SURFACE_COLORS: Record<string, Rgb> = {
   crackedStone: [126, 118, 110],
   mud: [110, 78, 46],
   dirt: [176, 140, 92],
+  clay: [150, 82, 58], // the desert's red dirt
   ash: [92, 88, 96],
   bog: [52, 58, 30],
   lava: [226, 92, 30],

@@ -23,6 +23,7 @@ export default defineBiome({
   walls: { trees: DRY_TREES, fillers: ['sandBoulder', 'rockSmall'] },
   build(z) {
     z.fill('sand');
+    z.paint('sand', z.bounds); // soft-edged sand over the fill, so the desert fades into its neighbours at the borders
     z.paint('redDirt', [
       ...blob(area(0.6, 0.6, 3.2, 2.2)),
       ...blob(area(9, 0.6, 3.4, 1.8)),

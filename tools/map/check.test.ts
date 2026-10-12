@@ -125,6 +125,42 @@ describe('checkMap doors', () => {
   });
 });
 
+describe('checkMap ground (tools/map/ground.ts)', () => {
+  const withSpawn = (edit: (z: Zone) => void) =>
+    field((z) => {
+      z.spawn(1, 1);
+      edit(z);
+    });
+  const seams = (r: { errors: string[] }) => r.errors.filter((e) => e.includes('hard seams'));
+  const clashes = (r: { errors: string[] }) => r.errors.filter((e) => e.includes('clashing shades'));
+
+  it('passes plain grass and soft-edged terrain', () => {
+    const r = withSpawn((z) => z.paint('sand', { col: 4, row: 4, w: 4, h: 4 }));
+    expect([...seams(r), ...clashes(r)]).toEqual([]);
+  });
+
+  it('fails a fill dropped on another fill with a hard edge', () => {
+    expect(seams(withSpawn((z) => z.fill('crackedStone', { col: 4, row: 4, w: 4, h: 4 })))).toHaveLength(1);
+  });
+
+  it('passes a patch, which brings its own edge', () => {
+    expect(seams(withSpawn((z) => z.patch('stone', { col: 4, row: 4, w: 5, h: 5 })))).toEqual([]);
+  });
+
+  it('fails two shades of grass too far apart, even with a soft edge', () => {
+    expect(clashes(withSpawn((z) => z.paint('darkGrass', { col: 3, row: 3, w: 6, h: 6 })))).toHaveLength(1);
+  });
+
+  it("keeps a plateau's top the ground of its rim, whatever is painted over it", () => {
+    const r = field((z) => {
+      z.paint('redDirt', { col: 0, row: 0, w: 12, h: 12 });
+      z.plateau({ col: 3, row: 3, w: 6, h: 4 }, { kind: 'dry', stairs: [6] });
+      z.spawn(1, 1);
+    });
+    expect(seams(r)).toEqual([]);
+  });
+});
+
 describe('checkMap', () => {
   it('passes every real zone without errors; the borders between biomes match and every door has a way back', async () => {
     const { zones, errors } = await generateAll();

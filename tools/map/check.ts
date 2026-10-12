@@ -9,6 +9,7 @@ import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
 import { coverage, sheet } from './image';
 import { BARE_WALL } from './zone';
+import { CLASH_DE, groundReport } from './ground';
 import { walkFrom } from './walk';
 
 export interface Report {
@@ -210,6 +211,28 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     }
     if (blocked.has(i) && c < 0.15 && !reasons.has(i)) walls.push(i);
   });
+  // Jarring ground (tools/map/ground.ts): hard seams and clashing shades, measured on the art. Rooms are exempt: their
+  // walls meet their floors on purpose.
+  if (!d.indoor) {
+    const g = groundReport(d);
+    const where = (ps: { col: number; row: number }[]) =>
+      ps
+        .slice(0, 8)
+        .map((p) => `(${p.col},${p.row})`)
+        .join(' ') + (ps.length > 8 ? ` …(+${ps.length - 8})` : '');
+    if (g.seams.length)
+      errors.push(
+        `${g.seams.length} hard seams in the ground (the colour jumps on a cell boundary: a fill against a fill, a ` +
+          `paved rect, a plateau top unlike its rim) at ${where(g.seams)}; use a soft-edged terrain or a patch`,
+      );
+    if (g.clashes.length) {
+      const kinds = [...new Set(g.clashes.map((c) => c.surface))].join(', ');
+      errors.push(
+        `${g.clashes.length} clashing shades of ${kinds} next to each other at ${where(g.clashes)}: a biome's ` +
+          `grounds must be close in colour (ΔE <= ${CLASH_DE})`,
+      );
+    }
+  }
   const bareWall = [...reasons].filter(([, why]) => why === BARE_WALL).map(([i]) => i);
   if (bareWall.length)
     errors.push(

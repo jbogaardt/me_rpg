@@ -67,7 +67,7 @@ export default defineBiome({
     z.mob('shade', 34, 154);
 
     // --- Old ruins: cracked flags in the grass and what is left standing ----------------------------------------
-    for (const r of blob(area(5, 11.8, 1.6, 1))) z.fill('crackedStone', r);
+    z.patch('stone', area(5, 11.8, 1.6, 1)); // old flags, with the tileset's own grassy edge
     z.keepClear(area(4.8, 11.6, 2, 1.4));
     for (const [x, y] of [
       [5.3, 12.1],

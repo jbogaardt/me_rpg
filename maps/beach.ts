@@ -16,8 +16,16 @@ const gap = (to: string): [number, number] => {
 };
 const [west, east, south] = [gap('desert'), gap('jungle'), gap('undead')];
 const TRAILS = [...trail([west, east], { swing: 1.5 }), ...trail([[south[0], east[1]], south])];
-/** The first land row of each column: a shore that swings in and out. */
-const shore = (col: number) => Math.round(11 + 2.6 * Math.sin(col / 8.3) + 1.6 * Math.sin(col / 3.7 + 1));
+const JUNGLE_EDGE = 199; // the beach's last column before the jungle
+/**
+ * The first land row of each column: a shore that swings in and out, and curves up to the world's edge before the
+ * jungle, so the sea meets the jungle only under its trees along the top, not in a straight line down the border.
+ */
+const shore = (col: number) =>
+  Math.min(
+    Math.round(11 + 2.6 * Math.sin(col / 8.3) + 1.6 * Math.sin(col / 3.7 + 1)),
+    3 + Math.round(Math.max(0, JUNGLE_EDGE - col) * 0.8),
+  );
 
 export default defineBiome({
   name: 'beach',
@@ -28,8 +36,10 @@ export default defineBiome({
     z.fill('sea');
     const { col, w } = z.bounds;
     for (let c = col - 3; c < col + w + 3; c++) {
-      z.paint('coast', { col: c, row: shore(c), w: 1, h: 60 - shore(c) });
+      z.paint('coast', { col: c, row: shore(c), w: 1, h: 72 - shore(c) }); // past the wandering south border
       z.block({ col: c, row: 0, w: 1, h: shore(c) }, 'the sea');
+      // The coast is opaque and stops dead at a border; soft sand over its land fades into the neighbours instead.
+      z.paint('sand', { col: c, row: shore(c) + 2, w: 1, h: 70 - shore(c) });
     }
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
@@ -55,7 +65,7 @@ export default defineBiome({
     // --- Tide pools and rocks --------------------------------------------------------------------------------
     for (const [x, y, w, h] of [
       [12.6, 5.1, 1.2, 0.5],
-      [15.2, 4.4, 1.2, 0.5],
+      [14.4, 3.7, 1.2, 0.5], // clear of the Barrow Lands' border
       [17.6, 1.6, 0.8, 0.5],
     ] as const) {
       pond(z, area(x, y, w, h));

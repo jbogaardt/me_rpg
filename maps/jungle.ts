@@ -40,7 +40,7 @@ export default defineBiome({
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');
-    z.paint('mud', [...TRAILS, ...blob(area(25, 9.6, 1.4, 0.6))]);
+    z.paint('mud', TRAILS);
     z.keepClear(TRAILS);
 
     // --- Signposts at the forks (systems/signs.ts) ------------------------------------------------------------------
@@ -60,7 +60,7 @@ export default defineBiome({
     z.prop('lilyPads', pick(water, 6).col + 12, pick(water, 6).row);
 
     // --- Overgrown ruins with a chest ---------------------------------------------------------------------------
-    for (const r of blob(area(25.4, 9.2, 1.2, 0.7), 3, 0.3)) z.fill('flagstone', r);
+    z.patch('stone', area(25.4, 9.2, 1.2, 0.7)); // old flags, with the tileset's own grassy edge
     z.keepClear(area(25.2, 9, 1.6, 1.1));
     z.prop('menhir', ...at(25.5, 9.3));
     z.prop('menhir', ...at(26.4, 9.3));

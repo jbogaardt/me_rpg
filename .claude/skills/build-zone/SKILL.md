@@ -96,6 +96,12 @@ Think in cells: for `plateau({col, row, w, h})` the top is cols `col..col+w-1`, 
 
 ## What the checks mean (`tools/map/check.ts`)
 
+- ✗ **hard seams in the ground** (`tools/map/ground.ts`): the colour jumps right on a cell boundary, so the eye sees a
+  grid line or a staircase. Causes: a `fill` against another fill (two biomes' grounds meeting, a paved blob on grass),
+  a plateau top unlike its rim, sea against land. Fix with a soft-edged terrain (`z.paint`, `z.ground`) or `z.patch`.
+- ✗ **clashing shades**: one kind of ground (`surface`) in two shades far apart within two cells, even with a soft
+  edge (a deep green over pale grass). Pick grounds close in colour, or one.
+
 - ✗ two open cells of different `level` touching without stairs (a hole in a plateau rim); a ramp on a blocked cell.
 - ✗ spawn/NPC/mob outside the map, on a blocked cell, or unreachable from the spawn; unknown mob kind;
   art reading outside its sheet; JSON out of date.
