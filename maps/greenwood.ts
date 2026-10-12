@@ -57,6 +57,7 @@ export default defineBiome({
     z.prop('barrel', ...near(14.8, 14.6));
     z.prop('barrel', ...near(14.9, 14.7));
     z.keepClear(area(13.2, 14.4, 2.2, 1.5));
+    z.well(...near(15.6, 15.9)); // a well at the crossroads: the action key beside it drinks (systems/water.ts)
     // Wild crops by the crossroads: ripe now, and they grow back after they are picked (systems/crops.ts).
     z.plot(...near(13.0, 15.8), 'carrot');
     z.plot(...near(13.3, 15.9), 'radish');

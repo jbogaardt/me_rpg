@@ -110,6 +110,9 @@ export class Arena {
   get plots() {
     return this.zone.plots;
   }
+  get wells() {
+    return this.zone.wells;
+  }
   get ground() {
     return this.zone.ground;
   }

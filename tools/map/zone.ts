@@ -4,6 +4,7 @@ import {
   type CellPoint,
   type ChestSpawn,
   type PlotSpawn,
+  type WellSpawn,
   type DoorSpawn,
   type ShopSpawn,
   type GroundCell,
@@ -70,6 +71,7 @@ export interface ZoneApi {
   mob(kind: string, col: number, row: number): unknown;
   chest(kind: string, loot: string, col: number, row: number): unknown;
   plot(col: number, row: number, crop?: string): unknown;
+  well(col: number, row: number): unknown;
   shop(shop: string, col: number, row: number): unknown;
   pet(kind: string, col: number, row: number): unknown;
   giver(giver: string, col: number, row: number): unknown;
@@ -197,6 +199,10 @@ export class WorldWindow implements ZoneApi {
     this.z.plot(col - this.o.col, row - this.o.row, crop);
     return this;
   }
+  well(col: number, row: number) {
+    this.z.well(col - this.o.col, row - this.o.row);
+    return this;
+  }
   shop(shop: string, col: number, row: number) {
     this.z.shop(shop, col - this.o.col, row - this.o.row);
     return this;
@@ -318,6 +324,7 @@ export class Zone {
   private mobList: MobSpawn[] = [];
   private chestList: ChestSpawn[] = [];
   private plotList: PlotSpawn[] = [];
+  private wellList: WellSpawn[] = [];
   private shopList: ShopSpawn[] = [];
   private petList: PetSpawn[] = [];
   private giverList: GiverSpawn[] = [];
@@ -758,6 +765,14 @@ export class Zone {
     return this;
   }
 
+  /** A well (solid, so its cell is blocked): the action key beside it gives a drink (src/systems/water.ts). */
+  well(col: number, row: number) {
+    this.wellList.push({ col, row });
+    this.forced.set(row * this.width + col, true);
+    this.reasons.set(row * this.width + col, 'well');
+    return this;
+  }
+
   /**
    * A plot of soil for crops (does not block). With `crop` (a key of CROPS, src/systems/crops.ts) a wild plant that is ripe
    * at the start and grows back after it is picked; without, a bare farm plot for the player's seeds.
@@ -836,6 +851,7 @@ export class Zone {
       mobs: this.mobList,
       chests: this.chestList,
       plots: this.plotList,
+      wells: this.wellList,
       shops: this.shopList,
       pets: this.petList,
       givers: this.giverList,
@@ -1022,6 +1038,7 @@ export class Zone {
       mobs: this.mobList,
       chests: this.chestList,
       plots: this.plotList,
+      wells: this.wellList,
       shops: this.shopList,
       pets: this.petList,
       givers: this.giverList,

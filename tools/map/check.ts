@@ -141,6 +141,7 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     return [`chest ${c.loot}`, c];
   });
   if (d.chests.length > 30) errors.push('a map holds at most 30 chests');
+  for (const w of d.wells) chestPoints.push(['well', w]); // solid, like a chest: drunk from a reachable cell beside it
   for (const pl of d.plots) {
     if (pl.crop !== undefined && !isCrop(pl.crop))
       errors.push(`plot at (${pl.col},${pl.row}) has unknown crop "${pl.crop}" (CROPS)`);

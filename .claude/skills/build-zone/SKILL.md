@@ -44,6 +44,7 @@ ground first, then features, then overrides.
 | `z.indoor()` | Marks the zone a room: no weather, no footprints or leaves, no co-op overview map. |
 | `z.chest(kind, loot, c, r)` | A treasure chest (`loot` is a key of `CHEST_LOOTS`, `src/systems/chests.ts`). Shops sell the common gear, so chests hold what no shop stocks, restoratives and gold purses. |
 | `z.plot(c, r, crop?)` | A plot of soil for crops (`systems/crops.ts`, does not block): with `crop` (a key of `CROPS`) a wild plant that is ripe at the start and grows back after it is picked; without, a bare farm plot for the player's seeds. Needs open, reachable ground. |
+| `z.well(c, r)` | A well (solid, like a chest; `systems/water.ts`): the action key beside it drinks. Needs a reachable cell next to it. Clear ponds and lakes are drinkable already, wells are for where there is none. |
 
 A `Rect` is `{ col, row, w, h }`.
 

@@ -87,6 +87,7 @@ export default defineBiome({
 
     // --- The allotments: bare plots of soil for the player's own seeds (the apothecary sells them, systems/crops.ts) ---
     z.keepClear([{ col: 181, row: 186, w: 11, h: 7 }]);
+    z.well(...z.near(180, 189)); // water for the allotments (and for the thirsty)
     for (const row of [188, 191]) for (const col of [183, 185, 187, 189]) z.plot(...z.near(col, row));
 
     z.scatter([...TREES], { count: 24, where: open, seed: 21 });

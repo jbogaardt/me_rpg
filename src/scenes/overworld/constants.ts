@@ -21,6 +21,7 @@ export const SIGN_REACH = CELL * 1.5; // how close (to its foot) the action key 
 export const PICKUP_REACH = 26; // how close the action key must be to an item on the ground
 export const SITE_REACH = CELL * 1.3; // how close the action key must be to a quest site
 export const PLOT_REACH = CELL * 1.3; // how close the action key must be to a plot of crops (feet to the plot's cell centre)
+export const WELL_REACH = CELL * 1.4; // how close the action key must be to a well (feet to the well's cell centre)
 export const CHEST_REACH = CELL * 1.4; // how close the action key must be to a chest (feet to the chest's cell centre)
 
 export const DEFEAT_LINES = ['You were struck down...', 'Time folds back, and you wake where you began.'];

@@ -35,6 +35,7 @@ export default defineBiome({
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(1.6, 10));
     z.pet('cat_tan', ...near(2.9, 10.6));
+    z.well(...near(2.4, 9.3)); // water in the desert, beside the way in
 
     // --- A mesa in the badlands with the legion's lost gear ---------------------------------------------------
     z.plateau({ col: 12, row: 8, w: 10, h: 5 }, { kind: 'dry', stairs: [16] });

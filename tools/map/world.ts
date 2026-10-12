@@ -681,6 +681,11 @@ class BiomeWindow implements BiomeApi {
     this.z.chest(kind, loot, col, row);
     this.takePoint(col, row);
   }
+  /** A well (see `Zone.well`): solid, the action key beside it drinks. */
+  well(col: number, row: number) {
+    this.z.well(col, row);
+    this.takePoint(col, row);
+  }
   /** A plot of soil for crops (see `Zone.plot`): wild with a `crop`, bare without. */
   plot(col: number, row: number, crop?: string) {
     this.z.plot(col, row, crop);
@@ -966,6 +971,7 @@ function cut(
     mobs: e.mobs.map(local),
     chests: e.chests.map(local),
     plots: e.plots.map(local),
+    wells: e.wells.map(local),
     shops: e.shops.map(local),
     pets: e.pets.map(local),
     givers: e.givers.map(local),
@@ -983,6 +989,7 @@ function cut(
     ...e.mobs.map((m): [string, typeof m] => [`mob ${m.kind}`, m]),
     ...e.chests.map((c): [string, typeof c] => [`chest ${c.loot}`, c]),
     ...e.plots.map((p): [string, typeof p] => [`plot ${p.crop ?? 'farm'}`, p]),
+    ...e.wells.map((w): [string, typeof w] => ['well', w]),
     ...e.shops.map((s): [string, typeof s] => [`shop ${s.shop}`, s]),
     ...e.pets.map((p): [string, typeof p] => [`pet ${p.kind}`, p]),
     ...e.givers.map((g): [string, typeof g] => [`quest giver ${g.giver}`, g]),

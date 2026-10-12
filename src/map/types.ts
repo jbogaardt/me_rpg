@@ -53,6 +53,9 @@ export interface PlotSpawn extends CellPoint {
   crop?: string;
 }
 
+/** A well (entities/Well.ts): solid, and the action key beside it gives a drink (systems/water.ts). */
+export type WellSpawn = CellPoint;
+
 /** A pet (a key of PET_KINDS, src/systems/pets.ts) lying about at `col,row`. */
 export interface PetSpawn extends CellPoint {
   kind: string;
@@ -115,6 +118,7 @@ export interface MapData {
   npc: CellPoint | null;
   mobs: MobSpawn[];
   chests: ChestSpawn[]; // solid; opened with the action key
+  wells: WellSpawn[]; // solid; the action key beside one drinks (the water bar)
   plots: PlotSpawn[]; // soil for crops: pick the ripe ones, plant seeds in the bare ones, with the action key (they do not block)
   shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
   pets: PetSpawn[]; // dogs and cats to talk to: the action key makes them answer
@@ -134,9 +138,10 @@ export interface MapData {
  * `[part, px, py]` triples naming an entry of `parts` (`[sheet, x, y, w, h, tag, z]`, tag -1 for none, z null for the
  * default; tags index `tags`). Everything else is as in `MapData`.
  */
-export interface PackedMap extends Omit<MapData, 'version' | 'ground' | 'objects' | 'plots'> {
+export interface PackedMap extends Omit<MapData, 'version' | 'ground' | 'objects' | 'plots' | 'wells'> {
   version: 3;
   plots?: PlotSpawn[]; // left out when the zone has none
+  wells?: WellSpawn[]; // likewise
   palette: GroundCell[];
   ground: number[];
   tags: string[];
@@ -190,6 +195,7 @@ function unpacked(json: unknown): MapData {
     mobs: d.mobs ?? [],
     chests: d.chests ?? [],
     plots: d.plots ?? [],
+    wells: d.wells ?? [],
     shops: d.shops ?? [],
     pets: d.pets ?? [],
     givers: d.givers ?? [],

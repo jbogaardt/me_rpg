@@ -4,6 +4,7 @@ import { Ambient } from '../entities/ambient';
 import { Character } from '../entities/Character';
 import { Chest } from '../entities/Chest';
 import { Plot } from '../entities/Plot';
+import { Well } from '../entities/Well';
 import { Effects } from '../entities/effects';
 import type { GroundItem } from '../entities/GroundItem';
 import { Pet } from '../entities/Pet';
@@ -73,6 +74,8 @@ export class ZoneState {
   readonly chests: Chest[];
   /** Soil for crops: wild plants and bare farm plots (systems/crops.ts). The host and solo grow them; a guest only shows them. */
   readonly plots: Plot[];
+  /** Wells to drink from (solid; the action key beside one, see systems/water.ts). They have no state to remember or sync. */
+  readonly wells: Well[];
   readonly ground: GroundItem[] = [];
   /** The bodies of the players here, which mobs hunt and which block others. The scene keeps it in step. */
   readonly heroBodies: Character[] = [];
@@ -136,6 +139,7 @@ export class ZoneState {
       if (!CHEST_LOOTS[c.loot]) throw new Error(`Zone "${zone.name}" has a chest with unknown loot "${c.loot}"`);
       return new Chest(c, chestFrames);
     });
+    this.wells = data.wells.map((spawn) => new Well(spawn));
     this.plots = data.plots.map((spawn) => new Plot(spawn, sprites.crops, clock));
     const bodies = [
       ...(this.npc ? [this.npc] : []),
@@ -145,6 +149,7 @@ export class ZoneState {
       ...this.pets,
       ...this.chests,
       ...this.plots,
+      ...this.wells,
       ...this.mobs.map((m) => m.body),
     ];
     if (bodies.length) this.world.layer.addChild(...bodies); // Pixi's addChild() with nothing to add throws

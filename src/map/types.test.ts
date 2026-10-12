@@ -22,6 +22,7 @@ describe('parseMap', () => {
       mobs: [],
       chests: [],
       plots: [],
+      wells: [],
       shops: [],
       pets: [],
       givers: [],

@@ -42,6 +42,7 @@ import { DayClock } from '../systems/daynight';
 import { NightLayer } from '../entities/NightLayer';
 import { Arena } from './overworld/Arena';
 import { CHEST_REACH, KEEPER_REACH, PICKUP_REACH, SIGN_REACH, SITE_REACH } from './overworld/constants';
+import { Drinking } from './overworld/Drinking';
 import { Farming } from './overworld/Farming';
 import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
@@ -103,6 +104,7 @@ export class OverworldScene implements Scene {
   private sim: Simulation;
   private ground: Ground;
   private farming: Farming;
+  private drinking: Drinking;
   private pack: PackSync;
   private trading: Trading;
   private training: Training;
@@ -137,6 +139,7 @@ export class OverworldScene implements Scene {
     this.zones.makeMobWorld = (z) => this.sim.mobWorldFor(z);
     this.ground = new Ground(arena, this.sim);
     this.farming = new Farming(arena, this.sim);
+    this.drinking = new Drinking(arena, this.sim);
     this.pack = new PackSync(arena, ui.session, ui, this.ground);
     this.trading = new Trading(arena, ui.session, ui);
     this.host = new HostLink(arena, ui.session, this.sim, this.pack, this.trading);
@@ -275,6 +278,7 @@ export class OverworldScene implements Scene {
 
     z.npc?.animate(dt * 1000, false);
     this.updateQuests(z, dt);
+    for (const w of z.wells) w.update(dt);
     this.announceArea();
     this.pointTheWay(z, dt);
     for (const k of z.keepers) k.body.animate(dt * 1000, false);
@@ -500,6 +504,7 @@ export class OverworldScene implements Scene {
     );
     if (chest) return this.openChest(p, chest);
     if (this.farming.tend(p)) return;
+    if (this.drinking.well(p)) return;
     const site = this.arena.sites.find(
       (s) =>
         Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH &&
@@ -508,7 +513,7 @@ export class OverworldScene implements Scene {
     if (site) return this.touchSite(p, site);
     const loose = this.ground.nearest(p);
     if (loose) this.ground.pickUp(p, loose);
-    else this.sim.attack(p);
+    else if (!this.drinking.water(p)) this.sim.attack(p);
   }
 
   /** A player touches a quest site that their quest wants: it counts once for them, and the world sees the sparkle. */
