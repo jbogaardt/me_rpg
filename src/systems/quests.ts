@@ -151,7 +151,7 @@ export const QUESTS: Quest[] = [
     title: 'Glimmercaps',
     goal: 'Gather 4 glimmercaps in the Greenwood',
     unit: 'glimmercaps',
-    hint: 'Glimmercaps glow blue in the groves of the Greenwood. Follow the arrow to the nearest one.',
+    hint: 'Glimmercaps glow blue in the groves of the Greenwood. Search the area marked on your map.',
     where: { zones: ['greenwood'] },
     objective: { t: 'gather', site: 'glimmercap', zone: 'greenwood', count: 4 },
     reward: { gold: 50, xp: 45 },

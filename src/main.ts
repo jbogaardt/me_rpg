@@ -14,6 +14,7 @@ import { ShopCounter } from './hud/ShopCounter';
 import { TradeUi } from './hud/Trade';
 import { Session } from './net/session';
 import { OverworldScene } from './scenes/OverworldScene';
+import { MOB_KINDS } from './systems/combat';
 import { ITEMS } from './systems/items';
 
 const START_ZONE = 'greenwood';
@@ -71,6 +72,10 @@ void (async () => {
       dialog: new Dialog(),
       touch,
       session,
+    };
+    ui.menu.portrait = (kind) => {
+      const look = MOB_KINDS[kind]?.look;
+      return look ? sprites.wardrobe.portrait(look) : null;
     };
     const overworld = new OverworldScene(zone, sprites, ui, loadZone, unloadZone, app.renderer);
     scenes.change(overworld);

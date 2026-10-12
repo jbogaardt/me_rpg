@@ -428,3 +428,19 @@
   text-shadow: 0 1px 2px #000, 0 0 3px #000, 0 0 3px #000;
 }
 .quest-hint { font-style: italic; color: var(--ink-soft); }
+
+/* The picture of what a quest wants, beside its hint */
+.quest-look { display: flex; gap: 12px; align-items: flex-start; }
+.quest-art { margin: 2px 0 0; flex: none; width: 76px; text-align: center; font: 600 13px var(--body); color: var(--ink-soft); }
+.quest-art img, .quest-art svg, .quest-art .item-art { display: block; width: 72px; height: 72px; margin: 0 auto 2px; image-rendering: pixelated; border-radius: 4px; background: rgba(60, 40, 15, 0.12); }
+.quest-art .item-art { padding: 10px; box-sizing: border-box; }
+.quest-art .item-art svg { width: 100%; height: 100%; background: none; }
+
+/* Where the current quest leads, on the map: a dashed search circle for something to find, a star for a person or door */
+#map-overlay .guide { position: absolute; transform: translate(-50%, -50%); text-align: center; font-family: var(--title); font-weight: 700; color: #ffe27a; text-shadow: 0 1px 3px #000, 0 0 4px #000; }
+#map-overlay .guide.search {
+  aspect-ratio: 1; min-width: 56px; border: 3px dashed #ffd34d; border-radius: 50%; background: rgba(255, 211, 77, 0.3); box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.55), 0 0 14px rgba(255, 211, 77, 0.8);
+  display: flex; align-items: center; justify-content: center; font-size: 30px; animation: search-pulse 1.8s ease-in-out infinite;
+}
+#map-overlay .guide.place-star { font-size: 22px; animation: search-pulse 1.8s ease-in-out infinite; }
+@keyframes search-pulse { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.45; } }

@@ -24,7 +24,39 @@ export interface Guide {
   y: number;
   /** What the arrow leads to, in a word or two ("Maren", "The Sunscar Desert"): the zone it leaves for, or the person. */
   label: string;
+  /**
+   * Set for something to be *found* (a monster, a plant, a stone): then (x, y) is only the middle of the area to search,
+   * this many pixels across from the middle to the edge, and no arrow points at it. Unset for a person or a door, which are
+   * known places: those get the arrow.
+   */
+  radius?: number;
 }
+
+/** How far from the middle a search area reaches, and how coarse the grid its middle snaps to is (so it holds still as a mob wanders). */
+export const SEARCH_RADIUS = 10 * CELL;
+const SEARCH_GRID = 8 * CELL;
+
+/**
+ * The middle of the area to search for something at (x, y): the target's grid square, pushed off-centre by a fixed amount
+ * that depends only on the square. It never moves while the target stays in its square, and the target is always inside the
+ * circle (the square's far corner is under 6 cells from its middle, the push is 3, the radius is 10).
+ */
+export function searchMiddle(x: number, y: number): { x: number; y: number } {
+  const gx = Math.floor(x / SEARCH_GRID);
+  const gy = Math.floor(y / SEARCH_GRID);
+  const h = Math.sin(gx * 12.9898 + gy * 78.233) * 43758.5453;
+  const angle = (h - Math.floor(h)) * Math.PI * 2;
+  return {
+    x: (gx + 0.5) * SEARCH_GRID + Math.cos(angle) * 3 * CELL,
+    y: (gy + 0.5) * SEARCH_GRID + Math.sin(angle) * 3 * CELL,
+  };
+}
+
+const area = (target: { x: number; y: number }): Guide => ({
+  ...searchMiddle(target.x, target.y),
+  label: '',
+  radius: SEARCH_RADIUS,
+});
 
 const doorCentre = (d: GuideWorld['doors'][number]) => ({ x: (d.col + d.w / 2) * CELL, y: (d.row + 0.5) * CELL });
 
@@ -73,13 +105,13 @@ export function guideFor(hero: Hero, world: GuideWorld, from: { x: number; y: nu
       world.sites.filter((s) => siteOpen(hero, s.kind, world.zone, s.index)),
       from,
     );
-    return site ? { x: site.x, y: site.y, label: '' } : null;
+    return site ? area(site) : null;
   }
   const mob = nearest(
     world.mobs.filter((m) => m.key === o.kind),
     from,
   );
-  return mob ? { x: mob.x, y: mob.y, label: '' } : null;
+  return mob ? area(mob) : null;
 }
 
 /** The reminder for the HUD: what the quest asks and how far along it is, or who to see. Empty when every quest is done. */

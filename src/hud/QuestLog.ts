@@ -1,4 +1,5 @@
 import type { Hero } from '../systems/combat';
+import { questArt } from './questArt';
 import { zoneName } from '../systems/places';
 import { GIVERS, QUESTS, QUEST_GIVER, currentQuest, progressText, questStatus, rewardText } from '../systems/quests';
 
@@ -6,7 +7,7 @@ import { GIVERS, QUESTS, QUEST_GIVER, currentQuest, progressText, questStatus, r
  * The Quests tab of the pause menu: the task the hero is on, what it pays, and the ones already handed in. Rules and the
  * story are systems/quests.ts; this is only the page. Returns markup (all of it from the game's own text).
  */
-export function questPage(hero: Hero): string {
+export function questPage(hero: Hero, portrait: (mobKind: string) => string | null = () => null): string {
   const giver = GIVERS[QUEST_GIVER]?.name ?? 'the warden';
   const q = currentQuest(hero.quests);
   const status = questStatus(hero);
@@ -17,9 +18,13 @@ export function questPage(hero: Hero): string {
     now = `<h3>${q.title} <small>not started</small></h3><p class="quest-note">Speak to ${giver} in ${zoneName(GIVERS[QUEST_GIVER]?.zone ?? 'town')}, on the market square, for a new task. An arrow on screen points the way.</p>`;
   } else {
     const done = status === 'ready';
+    const search =
+      !done && q.objective.t !== 'bring'
+        ? `<p class="quest-note">Press M to open the map: the gold <b>?</b> circle marks the area to search.</p>`
+        : '';
     now = `<h3>${q.title} <small>${done ? 'ready to hand in' : 'in progress'}</small></h3>
-      <p>${q.goal}</p>
-      <p class="quest-hint">${q.hint}</p>
+      <div class="quest-look">${questArt(q, portrait)}<div><p>${q.goal}</p>
+      <p class="quest-hint">${q.hint}</p>${search}</div></div>
       <p class="quest-progress${done ? ' done' : ''}">${progressText(hero)}</p>
       <p class="quest-note">${done ? `Return to ${giver} in ${zoneName(GIVERS[QUEST_GIVER]?.zone ?? 'town')}.` : `Reward: ${rewardText(q.reward)}.`}</p>`;
   }

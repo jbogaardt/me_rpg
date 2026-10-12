@@ -1,6 +1,7 @@
 import type { Explored } from '../map/explored';
 import { mapPercent, minimapPixels } from '../map/minimap';
 import { CELL, type MapData } from '../map/types';
+import type { Guide } from '../systems/guide';
 import { zoneName } from '../systems/places';
 import { PLAYER_COLORS, playerName } from '../systems/looks';
 
@@ -32,6 +33,8 @@ export class MapOverlay {
   private placed = ''; // last pin positions written, so the DOM is only touched when a pin moves
   private listed = ''; // who the legend currently lists
 
+  private guideEl = document.createElement('div'); // the quest's search area (a circle with a ?) or place (a star)
+  private guided = '';
   private title = this.root.querySelector<HTMLElement>('.zone-title')!;
   private labels = new Map<string, HTMLElement>(); // the place names on the map, by name
   private labelled = ''; // which places are listed, and for which zone
@@ -54,6 +57,27 @@ export class MapOverlay {
     if (this.open && (this.painted < 0 || (explored.version !== this.painted && now - this.paintedAt > REPAINT_MS))) {
       this.paint(data, explored, now);
     }
+  }
+
+  /**
+   * Mark where the quest leads on the map: a dashed circle with a "?" over the area to search for something to be found, or
+   * a star on a person or door. Nothing when there is no goal in this zone.
+   */
+  setGuide(guide: Guide | null) {
+    const data = this.data;
+    const key = guide && data ? `${Math.round(guide.x)},${Math.round(guide.y)},${guide.radius ?? 0},${data.width}` : '';
+    if (key === this.guided) return;
+    this.guided = key;
+    if (!guide || !data) return this.guideEl.remove();
+    const { left, top } = mapPercent(data, guide.x, guide.y);
+    const el = this.guideEl;
+    el.className = guide.radius === undefined ? 'guide place-star' : 'guide search';
+    el.textContent = guide.radius === undefined ? '★' : '?';
+    el.style.left = `${left}%`;
+    el.style.top = `${top}%`;
+    // The radius in cells is a share of the map's width, so the circle scales with the map.
+    el.style.width = guide.radius === undefined ? '' : `${((guide.radius * 2) / CELL / data.width) * 100}%`;
+    if (!el.parentElement) this.root.insertBefore(el, this.legend);
   }
 
   /** The zone's name as the heading, and each named place once the player has explored the ground it stands on. */

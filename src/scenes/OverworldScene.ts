@@ -537,12 +537,15 @@ export class OverworldScene implements Scene {
     const guide = hide ? null : guideFor(this.hero, world, this.player);
     const { camera } = z;
     const at = (x: number, y: number) => ({ x: z.world.x + x * camera.zoom, y: z.world.y + y * camera.zoom });
+    // A person or a door gets the arrow; something to be found is only an area on the map (M).
+    const known = guide && guide.radius === undefined ? guide : null;
     this.arrow.update(
       dt,
       at(this.player.x, this.player.y - 20),
-      guide && at(guide.x, guide.y - 12),
-      guide?.label ?? '',
+      known && at(known.x, known.y - 12),
+      known?.label ?? '',
     );
+    this.overlay.setGuide(guide);
   }
 
   private openChest(p: Player, chest: Chest) {

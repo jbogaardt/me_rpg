@@ -1,5 +1,14 @@
 import { Texture } from 'pixi.js';
-import { DOLL_HEIGHT, DOLL_WIDTH, outfitKey, outfitLayers, outfitParts, type Outfit, type PartManifest } from './doll';
+import {
+  DOLL_HEIGHT,
+  DOLL_WIDTH,
+  frameRect,
+  outfitKey,
+  outfitLayers,
+  outfitParts,
+  type Outfit,
+  type PartManifest,
+} from './doll';
 import { RefCache } from './sheetCache';
 
 /** Unused character sheets kept for reuse (each is about 5 MB of canvas plus 5 MB on the GPU). */
@@ -77,6 +86,32 @@ export class Wardrobe {
     const sheet = this.sheets.acquire(outfitKey(outfit), () => this.compose(outfit));
     owners.set(sheet, this);
     return sheet;
+  }
+
+  private portraits = new Map<string, string>();
+
+  /**
+   * A picture of what an outfit looks like (the idle frame facing the player, enlarged), as an image URL for the HTML
+   * screens, such as the quest page showing what to hunt. Made once per outfit.
+   */
+  portrait(outfit: Outfit): string {
+    const key = outfitKey(outfit);
+    const known = this.portraits.get(key);
+    if (known) return known;
+    const sheet = this.sheet(outfit);
+    const { x, y, w, h } = frameRect('idle', 'down', 0);
+    const out = document.createElement('canvas');
+    out.width = w * 3;
+    out.height = h * 3;
+    const ctx = out.getContext('2d');
+    if (ctx) {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(sheet.source.resource as HTMLCanvasElement, x, y, w, h, 0, 0, out.width, out.height);
+    }
+    const url = out.toDataURL();
+    this.release(sheet);
+    this.portraits.set(key, url);
+    return url;
   }
 
   release(sheet: Texture) {

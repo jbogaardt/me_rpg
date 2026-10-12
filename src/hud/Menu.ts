@@ -144,12 +144,14 @@ export class Menu {
       </dl>`;
   }
 
+  /** A picture URL for what a kill quest hunts (set by main.ts from the wardrobe); null until it is. */
+  portrait: (mobKind: string) => string | null = () => null;
   private questShown = '';
   /** Draw the Quests tab, only when it would change (it is checked every frame while the menu is open). */
   private renderQuests() {
     const hero = this.hero;
     if (!hero) return;
-    const html = questPage(hero);
+    const html = questPage(hero, (kind) => this.portrait(kind));
     if (html === this.questShown) return;
     this.questShown = html;
     document.getElementById('menu-quests')!.innerHTML = html;

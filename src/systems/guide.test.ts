@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newHero, type Hero } from './combat';
-import { guideFor, trackerText, type GuideWorld } from './guide';
+import { guideFor, searchMiddle, SEARCH_RADIUS, trackerText, type GuideWorld } from './guide';
 import { QUESTS, talk } from './quests';
 import { ZONE_NAMES } from './places';
 
@@ -62,7 +62,10 @@ describe('the quest arrow', () => {
         { key: 'goblin', x: 200, y: 0 },
       ],
     });
-    expect(guideFor(goblins, w, origin)).toMatchObject({ x: 200, y: 0 });
+    const g = guideFor(goblins, w, origin)!;
+    expect(g.radius).toBe(SEARCH_RADIUS); // an area to search, not a spot
+    expect(Math.hypot(g.x - 200, g.y - 0)).toBeLessThan(SEARCH_RADIUS); // ...that does hold the goblin
+    expect(g.x === 200 && g.y === 0).toBe(false); // ...but is not centred on it
     expect(guideFor(goblins, world('greenwood'), origin)).toBeNull(); // none about right now
 
     const caps = onQuest(1);
@@ -72,7 +75,9 @@ describe('the quest arrow', () => {
       { kind: 'glimmercap', index: 1, x: 90, y: 5 },
       { kind: 'glimmercap', index: 2, x: 60, y: 5 },
     ];
-    expect(guideFor(caps, world('greenwood', { sites }), origin)).toMatchObject({ x: 60 });
+    const found = guideFor(caps, world('greenwood', { sites }), origin)!;
+    expect(Math.hypot(found.x - 60, found.y - 5)).toBeLessThan(SEARCH_RADIUS);
+    expect(found.radius).toBe(SEARCH_RADIUS);
   });
 
   it('leads to the door towards a far zone, through the zones in between', () => {
@@ -99,6 +104,22 @@ describe('the quest arrow', () => {
     hero.quests.stage = QUESTS.length;
     expect(guideFor(hero, world('town', { giver: { x: 1, y: 1 } }), origin)).toBeNull();
     expect(trackerText(hero)).toBe('');
+  });
+});
+
+describe('the search area', () => {
+  it('holds still while the target stays in its square, and always contains it', () => {
+    expect(searchMiddle(100, 100)).toEqual(searchMiddle(140, 120));
+    for (let i = 0; i < 400; i++) {
+      const [x, y] = [(i * 977) % 6000, (i * 613) % 4000];
+      const m = searchMiddle(x, y);
+      expect(Math.hypot(m.x - x, m.y - y), `${x},${y}`).toBeLessThan(SEARCH_RADIUS);
+    }
+  });
+
+  it('is not given for a person or a door, which are known places', () => {
+    const g = guideFor(newHero(), world('town', { giver: { x: 100, y: 50 } }), origin)!;
+    expect(g.radius).toBeUndefined();
   });
 });
 
