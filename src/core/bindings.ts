@@ -2,7 +2,7 @@
 // `KeyboardEvent.code` ('KeyW', 'Space') or a mouse button ('Mouse0' = left, 'Mouse2' = right).
 // Touch controls are not rebindable; they press fixed codes (see touch.ts, TOUCH_CODES below).
 
-export const ACTIONS = ['up', 'down', 'left', 'right', 'attack', 'magic', 'inventory'] as const;
+export const ACTIONS = ['up', 'down', 'left', 'right', 'attack', 'inventory'] as const;
 export type Action = (typeof ACTIONS)[number];
 export const SLOTS = 2;
 
@@ -12,7 +12,6 @@ export const ACTION_LABELS: Record<Action, string> = {
   left: 'Move left',
   right: 'Move right',
   attack: 'Attack / talk',
-  magic: 'Magic',
   inventory: 'Inventory',
 };
 
@@ -24,7 +23,6 @@ export const DEFAULT_BINDINGS: Record<Action, Slots> = {
   left: ['KeyA', 'ArrowLeft'],
   right: ['KeyD', 'ArrowRight'],
   attack: ['Mouse0', 'Space'],
-  magic: ['Mouse2', 'KeyK'],
   inventory: ['KeyI', ''],
 };
 
@@ -35,7 +33,6 @@ export const TOUCH_CODES: Record<Action, readonly string[]> = {
   left: ['ArrowLeft'],
   right: ['ArrowRight'],
   attack: ['KeyJ'],
-  magic: ['KeyK'],
   inventory: ['KeyI'],
 };
 

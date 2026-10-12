@@ -182,6 +182,14 @@ export const NPC_LOOKS: Record<string, Outfit> = {
     torso: 'torso.robe_red',
     weapon: 'weapon.staff',
   },
+  wizard: {
+    body: 'body.f_brown',
+    head: 'head.human_f_brown',
+    hair: 'hair.long_gray',
+    torso: 'torso.robe_blue',
+    headwear: 'headwear.wizard_navy',
+    weapon: 'weapon.staff',
+  },
   farmhand: {
     body: 'body.light',
     head: 'head.human_light',

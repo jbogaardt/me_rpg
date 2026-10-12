@@ -4,6 +4,8 @@ import type { IconKind } from '../systems/inventory';
 // outline. Items have no art of their own: the sprites only exist as paper-doll layers.
 
 const ICONS: Record<IconKind, string> = {
+  wand: '<path d="M4 20.5L15 9.5" fill="none" stroke-width="3.2" stroke-linecap="round"/><path d="M4 20.5L15 9.5" fill="none" stroke="#e8dcc0" stroke-width="1" stroke-linecap="round"/><path d="M17.5 2l1.1 3 3 1.1-3 1.1-1.1 3-1.1-3-3-1.1 3-1.1z"/>',
+  tome: '<path d="M4.5 4h12a2.5 2.5 0 012.5 2.5V20H7a2.5 2.5 0 01-2.5-2.5z"/><path d="M7 20a2.5 2.5 0 010-5h12" fill="none" stroke="#e8dcc0" stroke-width="1.2"/><path d="M11.8 7.2l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" fill="#e8dcc0" stroke="none"/>',
   sword:
     '<path d="M12 1.5l2 2.5v9.5h-4V4z"/><rect x="6.5" y="13.5" width="11" height="2.5" rx="1"/><rect x="10.5" y="16" width="3" height="5"/><circle cx="12" cy="22" r="1.4"/>',
   bow: '<path d="M6 2.5c11 3 11 16 0 19" fill="none" stroke-width="2.6"/><path d="M6 2.5v19" fill="none" stroke-width="1" stroke="#e8dcc0"/><path d="M8 12h12m-3-3l3 3-3 3" fill="none" stroke="#e8dcc0" stroke-width="1.2"/>',

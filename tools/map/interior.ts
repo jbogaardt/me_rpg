@@ -120,9 +120,10 @@ const COLORS = {
   r: [196, 64, 52] as RGB,
   b: [74, 130, 200] as RGB,
   l: [64, 170, 92] as RGB,
+  p: [140, 90, 200] as RGB, // violet
   e: [236, 236, 226] as RGB, // glass shine
 };
-type Shelf = 'smithy' | 'armory' | 'ranger' | 'apothecary';
+type Shelf = 'smithy' | 'armory' | 'ranger' | 'apothecary' | 'wizard';
 /** Each shelf holds a row of one kind of ware, 6x8 pixels each, three to a shelf. */
 const WARES: Record<Shelf, string[][]> = {
   smithy: [
@@ -136,6 +137,10 @@ const WARES: Record<Shelf, string[][]> = {
   ranger: [
     ['.ww.....', 'w..w....', 'w..w.s..', 'w..wss..', 'w..w.s..', 'w..w....', '.ww.....', '........'],
     ['.bbb....', 'bbbbb...', 'bwwwb...', '.www....', '.www....', '........', '........', '........'],
+  ],
+  wizard: [
+    ['........', '.pppppp.', '.pgggwp.', '.pppppp.', '.pwwwwp.', '.pppppp.', '........', '........'],
+    ['......g.', '.....ggg', '....w.g.', '...w....', '..w.....', '.w......', '........', '........'],
   ],
   apothecary: [
     ['..ee....', '..ii....', '.irri...', 'irrrri..', 'irrrri..', '.iiii...', '........', '........'],
@@ -190,6 +195,27 @@ function sign(kind: string): Canvas {
   return c;
 }
 
+/** A reading stand with an open book on a slanted desk, 1 cell wide and 1.5 tall. */
+function lectern(): Canvas {
+  const c = new Canvas(16, 24);
+  const PAGE: RGB = [236, 236, 226];
+  c.rect(3, 21, 10, 3, BEAM_DARK); // foot
+  c.rect(6, 10, 4, 11, PLANK); // post
+  c.rect(6, 10, 1, 11, PLANK_DARK);
+  c.rect(1, 4, 14, 6, BEAM); // desk
+  c.rect(1, 3, 14, 2, PLANK_LIGHT);
+  c.rect(1, 9, 14, 1, BEAM_DARK);
+  c.rect(2, 0, 6, 5, PAGE); // the open book
+  c.rect(8, 0, 6, 5, PAGE);
+  c.rect(7, 0, 1, 5, INK);
+  c.rect(3, 1, 4, 1, [150, 120, 90]);
+  c.rect(3, 3, 3, 1, [150, 120, 90]);
+  c.rect(9, 1, 4, 1, [150, 120, 90]);
+  c.rect(9, 3, 3, 1, [150, 120, 90]);
+  c.rect(7, 5, 1, 4, [140, 90, 200]); // ribbon
+  return c;
+}
+
 // --- Lay the pieces out on the sheet (positions in INTERIOR, catalog.ts) and double them. ---------------------------
 const pieces: Record<keyof typeof INTERIOR, Canvas> = {
   planksA: planks(1),
@@ -202,10 +228,13 @@ const pieces: Record<keyof typeof INTERIOR, Canvas> = {
   shelfArmory: shelf('armory'),
   shelfRanger: shelf('ranger'),
   shelfApothecary: shelf('apothecary'),
+  shelfWizard: shelf('wizard'),
   signSmithy: sign('smithy'),
   signArmory: sign('armory'),
   signRanger: sign('ranger'),
   signApothecary: sign('apothecary'),
+  signWizard: sign('wizard'),
+  lectern: lectern(),
 };
 
 const width = Math.max(...Object.values(INTERIOR).map((p) => p.x + p.w));

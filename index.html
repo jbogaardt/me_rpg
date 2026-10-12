@@ -34,6 +34,9 @@
       </div>
     </div>
 
+    <!-- The combos of the wand or tome in hand, lit as they are tapped (src/hud/Hud.ts). Empty for any other weapon. -->
+    <ul id="combo-hud" aria-label="Spell combos" hidden></ul>
+
     <!-- Co-op map: the whole zone, semi-transparent, with a pin per player (each in that player's colour). -->
     <div id="map-overlay" aria-hidden="true" hidden>
       <img alt="" />
@@ -48,7 +51,6 @@
         <div id="dpad-knob"></div>
       </div>
       <div id="buttons">
-        <div id="btn-b" role="button" aria-label="Magic" data-key="KeyK">B</div>
         <div id="btn-a" role="button" aria-label="Attack / talk" data-key="KeyJ">A</div>
       </div>
     </div>
@@ -127,7 +129,7 @@
           <section id="menu-quests" hidden></section>
           <section id="menu-controls" hidden>
             <div id="aim-setting">
-              <h3>Aim <small>weapons &amp; magic</small></h3>
+              <h3>Aim <small>weapons &amp; spells</small></h3>
               <div id="aim-mode" role="radiogroup" aria-label="Aiming">
                 <button type="button" role="radio" data-aim="move" aria-checked="true">Way you walk</button>
                 <button type="button" role="radio" data-aim="mouse" aria-checked="false">Mouse</button>
@@ -150,7 +152,7 @@
                 <tr data-edited><td>Move</td><td data-bound="move"></td><td>D-pad</td></tr>
                 <tr data-edited><td>Attack / shoot / talk</td><td data-bound="attack"></td><td>A</td></tr>
                 <tr><td>Next line</td><td data-bound="attack"></td><td>A or tap the box</td></tr>
-                <tr data-edited><td>Magic</td><td data-bound="magic"></td><td>B</td></tr>
+                <tr><td>Cast a combo (wand or tome)</td><td>Tap four directions: ↑ ↑ ← →</td><td>Flick the D-pad the same way</td></tr>
                 <tr><td>Menu</td><td data-bound="menu"></td><td>☰</td></tr>
                 <tr data-edited><td>Inventory</td><td data-bound="inventory"></td><td>I button</td></tr>
                 <tr><td>Map (online)</td><td data-bound="map"></td><td>M button</td></tr>

@@ -20,10 +20,10 @@ export const packFree = (hero: Hero): number => packSize(hero) - hero.pack.lengt
 /** Does the hero have room for one more? */
 export const hasRoom = (hero: Hero): boolean => packFree(hero) > 0;
 
-/** Can `item` be worn in `slot`? A one-handed (non-bow) weapon fits the off-hand too. */
+/** Can `item` be worn in `slot`? A one-handed blade (not a bow, wand or tome) fits the off-hand too. */
 export function fitsSlot(item: Item, slot: GearSlot): boolean {
   if (item.slot === slot) return true;
-  return slot === 'offhand' && item.slot === 'weapon' && !item.ranged;
+  return slot === 'offhand' && item.slot === 'weapon' && !item.ranged && !item.focus;
 }
 
 /** Slots an item can go in, the natural one first (the weapon slot before the off-hand). */
@@ -110,6 +110,8 @@ export function compare(item: Item, worn: Item | undefined) {
 
 /** Which picture an item gets in the pack screen. */
 export type IconKind =
+  | 'wand'
+  | 'tome'
   | 'sword'
   | 'bow'
   | 'dagger'
@@ -126,6 +128,7 @@ export type IconKind =
 
 export function iconKind(item: Item): IconKind {
   if (item.ranged) return 'bow';
+  if (item.focus) return item.focus.kind;
   switch (item.slot) {
     case 'offhand':
       return item.attack && !item.defense ? 'dagger' : 'shield';
@@ -163,6 +166,8 @@ const worth = (item: Item | undefined) => (item ? (item.attack ?? 0) + (item.def
 export function isBetter(hero: Hero, item: Item): boolean {
   if (!item.slot) return false;
   const current = item.slot === 'weapon' ? hero.weapon : hero[item.slot];
+  // A wand or tome plays differently from a blade: never swapped in (or out) on its numbers alone, the player picks it.
+  if (current && !!item.focus !== !!current.focus) return false;
   return !current || worth(item) > worth(current);
 }
 

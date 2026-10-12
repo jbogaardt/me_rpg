@@ -1,4 +1,5 @@
 import type { Hero } from '../systems/combat';
+import { arrows, progress, SPELLS } from '../systems/spells';
 
 // Health / mana bars, mirrored on one line (XP and level are in the pause menu). HTML rather than
 // canvas so the text stays sharp on high-DPI phones and can respect notch safe areas; markup and
@@ -33,9 +34,13 @@ export class Hud {
   private hp = bar('hud-hp');
   private mp = bar('hud-mp');
   private gold = document.getElementById('hud-gold')!;
+  private combos = document.getElementById('combo-hud')!;
   private shown = '';
+  private shownCombos = '';
 
-  update(hero: Hero) {
+  /** `typed` is what the player has tapped toward a combo so far (lights the first arrows of the ones it leads to). */
+  update(hero: Hero, typed = '') {
+    this.updateCombos(hero, typed);
     const s = hero.stats;
     const hp = Math.ceil(s.hp);
     const mp = Math.floor(s.mp);
@@ -51,5 +56,26 @@ export class Hud {
   private set(b: Bar, value: number, max: number) {
     b.fill.style.setProperty('--frac', String(Math.max(0, Math.min(1, value / max))));
     if (b.label) b.label.textContent = `${value} / ${max}`;
+  }
+
+  /** The wand's or tome's combos, each arrow lit once tapped and a combo dimmed while there is not the mana for it. */
+  private updateCombos(hero: Hero, typed: string) {
+    const focus = hero.weapon.focus;
+    const mp = Math.floor(hero.stats.mp);
+    const key = focus ? `${hero.weapon.name}|${typed}|${focus.combos.map((c) => (mp >= c.cost ? 1 : 0)).join('')}` : '';
+    if (key === this.shownCombos) return;
+    this.shownCombos = key;
+    this.combos.hidden = !focus;
+    if (!focus) {
+      this.combos.innerHTML = '';
+      return;
+    }
+    this.combos.innerHTML = focus.combos
+      .map((c) => {
+        const lit = progress(typed, c.keys);
+        const keys = [...arrows(c.keys)].map((a, i) => (i < lit ? `<b>${a}</b>` : `<i>${a}</i>`)).join('');
+        return `<li${mp >= c.cost ? '' : ' class="poor"'}><span class="keys">${keys}</span> ${SPELLS[c.spell].name} <small>${c.cost}</small></li>`;
+      })
+      .join('');
   }
 }

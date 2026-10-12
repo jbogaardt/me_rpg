@@ -69,7 +69,7 @@ filter), `ridge`.
   water patch 1 cell inside its fill (the lake in `maps/frostlands.ts`). `snow`/`ice` are recolours (see Biomes in CLAUDE.md);
   re-run `npm run tilesets` after editing `tools/map/recolor.ts`. Water/ice rects are walkable until you `block` the inner cells.
 - Interior pieces (`interior.png`, drawn by `tools/map/interior.ts`): ground `planks`, `wall`, `mat`; prefabs `counter` (4x1.5), `shelf<Shop>` (3x2) and `sign<Shop>` (4x2) for each of smithy/armory/ranger/apothecary.
-- Prefabs: trees `treeA`/`treeB` (+ `frostTree*`, `dryTree*`, `jungleTree*`, `deadTree*`, `swampTree*`; 3x3, block bottom two rows, top row walk-behind), bushes
+- Prefabs: trees `treeA`..`treeF` (+ `frostTree*`, `dryTree*`, `jungleTree*`, `deadTree*`, `swampTree*`; LPC trees of 3-4 cells, the bottom 75% blocks, the crown is walk-behind; use the `TREES`/`FROST_TREES`... arrays), bushes
   `bush`/`frostBush`/`dryBush`/`jungleBush`/`deadBush`/`swampBush` (2x2), LPC `sandBoulder(B)`/`darkBoulder(B)` (2 wide),
   `sandSpire`/`darkSpire`/`menhir` (1 wide), `lilyPads`/`lilyFlower`/`lilyFlowerB`/`lilyRed` (on water), `reedBed`/`reedStalks` (3 and 1 cells wide, 3 tall: on the bank beside water), rocks `rock` (pale), `rockSmall`, `rockB`, `rockC` (+ `frostRock*`), `barrel`, and
   decorations `flowerRed`/`flowersPurple` (no collision). Mix variants to avoid repetition.

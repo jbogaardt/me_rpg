@@ -285,7 +285,7 @@ describe('gear buffs', () => {
     hero.charm = ITEMS.hourglassPendant;
     hero.feet = ITEMS.duneglassBoots;
     expect(speedFactor(hero)).toBeCloseTo(1.22);
-    expect(spellPower(hero)).toBe(hero.stats.magic + hero.spell.power + 4);
+    expect(spellPower(hero)).toBe(hero.stats.magic + 4);
     expect(xpFor(hero, 100)).toBe(110);
     hero.head = ITEMS.tuskbreakerHelm;
     expect(goldFor(hero, 100)).toBe(115);

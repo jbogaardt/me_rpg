@@ -92,7 +92,7 @@ export interface BiomeApi extends ZoneApi {
   near(col: number, row: number): [number, number];
   /**
    * Sprinkle props over the free cells of `rect` (default: the whole biome), deterministically: `count` of them, each
-   * a random pick of `names`, with at least `margin` free cells around each (default 1, so paths stay open).
+   * a random pick of `names`, with at least `margin` free cells around each (default 1, 2 for trees, so paths stay open and crowns do not clump).
    * `where` filters cells further (e.g. only on sand).
    */
   scatter(
@@ -712,7 +712,8 @@ class BiomeWindow implements BiomeApi {
     opts: { count: number; rect?: Rect; seed?: number; margin?: number; where?: (col: number, row: number) => boolean },
   ) {
     const r = opts.rect ?? this.bounds;
-    const m = opts.margin ?? 1;
+    // Big crowns need air between them: a tree keeps 2 free cells round its feet unless told otherwise.
+    const m = opts.margin ?? (names.some((n) => PREFABS[n].tag === 'tree') ? 2 : 1);
     const rand = rng(opts.seed ?? r.col * 31 + r.row * 977 + opts.count * 7 + names.length);
     const cells: [number, number][] = [];
     for (let row = r.row; row < r.row + r.h; row++)

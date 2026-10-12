@@ -149,8 +149,8 @@ export default defineBiome({
     ] as const)
       z.site('echostone', ...near(x, y));
 
-    z.scatter(['treeA', 'treeB'], { count: 70, where: open, seed: 11 });
-    z.scatter(['bush'], { count: 90, where: open, seed: 12 });
+    z.scatter([...TREES], { count: 70, where: open, seed: 11 });
+    z.scatter(['bush'], { count: 36, where: open, seed: 12 });
     z.scatter(['rock', 'rockSmall', 'rockB', 'rockC'], { count: 45, where: open, seed: 13 });
     z.scatter(['flowerRed', 'flowersPurple'], { count: 220, where: open, margin: 0, seed: 14 });
   },

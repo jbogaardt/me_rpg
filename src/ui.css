@@ -48,6 +48,24 @@
   right: calc(8px + env(safe-area-inset-right));
   display: flex; justify-content: space-between; align-items: center;
 }
+/* The combos of a wand or tome, under the bars: arrows light up as they are tapped, dim when the mana is short. */
+#combo-hud {
+  position: fixed; z-index: 2; pointer-events: none; margin: 0; padding: 4px 8px; list-style: none;
+  top: calc(52px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
+  background: rgba(23, 18, 12, 0.6); border: 1px solid var(--gold-dim); border-radius: 3px;
+  font: 700 12px/17px var(--title); color: #e8dcc0; text-shadow: 0 1px 2px #000;
+}
+#combo-hud[hidden] { display: none; }
+#combo-hud .keys { display: inline-block; min-width: 4.4em; letter-spacing: 0.12em; }
+#combo-hud i { font-style: normal; opacity: 0.8; }
+#combo-hud b { color: #7fe6ff; text-shadow: 0 0 6px #4de3ff; }
+#combo-hud small { color: #8fb3ff; font-size: 11px; }
+#combo-hud small::after { content: ' MP'; }
+#combo-hud .poor { opacity: 0.5; }
+.combo-list { list-style: none; margin: 4px 0 0; padding: 0; font-size: 12px; }
+.combo-list .keys { display: inline-block; min-width: 4.4em; font-weight: 700; letter-spacing: 0.12em; }
+.combo-list small { opacity: 0.75; }
+
 /* HP and MP as mirror-image bars on one line: HP drains toward the left edge, MP toward the right.
    XP and level are in the pause menu. */
 #hud-stats { display: flex; gap: 6px; flex: 0 1 400px; min-width: 0; margin-right: 8px; padding: 3px 4px; }
@@ -72,14 +90,14 @@
 .bar.xp .fill { background-image: var(--grad-xp); }
 
 /* Square wooden buttons from the kit */
-.wood-btn, #menu-btn, #map-btn, #inv-btn, #btn-a, #btn-b, #menu .close, #shop .close, #trade .close {
+.wood-btn, #menu-btn, #map-btn, #inv-btn, #btn-a, #menu .close, #shop .close, #trade .close {
   background: url('./ui/button.png') center / 100% 100% no-repeat;
   color: var(--gold); font-family: var(--title); font-weight: 700; text-align: center;
   text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 #menu-btn, #map-btn, #inv-btn, #menu .close, #shop .close, #trade .close { background-image: url('./ui/button-small.png'); }
-#menu-btn.pressed, #map-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #btn-b.pressed, #menu .close.pressed, #shop .close.pressed, #trade .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
+#menu-btn.pressed, #map-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #menu .close.pressed, #shop .close.pressed, #trade .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
 #hud-buttons { display: flex; gap: 6px; flex: none; }
 #menu-btn, #map-btn, #inv-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
 #map-btn[hidden] { display: none; }
@@ -141,14 +159,13 @@
 #dpad.up .up, #dpad.down .down, #dpad.left .left, #dpad.right .right {
   opacity: 1; filter: brightness(1.5) drop-shadow(0 0 5px rgba(242, 211, 138, 0.9));
 }
-/* A (attack/talk) big, bottom-right; B (magic) up and to its left. */
+/* A (attack/talk), bottom-right. Combos are tapped on the D-pad, so there is no second button. */
 #buttons {
-  position: absolute; width: 170px; height: 150px;
+  position: absolute; width: 100px; height: 130px;
   right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
 }
-#btn-a, #btn-b { position: absolute; pointer-events: auto; touch-action: none; }
+#btn-a { position: absolute; pointer-events: auto; touch-action: none; }
 #btn-a { right: 0; bottom: 20px; width: 84px; height: 84px; font-size: 34px; line-height: 84px; }
-#btn-b { left: 0; top: 0; width: 64px; height: 64px; font-size: 26px; line-height: 64px; color: #bfe0ff; }
 
 /* --- Pause menu --- */
 #menu, #shop, #trade {

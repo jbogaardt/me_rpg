@@ -82,6 +82,10 @@ export interface WoodsOptions {
   seed?: number;
   /** Cells that block even where no art covers them (a biome's wall along its border: nobody slips through). */
   hard?: (col: number, row: number) => boolean;
+  /** Fill every bare cell with a tree, bush or rock too (a dense thicket); by default only a wall's border row is. */
+  fill?: boolean;
+  /** Share of lattice spots a grove plants (default GROVE_DENSITY); walls always plant them all. */
+  density?: number;
 }
 
 /** A wood's cell blocks when its art covers at least this much of it; barer cells at its edge stay walkable. */
@@ -264,6 +268,14 @@ interface Placed {
  * Builder passed to a zone spec. Coordinates are cells unless named px/py. Later calls paint over
  * earlier ones, so lay down ground first, then features, then overrides.
  */
+/** Spacing of the staggered lattice trees stand on in woods: wide enough that crowns overlap only a little. */
+const WOOD_COL = 90;
+const WOOD_ROW = 84;
+const FILLER_SHARE = 0.2; // share of bare wall cells a bush or rock may fill
+const GROVE_DENSITY = 0.4;
+const WALL_DENSITY = 0.55; // share of lattice spots a wall plants
+const WALL_FILL = 0.5; // share of bare cells on a wall's border row that get a tree (the rest still block, unseen)
+
 export class Zone {
   private ground: ({ sheet: string; x: number; y: number } | null)[];
   private placed: Placed[] = [];
@@ -535,18 +547,25 @@ export class Zone {
     const [minC, maxC] = [Math.min(...spots.map((s) => s[0])), Math.max(...spots.map((s) => s[0]))];
     const [minR, maxR] = [Math.min(...spots.map((s) => s[1])), Math.max(...spots.map((s) => s[1]))];
     // The lattice is anchored to the world, so neighbouring woods line up.
-    for (let i = Math.floor((minR * CELL - TH) / 52); i * 52 <= (maxR + 1) * CELL; i++) {
-      const stagger = i % 2 ? 23 : 0;
-      for (let j = Math.floor((minC * CELL - TW) / 46) - 1; j * 46 <= (maxC + 1) * CELL; j++) {
-        const px = j * 46 + stagger + Math.round((rand() - 0.5) * 8);
-        tryPlace(trees[Math.floor(rand() * trees.length)], px, i * 52 + Math.round((rand() - 0.5) * 6));
+    for (let i = Math.floor((minR * CELL - TH) / WOOD_ROW); i * WOOD_ROW <= (maxR + 1) * CELL; i++) {
+      const stagger = i % 2 ? WOOD_COL / 2 : 0;
+      for (let j = Math.floor((minC * CELL - TW) / WOOD_COL) - 1; j * WOOD_COL <= (maxC + 1) * CELL; j++) {
+        const px = j * WOOD_COL + stagger + Math.round((rand() - 0.5) * 8);
+        const pick = trees[Math.floor(rand() * trees.length)];
+        const py = i * WOOD_ROW + Math.round((rand() - 0.5) * 6);
+        // Trees are spread out, not a thicket: many lattice spots stay empty (a wall's border row still blocks).
+        if (rand() < (opts.density ?? (opts.hard ? WALL_DENSITY : GROVE_DENSITY))) tryPlace(pick, px, py);
       }
     }
     // Bare cells: the first tree, then bush, then rock that fits over each.
     for (const [c, r] of spots) {
       if (covered.has(key(c, r))) continue;
+      // Only the wall's border row must be filled (it blocks whatever covers it); elsewhere gaps between trees stay open.
+      if (opts.hard && (!opts.hard(c, r) || rand() > WALL_FILL)) continue;
+      if (!opts.hard && !opts.fill) continue;
       [...trees, ...fillers].some((name) => {
         const p = PREFABS[name];
+        if (!trees.includes(name) && rand() > FILLER_SHARE) return false; // a wall is mostly trees, with the odd bush or rock
         const wCells = Math.ceil(p.w / CELL);
         for (let dc = 0; dc < wCells; dc++)
           for (let dr = 0; dr < 2; dr++) {

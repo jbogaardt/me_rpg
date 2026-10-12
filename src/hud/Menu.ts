@@ -131,7 +131,7 @@ export class Menu {
         ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
         ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${gearAttack(hero)} gear)</small>`)}
         ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${gearDefense(hero)} gear)</small>`)}
-        ${row('Magic', `${spellPower(hero)} <small>(${s.magic} + ${hero.spell.power} spell${gearMagic(hero) ? ` + ${gearMagic(hero)} gear` : ''})</small>`)}
+        ${row('Magic', `${spellPower(hero)} <small>(${s.magic} + ${hero.weapon.focus?.power ?? 0} ${hero.weapon.focus?.kind ?? 'weapon'}${gearMagic(hero) ? ` + ${gearMagic(hero)} gear` : ''})</small>`)}
         ${speedFactor(hero) > 1 ? row('Speed', `+${Math.round((speedFactor(hero) - 1) * 100)}% <small>gear</small>`) : ''}
         ${gearRegen(hero) ? row('Mending', `${gearRegen(hero)} <small>HP/s gear</small>`) : ''}
         ${gearMpRegen(hero) ? row('Focus', `${gearMpRegen(hero)} <small>MP/s gear</small>`) : ''}

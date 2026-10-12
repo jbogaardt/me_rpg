@@ -36,7 +36,7 @@ export class Visuals {
     this.arena.zone.ambient?.shake(x + vx * 16, y + vy * 16 - 6, MELEE_REACH);
   }
 
-  /** A player's Time Bolt in flight. `onHit` applies the damage (the host). */
+  /** A player's bolt (wand, tome or spell) in flight. `onHit` applies the damage (the host). */
   bolt(x: number, y: number, vx: number, vy: number, onHit?: (mob: Mob) => void) {
     const { effects } = this.arena;
     const trail = particleEffect('boltTrail', x, y);
@@ -131,6 +131,7 @@ export class Visuals {
       case 'fx':
         this.particles(e.name, e.x, e.y, e.dir);
         if (e.name === 'heroHurt') arena.playerNumbered(e.p)?.body.play('hurt');
+        if (e.name === 'castGlow') arena.playerNumbered(e.p)?.body.play('cast'); // a combo went off
         break;
       case 'defeat':
         break;

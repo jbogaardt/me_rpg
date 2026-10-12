@@ -2,7 +2,7 @@ import { AIM_MODES, type AimMode } from '../core/aim';
 import { aimSetting } from '../core/controls';
 import type { TouchControls } from '../core/touch';
 
-// The Controls tab's aim choice (markup `#aim-setting` in index.html): aim weapons and magic the way you last walked
+// The Controls tab's aim choice (markup `#aim-setting` in index.html): aim weapons and spells the way you last walked
 // (the original), or at the mouse pointer. On a touch screen the "mouse" is the spot you last tapped on the game.
 // The saving and the rules are in core/aim.ts; the scene reads the choice through `pointerAim` in core/controls.ts.
 
@@ -29,8 +29,8 @@ export class AimSetting {
     this.note.textContent =
       aimSetting.mode === 'mouse'
         ? touch
-          ? 'Tap the game to point; the attack and magic buttons fire that way.'
-          : 'Weapons and magic point at the mouse. Range is unchanged.'
-        : 'Weapons and magic point the way you last walked.';
+          ? 'Tap the game to point; the attack button and your spells go that way.'
+          : 'Weapons and spells point at the mouse. Range is unchanged.'
+        : 'Weapons and spells point the way you last walked.';
   }
 }
