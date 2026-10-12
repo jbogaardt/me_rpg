@@ -49,6 +49,9 @@ describe('limitOffset', () => {
     expect(limitOffset(-400, 640, 1, undefined, 1200)).toBe(-400); // already inside
     expect(limitOffset(-100, 640, 1, 300, undefined)).toBe(-300); // near edge held at 300
     expect(limitOffset(-2000, 640, 2, undefined, 1200)).toBe(-1760); // zoom 2: the far edge is at (640 - offset) / 2
+    // Limits closer than the view is wide: centred between them, whatever the offset asked for.
+    expect(limitOffset(-1000, 640, 1, 300, 700)).toBe(-180);
+    expect(limitOffset(-100, 640, 1, 300, 700)).toBe(-180);
   });
 });
 

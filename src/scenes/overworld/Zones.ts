@@ -179,7 +179,10 @@ export class Zones {
     p.pendingShot = null;
     p.grace = Math.max(p.grace, ARRIVE_GRACE);
     arena.syncHeroBodies();
-    if (p === arena.local) this.show(dest);
+    if (p === arena.local) {
+      this.show(dest);
+      this.transition.align(this.heroOnScreen());
+    }
   }
 
   /**

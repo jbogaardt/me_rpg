@@ -14,9 +14,13 @@ export interface EdgeLimits {
 
 /**
  * Keep a view offset (screen px, as `followOffset` gives it) inside the limits on that axis: `lo` and `hi` are the
- * world px the view's near and far edges may not pass. `screen` is the window size on that axis.
+ * world px the view's near and far edges may not pass. `screen` is the window size on that axis. Limits closer
+ * together than the view is wide cannot both hold: the view is centred between them (a neck of a zone, a small
+ * room) rather than favouring one side, so the player is never shoved to the edge of the screen for nothing.
  */
 export function limitOffset(offset: number, screen: number, zoom: number, lo?: number, hi?: number): number {
+  if (lo !== undefined && hi !== undefined && (hi - lo) * zoom <= screen)
+    return Math.round((screen - (lo + hi) * zoom) / 2);
   let o = offset;
   if (hi !== undefined) o = Math.max(o, screen - hi * zoom); // the view's far edge is at -o/zoom + screen/zoom
   if (lo !== undefined) o = Math.min(o, -lo * zoom);

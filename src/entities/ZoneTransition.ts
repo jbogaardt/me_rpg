@@ -1,8 +1,17 @@
 import { Container, Graphics, Rectangle, Sprite, type Renderer } from 'pixi.js';
 import type { Direction } from '../core/direction';
-import { coverRadius, IRIS_CLOSE, irisAt, slideAt, transitionLength, type TransitionKind } from '../map/transition';
+import {
+  coverRadius,
+  ease,
+  IRIS_CLOSE,
+  irisAt,
+  SLIDE_TIME,
+  slideAt,
+  transitionLength,
+  type TransitionKind,
+} from '../map/transition';
 
-const BACKGROUND = 0x1a1a2e; // the app's clear colour (main.ts), behind a map smaller than the screen
+const BACKGROUND = 0x000000; // the app's clear colour (main.ts): outside a zone is black
 
 interface Point {
   x: number;
@@ -31,6 +40,7 @@ export class ZoneTransition {
   private active = false;
   private held = false;
   private centre: Point = { x: 0, y: 0 }; // where the iris closes, on the old view (screen px)
+  private offset: Point = STILL; // slide: how far the new view starts off to the side, so the hero lines up across the border
 
   constructor(private renderer: Renderer) {
     this.shade.visible = false;
@@ -60,6 +70,7 @@ export class ZoneTransition {
     this.dir = dir;
     this.centre = { ...centre };
     this.t = 0;
+    this.offset = STILL;
     this.active = true;
     if (!stage) return;
     const shown = hide.map((c) => c.visible);
@@ -72,6 +83,17 @@ export class ZoneTransition {
     hide.forEach((c, i) => (c.visible = shown[i] ?? true));
     this.shot = new Sprite(texture);
     this.view.addChildAt(this.shot, 0);
+  }
+
+  /**
+   * Slide: the hero is on screen at `centre` in the new view as it will rest. Across the border the hero keeps the
+   * screen position they had along it (walking up out of the old view at one column, they come in at that column),
+   * and the new view eases to its own framing as it settles, so nothing jumps sideways.
+   */
+  align(centre: Point) {
+    if (this.kind !== 'slide') return;
+    const across = this.dir === 'left' || this.dir === 'right';
+    this.offset = across ? { x: 0, y: this.centre.y - centre.y } : { x: this.centre.x - centre.x, y: 0 };
   }
 
   /** Keep the iris shut (the next zone is still loading), or let it open. */
@@ -99,7 +121,8 @@ export class ZoneTransition {
         this.finish();
         return STILL;
       }
-      return fresh;
+      const rest = 1 - ease(this.t / SLIDE_TIME);
+      return { x: fresh.x + Math.round(this.offset.x * rest), y: fresh.y + Math.round(this.offset.y * rest) };
     }
 
     const { open, closing } = irisAt(this.t, this.held);
