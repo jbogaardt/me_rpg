@@ -67,7 +67,7 @@ export async function loadSprites(onProgress?: Progress): Promise<Sprites> {
   await wardrobe.load(requiredParts(), onProgress);
   Assets.add({ alias: 'sprites:chests', src: tilesetUrl('chests.png') });
   const pets = {} as Record<PetSheet, Texture>;
-  for (const sheet of ['dogs', 'cats'] as const) {
+  for (const sheet of ['dogs', 'cats', 'rat'] as const) {
     Assets.add({ alias: `sprites:pets:${sheet}`, src: publicUrl(`sprites/pets/${sheet}.png`) });
     pets[sheet] = await Assets.load<Texture>(`sprites:pets:${sheet}`);
   }

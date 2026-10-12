@@ -75,3 +75,7 @@ Dog and cat sprite sheets (32x32 frames, four directions, walk and sleeping fram
 GPL 2.0 / GPL 3.0 / OGA-BY 3.0; credit the author and link the page). Used unmodified. **Still to confirm** against the
 page's own licence list that this is the exact set the sheets came from; if it is the CC-BY-SA variant, the same
 share-alike note as the characters above applies.
+
+The rat (`public/sprites/pets/rat.png`, the top-left animal of the sheet, cropped) comes from OpenGameArt as well, most
+likely "LPC Rat, Cat and Dog" by Reemax, https://opengameart.org/content/lpc-rat-cat-and-dog (CC-BY 3.0 / CC-BY-SA 3.0 /
+GPL; credit the author and link the page). Same caveat: confirm the page and licence.

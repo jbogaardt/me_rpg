@@ -46,16 +46,17 @@ export class Pet extends Container {
   update(dt: number) {
     this.time += dt;
     this.awake = Math.max(0, this.awake - dt);
-    this.draw(this.awake > 0 ? 'stand' : petPose(this.time, this.seed));
+    this.draw(this.awake > 0 || !this.kind.lies ? 'stand' : petPose(this.time, this.seed));
   }
 
   private draw(pose: PetPose) {
-    const key = `${pose}:${this.direction}`;
+    const step = Math.floor(this.time * 3);
+    const key = `${pose}:${this.direction}:${this.kind.idleFrames > 1 ? step % this.kind.idleFrames : 0}`;
     if (key === this.shown) return;
     this.shown = key;
     let tex = this.frames.get(key);
     if (!tex) {
-      const f = petFrame(this.kind, pose, this.direction);
+      const f = petFrame(this.kind, pose, this.direction, step);
       const made = makeFrame(this.sheet, f.x, f.y, f.w, f.h);
       if (!made) throw new Error('Pet sheet is too small for its frame');
       this.frames.set(key, (tex = made));

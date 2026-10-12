@@ -16,8 +16,8 @@ describe('pets', () => {
       for (const pose of ['stand', 'lie'] as const) {
         for (const dir of ['up', 'down', 'left', 'right'] as const) {
           const f = petFrame(kind, pose, dir);
-          expect(f.x + f.w).toBeLessThanOrEqual(512);
-          expect(f.y + f.h).toBeLessThanOrEqual(256);
+          expect(f.x + f.w).toBeLessThanOrEqual(kind.sheet === 'rat' ? 96 : 512);
+          expect(f.y + f.h).toBeLessThanOrEqual(kind.sheet === 'rat' ? 128 : 256);
         }
       }
     }
@@ -28,6 +28,14 @@ describe('pets', () => {
     expect(petFrame(kind, 'lie', 'left').y).toBe(3 * PET_FRAME);
     expect(petFrame(kind, 'lie', 'down').y).toBe(0);
     expect(petFrame(kind, 'stand', 'down').y).toBe(2 * PET_FRAME);
+  });
+
+  it('squeaks, and a rat only stands, twitching its tail', () => {
+    const rat = PET_KINDS.rat!;
+    expect(petSound(rat, 0)).toBe('Squeak!');
+    expect(petFrame(rat, 'lie', 'left')).toEqual(petFrame(rat, 'stand', 'left'));
+    expect(petFrame(rat, 'stand', 'down', 2).x).toBe(2 * PET_FRAME);
+    expect(petFrame(rat, 'stand', 'down', 3).x).toBe(0);
   });
 
   it('alternates between standing and lying', () => {

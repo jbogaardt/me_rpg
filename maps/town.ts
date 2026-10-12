@@ -72,6 +72,7 @@ export default defineBiome({
     z.pet('dog_white', ...z.near(...at(19.2, 19.9)));
     z.pet('cat_ginger', ...z.near(...at(13.7, 20.3)));
     z.pet('cat_black', ...z.near(...at(17.9, 20.6)));
+    z.pet('rat', ...z.near(...at(14.9, 20.9))); // by the barrels
 
     // --- A pond and gardens in the west of town ---------------------------------------------------------------
     const water = pond(z, area(11.6, 20.6, 1.6, 1), { shore: 'sand' });
