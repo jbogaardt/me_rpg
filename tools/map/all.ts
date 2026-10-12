@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { MapData } from '../../src/map/types';
-import { checkDoors, checkMap, checkSeams, type Report } from './check';
+import { checkCrossings, checkDoors, checkMap, checkSeams, type Report } from './check';
 import { ROOT } from './image';
 import { buildWorld, World, type BiomeSpec, type WorldLayout } from './world';
 import { buildSpec, Zone, type ZoneSpec } from './zone';
@@ -58,5 +58,5 @@ export async function generateAll(): Promise<{
     zones.set(spec.name, { data, report: checkMap(data, z.reasons) });
   }
   const maps = new Map([...zones].map(([n, z]) => [n, z.data]));
-  return { zones, errors: [...checkSeams(new World(layout), maps), ...checkDoors(maps)] };
+  return { zones, errors: [...checkSeams(new World(layout), maps), ...checkDoors(maps), ...checkCrossings(maps)] };
 }

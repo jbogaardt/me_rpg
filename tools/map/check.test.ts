@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateAll } from './all';
-import { checkDoors, checkMap } from './check';
+import { checkCrossings, checkDoors, checkMap } from './check';
 import { buildSpec, Zone } from './zone';
 
 /** A small open grass field; `edit` adds whatever the case under test needs. */
@@ -65,6 +65,49 @@ describe('checkDoors', () => {
   it('errors when the other zone has no way back', () => {
     const errors = pair((a) => a.door(2, 2, 1, 'b', 8, 8));
     expect(errors.join('\n')).toMatch(/"b" has no door back to "a"/);
+  });
+});
+
+/** Two 40x12 zones, `a` with three doors on its east edge into the west edge of `b`; `edit` spoils `b`. */
+function crossing(edit: (b: Zone) => void) {
+  const a = new Zone(40, 12);
+  const b = new Zone(40, 12);
+  for (const z of [a, b]) {
+    z.fill('grass');
+    z.spawn(20, 6);
+  }
+  for (let row = 5; row <= 7; row++) {
+    a.door(39, row, 1, 'b', 0, row);
+    b.door(0, row, 1, 'a', 39, row);
+  }
+  edit(b);
+  const named = (z: Zone, dir: 'left' | 'right') => {
+    const d = z.toMapData();
+    return { ...d, doors: d.doors.map((x) => ({ ...x, dir })) };
+  };
+  return checkCrossings(
+    new Map([
+      ['a', named(a, 'right')],
+      ['b', named(b, 'left')],
+    ]),
+  );
+}
+
+describe('checkCrossings', () => {
+  it('accepts a clear way through the doors', () => {
+    expect(crossing(() => {})).toEqual([]);
+  });
+
+  it('errors on a trunk or bush standing in the doorway, even well past the door', () => {
+    expect(crossing((b) => b.block({ col: 3, row: 6, w: 1, h: 1 }, 'tree')).join('\n')).toMatch(
+      /door \(39,6\) into b \(0,6\): the way ahead is blocked 3 cells past the door/,
+    );
+  });
+
+  it('errors on an arrival that is walled in, so the player could never walk on', () => {
+    const wall = (b: Zone) => b.block({ col: 8, row: 0, w: 1, h: 12 }, 'wall');
+    const errors = crossing((b) => (b.spawn(30, 6), wall(b)));
+    expect(errors.join('\n')).toMatch(/a dead end/);
   });
 });
 

@@ -4,6 +4,7 @@ import { SHOPS } from '../../src/systems/shops';
 import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
 import { coverage, sheet } from './image';
+import { walkFrom } from './walk';
 
 export interface Report {
   errors: string[]; // the map is broken (fails the build)
@@ -212,6 +213,48 @@ export function checkDoors(maps: Map<string, MapData>): string[] {
       if (!target.doors.some((t) => t.to.zone === name)) {
         errors.push(`${where}: "${door.to.zone}" has no door back to "${name}"`);
       }
+    }
+  }
+  return errors;
+}
+
+const STEP_OF = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] } as const;
+/** How many cells past a door the way ahead must stay open, and how far a body must be able to walk from it. */
+const CLEAR_AHEAD = 6;
+const WALK_OUT = 30;
+
+/**
+ * What a player meets after stepping through each door (`maps` is every zone by name): they arrive on open ground that
+ * fits their feet; the line ahead of every door cell stays open for `CLEAR_AHEAD` cells, so there is no bush or trunk in
+ * the doorway; and walking with the real collision box they get at least `WALK_OUT` cells away (or to the zone's
+ * spawn, in a small zone), so the doorway is not a pocket. Doors that name no direction (shop doors) are left to `checkDoors`.
+ */
+export function checkCrossings(maps: Map<string, MapData>): string[] {
+  const errors: string[] = [];
+  for (const [name, d] of maps) {
+    for (const door of d.doors) {
+      const target = maps.get(door.to.zone);
+      if (!target || !door.dir) continue;
+      const { col, row } = door.to;
+      const where = `${name}: door (${door.col},${door.row}) into ${door.to.zone} (${col},${row})`;
+      const blocked = new Set(target.collision);
+      const [dc, dr] = STEP_OF[door.dir];
+      let shut = -1;
+      for (let k = 0; k < CLEAR_AHEAD && shut < 0; k++) {
+        const c = col + k * dc,
+          r = row + k * dr;
+        if (c < 0 || r < 0 || c >= target.width || r >= target.height || blocked.has(r * target.width + c)) shut = k;
+      }
+      if (shut >= 0) {
+        errors.push(`${where}: the way ahead is blocked ${shut} cells past the door`);
+        continue;
+      }
+      const walk = walkFrom(target, col, row, WALK_OUT);
+      if (!walk.start) errors.push(`${where}: the feet do not fit where the player arrives`);
+      else if (walk.far < WALK_OUT && !walk.reached(target.spawn.col, target.spawn.row))
+        errors.push(
+          `${where}: a dead end, a body can only walk ${walk.far} cells from here and never reaches the spawn`,
+        );
     }
   }
   return errors;

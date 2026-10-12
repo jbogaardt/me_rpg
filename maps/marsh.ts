@@ -132,6 +132,15 @@ export default defineBiome({
         const east = land(col, row) && land(col + 1, row) && land(col + 2, row) && isWater(col + 3, row);
         const west = land(col, row) && land(col + 1, row) && land(col + 2, row) && isWater(col - 1, row);
         if (!east && !west) continue;
+        // Never on or beside a causeway: a bed there narrows the way, and walking into it looks like being stuck in a bush.
+        let clear = true;
+        for (let dy = -3; dy <= 1; dy++)
+          for (let dx = -1; dx <= 3; dx++) {
+            const c = col + dx,
+              r = row + dy;
+            if (inside(c, r) && away[idx(c, r)] <= 2) clear = false;
+          }
+        if (!clear) continue;
         z.prop(reeds % 3 ? 'reedBed' : 'reedStalks', col, row);
         stood.push([col, row]);
         reeds++;
