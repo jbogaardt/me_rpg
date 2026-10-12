@@ -30,6 +30,7 @@ export default defineBiome({
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(29, 3.2));
+    z.pet('rat', ...near(30.2, 3.9));
 
     // --- Ponds, pools and a bog --------------------------------------------------------------------------------
     for (const [i, [x, y, w, h]] of (

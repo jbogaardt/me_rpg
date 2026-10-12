@@ -34,6 +34,7 @@ export default defineBiome({
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(16, 9.2));
+    z.pet('cat_black', ...near(17.2, 9.9));
 
     // --- The graveyard: rows of standing stones on cracked flags --------------------------------------------------
     const yard = blob(area(12, 8.1, 2.8, 1.6), 9, 0.25);

@@ -34,6 +34,7 @@ export default defineBiome({
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(30.8, 14.2));
+    z.pet('dog_white', ...near(32.0, 14.9));
 
     // --- Frozen lakes, slippery ---------------------------------------------------------------------------------
     for (const [x, y, w, h] of [

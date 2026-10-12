@@ -1,20 +1,16 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
-import { directionToward, type Direction } from '../core/direction';
 import { makeFrame } from '../core/textures';
-import { petFrame, petPose, type PetKind, type PetPose } from '../systems/pets';
-
-/** How long a pet stays up after being spoken to, in seconds. */
-const AWAKE = 4;
+import { petFrame, PetBrain, type PetKind } from '../systems/pets';
 
 /**
- * A town pet: one still sprite that stands, and lies down for a while now and then. Its container origin is the feet, like
- * a `Character`, so it y-sorts the same way. Purely local scenery (not synced in co-op, like the NPC); it does not block.
+ * A pet: a sprite driven by a `PetBrain`, which stands about, lies down and ambles round its home. Its container origin is
+ * the feet, like a `Character`, so it y-sorts the same way. Purely local scenery (not synced in co-op, like the NPC: each
+ * player sees their own wandering); it does not block anyone.
  */
 export class Pet extends Container {
   private sprite: Sprite;
-  private direction: Direction;
-  private time: number;
-  private awake = 0;
+  private brain: PetBrain;
+  private time = 0;
   private shown = '';
   private frames = new Map<string, Texture>();
   /** How many times it has been spoken to (picks its next sound). */
@@ -23,40 +19,46 @@ export class Pet extends Container {
   constructor(
     readonly kind: PetKind,
     private sheet: Texture,
-    private seed: number,
+    home: { x: number; y: number },
+    free: (x: number, y: number) => boolean,
+    seed: number,
   ) {
     super();
-    this.direction = seed % 2 ? 'left' : 'right';
-    this.time = seed * 2.3;
+    // Everyone gets a different (but repeatable) wander.
+    let state = seed * 2654435761;
+    const rng = () => (state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 4294967296;
+    this.brain = new PetBrain(kind, home, free, rng);
     const shadow = new Graphics().ellipse(0, -1, 9, 3.5).fill({ color: 0x000000, alpha: 0.22 });
     this.sprite = new Sprite();
     this.sprite.anchor.set(0.5, 0.9);
     this.addChild(shadow, this.sprite);
-    this.draw('stand');
+    this.position.set(home.x, home.y);
+    this.draw();
   }
 
   /** Turn toward (x, y) and stay up for a few seconds: it was spoken to. */
   attend(x: number, y: number) {
-    const d = directionToward(x - this.x, y - this.y);
-    this.direction = d === 'up' ? 'right' : d; // there is no back view worth showing for a friendly turn
-    this.awake = AWAKE;
-    this.draw('stand');
+    this.brain.attend(x, y);
+    this.draw();
   }
 
   update(dt: number) {
     this.time += dt;
-    this.awake = Math.max(0, this.awake - dt);
-    this.draw(this.awake > 0 || !this.kind.lies ? 'stand' : petPose(this.time, this.seed));
+    this.brain.update(dt);
+    this.position.set(this.brain.x, this.brain.y);
+    this.draw();
   }
 
-  private draw(pose: PetPose) {
-    const step = Math.floor(this.time * 3);
-    const key = `${pose}:${this.direction}:${this.kind.idleFrames > 1 ? step % this.kind.idleFrames : 0}`;
+  private draw() {
+    const { pose, dir, step } = this.brain;
+    const idle = Math.floor(this.time * 3);
+    const frame = pose === 'walk' ? step : this.kind.idleFrames > 1 ? idle % this.kind.idleFrames : 0;
+    const key = `${pose}:${dir}:${frame}`;
     if (key === this.shown) return;
     this.shown = key;
     let tex = this.frames.get(key);
     if (!tex) {
-      const f = petFrame(this.kind, pose, this.direction, step);
+      const f = petFrame(this.kind, pose, dir, frame);
       const made = makeFrame(this.sheet, f.x, f.y, f.w, f.h);
       if (!made) throw new Error('Pet sheet is too small for its frame');
       this.frames.set(key, (tex = made));
