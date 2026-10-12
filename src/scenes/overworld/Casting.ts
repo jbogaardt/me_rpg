@@ -13,7 +13,8 @@ import {
   MARK_SECONDS,
   MARK_STING,
   SKILLS,
-  SURGE_SECONDS,
+  VOLLEY_BOLTS,
+  VOLLEY_POWER,
   type SkillCombo,
 } from '../../systems/skills';
 import { SPELLS, type Combo, type Focus } from '../../systems/spells';
@@ -63,7 +64,7 @@ export class Casting {
 
   /** A wand's or tome's plain attack: a free bolt along the aim, as strong as the weapon's attack. */
   basic(p: Player, focus: Focus) {
-    p.attackCooldown = focus.cooldown * this.sim.cooldownScale(p);
+    p.attackCooldown = focus.cooldown;
     p.body.play('cast');
     this.bolt(p, p.aim.x, p.aim.y, attackPower(p.hero) + this.sim.takeEdge(p), BOLT_SPEED); // Arcane Edge adds to it
   }
@@ -94,8 +95,8 @@ export class Casting {
     switch (skill) {
       case 'arcaneEdge':
         return this.edge(p);
-      case 'swiftSurge':
-        return this.surge(p);
+      case 'sparkVolley':
+        return this.fan(p, { keys: '', spell: 'fan', cost: 0, power: VOLLEY_POWER, count: VOLLEY_BOLTS });
       case 'ironSkin':
         return this.guard(p);
       case 'spiritMark':
@@ -107,13 +108,6 @@ export class Casting {
   private edge(p: Player): Cast {
     p.edge = { charges: EDGE_CHARGES, timer: EDGE_SECONDS };
     this.sim.fx('ward', p.body.x, p.body.y - 14);
-    return true;
-  }
-
-  /** Swift Surge: for a few seconds the hero swings, draws and walks faster (Simulation reads `Player.haste`). */
-  private surge(p: Player): Cast {
-    p.haste = SURGE_SECONDS;
-    this.sim.fx('blink', p.body.x, p.body.y - 14);
     return true;
   }
 

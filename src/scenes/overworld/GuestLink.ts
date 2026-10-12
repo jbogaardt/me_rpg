@@ -248,7 +248,6 @@ export class GuestLink {
       auraTint({
         ward: (p.flags & FLAG.ward) !== 0,
         edge: (p.flags & FLAG.edge) !== 0,
-        haste: (p.flags & FLAG.haste) !== 0,
         guard: (p.flags & FLAG.guard) !== 0,
       }),
     );

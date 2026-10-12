@@ -21,7 +21,7 @@ import {
 import { isIce, stepVelocity } from '../../systems/ice';
 import { GIVERS, QUEST_GIVER, recordKill, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
-import { EDGE_SHARE, GUARD_TAKEN, SURGE_COOLDOWN, SURGE_SPEED } from '../../systems/skills';
+import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
 import type { Strike } from '../../entities/WeatherLayer';
 import type { ZoneState } from '../ZoneState';
 import type { Arena } from './Arena';
@@ -113,7 +113,6 @@ export class Simulation {
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
     p.ward = Math.max(0, p.ward - dt);
-    p.haste = Math.max(0, p.haste - dt);
     p.guard = Math.max(0, p.guard - dt);
     p.edge.timer = Math.max(0, p.edge.timer - dt);
     if (p.edge.timer === 0) p.edge.charges = 0;
@@ -140,7 +139,7 @@ export class Simulation {
     const swinging = this.isSwinging(p);
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
     p.body.alpha = p.invuln > 0 && Math.floor(p.invuln * 16) % 2 === 0 ? 0.35 : 1;
-    p.body.setTint(auraTint({ ward: p.ward > 0, edge: p.edge.charges > 0, haste: p.haste > 0, guard: p.guard > 0 }));
+    p.body.setTint(auraTint({ ward: p.ward > 0, edge: p.edge.charges > 0, guard: p.guard > 0 }));
     p.body.animate(dt * 1000, p.moving);
   }
 
@@ -159,13 +158,7 @@ export class Simulation {
       else p.body.face(dy > 0 ? 'down' : 'up');
       p.aim = wish;
     }
-    p.vel = stepVelocity(
-      p.vel,
-      wish,
-      SPEED * speedFactor(p.hero) * (p.haste > 0 ? SURGE_SPEED : 1),
-      dt,
-      isIce(data, p.body.x, p.body.y - 1),
-    );
+    p.vel = stepVelocity(p.vel, wish, SPEED * speedFactor(p.hero), dt, isIce(data, p.body.x, p.body.y - 1));
     if (p.vel.x || p.vel.y) {
       const [x, y] = [p.body.x, p.body.y];
       collision.slide(p.body, p.vel.x * dt, p.vel.y * dt, this.arena.bodies());
@@ -202,7 +195,7 @@ export class Simulation {
       this.draw(p, bow);
       return;
     }
-    p.attackCooldown = ATTACK_COOLDOWN * this.cooldownScale(p);
+    p.attackCooldown = ATTACK_COOLDOWN;
     p.body.play('slash');
     const dir = p.body.facing;
     const [vx, vy] = DIR_VEC[dir];
@@ -219,11 +212,6 @@ export class Simulation {
     }
   }
 
-  /** How much of the usual time between attacks a hero waits: less while Swift Surge lasts. */
-  cooldownScale(p: Player): number {
-    return p.haste > 0 ? SURGE_COOLDOWN : 1;
-  }
-
   /**
    * Arcane Edge (systems/skills.ts): spend one charge on an attack and say how much magic damage it adds (0 with none left).
    * Used by every attack: a sword swing, an arrow's release and a wand's bolt.
@@ -237,7 +225,7 @@ export class Simulation {
   /** Start drawing a bow: the arrow flies when the string is let go (`release`), a moment into the animation. */
   private draw(p: Player, bow: Ranged) {
     if (p.pendingShot) return;
-    p.attackCooldown = bow.cooldown * this.cooldownScale(p);
+    p.attackCooldown = bow.cooldown;
     p.pendingShot = { timer: SHOOT_RELEASE_MS / 1000, bow, damage: attackPower(p.hero) };
     p.body.play('shoot');
     this.emit({ type: 'draw', x: round1(p.body.x), y: round1(p.body.y), p: p.slot });
@@ -402,7 +390,7 @@ export class Simulation {
     p.pendingShot = null;
     p.ward = 0;
     p.edge = { charges: 0, timer: 0 };
-    p.haste = p.guard = 0;
+    p.guard = 0;
     if (arena.role === 'solo') for (const z of arena.zones.values()) z.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them
     if (p === arena.local) this.announce(DEFEAT_LINES);
     else this.emit({ type: 'defeat', player: p.slot });

@@ -11,7 +11,7 @@
 import type { Hero } from './combat';
 import { arrows, directionWords, type Combo } from './spells';
 
-export const SKILL_IDS = ['arcaneEdge', 'swiftSurge', 'ironSkin', 'spiritMark'] as const;
+export const SKILL_IDS = ['arcaneEdge', 'sparkVolley', 'ironSkin', 'spiritMark'] as const;
 export type SkillId = (typeof SKILL_IDS)[number];
 
 /** How many skills a hero can have ready at once. A wand or tome's own combos do not count toward this. */
@@ -42,10 +42,11 @@ export const SKILLS: Record<SkillId, Skill> = {
     minLevel: 1,
     zone: 'training_novice',
   },
-  swiftSurge: {
-    id: 'swiftSurge',
-    name: 'Swift Surge',
-    about: 'For 6 seconds you swing and draw your bow much faster, and walk a little quicker.',
+  sparkVolley: {
+    id: 'sparkVolley',
+    name: 'Spark Volley',
+    about:
+      "Three bolts fan out ahead of you, each hitting for a little less than a wand's bolt: a close-range blast that works with any weapon.",
     keys: 'urdl',
     cost: 6,
     minLevel: 5,
@@ -75,10 +76,9 @@ export const SKILLS: Record<SkillId, Skill> = {
 export const EDGE_CHARGES = 3;
 export const EDGE_SECONDS = 12;
 export const EDGE_SHARE = 0.6;
-/** Swift Surge: seconds, the share of the usual time between attacks (less is faster) and the walking speed multiplier. */
-export const SURGE_SECONDS = 6;
-export const SURGE_COOLDOWN = 0.6;
-export const SURGE_SPEED = 1.25;
+/** Spark Volley: how many bolts, and each one's share of the hero's spell power (a wand's bolt is 1.8 to 2.4 times it). */
+export const VOLLEY_BOLTS = 3;
+export const VOLLEY_POWER = 0.7;
 /** Iron Skin: seconds, and the share of damage still taken. */
 export const GUARD_SECONDS = 8;
 export const GUARD_TAKEN = 0.55;
@@ -217,7 +217,7 @@ export function trainerTalk(hero: Hero): TrainerTalk {
         : `You have grown, ${hero.name}. Ready to learn ${skill.name}?`,
       skillLine(skill),
       first ? MENU_HELP : `Remember: Menu, then the Magic tab, puts your two ready abilities in slot 1 or slot 2.`,
-      `At the training ground a wave of foes waits. Defeat every one of them, and do not fall. To let you practise, ${skill.name} will sit in your second slot while you are there (your first slot stays as it is), and your own choice comes back when you leave. Tap ${arrows(skill.keys)} to cast it.`,
+      `At the training ground a wave of foes waits. Defeat every one of them, and do not fall. To let you practice, ${skill.name} will sit in your second slot while you are there (your first slot stays as it is), and your own choice comes back when you leave. Tap ${arrows(skill.keys)} to cast it.`,
       'If you fall, you wake here and can try again. Walk out through the door at the bottom to give up. Off you go.',
     ],
     trial: skill,

@@ -22,8 +22,6 @@ export class Player {
   castCooldown = 0; // seconds before the next combo
   /** Arcane Edge (systems/skills.ts): the next `charges` attacks carry extra magic, for `timer` more seconds. */
   edge = { charges: 0, timer: 0 };
-  /** Swift Surge: seconds left of faster swinging and walking. */
-  haste = 0;
   /** Iron Skin: seconds left of taking less damage. */
   guard = 0;
   /** The skill this player is being tested for in a training ground (host and solo; null when not in a trial). */

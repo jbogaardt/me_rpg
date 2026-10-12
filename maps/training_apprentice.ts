@@ -1,7 +1,7 @@
 import { defineZone } from '../tools/map/zone';
 import { trainingYard } from '../tools/map/training';
 
-// The level 5 trial (Swift Surge, systems/skills.ts): orcs, skeletons and frostbound with a troll at the back. The enemies
+// The level 5 trial (Spark Volley, systems/skills.ts): orcs, skeletons and frostbound with a troll at the back. The enemies
 // do not come back; beat them all and you learn the skill.
 export default defineZone({
   name: 'training_apprentice',

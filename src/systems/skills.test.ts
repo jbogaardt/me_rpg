@@ -16,6 +16,8 @@ import {
   skillsFromMask,
   skillOfZone,
   trainerTalk,
+  VOLLEY_BOLTS,
+  VOLLEY_POWER,
   activeSkills,
   LOADOUT_SLOTS,
   loadoutCode,
@@ -71,13 +73,25 @@ describe('skills', () => {
     expect(learn(hero, 'arcaneEdge')).toBe(true);
     expect(learn(hero, 'arcaneEdge')).toBe(false);
     expect(hero.skills).toEqual(['arcaneEdge', 'spiritMark']); // always in SKILL_IDS order, so both sides agree on indices
-    learn(hero, 'swiftSurge');
+    learn(hero, 'sparkVolley');
     learn(hero, 'ironSkin');
     expect(skillMask(hero)).toBe(MAX_SKILL_MASK);
     expect(skillsFromMask(1)).toEqual(['arcaneEdge']);
     expect(skillsFromMask(MAX_SKILL_MASK)).toEqual([...SKILL_IDS]);
     expect(skillsFromMask(0)).toEqual([]);
     expect(knows(hero, 'spiritMark')).toBe(true);
+  });
+});
+
+describe('Spark Volley', () => {
+  it('is offensive and weaker than a wand: three bolts each below every wand fan and bolt', () => {
+    expect(SKILLS.sparkVolley.minLevel).toBe(5);
+    expect(VOLLEY_BOLTS).toBe(3);
+    for (const item of Object.values(ITEMS)) {
+      if (!('focus' in item) || item.focus.kind !== 'wand') continue;
+      for (const c of item.focus.combos)
+        if (c.spell === 'fan' || c.spell === 'bolt') expect(VOLLEY_POWER).toBeLessThan(c.power);
+    }
   });
 });
 
@@ -118,19 +132,19 @@ describe('the loadout', () => {
     const hero = newHero();
     for (const id of SKILL_IDS) learn(hero, id);
     expect(hero.skills).toEqual([...SKILL_IDS]);
-    expect(hero.loadout).toEqual(['arcaneEdge', 'swiftSurge']);
+    expect(hero.loadout).toEqual(['arcaneEdge', 'sparkVolley']);
   });
 
   it('can be changed to any two known skills, but not to more, to unknown ones or to the same twice', () => {
     const hero = newHero();
     learn(hero, 'arcaneEdge');
-    learn(hero, 'swiftSurge');
+    learn(hero, 'sparkVolley');
     learn(hero, 'ironSkin');
     expect(setLoadout(hero, ['ironSkin', 'arcaneEdge'])).toBe(true);
     expect(hero.loadout).toEqual(['ironSkin', 'arcaneEdge']);
     expect(setLoadout(hero, ['ironSkin'])).toBe(true);
     expect(setLoadout(hero, [])).toBe(true);
-    expect(setLoadout(hero, ['arcaneEdge', 'swiftSurge', 'ironSkin'])).toBe(false);
+    expect(setLoadout(hero, ['arcaneEdge', 'sparkVolley', 'ironSkin'])).toBe(false);
     expect(setLoadout(hero, ['spiritMark'])).toBe(false); // not learned
     expect(setLoadout(hero, ['arcaneEdge', 'arcaneEdge'])).toBe(false);
     expect(hero.loadout).toEqual([]);
@@ -154,11 +168,11 @@ describe('the loadout', () => {
   it('puts the skill being tested in the second slot of a training ground, and leaves the first alone', () => {
     const hero = newHero();
     learn(hero, 'arcaneEdge');
-    expect(activeSkills(hero, 'training_apprentice')).toEqual(['arcaneEdge', 'swiftSurge']);
+    expect(activeSkills(hero, 'training_apprentice')).toEqual(['arcaneEdge', 'sparkVolley']);
     expect(activeSkills(hero, 'town')).toEqual(['arcaneEdge']);
     const fresh = newHero();
     expect(activeSkills(fresh, 'training_novice')).toEqual(['arcaneEdge']); // nothing in slot 1: just the one on loan
-    learn(hero, 'swiftSurge');
+    learn(hero, 'sparkVolley');
     expect(activeSkills(hero, 'training_journeyman')).toEqual(['arcaneEdge', 'ironSkin']); // replaces slot 2
   });
 });
@@ -190,8 +204,8 @@ describe('the trainer', () => {
     expect(talk.lines.join(' ')).toContain('level 5');
     expect(talk.lines.join(' ')).toContain('Arcane Edge');
     hero.stats.level = 5;
-    expect(trainerTalk(hero).trial?.id).toBe('swiftSurge');
-    learn(hero, 'swiftSurge');
+    expect(trainerTalk(hero).trial?.id).toBe('sparkVolley');
+    learn(hero, 'sparkVolley');
     hero.stats.level = 12;
     expect(trainerTalk(hero).trial?.id).toBe('ironSkin');
     learn(hero, 'ironSkin');

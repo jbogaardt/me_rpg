@@ -130,7 +130,7 @@ export class Training {
     p.pendingShot = null;
     p.ward = 0;
     p.edge = { charges: 0, timer: 0 };
-    p.haste = p.guard = 0;
+    p.guard = 0;
     if (p === this.arena.local) this.announce(FAIL_LINES);
     else this.sim.text(p.body.x, p.body.y - 62, 'Trial failed', 0xff8a7a);
     return true;
