@@ -37,6 +37,24 @@ export function releaseSheet(sheet: Texture) {
  * the one place that loads art outside the Pixi `Assets` cache. Call `load()` for the parts an outfit needs before
  * `sheet()`.
  */
+/** Fetch one layer image, trying again a couple of times: a hiccup (a busy network, a deploy replacing files) must not stop the game from starting. */
+async function loadImage(url: string, file: string, tries = 3): Promise<HTMLImageElement> {
+  for (let attempt = 1; ; attempt++) {
+    const img = new Image();
+    img.src = url;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Sprite layer ${file} failed to load`));
+      });
+      return img;
+    } catch (err) {
+      if (attempt >= tries) throw err;
+      await new Promise((r) => setTimeout(r, 400 * attempt));
+    }
+  }
+}
+
 export class Wardrobe {
   private images = new Map<string, HTMLImageElement>();
   private sheets = new RefCache<Texture>(SPARE_SHEETS, (sheet) => {
@@ -66,12 +84,7 @@ export class Wardrobe {
     let done = 0;
     await Promise.all(
       [...files].map(async (file) => {
-        const img = new Image();
-        img.src = this.url(file);
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error(`Sprite layer ${file} failed to load`));
-        });
+        const img = await loadImage(this.url(file), file);
         this.images.set(file, img);
         onProgress?.(++done / files.size);
       }),
