@@ -1,10 +1,12 @@
+import type { Explored } from '../map/explored';
 import { mapPercent, minimapPixels } from '../map/minimap';
 import type { MapData } from '../map/types';
 import { PLAYER_COLORS, playerName } from '../systems/looks';
 
-// A semi-transparent map of the zone you are in with a pin for you and one for each co-op friend (every player in their
-// own colour, like their tag in the game), so players can find each other. Online play only: the scene makes it `available` while connected and the M key (or the
-// HUD map button on touch) toggles it. HTML rather than canvas, like the rest of the UI; markup in index.html,
+// A semi-transparent map of the zone you are in that fills in as you explore it (only the cells seen are drawn, see
+// map/explored.ts), with a pin for you and, in co-op, one for each friend (every player in their own colour, like their
+// tag in the game), so players can find each other. The scene makes it `available` in any open-air zone and the M key
+// (or the HUD map button on touch) toggles it. HTML rather than canvas, like the rest of the UI; markup in index.html,
 // styles in src/ui.css. It never takes pointer input, so the game keeps running (and stays playable) behind it.
 
 /** A player's position on the map: `slot` is their player number (it picks the colour). */
@@ -13,6 +15,9 @@ export interface Pin {
   x: number;
   y: number;
 }
+
+/** Longest wait between repaints of an open map that is still filling in. */
+const REPAINT_MS = 400;
 
 const cssColor = (slot: number) => `#${(PLAYER_COLORS[slot] ?? 0xffb13f).toString(16).padStart(6, '0')}`;
 
@@ -26,25 +31,38 @@ export class MapOverlay {
   private placed = ''; // last pin positions written, so the DOM is only touched when a pin moves
   private listed = ''; // who the legend currently lists
 
-  private data: MapData | undefined; // the zone currently painted
+  private data: MapData | undefined; // the zone currently shown
+  private painted = -1; // the `explored.version` on the image (-1: none)
+  private paintedAt = 0;
 
-  /** Show this zone's terrain (repainted only when the zone changes). */
-  setZone(data: MapData) {
-    if (data === this.data) return;
-    this.data = data;
-    this.placed = '';
-    // Painted on a detached canvas and shown as an image, so the page keeps a single <canvas> (the game's).
+  /** Use this zone's terrain and what has been explored of it. Called every frame; it repaints only a map that is open. */
+  setZone(data: MapData, explored: Explored) {
+    if (data !== this.data) {
+      this.data = data;
+      this.placed = '';
+      this.painted = -1;
+      this.root.style.setProperty('--aspect', String(data.width / data.height));
+    }
+    const now = performance.now();
+    // As you walk the picture grows, but not every frame: encoding the image is the costly part.
+    if (this.open && (this.painted < 0 || (explored.version !== this.painted && now - this.paintedAt > REPAINT_MS))) {
+      this.paint(data, explored, now);
+    }
+  }
+
+  // Painted on a detached canvas and shown as an image, so the page keeps a single <canvas> (the game's).
+  private paint(data: MapData, explored: Explored, now: number) {
+    this.painted = explored.version;
+    this.paintedAt = now;
     const canvas = document.createElement('canvas');
     canvas.width = data.width;
     canvas.height = data.height;
-    canvas
-      .getContext('2d')!
-      .putImageData(new ImageData(minimapPixels(data) as ImageData['data'], data.width, data.height), 0, 0);
+    const pixels = minimapPixels(data, explored.cells) as ImageData['data'];
+    canvas.getContext('2d')!.putImageData(new ImageData(pixels, data.width, data.height), 0, 0);
     this.root.querySelector('img')!.src = canvas.toDataURL();
-    this.root.style.setProperty('--aspect', String(data.width / data.height));
   }
 
-  /** Show the map button while the player is in a co-op game; leaving one closes the map. */
+  /** Show the map button while the player is in an open-air zone; a room closes the map. */
   setAvailable(on: boolean) {
     if (this.button.hidden !== on) return; // called every frame: only touch the DOM on a change
     this.button.hidden = !on;
@@ -106,6 +124,7 @@ export class MapOverlay {
   private show(on: boolean) {
     this.open = on;
     this.root.hidden = !on;
+    this.painted = -1; // repainted by the next setZone, with whatever was explored since
     this.placed = ''; // pins are repositioned on the next update
     this.listed = '';
   }
