@@ -45,7 +45,7 @@ const seat = (host: Page, slot: number) => host.locator(`#mp-roster li[data-slot
 
 test('two players connect with a game code, play, and disconnect', async ({ browser }) => {
   const host = await open(browser, '/');
-  await expect(host.locator('#map-btn')).toBeHidden(); // the map is for co-op only
+  await expect(host.locator('#map-btn')).toBeVisible(); // the map works in solo too (cbd2cf0)
   const code = await createGame(host);
   // The host sees who can come: themselves and three empty seats.
   await expect(host.locator('#mp-roster li')).toHaveCount(4);
@@ -101,8 +101,9 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await host.locator('#mp-disconnect').click();
   await expect(host.locator('#mp-status .label')).toHaveText('Disconnected');
   await expect(join.locator('#mp-status .label')).toHaveText('Disconnected', { timeout: 15_000 });
-  await expect(join.locator('#map-overlay')).toBeHidden();
-  await expect(join.locator('#map-btn')).toBeHidden();
+  // The map works solo too, so it stays; the friend's pin goes.
+  await expect(join.locator('#map-btn')).toBeVisible();
+  await expect(join.locator('#map-overlay .pin.friend')).toHaveCount(0);
   await join.keyboard.press('Escape');
   await expect(join.locator('#menu-online')).toBeVisible();
   await expect(join.locator('#mp-note')).toContainText('disconnected');
