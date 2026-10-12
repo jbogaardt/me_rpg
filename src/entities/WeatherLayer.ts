@@ -106,8 +106,7 @@ const STYLES: Partial<Record<Look, Style>> = {
 
 /** The colour and strength of the haze over the whole view (strong enough to read against bright ground). */
 const HAZE: Partial<Record<Look, { tint: number; alpha: number }>> = {
-  rain: { tint: 0x16233a, alpha: 0.24 },
-  storm: { tint: 0x0b1224, alpha: 0.3 },
+  // Rain and storms have no haze: only the drops themselves, so the world keeps its own colours.
   // Snow has no haze at all (a full-screen layer is the costliest thing here); a blizzard gets a thin cool tint. Weather
   // must not dim the game or slow it down.
   blizzard: { tint: 0x7f93b4, alpha: 0.18 },
