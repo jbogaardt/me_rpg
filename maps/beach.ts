@@ -30,7 +30,6 @@ export default defineBiome({
       z.paint('coast', { col: c, row: shore(c), w: 1, h: 60 - shore(c) });
       z.block({ col: c, row: 0, w: 1, h: shore(c) }, 'the sea');
     }
-    z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));

@@ -27,7 +27,6 @@ export default defineBiome({
       ...blob(area(9, 0.6, 3.4, 1.8)),
       ...blob(area(1, 7.2, 2.4, 1.8)),
     ]);
-    z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));

@@ -28,7 +28,6 @@ export default defineBiome({
   build(z) {
     z.fill('snow');
     z.paint('snow', z.bounds);
-    z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));

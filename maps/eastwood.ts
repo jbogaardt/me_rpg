@@ -30,7 +30,6 @@ export default defineBiome({
   build(z) {
     z.fill('grass');
     z.paint('meadow', z.bounds); // deeper green than the Greenwood's
-    z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));

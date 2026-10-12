@@ -46,7 +46,7 @@ export default defineBiome({
   walls: { trees: TREES },
   build(z) {
     z.fill('grass');
-    z.paint('dirt', [...STREETS, ...blob(MARKET, 5, 0.25)]);
+    z.paint('dirt', blob(MARKET, 5, 0.25));
     z.keepClear([...STREETS, MARKET, { col: 146, row: 190, w: 36, h: 11 }]);
     const open = awayFrom([...STREETS, MARKET]);
 

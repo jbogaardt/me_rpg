@@ -23,7 +23,6 @@ export default defineBiome({
   build(z) {
     z.fill('grass');
     z.paint('meadow', z.bounds);
-    z.paint('mud', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
