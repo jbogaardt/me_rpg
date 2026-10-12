@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MOB_KINDS, newHero } from './combat';
+import { ITEM_COUNT } from './inventory';
 import { ITEMS } from './items';
 import {
   heroCombos,
@@ -15,6 +16,13 @@ import {
   skillsFromMask,
   skillOfZone,
   trainerTalk,
+  activeSkills,
+  LOADOUT_SLOTS,
+  loadoutCode,
+  loadoutFromCode,
+  MAX_LOADOUT_CODE,
+  setLoadout,
+  type SkillId,
 } from './skills';
 import { COMBO_KEYS } from './spells';
 
@@ -44,10 +52,8 @@ describe('skills', () => {
     expect(new Set(skillKeys).size).toBe(skillKeys.length);
   });
 
-  it('are weaker than a wand: cheaper to learn than they are to outdo, and the second needs level 15', () => {
-    expect(SKILLS.arcaneEdge.minLevel).toBe(1);
-    expect(SKILLS.spiritMark.minLevel).toBe(15);
-    expect(SKILLS.spiritMark.minLevel).toBeGreaterThan(SKILLS.arcaneEdge.minLevel);
+  it('come one every five levels, at 1, 5, 10 and 15', () => {
+    expect(SKILL_IDS.map((id) => SKILLS[id].minLevel)).toEqual([1, 5, 10, 15]);
   });
 
   it('each have their own training ground, which is a trial zone', () => {
@@ -65,8 +71,11 @@ describe('skills', () => {
     expect(learn(hero, 'arcaneEdge')).toBe(true);
     expect(learn(hero, 'arcaneEdge')).toBe(false);
     expect(hero.skills).toEqual(['arcaneEdge', 'spiritMark']); // always in SKILL_IDS order, so both sides agree on indices
+    learn(hero, 'swiftSurge');
+    learn(hero, 'ironSkin');
     expect(skillMask(hero)).toBe(MAX_SKILL_MASK);
     expect(skillsFromMask(1)).toEqual(['arcaneEdge']);
+    expect(skillsFromMask(MAX_SKILL_MASK)).toEqual([...SKILL_IDS]);
     expect(skillsFromMask(0)).toEqual([]);
     expect(knows(hero, 'spiritMark')).toBe(true);
   });
@@ -77,18 +86,80 @@ describe('heroCombos', () => {
     const hero = newHero();
     expect(heroCombos(hero)).toEqual([]);
     learn(hero, 'arcaneEdge');
-    expect(heroCombos(hero).map((c) => c.keys)).toEqual(['ruld']);
+    expect(heroCombos(hero).map((c) => c.keys)).toEqual(['ruld']); // learned into a free slot: ready
     hero.weapon = ITEMS.noviceTome;
     const list = heroCombos(hero);
     expect(list.map((c) => c.keys)).toEqual([...ITEMS.noviceTome.focus.combos.map((c) => c.keys), 'ruld']);
     expect(list.at(-1)?.skill).toBe('arcaneEdge');
   });
 
-  it('stays within what the network allows', () => {
+  it('stays within what the network allows, with a tome and every slot full', () => {
     const hero = newHero();
     hero.weapon = ITEMS.arcaneGrimoire;
     for (const id of SKILL_IDS) learn(hero, id);
     expect(heroCombos(hero).length).toBeLessThanOrEqual(MAX_HERO_COMBOS);
+    expect(heroCombos(hero, 'training_adept').length).toBeLessThanOrEqual(MAX_HERO_COMBOS);
+  });
+
+  it('keeps a wand’s combos out of the two-skill limit: two skills plus all of the wand’s', () => {
+    const hero = newHero();
+    hero.weapon = ITEMS.stormcallerWand;
+    for (const id of SKILL_IDS) learn(hero, id);
+    expect(hero.loadout).toHaveLength(LOADOUT_SLOTS);
+    expect(heroCombos(hero)).toHaveLength(ITEMS.stormcallerWand.focus.combos.length + LOADOUT_SLOTS);
+    const plain = newHero();
+    for (const id of SKILL_IDS) learn(plain, id);
+    expect(heroCombos(plain)).toHaveLength(LOADOUT_SLOTS); // a sword gets just the two
+  });
+});
+
+describe('the loadout', () => {
+  it('takes the first two skills learned, and leaves later ones to be swapped in', () => {
+    const hero = newHero();
+    for (const id of SKILL_IDS) learn(hero, id);
+    expect(hero.skills).toEqual([...SKILL_IDS]);
+    expect(hero.loadout).toEqual(['arcaneEdge', 'swiftSurge']);
+  });
+
+  it('can be changed to any two known skills, but not to more, to unknown ones or to the same twice', () => {
+    const hero = newHero();
+    learn(hero, 'arcaneEdge');
+    learn(hero, 'swiftSurge');
+    learn(hero, 'ironSkin');
+    expect(setLoadout(hero, ['ironSkin', 'arcaneEdge'])).toBe(true);
+    expect(hero.loadout).toEqual(['ironSkin', 'arcaneEdge']);
+    expect(setLoadout(hero, ['ironSkin'])).toBe(true);
+    expect(setLoadout(hero, [])).toBe(true);
+    expect(setLoadout(hero, ['arcaneEdge', 'swiftSurge', 'ironSkin'])).toBe(false);
+    expect(setLoadout(hero, ['spiritMark'])).toBe(false); // not learned
+    expect(setLoadout(hero, ['arcaneEdge', 'arcaneEdge'])).toBe(false);
+    expect(hero.loadout).toEqual([]);
+  });
+
+  it('travels as a small code that no wrong loadout can come back from', () => {
+    for (const a of [undefined, ...SKILL_IDS]) {
+      for (const b of [undefined, ...SKILL_IDS]) {
+        const loadout = [a, b].filter((x): x is SkillId => x !== undefined);
+        if (a !== undefined && a === b) continue;
+        if (a === undefined && b !== undefined) continue; // slots fill from the first
+        expect(loadoutFromCode(loadoutCode(loadout))).toEqual(loadout);
+      }
+    }
+    expect(loadoutFromCode(MAX_LOADOUT_CODE + 1)).toBeNull();
+    expect(loadoutFromCode(-1)).toBeNull();
+    expect(loadoutFromCode(1 * 5 + 1)).toBeNull(); // the same skill in both slots
+    expect(MAX_LOADOUT_CODE).toBeLessThanOrEqual(ITEM_COUNT); // a `do` message's item field has to hold it
+  });
+
+  it('puts the skill being tested in the second slot of a training ground, and leaves the first alone', () => {
+    const hero = newHero();
+    learn(hero, 'arcaneEdge');
+    expect(activeSkills(hero, 'training_apprentice')).toEqual(['arcaneEdge', 'swiftSurge']);
+    expect(activeSkills(hero, 'town')).toEqual(['arcaneEdge']);
+    const fresh = newHero();
+    expect(activeSkills(fresh, 'training_novice')).toEqual(['arcaneEdge']); // nothing in slot 1: just the one on loan
+    learn(hero, 'swiftSurge');
+    expect(activeSkills(hero, 'training_journeyman')).toEqual(['arcaneEdge', 'ironSkin']); // replaces slot 2
   });
 });
 
@@ -102,12 +173,29 @@ describe('the trainer', () => {
     expect(text).toContain('↑'); // the keys to tap
   });
 
-  it('asks a hero who knows the first skill to come back at level 15', () => {
+  it('tells a new hero how the two slots and the Magic menu work, and that the skill is on loan in the trial', () => {
+    const text = trainerTalk(newHero()).lines.join(' ');
+    expect(text).toContain('Magic tab');
+    expect(text).toMatch(/two/);
+    expect(text).toContain('wand or tome');
+    expect(text).toContain('second slot');
+    expect(text).toContain('Walk out');
+  });
+
+  it('asks a hero for the next level, by name, and reminds them what they know', () => {
     const hero = newHero();
     learn(hero, 'arcaneEdge');
     const talk = trainerTalk(hero);
     expect(talk.trial).toBeNull();
-    expect(talk.lines.join(' ')).toContain('level 15');
+    expect(talk.lines.join(' ')).toContain('level 5');
+    expect(talk.lines.join(' ')).toContain('Arcane Edge');
+    hero.stats.level = 5;
+    expect(trainerTalk(hero).trial?.id).toBe('swiftSurge');
+    learn(hero, 'swiftSurge');
+    hero.stats.level = 12;
+    expect(trainerTalk(hero).trial?.id).toBe('ironSkin');
+    learn(hero, 'ironSkin');
+    expect(trainerTalk(hero).lines.join(' ')).toContain('level 15');
     hero.stats.level = 15;
     expect(trainerTalk(hero).trial?.id).toBe('spiritMark');
     expect(nextSkill(hero)?.id).toBe('spiritMark');
@@ -122,11 +210,17 @@ describe('the trainer', () => {
 });
 
 describe('the trials’ enemies', () => {
-  it('are real kinds, and the second trial’s hit hard enough to matter at level 15 (defense about 24)', () => {
-    expect(MOB_KINDS.warlord && MOB_KINDS.wraith).toBeTruthy();
-    for (const kind of [MOB_KINDS.warlord!, MOB_KINDS.wraith!]) {
-      expect(kind.attack).toBeGreaterThan(30);
-      expect(kind.defense).toBeLessThan(7); // a hero can always hurt them
+  it('are real kinds, and the later trials’ hit hard enough to matter at their level (defense 14 and 24)', () => {
+    for (const [name, atLeast] of [
+      ['chieftain', 28],
+      ['cultist', 28],
+      ['warlord', 40],
+      ['wraith', 40],
+    ] as const) {
+      const kind = MOB_KINDS[name]!;
+      expect(kind, name).toBeTruthy();
+      expect(kind.attack, name).toBeGreaterThanOrEqual(atLeast);
+      expect(kind.defense, name).toBeLessThan(7); // a hero can always hurt them
     }
   });
 });

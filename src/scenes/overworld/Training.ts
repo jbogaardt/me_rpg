@@ -1,4 +1,5 @@
 import type { Player } from '../../entities/Player';
+import { arrows } from '../../systems/spells';
 import { isTrialZone, knows, learn, skillOfZone, TRAINER_RETURN, TRAINER_ROOM, type Skill } from '../../systems/skills';
 import type { Arena } from './Arena';
 import type { Simulation } from './Simulation';
@@ -51,6 +52,7 @@ export class Training {
         s.mp = s.maxMp;
         p.trial = skill.id;
         this.zones.travel(p, dest, dest.data.spawn, false);
+        this.sim.text(p.body.x, p.body.y - 66, `${skill.name}: slot 2`, 0xcfe8ff); // it takes the second slot for the trial
       })
       .finally(() => this.starting.delete(p));
     return null;
@@ -83,9 +85,13 @@ export class Training {
     this.sim.text(p.body.x, p.body.y - 74, `${skill.name} learned!`, 0xffd34d);
     this.sim.fx('levelUp', p.body.x, p.body.y - 14);
     if (p === this.arena.local) {
+      const slot = p.hero.loadout.indexOf(skill.id) + 1;
       this.announce([
         `Every foe is down. You have learned ${skill.name}!`,
-        'You feel it settle into you, ready for any sword or bow. The trainer will bring you back now.',
+        slot
+          ? `It is ready in slot ${slot}: tap ${arrows(skill.keys)} to cast it with any weapon. To swap your abilities, open the menu (Esc) and choose the Magic tab.`
+          : `Both your slots are full, so it is not ready yet: open the menu (Esc), choose the Magic tab and ready ${skill.name} in either slot.`,
+        'The trainer will bring you back now.',
       ]);
     }
   }
@@ -124,6 +130,7 @@ export class Training {
     p.pendingShot = null;
     p.ward = 0;
     p.edge = { charges: 0, timer: 0 };
+    p.haste = p.guard = 0;
     if (p === this.arena.local) this.announce(FAIL_LINES);
     else this.sim.text(p.body.x, p.body.y - 62, 'Trial failed', 0xff8a7a);
     return true;

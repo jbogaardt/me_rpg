@@ -7,7 +7,18 @@ import type { Session } from '../../net/session';
 import { applyInvOp, decodeOp, gearCodes, itemFromCode, packCodes, setGear, setPack } from '../../systems/inventory';
 import type { InvOp, Result } from '../../systems/inventory';
 import { SHOPS } from '../../systems/shops';
-import { nextSkill, skillMask, skillsFromMask, TRAINER, trainerTalk, type Skill } from '../../systems/skills';
+import {
+  loadoutCode,
+  loadoutFromCode,
+  nextSkill,
+  setLoadout,
+  skillMask,
+  skillsFromMask,
+  TRAINER,
+  trainerTalk,
+  type Skill,
+  type SkillId,
+} from '../../systems/skills';
 import { GIVERS, linesFor, questFromWire, questWire, talk, type Talk } from '../../systems/quests';
 import { localTrader, remoteTrader, type Outcome, type Trader } from '../../systems/trader';
 import { CELL } from '../../map/types';
@@ -74,6 +85,19 @@ export class PackSync {
     this.ui.dialog.say(told.lines);
   }
 
+  /**
+   * The local player chooses which of their skills are ready (the Magic tab). Solo and the host change their hero at once; a
+   * guest asks the host, whose answer arrives with the next `pack` message. Returns false for a choice that is not allowed.
+   */
+  setLoadout(wanted: SkillId[]): boolean {
+    const { arena } = this;
+    if (arena.role === 'client') {
+      this.session.send({ k: 'do', n: ++this.doSeq, op: 'loadout', item: loadoutCode(wanted), shop: '' });
+      return true;
+    }
+    return setLoadout(arena.hero, wanted);
+  }
+
   /** A co-op guest asks the host to send them to the training ground (the host checks everything). */
   askTrial(giver: string) {
     this.session.send({ k: 'do', n: ++this.doSeq, op: 'train', item: 0, shop: giver });
@@ -131,6 +155,12 @@ export class PackSync {
   private tradeFor(p: Player, { op, item: code, shop: shopId }: DoMsg): Outcome {
     if (op === 'talk') return this.talkFor(p, shopId);
     if (op === 'train') return this.trainFor(p, shopId);
+    if (op === 'loadout') {
+      const wanted = loadoutFromCode(code);
+      return wanted && setLoadout(p.hero, wanted)
+        ? { ok: true, text: '' }
+        : { ok: false, text: 'You cannot ready that' };
+    }
     const item = itemFromCode(code);
     if (!item) return { ok: false, text: 'Unknown item' };
     const trader = localTrader(p.hero);
@@ -204,6 +234,7 @@ export class PackSync {
         ack: p.seenInv,
         quests: questWire(p.hero.quests),
         skills: skillMask(p.hero),
+        loadout: loadoutCode(p.hero.loadout),
         ...(p.reply ? { say: p.reply } : {}),
       };
       const sig = JSON.stringify(body);
@@ -226,9 +257,10 @@ export class PackSync {
   applyPack(pack: PackMsg) {
     const { arena } = this;
     const hero = arena.hero;
-    const sig = JSON.stringify([pack.gold, pack.worn, pack.items, pack.quests, pack.skills]);
+    const sig = JSON.stringify([pack.gold, pack.worn, pack.items, pack.quests, pack.skills, pack.loadout]);
     hero.quests = questFromWire(pack.quests) ?? hero.quests;
     hero.skills = skillsFromMask(pack.skills);
+    hero.loadout = (loadoutFromCode(pack.loadout) ?? []).filter((id) => hero.skills.includes(id));
     const worn = gearCodes(hero).join();
     hero.gold = pack.gold;
     this.pendingOps = this.pendingOps.filter((o) => o.seq > pack.ack);

@@ -19,6 +19,8 @@ export const ZONE_NAMES: Record<string, string> = {
   shop_ranger: "The Ranger's Lodge",
   shop_wizard: "The Wizard's Sanctum",
   training_novice: 'The Novice Training Hall',
+  training_apprentice: 'The Apprentice Training Hall',
+  training_journeyman: 'The Journeyman Training Hall',
   training_adept: 'The Adept Training Hall',
 };
 

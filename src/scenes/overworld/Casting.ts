@@ -6,12 +6,14 @@ import { attackPower, rollDamage, spellPower } from '../../systems/combat';
 import {
   EDGE_CHARGES,
   EDGE_SECONDS,
+  GUARD_SECONDS,
   heroCombos,
   MARK_BONUS,
   MARK_REACH_CELLS,
   MARK_SECONDS,
   MARK_STING,
   SKILLS,
+  SURGE_SECONDS,
   type SkillCombo,
 } from '../../systems/skills';
 import { SPELLS, type Combo, type Focus } from '../../systems/spells';
@@ -61,14 +63,14 @@ export class Casting {
 
   /** A wand's or tome's plain attack: a free bolt along the aim, as strong as the weapon's attack. */
   basic(p: Player, focus: Focus) {
-    p.attackCooldown = focus.cooldown;
+    p.attackCooldown = focus.cooldown * this.sim.cooldownScale(p);
     p.body.play('cast');
     this.bolt(p, p.aim.x, p.aim.y, attackPower(p.hero) + this.sim.takeEdge(p), BOLT_SPEED); // Arcane Edge adds to it
   }
 
   /** The player finished combo `index` of what they can cast (the wand or tome in hand, then their skills): cast it if there is mana. */
   combo(p: Player, index: number) {
-    const combo = heroCombos(p.hero)[index];
+    const combo = heroCombos(p.hero, p.zone)[index];
     if (!combo || p.castCooldown > 0) return;
     const { stats } = p.hero;
     const { x, y } = p.body;
@@ -92,6 +94,10 @@ export class Casting {
     switch (skill) {
       case 'arcaneEdge':
         return this.edge(p);
+      case 'swiftSurge':
+        return this.surge(p);
+      case 'ironSkin':
+        return this.guard(p);
       case 'spiritMark':
         return this.mark(p);
     }
@@ -100,6 +106,20 @@ export class Casting {
   /** Arcane Edge: the next few attacks, with whatever is in hand, carry extra magic. */
   private edge(p: Player): Cast {
     p.edge = { charges: EDGE_CHARGES, timer: EDGE_SECONDS };
+    this.sim.fx('ward', p.body.x, p.body.y - 14);
+    return true;
+  }
+
+  /** Swift Surge: for a few seconds the hero swings, draws and walks faster (Simulation reads `Player.haste`). */
+  private surge(p: Player): Cast {
+    p.haste = SURGE_SECONDS;
+    this.sim.fx('blink', p.body.x, p.body.y - 14);
+    return true;
+  }
+
+  /** Iron Skin: for a few seconds blows do less (Simulation reads `Player.guard` when it hurts the hero). */
+  private guard(p: Player): Cast {
+    p.guard = GUARD_SECONDS;
     this.sim.fx('ward', p.body.x, p.body.y - 14);
     return true;
   }

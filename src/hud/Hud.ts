@@ -42,8 +42,8 @@ export class Hud {
   private shownCombos = '';
 
   /** `typed` is what the player has tapped toward a combo so far (lights the first arrows of the ones it leads to). */
-  update(hero: Hero, typed = '') {
-    this.updateCombos(hero, typed);
+  update(hero: Hero, typed = '', zone = '') {
+    this.updateCombos(hero, typed, zone);
     const s = hero.stats;
     const hp = Math.ceil(s.hp);
     const mp = Math.floor(s.mp);
@@ -65,8 +65,8 @@ export class Hud {
   }
 
   /** What the hero can cast (the wand or tome's combos, then their skills): each arrow lit once tapped, dim while the mana is short. */
-  private updateCombos(hero: Hero, typed: string) {
-    const list = heroCombos(hero);
+  private updateCombos(hero: Hero, typed: string, zone: string) {
+    const list = heroCombos(hero, zone);
     const mp = Math.floor(hero.stats.mp);
     const key = list.length ? `${typed}|${list.map((c) => `${c.keys}${mp >= c.cost ? 1 : 0}`).join()}` : '';
     if (key === this.shownCombos) return;

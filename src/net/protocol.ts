@@ -16,7 +16,7 @@ import { AIM_STEPS } from '../core/aim';
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
 import { questFromWire } from '../systems/quests';
-import { MAX_HERO_COMBOS, MAX_SKILL_MASK } from '../systems/skills';
+import { loadoutFromCode, MAX_HERO_COMBOS, MAX_SKILL_MASK } from '../systems/skills';
 import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../systems/inventory';
 import type { Note, SideWire, TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GUESTS } from './relayApi';
@@ -24,7 +24,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 17;
+export const PROTOCOL_VERSION = 18;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -44,7 +44,7 @@ export function unpackKeys(keys: number): { dx: number; dy: number } {
 export const MAX_PLAYERS = MAX_GUESTS + 1;
 
 /** PlayerSnap flag bits. */
-export const FLAG = { moving: 1, invuln: 2, swing: 4, ward: 8, edge: 16 } as const;
+export const FLAG = { moving: 1, invuln: 2, swing: 4, ward: 8, edge: 16, haste: 32, guard: 64 } as const;
 
 /** [player number, x, y, direction index, FLAG bits] */
 export type PlayerSnap = [number, number, number, number, number];
@@ -155,7 +155,7 @@ export interface SnapMsg {
 }
 
 /** What a guest may ask the host to do with its own hero. The host checks every one (the guest only sends a wish). */
-export const TRADE_OPS = ['buy', 'sell', 'wear', 'use', 'talk', 'train'] as const;
+export const TRADE_OPS = ['buy', 'sell', 'wear', 'use', 'talk', 'train', 'loadout'] as const;
 export type TradeOp = (typeof TRADE_OPS)[number];
 
 /**
@@ -171,7 +171,8 @@ export interface DoMsg {
 }
 // A `talk` (item 0) is a wish to speak to the quest giver named in `shop` (a key of GIVERS); the host checks the guest is
 // beside them and answers with `say.story`. A `train` (item 0) asks the training wizard (`shop` = TRAINER) to send the guest to
-// the trial for their next skill; the host checks the guest is beside the trainer and ready, and moves them there (or says why not).
+// the trial for their next skill; the host checks the guest is beside the trainer and ready, and moves them there (or says why not). A `loadout` (`item` =
+// `loadoutCode`) chooses which two skills are ready; the host checks they are known and says the result in the next `pack`.
 
 /**
  * Host -> guest: the guest's own purse and pack, sent when it changes and now and then in case a packet is lost.
@@ -188,8 +189,9 @@ export interface PackMsg {
   say?: { id: number; text: string; ok: boolean; story?: string };
   /** The guest's place in the quest chain (systems/quests.ts `questWire`): [stage, taken, progress]. */
   quests: number[];
-  /** The skills the guest has learned (systems/skills.ts `skillMask`). */
+  /** The skills the guest has learned (systems/skills.ts `skillMask`), and which two are ready (`loadoutCode`). */
   skills: number;
+  loadout: number;
 }
 
 /** Host -> guest: what every player wears, `[player number, ...one item code per GEAR_SLOTS slot]`, so everyone's look is right. */
@@ -447,7 +449,7 @@ function parseTradeView(raw: unknown): TradeViewWire | null {
 function parsePlayer(raw: unknown): PlayerSnap | null {
   if (!numbers(raw, 5) || !raw.every((v, i) => (i === 1 || i === 2 ? isCoord(v) : isCount(v)))) return null;
   const [slot, x, y, dir, flags] = raw as PlayerSnap;
-  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 31 ? [slot, x, y, dir, flags] : null;
+  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 127 ? [slot, x, y, dir, flags] : null;
 }
 
 function parseGround(raw: unknown): GroundSnap | null {
@@ -613,6 +615,8 @@ export function parseMessage(raw: unknown): Message | null {
         questFromWire(m.quests) !== null &&
         isCount(m.skills) &&
         m.skills <= MAX_SKILL_MASK &&
+        isCount(m.loadout) &&
+        loadoutFromCode(m.loadout) !== null &&
         sayOk
         ? {
             k: 'pack',
@@ -623,6 +627,7 @@ export function parseMessage(raw: unknown): Message | null {
             ack: m.ack,
             quests: m.quests as number[],
             skills: m.skills,
+            loadout: m.loadout,
             ...(say === undefined ? {} : { say: say as { id: number; text: string; ok: boolean; story?: string } }),
           }
         : null;

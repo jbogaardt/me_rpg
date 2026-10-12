@@ -183,12 +183,14 @@ export class OverworldScene implements Scene {
 
   enter() {
     this.ui.menu.inventory.attach({ apply: (op) => this.pack.localOp(op) });
+    this.ui.menu.magic.attach({ equip: (wanted) => this.pack.setLoadout(wanted), zone: () => this.arena.zone.name });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
     if (this.ui.session.urlCode) this.ui.menu.toggle(this.hero, 'online');
   }
 
   exit() {
     this.ui.menu.inventory.attach(null);
+    this.ui.menu.magic.attach(null);
     this.overlay.setAvailable(false);
     this.ui.dialog.close();
     this.ui.shop.close();
@@ -269,7 +271,7 @@ export class OverworldScene implements Scene {
       item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
     }
     for (const body of arena.bodies()) body.zIndex = body.y;
-    hud.update(this.hero, this.combos.typed);
+    hud.update(this.hero, this.combos.typed, this.arena.zone.name);
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.
@@ -384,7 +386,7 @@ export class OverworldScene implements Scene {
    * just finished, if any. Presses are the move actions as bound, and the on-screen pad (the D-pad also moves the hero).
    */
   private readCombo(dt: number, reading: boolean): number | undefined {
-    const combos = heroCombos(this.hero).map((c) => c.keys); // the wand or tome in hand, then the skills learned
+    const combos = heroCombos(this.hero, this.arena.zone.name).map((c) => c.keys); // the wand or tome in hand, then the skills ready
     const set = combos.join();
     if (reading || this.comboSet !== set) {
       this.combos.reset();
