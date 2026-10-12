@@ -1,4 +1,5 @@
 import type { Hero } from '../systems/combat';
+import { heroCombos, SKILLS } from '../systems/skills';
 import { arrows, progress, SPELLS } from '../systems/spells';
 
 // Health / mana bars, mirrored on one line (XP and level are in the pause menu). HTML rather than
@@ -58,23 +59,20 @@ export class Hud {
     if (b.label) b.label.textContent = `${value} / ${max}`;
   }
 
-  /** The wand's or tome's combos, each arrow lit once tapped and a combo dimmed while there is not the mana for it. */
+  /** What the hero can cast (the wand or tome's combos, then their skills): each arrow lit once tapped, dim while the mana is short. */
   private updateCombos(hero: Hero, typed: string) {
-    const focus = hero.weapon.focus;
+    const list = heroCombos(hero);
     const mp = Math.floor(hero.stats.mp);
-    const key = focus ? `${hero.weapon.name}|${typed}|${focus.combos.map((c) => (mp >= c.cost ? 1 : 0)).join('')}` : '';
+    const key = list.length ? `${typed}|${list.map((c) => `${c.keys}${mp >= c.cost ? 1 : 0}`).join()}` : '';
     if (key === this.shownCombos) return;
     this.shownCombos = key;
-    this.combos.hidden = !focus;
-    if (!focus) {
-      this.combos.innerHTML = '';
-      return;
-    }
-    this.combos.innerHTML = focus.combos
+    this.combos.hidden = !list.length;
+    this.combos.innerHTML = list
       .map((c) => {
         const lit = progress(typed, c.keys);
         const keys = [...arrows(c.keys)].map((a, i) => (i < lit ? `<b>${a}</b>` : `<i>${a}</i>`)).join('');
-        return `<li${mp >= c.cost ? '' : ' class="poor"'}><span class="keys">${keys}</span> ${SPELLS[c.spell].name} <small>${c.cost}</small></li>`;
+        const name = c.skill ? SKILLS[c.skill].name : SPELLS[c.spell].name;
+        return `<li${mp >= c.cost ? '' : ' class="poor"'}><span class="keys">${keys}</span> ${name} <small>${c.cost}</small></li>`;
       })
       .join('');
   }

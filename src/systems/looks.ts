@@ -143,6 +143,18 @@ export const NPC_LOOKS: Record<string, Outfit> = {
     cape: 'cape.teal',
     weapon: 'weapon.staff',
   },
+  // The training wizard (GIVERS.orin in systems/quests.ts): grey-bearded, in a navy hat and a teal cloak.
+  trainer: {
+    body: 'body.light',
+    head: 'head.human_light',
+    beard: 'beard.gray',
+    torso: 'torso.tunic_navy',
+    legs: 'legs.pants_charcoal',
+    feet: 'feet.boots_brown',
+    headwear: 'headwear.wizard_navy',
+    cape: 'cape.teal',
+    weapon: 'weapon.staff',
+  },
   // The shopkeepers (see SHOPS in systems/shops.ts).
   smith: {
     body: 'body.bronze',

@@ -3,7 +3,19 @@ import type { Player } from '../../entities/Player';
 import { CELL } from '../../map/types';
 import { round1, type WorldEvent } from '../../net/protocol';
 import { attackPower, rollDamage, spellPower } from '../../systems/combat';
+import {
+  EDGE_CHARGES,
+  EDGE_SECONDS,
+  heroCombos,
+  MARK_BONUS,
+  MARK_REACH_CELLS,
+  MARK_SECONDS,
+  MARK_STING,
+  SKILLS,
+  type SkillCombo,
+} from '../../systems/skills';
 import { SPELLS, type Combo, type Focus } from '../../systems/spells';
+import type { Mob } from '../../entities/Mob';
 import type { Arena } from './Arena';
 import {
   BLAST_RADIUS,
@@ -39,16 +51,24 @@ export class Casting {
     private emit: (e: WorldEvent) => void,
   ) {}
 
+  /** Foes marked by Spirit Mark, and until when (the arena's clock). */
+  private marks = new WeakMap<Mob, number>();
+
+  /** How much more a foe takes right now: 1, or more while Spirit Mark is on it. */
+  markFactor(mob: Mob): number {
+    return (this.marks.get(mob) ?? 0) > this.arena.clock ? 1 + MARK_BONUS : 1;
+  }
+
   /** A wand's or tome's plain attack: a free bolt along the aim, as strong as the weapon's attack. */
   basic(p: Player, focus: Focus) {
     p.attackCooldown = focus.cooldown;
     p.body.play('cast');
-    this.bolt(p, p.aim.x, p.aim.y, attackPower(p.hero), BOLT_SPEED);
+    this.bolt(p, p.aim.x, p.aim.y, attackPower(p.hero) + this.sim.takeEdge(p), BOLT_SPEED); // Arcane Edge adds to it
   }
 
-  /** The player finished combo `index` of the weapon in hand: cast it if there is mana for it. */
+  /** The player finished combo `index` of what they can cast (the wand or tome in hand, then their skills): cast it if there is mana. */
   combo(p: Player, index: number) {
-    const combo = p.hero.weapon.focus?.combos[index];
+    const combo = heroCombos(p.hero)[index];
     if (!combo || p.castCooldown > 0) return;
     const { stats } = p.hero;
     const { x, y } = p.body;
@@ -59,11 +79,50 @@ export class Casting {
     }
     if (p.mouseAim) p.body.face(directionToward(p.aim.x, p.aim.y));
     p.body.play('cast');
-    if (!this.cast(p, combo)) return;
+    if (!(combo.skill ? this.skill(p, combo) : this.cast(p, combo))) return;
     stats.mp -= combo.cost;
     p.castCooldown = COMBO_COOLDOWN;
     this.sim.fx('castGlow', x, y - 22, undefined, p.slot);
-    this.sim.text(x, y - 66, SPELLS[combo.spell].name, 0xcfe8ff);
+    this.sim.text(x, y - 66, combo.skill ? SKILLS[combo.skill].name : SPELLS[combo.spell].name, 0xcfe8ff);
+  }
+
+  // --- Skills (learned from the trainer; any weapon) ---
+
+  private skill(p: Player, { skill }: SkillCombo): Cast {
+    switch (skill) {
+      case 'arcaneEdge':
+        return this.edge(p);
+      case 'spiritMark':
+        return this.mark(p);
+    }
+  }
+
+  /** Arcane Edge: the next few attacks, with whatever is in hand, carry extra magic. */
+  private edge(p: Player): Cast {
+    p.edge = { charges: EDGE_CHARGES, timer: EDGE_SECONDS };
+    this.sim.fx('ward', p.body.x, p.body.y - 14);
+    return true;
+  }
+
+  /** Spirit Mark: a pulse that stings the foes near you and marks them to take more from everything for a while. */
+  private mark(p: Player): Cast {
+    const reach = MARK_REACH_CELLS * CELL;
+    const near = this.arena.mobs.filter((m) => m.alive && dist(m.body, p.body) <= reach);
+    if (!near.length) {
+      this.sim.text(p.body.x, p.body.y - 54, 'No target', 0x8fb3ff);
+      return false;
+    }
+    this.sim.fx('nova', p.body.x, p.body.y - 14);
+    const sting = spellPower(p.hero) * MARK_STING;
+    for (const mob of near) {
+      const [ux, uy] = unit(mob.body.x - p.body.x, mob.body.y - p.body.y);
+      this.sim.hitMob(mob, rollDamage(sting, mob.kind.defense), ux, uy, true); // before the mark: only later hits take more
+      if (!mob.alive) continue;
+      this.marks.set(mob, this.arena.clock + MARK_SECONDS);
+      this.sim.fx('blink', mob.body.x, mob.body.y - 18);
+      this.sim.text(mob.body.x, mob.body.y - 66, 'Marked', 0xd9a8ff);
+    }
+    return true;
   }
 
   // --- The spells ---

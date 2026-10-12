@@ -12,7 +12,7 @@ import { newHero, type Hero } from '../../systems/combat';
 import { encodeOp, type InvOpWire } from '../../systems/inventory';
 import { heroOutfit, playerName } from '../../systems/looks';
 import type { Arena } from './Arena';
-import { DEFEAT_LINES, WARD_TINT } from './constants';
+import { DEFEAT_LINES, EDGE_TINT, WARD_TINT } from './constants';
 import type { Ground } from './Ground';
 import type { PackSync } from './PackSync';
 import type { Trading } from './Trading';
@@ -244,7 +244,7 @@ export class GuestLink {
     const [fx, fy] = DIR_VEC[p.body.facing];
     const swinging = (p.flags & FLAG.swing) !== 0;
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
-    p.body.setTint(p.flags & FLAG.ward ? WARD_TINT : 0xffffff);
+    p.body.setTint(p.flags & FLAG.ward ? WARD_TINT : p.flags & FLAG.edge ? EDGE_TINT : 0xffffff);
     p.body.alpha = p.flags & FLAG.invuln && Math.floor(this.arena.clock * 16) % 2 === 0 ? 0.35 : 1;
     p.body.animate(dt * 1000, (p.flags & FLAG.moving) !== 0);
   }

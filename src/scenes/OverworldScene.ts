@@ -27,8 +27,9 @@ import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
 import { lecternIn, lecternPages } from '../systems/lectern';
+import { heroCombos, TRAINER, trainerTalk, type Skill } from '../systems/skills';
 import { petSound } from '../systems/pets';
-import { GIVERS, giverMark, progressOf, recordSite, siteNote, siteOpen } from '../systems/quests';
+import { QUEST_GIVER, GIVERS, giverMark, progressOf, recordSite, siteNote, siteOpen } from '../systems/quests';
 import { SHOPS } from '../systems/shops';
 import type { ComboKey } from '../systems/spells';
 import type { Precip } from '../systems/weather';
@@ -40,6 +41,7 @@ import { HostLink } from './overworld/HostLink';
 import { PackSync } from './overworld/PackSync';
 import { Simulation } from './overworld/Simulation';
 import { Trading } from './overworld/Trading';
+import { Training } from './overworld/Training';
 import { Visuals } from './overworld/Visuals';
 import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
 
@@ -94,12 +96,13 @@ export class OverworldScene implements Scene {
   private ground: Ground;
   private pack: PackSync;
   private trading: Trading;
+  private training: Training;
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
   private marked = new WeakMap<Character, string>(); // the tag last put over each quest giver
   private combos = new ComboReader();
-  private comboSet: Item | null = null; // the weapon the reader is following (a different one starts it afresh)
+  private comboSet = ''; // the combos the reader is following (a different set starts it afresh)
   private atlas = new Atlas(); // what the players have seen of each zone, for the map
 
   constructor(
@@ -123,6 +126,9 @@ export class OverworldScene implements Scene {
     this.host = new HostLink(arena, ui.session, this.sim, this.pack, this.trading);
     this.guest = new GuestLink(arena, ui.session, visuals, this.zones, this.ground, this.pack, this.trading, ui, say);
     this.pack.sendSoon = () => this.guest.sendSoon();
+    this.training = new Training(arena, this.zones, this.sim, say);
+    this.sim.trialDefeat = (p) => this.training.fail(p);
+    this.pack.startTrial = (p, skill) => this.training.start(p, skill);
     this.pack.levelUp = (p) => this.sim.levelUp(p);
 
     this.zones.addHome(zone);
@@ -309,6 +315,7 @@ export class OverworldScene implements Scene {
           if (z !== here) z.effects.update(dt); // the local zone's effects are updated with the rest of what is drawn
         });
       }
+      this.training.update(dt);
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
@@ -366,10 +373,11 @@ export class OverworldScene implements Scene {
    * just finished, if any. Presses are the move actions as bound, and the on-screen pad (the D-pad also moves the hero).
    */
   private readCombo(dt: number, reading: boolean): number | undefined {
-    const combos = this.hero.weapon.focus?.combos.map((c) => c.keys) ?? [];
-    if (reading || this.comboSet !== this.hero.weapon) {
+    const combos = heroCombos(this.hero).map((c) => c.keys); // the wand or tome in hand, then the skills learned
+    const set = combos.join();
+    if (reading || this.comboSet !== set) {
       this.combos.reset();
-      this.comboSet = this.hero.weapon;
+      this.comboSet = set;
     }
     if (reading) return undefined;
     this.combos.tick(dt);
@@ -404,7 +412,8 @@ export class OverworldScene implements Scene {
       this.talkToKeeper(keeper);
     } else if (giver) {
       giver.body.face(directionToward(this.player.x - giver.body.x, this.player.y - giver.body.y));
-      this.pack.talkToGiver(giver.giver);
+      if (giver.giver === TRAINER) this.talkToTrainer();
+      else this.pack.talkToGiver(giver.giver);
     } else if (site) {
       // Touching a site the quest wants: read what it says, and let the action count it (the host decides, for a guest).
       dialog.say(siteNote(site.kind, progressOf(this.hero)));
@@ -418,6 +427,25 @@ export class OverworldScene implements Scene {
     } else {
       attack();
     }
+  }
+
+  /**
+   * The training wizard tells the player what they know and what is next; when a trial follows, it begins once the last line
+   * is dismissed (solo and the host send the player there; a guest asks the host).
+   */
+  private talkToTrainer() {
+    const { lines, trial } = trainerTalk(this.hero);
+    this.ui.dialog.say(lines, trial ? () => this.beginTrial(trial) : undefined);
+  }
+
+  private beginTrial(skill: Skill) {
+    const { arena } = this;
+    if (arena.role === 'client') {
+      this.pack.askTrial(TRAINER);
+      return;
+    }
+    const refused = this.training.start(arena.local, skill);
+    if (refused) this.ui.dialog.say([refused]);
   }
 
   /** A shopkeeper greets the player, then the counter opens (for a guest the host settles each trade). */
@@ -456,8 +484,9 @@ export class OverworldScene implements Scene {
   /** The quest markers for the local player: "!" over the giver with a task to hand out, "?" when one can be handed in; sites show only while wanted. */
   private updateQuests(z: ZoneState, dt: number) {
     const hero = this.hero;
-    const mark = giverMark(hero);
+    const quest = giverMark(hero);
     for (const g of z.givers) {
+      const mark = g.giver === QUEST_GIVER ? quest : ''; // only the warden has tasks to hand out
       const text = mark ? `${mark} ${GIVERS[g.giver]?.tag ?? ''}` : (GIVERS[g.giver]?.tag ?? '');
       if (this.marked.get(g.body) === text) continue;
       this.marked.set(g.body, text);

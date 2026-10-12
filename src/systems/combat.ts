@@ -4,6 +4,7 @@ import type { Direction } from '../core/direction';
 import type { Outfit } from '../sprites/doll';
 import { ITEMS } from './items';
 import type { Focus } from './spells';
+import type { SkillId } from './skills';
 
 export interface Stats {
   level: number;
@@ -89,6 +90,8 @@ export interface Hero extends Partial<Record<Exclude<GearSlot, 'weapon'>, Item>>
   gold: number; // money: dropped by enemies, spent in shops
   /** Where the hero is in the story quests (systems/quests.ts). */
   quests: QuestLog;
+  /** Spells learned from the training wizard (systems/skills.ts): carried in the hero, so any weapon can use them. */
+  skills: SkillId[];
 }
 
 /** A hero's place in the quest chain (systems/quests.ts has the chain itself and the rules). */
@@ -147,6 +150,7 @@ export function newHero(): Hero {
     pack: [],
     gold: 0,
     quests: { stage: 0, taken: false, progress: 0 },
+    skills: [],
   };
 }
 
@@ -324,6 +328,49 @@ export const TROLL: MobKind = {
   stagger: 0.04, // too big to be stunned: it just keeps swinging
 };
 
+/**
+ * Training-ground enemies for the second trial (systems/skills.ts, `spiritMark`), tuned for a level 15 hero (about 160 HP,
+ * 24 defense, 60 attack): they hit hard enough to matter at that level, which nothing in the open world does.
+ */
+export const WARLORD: MobKind = {
+  name: 'Warlord',
+  look: {
+    body: 'body.dark_green',
+    head: 'head.orc_dark',
+    headwear: 'headwear.greathelm',
+    torso: 'torso.plate_steel',
+    legs: 'legs.plate_steel',
+    feet: 'feet.boots_black',
+    weapon: 'weapon.arming_steel',
+  },
+  maxHp: 320,
+  attack: 46,
+  defense: 6,
+  xp: 180,
+  gold: 90,
+  speed: 58,
+  sight: 6 * 32,
+  windup: 0.5,
+  recover: 0.6,
+  stagger: 0.05,
+};
+
+/** A hooded caster for the second trial: slow blue bolts that hurt a level 15 hero. */
+export const WRAITH: MobKind = {
+  name: 'Wraith',
+  look: { body: 'body.shade', head: 'head.shade', headwear: 'headwear.hood_brown', weapon: 'weapon.dagger' },
+  maxHp: 180,
+  attack: 50,
+  defense: 4,
+  xp: 150,
+  gold: 75,
+  speed: 54,
+  sight: 7 * 32,
+  windup: 0.65,
+  recover: 1.2,
+  shot: { range: 6 * 32, speed: 150, color: 0x7aa8ff },
+};
+
 /** What a mob is doing, in the order used on the wire (src/net/protocol.ts). */
 export const MOB_STATES = ['idle', 'wander', 'chase', 'windup', 'recover', 'dead'] as const;
 export type MobState = (typeof MOB_STATES)[number];
@@ -351,6 +398,8 @@ export const MOB_KINDS: Record<string, MobKind> = {
   zombie: ZOMBIE,
   orc: ORC,
   troll: TROLL,
+  warlord: WARLORD,
+  wraith: WRAITH,
 };
 
 /** The gear a hero is wearing, in slot order. */

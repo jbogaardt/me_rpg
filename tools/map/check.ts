@@ -1,3 +1,4 @@
+import { isTrialZone } from '../../src/systems/skills';
 import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
 import { MOB_KINDS } from '../../src/systems/combat';
 import { PET_KINDS } from '../../src/systems/pets';
@@ -226,7 +227,7 @@ export function checkDoors(maps: Map<string, MapData>): string[] {
           `${where} arrives on a door of "${door.to.zone}" (${col},${row}), which would bounce the player back`,
         );
       }
-      if (!target.doors.some((t) => t.to.zone === name)) {
+      if (!target.doors.some((t) => t.to.zone === name) && !isTrialZone(name)) {
         errors.push(`${where}: "${door.to.zone}" has no door back to "${name}"`);
       }
     }

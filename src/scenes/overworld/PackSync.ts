@@ -7,6 +7,7 @@ import type { Session } from '../../net/session';
 import { applyInvOp, decodeOp, gearCodes, itemFromCode, packCodes, setGear, setPack } from '../../systems/inventory';
 import type { InvOp, Result } from '../../systems/inventory';
 import { SHOPS } from '../../systems/shops';
+import { nextSkill, skillMask, skillsFromMask, TRAINER, trainerTalk, type Skill } from '../../systems/skills';
 import { GIVERS, linesFor, questFromWire, questWire, talk, type Talk } from '../../systems/quests';
 import { localTrader, remoteTrader, type Outcome, type Trader } from '../../systems/trader';
 import { CELL } from '../../map/types';
@@ -35,6 +36,8 @@ export class PackSync {
   private sentLooks = '';
   /** Set by the scene: a guest's action should be sent to the host now rather than at the next regular send. */
   sendSoon: () => void = () => {};
+  /** Set by the scene (host and solo): send a player to a training ground; returns why not, or null when they are going. */
+  startTrial: (p: Player, skill: Skill) => string | null = () => 'Training is not available.';
   /** Set by the scene: celebrate a player's level-up (a reward's XP can give one). */
   levelUp: (p: Player) => void = () => {};
 
@@ -69,6 +72,11 @@ export class PackSync {
     const told = talk(arena.hero);
     this.afterTalk(arena.local, told);
     this.ui.dialog.say(told.lines);
+  }
+
+  /** A co-op guest asks the host to send them to the training ground (the host checks everything). */
+  askTrial(giver: string) {
+    this.session.send({ k: 'do', n: ++this.doSeq, op: 'train', item: 0, shop: giver });
   }
 
   private afterTalk(p: Player, told: Talk) {
@@ -122,6 +130,7 @@ export class PackSync {
 
   private tradeFor(p: Player, { op, item: code, shop: shopId }: DoMsg): Outcome {
     if (op === 'talk') return this.talkFor(p, shopId);
+    if (op === 'train') return this.trainFor(p, shopId);
     const item = itemFromCode(code);
     if (!item) return { ok: false, text: 'Unknown item' };
     const trader = localTrader(p.hero);
@@ -147,6 +156,19 @@ export class PackSync {
     const told = talk(p.hero);
     if (told.levels) this.levelUp(p);
     return { ok: true, text: '', gear: told.gear, story: told.key };
+  }
+
+  /** Host: a friend asks the training wizard for their trial (they must be beside the trainer, and ready for it). */
+  private trainFor(p: Player, giverId: string): Outcome {
+    const giver = this.arena.zoneOf(p).givers.find((g) => g.giver === giverId);
+    if (giverId !== TRAINER || !giver) return { ok: false, text: 'Nobody to train you' };
+    if (Math.hypot(p.body.x - giver.body.x, p.body.y - giver.body.y) > KEEPER_REACH + CELL) {
+      return { ok: false, text: 'Too far away' };
+    }
+    const { trial } = trainerTalk(p.hero);
+    if (!trial) return { ok: false, text: nextSkill(p.hero) ? 'You are not ready yet' : 'Nothing more to learn' };
+    const refused = this.startTrial(p, trial);
+    return refused ? { ok: false, text: refused } : { ok: true, text: '' };
   }
 
   /** Host: do the Inventory action a friend is asking for (each is numbered, and done once and in order). */
@@ -181,6 +203,7 @@ export class PackSync {
         items: packCodes(p.hero),
         ack: p.seenInv,
         quests: questWire(p.hero.quests),
+        skills: skillMask(p.hero),
         ...(p.reply ? { say: p.reply } : {}),
       };
       const sig = JSON.stringify(body);
@@ -203,8 +226,9 @@ export class PackSync {
   applyPack(pack: PackMsg) {
     const { arena } = this;
     const hero = arena.hero;
-    const sig = JSON.stringify([pack.gold, pack.worn, pack.items, pack.quests]);
+    const sig = JSON.stringify([pack.gold, pack.worn, pack.items, pack.quests, pack.skills]);
     hero.quests = questFromWire(pack.quests) ?? hero.quests;
+    hero.skills = skillsFromMask(pack.skills);
     const worn = gearCodes(hero).join();
     hero.gold = pack.gold;
     this.pendingOps = this.pendingOps.filter((o) => o.seq > pack.ack);

@@ -1,6 +1,7 @@
 import { defineZone } from '../tools/map/zone';
 import { SHOP_ROOM, shopInterior } from '../tools/map/interiors';
 import { LECTERNS } from '../src/systems/lectern';
+import { TRAINER } from '../src/systems/skills';
 import { shopExit } from './town';
 
 const LECTERN = LECTERNS.shop_wizard;
@@ -12,5 +13,6 @@ export default defineZone({
   build(z) {
     shopInterior(z, 'wizard', shopExit('wizard'));
     z.prop('lectern', LECTERN.col, LECTERN.row); // read the combos here (systems/lectern.ts)
+    z.giver(TRAINER, 2, 6); // the training wizard, who sends you to the training grounds (systems/skills.ts)
   },
 });

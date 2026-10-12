@@ -9,6 +9,7 @@ import { CELL, type CellPoint } from '../../map/types';
 import { pickTransition } from '../../map/transition';
 import { GroundItem } from '../../entities/GroundItem';
 import { ZoneState } from '../ZoneState';
+import { TRAINER_ROOM } from '../../systems/skills';
 import type { Arena } from './Arena';
 
 const PREFETCH_REACH = 14 * CELL; // a door this close starts loading the zone behind it (the camera stops at a gap's border, so the player walks the last stretch to the screen's edge)
@@ -88,6 +89,7 @@ export class Zones {
       const here = arena.zones.get(p.zone);
       if (!here) continue;
       wanted.add(here.name);
+      if (p.trial) wanted.add(TRAINER_ROOM); // a trial ends back in the trainer's room
       for (const door of doorsNear(here.data, p.body.x, p.body.y, RETIRE_REACH)) wanted.add(door.to.zone);
     }
     for (const z of [...arena.zones.values()]) {
