@@ -84,8 +84,10 @@
 
 /* HP and MP as mirror-image bars on one line: HP drains toward the left edge, MP toward the right.
    XP and level are in the pause menu. */
-#hud-stats { display: flex; gap: 6px; flex: 0 1 400px; min-width: 0; margin-right: 8px; padding: 3px 4px; }
-#hud-stats .bar { flex: 1 1 0; min-width: 0; }
+#hud-stats { display: flex; flex-wrap: wrap; gap: 4px 6px; flex: 0 1 400px; min-width: 0; margin-right: 8px; padding: 3px 4px; }
+#hud-stats .bar { flex: 1 1 40%; min-width: 0; }
+#hud-stats .bar.vital { flex-basis: 25%; height: 10px; }
+.bar.vital .label { font: 600 9px/10px var(--body); }
 .bar {
   position: relative; height: 14px; overflow: hidden;
   background: #17120c; border: 1px solid var(--gold-dim); border-radius: 2px; box-shadow: inset 0 1px 3px #000;
@@ -101,6 +103,12 @@
 #hud-hp .label::before { content: 'HP '; font-weight: 700; }
 #hud-mp .label::before { content: 'MP '; font-weight: 700; }
 #hud-hp .fill { background-image: linear-gradient(rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.25)); }
+#hud-food .label::before { content: 'FOOD '; font-weight: 700; }
+#hud-water .label::before { content: 'WATER '; font-weight: 700; }
+#hud-food .fill { background-image: linear-gradient(90deg, #7a4a14, #b8741f, #e0a43c); }
+#hud-water .fill { background-image: linear-gradient(270deg, #1d4f8a, #2f7fc4, #5db6f0); }
+.bar.low { animation: vital-low 1s ease-in-out infinite alternate; }
+@keyframes vital-low { to { filter: brightness(1.6) saturate(1.4); } }
 #hud-mp .fill { background-image: linear-gradient(270deg, #363c4e, #586c78, #7796a5, #90b8d1, #a8d3fc); }
 .bar.xp { height: 8px; margin-top: 3px; }
 .bar.xp .fill { background-image: var(--grad-xp); }

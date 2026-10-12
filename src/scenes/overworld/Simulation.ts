@@ -22,6 +22,7 @@ import { isIce, stepVelocity } from '../../systems/ice';
 import { GIVERS, QUEST_GIVER, recordKill, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
+import { isWeak, MAX_VITAL, tickVitals } from '../../systems/survival';
 import type { Strike } from '../../entities/WeatherLayer';
 import type { ZoneState } from '../ZoneState';
 import type { Arena } from './Arena';
@@ -122,8 +123,9 @@ export class Simulation {
     if (p.pendingShot && (p.pendingShot.timer -= dt) <= 0) this.release(p);
     s.mp = Math.min(s.maxMp, s.mp + (MP_REGEN + gearMpRegen(p.hero)) * dt);
     // Gear that mends (a Warden's Mantle) works in the thick of a fight; the slow natural kind waits for a quiet spell.
-    const mend = gearRegen(p.hero) + (p.sinceHit > HP_REGEN_DELAY ? HP_REGEN : 0);
+    const mend = gearRegen(p.hero) + (p.sinceHit > HP_REGEN_DELAY && !isWeak(p.hero) ? HP_REGEN : 0);
     if (mend) s.hp = Math.min(s.maxHp, s.hp + mend * dt);
+    tickVitals(p.hero, dt); // hunger and thirst
 
     if (p.knock.x || p.knock.y) {
       this.arena.collision.slide(p.body, p.knock.x * dt, p.knock.y * dt, this.arena.bodies());
@@ -377,6 +379,8 @@ export class Simulation {
     const s = p.hero.stats;
     s.hp = s.maxHp;
     s.mp = s.maxMp;
+    s.food = Math.max(s.food, MAX_VITAL / 2); // woken fed enough not to starve at once
+    s.water = Math.max(s.water, MAX_VITAL / 2);
     if (p.zone === home.name) {
       p.body.position.set(...cellFeet(home.data.spawn));
       p.body.face('down');

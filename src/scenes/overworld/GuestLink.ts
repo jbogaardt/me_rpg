@@ -205,9 +205,9 @@ export class GuestLink {
     if (snap.ground) this.ground.sync(snap.ground); // absent: the same items as before
     for (const [index, ...state] of snap.mobs) arena.mobs[index]?.setRemote(decodeMob(state)); // only the mobs the host listed: the rest are out of sight
 
-    const [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] = snap.me;
+    const [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic, food, water] = snap.me;
     if (maxHp > 0 && maxMp > 0)
-      Object.assign(arena.hero.stats, { level, xp, hp, maxHp, mp, maxMp, attack, defense, magic });
+      Object.assign(arena.hero.stats, { level, xp, hp, maxHp, mp, maxMp, attack, defense, magic, food, water });
 
     let newest = this.lastEvent;
     for (const wire of snap.events) {

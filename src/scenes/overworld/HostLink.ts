@@ -219,6 +219,18 @@ export class HostLink {
   }
 
   private snapStats(s: Stats): StatsSnap {
-    return [s.level, s.xp, round1(s.hp), s.maxHp, round1(s.mp), s.maxMp, s.attack, s.defense, s.magic];
+    return [
+      s.level,
+      s.xp,
+      round1(s.hp),
+      s.maxHp,
+      round1(s.mp),
+      s.maxMp,
+      s.attack,
+      s.defense,
+      s.magic,
+      round1(s.food),
+      round1(s.water),
+    ];
   }
 }

@@ -48,6 +48,8 @@ const stats = (item: Item) =>
     item.focus ? item.focus.kind : '',
     item.use?.hp ? `+${item.use.hp} HP` : '',
     item.use?.mp ? `+${item.use.mp} MP` : '',
+    item.use?.food ? `+${item.use.food} food` : '',
+    item.use?.water ? `+${item.use.water} water` : '',
     item.value ? `worth ${item.value}g` : '',
   ]
     .filter(Boolean)

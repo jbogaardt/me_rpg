@@ -16,6 +16,8 @@ export interface Stats {
   attack: number;
   defense: number;
   magic: number;
+  food: number; // 0..MAX_VITAL, drains over time (systems/survival.ts); fractional, show Math.ceil
+  water: number; // same
 }
 
 /**
@@ -73,8 +75,8 @@ export interface Item {
   ranged?: Ranged;
   /** Set on wands and tomes (weapons): the plain attack is a free bolt, and a combo of directions casts a spell. */
   focus?: Focus;
-  /** Set on supplies (no slot): drinking one restores this much HP and MP, from the pack. */
-  use?: { hp: number; mp?: number };
+  /** Set on supplies (no slot): drinking or eating one restores this much HP, MP, food and water, from the pack. */
+  use?: { hp?: number; mp?: number; food?: number; water?: number };
   /** Set on bags (slot `bag`): extra pack slots while it is worn. */
   capacity?: number;
   /** Sprite parts this item puts on the hero (see sprites/parts.ts); drawn over the hero's base look. */
@@ -146,7 +148,19 @@ export function mobTimings(kind: MobKind): { windup: number; recover: number; st
 export function newHero(): Hero {
   return {
     name: 'Hero',
-    stats: { level: 1, xp: 0, hp: 30, maxHp: 30, mp: 20, maxMp: 20, attack: 5, defense: 1, magic: 8 },
+    stats: {
+      level: 1,
+      xp: 0,
+      hp: 30,
+      maxHp: 30,
+      mp: 20,
+      maxMp: 20,
+      attack: 5,
+      defense: 1,
+      magic: 8,
+      food: 100,
+      water: 100,
+    },
     weapon: ITEMS.rustySword,
     cape: ITEMS.travelerCloak,
     pack: [],

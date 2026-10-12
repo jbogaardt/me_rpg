@@ -14,6 +14,7 @@ import {
 import { tabStep } from '../core/controls';
 import { SKILLS } from '../systems/skills';
 import { arrows } from '../systems/spells';
+import { MAX_VITAL } from '../systems/survival';
 import type { Session } from '../net/session';
 import type { TouchControls } from '../core/touch';
 import { Inventory } from './Inventory';
@@ -138,6 +139,8 @@ export class Menu {
       <dl>
         ${row('HP', `${Math.ceil(s.hp)} / ${s.maxHp}`)}
         ${row('MP', `${Math.floor(s.mp)} / ${s.maxMp}`)}
+        ${row('Food', `${Math.ceil(s.food)} / ${MAX_VITAL}`)}
+        ${row('Water', `${Math.ceil(s.water)} / ${MAX_VITAL}`)}
         ${row('Gold', `${hero.gold} <small>g</small>`)}
         ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
         ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${gearAttack(hero)} gear)</small>`)}

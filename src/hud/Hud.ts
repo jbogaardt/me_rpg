@@ -2,6 +2,7 @@ import type { Hero } from '../systems/combat';
 import { trackerText } from '../systems/guide';
 import { heroCombos, SKILLS } from '../systems/skills';
 import { arrows, progress, SPELLS } from '../systems/spells';
+import { LOW_VITAL, MAX_VITAL } from '../systems/survival';
 
 // Health / mana bars, mirrored on one line (XP and level are in the pause menu). HTML rather than
 // canvas so the text stays sharp on high-DPI phones and can respect notch safe areas; markup and
@@ -35,6 +36,8 @@ function bar(id: string): Bar {
 export class Hud {
   private hp = bar('hud-hp');
   private mp = bar('hud-mp');
+  private food = bar('hud-food');
+  private water = bar('hud-water');
   private gold = document.getElementById('hud-gold')!;
   private combos = document.getElementById('combo-hud')!;
   private tracker = document.getElementById('quest-tracker')!;
@@ -48,12 +51,18 @@ export class Hud {
     const hp = Math.ceil(s.hp);
     const mp = Math.floor(s.mp);
     const quest = trackerText(hero);
-    const key = `${hp}/${s.maxHp} ${mp}/${s.maxMp} ${hero.gold} ${quest}`;
+    const food = Math.ceil(s.food);
+    const water = Math.ceil(s.water);
+    const key = `${hp}/${s.maxHp} ${mp}/${s.maxMp} ${food} ${water} ${hero.gold} ${quest}`;
     if (key === this.shown) return; // only touch the DOM when something changed
     this.shown = key;
     this.set(this.hp, hp, s.maxHp);
     this.hp.fill.style.backgroundColor = hpColor(hp / s.maxHp);
     this.set(this.mp, mp, s.maxMp);
+    this.set(this.food, food, MAX_VITAL);
+    this.set(this.water, water, MAX_VITAL);
+    this.food.fill.parentElement!.classList.toggle('low', food <= LOW_VITAL);
+    this.water.fill.parentElement!.classList.toggle('low', water <= LOW_VITAL);
     this.gold.querySelector('.label')!.textContent = String(hero.gold);
     this.tracker.hidden = quest === '';
     this.tracker.textContent = quest;

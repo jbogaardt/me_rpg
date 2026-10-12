@@ -24,7 +24,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 19;
+export const PROTOCOL_VERSION = 20; // v20: food and water on StatsSnap
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -52,8 +52,8 @@ export type PlayerSnap = [number, number, number, number, number];
 export type MobFields = [number, number, number, number, number, number, number];
 /** A mob's state tagged with its index in the map's mob list (a snapshot lists only some of the mobs). */
 export type MobSnap = [index: number, ...state: MobFields];
-/** [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] */
-export type StatsSnap = [number, number, number, number, number, number, number, number, number];
+/** [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic, food, water] */
+export type StatsSnap = [number, number, number, number, number, number, number, number, number, number, number];
 
 /** One-shot particle effects a host may ask a guest to play (continuous ones, like the bolt trail, are local). */
 export const FX_NAMES = [
@@ -564,7 +564,7 @@ export function parseMessage(raw: unknown): Message | null {
         events.includes(null) ||
         !ground ||
         ground.includes(null) ||
-        !numbers(m.me, 9) ||
+        !numbers(m.me, 11) ||
         !isWeather(m.w) ||
         !isCount(m.chests) ||
         m.chests > MAX_CHEST_MASK
