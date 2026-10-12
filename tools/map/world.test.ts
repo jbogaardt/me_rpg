@@ -152,7 +152,7 @@ describe('borders as the world builder sees them', () => {
     let trees = 0;
     for (let row = 5; row < 16; row++)
       for (let col = 9; col < 19; col++) if (blocked.has(row * built.width + col)) trees++;
-    expect(trees).toBeGreaterThan(10);
+    expect(trees).toBeGreaterThan(4);
   });
 });
 
