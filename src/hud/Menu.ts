@@ -11,7 +11,7 @@ import { Multiplayer } from './Multiplayer';
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
 // The Online tab (multiplayer connection) is Multiplayer.ts. Online play does not pause the world behind the menu.
 
-const TABS = ['status', 'inventory', 'controls', 'online', 'trade']; // 'trade' (hud/Trade.ts) shows only in a co-op game
+const TABS = ['status', 'inventory', 'controls', 'online', 'trade', 'credits']; // 'trade' (hud/Trade.ts) shows only in a co-op game
 
 export class Menu {
   open = false;
