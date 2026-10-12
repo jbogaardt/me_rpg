@@ -1,5 +1,5 @@
 // Corner-based terrain (autotiling) on the LPC terrain atlas (public/tilesets/lpc_terrain.png, source and credits in
-// art/lpc_terrain/). A terrain is painted on the *corners* of cells: `zone.paint('bog', rect)` marks the four corners
+// art/lpc_terrain/). A terrain is painted on the *corners* of cells: `zone.paint('murk', rect)` marks the four corners
 // of every cell in the rect, and each cell then shows the tile whose corners match (a full tile inside, soft edges and
 // corners around it, reaching half a cell past the rect). So any shape works, stepped borders and inner corners
 // included, which the ring-based `zone.patch` cannot do.
@@ -16,14 +16,17 @@ import { CELL } from '../../src/map/types';
 import { ROOT } from './image';
 
 export const TERRAIN_SHEET = 'lpc_terrain.png';
+/** The atlas with its water recoloured murky olive (tools/map/recolor.ts): same layout, swamp water. */
+export const SWAMP_SHEET = 'lpc_swamp.png';
 
 /** A corner mask: bit 3 = top-left, 2 = top-right, 1 = bottom-left, 0 = bottom-right (Tiled's corner order). */
 export type Mask = number;
 export const FULL: Mask = 0b1111;
 
-interface TerrainDef {
+export interface TerrainDef {
   lpc: string; // the terrain's name in Terrain.tsx
   surface: string; // what a cell (mostly) covered by it is made of: footprints, ice, the co-op map's colours
+  sheet?: string; // a recoloured copy of the atlas (default: the atlas itself)
   opaque?: true; // painted over its own sea, so it hides everything below and never fades across a biome's border
   about: string;
 }
@@ -61,7 +64,12 @@ export const TERRAINS = {
   dirt: { lpc: 'Trans Dirt', surface: 'dirt', about: 'Pale sandy dirt with pebbles: paths and trails.' },
   road: { lpc: 'Brick Road', surface: 'stone', about: 'Brown brick paving.' },
   pond: { lpc: 'Water', surface: 'water', about: 'Clear water with an earthy bank. Block the painted rect.' },
-  bog: { lpc: 'Sewer Water', surface: 'bog', about: 'Murky swamp water. Block the painted rect.' },
+  murk: {
+    lpc: 'Water',
+    sheet: SWAMP_SHEET,
+    surface: 'bog',
+    about: 'Murky olive swamp water with a soft muddy bank (the pond, recoloured). Block the painted cells.',
+  },
   ice: { lpc: 'Ice', surface: 'ice', about: 'A frozen pond with an earthy rim (slippery).' },
   lava: { lpc: 'Lava', surface: 'lava', about: 'Molten rock. Block the painted rect.' },
   pit: { lpc: 'Hole', surface: 'pit', about: 'A dark earthen pit. Block the painted rect.' },

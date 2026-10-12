@@ -1,6 +1,6 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { DRY_TREES } from '../tools/map/catalog';
-import { awayFrom, blob, pick, pond, trail, units } from '../tools/map/helpers';
+import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
 // The desert: the whole north-west, stepping down to the Greenwood. Dunes, a buried skull, red badlands, an oasis, a
@@ -47,7 +47,7 @@ export default defineBiome({
     z.keepClear(area(6.4, 3.7, 2.8, 1.9));
     z.prop('dryTreeA', ...near(6.6, 4));
     z.prop('dryTreeB', ...near(9, 5.2));
-    z.prop('reeds', pick(water, 6).col + 1, pick(water, 6).row);
+    reedsAt(z, water, 6, 'e');
     z.prop('lilyFlower', pick(water, 3).col + 3, pick(water, 3).row);
     z.prop('lilyPads', pick(water, 5).col + 10, pick(water, 5).row);
     z.chest('wood', 'potion', ...near(9.3, 4.4));

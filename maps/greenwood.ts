@@ -1,6 +1,6 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { TREES } from '../tools/map/catalog';
-import { awayFrom, blob, pick, pond, trail, units } from '../tools/map/helpers';
+import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
 // The Greenwood: the big forest of the south-west and where the game starts. Meadows and groves round a crossroads,
@@ -77,7 +77,7 @@ export default defineBiome({
     z.prop('lilyFlower', pick(lake, 4).col + 2, pick(lake, 4).row);
     z.prop('lilyPads', pick(lake, 7).col + 9, pick(lake, 7).row);
     z.prop('lilyRed', pick(lake, 9).col + 15, pick(lake, 9).row);
-    z.prop('reeds', pick(lake, 13).col + 1, pick(lake, 13).row);
+    reedsAt(z, lake, 13, 'w');
     const small = pond(z, area(6, 21, 1.4, 0.9), { shore: 'meadow' });
     z.keepClear(area(5.7, 20.7, 2, 1.5));
     z.prop('lilyPads', pick(small, 3).col + 3, pick(small, 3).row);

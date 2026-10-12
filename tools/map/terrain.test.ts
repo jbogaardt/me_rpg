@@ -51,8 +51,8 @@ describe('zone.paint', () => {
   it('erases', () => {
     const z = new Zone(4, 4);
     z.fill('grass');
-    z.paint('bog', { col: 0, row: 0, w: 4, h: 4 });
-    z.paint('bog', { col: 0, row: 0, w: 4, h: 4 }, { erase: true });
+    z.paint('murk', { col: 0, row: 0, w: 4, h: 4 });
+    z.paint('murk', { col: 0, row: 0, w: 4, h: 4 }, { erase: true });
     z.spawn(0, 0);
     expect(z.toMapData().ground.every((g) => g?.length === 3)).toBe(true);
   });

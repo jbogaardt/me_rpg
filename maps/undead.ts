@@ -27,7 +27,7 @@ export default defineBiome({
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');
-    z.paint('ash', z.bounds);
+    z.ground('ash');
     z.paint('soot', [...blob(area(11.4, 6.2, 2.6, 1.6)), ...blob(area(18, 8.8, 2.6, 1.4))]);
     z.paint('mud', TRAILS);
     z.keepClear(TRAILS);

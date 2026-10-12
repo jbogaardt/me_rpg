@@ -102,7 +102,7 @@ export function pond(
   z: ZoneApi,
   r: Rect,
   opts: {
-    water?: 'pond' | 'bog' | 'lava' | 'abyss' | 'pit';
+    water?: 'pond' | 'murk' | 'lava' | 'abyss' | 'pit';
     shore?: 'sand' | 'meadow' | 'mud' | 'darkGrass' | 'snow';
   } = {},
 ): Rect[] {
@@ -156,4 +156,21 @@ export function pick(rows: Rect[], i: number): Rect {
   const r = rows[Math.min(rows.length - 1, Math.max(0, i))];
   if (!r) throw new Error('pick: the shape has no rows');
   return r;
+}
+
+/**
+ * Stand reeds on the bank beside a pond (`rows` as `pond` returns them): row `at` of the water, on its west or east
+ * side, with the bed's foot on the land next to the first or last water cell of that row. Reeds grow at the edge, never
+ * in the water.
+ */
+export function reedsAt(
+  z: ZoneApi,
+  rows: Rect[],
+  at: number,
+  side: 'w' | 'e' = 'w',
+  kind: 'reedBed' | 'reedStalks' = 'reedBed',
+) {
+  const row = pick(rows, at);
+  const w = kind === 'reedBed' ? 3 : 1;
+  z.prop(kind, side === 'w' ? row.col - w : row.col + row.w, row.row);
 }

@@ -32,6 +32,7 @@ import {
   tileTable,
   variant,
   FULL,
+  type TerrainDef,
   type TerrainName,
 } from './terrain';
 
@@ -817,7 +818,7 @@ export class Zone {
         if (m === FULL) layers = [];
         for (const part of decompose(table, m)) {
           const [x, y] = part === FULL ? variant(table.get(FULL)!, col, row) : table.get(part)![0];
-          layers.push(sheetIndex(TERRAIN_SHEET), x, y);
+          layers.push(sheetIndex((TERRAINS[name] as TerrainDef).sheet ?? TERRAIN_SHEET), x, y);
         }
         // Mostly covered: the cell is made of it now (footprints, ice, the co-op map).
         if ([8, 4, 2, 1].filter((b) => m & b).length >= 3) surface[i] = SURFACES.indexOf(TERRAINS[name].surface);

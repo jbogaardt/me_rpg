@@ -46,7 +46,7 @@ ground first, then features, then overrides.
 A `Rect` is `{ col, row, w, h }`.
 
 Biome specs (`defineBiome`, below) also get `z.bounds` (the biome's box), `z.owns(c, r)`, `z.free(c, r)`,
-`z.near(c, r)` (the nearest free cell: put mobs, chests and the spawn there, since the borders wander),
+`z.ground(terrain, {inset?})` (the biome's ground terrain, stopping short of the borders with a noisy edge: use it for a biome's base terrain instead of painting its bounds), `z.borderDistance(c, r)`, `z.near(c, r)` (the nearest free cell: put mobs, chests and the spawn there, since the borders wander),
 `z.keepClear(rects)` (no scattered props there: roads, plazas, lakes) and
 `z.scatter(prefabs, { count, rect?, seed?, margin?, where? })`, which sprinkles props deterministically on free cells
 (not walls, gaps or anything already placed) with `margin` free cells round each. Scatter big things (trees) first;
@@ -54,14 +54,14 @@ the build prints `scatter placed N of M` when there was no room, so lower the co
 `units(square)` (`at(x, y)` and `area(x, y, w, h)` in the layout's squares: write biome specs in squares so the world
 can be rescaled), `blob(rect)` (a lobed, natural outline as rects: lakes, groves, patches; never paint a bare rect for
 anything natural), `pond(z, rect, { water, shore })` (a blob of water, blocked, with a shore; returns its rows, `pick`
-one for lily pads), `trail(points)` (a winding 3-wide trail through nodes that runs straight into each; a gap's
+one for lily pads, `reedsAt(z, rows, i, side)` for reeds on its bank: never put reeds in the water), `trail(points)` (a winding 3-wide trail through nodes that runs straight into each; a gap's
 corridor `worldOf(layout).gap(a, b)` is a node), `road(points)` (the straight version), `awayFrom(rects)` (a `where`
 filter), `ridge`.
 
 ## Assets (`tools/map/catalog.ts`)
 
 - Terrain (`z.paint`, `TERRAINS` in `tools/map/terrain.ts`): `dirt` (paths), `sand`, `meadow`/`darkGrass` (deeper greens),
-  `snow`, `mud`, `redDirt`, `ash`/`soot` (undead), `road` (bricks), `pond`, `bog`, `ice` (slippery), `lava`, `pit`/`abyss`;
+  `snow`, `mud`, `redDirt`, `ash`/`soot` (undead), `road` (bricks), `pond`, `murk` (swamp water, same soft bank), `ice` (slippery), `lava`, `pit`/`abyss`;
   and the opaque `coast`/`snowCoast` (land painted over a `sea` fill). Later entries draw over earlier ones, and a full
   tile hides what is under it, so paint the biome's base terrain first and erase it (`{ erase: true }`) under a plaza.
 - Ground fills: `grass`, `sand`, `snow`, `water`, `ice`, `stone`, and from the LPC atlas `sea`, `cobble`, `flagstone`, `crackedStone`. `patch(name, rect)` blends sand/snow/stone into grass
@@ -71,8 +71,7 @@ filter), `ridge`.
 - Interior pieces (`interior.png`, drawn by `tools/map/interior.ts`): ground `planks`, `wall`, `mat`; prefabs `counter` (4x1.5), `shelf<Shop>` (3x2) and `sign<Shop>` (4x2) for each of smithy/armory/ranger/apothecary.
 - Prefabs: trees `treeA`/`treeB` (+ `frostTree*`, `dryTree*`, `jungleTree*`, `deadTree*`, `swampTree*`; 3x3, block bottom two rows, top row walk-behind), bushes
   `bush`/`frostBush`/`dryBush`/`jungleBush`/`deadBush`/`swampBush` (2x2), LPC `sandBoulder(B)`/`darkBoulder(B)` (2 wide),
-  `sandSpire`/`darkSpire`/`menhir` (1 wide), `reeds` (3 wide)/`reedsThin` (4.5 cells tall: everything they cover must be
-  water or wall), `lilyPads`/`lilyFlower`/`lilyFlowerB`/`lilyRed` (on water), rocks `rock` (pale), `rockSmall`, `rockB`, `rockC` (+ `frostRock*`), `barrel`, and
+  `sandSpire`/`darkSpire`/`menhir` (1 wide), `lilyPads`/`lilyFlower`/`lilyFlowerB`/`lilyRed` (on water), `reedBed`/`reedStalks` (3 and 1 cells wide, 3 tall: on the bank beside water), rocks `rock` (pale), `rockSmall`, `rockB`, `rockC` (+ `frostRock*`), `barrel`, and
   decorations `flowerRed`/`flowersPurple` (no collision). Mix variants to avoid repetition.
 - Buildings (`town.png`, from the CC0 Town RPG Pack, built by `tools/map/town.ts`): `smithy` and `apothecary` are 6x7-cell halls,
   `armory` and `ranger` are 3x9-cell tall houses. Solid from the ground up (you walk around them, not behind). Leave one cell of

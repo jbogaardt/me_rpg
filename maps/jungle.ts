@@ -1,5 +1,5 @@
 import { defineBiome, worldOf } from '../tools/map/world';
-import { awayFrom, blob, pick, pond, trail, units } from '../tools/map/helpers';
+import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
 // The jungle: a tall band of deep green in the middle of the north, from the sea down to the Eastwood. Thick groves,
@@ -39,7 +39,7 @@ export default defineBiome({
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');
-    z.paint('darkGrass', z.bounds);
+    z.ground('darkGrass');
     z.paint('mud', [...TRAILS, ...blob(area(25, 9.6, 1.4, 0.6))]);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
@@ -49,7 +49,7 @@ export default defineBiome({
     // --- A lagoon with reeds ----------------------------------------------------------------------------------
     const water = pond(z, area(24.6, 5.4, 2.2, 1.4), { shore: 'mud' });
     z.keepClear(area(24.3, 5.1, 2.8, 2));
-    z.prop('reeds', pick(water, 9).col + 1, pick(water, 9).row);
+    reedsAt(z, water, 9, 'w');
     z.prop('lilyFlower', pick(water, 3).col + 2, pick(water, 3).row);
     z.prop('lilyPads', pick(water, 6).col + 12, pick(water, 6).row);
 

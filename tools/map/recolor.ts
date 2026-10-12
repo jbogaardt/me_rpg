@@ -297,6 +297,16 @@ writePng(
   dir('dry_cliffs.png'),
   recolor(CLIFFS, (c) => (isTop(c) ? dryTop(c) : dryRock(c))),
 );
+// --- Swamp water: the LPC atlas's soft-banked pond, recoloured murky olive (the brown bank stays) ------------------------
+// Water terrain tiles sit at columns 27-29, rows 0-5 of the atlas (see Terrain.tsx); the plain tile below them is deep water.
+const SWAMP_BOX: Box = { x: 27 * 32, y: 0, w: 3 * 32, h: 6 * 32 };
+const murk = (c: RGB): RGB | null => {
+  const [h, s, l] = toHsl(c);
+  if (h < 160 || h > 220 || s < 0.25) return null; // only the blue-cyan water, not the earthy bank
+  return fromHsl(78 + (h - 190) * 0.3, clamp(0.26 + s * 0.2, 0, 0.5), clamp(l * 0.82, 0.12, 0.5));
+};
+writePng(dir('lpc_swamp.png'), recolor(readPng(dir('lpc_terrain.png')), murk, SWAMP_BOX));
+
 console.log(
-  'wrote ground_plus.png, frost_ground.png, frost_objects.png, dry_objects.png, jungle_objects.png, dead_objects.png, swamp_objects.png, frost_cliffs.png, dry_cliffs.png',
+  'wrote lpc_swamp.png, ground_plus.png, frost_ground.png, frost_objects.png, dry_objects.png, jungle_objects.png, dead_objects.png, swamp_objects.png, frost_cliffs.png, dry_cliffs.png',
 );

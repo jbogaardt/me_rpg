@@ -1,5 +1,5 @@
 import { defineBiome, worldOf } from '../tools/map/world';
-import { awayFrom, blob, pond, trail, units } from '../tools/map/helpers';
+import { awayFrom, blob, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
 // The wetlands: the north-east, a soggy meadow of ponds, reeds and olive trees wrapped round the marsh. The coast road
@@ -23,7 +23,7 @@ export default defineBiome({
   walls: { trees: [...KIT.trees], fillers: [...KIT.fillers] },
   build(z) {
     z.fill('grass');
-    z.paint('meadow', z.bounds);
+    z.ground('meadow');
     z.paint('mud', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
@@ -44,13 +44,12 @@ export default defineBiome({
         [29.8, 0.9, 0.8, 0.6],
       ] as const
     ).entries()) {
-      const water = pond(z, area(x, y, w, h), { water: i % 4 === 2 ? 'bog' : 'pond', shore: 'mud' });
+      const water = pond(z, area(x, y, w, h), { water: i % 4 === 2 ? 'murk' : 'pond', shore: 'mud' });
       z.keepClear(area(x - 0.2, y - 0.2, w + 0.4, h + 0.4));
       const mid = water[Math.floor(water.length / 2)];
       z.prop(i % 2 ? 'lilyFlower' : 'lilyPads', mid.col + 1, mid.row);
       z.prop('lilyRed', mid.col + mid.w - 2, mid.row - 1);
-      const foot = water[water.length - 1];
-      z.prop(i % 2 ? 'reeds' : 'reedsThin', foot.col, foot.row);
+      reedsAt(z, water, water.length - 1, i % 2 ? 'w' : 'e', i % 2 ? 'reedBed' : 'reedStalks');
     }
 
     // --- The east strip and its hidden chest ------------------------------------------------------------------

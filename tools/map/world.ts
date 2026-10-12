@@ -17,20 +17,24 @@
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
 import { PREFABS, type PrefabName } from './catalog';
 import type { ClimateName } from '../../src/systems/weather';
+import type { TerrainName } from './terrain';
+import { fbm, maskRects, noise, smoothMask } from './noise';
 import { rng, SURFACES, Zone, type Rect, type WoodsOptions, type ZoneApi } from './zone';
 
 /** Cells of trees on each side of a border between two biomes (and along the world's edge). */
 export const WALL = 3;
 /**
- * Cells of the neighbours a biome's map includes around its own: enough to see well past the walls (the camera stops at
- * the map's edge, so on a very wide screen the view simply stops scrolling a little before the border).
+ * Cells of the neighbours a biome's map includes around its own: more than half of the widest usual view (40 cells at
+ * 1280 px wide, 20 each side) plus the walls, so a player at a wall never sees past the drawn map.
  */
-export const MARGIN = 14;
+export const MARGIN = 22;
 /**
  * Cells past a gap's border where a player arrives (the first, the neighbour's own door cell, would send them straight
  * back): at the very edge of the new screen, as if they had just walked on, since the camera stops at the border.
  */
 export const ARRIVE = 1;
+/** Up to this many cells thicker than `WALL` a wall swells where the noise says so, so its inner edge is ragged. */
+export const RAGGED = 3;
 /** Default width of a gap (cells). */
 export const GAP = 3;
 
@@ -74,6 +78,14 @@ export interface BiomeApi extends ZoneApi {
   /** Keep scattered props off these cells (roads, plazas, a frozen lake...); points may still go there. */
   keepClear(area: Rect | Rect[]): void;
   /**
+   * Lay the biome's ground terrain over its own cells, but stop short of the borders: the terrain's edge lies between
+   * `inset[0]` and `inset[1]` cells from the nearest other biome (default 4 to 11, wandering with noise), so the shared
+   * ground shows between it and the wall and the two grounds on either side of a border never meet in a straight line.
+   */
+  ground(name: TerrainName, opts?: { inset?: [number, number]; scale?: number; seed?: number }): void;
+  /** How far (cells) an own cell is from the nearest other biome or the edge of the world (0 outside the biome). */
+  borderDistance(col: number, row: number): number;
+  /**
    * The free cell (see `free`) nearest (col, row): where to put a mob, chest or the spawn so that it lands in the
    * biome's open ground however its border wanders. Throws if there is none within 30 cells.
    */
@@ -110,27 +122,6 @@ export function worldOf(layout: WorldLayout): World {
   return w;
 }
 
-/** Smooth value noise in -1..1 on a lattice of `scale` cells, from a seed. */
-function noise(seed: number, scale: number) {
-  const hash = (x: number, y: number) => {
-    let h = (x * 374761393 + y * 668265263 + seed * 2147483647) | 0;
-    h = Math.imul(h ^ (h >>> 13), 1274126177);
-    return (((h ^ (h >>> 16)) >>> 0) / 4294967296) * 2 - 1;
-  };
-  const fade = (t: number) => t * t * (3 - 2 * t);
-  return (x: number, y: number) => {
-    const fx = x / scale,
-      fy = y / scale;
-    const x0 = Math.floor(fx),
-      y0 = Math.floor(fy);
-    const tx = fade(fx - x0),
-      ty = fade(fy - y0);
-    const a = hash(x0, y0) + (hash(x0 + 1, y0) - hash(x0, y0)) * tx;
-    const b = hash(x0, y0 + 1) + (hash(x0 + 1, y0 + 1) - hash(x0, y0 + 1)) * tx;
-    return a + (b - a) * ty;
-  };
-}
-
 /**
  * Who owns each world cell: the layout's squares, with the borders wandering (`wobble`) so they look carved. Each cell
  * looks up the square at a point pushed about by smooth noise, except near a gap, where the push fades out so the
@@ -161,7 +152,7 @@ function carve(layout: WorldLayout, names: string[]): Int16Array {
     return {
       x: dx ? g.at[0] * S + (dx > 0 ? S : 0) : g.at[0] * S + along,
       y: dy ? g.at[1] * S + (dy > 0 ? S : 0) : g.at[1] * S + along,
-      r0: w / 2 + WALL + 6,
+      r0: w / 2 + WALL + 3,
     };
   });
   const owner = new Int16Array(W * H);
@@ -180,7 +171,7 @@ function carve(layout: WorldLayout, names: string[]): Int16Array {
       let k = 1;
       for (const c of calm) {
         const d = Math.hypot(x - c.x, y - c.y);
-        if (d < c.r0 + S) k = Math.min(k, Math.max(0, (d - c.r0) / S));
+        if (d < c.r0 + S * 0.6) k = Math.min(k, Math.max(0, (d - c.r0) / (S * 0.6)));
       }
       k = k * k * (3 - 2 * k);
       const dx = push(nx, x, y) * amp * k;
@@ -436,9 +427,62 @@ export class World {
     return { corridor, approach, doors };
   }
 
-  /** Biome `k`'s wall cells: its cells within WALL (a circle) of another biome (or of the world's edge, if `edge`). */
-  wall(k: number, edge: boolean, corridor: Set<number>, approach: Set<number> = new Set()): Uint8Array {
+  /**
+   * For each cell of biome `k`, its distance (cells, a chamfer approximation of the straight-line one) to the nearest
+   * cell of another biome, or to the edge of the world when `edge`; 0 for cells that are not the biome's.
+   */
+  borderDistance(k: number, edge: boolean): Float32Array {
+    const { width: W, height: H } = this;
+    const dist = new Float32Array(W * H);
+    const BIG = 1e6;
+    for (let i = 0; i < dist.length; i++) dist[i] = this.owner[i] === k ? BIG : 0;
+    if (edge) {
+      for (let c = 0; c < W; c++) for (const r of [0, H - 1]) if (this.owner[r * W + c] === k) dist[r * W + c] = 1;
+      for (let r = 0; r < H; r++) for (const c of [0, W - 1]) if (this.owner[r * W + c] === k) dist[r * W + c] = 1;
+    }
+    const D = Math.SQRT2;
+    const relax = (i: number, c: number, r: number, dc: number, dr: number, cost: number) => {
+      const nc = c + dc,
+        nr = r + dr;
+      if (nc < 0 || nr < 0 || nc >= W || nr >= H) return;
+      const v = dist[nr * W + nc] + cost;
+      if (v < dist[i]) dist[i] = v;
+    };
+    for (let r = 0; r < H; r++)
+      for (let c = 0; c < W; c++) {
+        const i = r * W + c;
+        if (this.owner[i] !== k) continue;
+        relax(i, c, r, -1, 0, 1);
+        relax(i, c, r, 0, -1, 1);
+        relax(i, c, r, -1, -1, D);
+        relax(i, c, r, 1, -1, D);
+      }
+    for (let r = H - 1; r >= 0; r--)
+      for (let c = W - 1; c >= 0; c--) {
+        const i = r * W + c;
+        if (this.owner[i] !== k) continue;
+        relax(i, c, r, 1, 0, 1);
+        relax(i, c, r, 0, 1, 1);
+        relax(i, c, r, 1, 1, D);
+        relax(i, c, r, -1, 1, D);
+      }
+    return dist;
+  }
+
+  /**
+   * Biome `k`'s wall cells: its cells within `WALL` of another biome (or of the world's edge, if `edge`) and a ragged
+   * extra of up to `RAGGED` cells where the noise swells it, so the inner edge of a wall has lobes and bays rather than
+   * running dead straight along a straight border. `dist` is `borderDistance(k, edge)`.
+   */
+  wall(
+    k: number,
+    edge: boolean,
+    corridor: Set<number>,
+    approach: Set<number> = new Set(),
+    dist: Float32Array = this.borderDistance(k, edge),
+  ): Uint8Array {
     const out = new Uint8Array(this.width * this.height);
+    const swell = fbm(k * 53 + 7, 9);
     const foreign = (c: number, r: number) => {
       const o = this.ownerAt(c, r);
       return (o < 0 && edge) || (o >= 0 && o !== k);
@@ -458,16 +502,8 @@ export class World {
           ].some(([c, r]) => foreign(c, r))
         )
           continue;
-        search: for (let dr = -WALL; dr <= WALL; dr++) {
-          for (let dc = -WALL; dc <= WALL; dc++) {
-            if (dr * dr + dc * dc > (WALL + 0.25) ** 2) continue; // round, so the wall follows a curving border
-            const o = this.ownerAt(col + dc, row + dr);
-            if ((o < 0 && edge) || (o >= 0 && o !== k)) {
-              out[i] = 1;
-              break search;
-            }
-          }
-        }
+        const extra = RAGGED * Math.max(0, swell(col, row)) ** 1.3;
+        if (dist[i] <= WALL + 0.25 + extra) out[i] = 1;
       }
     }
     return out;
@@ -486,6 +522,7 @@ class BiomeWindow implements BiomeApi {
     private k: number,
     private walls: Uint8Array,
     reserved: Set<number>,
+    private dist: Float32Array,
   ) {
     this.taken = new Uint8Array(world.width * world.height);
     this.clear = new Uint8Array(world.width * world.height);
@@ -525,6 +562,39 @@ class BiomeWindow implements BiomeApi {
       for (let col = r.col; col < r.col + r.w; col++)
         if (col >= 0 && row >= 0 && col < this.world.width && row < this.world.height)
           this.taken[row * this.world.width + col] = 1;
+  }
+  borderDistance(col: number, row: number): number {
+    return this.dist[row * this.world.width + col] ?? 0;
+  }
+  ground(name: TerrainName, opts: { inset?: [number, number]; scale?: number; seed?: number } = {}) {
+    const [lo, hi] = opts.inset ?? [WALL + 1, WALL + 8];
+    const edge = fbm(opts.seed ?? this.k * 97 + name.length * 13 + 3, opts.scale ?? 14);
+    const b = this.bounds;
+    const mask = new Uint8Array(b.w * b.h);
+    for (let r = 0; r < b.h; r++)
+      for (let c = 0; c < b.w; c++) {
+        const col = b.col + c,
+          row = b.row + r;
+        if (!this.owns(col, row)) continue;
+        const reach = lo + (hi - lo) * Math.min(1, Math.max(0, (edge(col, row) + 1) / 2));
+        mask[r * b.w + c] = this.borderDistance(col, row) >= reach ? 1 : 0;
+      }
+    const smooth = smoothMask(mask, b.w, b.h, 2);
+    this.z.paint(
+      name,
+      maskRects((col, row) => smooth[(row - b.row) * b.w + (col - b.col)] === 1 && this.owns(col, row), b),
+    );
+  }
+  /** Is any cell within `pad` of (col, row) kept clear (a road, a plaza...)? */
+  private nearClear(col: number, row: number, pad: number): boolean {
+    for (let dr = -pad; dr <= pad; dr++)
+      for (let dc = -pad; dc <= pad; dc++) {
+        const c = col + dc,
+          r = row + dr;
+        if (c >= 0 && r >= 0 && c < this.world.width && r < this.world.height && this.clear[r * this.world.width + c])
+          return true;
+      }
+    return false;
   }
   near(col: number, row: number): [number, number] {
     for (let d = 0; d <= 30; d++)
@@ -574,12 +644,13 @@ class BiomeWindow implements BiomeApi {
     this.take(rect);
   }
   grove(area: Rect | Rect[], opts?: WoodsOptions) {
-    // Its own cells only, and not over anything placed already (a mob, a chest, the spawn) or the gaps' ways through.
+    // Its own cells only, and not over anything placed already (a mob, a chest, the spawn), the gaps' ways through, or a
+    // road (kept clear, with a cell of verge: a wood never grows onto a path).
     const cells = new Set<number>();
     for (const r of Array.isArray(area) ? area : [area])
       for (let row = r.row; row < r.row + r.h; row++)
         for (let col = r.col; col < r.col + r.w; col++)
-          if (this.free(col, row)) cells.add(row * this.world.width + col);
+          if (this.free(col, row) && !this.nearClear(col, row, 1)) cells.add(row * this.world.width + col);
     this.z.woods((c, r) => cells.has(r * this.world.width + c), opts);
     for (const i of cells) this.taken[i] = 1;
   }
@@ -647,6 +718,10 @@ class BiomeWindow implements BiomeApi {
       for (let y = f.row - m; y < f.row + f.h + m && ok; y++)
         for (let x = f.col - m; x < f.col + f.w + m && ok; x++)
           ok = this.roomy(x, y) && (!opts.where || opts.where(x, y));
+      // A tall prop's top rows hang over the cells above its feet: they must not hang over a road either.
+      const above = Math.ceil(PREFABS[name].h / CELL) - f.h;
+      for (let y = f.row - above; y < f.row && ok; y++)
+        for (let x = f.col; x < f.col + f.w && ok; x++) ok = !this.nearClear(x, y, 0);
       if (!ok) continue;
       this.prop(name, col, row);
       placed++;
@@ -681,7 +756,8 @@ export function buildWorld(layout: WorldLayout, specs: BiomeSpec[]): Map<string,
     const edge = spec.worldEdge ?? true;
     const z = new Zone(W, H);
     z.climate(spec.climate);
-    const walls = world.wall(k, edge, gaps.corridor, gaps.approach);
+    const dist = world.borderDistance(k, edge);
+    const walls = world.wall(k, edge, gaps.corridor, gaps.approach, dist);
     // The wall: its own trees over every wall cell, running on 3 cells past the world's edge so no gap shows there.
     z.woods(
       (c, r) => {
@@ -708,7 +784,7 @@ export function buildWorld(layout: WorldLayout, specs: BiomeSpec[]): Map<string,
       },
     );
     for (const d of gaps.doors) if (d.zone === name) z.door(d.col, d.row, 1, d.to.zone, d.to.col, d.to.row, d.dir);
-    spec.build(new BiomeWindow(z, world, k, walls, reserved));
+    spec.build(new BiomeWindow(z, world, k, walls, reserved, dist));
     return z;
   });
 

@@ -1,6 +1,6 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { TREES } from '../tools/map/catalog';
-import { awayFrom, blob, pick, pond, trail, units } from '../tools/map/helpers';
+import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
 // The Eastwood: the second forest, east of the Greenwood. Deeper green and wilder: dense groves, a woodland pond, a
@@ -30,7 +30,7 @@ export default defineBiome({
   walls: { trees: TREES },
   build(z) {
     z.fill('grass');
-    z.paint('meadow', z.bounds); // deeper green than the Greenwood's
+    z.ground('meadow'); // deeper green than the Greenwood's
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
     const open = awayFrom(TRAILS);
@@ -48,7 +48,7 @@ export default defineBiome({
     const water = pond(z, area(25, 14.2, 1.6, 1), { shore: 'mud' });
     z.keepClear(area(24.7, 13.9, 2.2, 1.6));
     z.prop('lilyFlower', pick(water, 3).col + 2, pick(water, 3).row);
-    z.prop('reedsThin', pick(water, 8).col + 4, pick(water, 8).row);
+    reedsAt(z, water, 8, 'e', 'reedStalks');
 
     // --- The end of the tongue: a hidden clearing --------------------------------------------------------------
     z.chest('iron', 'relic', ...near(21.6, 20));

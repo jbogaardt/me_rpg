@@ -448,23 +448,25 @@ export const PREFABS = {
     tag: 'rock',
     about: 'Standing stone, 1 cell, about 2 tall (graves, old rings).',
   },
-  reeds: {
+  // Reeds are bank plants (the atlas draws a water-edge strip under them that is not used): stand them on the land
+  // beside the water, never in it.
+  reedBed: {
     sheet: TERRAIN_SHEET,
-    w: 96,
-    h: 144,
-    parts: [part(32, 816, 96, 144)],
-    solid: { band: 44, min: 0.5 },
+    w: 94,
+    h: 103,
+    parts: [part(33, 819, 94, 103)],
+    solid: { band: 28, min: 0.3 },
     tag: 'reeds',
-    about: 'A tall bed of reeds standing in water (3 cells wide, 4.5 tall); its watery foot row blocks.',
+    about: 'A thicket of tall reeds on the bank (3 cells wide, 3 tall); its foot row blocks. Put it beside water.',
   },
-  reedsThin: {
+  reedStalks: {
     sheet: TERRAIN_SHEET,
     w: 32,
-    h: 144,
-    parts: [part(0, 816, 32, 144)],
-    solid: { band: 44, min: 0.5 },
+    h: 104,
+    parts: [part(0, 817, 32, 104)],
+    solid: { band: 28, min: 0.3 },
     tag: 'reeds',
-    about: 'A narrow clump of reeds in water (1 cell wide).',
+    about: 'A narrow clump of tall reeds on the bank (1 cell wide, 3 tall). Put it beside water.',
   },
   lilyFlower: lily(192, 544, 32, 32, 'Lily pads with a pink flower; lay on water.'),
   lilyFlowerB: lily(224, 545, 31, 31, 'Lily pads with a white flower; lay on water.'),

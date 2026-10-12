@@ -1,6 +1,6 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { TREES } from '../tools/map/catalog';
-import { awayFrom, blob, pick, pond, trail, units } from '../tools/map/helpers';
+import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import { SHOP_ARRIVAL } from '../tools/map/interiors';
 import layout from './world';
 
@@ -72,7 +72,7 @@ export default defineBiome({
     z.keepClear(area(11.3, 20.3, 2.2, 1.6));
     z.prop('lilyFlower', pick(water, 3).col + 2, pick(water, 3).row);
     z.prop('lilyPads', pick(water, 5).col + 8, pick(water, 5).row);
-    z.prop('reedsThin', pick(water, 8).col + 3, pick(water, 8).row);
+    reedsAt(z, water, 8, 'e', 'reedStalks');
     z.paint('meadow', blob(area(15, 21.4, 4, 1.2)));
     for (const [x, y, w, h] of [
       [12.4, 18.8, 1.4, 1],

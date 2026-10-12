@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { checkSeams } from './check';
 import { TREES } from './catalog';
-import { buildWorld, defineBiome, World, type BiomeSpec, type WorldLayout } from './world';
+import { buildWorld, defineBiome, RAGGED, WALL, World, type BiomeSpec, type WorldLayout } from './world';
 
 /** Two biomes side by side, 14x21 cells each, joined by one gap halfway down. */
 const LAYOUT: WorldLayout = {
@@ -91,6 +91,68 @@ describe('World', () => {
     expect([at(11, 10), at(13, 10)]).toEqual([0, 0]); // the gap's corridor
     expect([at(0, 10), at(2, 10), at(5, 0), at(5, 20)]).toEqual([1, 1, 1, 1]); // the world's edge
     expect(at(14, 5)).toBe(0); // not its own cell
+  });
+});
+
+describe('borders as the world builder sees them', () => {
+  it('measures how far a cell is from another biome or the edge of the world', () => {
+    const w = new World(LAYOUT);
+    const west = w.borderDistance(0, true);
+    expect(west[10 * w.width + 13]).toBe(1); // the last cell before the east biome
+    expect(west[10 * w.width + 10]).toBeCloseTo(4, 5);
+    expect(west[0]).toBe(1); // a corner of the world
+    expect(west[10 * w.width + 20]).toBe(0); // not the biome's
+    expect(w.borderDistance(0, false)[10 * w.width + 0]).toBeGreaterThan(10); // the world's edge counts only when asked
+  });
+
+  it('swells walls raggedly: never thinner than WALL, never thicker than WALL + RAGGED, and not all the same', () => {
+    const w = new World(LAYOUT);
+    const walls = w.wall(1, true, new Set(), new Set()); // the east biome: its wall grows eastward from its border at col 14
+    const thickness: number[] = [];
+    for (let row = 3; row < 18; row++) {
+      let t = 0;
+      for (let col = 14; col < w.width && walls[row * w.width + col]; col++) t++;
+      thickness.push(t);
+    }
+    expect(Math.min(...thickness)).toBeGreaterThanOrEqual(WALL);
+    expect(Math.max(...thickness)).toBeLessThanOrEqual(WALL + RAGGED + 1);
+    expect(new Set(thickness).size).toBeGreaterThan(1);
+  });
+
+  it('lays ground terrain short of the border (a shared base shows between), and keeps groves off roads', () => {
+    // A wider world, so the road sits well inside the biome (a wall swells up to WALL + RAGGED from every border).
+    const wide: WorldLayout = {
+      square: 10,
+      rows: ['AAAB', 'AAAB'],
+      key: LAYOUT.key,
+      gaps: [],
+      wobble: 0,
+    };
+    const west = defineBiome({
+      name: 'west',
+      climate: 'temperate',
+      walls: { trees: TREES },
+      build(z) {
+        z.fill('grass');
+        z.ground('meadow', { inset: [4, 4] });
+        z.keepClear({ col: 12, row: 7, w: 4, h: 7 }); // a road
+        z.grove({ col: 9, row: 5, w: 10, h: 11 }, { trees: TREES });
+        z.spawn(15, 10);
+      },
+    });
+    const built = buildWorld(wide, [west, field('east', [35, 10])]).get('west')!.data;
+    const sheetOf = (col: number, row: number) => built.sheets[built.ground[row * built.width + col]![0]];
+    expect(sheetOf(27, 10)).toBe('ground_tiles.png'); // 3 cells from the border: just the shared base, no meadow terrain
+    expect(sheetOf(15, 2)).toBe('ground_tiles.png'); // 3 cells from the top edge of the world
+    expect(sheetOf(18, 10)).toBe('lpc_terrain.png'); // well inside: the meadow
+    // The grove grew round the road, not onto it: nothing blocks the road or its one-cell verge, and there are trees beyond.
+    const blocked = new Set(built.collision);
+    for (let row = 6; row <= 14; row++)
+      for (let col = 11; col <= 16; col++) expect(blocked.has(row * built.width + col)).toBe(false);
+    let trees = 0;
+    for (let row = 5; row < 16; row++)
+      for (let col = 9; col < 19; col++) if (blocked.has(row * built.width + col)) trees++;
+    expect(trees).toBeGreaterThan(10);
   });
 });
 
