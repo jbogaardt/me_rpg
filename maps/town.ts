@@ -67,6 +67,12 @@ export default defineBiome({
     ] as const)
       z.prop('barrel', ...z.near(...at(x, y)));
 
+    // --- Strays: talk to them with the action key (a dog woofs, a cat meows) ----------------------------------
+    z.pet('dog_brown', ...z.near(...at(15.9, 20.7)));
+    z.pet('dog_white', ...z.near(...at(19.2, 19.9)));
+    z.pet('cat_ginger', ...z.near(...at(13.7, 20.3)));
+    z.pet('cat_black', ...z.near(...at(17.9, 20.6)));
+
     // --- A pond and gardens in the west of town ---------------------------------------------------------------
     const water = pond(z, area(11.6, 20.6, 1.6, 1), { shore: 'sand' });
     z.keepClear(area(11.3, 20.3, 2.2, 1.6));

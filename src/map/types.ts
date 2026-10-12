@@ -45,6 +45,11 @@ export interface ChestSpawn extends CellPoint {
   loot: string;
 }
 
+/** A pet (a key of PET_KINDS, src/systems/pets.ts) lying about at `col,row`. */
+export interface PetSpawn extends CellPoint {
+  kind: string;
+}
+
 /** A shopkeeper standing at `col,row`; `shop` is a key of SHOPS (src/systems/shops.ts). The building is a map prop. */
 export interface ShopSpawn extends CellPoint {
   shop: string;
@@ -80,6 +85,7 @@ export interface MapData {
   mobs: MobSpawn[];
   chests: ChestSpawn[]; // solid; opened with the action key
   shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
+  pets: PetSpawn[]; // dogs and cats to talk to: the action key makes them answer
   doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
   /** The zone's weather (a key of CLIMATES in systems/weather.ts): what falls and blows there. Rooms have none. */
@@ -147,6 +153,7 @@ function unpacked(json: unknown): MapData {
     mobs: d.mobs ?? [],
     chests: d.chests ?? [],
     shops: d.shops ?? [],
+    pets: d.pets ?? [],
     doors: d.doors ?? [],
     indoor: d.indoor ?? false,
     climate: d.climate ?? 'temperate',

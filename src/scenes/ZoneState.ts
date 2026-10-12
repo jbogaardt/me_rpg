@@ -5,6 +5,7 @@ import { Character } from '../entities/Character';
 import { Chest } from '../entities/Chest';
 import { Effects } from '../entities/effects';
 import type { GroundItem } from '../entities/GroundItem';
+import { Pet } from '../entities/Pet';
 import { Mob, type MobWorld } from '../entities/Mob';
 import { WeatherLayer } from '../entities/WeatherLayer';
 import { CLIMATES, DEFAULT_CLIMATE, isClimate, Weather } from '../systems/weather';
@@ -17,6 +18,7 @@ import { MOB_KINDS, type Item } from '../systems/combat';
 import { CHEST_LOOTS } from '../systems/chests';
 import { Collision } from '../systems/collision';
 import { npcLook, OVERWORLD_NPC } from '../systems/looks';
+import { PET_KINDS } from '../systems/pets';
 import { SHOPS } from '../systems/shops';
 
 /** What a zone remembers while it is unloaded (Arena.memory); its mobs simply start afresh. */
@@ -51,6 +53,8 @@ export class ZoneState {
   readonly weather: Weather | null;
   readonly npc: Character | null;
   readonly keepers: Keeper[];
+  /** Dogs and cats lying about: scenery you can talk to (local only, not synced). */
+  readonly pets: Pet[];
   readonly mobs: Mob[];
   readonly chests: Chest[];
   readonly ground: GroundItem[] = [];
@@ -82,6 +86,13 @@ export class ZoneState {
       body.setTag(shop.tag, 0xffd34d);
       return { shop: spawn.shop, body };
     });
+    this.pets = data.pets.map((spawn, i) => {
+      const kind = PET_KINDS[spawn.kind];
+      if (!kind) throw new Error(`Zone "${zone.name}" has an unknown pet "${spawn.kind}"`);
+      const pet = new Pet(kind, sprites.pets[kind.sheet], i + 1);
+      pet.position.set(...cellFeet(spawn));
+      return pet;
+    });
     this.mobs = data.mobs.map((m) => {
       const kind = MOB_KINDS[m.kind];
       if (!kind) throw new Error(`Zone "${zone.name}" spawns unknown mob kind "${m.kind}"`);
@@ -95,6 +106,7 @@ export class ZoneState {
     const bodies = [
       ...(this.npc ? [this.npc] : []),
       ...this.keepers.map((k) => k.body),
+      ...this.pets,
       ...this.chests,
       ...this.mobs.map((m) => m.body),
     ];

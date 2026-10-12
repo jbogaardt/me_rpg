@@ -67,3 +67,8 @@ backgrounds re-encoded as JPEG. Bar colours are sampled from the kit's gradients
 ## Fonts
 
 Cinzel (Natanael Gama) and Crimson Text (Sebastian Kosch), SIL Open Font License 1.1, bundled via Fontsource.
+
+## Pets (`public/sprites/pets/dogs.png`, `cats.png`)
+
+Dog and cat sprite sheets (32x32 frames) supplied by the project owner. **Original author and licence still to be confirmed**:
+add them here (and check the licence allows a public repo and redistribution) before relying on this art long term.
