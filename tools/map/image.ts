@@ -232,6 +232,7 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
     for (const m of data.mobs) mark(m.col, m.row, 0xff9020);
     for (const c of data.chests) mark(c.col, c.row, 0xffe040);
     for (const sh of data.shops) mark(sh.col, sh.row, 0x40c0ff);
+    for (const p of data.pets) mark(p.col, p.row, 0xc080ff);
   }
 
   let img = out;

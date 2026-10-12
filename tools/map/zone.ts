@@ -9,6 +9,7 @@ import {
   type MapData,
   type MapObject,
   type MobSpawn,
+  type PetSpawn,
 } from '../../src/map/types';
 import {
   CLIFF,
@@ -64,6 +65,7 @@ export interface ZoneApi {
   mob(kind: string, col: number, row: number): unknown;
   chest(kind: string, loot: string, col: number, row: number): unknown;
   shop(shop: string, col: number, row: number): unknown;
+  pet(kind: string, col: number, row: number): unknown;
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number): unknown;
   indoor(): unknown;
   climate(name: ClimateName): unknown;
@@ -185,6 +187,10 @@ export class WorldWindow implements ZoneApi {
     this.z.shop(shop, col - this.o.col, row - this.o.row);
     return this;
   }
+  pet(kind: string, col: number, row: number) {
+    this.z.pet(kind, col - this.o.col, row - this.o.row);
+    return this;
+  }
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number) {
     this.z.door(col - this.o.col, row - this.o.row, w, toZone, toCol, toRow); // the destination is the other zone's own cell
     return this;
@@ -274,6 +280,7 @@ export class Zone {
   private mobList: MobSpawn[] = [];
   private chestList: ChestSpawn[] = [];
   private shopList: ShopSpawn[] = [];
+  private petList: PetSpawn[] = [];
   private doorList: DoorSpawn[] = [];
   private isIndoor = false;
   private weather: ClimateName = DEFAULT_CLIMATE;
@@ -704,6 +711,12 @@ export class Zone {
     return this;
   }
 
+  /** A pet (`kind` is a key of PET_KINDS, src/systems/pets.ts): talk to it with the action key. It does not block, so any open cell will do. */
+  pet(kind: string, col: number, row: number) {
+    this.petList.push({ kind, col, row });
+    return this;
+  }
+
   /**
    * A doorway: walking onto the `w` cells starting at (col, row) takes the player to cell (toCol, toRow) of another zone.
    * The cells are opened up (a building's art would otherwise block them), so put the door where the art has one.
@@ -729,6 +742,7 @@ export class Zone {
       mobs: this.mobList,
       chests: this.chestList,
       shops: this.shopList,
+      pets: this.petList,
       doors: this.doorList,
       indoor: this.isIndoor,
       climate: this.weather,
@@ -908,6 +922,7 @@ export class Zone {
       mobs: this.mobList,
       chests: this.chestList,
       shops: this.shopList,
+      pets: this.petList,
       doors: this.doorList,
       indoor: this.isIndoor,
       climate: this.weather,

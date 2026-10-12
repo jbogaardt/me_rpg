@@ -20,7 +20,7 @@ const TRAILS = trail([south, [south[0], 62], [42, 62], [42, east[1]], east]);
 export default defineBiome({
   name: 'desert',
   climate: 'desert',
-  walls: { trees: DRY_TREES, fillers: ['dryBush', 'rockSmall'] },
+  walls: { trees: DRY_TREES, fillers: ['sandBoulder', 'rockSmall'] },
   build(z) {
     z.fill('sand');
     z.paint('redDirt', [
@@ -80,7 +80,7 @@ export default defineBiome({
       [10.4, 3.4, 1.2, 0.8],
       [6.6, 5.6, 1.2, 0.6],
     ] as const)
-      z.grove(blob(area(x, y, w, h)), { trees: DRY_TREES, fillers: ['dryBush', 'rockSmall'] });
+      z.grove(blob(area(x, y, w, h)), { trees: DRY_TREES, fillers: ['sandBoulder', 'rockSmall'] });
 
     for (const [kind, x, y] of [
       ['raider', 5.6, 1.6],
