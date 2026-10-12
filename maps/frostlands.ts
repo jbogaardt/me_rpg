@@ -84,5 +84,10 @@ export default defineBiome({
     z.scatter([...FROST_TREES], { count: 55, where: open, seed: 41 });
     z.scatter(['frostBush'], { count: 18, where: open, seed: 42 });
     z.scatter(['frostRock', 'frostRockB', 'frostRockC', 'frostRockSmall'], { count: 45, where: open, seed: 43 });
+
+    // --- Names for the map: each shows once the player has explored round it ---------------------------------------
+    z.place('Mirrorfrost Lake', 266, 186);
+    z.place('The Frozen Pond', 319, 119);
+    z.place('The Frozen Ledge', 319, 202);
   },
 });

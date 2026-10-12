@@ -16,6 +16,10 @@ import type { Dialog } from '../hud/Dialog';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
+import { AreaBanner } from '../hud/AreaBanner';
+import { GuideArrow } from '../entities/GuideArrow';
+import { guideFor } from '../systems/guide';
+import { zoneName } from '../systems/places';
 import type { Menu } from '../hud/Menu';
 import type { ShopCounter } from '../hud/ShopCounter';
 import type { TradeUi } from '../hud/Trade';
@@ -28,7 +32,7 @@ import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
 import { lecternIn, lecternPages } from '../systems/lectern';
 import { petSound } from '../systems/pets';
-import { GIVERS, giverMark, progressOf, recordSite, siteNote, siteOpen } from '../systems/quests';
+import { GIVERS, giverMark, mobKey, progressOf, recordSite, siteNote, siteOpen } from '../systems/quests';
 import { SHOPS } from '../systems/shops';
 import type { ComboKey } from '../systems/spells';
 import type { Precip } from '../systems/weather';
@@ -97,6 +101,10 @@ export class OverworldScene implements Scene {
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
+  private banner = new AreaBanner();
+  private announced = ''; // the zone the banner last named
+  private visited = new Set<string>(); // zones the local player has been in (the banner says "new area" the first time)
+  private arrow = new GuideArrow(); // the quest arrow, over the world and under the door transition
   private marked = new WeakMap<Character, string>(); // the tag last put over each quest giver
   private combos = new ComboReader();
   private comboSet: Item | null = null; // the weapon the reader is following (a different one starts it afresh)
@@ -126,6 +134,7 @@ export class OverworldScene implements Scene {
     this.pack.levelUp = (p) => this.sim.levelUp(p);
 
     this.zones.addHome(zone);
+    this.zones.root.addChildAt(this.arrow, 1);
     this.overlay = new MapOverlay();
     ui.shop.onGearChange = () => arena.refreshLook();
     ui.shop.trader = () => this.pack.trader();
@@ -202,7 +211,7 @@ export class OverworldScene implements Scene {
       const seen = this.atlas.of(arena.zone.name, arena.zone.data);
       // Everyone in this zone uncovers the map around them (a guest only knows the players in its own zone).
       for (const p of arena.players()) if (p.body.visible) seen.reveal(p.body.x, p.body.y);
-      this.overlay.setZone(arena.zone.data, seen);
+      this.overlay.setZone(arena.zone.data, seen, arena.zone.name);
     }
     menu.setOnline(online);
     this.trading.sync(dt, online);
@@ -243,6 +252,8 @@ export class OverworldScene implements Scene {
 
     z.npc?.animate(dt * 1000, false);
     this.updateQuests(z, dt);
+    this.announceArea();
+    this.pointTheWay(z, dt);
     for (const k of z.keepers) k.body.animate(dt * 1000, false);
     for (const pet of z.pets) {
       pet.update(dt);
@@ -468,6 +479,40 @@ export class OverworldScene implements Scene {
       s.update(dt);
     }
     for (const g of z.givers) g.body.animate(dt * 1000, false);
+  }
+
+  /** The big area name in the top middle, when the local player arrives somewhere (once the door transition is over). */
+  private announceArea() {
+    const name = this.arena.zone.name;
+    if (name === this.announced || this.zones.transition.busy) return;
+    this.announced = name;
+    const fresh = !this.visited.has(name);
+    this.visited.add(name);
+    this.banner.show(zoneName(name), fresh && !this.arena.zone.data.indoor ? 'New area discovered' : '');
+  }
+
+  /** The quest arrow: points from the hero at where the quest leads (a thing in this zone, or the door towards it). */
+  private pointTheWay(z: ZoneState, dt: number) {
+    const hide = this.zones.transition.busy || !this.player.visible;
+    const world = {
+      zone: z.name,
+      doors: z.data.doors,
+      sites: z.sites.map((s) => ({ kind: s.kind, index: s.index, x: s.x, y: s.y })),
+      mobs: z.mobs.flatMap((m) => {
+        const key = m.alive ? mobKey(m.kind) : undefined;
+        return key ? [{ key, x: m.body.x, y: m.body.y }] : [];
+      }),
+      giver: z.givers[0] ? { x: z.givers[0].body.x, y: z.givers[0].body.y } : null,
+    };
+    const guide = hide ? null : guideFor(this.hero, world, this.player);
+    const { camera } = z;
+    const at = (x: number, y: number) => ({ x: z.world.x + x * camera.zoom, y: z.world.y + y * camera.zoom });
+    this.arrow.update(
+      dt,
+      at(this.player.x, this.player.y - 20),
+      guide && at(guide.x, guide.y - 12),
+      guide?.label ?? '',
+    );
   }
 
   private openChest(p: Player, chest: Chest) {

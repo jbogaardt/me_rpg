@@ -22,10 +22,12 @@ export interface Giver {
   look: string;
   /** Floats over their head. */
   tag: string;
+  /** The zone they stand in (where a quest's arrow leads to hand a task in). */
+  zone: string;
 }
 
 export const GIVERS: Record<string, Giver> = {
-  maren: { name: 'Warden Maren', look: 'warden', tag: 'Maren' },
+  maren: { name: 'Warden Maren', look: 'warden', tag: 'Maren', zone: 'town' },
 };
 
 /** The giver whose chain QUESTS is (there is one story so far). */
@@ -105,6 +107,10 @@ export interface Quest {
   title: string;
   /** The task in a few words, for the quest log ("Drive off 5 goblins"). */
   goal: string;
+  /** Where to go and what to do, for the quest page (it names areas as ZONE_NAMES does). */
+  hint: string;
+  /** The zones the task can be done in, nearest first wins; `door` is the door (by the zone it leads to) a bring task starts at. */
+  where: { zones: string[]; door?: string };
   /** What is counted in progress text ("goblins": "3/5 goblins"). */
   unit: string;
   objective: Objective;
@@ -123,6 +129,8 @@ export const QUESTS: Quest[] = [
     title: 'Trouble on the Road',
     goal: 'Drive off 5 goblins',
     unit: 'goblins',
+    hint: 'Goblins prowl the Greenwood, the wild country around the crossroads. Walk the trails and they will come for you.',
+    where: { zones: ['greenwood'] },
     objective: { t: 'kill', kind: 'goblin', count: 5 },
     reward: { gold: 30, xp: 30 },
     offer: [
@@ -141,6 +149,8 @@ export const QUESTS: Quest[] = [
     title: 'Glimmercaps',
     goal: 'Gather 4 glimmercaps in the Greenwood',
     unit: 'glimmercaps',
+    hint: 'Glimmercaps glow blue in the groves of the Greenwood. Follow the arrow to the nearest one.',
+    where: { zones: ['greenwood'] },
     objective: { t: 'gather', site: 'glimmercap', zone: 'greenwood', count: 4 },
     reward: { gold: 50, xp: 45 },
     offer: [
@@ -158,6 +168,8 @@ export const QUESTS: Quest[] = [
     title: 'The Hungry Pack',
     goal: 'Defeat 5 wolfkin',
     unit: 'wolfkin',
+    hint: 'Wolfkin hunt in the Greenwood and the Eastwood, the forest east of the crossroads.',
+    where: { zones: ['greenwood', 'eastwood'] },
     objective: { t: 'kill', kind: 'wolfkin', count: 5 },
     reward: { gold: 70, xp: 70 },
     offer: [
@@ -178,6 +190,8 @@ export const QUESTS: Quest[] = [
     title: 'Medicine for the Watch',
     goal: 'Bring 1 Elixir from the apothecary',
     unit: 'elixir',
+    hint: "Buy an Elixir at the Apothecary's Shop on the market square in Lanternrest, then bring it to Maren.",
+    where: { zones: ['town'], door: 'shop_apothecary' },
     objective: { t: 'bring', item: 'elixir', count: 1 },
     reward: { gold: 90, xp: 90 },
     offer: [
@@ -196,6 +210,8 @@ export const QUESTS: Quest[] = [
     title: 'Voices in the Stones',
     goal: 'Touch 3 echo stones in the Greenwood',
     unit: 'echo stones',
+    hint: 'Echo stones stand at the old ruins in the west of the Greenwood, in the northern glade and by the old lake.',
+    where: { zones: ['greenwood'] },
     objective: { t: 'gather', site: 'echostone', zone: 'greenwood', count: 3 },
     reward: { gold: 110, xp: 130, items: ['wayfarersCharm'] },
     offer: [
@@ -217,10 +233,12 @@ export const QUESTS: Quest[] = [
     title: 'The Restless Dead',
     goal: 'Lay 6 skeletons to rest',
     unit: 'skeletons',
+    hint: 'Skeletons walk the Barrow Lands and the Eastwood. They throw bone shards from afar, so keep moving.',
+    where: { zones: ['undead', 'eastwood'] },
     objective: { t: 'kill', kind: 'skeleton', count: 6 },
     reward: { gold: 150, xp: 180, items: ['wardensMantle'] },
     offer: [
-      'Where time stops, the dead cannot rest. Skeletons walk the old graves in the undead lands and the Eastwood, with bone shards in their fingers.',
+      'Where time stops, the dead cannot rest. Skeletons walk the old graves in the Barrow Lands and the Eastwood, with bone shards in their fingers.',
       'They keep their distance and throw. Keep moving and they cannot aim, then close in. Put six of them back to sleep.',
     ],
     remind: ['Six skeletons. They stay at range and flick bone shards, so keep moving, then close in.'],
@@ -232,15 +250,17 @@ export const QUESTS: Quest[] = [
   {
     id: 'sand',
     title: 'Sand and Silence',
-    goal: 'Gather 4 mounds of hourglass sand in the desert',
+    goal: 'Gather 4 mounds of hourglass sand in the Sunscar Desert',
     unit: 'mounds',
+    hint: 'Hourglass sand lies scattered across the Sunscar Desert, far to the north-west. Raiders guard the dunes.',
+    where: { zones: ['desert'] },
     objective: { t: 'gather', site: 'hoursand', zone: 'desert', count: 4 },
     reward: { gold: 200, xp: 240, items: ['duneglassBoots'] },
     offer: [
-      'When the Hourglass broke, its sand fell across the Vale. Where it lies, time pools thick and strange. It has gathered in the western desert.',
+      'When the Hourglass broke, its sand fell across the Vale. Where it lies, time pools thick and strange. It has gathered in the Sunscar Desert.',
       'Raiders and worse prowl those dunes. Bring me four pinches and I will read the sand. Touch each glittering mound with the action key.',
     ],
-    remind: ['Four glittering mounds of hourglass sand in the western desert. Mind the raiders.'],
+    remind: ['Four glittering mounds of hourglass sand in the Sunscar Desert. Mind the raiders.'],
     done: [
       'I can read it. Look: every grain falls toward the north, toward the Spire.',
       'The Stillness gathers where the shards lie, and it is not blind. It hunts them too. The raiders, the orcs, the frozen soldiers in the east: they are all guarding something.',
@@ -252,10 +272,12 @@ export const QUESTS: Quest[] = [
     title: 'The Tusk Banner',
     goal: 'Defeat 4 orcs',
     unit: 'orcs',
+    hint: 'Orcs hold the Sunscar Desert and the Tuskwood Jungle. They hit hard, so take them one at a time.',
+    where: { zones: ['desert', 'jungle'] },
     objective: { t: 'kill', kind: 'orc', count: 4 },
     reward: { gold: 260, xp: 320, items: ['tuskbreakerHelm'] },
     offer: [
-      'Orcs have raised a banner in the jungle and the dunes. They answer to a voice that never speaks, and they march in step to a ticking no one else can hear.',
+      'Orcs have raised a banner in the Tuskwood Jungle and the Sunscar Desert. They answer to a voice that never speaks, and they march in step to a ticking no one else can hear.',
       'Something is commanding them. Break four of them, and we will see whether the rest falter. Take your time. They hit hard, and they do not flinch.',
     ],
     remind: ['Four orcs. They do not flinch when struck, so fight them one at a time.'],
@@ -269,6 +291,8 @@ export const QUESTS: Quest[] = [
     title: 'Frostbound Vigil',
     goal: 'Defeat 4 frostbound in the Frostlands',
     unit: 'frostbound',
+    hint: 'The frozen soldiers stand in the Frostlands, east of Lanternrest along the town road.',
+    where: { zones: ['frostlands'] },
     objective: { t: 'kill', kind: 'frostbound', count: 4, zone: 'frostlands' },
     reward: { gold: 340, xp: 420, items: ['sunforgedCuirass'] },
     offer: [
@@ -287,15 +311,17 @@ export const QUESTS: Quest[] = [
     title: 'The Heart of the Stillness',
     goal: 'Defeat 2 trolls',
     unit: 'trolls',
+    hint: 'Trolls roam the Frostlands, the Tuskwood Jungle and Gloamfen Marsh. The Frostlands are the nearest.',
+    where: { zones: ['frostlands', 'jungle', 'marsh'] },
     objective: { t: 'kill', kind: 'troll', count: 2 },
     reward: { gold: 500, xp: 650, items: ['hourglassPendant'] },
     offer: [
       'Last, and worst. I can feel a splinter of the Hourglass in the trolls of the Vale, like a bad tooth. Two of them carry what we need.',
-      'They roam the Frostlands, the jungle and the marsh. They are slow, they cannot be stunned, and they hit like falling roofs. Take potions. Take your time.',
+      'They roam the Frostlands, the Tuskwood Jungle and Gloamfen Marsh. They are slow, they cannot be stunned, and they hit like falling roofs. Take potions. Take your time.',
       'Bring down two, and I will see what they hold.',
     ],
     remind: [
-      'Two trolls, in the Frostlands, the jungle or the marsh. Huge, slow, and hard to stun. Keep your distance and keep potions close.',
+      'Two trolls, in the Frostlands, the Tuskwood Jungle or Gloamfen Marsh. Huge, slow, and hard to stun. Keep your distance and keep potions close.',
     ],
     done: [
       'A shard of the Hourglass. It is warm, and it ticks. I hold it to the lamp, and the flame stands perfectly still.',

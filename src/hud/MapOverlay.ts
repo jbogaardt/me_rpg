@@ -1,6 +1,7 @@
 import type { Explored } from '../map/explored';
 import { mapPercent, minimapPixels } from '../map/minimap';
-import type { MapData } from '../map/types';
+import { CELL, type MapData } from '../map/types';
+import { zoneName } from '../systems/places';
 import { PLAYER_COLORS, playerName } from '../systems/looks';
 
 // A semi-transparent map of the zone you are in that fills in as you explore it (only the cells seen are drawn, see
@@ -31,12 +32,17 @@ export class MapOverlay {
   private placed = ''; // last pin positions written, so the DOM is only touched when a pin moves
   private listed = ''; // who the legend currently lists
 
+  private title = this.root.querySelector<HTMLElement>('.zone-title')!;
+  private labels = new Map<string, HTMLElement>(); // the place names on the map, by name
+  private labelled = ''; // which places are listed, and for which zone
+
   private data: MapData | undefined; // the zone currently shown
   private painted = -1; // the `explored.version` on the image (-1: none)
   private paintedAt = 0;
 
   /** Use this zone's terrain and what has been explored of it. Called every frame; it repaints only a map that is open. */
-  setZone(data: MapData, explored: Explored) {
+  setZone(data: MapData, explored: Explored, zone = '') {
+    this.nameThings(data, explored, zone);
     if (data !== this.data) {
       this.data = data;
       this.placed = '';
@@ -47,6 +53,27 @@ export class MapOverlay {
     // As you walk the picture grows, but not every frame: encoding the image is the costly part.
     if (this.open && (this.painted < 0 || (explored.version !== this.painted && now - this.paintedAt > REPAINT_MS))) {
       this.paint(data, explored, now);
+    }
+  }
+
+  /** The zone's name as the heading, and each named place once the player has explored the ground it stands on. */
+  private nameThings(data: MapData, explored: Explored, zone: string) {
+    const known = data.places.filter((p) => explored.cells[p.row * data.width + p.col]);
+    const key = `${zone}|${known.map((p) => p.name).join(',')}`;
+    if (key === this.labelled) return;
+    this.labelled = key;
+    this.title.textContent = zoneName(zone);
+    for (const label of this.labels.values()) label.remove();
+    this.labels.clear();
+    for (const p of known) {
+      const { left, top } = mapPercent(data, (p.col + 0.5) * CELL, (p.row + 0.5) * CELL);
+      const el = document.createElement('span');
+      el.className = 'place';
+      el.textContent = p.name;
+      el.style.left = `${left}%`;
+      el.style.top = `${top}%`;
+      this.root.insertBefore(el, this.legend);
+      this.labels.set(p.name, el);
     }
   }
 

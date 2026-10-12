@@ -392,3 +392,39 @@
 .quest-progress.done { color: #2f6b2a; }
 .quest-note { color: var(--ink-soft); }
 .quest-done { margin: 4px 0 0; padding-left: 20px; color: var(--ink-soft); }
+
+/* --- The area name that shows in the top middle on entering a zone (src/hud/AreaBanner.ts) --- */
+#area-banner {
+  position: fixed; z-index: 2; left: 50%; top: calc(72px + env(safe-area-inset-top)); transform: translateX(-50%);
+  width: calc(100vw - 24px); text-align: center; pointer-events: none; opacity: 0; font-family: var(--title);
+  text-shadow: 0 2px 3px #000, 0 0 10px #000, 0 0 3px #000;
+}
+#area-banner .title { font-weight: 700; font-size: clamp(30px, 7vw, 60px); line-height: 1.1; color: var(--gold, #f5d175); letter-spacing: 0.04em; }
+#area-banner .sub { font: 600 clamp(13px, 2.4vw, 18px) var(--body); color: #e8dcc0; letter-spacing: 0.2em; text-transform: uppercase; min-height: 1.2em; }
+#area-banner.show { animation: area-banner 4.2s ease-out forwards; }
+@keyframes area-banner {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-8px) scale(0.96); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* --- Quest reminder (src/hud/Hud.ts) --- */
+#quest-tracker {
+  position: fixed; z-index: 2; pointer-events: none; max-width: min(340px, 60vw);
+  top: calc(52px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); text-align: right;
+  padding: 3px 8px; background: rgba(23, 18, 12, 0.6); border: 1px solid var(--gold-dim); border-radius: 3px;
+  font: 700 13px/17px var(--title); color: #ffe9a8; text-shadow: 0 1px 2px #000;
+}
+#quest-tracker[hidden] { display: none; }
+
+/* --- Map: the zone's name and the places explored so far --- */
+#map-overlay .zone-title {
+  position: absolute; left: 0; right: 0; top: 4px; text-align: center; font: 700 18px var(--title); color: #fff;
+  text-shadow: 0 1px 3px #000, 0 0 4px #000;
+}
+#map-overlay .place {
+  position: absolute; transform: translate(-50%, -50%); white-space: nowrap; font: 700 12px var(--body); color: #fff4c8;
+  text-shadow: 0 1px 2px #000, 0 0 3px #000, 0 0 3px #000;
+}
+.quest-hint { font-style: italic; color: var(--ink-soft); }

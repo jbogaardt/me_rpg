@@ -65,6 +65,11 @@ export interface SiteSpawn extends CellPoint {
   kind: string;
 }
 
+/** A named spot (the old ruins, an oasis): its name shows on the map once the player has explored round it. */
+export interface PlaceSpawn extends CellPoint {
+  name: string;
+}
+
 /** Walking onto a door cell takes the player to another zone (`to.col`/`to.row` is where they appear). */
 export interface DoorSpawn extends CellPoint {
   w: number; // cells wide, starting at `col` (a hall's door is two cells wide, a tower's one)
@@ -97,6 +102,7 @@ export interface MapData {
   shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
   pets: PetSpawn[]; // dogs and cats to talk to: the action key makes them answer
   givers: GiverSpawn[]; // quest givers: the action key talks to them
+  places: PlaceSpawn[]; // named spots, labelled on the map once explored
   sites: SiteSpawn[]; // where gather quests send the player; touched with the action key while a quest wants them
   doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
@@ -168,6 +174,7 @@ function unpacked(json: unknown): MapData {
     pets: d.pets ?? [],
     givers: d.givers ?? [],
     sites: d.sites ?? [],
+    places: d.places ?? [],
     doors: d.doors ?? [],
     indoor: d.indoor ?? false,
     climate: d.climate ?? 'temperate',

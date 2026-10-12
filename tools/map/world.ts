@@ -697,6 +697,9 @@ class BiomeWindow implements BiomeApi {
     this.z.site(kind, col, row);
     this.takePoint(col, row);
   }
+  place(name: string, col: number, row: number) {
+    this.z.place(name, col, row); // a label only: it takes no room
+  }
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number) {
     this.z.door(col, row, w, toZone, toCol, toRow);
     this.take({ col: col - 1, row: row - 1, w: w + 2, h: 3 });
@@ -944,6 +947,7 @@ function cut(
     pets: e.pets.map(local),
     givers: e.givers.map(local),
     sites: e.sites.map(local),
+    places: e.places.map(local),
     doors: e.doors.map(local),
     indoor: false,
     climate: e.climate,
@@ -958,6 +962,7 @@ function cut(
     ...e.pets.map((p): [string, typeof p] => [`pet ${p.kind}`, p]),
     ...e.givers.map((g): [string, typeof g] => [`quest giver ${g.giver}`, g]),
     ...e.sites.map((s): [string, typeof s] => [`quest site ${s.kind}`, s]),
+    ...e.places.map((s): [string, typeof s] => [`place ${s.name}`, s]),
     ...e.doors.map((d): [string, typeof d] => [`door to ${d.to.zone}`, d]),
   ];
   stray.splice(0, stray.length, ...stray.filter(([, p]) => world.ownerAt(p.col, p.row) !== k));

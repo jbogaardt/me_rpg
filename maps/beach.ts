@@ -80,5 +80,10 @@ export default defineBiome({
     z.scatter(['sandBoulder', 'sandBoulderB', 'sandSpire'], { count: 18, where: open, seed: 61 });
     z.scatter(['rockSmall', 'rockC', 'rock'], { count: 20, where: open, seed: 62 });
     z.scatter(['bush'], { count: 3, where: (c, r) => open(c, r) && c > 180, seed: 63 });
+
+    // --- Names for the map: each shows once the player has explored round it ---------------------------------------
+    z.place('The Wreck', 162, 34);
+    z.place('Tide Pools', 136, 52);
+    z.place("The Jungle's Edge", 193, 38);
   },
 });

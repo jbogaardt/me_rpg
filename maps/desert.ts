@@ -112,5 +112,11 @@ export default defineBiome({
     z.scatter(['sandBoulder', 'sandBoulderB', 'sandSpire'], { count: 36, where: open, seed: 51 });
     z.scatter(['dryBush'], { count: 24, where: open, seed: 52 });
     z.scatter(['rockC', 'rockB', 'rockSmall'], { count: 30, where: open, seed: 54 });
+
+    // --- Names for the map: each shows once the player has explored round it ---------------------------------------
+    z.place("The Legion's Mesa", 17, 10);
+    z.place('The Oasis', 78, 46);
+    z.place('The Ring of Stones', 35, 50);
+    z.place('The Buried Skull', 64, 6);
   },
 });

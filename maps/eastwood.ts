@@ -84,5 +84,10 @@ export default defineBiome({
     z.scatter(['bush'], { count: 16, where: open, seed: 32 });
     z.scatter(['rock', 'rockB', 'rockC', 'rockSmall'], { count: 24, where: open, seed: 33 });
     z.scatter(['flowersPurple', 'flowerRed'], { count: 70, where: open, margin: 0, seed: 34 });
+
+    // --- Names for the map: each shows once the player has explored round it ---------------------------------------
+    z.place('The Wooded Hill', 256, 120);
+    z.place('Woodland Pond', 258, 143);
+    z.place('The Hidden Clearing', 216, 200);
   },
 });

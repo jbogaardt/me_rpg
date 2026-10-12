@@ -83,5 +83,9 @@ export default defineBiome({
     z.scatter([...SWAMP_TREES], { count: 35, where: open, seed: 91 });
     z.scatter(['swampBush', 'bush'], { count: 16, where: open, seed: 92 });
     z.scatter(['flowersPurple', 'flowerRed'], { count: 60, where: open, margin: 0, seed: 93 });
+
+    // --- Names for the map: each shows once the player has explored round it ---------------------------------------
+    z.place('Mirewater Pools', 290, 25);
+    z.place('The Hidden Shore', 328, 92);
   },
 });

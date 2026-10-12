@@ -100,5 +100,9 @@ export default defineBiome({
     z.pet('cat_white', ...z.near(...at(16.7, 20.6)));
     z.pet('cat_tan', ...z.near(...at(15.2, 21.6)));
     z.pet('rat', ...z.near(...at(19.6, 20.6)));
+
+    // --- Names for the map: each shows once the player has explored round it ---------------------------------------
+    z.place('Market Square', 168, 206);
+    z.place('The Lanternrest Pond', 116, 206);
   },
 });

@@ -117,6 +117,8 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     if (!SITE_KINDS[s.kind])
       errors.push(`quest site at (${s.col},${s.row}) is an unknown kind "${s.kind}" (SITE_KINDS)`);
   }
+  for (const pl of d.places)
+    if (!inMap(pl.col, pl.row)) errors.push(`place "${pl.name}" (${pl.col},${pl.row}) is outside the map`);
   if (d.sites.length > 30) errors.push('a map holds at most 30 quest sites');
   const doorCells = new Set<number>();
   for (const door of d.doors) {

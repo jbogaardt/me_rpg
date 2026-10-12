@@ -153,5 +153,13 @@ export default defineBiome({
     z.scatter(['bush'], { count: 36, where: open, seed: 12 });
     z.scatter(['rock', 'rockSmall', 'rockB', 'rockC'], { count: 45, where: open, seed: 13 });
     z.scatter(['flowerRed', 'flowersPurple'], { count: 220, where: open, margin: 0, seed: 14 });
+
+    // --- Names for the map: each shows once the player has explored round it ---------------------------------------
+    z.place('The Crossroads', 140, 150);
+    z.place('The Old Ruins', 56, 125);
+    z.place('The Overlook', 34, 154);
+    z.place('Mossback Hill', 44, 198);
+    z.place('The Old Lake', 30, 185);
+    z.place('The Northern Glade', 80, 86);
   },
 });

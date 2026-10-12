@@ -95,5 +95,9 @@ export default defineBiome({
     z.scatter([...JUNGLE_TREES], { count: 45, where: open, seed: 81 });
     z.scatter(['jungleBush'], { count: 20, where: open, seed: 82 });
     z.scatter(['rockB', 'rockC'], { count: 12, where: open, seed: 83 });
+
+    // --- Names for the map: each shows once the player has explored round it ---------------------------------------
+    z.place('The Lagoon', 257, 64);
+    z.place('Overgrown Ruins', 260, 94);
   },
 });

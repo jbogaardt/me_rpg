@@ -80,5 +80,10 @@ export default defineBiome({
     z.scatter([...DEAD_TREES], { count: 40, where: open, seed: 71 });
     z.scatter(['deadBush'], { count: 14, where: open, seed: 72 });
     z.scatter(['darkBoulder', 'darkBoulderB', 'darkSpire', 'menhir'], { count: 30, where: open, seed: 73 });
+
+    // --- Names for the map: each shows once the player has explored round it ---------------------------------------
+    z.place('The Graveyard', 130, 89);
+    z.place('The Ember Pool', 130, 67);
+    z.place('The Chasm', 168, 68);
   },
 });

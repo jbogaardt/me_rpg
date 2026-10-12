@@ -11,6 +11,7 @@ import {
   type MobSpawn,
   type GiverSpawn,
   type PetSpawn,
+  type PlaceSpawn,
   type SiteSpawn,
 } from '../../src/map/types';
 import {
@@ -70,6 +71,7 @@ export interface ZoneApi {
   pet(kind: string, col: number, row: number): unknown;
   giver(giver: string, col: number, row: number): unknown;
   site(kind: string, col: number, row: number): unknown;
+  place(name: string, col: number, row: number): unknown;
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number): unknown;
   indoor(): unknown;
   climate(name: ClimateName): unknown;
@@ -203,6 +205,10 @@ export class WorldWindow implements ZoneApi {
     this.z.site(kind, col - this.o.col, row - this.o.row);
     return this;
   }
+  place(name: string, col: number, row: number) {
+    this.z.place(name, col - this.o.col, row - this.o.row);
+    return this;
+  }
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number) {
     this.z.door(col - this.o.col, row - this.o.row, w, toZone, toCol, toRow); // the destination is the other zone's own cell
     return this;
@@ -298,6 +304,7 @@ export class Zone {
   private petList: PetSpawn[] = [];
   private giverList: GiverSpawn[] = [];
   private siteList: SiteSpawn[] = [];
+  private placeList: PlaceSpawn[] = [];
   private doorList: DoorSpawn[] = [];
   private isIndoor = false;
   private weather: ClimateName = DEFAULT_CLIMATE;
@@ -747,6 +754,12 @@ export class Zone {
     return this;
   }
 
+  /** A named spot ("The Old Ruins"): labelled on the map once the player has explored round it. Any cell will do; it does not block. */
+  place(name: string, col: number, row: number) {
+    this.placeList.push({ name, col, row });
+    return this;
+  }
+
   /**
    * A doorway: walking onto the `w` cells starting at (col, row) takes the player to cell (toCol, toRow) of another zone.
    * The cells are opened up (a building's art would otherwise block them), so put the door where the art has one.
@@ -775,6 +788,7 @@ export class Zone {
       pets: this.petList,
       givers: this.giverList,
       sites: this.siteList,
+      places: this.placeList,
       doors: this.doorList,
       indoor: this.isIndoor,
       climate: this.weather,
@@ -957,6 +971,7 @@ export class Zone {
       pets: this.petList,
       givers: this.giverList,
       sites: this.siteList,
+      places: this.placeList,
       doors: this.doorList,
       indoor: this.isIndoor,
       climate: this.weather,

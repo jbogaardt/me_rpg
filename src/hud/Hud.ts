@@ -1,4 +1,5 @@
 import type { Hero } from '../systems/combat';
+import { trackerText } from '../systems/guide';
 import { arrows, progress, SPELLS } from '../systems/spells';
 
 // Health / mana bars, mirrored on one line (XP and level are in the pause menu). HTML rather than
@@ -35,6 +36,7 @@ export class Hud {
   private mp = bar('hud-mp');
   private gold = document.getElementById('hud-gold')!;
   private combos = document.getElementById('combo-hud')!;
+  private tracker = document.getElementById('quest-tracker')!;
   private shown = '';
   private shownCombos = '';
 
@@ -44,13 +46,16 @@ export class Hud {
     const s = hero.stats;
     const hp = Math.ceil(s.hp);
     const mp = Math.floor(s.mp);
-    const key = `${hp}/${s.maxHp} ${mp}/${s.maxMp} ${hero.gold}`;
+    const quest = trackerText(hero);
+    const key = `${hp}/${s.maxHp} ${mp}/${s.maxMp} ${hero.gold} ${quest}`;
     if (key === this.shown) return; // only touch the DOM when something changed
     this.shown = key;
     this.set(this.hp, hp, s.maxHp);
     this.hp.fill.style.backgroundColor = hpColor(hp / s.maxHp);
     this.set(this.mp, mp, s.maxMp);
     this.gold.querySelector('.label')!.textContent = String(hero.gold);
+    this.tracker.hidden = quest === '';
+    this.tracker.textContent = quest;
   }
 
   private set(b: Bar, value: number, max: number) {

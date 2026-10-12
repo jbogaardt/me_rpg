@@ -1,4 +1,5 @@
 import type { Hero } from '../systems/combat';
+import { zoneName } from '../systems/places';
 import { GIVERS, QUESTS, QUEST_GIVER, currentQuest, progressText, questStatus, rewardText } from '../systems/quests';
 
 /**
@@ -13,13 +14,14 @@ export function questPage(hero: Hero): string {
   if (!q) {
     now = `<p class="quest-note">Every task is done, for now. The next part of the story is still being written.</p>`;
   } else if (status === 'offer') {
-    now = `<h3>${q.title} <small>not started</small></h3><p class="quest-note">Speak to ${giver} in Lanternrest for a new task.</p>`;
+    now = `<h3>${q.title} <small>not started</small></h3><p class="quest-note">Speak to ${giver} in ${zoneName(GIVERS[QUEST_GIVER]?.zone ?? 'town')}, on the market square, for a new task. An arrow on screen points the way.</p>`;
   } else {
     const done = status === 'ready';
     now = `<h3>${q.title} <small>${done ? 'ready to hand in' : 'in progress'}</small></h3>
       <p>${q.goal}</p>
+      <p class="quest-hint">${q.hint}</p>
       <p class="quest-progress${done ? ' done' : ''}">${progressText(hero)}</p>
-      <p class="quest-note">${done ? `Return to ${giver} in Lanternrest.` : `Reward: ${rewardText(q.reward)}.`}</p>`;
+      <p class="quest-note">${done ? `Return to ${giver} in ${zoneName(GIVERS[QUEST_GIVER]?.zone ?? 'town')}.` : `Reward: ${rewardText(q.reward)}.`}</p>`;
   }
   const finished = QUESTS.slice(0, hero.quests.stage);
   const past = finished.length

@@ -155,5 +155,8 @@ export default defineBiome({
           z.prop(lilies[n++ % 4], col, row);
     z.scatter(['swampBush'], { count: 6, seed: 95 });
     z.scatter([...SWAMP_TREES], { count: 6, seed: 96, margin: 2 });
+
+    // --- Names for the map: each shows once the player has explored round it ---------------------------------------
+    z.place('The Drowned Causeway', 300, 84);
   },
 });
