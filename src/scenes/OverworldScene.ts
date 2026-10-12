@@ -38,6 +38,8 @@ import { QUEST_GIVER, GIVERS, giverMark, mobKey, progressOf, recordSite, siteNot
 import { SHOPS } from '../systems/shops';
 import type { ComboKey } from '../systems/spells';
 import type { Precip } from '../systems/weather';
+import { DayClock } from '../systems/daynight';
+import { NightLayer } from '../entities/NightLayer';
 import { Arena } from './overworld/Arena';
 import { CHEST_REACH, KEEPER_REACH, PICKUP_REACH, SIGN_REACH, SITE_REACH } from './overworld/constants';
 import { Farming } from './overworld/Farming';
@@ -115,6 +117,8 @@ export class OverworldScene implements Scene {
   private combos = new ComboReader();
   private comboSet = ''; // the combos the reader is following (a different set starts it afresh)
   private atlas = new Atlas(); // what the players have seen of each zone, for the map
+  private dayClock = new DayClock(); // the hour comes from the wall clock, so co-op players agree with nothing sent
+  private night = new NightLayer();
 
   constructor(
     zone: Zone,
@@ -145,6 +149,7 @@ export class OverworldScene implements Scene {
 
     this.zones.addHome(zone);
     this.zones.root.addChildAt(this.arrow, 1);
+    this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     this.overlay = new MapOverlay();
     ui.shop.onGearChange = () => arena.refreshLook();
     ui.shop.trader = () => this.pack.trader();
@@ -183,6 +188,11 @@ export class OverworldScene implements Scene {
   /** Start some weather in the zone you are in right now (playtest scripts); otherwise it changes at random. */
   setWeather(precip: Precip | null, windLevel = 0) {
     this.arena.zone.weather?.force(precip, windLevel);
+  }
+
+  /** Jump to an hour of the day, 0 to 24 (playtest scripts; this client only, the clock otherwise follows real time). */
+  setHour(hour: number) {
+    this.dayClock.setHour(hour);
   }
 
   enter() {
@@ -252,6 +262,7 @@ export class OverworldScene implements Scene {
     // What the local player sees: the zone they are in (a door above may just have changed it).
     const z = arena.zone;
     z.effects.update(dt);
+    this.night.update(this.dayClock.time(), !z.data.indoor, arena.screen.width, arena.screen.height);
     if (z.weatherLayer && z.ambient && z.weather) {
       // This biome's weather (the simulation rolls it, in every zone someone is in; a guest is told by the host).
       z.ambient.wind = z.weather.wind;
