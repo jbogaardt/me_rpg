@@ -82,8 +82,8 @@ export default defineBiome({
     ] as const)
       z.grove(blob(area(x, y, w, h)), { trees: TREES });
 
-    z.scatter(['treeA', 'treeB'], { count: 24, where: open, seed: 21 });
-    z.scatter(['bush'], { count: 40, where: open, seed: 22 });
+    z.scatter([...TREES], { count: 24, where: open, seed: 21 });
+    z.scatter(['bush'], { count: 16, where: open, seed: 22 });
     z.scatter(['flowerRed', 'flowersPurple'], { count: 150, where: open, margin: 0, seed: 23 });
 
     // --- Strays: talk to them with the action key (a dog woofs, a cat meows) ----------------------------------

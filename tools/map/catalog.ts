@@ -1,16 +1,14 @@
 // Named map assets for zone specs. Every coordinate here was checked against the sheets in
 // public/tilesets/ (see the map pitfalls in CLAUDE.md); add new entries only after looking at the art.
 
+import { TREE_ATLAS } from './treeAtlas';
+
 export const GROUND_SHEET = 'ground_tiles.png';
 export const OBJECT_SHEET = 'object-layer.png';
 // Derived by tools/map/recolor.ts (`npm run tilesets`): same layout as the originals, recoloured.
 export const PLUS_SHEET = 'ground_plus.png'; // ground_tiles + a plain water tile matching the lake ring
 export const FROST_SHEET = 'frost_ground.png'; // sand -> snow, water -> ice
-export const FROST_OBJECTS = 'frost_objects.png'; // snow-dusted trees/bushes, blue-grey rocks
-export const DRY_OBJECTS = 'dry_objects.png'; // withered ochre trees/bushes
-export const JUNGLE_OBJECTS = 'jungle_objects.png'; // deep green jungle trees/bushes
-export const DEAD_OBJECTS = 'dead_objects.png'; // ashen grey trees/bushes of the undead lands
-export const SWAMP_OBJECTS = 'swamp_objects.png'; // murky olive marsh trees/bushes
+export const FROST_OBJECTS = 'frost_objects.png'; // blue-grey rocks (trees and bushes: trees_<kind>.png, see trees.ts)
 export const TOWN_SHEET = 'town.png'; // the shop buildings, cut from the CC0 Town RPG Pack by tools/map/town.ts
 export const INTERIOR_SHEET = 'interior.png'; // shop interiors: floor, wall, counter, shelves, signs (tools/map/interior.ts)
 export const TERRAIN_SHEET = 'lpc_terrain.png'; // the LPC terrain atlas (art/lpc_terrain/): autotiled terrains, see terrain.ts
@@ -18,15 +16,7 @@ export const CLIFF_SHEET = 'Cliff_tileset.png'; // Avalon cliffs: a plateau blob
 export const FROST_CLIFFS = 'frost_cliffs.png'; // cliffs with snow tops and blue-grey rock (recolor.ts)
 export const DRY_CLIFFS = 'dry_cliffs.png'; // cliffs with sandy tops and ochre rock (recolor.ts)
 
-/** Baked-in drop-shadow colour on object-layer.png. Ignored when measuring how much a cell is covered. */
-export const SHADOW_RGB = [152, 169, 150] as const;
-/** Shadow colours of the recoloured sheets (tools/map/recolor.ts), tuned to read on snow and on sand. */
-export const SHADOW_FROST = [150, 162, 178] as const;
-export const SHADOW_DRY = [183, 163, 125] as const;
-export const SHADOW_JUNGLE = [96, 128, 92] as const;
-export const SHADOW_DEAD = [104, 98, 110] as const;
-export const SHADOW_SWAMP = [112, 118, 84] as const;
-export const SHADOWS = [SHADOW_RGB, SHADOW_FROST, SHADOW_DRY, SHADOW_JUNGLE, SHADOW_DEAD, SHADOW_SWAMP] as const;
+export { SHADOW_RGB, SHADOW_FROST, SHADOWS } from './shadows';
 
 /** A repeating ground fill: `tiles[row % rows][col % cols]` gives the source [x, y] of each map cell. */
 export interface GroundFill {
@@ -292,28 +282,34 @@ export interface Prefab {
 
 const part = (x: number, y: number, w: number, h: number, dx = 0, dy = 0): PrefabPart => ({ x, y, w, h, dx, dy });
 
-const treeParts = {
-  A: [part(96, 103, 64, 89), part(160, 127, 30, 65, 64, 24)],
-  B: [part(220, 103, 66, 89, 28, 0), part(192, 125, 28, 67, 0, 22)],
+type Biome = 'green' | 'frost' | 'dry' | 'jungle' | 'dead' | 'swamp';
+/** A tree of the LPC trees pack (see trees.ts): one part, trunk and lower canopy solid, the crown walk-behind. */
+const lpcTree = (biome: Biome, i: number, about: string): Prefab => {
+  const t = TREE_ATLAS[biome]?.trees[i];
+  if (!t) throw new Error(`no ${biome} tree ${i} in the atlas (run npm run tilesets)`);
+  return {
+    sheet: `trees_${biome}.png`,
+    w: t.w,
+    h: t.h,
+    parts: [part(t.x, t.y, t.w, t.h)],
+    solid: { band: t.band, min: 0.5 },
+    tag: 'tree',
+    about,
+  };
 };
-const tree = (sheet: string, which: 'A' | 'B', about: string): Prefab => ({
-  sheet,
-  w: 94,
-  h: 89,
-  parts: treeParts[which],
-  solid: { band: 64, min: 0.5 },
-  tag: 'tree',
-  about,
-});
-const bush = (sheet: string, about: string): Prefab => ({
-  sheet,
-  w: 62,
-  h: 57,
-  parts: [part(160, 71, 62, 57)],
-  solid: { band: 40, min: 0.5 },
-  tag: 'bush',
-  about,
-});
+const lpcBush = (biome: Biome, i: number, about: string): Prefab => {
+  const t = TREE_ATLAS[biome]?.bushes[i];
+  if (!t) throw new Error(`no ${biome} bush ${i} in the atlas (run npm run tilesets)`);
+  return {
+    sheet: `trees_${biome}.png`,
+    w: t.w,
+    h: t.h,
+    parts: [part(t.x, t.y, t.w, t.h)],
+    solid: { band: t.band, min: 0.5 },
+    tag: 'bush',
+    about,
+  };
+};
 const rock = (sheet: string, x: number, y: number, w: number, h: number, about: string): Prefab => ({
   sheet,
   w,
@@ -417,28 +413,174 @@ export const PREFABS = {
   ),
   signWizard: furniture('signWizard', 0, 'Wall sign with a star, 4x2 cells, decoration.'),
   ranger: building('ranger', "Ranger's lodge: a 3x9 tall house with a golden roof and a bow over the door."),
-  treeA: tree(OBJECT_SHEET, 'A', 'Round leafy canopy (3x3 cells). Blocks its bottom two rows; top row is walk-behind.'),
-  treeB: tree(
-    OBJECT_SHEET,
-    'B',
-    'Second canopy variant, same size and collision as treeA. Mix the two to avoid repetition.',
+  treeA: lpcTree('green', 0, 'Leafy tree, variant A. Blocks its trunk and lower canopy; the crown is walk-behind.'),
+  treeB: lpcTree('green', 1, 'Leafy tree, variant B. Blocks its trunk and lower canopy; the crown is walk-behind.'),
+  treeC: lpcTree('green', 2, 'Leafy tree, variant C. Blocks its trunk and lower canopy; the crown is walk-behind.'),
+  treeD: lpcTree('green', 3, 'Leafy tree, variant D. Blocks its trunk and lower canopy; the crown is walk-behind.'),
+  treeE: lpcTree('green', 4, 'Leafy tree, variant E. Blocks its trunk and lower canopy; the crown is walk-behind.'),
+  treeF: lpcTree('green', 5, 'Leafy tree, variant F. Blocks its trunk and lower canopy; the crown is walk-behind.'),
+  bush: lpcBush('green', 0, 'Leafy bush.'),
+  bushSmall: lpcBush('green', 1, 'Small leafy bush.'),
+  frostTreeA: lpcTree(
+    'frost',
+    0,
+    'Snow-laden tree (frost zone), variant A. Blocks its trunk and lower canopy; the crown is walk-behind.',
   ),
-  frostTreeA: tree(FROST_OBJECTS, 'A', 'treeA wearing snow (frost zone).'),
-  frostTreeB: tree(FROST_OBJECTS, 'B', 'treeB wearing snow (frost zone).'),
-  dryTreeA: tree(DRY_OBJECTS, 'A', 'treeA withered to ochre (desert edge).'),
-  dryTreeB: tree(DRY_OBJECTS, 'B', 'treeB withered to ochre (desert edge).'),
-  jungleTreeA: tree(JUNGLE_OBJECTS, 'A', 'treeA in deep jungle green.'),
-  jungleTreeB: tree(JUNGLE_OBJECTS, 'B', 'treeB in deep jungle green.'),
-  deadTreeA: tree(DEAD_OBJECTS, 'A', 'treeA drained to ashen grey (undead lands).'),
-  deadTreeB: tree(DEAD_OBJECTS, 'B', 'treeB drained to ashen grey (undead lands).'),
-  swampTreeA: tree(SWAMP_OBJECTS, 'A', 'treeA in murky olive (marsh, wetlands).'),
-  swampTreeB: tree(SWAMP_OBJECTS, 'B', 'treeB in murky olive (marsh, wetlands).'),
-  bush: bush(OBJECT_SHEET, 'Small round bush (2x2 cells).'),
-  jungleBush: bush(JUNGLE_OBJECTS, 'Deep green bush (2x2).'),
-  deadBush: bush(DEAD_OBJECTS, 'Ashen grey bush (2x2).'),
-  swampBush: bush(SWAMP_OBJECTS, 'Olive marsh bush (2x2).'),
-  frostBush: bush(FROST_OBJECTS, 'Snow-dusted bush (2x2).'),
-  dryBush: bush(DRY_OBJECTS, 'Withered scrub (2x2).'),
+  frostTreeB: lpcTree(
+    'frost',
+    1,
+    'Snow-laden tree (frost zone), variant B. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  frostTreeC: lpcTree(
+    'frost',
+    2,
+    'Snow-laden tree (frost zone), variant C. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  frostTreeD: lpcTree(
+    'frost',
+    3,
+    'Snow-laden tree (frost zone), variant D. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  frostTreeE: lpcTree(
+    'frost',
+    4,
+    'Snow-laden tree (frost zone), variant E. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  frostTreeF: lpcTree(
+    'frost',
+    5,
+    'Snow-laden tree (frost zone), variant F. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  frostBush: lpcBush('frost', 0, 'Snow-laden bush.'),
+  frostBushSmall: lpcBush('frost', 1, 'Small snow-laden bush.'),
+  dryTreeA: lpcTree(
+    'dry',
+    0,
+    'Autumn-brown tree (desert edge), variant A. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  dryTreeB: lpcTree(
+    'dry',
+    1,
+    'Autumn-brown tree (desert edge), variant B. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  dryTreeC: lpcTree(
+    'dry',
+    2,
+    'Autumn-brown tree (desert edge), variant C. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  dryTreeD: lpcTree(
+    'dry',
+    3,
+    'Autumn-brown tree (desert edge), variant D. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  dryTreeE: lpcTree(
+    'dry',
+    4,
+    'Autumn-brown tree (desert edge), variant E. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  dryTreeF: lpcTree(
+    'dry',
+    5,
+    'Autumn-brown tree (desert edge), variant F. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  dryBush: lpcBush('dry', 0, 'Autumn-brown bush.'),
+  dryBushSmall: lpcBush('dry', 1, 'Small autumn-brown bush.'),
+  jungleTreeA: lpcTree(
+    'jungle',
+    0,
+    'Deep teal jungle tree, variant A. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  jungleTreeB: lpcTree(
+    'jungle',
+    1,
+    'Deep teal jungle tree, variant B. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  jungleTreeC: lpcTree(
+    'jungle',
+    2,
+    'Deep teal jungle tree, variant C. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  jungleTreeD: lpcTree(
+    'jungle',
+    3,
+    'Deep teal jungle tree, variant D. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  jungleTreeE: lpcTree(
+    'jungle',
+    4,
+    'Deep teal jungle tree, variant E. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  jungleTreeF: lpcTree(
+    'jungle',
+    5,
+    'Deep teal jungle tree, variant F. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  jungleBush: lpcBush('jungle', 0, 'Deep teal jungle bush.'),
+  jungleBushSmall: lpcBush('jungle', 1, 'Small deep teal jungle bush.'),
+  deadTreeA: lpcTree(
+    'dead',
+    0,
+    'Bare dead tree (undead lands), variant A. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  deadTreeB: lpcTree(
+    'dead',
+    1,
+    'Bare dead tree (undead lands), variant B. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  deadTreeC: lpcTree(
+    'dead',
+    2,
+    'Bare dead tree (undead lands), variant C. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  deadTreeD: lpcTree(
+    'dead',
+    3,
+    'Bare dead tree (undead lands), variant D. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  deadTreeE: lpcTree(
+    'dead',
+    4,
+    'Bare dead tree (undead lands), variant E. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  deadTreeF: lpcTree(
+    'dead',
+    5,
+    'Bare dead tree (undead lands), variant F. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  deadBush: lpcBush('dead', 0, 'Bare dead bush.'),
+  deadBushSmall: lpcBush('dead', 1, 'Small bare dead bush.'),
+  swampTreeA: lpcTree(
+    'swamp',
+    0,
+    'Murky olive tree (marsh, wetlands), variant A. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  swampTreeB: lpcTree(
+    'swamp',
+    1,
+    'Murky olive tree (marsh, wetlands), variant B. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  swampTreeC: lpcTree(
+    'swamp',
+    2,
+    'Murky olive tree (marsh, wetlands), variant C. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  swampTreeD: lpcTree(
+    'swamp',
+    3,
+    'Murky olive tree (marsh, wetlands), variant D. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  swampTreeE: lpcTree(
+    'swamp',
+    4,
+    'Murky olive tree (marsh, wetlands), variant E. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  swampTreeF: lpcTree(
+    'swamp',
+    5,
+    'Murky olive tree (marsh, wetlands), variant F. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  swampBush: lpcBush('swamp', 0, 'Murky olive bush.'),
+  swampBushSmall: lpcBush('swamp', 1, 'Small murky olive bush.'),
   ...rocks,
   frostRock: frostRocks.rock,
   frostRockSmall: frostRocks.rockSmall,
@@ -514,12 +656,47 @@ export const PREFABS = {
 } satisfies Record<string, Prefab>;
 
 export type PrefabName = keyof typeof PREFABS;
-export const TREES: PrefabName[] = ['treeA', 'treeB'];
-export const FROST_TREES: PrefabName[] = ['frostTreeA', 'frostTreeB'];
-export const DRY_TREES: PrefabName[] = ['dryTreeA', 'dryTreeB'];
-export const JUNGLE_TREES: PrefabName[] = ['jungleTreeA', 'jungleTreeB'];
-export const DEAD_TREES: PrefabName[] = ['deadTreeA', 'deadTreeB'];
-export const SWAMP_TREES: PrefabName[] = ['swampTreeA', 'swampTreeB'];
+export const TREES = ['treeA', 'treeB', 'treeC', 'treeD', 'treeE', 'treeF'] as const satisfies PrefabName[];
+export const FROST_TREES = [
+  'frostTreeA',
+  'frostTreeB',
+  'frostTreeC',
+  'frostTreeD',
+  'frostTreeE',
+  'frostTreeF',
+] as const satisfies PrefabName[];
+export const DRY_TREES = [
+  'dryTreeA',
+  'dryTreeB',
+  'dryTreeC',
+  'dryTreeD',
+  'dryTreeE',
+  'dryTreeF',
+] as const satisfies PrefabName[];
+export const JUNGLE_TREES = [
+  'jungleTreeA',
+  'jungleTreeB',
+  'jungleTreeC',
+  'jungleTreeD',
+  'jungleTreeE',
+  'jungleTreeF',
+] as const satisfies PrefabName[];
+export const DEAD_TREES = [
+  'deadTreeA',
+  'deadTreeB',
+  'deadTreeC',
+  'deadTreeD',
+  'deadTreeE',
+  'deadTreeF',
+] as const satisfies PrefabName[];
+export const SWAMP_TREES = [
+  'swampTreeA',
+  'swampTreeB',
+  'swampTreeC',
+  'swampTreeD',
+  'swampTreeE',
+  'swampTreeF',
+] as const satisfies PrefabName[];
 
 /**
  * Cliff kit: the plateau blob on Cliff_tileset.png (x 44-213, y 15-223) cut along its 64x64 grass hole

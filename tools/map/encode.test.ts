@@ -8,7 +8,7 @@ describe('packMap', () => {
     const z = new Zone(8, 6);
     z.fill('grass');
     z.paint('sand', { col: 2, row: 2, w: 3, h: 2 });
-    z.forest({ col: 0, row: 0, w: 8, h: 2 });
+    z.forest({ col: 0, row: 0, w: 8, h: 2 }, { trees: ['treeA', 'treeB'] }); // two kinds, so parts repeat
     z.prop('rock', 6, 5);
     z.spawn(1, 4);
     const d = z.toMapData();

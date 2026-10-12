@@ -19,8 +19,14 @@ Casper Nilsson, Daniel Eddeland, Johann Charlot, Skyler Robert Colladay and othe
 [`art/lpc_terrain/Attribution.txt`](art/lpc_terrain/Attribution.txt), kept with the art. The atlas is used unmodified:
 `tools/map/terrain.ts` reads its Tiled tileset (`Terrain.tsx`) to autotile the ground, and some props are cut from it.
 
-`jungle_objects.png`, `dead_objects.png` and `swamp_objects.png` are further recolours of the Avalon trees, made by
-`tools/map/recolor.ts` like the frost and dry ones above.
+## Trees and bushes (`public/tilesets/trees_*.png`, source in `art/lpc_trees/`)
+
+"[LPC] Trees Mega-Pack" (https://opengameart.org/content/lpc-trees), CC-BY-SA 3.0, compiled by bluecarrot16 from art by
+Jetrel, Zabin, Hyptosis, Surt, Buch, Johann Charlot, Stephen Challener and the Open Surge team, Ivan Voirol (Silver IV),
+Guido Bos, Yar, Paulina Riva (PauR), William.Thompsonj, Casper Nilsson, ansimuz, qubodup, Bart K., Blarumyrran, Lanea
+Zimmerman (Sharm), Leonard Pabin, Chris Phillips, Barbara Rivera and Talosaurus. The full per-source list with each
+licence is in [`art/lpc_trees/CREDITS-trees.txt`](art/lpc_trees/CREDITS-trees.txt), kept with the art. Selected trees and
+bushes are cut out and repacked by `tools/map/trees.ts`; the frost and swamp sheets are recolours of the green one.
 
 ## Shop buildings (`public/tilesets/town.png`, source in `art/town_rpg_pack/`)
 
