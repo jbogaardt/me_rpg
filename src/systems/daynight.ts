@@ -1,7 +1,7 @@
 // The day and night cycle: purely cosmetic light. The model is Pixi-free; `entities/NightLayer.ts` draws it as a screen
 // tint. Nothing in combat or collision depends on the hour.
 //
-// Time of day is a number from 0 to 1: 0 is midnight, 0.25 dawn, 0.5 noon, 0.75 dusk. It is a function of the wall clock
+// Time of day is a number from 0 to 1: 0 is midnight, 0.5 noon: plain day, plain night, and a short blend between. It is a function of the wall clock
 // (`DayClock`), so every player in a co-op game sees the same hour with nothing sent over the network.
 
 /** Real seconds in one full day. */
@@ -13,19 +13,16 @@ interface Stop {
   color: number;
 }
 
+const NIGHT = 0x5565a0;
+
 /** In order, from midnight round to midnight again (the first and last match so the day wraps smoothly). */
 export const SKY: readonly Stop[] = [
-  { at: 0, color: 0x4a5a94 },
-  { at: 0.2, color: 0x5565a0 },
-  { at: 0.26, color: 0xf0c8c0 }, // first light
-  { at: 0.31, color: 0xfff0e0 }, // sunrise
-  { at: 0.35, color: 0xffffff },
-  { at: 0.64, color: 0xffffff },
-  { at: 0.71, color: 0xffecd0 }, // golden hour
-  { at: 0.77, color: 0xf2a882 }, // sunset
-  { at: 0.84, color: 0x8a82b8 }, // dusk
-  { at: 0.92, color: 0x5565a0 },
-  { at: 1, color: 0x4a5a94 },
+  { at: 0, color: NIGHT },
+  { at: 0.22, color: NIGHT },
+  { at: 0.3, color: 0xffffff }, // day comes up
+  { at: 0.7, color: 0xffffff },
+  { at: 0.78, color: NIGHT }, // and goes down
+  { at: 1, color: NIGHT },
 ];
 
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;

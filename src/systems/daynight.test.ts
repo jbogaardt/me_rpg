@@ -27,7 +27,7 @@ describe('day and night', () => {
 
   it('gets brighter through the morning and darker through the evening', () => {
     expect(daylight(0.3)).toBeGreaterThan(daylight(0.22));
-    expect(daylight(0.8)).toBeGreaterThan(daylight(0.9));
+    expect(daylight(0.74)).toBeGreaterThan(daylight(0.9));
   });
 
   it('mixes colours', () => {
