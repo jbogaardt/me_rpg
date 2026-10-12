@@ -14,6 +14,10 @@ export function buffTexts(item: Item): string[] {
 }
 
 /** What an item adds, as a short line ("+3 ATK, ranged", "+20 HP"); empty for an item with no effect. */
+/** The button for using a supply: food is eaten, potions and water are drunk. */
+export const useVerb = (item: Item) =>
+  item.use?.food && !item.use.water && !item.use.hp && !item.use.mp ? 'Eat' : 'Drink';
+
 export function bonuses(item: Item): string {
   return [
     item.attack ? `+${item.attack} ATK` : '',

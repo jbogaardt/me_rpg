@@ -4,7 +4,7 @@ import { isWorn, packEntries, upgrade } from '../systems/inventory';
 import { ITEMS, type ItemId } from '../systems/items';
 import { buyPrice, sellPrice, type Shop as ShopDef } from '../systems/shops';
 import type { Outcome, Trader } from '../systems/trader';
-import { bonuses, combosHtml } from './itemText';
+import { bonuses, combosHtml, useVerb } from './itemText';
 
 // A shopkeeper's counter (HTML overlay; markup in index.html, styles in src/ui.css). Two tabs: what the shop sells,
 // and what the hero can sell it from the pack (a shop only buys its own trade). The rules are systems/shops.ts;
@@ -140,7 +140,7 @@ export class ShopCounter {
         const other = item.slot
           ? `<button type="button" class="item-btn" data-act="wear" data-pack="${i}">Wear</button>`
           : item.use
-            ? `<button type="button" class="item-btn" data-act="use" data-pack="${i}">Drink</button>`
+            ? `<button type="button" class="item-btn" data-act="use" data-pack="${i}">${useVerb(item)}</button>`
             : '';
         return `<li${trade ? '' : ' class="poor"'}><div class="info"><b>${item.name}${count > 1 ? ` ×${count}` : ''}</b> <small>${bonuses(item)}</small></div>${sellBtn}${other}</li>`;
       })

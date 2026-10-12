@@ -11,7 +11,7 @@ import {
 } from '../systems/inventory';
 import { iconSvg } from './itemIcons';
 import { buffTexts } from './itemText';
-import { combosHtml } from './itemText';
+import { combosHtml, useVerb } from './itemText';
 
 // The Inventory tab of the pause menu: what the hero wears (a slot each, including both hands, a tool and a bag),
 // and the pack of carried items. Tap or click a slot to pick it, then use the buttons under the grids; a double
@@ -141,7 +141,7 @@ export class Inventory {
     const btn = (action: string, text: string) =>
       `<button type="button" class="mp-btn panel thin wood" data-action="${action}">${text}</button>`;
     if (sel.from === 'pack') {
-      if (item.use) buttons.push(btn('use', 'Drink'));
+      if (item.use) buttons.push(btn('use', useVerb(item)));
       const slots = slotsFor(item);
       if (slots[0]) buttons.push(btn('equip', slots[0] === 'weapon' ? 'Equip main hand' : 'Equip'));
       if (slots.includes('offhand') && item.slot === 'weapon') buttons.push(btn('equip-off', 'Equip off-hand'));
