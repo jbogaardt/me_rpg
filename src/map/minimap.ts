@@ -29,13 +29,18 @@ const UNKNOWN: Rgb = [120, 120, 120];
 /** Blocked cells (trees, rocks, cliffs, walls) are drawn darker so the shape of the land shows. Water is blocked everywhere. */
 const OBSTACLE_SHADE = 0.55;
 
-/** RGBA pixels, one per map cell, row-major: `data.width` x `data.height`. */
-export function minimapPixels(data: MapData): Uint8ClampedArray {
+/**
+ * RGBA pixels, one per map cell, row-major: `data.width` x `data.height`. With `explored` (1 = seen, one per cell)
+ * only the seen cells are drawn and the rest are left transparent; a neighbouring biome (`beyond`) always shows as
+ * the dark background.
+ */
+export function minimapPixels(data: MapData, explored?: ArrayLike<number>): Uint8ClampedArray {
   const cells = data.width * data.height;
   const blocked = new Set(data.collision);
   const out = new Uint8ClampedArray(cells * 4);
   for (let i = 0; i < cells; i++) {
     const name = data.surfaces[data.surface[i] ?? 0] ?? 'grass';
+    if (explored && !explored[i] && name !== 'beyond') continue; // fog: stays transparent
     const [r, g, b] = SURFACE_COLORS[name] ?? UNKNOWN;
     const shade = blocked.has(i) && name !== 'water' ? OBSTACLE_SHADE : 1;
     out[i * 4] = r * shade;

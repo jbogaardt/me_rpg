@@ -12,6 +12,7 @@ import type { Command, Player } from '../entities/Player';
 import { NO_COMMAND } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
 import type { Hud } from '../hud/Hud';
+import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
 import type { Menu } from '../hud/Menu';
 import type { ShopCounter } from '../hud/ShopCounter';
@@ -81,6 +82,7 @@ export class OverworldScene implements Scene {
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
+  private atlas = new Atlas(); // what the players have seen of each zone, for the map
 
   constructor(
     zone: Zone,
@@ -174,12 +176,18 @@ export class OverworldScene implements Scene {
     this.syncRole(session.role);
     arena.clock += dt;
     const online = arena.role !== 'solo';
-    // The map shows the open-air zone you are in; rooms have none.
-    this.overlay.setAvailable(online && !arena.zone.data.indoor);
-    if (!arena.zone.data.indoor) this.overlay.setZone(arena.zone.data);
+    // The map shows the open-air zone you are in, as far as it has been explored; rooms have none.
+    const outdoors = !arena.zone.data.indoor;
+    this.overlay.setAvailable(outdoors);
+    if (outdoors) {
+      const seen = this.atlas.of(arena.zone.name, arena.zone.data);
+      // Everyone in this zone uncovers the map around them (a guest only knows the players in its own zone).
+      for (const p of arena.players()) if (p.body.visible) seen.reveal(p.body.x, p.body.y);
+      this.overlay.setZone(arena.zone.data, seen);
+    }
     menu.setOnline(online);
     this.trading.sync(dt, online);
-    if (online && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
+    if (outdoors && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
     if (!dialog.active && menuPressed()) {
       if (trade.open) this.trading.command({ c: 'cancel' });
       else if (shop.open) shop.close();
