@@ -89,9 +89,9 @@ export class ZoneState {
     this.pets = data.pets.map((spawn, i) => {
       const kind = PET_KINDS[spawn.kind];
       if (!kind) throw new Error(`Zone "${zone.name}" has an unknown pet "${spawn.kind}"`);
-      const pet = new Pet(kind, sprites.pets[kind.sheet], i + 1);
-      pet.position.set(...cellFeet(spawn));
-      return pet;
+      const [x, y] = cellFeet(spawn);
+      const free = (px: number, py: number) => this.collision.fitsMap(px, py);
+      return new Pet(kind, sprites.pets[kind.sheet], { x, y }, free, i + 1);
     });
     this.mobs = data.mobs.map((m) => {
       const kind = MOB_KINDS[m.kind];

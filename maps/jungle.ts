@@ -46,6 +46,7 @@ export default defineBiome({
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(24, 7.2));
+    z.pet('rat', ...near(25.2, 7.8));
 
     // --- A lagoon with reeds ----------------------------------------------------------------------------------
     const water = pond(z, area(24.6, 5.4, 2.2, 1.4), { shore: 'mud' });

@@ -36,6 +36,8 @@ export default defineBiome({
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(15.6, 2.8));
+    z.pet('dog_tan', ...near(16.8, 3.3));
+    z.pet('cat_tan', ...near(14.4, 3.3));
 
     // --- A wreck washed up on the sand -----------------------------------------------------------------------
     for (const [x, y] of [
