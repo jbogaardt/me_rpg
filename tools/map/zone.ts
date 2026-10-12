@@ -259,6 +259,7 @@ interface Placed {
 /** Spacing of the staggered lattice trees stand on in woods: wide enough that crowns overlap only a little. */
 const WOOD_COL = 90;
 const WOOD_ROW = 84;
+const FILLER_SHARE = 0.2; // share of bare wall cells a bush or rock may fill
 const GROVE_DENSITY = 0.4; // share of lattice spots a grove plants
 
 export class Zone {
@@ -548,6 +549,7 @@ export class Zone {
       if (!opts.hard && !opts.fill) continue;
       [...trees, ...fillers].some((name) => {
         const p = PREFABS[name];
+        if (!trees.includes(name) && rand() > FILLER_SHARE) return false; // a wall is mostly trees, with the odd bush or rock
         const wCells = Math.ceil(p.w / CELL);
         for (let dc = 0; dc < wCells; dc++)
           for (let dr = 0; dr < 2; dr++) {
