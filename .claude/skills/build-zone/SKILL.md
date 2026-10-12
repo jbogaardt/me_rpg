@@ -110,7 +110,7 @@ Every `maps/<name>.ts` is a zone; the game starts in `greenwood` (`START_ZONE`, 
 **The biomes** (the open-air world) are laid out in `maps/world.ts`: one character per 10x10-cell square, every border
 between two biomes shared exactly (the build makes them wander off the squares so they look carved, `wobble`), plus the
 list of **gaps**. Each biome is `maps/<name>.ts` with
-`defineBiome({ name, walls: { trees, fillers }, worldEdge?, build })`, written in *world* cells (placed in squares with
+`defineBiome({ name, climate, walls: { trees, fillers }, worldEdge?, build })`, written in *world* cells (placed in squares with
 `units`). You don't draw borders: the build walls every biome in with 3 cells of its own woods along each border (and the world's edge, unless
 `worldEdge: false`, as the beach closes it with the sea), opens a 3-wide corridor at each gap with doors on both sides
 leading straight across, and cuts each biome's map out of the composed world with 14 cells of its neighbours around it
@@ -118,6 +118,7 @@ leading straight across, and cuts each biome's map out of the composed world wit
 doors, or if anything is open on the world's edge. To join two biomes, add a gap `{ at: [squareCol, squareRow], side }`
 (away from a bend in the border; `offset` slides it along its square's side), then run a `trail` into
 `worldOf(layout).gap(a, b)` on both sides.
+`climate` is the biome's weather (`CLIMATES` in `src/systems/weather.ts`: `temperate`, `coast`, `desert`, `jungle`, `swamp`, `undead`, `frost`): it decides which precipitation can fall there (snow only in `frost`, sandstorms only in `desert`, ash in `undead`), so pick the one that fits the biome; for a new kind of weather add a climate (and a `Precip` with a `WeatherLayer` style if it needs a new look). A crossing at a gap is a Zelda-style screen change: the camera stops at the border near the gap (`map/edges.ts`), so keep a gap's corridor straight for the last ~10 cells on both sides (the trail helpers and the wall already do) and don't put anything else on a gap's rows right at the border.
 To reshape the world, edit the layout's characters; a new biome needs a key letter and a `maps/<name>.ts`.
 Door destinations in other zones (`toCol`, `toRow`) are always cells of the destination zone's own map: convert a world
 cell with `worldOf(layout).toLocal(zone, col, row)` (the shop rooms use `shopExit` in `maps/town.ts`). Crossing a gap

@@ -24,6 +24,7 @@ const TRAILS = [
 
 export default defineBiome({
   name: 'frostlands',
+  climate: 'frost',
   walls: { trees: FROST_TREES, fillers: ['frostBush', 'frostRockSmall'] },
   build(z) {
     z.fill('snow');

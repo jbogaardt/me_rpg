@@ -22,6 +22,7 @@ import type { Session } from '../../net/session';
 import type { Stats } from '../../systems/combat';
 import { itemCode } from '../../systems/inventory';
 import { PLAYER_COLORS, playerName } from '../../systems/looks';
+import { NO_WEATHER } from '../../systems/weather';
 import type { ZoneState } from '../ZoneState';
 import type { Arena } from './Arena';
 import { BOLT_RANGE } from './constants';
@@ -154,7 +155,7 @@ export class HostLink {
             away: everyone.filter((p) => p.zone !== z.name).map((p) => p.slot),
             players: everyone.filter((p) => p.zone === z.name).map((p) => this.snapPlayer(p)),
             chests: z.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
-            w: arena.weather.snapshot(),
+            w: z.weather?.snapshot() ?? NO_WEATHER,
           },
           states: z.mobs.map((m) => encodeMob(m.view())),
           ground: z.ground.map((g): GroundSnap => [

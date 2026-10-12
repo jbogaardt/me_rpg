@@ -82,6 +82,8 @@ export interface MapData {
   shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
   doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
+  /** The zone's weather (a key of CLIMATES in systems/weather.ts): what falls and blows there. Rooms have none. */
+  climate: string;
 }
 
 /**
@@ -147,5 +149,6 @@ function unpacked(json: unknown): MapData {
     shops: d.shops ?? [],
     doors: d.doors ?? [],
     indoor: d.indoor ?? false,
+    climate: d.climate ?? 'temperate',
   };
 }

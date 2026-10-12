@@ -19,10 +19,10 @@ import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../syst
 import type { Note, SideWire, TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
-import { WEATHER_KINDS, type WeatherSnap } from '../systems/weather';
+import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 13;
+export const PROTOCOL_VERSION = 14;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -243,7 +243,13 @@ const numbers = (v: unknown, length: number): v is number[] =>
   Array.isArray(v) && v.length === length && v.every(isNum);
 
 const isWeather = (v: unknown): v is WeatherSnap =>
-  numbers(v, 3) && isIndex(v[0], WEATHER_KINDS.length) && isCount(v[1]) && v[1] <= 100 && (v[2] === 0 || v[2] === 1);
+  numbers(v, 4) &&
+  isIndex(v[0], PRECIPS.length + 1) && // 0 is clear sky
+  isCount(v[1]) &&
+  v[1] <= 100 &&
+  isCount(v[2]) &&
+  v[2] <= 100 &&
+  (v[3] === 0 || v[3] === 1);
 
 /** An event as it travels in a snapshot (see EventWire). */
 export function encodeEvent(id: number, e: WorldEvent): EventWire {

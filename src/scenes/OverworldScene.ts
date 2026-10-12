@@ -23,7 +23,7 @@ import { CHEST_LOOTS, collect } from '../systems/chests';
 import type { Hero, Item } from '../systems/combat';
 import { equip } from '../systems/items';
 import { SHOPS } from '../systems/shops';
-import type { WeatherKind } from '../systems/weather';
+import type { Precip } from '../systems/weather';
 import { Arena } from './overworld/Arena';
 import { CHEST_REACH, KEEPER_REACH, PICKUP_REACH } from './overworld/constants';
 import { Ground } from './overworld/Ground';
@@ -140,9 +140,9 @@ export class OverworldScene implements Scene {
     return this.arena.remotes;
   }
 
-  /** Start a kind of weather right now (playtest scripts); otherwise it changes at random. */
-  setWeather(kind: WeatherKind) {
-    this.arena.weather.force(kind);
+  /** Start some weather in the zone you are in right now (playtest scripts); otherwise it changes at random. */
+  setWeather(precip: Precip | null, windLevel = 0) {
+    this.arena.zone.weather?.force(precip, windLevel);
   }
 
   enter() {
@@ -165,7 +165,7 @@ export class OverworldScene implements Scene {
     arena.screen = { width, height };
     arena.camera.resize(width, height);
     this.ui.dialog.layout(arena.screen, this.ui.touch.rects());
-    arena.camera.follow(width, height, this.player.x, this.player.y);
+    arena.zone.follow(width, height, this.player.x, this.player.y);
   }
 
   update(dt: number) {
@@ -204,17 +204,10 @@ export class OverworldScene implements Scene {
     // What the local player sees: the zone they are in (a door above may just have changed it).
     const z = arena.zone;
     z.effects.update(dt);
-    if (z.weatherLayer && z.ambient) {
-      if (arena.role !== 'client') arena.weather.update(dt); // a guest shows the host's weather (see GuestLink)
-      z.ambient.wind = arena.weather.wind;
-      // Solo and host roll the lightning (anywhere around a player in this zone); a guest only draws the host's.
-      const strike = z.weatherLayer.update(
-        dt,
-        arena.weather,
-        z.camera.view(arena.screen.width, arena.screen.height),
-        arena.role === 'client' ? undefined : () => this.sim.strikeTarget(),
-      );
-      if (strike) this.sim.lightning(strike);
+    if (z.weatherLayer && z.ambient && z.weather) {
+      // This biome's weather (the simulation rolls it, in every zone someone is in; a guest is told by the host).
+      z.ambient.wind = z.weather.wind;
+      z.weatherLayer.update(dt, z.weather, z.camera.view(arena.screen.width, arena.screen.height));
       z.ambient.update(dt, this.player, [
         ...arena.players().map((p) => p.body),
         ...z.mobs.filter((m) => m.alive).map((m) => m.body),
@@ -239,12 +232,10 @@ export class OverworldScene implements Scene {
           .map(pin),
       );
     }
-    z.camera.follow(arena.screen.width, arena.screen.height, this.player.x, this.player.y);
-    // A slide shifts the whole new zone in; the weather is the sky over the screen, so it stays put.
+    z.follow(arena.screen.width, arena.screen.height, this.player.x, this.player.y);
+    // A slide shifts the whole new zone in, its sky with it (each biome has its own weather).
     const shift = this.zones.transition.update(dt, arena.screen, this.zones.heroOnScreen());
-    z.world.position.x += shift.x;
-    z.world.position.y += shift.y;
-    z.weatherLayer?.view.position.set(-shift.x / z.camera.zoom, -shift.y / z.camera.zoom);
+    z.camera.shift(shift.x, shift.y);
     z.world.update(z.camera.view(arena.screen.width, arena.screen.height)); // build the map around the view
   }
 
@@ -278,6 +269,7 @@ export class OverworldScene implements Scene {
           for (const p of present) sim.updatePlayer(p, commandOf(p), dt);
           for (const mob of z.mobs) mob.update(dt, z.mobWorld);
           this.ground.age(dt);
+          sim.weather(dt);
           for (const p of present) if (commandOf(p).mag) sim.cast(p);
           if (z !== here) z.effects.update(dt); // the local zone's effects are updated with the rest of what is drawn
         });

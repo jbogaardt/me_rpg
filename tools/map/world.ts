@@ -16,6 +16,7 @@
 
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
 import { PREFABS, type PrefabName } from './catalog';
+import type { ClimateName } from '../../src/systems/weather';
 import { rng, SURFACES, Zone, type Rect, type WoodsOptions, type ZoneApi } from './zone';
 
 /** Cells of trees on each side of a border between two biomes (and along the world's edge). */
@@ -25,6 +26,11 @@ export const WALL = 3;
  * the map's edge, so on a very wide screen the view simply stops scrolling a little before the border).
  */
 export const MARGIN = 14;
+/**
+ * Cells past a gap's border where a player arrives (the first, the neighbour's own door cell, would send them straight
+ * back): at the very edge of the new screen, as if they had just walked on, since the camera stops at the border.
+ */
+export const ARRIVE = 1;
 /** Default width of a gap (cells). */
 export const GAP = 3;
 
@@ -85,6 +91,8 @@ export interface BiomeApi extends ZoneApi {
 
 export interface BiomeSpec {
   name: string;
+  /** The biome's weather (a key of CLIMATES, systems/weather.ts): snow only in the frost, sandstorms in the desert... */
+  climate: ClimateName;
   /** What its walls are made of: trees, and bushes and rocks for the corners no tree fits (`WoodsOptions`). */
   walls: WoodsOptions;
   /** Wall the edge of the world too (default true). False when the spec closes that edge itself, e.g. with the sea. */
@@ -412,14 +420,14 @@ export class World {
           zone: nameA,
           col: ac,
           row: ar,
-          to: { zone: nameB, ...this.toLocal(nameB, bc + dx * (WALL - 1), br + dy * (WALL - 1)) },
+          to: { zone: nameB, ...this.toLocal(nameB, bc + dx * ARRIVE, br + dy * ARRIVE) },
           dir: DIR[g.side],
         });
         doors.push({
           zone: nameB,
           col: bc,
           row: br,
-          to: { zone: nameA, ...this.toLocal(nameA, ac - dx * (WALL - 1), ar - dy * (WALL - 1)) },
+          to: { zone: nameA, ...this.toLocal(nameA, ac - dx * ARRIVE, ar - dy * ARRIVE) },
           dir: DIR[OPPOSITE[g.side]],
         });
       }
@@ -613,6 +621,9 @@ class BiomeWindow implements BiomeApi {
   indoor() {
     throw new Error('a biome is open air; rooms are their own zones (maps/shop_*.ts)');
   }
+  climate(name: ClimateName) {
+    this.z.climate(name);
+  }
   scatter(
     names: PrefabName[],
     opts: { count: number; rect?: Rect; seed?: number; margin?: number; where?: (col: number, row: number) => boolean },
@@ -669,6 +680,7 @@ export function buildWorld(layout: WorldLayout, specs: BiomeSpec[]): Map<string,
     const spec = byName.get(name)!;
     const edge = spec.worldEdge ?? true;
     const z = new Zone(W, H);
+    z.climate(spec.climate);
     const walls = world.wall(k, edge, gaps.corridor, gaps.approach);
     // The wall: its own trees over every wall cell, running on 3 cells past the world's edge so no gap shows there.
     z.woods(
@@ -842,6 +854,7 @@ function cut(
     shops: e.shops.map(local),
     doors: e.doors.map(local),
     indoor: false,
+    climate: e.climate,
   };
   // Points must stand on the biome's own cells.
   const stray: [string, { col: number; row: number }][] = [

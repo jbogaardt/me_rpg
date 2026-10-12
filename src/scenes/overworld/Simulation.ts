@@ -256,8 +256,20 @@ export class Simulation {
     return { x: p.body.x + (Math.random() - 0.5) * 840, y: p.body.y + (Math.random() - 0.5) * 600 };
   }
 
+  /**
+   * Let the weather of the zone being worked in pass `dt` seconds, and strike if it is a storm: the host or a solo game
+   * rolls every occupied zone's weather (a guest is only told), and a storm picks where to strike in its own zone.
+   */
+  weather(dt: number) {
+    const { weather } = this.arena.zone;
+    if (!weather) return;
+    weather.update(dt);
+    if (weather.strikeDue(dt)) this.lightning({ ...this.strikeTarget(), seed: Math.floor(Math.random() * 1e9) });
+  }
+
   /** A bolt landed (only the host or a solo game decides this): friends see it, and it burns whoever stands there. */
   lightning(strike: Strike) {
+    this.arena.zone.weatherLayer?.strike(strike);
     this.emit({ type: 'lightning', ...strike });
     const { x, y } = strike;
     this.fx('hitSpark', x, y);

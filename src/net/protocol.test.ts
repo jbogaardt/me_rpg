@@ -1,4 +1,4 @@
-import { Weather } from '../systems/weather';
+import { CLIMATES, PRECIPS, WIND_LEVELS, Weather } from '../systems/weather';
 import { describe, expect, it } from 'vitest';
 import type { TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GROUND } from '../systems/inventory';
@@ -38,7 +38,7 @@ const snap: SnapMsg = {
   mobs: [mob, [7, 1, 2, 0, 5, 0, 5000, 0]],
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10],
   chests: 5,
-  w: [0, 0, 1],
+  w: [0, 0, 0, 1],
   ground: [[3, 40.5, 50, 2, 150]],
   events: (
     [
@@ -169,16 +169,29 @@ describe('messages', () => {
   });
 
   it('carries the host weather to a guest through the wire format', () => {
-    const host = new Weather(() => 0.5);
-    host.force('storm');
+    const host = new Weather(CLIMATES.temperate, () => 0.5);
+    host.force('storm', WIND_LEVELS.gale);
     host.windDir = -1;
     const received = parseMessage(encodeMessage({ ...snap, w: host.snapshot() }));
     expect(received?.k).toBe('snap');
-    const guest = new Weather(() => 0.5);
+    const guest = new Weather(CLIMATES.temperate, () => 0.5);
     if (received?.k === 'snap') guest.setRemote(received.w);
-    expect(guest.kind).toBe('storm');
+    expect(guest.precip).toBe('storm');
+    expect(guest.windLevel).toBeCloseTo(WIND_LEVELS.gale, 2);
     expect(guest.windDir).toBe(-1);
     expect(guest.intensity).toBe(1);
+  });
+
+  it('rejects a weather that is not one of the known precipitations, or out of range', () => {
+    for (const w of [
+      [PRECIPS.length + 1, 0, 100, 1],
+      [-1, 0, 100, 1],
+      [1, 101, 100, 1],
+      [1, 0, 101, 1],
+      [1, 0, 100, 2],
+      [1, 0, 100],
+    ])
+      expect(parseMessage(JSON.stringify({ ...snap, w }))).toBeNull();
   });
 
   it('rejects a lightning event with a bad seed or place', () => {

@@ -196,7 +196,7 @@ export class GuestLink {
       }
     }
 
-    arena.weather.setRemote(snap.w);
+    arena.zone.weather?.setRemote(snap.w); // this biome's own sky
     arena.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
     if (snap.ground) this.ground.sync(snap.ground); // absent: the same items as before
     for (const [index, ...state] of snap.mobs) arena.mobs[index]?.setRemote(decodeMob(state)); // only the mobs the host listed: the rest are out of sight
