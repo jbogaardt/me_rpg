@@ -136,7 +136,7 @@ describe('borders as the world builder sees them', () => {
         z.fill('grass');
         z.ground('meadow', { inset: [4, 4] });
         z.keepClear({ col: 12, row: 7, w: 4, h: 7 }); // a road
-        z.grove({ col: 9, row: 5, w: 10, h: 11 }, { trees: TREES, density: 1 });
+        z.grove({ col: 9, row: 5, w: 10, h: 11 }, { trees: TREES, density: 1, fill: true });
         z.spawn(15, 10);
       },
     });

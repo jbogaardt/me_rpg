@@ -77,7 +77,7 @@ export default defineBiome({
       z.mob(kind, ...near(x, y));
 
     z.scatter([...DEAD_TREES], { count: 40, where: open, seed: 71 });
-    z.scatter(['deadBush'], { count: 35, where: open, seed: 72 });
+    z.scatter(['deadBush'], { count: 14, where: open, seed: 72 });
     z.scatter(['darkBoulder', 'darkBoulderB', 'darkSpire', 'menhir'], { count: 30, where: open, seed: 73 });
   },
 });

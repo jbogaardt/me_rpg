@@ -99,7 +99,7 @@ export default defineBiome({
 
     z.scatter([...DRY_TREES], { count: 22, where: open, seed: 53 });
     z.scatter(['sandBoulder', 'sandBoulderB', 'sandSpire'], { count: 36, where: open, seed: 51 });
-    z.scatter(['dryBush'], { count: 60, where: open, seed: 52 });
+    z.scatter(['dryBush'], { count: 24, where: open, seed: 52 });
     z.scatter(['rockC', 'rockB', 'rockSmall'], { count: 30, where: open, seed: 54 });
   },
 });

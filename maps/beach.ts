@@ -77,6 +77,6 @@ export default defineBiome({
 
     z.scatter(['sandBoulder', 'sandBoulderB', 'sandSpire'], { count: 18, where: open, seed: 61 });
     z.scatter(['rockSmall', 'rockC', 'rock'], { count: 20, where: open, seed: 62 });
-    z.scatter(['bush'], { count: 6, where: (c, r) => open(c, r) && c > 180, seed: 63 });
+    z.scatter(['bush'], { count: 3, where: (c, r) => open(c, r) && c > 180, seed: 63 });
   },
 });

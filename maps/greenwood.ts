@@ -131,7 +131,7 @@ export default defineBiome({
       z.mob(kind, ...near(x, y));
 
     z.scatter([...TREES], { count: 70, where: open, seed: 11 });
-    z.scatter(['bush'], { count: 90, where: open, seed: 12 });
+    z.scatter(['bush'], { count: 36, where: open, seed: 12 });
     z.scatter(['rock', 'rockSmall', 'rockB', 'rockC'], { count: 45, where: open, seed: 13 });
     z.scatter(['flowerRed', 'flowersPurple'], { count: 220, where: open, margin: 0, seed: 14 });
   },

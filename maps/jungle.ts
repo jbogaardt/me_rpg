@@ -92,7 +92,7 @@ export default defineBiome({
       z.mob(kind, ...near(x, y));
 
     z.scatter([...JUNGLE_TREES], { count: 45, where: open, seed: 81 });
-    z.scatter(['jungleBush'], { count: 50, where: open, seed: 82 });
+    z.scatter(['jungleBush'], { count: 20, where: open, seed: 82 });
     z.scatter(['rockB', 'rockC'], { count: 12, where: open, seed: 83 });
   },
 });

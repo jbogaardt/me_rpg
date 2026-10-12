@@ -80,7 +80,7 @@ export default defineBiome({
       z.mob(kind, ...near(x, y));
 
     z.scatter([...SWAMP_TREES], { count: 35, where: open, seed: 91 });
-    z.scatter(['swampBush', 'bush'], { count: 40, where: open, seed: 92 });
+    z.scatter(['swampBush', 'bush'], { count: 16, where: open, seed: 92 });
     z.scatter(['flowersPurple', 'flowerRed'], { count: 60, where: open, margin: 0, seed: 93 });
   },
 });

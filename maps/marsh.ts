@@ -152,7 +152,7 @@ export default defineBiome({
       for (let col = b.col + (row % 5); col < b.col + b.w; col += 6)
         if (isWater(col, row) && isWater(col + 1, row) && isWater(col, row + 1) && (col + row) % 3 === 0)
           z.prop(lilies[n++ % 4], col, row);
-    z.scatter(['swampBush'], { count: 14, seed: 95 });
+    z.scatter(['swampBush'], { count: 6, seed: 95 });
     z.scatter([...SWAMP_TREES], { count: 6, seed: 96, margin: 2 });
   },
 });
