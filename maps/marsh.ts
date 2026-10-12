@@ -109,6 +109,7 @@ export default defineBiome({
     z.keepClear(DRY);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(30, 8.4));
+    z.pet('rat', ...near(31.2, 9.0));
 
     z.chest('oak', 'elixir', ...near(28.9, 7.6));
     z.mob('troll', ...near(29.1, 7.8));

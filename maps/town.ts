@@ -67,13 +67,6 @@ export default defineBiome({
     ] as const)
       z.prop('barrel', ...z.near(...at(x, y)));
 
-    // --- Strays: talk to them with the action key (a dog woofs, a cat meows) ----------------------------------
-    z.pet('dog_brown', ...z.near(...at(15.9, 20.7)));
-    z.pet('dog_white', ...z.near(...at(19.2, 19.9)));
-    z.pet('cat_ginger', ...z.near(...at(13.7, 20.3)));
-    z.pet('cat_black', ...z.near(...at(17.9, 20.6)));
-    z.pet('rat', ...z.near(...at(14.9, 20.9))); // by the barrels
-
     // --- A pond and gardens in the west of town ---------------------------------------------------------------
     const water = pond(z, area(11.6, 20.6, 1.6, 1), { shore: 'sand' });
     z.keepClear(area(11.3, 20.3, 2.2, 1.6));
@@ -91,5 +84,17 @@ export default defineBiome({
     z.scatter(['treeA', 'treeB'], { count: 24, where: open, seed: 21 });
     z.scatter(['bush'], { count: 40, where: open, seed: 22 });
     z.scatter(['flowerRed', 'flowersPurple'], { count: 150, where: open, margin: 0, seed: 23 });
+
+    // --- Strays: talk to them with the action key (a dog woofs, a cat meows) ----------------------------------
+    z.pet('dog_brown', ...z.near(...at(15.9, 20.7)));
+    z.pet('dog_white', ...z.near(...at(19.2, 19.9)));
+    z.pet('cat_ginger', ...z.near(...at(13.7, 20.3)));
+    z.pet('cat_black', ...z.near(...at(17.9, 20.6)));
+    z.pet('rat', ...z.near(...at(14.9, 20.9))); // by the barrels
+    z.pet('dog_tan', ...z.near(...at(12.4, 19.4)));
+    z.pet('dog_black', ...z.near(...at(18.6, 21.3)));
+    z.pet('cat_white', ...z.near(...at(16.7, 20.6)));
+    z.pet('cat_tan', ...z.near(...at(15.2, 21.6)));
+    z.pet('rat', ...z.near(...at(19.6, 20.6)));
   },
 });

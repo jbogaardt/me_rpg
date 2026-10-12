@@ -36,6 +36,7 @@ export default defineBiome({
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(23.4, 14));
+    z.pet('dog_black', ...near(24.6, 14.6));
 
     // --- A wooded hill with chests on top ---------------------------------------------------------------------
     z.plateau({ col: 252, row: 118, w: 9, h: 5 }, { stairs: [256] });

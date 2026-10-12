@@ -44,6 +44,8 @@ export default defineBiome({
 
     // --- The crossroads: where the game starts ---------------------------------------------------------------
     z.spawn(...near(14, 15));
+    z.pet('dog_tan', ...near(15.2, 15.6));
+    z.pet('cat_white', ...near(12.8, 14.6));
     z.npc(...near(14.4, 15));
     z.chest('wood', 'coins', ...near(13.6, 15.3));
     z.chest('wood', 'sack', ...near(13.8, 15.5)); // more pack slots, close to the start
