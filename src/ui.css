@@ -169,9 +169,9 @@
   font: 700 clamp(10px, 3.2vw, 14px) var(--title); color: #b9b3a2; text-shadow: 0 1px 2px #000; letter-spacing: 0.03em;
 }
 #menu [role="tab"][hidden] { display: none; }
-/* Six tabs (Trade is online only) share one row: a wider panel and smaller type. */
-#menu > .panel { width: min(560px, calc(100vw - 16px)); }
-#menu [role="tab"] { font-size: clamp(9px, 2.6vw, 12px); letter-spacing: 0; }
+/* Credits sits alone in the bottom-left corner, as wide as one of the tabs along the top. */
+#menu footer { display: flex; margin-top: 8px; }
+#menu footer [role="tab"] { flex: none; width: 92px; }
 #menu [role="tab"].active, #shop [role="tab"].active, #trade [role="tab"].active { background-image: url('./ui/plank.png'); color: var(--gold); }
 #menu .close, #shop .close, #trade .close { flex: none; width: 36px; height: 36px; font-size: 18px; line-height: 36px; }
 #menu section { color: var(--ink); padding: 4px 12px 10px; font-size: 17px; }
