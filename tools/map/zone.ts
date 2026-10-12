@@ -287,6 +287,8 @@ const FILLER_SHARE = 0.2; // share of bare wall cells a bush or rock may fill
 const GROVE_DENSITY = 0.4;
 /** The reason a border cell of a wall carries when nothing would fit over it (`checkMap` fails it). */
 export const BARE_WALL = 'a bare wall cell (nothing fits over it)';
+/** The ground a plateau's top is made of: what its cliff art's rim is drawn with. */
+const TOP_GROUND: Record<CliffKind, GroundName> = { grass: 'grass', frost: 'snow', dry: 'sand' };
 const WALL_DENSITY = 0.55; // share of lattice spots a wall plants (its border row is then filled, see `woods`)
 
 export class Zone {
@@ -296,6 +298,8 @@ export class Zone {
   private surfaceAt: number[]; // per cell: index into SURFACES
   private levelAt: number[]; // per cell: height (0 = ground)
   private ramps = new Set<number>();
+  /** Plateau tops: cells that show their cliff's own ground (`TOP_GROUND`) and no terrain, so the top matches its rim. */
+  private tops = new Set<number>();
   private terrain = new Map<TerrainName, Uint8Array>(); // per terrain: which cell corners it covers, (w+1) x (h+1)
   private cellMasks = new Map<TerrainName, Uint8Array>(); // per terrain: fixed corner masks per cell (see compose)
   private blocked = new Set<number>();
@@ -606,8 +610,9 @@ export class Zone {
   /**
    * A raised plateau. `rect` is the walkable top in cells (at least 4x4); the rim rocks fill the 1-cell
    * ring around it (north/west/east) and the rock face the 2 rows south of it; all of that is blocked,
-   * as are the four corner cells of `rect` where the rounded rim cuts in. Lay it on the ground that
-   * should form the top (grass; snow for `kind: 'frost'`; sand for `'dry'`).
+   * as are the four corner cells of `rect` where the rounded rim cuts in. The top is always the ground its rim is
+   * drawn with (grass; snow for `kind: 'frost'`; sand for `'dry'`, `TOP_GROUND`): no terrain painted before or after
+   * shows on it, so a mesa in red dirt or a hill in a meadow never has a top of another colour than its edge.
    * Stairs are the only way up: `stairs` lists the centre columns of 3-wide staircases cut into the south
    * face (each needs rect.col+2 <= column <= rect.col+w-3, so w >= 5, and >= 3 columns between stairs).
    * The top becomes level (existing level + 1); the stair cells are ramps connecting it to the level below.
@@ -622,7 +627,10 @@ export class Zone {
       if (i && c - stairCols[i - 1] < 3)
         throw new Error(`stairs at columns ${stairCols[i - 1]} and ${c} overlap (need 3+ apart)`);
     });
-    const sheet = CLIFF.sheets[opts.kind ?? 'grass'];
+    const kind = opts.kind ?? 'grass';
+    const sheet = CLIFF.sheets[kind];
+    this.fill(TOP_GROUND[kind], rect);
+    for (const { col: c, row: r } of this.cells(rect)) this.tops.add(r * this.width + c);
     const { xs, ys } = CLIFF;
     const level = Math.max(...this.cells(rect).map(({ col: c, row: r }) => this.levelAt[r * this.width + c])) + 1;
     const nx = w - 2,
@@ -839,6 +847,7 @@ export class Zone {
       out.ground[i] = z.ground[i];
       out.surfaceAt[i] = z.surfaceAt[i];
       out.levelAt[i] = z.levelAt[i];
+      if (z.tops.has(i)) out.tops.add(i);
       if (z.ramps.has(i)) out.ramps.add(i);
       if (z.blocked.has(i)) out.blocked.add(i);
       const soft = z.soft.get(i);
@@ -913,7 +922,7 @@ export class Zone {
       const col = i % this.width,
         row = Math.floor(i / this.width);
       let layers: number[] = g ? [sheetIndex(g.sheet), g.x, g.y] : [];
-      for (const name of TERRAIN_NAMES) {
+      for (const name of this.tops.has(i) ? [] : TERRAIN_NAMES) {
         const m = this.cornerMask(name, col, row);
         if (!m) continue;
         const table = tileTable(name);
