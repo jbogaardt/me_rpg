@@ -15,17 +15,17 @@ interface Stop {
 
 /** In order, from midnight round to midnight again (the first and last match so the day wraps smoothly). */
 export const SKY: readonly Stop[] = [
-  { at: 0, color: 0x2a3566 },
-  { at: 0.2, color: 0x323d70 },
-  { at: 0.26, color: 0xd29a9a }, // first light
-  { at: 0.31, color: 0xffe4cc }, // sunrise
-  { at: 0.38, color: 0xffffff },
+  { at: 0, color: 0x4a5a94 },
+  { at: 0.2, color: 0x5565a0 },
+  { at: 0.26, color: 0xf0c8c0 }, // first light
+  { at: 0.31, color: 0xfff0e0 }, // sunrise
+  { at: 0.35, color: 0xffffff },
   { at: 0.64, color: 0xffffff },
-  { at: 0.71, color: 0xffe2b4 }, // golden hour
-  { at: 0.77, color: 0xe58a62 }, // sunset
-  { at: 0.84, color: 0x5d5390 }, // dusk
-  { at: 0.92, color: 0x323d70 },
-  { at: 1, color: 0x2a3566 },
+  { at: 0.71, color: 0xffecd0 }, // golden hour
+  { at: 0.77, color: 0xf2a882 }, // sunset
+  { at: 0.84, color: 0x8a82b8 }, // dusk
+  { at: 0.92, color: 0x5565a0 },
+  { at: 1, color: 0x4a5a94 },
 ];
 
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
