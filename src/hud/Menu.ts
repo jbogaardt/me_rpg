@@ -17,6 +17,7 @@ import { arrows } from '../systems/spells';
 import type { Session } from '../net/session';
 import type { TouchControls } from '../core/touch';
 import { Inventory } from './Inventory';
+import { Magic } from './Magic';
 import { questPage } from './QuestLog';
 import { AimSetting } from './AimSetting';
 import { Keybinds } from './Keybinds';
@@ -26,7 +27,7 @@ import { Multiplayer } from './Multiplayer';
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
 // The Online tab (multiplayer connection) is Multiplayer.ts. Online play does not pause the world behind the menu.
 
-const TABS = ['status', 'inventory', 'quests', 'controls', 'online', 'trade', 'credits']; // 'trade' (hud/Trade.ts) shows only in a co-op game
+const TABS = ['status', 'inventory', 'magic', 'quests', 'controls', 'online', 'trade', 'credits']; // 'trade' (hud/Trade.ts) shows only in a co-op game
 
 export class Menu {
   open = false;
@@ -35,6 +36,9 @@ export class Menu {
   private hero: Hero | null = null;
   /** The Inventory tab; the scene attaches its handlers while it runs. */
   readonly inventory = new Inventory(document.getElementById('menu-inventory')!, () => this.renderStatus());
+
+  /** The Magic tab (the abilities learned from the trainer); the scene attaches its handlers while it runs. */
+  readonly magic = new Magic(document.getElementById('menu-magic')!);
 
   private keybinds: Keybinds;
   private aim: AimSetting;
@@ -72,6 +76,7 @@ export class Menu {
     this.renderStatus();
     this.renderQuests();
     if (TABS[this.tab] === 'inventory') this.inventory.show(hero);
+    if (TABS[this.tab] === 'magic') this.magic.show(hero);
   }
 
   /** Close the menu (a no-op if it is already closed). */
@@ -111,6 +116,7 @@ export class Menu {
   private select(i: number) {
     this.tab = i;
     if (TABS[i] === 'inventory' && this.hero) this.inventory.show(this.hero);
+    if (TABS[i] === 'magic' && this.hero) this.magic.show(this.hero);
     for (const [j, name] of TABS.entries()) {
       this.tabButton(name).classList.toggle('active', i === j);
       document.getElementById(`menu-${name}`)!.hidden = i !== j;

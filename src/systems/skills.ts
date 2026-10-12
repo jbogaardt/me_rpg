@@ -11,8 +11,11 @@
 import type { Hero } from './combat';
 import { arrows, directionWords, type Combo } from './spells';
 
-export const SKILL_IDS = ['arcaneEdge', 'spiritMark'] as const;
+export const SKILL_IDS = ['arcaneEdge', 'swiftSurge', 'ironSkin', 'spiritMark'] as const;
 export type SkillId = (typeof SKILL_IDS)[number];
+
+/** How many skills a hero can have ready at once. A wand or tome's own combos do not count toward this. */
+export const LOADOUT_SLOTS = 2;
 
 export interface Skill {
   id: SkillId;
@@ -23,7 +26,7 @@ export interface Skill {
   keys: string;
   /** Mana to cast it. */
   cost: number;
-  /** The level a hero must have before the trainer will test them for it. */
+  /** The level a hero must have before the trainer will test them for it: a new skill every five levels. */
   minLevel: number;
   /** The training ground that tests for it: a zone name (maps/<zone>.ts). */
   zone: string;
@@ -38,6 +41,24 @@ export const SKILLS: Record<SkillId, Skill> = {
     cost: 5,
     minLevel: 1,
     zone: 'training_novice',
+  },
+  swiftSurge: {
+    id: 'swiftSurge',
+    name: 'Swift Surge',
+    about: 'For 6 seconds you swing and draw your bow much faster, and walk a little quicker.',
+    keys: 'urdl',
+    cost: 6,
+    minLevel: 5,
+    zone: 'training_apprentice',
+  },
+  ironSkin: {
+    id: 'ironSkin',
+    name: 'Iron Skin',
+    about: 'For 8 seconds you take a little over half the damage from every blow.',
+    keys: 'dlur',
+    cost: 8,
+    minLevel: 10,
+    zone: 'training_journeyman',
   },
   spiritMark: {
     id: 'spiritMark',
@@ -54,6 +75,13 @@ export const SKILLS: Record<SkillId, Skill> = {
 export const EDGE_CHARGES = 3;
 export const EDGE_SECONDS = 12;
 export const EDGE_SHARE = 0.6;
+/** Swift Surge: seconds, the share of the usual time between attacks (less is faster) and the walking speed multiplier. */
+export const SURGE_SECONDS = 6;
+export const SURGE_COOLDOWN = 0.6;
+export const SURGE_SPEED = 1.25;
+/** Iron Skin: seconds, and the share of damage still taken. */
+export const GUARD_SECONDS = 8;
+export const GUARD_TAKEN = 0.55;
 /** Spirit Mark: how long it lasts, how much more a marked foe takes, how hard the pulse itself stings (share of spell power). */
 export const MARK_SECONDS = 8;
 export const MARK_BONUS = 0.3;
@@ -80,7 +108,50 @@ export const knows = (hero: Hero, id: SkillId): boolean => hero.skills.includes(
 export function learn(hero: Hero, id: SkillId): boolean {
   if (knows(hero, id)) return false;
   hero.skills = SKILL_IDS.filter((s) => s === id || hero.skills.includes(s));
+  if (hero.loadout.length < LOADOUT_SLOTS) hero.loadout = [...hero.loadout, id]; // a free slot takes it; otherwise the menu swaps
   return true;
+}
+
+/**
+ * Choose which skills are ready: at most `LOADOUT_SLOTS`, each known, none twice. Slots fill from the first, so taking the
+ * first one out moves the second up. Returns false (changing nothing) for anything else.
+ */
+export function setLoadout(hero: Hero, wanted: readonly SkillId[]): boolean {
+  if (
+    wanted.length > LOADOUT_SLOTS ||
+    new Set(wanted).size !== wanted.length ||
+    !wanted.every((id) => knows(hero, id))
+  ) {
+    return false;
+  }
+  hero.loadout = [...wanted];
+  return true;
+}
+
+/** A loadout as one small number for the network: slot 1 and slot 2 as 0 (empty) or a skill's place in SKILL_IDS plus one. */
+export const loadoutCode = (loadout: readonly SkillId[]): number =>
+  (loadout[0] ? SKILL_IDS.indexOf(loadout[0]) + 1 : 0) * (SKILL_IDS.length + 1) +
+  (loadout[1] ? SKILL_IDS.indexOf(loadout[1]) + 1 : 0);
+
+/** The biggest value `loadoutCode` can have. */
+export const MAX_LOADOUT_CODE = (SKILL_IDS.length + 1) ** 2 - 1;
+
+/** The loadout a code stands for, or null if it is no loadout (an out-of-range code, or one skill in both slots). */
+export function loadoutFromCode(code: number): SkillId[] | null {
+  if (!Number.isInteger(code) || code < 0 || code > MAX_LOADOUT_CODE) return null;
+  const n = SKILL_IDS.length + 1;
+  const slots = [Math.floor(code / n), code % n].filter((v) => v > 0).map((v) => SKILL_IDS[v - 1]!);
+  return new Set(slots).size === slots.length ? slots : null;
+}
+
+/**
+ * The skills the hero can cast where they stand: the ones they have ready, except that in a training ground the skill being
+ * tested takes the second slot (the first stays), so it can be tried out on the wave.
+ */
+export function activeSkills(hero: Hero, zone = ''): SkillId[] {
+  const trial = skillOfZone(zone)?.id;
+  if (!trial) return hero.loadout;
+  return [...hero.loadout.slice(0, LOADOUT_SLOTS - 1).filter((id) => id !== trial), trial];
 }
 
 /** The skills a hero knows as a bit mask (bit n is `SKILL_IDS[n]`), for the network. */
@@ -105,59 +176,73 @@ export interface TrainerTalk {
   trial: Skill | null;
 }
 
+const MENU_HELP = `Only ${LOADOUT_SLOTS === 2 ? 'two' : LOADOUT_SLOTS} of these abilities can be ready at once. Open your menu (Esc, or the ☰ button) and choose the Magic tab to put them in slot 1 or slot 2, and to swap them whenever you like. A wand or tome's own combos do not count toward the two, so with one in hand you can have both of mine ready as well.`;
+
+/** One line about a skill: its name, the keys, what it costs and what it does. */
+export const skillLine = (s: Skill): string =>
+  `${s.name} (${arrows(s.keys)}: ${directionWords(s.keys)}; ${s.cost} MP): ${s.about}`;
+
 /**
- * The training wizard's words to a hero: what they know, and either a trial for the next skill (what to do there is the
- * lines), or why not yet, or that there is nothing more to teach.
+ * The training wizard's words to a hero: what they know and how the two ability slots work, and either a trial for the
+ * next skill (what to do there is in the lines), or why not yet, or that there is nothing more to teach.
  */
 export function trainerTalk(hero: Hero): TrainerTalk {
   const skill = nextSkill(hero);
-  const known = SKILL_IDS.filter((id) => knows(hero, id)).map(
-    (id) => `${SKILLS[id].name} (${arrows(SKILLS[id].keys)})`,
-  );
-  const recap = known.length ? [`You already know ${known.join(' and ')}.`] : [];
+  const known = SKILL_IDS.filter((id) => knows(hero, id)).map((id) => SKILLS[id]);
   if (!skill) {
-    return { lines: [...recap, 'There is nothing more I can teach you. Spend it well.'], trial: null };
-  }
-  if (hero.stats.level < skill.minLevel) {
     return {
       lines: [
-        ...recap,
-        `I can teach you ${skill.name} when you have reached level ${skill.minLevel}. You are level ${hero.stats.level}. Go and fight; come back stronger.`,
+        'You have learned everything I can teach. Here is what you carry:',
+        ...known.map(skillLine),
+        MENU_HELP,
+        'Spend it well.',
       ],
       trial: null,
     };
   }
-  const hard = skill.minLevel > 1;
+  if (hero.stats.level < skill.minLevel) {
+    return {
+      lines: [
+        ...(known.length ? ['This is what you know so far:', ...known.map(skillLine), MENU_HELP] : []),
+        `I can teach you ${skill.name} when you have reached level ${skill.minLevel}; you are level ${hero.stats.level}. A new ability every five levels: go and fight, and come back stronger.`,
+      ],
+      trial: null,
+    };
+  }
+  const first = known.length === 0;
   return {
     lines: [
-      ...recap,
-      hard
-        ? `You have grown, ${hero.name}. Ready for the second trial? I will teach you ${skill.name}.`
-        : `So you want to cast without a wand? Magic can live in you, ${hero.name}, and any sword or bow can carry it. I will teach you ${skill.name}.`,
-      skill.about,
-      `At the training ground, a wave of foes waits. Defeat every one of them, and do not fall. If you fall, you wake here and can try again; walk out through the door at the bottom to give up.`,
-      `Once you have it, cast ${skill.name} by tapping ${arrows(skill.keys)} (${directionWords(skill.keys)}: a circle, on the pad too). It costs ${skill.cost} MP, so keep some for it.`,
-      'Off you go. I will send you now.',
+      first
+        ? `So you want to cast without a wand? Magic can live in you, ${hero.name}, and any sword or bow can carry it. I will teach you ${skill.name}.`
+        : `You have grown, ${hero.name}. Ready to learn ${skill.name}?`,
+      skillLine(skill),
+      first ? MENU_HELP : `Remember: Menu, then the Magic tab, puts your two ready abilities in slot 1 or slot 2.`,
+      `At the training ground a wave of foes waits. Defeat every one of them, and do not fall. To let you practise, ${skill.name} will sit in your second slot while you are there (your first slot stays as it is), and your own choice comes back when you leave. Tap ${arrows(skill.keys)} to cast it.`,
+      'If you fall, you wake here and can try again. Walk out through the door at the bottom to give up. Off you go.',
     ],
     trial: skill,
   };
 }
 
-/** What a hero's own spells are (the skills they know), as combos for the combo reader. */
+/** What a hero's own spells are (the skills they have ready), as combos for the combo reader. */
 export interface SkillCombo {
   keys: string;
   cost: number;
   skill: SkillId;
 }
 
-/** Every combo a hero can tap right now: those of the wand or tome in hand first, then their skills. The index is what travels. */
+/** Every combo a hero can tap right now: those of the wand or tome in hand first (they do not use the skill slots), then their ready skills. The index is what travels. */
 export type HeroCombo = (Combo & { skill?: undefined }) | SkillCombo;
 
-export function heroCombos(hero: Hero): HeroCombo[] {
+export function heroCombos(hero: Hero, zone = ''): HeroCombo[] {
   const weapon: HeroCombo[] = [...(hero.weapon.focus?.combos ?? [])];
-  const innate: HeroCombo[] = hero.skills.map((id) => ({ keys: SKILLS[id].keys, cost: SKILLS[id].cost, skill: id }));
+  const innate: HeroCombo[] = activeSkills(hero, zone).map((id) => ({
+    keys: SKILLS[id].keys,
+    cost: SKILLS[id].cost,
+    skill: id,
+  }));
   return [...weapon, ...innate];
 }
 
-/** The most combos a hero can have at once: a tome's, plus every skill. */
-export const MAX_HERO_COMBOS = 4 + SKILL_IDS.length;
+/** The most combos a hero can have at once: a wand or tome's, plus the skills they have ready. */
+export const MAX_HERO_COMBOS = 4 + LOADOUT_SLOTS;

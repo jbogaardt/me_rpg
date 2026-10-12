@@ -34,4 +34,11 @@ export const DASH_DISTANCE = 4.5 * CELL;
 export const DASH_GRACE = 0.35; // seconds of immunity after a Blink
 export const WARD_TINT = 0xa8d8ff; // a warded player is tinted pale blue
 export const EDGE_TINT = 0xe3c4ff; // a hero with Arcane Edge charges is tinted violet
+export const SURGE_TINT = 0xfff0a8; // Swift Surge: pale gold
+export const GUARD_TINT = 0xc8d4e4; // Iron Skin: steel grey
+
+/** The tint a hero wears for the effects on them (the first that applies; plain white otherwise). The guest gets the same from the snapshot's flags. */
+export const auraTint = (on: { ward: boolean; edge: boolean; haste: boolean; guard: boolean }): number =>
+  on.ward ? WARD_TINT : on.edge ? EDGE_TINT : on.haste ? SURGE_TINT : on.guard ? GUARD_TINT : 0xffffff;
+
 export const HELP_RADIUS = 4 * CELL; // Mend and Ward reach friends this close

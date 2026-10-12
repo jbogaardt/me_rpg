@@ -66,6 +66,20 @@
 .combo-list .keys { display: inline-block; min-width: 4.4em; font-weight: 700; letter-spacing: 0.12em; }
 .combo-list small { opacity: 0.75; }
 
+/* The Magic tab: two ability slots, then a card per ability. */
+#menu-magic h3 { margin: 10px 0 2px; }
+.magic-help { font-size: 13px; margin: 2px 0 8px; }
+.magic-slots { display: flex; gap: 8px; margin-bottom: 8px; }
+.magic-slot { flex: 1 1 0; min-width: 0; padding: 6px 8px; border: 2px solid var(--gold-dim); border-radius: 3px; background: rgba(60, 40, 20, 0.18); }
+.magic-slot.empty { opacity: 0.6; }
+.magic-card { margin: 6px 0; padding: 6px 8px; border: 1px solid rgba(90, 60, 30, 0.5); border-radius: 3px; background: rgba(60, 40, 20, 0.08); }
+.magic-card.ready { border-color: var(--gold-dim); background: rgba(160, 120, 40, 0.18); }
+.magic-card.locked { opacity: 0.55; }
+.magic-card p { margin: 3px 0 5px; font-size: 13px; }
+.magic .keys, #menu-magic .keys { font-weight: 700; letter-spacing: 0.12em; }
+.magic-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.magic-actions .mp-btn { padding: 2px 8px; font-size: 12px; }
+
 /* HP and MP as mirror-image bars on one line: HP drains toward the left edge, MP toward the right.
    XP and level are in the pause menu. */
 #hud-stats { display: flex; gap: 6px; flex: 0 1 400px; min-width: 0; margin-right: 8px; padding: 3px 4px; }
@@ -185,6 +199,8 @@
   background: url('./ui/plank-dim.png') center / 100% 100% no-repeat;
   font: 700 clamp(10px, 3.2vw, 14px) var(--title); color: #b9b3a2; text-shadow: 0 1px 2px #000; letter-spacing: 0.03em;
 }
+/* Seven or eight tabs share one row: smaller lettering so none runs into its neighbour. */
+#menu nav [role="tab"] { font-size: clamp(8px, 2.3vw, 11px); letter-spacing: 0; }
 #menu [role="tab"][hidden] { display: none; }
 /* Credits sits alone in the bottom-left corner, as wide as one of the tabs along the top. */
 #menu footer { display: flex; margin-top: 8px; }
