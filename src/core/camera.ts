@@ -54,8 +54,7 @@ export const FOLLOW_RATE = 9;
 
 /**
  * Zooms and scrolls a world container to follow a point. The player is in the middle of the screen (a little behind
- * while walking, the camera eases after them) and the view never leaves `bounds`, so outside the zone is never shown
- * and near a wall the player simply walks toward the edge of the screen. One rule, everywhere.
+ * while walking, the camera eases after them) and the view never leaves `bounds` (the map). One rule, everywhere.
  */
 export class Camera {
   zoom = 1;
@@ -70,6 +69,20 @@ export class Camera {
     this.zoom = pickZoom(screenW, screenH);
     this.world.scale.set(this.zoom);
     this.settled = false; // the next follow() puts the view where it belongs at once
+  }
+
+  /** Where the world sits (screen px) before any `punch`. */
+  get base(): { x: number; y: number } {
+    return { x: this.baseX, y: this.baseY };
+  }
+
+  /** Put the world exactly here (screen px), as when another zone's view takes over from one it was laid beside. */
+  adopt(x: number, y: number) {
+    this.baseX = x;
+    this.baseY = y;
+    this.settled = true;
+    this.world.scale.set(this.zoom);
+    this.world.position.set(x, y);
   }
 
   view(screenW: number, screenH: number): ViewRect {

@@ -1,6 +1,7 @@
 // Doors between zones, Pixi-free. A door is a row of cells in `MapData.doors`; walking onto one takes the player to the
 // cell it names in another zone. The scene does the moving (OverworldScene.travel); this is just the geometry.
 
+import { DIR_VEC } from '../core/direction';
 import { CELL, type DoorSpawn, type MapData } from './types';
 
 /** The door whose cells the feet at (x, y) stand on, if any. (Feet sit at the very bottom of a cell, so look a pixel up.) */
@@ -48,3 +49,42 @@ export const cellFeet = (p: { col: number; row: number }): [number, number] => [
   (p.col + 0.5) * CELL,
   (p.row + 0.9) * CELL,
 ];
+
+/** How many cells inside the next zone a gap's door puts the player (tools/map/world.ts `ARRIVE`: just past the far door). */
+export const ARRIVE_CELLS = 1;
+
+/** An open-air zone reached through a gap, and where its map sits relative to this one. */
+export interface Link {
+  zone: string;
+  /** Add to a point in this zone's pixels to get the same place in that zone's. */
+  dx: number;
+  dy: number;
+}
+
+const links = new WeakMap<object, Link[]>();
+
+/**
+ * The zones joined to this one by a gap in the border (doors that name the way they go), each with the offset between
+ * the two maps' coordinates. The player standing on this zone's door cell arrives `1 + ARRIVE_CELLS` cells further on
+ * in the other zone, so the same place is `to - door - direction * (1 + ARRIVE_CELLS)` cells away. Both maps draw the
+ * same world, so with that offset one can be laid beside the other and they join without a seam. Rooms have none.
+ */
+export function neighbourLinks(data: Pick<MapData, 'doors' | 'indoor'>): Link[] {
+  const known = links.get(data);
+  if (known) return known;
+  const found: Link[] = [];
+  if (!data.indoor) {
+    for (const d of data.doors) {
+      if (!d.dir || found.some((l) => l.zone === d.to.zone)) continue;
+      const [vx, vy] = DIR_VEC[d.dir];
+      const step = 1 + ARRIVE_CELLS;
+      found.push({
+        zone: d.to.zone,
+        dx: (d.to.col - d.col - vx * step) * CELL,
+        dy: (d.to.row - d.row - vy * step) * CELL,
+      });
+    }
+  }
+  links.set(data, found);
+  return found;
+}

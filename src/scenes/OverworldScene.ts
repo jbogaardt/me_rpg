@@ -296,11 +296,12 @@ export class OverworldScene implements Scene {
       );
     }
     z.follow(arena.screen.width, arena.screen.height, this.player.x, this.player.y, dt);
-    // A warp pushes the new zone in, its sky with it (each biome has its own weather), about the hero.
+    // The new zone settles in from a closer shot as the iris opens (each biome has its own weather), about the hero.
     const punch = this.zones.transition.update(dt, arena.screen, this.zones.heroOnScreen());
     if (punch.scale !== 1 || punch.x !== 0 || punch.y !== 0)
       z.camera.punch(punch.scale, this.player.x, this.player.y, punch.x, punch.y);
     z.world.update(z.camera.view(arena.screen.width, arena.screen.height)); // build the map around the view
+    this.zones.update(dt); // the zones beside it, and the drawing of a player who has just crossed a border
   }
 
   /**
