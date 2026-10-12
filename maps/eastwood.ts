@@ -33,6 +33,10 @@ export default defineBiome({
     z.ground('meadow'); // deeper green than the Greenwood's
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
+
+    // --- Signposts at the forks (systems/signs.ts) ------------------------------------------------------------------
+    z.sign(223, 130, { left: 'greenwood', right: 'frostlands', down: 'The Hidden Clearing' });
+    z.sign(244, 137, { up: 'jungle', left: 'greenwood', right: 'frostlands' });
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(23.4, 14));

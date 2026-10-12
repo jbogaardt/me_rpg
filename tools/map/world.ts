@@ -14,7 +14,7 @@
 // `checkSeams` (tools/map/check.ts) then proves it on the generated maps: along every border both sides are walled,
 // or both are doors to each other, and no one can walk off the world.
 
-import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
+import { CELL, type DoorSpawn, type MapData, type SignSpawn } from '../../src/map/types';
 import { PREFABS, type PrefabName } from './catalog';
 import type { ClimateName } from '../../src/systems/weather';
 import type { TerrainName } from './terrain';
@@ -700,6 +700,23 @@ class BiomeWindow implements BiomeApi {
   place(name: string, col: number, row: number) {
     this.z.place(name, col, row); // a label only: it takes no room
   }
+  /**
+   * A signpost at the fork round (col, row): on the free cell nearest it that is beside a road (a kept-clear cell next
+   * to it) but not on one, with its board's cell above free too, so it stands on the verge and never in the way.
+   */
+  sign(col: number, row: number, ways: SignSpawn['ways']) {
+    for (let d = 0; d <= 8; d++)
+      for (let dr = -d; dr <= d; dr++)
+        for (let dc = -d; dc <= d; dc++) {
+          const [c, r] = [col + dc, row + dr];
+          if (Math.max(Math.abs(dr), Math.abs(dc)) !== d) continue;
+          if (!this.roomy(c, r) || !this.roomy(c, r - 1) || !this.nearClear(c, r, 1)) continue;
+          this.z.sign(c, r, ways);
+          this.takePoint(c, r);
+          return;
+        }
+    throw new Error(`${this.world.names[this.k]}: no cell beside a road near (${col},${row}) for a signpost`);
+  }
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number) {
     this.z.door(col, row, w, toZone, toCol, toRow);
     this.take({ col: col - 1, row: row - 1, w: w + 2, h: 3 });
@@ -948,6 +965,7 @@ function cut(
     givers: e.givers.map(local),
     sites: e.sites.map(local),
     places: e.places.map(local),
+    signs: e.signs.map(local),
     doors: e.doors.map(local),
     indoor: false,
     climate: e.climate,
@@ -963,6 +981,7 @@ function cut(
     ...e.givers.map((g): [string, typeof g] => [`quest giver ${g.giver}`, g]),
     ...e.sites.map((s): [string, typeof s] => [`quest site ${s.kind}`, s]),
     ...e.places.map((s): [string, typeof s] => [`place ${s.name}`, s]),
+    ...e.signs.map((s): [string, typeof s] => [`signpost`, s]),
     ...e.doors.map((d): [string, typeof d] => [`door to ${d.to.zone}`, d]),
   ];
   stray.splice(0, stray.length, ...stray.filter(([, p]) => world.ownerAt(p.col, p.row) !== k));

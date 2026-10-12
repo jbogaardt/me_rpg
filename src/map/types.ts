@@ -70,6 +70,14 @@ export interface PlaceSpawn extends CellPoint {
   name: string;
 }
 
+/**
+ * A signpost at a fork in the road (its foot is `col,row`, a solid cell): `ways` names where each way leads, as a zone
+ * key or a place on this map (systems/signs.ts). The art is a map object; this is what the action key reads.
+ */
+export interface SignSpawn extends CellPoint {
+  ways: Partial<Record<'up' | 'down' | 'left' | 'right', string>>;
+}
+
 /** Walking onto a door cell takes the player to another zone (`to.col`/`to.row` is where they appear). */
 export interface DoorSpawn extends CellPoint {
   w: number; // cells wide, starting at `col` (a hall's door is two cells wide, a tower's one)
@@ -103,6 +111,7 @@ export interface MapData {
   pets: PetSpawn[]; // dogs and cats to talk to: the action key makes them answer
   givers: GiverSpawn[]; // quest givers: the action key talks to them
   places: PlaceSpawn[]; // named spots, labelled on the map once explored
+  signs: SignSpawn[]; // signposts at the forks of the roads: the action key reads where each way leads
   sites: SiteSpawn[]; // where gather quests send the player; touched with the action key while a quest wants them
   doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
@@ -175,6 +184,7 @@ function unpacked(json: unknown): MapData {
     givers: d.givers ?? [],
     sites: d.sites ?? [],
     places: d.places ?? [],
+    signs: d.signs ?? [],
     doors: d.doors ?? [],
     indoor: d.indoor ?? false,
     climate: d.climate ?? 'temperate',

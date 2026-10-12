@@ -26,6 +26,7 @@ describe('parseMap', () => {
       givers: [],
       sites: [],
       places: [],
+      signs: [],
       doors: [],
       indoor: false,
       climate: 'temperate',

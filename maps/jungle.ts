@@ -44,6 +44,11 @@ export default defineBiome({
     z.ground('darkGrass', { inset: [6, 11] });
     z.paint('mud', [...TRAILS, ...blob(area(25, 9.6, 1.4, 0.6))]);
     z.keepClear(TRAILS);
+
+    // --- Signposts at the forks (systems/signs.ts) ------------------------------------------------------------------
+    z.sign(217, 20, { left: 'beach', right: 'wetlands', down: 'eastwood' });
+    z.sign(235, 87, { up: 'beach', left: 'undead', right: 'marsh' });
+    z.sign(244, 80, { left: 'undead', right: 'marsh', down: 'eastwood' });
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(24, 7.2));

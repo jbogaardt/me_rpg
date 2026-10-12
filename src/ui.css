@@ -148,7 +148,7 @@
   font-size: 19px; line-height: 1.35;
 }
 #dialog[hidden] { display: none; }
-#dialog p { margin: 0; }
+#dialog p { margin: 0; white-space: pre-line; } /* a signpost puts each way on its own line */
 #dialog .more {
   position: absolute; right: 8px; bottom: 6px; width: 18px; height: 17px;
   background: url('./ui/arrow-down.png') center / contain no-repeat; animation: bob 0.9s ease-in-out infinite;

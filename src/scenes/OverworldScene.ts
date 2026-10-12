@@ -31,6 +31,7 @@ import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
 import { lecternIn, lecternPages } from '../systems/lectern';
+import { signLines, signNear } from '../systems/signs';
 import { heroCombos, TRAINER, trainerTalk, type Skill } from '../systems/skills';
 import { petSound } from '../systems/pets';
 import { QUEST_GIVER, GIVERS, giverMark, mobKey, progressOf, recordSite, siteNote, siteOpen } from '../systems/quests';
@@ -38,7 +39,7 @@ import { SHOPS } from '../systems/shops';
 import type { ComboKey } from '../systems/spells';
 import type { Precip } from '../systems/weather';
 import { Arena } from './overworld/Arena';
-import { CHEST_REACH, KEEPER_REACH, PICKUP_REACH, SITE_REACH } from './overworld/constants';
+import { CHEST_REACH, KEEPER_REACH, PICKUP_REACH, SIGN_REACH, SITE_REACH } from './overworld/constants';
 import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
 import { HostLink } from './overworld/HostLink';
@@ -412,6 +413,7 @@ export class OverworldScene implements Scene {
       Math.hypot(this.player.x - body.x, this.player.y - body.y) < reach;
     const stand = lecternIn(arena.zone.name);
     const lectern = stand && near({ x: stand.x, y: stand.y - CELL / 2 }, CELL * 1.5);
+    const sign = signNear(arena.zone.data.signs, this.player.x, this.player.y, this.player.facing, SIGN_REACH);
     const keeper = arena.keepers.find((k) => near(k.body, KEEPER_REACH));
     const npc = arena.npc;
     const giver = arena.givers.find((g) => near(g.body, KEEPER_REACH));
@@ -421,6 +423,8 @@ export class OverworldScene implements Scene {
       dialog.advance();
     } else if (lectern) {
       dialog.say(lecternPages());
+    } else if (sign) {
+      dialog.say(signLines(sign.ways));
     } else if (keeper) {
       this.talkToKeeper(keeper);
     } else if (giver) {

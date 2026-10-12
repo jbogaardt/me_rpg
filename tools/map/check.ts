@@ -3,6 +3,7 @@ import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
 import { MOB_KINDS } from '../../src/systems/combat';
 import { PET_KINDS } from '../../src/systems/pets';
 import { GIVERS, SITE_KINDS } from '../../src/systems/quests';
+import { ZONE_NAMES } from '../../src/systems/places';
 import { SHOPS } from '../../src/systems/shops';
 import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
@@ -137,6 +138,18 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     return [`chest ${c.loot}`, c];
   });
   if (d.chests.length > 30) errors.push('a map holds at most 30 chests');
+  // A signpost names at least two ways (a fork), each a zone or a place on this map, and is read from beside it.
+  const placeNames = new Set(d.places.map((p) => p.name));
+  for (const sg of d.signs) {
+    const ways = Object.entries(sg.ways);
+    if (ways.length < 2) errors.push(`signpost at (${sg.col},${sg.row}) names fewer than two ways`);
+    for (const [dir, to] of ways)
+      if (!['up', 'down', 'left', 'right'].includes(dir) || !to || (!ZONE_NAMES[to] && !placeNames.has(to)))
+        errors.push(
+          `signpost at (${sg.col},${sg.row}): "${dir}" leads to "${to}", not a zone (ZONE_NAMES) or a place here`,
+        );
+    chestPoints.push(['signpost', sg]);
+  }
   for (const [name, p] of points) {
     if (!inMap(p.col, p.row)) errors.push(`${name} (${p.col},${p.row}) is outside the map`);
     else if (blocked.has(p.row * W + p.col)) errors.push(`${name} (${p.col},${p.row}) is on a blocked cell`);

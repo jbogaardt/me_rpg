@@ -108,6 +108,9 @@ export default defineBiome({
     z.paint('murk', pool);
     for (const r of pool) z.block(r, 'bog');
     z.keepClear(DRY);
+    // Signposts where the causeways meet (systems/signs.ts).
+    z.sign(307, 84, { up: 'wetlands', left: 'jungle', down: 'frostlands' });
+    z.sign(291, 86, { up: "The Troll's Isle", left: 'jungle', right: 'The Drowned Causeway' });
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(30, 8.4));
     z.pet('rat', ...near(31.2, 9.0));
@@ -158,5 +161,6 @@ export default defineBiome({
 
     // --- Names for the map: each shows once the player has explored round it ---------------------------------------
     z.place('The Drowned Causeway', 300, 84);
+    z.place("The Troll's Isle", 290, 77);
   },
 });

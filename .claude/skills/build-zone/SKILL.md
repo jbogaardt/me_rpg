@@ -40,6 +40,7 @@ ground first, then features, then overrides.
 | `z.spawn(c, r)`, `z.npc(c, r)`, `z.mob(kind, c, r)` | Player start, the NPC, enemy spawns (`kind` must be in `MOB_KINDS`, `src/systems/combat.ts`). |
 | `z.shop(id, c, r)` | A shopkeeper (`id` is a key of `SHOPS`, `src/systems/shops.ts`) standing on an open cell, normally inside a shop room (`tools/map/interiors.ts` builds one). |
 | `z.door(c, r, w, toZone, toCol, toRow)` | A doorway: walking onto the `w` cells from (c, r) takes the player to (toCol, toRow) of another zone. The cells are forced open (a building's art would block them) and must be reachable. The arrival cell must be open and must not itself be a door; the other zone needs a door back (`npm run map -- check` verifies all of this across zones). |
+| `z.sign(c, r, ways)` | A signpost at a fork in the road: `ways` maps `up`/`down`/`left`/`right` to a zone key (`ZONE_NAMES`) or a `z.place` name on this map; the action key reads them (`systems/signs.ts`). In a biome, give the junction: it stands on the nearest free cell beside the road, never on it. Put one at every new fork. |
 | `z.indoor()` | Marks the zone a room: no weather, no footprints or leaves, no co-op overview map. |
 | `z.chest(kind, loot, c, r)` | A treasure chest (`loot` is a key of `CHEST_LOOTS`, `src/systems/chests.ts`). Shops sell the common gear, so chests hold what no shop stocks, restoratives and gold purses. |
 

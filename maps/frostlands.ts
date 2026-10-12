@@ -31,6 +31,7 @@ export default defineBiome({
     z.paint('snow', z.bounds);
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
+    z.sign(307, 134, { up: 'marsh', left: 'eastwood', down: 'town' }); // the fork (systems/signs.ts)
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(30.8, 14.2));

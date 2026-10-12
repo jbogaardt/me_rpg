@@ -364,6 +364,7 @@ export const INTERIOR = {
   shelfWizard: { x: 512, y: 32, w: 96, h: 64 },
   signWizard: { x: 512, y: 96, w: 128, h: 64 },
   lectern: { x: 0, y: 160, w: 32, h: 48 },
+  signpost: { x: 32, y: 160, w: 32, h: 48 },
 };
 const furniture = (name: keyof typeof INTERIOR, band: number, about: string): Prefab => {
   const { x, y, w, h } = INTERIOR[name];
@@ -412,6 +413,14 @@ export const PREFABS = {
     'A reading stand with an open book, 1x1.5 cells, solid. The wizard room lists the combos on it (systems/lectern.ts).',
   ),
   signWizard: furniture('signWizard', 0, 'Wall sign with a star, 4x2 cells, decoration.'),
+  signpost: {
+    ...furniture(
+      'signpost',
+      16,
+      'A wooden signpost, 1x1.5 cells; its foot blocks. Place it with `z.sign` (it names the ways), not `z.prop`.',
+    ),
+    tag: 'sign',
+  },
   ranger: building('ranger', "Ranger's lodge: a 3x9 tall house with a golden roof and a bow over the door."),
   treeA: lpcTree('green', 0, 'Leafy tree, variant A. Blocks its trunk and lower canopy; the crown is walk-behind.'),
   treeB: lpcTree('green', 1, 'Leafy tree, variant B. Blocks its trunk and lower canopy; the crown is walk-behind.'),

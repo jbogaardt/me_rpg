@@ -39,6 +39,11 @@ export default defineBiome({
     z.fill('grass');
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
+
+    // --- Signposts at the forks of the trail (systems/signs.ts): the action key, facing one, reads where each way goes
+    z.sign(81, 138, { left: 'desert', right: 'The Crossroads', down: 'town' }); // the west gate's branch
+    z.sign(154, 144, { up: 'undead', left: 'The Crossroads', right: 'town' });
+    z.sign(174, 138, { left: 'The Crossroads', right: 'eastwood', down: 'town' }); // the north road's branch
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
 
