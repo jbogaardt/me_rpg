@@ -260,7 +260,9 @@ interface Placed {
 const WOOD_COL = 90;
 const WOOD_ROW = 84;
 const FILLER_SHARE = 0.2; // share of bare wall cells a bush or rock may fill
-const GROVE_DENSITY = 0.4; // share of lattice spots a grove plants
+const GROVE_DENSITY = 0.4;
+const WALL_DENSITY = 0.55; // share of lattice spots a wall plants
+const WALL_FILL = 0.5; // share of bare cells on a wall's border row that get a tree (the rest still block, unseen)
 
 export class Zone {
   private ground: ({ sheet: string; x: number; y: number } | null)[];
@@ -537,15 +539,15 @@ export class Zone {
         const px = j * WOOD_COL + stagger + Math.round((rand() - 0.5) * 8);
         const pick = trees[Math.floor(rand() * trees.length)];
         const py = i * WOOD_ROW + Math.round((rand() - 0.5) * 6);
-        // A grove is a scatter of trees, not a thicket: most lattice spots stay empty. A wall (`hard`) keeps them all.
-        if (opts.hard || rand() < (opts.density ?? GROVE_DENSITY)) tryPlace(pick, px, py);
+        // Trees are spread out, not a thicket: many lattice spots stay empty (a wall's border row still blocks).
+        if (rand() < (opts.density ?? (opts.hard ? WALL_DENSITY : GROVE_DENSITY))) tryPlace(pick, px, py);
       }
     }
     // Bare cells: the first tree, then bush, then rock that fits over each.
     for (const [c, r] of spots) {
       if (covered.has(key(c, r))) continue;
       // Only the wall's border row must be filled (it blocks whatever covers it); elsewhere gaps between trees stay open.
-      if (opts.hard && !opts.hard(c, r)) continue;
+      if (opts.hard && (!opts.hard(c, r) || rand() > WALL_FILL)) continue;
       if (!opts.hard && !opts.fill) continue;
       [...trees, ...fillers].some((name) => {
         const p = PREFABS[name];
