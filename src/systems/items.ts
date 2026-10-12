@@ -4,7 +4,7 @@
 //
 // Every item has a `value` in gold: what a shop charges for it. A shop pays 40% of that when buying it back (systems/shops.ts).
 //
-// Slots (see GEAR_SLOTS): weapon, offhand (a shield, or a second blade), head, chest, legs, feet and cape. A piece
+// Slots (see GEAR_SLOTS): weapon, offhand (a shield, or a second blade), head, chest, legs, feet, cape, tool, bag and charm. A piece
 // replaces the hero's base clothes in the doll slots its `look` sets, so an empty slot shows the base clothes.
 
 import type { Hero, Item } from './combat';
@@ -114,6 +114,58 @@ export const ITEMS = {
   // Bags: worn on the back, each adds pack slots (the pack holds BASE_PACK without one).
   sack: { name: 'Sack', value: 50, slot: 'bag', capacity: 4, look: {} },
   backpack: { name: 'Backpack', value: 150, slot: 'bag', capacity: 8, look: {} },
+
+  // Quest rewards (systems/quests.ts): no shop sells these. Each carries a buff beyond attack and defense, and the
+  // `rare` flag gives it the gold slot colour. Charms hang round the neck (slot `charm`) and have no art on the doll.
+  // New items go at the end of this list: a code is an item's place in it (see inventory.ts).
+  wayfarersCharm: { name: "Wayfarer's Charm", value: 200, slot: 'charm', speed: 8, rare: true, look: {} },
+  wardensMantle: {
+    name: "Warden's Mantle",
+    value: 260,
+    slot: 'cape',
+    defense: 2,
+    regen: 0.5,
+    rare: true,
+    look: { cape: 'cape.navy' },
+  },
+  duneglassBoots: {
+    name: 'Duneglass Boots',
+    value: 320,
+    slot: 'feet',
+    defense: 2,
+    speed: 10,
+    rare: true,
+    look: { feet: 'feet.boots_fold_tan' },
+  },
+  tuskbreakerHelm: {
+    name: 'Tuskbreaker Helm',
+    value: 380,
+    slot: 'head',
+    defense: 3,
+    goldBonus: 15,
+    rare: true,
+    look: { headwear: 'headwear.barbarian' },
+  },
+  sunforgedCuirass: {
+    name: 'Sunforged Cuirass',
+    value: 520,
+    slot: 'chest',
+    defense: 5,
+    regen: 0.4,
+    rare: true,
+    look: { torso: 'torso.plate_gold' },
+  },
+  hourglassPendant: {
+    name: 'Hourglass Pendant',
+    value: 700,
+    slot: 'charm',
+    speed: 12,
+    magic: 4,
+    xpBonus: 10,
+    mpRegen: 0.5,
+    rare: true,
+    look: {},
+  },
 } satisfies Record<string, Item>;
 
 export type ItemId = keyof typeof ITEMS;

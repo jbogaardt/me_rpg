@@ -132,6 +132,23 @@ export default defineBiome({
     ] as const)
       z.mob(kind, ...near(x, y));
 
+    // --- Where the story quests send you (systems/quests.ts): glimmercaps in the groves, an echo stone at each of three
+    // old places (the notes they play are read in the order you touch them). They only show while a quest wants them.
+    for (const [x, y] of [
+      [9.6, 13.4],
+      [3, 14.4],
+      [11, 18],
+      [6.6, 19.6],
+      [16.8, 17.2],
+    ] as const)
+      z.site('glimmercap', ...near(x, y));
+    for (const [x, y] of [
+      [5.9, 12.9], // the ruins in the west
+      [8.2, 8.6], // the northern glade
+      [3.2, 19.2], // by the old lake
+    ] as const)
+      z.site('echostone', ...near(x, y));
+
     z.scatter(['treeA', 'treeB'], { count: 70, where: open, seed: 11 });
     z.scatter(['bush'], { count: 90, where: open, seed: 12 });
     z.scatter(['rock', 'rockSmall', 'rockB', 'rockC'], { count: 45, where: open, seed: 13 });

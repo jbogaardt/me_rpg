@@ -132,6 +132,17 @@ export const NPC_LOOKS: Record<string, Outfit> = {
     legs: 'legs.f_pants_white',
     feet: 'feet.f_boots_brown',
   },
+  // The quest giver in the town (GIVERS in systems/quests.ts): white-haired, in maroon, leaning on her staff.
+  warden: {
+    body: 'body.f_brown',
+    head: 'head.human_f_brown',
+    hair: 'hair.long_white',
+    torso: 'torso.f_tunic_maroon',
+    legs: 'legs.f_pants_charcoal',
+    feet: 'feet.f_boots_brown',
+    cape: 'cape.teal',
+    weapon: 'weapon.staff',
+  },
   // The shopkeepers (see SHOPS in systems/shops.ts).
   smith: {
     body: 'body.bronze',

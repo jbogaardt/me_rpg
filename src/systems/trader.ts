@@ -12,9 +12,11 @@ export interface Outcome {
   ok: boolean;
   text: string;
   gear?: boolean;
+  /** Set on the answer to a `talk`: the quest lines to read (systems/quests.ts `linesFor`). */
+  story?: string;
 }
 
-export type TradeRequest = { op: 'buy' | 'sell' | 'wear' | 'use'; item: number; shop: string };
+export type TradeRequest = { op: 'buy' | 'sell' | 'wear' | 'use' | 'talk'; item: number; shop: string };
 
 export interface Trader {
   /** Each returns the outcome at once, or null when the host decides and will answer later. */

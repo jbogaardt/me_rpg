@@ -689,6 +689,14 @@ class BiomeWindow implements BiomeApi {
     this.z.pet(kind, col, row);
     this.takePoint(col, row);
   }
+  giver(giver: string, col: number, row: number) {
+    this.z.giver(giver, col, row);
+    this.takePoint(col, row);
+  }
+  site(kind: string, col: number, row: number) {
+    this.z.site(kind, col, row);
+    this.takePoint(col, row);
+  }
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number) {
     this.z.door(col, row, w, toZone, toCol, toRow);
     this.take({ col: col - 1, row: row - 1, w: w + 2, h: 3 });
@@ -933,6 +941,8 @@ function cut(
     chests: e.chests.map(local),
     shops: e.shops.map(local),
     pets: e.pets.map(local),
+    givers: e.givers.map(local),
+    sites: e.sites.map(local),
     doors: e.doors.map(local),
     indoor: false,
     climate: e.climate,
@@ -945,6 +955,8 @@ function cut(
     ...e.chests.map((c): [string, typeof c] => [`chest ${c.loot}`, c]),
     ...e.shops.map((s): [string, typeof s] => [`shop ${s.shop}`, s]),
     ...e.pets.map((p): [string, typeof p] => [`pet ${p.kind}`, p]),
+    ...e.givers.map((g): [string, typeof g] => [`quest giver ${g.giver}`, g]),
+    ...e.sites.map((s): [string, typeof s] => [`quest site ${s.kind}`, s]),
     ...e.doors.map((d): [string, typeof d] => [`door to ${d.to.zone}`, d]),
   ];
   stray.splice(0, stray.length, ...stray.filter(([, p]) => world.ownerAt(p.col, p.row) !== k));

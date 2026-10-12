@@ -1,4 +1,5 @@
 import type { Player } from '../../entities/Player';
+import type { Dialog } from '../../hud/Dialog';
 import type { Menu } from '../../hud/Menu';
 import type { ShopCounter } from '../../hud/ShopCounter';
 import type { DoMsg, LooksMsg, PackMsg } from '../../net/protocol';
@@ -6,6 +7,7 @@ import type { Session } from '../../net/session';
 import { applyInvOp, decodeOp, gearCodes, itemFromCode, packCodes, setGear, setPack } from '../../systems/inventory';
 import type { InvOp, Result } from '../../systems/inventory';
 import { SHOPS } from '../../systems/shops';
+import { GIVERS, linesFor, questFromWire, questWire, talk, type Talk } from '../../systems/quests';
 import { localTrader, remoteTrader, type Outcome, type Trader } from '../../systems/trader';
 import { CELL } from '../../map/types';
 import type { Arena } from './Arena';
@@ -33,11 +35,13 @@ export class PackSync {
   private sentLooks = '';
   /** Set by the scene: a guest's action should be sent to the host now rather than at the next regular send. */
   sendSoon: () => void = () => {};
+  /** Set by the scene: celebrate a player's level-up (a reward's XP can give one). */
+  levelUp: (p: Player) => void = () => {};
 
   constructor(
     private arena: Arena,
     private session: Session,
-    private ui: { shop: ShopCounter; menu: Menu },
+    private ui: { shop: ShopCounter; menu: Menu; dialog: Dialog },
     private ground: Ground,
   ) {}
 
@@ -50,6 +54,26 @@ export class PackSync {
     return remoteTrader(({ op, item, shop }) => {
       this.session.send({ k: 'do', n: ++this.doSeq, op, item, shop });
     });
+  }
+
+  /**
+   * The local player speaks to a quest giver. Solo and the host settle it here and show the lines at once; a guest asks the
+   * host, whose answer (the story key, `say.story`) arrives with the next `pack` message.
+   */
+  talkToGiver(giver: string) {
+    const { arena } = this;
+    if (arena.role === 'client') {
+      this.session.send({ k: 'do', n: ++this.doSeq, op: 'talk', item: 0, shop: giver });
+      return;
+    }
+    const told = talk(arena.hero);
+    this.afterTalk(arena.local, told);
+    this.ui.dialog.say(told.lines);
+  }
+
+  private afterTalk(p: Player, told: Talk) {
+    if (told.gear) this.arena.refreshLook(p);
+    if (told.levels) this.levelUp(p);
   }
 
   /** An Inventory action by the local player: done here, or (a co-op guest) done here at once and also sent to the host. */
@@ -89,7 +113,7 @@ export class PackSync {
     for (const p of arena.remotes.values()) {
       for (const request of this.session.takeTrades(p.slot)) {
         const out = this.tradeFor(p, request);
-        p.reply = { id: request.n, text: out.text, ok: out.ok };
+        p.reply = { id: request.n, text: out.text, ok: out.ok, ...(out.story ? { story: out.story } : {}) };
         if (out.gear) arena.refreshLook(p);
       }
       arena.inZone(arena.zoneOf(p), () => this.applyPeerInv(p));
@@ -97,6 +121,7 @@ export class PackSync {
   }
 
   private tradeFor(p: Player, { op, item: code, shop: shopId }: DoMsg): Outcome {
+    if (op === 'talk') return this.talkFor(p, shopId);
     const item = itemFromCode(code);
     if (!item) return { ok: false, text: 'Unknown item' };
     const trader = localTrader(p.hero);
@@ -110,6 +135,18 @@ export class PackSync {
       return { ok: false, text: 'Too far from the counter' };
     }
     return (op === 'buy' ? trader.buy(shop, item) : trader.sell(shop, item)) ?? { ok: false, text: '' };
+  }
+
+  /** Host: a friend speaks to a quest giver (they must be beside one); the answer tells them which lines to read. */
+  private talkFor(p: Player, giverId: string): Outcome {
+    const giver = this.arena.zoneOf(p).givers.find((g) => g.giver === giverId);
+    if (!giver || !GIVERS[giverId]) return { ok: false, text: 'Nobody to talk to' };
+    if (Math.hypot(p.body.x - giver.body.x, p.body.y - giver.body.y) > KEEPER_REACH + CELL) {
+      return { ok: false, text: 'Too far away' };
+    }
+    const told = talk(p.hero);
+    if (told.levels) this.levelUp(p);
+    return { ok: true, text: '', gear: told.gear, story: told.key };
   }
 
   /** Host: do the Inventory action a friend is asking for (each is numbered, and done once and in order). */
@@ -143,6 +180,7 @@ export class PackSync {
         worn: gearCodes(p.hero),
         items: packCodes(p.hero),
         ack: p.seenInv,
+        quests: questWire(p.hero.quests),
         ...(p.reply ? { say: p.reply } : {}),
       };
       const sig = JSON.stringify(body);
@@ -165,7 +203,8 @@ export class PackSync {
   applyPack(pack: PackMsg) {
     const { arena } = this;
     const hero = arena.hero;
-    const sig = JSON.stringify([pack.gold, pack.worn, pack.items]);
+    const sig = JSON.stringify([pack.gold, pack.worn, pack.items, pack.quests]);
+    hero.quests = questFromWire(pack.quests) ?? hero.quests;
     const worn = gearCodes(hero).join();
     hero.gold = pack.gold;
     this.pendingOps = this.pendingOps.filter((o) => o.seq > pack.ack);
@@ -177,7 +216,9 @@ export class PackSync {
     if (gearCodes(hero).join() !== worn) arena.refreshLook();
     if (pack.say && pack.say.id > this.lastSay) {
       this.lastSay = pack.say.id;
-      this.ui.shop.report({ ok: pack.say.ok, text: pack.say.text });
+      const story = pack.say.story ? linesFor(pack.say.story) : null;
+      if (story) this.ui.dialog.say(story);
+      else this.ui.shop.report({ ok: pack.say.ok, text: pack.say.text });
     }
     if (sig === this.lastPackSig) return;
     this.lastPackSig = sig;

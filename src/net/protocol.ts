@@ -15,6 +15,7 @@
 import { AIM_STEPS } from '../core/aim';
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
+import { questFromWire } from '../systems/quests';
 import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../systems/inventory';
 import type { Note, SideWire, TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GUESTS } from './relayApi';
@@ -22,7 +23,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 14;
+export const PROTOCOL_VERSION = 15;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -140,7 +141,7 @@ export interface SnapMsg {
 }
 
 /** What a guest may ask the host to do with its own hero. The host checks every one (the guest only sends a wish). */
-export const TRADE_OPS = ['buy', 'sell', 'wear', 'use'] as const;
+export const TRADE_OPS = ['buy', 'sell', 'wear', 'use', 'talk'] as const;
 export type TradeOp = (typeof TRADE_OPS)[number];
 
 /**
@@ -154,6 +155,8 @@ export interface DoMsg {
   item: number;
   shop: string;
 }
+// A `talk` (item 0) is a wish to speak to the quest giver named in `shop` (a key of GIVERS); the host checks the guest is
+// beside them and answers with `say.story`.
 
 /**
  * Host -> guest: the guest's own purse and pack, sent when it changes and now and then in case a packet is lost.
@@ -166,7 +169,10 @@ export interface PackMsg {
   worn: number[]; // an item code per GEAR_SLOTS slot
   items: number[]; // the pack, as item codes
   ack: number; // how many of this guest's Inventory actions (InputMsg.inv) the host has done
-  say?: { id: number; text: string; ok: boolean };
+  /** `story` names the quest lines to read (systems/quests.ts `linesFor`), for the answer to a `talk`. */
+  say?: { id: number; text: string; ok: boolean; story?: string };
+  /** The guest's place in the quest chain (systems/quests.ts `questWire`): [stage, taken, progress]. */
+  quests: number[];
 }
 
 /** Host -> guest: what every player wears, `[player number, ...one item code per GEAR_SLOTS slot]`, so everyone's look is right. */
@@ -564,7 +570,7 @@ export function parseMessage(raw: unknown): Message | null {
         ? { k: 'do', n: m.n, op: m.op as TradeOp, item: m.item, shop: m.shop }
         : null;
     case 'pack': {
-      const say = m.say as { id?: unknown; text?: unknown; ok?: unknown } | undefined;
+      const say = m.say as { id?: unknown; text?: unknown; ok?: unknown; story?: unknown } | undefined;
       const sayOk =
         say === undefined ||
         (typeof say === 'object' &&
@@ -572,7 +578,9 @@ export function parseMessage(raw: unknown): Message | null {
           isCount(say.id) &&
           typeof say.text === 'string' &&
           say.text.length <= 64 &&
-          typeof say.ok === 'boolean');
+          typeof say.ok === 'boolean' &&
+          (say.story === undefined ||
+            (typeof say.story === 'string' && /^[a-z0-9]{1,16}(\.[a-z]{1,8})?$/.test(say.story))));
       return isCount(m.n) &&
         isCount(m.gold) &&
         codes(m.worn, GEAR_SLOTS.length) &&
@@ -580,6 +588,7 @@ export function parseMessage(raw: unknown): Message | null {
         m.items.length <= MAX_PACK &&
         m.items.every(isCode) &&
         isCount(m.ack) &&
+        questFromWire(m.quests) !== null &&
         sayOk
         ? {
             k: 'pack',
@@ -588,7 +597,8 @@ export function parseMessage(raw: unknown): Message | null {
             worn: m.worn,
             items: m.items,
             ack: m.ack,
-            ...(say === undefined ? {} : { say: say as { id: number; text: string; ok: boolean } }),
+            quests: m.quests as number[],
+            ...(say === undefined ? {} : { say: say as { id: number; text: string; ok: boolean; story?: string } }),
           }
         : null;
     }

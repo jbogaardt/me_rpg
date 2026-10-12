@@ -95,6 +95,12 @@ export class Arena {
   get keepers() {
     return this.zone.keepers;
   }
+  get givers() {
+    return this.zone.givers;
+  }
+  get sites() {
+    return this.zone.sites;
+  }
   get mobs() {
     return this.zone.mobs;
   }
@@ -136,6 +142,7 @@ export class Arena {
       ...this.players().map((p) => p.body),
       ...(this.npc ? [this.npc] : []),
       ...this.keepers.map((k) => k.body),
+      ...this.givers.map((g) => g.body),
       ...this.mobs.filter((m) => m.alive).map((m) => m.body),
     ];
   }

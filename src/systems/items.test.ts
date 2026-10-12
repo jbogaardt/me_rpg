@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Outfit } from '../sprites/doll';
 import { GEAR_SLOTS, newHero, type GearSlot, type Item } from './combat';
 import { equip, ITEMS } from './items';
+import { SHOPS } from './shops';
 
 const everything = Object.entries(ITEMS);
 // Gear: everything with a slot (supplies, the potions, have none).
@@ -23,7 +24,18 @@ describe('ITEMS', () => {
 
   it.each(items)('%s goes in a real slot and does something', (_id, item) => {
     expect(GEAR_SLOTS as readonly string[]).toContain(item.slot);
-    expect((item.attack ?? 0) + (item.defense ?? 0) + (item.capacity ?? 0)).toBeGreaterThan(0);
+    const buffs = [item.speed, item.magic, item.regen, item.mpRegen, item.xpBonus, item.goldBonus];
+    const worth = (item.attack ?? 0) + (item.defense ?? 0) + (item.capacity ?? 0);
+    expect(worth + buffs.reduce<number>((n, b) => n + (b ?? 0), 0)).toBeGreaterThan(0);
+  });
+
+  it('gives every rare piece a buff, and keeps rare pieces out of the shops', () => {
+    const sold = new Set<string>(Object.values(SHOPS).flatMap((shop) => shop.stock));
+    for (const [id, item] of items.filter(([, i]) => i.rare)) {
+      const buffs = [item.speed, item.magic, item.regen, item.mpRegen, item.xpBonus, item.goldBonus];
+      expect(buffs.some(Boolean), id).toBe(true);
+      expect(sold.has(id), id).toBe(false);
+    }
   });
 
   it('has several pieces for every armor slot, and shields and blades for the off-hand', () => {
@@ -44,8 +56,9 @@ describe('ITEMS', () => {
       cape: 'cape',
       offhand: 'shield',
       weapon: 'weapon',
-      tool: undefined, // tools and bags are not drawn on the doll
+      tool: undefined, // tools, bags and charms are not drawn on the doll
       bag: undefined,
+      charm: undefined,
     };
     for (const [id, item] of items) {
       const part = dollSlot[item.slot];

@@ -98,6 +98,16 @@ export default defineBiome({
     ] as const)
       z.mob(kind, ...near(x, y));
 
+    // --- Hourglass sand: where the Great Hourglass's sand fell (the story quest "Sand and Silence", systems/quests.ts) ---
+    for (const [x, y] of [
+      [4.8, 1.8],
+      [10.4, 2.2],
+      [2.2, 3.8],
+      [6, 8.2],
+      [8.6, 6.2],
+    ] as const)
+      z.site('hoursand', ...near(x, y));
+
     z.scatter(['dryTreeA', 'dryTreeB'], { count: 22, where: open, seed: 53 });
     z.scatter(['sandBoulder', 'sandBoulderB', 'sandSpire'], { count: 36, where: open, seed: 51 });
     z.scatter(['dryBush'], { count: 60, where: open, seed: 52 });

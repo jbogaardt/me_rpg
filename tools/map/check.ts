@@ -1,6 +1,7 @@
 import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
 import { MOB_KINDS } from '../../src/systems/combat';
 import { PET_KINDS } from '../../src/systems/pets';
+import { GIVERS, SITE_KINDS } from '../../src/systems/quests';
 import { SHOPS } from '../../src/systems/shops';
 import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
@@ -107,6 +108,16 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     points.push([`pet ${p.kind}`, p]);
     if (!PET_KINDS[p.kind]) errors.push(`pet at (${p.col},${p.row}) is an unknown kind "${p.kind}" (PET_KINDS)`);
   }
+  for (const g of d.givers) {
+    points.push([`quest giver ${g.giver}`, g]);
+    if (!GIVERS[g.giver]) errors.push(`quest giver at (${g.col},${g.row}) is unknown "${g.giver}" (GIVERS)`);
+  }
+  for (const s of d.sites) {
+    points.push([`quest site ${s.kind}`, s]);
+    if (!SITE_KINDS[s.kind])
+      errors.push(`quest site at (${s.col},${s.row}) is an unknown kind "${s.kind}" (SITE_KINDS)`);
+  }
+  if (d.sites.length > 30) errors.push('a map holds at most 30 quest sites');
   const doorCells = new Set<number>();
   for (const door of d.doors) {
     for (let i = 0; i < door.w; i++) {

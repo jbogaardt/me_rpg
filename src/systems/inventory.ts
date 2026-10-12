@@ -95,6 +95,7 @@ export function dropWorn(hero: Hero, slot: GearSlot): Result & { item?: Item } {
 
 /** How good an item is, 1 (plain) to 4 (best): drives the colour of its slot and its glow on the ground. */
 export function itemTier(item: Item): number {
+  if (item.rare) return 4;
   if (item.capacity) return item.capacity >= 8 ? 3 : 2;
   return Math.max(1, Math.min(4, (item.attack ?? 0) + (item.defense ?? 0)));
 }
@@ -109,7 +110,19 @@ export function compare(item: Item, worn: Item | undefined) {
 
 /** Which picture an item gets in the pack screen. */
 export type IconKind =
-  'sword' | 'bow' | 'dagger' | 'shield' | 'helm' | 'armor' | 'greaves' | 'boot' | 'cape' | 'tool' | 'sack' | 'backpack';
+  | 'sword'
+  | 'bow'
+  | 'dagger'
+  | 'shield'
+  | 'helm'
+  | 'armor'
+  | 'greaves'
+  | 'boot'
+  | 'cape'
+  | 'tool'
+  | 'sack'
+  | 'backpack'
+  | 'charm';
 
 export function iconKind(item: Item): IconKind {
   if (item.ranged) return 'bow';
@@ -130,6 +143,8 @@ export function iconKind(item: Item): IconKind {
       return 'tool';
     case 'bag':
       return (item.capacity ?? 0) >= 8 ? 'backpack' : 'sack';
+    case 'charm':
+      return 'charm';
     default:
       return 'sword';
   }
@@ -137,8 +152,12 @@ export function iconKind(item: Item): IconKind {
 
 // --- Shops, supplies and the network. Money and what to buy are systems/shops.ts; these are the pack moves they use. ---
 
-/** A piece's worth in its slot: attack for blades and bows, defense for armor and shields, both added for a mix. */
-const worth = (item: Item | undefined) => (item?.attack ?? 0) + (item?.defense ?? 0);
+/** How many of the extra buffs (speed, regen, XP...) a piece carries. */
+const buffCount = (item: Item) =>
+  [item.speed, item.magic, item.regen, item.mpRegen, item.xpBonus, item.goldBonus].filter(Boolean).length;
+
+/** A piece's worth in its slot: attack for blades and bows, defense for armor and shields, both added for a mix, and half a point per buff. */
+const worth = (item: Item | undefined) => (item ? (item.attack ?? 0) + (item.defense ?? 0) + buffCount(item) / 2 : 0);
 
 /** Is `item` better than what the hero wears in its slot (an empty slot takes anything)? */
 export function isBetter(hero: Hero, item: Item): boolean {

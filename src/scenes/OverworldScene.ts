@@ -3,6 +3,7 @@ import type { Sprites, Zone } from '../assets';
 import type { Aim } from '../core/aim';
 import { actionDown, actionPressed, mapPressed, menuPressed, pointerAim } from '../core/controls';
 import { directionToward } from '../core/direction';
+import type { ZoneState } from './ZoneState';
 import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import type { Character } from '../entities/Character';
@@ -22,12 +23,14 @@ import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
 import type { Hero, Item } from '../systems/combat';
+import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
 import { petSound } from '../systems/pets';
+import { GIVERS, giverMark, progressOf, recordSite, siteNote, siteOpen } from '../systems/quests';
 import { SHOPS } from '../systems/shops';
 import type { Precip } from '../systems/weather';
 import { Arena } from './overworld/Arena';
-import { CHEST_REACH, KEEPER_REACH, PICKUP_REACH } from './overworld/constants';
+import { CHEST_REACH, KEEPER_REACH, PICKUP_REACH, SITE_REACH } from './overworld/constants';
 import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
 import { HostLink } from './overworld/HostLink';
@@ -42,8 +45,8 @@ export type { ZoneLoader, ZoneUnloader };
 const aimOf = (aim: Aim | null) => (aim ? { aim } : {});
 
 const NPC_LINES = [
-  'Greetings, traveler. This world is still being drawn.',
-  'Soon there will be a story here. Come back later!',
+  'Greetings, traveler. Something is wrong with the Vale: the clocks stopped, and the dead walk.',
+  'Follow the road south to Lanternrest. Warden Maren keeps its lamp lit, and she has been waiting for a stranger like you.',
 ];
 
 /** The HTML overlays shared by every scene. They are created once in main.ts. */
@@ -83,6 +86,7 @@ export class OverworldScene implements Scene {
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
+  private marked = new WeakMap<Character, string>(); // the tag last put over each quest giver
   private atlas = new Atlas(); // what the players have seen of each zone, for the map
 
   constructor(
@@ -106,6 +110,7 @@ export class OverworldScene implements Scene {
     this.host = new HostLink(arena, ui.session, this.sim, this.pack, this.trading);
     this.guest = new GuestLink(arena, ui.session, visuals, this.zones, this.ground, this.pack, this.trading, ui, say);
     this.pack.sendSoon = () => this.guest.sendSoon();
+    this.pack.levelUp = (p) => this.sim.levelUp(p);
 
     this.zones.addHome(zone);
     this.overlay = new MapOverlay();
@@ -224,6 +229,7 @@ export class OverworldScene implements Scene {
     }
 
     z.npc?.animate(dt * 1000, false);
+    this.updateQuests(z, dt);
     for (const k of z.keepers) k.body.animate(dt * 1000, false);
     for (const pet of z.pets) {
       pet.update(dt);
@@ -346,11 +352,20 @@ export class OverworldScene implements Scene {
       Math.hypot(this.player.x - body.x, this.player.y - body.y) < reach;
     const keeper = arena.keepers.find((k) => near(k.body, KEEPER_REACH));
     const npc = arena.npc;
+    const giver = arena.givers.find((g) => near(g.body, KEEPER_REACH));
+    const site = arena.sites.find((s) => s.visible && near(s, SITE_REACH));
     const pet = arena.pets.find((p) => near(p));
     if (dialog.active) {
       dialog.advance();
     } else if (keeper) {
       this.talkToKeeper(keeper);
+    } else if (giver) {
+      giver.body.face(directionToward(this.player.x - giver.body.x, this.player.y - giver.body.y));
+      this.pack.talkToGiver(giver.giver);
+    } else if (site) {
+      // Touching a site the quest wants: read what it says, and let the action count it (the host decides, for a guest).
+      dialog.say(siteNote(site.kind, progressOf(this.hero)));
+      attack();
     } else if (pet) {
       pet.attend(this.player.x, this.player.y);
       dialog.say([petSound(pet.kind, pet.talks++)]);
@@ -376,9 +391,40 @@ export class OverworldScene implements Scene {
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
     if (chest) return this.openChest(p, chest);
+    const site = this.arena.sites.find(
+      (s) =>
+        Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH &&
+        siteOpen(p.hero, s.kind, this.arena.zone.name, s.index),
+    );
+    if (site) return this.touchSite(p, site);
     const loose = this.ground.nearest(p);
     if (loose) this.ground.pickUp(p, loose);
     else this.sim.attack(p);
+  }
+
+  /** A player touches a quest site that their quest wants: it counts once for them, and the world sees the sparkle. */
+  private touchSite(p: Player, site: QuestSite) {
+    const progress = recordSite(p.hero, site.kind, this.arena.zone.name, site.index);
+    if (!progress) return;
+    this.sim.fx('levelUp', site.x, site.y - 6);
+    this.sim.questNote(p, progress);
+  }
+
+  /** The quest markers for the local player: "!" over the giver with a task to hand out, "?" when one can be handed in; sites show only while wanted. */
+  private updateQuests(z: ZoneState, dt: number) {
+    const hero = this.hero;
+    const mark = giverMark(hero);
+    for (const g of z.givers) {
+      const text = mark ? `${mark} ${GIVERS[g.giver]?.tag ?? ''}` : (GIVERS[g.giver]?.tag ?? '');
+      if (this.marked.get(g.body) === text) continue;
+      this.marked.set(g.body, text);
+      g.body.setTag(text, mark ? 0xffd34d : 0xffffff);
+    }
+    for (const s of z.sites) {
+      s.setOpen(siteOpen(hero, s.kind, z.name, s.index));
+      s.update(dt);
+    }
+    for (const g of z.givers) g.body.animate(dt * 1000, false);
   }
 
   private openChest(p: Player, chest: Chest) {

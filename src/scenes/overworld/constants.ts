@@ -18,6 +18,7 @@ export const LIGHTNING_DAMAGE = 0.35; // fraction of a player's max HP a direct 
 
 export const KEEPER_REACH = CELL * 2.3; // how close the action key must be to talk to a shopkeeper (across a counter)
 export const PICKUP_REACH = 26; // how close the action key must be to an item on the ground
+export const SITE_REACH = CELL * 1.3; // how close the action key must be to a quest site
 export const CHEST_REACH = CELL * 1.4; // how close the action key must be to a chest (feet to the chest's cell centre)
 
 export const DEFEAT_LINES = ['You were struck down...', 'Time folds back, and you wake where you began.'];

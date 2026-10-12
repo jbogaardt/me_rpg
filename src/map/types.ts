@@ -55,6 +55,16 @@ export interface ShopSpawn extends CellPoint {
   shop: string;
 }
 
+/** A quest giver standing at `col,row`; `giver` is a key of GIVERS (src/systems/quests.ts). */
+export interface GiverSpawn extends CellPoint {
+  giver: string;
+}
+
+/** A place a gather quest sends the player to; `kind` is a key of SITE_KINDS (src/systems/quests.ts). Walkable: it is touched, not blocked. */
+export interface SiteSpawn extends CellPoint {
+  kind: string;
+}
+
 /** Walking onto a door cell takes the player to another zone (`to.col`/`to.row` is where they appear). */
 export interface DoorSpawn extends CellPoint {
   w: number; // cells wide, starting at `col` (a hall's door is two cells wide, a tower's one)
@@ -86,6 +96,8 @@ export interface MapData {
   chests: ChestSpawn[]; // solid; opened with the action key
   shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
   pets: PetSpawn[]; // dogs and cats to talk to: the action key makes them answer
+  givers: GiverSpawn[]; // quest givers: the action key talks to them
+  sites: SiteSpawn[]; // where gather quests send the player; touched with the action key while a quest wants them
   doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
   /** The zone's weather (a key of CLIMATES in systems/weather.ts): what falls and blows there. Rooms have none. */
@@ -154,6 +166,8 @@ function unpacked(json: unknown): MapData {
     chests: d.chests ?? [],
     shops: d.shops ?? [],
     pets: d.pets ?? [],
+    givers: d.givers ?? [],
+    sites: d.sites ?? [],
     doors: d.doors ?? [],
     indoor: d.indoor ?? false,
     climate: d.climate ?? 'temperate',

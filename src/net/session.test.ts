@@ -686,7 +686,8 @@ describe('joining a game', () => {
       k: 'pack',
       n,
       gold,
-      worn: [1, 0, 0, 0, 0, 0, 0, 0, 0],
+      worn: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      quests: [0, 0, 0],
       ack: 0,
       items: [],
     });
@@ -694,7 +695,7 @@ describe('joining a game', () => {
     link.receive(pack(2, 99)); // late: ignored
     expect(session.takePack()).toMatchObject({ n: 4, gold: 10 });
     expect(session.takePack()).toBeNull();
-    link.receive({ k: 'looks', n: 3, players: [[0, 1, 0, 0, 0, 0, 0, 0, 0, 0]] });
+    link.receive({ k: 'looks', n: 3, players: [[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]] });
     expect(session.takeLooks()?.n).toBe(3);
     expect(session.takeLooks()).toBeNull();
     expect(session.send({ k: 'do', n: 1, op: 'use', item: 28, shop: '' })).toBe(true);

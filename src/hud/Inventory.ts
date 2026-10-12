@@ -10,6 +10,7 @@ import {
   type Result,
 } from '../systems/inventory';
 import { iconSvg } from './itemIcons';
+import { buffTexts } from './itemText';
 
 // The Inventory tab of the pause menu: what the hero wears (a slot each, including both hands, a tool and a bag),
 // and the pack of carried items. Tap or click a slot to pick it, then use the buttons under the grids; a double
@@ -25,6 +26,7 @@ const SLOT_LABELS: Record<GearSlot, string> = {
   cape: 'Cloak',
   tool: 'Tool',
   bag: 'Bag',
+  charm: 'Charm',
 };
 
 /** What the scene lets the screen do. Set while a scene is running. */
@@ -39,6 +41,7 @@ const stats = (item: Item) =>
   [
     item.attack ? `+${item.attack} ATK` : '',
     item.defense ? `+${item.defense} DEF` : '',
+    ...buffTexts(item),
     item.capacity ? `+${item.capacity} pack slots` : '',
     item.ranged ? 'ranged' : '',
     item.use?.hp ? `+${item.use.hp} HP` : '',

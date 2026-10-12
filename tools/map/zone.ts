@@ -9,7 +9,9 @@ import {
   type MapData,
   type MapObject,
   type MobSpawn,
+  type GiverSpawn,
   type PetSpawn,
+  type SiteSpawn,
 } from '../../src/map/types';
 import {
   CLIFF,
@@ -66,6 +68,8 @@ export interface ZoneApi {
   chest(kind: string, loot: string, col: number, row: number): unknown;
   shop(shop: string, col: number, row: number): unknown;
   pet(kind: string, col: number, row: number): unknown;
+  giver(giver: string, col: number, row: number): unknown;
+  site(kind: string, col: number, row: number): unknown;
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number): unknown;
   indoor(): unknown;
   climate(name: ClimateName): unknown;
@@ -187,6 +191,14 @@ export class WorldWindow implements ZoneApi {
     this.z.pet(kind, col - this.o.col, row - this.o.row);
     return this;
   }
+  giver(giver: string, col: number, row: number) {
+    this.z.giver(giver, col - this.o.col, row - this.o.row);
+    return this;
+  }
+  site(kind: string, col: number, row: number) {
+    this.z.site(kind, col - this.o.col, row - this.o.row);
+    return this;
+  }
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number) {
     this.z.door(col - this.o.col, row - this.o.row, w, toZone, toCol, toRow); // the destination is the other zone's own cell
     return this;
@@ -272,6 +284,8 @@ export class Zone {
   private chestList: ChestSpawn[] = [];
   private shopList: ShopSpawn[] = [];
   private petList: PetSpawn[] = [];
+  private giverList: GiverSpawn[] = [];
+  private siteList: SiteSpawn[] = [];
   private doorList: DoorSpawn[] = [];
   private isIndoor = false;
   private weather: ClimateName = DEFAULT_CLIMATE;
@@ -702,6 +716,18 @@ export class Zone {
     return this;
   }
 
+  /** A quest giver (`giver` is a key of GIVERS, src/systems/quests.ts): the action key talks to them. They block, like a shopkeeper, so leave the cell open. */
+  giver(giver: string, col: number, row: number) {
+    this.giverList.push({ giver, col, row });
+    return this;
+  }
+
+  /** A place a gather quest sends the player (`kind` is a key of SITE_KINDS, src/systems/quests.ts). It does not block, so any open cell will do. */
+  site(kind: string, col: number, row: number) {
+    this.siteList.push({ kind, col, row });
+    return this;
+  }
+
   /**
    * A doorway: walking onto the `w` cells starting at (col, row) takes the player to cell (toCol, toRow) of another zone.
    * The cells are opened up (a building's art would otherwise block them), so put the door where the art has one.
@@ -728,6 +754,8 @@ export class Zone {
       chests: this.chestList,
       shops: this.shopList,
       pets: this.petList,
+      givers: this.giverList,
+      sites: this.siteList,
       doors: this.doorList,
       indoor: this.isIndoor,
       climate: this.weather,
@@ -908,6 +936,8 @@ export class Zone {
       chests: this.chestList,
       shops: this.shopList,
       pets: this.petList,
+      givers: this.giverList,
+      sites: this.siteList,
       doors: this.doorList,
       indoor: this.isIndoor,
       climate: this.weather,

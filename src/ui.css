@@ -366,3 +366,12 @@
 @media (max-width: 420px) {
   .trade-cols { grid-template-columns: 1fr; }
 }
+
+/* The Quests tab of the menu (hud/QuestLog.ts). */
+#menu-quests h3 { margin: 12px 0 4px; font: 700 17px var(--title); color: var(--ink); }
+#menu-quests h3 small { font: 600 14px var(--body); color: var(--ink-soft); margin-left: 6px; }
+#menu-quests p { margin: 4px 0; }
+.quest-progress { font-weight: 700; color: #7a4f1b; }
+.quest-progress.done { color: #2f6b2a; }
+.quest-note { color: var(--ink-soft); }
+.quest-done { margin: 4px 0 0; padding-left: 20px; color: var(--ink-soft); }

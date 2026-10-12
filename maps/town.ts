@@ -67,6 +67,9 @@ export default defineBiome({
     ] as const)
       z.prop('barrel', ...z.near(...at(x, y)));
 
+    // --- Warden Maren: keeper of the town lamp, and the one who hands out the story quests (systems/quests.ts) -------------
+    z.giver('maren', ...z.near(...at(16.9, 20.3)));
+
     // --- A pond and gardens in the west of town ---------------------------------------------------------------
     const water = pond(z, area(11.6, 20.6, 1.6, 1), { shore: 'sand' });
     z.keepClear(area(11.3, 20.3, 2.2, 1.6));

@@ -4,8 +4,22 @@ import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
 import { cellFeet } from '../../map/doors';
 import { round1, type FxName, type WorldEvent } from '../../net/protocol';
-import { attackPower, defensePower, gainXp, rollDamage, rollGold, spellPower, type Ranged } from '../../systems/combat';
+import {
+  attackPower,
+  defensePower,
+  gainXp,
+  gearMpRegen,
+  gearRegen,
+  goldFor,
+  rollDamage,
+  rollGold,
+  speedFactor,
+  spellPower,
+  xpFor,
+  type Ranged,
+} from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
+import { GIVERS, QUEST_GIVER, recordKill, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import type { Strike } from '../../entities/WeatherLayer';
 import type { ZoneState } from '../ZoneState';
@@ -95,8 +109,10 @@ export class Simulation {
     p.grace = Math.max(0, p.grace - dt);
     p.sinceHit += dt;
     if (p.pendingShot && (p.pendingShot.timer -= dt) <= 0) this.release(p);
-    s.mp = Math.min(s.maxMp, s.mp + MP_REGEN * dt);
-    if (p.sinceHit > HP_REGEN_DELAY) s.hp = Math.min(s.maxHp, s.hp + HP_REGEN * dt);
+    s.mp = Math.min(s.maxMp, s.mp + (MP_REGEN + gearMpRegen(p.hero)) * dt);
+    // Gear that mends (a Warden's Mantle) works in the thick of a fight; the slow natural kind waits for a quiet spell.
+    const mend = gearRegen(p.hero) + (p.sinceHit > HP_REGEN_DELAY ? HP_REGEN : 0);
+    if (mend) s.hp = Math.min(s.maxHp, s.hp + mend * dt);
 
     if (p.knock.x || p.knock.y) {
       this.arena.collision.slide(p.body, p.knock.x * dt, p.knock.y * dt, this.arena.bodies());
@@ -130,7 +146,7 @@ export class Simulation {
       else p.body.face(dy > 0 ? 'down' : 'up');
       p.aim = wish;
     }
-    p.vel = stepVelocity(p.vel, wish, SPEED, dt, isIce(data, p.body.x, p.body.y - 1));
+    p.vel = stepVelocity(p.vel, wish, SPEED * speedFactor(p.hero), dt, isIce(data, p.body.x, p.body.y - 1));
     if (p.vel.x || p.vel.y) {
       const [x, y] = [p.body.x, p.body.y];
       collision.slide(p.body, p.vel.x * dt, p.vel.y * dt, this.arena.bodies());
@@ -293,11 +309,24 @@ export class Simulation {
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
     this.text(mob.body.x, mob.body.y - 78, `+${gold}g`, 0xffd34d);
     for (const p of this.arena.players()) {
-      p.hero.gold += gold;
-      if (!gainXp(p.hero.stats, mob.kind.xp)) continue;
-      this.text(p.body.x, p.body.y - 62, 'LEVEL UP!', 0xffb13f);
-      this.fx('levelUp', p.body.x, p.body.y - 14);
+      p.hero.gold += goldFor(p.hero, gold); // gear can add to the purse and the XP, so each player gets their own share
+      if (gainXp(p.hero.stats, xpFor(p.hero, mob.kind.xp))) this.levelUp(p);
+      this.questNote(p, recordKill(p.hero, mob.kind, this.arena.zone.name)); // a quest counts the kill for everyone here
     }
+  }
+
+  /** Float a quest's progress ("3/5 goblins") over the player, and a nudge once it can be handed in. */
+  questNote(p: Player, progress: Progress | null) {
+    if (!progress) return;
+    this.text(p.body.x, p.body.y - 74, progress.text, 0x9fe8ff);
+    if (progress.ready)
+      this.text(p.body.x, p.body.y - 86, `Return to ${GIVERS[QUEST_GIVER]?.tag ?? 'the warden'}`, 0xffd34d);
+  }
+
+  /** A player gained a level (from a kill or a quest reward). */
+  levelUp(p: Player) {
+    this.text(p.body.x, p.body.y - 62, 'LEVEL UP!', 0xffb13f);
+    this.fx('levelUp', p.body.x, p.body.y - 14);
   }
 
   private hurtHero(mob: Mob, victim: Character) {

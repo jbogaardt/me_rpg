@@ -1,8 +1,21 @@
-import { attackPower, defensePower, gearAttack, gearDefense, spellPower, xpToNext, type Hero } from '../systems/combat';
+import {
+  attackPower,
+  defensePower,
+  gearAttack,
+  gearDefense,
+  gearMagic,
+  gearMpRegen,
+  gearRegen,
+  speedFactor,
+  spellPower,
+  xpToNext,
+  type Hero,
+} from '../systems/combat';
 import { tabStep } from '../core/controls';
 import type { Session } from '../net/session';
 import type { TouchControls } from '../core/touch';
 import { Inventory } from './Inventory';
+import { questPage } from './QuestLog';
 import { AimSetting } from './AimSetting';
 import { Keybinds } from './Keybinds';
 import { Multiplayer } from './Multiplayer';
@@ -11,7 +24,7 @@ import { Multiplayer } from './Multiplayer';
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
 // The Online tab (multiplayer connection) is Multiplayer.ts. Online play does not pause the world behind the menu.
 
-const TABS = ['status', 'inventory', 'controls', 'online', 'trade', 'credits']; // 'trade' (hud/Trade.ts) shows only in a co-op game
+const TABS = ['status', 'inventory', 'quests', 'controls', 'online', 'trade', 'credits']; // 'trade' (hud/Trade.ts) shows only in a co-op game
 
 export class Menu {
   open = false;
@@ -55,6 +68,7 @@ export class Menu {
     this.hero = hero;
     if (!this.open) return;
     this.renderStatus();
+    this.renderQuests();
     if (TABS[this.tab] === 'inventory') this.inventory.show(hero);
   }
 
@@ -69,6 +83,7 @@ export class Menu {
   update() {
     const by = tabStep();
     if (by) this.step(by);
+    this.renderQuests(); // online the world runs behind the menu, so a kill can move the log
   }
 
   /** The tab `by` places along from the current one, skipping tabs that are hidden. */
@@ -116,13 +131,28 @@ export class Menu {
         ${row('XP', `${s.xp} / ${next} <small>to level ${s.level + 1}</small><div class="bar xp"><div class="fill" style="--frac: ${xpFrac}"></div></div>`)}
         ${row('Attack', `${attackPower(hero)} <small>(${s.attack} + ${gearAttack(hero)} gear)</small>`)}
         ${row('Defense', `${defensePower(hero)} <small>(${s.defense} + ${gearDefense(hero)} gear)</small>`)}
-        ${row('Magic', `${spellPower(hero)} <small>(${s.magic} + ${hero.spell.power} spell)</small>`)}
+        ${row('Magic', `${spellPower(hero)} <small>(${s.magic} + ${hero.spell.power} spell${gearMagic(hero) ? ` + ${gearMagic(hero)} gear` : ''})</small>`)}
+        ${speedFactor(hero) > 1 ? row('Speed', `+${Math.round((speedFactor(hero) - 1) * 100)}% <small>gear</small>`) : ''}
+        ${gearRegen(hero) ? row('Mending', `${gearRegen(hero)} <small>HP/s gear</small>`) : ''}
+        ${gearMpRegen(hero) ? row('Focus', `${gearMpRegen(hero)} <small>MP/s gear</small>`) : ''}
       </dl>`;
+  }
+
+  private questShown = '';
+  /** Draw the Quests tab, only when it would change (it is checked every frame while the menu is open). */
+  private renderQuests() {
+    const hero = this.hero;
+    if (!hero) return;
+    const html = questPage(hero);
+    if (html === this.questShown) return;
+    this.questShown = html;
+    document.getElementById('menu-quests')!.innerHTML = html;
   }
 
   private render(hero: Hero) {
     this.hero = hero;
     this.renderStatus();
+    this.renderQuests();
     this.inventory.show(hero);
     this.keybinds.refresh();
     this.aim.refresh();

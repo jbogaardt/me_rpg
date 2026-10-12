@@ -18,9 +18,21 @@ export interface Stats {
 
 /**
  * Where gear is worn. `offhand` takes a shield or a second (one-handed) weapon; `cape` is the cloak over the shoulders;
- * `tool` is the one gadget in hand; `bag` is the sack or pack on the hero's back (it adds pack slots, see inventory.ts).
+ * `tool` is the one gadget in hand; `bag` is the sack or pack on the hero's back (it adds pack slots, see inventory.ts);
+ * `charm` is a talisman on a cord round the neck (no art on the doll; only quests hand them out).
  */
-export const GEAR_SLOTS = ['weapon', 'offhand', 'head', 'chest', 'legs', 'feet', 'cape', 'tool', 'bag'] as const;
+export const GEAR_SLOTS = [
+  'weapon',
+  'offhand',
+  'head',
+  'chest',
+  'legs',
+  'feet',
+  'cape',
+  'tool',
+  'bag',
+  'charm',
+] as const;
 export type GearSlot = (typeof GEAR_SLOTS)[number];
 
 /** A weapon that shoots instead of swinging: the action key looses a projectile along the way the hero is heading. */
@@ -40,6 +52,21 @@ export interface Item {
   slot?: GearSlot;
   attack?: number;
   defense?: number;
+  // Buffs beyond attack and defense. Quest rewards carry them (shops sell none); they add up over everything worn.
+  /** Walking speed, percent faster (8 = 8% quicker). */
+  speed?: number;
+  /** Added to the hero's magic stat, so Time Bolts hit harder. */
+  magic?: number;
+  /** HP regained per second (on top of the usual slow regeneration). */
+  regen?: number;
+  /** MP regained per second (on top of the usual regeneration). */
+  mpRegen?: number;
+  /** Percent more XP from kills. */
+  xpBonus?: number;
+  /** Percent more gold from kills. */
+  goldBonus?: number;
+  /** A one-of-a-kind reward: shown in the quest colour and never sold in a shop. */
+  rare?: boolean;
   /** Set on bows: the weapon shoots (see `Ranged`) instead of swinging. */
   ranged?: Ranged;
   /** Set on supplies (no slot): drinking one restores this much HP and MP, from the pack. */
@@ -64,6 +91,18 @@ export interface Hero extends Partial<Record<Exclude<GearSlot, 'weapon'>, Item>>
   pack: Item[];
   spell: Spell;
   gold: number; // money: dropped by enemies, spent in shops
+  /** Where the hero is in the story quests (systems/quests.ts). */
+  quests: QuestLog;
+}
+
+/** A hero's place in the quest chain (systems/quests.ts has the chain itself and the rules). */
+export interface QuestLog {
+  /** Quests handed in so far: the index of the current one. */
+  stage: number;
+  /** Has the current quest been given to the hero? */
+  taken: boolean;
+  /** Kills so far (kill quests), or a bit per site gathered (gather quests). */
+  progress: number;
 }
 
 export interface MobKind {
@@ -112,6 +151,7 @@ export function newHero(): Hero {
     pack: [],
     spell: { name: 'Time Bolt', cost: 5, power: 6 },
     gold: 0,
+    quests: { stage: 0, taken: false, progress: 0 },
   };
 }
 
@@ -324,9 +364,21 @@ export const wornGear = (h: Hero): Item[] => GEAR_SLOTS.flatMap((slot) => h[slot
 export const gearAttack = (h: Hero) => wornGear(h).reduce((sum, i) => sum + (i.attack ?? 0), 0);
 /** Defense from every piece of armor and a shield. */
 export const gearDefense = (h: Hero) => wornGear(h).reduce((sum, i) => sum + (i.defense ?? 0), 0);
+/** A buff summed over everything worn. */
+const gearSum = (h: Hero, key: 'speed' | 'magic' | 'regen' | 'mpRegen' | 'xpBonus' | 'goldBonus') =>
+  wornGear(h).reduce((sum, i) => sum + (i[key] ?? 0), 0);
+export const gearMagic = (h: Hero) => gearSum(h, 'magic');
+/** Walking speed as a multiplier: 1 plain, 1.2 with +20% from gear. */
+export const speedFactor = (h: Hero) => 1 + gearSum(h, 'speed') / 100;
+/** HP and MP per second that gear adds to the usual regeneration. */
+export const gearRegen = (h: Hero) => gearSum(h, 'regen');
+export const gearMpRegen = (h: Hero) => gearSum(h, 'mpRegen');
+/** What a kill is worth to this hero: its XP and gold, plus the bonus from gear (at least what it was). */
+export const xpFor = (h: Hero, xp: number) => Math.round(xp * (1 + gearSum(h, 'xpBonus') / 100));
+export const goldFor = (h: Hero, gold: number) => Math.round(gold * (1 + gearSum(h, 'goldBonus') / 100));
 export const attackPower = (h: Hero) => h.stats.attack + gearAttack(h);
 export const defensePower = (h: Hero) => h.stats.defense + gearDefense(h);
-export const spellPower = (h: Hero) => h.stats.magic + h.spell.power;
+export const spellPower = (h: Hero) => h.stats.magic + h.spell.power + gearMagic(h);
 /** XP to go from `level` to the next. Grows faster than linearly: 20 at level 1, 224 at 5, 632 at 10. */
 export const xpToNext = (level: number) => Math.round(20 * level ** 1.5);
 

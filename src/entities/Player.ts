@@ -41,7 +41,7 @@ export class Player {
   seenMag = 0;
   seenInv = 0; // the last Inventory action done for this friend
   /** Host: the answer to this friend's last trade request (they see it once, by its id). */
-  reply: { id: number; text: string; ok: boolean } | null = null;
+  reply: { id: number; text: string; ok: boolean; story?: string } | null = null;
   // Guest: where the host says this player is, and its FLAG bits.
   target: { x: number; y: number } | null = null;
   flags = 0;
