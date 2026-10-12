@@ -204,7 +204,7 @@ export class OverworldScene implements Scene {
     arena.screen = { width, height };
     arena.camera.resize(width, height);
     this.ui.dialog.layout(arena.screen, this.ui.touch.rects());
-    arena.zone.follow(width, height, this.player.x, this.player.y);
+    arena.zone.follow(width, height, this.player.x, this.player.y, 0, true);
   }
 
   update(dt: number) {
@@ -284,10 +284,11 @@ export class OverworldScene implements Scene {
           .map(pin),
       );
     }
-    z.follow(arena.screen.width, arena.screen.height, this.player.x, this.player.y);
-    // A slide shifts the whole new zone in, its sky with it (each biome has its own weather).
-    const shift = this.zones.transition.update(dt, arena.screen, this.zones.heroOnScreen());
-    z.camera.shift(shift.x, shift.y);
+    z.follow(arena.screen.width, arena.screen.height, this.player.x, this.player.y, dt);
+    // A warp pushes the new zone in, its sky with it (each biome has its own weather), about the hero.
+    const punch = this.zones.transition.update(dt, arena.screen, this.zones.heroOnScreen());
+    if (punch.scale !== 1 || punch.x !== 0 || punch.y !== 0)
+      z.camera.punch(punch.scale, this.player.x, this.player.y, punch.x, punch.y);
     z.world.update(z.camera.view(arena.screen.width, arena.screen.height)); // build the map around the view
   }
 

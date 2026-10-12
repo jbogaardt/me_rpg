@@ -2,53 +2,41 @@ import { describe, expect, it } from 'vitest';
 import {
   coverRadius,
   ease,
+  easeOut,
   IRIS_CLOSE,
   IRIS_DARK,
   IRIS_OPEN,
   irisAt,
-  nearestEdge,
   pickTransition,
-  SLIDE_TIME,
-  slideAt,
   transitionLength,
+  WARP_TIME,
+  warpAt,
 } from './transition';
-import { CELL } from './types';
 
-const outdoor = { indoor: false, width: 40, height: 30 };
-const room = { indoor: true, width: 12, height: 10 };
+const outdoor = { indoor: false };
+const room = { indoor: true };
 
 describe('door transitions', () => {
   it('eases from 0 to 1 and clamps outside', () => {
-    expect(ease(-1)).toBe(0);
-    expect(ease(0)).toBe(0);
+    for (const f of [ease, easeOut]) {
+      expect(f(-1)).toBe(0);
+      expect(f(0)).toBe(0);
+      expect(f(1)).toBe(1);
+      expect(f(2)).toBe(1);
+    }
     expect(ease(0.5)).toBe(0.5);
-    expect(ease(1)).toBe(1);
-    expect(ease(2)).toBe(1);
+    expect(easeOut(0.5)).toBeGreaterThan(0.5); // a push-in is quick at first
   });
 
-  it('finds the nearest map edge', () => {
-    expect(nearestEdge(100, 80, 3, 40)).toEqual({ dir: 'left', distance: 3 });
-    expect(nearestEdge(100, 80, 95, 40)).toEqual({ dir: 'right', distance: 5 });
-    expect(nearestEdge(100, 80, 50, 2)).toEqual({ dir: 'up', distance: 2 });
-    expect(nearestEdge(100, 80, 50, 79)).toEqual({ dir: 'down', distance: 1 });
+  it('irises into and out of rooms, and when not going across the world (waking after a defeat)', () => {
+    expect(pickTransition(outdoor, room, 'up').kind).toBe('iris');
+    expect(pickTransition(room, outdoor, 'down').kind).toBe('iris');
+    expect(pickTransition(outdoor, outdoor).kind).toBe('iris');
   });
 
-  it('irises into and out of rooms, wherever the door is', () => {
-    expect(pickTransition(outdoor, room, 20 * CELL, 15 * CELL).kind).toBe('iris');
-    expect(pickTransition(room, outdoor, 6 * CELL, 9.9 * CELL).kind).toBe('iris');
-    expect(pickTransition(outdoor, room, 0.5 * CELL, 15 * CELL).kind).toBe('iris'); // a cave mouth at the edge
-  });
-
-  it('slides between open-air zones when leaving at an edge, toward that edge', () => {
-    expect(pickTransition(outdoor, outdoor, 39.5 * CELL, 15 * CELL)).toEqual({ kind: 'slide', dir: 'right' });
-    expect(pickTransition(outdoor, outdoor, 0.5 * CELL, 15 * CELL)).toEqual({ kind: 'slide', dir: 'left' });
-    expect(pickTransition(outdoor, outdoor, 20 * CELL, 0.9 * CELL)).toEqual({ kind: 'slide', dir: 'up' });
-    expect(pickTransition(outdoor, outdoor, 20 * CELL, 29.9 * CELL)).toEqual({ kind: 'slide', dir: 'down' });
-    // Far from any edge (waking at the spawn after a defeat): no side to slide from.
-    expect(pickTransition(outdoor, outdoor, 20 * CELL, 15 * CELL).kind).toBe('iris');
-    // A gap between two biomes says which way it goes, wherever it is in the map.
-    expect(pickTransition(outdoor, outdoor, 20 * CELL, 15 * CELL, 'up')).toEqual({ kind: 'slide', dir: 'up' });
-    expect(pickTransition(outdoor, room, 20 * CELL, 15 * CELL, 'up').kind).toBe('iris');
+  it('warps between open-air zones, toward the way the gap goes', () => {
+    expect(pickTransition(outdoor, outdoor, 'up')).toEqual({ kind: 'warp', dir: 'up' });
+    expect(pickTransition(outdoor, outdoor, 'left')).toEqual({ kind: 'warp', dir: 'left' });
   });
 
   it('closes the iris on the old view, stays dark, then opens on the new one', () => {
@@ -65,17 +53,41 @@ describe('door transitions', () => {
     expect(coverRadius(15, 20, 30, 40)).toBe(25);
     expect(coverRadius(30, 0, 30, 40)).toBe(50);
   });
+});
 
-  it('slides the views a screen apart, the new one in from the side being walked to', () => {
-    const start = slideAt(0, 'right', 640, 480);
-    expect(start.old).toEqual({ x: 0, y: 0 });
-    expect(start.fresh).toEqual({ x: 640, y: 0 });
-    const mid = slideAt(SLIDE_TIME / 2, 'up', 640, 480);
-    expect(mid.old).toEqual({ x: 0, y: 240 });
-    expect(mid.fresh).toEqual({ x: 0, y: -240 });
-    const end = slideAt(SLIDE_TIME, 'left', 640, 480);
-    expect(end.old).toEqual({ x: 640, y: 0 });
-    expect(end.fresh).toEqual({ x: 0, y: 0 });
-    expect(transitionLength('slide')).toBe(SLIDE_TIME);
+describe('warp', () => {
+  it('starts as the old view untouched and ends as the new view alone', () => {
+    const a = warpAt(0, 'up', 640, 480);
+    expect(a.old).toEqual({ scale: 1, alpha: 1, x: 0, y: 0 });
+    expect(a.flash).toBe(0);
+    expect(a.fresh.scale).toBeCloseTo(1.14);
+    const z = warpAt(WARP_TIME, 'up', 640, 480);
+    expect(z.old.alpha).toBe(0);
+    expect(z.fresh).toEqual({ scale: 1, x: 0, y: 0 });
+    expect(z.flash).toBeCloseTo(0);
+    expect(transitionLength('warp')).toBe(WARP_TIME);
+  });
+
+  it('flashes in the middle, and the old view dissolves while it zooms in', () => {
+    const mid = warpAt(WARP_TIME * 0.2, 'right', 640, 480);
+    expect(mid.flash).toBeCloseTo(0.5);
+    expect(mid.old.scale).toBeGreaterThan(1);
+    expect(mid.old.alpha).toBeLessThan(1);
+    let last = 1;
+    for (let t = 0; t <= WARP_TIME; t += WARP_TIME / 40) {
+      const alpha = warpAt(t, 'right', 640, 480).old.alpha;
+      expect(alpha).toBeLessThanOrEqual(last); // never flickers back
+      last = alpha;
+    }
+  });
+
+  it('drifts the old view the way the player went and the new one in from that side', () => {
+    const w = warpAt(WARP_TIME * 0.3, 'right', 640, 480);
+    expect(w.old.x).toBeLessThan(0);
+    expect(w.fresh.x).toBeGreaterThan(0);
+    expect(w.old.y).toBe(0);
+    const up = warpAt(WARP_TIME * 0.3, 'up', 640, 480);
+    expect(up.old.y).toBeGreaterThan(0);
+    expect(up.fresh.y).toBeLessThan(0);
   });
 });

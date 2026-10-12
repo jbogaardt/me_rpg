@@ -7,12 +7,13 @@ import type { MobWorld } from '../../entities/Mob';
 import { arrivalFacing, cellFeet, doorAt, doorsNear } from '../../map/doors';
 import { CELL, type CellPoint } from '../../map/types';
 import { pickTransition } from '../../map/transition';
+import { zoneTint } from '../../systems/places';
 import { GroundItem } from '../../entities/GroundItem';
 import { ZoneState } from '../ZoneState';
 import { TRAINER_ROOM } from '../../systems/skills';
 import type { Arena } from './Arena';
 
-const PREFETCH_REACH = 14 * CELL; // a door this close starts loading the zone behind it (the camera stops at a gap's border, so the player walks the last stretch to the screen's edge)
+const PREFETCH_REACH = 14 * CELL; // a door this close starts loading the zone behind it, so stepping through is instant
 const PREFETCH_EVERY = 0.5; // seconds between looking for doors to prefetch
 const RETIRE_EVERY = 2; // seconds between looking for zones to unload
 const RETIRE_AFTER = 20; // seconds a zone must have been out of everyone's way before it is unloaded
@@ -179,31 +180,21 @@ export class Zones {
     p.pendingShot = null;
     p.grace = Math.max(p.grace, ARRIVE_GRACE);
     arena.syncHeroBodies();
-    if (p === arena.local) {
-      this.show(dest);
-      this.transition.align(this.heroOnScreen());
-    }
+    if (p === arena.local) this.show(dest);
   }
 
   /**
    * The local player is about to leave `from` for `dest`: picture the view they are leaving and start the transition
-   * (map/transition.ts picks an iris for rooms, a slide for walking off a map edge into more open air).
+   * (map/transition.ts picks an iris for rooms, a warp for walking into the next open-air zone).
    */
   private beginTrip(from: ZoneState, dest: ZoneState, door = true) {
     const { arena } = this;
     // The door being taken (a guest's view of its own body may lag the host's by a step, so look a little around).
     const { x, y } = arena.player;
     const through = doorsNear(from.data, x, y - 1, CELL).find((d) => d.to.zone === dest.name && d.dir)?.dir;
-    const pick = pickTransition(from.data, dest.data, x, y, through);
+    const pick = pickTransition(from.data, dest.data, through);
     const kind = door ? pick.kind : 'iris';
-    this.transition.begin(
-      kind,
-      pick.dir,
-      this.stage,
-      arena.screen,
-      this.heroOnScreen(),
-      kind === 'slide' ? [arena.player] : [],
-    );
+    this.transition.begin(kind, pick.dir, this.stage, arena.screen, this.heroOnScreen(), zoneTint(dest.name));
   }
 
   /** Where the local player is on screen (CSS px): the middle of their body, which the door iris closes and opens on. */
@@ -229,7 +220,7 @@ export class Zones {
     this.stage.addChild(dest.world);
     arena.setView(dest);
     dest.camera.resize(arena.screen.width, arena.screen.height);
-    dest.follow(arena.screen.width, arena.screen.height, arena.player.x, arena.player.y);
+    dest.follow(arena.screen.width, arena.screen.height, arena.player.x, arena.player.y, 0, true);
     dest.world.update(dest.camera.view(arena.screen.width, arena.screen.height));
     this.ui.shop.close();
   }

@@ -11,7 +11,7 @@ import { Mob, type MobWorld } from '../entities/Mob';
 import { WeatherLayer } from '../entities/WeatherLayer';
 import { CLIMATES, DEFAULT_CLIMATE, isClimate, Weather } from '../systems/weather';
 import { sheetGrid } from '../core/textures';
-import { edgeLimits, zoneRegion } from '../map/edges';
+import { zoneBounds } from '../map/bounds';
 import { MapView } from '../map/MapView';
 import { CELL, type MapData } from '../map/types';
 import { cellFeet } from '../map/doors';
@@ -80,7 +80,7 @@ export class ZoneState {
     this.data = data;
     this.source = zone;
     this.world = new MapView(data, zone.textures);
-    this.camera = new Camera(this.world, data.width * CELL, data.height * CELL);
+    this.camera = new Camera(this.world);
     this.collision = new Collision(data.width, data.height, data.collision);
     this.effects = new Effects(this.world.layer);
     this.ambient = data.indoor ? null : new Ambient(this.world.layer, data);
@@ -142,9 +142,9 @@ export class ZoneState {
     if (bodies.length) this.world.layer.addChild(...bodies); // Pixi's addChild() with nothing to add throws
   }
 
-  /** Centre the camera on (x, y): the map's edge and a gap's border (map/edges.ts) stop it, so a crossing is at the screen's edge. */
-  follow(screenW: number, screenH: number, x: number, y: number) {
-    this.camera.follow(screenW, screenH, x, y, edgeLimits(this.data.doors, x, y, zoneRegion(this.data)));
+  /** Follow (x, y) with the camera, inside the zone's own cells (`dt` eases after the player; `snap` puts the view there at once). */
+  follow(screenW: number, screenH: number, x: number, y: number, dt = 0, snap = false) {
+    this.camera.follow(screenW, screenH, x, y, zoneBounds(this.data), dt, snap);
   }
 
   /** What must outlive the zone being unloaded: the chests opened and the items lying on the ground. */
