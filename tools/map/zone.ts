@@ -246,6 +246,10 @@ interface Placed {
  * Builder passed to a zone spec. Coordinates are cells unless named px/py. Later calls paint over
  * earlier ones, so lay down ground first, then features, then overrides.
  */
+/** Spacing of the staggered lattice trees stand on in woods: wide enough that crowns overlap only a little. */
+const WOOD_COL = 64;
+const WOOD_ROW = 56;
+
 export class Zone {
   private ground: ({ sheet: string; x: number; y: number } | null)[];
   private placed: Placed[] = [];
@@ -514,11 +518,11 @@ export class Zone {
     const [minC, maxC] = [Math.min(...spots.map((s) => s[0])), Math.max(...spots.map((s) => s[0]))];
     const [minR, maxR] = [Math.min(...spots.map((s) => s[1])), Math.max(...spots.map((s) => s[1]))];
     // The lattice is anchored to the world, so neighbouring woods line up.
-    for (let i = Math.floor((minR * CELL - TH) / 52); i * 52 <= (maxR + 1) * CELL; i++) {
-      const stagger = i % 2 ? 23 : 0;
-      for (let j = Math.floor((minC * CELL - TW) / 46) - 1; j * 46 <= (maxC + 1) * CELL; j++) {
-        const px = j * 46 + stagger + Math.round((rand() - 0.5) * 8);
-        tryPlace(trees[Math.floor(rand() * trees.length)], px, i * 52 + Math.round((rand() - 0.5) * 6));
+    for (let i = Math.floor((minR * CELL - TH) / WOOD_ROW); i * WOOD_ROW <= (maxR + 1) * CELL; i++) {
+      const stagger = i % 2 ? WOOD_COL / 2 : 0;
+      for (let j = Math.floor((minC * CELL - TW) / WOOD_COL) - 1; j * WOOD_COL <= (maxC + 1) * CELL; j++) {
+        const px = j * WOOD_COL + stagger + Math.round((rand() - 0.5) * 8);
+        tryPlace(trees[Math.floor(rand() * trees.length)], px, i * WOOD_ROW + Math.round((rand() - 0.5) * 6));
       }
     }
     // Bare cells: the first tree, then bush, then rock that fits over each.
