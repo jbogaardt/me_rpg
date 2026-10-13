@@ -51,6 +51,8 @@ export class PackSync {
   startTrial: (p: Player, skill: Skill) => string | null = () => 'Training is not available.';
   /** Set by the scene: celebrate a player's level-up (a reward's XP can give one). */
   levelUp: (p: Player) => void = () => {};
+  /** Set by the scene (host): a player drinks from the pond beside them; false when there is none. */
+  drink: (p: Player) => boolean = () => false;
 
   constructor(
     private arena: Arena,
@@ -101,6 +103,11 @@ export class PackSync {
   /** A co-op guest asks the host to send them to the training ground (the host checks everything). */
   askTrial(giver: string) {
     this.session.send({ k: 'do', n: ++this.doSeq, op: 'train', item: 0, shop: giver });
+  }
+
+  /** A co-op guest asks the host for a drink from the pond beside them (the host checks it and floats the result). */
+  askDrink() {
+    this.session.send({ k: 'do', n: ++this.doSeq, op: 'drink', item: 0, shop: '' });
   }
 
   private afterTalk(p: Player, told: Talk) {
@@ -155,6 +162,11 @@ export class PackSync {
   private tradeFor(p: Player, { op, item: code, shop: shopId }: DoMsg): Outcome {
     if (op === 'talk') return this.talkFor(p, shopId);
     if (op === 'train') return this.trainFor(p, shopId);
+    if (op === 'drink') {
+      const { arena } = this;
+      // The float shows over the pond for everyone, so the answer itself says nothing.
+      return arena.inZone(arena.zoneOf(p), () => this.drink(p)) ? { ok: true, text: '' } : { ok: false, text: '' };
+    }
     if (op === 'loadout') {
       const wanted = loadoutFromCode(code);
       return wanted && setLoadout(p.hero, wanted)

@@ -384,7 +384,9 @@ describe('trade, pack and looks messages', () => {
     const talk: DoMsg = { k: 'do', n: 4, op: 'talk', item: 0, shop: 'maren' };
     const told: PackMsg = { ...pack, say: { id: 4, text: '', ok: true, story: 'road.offer' } };
     const train: DoMsg = { k: 'do', n: 5, op: 'train', item: 0, shop: 'orin' };
-    for (const m of [ask, talk, train, told, pack, packNoSay, looks]) expect(parseMessage(encodeMessage(m))).toEqual(m);
+    const drink: DoMsg = { k: 'do', n: 6, op: 'drink', item: 0, shop: '' };
+    for (const m of [ask, talk, train, drink, told, pack, packNoSay, looks])
+      expect(parseMessage(encodeMessage(m))).toEqual(m);
   });
 
   it("keeps a full pack and everyone's gear small", () => {

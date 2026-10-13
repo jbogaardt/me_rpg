@@ -26,7 +26,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 25;
+export const PROTOCOL_VERSION = 26;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -159,7 +159,7 @@ export interface SnapMsg {
 }
 
 /** What a guest may ask the host to do with its own hero. The host checks every one (the guest only sends a wish). */
-export const TRADE_OPS = ['buy', 'sell', 'wear', 'use', 'talk', 'train', 'loadout'] as const;
+export const TRADE_OPS = ['buy', 'sell', 'wear', 'use', 'talk', 'train', 'loadout', 'drink'] as const;
 export type TradeOp = (typeof TRADE_OPS)[number];
 
 /**
@@ -177,6 +177,7 @@ export interface DoMsg {
 // beside them and answers with `say.story`. A `train` (item 0) asks the training wizard (`shop` = TRAINER) to send the guest to
 // the trial for their next skill; the host checks the guest is beside the trainer and ready, and moves them there (or says why not). A `loadout` (`item` =
 // `loadoutCode`) chooses which two skills are ready; the host checks they are known and says the result in the next `pack`.
+// A `drink` (item 0, shop '') drinks from the pond beside the guest; the host checks there is one and floats the result.
 
 /**
  * Host -> guest: the guest's own purse and pack, sent when it changes and now and then in case a packet is lost.

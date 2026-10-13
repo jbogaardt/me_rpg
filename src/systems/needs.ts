@@ -1,6 +1,9 @@
 // Food and water: two meters (0..NEED_MAX) that drain with time and are refilled by eating and drinking supplies.
 // Pixi-free so the rules are unit-tested. A fed and watered hero mends a little faster, a hungry or thirsty one mends
 // more slowly, one with an empty meter stops mending, and one with both empty loses health (never the last point).
+// Standing at the edge of a pond, a hero can also drink from it (`drinkableNear`, `drinkFrom`).
+
+import { CELL, type MapData } from '../map/types';
 
 export const NEED_MAX = 100;
 
@@ -69,4 +72,54 @@ export const STARVE_SHARE = 0.03;
 /** HP lost per second to hunger and thirst: only when both meters are empty. */
 export function starveRate(n: Needs, maxHp: number): number {
   return n.food <= 0 && n.water <= 0 ? STARVE_SHARE * maxHp : 0;
+}
+
+/** Water points one drink from a pond gives. */
+export const POND_SIP = 40;
+
+/** How far (px) from a hero's feet to the edge of the water they may drink from: the bank cell beside it. */
+export const DRINK_REACH = CELL * 0.9;
+
+/** Ground a hero may drink: a pond's clear water (the sea is salt, swamp water foul, ice frozen). */
+const DRINKABLE = 'water';
+
+/**
+ * The middle of the nearest drinkable water cell whose edge is within `reach` of (x, y), or null. A pond's water cells
+ * are solid, so the hero stands on the bank and the nearest edge is what counts, not the middle.
+ */
+export function drinkableNear(
+  data: Pick<MapData, 'width' | 'height' | 'surfaces' | 'surface'>,
+  x: number,
+  y: number,
+  reach = DRINK_REACH,
+): { x: number; y: number } | null {
+  const id = data.surfaces.indexOf(DRINKABLE);
+  if (id < 0) return null;
+  const c0 = Math.max(0, Math.floor((x - reach) / CELL));
+  const c1 = Math.min(data.width - 1, Math.floor((x + reach) / CELL));
+  const r0 = Math.max(0, Math.floor((y - reach) / CELL));
+  const r1 = Math.min(data.height - 1, Math.floor((y + reach) / CELL));
+  let best: { x: number; y: number } | null = null;
+  let bestDist = reach;
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      if (data.surface[r * data.width + c] !== id) continue;
+      const dx = Math.max(c * CELL - x, 0, x - (c + 1) * CELL);
+      const dy = Math.max(r * CELL - y, 0, y - (r + 1) * CELL);
+      const d = Math.hypot(dx, dy);
+      if (d > bestDist) continue;
+      bestDist = d;
+      best = { x: (c + 0.5) * CELL, y: (r + 0.5) * CELL };
+    }
+  }
+  return best;
+}
+
+/** Is there anything to drink for? (The Drink button only shows when there is.) */
+export const thirsty = (n: Needs): boolean => Math.ceil(n.water) < NEED_MAX;
+
+/** Take a drink from a pond: `POND_SIP` water, refused when the hero is not thirsty. */
+export function drinkFrom(n: Needs): { ok: boolean; text: string } {
+  if (!refill(n, 0, POND_SIP)) return { ok: false, text: 'Not thirsty' };
+  return { ok: true, text: `+${POND_SIP} water` };
 }

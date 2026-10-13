@@ -2,7 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { newHero } from './combat';
 import { ITEMS } from './items';
 import { useFromPack } from './inventory';
-import { drainNeeds, needLevel, newNeeds, NEED_MAX, needsRegen, refill, starveRate } from './needs';
+import { CELL } from '../map/types';
+import {
+  drainNeeds,
+  drinkableNear,
+  drinkFrom,
+  needLevel,
+  newNeeds,
+  NEED_MAX,
+  needsRegen,
+  POND_SIP,
+  refill,
+  starveRate,
+  thirsty,
+} from './needs';
 
 describe('needs', () => {
   it('start full and drain over time, never below zero', () => {
@@ -56,5 +69,40 @@ describe('eating and drinking', () => {
     hero.pack.push(ITEMS.waterskin);
     expect(useFromPack(hero, ITEMS.waterskin)).toBeNull();
     expect(hero.pack).toHaveLength(1);
+  });
+
+  describe('drinking from a pond', () => {
+    // A 6x4 map: grass with two pond cells at (3,1) and (4,1); a sea cell at (0,3) is not for drinking.
+    const surfaces = ['grass', 'water', 'sea'];
+    const surface = new Array<number>(24).fill(0);
+    surface[1 * 6 + 3] = 1;
+    surface[1 * 6 + 4] = 1;
+    surface[3 * 6 + 0] = 2;
+    const data = { width: 6, height: 4, surfaces, surface };
+
+    it('finds the water beside the bank, not further off', () => {
+      // Standing just left of the pond, on the bank cell (2,1).
+      expect(drinkableNear(data, 2.6 * CELL, 1.5 * CELL)).toEqual({ x: 3.5 * CELL, y: 1.5 * CELL });
+      // Just below it, nearer the right-hand cell.
+      expect(drinkableNear(data, 4.4 * CELL, 2.3 * CELL)).toEqual({ x: 4.5 * CELL, y: 1.5 * CELL });
+      // Two cells away is too far, and the sea does not count.
+      expect(drinkableNear(data, 1 * CELL, 1.5 * CELL)).toBeNull();
+      expect(drinkableNear(data, 0.5 * CELL, 2.5 * CELL)).toBeNull();
+    });
+
+    it('is not on a map without ponds', () => {
+      expect(drinkableNear({ width: 1, height: 1, surfaces: ['grass'], surface: [0] }, 16, 16)).toBeNull();
+    });
+
+    it('refills water and refuses when not thirsty', () => {
+      const n = { food: 50, water: 30 };
+      expect(thirsty(n)).toBe(true);
+      expect(drinkFrom(n).ok).toBe(true);
+      expect(n).toEqual({ food: 50, water: 30 + POND_SIP });
+      expect(drinkFrom(n).ok).toBe(true);
+      expect(n.water).toBe(NEED_MAX);
+      expect(thirsty(n)).toBe(false);
+      expect(drinkFrom(n)).toEqual({ ok: false, text: 'Not thirsty' });
+    });
   });
 });

@@ -18,7 +18,7 @@ import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
 import { AreaBanner } from '../hud/AreaBanner';
-import { HarvestButtons } from '../hud/HarvestButtons';
+import { DRINK_KEY, HarvestButtons, type HarvestSpot } from '../hud/HarvestButtons';
 import { GuideArrow } from '../entities/GuideArrow';
 import { guideFor } from '../systems/guide';
 import { zoneName } from '../systems/places';
@@ -30,6 +30,7 @@ import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
 import { harvest, waterWith } from '../systems/crops';
+import { drinkableNear, thirsty } from '../systems/needs';
 import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
@@ -165,6 +166,7 @@ export class OverworldScene implements Scene {
     this.sim.trialDefeat = (p) => this.training.fail(p);
     this.pack.startTrial = (p, skill) => this.training.start(p, skill);
     this.pack.levelUp = (p) => this.sim.levelUp(p);
+    this.pack.drink = (p) => this.sim.drink(p);
 
     this.zones.addHome(zone);
     this.zones.root.addChildAt(this.arrow, 1);
@@ -655,17 +657,24 @@ export class OverworldScene implements Scene {
     this.overlay.setGuide(guide);
   }
 
-  /** The Harvest button of every ripe plot the local player can reach, drawn by the plant (none while a menu or door is up). */
+  /**
+   * The Harvest button of every ripe plot the local player can reach, drawn by the plant, and a Drink button at the edge
+   * of a pond the player stands beside while they are thirsty (none while a menu or door is up).
+   */
   private updateHarvestButtons(z: ZoneState, hidden: boolean) {
     const { arena } = this;
     if (hidden) return this.harvestButtons.clear();
     const { world } = arena.view;
     const scale = world.scale.x;
-    const spots = z.crops.flatMap((c, key) =>
+    const spots: HarvestSpot[] = z.crops.flatMap((c, key) =>
       c.ripe && this.inReach(arena.local, c)
         ? [{ key, x: world.x + c.x * scale, y: world.y + (c.y - CELL * 1.6) * scale }]
         : [],
     );
+    const water = thirsty(this.hero.needs) && drinkableNear(z.data, this.player.x, this.player.y);
+    if (water) {
+      spots.push({ key: DRINK_KEY, label: 'Drink', x: world.x + water.x * scale, y: world.y + water.y * scale });
+    }
     this.harvestButtons.update(spots);
   }
 
@@ -675,10 +684,19 @@ export class OverworldScene implements Scene {
 
   /** The player pressed a plot's Harvest button: pick it here, or, as a guest, ask the host (an action press picks the plot beside them). */
   private harvestPressed(key: number) {
+    if (key === DRINK_KEY) return this.drinkPressed();
     const crop = this.arena.crops[key];
     if (!crop?.ripe || !this.inReach(this.arena.local, crop)) return;
     if (this.arena.role === 'client') this.guest.pressAction();
     else this.pickCrop(this.arena.local, crop);
+  }
+
+  /** The player pressed the Drink button by a pond: drink here, or, as a guest, ask the host (who keeps the meters). */
+  private drinkPressed() {
+    const { arena } = this;
+    if (!drinkableNear(arena.zone.data, this.player.x, this.player.y)) return;
+    if (arena.role === 'client') this.pack.askDrink();
+    else this.sim.drink(arena.local);
   }
 
   /** A player picks a ripe crop plot: the produce goes to their pack and the plot starts again as a sprout. */
