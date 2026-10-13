@@ -57,33 +57,6 @@ export function slashEffect(x: number, y: number, dir: Direction): Effect {
   };
 }
 
-/** A mob's ray: a beam of `length` px along the unit vector (ux, uy) from (x, y), flaring and fading in a moment. */
-export function rayEffect(x: number, y: number, ux: number, uy: number, length: number, color: number): Effect {
-  const g = new Graphics({ position: { x, y }, zIndex: 1e9 });
-  const duration = 0.3;
-  let t = 0;
-  return {
-    view: g,
-    update(dt) {
-      t += dt;
-      const p = Math.min(1, t / duration);
-      const grow = Math.min(1, p * 5); // it shoots out almost at once, then fades
-      const [ex, ey] = [ux * length * grow, uy * length * grow];
-      g.clear()
-        .moveTo(0, 0)
-        .lineTo(ex, ey)
-        .stroke({ width: 14 * (1 - p), color, alpha: 0.3 * (1 - p), cap: 'round' })
-        .moveTo(0, 0)
-        .lineTo(ex, ey)
-        .stroke({ width: 6 * (1 - p), color, alpha: 0.7 * (1 - p), cap: 'round' })
-        .moveTo(0, 0)
-        .lineTo(ex, ey)
-        .stroke({ width: 2.5 * (1 - p), color: 0xffffff, alpha: 1 - p, cap: 'round' });
-      return t < duration;
-    },
-  };
-}
-
 /**
  * A glowing projectile. `step` is called with its position every frame and returns true when it hit
  * something, which ends it; it also ends after travelling `range` pixels. `onEnd` gets the final position

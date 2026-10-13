@@ -3,6 +3,7 @@ import type { Character } from '../../entities/Character';
 import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
 import { cellFeet } from '../../map/doors';
+import { CELL } from '../../map/types';
 import { round1, type FxName, type WorldEvent } from '../../net/protocol';
 import {
   attackPower,
@@ -30,8 +31,6 @@ import { Casting } from './Casting';
 import {
   ATTACK_COOLDOWN,
   BOLT_HEIGHT,
-  RAY_HALF_WIDTH,
-  RAY_SPEED,
   DEFEAT_LINES,
   HP_REGEN,
   HP_REGEN_DELAY,
@@ -84,7 +83,7 @@ export class Simulation {
         ),
       strike: (mob, target) => arena.inZone(z, () => this.hurtHero(mob, target)),
       shoot: (mob, ux, uy) => arena.inZone(z, () => this.mobShoot(mob, ux, uy)),
-      ray: (mob, ux, uy) => arena.inZone(z, () => this.mobRay(mob, ux, uy)),
+      ray: (mob, target) => arena.inZone(z, () => this.mobRay(mob, target)),
     };
   }
 
@@ -287,26 +286,33 @@ export class Simulation {
   }
 
   /**
-   * A ray caster fires its beam along (ux, uy), the line it locked on when its windup began: it burns every player
-   * on that line (one blinking with invulnerability is spared) up to the first wall. A guest is sent it as a `bolt`
-   * event moving at `RAY_SPEED`, which `Visuals.show` draws as a beam.
+   * One burn of a mob's held ray on `target` (the host and solo): false when the beam can no longer reach them (a wall
+   * is in the way, or they are spared), which ends it. Every client draws the beam itself from the mob's `channel` state.
    */
-  private mobRay(mob: Mob, ux: number, uy: number) {
+  private mobRay(mob: Mob, target: Character): boolean {
     const { ray } = mob.kind;
-    if (!ray) return;
-    const x = round1(mob.body.x + ux * 10);
-    const y = round1(mob.body.y - BOLT_HEIGHT + uy * 8);
-    const length = this.visuals.rayReach(x, y, ux, uy);
-    for (const p of this.arena.players()) {
-      if (p.safe) continue;
-      // distance from the player's feet to the beam's line on the ground
-      const [px, py] = [p.body.x - x, p.body.y - (y + BOLT_HEIGHT)];
-      const along = px * ux + py * uy;
-      if (along < -RAY_HALF_WIDTH || along > length + RAY_HALF_WIDTH) continue;
-      if (Math.abs(px * uy - py * ux) < RAY_HALF_WIDTH) this.hurtHero(mob, p.body);
-    }
-    this.visuals.foeRay(x, y, ux, uy, ray.color);
-    this.emit({ type: 'bolt', x, y, vx: round1(ux * RAY_SPEED), vy: round1(uy * RAY_SPEED), color: ray.color });
+    const p = this.arena.players().find((q) => q.body === target);
+    if (!ray || !p) return false;
+    const { collision } = this.arena;
+    const [dx, dy] = [target.x - mob.body.x, target.y - mob.body.y];
+    const steps = Math.ceil(Math.hypot(dx, dy) / 8);
+    for (let i = 1; i < steps; i++)
+      if (
+        collision.isBlocked(
+          Math.floor((mob.body.x + (dx * i) / steps) / CELL),
+          Math.floor((mob.body.y + (dy * i) / steps) / CELL),
+        )
+      )
+        return false;
+    if (p.safe) return true; // warded or just arrived: the beam holds but does nothing
+    this.harm(
+      p,
+      rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero)),
+      mob.body.x,
+      mob.body.y,
+      true,
+    );
+    return true;
   }
 
   // --- Weather ---
@@ -383,16 +389,21 @@ export class Simulation {
   }
 
   /** Damage a player and knock them away from (fromX, fromY): the shared tail of a mob's hit and a lightning strike. */
-  private harm(p: Player, damage: number, fromX: number, fromY: number) {
+  private harm(p: Player, damage: number, fromX: number, fromY: number, burn = false) {
     const s = p.hero.stats;
     if (p.guard > 0) damage = Math.max(1, Math.round(damage * GUARD_TAKEN)); // Iron Skin
     s.hp -= damage;
-    p.invuln = INVULN_TIME;
     p.sinceHit = 0;
+    this.text(p.body.x, p.body.y - 54, String(damage), burn ? 0xff7fd0 : 0xff5a5a);
+    this.fx('heroHurt', p.body.x, p.body.y - 14, undefined, p.slot);
+    if (burn) {
+      // damage over time: no knockback, no stun, no blinking immunity (the next burn must land), the shot still goes
+      if (s.hp <= 0) this.defeat(p);
+      return;
+    }
+    p.invuln = INVULN_TIME;
     p.pendingShot = null; // a hit spoils the shot
     p.body.play('hurt');
-    this.text(p.body.x, p.body.y - 54, String(damage), 0xff5a5a);
-    this.fx('heroHurt', p.body.x, p.body.y - 14, undefined, p.slot);
     const dx = p.body.x - fromX;
     const dy = p.body.y - fromY;
     const len = Math.hypot(dx, dy) || 1;

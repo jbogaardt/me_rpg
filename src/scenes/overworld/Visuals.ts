@@ -1,12 +1,12 @@
 import { DIRS, DIR_VEC, type Direction } from '../../core/direction';
-import { arrowEffect, boltEffect, floatText, rayEffect, slashEffect } from '../../entities/effects';
+import { arrowEffect, boltEffect, floatText, slashEffect } from '../../entities/effects';
 import type { Mob } from '../../entities/Mob';
 import { particleEffect } from '../../entities/ParticleEffect';
 import { CELL } from '../../map/types';
 import type { WorldEvent } from '../../net/protocol';
 import type { ParticleEffectName } from '../../systems/particleEffects';
 import type { Arena } from './Arena';
-import { BOLT_HEIGHT, BOLT_RANGE, MELEE_REACH, RAY_LENGTH, RAY_SPEED } from './constants';
+import { BOLT_HEIGHT, BOLT_RANGE, MELEE_REACH } from './constants';
 
 /**
  * Draws what happens in the world: sword arcs, bolts and arrows in flight, floating numbers, particle bursts, a player's
@@ -87,27 +87,6 @@ export class Visuals {
     );
   }
 
-  /**
-   * How far a ray fired from (x, y) (chest height, like a bolt) along the unit vector (ux, uy) reaches: its full length,
-   * or up to the first wall. The host and a guest both ask, so they draw the same beam.
-   */
-  rayReach(x: number, y: number, ux: number, uy: number): number {
-    const { collision } = this.arena;
-    for (let d = 0; d < RAY_LENGTH; d += 8) {
-      const [gx, gy] = [x + ux * d, y + BOLT_HEIGHT + uy * d];
-      if (collision.isBlocked(Math.floor(gx / CELL), Math.floor(gy / CELL))) return d;
-    }
-    return RAY_LENGTH;
-  }
-
-  /** An enemy's ray, for show: the host decides who it burns (`Simulation.mobRay`). */
-  foeRay(x: number, y: number, ux: number, uy: number, color: number) {
-    const length = this.rayReach(x, y, ux, uy);
-    this.arena.effects.add(rayEffect(x, y, ux, uy, length, color));
-    const end = particleEffect('hitSpark', x + ux * length, y + uy * length);
-    this.arena.effects.add(end);
-  }
-
   /** Did a player's projectile at (x, y) run into a wall or an enemy? An enemy it hits is handed to `onHit`. */
   private projectileStep(x: number, y: number, onHit?: (mob: Mob) => void): boolean {
     const { collision, mobs } = this.arena;
@@ -143,10 +122,7 @@ export class Visuals {
           this.bolt(e.x, e.y, e.vx, e.vy);
           arena.playerNumbered(e.p)?.body.play('cast');
         } else {
-          const speed = Math.hypot(e.vx, e.vy);
-          if (speed >= RAY_SPEED * 0.9)
-            this.foeRay(e.x, e.y, e.vx / speed, e.vy / speed, e.color); // a mob's ray
-          else this.foeBolt(e.x, e.y, e.vx, e.vy, e.color); // an enemy's shot: only drawn here, the host decides what it hits
+          this.foeBolt(e.x, e.y, e.vx, e.vy, e.color); // an enemy's shot: only drawn here, the host decides what it hits
         }
         break;
       case 'text':

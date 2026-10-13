@@ -1,5 +1,4 @@
 import { mobAttack, REACH } from '../entities/Mob';
-import { RAY_LENGTH } from '../scenes/overworld/constants';
 import { ITEMS } from './items';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -133,11 +132,16 @@ describe('MOB_KINDS', () => {
       expect(kind.shot).toBeUndefined();
       expect(ray.range).toBeGreaterThan(REACH);
       expect(ray.range).toBeLessThanOrEqual(kind.sight);
-      expect(ray.range).toBeLessThanOrEqual(RAY_LENGTH);
+      expect(ray.tick).toBeGreaterThan(0);
+      expect(ray.duration).toBeGreaterThan(ray.tick);
+      expect(ray.rest).toBeGreaterThan(0);
+      // held for its full duration it burns less than the kind's melee would in the same time (one blow per second)
+      expect((kind.attack * ray.power * ray.duration) / ray.tick).toBeLessThan(kind.attack * ray.duration);
+      expect(mobAttack(kind, ray.range - 1, false)).toBeNull(); // resting: it closes in instead
       expect(mobAttack(kind, REACH - 1)).toBe('melee');
       expect(mobAttack(kind, ray.range - 1)).toBe('ray');
       expect(mobAttack(kind, ray.range + 1)).toBeNull();
-      expect(kind.windup ?? 0.45).toBeGreaterThanOrEqual(0.5); // time to step out of the line it locked
+      expect(kind.windup ?? 0.45).toBeGreaterThanOrEqual(0.5); // time to leave before it connects
     },
   );
 

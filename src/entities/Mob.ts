@@ -16,17 +16,17 @@ export interface MobWorld {
   strike(mob: Mob, target: Character): void;
   /** A ranged mob fires along the unit vector (ux, uy); the scene flies the projectile and decides what it hits. */
   shoot(mob: Mob, ux: number, uy: number): void;
-  /** A ray caster fires its beam along the unit vector (ux, uy) it locked on when the windup began. */
-  ray(mob: Mob, ux: number, uy: number): void;
+  /** One burn of a held ray on `target`. Returns false when the beam cannot reach them (a wall): it then ends. */
+  ray(mob: Mob, target: Character): boolean;
 }
 
 /** What a mob does to a hero `dist` px away: melee when close, otherwise its ray or shot if it has one in range. */
 export type MobAttack = 'melee' | 'shot' | 'ray';
 
-export function mobAttack(kind: MobKind, dist: number): MobAttack | null {
+export function mobAttack(kind: MobKind, dist: number, rayReady = true): MobAttack | null {
   if (kind.shot) return dist <= kind.shot.range ? 'shot' : null;
   if (dist < REACH) return 'melee';
-  if (kind.ray && dist <= kind.ray.range) return 'ray';
+  if (kind.ray && rayReady && dist <= kind.ray.range) return 'ray';
   return null;
 }
 
@@ -73,7 +73,10 @@ export class Mob {
   private poise = 0; // seconds left in which a hit cannot stagger it again
   private moving = false;
   private attack: MobAttack = 'melee'; // what the current windup leads to
-  private aim = { x: 0, y: 1 }; // the line a ray locked on when its windup began
+  private rayTimer = 0; // seconds until the next burn of a held ray
+  private rayRest = 0; // seconds before it may cast another ray (after a break)
+  private beam = new Graphics(); // the held ray, drawn from the sceptre to the hero (every client draws its own)
+  private heroes: MobWorld['heroes'] = []; // guest: who the beam can be on
   private remote: { x: number; y: number } | null = null; // guest only: where the host says this mob is
   private bar = new Graphics();
   private readonly t: ReturnType<typeof mobTimings>;
@@ -86,7 +89,7 @@ export class Mob {
   ) {
     this.t = mobTimings(kind);
     this.body = new Character(sheet);
-    this.body.addChild(this.bar);
+    this.body.addChild(this.bar, this.beam);
     this.hp = kind.maxHp;
     this.reset();
   }
@@ -107,6 +110,8 @@ export class Mob {
     this.state = 'idle';
     this.timer = 1;
     this.frozen = 0;
+    this.rayRest = 0;
+    this.beam.clear();
     this.knock = { x: 0, y: 0 };
     this.poise = 0;
     this.drawBar();
@@ -122,6 +127,7 @@ export class Mob {
     this.state = 'idle';
     this.timer = 1;
     this.flash = 0;
+    this.beam.clear();
     this.body.setOffset(0, 0);
     this.body.setTint(0xffffff);
   }
@@ -132,11 +138,15 @@ export class Mob {
     this.flash = 0.15;
     this.drawBar();
     if (this.hp <= 0) {
+      this.beam.clear();
       this.knock = { x: vx * 180, y: vy * 180 };
       this.body.play('hurt', this.t.stagger * 1000);
       this.state = 'dead';
       this.timer = RESPAWN;
       return true;
+    }
+    if (this.state === 'channel') {
+      this.breakRay(); // any blow breaks the beam, however poised: it is stunned and then only fights up close
     }
     const committed = this.state === 'windup' && this.timer < this.t.windup * COMMITTED;
     if (this.poise > 0 || committed) {
@@ -149,6 +159,15 @@ export class Mob {
     this.timer = this.t.stagger;
     this.poise = this.t.stagger + POISE;
     return false;
+  }
+
+  /** The held ray ends (it ran out, was broken by a hit, or lost its target): a short rest, then it fights up close. */
+  private breakRay() {
+    if (this.state !== 'channel') return;
+    this.state = 'recover';
+    this.timer = this.t.recover;
+    this.rayRest = this.kind.ray?.rest ?? 0;
+    this.beam.clear();
   }
 
   /** Held still by a spell (Stasis) for this many seconds: it neither moves nor attacks (host and solo; a guest just sees it stand). */
@@ -178,6 +197,7 @@ export class Mob {
 
     this.flash = Math.max(0, this.flash - dt);
     this.poise = Math.max(0, this.poise - dt);
+    this.rayRest = Math.max(0, this.rayRest - dt);
     if (this.knock.x || this.knock.y) {
       world.slide(this.body, this.knock.x * dt, this.knock.y * dt);
       const decay = Math.exp(-12 * dt);
@@ -186,6 +206,7 @@ export class Mob {
       if (Math.hypot(this.knock.x, this.knock.y) < 5) this.knock = { x: 0, y: 0 };
     }
 
+    this.heroes = world.heroes;
     const target = nearest(this.body, world.heroes);
     const dx = target ? target.x - this.body.x : 0;
     const dy = target ? target.y - this.body.y : 0;
@@ -204,7 +225,7 @@ export class Mob {
         break;
       case 'chase': {
         const { shot } = this.kind;
-        const attack = mobAttack(this.kind, dist);
+        const attack = mobAttack(this.kind, dist, this.rayRest <= 0);
         if (dist > this.kind.sight * 1.5) {
           this.state = 'idle';
           this.timer = 1;
@@ -222,7 +243,6 @@ export class Mob {
           this.state = 'windup';
           this.timer = this.t.windup;
           this.attack = attack;
-          this.aim = { x: dx / (dist || 1), y: dy / (dist || 1) }; // a ray keeps this line: step aside to dodge it
           this.body.face(directionToward(dx, dy));
           this.body.play(attack === 'shot' ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph; the blow lands as it ends
         } else {
@@ -234,12 +254,31 @@ export class Mob {
         if (this.timer <= 0) {
           if (this.attack === 'shot')
             world.shoot(this, dx / (dist || 1), dy / (dist || 1)); // aimed as it lets go
-          else if (this.attack === 'ray') world.ray(this, this.aim.x, this.aim.y);
-          else if (target && dist < REACH + 8) world.strike(this, target);
+          else if (this.attack === 'ray' && this.kind.ray) {
+            this.state = 'channel'; // hold the beam on the hero until it runs out or something breaks it
+            this.timer = this.kind.ray.duration;
+            this.rayTimer = this.kind.ray.tick * 0.5;
+            break;
+          } else if (target && dist < REACH + 8) world.strike(this, target);
           this.state = 'recover';
           this.timer = this.t.recover;
         }
         break;
+      case 'channel': {
+        const { ray } = this.kind;
+        // It ends when it runs out, the hero gets away (or is gone), or a wall comes between them.
+        let held = !!ray && !!target && dist <= ray.range * 1.4 && this.timer > 0;
+        if (held && target) {
+          this.body.face(directionToward(dx, dy));
+          this.rayTimer -= dt;
+          if (this.rayTimer <= 0 && ray) {
+            this.rayTimer += ray.tick;
+            held = world.ray(this, target);
+          }
+        }
+        if (!held) this.breakRay();
+        break;
+      }
       case 'recover':
         if (this.timer <= 0) this.state = 'chase';
         break;
@@ -266,6 +305,7 @@ export class Mob {
 
   /** Guest: take the host's latest word on this mob. The body glides there over the next frames (updateRemote). */
   setRemote({ x, y, facing, state: next, hp, timer, moving }: MobView, heroes: MobWorld['heroes'] = []) {
+    this.heroes = heroes;
     const respawned = this.state === 'dead' && next !== 'dead';
     if (hp < this.hp) {
       this.flash = 0.15;
@@ -315,8 +355,36 @@ export class Mob {
     else if (lunging) this.body.setOffset(fx * 5, fy * 5);
     else this.body.setOffset(0, 0);
     const blink = this.state === 'windup' && Math.floor(this.timer * 16) % 2 === 0;
+    this.drawBeam();
     this.body.setTint(this.flash > 0 ? 0xff6060 : this.frozen > 0 ? 0xa8d8ff : blink ? 0xffe080 : 0xffffff);
     this.body.animate(dt * 1000, moving);
+  }
+
+  /** The held ray: a pink beam from the sceptre to the hero's chest, on every client (a guest picks the nearest hero). */
+  private drawBeam() {
+    this.beam.clear();
+    if (this.state !== 'channel' || this.frozen > 0) return;
+    const target = nearest(this.body, this.heroes);
+    if (!target) return;
+    const { color } = this.kind.ray ?? { color: 0xff5fc8 };
+    const [fx, fy] = DIR_VEC[this.body.facing];
+    const [sx, sy] = [fx * 14, -24 + fy * 4]; // the sceptre's head, relative to the feet
+    const [ex, ey] = [target.x - this.body.x, target.y - this.body.y - 14];
+    const flicker = 0.85 + 0.15 * Math.sin(performance.now() / 40);
+    this.beam
+      .moveTo(sx, sy)
+      .lineTo(ex, ey)
+      .stroke({ width: 9, color, alpha: 0.25 * flicker, cap: 'round' })
+      .moveTo(sx, sy)
+      .lineTo(ex, ey)
+      .stroke({ width: 4, color, alpha: 0.75 * flicker, cap: 'round' })
+      .moveTo(sx, sy)
+      .lineTo(ex, ey)
+      .stroke({ width: 1.5, color: 0xffffff, alpha: flicker, cap: 'round' })
+      .circle(sx, sy, 4)
+      .fill({ color, alpha: 0.6 })
+      .circle(ex, ey, 5)
+      .fill({ color, alpha: 0.5 });
   }
 
   /** Fade out while dead; it comes back (reset) when the timer runs out. */

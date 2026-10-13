@@ -128,15 +128,19 @@ export interface MobKind {
   /** A ranged attacker: stops `range` px from the hero, telegraphs, then fires a projectile instead of swinging. */
   shot?: MobShot;
   /**
-   * A caster with a melee fallback: from `ray.range` away it telegraphs and fires an instant beam along the line it
-   * locked on at the start of the windup (sidestep it), but a hero within melee reach is simply swung at.
+   * A caster with a melee fallback: from `ray.range` away it telegraphs, then holds a beam on the hero that burns for
+   * as long as it lasts. Any hit on the caster breaks it, and it then only fights in melee for `ray.rest` seconds.
    */
   ray?: MobRay;
 }
 
 export interface MobRay {
-  range: number; // pixels: starts a ray from this close (must not exceed `sight`, nor RAY_LENGTH)
+  range: number; // pixels: starts a ray from this close (must not exceed `sight`); it breaks if the hero gets past 1.4x this
   color: number; // 0xRRGGBB of the beam
+  tick: number; // seconds between burns
+  power: number; // each burn is this fraction of the kind's `attack`
+  duration: number; // seconds the beam holds at most
+  rest: number; // seconds after a broken (or finished) beam before it can cast another
 }
 
 export interface MobShot {
@@ -230,7 +234,7 @@ export const MUMMY: MobKind = {
   windup: 0.6,
   recover: 0.9,
   stagger: 0.15,
-  ray: { range: 4.5 * 32, color: 0x59e0a8 },
+  ray: { range: 4.5 * 32, color: 0xff5fc8, tick: 0.5, power: 0.35, duration: 6, rest: 5 },
 };
 
 /** Frost enemy: an armoured, icy skeleton, tuned for roughly levels 5-7. */
@@ -555,7 +559,7 @@ export const FROST_WARDEN: MobKind = {
 };
 
 /** What a mob is doing, in the order used on the wire (src/net/protocol.ts). */
-export const MOB_STATES = ['idle', 'wander', 'chase', 'windup', 'recover', 'dead'] as const;
+export const MOB_STATES = ['idle', 'wander', 'chase', 'windup', 'recover', 'dead', 'channel'] as const;
 export type MobState = (typeof MOB_STATES)[number];
 
 /** What a viewer needs to draw a mob: the host's mob as it is now. The network sends it (net/mobWire.ts); a co-op guest's copy of a mob is drawn from one. */
