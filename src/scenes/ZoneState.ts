@@ -26,12 +26,14 @@ import { GIVERS } from '../systems/quests';
 import { SHOPS } from '../systems/shops';
 import { isTrialZone } from '../systems/skills';
 import { PondLevels } from '../systems/needs';
+import { PondBeds } from '../entities/PondBeds';
 
 /** What a zone remembers while it is unloaded (Arena.memory); its mobs simply start afresh. */
 export interface ZoneMemory {
   opened: number[]; // indices of opened chests
   crops: CropMemory[]; // each crop plot: its phase, progress and whether it is watered
   ground: { item: Item; x: number; y: number; id: number; age: number }[];
+  ponds?: [number, number][]; // each drained pond: its id and how far it is drained (only rain fills it again)
 }
 
 export interface QuestGiver {
@@ -76,8 +78,10 @@ export class ZoneState {
   readonly ground: GroundItem[] = [];
   /** The bodies of the players here, which mobs hunt and which block others. The scene keeps it in step. */
   readonly heroBodies: Character[] = [];
-  /** How much each pond here has been drunk from (solo and host; forgotten when the zone is unloaded, ponds refill anyway). */
+  /** How far each pond here is drained (solo and host decide; kept in the zone's memory while it is unloaded). */
   readonly ponds = new PondLevels();
+  /** Draws the drained part of each pond (the shown zone's, each frame: `showPonds`). */
+  readonly pondBeds: PondBeds;
   /** Set by the scene, which owns the combat rules mobs call back into. */
   mobWorld!: MobWorld;
 
@@ -90,6 +94,8 @@ export class ZoneState {
     this.camera = new Camera(this.world);
     this.collision = new Collision(data.width, data.height, data.collision);
     this.effects = new Effects(this.world.layer);
+    this.pondBeds = new PondBeds(data);
+    this.world.layer.addChild(this.pondBeds);
     this.ambient = data.indoor ? null : new Ambient(this.world.layer, data);
     this.weatherLayer = data.indoor ? null : new WeatherLayer(this.world.layer);
     this.weather = data.indoor ? null : new Weather(CLIMATES[isClimate(data.climate) ? data.climate : DEFAULT_CLIMATE]);
@@ -176,6 +182,7 @@ export class ZoneState {
       opened: this.chests.flatMap((c, i) => (c.opened ? [i] : [])),
       crops: this.crops.map((c) => c.remember()),
       ground: this.ground.map((g) => ({ item: g.item, x: g.x, y: g.y, id: g.id, age: g.age })),
+      ponds: this.ponds.levels(),
     };
   }
 

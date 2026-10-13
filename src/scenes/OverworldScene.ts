@@ -127,6 +127,7 @@ export class OverworldScene implements Scene {
   private overlay: MapOverlay;
   private banner = new AreaBanner();
   private harvestButtons = new HarvestButtons();
+  private guestDrinking = false; // guest: asked the host to let it drink (see `drinking`)
   private announced = ''; // the zone the banner last named
   /** What the story last looked like for the local hero, to notice when it moves: a task done in the field, a chapter begun, the end. */
   private story = { stage: -1, ready: false, chapter: -1 };
@@ -166,7 +167,11 @@ export class OverworldScene implements Scene {
     this.sim.trialDefeat = (p) => this.training.fail(p);
     this.pack.startTrial = (p, skill) => this.training.start(p, skill);
     this.pack.levelUp = (p) => this.sim.levelUp(p);
-    this.pack.drink = (p) => this.sim.drink(p);
+    this.pack.drink = (p, on) => {
+      if (on) return this.sim.startDrinking(p);
+      this.sim.stopDrinking(p);
+      return true;
+    };
 
     this.zones.addHome(zone);
     this.zones.root.addChildAt(this.arrow, 1);
@@ -299,6 +304,7 @@ export class OverworldScene implements Scene {
       ]);
     }
 
+    z.pondBeds.show(z.ponds.levels()); // the ponds drained by drinking, until rain fills them
     z.npc?.animate(dt * 1000, false);
     this.updateQuests(z, dt);
     this.announceArea();
@@ -405,6 +411,7 @@ export class OverworldScene implements Scene {
     const busy = this.zones.transition.busy;
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
     const cmd = this.readCommand(dt, reading);
+    if (cmd.dx || cmd.dy) this.guestDrinking = false; // walking off stops the drink (the host sees it too)
     if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.guest.pressAction());
     if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);
     this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy), cmd.aim);
@@ -671,9 +678,11 @@ export class OverworldScene implements Scene {
         ? [{ key, x: world.x + c.x * scale, y: world.y + (c.y - CELL * 1.6) * scale }]
         : [],
     );
-    const water = thirsty(this.hero.needs) && drinkableNear(z.data, this.player.x, this.player.y);
+    const drinking = this.drinking();
+    const water = (drinking || thirsty(this.hero.needs)) && drinkableNear(z.data, this.player.x, this.player.y);
     if (water) {
-      spots.push({ key: DRINK_KEY, label: 'Drink', x: world.x + water.x * scale, y: world.y + water.y * scale });
+      const label = drinking ? 'Stop' : 'Drink';
+      spots.push({ key: DRINK_KEY, label, x: world.x + water.x * scale, y: world.y + water.y * scale });
     }
     this.harvestButtons.update(spots);
   }
@@ -691,12 +700,27 @@ export class OverworldScene implements Scene {
     else this.pickCrop(this.arena.local, crop);
   }
 
-  /** The player pressed the Drink button by a pond: drink here, or, as a guest, ask the host (who keeps the meters). */
+  /**
+   * Is the local player drinking? Solo and the host know; a guest only knows it asked, and assumes it stopped once it
+   * walks, is full, or asks to stop (the host stops it for the same reasons).
+   */
+  private drinking(): boolean {
+    const { arena } = this;
+    if (arena.role !== 'client') return arena.local.drinking !== null;
+    if (!thirsty(this.hero.needs)) this.guestDrinking = false;
+    return this.guestDrinking;
+  }
+
+  /** The player pressed Drink (or Stop) by a pond: start or stop here, or, as a guest, ask the host (who keeps the meters). */
   private drinkPressed() {
     const { arena } = this;
-    if (!drinkableNear(arena.zone.data, this.player.x, this.player.y)) return;
-    if (arena.role === 'client') this.pack.askDrink();
-    else this.sim.drink(arena.local);
+    const on = !this.drinking();
+    if (on && !drinkableNear(arena.zone.data, this.player.x, this.player.y)) return;
+    if (arena.role === 'client') {
+      this.guestDrinking = on;
+      this.pack.askDrink(on);
+    } else if (on) this.sim.startDrinking(arena.local);
+    else this.sim.stopDrinking(arena.local);
   }
 
   /** A player picks a ripe crop plot: the produce goes to their pack and the plot starts again as a sprout. */

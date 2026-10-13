@@ -4,20 +4,22 @@ import { ITEMS } from './items';
 import { useFromPack } from './inventory';
 import { CELL } from '../map/types';
 import {
+  drainedLayers,
   drainNeeds,
   drinkableNear,
-  drinkFrom,
   needLevel,
   newNeeds,
   NEED_MAX,
   needsRegen,
+  pondCapacity,
+  pondCells,
   PondLevels,
   pondId,
-  pondSip,
-  POND_MIN_SIP,
-  POND_RECOVER,
-  POND_SIP,
+  pondLayers,
+  rainFill,
+  RAIN_FILL_TIME,
   refill,
+  sipWater,
   starveRate,
   thirsty,
 } from './needs';
@@ -99,38 +101,68 @@ describe('eating and drinking', () => {
       expect(drinkableNear({ width: 1, height: 1, surfaces: ['grass'], surface: [0] }, 16, 16)).toBeNull();
     });
 
-    it('refills water and refuses when not thirsty', () => {
+    it('fills the meter steadily, never past full', () => {
       const n = { food: 50, water: 30 };
       expect(thirsty(n)).toBe(true);
-      expect(drinkFrom(n).ok).toBe(true);
-      expect(n).toEqual({ food: 50, water: 30 + POND_SIP });
-      expect(drinkFrom(n).ok).toBe(true);
-      expect(n.water).toBe(NEED_MAX);
+      expect(sipWater(n, 8, 0.5)).toBe(4);
+      expect(n).toEqual({ food: 50, water: 34 });
+      expect(sipWater(n, 8, 100)).toBe(NEED_MAX - 34);
       expect(thirsty(n)).toBe(false);
-      expect(drinkFrom(n)).toEqual({ ok: false, text: 'Not thirsty' });
     });
 
-    it('gives less each drink from the same pond, down to a trickle', () => {
-      const sips = [0, 1, 2, 3].map(pondSip);
-      expect(sips[0]).toBe(POND_SIP);
-      for (let i = 1; i < sips.length; i++) expect(sips[i]).toBeLessThan(sips[i - 1]!);
-      expect(pondSip(50)).toBe(POND_MIN_SIP);
-    });
-
-    it('knows one pond from another', () => {
+    it('knows one pond from another, and dries it from the shore in', () => {
       expect(pondId(data, 1 * 6 + 3)).toBe(pondId(data, 1 * 6 + 4));
       expect(pondId(data, 3 * 6 + 0)).not.toBe(pondId(data, 1 * 6 + 3));
+      // A 5x5 pond: its middle cell is the last to dry.
+      const big = { width: 7, height: 7, surfaces: ['grass', 'water'], surface: new Array<number>(49).fill(0) };
+      for (let r = 1; r <= 5; r++) for (let c = 1; c <= 5; c++) big.surface[r * 7 + c] = 1;
+      const cells = pondCells(big, pondId(big, 8));
+      expect(cells).toHaveLength(25);
+      expect(cells.at(-1)).toBe(3 * 7 + 3);
+      expect(pondCapacity(big, pondId(big, 8))).toBeGreaterThan(0);
     });
 
-    it('lets a pond recover when left alone, and keeps ponds apart', () => {
+    it('drains as it is drunk, gives nothing when dry, and only rain fills it', () => {
       const ponds = new PondLevels();
-      expect(ponds.sip(7, 0)).toBe(POND_SIP);
-      ponds.record(7, 0);
-      ponds.record(7, 1);
-      expect(ponds.sip(7, 1)).toBe(pondSip(2));
-      expect(ponds.sip(8, 1)).toBe(POND_SIP); // another pond is untouched
-      expect(ponds.sip(7, 1 + POND_RECOVER)).toBe(pondSip(1));
-      expect(ponds.sip(7, 1 + 2 * POND_RECOVER)).toBe(POND_SIP);
+      expect(ponds.drink(7, 30, 60)).toBe(30);
+      expect(ponds.level(7)).toBeCloseTo(0.5);
+      expect(ponds.level(8)).toBe(0); // another pond is untouched
+      expect(ponds.drink(7, 50, 60)).toBe(30); // only what is left
+      expect(ponds.drink(7, 5, 60)).toBe(0);
+      expect(ponds.level(7)).toBe(1);
+      ponds.rain(rainFill(null, 1), 1000); // clear skies fill nothing
+      ponds.rain(rainFill('snow', 1), 1000); // nor does snow
+      expect(ponds.level(7)).toBe(1);
+      ponds.rain(rainFill('rain', 1), RAIN_FILL_TIME / 2);
+      expect(ponds.level(7)).toBeCloseTo(0.5);
+      ponds.rain(rainFill('storm', 1), RAIN_FILL_TIME / 4); // a storm fills twice as fast
+      expect(ponds.levels()).toEqual([]);
     });
+
+    it('is remembered and told as a list of levels', () => {
+      const ponds = new PondLevels();
+      ponds.drink(3, 10, 40);
+      const copy = new PondLevels();
+      copy.setLevels(ponds.levels());
+      expect(copy.level(3)).toBeCloseTo(0.25);
+      copy.setLevels([]);
+      expect(copy.level(3)).toBe(0);
+    });
+  });
+});
+
+describe('the layers of a pond', () => {
+  it('go from the shore in, a wide ring taking longer than a small middle', () => {
+    const layers = [[1, 2, 3, 4, 5, 6, 7, 8], [9]];
+    expect(drainedLayers(layers, 0)).toEqual({ gone: 0, fading: 0 });
+    expect(drainedLayers(layers, 4 / 9)).toEqual({ gone: 0, fading: 0.5 });
+    expect(drainedLayers(layers, 8 / 9 + 0.5 / 9).gone).toBe(1);
+    expect(drainedLayers(layers, 1)).toEqual({ gone: 2, fading: 0 });
+  });
+
+  it('are rings of a real pond', () => {
+    const big = { width: 7, height: 7, surfaces: ['grass', 'water'], surface: new Array<number>(49).fill(0) };
+    for (let r = 1; r <= 5; r++) for (let c = 1; c <= 5; c++) big.surface[r * 7 + c] = 1;
+    expect(pondLayers(big, pondId(big, 8)).map((l) => l.length)).toEqual([16, 8, 1]);
   });
 });

@@ -6,7 +6,7 @@ import type { Player } from '../../entities/Player';
 import type { Menu } from '../../hud/Menu';
 import type { ShopCounter } from '../../hud/ShopCounter';
 import { decodeMob } from '../../net/mobWire';
-import { decodeEvent, FLAG, MAX_VIEW, type PlayerSnap, type SnapMsg } from '../../net/protocol';
+import { decodeEvent, FLAG, MAX_VIEW, pondsFromWire, type PlayerSnap, type SnapMsg } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import { newHero, type Hero } from '../../systems/combat';
 import { encodeOp, type InvOpWire } from '../../systems/inventory';
@@ -204,6 +204,7 @@ export class GuestLink {
     arena.zone.weather?.setRemote(snap.w); // this biome's own sky
     arena.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
     arena.crops.forEach((c, i) => c.setCode(snap.crops[i] ?? RIPE_CODE));
+    arena.zone.ponds.setLevels(pondsFromWire(snap.ponds)); // drained by someone's drinking, until rain fills them
     if (snap.ground) this.ground.sync(snap.ground); // absent: the same items as before
     for (const [index, ...state] of snap.mobs)
       arena.mobs[index]?.setRemote(

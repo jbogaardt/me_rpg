@@ -17,6 +17,7 @@ import {
   type SnapMsg,
   type StatsSnap,
   type WorldEvent,
+  pondsWire,
 } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import type { Stats } from '../../systems/combat';
@@ -153,6 +154,7 @@ export class HostLink {
     const worldOf = (z: ZoneState) => {
       let world = shared.get(z.name);
       if (!world) {
+        const ponds = pondsWire(z.ponds.levels());
         world = {
           base: {
             k: 'snap',
@@ -162,6 +164,7 @@ export class HostLink {
             players: everyone.filter((p) => p.zone === z.name).map((p) => this.snapPlayer(p)),
             chests: z.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
             crops: z.crops.map((c) => c.code()),
+            ...(ponds ? { ponds } : {}),
             w: z.weather?.snapshot() ?? NO_WEATHER,
           },
           states: z.mobs.map((m) => encodeMob(m.view())),

@@ -13,7 +13,7 @@ export interface HarvestSpot {
   label?: string;
 }
 
-/** The key of the "Drink" button shown at the edge of a pond. */
+/** The key of the "Drink" (or, while drinking, "Stop") button shown at the edge of a pond. */
 export const DRINK_KEY = -1;
 
 export class HarvestButtons {
@@ -37,7 +37,6 @@ export class HarvestButtons {
         button = document.createElement('button');
         button.type = 'button';
         button.className = 'harvest-btn wood-btn';
-        button.textContent = spot.label ?? 'Harvest';
         // pointerdown, not click: it works the moment a finger lands and the plot may be picked or gone by mouseup.
         button.addEventListener('pointerdown', (e) => {
           e.preventDefault();
@@ -47,6 +46,8 @@ export class HarvestButtons {
         this.layer.appendChild(button);
         this.buttons.set(spot.key, button);
       }
+      const label = spot.label ?? 'Harvest';
+      if (button.textContent !== label) button.textContent = label;
       button.style.left = `${Math.round(spot.x)}px`;
       button.style.top = `${Math.round(spot.y)}px`;
     }

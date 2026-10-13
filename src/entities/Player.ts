@@ -44,6 +44,8 @@ export class Player {
   }
   /** The zone this player is in (a key of the scene's zones). The host moves players between zones; a guest follows. */
   zone = '';
+  /** Host/solo: drinking from a pond (the water gained so far, floated when they stop), or null. */
+  drinking: { gained: number } | null = null;
   moving = false; // was trying to move this tick (drives the walk cycle, and the guest's copy of it)
 
   // Host: the last action counters honoured from a network player (see protocol.ts).

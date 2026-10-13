@@ -4,6 +4,8 @@ import type { TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GROUND } from '../systems/inventory';
 import { fitEvents, SNAP_BUDGET } from './feed';
 import {
+  pondsFromWire,
+  pondsWire,
   decodeEvent,
   encodeEvent,
   encodeMessage,
@@ -297,6 +299,30 @@ describe('messages', () => {
     for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m).slice(0, 80)).toBeNull();
   });
 
+  it('carries drained ponds, and rejects bad ones', () => {
+    const wire = pondsWire([
+      [42, 0.5],
+      [7, 0.0001],
+    ]);
+    expect(wire).toEqual([42, 500, 7, 1]);
+    expect(pondsWire([])).toBeUndefined();
+    const m = { ...snap, ponds: wire };
+    expect(parseMessage(JSON.stringify(m))).toEqual(m);
+    expect(pondsFromWire(wire)).toEqual([
+      [42, 0.5],
+      [7, 0.001],
+    ]);
+    const bad: Record<string, unknown>[] = [
+      { ...snap, ponds: [1] }, // no level
+      { ...snap, ponds: [1, 0] }, // a full pond is not listed
+      { ...snap, ponds: [1, 1001] },
+      { ...snap, ponds: [-1, 5] },
+      { ...snap, ponds: [1.5, 5] },
+      { ...snap, ponds: Array.from({ length: 34 }, () => 1) }, // too many
+    ];
+    for (const b of bad) expect(parseMessage(JSON.stringify(b)), JSON.stringify(b).slice(0, 80)).toBeNull();
+  });
+
   it('rejects malformed snapshots', () => {
     const bad: Record<string, unknown>[] = [
       { ...snap, players: [] },
@@ -384,7 +410,7 @@ describe('trade, pack and looks messages', () => {
     const talk: DoMsg = { k: 'do', n: 4, op: 'talk', item: 0, shop: 'maren' };
     const told: PackMsg = { ...pack, say: { id: 4, text: '', ok: true, story: 'road.offer' } };
     const train: DoMsg = { k: 'do', n: 5, op: 'train', item: 0, shop: 'orin' };
-    const drink: DoMsg = { k: 'do', n: 6, op: 'drink', item: 0, shop: '' };
+    const drink: DoMsg = { k: 'do', n: 6, op: 'drink', item: 1, shop: '' };
     for (const m of [ask, talk, train, drink, told, pack, packNoSay, looks])
       expect(parseMessage(encodeMessage(m))).toEqual(m);
   });

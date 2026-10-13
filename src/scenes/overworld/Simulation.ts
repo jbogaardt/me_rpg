@@ -20,7 +20,18 @@ import {
   type Ranged,
 } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
-import { drainNeeds, drinkableNear, drinkFrom, needsRegen, pondId, starveRate } from '../../systems/needs';
+import {
+  drainNeeds,
+  drinkableNear,
+  needsRegen,
+  pondCapacity,
+  pondId,
+  POND_FLOW,
+  rainFill,
+  sipWater,
+  starveRate,
+  thirsty,
+} from '../../systems/needs';
 import { GIVERS, QUEST_GIVER, recordKill, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
@@ -111,24 +122,52 @@ export class Simulation {
   // --- A player ---
 
   /**
-   * A player drinks from the pond beside them (call it in their zone); each drink from the same pond gives less until it
-   * recovers. Says why not, or returns false with no pond near.
+   * A player starts drinking from the pond beside them (call it in their zone): the water then flows in each tick
+   * (`drinkTick`), draining the pond, until they are full, walk off, stop or the pond is dry. Says why not, or returns
+   * false with no pond near.
    */
-  drink(p: Player): boolean {
-    const { arena } = this;
-    const z = arena.zone;
+  startDrinking(p: Player): boolean {
+    const z = this.arena.zone;
     const { x, y } = p.body;
     const water = drinkableNear(z.data, x, y);
     if (!water) return false;
     p.body.face(directionToward(water.x - x, water.y - y));
-    const pond = pondId(z.data, water.cell);
-    const drunk = drinkFrom(p.hero.needs, z.ponds.sip(pond, arena.clock));
-    if (drunk.ok) {
-      z.ponds.record(pond, arena.clock);
-      this.fx('levelUp', water.x, water.y);
+    const why = !thirsty(p.hero.needs)
+      ? 'Not thirsty'
+      : z.ponds.level(pondId(z.data, water.cell)) >= 1
+        ? 'The pond is dry'
+        : '';
+    if (why) {
+      this.text(x, y - 40, why, 0xff8a7a);
+      return true;
     }
-    this.text(x, y - 40, drunk.text, drunk.ok ? 0x8fc8ff : 0xff8a7a);
+    if (!p.drinking) this.fx('levelUp', water.x, water.y);
+    p.drinking ??= { gained: 0 };
     return true;
+  }
+
+  /** The player stops drinking: how much it did them good floats over them. */
+  stopDrinking(p: Player) {
+    const gained = Math.round(p.drinking?.gained ?? 0);
+    p.drinking = null;
+    if (gained > 0) this.text(p.body.x, p.body.y - 40, `+${gained} water`, 0x8fc8ff);
+  }
+
+  /** A drinking player's tick: water flows from the pond into them; walking off, a full meter or a dry pond stops it. */
+  private drinkTick(p: Player, dt: number) {
+    const sip = p.drinking;
+    if (!sip) return;
+    const z = this.arena.zone;
+    const water = p.moving ? null : drinkableNear(z.data, p.body.x, p.body.y);
+    if (!water || !thirsty(p.hero.needs)) return this.stopDrinking(p);
+    const pond = pondId(z.data, water.cell);
+    const room = 100 - p.hero.needs.water;
+    const got = z.ponds.drink(pond, Math.min(POND_FLOW * dt, room), pondCapacity(z.data, pond));
+    sip.gained += sipWater(p.hero.needs, got, 1);
+    if (z.ponds.level(pond) >= 1) {
+      this.stopDrinking(p);
+      this.text(p.body.x, p.body.y - 52, 'The pond is dry', 0xd8b080);
+    }
   }
 
   /** One tick for a player: cooldowns and regeneration, knockback, walking (or sliding on ice), and the poses. */
@@ -162,6 +201,7 @@ export class Simulation {
     }
 
     p.moving = this.move(p, cmd, dt);
+    this.drinkTick(p, dt);
     // Lunge into a swing; blink while invulnerable.
     const [fx, fy] = DIR_VEC[p.body.facing];
     const swinging = this.isSwinging(p);
@@ -350,9 +390,10 @@ export class Simulation {
    * rolls every occupied zone's weather (a guest is only told), and a storm picks where to strike in its own zone.
    */
   weather(dt: number) {
-    const { weather } = this.arena.zone;
+    const { weather, ponds } = this.arena.zone;
     if (!weather) return;
     weather.update(dt);
+    ponds.rain(rainFill(weather.precip, weather.intensity), dt); // only rain fills a pond someone drank from
     if (weather.strikeDue(dt)) this.lightning({ ...this.strikeTarget(), seed: Math.floor(Math.random() * 1e9) });
   }
 

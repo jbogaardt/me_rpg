@@ -26,7 +26,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 26;
+export const PROTOCOL_VERSION = 27;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -152,6 +152,8 @@ export interface SnapMsg {
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
   crops: number[]; // the state of each crop plot of the map (systems/crops.ts `cropCode`)
+  /** Drained ponds of that zone, flat: pond id, then how far drained in thousandths (1..1000). Absent: every pond full. */
+  ponds?: number[];
   w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
   ground?: GroundSnap[];
@@ -177,7 +179,8 @@ export interface DoMsg {
 // beside them and answers with `say.story`. A `train` (item 0) asks the training wizard (`shop` = TRAINER) to send the guest to
 // the trial for their next skill; the host checks the guest is beside the trainer and ready, and moves them there (or says why not). A `loadout` (`item` =
 // `loadoutCode`) chooses which two skills are ready; the host checks they are known and says the result in the next `pack`.
-// A `drink` (item 0, shop '') drinks from the pond beside the guest; the host checks there is one and floats the result.
+// A `drink` (shop '') starts (item 1) or stops (item 0) the guest drinking from the pond beside them; the host checks
+// there is one, lets the water flow in each tick and floats the total when they stop.
 
 /**
  * Host -> guest: the guest's own purse and pack, sent when it changes and now and then in case a packet is lost.
@@ -485,6 +488,38 @@ const isCode = (v: unknown): v is number => isCount(v) && v <= ITEM_COUNT;
 const codes = (v: unknown, length: number): v is number[] => numbers(v, length) && v.every(isCode);
 
 /** Parse and validate a raw channel message. Returns null for anything malformed. */
+/** At most this many drained ponds go in a snapshot (a zone has a handful). */
+export const MAX_PONDS = 16;
+const MAX_POND_ID = 1 << 20; // a cell index of the map
+
+/** `[id, thousandths drained, ...]`: whole numbers, ids in range, levels 1..1000. */
+function isPonds(v: unknown): boolean {
+  return (
+    Array.isArray(v) &&
+    v.length % 2 === 0 &&
+    v.length <= MAX_PONDS * 2 &&
+    v.every(
+      (x: unknown, i) =>
+        Number.isInteger(x) && (x as number) >= (i % 2 ? 1 : 0) && (x as number) <= (i % 2 ? 1000 : MAX_POND_ID),
+    )
+  );
+}
+
+/** Pond levels (systems/needs.ts `PondLevels.levels`) as a snapshot's `ponds`, or undefined when every pond is full. */
+export function pondsWire(levels: readonly (readonly [number, number])[]): number[] | undefined {
+  const out = levels
+    .slice(0, MAX_PONDS)
+    .flatMap(([id, level]) => [id, Math.min(1000, Math.max(1, Math.round(level * 1000)))]);
+  return out.length ? out : undefined;
+}
+
+/** A snapshot's `ponds` back as levels. */
+export function pondsFromWire(wire: readonly number[] | undefined): [number, number][] {
+  const out: [number, number][] = [];
+  for (let i = 0; wire && i + 1 < wire.length; i += 2) out.push([wire[i]!, wire[i + 1]! / 1000]);
+  return out;
+}
+
 export function parseMessage(raw: unknown): Message | null {
   if (typeof raw !== 'string' || raw.length > 64_000) return null;
   let m: Record<string, unknown>;
@@ -577,7 +612,8 @@ export function parseMessage(raw: unknown): Message | null {
         m.chests > MAX_CHEST_MASK ||
         !Array.isArray(m.crops) ||
         m.crops.length > MAX_CROPS ||
-        !m.crops.every((c: unknown) => cropFromCode(c) !== null)
+        !m.crops.every((c: unknown) => cropFromCode(c) !== null) ||
+        (m.ponds !== undefined && !isPonds(m.ponds))
       ) {
         return null;
       }
@@ -591,6 +627,7 @@ export function parseMessage(raw: unknown): Message | null {
         me: m.me as StatsSnap,
         chests: m.chests,
         crops: m.crops as number[],
+        ...(m.ponds === undefined ? {} : { ponds: m.ponds as number[] }),
         w: m.w,
         ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
         events: events as EventWire[],

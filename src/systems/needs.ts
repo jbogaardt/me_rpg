@@ -1,8 +1,9 @@
 // Food and water: two meters (0..NEED_MAX) that drain with time and are refilled by eating and drinking supplies.
 // Pixi-free so the rules are unit-tested. A fed and watered hero mends a little faster, a hungry or thirsty one mends
 // more slowly, one with an empty meter stops mending, and one with both empty loses health (never the last point).
-// Standing at the edge of a pond, a hero can also drink from it (`drinkableNear`, `drinkFrom`); each drink from the
-// same pond gives less than the last, and a pond left alone recovers (`PondLevels`).
+// Standing at the edge of a pond, a hero can also drink from it (`drinkableNear`, `sipWater`): the water flows in steadily
+// and the pond drains as it does, drying up from the shore inwards, until it is dry; left alone it fills up again
+// (`PondLevels`, `pondCells`).
 
 import { CELL, type MapData } from '../map/types';
 
@@ -75,13 +76,18 @@ export function starveRate(n: Needs, maxHp: number): number {
   return n.food <= 0 && n.water <= 0 ? STARVE_SHARE * maxHp : 0;
 }
 
-/** Water points the first drink from a pond gives. */
-export const POND_SIP = 40;
-/** Each drink from the same pond gives this share of the one before (40, 28, 20, 14...), never below `POND_MIN_SIP`. */
-export const POND_FALLOFF = 0.7;
-export const POND_MIN_SIP = 5;
-/** Seconds a pond takes to win back one drink's worth while nobody drinks from it. */
-export const POND_RECOVER = 45;
+/** Water per second while drinking from a pond: an empty meter takes about twelve seconds to fill. */
+export const POND_FLOW = 8;
+/** Water each cell of a pond holds: the Greenwood's small pond (71 cells) has about one thirsty hero's worth. */
+export const WATER_PER_CELL = 1.5;
+/** Seconds of steady rain that fill a dry pond (a storm fills it twice as fast; nothing else does). */
+export const RAIN_FILL_TIME = 120;
+
+/** How much of a pond the weather fills per second: rain and storms only, as hard as they are falling. */
+export function rainFill(precip: string | null, intensity: number): number {
+  if (precip !== 'rain' && precip !== 'storm') return 0;
+  return ((precip === 'storm' ? 2 : 1) * Math.max(0, intensity)) / RAIN_FILL_TIME;
+}
 
 /** How far (px) from a hero's feet to the edge of the water they may drink from: the bank cell beside it. */
 export const DRINK_REACH = CELL * 0.9;
@@ -124,68 +130,142 @@ export function drinkableNear(
 /** Is there anything to drink for? (The Drink button only shows when there is.) */
 export const thirsty = (n: Needs): boolean => Math.ceil(n.water) < NEED_MAX;
 
-/** Take a drink of `amount` water from a pond, refused when the hero is not thirsty. */
-export function drinkFrom(n: Needs, amount = POND_SIP): { ok: boolean; text: string } {
-  if (!refill(n, 0, amount)) return { ok: false, text: 'Not thirsty' };
-  return { ok: true, text: `+${amount} water` };
+/** Drink for `dt` seconds at `flow` water per second (never past full). Returns the water gained. */
+export function sipWater(n: Needs, flow: number, dt: number): number {
+  const before = n.water;
+  n.water = Math.min(NEED_MAX, n.water + Math.max(0, flow * dt));
+  return n.water - before;
 }
 
-/** What a drink gives from a pond already drunk from `drinks` times (fractional while it recovers). */
-export const pondSip = (drinks: number): number =>
-  Math.max(POND_MIN_SIP, Math.round(POND_SIP * POND_FALLOFF ** Math.max(0, drinks)));
-
 type PondMap = Pick<MapData, 'width' | 'height' | 'surfaces' | 'surface'>;
-const pondLabels = new WeakMap<PondMap, Int32Array>();
+interface PondShapes {
+  labels: Int32Array; // each cell: its pond's id, -1 not looked at yet, -2 not water
+  cells: Map<number, number[]>; // each pond's cells, those along the shore first, the middle last
+  layers: Map<number, number[][]>; // each pond's rings of water: the cells along the shore, then the ring inside, ...
+}
+const shapes = new WeakMap<PondMap, PondShapes>();
+
+/** Find the pond that `cell` is in (a flood fill of the water joined side by side) and order its cells shore first. */
+function shapeOf(data: PondMap, cell: number): PondShapes {
+  let s = shapes.get(data);
+  if (!s) {
+    s = { labels: new Int32Array(data.width * data.height).fill(-1), cells: new Map(), layers: new Map() };
+    shapes.set(data, s);
+  }
+  const { labels } = s;
+  if (labels[cell] !== -1 || cell < 0 || cell >= labels.length) return s;
+  const water = data.surface[cell];
+  const around = (i: number) => {
+    const c = i % data.width;
+    return [c > 0 ? i - 1 : -1, c < data.width - 1 ? i + 1 : -1, i - data.width, i + data.width];
+  };
+  const inPond = (j: number) => j >= 0 && j < labels.length && data.surface[j] === water;
+  const cells = [cell];
+  labels[cell] = cell;
+  for (let k = 0; k < cells.length; k++) {
+    for (const j of around(cells[k]!)) {
+      if (!inPond(j) || labels[j] !== -1) continue;
+      labels[j] = cell;
+      cells.push(j);
+    }
+  }
+  // Distance from the shore, by a walk inwards from every cell that touches land.
+  const depth = new Map<number, number>();
+  let ring = cells.filter((i) => around(i).some((j) => !inPond(j)));
+  for (const i of ring) depth.set(i, 0);
+  for (let d = 1; ring.length; d++) {
+    const next: number[] = [];
+    for (const i of ring) {
+      for (const j of around(i)) {
+        if (!inPond(j) || depth.has(j)) continue;
+        depth.set(j, d);
+        next.push(j);
+      }
+    }
+    ring = next;
+  }
+  cells.sort((x, y) => (depth.get(x) ?? 0) - (depth.get(y) ?? 0) || x - y);
+  s.cells.set(cell, cells);
+  const layers: number[][] = [];
+  for (const i of cells) (layers[depth.get(i) ?? 0] ??= []).push(i);
+  s.layers.set(cell, layers);
+  return s;
+}
 
 /**
  * Which pond a water cell belongs to: every cell of one body of water (joined side by side) gets the same id, the index
  * of the first of its cells found. Worked out once per pond and kept with the map.
  */
 export function pondId(data: PondMap, cell: number): number {
-  let labels = pondLabels.get(data);
-  if (!labels) {
-    labels = new Int32Array(data.width * data.height).fill(-1);
-    pondLabels.set(data, labels);
-  }
-  const known = labels[cell];
-  if (known === undefined) return -1;
-  if (known >= 0) return known;
-  const water = data.surface[cell];
-  const stack = [cell];
-  labels[cell] = cell;
-  while (stack.length) {
-    const i = stack.pop()!;
-    const c = i % data.width;
-    const around = [c > 0 ? i - 1 : -1, c < data.width - 1 ? i + 1 : -1, i - data.width, i + data.width];
-    for (const j of around) {
-      if (j < 0 || j >= labels.length || labels[j] !== -1 || data.surface[j] !== water) continue;
-      labels[j] = cell;
-      stack.push(j);
-    }
-  }
-  return cell;
+  return shapeOf(data, cell).labels[cell] ?? -1;
+}
+
+/** A pond's cells (by its id), those along the shore first: the order it dries up in. */
+export function pondCells(data: PondMap, id: number): readonly number[] {
+  return shapeOf(data, id).cells.get(id) ?? [];
+}
+
+/** A pond's layers of water (by its id): the ring along the shore first, then each ring inside it, the middle last. */
+export function pondLayers(data: PondMap, id: number): readonly (readonly number[])[] {
+  return shapeOf(data, id).layers.get(id) ?? [];
 }
 
 /**
- * How much each pond of a zone has been drunk from. A drink counts one; the count falls back by one every `POND_RECOVER`
- * seconds (worked out when asked, from the time of the last drink), so a pond left alone is full again.
+ * How a pond drained `level` (0..1) looks: how many of its layers are gone (from the shore in), and how far the next one
+ * has faded (0..1). Each cell holds the same water, so a wide outer ring takes longer to go than a small middle.
+ */
+export function drainedLayers(layers: readonly (readonly number[])[], level: number): { gone: number; fading: number } {
+  const total = layers.reduce((n, l) => n + l.length, 0);
+  let left = Math.max(0, Math.min(1, level)) * total;
+  for (let k = 0; k < layers.length; k++) {
+    const n = layers[k]!.length;
+    if (left < n) return { gone: k, fading: left / n };
+    left -= n;
+  }
+  return { gone: layers.length, fading: 0 };
+}
+
+/** How much water a pond holds when full. */
+export const pondCapacity = (data: PondMap, id: number): number => pondCells(data, id).length * WATER_PER_CELL;
+
+/**
+ * How far each pond of a zone is drained (0 full .. 1 dry). Drinking drains it and only rain fills it again (`rain`). A
+ * co-op guest is told the levels by the host instead (`setRemote`).
  */
 export class PondLevels {
-  private drunk = new Map<number, { drinks: number; at: number }>();
+  private drained = new Map<number, number>();
 
-  /** Drinks still counting against this pond at time `now` (seconds). */
-  drinks(id: number, now: number): number {
-    const d = this.drunk.get(id);
-    return d ? Math.max(0, d.drinks - (now - d.at) / POND_RECOVER) : 0;
+  /** How far this pond is drained. */
+  level(id: number): number {
+    return this.drained.get(id) ?? 0;
   }
 
-  /** What the next drink from this pond gives. */
-  sip(id: number, now: number): number {
-    return pondSip(this.drinks(id, now));
+  /** Drink up to `amount` water from a pond that holds `capacity`: returns what it had to give. */
+  drink(id: number, amount: number, capacity: number): number {
+    if (capacity <= 0) return 0;
+    const level = this.level(id);
+    const got = Math.max(0, Math.min(amount, (1 - level) * capacity));
+    this.drained.set(id, Math.min(1, level + got / capacity));
+    return got;
   }
 
-  /** Someone drank from this pond. */
-  record(id: number, now: number) {
-    this.drunk.set(id, { drinks: this.drinks(id, now) + 1, at: now });
+  /** Rain falls for `dt` seconds, filling every pond by `fill` (of a whole pond) per second (`rainFill`). */
+  rain(fill: number, dt: number) {
+    if (fill <= 0) return;
+    for (const [id, level] of this.drained) {
+      const left = level - fill * dt;
+      if (left > 0) this.drained.set(id, left);
+      else this.drained.delete(id);
+    }
+  }
+
+  /** Every pond not full, with how far it is drained. */
+  levels(): [id: number, level: number][] {
+    return [...this.drained];
+  }
+
+  /** Set the levels: the host's word to a guest, or a zone's memory when it loads again (any pond not listed is full). */
+  setLevels(levels: readonly (readonly [number, number])[]) {
+    this.drained = new Map(levels.filter(([, level]) => level > 0));
   }
 }
