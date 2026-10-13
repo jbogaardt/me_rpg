@@ -7,6 +7,7 @@ import {
   cropCode,
   cropFromCode,
   cropStage,
+  canHarvest,
   harvest,
   RIPE_CODE,
   waterWith,
@@ -56,6 +57,15 @@ describe('crops', () => {
     expect(got).toMatchObject({ ok: false, text: 'Pack full' });
     expect(hero.pack).toHaveLength(BASE_PACK - 1);
     expect(harvest(hero, 'pumpkin').ok).toBe(true); // a single pumpkin fits
+  });
+
+  it('say whether a whole pick fits the pack', () => {
+    const hero = newHero();
+    expect(canHarvest(hero, 'carrot')).toBe(true);
+    hero.pack = Array.from({ length: BASE_PACK - 1 }, () => ITEMS.potion);
+    expect(canHarvest(hero, 'carrot')).toBe(false);
+    expect(canHarvest(hero, 'pumpkin')).toBe(true);
+    expect(canHarvest(hero, 'nope')).toBe(false);
   });
 
   it('refuse an unknown crop', () => {

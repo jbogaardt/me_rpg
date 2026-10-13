@@ -78,6 +78,12 @@ export interface Harvest {
   items: Item[];
 }
 
+/** Is there room in the pack for a whole pick of this crop? */
+export function canHarvest(hero: Hero, kind: string): boolean {
+  const crop = (CROPS as Record<string, CropKind>)[kind];
+  return !!crop && packFree(hero) >= crop.yield;
+}
+
 /** Pick a ripe plot for the hero: the produce goes to the pack, or, with no room for all of it, nothing is taken. */
 export function harvest(hero: Hero, kind: string): Harvest {
   const crop = (CROPS as Record<string, CropKind>)[kind];

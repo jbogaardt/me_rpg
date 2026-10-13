@@ -28,7 +28,7 @@ import { CELL } from '../map/types';
 import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
-import { harvest, waterWith } from '../systems/crops';
+import { canHarvest, harvest, waterWith } from '../systems/crops';
 import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
@@ -355,6 +355,7 @@ export class OverworldScene implements Scene {
           for (const p of present) sim.updatePlayer(p, commandOf(p), dt);
           for (const mob of z.mobs) mob.update(dt, z.mobWorld);
           for (const crop of z.crops) crop.grow(dt);
+          for (const p of present) this.autoHarvest(p);
           this.ground.age(dt);
           sim.weather(dt);
           for (const p of present) {
@@ -645,6 +646,15 @@ export class OverworldScene implements Scene {
       known?.label ?? '',
     );
     this.overlay.setGuide(guide);
+  }
+
+  /** Walking up to a ripe crop plot picks it (host and solo, for every player): no key needed while the pack has room. */
+  private autoHarvest(p: Player) {
+    if (p.hero.stats.hp <= 0) return;
+    for (const crop of this.arena.crops) {
+      if (!crop.ripe || !canHarvest(p.hero, crop.kind)) continue;
+      if (Math.hypot(p.body.x - crop.x, p.body.y - (crop.y - CELL / 2)) < CROP_REACH) this.pickCrop(p, crop);
+    }
   }
 
   /** A player picks a ripe crop plot: the produce goes to their pack and the plot starts again as a sprout. */
