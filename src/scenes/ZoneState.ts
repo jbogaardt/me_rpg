@@ -94,7 +94,7 @@ export class ZoneState {
     this.camera = new Camera(this.world);
     this.collision = new Collision(data.width, data.height, data.collision);
     this.effects = new Effects(this.world.layer);
-    this.pondBeds = new PondBeds(data);
+    this.pondBeds = new PondBeds(data, this.world);
     this.world.layer.addChild(this.pondBeds);
     this.ambient = data.indoor ? null : new Ambient(this.world.layer, data);
     this.weatherLayer = data.indoor ? null : new WeatherLayer(this.world.layer);

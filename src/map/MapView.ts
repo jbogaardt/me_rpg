@@ -4,6 +4,13 @@ import type { ViewRect } from '../core/camera';
 import { chunkRange, chunksOfObjects, CHUNK } from './chunks';
 import { CELL, sortKey, type MapData } from './types';
 
+/** A built chunk: its ground, and its objects' sprites with their indices in `MapData.objects`. */
+interface Chunk {
+  ground: Container;
+  objects: Sprite[];
+  ids: number[];
+}
+
 /**
  * Renders a MapData as two layers inside one render group (so the camera moving or zooming it is a single GPU
  * transform):
@@ -22,7 +29,9 @@ export class MapView extends Container {
   readonly layer = new Container({ sortableChildren: true });
   private frames = new Map<string, Texture | null>();
   private byChunk: number[][]; // object indices by the chunk their foot stands in
-  private live = new Map<number, { ground: Container; objects: Sprite[] }>(); // built chunks by index
+  private live = new Map<number, Chunk>(); // built chunks by index
+  private sprites = new Map<number, Sprite>(); // the built sprite of each map object on screen, by its index in `objects`
+  private fade = new Map<number, number>(); // map objects drawn faded (0 hidden), by index: e.g. lily pads on a dry pond
   private readonly cols: number; // chunks across
   private readonly rows: number;
   private readonly beyond: number; // the surface index of a neighbour's margin, which another zone's view draws (-1 in a room)
@@ -83,6 +92,7 @@ export class MapView extends Container {
     }
     this.ground.addChild(ground);
     const objects: Sprite[] = [];
+    const ids: number[] = []; // the index in `data.objects` of each sprite
     for (const i of this.byChunk[cy * this.cols + cx] ?? []) {
       const o = data.objects[i]!;
       if (this.isBeyond(Math.floor((o.px + o.w / 2) / CELL), Math.floor((o.py + o.h - 1) / CELL))) continue;
@@ -92,10 +102,29 @@ export class MapView extends Container {
       sprite.position.set(o.px, o.py);
       sprite.zIndex = sortKey(o);
       sprite.cullable = true; // the chunks round the view are built, but only what is on screen is drawn
+      this.applyFade(sprite, this.fade.get(i) ?? 1);
+      this.sprites.set(i, sprite);
       objects.push(sprite);
+      ids.push(i);
     }
     if (objects.length) this.layer.addChild(...objects);
-    this.live.set(cy * this.cols + cx, { ground, objects });
+    this.live.set(cy * this.cols + cx, { ground, objects, ids });
+  }
+
+  /**
+   * Draw a map object faded (1 as made, 0 hidden), e.g. the lily pads of a pond drunk dry. Kept while its chunk is freed
+   * and built again.
+   */
+  setObjectAlpha(index: number, alpha: number) {
+    if (alpha >= 1) this.fade.delete(index);
+    else this.fade.set(index, alpha);
+    const sprite = this.sprites.get(index);
+    if (sprite) this.applyFade(sprite, alpha);
+  }
+
+  private applyFade(sprite: Sprite, alpha: number) {
+    sprite.alpha = alpha;
+    sprite.visible = alpha > 0;
   }
 
   /** Is this cell a neighbouring biome's margin? Only the zone's own cells are drawn here: the neighbour draws the rest. */
@@ -104,9 +133,10 @@ export class MapView extends Container {
     return this.beyond >= 0 && data.surface[row * data.width + col] === this.beyond;
   }
 
-  private free(i: number, chunk: { ground: Container; objects: Sprite[] }) {
+  private free(i: number, chunk: Chunk) {
     // The textures are frames of the shared tilesets: keep them (the frame cache reuses them when the chunk returns).
     chunk.ground.destroy({ children: true });
+    for (const id of chunk.ids) this.sprites.delete(id);
     for (const s of chunk.objects) s.destroy();
     this.live.delete(i);
   }

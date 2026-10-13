@@ -1,7 +1,8 @@
 import { BlurFilter, Graphics } from 'pixi.js';
+import type { MapView } from '../map/MapView';
 import { cellsOutline } from '../map/outline';
 import { CELL, type MapData } from '../map/types';
-import { drainedLayers, pondCells, pondLayers } from '../systems/needs';
+import { drainedLayers, pondCells, pondId, pondLayers } from '../systems/needs';
 
 const SHALLOW = 0x2f88b4; // the ponds' own blue (0x156c99), a shade lighter: water gone shallow
 const SHALLOW_ALPHA = 0.55;
@@ -18,15 +19,27 @@ const STEPS = 4; // redraws per cell's worth of water drained: a layer fades out
  * (`pondLayers`): drinking makes the outer layer slowly fade away, then the layer inside it. A layer gone leaves shallow
  * water (a wash of the same blue, a shade lighter, kept off the bank), so the deep water shrinks ring by ring towards the
  * middle; only when the last layer goes does the pond turn to an earthen bed, fading in with it, shaped like the shore
- * and in the banks' tan at its edge, darker towards the middle.
+ * and in the banks' tan at its edge, darker towards the middle; what floats on it (lily pads) fades out with the last
+ * of the water (`MapView.setObjectAlpha`).
  * Flat on the ground, under every object, with a blurred soft edge. Redrawn (and cached as a texture) only when a level
  * changes enough to show.
  */
 export class PondBeds extends Graphics {
   private drawn = '';
+  private props = new Map<number, number[]>(); // the map objects standing in each pond's water (lily pads), by pond id
+  private faded = new Set<number>(); // ponds whose props are drawn faded now
 
-  constructor(private data: MapData) {
+  constructor(
+    private data: MapData,
+    private view: MapView,
+  ) {
     super();
+    for (const [i, o] of data.objects.entries()) {
+      const cell = Math.floor((o.py + o.h / 2) / CELL) * data.width + Math.floor((o.px + o.w / 2) / CELL);
+      if (data.surfaces[data.surface[cell] ?? -1] !== 'water') continue;
+      const id = pondId(data, cell);
+      this.props.set(id, [...(this.props.get(id) ?? []), i]);
+    }
     this.zIndex = -1e9; // ground level: under every prop and character in the y-sorted layer
     // A soft edge, so the bed melts into the water and the bank; drawn once into a texture each time it changes.
     this.filters = [new BlurFilter({ strength: 3, quality: 2 })];
@@ -41,19 +54,31 @@ export class PondBeds extends Graphics {
     if (sig === this.drawn) return;
     this.drawn = sig;
     this.clear();
-    for (const [id, n] of steps) this.drawPond(pondLayers(this.data, id), n / STEPS / pondCells(this.data, id).length);
+    const faded = new Set<number>();
+    for (const [id, n] of steps) {
+      const empty = this.drawPond(pondLayers(this.data, id), n / STEPS / pondCells(this.data, id).length);
+      // What floats on the water (lily pads) goes with the last of it.
+      for (const i of this.props.get(id) ?? []) this.view.setObjectAlpha(i, 1 - empty);
+      if (empty > 0) faded.add(id);
+    }
+    for (const id of this.faded) {
+      if (!faded.has(id)) for (const i of this.props.get(id) ?? []) this.view.setObjectAlpha(i, 1);
+    }
+    this.faded = faded;
     if (steps.length) this.cacheAsTexture(true);
     else this.cacheAsTexture(false);
     this.updateCacheTexture();
   }
 
-  private drawPond(layers: readonly (readonly number[])[], level: number) {
+  /** Draw one pond drained `level`; returns how far its empty bed has come in (0..1), which the lily pads follow. */
+  private drawPond(layers: readonly (readonly number[])[], level: number): number {
     const { gone, fading } = drainedLayers(layers, level);
     // The layers gone are shallow water and the one going now fades to it; the last layer going takes it to dry mud.
     this.drawLayers(layers.slice(0, gone), SHALLOW, SHALLOW_ALPHA, 0.8);
     this.drawLayers(layers.slice(gone, gone + 1), SHALLOW, SHALLOW_ALPHA * fading, 0.8);
     const empty = gone >= layers.length ? 1 : gone === layers.length - 1 ? fading : 0;
     if (empty > 0) this.drawBed(layers, empty);
+    return empty;
   }
 
   /**
