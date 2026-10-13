@@ -3,6 +3,7 @@ import { Camera } from '../core/camera';
 import { Ambient } from '../entities/ambient';
 import { Character } from '../entities/Character';
 import { Chest } from '../entities/Chest';
+import { Crop } from '../entities/Crop';
 import { Effects } from '../entities/effects';
 import type { GroundItem } from '../entities/GroundItem';
 import { Pet } from '../entities/Pet';
@@ -17,6 +18,7 @@ import { CELL, type MapData } from '../map/types';
 import { cellFeet } from '../map/doors';
 import { MOB_KINDS, type Item } from '../systems/combat';
 import { CHEST_LOOTS } from '../systems/chests';
+import { CROP_KINDS, CROP_STAGES } from '../systems/crops';
 import { Collision } from '../systems/collision';
 import { npcLook, OVERWORLD_NPC } from '../systems/looks';
 import { PET_KINDS } from '../systems/pets';
@@ -27,6 +29,7 @@ import { isTrialZone } from '../systems/skills';
 /** What a zone remembers while it is unloaded (Arena.memory); its mobs simply start afresh. */
 export interface ZoneMemory {
   opened: number[]; // indices of opened chests
+  crops: number[]; // how long each crop plot has been growing (seconds since it was picked)
   ground: { item: Item; x: number; y: number; id: number; age: number }[];
 }
 
@@ -68,6 +71,7 @@ export class ZoneState {
   readonly pets: Pet[];
   readonly mobs: Mob[];
   readonly chests: Chest[];
+  readonly crops: Crop[];
   readonly ground: GroundItem[] = [];
   /** The bodies of the players here, which mobs hunt and which block others. The scene keeps it in step. */
   readonly heroBodies: Character[] = [];
@@ -130,6 +134,8 @@ export class ZoneState {
       if (!CHEST_LOOTS[c.loot]) throw new Error(`Zone "${zone.name}" has a chest with unknown loot "${c.loot}"`);
       return new Chest(c, chestFrames);
     });
+    const cropFrames = sheetGrid(sprites.crops, CROP_STAGES, CROP_KINDS.length, CELL, CELL * 2);
+    this.crops = data.crops.map((c) => new Crop(c, cropFrames));
     const bodies = [
       ...(this.npc ? [this.npc] : []),
       ...this.keepers.map((k) => k.body),
@@ -137,6 +143,7 @@ export class ZoneState {
       ...this.sites,
       ...this.pets,
       ...this.chests,
+      ...this.crops,
       ...this.mobs.map((m) => m.body),
     ];
     if (bodies.length) this.world.layer.addChild(...bodies); // Pixi's addChild() with nothing to add throws
@@ -164,6 +171,7 @@ export class ZoneState {
   remember(): ZoneMemory {
     return {
       opened: this.chests.flatMap((c, i) => (c.opened ? [i] : [])),
+      crops: this.crops.map((c) => c.age),
       ground: this.ground.map((g) => ({ item: g.item, x: g.x, y: g.y, id: g.id, age: g.age })),
     };
   }

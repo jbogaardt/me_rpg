@@ -125,9 +125,11 @@ export type IconKind =
   | 'tool'
   | 'sack'
   | 'backpack'
-  | 'charm';
+  | 'charm'
+  | 'food';
 
 export function iconKind(item: Item): IconKind {
+  if (item.use?.food || item.use?.water) return 'food';
   if (item.ranged) return 'bow';
   if (item.focus) return item.focus.kind;
   switch (item.slot) {

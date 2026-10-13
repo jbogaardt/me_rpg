@@ -248,6 +248,15 @@ export const ITEMS = {
   roastMeat: { name: 'Roast Meat', value: 12, use: { hp: 5, food: 55 } },
   apple: { name: 'Apple', value: 4, use: { hp: 0, food: 12, water: 12 } },
   waterskin: { name: 'Waterskin', value: 5, use: { hp: 0, water: 55 } },
+
+  // Produce picked from crop plots (systems/crops.ts): raw, so each fills less than cooked food but it is free.
+  potato: { name: 'Potato', value: 3, use: { hp: 0, food: 22 } },
+  carrot: { name: 'Carrot', value: 3, use: { hp: 0, food: 14, water: 6 } },
+  cabbage: { name: 'Cabbage', value: 4, use: { hp: 0, food: 20, water: 10 } },
+  tomato: { name: 'Tomato', value: 3, use: { hp: 0, food: 10, water: 16 } },
+  strawberry: { name: 'Strawberry', value: 3, use: { hp: 0, food: 7, water: 12 } },
+  pumpkin: { name: 'Pumpkin', value: 8, use: { hp: 0, food: 40, water: 5 } },
+  watermelon: { name: 'Watermelon', value: 8, use: { hp: 0, food: 14, water: 40 } },
 } satisfies Record<string, Item>;
 
 export type ItemId = keyof typeof ITEMS;

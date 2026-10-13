@@ -9,6 +9,7 @@ import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import type { Character } from '../entities/Character';
 import type { Chest } from '../entities/Chest';
+import type { Crop } from '../entities/Crop';
 import type { Mob } from '../entities/Mob';
 import type { Command, Player } from '../entities/Player';
 import { NO_COMMAND } from '../entities/Player';
@@ -27,6 +28,7 @@ import { CELL } from '../map/types';
 import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
+import { harvest } from '../systems/crops';
 import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
@@ -41,7 +43,7 @@ import type { Precip } from '../systems/weather';
 import { DayClock } from '../systems/daynight';
 import { NightLayer } from '../entities/NightLayer';
 import { Arena } from './overworld/Arena';
-import { CHEST_REACH, KEEPER_REACH, PICKUP_REACH, SIGN_REACH, SITE_REACH } from './overworld/constants';
+import { CHEST_REACH, CROP_REACH, KEEPER_REACH, PICKUP_REACH, SIGN_REACH, SITE_REACH } from './overworld/constants';
 import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
 import { HostLink } from './overworld/HostLink';
@@ -333,6 +335,7 @@ export class OverworldScene implements Scene {
           const present = arena.players();
           for (const p of present) sim.updatePlayer(p, commandOf(p), dt);
           for (const mob of z.mobs) mob.update(dt, z.mobWorld);
+          for (const crop of z.crops) crop.grow(dt);
           this.ground.age(dt);
           sim.weather(dt);
           for (const p of present) {
@@ -369,6 +372,7 @@ export class OverworldScene implements Scene {
   private updateClient(dt: number) {
     const { menu, shop, dialog, trade } = this.ui;
     this.guest.update(dt);
+    for (const crop of this.arena.crops) crop.grow(dt, false); // only the host says when a plot is ripe
     const busy = this.zones.transition.busy;
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
     const cmd = this.readCommand(dt, reading);
@@ -504,6 +508,10 @@ export class OverworldScene implements Scene {
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
     if (chest) return this.openChest(p, chest);
+    const crop = this.arena.crops.find(
+      (c) => c.ripe && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH,
+    );
+    if (crop) return this.pickCrop(p, crop);
     const site = this.arena.sites.find(
       (s) =>
         Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH &&
@@ -577,6 +585,20 @@ export class OverworldScene implements Scene {
       known?.label ?? '',
     );
     this.overlay.setGuide(guide);
+  }
+
+  /** A player picks a ripe crop plot: the produce goes to their pack and the plot starts again as a sprout. */
+  private pickCrop(p: Player, crop: Crop) {
+    const { sim } = this;
+    const got = harvest(p.hero, crop.kind);
+    const [x, y] = [crop.x, crop.y - CELL];
+    if (!got.ok) {
+      sim.text(x, y - 14, got.text, 0xff8a7a);
+      return;
+    }
+    crop.pick();
+    sim.fx('levelUp', x, y + 6);
+    sim.text(x, y - 14, got.text, 0xa8e868);
   }
 
   private openChest(p: Player, chest: Chest) {

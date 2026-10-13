@@ -15,6 +15,7 @@
 import { AIM_STEPS } from '../core/aim';
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
+import { MAX_CROPS } from '../systems/crops';
 import { NEED_MAX } from '../systems/needs';
 import { questFromWire } from '../systems/quests';
 import { loadoutFromCode, MAX_HERO_COMBOS, MAX_SKILL_MASK } from '../systems/skills';
@@ -25,7 +26,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 20;
+export const PROTOCOL_VERSION = 21;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -149,6 +150,7 @@ export interface SnapMsg {
   mobs: MobSnap[]; // only the mobs near the recipient, and a still one only now and then
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
+  crops: number; // bit i set: crop plot i of the map is ripe
   w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
   ground?: GroundSnap[];
@@ -251,6 +253,7 @@ export const round1 = (n: number) => Math.round(n * 10) / 10;
 /** A map may hold up to 30 chests (one bit each in SnapMsg.chests). */
 export const MAX_CHESTS = 30;
 const MAX_CHEST_MASK = 2 ** MAX_CHESTS - 1;
+const MAX_CROP_MASK = 2 ** MAX_CROPS - 1;
 const MAX_MOBS = 256;
 const MAX_EVENTS = 64;
 const MAX_TEXT = 32;
@@ -570,7 +573,9 @@ export function parseMessage(raw: unknown): Message | null {
         !numbers(m.me, 9) ||
         !isWeather(m.w) ||
         !isCount(m.chests) ||
-        m.chests > MAX_CHEST_MASK
+        m.chests > MAX_CHEST_MASK ||
+        !isCount(m.crops) ||
+        m.crops > MAX_CROP_MASK
       ) {
         return null;
       }
@@ -583,6 +588,7 @@ export function parseMessage(raw: unknown): Message | null {
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
         chests: m.chests,
+        crops: m.crops,
         w: m.w,
         ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
         events: events as EventWire[],

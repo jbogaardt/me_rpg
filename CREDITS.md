@@ -34,6 +34,15 @@ bushes are cut out and repacked by `tools/map/trees.ts`; the frost and swamp she
 (public domain; credit is not required but is given). The inn and the tall house are cut out of the pack's tile map,
 scaled 2x, recoloured and given doors and emblems by `tools/map/town.ts`.
 
+## Crops (`public/tilesets/crops.png`, source in `art/lpc_crops/`)
+
+"[LPC] Crops" (https://opengameart.org/content/lpc-crops) by bluecarrot16, Daniel Eddeland (daneeklu), Joshua Taylor and
+Richard Kettering (Jetrel), commissioned by castelonia; CC-BY-SA 3.0+ or GPL 3.0+. Based on "[LPC] Farming tilesets,
+magic animations and UI elements" (DE) and "Fruit and Veggie Inventory" (JT), both CC-BY-SA 3.0 / GPL 3.0, and the
+"RPG item set" (RK), CC0: https://opengameart.org/content/rpg-item-set. The full list of items and licences is in
+[`art/lpc_crops/CREDITS-crops.txt`](art/lpc_crops/CREDITS-crops.txt), kept with the art. Seven crops are cut out and
+repacked by `tools/map/crops.ts`.
+
 ## Characters (`public/sprites/lpc/`, catalog in `sprites/parts.ts`)
 
 Hero, NPC and monster art comes from the [Universal LPC Spritesheet Character Generator](https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator)

@@ -58,6 +58,17 @@ export default defineBiome({
     z.prop('barrel', ...near(14.9, 14.7));
     z.keepClear(area(13.2, 14.4, 2.2, 1.5));
 
+    // --- A farm by the crossroads: tilled ground with a plot of every crop to pick and eat (systems/crops.ts) ----
+    const FARM = { col: 139, row: 160, w: 11, h: 7 };
+    z.paint('dirt', [FARM]);
+    z.keepClear({ col: FARM.col - 1, row: FARM.row - 1, w: FARM.w + 2, h: FARM.h + 2 });
+    (
+      [
+        ['potato', 'carrot', 'cabbage', 'tomato'],
+        ['strawberry', 'pumpkin', 'watermelon', 'carrot'],
+      ] as const
+    ).forEach((kinds, r) => kinds.forEach((kind, c) => z.crop(kind, FARM.col + 1 + c * 3, FARM.row + 2 + r * 3)));
+
     // --- An overlook in the west: raised ground with stairs, and chests on top ---------------------------------
     z.plateau({ col: 30, row: 152, w: 9, h: 5 }, { stairs: [34] });
     z.prop('rockSmall', 31, 155);

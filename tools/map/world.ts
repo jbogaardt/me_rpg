@@ -681,6 +681,10 @@ class BiomeWindow implements BiomeApi {
     this.z.chest(kind, loot, col, row);
     this.takePoint(col, row);
   }
+  crop(kind: string, col: number, row: number) {
+    this.z.crop(kind, col, row);
+    this.takePoint(col, row);
+  }
   shop(shop: string, col: number, row: number) {
     this.z.shop(shop, col, row);
     this.takePoint(col, row);
@@ -960,6 +964,7 @@ function cut(
     npc: e.npc && local(e.npc),
     mobs: e.mobs.map(local),
     chests: e.chests.map(local),
+    crops: e.crops.map(local),
     shops: e.shops.map(local),
     pets: e.pets.map(local),
     givers: e.givers.map(local),
@@ -976,6 +981,7 @@ function cut(
     ...(e.npc ? [['npc', e.npc] as [string, { col: number; row: number }]] : []),
     ...e.mobs.map((m): [string, typeof m] => [`mob ${m.kind}`, m]),
     ...e.chests.map((c): [string, typeof c] => [`chest ${c.loot}`, c]),
+    ...e.crops.map((c): [string, typeof c] => [`crop ${c.kind}`, c]),
     ...e.shops.map((s): [string, typeof s] => [`shop ${s.shop}`, s]),
     ...e.pets.map((p): [string, typeof p] => [`pet ${p.kind}`, p]),
     ...e.givers.map((g): [string, typeof g] => [`quest giver ${g.giver}`, g]),

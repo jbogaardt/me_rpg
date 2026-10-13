@@ -1,5 +1,6 @@
 import { isTrialZone } from '../../src/systems/skills';
 import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
+import { CROPS, MAX_CROPS } from '../../src/systems/crops';
 import { MOB_KINDS } from '../../src/systems/combat';
 import { PET_KINDS } from '../../src/systems/pets';
 import { GIVERS, SITE_KINDS } from '../../src/systems/quests';
@@ -140,6 +141,11 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     return [`chest ${c.loot}`, c];
   });
   if (d.chests.length > 30) errors.push('a map holds at most 30 chests');
+  for (const c of d.crops) {
+    if (!(c.kind in CROPS)) errors.push(`crop at (${c.col},${c.row}) has unknown kind "${c.kind}" (CROPS)`);
+    chestPoints.push([`crop ${c.kind}`, c]); // solid like a chest: picked from a reachable cell beside it
+  }
+  if (d.crops.length > MAX_CROPS) errors.push(`a map holds at most ${MAX_CROPS} crop plots`);
   // A signpost names at least two ways (a fork), each a zone or a place on this map, and is read from beside it.
   const placeNames = new Set(d.places.map((p) => p.name));
   for (const sg of d.signs) {

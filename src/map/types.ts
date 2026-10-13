@@ -45,6 +45,11 @@ export interface ChestSpawn extends CellPoint {
   loot: string;
 }
 
+/** A crop plot (solid; `kind` is a key of CROPS, src/systems/crops.ts): grows, ripens, and is picked with the action key. */
+export interface CropSpawn extends CellPoint {
+  kind: string;
+}
+
 /** A pet (a key of PET_KINDS, src/systems/pets.ts) lying about at `col,row`. */
 export interface PetSpawn extends CellPoint {
   kind: string;
@@ -107,6 +112,7 @@ export interface MapData {
   npc: CellPoint | null;
   mobs: MobSpawn[];
   chests: ChestSpawn[]; // solid; opened with the action key
+  crops: CropSpawn[]; // solid plots; picked with the action key when ripe
   shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
   pets: PetSpawn[]; // dogs and cats to talk to: the action key makes them answer
   givers: GiverSpawn[]; // quest givers: the action key talks to them
@@ -179,6 +185,7 @@ function unpacked(json: unknown): MapData {
     npc: d.npc ?? null,
     mobs: d.mobs ?? [],
     chests: d.chests ?? [],
+    crops: d.crops ?? [],
     shops: d.shops ?? [],
     pets: d.pets ?? [],
     givers: d.givers ?? [],

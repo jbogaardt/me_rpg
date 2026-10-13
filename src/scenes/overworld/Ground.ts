@@ -128,7 +128,7 @@ export class Ground {
     }
     // A zone that is not loaded now gets its items back when it is (Zones.add reads the memory).
     for (const [name, items] of this.soloGround) {
-      const memory = this.arena.memory.get(name) ?? { opened: [], ground: [] };
+      const memory = this.arena.memory.get(name) ?? { opened: [], crops: [], ground: [] };
       memory.ground = items.map((g) => ({ ...g, id: ++this.nextId }));
       this.arena.memory.set(name, memory);
     }

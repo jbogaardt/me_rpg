@@ -20,6 +20,7 @@ export const KEEPER_REACH = CELL * 2.3; // how close the action key must be to t
 export const SIGN_REACH = CELL * 1.5; // how close (to its foot) the action key reads a signpost: like an NPC, facing does not matter
 export const PICKUP_REACH = 26; // how close the action key must be to an item on the ground
 export const SITE_REACH = CELL * 1.3; // how close the action key must be to a quest site
+export const CROP_REACH = CELL * 1.5; // how close the action key must be to a crop plot (feet to the plot's cell centre)
 export const CHEST_REACH = CELL * 1.4; // how close the action key must be to a chest (feet to the chest's cell centre)
 
 export const DEFEAT_LINES = ['You were struck down...', 'Time folds back, and you wake where you began.'];

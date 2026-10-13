@@ -3,6 +3,7 @@ import {
   FLAT_Z,
   type CellPoint,
   type ChestSpawn,
+  type CropSpawn,
   type DoorSpawn,
   type ShopSpawn,
   type GroundCell,
@@ -68,6 +69,7 @@ export interface ZoneApi {
   npc(col: number, row: number): unknown;
   mob(kind: string, col: number, row: number): unknown;
   chest(kind: string, loot: string, col: number, row: number): unknown;
+  crop(kind: string, col: number, row: number): unknown;
   shop(shop: string, col: number, row: number): unknown;
   pet(kind: string, col: number, row: number): unknown;
   giver(giver: string, col: number, row: number): unknown;
@@ -191,6 +193,10 @@ export class WorldWindow implements ZoneApi {
     this.z.chest(kind, loot, col - this.o.col, row - this.o.row);
     return this;
   }
+  crop(kind: string, col: number, row: number) {
+    this.z.crop(kind, col - this.o.col, row - this.o.row);
+    return this;
+  }
   shop(shop: string, col: number, row: number) {
     this.z.shop(shop, col - this.o.col, row - this.o.row);
     return this;
@@ -311,6 +317,7 @@ export class Zone {
   private npcAt: CellPoint | null = null;
   private mobList: MobSpawn[] = [];
   private chestList: ChestSpawn[] = [];
+  private cropList: CropSpawn[] = [];
   private shopList: ShopSpawn[] = [];
   private petList: PetSpawn[] = [];
   private giverList: GiverSpawn[] = [];
@@ -743,6 +750,14 @@ export class Zone {
     return this;
   }
 
+  /** A crop plot (solid, so its cell is blocked; picked from beside it). `kind` is a key of CROPS (src/systems/crops.ts). */
+  crop(kind: string, col: number, row: number) {
+    this.cropList.push({ kind, col, row });
+    this.forced.set(row * this.width + col, true);
+    this.reasons.set(row * this.width + col, 'crop');
+    return this;
+  }
+
   /** A treasure chest (solid, so its cell is blocked). `kind` is a CHEST_KINDS name, `loot` a key of CHEST_LOOTS (src/systems/chests.ts). */
   chest(kind: string, loot: string, col: number, row: number) {
     this.chestList.push({ kind, loot, col, row });
@@ -819,6 +834,7 @@ export class Zone {
       npc: this.npcAt,
       mobs: this.mobList,
       chests: this.chestList,
+      crops: this.cropList,
       shops: this.shopList,
       pets: this.petList,
       givers: this.giverList,
@@ -1004,6 +1020,7 @@ export class Zone {
       npc: this.npcAt,
       mobs: this.mobList,
       chests: this.chestList,
+      crops: this.cropList,
       shops: this.shopList,
       pets: this.petList,
       givers: this.giverList,

@@ -107,6 +107,10 @@ export class Arena {
   get chests() {
     return this.zone.chests;
   }
+
+  get crops() {
+    return this.zone.crops;
+  }
   get ground() {
     return this.zone.ground;
   }

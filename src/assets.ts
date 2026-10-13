@@ -38,6 +38,8 @@ export interface Sprites {
   wardrobe: Wardrobe;
   /** Treasure chest art (public/tilesets/chests.png): 2 columns (open, closed) by one row per chest kind. */
   chests: Texture;
+  /** Crop plot art (public/tilesets/crops.png): a column per growth stage by one 32x64 row per crop (systems/crops.ts). */
+  crops: Texture;
   /** The dog and cat sheets (public/sprites/pets/), see systems/pets.ts. */
   pets: Record<PetSheet, Texture>;
 }
@@ -66,12 +68,18 @@ export async function loadSprites(onProgress?: Progress): Promise<Sprites> {
   const wardrobe = new Wardrobe(manifest, (file) => publicUrl(LPC_DIR + file));
   await wardrobe.load(requiredParts(), onProgress);
   Assets.add({ alias: 'sprites:chests', src: tilesetUrl('chests.png') });
+  Assets.add({ alias: 'sprites:crops', src: tilesetUrl('crops.png') });
   const pets = {} as Record<PetSheet, Texture>;
   for (const sheet of ['dogs', 'cats', 'rat'] as const) {
     Assets.add({ alias: `sprites:pets:${sheet}`, src: publicUrl(`sprites/pets/${sheet}.png`) });
     pets[sheet] = await Assets.load<Texture>(`sprites:pets:${sheet}`);
   }
-  return { wardrobe, chests: await Assets.load<Texture>('sprites:chests'), pets };
+  return {
+    wardrobe,
+    chests: await Assets.load<Texture>('sprites:chests'),
+    crops: await Assets.load<Texture>('sprites:crops'),
+    pets,
+  };
 }
 
 export interface Zone {
