@@ -53,6 +53,16 @@ export function chase(from: number, to: number, rate: number, dt: number): numbe
 export const FOLLOW_RATE = 9;
 
 /**
+ * One whole-pixel step of the follow ease. Rounding alone stalls the camera a few px short of the goal (the step rounds
+ * to 0), and the next snap (a resize, a layout pass) then shows as a jump; so it always moves at least 1px and lands exactly.
+ */
+function ease(from: number, goal: number, dt: number): number {
+  const next = Math.round(chase(from, goal, FOLLOW_RATE, dt));
+  if (next !== from || from === goal) return next;
+  return from + Math.sign(goal - from);
+}
+
+/**
  * Zooms and scrolls a world container to follow a point. The player is in the middle of the screen (a little behind
  * while walking, the camera eases after them) and the view never leaves `bounds` (the map). One rule, everywhere.
  */
@@ -66,9 +76,10 @@ export class Camera {
   constructor(private world: Container) {}
 
   resize(screenW: number, screenH: number) {
-    this.zoom = pickZoom(screenW, screenH);
+    const zoom = pickZoom(screenW, screenH);
+    if (zoom !== this.zoom) this.settled = false; // the next follow() puts the view where it belongs at once
+    this.zoom = zoom;
     this.world.scale.set(this.zoom);
-    this.settled = false; // the next follow() puts the view where it belongs at once
   }
 
   /** Where the world sits (screen px) before any `punch`. */
@@ -101,8 +112,8 @@ export class Camera {
       this.baseY = goalY;
       this.settled = true;
     } else {
-      this.baseX = Math.round(chase(this.baseX, goalX, FOLLOW_RATE, dt));
-      this.baseY = Math.round(chase(this.baseY, goalY, FOLLOW_RATE, dt));
+      this.baseX = ease(this.baseX, goalX, dt);
+      this.baseY = ease(this.baseY, goalY, dt);
     }
     this.world.scale.set(this.zoom);
     this.world.position.set(this.baseX, this.baseY);

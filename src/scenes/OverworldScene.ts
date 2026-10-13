@@ -235,10 +235,13 @@ export class OverworldScene implements Scene {
 
   resize(width: number, height: number) {
     const { arena } = this;
+    // A layout pass with the same window (the touch controls appearing, say) must not re-centre the camera: that
+    // would jump it by however far it was still trailing the hero.
+    const sameSize = arena.screen.width === width && arena.screen.height === height;
     arena.screen = { width, height };
     arena.camera.resize(width, height);
     this.ui.dialog.layout(arena.screen, this.ui.touch.rects());
-    arena.zone.follow(width, height, this.player.x, this.player.y, 0, true);
+    if (!sameSize) arena.zone.follow(width, height, this.player.x, this.player.y, 0, true);
   }
 
   update(dt: number) {
