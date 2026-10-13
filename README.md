@@ -66,3 +66,5 @@ the generated JSON together; the deploy fails if they disagree.
 ## Deploy
 
 Pushing to `main` runs `.github/workflows/deploy.yml`. One-time setup: repo **Settings → Pages → Source: GitHub Actions**.
+
+The deployed site is public, so never commit secrets or private assets.
