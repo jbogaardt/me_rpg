@@ -26,7 +26,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 21;
+export const PROTOCOL_VERSION = 22;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -151,6 +151,7 @@ export interface SnapMsg {
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
   crops: number; // bit i set: crop plot i of the map is ripe
+  dry: number; // bit i set: crop plot i is waiting for water
   w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
   ground?: GroundSnap[];
@@ -575,7 +576,9 @@ export function parseMessage(raw: unknown): Message | null {
         !isCount(m.chests) ||
         m.chests > MAX_CHEST_MASK ||
         !isCount(m.crops) ||
-        m.crops > MAX_CROP_MASK
+        m.crops > MAX_CROP_MASK ||
+        !isCount(m.dry) ||
+        m.dry > MAX_CROP_MASK
       ) {
         return null;
       }
@@ -589,6 +592,7 @@ export function parseMessage(raw: unknown): Message | null {
         me: m.me as StatsSnap,
         chests: m.chests,
         crops: m.crops,
+        dry: m.dry,
         w: m.w,
         ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
         events: events as EventWire[],

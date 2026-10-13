@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newHero, type Item } from './combat';
-import { CROP_KINDS, CROP_STAGES, CROPS, cropStage, harvest } from './crops';
+import { CROP_KINDS, CROP_STAGES, CROPS, cropStage, harvest, waterWith } from './crops';
 import { BASE_PACK } from './inventory';
 import { ITEMS } from './items';
 
@@ -41,5 +41,13 @@ describe('crops', () => {
 
   it('refuse an unknown crop', () => {
     expect(harvest(newHero(), 'nope').ok).toBe(false);
+  });
+
+  it('are watered with a waterskin, which is used up', () => {
+    const hero = newHero();
+    expect(waterWith(hero)).toEqual({ ok: false, text: 'Need a Waterskin' });
+    hero.pack.push(ITEMS.waterskin, ITEMS.waterskin);
+    expect(waterWith(hero).ok).toBe(true);
+    expect(hero.pack).toEqual([ITEMS.waterskin]);
   });
 });

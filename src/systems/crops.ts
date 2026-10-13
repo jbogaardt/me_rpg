@@ -1,10 +1,11 @@
 // Crops: plots in the world that grow a vegetable or fruit, ripen over a few minutes, and are picked with the action
 // key. Pure rules; the Pixi side is entities/Crop.ts. Add a crop by naming it here (the art is one row of
 // public/tilesets/crops.png, cut by tools/map/crops.ts) and giving its produce an item in systems/items.ts.
-// The produce is eaten from the Inventory for food and water (see needs.ts).
+// The produce is eaten from the Inventory for food and water (see needs.ts). A plot only grows while it is watered:
+// a freshly picked one is dry and shows "Needs water" until a player waters it with a Waterskin from their pack.
 
 import type { Hero, Item } from './combat';
-import { packFree } from './inventory';
+import { packFree, takeFromPack } from './inventory';
 import { ITEMS, type ItemId } from './items';
 
 export interface CropKind {
@@ -59,4 +60,17 @@ export function harvest(hero: Hero, kind: string): Harvest {
   const items = Array.from({ length: crop.yield }, () => item);
   hero.pack.push(...items);
   return { ok: true, text: `${item.name} x${crop.yield}`, items };
+}
+
+export interface Watering {
+  ok: boolean;
+  text: string;
+}
+
+/** Water a dry plot for the hero: one Waterskin from the pack is used up (the same Waterskin that quenches thirst). */
+export function waterWith(hero: Hero): Watering {
+  const skin = hero.pack.find((i) => i === ITEMS.waterskin);
+  if (!skin) return { ok: false, text: 'Need a Waterskin' };
+  takeFromPack(hero, skin);
+  return { ok: true, text: 'Watered' };
 }

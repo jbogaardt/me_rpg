@@ -72,11 +72,7 @@ export class Zones {
     const memory = this.arena.memory.get(zone.name);
     if (memory) {
       for (const i of memory.opened) z.chests[i]?.setOpen(true);
-      memory.crops.forEach((age, i) => {
-        const crop = z.crops[i];
-        if (crop) crop.age = age;
-        crop?.grow(0);
-      });
+      memory.crops.forEach(({ age, watered }, i) => z.crops[i]?.restore(age, watered));
       for (const { item, x, y, id, age } of memory.ground) {
         const g = new GroundItem(item, x, y, id, age);
         z.ground.push(g);

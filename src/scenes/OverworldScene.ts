@@ -28,7 +28,7 @@ import { CELL } from '../map/types';
 import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
-import { harvest } from '../systems/crops';
+import { harvest, waterWith } from '../systems/crops';
 import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
@@ -531,6 +531,10 @@ export class OverworldScene implements Scene {
       (c) => c.ripe && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH,
     );
     if (crop) return this.pickCrop(p, crop);
+    const dry = this.arena.crops.find(
+      (c) => c.thirsty && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH,
+    );
+    if (dry) return this.waterCrop(p, dry);
     const site = this.arena.sites.find(
       (s) =>
         Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH &&
@@ -655,6 +659,20 @@ export class OverworldScene implements Scene {
     crop.pick();
     sim.fx('levelUp', x, y + 6);
     sim.text(x, y - 14, got.text, 0xa8e868);
+  }
+
+  /** A player waters a dry plot with a Waterskin from their pack. */
+  private waterCrop(p: Player, crop: Crop) {
+    const { sim } = this;
+    const [x, y] = [crop.x, crop.y - CELL];
+    const result = waterWith(p.hero);
+    if (!result.ok) {
+      sim.text(x, y - 14, result.text, 0xff8a7a);
+      return;
+    }
+    crop.water();
+    sim.fx('levelUp', x, y + 6);
+    sim.text(x, y - 14, result.text, 0x8fc8ff);
   }
 
   private openChest(p: Player, chest: Chest) {

@@ -39,6 +39,7 @@ const snap: SnapMsg = {
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10],
   chests: 5,
   crops: 3,
+  dry: 4,
   w: [0, 0, 0, 1],
   ground: [[3, 40.5, 50, 2, 150]],
   events: (
