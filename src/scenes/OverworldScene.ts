@@ -34,7 +34,21 @@ import { lecternIn, lecternPages } from '../systems/lectern';
 import { signLines, signNear } from '../systems/signs';
 import { heroCombos, TRAINER, trainerTalk, type Skill } from '../systems/skills';
 import { petSound } from '../systems/pets';
-import { QUEST_GIVER, GIVERS, giverMark, mobKey, progressOf, recordSite, siteNote, siteOpen } from '../systems/quests';
+import {
+  CHAPTERS,
+  GIVERS,
+  QUEST_GIVER,
+  QUESTS,
+  currentQuest,
+  giverMark,
+  mobKey,
+  progressOf,
+  questStatus,
+  recordSite,
+  siteNote,
+  siteOpen,
+  startsChapter,
+} from '../systems/quests';
 import { SHOPS } from '../systems/shops';
 import type { ComboKey } from '../systems/spells';
 import type { Precip } from '../systems/weather';
@@ -109,6 +123,10 @@ export class OverworldScene implements Scene {
   private overlay: MapOverlay;
   private banner = new AreaBanner();
   private announced = ''; // the zone the banner last named
+  /** What the story last looked like for the local hero, to notice when it moves: a task done in the field, a chapter begun, the end. */
+  private story = { stage: -1, ready: false, chapter: -1 };
+  private fieldNote: string[] | null = null; // narration waiting for the dialog to be free
+  private titleCard: { title: string; sub: string } | null = null; // a chapter banner waiting its turn
   private visited = new Set<string>(); // zones the local player has been in (the banner says "new area" the first time)
   private arrow = new GuideArrow(); // the quest arrow, over the world and under the door transition
   private marked = new WeakMap<Character, string>(); // the tag last put over each quest giver
@@ -273,6 +291,7 @@ export class OverworldScene implements Scene {
     z.npc?.animate(dt * 1000, false);
     this.updateQuests(z, dt);
     this.announceArea();
+    this.tellStory();
     this.pointTheWay(z, dt);
     for (const k of z.keepers) k.body.animate(dt * 1000, false);
     for (const pet of z.pets) {
@@ -549,6 +568,43 @@ export class OverworldScene implements Scene {
     const fresh = !this.visited.has(name);
     this.visited.add(name);
     this.banner.show(zoneName(name), fresh && !this.arena.zone.data.indoor ? 'New area discovered' : '');
+  }
+
+  /**
+   * Tell the story at the right moments (from the local hero's quest log, so it is the same for solo, host and guest): the
+   * narration when a task is finished out in the world, a title card when a chapter begins, and the end of part one. Each
+   * waits until no dialog or menu is open, so it never talks over a conversation.
+   */
+  private tellStory() {
+    const { dialog, menu } = this.ui;
+    const log = this.hero.quests;
+    const q = currentQuest(log);
+    const ready = questStatus(this.hero) === 'ready';
+    const s = this.story;
+    if (s.stage === -1) {
+      // The first look (or a guest's first word from the host): remember where things stand, announce nothing.
+      this.story = { stage: log.stage, ready, chapter: q && log.taken ? q.chapter : -1 };
+      return;
+    }
+    if (q && s.stage === log.stage && !s.ready && ready) this.fieldNote = q.fieldNote;
+    if (q && log.taken && startsChapter(q) && s.chapter !== q.chapter) {
+      s.chapter = q.chapter;
+      this.titleCard = { title: CHAPTERS[q.chapter]?.title ?? '', sub: `Chapter ${q.chapter + 1}` };
+    }
+    if (s.stage < QUESTS.length && log.stage === QUESTS.length) {
+      this.titleCard = { title: 'To be continued...', sub: 'End of part one' };
+    }
+    s.stage = log.stage;
+    s.ready = ready;
+
+    if (dialog.active || menu.open || this.zones.transition.busy) return;
+    if (this.fieldNote) {
+      dialog.say(this.fieldNote);
+      this.fieldNote = null;
+    } else if (this.titleCard) {
+      this.banner.show(this.titleCard.title, this.titleCard.sub);
+      this.titleCard = null;
+    }
   }
 
   /** The quest arrow: points from the hero at where the quest leads (a thing in this zone, or the door towards it). */

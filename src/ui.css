@@ -462,3 +462,8 @@
 }
 #map-overlay .guide.place-star { font-size: 22px; animation: search-pulse 1.8s ease-in-out infinite; }
 @keyframes search-pulse { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.45; } }
+
+/* Chapter heading and the journal on the Quests tab */
+.quest-chapter-title { margin: 0 0 4px; font: 600 15px var(--body); color: var(--ink-soft); letter-spacing: 0.04em; }
+.quest-chapter-title b { color: var(--ink); font-family: var(--title); }
+.quest-chapter { margin: 8px 0 2px; font: 700 14px var(--title); color: var(--ink); }

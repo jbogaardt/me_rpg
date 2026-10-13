@@ -4,6 +4,11 @@ import { npcLook, NPC_LOOKS } from './looks';
 import { ITEMS } from './items';
 import { BASE_PACK } from './inventory';
 import {
+  CHAPTERS,
+  currentChapter,
+  journal,
+  offerLines,
+  startsChapter,
   EPILOGUE,
   GIVERS,
   QUESTS,
@@ -104,7 +109,7 @@ describe('talking to the giver', () => {
     expect(giverMark(hero)).toBe('!');
     const first = talk(hero);
     expect(first.key).toBe('road.offer');
-    expect(first.lines).toEqual(QUESTS[0]!.offer);
+    expect(first.lines).toEqual([...CHAPTERS[0]!.intro, ...QUESTS[0]!.offer]); // the first quest opens the chapter
     expect(questStatus(hero)).toBe('active');
     expect(giverMark(hero)).toBe('');
     expect(talk(hero).key).toBe('road.remind');
@@ -247,7 +252,7 @@ describe('rewards', () => {
 describe('story keys', () => {
   it('turn back into the same lines on the other side of the wire', () => {
     for (const q of QUESTS) {
-      expect(linesFor(`${q.id}.offer`)).toEqual(q.offer);
+      expect(linesFor(`${q.id}.offer`)).toEqual(offerLines(q));
       expect(linesFor(`${q.id}.remind`)).toEqual(q.remind);
       expect(linesFor(`${q.id}.reward`)?.length).toBe(q.done.length + 1);
       expect(linesFor(`${q.id}.full`)?.length).toBe(1);
@@ -295,5 +300,46 @@ describe('gear buffs', () => {
     const hero = newHero();
     expect(xpFor(hero, 12)).toBe(12);
     expect(goldFor(hero, 7)).toBe(7);
+  });
+});
+
+describe('the story', () => {
+  it('is told in chapters: in order, each opened by its first quest, none empty', () => {
+    expect(CHAPTERS.length).toBeGreaterThanOrEqual(3);
+    let last = 0;
+    for (const q of QUESTS) {
+      expect(q.chapter, q.id).toBeGreaterThanOrEqual(last); // the story never goes back
+      expect(q.chapter - last, q.id).toBeLessThanOrEqual(1); // and never skips a chapter
+      last = q.chapter;
+      expect(q.learned, q.id).toBeTruthy();
+      expect(q.fieldNote.length, q.id).toBeGreaterThan(0);
+    }
+    CHAPTERS.forEach((c, i) => {
+      expect(c.title).toBeTruthy();
+      expect(c.intro.length).toBeGreaterThan(0);
+      const quests = QUESTS.filter((q) => q.chapter === i);
+      expect(quests.length, c.title).toBeGreaterThan(0);
+      expect(startsChapter(quests[0]!), c.title).toBe(true);
+      for (const q of quests.slice(1)) expect(startsChapter(q), q.id).toBe(false);
+    });
+  });
+
+  it('opens a chapter with its intro, and only then', () => {
+    const second = QUESTS.find((q) => q.chapter === 1 && startsChapter(q))!;
+    expect(offerLines(second)).toEqual([...CHAPTERS[1]!.intro, ...second.offer]);
+    expect(offerLines(QUESTS[1]!)).toEqual(QUESTS[1]!.offer);
+  });
+
+  it('keeps a journal of what the hero has learned, by chapter', () => {
+    const hero = newHero();
+    expect(journal(hero.quests)).toEqual([]);
+    hero.quests.stage = 5;
+    const j = journal(hero.quests);
+    expect(j.map((c) => c.title)).toEqual([CHAPTERS[0]!.title, CHAPTERS[1]!.title]);
+    expect(j[0]!.lines).toEqual(QUESTS.slice(0, 4).map((q) => q.learned));
+    expect(j[1]!.lines).toEqual([QUESTS[4]!.learned]);
+    expect(currentChapter(hero.quests)?.index).toBe(1);
+    hero.quests.stage = QUESTS.length;
+    expect(currentChapter(hero.quests)?.index).toBe(CHAPTERS.length - 1);
   });
 });
