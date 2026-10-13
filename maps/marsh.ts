@@ -116,10 +116,10 @@ export default defineBiome({
     z.chest('oak', 'elixir', ...near(28.9, 7.6));
     z.mob('troll', ...near(29.1, 7.8));
     for (const [kind, x, y] of [
-      ['zombie', 28.6, 8.4],
-      ['zombie', 30.4, 7.4],
+      ['bogGhoul', 28.6, 8.4],
+      ['bogGhoul', 30.4, 7.4],
       ['zombie', 30.4, 9.4],
-      ['zombie', 31.2, 8.4],
+      ['hexer', 31.2, 8.4],
     ] as const)
       z.mob(kind, ...near(x, y));
 

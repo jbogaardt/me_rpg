@@ -70,15 +70,15 @@ export default defineBiome({
     for (const [kind, x, y] of [
       ['frostbound', 29.4, 13],
       ['frostbound', 26.6, 17.2],
-      ['skeleton', 32.6, 12],
+      ['frostWarden', 32.6, 12],
       ['troll', 31.6, 22],
-      ['wolfkin', 22.4, 22.4],
+      ['warg', 22.4, 22.4],
       ['frostbound', 33, 17],
-      ['skeleton', 24.6, 20.6],
+      ['hexer', 24.6, 20.6],
       ['troll', 28, 19.4],
       ['frostbound', 30.4, 10.6],
-      ['wolfkin', 27.2, 22.2],
-      ['skeleton', 29.8, 16.6],
+      ['warg', 27.2, 22.2],
+      ['frostWarden', 29.8, 16.6],
     ] as const)
       z.mob(kind, ...near(x, y));
 

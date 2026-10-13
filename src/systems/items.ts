@@ -10,7 +10,7 @@
 import type { Hero, Item } from './combat';
 import type { Combo, SpellId } from './spells';
 
-/** A bow's flight: arrows are free, so they are slower to follow up than a sword but reach well past a wand's bolt. */
+/** A bow's flight: about three quarters of a sword's damage per second (the price of standing back), with a reach well past a wand's bolt. */
 const bow = (speed: number, range: number, cooldown: number) => ({ speed, range, cooldown });
 
 /** One combo of a wand or tome: the directions to tap, the spell, its mana cost and strength (see systems/spells.ts). */
@@ -34,30 +34,30 @@ export const ITEMS = {
     attack: 7,
     look: { weapon: 'weapon.arming_silver' },
   },
-  // Ranged weapons: the action key shoots an arrow the way the hero is heading. Weaker than a sword of the same tier
-  // (the price of staying out of reach), and a little slower between shots.
+  // Ranged weapons: the action key shoots an arrow the way the hero is heading. About 75% of a sword's damage per second
+  // at the same price (the price of staying out of reach).
   shortBow: {
     name: 'Short Bow',
     value: 35,
     slot: 'weapon',
-    attack: 2,
-    ranged: bow(300, 8 * 32, 0.6),
+    attack: 3,
+    ranged: bow(300, 8 * 32, 0.45),
     look: { weapon: 'weapon.bow_light' },
   },
   recurveBow: {
     name: 'Recurve Bow',
     value: 120,
     slot: 'weapon',
-    attack: 4,
-    ranged: bow(340, 9 * 32, 0.55),
+    attack: 5,
+    ranged: bow(340, 9 * 32, 0.42),
     look: { weapon: 'weapon.bow_recurve' },
   },
   greatBow: {
     name: 'Great Bow',
     value: 300,
     slot: 'weapon',
-    attack: 6,
-    ranged: bow(380, 10 * 32, 0.7),
+    attack: 8,
+    ranged: bow(380, 10 * 32, 0.5),
     look: { weapon: 'weapon.bow_great' },
   },
 
@@ -136,26 +136,26 @@ export const ITEMS = {
     look: {},
     focus: {
       kind: 'wand',
-      power: 3,
-      cooldown: 0.4,
-      combos: [combo('uulr', 'bolt', 4, 1.8), combo('uldr', 'fan', 8, 1.1, 3), combo('ddrr', 'dash', 5, 1)],
+      power: 2,
+      cooldown: 0.45,
+      combos: [combo('uulr', 'bolt', 5, 1.4), combo('uldr', 'fan', 9, 0.8, 3), combo('ddrr', 'dash', 6, 0.9)],
     },
   },
   stormcallerWand: {
     name: 'Stormcaller Wand',
     value: 280,
     slot: 'weapon',
-    attack: 5,
+    attack: 4,
     look: {},
     focus: {
       kind: 'wand',
-      power: 7,
-      cooldown: 0.32,
+      power: 5,
+      cooldown: 0.4,
       combos: [
-        combo('uulr', 'bolt', 5, 2.4),
-        combo('uldr', 'fan', 10, 1.2, 5),
-        combo('lrlr', 'chain', 12, 1.6, 3),
-        combo('ddrr', 'dash', 5, 1.6),
+        combo('uulr', 'bolt', 6, 1.6),
+        combo('uldr', 'fan', 12, 0.75, 5),
+        combo('lrlr', 'chain', 14, 1.1, 3),
+        combo('ddrr', 'dash', 7, 1.1),
       ],
     },
   },
@@ -163,30 +163,30 @@ export const ITEMS = {
     name: 'Novice Tome',
     value: 90,
     slot: 'weapon',
-    attack: 1,
+    attack: 3,
     look: {},
     focus: {
       kind: 'tome',
-      power: 4,
-      cooldown: 0.7,
-      combos: [combo('uulr', 'nova', 10, 1.6), combo('dudu', 'heal', 8, 2), combo('lrrl', 'ward', 9, 3)],
+      power: 3,
+      cooldown: 0.8,
+      combos: [combo('uulr', 'nova', 11, 1.1), combo('dudu', 'heal', 9, 1.5), combo('lrrl', 'ward', 14, 2)],
     },
   },
   arcaneGrimoire: {
     name: 'Arcane Grimoire',
     value: 320,
     slot: 'weapon',
-    attack: 3,
+    attack: 5,
     look: {},
     focus: {
       kind: 'tome',
-      power: 9,
-      cooldown: 0.6,
+      power: 6,
+      cooldown: 0.75,
       combos: [
-        combo('uulr', 'nova', 14, 2.6),
-        combo('rdlu', 'blast', 16, 3.2),
-        combo('dudu', 'heal', 12, 3.5),
-        combo('lrrl', 'ward', 12, 5),
+        combo('uulr', 'nova', 15, 1.5),
+        combo('rdlu', 'blast', 18, 1.7),
+        combo('dudu', 'heal', 13, 2.3),
+        combo('lrrl', 'ward', 18, 3),
       ],
     },
   },

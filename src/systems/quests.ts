@@ -103,9 +103,22 @@ export interface Reward {
   items?: ItemId[];
 }
 
+/** A stretch of the story: a few quests that belong together, with a title and what Maren says as it begins. */
+export interface Chapter {
+  title: string;
+  /** Said before the first quest's offer, to set the scene and say why the next task matters. */
+  intro: string[];
+}
+
 export interface Quest {
   /** Short and stable: story keys are `<id>.offer` and so on. */
   id: string;
+  /** Index into CHAPTERS. A chapter's quests are next to each other, and its first quest starts with the chapter's intro. */
+  chapter: number;
+  /** What the hero has learned once this is handed in: one line of the story, kept in the journal on the Quests tab. */
+  learned: string;
+  /** The moment the task is done out in the world, before going back: a line or two of narration (shown as a dialog). */
+  fieldNote: string[];
   title: string;
   /** The task in a few words, for the quest log ("Drive off 5 goblins"). */
   goal: string;
@@ -125,9 +138,47 @@ export interface Quest {
   done: string[];
 }
 
+/** The first part of the story, in four chapters (the quests of a chapter are next to each other in QUESTS). */
+export const CHAPTERS: Chapter[] = [
+  {
+    title: 'The Stilled Hour',
+    intro: [
+      'Ah, you are the stranger from the crossroads. I am Maren, Warden of Lanternrest, and I have watched the road for you.',
+      'Three winters ago, the night the sky cracked, the whole Vale held its breath, and it has not let it out since: clocks stopped, birds fell silent, roads forgot where they led. We call it the Stillness.',
+      'I keep the town lamp burning, because a flame that moves is proof that time still does. Help me keep it moving, and I will teach you what I know.',
+    ],
+  },
+  {
+    title: 'Voices in the Stone',
+    intro: [
+      'You have shown me you can walk where others freeze. Now I must ask you to listen, not fight.',
+      'The old Vale remembered itself in stone, and it is still talking, if someone is quiet enough to hear. It may tell us what broke.',
+    ],
+  },
+  {
+    title: 'The Fallen Sand',
+    intro: [
+      'The Hourglass did not simply break. It scattered. Where its sand fell, the Stillness is thicker, and it has set guards there.',
+      'Whatever is behind this is gathering the pieces. We must find them first, and that means going where the guards are.',
+    ],
+  },
+  {
+    title: 'The Frozen March',
+    intro: [
+      'The road to the Spire runs through the cold east, and the cold east is where the Stillness has marched its soldiers.',
+      'This is the last of what I can ask of you for now, and the hardest. After it, we will know who we are fighting.',
+    ],
+  },
+];
+
 export const QUESTS: Quest[] = [
   {
     id: 'road',
+    chapter: 0,
+    learned: 'The Stillness is three winters old, and it has frightened even the goblins out of their burrows.',
+    fieldNote: [
+      'The last goblin drops its dagger and runs for the trees, shaking. Tallies are scratched into every trunk here: three winters of them. It was never hunting you. It was running from something.',
+    ],
     title: 'Trouble on the Road',
     goal: 'Drive off 5 goblins',
     unit: 'goblins',
@@ -136,8 +187,6 @@ export const QUESTS: Quest[] = [
     objective: { t: 'kill', kind: 'goblin', count: 5 },
     reward: { gold: 30, xp: 30 },
     offer: [
-      'Ah, you are the stranger from the crossroads. I am Maren, Warden of Lanternrest. I keep the town lamp burning.',
-      'Three winters ago something cracked the sky, and time went wrong: clocks stopped, birds fell silent, roads forgot where they led. We call it the Stillness.',
       'The goblins used to keep to their burrows. Now they swarm the Greenwood roads, half mad with fear. Drive off five of them, and I will know what you are made of.',
     ],
     remind: ['Five goblins on the Greenwood roads. You will not need to look far; they will find you.'],
@@ -148,6 +197,12 @@ export const QUESTS: Quest[] = [
   },
   {
     id: 'glimmer',
+    chapter: 0,
+    learned:
+      'Glimmercaps glow wherever time still flows. The town lamp burns on them, and it is the last light in the Vale.',
+    fieldNote: [
+      'The last glimmercap pulses once, like a heartbeat, then holds steady. Somewhere beyond the hush, time is still running.',
+    ],
     title: 'Glimmercaps',
     goal: 'Gather 4 glimmercaps in the Greenwood',
     unit: 'glimmercaps',
@@ -167,6 +222,11 @@ export const QUESTS: Quest[] = [
   },
   {
     id: 'pack',
+    chapter: 0,
+    learned: 'The Stillness traps whatever it touches in a single moment. For the wolfkin, that moment is hunger.',
+    fieldNote: [
+      "The pack's howl cuts off mid-breath. In the quiet, you notice there are no birds anywhere. You have not heard one since you arrived.",
+    ],
     title: 'The Hungry Pack',
     goal: 'Defeat 5 wolfkin',
     unit: 'wolfkin',
@@ -189,6 +249,11 @@ export const QUESTS: Quest[] = [
   },
   {
     id: 'medicine',
+    chapter: 0,
+    learned: 'Shades are the Hollow: what is left of people the Stillness took. They leave a cold that does not heal.',
+    fieldNote: [
+      'The potion is cold in your hand, and so is the air. Somewhere in town, a wounded man is waiting on you.',
+    ],
     title: 'Medicine for the Watch',
     goal: 'Bring 1 Elixir from the apothecary',
     unit: 'elixir',
@@ -209,6 +274,12 @@ export const QUESTS: Quest[] = [
   },
   {
     id: 'stones',
+    chapter: 1,
+    learned:
+      'The Great Hourglass broke into five shards, and you are untouched by the Stillness: the boy outside time.',
+    fieldNote: [
+      'The runes go dark, but one of them is still faintly warm. The echo said: a child outside the glass. It was talking about you.',
+    ],
     title: 'Voices in the Stones',
     goal: 'Touch 3 echo stones in the Greenwood',
     unit: 'echo stones',
@@ -232,6 +303,11 @@ export const QUESTS: Quest[] = [
   },
   {
     id: 'dead',
+    chapter: 1,
+    learned: 'Where time stops, the dead cannot rest. The graves are only the first place it shows.',
+    fieldNote: [
+      'The last skeleton folds into a heap of bone, and the air relaxes a little, as if something let go of a held breath.',
+    ],
     title: 'The Restless Dead',
     goal: 'Lay 6 skeletons to rest',
     unit: 'skeletons',
@@ -251,6 +327,12 @@ export const QUESTS: Quest[] = [
   },
   {
     id: 'sand',
+    chapter: 2,
+    learned:
+      'The Hourglass sand falls toward the north, toward the Spire, and the Stillness is hunting the shards too.',
+    fieldNote: [
+      'Every grain you hold tilts the same way, north, like a compass needle. Far off, a bell tolls once, and the sand goes still.',
+    ],
     title: 'Sand and Silence',
     goal: 'Gather 4 mounds of hourglass sand in the Sunscar Desert',
     unit: 'mounds',
@@ -271,6 +353,11 @@ export const QUESTS: Quest[] = [
   },
   {
     id: 'tusk',
+    chapter: 2,
+    learned: 'Something that does not speak is commanding the orcs, and it can be startled.',
+    fieldNote: [
+      "The fallen orc's hand still beats a slow, steady rhythm against the ground. A ticking. Then it, too, goes quiet.",
+    ],
     title: 'The Tusk Banner',
     goal: 'Defeat 4 orcs',
     unit: 'orcs',
@@ -290,6 +377,11 @@ export const QUESTS: Quest[] = [
   },
   {
     id: 'frost',
+    chapter: 3,
+    learned: 'The frozen soldiers guard the northern pass, the way to the Spire.',
+    fieldNote: [
+      'Where the last frostbound fell, snow begins to drift again. For a moment, the flakes fall, not hang. Then the hush returns.',
+    ],
     title: 'Frostbound Vigil',
     goal: 'Defeat 4 frostbound in the Frostlands',
     unit: 'frostbound',
@@ -310,6 +402,10 @@ export const QUESTS: Quest[] = [
   },
   {
     id: 'heart',
+    chapter: 3,
+    learned:
+      'A shard of the Hourglass bears a name: Orrin, Clockmaker. Four shards remain, and the Stillness knows yours.',
+    fieldNote: ["The troll's heavy hand opens, and a splinter of glass rolls out, warm, ticking. Take it to Maren."],
     title: 'The Heart of the Stillness',
     goal: 'Defeat 2 trolls',
     unit: 'trolls',
@@ -455,6 +551,32 @@ export interface Talk {
 
 const FULL_LINES = ['Your pack is too full to carry my thanks. Make room, and come back.'];
 
+/** Does this quest begin a chapter (the one before it belongs to an earlier chapter, or it is the first)? */
+export const startsChapter = (q: Quest): boolean =>
+  QUESTS.indexOf(q) === 0 || QUESTS[QUESTS.indexOf(q) - 1]?.chapter !== q.chapter;
+
+/** What the giver says when handing out `q`: the chapter's opening first, when `q` is where a chapter begins. */
+export const offerLines = (q: Quest): string[] => [
+  ...(startsChapter(q) ? (CHAPTERS[q.chapter]?.intro ?? []) : []),
+  ...q.offer,
+];
+
+/** The chapter the hero is in (the one their current quest belongs to), or the last once every quest is done. */
+export function currentChapter(log: QuestLog): { index: number; chapter: Chapter } | undefined {
+  const q = currentQuest(log) ?? QUESTS[QUESTS.length - 1];
+  const chapter = q && CHAPTERS[q.chapter];
+  return q && chapter ? { index: q.chapter, chapter } : undefined;
+}
+
+/** What the hero has learned so far, chapter by chapter: the journal. Only chapters with something learned are listed. */
+export function journal(log: QuestLog): { title: string; lines: string[] }[] {
+  const done = QUESTS.slice(0, log.stage);
+  return CHAPTERS.flatMap((chapter, i) => {
+    const lines = done.filter((q) => q.chapter === i).map((q) => q.learned);
+    return lines.length ? [{ title: chapter.title, lines }] : [];
+  });
+}
+
 /** The story lines behind a key ("road.offer", "road.reward", "end"...), or null for one this build does not know. */
 export function linesFor(key: string): string[] | null {
   if (key === 'end') return EPILOGUE;
@@ -463,7 +585,7 @@ export function linesFor(key: string): string[] | null {
   if (!q) return null;
   switch (part) {
     case 'offer':
-      return q.offer;
+      return offerLines(q);
     case 'remind':
       return q.remind;
     case 'full':
@@ -510,7 +632,7 @@ export function talk(hero: Hero): Talk {
     case 'offer':
       log.taken = true;
       log.progress = 0;
-      return said(`${q.id}.offer`, q.offer);
+      return said(`${q.id}.offer`, offerLines(q));
     case 'active':
       return said(`${q.id}.remind`, q.remind);
     default: {

@@ -33,13 +33,14 @@ export interface Guide {
 }
 
 /** How far from the middle a search area reaches, and how coarse the grid its middle snaps to is (so it holds still as a mob wanders). */
-export const SEARCH_RADIUS = 10 * CELL;
-const SEARCH_GRID = 8 * CELL;
+export const SEARCH_RADIUS = 16 * CELL;
+const SEARCH_GRID = 10 * CELL;
+const SEARCH_PUSH = 4 * CELL;
 
 /**
  * The middle of the area to search for something at (x, y): the target's grid square, pushed off-centre by a fixed amount
  * that depends only on the square. It never moves while the target stays in its square, and the target is always inside the
- * circle (the square's far corner is under 6 cells from its middle, the push is 3, the radius is 10).
+ * circle (the square's far corner is under 7.1 cells from its middle, the push is 4, the radius is 16).
  */
 export function searchMiddle(x: number, y: number): { x: number; y: number } {
   const gx = Math.floor(x / SEARCH_GRID);
@@ -47,8 +48,8 @@ export function searchMiddle(x: number, y: number): { x: number; y: number } {
   const h = Math.sin(gx * 12.9898 + gy * 78.233) * 43758.5453;
   const angle = (h - Math.floor(h)) * Math.PI * 2;
   return {
-    x: (gx + 0.5) * SEARCH_GRID + Math.cos(angle) * 3 * CELL,
-    y: (gy + 0.5) * SEARCH_GRID + Math.sin(angle) * 3 * CELL,
+    x: (gx + 0.5) * SEARCH_GRID + Math.cos(angle) * SEARCH_PUSH,
+    y: (gy + 0.5) * SEARCH_GRID + Math.sin(angle) * SEARCH_PUSH,
   };
 }
 

@@ -1,7 +1,18 @@
 import type { Hero } from '../systems/combat';
 import { questArt } from './questArt';
 import { zoneName } from '../systems/places';
-import { GIVERS, QUESTS, QUEST_GIVER, currentQuest, progressText, questStatus, rewardText } from '../systems/quests';
+import {
+  CHAPTERS,
+  GIVERS,
+  QUESTS,
+  QUEST_GIVER,
+  currentChapter,
+  currentQuest,
+  journal,
+  progressText,
+  questStatus,
+  rewardText,
+} from '../systems/quests';
 
 /**
  * The Quests tab of the pause menu: the task the hero is on, what it pays, and the ones already handed in. Rules and the
@@ -28,10 +39,20 @@ export function questPage(hero: Hero, portrait: (mobKind: string) => string | nu
       <p class="quest-progress${done ? ' done' : ''}">${progressText(hero)}</p>
       <p class="quest-note">${done ? `Return to ${giver} in ${zoneName(GIVERS[QUEST_GIVER]?.zone ?? 'town')}.` : `Reward: ${rewardText(q.reward)}.`}</p>`;
   }
-  const finished = QUESTS.slice(0, hero.quests.stage);
-  const past = finished.length
-    ? `<h3>Done <small>${finished.length} of ${QUESTS.length}</small></h3>
-       <ul class="quest-done">${finished.map((d) => `<li>${d.title}</li>`).join('')}</ul>`
+  // The story so far: what the hero has learned, chapter by chapter (the quest titles they handed in are under each).
+  const story = journal(hero.quests);
+  const past = story.length
+    ? `<h3>The story so far <small>${hero.quests.stage} of ${QUESTS.length} tasks done</small></h3>` +
+      story
+        .map(
+          (c) =>
+            `<h4 class="quest-chapter">${c.title}</h4><ul class="quest-done">${c.lines.map((l) => `<li>${l}</li>`).join('')}</ul>`,
+        )
+        .join('')
     : '';
-  return `<h2>Quests</h2>${now}${past}`;
+  const chapter = currentChapter(hero.quests);
+  const heading = chapter
+    ? `<p class="quest-chapter-title">Chapter ${chapter.index + 1} of ${CHAPTERS.length}: <b>${chapter.chapter.title}</b>${q ? '' : ' <small>(the end of part one)</small>'}</p>`
+    : '';
+  return `<h2>Quests</h2>${heading}${now}${past}`;
 }
