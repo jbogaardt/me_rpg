@@ -85,6 +85,7 @@ export class Mob {
     this.hp = this.kind.maxHp;
     this.state = 'idle';
     this.timer = 1;
+    this.frozen = 0;
     this.knock = { x: 0, y: 0 };
     this.drawBar();
   }
@@ -120,7 +121,24 @@ export class Mob {
     return false;
   }
 
+  /** Held still by a spell (Stasis) for this many seconds: it neither moves nor attacks (host and solo; a guest just sees it stand). */
+  private frozen = 0;
+
+  /** Freeze the mob in place for `seconds` (a longer freeze already on it wins). */
+  freeze(seconds: number) {
+    if (this.state === 'dead') return;
+    this.frozen = Math.max(this.frozen, seconds);
+    this.knock = { x: 0, y: 0 };
+  }
+
   update(dt: number, world: MobWorld) {
+    if (this.state !== 'dead' && this.frozen > 0) {
+      this.frozen = Math.max(0, this.frozen - dt);
+      this.flash = Math.max(0, this.flash - dt);
+      this.moving = false;
+      this.present(dt, false);
+      return;
+    }
     if (this.state === 'dead') {
       this.timer = Math.max(0, this.timer - dt);
       this.fade();
@@ -258,7 +276,7 @@ export class Mob {
     else if (lunging) this.body.setOffset(fx * 5, fy * 5);
     else this.body.setOffset(0, 0);
     const blink = this.state === 'windup' && Math.floor(this.timer * 16) % 2 === 0;
-    this.body.setTint(this.flash > 0 ? 0xff6060 : blink ? 0xffe080 : 0xffffff);
+    this.body.setTint(this.flash > 0 ? 0xff6060 : this.frozen > 0 ? 0xa8d8ff : blink ? 0xffe080 : 0xffffff);
     this.body.animate(dt * 1000, moving);
   }
 

@@ -126,7 +126,8 @@ export const ITEMS = {
   backpack: { name: 'Backpack', value: 150, slot: 'bag', capacity: 8, look: {} },
 
   // Wands and tomes (the wizard sells them): weapons whose plain attack is a free, weak bolt and whose combos (a string
-  // of directions, W W A D) cast far stronger spells for mana. A wand is quick and sharp; a tome is slow and heavy.
+  // of directions, five on a first-tier weapon and six on a second-tier one) cast far stronger spells for mana. A wand is quick and
+  // sharp; a tome is slow and heavy. Every wand and tome has its own spells: none is on two weapons.
   // They have no art on the hero yet, so `look` is empty. New items go at the end (item codes are positions).
   apprenticeWand: {
     name: 'Apprentice Wand',
@@ -138,7 +139,7 @@ export const ITEMS = {
       kind: 'wand',
       power: 2,
       cooldown: 0.45,
-      combos: [combo('uulr', 'bolt', 5, 1.4), combo('uldr', 'fan', 9, 0.8, 3), combo('ddrr', 'dash', 6, 0.9)],
+      combos: [combo('urulr', 'bolt', 6, 1.4), combo('ldlrd', 'fan', 11, 0.8, 3), combo('drudl', 'dash', 8, 0.9)],
     },
   },
   stormcallerWand: {
@@ -152,10 +153,10 @@ export const ITEMS = {
       power: 5,
       cooldown: 0.4,
       combos: [
-        combo('uulr', 'bolt', 6, 1.6),
-        combo('uldr', 'fan', 12, 0.75, 5),
-        combo('lrlr', 'chain', 14, 1.1, 3),
-        combo('ddrr', 'dash', 7, 1.1),
+        combo('lrlrlr', 'chain', 17, 1.1, 3),
+        combo('ululdr', 'lance', 15, 1.2),
+        combo('dudrdr', 'smite', 13, 1.6),
+        combo('rdrdlu', 'gale', 12, 0.9),
       ],
     },
   },
@@ -169,7 +170,7 @@ export const ITEMS = {
       kind: 'tome',
       power: 3,
       cooldown: 0.8,
-      combos: [combo('uulr', 'nova', 11, 1.1), combo('dudu', 'heal', 9, 1.5), combo('lrrl', 'ward', 14, 2)],
+      combos: [combo('udlru', 'nova', 14, 1.1), combo('rdrul', 'heal', 11, 1.5), combo('lulrd', 'ward', 17, 2)],
     },
   },
   arcaneGrimoire: {
@@ -183,10 +184,10 @@ export const ITEMS = {
       power: 6,
       cooldown: 0.75,
       combos: [
-        combo('uulr', 'nova', 15, 1.5),
-        combo('rdlu', 'blast', 18, 1.7),
-        combo('dudu', 'heal', 13, 2.3),
-        combo('lrrl', 'ward', 18, 3),
+        combo('uldrdl', 'blast', 22, 1.7),
+        combo('ludrud', 'drain', 19, 1),
+        combo('dlrlru', 'freeze', 20, 0.7, 3),
+        combo('urdrdl', 'vortex', 18, 0.9),
       ],
     },
   },

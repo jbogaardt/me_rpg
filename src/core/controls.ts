@@ -13,6 +13,10 @@ export const actionDown = (a: Action) => input.isHeld(...bindings.codes(a)) || i
 
 export const actionPressed = (a: Action) => input.wasHit(...bindings.codes(a)) || input.wasTouched(...TOUCH_CODES[a]);
 
+/** A press of this action's on-screen pad direction, with no key pressed for it (a thumb, not a keyboard). */
+export const actionTouchedOnly = (a: Action) =>
+  input.wasTouched(...TOUCH_CODES[a]) && !input.wasHit(...bindings.codes(a));
+
 /** How the player aims (saved): along the way they last walked, or at the mouse / the last tap. */
 export const aimSetting = {
   mode: loadAimMode(),

@@ -26,7 +26,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 22;
+export const PROTOCOL_VERSION = 23;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -70,6 +70,7 @@ export const FX_NAMES = [
   'heal',
   'ward',
   'blink',
+  'frost',
 ] as const satisfies readonly ParticleEffectName[];
 export type FxName = (typeof FX_NAMES)[number];
 

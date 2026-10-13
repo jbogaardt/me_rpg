@@ -58,14 +58,14 @@
 #combo-hud[hidden] { display: none; }
 /* On a phone the quest tracker takes the line under the bars, so the combo list sits below it. */
 @media (max-width: 600px) { #combo-hud { top: calc(84px + env(safe-area-inset-top)); } }
-#combo-hud .keys { display: inline-block; min-width: 4.4em; letter-spacing: 0.12em; }
+#combo-hud .keys { display: inline-block; min-width: 6.2em; letter-spacing: 0.12em; }
 #combo-hud i { font-style: normal; opacity: 0.8; }
 #combo-hud b { color: #7fe6ff; text-shadow: 0 0 6px #4de3ff; }
 #combo-hud small { color: #8fb3ff; font-size: 11px; }
 #combo-hud small::after { content: ' MP'; }
 #combo-hud .poor { opacity: 0.5; }
 .combo-list { list-style: none; margin: 4px 0 0; padding: 0; font-size: 12px; }
-.combo-list .keys { display: inline-block; min-width: 4.4em; font-weight: 700; letter-spacing: 0.12em; }
+.combo-list .keys { display: inline-block; min-width: 6.2em; font-weight: 700; letter-spacing: 0.12em; }
 .combo-list small { opacity: 0.75; }
 
 /* The Magic tab: two ability slots, then a card per ability. */

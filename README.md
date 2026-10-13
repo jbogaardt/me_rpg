@@ -10,8 +10,8 @@ npm run dev
 ```
 
 Controls: WASD / arrow keys to move, Space / J / Enter / E to attack (or talk when next to the NPC),
-Esc / I / Tab for the menu. With a wand or tome from the wizard's shop in hand, tap a string of four
-directions (for example W W A D) to cast a spell for MP; it is stronger than the plain attack.
+Esc / I / Tab for the menu. With a wand or tome from the wizard's shop in hand, tap a string of five or six
+directions (for example W D W A D) to cast a spell for MP; it is stronger than the plain attack. Every wand and tome has its own spells.
 On phones and tablets an on-screen D-pad (drag your thumb, 8-way) plus **A** (attack/talk)
 and **☰** (menu) buttons appear; flick the D-pad (up, up, left, right) to cast a combo.
 

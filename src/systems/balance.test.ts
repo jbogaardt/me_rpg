@@ -58,11 +58,11 @@ describe('weapon balance', () => {
   });
 
   it('keeps a ward under a third of the time it can be recast, and swords stepping up each tier', () => {
-    for (const tome of tomes) {
-      const ward = tome.focus.combos.find((c) => c.spell === 'ward');
-      expect(ward).toBeDefined();
+    for (const item of [...wands, ...tomes]) {
+      const ward = item.focus.combos.find((c) => c.spell === 'ward');
+      if (!ward) continue; // only the Novice Tome has one: no spell is on two weapons
       // seconds of immunity per second of mana regeneration (1.5 MP/s)
-      expect(ward!.power / (ward!.cost / 1.5), tome.name).toBeLessThan(0.34);
+      expect(ward.power / (ward.cost / 1.5), item.name).toBeLessThan(0.34);
     }
     for (let i = 1; i < swords.length; i++) expect(swords[i]!.attack).toBeGreaterThan(swords[i - 1]!.attack);
     for (let i = 1; i < bows.length; i++) expect(bows[i]!.attack).toBeGreaterThan(bows[i - 1]!.attack);

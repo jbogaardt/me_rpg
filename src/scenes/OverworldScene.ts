@@ -1,8 +1,8 @@
 import type { Container, Renderer } from 'pixi.js';
 import type { Sprites, Zone } from '../assets';
 import type { Aim } from '../core/aim';
-import { ComboReader } from '../core/combo';
-import { actionDown, actionPressed, mapPressed, menuPressed, pointerAim } from '../core/controls';
+import { COMBO_WINDOW, COMBO_WINDOW_TOUCH, ComboReader } from '../core/combo';
+import { actionDown, actionPressed, actionTouchedOnly, mapPressed, menuPressed, pointerAim } from '../core/controls';
 import { directionToward } from '../core/direction';
 import type { ZoneState } from './ZoneState';
 import type { Scene } from '../core/Scene';
@@ -438,10 +438,12 @@ export class OverworldScene implements Scene {
       this.comboSet = set;
     }
     if (reading) return undefined;
-    this.combos.tick(dt);
+    this.combos.tick(dt, this.ui.touch.active ? COMBO_WINDOW_TOUCH : COMBO_WINDOW);
+    const pressed = COMBO_PRESSES.filter(([, action]) => actionPressed(action));
+    // A thumb that lands on a diagonal of the pad presses two directions at once: that is a slip, not two taps, so ignore it.
+    if (pressed.length > 1 && pressed.every(([, action]) => actionTouchedOnly(action))) return undefined;
     let done: number | undefined;
-    for (const [key, action] of COMBO_PRESSES) {
-      if (!actionPressed(action)) continue;
+    for (const [key] of pressed) {
       const i = this.combos.press(key, combos);
       if (i >= 0) done = i;
     }

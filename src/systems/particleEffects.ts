@@ -342,6 +342,35 @@ export const PARTICLE_EFFECTS = {
     ],
   },
 
+  /** Ice shards bursting round a frozen foe, and a pale ring where Stasis is cast. */
+  frost: {
+    emitters: [
+      {
+        shape: 'streak',
+        blend: 'add',
+        burst: [9, 11],
+        life: [0.25, 0.5],
+        speed: [60, 150],
+        size: [9, 15],
+        sizeOverLife: [1, 0.3],
+        alphaOverLife: [1, 1, 0],
+        colorOverLife: [0xffffff, 0xcfeeff, 0x7ac8ff],
+        drag: 3,
+        align: true,
+      },
+      {
+        shape: 'glow',
+        blend: 'add',
+        burst: 1,
+        life: 0.35,
+        size: 52,
+        sizeOverLife: [0.5, 1.4],
+        alphaOverLife: [0.7, 0],
+        colorOverLife: 0xbfe8ff,
+      },
+    ],
+  },
+
   /** The puff where a Blink starts or ends. */
   blink: {
     emitters: [

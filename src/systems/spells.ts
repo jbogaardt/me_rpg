@@ -2,15 +2,32 @@
 // pad) and the weapon you hold does something stronger than its plain attack, for mana. Pure data and rules; the
 // simulation (scenes/overworld/Casting.ts) carries a spell out and the input side (core/combo.ts) reads the keys.
 //
-// A combo is a string over u/d/l/r (up, down, left, right). Every combo of one weapon is the same length, so none can
-// be hidden inside another; the same string may do something else on another weapon (that is the point of the weapon).
+// A combo is a string over u/d/l/r (up, down, left, right): five taps on a first-tier weapon, six on a second-tier one.
+// Two taps of the same direction never follow each other (on the on-screen pad a repeat means going back through the
+// middle, and the reader ignores a repeated tap), no combo is hidden inside another of the same weapon or inside a skill's
+// (systems/skills.ts), and **no spell is on two weapons**: each wand and tome has its own set, see items.ts.
 
 export type ComboKey = 'u' | 'd' | 'l' | 'r';
 
 export const COMBO_KEYS: readonly ComboKey[] = ['u', 'd', 'l', 'r'];
 
 /** What a combo can do. `power` and `count` on a `Combo` mean something slightly different for each (see `SPELLS`). */
-export const SPELL_IDS = ['bolt', 'fan', 'chain', 'dash', 'nova', 'blast', 'heal', 'ward'] as const;
+export const SPELL_IDS = [
+  'bolt',
+  'fan',
+  'dash',
+  'chain',
+  'lance',
+  'smite',
+  'gale',
+  'heal',
+  'ward',
+  'nova',
+  'blast',
+  'drain',
+  'freeze',
+  'vortex',
+] as const;
 export type SpellId = (typeof SPELL_IDS)[number];
 
 export interface SpellInfo {
@@ -28,6 +45,12 @@ export const SPELLS: Record<SpellId, SpellInfo> = {
   blast: { name: 'Meteor', about: 'A crash of fire where you aim, hitting everything near it.' },
   heal: { name: 'Mend', about: 'Heals you and friends close by.' },
   ward: { name: 'Ward', about: 'A shell of light: you and friends close by take no damage for a while.' },
+  lance: { name: 'Storm Lance', about: 'A bolt of lightning pierces every foe in a long line ahead.' },
+  smite: { name: 'Smite', about: 'A heavy lightning strike on the nearest foe.' },
+  gale: { name: 'Gale', about: 'A gust blows foes in front of you back, hurting them as they go.' },
+  drain: { name: 'Soul Drain', about: 'Foes around you lose health, and you gain some of it.' },
+  freeze: { name: 'Stasis', about: 'Foes around you take a little damage and are frozen still for a moment.' },
+  vortex: { name: 'Vortex', about: 'Foes nearby are dragged in toward you and hurt.' },
 };
 
 export interface Combo {
@@ -37,11 +60,11 @@ export interface Combo {
   /** Mana it takes. */
   cost: number;
   /**
-   * How strong: a multiple of the caster's spell power for damage (bolt, fan, chain, dash, nova, blast) and healing
-   * (heal); the seconds it lasts for a ward.
+   * How strong: a multiple of the caster's spell power for damage (every attack spell) and healing (heal); the seconds it
+   * lasts for a ward.
    */
   power: number;
-  /** Bolts in a fan, foes a chain reaches. */
+  /** Bolts in a fan, foes a chain reaches, seconds a freeze holds. */
   count?: number;
 }
 

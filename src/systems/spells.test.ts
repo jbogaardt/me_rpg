@@ -20,23 +20,57 @@ describe('wands and tomes', () => {
     for (const item of casters) expect(item.focus.combos.length, item.name).toBeGreaterThanOrEqual(3);
   });
 
-  it('use only the four directions, with several taps, and none hidden inside another', () => {
+  it('use only the four directions, with five or six taps, and none hidden inside another', () => {
     for (const item of casters) {
       const all = item.focus.combos.map((c) => c.keys);
       for (const keys of all) {
-        expect(keys.length, `${item.name} ${keys}`).toBeGreaterThanOrEqual(4);
+        expect(keys.length, `${item.name} ${keys}`).toBeGreaterThanOrEqual(5);
+        expect(keys.length, `${item.name} ${keys}`).toBeLessThanOrEqual(6);
         expect(
           [...keys].every((k) => (COMBO_KEYS as readonly string[]).includes(k)),
           `${item.name} ${keys}`,
         ).toBe(true);
-        // Two taps of the same key in a row are fine (the reader needs a release between), but a combo must not be
-        // all one key: that is just standing there pressing.
+        // Never the same direction twice in a row: on the on-screen pad that means going back through the middle, and
+        // the combo reader ignores a repeated tap anyway.
+        expect(/(.)\1/.test(keys), `${item.name} ${keys}`).toBe(false);
         expect(new Set(keys).size, `${item.name} ${keys}`).toBeGreaterThan(1);
       }
       expect(new Set(all).size, item.name).toBe(all.length);
       for (const a of all)
         for (const b of all) if (a !== b) expect(b.includes(a), `${item.name}: ${a} in ${b}`).toBe(false);
     }
+  });
+
+  it('are unique: no spell is on two weapons, and no two weapons share a combo', () => {
+    const spells = casters.flatMap((i) => i.focus.combos.map((c) => c.spell));
+    expect(new Set(spells).size, 'every spell is on one weapon only').toBe(spells.length);
+    const keys = casters.flatMap((i) => i.focus.combos.map((c) => c.keys));
+    expect(new Set(keys).size, 'every string is on one weapon only').toBe(keys.length);
+  });
+
+  it('give a second-tier weapon longer combos than the first-tier one of its kind, and more of them', () => {
+    const [apprentice, stormcaller, novice, grimoire] = [
+      ITEMS.apprenticeWand,
+      ITEMS.stormcallerWand,
+      ITEMS.noviceTome,
+      ITEMS.arcaneGrimoire,
+    ];
+    for (const [low, high] of [
+      [apprentice, stormcaller],
+      [novice, grimoire],
+    ] as const) {
+      expect(Math.min(...high.focus.combos.map((c) => c.keys.length))).toBeGreaterThan(
+        Math.max(...low.focus.combos.map((c) => c.keys.length)),
+      );
+      expect(high.focus.combos.length).toBeGreaterThan(low.focus.combos.length);
+    }
+  });
+
+  it('keep the mana costs in a sane range: a hero can cast the first weapons’ spells at once and a spell is not free', () => {
+    for (const item of [ITEMS.apprenticeWand, ITEMS.noviceTome]) {
+      for (const c of item.focus.combos) expect(c.cost, `${item.name} ${c.spell}`).toBeLessThanOrEqual(20);
+    }
+    for (const item of casters) for (const c of item.focus.combos) expect(c.cost, c.spell).toBeLessThanOrEqual(24);
   });
 
   it('cost mana, name a known spell, and give every spell a description', () => {
@@ -63,7 +97,7 @@ describe('wands and tomes', () => {
       const hero = newHero();
       hero.weapon = item;
       for (const c of item.focus.combos) {
-        if (c.spell === 'heal' || c.spell === 'ward' || c.spell === 'dash') continue; // not (only) damage
+        if (['heal', 'ward', 'dash', 'freeze'].includes(c.spell)) continue; // not (only) damage
         const per = spellPower(hero) * c.power;
         expect(per, `${item.name} ${c.spell}`).toBeGreaterThan(attackPower(hero));
       }

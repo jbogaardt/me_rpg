@@ -324,7 +324,7 @@ describe('messages', () => {
       { ...snap, events: [[1, 3, 0, 0, 1, 0]] }, // arrow: no range
       { ...snap, events: [[1, 3, 0, 0, 1, 0, -5]] },
       { ...snap, events: [[1, 1, 0, 0, 1, 0, -1, 0x1000000]] }, // bolt: colour out of range
-      { ...snap, events: [[1, 5, 11, 0, 0]] }, // fx: no such one-shot effect (continuous ones stay local)
+      { ...snap, events: [[1, 5, 12, 0, 0]] }, // fx: no such one-shot effect (continuous ones stay local)
       { ...snap, events: [[1, 5, 'hitSpark', 0, 0]] },
       { ...snap, events: [[1, 5, 0, 0, 0, 'up']] },
       { ...snap, events: Array.from({ length: 65 }, (_, i) => [i, 6, 0]) },

@@ -29,10 +29,19 @@ import {
   COMBO_COOLDOWN,
   DASH_DISTANCE,
   DASH_GRACE,
+  DRAIN_RADIUS,
+  DRAIN_SHARE,
   FAN_STEP,
+  FREEZE_RADIUS,
+  GALE_COS,
+  GALE_RANGE,
   HELP_RADIUS,
+  LANCE_RANGE,
+  LANCE_WIDTH,
   NOVA_RADIUS,
+  SMITE_RANGE,
   SPELL_SPEED,
+  VORTEX_RADIUS,
 } from './constants';
 import type { Simulation } from './Simulation';
 import type { Visuals } from './Visuals';
@@ -159,6 +168,18 @@ export class Casting {
         return this.heal(p, combo);
       case 'ward':
         return this.ward(p, combo);
+      case 'lance':
+        return this.lance(p, combo);
+      case 'smite':
+        return this.smite(p, combo);
+      case 'gale':
+        return this.gale(p, combo);
+      case 'drain':
+        return this.drain(p, combo);
+      case 'freeze':
+        return this.freeze(p, combo);
+      case 'vortex':
+        return this.vortex(p, combo);
     }
   }
 
@@ -277,7 +298,122 @@ export class Casting {
     return true;
   }
 
+  /** Lightning along the aim: every foe on a long line takes the hit (the line stops at a wall). */
+  private lance(p: Player, c: Combo): Cast {
+    const { collision } = this.arena;
+    const { x: ux, y: uy } = p.aim;
+    let reach = 0;
+    while (reach < LANCE_RANGE) {
+      const next = reach + 8;
+      if (collision.isBlocked(Math.floor((p.body.x + ux * next) / CELL), Math.floor((p.body.y + uy * next) / CELL)))
+        break;
+      reach = next;
+    }
+    const end = { x: p.body.x + ux * reach, y: p.body.y + uy * reach };
+    for (let d = CELL * 2; d <= reach; d += CELL * 3) this.sim.fx('zap', p.body.x + ux * d, p.body.y + uy * d - 14);
+    const damage = spellPower(p.hero) * c.power;
+    for (const mob of this.arena.mobs) {
+      if (!mob.alive || distToSegment(mob.body, p.body.x, p.body.y, end.x, end.y) > LANCE_WIDTH) continue;
+      this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux, uy, true);
+    }
+    return true;
+  }
+
+  /** A heavy strike on the nearest foe in range. With nobody to hit it does nothing. */
+  private smite(p: Player, c: Combo): Cast {
+    const target = this.nearest(p, SMITE_RANGE);
+    if (!target) return this.noTarget(p);
+    this.sim.fx('blast', target.body.x, target.body.y - 8);
+    this.sim.fx('zap', target.body.x, target.body.y - 16);
+    const [ux, uy] = unit(target.body.x - p.body.x, target.body.y - p.body.y);
+    this.sim.hitMob(target, rollDamage(spellPower(p.hero) * c.power, target.kind.defense), ux, uy, true);
+    return true;
+  }
+
+  /** A gust in a cone ahead: foes in it are hurt and blown back. */
+  private gale(p: Player, c: Combo): Cast {
+    const { x: ux, y: uy } = p.aim;
+    const near = this.arena.mobs.filter((m) => {
+      if (!m.alive) return false;
+      const d = dist(m.body, p.body);
+      if (d > GALE_RANGE) return false;
+      const [mx, my] = unit(m.body.x - p.body.x, m.body.y - p.body.y);
+      return d < 12 || mx * ux + my * uy >= GALE_COS;
+    });
+    if (!near.length) return this.noTarget(p);
+    for (const d of [1.2, 2.6, 4]) this.sim.fx('blink', p.body.x + ux * d * CELL, p.body.y + uy * d * CELL - 14);
+    const damage = spellPower(p.hero) * c.power;
+    for (const mob of near) this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux * 2.4, uy * 2.4, true);
+    return true;
+  }
+
+  /** Hurt the foes close round the caster and take back a share of the damage as health. */
+  private drain(p: Player, c: Combo): Cast {
+    const near = this.arena.mobs.filter((m) => m.alive && dist(m.body, p.body) <= DRAIN_RADIUS);
+    if (!near.length) return this.noTarget(p);
+    const damage = spellPower(p.hero) * c.power;
+    let dealt = 0;
+    for (const mob of near) {
+      const hit = rollDamage(damage, mob.kind.defense);
+      dealt += hit;
+      this.sim.fx('zap', mob.body.x, mob.body.y - 16);
+      const [ux, uy] = unit(mob.body.x - p.body.x, mob.body.y - p.body.y);
+      this.sim.hitMob(mob, hit, ux, uy, true);
+    }
+    const s = p.hero.stats;
+    const gained = Math.min(Math.round(dealt * DRAIN_SHARE), Math.ceil(s.maxHp - s.hp));
+    if (gained > 0) {
+      s.hp = Math.min(s.maxHp, s.hp + gained);
+      this.sim.fx('heal', p.body.x, p.body.y - 10);
+      this.sim.text(p.body.x, p.body.y - 54, `+${gained}`, 0x7dff8f);
+    }
+    return true;
+  }
+
+  /** Freeze the foes round the caster still for `count` seconds, with a little damage. */
+  private freeze(p: Player, c: Combo): Cast {
+    const near = this.arena.mobs.filter((m) => m.alive && dist(m.body, p.body) <= FREEZE_RADIUS);
+    if (!near.length) return this.noTarget(p);
+    this.sim.fx('frost', p.body.x, p.body.y - 12);
+    const damage = spellPower(p.hero) * c.power;
+    for (const mob of near) {
+      const [ux, uy] = unit(mob.body.x - p.body.x, mob.body.y - p.body.y);
+      this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux * 0.2, uy * 0.2, true);
+      if (!mob.alive) continue;
+      mob.freeze(c.count ?? 2);
+      this.sim.fx('frost', mob.body.x, mob.body.y - 14);
+    }
+    return true;
+  }
+
+  /** Drag the foes near the caster in toward them, hurting them on the way. */
+  private vortex(p: Player, c: Combo): Cast {
+    const near = this.arena.mobs.filter((m) => m.alive && dist(m.body, p.body) <= VORTEX_RADIUS);
+    if (!near.length) return this.noTarget(p);
+    this.sim.fx('nova', p.body.x, p.body.y - 14);
+    const damage = spellPower(p.hero) * c.power;
+    for (const mob of near) {
+      const [ux, uy] = unit(p.body.x - mob.body.x, p.body.y - mob.body.y); // toward the caster
+      this.sim.fx('blink', mob.body.x, mob.body.y - 16);
+      this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux * 2.6, uy * 2.6, true);
+    }
+    return true;
+  }
+
   // --- Helpers ---
+
+  /** The nearest living foe within `range` of the caster. */
+  private nearest(p: Player, range: number): Mob | undefined {
+    return this.arena.mobs
+      .filter((m) => m.alive && dist(m.body, p.body) <= range)
+      .sort((a, b) => dist(a.body, p.body) - dist(b.body, p.body))[0];
+  }
+
+  /** Say there was nobody to hit: the spell costs no mana. */
+  private noTarget(p: Player): Cast {
+    this.sim.text(p.body.x, p.body.y - 54, 'No target', 0x8fb3ff);
+    return false;
+  }
 
   /** The caster and the other players within Mend/Ward range (this zone). */
   private friends(p: Player): Player[] {
