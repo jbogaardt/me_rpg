@@ -72,7 +72,7 @@ export class Simulation {
   mobWorldFor(z: ZoneState): MobWorld {
     const { arena } = this;
     return {
-      heroes: z.heroBodies as unknown as MobWorld['heroes'],
+      heroes: z.heroBodies,
       slide: (body, mx, my) =>
         z.collision.slide(
           body,

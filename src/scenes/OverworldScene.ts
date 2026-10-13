@@ -254,6 +254,7 @@ export class OverworldScene implements Scene {
       if (menu.open) menu.update();
       else if (shop.open) shop.update();
       hud.update(this.hero); // gold changes at the counter
+      hud.setDrink(null);
       if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
     }
 
@@ -291,6 +292,11 @@ export class OverworldScene implements Scene {
     }
     for (const body of arena.bodies()) body.zIndex = body.y;
     hud.update(this.hero, this.combos.typed, this.arena.zone.name);
+    hud.setDrink(
+      !this.ui.dialog.active && !this.zones.transition.busy && this.player.visible
+        ? this.drinking.prompt(arena.local)
+        : null,
+    );
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.

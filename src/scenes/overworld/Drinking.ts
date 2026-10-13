@@ -17,10 +17,24 @@ export class Drinking {
     private sim: Pick<Simulation, 'text'>,
   ) {}
 
+  private wellNear(p: Player) {
+    return this.arena.wells.some((w) => Math.hypot(p.body.x - w.x, p.body.y - (w.y - CELL / 2)) < WELL_REACH);
+  }
+
+  /**
+   * The label of the button to show beside water the hero can use, or null: "Drink" when thirsty (at a well or clear open
+   * water), "Fill can" when only the can is short, both when both are.
+   */
+  prompt(p: Player): string | null {
+    const [thirsty, fill] = [isThirsty(p.hero), canNeedsWater(p.hero)];
+    if (!thirsty && !fill) return null;
+    if (!this.wellNear(p) && !waterNear(this.arena.zone.data, p.body.x, p.body.y - 2)) return null;
+    return thirsty ? (fill ? 'Drink & fill can' : 'Drink') : 'Fill can';
+  }
+
   /** A well within reach: drink and fill the can (or say there is no need). Returns true when a well took the press. */
   well(p: Player): boolean {
-    const well = this.arena.wells.find((w) => Math.hypot(p.body.x - w.x, p.body.y - (w.y - CELL / 2)) < WELL_REACH);
-    if (!well) return false;
+    if (!this.wellNear(p)) return false;
     this.take(p, true);
     return true;
   }

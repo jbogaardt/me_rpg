@@ -7,8 +7,8 @@ import { Character } from './Character';
 
 /** What a mob needs from the game each tick. */
 export interface MobWorld {
-  /** Every hero a mob might go after (one, or two in co-op); it picks the nearest. */
-  heroes: readonly [Character, ...Character[]];
+  /** Every hero a mob might go after (one, or two in co-op); it picks the nearest. Empty in a zone nobody is in (one seen across a border): the mob just wanders. */
+  heroes: readonly Character[];
   /** Move a body by (mx, my) with collision, one axis at a time. Returns true if it moved at all. */
   slide(body: Character, mx: number, my: number): boolean;
   /** The mob's melee attack connected with `target`. */
@@ -28,8 +28,9 @@ const RESPAWN = 6;
 const FADE = 0.4;
 const LEASH = 4 * CELL; // wanders no further than this from home
 
-function nearest(from: Character, heroes: MobWorld['heroes']): Character {
+function nearest(from: Character, heroes: MobWorld['heroes']): Character | null {
   let best = heroes[0];
+  if (!best) return null;
   let bestDist = Math.hypot(best.x - from.x, best.y - from.y);
   for (const hero of heroes) {
     const dist = Math.hypot(hero.x - from.x, hero.y - from.y);
@@ -137,9 +138,10 @@ export class Mob {
     }
 
     const target = nearest(this.body, world.heroes);
-    const dx = target.x - this.body.x;
-    const dy = target.y - this.body.y;
-    const dist = Math.hypot(dx, dy);
+    // With no hero in the zone (one drawn beside yours) there is nothing to chase: it stays out of sight, so it only wanders.
+    const dx = target ? target.x - this.body.x : 0;
+    const dy = target ? target.y - this.body.y : 0;
+    const dist = target ? Math.hypot(dx, dy) : Infinity;
     let moving = false;
     this.timer -= dt;
     switch (this.state) {
@@ -179,7 +181,9 @@ export class Mob {
       }
       case 'windup':
         if (this.timer <= 0) {
-          if (this.kind.shot)
+          if (!target) {
+            // everyone left while it wound up: no blow
+          } else if (this.kind.shot)
             world.shoot(this, dx / (dist || 1), dy / (dist || 1)); // aimed as it lets go
           else if (dist < REACH + 8) world.strike(this, target);
           this.state = 'recover';
