@@ -18,6 +18,7 @@ import type { PackSync } from './PackSync';
 import type { Trading } from './Trading';
 import type { Visuals } from './Visuals';
 import type { Zones } from './Zones';
+import { RIPE_CODE } from '../../systems/crops';
 
 const INPUT_HZ = 30; // guest -> host controls (also sent at once when they change)
 
@@ -202,7 +203,7 @@ export class GuestLink {
 
     arena.zone.weather?.setRemote(snap.w); // this biome's own sky
     arena.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
-    arena.crops.forEach((c, i) => c.setState((snap.crops & (1 << i)) !== 0, (snap.dry & (1 << i)) !== 0));
+    arena.crops.forEach((c, i) => c.setCode(snap.crops[i] ?? RIPE_CODE));
     if (snap.ground) this.ground.sync(snap.ground); // absent: the same items as before
     for (const [index, ...state] of snap.mobs) arena.mobs[index]?.setRemote(decodeMob(state)); // only the mobs the host listed: the rest are out of sight
 

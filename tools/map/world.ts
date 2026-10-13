@@ -99,6 +99,15 @@ export interface BiomeApi extends ZoneApi {
     names: PrefabName[],
     opts: { count: number; rect?: Rect; seed?: number; margin?: number; where?: (col: number, row: number) => boolean },
   ): void;
+  /**
+   * Spread `count` enemies (kinds cycled through `kinds`) over the biome's open ground, deterministically, so no stretch of
+   * it is empty: each stands at least `apart` cells (default 12) from the others placed here and from every `avoid` point
+   * (the spawn, a camp). Call it after the biome's props, so it only lands on free ground.
+   */
+  roam(
+    kinds: string[],
+    opts: { count: number; seed?: number; apart?: number; avoid?: [number, number, number][] },
+  ): void;
 }
 
 export interface BiomeSpec {
@@ -730,6 +739,37 @@ class BiomeWindow implements BiomeApi {
   }
   climate(name: ClimateName) {
     this.z.climate(name);
+  }
+  private roamed: [number, number][] = [];
+  /** Is every cell within `r` of (col, row) free and not kept clear? (A mob there cannot end up inside a trunk's footprint.) */
+  private openAround(col: number, row: number, r: number) {
+    for (let y = row - r; y <= row + r; y++)
+      for (let x = col - r; x <= col + r; x++) if (!this.roomy(x, y)) return false;
+    return true;
+  }
+  roam(kinds: string[], opts: { count: number; seed?: number; apart?: number; avoid?: [number, number, number][] }) {
+    const r = this.bounds;
+    const apart = opts.apart ?? 12;
+    const rand = rng(opts.seed ?? r.col * 17 + r.row * 131 + opts.count);
+    const cells: [number, number][] = [];
+    for (let row = r.row; row < r.row + r.h; row++)
+      for (let col = r.col; col < r.col + r.w; col++)
+        if (this.borderDistance(col, row) > 6 && this.openAround(col, row, 1)) cells.push([col, row]);
+    for (let i = cells.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [cells[i], cells[j]] = [cells[j], cells[i]];
+    }
+    let placed = 0;
+    for (const [col, row] of cells) {
+      if (placed >= opts.count) break;
+      if (this.roamed.some(([c, w]) => Math.hypot(c - col, w - row) < apart)) continue;
+      if ((opts.avoid ?? []).some(([c, w, d]) => Math.hypot(c - col, w - row) < d)) continue;
+      this.mob(kinds[placed % kinds.length], col, row);
+      this.roamed.push([col, row]);
+      placed++;
+    }
+    if (placed < opts.count)
+      console.log(`  ! ${this.world.names[this.k]}: roam placed ${placed} of ${opts.count} enemies; not enough room`);
   }
   scatter(
     names: PrefabName[],

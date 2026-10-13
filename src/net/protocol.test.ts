@@ -38,8 +38,7 @@ const snap: SnapMsg = {
   mobs: [mob, [7, 1, 2, 0, 5, 0, 5000, 0]],
   me: [2, 5, 28.5, 36, 12.2, 24, 7, 2, 10],
   chests: 5,
-  crops: 3,
-  dry: 4,
+  crops: [0, 3, 6, 5],
   w: [0, 0, 0, 1],
   ground: [[3, 40.5, 50, 2, 150]],
   events: (
@@ -283,6 +282,17 @@ describe('messages', () => {
       { ...snap, ground: [[1, 2, 3, 1]] }, // no time left given
       { ...snap, ground: [[1, 2, 3, 1, -1]] },
       { ...snap, ground: [[1, 2, 3, 1, 9999]] }, // longer than an item lasts
+    ];
+    for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m).slice(0, 80)).toBeNull();
+  });
+
+  it('rejects a snapshot with bad crop states', () => {
+    const bad: Record<string, unknown>[] = [
+      { ...snap, crops: Array.from({ length: 31 }, () => 6) }, // too many plots
+      { ...snap, crops: [7] }, // no such state
+      { ...snap, crops: [-1] },
+      { ...snap, crops: [1.5] },
+      { ...snap, crops: 3 },
     ];
     for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m).slice(0, 80)).toBeNull();
   });

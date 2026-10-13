@@ -24,6 +24,12 @@ const REACH = 20; // starts an attack when this close (feet to feet)
 // Windup (telegraph before the blow lands, so the hero can dodge), recover and stagger (the pause after being hit,
 // which interrupts a windup) are per kind: see `mobTimings` in systems/combat.ts.
 const LUNGE = 0.12;
+// Stagger rules, so a hero cannot juggle a mob forever: after one stagger the mob shrugs off the next hits for POISE
+// seconds (the damage still lands, it is only pushed a little), and once COMMITTED of its windup has passed the blow
+// cannot be interrupted. It always gets to swing back.
+const POISE = 0.9;
+const COMMITTED = 0.5;
+const SHOVE = 40; // knockback speed (px/s) while it is not staggered; a staggering hit pushes 180
 const KEEP_AWAY = 0.4; // a shooter backs off when the hero is closer than this fraction of its range
 const RESPAWN = 6;
 const FADE = 0.4;
@@ -52,6 +58,7 @@ export class Mob {
   private dir = { x: 0, y: 0 };
   private knock = { x: 0, y: 0 };
   private flash = 0;
+  private poise = 0; // seconds left in which a hit cannot stagger it again
   private moving = false;
   private remote: { x: number; y: number } | null = null; // guest only: where the host says this mob is
   private bar = new Graphics();
@@ -87,6 +94,7 @@ export class Mob {
     this.timer = 1;
     this.frozen = 0;
     this.knock = { x: 0, y: 0 };
+    this.poise = 0;
     this.drawBar();
   }
 
@@ -107,17 +115,25 @@ export class Mob {
   /** Take a hit pushing along (vx, vy). Returns true if it was fatal. */
   hit(damage: number, vx: number, vy: number): boolean {
     this.hp = Math.max(0, this.hp - damage);
-    this.knock = { x: vx * 180, y: vy * 180 };
     this.flash = 0.15;
-    this.body.play('hurt', this.t.stagger * 1000);
     this.drawBar();
     if (this.hp <= 0) {
+      this.knock = { x: vx * 180, y: vy * 180 };
+      this.body.play('hurt', this.t.stagger * 1000);
       this.state = 'dead';
       this.timer = RESPAWN;
       return true;
     }
+    const committed = this.state === 'windup' && this.timer < this.t.windup * COMMITTED;
+    if (this.poise > 0 || committed) {
+      this.knock = { x: vx * SHOVE, y: vy * SHOVE }; // hurt, but not stopped
+      return false;
+    }
+    this.knock = { x: vx * 180, y: vy * 180 };
+    this.body.play('hurt', this.t.stagger * 1000);
     this.state = 'recover';
     this.timer = this.t.stagger;
+    this.poise = this.t.stagger + POISE;
     return false;
   }
 
@@ -147,6 +163,7 @@ export class Mob {
     }
 
     this.flash = Math.max(0, this.flash - dt);
+    this.poise = Math.max(0, this.poise - dt);
     if (this.knock.x || this.knock.y) {
       world.slide(this.body, this.knock.x * dt, this.knock.y * dt);
       const decay = Math.exp(-12 * dt);
@@ -234,7 +251,7 @@ export class Mob {
     const respawned = this.state === 'dead' && next !== 'dead';
     if (hp < this.hp) {
       this.flash = 0.15;
-      if (hp > 0) this.body.play('hurt', this.t.stagger * 1000);
+      if (hp > 0 && next !== 'windup') this.body.play('hurt', this.t.stagger * 1000); // a mob mid-windup was not stopped
     }
     if (next === 'windup' && this.state !== 'windup') {
       this.body.play(this.kind.shot ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph

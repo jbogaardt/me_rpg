@@ -92,5 +92,12 @@ export default defineBiome({
     z.place('The Wooded Hill', 256, 120);
     z.place('Woodland Pond', 258, 143);
     z.place('The Hidden Clearing', 216, 200);
+
+    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
+    z.roam(['wolfkin', 'skeleton', 'goblin', 'shade', 'zombie'], {
+      count: 7,
+      seed: 102,
+      avoid: [[...near(23.4, 14), 16]],
+    });
   },
 });

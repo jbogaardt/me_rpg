@@ -86,5 +86,8 @@ export default defineBiome({
     // --- Names for the map: each shows once the player has explored round it ---------------------------------------
     z.place('Mirewater Pools', 290, 25);
     z.place('The Hidden Shore', 328, 92);
+
+    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
+    z.roam(['hexer', 'bogGhoul', 'warg', 'zombie', 'hexer'], { count: 8, seed: 107, avoid: [[...near(29, 3.2), 16]] });
   },
 });
