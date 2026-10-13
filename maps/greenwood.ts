@@ -176,5 +176,12 @@ export default defineBiome({
     z.place('Mossback Hill', 44, 198);
     z.place('The Old Lake', 30, 185);
     z.place('The Northern Glade', 80, 86);
+
+    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
+    z.roam(['goblin', 'wolfkin', 'goblin', 'shade', 'goblin', 'wolfkin'], {
+      count: 14,
+      seed: 101,
+      avoid: [[...near(14, 15), 34]],
+    });
   },
 });

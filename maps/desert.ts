@@ -119,5 +119,12 @@ export default defineBiome({
     z.place('The Oasis', 78, 46);
     z.place('The Ring of Stones', 35, 50);
     z.place('The Buried Skull', 64, 6);
+
+    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
+    z.roam(['raider', 'orc', 'raider', 'zombie', 'raider', 'skeleton'], {
+      count: 14,
+      seed: 103,
+      avoid: [[...near(1.6, 10), 20]],
+    });
   },
 });

@@ -90,5 +90,12 @@ export default defineBiome({
     z.place('Mirrorfrost Lake', 266, 186);
     z.place('The Frozen Pond', 319, 119);
     z.place('The Frozen Ledge', 319, 202);
+
+    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
+    z.roam(['frostbound', 'warg', 'frostWarden', 'skeleton', 'troll', 'hexer'], {
+      count: 10,
+      seed: 109,
+      avoid: [[...near(30.8, 14.2), 16]],
+    });
   },
 });
