@@ -36,8 +36,8 @@ function bar(id: string): Bar {
 export class Hud {
   private hp = bar('hud-hp');
   private mp = bar('hud-mp');
-  private food = document.getElementById('hud-food')!;
-  private water = document.getElementById('hud-water')!;
+  private food = bar('hud-food');
+  private water = bar('hud-water');
   private gold = document.getElementById('hud-gold')!;
   private combos = document.getElementById('combo-hud')!;
   private tracker = document.getElementById('quest-tracker')!;
@@ -57,19 +57,19 @@ export class Hud {
     this.set(this.hp, hp, s.maxHp);
     this.hp.fill.style.backgroundColor = hpColor(hp / s.maxHp);
     this.set(this.mp, mp, s.maxMp);
-    this.need(this.food, 'Food', 'food', hero.needs.food);
-    this.need(this.water, 'Water', 'water', hero.needs.water);
+    this.need(this.food, 'food', hero.needs.food);
+    this.need(this.water, 'water', hero.needs.water);
     this.gold.querySelector('.label')!.textContent = String(hero.gold);
     this.tracker.hidden = quest === '';
     this.tracker.textContent = quest;
   }
 
-  private need(el: HTMLElement, title: string, kind: 'food' | 'water', value: number) {
+  private need(b: Bar, kind: 'food' | 'water', value: number) {
     const level = needLevel(value);
-    el.style.setProperty('--frac', String(value / 100));
-    el.classList.toggle('low', level === 'low');
-    el.classList.toggle('empty', level === 'empty');
-    el.title = `${title}: ${Math.ceil(value)} (${needWord(kind, value)})`;
+    this.set(b, Math.ceil(value), 100);
+    b.fill.parentElement!.classList.toggle('low', level === 'low');
+    b.fill.parentElement!.classList.toggle('empty', level === 'empty');
+    b.fill.parentElement!.title = needWord(kind, value);
   }
 
   private set(b: Bar, value: number, max: number) {

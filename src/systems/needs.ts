@@ -1,6 +1,6 @@
 // Food and water: two meters (0..NEED_MAX) that drain with time and are refilled by eating and drinking supplies.
-// Pixi-free so the rules are unit-tested. They are gentle: a fed and watered hero mends a little faster, a hungry
-// or thirsty one mends more slowly, and one with an empty meter stops mending on their own. Nothing here hurts.
+// Pixi-free so the rules are unit-tested. A fed and watered hero mends a little faster, a hungry or thirsty one mends
+// more slowly, and one with an empty meter stops mending and starts to lose health (never the last point).
 
 export const NEED_MAX = 100;
 
@@ -57,8 +57,16 @@ export const needWord = (kind: 'food' | 'water', value: number): string => {
 /** What the meters mean for mending, in a line ("" when all is well). */
 export function needsNote(n: Needs): string {
   const k = needsRegen(n);
-  if (k === 0) return 'Too weak to mend on your own';
+  if (k === 0) return 'Losing health to hunger and thirst';
   if (k < 1) return 'Mending slowly';
   if (k > 1) return 'Mending faster';
   return '';
+}
+
+/** Share of max HP lost per second for each empty meter (both empty: twice that). The hero is left on 1 HP, never killed. */
+export const STARVE_SHARE = 0.02;
+
+/** HP lost per second to hunger and thirst. */
+export function starveRate(n: Needs, maxHp: number): number {
+  return ((n.food <= 0 ? 1 : 0) + (n.water <= 0 ? 1 : 0)) * STARVE_SHARE * maxHp;
 }

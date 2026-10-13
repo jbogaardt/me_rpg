@@ -19,7 +19,7 @@ import {
   type Ranged,
 } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
-import { drainNeeds, needsRegen } from '../../systems/needs';
+import { drainNeeds, needsRegen, starveRate } from '../../systems/needs';
 import { GIVERS, QUEST_GIVER, recordKill, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
@@ -127,6 +127,8 @@ export class Simulation {
     // Gear that mends (a Warden's Mantle) works in the thick of a fight; the slow natural kind waits for a quiet spell.
     const mend = gearRegen(p.hero) + (p.sinceHit > HP_REGEN_DELAY ? HP_REGEN * fed : 0);
     if (mend) s.hp = Math.min(s.maxHp, s.hp + mend * dt);
+    const starving = starveRate(p.hero.needs, s.maxHp);
+    if (starving && s.hp > 1) s.hp = Math.max(1, s.hp - starving * dt); // empty meters wear you down, but never finish you
 
     if (p.knock.x || p.knock.y) {
       this.arena.collision.slide(p.body, p.knock.x * dt, p.knock.y * dt, this.arena.bodies());

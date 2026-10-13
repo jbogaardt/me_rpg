@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newHero } from './combat';
 import { ITEMS } from './items';
 import { useFromPack } from './inventory';
-import { drainNeeds, needLevel, newNeeds, NEED_MAX, needsRegen, refill } from './needs';
+import { drainNeeds, needLevel, newNeeds, NEED_MAX, needsRegen, refill, starveRate } from './needs';
 
 describe('needs', () => {
   it('start full and drain over time, never below zero', () => {
@@ -23,6 +23,12 @@ describe('needs', () => {
     expect(needsRegen({ food: 100, water: 40 })).toBe(1);
     expect(needsRegen({ food: 10, water: 100 })).toBe(0.5);
     expect(needsRegen({ food: 100, water: 0 })).toBe(0);
+  });
+
+  it('cost health only while a meter is empty', () => {
+    expect(starveRate({ food: 5, water: 5 }, 100)).toBe(0);
+    expect(starveRate({ food: 0, water: 5 }, 100)).toBeCloseTo(2);
+    expect(starveRate({ food: 0, water: 0 }, 100)).toBeCloseTo(4);
   });
 
   it('refill up to full and report when nothing changes', () => {
