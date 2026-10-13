@@ -30,7 +30,7 @@ import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
 import { harvest, waterWith } from '../systems/crops';
-import { drinkableNear, thirsty } from '../systems/needs';
+import { drinkableNear, pondId, thirsty } from '../systems/needs';
 import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
@@ -666,7 +666,7 @@ export class OverworldScene implements Scene {
 
   /**
    * The Harvest button of every ripe plot the local player can reach, drawn by the plant, and a Drink button at the edge
-   * of a pond the player stands beside while they are thirsty (none while a menu or door is up).
+   * of a pond the player stands beside while they are thirsty and it is not empty (none while a menu or door is up).
    */
   private updateHarvestButtons(z: ZoneState, hidden: boolean) {
     const { arena } = this;
@@ -679,7 +679,9 @@ export class OverworldScene implements Scene {
         : [],
     );
     const drinking = this.drinking();
-    const water = (drinking || thirsty(this.hero.needs)) && drinkableNear(z.data, this.player.x, this.player.y);
+    const near = (drinking || thirsty(this.hero.needs)) && drinkableNear(z.data, this.player.x, this.player.y);
+    // An empty pond has nothing to give: no button (a guest knows the levels from the host's snapshot).
+    const water = near && (drinking || z.ponds.level(pondId(z.data, near.cell)) < 1) ? near : null;
     if (water) {
       const label = drinking ? 'Stop' : 'Drink';
       spots.push({ key: DRINK_KEY, label, x: world.x + water.x * scale, y: world.y + water.y * scale });
