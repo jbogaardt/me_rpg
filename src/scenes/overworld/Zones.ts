@@ -269,6 +269,11 @@ export class Zones {
     this.ui.shop.close();
   }
 
+  /** The zones drawn beside the local player's (their mobs wander on, so the next zone is alive before you reach it). */
+  lookouts(): ZoneState[] {
+    return [...this.shown.keys()];
+  }
+
   /** Lay the zones joined to the local player's by a gap beside it, and take away those no longer joined. */
   private syncNeighbours() {
     const { arena } = this;
@@ -286,7 +291,7 @@ export class Zones {
     for (const z of want.keys()) {
       if (this.shown.has(z) && z.world.parent === this.stage) continue;
       this.stage.addChildAt(z.world, 0);
-      z.setLookout(true);
+      z.setLookout(true, arena.role === 'client');
     }
     this.shown = want;
   }

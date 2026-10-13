@@ -149,10 +149,11 @@ export class ZoneState {
 
   /**
    * Is this zone only being looked at from the next one over (its map drawn beside the player's, which they will walk
-   * into)? Then nothing here is running, so what would stand frozen mid-step is left out: its mobs and its weather.
+   * into)? Then its weather stays out of the picture. Its mobs are drawn too (the scene keeps them wandering) unless
+   * `hideMobs`, as for a co-op guest, who is not told what they are doing.
    */
-  setLookout(on: boolean) {
-    for (const m of this.mobs) m.body.visible = !on && m.body.alpha > 0;
+  setLookout(on: boolean, hideMobs = on) {
+    for (const m of this.mobs) m.body.visible = !(on && hideMobs) && m.body.alpha > 0;
     if (this.weatherLayer) {
       this.weatherLayer.view.visible = !on;
       this.weatherLayer.view.alpha = 1;

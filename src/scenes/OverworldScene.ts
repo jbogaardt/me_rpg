@@ -342,6 +342,14 @@ export class OverworldScene implements Scene {
           if (z !== here) z.effects.update(dt); // the local zone's effects are updated with the rest of what is drawn
         });
       }
+      // The zones drawn beside this one keep their mobs wandering, so nothing looks frozen across the border.
+      const occupied = new Set(arena.occupiedZones());
+      for (const z of this.zones.lookouts()) {
+        if (occupied.has(z)) continue;
+        arena.inZone(z, () => {
+          for (const mob of z.mobs) mob.update(dt, z.mobWorld);
+        });
+      }
       this.training.update(dt);
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
