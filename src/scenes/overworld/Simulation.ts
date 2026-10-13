@@ -56,6 +56,13 @@ import {
 import type { Visuals } from './Visuals';
 import type { Zones } from './Zones';
 
+/** Is this player thirsty and beside a pond in `z` that is not empty? (What the A button and the Drink button both ask.) */
+export function canDrink(z: ZoneState, p: Player): boolean {
+  if (!thirsty(p.hero.needs)) return false;
+  const water = drinkableNear(z.data, p.body.x, p.body.y);
+  return !!water && z.ponds.level(pondId(z.data, water.cell)) < 1;
+}
+
 /**
  * The authoritative game rules for the people and mobs in the arena: moving, swinging, shooting, casting, taking damage
  * (from mobs and from lightning), winning XP and gold, being knocked out. It runs in solo and on a co-op host only; a guest
@@ -144,6 +151,19 @@ export class Simulation {
     if (!p.drinking) this.fx('levelUp', water.x, water.y);
     p.drinking ??= { gained: 0 };
     return true;
+  }
+
+  /**
+   * The action key (A) by a pond: stops a player who is drinking, or starts one who is thirsty at a pond that is not empty.
+   * Returns false when it does neither (then the key does what it otherwise would). Call it in the player's zone.
+   */
+  pondAction(p: Player): boolean {
+    if (p.drinking) {
+      this.stopDrinking(p);
+      return true;
+    }
+    if (!canDrink(this.arena.zone, p)) return false;
+    return this.startDrinking(p);
   }
 
   /** The player stops drinking: how much it did them good floats over them. */

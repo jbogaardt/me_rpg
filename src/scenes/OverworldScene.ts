@@ -30,7 +30,7 @@ import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
 import { harvest, waterWith } from '../systems/crops';
-import { drinkableNear, pondId, thirsty } from '../systems/needs';
+import { drinkableNear, thirsty } from '../systems/needs';
 import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
@@ -64,7 +64,7 @@ import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
 import { HostLink } from './overworld/HostLink';
 import { PackSync } from './overworld/PackSync';
-import { Simulation } from './overworld/Simulation';
+import { canDrink, Simulation } from './overworld/Simulation';
 import { Trading } from './overworld/Trading';
 import { Training } from './overworld/Training';
 import { Visuals } from './overworld/Visuals';
@@ -411,7 +411,12 @@ export class OverworldScene implements Scene {
     const busy = this.zones.transition.busy;
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
     const cmd = this.readCommand(dt, reading);
-    if (cmd.dx || cmd.dy) this.guestDrinking = false; // walking off stops the drink (the host sees it too)
+    if (cmd.dx || cmd.dy)
+      this.guestDrinking = false; // walking off stops the drink (the host sees it too)
+    // A by a pond: the host starts or stops the drink (its `act`); keep this guest's button label in step.
+    else if (cmd.act && (this.guestDrinking || canDrink(this.arena.zone, this.arena.local))) {
+      this.guestDrinking = !this.guestDrinking;
+    }
     if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.guest.pressAction());
     if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);
     this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy), cmd.aim);
@@ -558,6 +563,7 @@ export class OverworldScene implements Scene {
         siteOpen(p.hero, s.kind, this.arena.zone.name, s.index),
     );
     if (site) return this.touchSite(p, site);
+    if (this.sim.pondAction(p)) return; // A by a pond drinks (or stops drinking) instead of swinging
     const loose = this.ground.nearest(p);
     if (loose) this.ground.pickUp(p, loose);
     else this.sim.attack(p);
@@ -679,9 +685,8 @@ export class OverworldScene implements Scene {
         : [],
     );
     const drinking = this.drinking();
-    const near = (drinking || thirsty(this.hero.needs)) && drinkableNear(z.data, this.player.x, this.player.y);
     // An empty pond has nothing to give: no button (a guest knows the levels from the host's snapshot).
-    const water = near && (drinking || z.ponds.level(pondId(z.data, near.cell)) < 1) ? near : null;
+    const water = (drinking || canDrink(z, arena.local)) && drinkableNear(z.data, this.player.x, this.player.y);
     if (water) {
       const label = drinking ? 'Stop' : 'Drink';
       spots.push({ key: DRINK_KEY, label, x: world.x + water.x * scale, y: world.y + water.y * scale });
