@@ -41,6 +41,14 @@
 #loading.failed .bar { display: none; }
 #loading.failed { color: #ff8a7a; font-size: 16px; }
 
+/* --- Harvest buttons: one by each ripe crop plot in reach (src/hud/HarvestButtons.ts) --- */
+#harvest-layer { position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.harvest-btn {
+  position: absolute; transform: translate(-50%, -100%); pointer-events: auto; cursor: pointer;
+  min-width: 76px; padding: 7px 14px 9px; border: 0; font-size: 14px; line-height: 1; touch-action: manipulation;
+}
+.harvest-btn:active { transform: translate(-50%, -100%) scale(0.95); }
+
 /* --- HUD --- */
 #hud {
   position: fixed; z-index: 2; pointer-events: none;

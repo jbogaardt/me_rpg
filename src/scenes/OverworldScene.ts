@@ -18,6 +18,7 @@ import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
 import { AreaBanner } from '../hud/AreaBanner';
+import { HarvestButtons } from '../hud/HarvestButtons';
 import { GuideArrow } from '../entities/GuideArrow';
 import { guideFor } from '../systems/guide';
 import { zoneName } from '../systems/places';
@@ -28,7 +29,7 @@ import { CELL } from '../map/types';
 import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
-import { canHarvest, harvest, waterWith } from '../systems/crops';
+import { harvest, waterWith } from '../systems/crops';
 import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
@@ -124,6 +125,7 @@ export class OverworldScene implements Scene {
   private guest: GuestLink;
   private overlay: MapOverlay;
   private banner = new AreaBanner();
+  private harvestButtons = new HarvestButtons();
   private announced = ''; // the zone the banner last named
   /** What the story last looked like for the local hero, to notice when it moves: a task done in the field, a chapter begun, the end. */
   private story = { stage: -1, ready: false, chapter: -1 };
@@ -168,6 +170,7 @@ export class OverworldScene implements Scene {
     this.zones.root.addChildAt(this.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     this.overlay = new MapOverlay();
+    this.harvestButtons.onPick = (key) => this.harvestPressed(key);
     ui.shop.onGearChange = () => arena.refreshLook();
     ui.shop.trader = () => this.pack.trader();
   }
@@ -223,6 +226,7 @@ export class OverworldScene implements Scene {
     this.ui.menu.inventory.attach(null);
     this.ui.menu.magic.attach(null);
     this.overlay.setAvailable(false);
+    this.harvestButtons.clear();
     this.ui.dialog.close();
     this.ui.shop.close();
     if (this.ui.menu.open) this.ui.menu.toggle(this.hero);
@@ -304,6 +308,7 @@ export class OverworldScene implements Scene {
       item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
     }
     for (const body of arena.bodies()) body.zIndex = body.y;
+    this.updateHarvestButtons(z, menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy);
     hud.update(this.hero, this.combos.typed, this.arena.zone.name);
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
@@ -355,7 +360,6 @@ export class OverworldScene implements Scene {
           for (const p of present) sim.updatePlayer(p, commandOf(p), dt);
           for (const mob of z.mobs) mob.update(dt, z.mobWorld);
           for (const crop of z.crops) crop.grow(dt);
-          for (const p of present) this.autoHarvest(p);
           this.ground.age(dt);
           sim.weather(dt);
           for (const p of present) {
@@ -528,9 +532,7 @@ export class OverworldScene implements Scene {
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
     if (chest) return this.openChest(p, chest);
-    const crop = this.arena.crops.find(
-      (c) => c.ripe && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH,
-    );
+    const crop = this.arena.crops.find((c) => c.ripe && this.inReach(p, c));
     if (crop) return this.pickCrop(p, crop);
     const dry = this.arena.crops.find(
       (c) => c.thirsty && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH,
@@ -648,13 +650,30 @@ export class OverworldScene implements Scene {
     this.overlay.setGuide(guide);
   }
 
-  /** Walking up to a ripe crop plot picks it (host and solo, for every player): no key needed while the pack has room. */
-  private autoHarvest(p: Player) {
-    if (p.hero.stats.hp <= 0) return;
-    for (const crop of this.arena.crops) {
-      if (!crop.ripe || !canHarvest(p.hero, crop.kind)) continue;
-      if (Math.hypot(p.body.x - crop.x, p.body.y - (crop.y - CELL / 2)) < CROP_REACH) this.pickCrop(p, crop);
-    }
+  /** The Harvest button of every ripe plot the local player can reach, drawn by the plant (none while a menu or door is up). */
+  private updateHarvestButtons(z: ZoneState, hidden: boolean) {
+    const { arena } = this;
+    if (hidden) return this.harvestButtons.clear();
+    const { world } = arena.view;
+    const scale = world.scale.x;
+    const spots = z.crops.flatMap((c, key) =>
+      c.ripe && this.inReach(arena.local, c)
+        ? [{ key, x: world.x + c.x * scale, y: world.y + (c.y - CELL * 1.6) * scale }]
+        : [],
+    );
+    this.harvestButtons.update(spots);
+  }
+
+  private inReach(p: Player, crop: Crop) {
+    return Math.hypot(p.body.x - crop.x, p.body.y - (crop.y - CELL / 2)) < CROP_REACH;
+  }
+
+  /** The player pressed a plot's Harvest button: pick it here, or, as a guest, ask the host (an action press picks the plot beside them). */
+  private harvestPressed(key: number) {
+    const crop = this.arena.crops[key];
+    if (!crop?.ripe || !this.inReach(this.arena.local, crop)) return;
+    if (this.arena.role === 'client') this.guest.pressAction();
+    else this.pickCrop(this.arena.local, crop);
   }
 
   /** A player picks a ripe crop plot: the produce goes to their pack and the plot starts again as a sprout. */
