@@ -1,6 +1,6 @@
 import { Graphics, type Texture } from 'pixi.js';
 import { CELL } from '../map/types';
-import { DIR_VEC, directionToward } from '../core/direction';
+import { DIR_VEC, directionToward, type Direction } from '../core/direction';
 import { glide } from '../core/interp';
 import { mobTimings, type MobKind, type MobState, type MobView } from '../systems/combat';
 import { Character } from './Character';
@@ -32,7 +32,9 @@ export function mobAttack(kind: MobKind, dist: number, rayReady = true): MobAtta
 
 type State = MobState;
 
-export const REACH = 20; // starts an attack when this close (feet to feet)
+export const REACH = 20;
+/** The held pose of a ray caster: the sceptre thrust out (`slash` frame 3), and where its head is from the feet (left; mirrored for right). */
+const RAY_POSE = { anim: 'slash', col: 3, headX: 21, headY: -30 } as const; // starts an attack when this close (feet to feet)
 // Windup (telegraph before the blow lands, so the hero can dodge), recover and stagger (the pause after being hit,
 // which interrupts a windup) are per kind: see `mobTimings` in systems/combat.ts.
 const LUNGE = 0.12;
@@ -46,6 +48,8 @@ const KEEP_AWAY = 0.4; // a shooter backs off when the hero is closer than this 
 const RESPAWN = 6;
 const FADE = 0.4;
 const LEASH = 4 * CELL; // wanders no further than this from home
+
+const sideToward = (dx: number): Direction => (dx < 0 ? 'left' : 'right');
 
 function nearest(from: Character, heroes: MobWorld['heroes']): Character | undefined {
   let best: Character | undefined;
@@ -112,6 +116,7 @@ export class Mob {
     this.frozen = 0;
     this.rayRest = 0;
     this.beam.clear();
+    this.body.release();
     this.knock = { x: 0, y: 0 };
     this.poise = 0;
     this.drawBar();
@@ -128,6 +133,7 @@ export class Mob {
     this.timer = 1;
     this.flash = 0;
     this.beam.clear();
+    this.body.release();
     this.body.setOffset(0, 0);
     this.body.setTint(0xffffff);
   }
@@ -139,6 +145,7 @@ export class Mob {
     this.drawBar();
     if (this.hp <= 0) {
       this.beam.clear();
+      this.body.release();
       this.knock = { x: vx * 180, y: vy * 180 };
       this.body.play('hurt', this.t.stagger * 1000);
       this.state = 'dead';
@@ -168,6 +175,7 @@ export class Mob {
     this.timer = this.t.recover;
     this.rayRest = this.kind.ray?.rest ?? 0;
     this.beam.clear();
+    this.body.release();
   }
 
   /** Held still by a spell (Stasis) for this many seconds: it neither moves nor attacks (host and solo; a guest just sees it stand). */
@@ -243,7 +251,7 @@ export class Mob {
           this.state = 'windup';
           this.timer = this.t.windup;
           this.attack = attack;
-          this.body.face(directionToward(dx, dy));
+          this.body.face(attack === 'ray' ? sideToward(dx) : directionToward(dx, dy)); // the sceptre is only drawn left or right
           this.body.play(attack === 'shot' ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph; the blow lands as it ends
         } else {
           moving = this.walk(dx / dist, dy / dist, this.kind.speed * dt, world);
@@ -256,6 +264,7 @@ export class Mob {
             world.shoot(this, dx / (dist || 1), dy / (dist || 1)); // aimed as it lets go
           else if (this.attack === 'ray' && this.kind.ray) {
             this.state = 'channel'; // hold the beam on the hero until it runs out or something breaks it
+            this.body.hold(RAY_POSE.anim, RAY_POSE.col);
             this.timer = this.kind.ray.duration;
             this.rayTimer = this.kind.ray.tick * 0.5;
             break;
@@ -269,7 +278,7 @@ export class Mob {
         // It ends when it runs out, the hero gets away (or is gone), or a wall comes between them.
         let held = !!ray && !!target && dist <= ray.range * 1.4 && this.timer > 0;
         if (held && target) {
-          this.body.face(directionToward(dx, dy));
+          this.body.face(sideToward(dx));
           this.rayTimer -= dt;
           if (this.rayTimer <= 0 && ray) {
             this.rayTimer += ray.tick;
@@ -321,6 +330,8 @@ export class Mob {
       this.hp = hp;
       this.drawBar();
     }
+    if (next === 'channel' && this.state !== 'channel') this.body.hold(RAY_POSE.anim, RAY_POSE.col);
+    else if (next !== 'channel' && this.state === 'channel') this.body.release();
     this.state = next;
     this.timer = timer;
     this.moving = moving;
@@ -367,8 +378,8 @@ export class Mob {
     const target = nearest(this.body, this.heroes);
     if (!target) return;
     const { color } = this.kind.ray ?? { color: 0xff5fc8 };
-    const [fx, fy] = DIR_VEC[this.body.facing];
-    const [sx, sy] = [fx * 14, -24 + fy * 4]; // the sceptre's head, relative to the feet
+    const side = this.body.facing === 'left' ? -1 : 1;
+    const [sx, sy] = [side * RAY_POSE.headX, RAY_POSE.headY]; // the sceptre's head in the held pose, relative to the feet
     const [ex, ey] = [target.x - this.body.x, target.y - this.body.y - 14];
     const flicker = 0.85 + 0.15 * Math.sin(performance.now() / 40);
     this.beam
@@ -381,8 +392,12 @@ export class Mob {
       .moveTo(sx, sy)
       .lineTo(ex, ey)
       .stroke({ width: 1.5, color: 0xffffff, alpha: flicker, cap: 'round' })
-      .circle(sx, sy, 4)
-      .fill({ color, alpha: 0.6 })
+      .circle(sx, sy, 9)
+      .fill({ color, alpha: 0.3 * flicker })
+      .circle(sx, sy, 5)
+      .fill({ color, alpha: 0.8 })
+      .circle(sx, sy, 2.2)
+      .fill({ color: 0xffffff, alpha: flicker })
       .circle(ex, ey, 5)
       .fill({ color, alpha: 0.5 });
   }

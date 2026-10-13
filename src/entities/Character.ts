@@ -49,6 +49,7 @@ export class Character extends Container {
   private loopTime = 0;
   private loopAnim: AnimName = 'idle';
   private action: { anim: AnimName; time: number; ms: number } | null = null;
+  private held: { anim: AnimName; col: number } | null = null;
   private auraTime = 0;
   private auraColor = 0x4de3ff;
   private tag: BitmapText | null = null;
@@ -107,6 +108,16 @@ export class Character extends Container {
     this.action = { anim, time: 0, ms: ms ?? ANIMS[anim].cycle.length * ANIMS[anim].ms };
   }
 
+  /** Freeze on one frame of an animation (a channelled attack) until `release()`; a one-shot action still plays over it. */
+  hold(anim: AnimName, col: number) {
+    this.held = { anim, col };
+  }
+
+  /** Go back to idle/walk after `hold()`. */
+  release() {
+    this.held = null;
+  }
+
   /** Is a one-shot animation still playing? */
   get acting(): boolean {
     return this.action !== null;
@@ -132,6 +143,7 @@ export class Character extends Container {
       if (step < cycle.length) return { anim: act.anim, col: cycle[step] ?? 0 };
       this.action = null;
     }
+    if (this.held) return this.held;
     const anim: AnimName = moving ? 'walk' : 'idle';
     const { cycle, ms } = ANIMS[anim];
     // Switching between idle and walk restarts the cycle, so a step always begins on the same foot.
