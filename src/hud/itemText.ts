@@ -23,6 +23,8 @@ export function bonuses(item: Item): string {
     item.focus ? `${item.focus.kind}, ${item.focus.combos.length} combos` : '',
     item.use?.hp ? `+${item.use.hp} HP` : '',
     item.use?.mp ? `+${item.use.mp} MP` : '',
+    item.use?.food ? `+${item.use.food} food` : '',
+    item.use?.water ? `+${item.use.water} water` : '',
   ]
     .filter(Boolean)
     .join(', ');

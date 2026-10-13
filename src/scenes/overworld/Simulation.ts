@@ -19,6 +19,7 @@ import {
   type Ranged,
 } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
+import { drainNeeds, needsRegen, starveRate } from '../../systems/needs';
 import { GIVERS, QUEST_GIVER, recordKill, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
@@ -120,10 +121,14 @@ export class Simulation {
     p.grace = Math.max(0, p.grace - dt);
     p.sinceHit += dt;
     if (p.pendingShot && (p.pendingShot.timer -= dt) <= 0) this.release(p);
-    s.mp = Math.min(s.maxMp, s.mp + (MP_REGEN + gearMpRegen(p.hero)) * dt);
+    drainNeeds(p.hero.needs, dt);
+    const fed = needsRegen(p.hero.needs); // hungry or thirsty heroes mend more slowly (systems/needs.ts)
+    s.mp = Math.min(s.maxMp, s.mp + (MP_REGEN * fed + gearMpRegen(p.hero)) * dt);
     // Gear that mends (a Warden's Mantle) works in the thick of a fight; the slow natural kind waits for a quiet spell.
-    const mend = gearRegen(p.hero) + (p.sinceHit > HP_REGEN_DELAY ? HP_REGEN : 0);
+    const mend = gearRegen(p.hero) + (p.sinceHit > HP_REGEN_DELAY ? HP_REGEN * fed : 0);
     if (mend) s.hp = Math.min(s.maxHp, s.hp + mend * dt);
+    const starving = starveRate(p.hero.needs, s.maxHp);
+    if (starving && s.hp > 1) s.hp = Math.max(1, s.hp - starving * dt); // empty meters wear you down, but never finish you
 
     if (p.knock.x || p.knock.y) {
       this.arena.collision.slide(p.body, p.knock.x * dt, p.knock.y * dt, this.arena.bodies());

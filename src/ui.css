@@ -102,6 +102,18 @@
 #hud-mp .label::before { content: 'MP '; font-weight: 700; }
 #hud-hp .fill { background-image: linear-gradient(rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.25)); }
 #hud-mp .fill { background-image: linear-gradient(270deg, #363c4e, #586c78, #7796a5, #90b8d1, #a8d3fc); }
+/* Food and water: a second row of bars under HP and MP (Hud.ts sets --frac and the low/empty classes). */
+#hud-stats { flex-wrap: wrap; }
+#hud-needs { display: flex; gap: 6px; flex: 1 1 100%; min-width: 0; }
+#hud-needs .bar { flex: 1 1 0; min-width: 0; height: 11px; }
+#hud-needs .label { font-size: 9px; line-height: 11px; }
+#hud-food .label::before { content: 'FOOD '; font-weight: 700; }
+#hud-water .label::before { content: 'WATER '; font-weight: 700; }
+#hud-food .fill { background-image: linear-gradient(270deg, #963a11, #e7682f, #ffb13f); }
+#hud-water .fill { background-image: linear-gradient(270deg, #1a3051, #406181, #5b93c9); }
+#hud-needs .bar.low .fill { animation: need-pulse 1s infinite alternate; }
+#hud-needs .bar.empty { border-color: #b82024; }
+@keyframes need-pulse { to { opacity: 0.45; } }
 .bar.xp { height: 8px; margin-top: 3px; }
 .bar.xp .fill { background-image: var(--grad-xp); }
 

@@ -15,6 +15,7 @@
 import { AIM_STEPS } from '../core/aim';
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
+import { NEED_MAX } from '../systems/needs';
 import { questFromWire } from '../systems/quests';
 import { loadoutFromCode, MAX_HERO_COMBOS, MAX_SKILL_MASK } from '../systems/skills';
 import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../systems/inventory';
@@ -24,7 +25,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 19;
+export const PROTOCOL_VERSION = 20;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -192,6 +193,8 @@ export interface PackMsg {
   /** The skills the guest has learned (systems/skills.ts `skillMask`), and which two are ready (`loadoutCode`). */
   skills: number;
   loadout: number;
+  /** Food and water, whole points (systems/needs.ts). */
+  needs: [number, number];
 }
 
 /** Host -> guest: what every player wears, `[player number, ...one item code per GEAR_SLOTS slot]`, so everyone's look is right. */
@@ -617,6 +620,8 @@ export function parseMessage(raw: unknown): Message | null {
         m.skills <= MAX_SKILL_MASK &&
         isCount(m.loadout) &&
         loadoutFromCode(m.loadout) !== null &&
+        numbers(m.needs, 2) &&
+        m.needs.every((v: number) => Number.isInteger(v) && v >= 0 && v <= NEED_MAX) &&
         sayOk
         ? {
             k: 'pack',
@@ -628,6 +633,7 @@ export function parseMessage(raw: unknown): Message | null {
             quests: m.quests as number[],
             skills: m.skills,
             loadout: m.loadout,
+            needs: [m.needs[0] ?? 0, m.needs[1] ?? 0],
             ...(say === undefined ? {} : { say: say as { id: number; text: string; ok: boolean; story?: string } }),
           }
         : null;
