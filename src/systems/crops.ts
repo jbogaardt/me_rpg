@@ -38,11 +38,38 @@ export const CROP_KINDS = Object.keys(CROPS) as CropName[];
 /** A map holds at most 30 crop plots (one bit each in SnapMsg.crops). */
 export const MAX_CROPS = 30;
 
-/** The stage to draw for a plot `age` seconds into its growth: ripe (the last stage) only once `age` reaches `grow`. */
-export function cropStage(age: number, grow: number): number {
-  if (age >= grow) return CROP_STAGES - 1;
-  return Math.min(CROP_STAGES - 2, Math.floor((Math.max(0, age) / grow) * (CROP_STAGES - 1)));
+/**
+ * A crop grows in `CROP_PHASES` phases, and each phase needs its own watering: a picked plot is dry; water it and it
+ * grows for a third of `grow`, then dries out again showing the next stage; the third watering carries it to ripe.
+ */
+export const CROP_PHASES = CROP_STAGES - 1;
+
+/** Seconds one watered phase lasts. */
+export const phaseTime = (grow: number): number => grow / CROP_PHASES;
+
+/** The state of a plot as it travels to a guest: a small number, 0-5 growing (phase * 2, plus 1 while dry) or `RIPE_CODE`. */
+export const RIPE_CODE = CROP_PHASES * 2;
+
+export interface CropState {
+  ripe: boolean;
+  /** 0..CROP_PHASES-1 while growing (the stage drawn); 0 once ripe (the ripe stage is drawn instead). */
+  phase: number;
+  /** Waiting for water. Never true when ripe. */
+  dry: boolean;
 }
+
+export const cropCode = ({ ripe, phase, dry }: CropState): number => (ripe ? RIPE_CODE : phase * 2 + (dry ? 1 : 0));
+
+/** Read a code back; null when it is not one. */
+export function cropFromCode(code: unknown): CropState | null {
+  if (typeof code !== 'number' || !Number.isInteger(code) || code < 0 || code > RIPE_CODE) return null;
+  if (code === RIPE_CODE) return { ripe: true, phase: 0, dry: false };
+  return { ripe: false, phase: code >> 1, dry: (code & 1) === 1 };
+}
+
+/** The stage to draw: the phase while growing, the last stage when ripe. */
+export const cropStage = ({ ripe, phase }: Pick<CropState, 'ripe' | 'phase'>): number =>
+  ripe ? CROP_STAGES - 1 : phase;
 
 export interface Harvest {
   ok: boolean;
