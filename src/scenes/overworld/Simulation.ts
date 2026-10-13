@@ -20,7 +20,7 @@ import {
   type Ranged,
 } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
-import { drainNeeds, drinkableNear, drinkFrom, needsRegen, starveRate } from '../../systems/needs';
+import { drainNeeds, drinkableNear, drinkFrom, needsRegen, pondId, starveRate } from '../../systems/needs';
 import { GIVERS, QUEST_GIVER, recordKill, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
@@ -110,14 +110,23 @@ export class Simulation {
 
   // --- A player ---
 
-  /** A player drinks from the pond beside them (call it in their zone). Says why not, or returns false with no pond near. */
+  /**
+   * A player drinks from the pond beside them (call it in their zone); each drink from the same pond gives less until it
+   * recovers. Says why not, or returns false with no pond near.
+   */
   drink(p: Player): boolean {
+    const { arena } = this;
+    const z = arena.zone;
     const { x, y } = p.body;
-    const water = drinkableNear(this.arena.zone.data, x, y);
+    const water = drinkableNear(z.data, x, y);
     if (!water) return false;
     p.body.face(directionToward(water.x - x, water.y - y));
-    const drunk = drinkFrom(p.hero.needs);
-    if (drunk.ok) this.fx('levelUp', water.x, water.y);
+    const pond = pondId(z.data, water.cell);
+    const drunk = drinkFrom(p.hero.needs, z.ponds.sip(pond, arena.clock));
+    if (drunk.ok) {
+      z.ponds.record(pond, arena.clock);
+      this.fx('levelUp', water.x, water.y);
+    }
     this.text(x, y - 40, drunk.text, drunk.ok ? 0x8fc8ff : 0xff8a7a);
     return true;
   }

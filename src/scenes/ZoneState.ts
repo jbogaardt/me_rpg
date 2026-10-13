@@ -25,6 +25,7 @@ import { PET_KINDS } from '../systems/pets';
 import { GIVERS } from '../systems/quests';
 import { SHOPS } from '../systems/shops';
 import { isTrialZone } from '../systems/skills';
+import { PondLevels } from '../systems/needs';
 
 /** What a zone remembers while it is unloaded (Arena.memory); its mobs simply start afresh. */
 export interface ZoneMemory {
@@ -75,6 +76,8 @@ export class ZoneState {
   readonly ground: GroundItem[] = [];
   /** The bodies of the players here, which mobs hunt and which block others. The scene keeps it in step. */
   readonly heroBodies: Character[] = [];
+  /** How much each pond here has been drunk from (solo and host; forgotten when the zone is unloaded, ponds refill anyway). */
+  readonly ponds = new PondLevels();
   /** Set by the scene, which owns the combat rules mobs call back into. */
   mobWorld!: MobWorld;
 

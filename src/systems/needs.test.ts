@@ -11,6 +11,11 @@ import {
   newNeeds,
   NEED_MAX,
   needsRegen,
+  PondLevels,
+  pondId,
+  pondSip,
+  POND_MIN_SIP,
+  POND_RECOVER,
   POND_SIP,
   refill,
   starveRate,
@@ -82,9 +87,9 @@ describe('eating and drinking', () => {
 
     it('finds the water beside the bank, not further off', () => {
       // Standing just left of the pond, on the bank cell (2,1).
-      expect(drinkableNear(data, 2.6 * CELL, 1.5 * CELL)).toEqual({ x: 3.5 * CELL, y: 1.5 * CELL });
+      expect(drinkableNear(data, 2.6 * CELL, 1.5 * CELL)).toEqual({ x: 3.5 * CELL, y: 1.5 * CELL, cell: 9 });
       // Just below it, nearer the right-hand cell.
-      expect(drinkableNear(data, 4.4 * CELL, 2.3 * CELL)).toEqual({ x: 4.5 * CELL, y: 1.5 * CELL });
+      expect(drinkableNear(data, 4.4 * CELL, 2.3 * CELL)).toEqual({ x: 4.5 * CELL, y: 1.5 * CELL, cell: 10 });
       // Two cells away is too far, and the sea does not count.
       expect(drinkableNear(data, 1 * CELL, 1.5 * CELL)).toBeNull();
       expect(drinkableNear(data, 0.5 * CELL, 2.5 * CELL)).toBeNull();
@@ -103,6 +108,29 @@ describe('eating and drinking', () => {
       expect(n.water).toBe(NEED_MAX);
       expect(thirsty(n)).toBe(false);
       expect(drinkFrom(n)).toEqual({ ok: false, text: 'Not thirsty' });
+    });
+
+    it('gives less each drink from the same pond, down to a trickle', () => {
+      const sips = [0, 1, 2, 3].map(pondSip);
+      expect(sips[0]).toBe(POND_SIP);
+      for (let i = 1; i < sips.length; i++) expect(sips[i]).toBeLessThan(sips[i - 1]!);
+      expect(pondSip(50)).toBe(POND_MIN_SIP);
+    });
+
+    it('knows one pond from another', () => {
+      expect(pondId(data, 1 * 6 + 3)).toBe(pondId(data, 1 * 6 + 4));
+      expect(pondId(data, 3 * 6 + 0)).not.toBe(pondId(data, 1 * 6 + 3));
+    });
+
+    it('lets a pond recover when left alone, and keeps ponds apart', () => {
+      const ponds = new PondLevels();
+      expect(ponds.sip(7, 0)).toBe(POND_SIP);
+      ponds.record(7, 0);
+      ponds.record(7, 1);
+      expect(ponds.sip(7, 1)).toBe(pondSip(2));
+      expect(ponds.sip(8, 1)).toBe(POND_SIP); // another pond is untouched
+      expect(ponds.sip(7, 1 + POND_RECOVER)).toBe(pondSip(1));
+      expect(ponds.sip(7, 1 + 2 * POND_RECOVER)).toBe(POND_SIP);
     });
   });
 });
