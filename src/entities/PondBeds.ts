@@ -5,6 +5,8 @@ import { drainedLayers, pondCells, pondLayers } from '../systems/needs';
 const SHALLOW = 0x2f88b4; // the ponds' own blue (0x156c99), a shade lighter: water gone shallow
 const SHALLOW_ALPHA = 0.55;
 const DRY = 0x9c7d55; // the dried-out bed, close to the ponds' earthy banks: only once the pond is empty
+/** How far (cells) the empty bed reaches past each water cell: over the water half of every bank tile, corners too. */
+const BED_REACH = 0.6;
 const STEPS = 4; // redraws per cell's worth of water drained: a layer fades out in that many steps per cell of it
 
 /**
@@ -47,17 +49,34 @@ export class PondBeds extends Graphics {
     this.drawLayers(layers.slice(0, gone), SHALLOW, SHALLOW_ALPHA, 0.8);
     this.drawLayers(layers.slice(gone, gone + 1), SHALLOW, SHALLOW_ALPHA * fading, 0.8);
     const empty = gone >= layers.length ? 1 : gone === layers.length - 1 ? fading : 0;
-    this.drawLayers(layers, DRY, empty, 1.1);
+    this.drawLayers(layers, DRY, empty, BED_REACH, true);
   }
 
-  /** `shore`: the radius (in cells) of a shore cell's patch: the wash stays off the sandy bank, the dry bed covers it all. */
-  private drawLayers(layers: readonly (readonly number[])[], color: number, alpha: number, shore: number) {
+  /**
+   * Patches over every cell of these layers. A wash is a round patch, a shore cell's `shore` cells across (it stays off the
+   * sandy bank); the empty bed (`square`) is a rounded square reaching `shore` cells past each cell, so it also covers the
+   * water the bank tiles draw round the pond's edges and in their corners, where round patches leave gaps.
+   */
+  private drawLayers(
+    layers: readonly (readonly number[])[],
+    color: number,
+    alpha: number,
+    shore: number,
+    square = false,
+  ) {
     if (alpha <= 0 || !layers.length) return;
     const { width, surface } = this.data;
     for (const layer of layers) {
       for (const i of layer) {
+        const x = ((i % width) + 0.5) * CELL;
+        const y = (Math.floor(i / width) + 0.5) * CELL;
+        if (square) {
+          const half = (0.5 + shore) * CELL;
+          this.roundRect(x - half, y - half, half * 2, half * 2, shore * CELL);
+          continue;
+        }
         const edge = [i - 1, i + 1, i - width, i + width].some((j) => surface[j] !== surface[i]);
-        this.circle(((i % width) + 0.5) * CELL, (Math.floor(i / width) + 0.5) * CELL, (edge ? shore : 0.9) * CELL);
+        this.circle(x, y, (edge ? shore : 0.9) * CELL);
       }
     }
     this.fill({ color, alpha });
