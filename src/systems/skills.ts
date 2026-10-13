@@ -76,9 +76,9 @@ export const SKILLS: Record<SkillId, Skill> = {
 export const EDGE_CHARGES = 3;
 export const EDGE_SECONDS = 12;
 export const EDGE_SHARE = 0.6;
-/** Spark Volley: how many bolts, and each one's share of the hero's spell power (a wand's bolt is 1.8 to 2.4 times it). */
+/** Spark Volley: how many bolts, and each one's share of the hero's spell power (a wand's bolt is 1.4 to 1.6 times it, its fan 0.75 to 0.8 per bolt). */
 export const VOLLEY_BOLTS = 3;
-export const VOLLEY_POWER = 0.7;
+export const VOLLEY_POWER = 0.55;
 /** Iron Skin: seconds, and the share of damage still taken. */
 export const GUARD_SECONDS = 8;
 export const GUARD_TAKEN = 0.55;

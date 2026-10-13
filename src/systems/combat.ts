@@ -157,8 +157,10 @@ export function newHero(): Hero {
   };
 }
 
-// Mob kinds. `look` is a paper-doll outfit (part ids from sprites/parts.ts); the numbers are tuned against the
-// starter hero (about 7 damage per swing, 30 HP). Add a kind with the add-mob-kind skill.
+// Mob kinds. `look` is a paper-doll outfit (part ids from sprites/parts.ts). Each kind is tuned for a band of hero levels,
+// and the biomes hand them out by that band (greenwood 1-3, eastwood and the coast 3-5, the barrows and desert 4-6, the
+// frostlands 5-8, the Mirewater 6-8, the jungle 7-9, the marsh 8-10): a blow should take roughly 10-20% of a hero's
+// HP at the middle of the band, wearing the usual gear for it. Add a kind with the add-mob-kind skill.
 
 /** The original test enemy, now a caster: hangs back and hurls slow violet bolts you can sidestep. Level 1. */
 export const SHADE: MobKind = {
@@ -176,7 +178,7 @@ export const SHADE: MobKind = {
   shot: { range: 5.5 * 32, speed: 135, color: 0xb06cff },
 };
 
-/** Desert enemy: tougher than the shade, tuned for roughly levels 2-4. */
+/** Desert and coast enemy: tougher than the shade, tuned for roughly levels 4-5. */
 export const RAIDER: MobKind = {
   name: 'Dune Raider',
   look: {
@@ -188,11 +190,11 @@ export const RAIDER: MobKind = {
     feet: 'feet.boots_brown',
     weapon: 'weapon.arming_bronze',
   },
-  maxHp: 40,
-  attack: 9,
+  maxHp: 48,
+  attack: 15,
   defense: 1,
-  xp: 22,
-  gold: 14,
+  xp: 28,
+  gold: 16,
   speed: 70,
   sight: 5.5 * 32,
   windup: 0.38,
@@ -200,7 +202,7 @@ export const RAIDER: MobKind = {
   stagger: 0.2,
 };
 
-/** Frost enemy: an armoured, icy skeleton; the hardest so far, tuned for roughly levels 4-6. */
+/** Frost enemy: an armoured, icy skeleton, tuned for roughly levels 5-7. */
 export const FROSTBOUND: MobKind = {
   name: 'Frostbound',
   look: {
@@ -211,11 +213,11 @@ export const FROSTBOUND: MobKind = {
     headwear: 'headwear.nasal',
     weapon: 'weapon.arming_steel',
   },
-  maxHp: 64,
-  attack: 13,
-  defense: 2,
-  xp: 38,
-  gold: 24,
+  maxHp: 80,
+  attack: 22,
+  defense: 3,
+  xp: 55,
+  gold: 32,
   speed: 62,
   sight: 6 * 32,
   windup: 0.4,
@@ -266,11 +268,11 @@ export const WOLFKIN: MobKind = {
 export const SKELETON: MobKind = {
   name: 'Skeleton',
   look: { body: 'body.skeleton', head: 'head.skeleton', weapon: 'weapon.arming_iron', shield: 'shield.round_brown' },
-  maxHp: 32,
-  attack: 8,
+  maxHp: 36,
+  attack: 12,
   defense: 1,
-  xp: 16,
-  gold: 10,
+  xp: 22,
+  gold: 12,
   speed: 52,
   sight: 6.5 * 32,
   windup: 0.55,
@@ -282,16 +284,16 @@ export const SKELETON: MobKind = {
 export const ZOMBIE: MobKind = {
   name: 'Zombie',
   look: { body: 'body.zombie', head: 'head.zombie', torso: 'torso.tunic_charcoal', legs: 'legs.pants_brown' },
-  maxHp: 40,
-  attack: 7,
+  maxHp: 52,
+  attack: 13,
   defense: 0,
-  xp: 14,
-  gold: 9,
+  xp: 24,
+  gold: 14,
   speed: 36,
   sight: 4 * 32,
 };
 
-/** A heavy hitter in a barbarian helm: a real fight at levels 3-5. */
+/** A heavy hitter in a barbarian helm: a real fight at levels 5-6. */
 export const ORC: MobKind = {
   name: 'Orc',
   look: {
@@ -303,11 +305,11 @@ export const ORC: MobKind = {
     feet: 'feet.boots_black',
     weapon: 'weapon.arming_iron',
   },
-  maxHp: 56,
-  attack: 11,
-  defense: 1,
-  xp: 30,
-  gold: 18,
+  maxHp: 70,
+  attack: 20,
+  defense: 2,
+  xp: 40,
+  gold: 22,
   speed: 58,
   sight: 5.5 * 32,
   windup: 0.4,
@@ -315,15 +317,15 @@ export const ORC: MobKind = {
   stagger: 0.08,
 };
 
-/** The toughest so far: huge HP and defense, slow, hits very hard with bare fists. */
+/** The toughest of the open world's old kinds: huge HP and defense, slow, hits very hard with bare fists. Levels 6-8. */
 export const TROLL: MobKind = {
   name: 'Troll',
   look: { body: 'body.green', head: 'head.troll', legs: 'legs.pants_brown' },
-  maxHp: 96,
-  attack: 15,
-  defense: 3,
-  xp: 60,
-  gold: 40,
+  maxHp: 130,
+  attack: 26,
+  defense: 4,
+  xp: 90,
+  gold: 50,
   speed: 46,
   sight: 5 * 32,
   windup: 0.5,
@@ -417,6 +419,110 @@ export const CULTIST: MobKind = {
   shot: { range: 6 * 32, speed: 145, color: 0xff9a5a },
 };
 
+/** The Mirewater's marsh witch: stays back in the reeds and flings murky bolts. Levels 6-8. */
+export const HEXER: MobKind = {
+  name: 'Hexer',
+  look: {
+    body: 'body.shade',
+    head: 'head.shade',
+    headwear: 'headwear.wizard_navy',
+    torso: 'torso.robe_blue',
+    weapon: 'weapon.dagger',
+  },
+  maxHp: 60,
+  attack: 24,
+  defense: 2,
+  xp: 62,
+  gold: 34,
+  speed: 54,
+  sight: 7 * 32,
+  windup: 0.6,
+  recover: 1.1,
+  shot: { range: 6 * 32, speed: 150, color: 0x6fd0a0 },
+};
+
+/** A bloated swamp corpse: slow, soaks up blows and hits hard. Levels 6-8. */
+export const BOG_GHOUL: MobKind = {
+  name: 'Bog Ghoul',
+  look: { body: 'body.zombie', head: 'head.zombie', torso: 'torso.tunic_forest', legs: 'legs.pants_forest' },
+  maxHp: 100,
+  attack: 24,
+  defense: 3,
+  xp: 68,
+  gold: 38,
+  speed: 40,
+  sight: 4.5 * 32,
+  windup: 0.55,
+  recover: 0.8,
+  stagger: 0.1,
+};
+
+/** A big, fast wolf: the jungle and wild country's hunter. Levels 6-8. */
+export const WARG: MobKind = {
+  name: 'Warg',
+  look: { body: 'body.fur_grey', head: 'head.wolf', legs: 'legs.pants_charcoal', torso: 'torso.leather' },
+  maxHp: 60,
+  attack: 20,
+  defense: 1,
+  xp: 42,
+  gold: 24,
+  speed: 106,
+  sight: 6.5 * 32,
+  windup: 0.3,
+  recover: 0.45,
+  stagger: 0.1,
+};
+
+/** An orc picked to guard the Tuskwood: legion plate and a shield. Levels 7-9. */
+export const TUSK_GUARD: MobKind = {
+  name: 'Tusk Guard',
+  look: {
+    body: 'body.dark_green',
+    head: 'head.orc_dark',
+    headwear: 'headwear.legion',
+    torso: 'torso.legion_iron',
+    legs: 'legs.pants_charcoal',
+    feet: 'feet.boots_black',
+    weapon: 'weapon.arming_steel',
+    shield: 'shield.round_black',
+  },
+  maxHp: 130,
+  attack: 28,
+  defense: 5,
+  xp: 85,
+  gold: 46,
+  speed: 56,
+  sight: 5.5 * 32,
+  windup: 0.45,
+  recover: 0.6,
+  stagger: 0.06,
+};
+
+/** The deep Frostlands' sentry: a frostbound in a great helm and a kite shield. Levels 7-9. */
+export const FROST_WARDEN: MobKind = {
+  name: 'Frost Warden',
+  look: {
+    body: 'body.frost',
+    head: 'head.frost',
+    torso: 'torso.plate_steel',
+    legs: 'legs.plate_steel',
+    feet: 'feet.plate_steel',
+    headwear: 'headwear.greathelm',
+    weapon: 'weapon.arming_silver',
+    shield: 'shield.kite_gray',
+  },
+  maxHp: 150,
+  attack: 30,
+  defense: 6,
+  xp: 100,
+  gold: 56,
+  speed: 58,
+  sight: 6 * 32,
+  windup: 0.45,
+  recover: 0.6,
+  stagger: 0.05,
+};
+
 /** What a mob is doing, in the order used on the wire (src/net/protocol.ts). */
 export const MOB_STATES = ['idle', 'wander', 'chase', 'windup', 'recover', 'dead'] as const;
 export type MobState = (typeof MOB_STATES)[number];
@@ -448,6 +554,11 @@ export const MOB_KINDS: Record<string, MobKind> = {
   cultist: CULTIST,
   warlord: WARLORD,
   wraith: WRAITH,
+  hexer: HEXER,
+  bogGhoul: BOG_GHOUL,
+  warg: WARG,
+  tuskGuard: TUSK_GUARD,
+  frostWarden: FROST_WARDEN,
 };
 
 /** The gear a hero is wearing, in slot order. */

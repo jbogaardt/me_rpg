@@ -86,7 +86,7 @@ describe('power helpers', () => {
     expect(defensePower(hero)).toBe(hero.stats.defense + (hero.cape?.defense ?? 0));
     expect(spellPower(hero)).toBe(hero.stats.magic); // a sword adds nothing to spells
     hero.weapon = ITEMS.apprenticeWand;
-    expect(spellPower(hero)).toBe(hero.stats.magic + 3);
+    expect(spellPower(hero)).toBe(hero.stats.magic + ITEMS.apprenticeWand.focus.power);
   });
 
   it('count every piece of gear: armor and shields add defense, a second blade adds attack', () => {

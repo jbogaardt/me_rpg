@@ -78,12 +78,12 @@ export default defineBiome({
 
     for (const [kind, x, y] of [
       ['raider', 14.6, 2.2],
-      ['goblin', 17.6, 4.4],
-      ['goblin', 13.2, 4.6],
+      ['shade', 17.6, 4.4],
+      ['wolfkin', 13.2, 4.6],
       ['wolfkin', 19.2, 3.4],
       ['raider', 16.4, 5.4],
       ['raider', 18.4, 1.8],
-      ['goblin', 15, 5.6],
+      ['shade', 15, 5.6],
     ] as const)
       z.mob(kind, ...near(x, y));
 

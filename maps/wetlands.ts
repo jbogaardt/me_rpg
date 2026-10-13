@@ -55,7 +55,7 @@ export default defineBiome({
 
     // --- The east strip and its hidden chest ------------------------------------------------------------------
     z.chest('oak', 'purse', ...near(32.8, 9.2));
-    z.mob('wolfkin', ...near(32.8, 8.2));
+    z.mob('warg', ...near(32.8, 8.2));
     z.chest('wood', 'potion', ...near(28.6, 1.6));
 
     for (const [x, y, w, h] of [
@@ -67,15 +67,15 @@ export default defineBiome({
       z.grove(blob(area(x, y, w, h)), { trees: [...KIT.trees], fillers: [...KIT.fillers] });
 
     for (const [kind, x, y] of [
-      ['zombie', 26, 2.2],
-      ['zombie', 30.4, 2.6],
+      ['bogGhoul', 26, 2.2],
+      ['bogGhoul', 30.4, 2.6],
       ['zombie', 32.6, 1.4],
-      ['wolfkin', 30, 6.2],
-      ['goblin', 24.6, 2.6],
-      ['goblin', 28.6, 0.8],
-      ['shade', 32.8, 7],
+      ['warg', 30, 6.2],
+      ['hexer', 24.6, 2.6],
+      ['hexer', 28.6, 0.8],
+      ['hexer', 32.8, 7],
       ['zombie', 27, 4.4],
-      ['wolfkin', 33, 4.6],
+      ['warg', 33, 4.6],
     ] as const)
       z.mob(kind, ...near(x, y));
 

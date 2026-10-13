@@ -72,8 +72,8 @@ export default defineBiome({
     for (const [kind, x, y] of [
       ['wolfkin', 21.6, 14],
       ['wolfkin', 26.6, 14.8],
-      ['goblin', 23.8, 12],
-      ['goblin', 26.4, 12.8],
+      ['skeleton', 23.8, 12],
+      ['zombie', 26.4, 12.8],
       ['shade', 21.8, 17.2],
       ['skeleton', 24.2, 15.4],
       ['shade', 23.4, 18],

@@ -84,13 +84,13 @@ export default defineBiome({
       ['orc', 21.6, 1.6],
       ['orc', 25.4, 4.4],
       ['orc', 27, 9.4],
-      ['wolfkin', 24, 6.4],
-      ['wolfkin', 23.2, 9.6],
-      ['goblin', 21.6, 4.2],
-      ['goblin', 20.6, 2.4],
+      ['warg', 24, 6.4],
+      ['warg', 23.2, 9.6],
+      ['tuskGuard', 21.6, 4.2],
+      ['tuskGuard', 20.6, 2.4],
       ['troll', 26.8, 6.4],
       ['orc', 23.6, 2],
-      ['wolfkin', 25.6, 8.2],
+      ['warg', 25.6, 8.2],
     ] as const)
       z.mob(kind, ...near(x, y));
 
