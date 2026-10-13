@@ -18,6 +18,7 @@ export interface Stats {
   magic: number;
   food: number; // 0..MAX_VITAL, drains over time (systems/survival.ts); fractional, show Math.ceil
   water: number; // same
+  can: number; // charges in the watering can (0..CAN_CAPACITY, systems/water.ts): only used while the hero carries one
 }
 
 /**
@@ -79,6 +80,8 @@ export interface Item {
   use?: { hp?: number; mp?: number; food?: number; water?: number };
   /** Set on a harvested crop (a key of CROPS, systems/crops.ts): the pack shows that plant. Eaten, it has a `use`. */
   crop?: string;
+  /** Set on the watering can: fill it at a well or pond, water growing plants with it (systems/water.ts, crops.ts). */
+  can?: boolean;
   /** Set on seeds (a key of CROPS): the action key beside a bare plot plants one. */
   seed?: string;
   /** Set on bags (slot `bag`): extra pack slots while it is worn. */
@@ -164,6 +167,7 @@ export function newHero(): Hero {
       magic: 8,
       food: 100,
       water: 100,
+      can: 0,
     },
     weapon: ITEMS.rustySword,
     cape: ITEMS.travelerCloak,

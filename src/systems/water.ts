@@ -33,6 +33,15 @@ export function waterNear(data: MapData, x: number, y: number, reach = WATER_REA
   return false;
 }
 
+/** How many plants one full can waters. */
+export const CAN_CAPACITY = 8;
+
+/** Does the hero carry a watering can (in the pack)? */
+export const hasCan = (hero: Hero): boolean => hero.pack.some((i) => i.can);
+
+/** Is there a can to fill that is not full? (Then a well or pond is worth a press even when the hero is not thirsty.) */
+export const canNeedsWater = (hero: Hero): boolean => hasCan(hero) && hero.stats.can < CAN_CAPACITY;
+
 export type Drank = { ok: true; text: string } | { ok: false; text: string };
 
 /** Drink: fill the water bar by `DRINK` (less when nearly full), or say there is no need. */
@@ -42,4 +51,12 @@ export function drink(hero: Hero): Drank {
   const gained = Math.min(DRINK, MAX_VITAL - s.water);
   s.water += gained;
   return { ok: true, text: `+${Math.ceil(gained)} water` };
+}
+
+/** Fill the watering can at a well or pond (nothing happens without one, or when it is full). */
+export function fillCan(hero: Hero): Drank {
+  if (!hasCan(hero)) return { ok: false, text: '' };
+  if (hero.stats.can >= CAN_CAPACITY) return { ok: false, text: '' };
+  hero.stats.can = CAN_CAPACITY;
+  return { ok: true, text: 'Filled the can' };
 }

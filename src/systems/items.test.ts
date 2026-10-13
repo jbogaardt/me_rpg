@@ -18,9 +18,9 @@ describe('ITEMS', () => {
 
   it('keeps supplies out of the gear slots and gives them something to restore (or plant)', () => {
     for (const [id, item] of everything.filter(([, i]) => !('slot' in i))) {
-      const { use, seed } = item as Item;
+      const { use, seed, can } = item as Item;
       const restores = (use?.hp ?? 0) + (use?.mp ?? 0) + (use?.food ?? 0) + (use?.water ?? 0) > 0;
-      expect(restores || seed !== undefined, id).toBe(true);
+      expect(restores || seed !== undefined || can === true, id).toBe(true);
     }
   });
 

@@ -30,7 +30,7 @@ import { isTrialZone } from '../systems/skills';
 /** What a zone remembers while it is unloaded (Arena.memory); its mobs simply start afresh. */
 export interface ZoneMemory {
   opened: number[]; // indices of opened chests
-  plots: { crop: CropId | null; since: number }[]; // what grows in each plot, and since when (the arena clock)
+  plots: { crop: CropId | null; grown: number; last: number; wetUntil: number }[]; // what grows in each plot, how far, and until when it is wet
   ground: { item: Item; x: number; y: number; id: number; age: number }[];
 }
 
@@ -164,7 +164,12 @@ export class ZoneState {
   remember(): ZoneMemory {
     return {
       opened: this.chests.flatMap((c, i) => (c.opened ? [i] : [])),
-      plots: this.plots.map((p) => ({ crop: p.state.crop, since: p.state.since })),
+      plots: this.plots.map((p) => ({
+        crop: p.state.crop,
+        grown: p.state.grown,
+        last: p.state.last,
+        wetUntil: p.state.wetUntil,
+      })),
       ground: this.ground.map((g) => ({ item: g.item, x: g.x, y: g.y, id: g.id, age: g.age })),
     };
   }

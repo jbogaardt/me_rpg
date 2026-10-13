@@ -1,6 +1,6 @@
 import type { Player } from '../../entities/Player';
 import { CELL } from '../../map/types';
-import { drink, isThirsty, waterNear } from '../../systems/water';
+import { canNeedsWater, drink, fillCan, isThirsty, waterNear } from '../../systems/water';
 import type { Arena } from './Arena';
 import { WELL_REACH } from './constants';
 import type { Simulation } from './Simulation';
@@ -17,22 +17,28 @@ export class Drinking {
     private sim: Pick<Simulation, 'text'>,
   ) {}
 
-  /** A well within reach: drink (or say there is no need). Returns true when a well took the press. */
+  /** A well within reach: drink and fill the can (or say there is no need). Returns true when a well took the press. */
   well(p: Player): boolean {
     const well = this.arena.wells.find((w) => Math.hypot(p.body.x - w.x, p.body.y - (w.y - CELL / 2)) < WELL_REACH);
     if (!well) return false;
-    this.say(p, drink(p.hero));
+    this.take(p, true);
     return true;
   }
 
-  /** Clear open water within reach and a thirsty hero: drink. Returns true when it did, so the hero does not swing. */
+  /** Clear open water within reach and something to fill (a thirsty hero or a can that is not full): take it. Returns true when it did, so the hero does not swing. */
   water(p: Player): boolean {
-    if (!isThirsty(p.hero) || !waterNear(this.arena.zone.data, p.body.x, p.body.y - 2)) return false;
-    this.say(p, drink(p.hero));
+    if (!(isThirsty(p.hero) || canNeedsWater(p.hero)) || !waterNear(this.arena.zone.data, p.body.x, p.body.y - 2))
+      return false;
+    this.take(p, false);
     return true;
   }
 
-  private say(p: Player, result: ReturnType<typeof drink>) {
-    this.sim.text(p.body.x, p.body.y - 62, result.text, result.ok ? 0x7ec8ff : 0xcfd8e0);
+  /** Drink what is needed and fill the can, in one press. At a well something is always said. */
+  private take(p: Player, well: boolean) {
+    const filled = fillCan(p.hero);
+    const drank = drink(p.hero);
+    const parts = [drank.ok ? drank.text : '', filled.ok ? filled.text : ''].filter(Boolean);
+    if (parts.length) this.sim.text(p.body.x, p.body.y - 62, parts.join(', '), 0x7ec8ff);
+    else if (well) this.sim.text(p.body.x, p.body.y - 62, drank.text, 0xcfd8e0);
   }
 }

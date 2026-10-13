@@ -261,6 +261,8 @@ export const ITEMS = {
   pumpkinSeeds: { name: 'Pumpkin Seeds', value: 6, seed: 'pumpkin' },
   cornSeeds: { name: 'Corn Seeds', value: 4, seed: 'corn' },
   strawberrySeeds: { name: 'Strawberry Seeds', value: 3, seed: 'strawberry' },
+  // The watering can (the apothecary sells it): fill it at a well or pond, then water the plots (systems/crops.ts).
+  wateringCan: { name: 'Watering Can', value: 25, can: true },
 } satisfies Record<string, Item>;
 
 export type ItemId = keyof typeof ITEMS;

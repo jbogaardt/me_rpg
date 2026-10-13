@@ -39,7 +39,7 @@ const isSlot =
 const isBow = (item: Item) => item.ranged !== undefined;
 const isCaster = (item: Item) => item.focus !== undefined;
 const isBlade = (item: Item) => item.slot === 'weapon' && !isBow(item) && !isCaster(item);
-const isSupply = (item: Item) => item.use !== undefined || item.seed !== undefined; // potions, produce and seeds
+const isSupply = (item: Item) => item.use !== undefined || item.seed !== undefined || item.can === true; // potions, produce, seeds, the can
 
 export const SHOPS: Record<string, Shop> = {
   smithy: {
@@ -95,11 +95,12 @@ export const SHOPS: Record<string, Shop> = {
     keeper: 'apothecary',
     greeting: [
       'Potions for the bruised, elixirs for the brave.',
-      'And seeds, if you have a patch of soil: plant them in a bare plot with the action key.',
+      'And seeds, if you have a patch of soil: plant them in a bare plot with the action key. Plants only grow wet, so take a can: fill it at a well.',
     ],
     stock: [
       'potion',
       'elixir',
+      'wateringCan',
       'radishSeeds',
       'carrotSeeds',
       'potatoSeeds',

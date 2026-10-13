@@ -2,7 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { CELL, parseMap, type MapData } from '../map/types';
 import { newHero } from './combat';
 import { MAX_VITAL } from './survival';
-import { DRINK, drink, isThirsty, THIRSTY_BELOW, waterNear } from './water';
+import { ITEMS } from './items';
+import {
+  CAN_CAPACITY,
+  canNeedsWater,
+  DRINK,
+  drink,
+  fillCan,
+  hasCan,
+  isThirsty,
+  THIRSTY_BELOW,
+  waterNear,
+} from './water';
 
 /** A 5x3 map: grass, with a pond in column 3 (row 1) and a bog beside it in column 4. */
 function pondMap(): MapData {
@@ -57,5 +68,20 @@ describe('water near', () => {
     expect(waterNear(bogOnly, ...feet(4, 1))).toBe(false);
     expect(waterNear(map, -500, -500)).toBe(false); // well off the map
     expect(waterNear(map, 5000, 5000)).toBe(false);
+  });
+});
+
+describe('the watering can', () => {
+  it('is filled once, only when there is a can that is not full', () => {
+    const hero = newHero();
+    expect(fillCan(hero)).toEqual({ ok: false, text: '' }); // no can
+    expect(canNeedsWater(hero)).toBe(false);
+    hero.pack.push(ITEMS.wateringCan);
+    expect(hasCan(hero)).toBe(true);
+    expect(canNeedsWater(hero)).toBe(true);
+    expect(fillCan(hero)).toEqual({ ok: true, text: 'Filled the can' });
+    expect(hero.stats.can).toBe(CAN_CAPACITY);
+    expect(canNeedsWater(hero)).toBe(false);
+    expect(fillCan(hero)).toEqual({ ok: false, text: '' }); // already full
   });
 });

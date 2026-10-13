@@ -232,6 +232,7 @@ export class HostLink {
       s.magic,
       round1(s.food),
       round1(s.water),
+      s.can,
     ];
   }
 }
