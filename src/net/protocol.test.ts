@@ -355,6 +355,7 @@ describe('trade, pack and looks messages', () => {
     quests: [4, 1, 5],
     skills: 1,
     loadout: 1,
+    needs: [80, 45],
     say: { id: 3, text: 'Bought it', ok: true },
   };
   const { say: _say, ...packNoSay } = pack;

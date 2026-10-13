@@ -235,6 +235,7 @@ export class PackSync {
         quests: questWire(p.hero.quests),
         skills: skillMask(p.hero),
         loadout: loadoutCode(p.hero.loadout),
+        needs: [Math.ceil(p.hero.needs.food), Math.ceil(p.hero.needs.water)] as [number, number],
         ...(p.reply ? { say: p.reply } : {}),
       };
       const sig = JSON.stringify(body);
@@ -257,12 +258,13 @@ export class PackSync {
   applyPack(pack: PackMsg) {
     const { arena } = this;
     const hero = arena.hero;
-    const sig = JSON.stringify([pack.gold, pack.worn, pack.items, pack.quests, pack.skills, pack.loadout]);
+    const sig = JSON.stringify([pack.gold, pack.worn, pack.items, pack.quests, pack.skills, pack.loadout, pack.needs]);
     hero.quests = questFromWire(pack.quests) ?? hero.quests;
     hero.skills = skillsFromMask(pack.skills);
     hero.loadout = (loadoutFromCode(pack.loadout) ?? []).filter((id) => hero.skills.includes(id));
     const worn = gearCodes(hero).join();
     hero.gold = pack.gold;
+    hero.needs = { food: pack.needs[0], water: pack.needs[1] };
     this.pendingOps = this.pendingOps.filter((o) => o.seq > pack.ack);
     if (this.pendingOps.length === 0) {
       // Take the host's word for the gear and pack, once it has done every action sent (until then ours is ahead of it).

@@ -1,5 +1,6 @@
 import type { Hero } from '../systems/combat';
 import { trackerText } from '../systems/guide';
+import { needLevel, needWord } from '../systems/needs';
 import { heroCombos, SKILLS } from '../systems/skills';
 import { arrows, progress, SPELLS } from '../systems/spells';
 
@@ -35,6 +36,8 @@ function bar(id: string): Bar {
 export class Hud {
   private hp = bar('hud-hp');
   private mp = bar('hud-mp');
+  private food = document.getElementById('hud-food')!;
+  private water = document.getElementById('hud-water')!;
   private gold = document.getElementById('hud-gold')!;
   private combos = document.getElementById('combo-hud')!;
   private tracker = document.getElementById('quest-tracker')!;
@@ -48,15 +51,25 @@ export class Hud {
     const hp = Math.ceil(s.hp);
     const mp = Math.floor(s.mp);
     const quest = trackerText(hero);
-    const key = `${hp}/${s.maxHp} ${mp}/${s.maxMp} ${hero.gold} ${quest}`;
+    const key = `${hp}/${s.maxHp} ${mp}/${s.maxMp} ${hero.gold} ${Math.ceil(hero.needs.food)} ${Math.ceil(hero.needs.water)} ${quest}`;
     if (key === this.shown) return; // only touch the DOM when something changed
     this.shown = key;
     this.set(this.hp, hp, s.maxHp);
     this.hp.fill.style.backgroundColor = hpColor(hp / s.maxHp);
     this.set(this.mp, mp, s.maxMp);
+    this.need(this.food, 'Food', 'food', hero.needs.food);
+    this.need(this.water, 'Water', 'water', hero.needs.water);
     this.gold.querySelector('.label')!.textContent = String(hero.gold);
     this.tracker.hidden = quest === '';
     this.tracker.textContent = quest;
+  }
+
+  private need(el: HTMLElement, title: string, kind: 'food' | 'water', value: number) {
+    const level = needLevel(value);
+    el.style.setProperty('--frac', String(value / 100));
+    el.classList.toggle('low', level === 'low');
+    el.classList.toggle('empty', level === 'empty');
+    el.title = `${title}: ${Math.ceil(value)} (${needWord(kind, value)})`;
   }
 
   private set(b: Bar, value: number, max: number) {
