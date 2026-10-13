@@ -56,6 +56,8 @@ export const ARRIVE_CELLS = 1;
 /** An open-air zone reached through a gap, and where its map sits relative to this one. */
 export interface Link {
   zone: string;
+  /** The way the gap goes from this zone: which side of it the other zone lies on. */
+  dir: NonNullable<DoorSpawn['dir']>;
   /** Add to a point in this zone's pixels to get the same place in that zone's. */
   dx: number;
   dy: number;
@@ -80,6 +82,7 @@ export function neighbourLinks(data: Pick<MapData, 'doors' | 'indoor'>): Link[] 
       const step = 1 + ARRIVE_CELLS;
       found.push({
         zone: d.to.zone,
+        dir: d.dir,
         dx: (d.to.col - d.col - vx * step) * CELL,
         dy: (d.to.row - d.row - vy * step) * CELL,
       });

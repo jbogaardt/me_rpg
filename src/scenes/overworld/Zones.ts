@@ -247,7 +247,10 @@ export class Zones {
     if (!link) {
       // Nothing of the old view stays: free the map sprites of every zone that was drawn (they are built again if shown).
       for (const z of [from, ...this.shown.keys()]) if (z !== dest) z.world.release();
-      for (const z of this.shown.keys()) z.setLookout(false);
+      for (const z of this.shown.keys()) {
+        z.world.parent?.removeChild(z.world); // they sit inside the old view's world (see `syncNeighbours`)
+        z.setLookout(false);
+      }
       this.shown.clear();
       this.weatherFade = null;
       this.stage.removeChildren();
@@ -275,9 +278,15 @@ export class Zones {
     return [...this.shown.keys()];
   }
 
-  /** Lay the zones joined to the local player's by a gap beside it, and take away those no longer joined. */
+  /**
+   * Lay the zones joined to the local player's by a gap beside it, and take away those no longer joined. They are drawn
+   * inside the player's own world, so they share its camera, and between its ground and its objects: the ground of every
+   * zone is under everyone's trees and walls (a crown never sinks into the next zone's grass). A zone to the south goes
+   * over the player's objects (its trees stand in front of theirs), any other under.
+   */
   private syncNeighbours() {
     const { arena } = this;
+    const host = arena.view.world;
     const want = new Map<ZoneState, Link>();
     for (const l of neighbourLinks(arena.view.data)) {
       const z = arena.zones.get(l.zone);
@@ -285,21 +294,22 @@ export class Zones {
     }
     for (const z of this.shown.keys()) {
       if (want.has(z)) continue;
-      if (z.world.parent === this.stage) this.stage.removeChild(z.world);
+      z.world.parent?.removeChild(z.world);
       z.world.release();
       z.setLookout(false);
     }
-    for (const z of want.keys()) {
-      if (this.shown.has(z) && z.world.parent === this.stage) continue;
-      this.stage.addChildAt(z.world, 0);
+    for (const [z, l] of want) {
+      if (z.world.parent === host) continue;
+      if (l.dir === 'down') host.addChild(z.world);
+      else host.addChildAt(z.world, host.getChildIndex(host.layer));
       z.setLookout(true, arena.role === 'client');
     }
     this.shown = want;
   }
 
   /**
-   * Every frame, after the camera: keep the zones laid beside the local player's where they belong (the same scale and
-   * the same place on screen as the player's own map, shifted by the gap between the two maps' coordinates), build
+   * Every frame, after the camera: keep the zones laid beside the local player's where they belong (inside the
+   * player's own world, shifted by the gap between the two maps' coordinates), build
    * what is in view of them, ease the player's drawing up to them after a jump across a border, and let the weather
    * of the zone behind give way to the new one's.
    */
@@ -307,12 +317,11 @@ export class Zones {
     const { arena } = this;
     const view = arena.view;
     this.syncNeighbours();
-    const { world } = view;
     const rect = view.camera.view(arena.screen.width, arena.screen.height);
     const rectOf = (l: Link) => ({ x: rect.x + l.dx, y: rect.y + l.dy, w: rect.w, h: rect.h });
     for (const [z, l] of this.shown) {
-      z.world.scale.set(world.scale.x, world.scale.y);
-      z.world.position.set(world.x - world.scale.x * l.dx, world.y - world.scale.y * l.dy);
+      z.world.scale.set(1, 1); // inside the player's world: its camera and any punch apply
+      z.world.position.set(-l.dx, -l.dy);
       z.world.update(rectOf(l));
     }
     const fade = this.weatherFade;
