@@ -228,16 +228,25 @@ export function drainedLayers(layers: readonly (readonly number[])[], level: num
 /** How much water a pond holds when full. */
 export const pondCapacity = (data: PondMap, id: number): number => pondCells(data, id).length * WATER_PER_CELL;
 
+/** One pond's state: its id, how far it is drained (0 full .. 1 dry), and whether it is filling up again after running dry. */
+export type PondState = [id: number, level: number, refilling: boolean];
+
 /**
  * How far each pond of a zone is drained (0 full .. 1 dry). Drinking drains it and only rain fills it again (`rain`). A
- * co-op guest is told the levels by the host instead (`setRemote`).
+ * pond drunk dry is `refilling` until it is full again: it then fills from the middle out (`PondBeds` draws it so), where
+ * one only part drunk goes back the way it went. A co-op guest is told the states by the host instead (`setLevels`).
  */
 export class PondLevels {
-  private drained = new Map<number, number>();
+  private drained = new Map<number, { level: number; refilling: boolean }>();
 
   /** How far this pond is drained. */
   level(id: number): number {
-    return this.drained.get(id) ?? 0;
+    return this.drained.get(id)?.level ?? 0;
+  }
+
+  /** Is this pond filling up again after running dry? */
+  refilling(id: number): boolean {
+    return this.drained.get(id)?.refilling ?? false;
   }
 
   /** Drink up to `amount` water from a pond that holds `capacity`: returns what it had to give. */
@@ -245,27 +254,29 @@ export class PondLevels {
     if (capacity <= 0) return 0;
     const level = this.level(id);
     const got = Math.max(0, Math.min(amount, (1 - level) * capacity));
-    this.drained.set(id, Math.min(1, level + got / capacity));
+    const now = Math.min(1, level + got / capacity);
+    this.drained.set(id, { level: now, refilling: this.refilling(id) || now >= 1 });
     return got;
   }
 
   /** Rain falls for `dt` seconds, filling every pond by `fill` (of a whole pond) per second (`rainFill`). */
   rain(fill: number, dt: number) {
     if (fill <= 0) return;
-    for (const [id, level] of this.drained) {
-      const left = level - fill * dt;
-      if (left > 0) this.drained.set(id, left);
-      else this.drained.delete(id);
+    for (const [id, pond] of this.drained) {
+      pond.level -= fill * dt;
+      if (pond.level <= 0) this.drained.delete(id); // full again
     }
   }
 
-  /** Every pond not full, with how far it is drained. */
-  levels(): [id: number, level: number][] {
-    return [...this.drained];
+  /** Every pond not full: how far it is drained, and whether it is refilling after running dry. */
+  levels(): PondState[] {
+    return [...this.drained].map(([id, { level, refilling }]) => [id, level, refilling]);
   }
 
-  /** Set the levels: the host's word to a guest, or a zone's memory when it loads again (any pond not listed is full). */
-  setLevels(levels: readonly (readonly [number, number])[]) {
-    this.drained = new Map(levels.filter(([, level]) => level > 0));
+  /** Set the states: the host's word to a guest, or a zone's memory when it loads again (any pond not listed is full). */
+  setLevels(states: readonly (readonly [number, number, boolean?])[]) {
+    this.drained = new Map(
+      states.filter(([, level]) => level > 0).map(([id, level, refilling]) => [id, { level, refilling: !!refilling }]),
+    );
   }
 }

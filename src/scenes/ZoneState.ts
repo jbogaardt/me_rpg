@@ -25,7 +25,7 @@ import { PET_KINDS } from '../systems/pets';
 import { GIVERS } from '../systems/quests';
 import { SHOPS } from '../systems/shops';
 import { isTrialZone } from '../systems/skills';
-import { PondLevels } from '../systems/needs';
+import { PondLevels, type PondState } from '../systems/needs';
 import { PondBeds } from '../entities/PondBeds';
 
 /** What a zone remembers while it is unloaded (Arena.memory); its mobs simply start afresh. */
@@ -33,7 +33,7 @@ export interface ZoneMemory {
   opened: number[]; // indices of opened chests
   crops: CropMemory[]; // each crop plot: its phase, progress and whether it is watered
   ground: { item: Item; x: number; y: number; id: number; age: number }[];
-  ponds?: [number, number][]; // each drained pond: its id and how far it is drained (only rain fills it again)
+  ponds?: PondState[]; // each drained pond: its id, how far it is drained, whether refilling (only rain fills it)
 }
 
 export interface QuestGiver {

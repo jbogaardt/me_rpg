@@ -301,21 +301,24 @@ describe('messages', () => {
 
   it('carries drained ponds, and rejects bad ones', () => {
     const wire = pondsWire([
-      [42, 0.5],
-      [7, 0.0001],
+      [42, 0.5, false],
+      [7, 0.0001, false],
+      [9, 1, true], // drunk dry, filling up again
     ]);
-    expect(wire).toEqual([42, 500, 7, 1]);
+    expect(wire).toEqual([42, 500, 7, 1, 9, -1000]);
     expect(pondsWire([])).toBeUndefined();
     const m = { ...snap, ponds: wire };
     expect(parseMessage(JSON.stringify(m))).toEqual(m);
     expect(pondsFromWire(wire)).toEqual([
-      [42, 0.5],
-      [7, 0.001],
+      [42, 0.5, false],
+      [7, 0.001, false],
+      [9, 1, true],
     ]);
     const bad: Record<string, unknown>[] = [
       { ...snap, ponds: [1] }, // no level
       { ...snap, ponds: [1, 0] }, // a full pond is not listed
       { ...snap, ponds: [1, 1001] },
+      { ...snap, ponds: [1, -1001] },
       { ...snap, ponds: [-1, 5] },
       { ...snap, ponds: [1.5, 5] },
       { ...snap, ponds: Array.from({ length: 34 }, () => 1) }, // too many

@@ -135,8 +135,12 @@ describe('eating and drinking', () => {
       expect(ponds.level(7)).toBe(1);
       ponds.rain(rainFill('rain', 1), RAIN_FILL_TIME / 2);
       expect(ponds.level(7)).toBeCloseTo(0.5);
+      expect(ponds.refilling(7)).toBe(true); // it ran dry, so it fills from the middle out
       ponds.rain(rainFill('storm', 1), RAIN_FILL_TIME / 4); // a storm fills twice as fast
       expect(ponds.levels()).toEqual([]);
+      expect(ponds.refilling(7)).toBe(false);
+      ponds.drink(7, 10, 60); // only part drunk: not refilling
+      expect(ponds.levels()).toEqual([[7, 10 / 60, false]]);
     });
 
     it('is remembered and told as a list of levels', () => {
@@ -145,6 +149,8 @@ describe('eating and drinking', () => {
       const copy = new PondLevels();
       copy.setLevels(ponds.levels());
       expect(copy.level(3)).toBeCloseTo(0.25);
+      copy.setLevels([[3, 0.5, true]]);
+      expect(copy.refilling(3)).toBe(true);
       copy.setLevels([]);
       expect(copy.level(3)).toBe(0);
     });

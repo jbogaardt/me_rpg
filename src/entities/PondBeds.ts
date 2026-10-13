@@ -2,7 +2,7 @@ import { BlurFilter, Graphics } from 'pixi.js';
 import type { MapView } from '../map/MapView';
 import { cellsOutline } from '../map/outline';
 import { CELL, type MapData } from '../map/types';
-import { drainedLayers, pondCells, pondId, pondLayers } from '../systems/needs';
+import { drainedLayers, pondCells, pondId, pondLayers, type PondState } from '../systems/needs';
 
 const SHALLOW = 0x2f88b4; // the ponds' own blue (0x156c99), a shade lighter: water gone shallow
 const SHALLOW_ALPHA = 0.55;
@@ -26,7 +26,8 @@ const STEPS = 4; // redraws per cell's worth of water drained: a layer fades out
  */
 export class PondBeds extends Graphics {
   private drawn = '';
-  private props = new Map<number, number[]>(); // the map objects standing in each pond's water (lily pads), by pond id
+  /** The map objects standing in each pond's water (lily pads), by pond id: each object's index and its cell. */
+  private props = new Map<number, [index: number, cell: number][]>();
   private faded = new Set<number>(); // ponds whose props are drawn faded now
 
   constructor(
@@ -38,31 +39,33 @@ export class PondBeds extends Graphics {
       const cell = Math.floor((o.py + o.h / 2) / CELL) * data.width + Math.floor((o.px + o.w / 2) / CELL);
       if (data.surfaces[data.surface[cell] ?? -1] !== 'water') continue;
       const id = pondId(data, cell);
-      this.props.set(id, [...(this.props.get(id) ?? []), i]);
+      this.props.set(id, [...(this.props.get(id) ?? []), [i, cell]]);
     }
     this.zIndex = -1e9; // ground level: under every prop and character in the y-sorted layer
     // A soft edge, so the bed melts into the water and the bank; drawn once into a texture each time it changes.
     this.filters = [new BlurFilter({ strength: 3, quality: 2 })];
   }
 
-  /** Show these levels (pond id → 0 full .. 1 dry; ponds not listed are full). */
-  show(levels: readonly (readonly [number, number])[]) {
-    const steps = levels.map(
-      ([id, level]) => [id, Math.round(level * pondCells(this.data, id).length * STEPS)] as const,
+  /** Show these ponds (how far each is drained, 0 full .. 1 dry, and whether it is refilling; ponds not listed are full). */
+  show(states: readonly PondState[]) {
+    const steps = states.map(
+      ([id, level, refilling]) => [id, Math.round(level * pondCells(this.data, id).length * STEPS), refilling] as const,
     );
-    const sig = steps.map(([id, n]) => `${id}:${n}`).join(',');
+    const sig = steps.map(([id, n, r]) => `${id}:${n}${r ? 'r' : ''}`).join(',');
     if (sig === this.drawn) return;
     this.drawn = sig;
     this.clear();
     const faded = new Set<number>();
-    for (const [id, n] of steps) {
-      const empty = this.drawPond(pondLayers(this.data, id), n / STEPS / pondCells(this.data, id).length);
-      // What floats on the water (lily pads) goes with the last of it.
-      for (const i of this.props.get(id) ?? []) this.view.setObjectAlpha(i, 1 - empty);
-      if (empty > 0) faded.add(id);
+    for (const [id, n, refilling] of steps) {
+      const layers = pondLayers(this.data, id);
+      const level = n / STEPS / pondCells(this.data, id).length;
+      // What floats on the water (lily pads) goes with the last of it, and comes back as the water reaches it.
+      const shown = refilling ? this.drawRefill(layers, level) : this.drawPond(layers, level);
+      for (const [i, cell] of this.props.get(id) ?? []) this.view.setObjectAlpha(i, shown(cell));
+      faded.add(id);
     }
     for (const id of this.faded) {
-      if (!faded.has(id)) for (const i of this.props.get(id) ?? []) this.view.setObjectAlpha(i, 1);
+      if (!faded.has(id)) for (const [i] of this.props.get(id) ?? []) this.view.setObjectAlpha(i, 1);
     }
     this.faded = faded;
     if (steps.length) this.cacheAsTexture(true);
@@ -70,15 +73,36 @@ export class PondBeds extends Graphics {
     this.updateCacheTexture();
   }
 
-  /** Draw one pond drained `level`; returns how far its empty bed has come in (0..1), which the lily pads follow. */
-  private drawPond(layers: readonly (readonly number[])[], level: number): number {
+  /**
+   * Draw one pond drained `level` by drinking: the outer layers go shallow first, and the bed comes only with the last of
+   * the water. Returns how visible what floats on a cell should be (0..1).
+   */
+  private drawPond(layers: readonly (readonly number[])[], level: number): (cell: number) => number {
     const { gone, fading } = drainedLayers(layers, level);
     // The layers gone are shallow water and the one going now fades to it; the last layer going takes it to dry mud.
     this.drawLayers(layers.slice(0, gone), SHALLOW, SHALLOW_ALPHA, 0.8);
     this.drawLayers(layers.slice(gone, gone + 1), SHALLOW, SHALLOW_ALPHA * fading, 0.8);
     const empty = gone >= layers.length ? 1 : gone === layers.length - 1 ? fading : 0;
-    if (empty > 0) this.drawBed(layers, empty);
-    return empty;
+    if (empty > 0) this.drawBed(layers, layers.length, empty);
+    return () => 1 - empty;
+  }
+
+  /**
+   * Draw a pond filling up again after running dry: the rain gathers in the middle first, so the water comes back ring by
+   * ring from the middle out, and the outer rings it has not reached yet are still the bed. Returns how visible what
+   * floats on a cell should be (0..1): it comes back as the water reaches its ring.
+   */
+  private drawRefill(layers: readonly (readonly number[])[], level: number): (cell: number) => number {
+    const { gone: filled, fading: rising } = drainedLayers([...layers].reverse(), 1 - level);
+    const dry = layers.length - filled; // the outer rings still dry, the last of them filling now
+    this.drawBed(layers, dry - 1, 1);
+    if (dry > 0) this.drawBed(layers.slice(dry - 1, dry), 1, 1 - rising, true);
+    const ring = new Map<number, number>();
+    layers.forEach((layer, k) => layer.forEach((cell) => ring.set(cell, k)));
+    return (cell) => {
+      const k = ring.get(cell) ?? 0;
+      return k >= dry ? 1 : k === dry - 1 ? rising : 0;
+    };
   }
 
   /**
@@ -86,15 +110,23 @@ export class PondBeds extends Graphics {
    * rounded), so it covers the water at the edges and corners and the ground flows on into it, in the banks' tan; each
    * ring further in is the same smooth shape a size smaller, a shade darker, so the bed deepens towards the middle.
    */
-  private drawBed(layers: readonly (readonly number[])[], alpha: number) {
+  private drawBed(layers: readonly (readonly number[])[], upto: number, alpha: number, plain = false) {
     const { width } = this.data;
-    for (let k = 0; k <= Math.min(DEEP_RINGS, layers.length - 1); k++) {
-      const loops = cellsOutline(layers.slice(k).flat(), width, BED_REACH);
-      // Only the outer loops (an island in the pond would be a loop the other way round; it is left under the bed).
+    // The bed over the rings before `upto`: while the pond refills, the water in the middle is a hole in it.
+    for (let k = 0; k <= Math.min(plain ? 0 : DEEP_RINGS, upto - 1); k++) {
+      const loops = cellsOutline(layers.slice(k, upto).flat(), width, BED_REACH);
       const outer = loops.filter((l) => signedArea(l) > 0);
-      if (!outer.length) continue;
-      for (const loop of outer) this.poly(loop.flatMap(([x, y]) => [x * CELL, y * CELL]));
-      this.fill(k === 0 ? { color: BANK, alpha } : { color: DEEP, alpha: DEEP_ALPHA * alpha });
+      const holes = loops.filter((l) => signedArea(l) < 0);
+      for (const loop of outer) {
+        this.poly(loop.flatMap(([x, y]) => [x * CELL, y * CELL]));
+        this.fill(k === 0 ? { color: BANK, alpha } : { color: DEEP, alpha: DEEP_ALPHA * alpha });
+        // The water in the middle (or an island, which then shows its own ground) is cut out of this piece of bed.
+        for (const hole of holes) {
+          if (!inside(loop, hole[0]!)) continue;
+          this.poly(hole.flatMap(([x, y]) => [x * CELL, y * CELL]));
+          this.cut();
+        }
+      }
     }
   }
 
@@ -123,4 +155,15 @@ function signedArea(loop: readonly (readonly [number, number])[]): number {
     a += x1 * y2 - x2 * y1;
   }
   return a;
+}
+
+/** Is point `p` inside the loop (even-odd)? */
+function inside(loop: readonly (readonly [number, number])[], [px, py]: readonly [number, number]): boolean {
+  let hit = false;
+  for (let i = 0, j = loop.length - 1; i < loop.length; j = i++) {
+    const [xi, yi] = loop[i]!;
+    const [xj, yj] = loop[j]!;
+    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) hit = !hit;
+  }
+  return hit;
 }

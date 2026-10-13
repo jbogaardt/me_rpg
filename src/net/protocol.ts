@@ -16,6 +16,7 @@ import { AIM_STEPS } from '../core/aim';
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
 import { cropFromCode, MAX_CROPS } from '../systems/crops';
+import type { PondState } from '../systems/needs';
 import { NEED_MAX } from '../systems/needs';
 import { questFromWire } from '../systems/quests';
 import { loadoutFromCode, MAX_HERO_COMBOS, MAX_SKILL_MASK } from '../systems/skills';
@@ -26,7 +27,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 27;
+export const PROTOCOL_VERSION = 28;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -152,7 +153,10 @@ export interface SnapMsg {
   me: StatsSnap;
   chests: number; // bit i set: chest i of the map is open
   crops: number[]; // the state of each crop plot of the map (systems/crops.ts `cropCode`)
-  /** Drained ponds of that zone, flat: pond id, then how far drained in thousandths (1..1000). Absent: every pond full. */
+  /**
+   * Drained ponds of that zone, flat: pond id, then how far drained in thousandths (1..1000), negative while the pond is
+   * filling up again after running dry. Absent: every pond full.
+   */
   ponds?: number[];
   w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
@@ -492,31 +496,34 @@ const codes = (v: unknown, length: number): v is number[] => numbers(v, length) 
 export const MAX_PONDS = 16;
 const MAX_POND_ID = 1 << 20; // a cell index of the map
 
-/** `[id, thousandths drained, ...]`: whole numbers, ids in range, levels 1..1000. */
+/** `[id, thousandths drained, ...]`: whole numbers, ids in range, levels 1..1000 (or -1000..-1 while refilling). */
 function isPonds(v: unknown): boolean {
   return (
     Array.isArray(v) &&
     v.length % 2 === 0 &&
     v.length <= MAX_PONDS * 2 &&
-    v.every(
-      (x: unknown, i) =>
-        Number.isInteger(x) && (x as number) >= (i % 2 ? 1 : 0) && (x as number) <= (i % 2 ? 1000 : MAX_POND_ID),
-    )
+    v.every((x: unknown, i) => {
+      if (!Number.isInteger(x)) return false;
+      const n = x as number;
+      return i % 2 ? n !== 0 && Math.abs(n) <= 1000 : n >= 0 && n <= MAX_POND_ID;
+    })
   );
 }
 
-/** Pond levels (systems/needs.ts `PondLevels.levels`) as a snapshot's `ponds`, or undefined when every pond is full. */
-export function pondsWire(levels: readonly (readonly [number, number])[]): number[] | undefined {
-  const out = levels
-    .slice(0, MAX_PONDS)
-    .flatMap(([id, level]) => [id, Math.min(1000, Math.max(1, Math.round(level * 1000)))]);
+/** Pond states (systems/needs.ts `PondLevels.levels`) as a snapshot's `ponds`, or undefined when every pond is full. */
+export function pondsWire(states: readonly PondState[]): number[] | undefined {
+  const out = states.slice(0, MAX_PONDS).flatMap(([id, level, refilling]) => {
+    const t = Math.min(1000, Math.max(1, Math.round(level * 1000)));
+    return [id, refilling ? -t : t];
+  });
   return out.length ? out : undefined;
 }
 
-/** A snapshot's `ponds` back as levels. */
-export function pondsFromWire(wire: readonly number[] | undefined): [number, number][] {
-  const out: [number, number][] = [];
-  for (let i = 0; wire && i + 1 < wire.length; i += 2) out.push([wire[i]!, wire[i + 1]! / 1000]);
+/** A snapshot's `ponds` back as states. */
+export function pondsFromWire(wire: readonly number[] | undefined): PondState[] {
+  const out: PondState[] = [];
+  for (let i = 0; wire && i + 1 < wire.length; i += 2)
+    out.push([wire[i]!, Math.abs(wire[i + 1]!) / 1000, wire[i + 1]! < 0]);
   return out;
 }
 
