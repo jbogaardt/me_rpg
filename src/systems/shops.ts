@@ -93,8 +93,12 @@ export const SHOPS: Record<string, Shop> = {
     name: "Wren's Apothecary",
     tag: 'Apothecary',
     keeper: 'apothecary',
-    greeting: ['Potions for the bruised, elixirs for the brave.', 'Drink them from the Gear tab of your menu.'],
-    stock: ['potion', 'elixir'],
+    greeting: [
+      'Potions for the bruised, elixirs for the brave.',
+      'And bread, meat and water for the hungry. Keep your food and water up and you mend faster.',
+      'Use them from the Inventory tab of your menu.',
+    ],
+    stock: ['potion', 'elixir', 'bread', 'roastMeat', 'apple', 'waterskin'],
     buys: isSupply,
   },
   wizard: {

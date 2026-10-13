@@ -4,6 +4,7 @@
 
 import { gainXp, GEAR_SLOTS, type GearSlot, type Hero, type Item } from './combat';
 import { ITEMS, type ItemId } from './items';
+import { NEED_MAX, refill } from './needs';
 
 /** Pack slots with no bag. A sack or backpack (slot `bag`, `capacity`) adds to it while worn. */
 export const BASE_PACK = 10;
@@ -232,11 +233,25 @@ export function useFromPack(hero: Hero, item: Item): Used | null {
   const { use } = item;
   const s = hero.stats;
   if (!use || !hero.pack.includes(item)) return null;
-  if (s.hp >= s.maxHp && (!use.mp || s.mp >= s.maxMp)) return null;
+  const heals = use.hp > 0 && s.hp < s.maxHp;
+  const mana = !!use.mp && s.mp < s.maxMp;
+  const feeds = (use.food ?? 0) > 0 && hero.needs.food < NEED_MAX;
+  const drinks = (use.water ?? 0) > 0 && hero.needs.water < NEED_MAX;
+  if (!heals && !mana && !feeds && !drinks) return null;
   takeFromPack(hero, item);
   s.hp = Math.min(s.maxHp, s.hp + use.hp);
   s.mp = Math.min(s.maxMp, s.mp + (use.mp ?? 0));
-  return { text: use.mp ? 'HP and MP restored' : `+${use.hp} HP`, levels: gainXp(s, 0) };
+  refill(hero.needs, use.food ?? 0, use.water ?? 0);
+  const text = use.mp
+    ? 'HP and MP restored'
+    : use.food && use.water
+      ? 'Food and water'
+      : use.food
+        ? `+${use.food} food`
+        : use.water
+          ? `+${use.water} water`
+          : `+${use.hp} HP`;
+  return { text, levels: gainXp(s, 0) };
 }
 
 // --- Item codes: how a hero's gear and pack travel over the network (src/net/protocol.ts). A code is the item's

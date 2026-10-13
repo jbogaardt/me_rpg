@@ -242,6 +242,12 @@ export const ITEMS = {
     rare: true,
     look: {},
   },
+
+  // Provisions (appended: item codes are positions in this list). They fill the food and water meters (systems/needs.ts).
+  bread: { name: 'Bread', value: 5, use: { hp: 0, food: 30 } },
+  roastMeat: { name: 'Roast Meat', value: 12, use: { hp: 5, food: 55 } },
+  apple: { name: 'Apple', value: 4, use: { hp: 0, food: 12, water: 12 } },
+  waterskin: { name: 'Waterskin', value: 5, use: { hp: 0, water: 55 } },
 } satisfies Record<string, Item>;
 
 export type ItemId = keyof typeof ITEMS;

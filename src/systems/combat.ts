@@ -3,6 +3,7 @@
 import type { Direction } from '../core/direction';
 import type { Outfit } from '../sprites/doll';
 import { ITEMS } from './items';
+import { newNeeds, type Needs } from './needs';
 import type { Focus } from './spells';
 import type { SkillId } from './skills';
 
@@ -73,8 +74,8 @@ export interface Item {
   ranged?: Ranged;
   /** Set on wands and tomes (weapons): the plain attack is a free bolt, and a combo of directions casts a spell. */
   focus?: Focus;
-  /** Set on supplies (no slot): drinking one restores this much HP and MP, from the pack. */
-  use?: { hp: number; mp?: number };
+  /** Set on supplies (no slot): drinking one restores this much HP, MP, food and water, from the pack. */
+  use?: { hp: number; mp?: number; food?: number; water?: number };
   /** Set on bags (slot `bag`): extra pack slots while it is worn. */
   capacity?: number;
   /** Sprite parts this item puts on the hero (see sprites/parts.ts); drawn over the hero's base look. */
@@ -94,6 +95,8 @@ export interface Hero extends Partial<Record<Exclude<GearSlot, 'weapon'>, Item>>
   skills: SkillId[];
   /** The skills ready to cast (at most two of those learned; a wand's combos do not count). */
   loadout: SkillId[];
+  /** Hunger and thirst (systems/needs.ts). */
+  needs: Needs;
 }
 
 /** A hero's place in the quest chain (systems/quests.ts has the chain itself and the rules). */
@@ -154,6 +157,7 @@ export function newHero(): Hero {
     quests: { stage: 0, taken: false, progress: 0 },
     skills: [],
     loadout: [],
+    needs: newNeeds(),
   };
 }
 
