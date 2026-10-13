@@ -8,7 +8,8 @@ import { Character } from './Character';
 /** What a mob needs from the game each tick. */
 export interface MobWorld {
   /** Every hero a mob might go after (one, or two in co-op); it picks the nearest. */
-  heroes: readonly [Character, ...Character[]];
+  /** The players in the mob's zone: none while it is only being looked at from the next zone over (it just wanders). */
+  heroes: readonly Character[];
   /** Move a body by (mx, my) with collision, one axis at a time. Returns true if it moved at all. */
   slide(body: Character, mx: number, my: number): boolean;
   /** The mob's melee attack connected with `target`. */
@@ -28,9 +29,9 @@ const RESPAWN = 6;
 const FADE = 0.4;
 const LEASH = 4 * CELL; // wanders no further than this from home
 
-function nearest(from: Character, heroes: MobWorld['heroes']): Character {
-  let best = heroes[0];
-  let bestDist = Math.hypot(best.x - from.x, best.y - from.y);
+function nearest(from: Character, heroes: MobWorld['heroes']): Character | undefined {
+  let best: Character | undefined;
+  let bestDist = Infinity;
   for (const hero of heroes) {
     const dist = Math.hypot(hero.x - from.x, hero.y - from.y);
     if (dist < bestDist) [best, bestDist] = [hero, dist];
@@ -137,9 +138,9 @@ export class Mob {
     }
 
     const target = nearest(this.body, world.heroes);
-    const dx = target.x - this.body.x;
-    const dy = target.y - this.body.y;
-    const dist = Math.hypot(dx, dy);
+    const dx = target ? target.x - this.body.x : 0;
+    const dy = target ? target.y - this.body.y : 0;
+    const dist = target ? Math.hypot(dx, dy) : Infinity; // nobody here: nothing to chase
     let moving = false;
     this.timer -= dt;
     switch (this.state) {
@@ -181,7 +182,7 @@ export class Mob {
         if (this.timer <= 0) {
           if (this.kind.shot)
             world.shoot(this, dx / (dist || 1), dy / (dist || 1)); // aimed as it lets go
-          else if (dist < REACH + 8) world.strike(this, target);
+          else if (target && dist < REACH + 8) world.strike(this, target);
           this.state = 'recover';
           this.timer = this.t.recover;
         }
