@@ -77,6 +77,12 @@
    "z": 10
   }
  ],
+ "body.mummy": [
+  {
+   "file": "body.mummy.0.png",
+   "z": 10
+  }
+ ],
  "body.olive": [
   {
    "file": "body.olive.0.png",

@@ -127,6 +127,16 @@ export interface MobKind {
   stagger?: number;
   /** A ranged attacker: stops `range` px from the hero, telegraphs, then fires a projectile instead of swinging. */
   shot?: MobShot;
+  /**
+   * A caster with a melee fallback: from `ray.range` away it telegraphs and fires an instant beam along the line it
+   * locked on at the start of the windup (sidestep it), but a hero within melee reach is simply swung at.
+   */
+  ray?: MobRay;
+}
+
+export interface MobRay {
+  range: number; // pixels: starts a ray from this close (must not exceed `sight`, nor RAY_LENGTH)
+  color: number; // 0xRRGGBB of the beam
 }
 
 export interface MobShot {
@@ -204,6 +214,23 @@ export const RAIDER: MobKind = {
   windup: 0.38,
   recover: 0.5,
   stagger: 0.2,
+};
+
+/** Desert enemy: a mummy that sears you with its sceptre from a distance and bludgeons you up close. Levels 4-6. */
+export const MUMMY: MobKind = {
+  name: 'Mummy',
+  look: { body: 'body.mummy' },
+  maxHp: 60,
+  attack: 14,
+  defense: 1,
+  xp: 30,
+  gold: 17,
+  speed: 48,
+  sight: 6 * 32,
+  windup: 0.6,
+  recover: 0.9,
+  stagger: 0.15,
+  ray: { range: 4.5 * 32, color: 0x59e0a8 },
 };
 
 /** Frost enemy: an armoured, icy skeleton, tuned for roughly levels 5-7. */
@@ -552,6 +579,7 @@ export const MOB_KINDS: Record<string, MobKind> = {
   wolfkin: WOLFKIN,
   skeleton: SKELETON,
   zombie: ZOMBIE,
+  mummy: MUMMY,
   orc: ORC,
   troll: TROLL,
   chieftain: CHIEFTAIN,

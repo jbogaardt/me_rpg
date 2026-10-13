@@ -10,7 +10,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { PARTS } from '../../sprites/parts';
+import { CUSTOM_PARTS, PARTS } from '../../sprites/parts';
 import {
   ANIMS,
   DIR_ROW,
@@ -28,7 +28,39 @@ const MANIFEST = path.join(OUT, 'parts.json');
 const CREDITS = path.join(OUT, 'credits.csv');
 const rel = (p: string) => path.relative(process.cwd(), p);
 
+const customCredit = (id: string): Credit => {
+  const part = CUSTOM_PARTS[id];
+  return { file: `custom/${id}`, notes: part.notes, authors: part.authors, licenses: part.licenses, urls: part.urls };
+};
+
+/** Pack only custom (non-LPC) parts: needs no clone of the generator, and edits the manifest and credits in place. */
+function buildCustom(ids: string[]) {
+  const manifest = JSON.parse(fs.readFileSync(MANIFEST, 'utf8')) as PartManifest;
+  const rows = fs.readFileSync(CREDITS, 'utf8').trimEnd().split('\n');
+  const [header = '', ...body] = rows;
+  for (const id of ids) {
+    const part = CUSTOM_PARTS[id];
+    const file = `${id}.0.png`;
+    writePng(path.join(OUT, file), readPng(path.join(ROOT, part.source)));
+    manifest[id] = [{ file, z: part.z }];
+    const c = customCredit(id);
+    const key = csv(c.file);
+    const row = [c.file, c.notes, c.authors.join(', '), c.licenses.join(', '), c.urls.join(' ')].map(csv).join(',');
+    const at = body.findIndex((r) => r.startsWith(`${key},`));
+    if (at >= 0) body[at] = row;
+    else body.push(row);
+  }
+  body.sort((a, b) => a.localeCompare(b));
+  fs.writeFileSync(
+    MANIFEST,
+    JSON.stringify(Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b))), null, 1) + '\n',
+  );
+  fs.writeFileSync(CREDITS, [header, ...body].join('\n') + '\n');
+  console.log(`Packed ${ids.join(', ')} into ${rel(OUT)}`);
+}
+
 function build(ids: string[]) {
+  if (ids.length && ids.every((id) => CUSTOM_PARTS[id])) return buildCustom(ids);
   const lpc = new Lpc(process.env.LPC_DIR ?? path.resolve(ROOT, '../Universal-LPC-Spritesheet-Character-Generator'));
   const existing: PartManifest = fs.existsSync(MANIFEST)
     ? (JSON.parse(fs.readFileSync(MANIFEST, 'utf8')) as PartManifest)
@@ -41,7 +73,10 @@ function build(ids: string[]) {
   const failures: string[] = [];
   for (const id of ids.length ? ids : Object.keys(PARTS)) {
     const spec = PARTS[id];
-    if (!spec) throw new Error(`Unknown part ${id}`);
+    if (!spec) {
+      if (CUSTOM_PARTS[id]) continue; // copied below
+      throw new Error(`Unknown part ${id}`);
+    }
     let built;
     try {
       built = lpc.build(spec);
@@ -57,6 +92,13 @@ function build(ids: string[]) {
     for (const c of built.credits) credits.set(c.file, c);
   }
 
+  for (const [id, part] of Object.entries(CUSTOM_PARTS)) {
+    if (ids.length && !ids.includes(id)) continue;
+    const file = `${id}.0.png`;
+    writePng(path.join(OUT, file), readPng(path.join(ROOT, part.source)));
+    manifest[id] = [{ file, z: part.z }];
+  }
+
   if (failures.length) {
     console.error(failures.join('\n'));
     process.exit(1);
@@ -66,6 +108,7 @@ function build(ids: string[]) {
   if (ids.length) {
     for (const id of Object.keys(PARTS)) for (const c of lpc.build(PARTS[id]).credits) credits.set(c.file, c);
   }
+  for (const id of Object.keys(CUSTOM_PARTS)) credits.set(customCredit(id).file, customCredit(id));
   const sorted = Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b)));
   fs.writeFileSync(MANIFEST, JSON.stringify(sorted, null, 1) + '\n');
   writeCredits(credits);
@@ -91,8 +134,10 @@ function check(): boolean {
   const errors: string[] = [];
   for (const id of Object.keys(PARTS))
     if (!manifest[id]) errors.push(`part ${id} is in sprites/parts.ts but not packed`);
+  for (const id of Object.keys(CUSTOM_PARTS))
+    if (!manifest[id]) errors.push(`custom part ${id} is in sprites/parts.ts but not packed`);
   for (const [id, layers] of Object.entries(manifest)) {
-    if (!PARTS[id]) errors.push(`part ${id} is packed but not in sprites/parts.ts`);
+    if (!PARTS[id] && !CUSTOM_PARTS[id]) errors.push(`part ${id} is packed but not in sprites/parts.ts`);
     for (const l of layers) if (!fs.existsSync(path.join(OUT, l.file))) errors.push(`${l.file} is missing`);
   }
   const used = new Set(Object.values(manifest).flatMap((ls) => ls.map((l) => l.file)));

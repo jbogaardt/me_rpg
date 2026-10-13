@@ -205,7 +205,11 @@ export class GuestLink {
     arena.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
     arena.crops.forEach((c, i) => c.setCode(snap.crops[i] ?? RIPE_CODE));
     if (snap.ground) this.ground.sync(snap.ground); // absent: the same items as before
-    for (const [index, ...state] of snap.mobs) arena.mobs[index]?.setRemote(decodeMob(state)); // only the mobs the host listed: the rest are out of sight
+    for (const [index, ...state] of snap.mobs)
+      arena.mobs[index]?.setRemote(
+        decodeMob(state),
+        arena.players().map((p) => p.body),
+      ); // only the mobs the host listed: the rest are out of sight
 
     const [level, xp, hp, maxHp, mp, maxMp, attack, defense, magic] = snap.me;
     if (maxHp > 0 && maxMp > 0)

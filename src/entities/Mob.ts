@@ -16,11 +16,23 @@ export interface MobWorld {
   strike(mob: Mob, target: Character): void;
   /** A ranged mob fires along the unit vector (ux, uy); the scene flies the projectile and decides what it hits. */
   shoot(mob: Mob, ux: number, uy: number): void;
+  /** A ray caster fires its beam along the unit vector (ux, uy) it locked on when the windup began. */
+  ray(mob: Mob, ux: number, uy: number): void;
+}
+
+/** What a mob does to a hero `dist` px away: melee when close, otherwise its ray or shot if it has one in range. */
+export type MobAttack = 'melee' | 'shot' | 'ray';
+
+export function mobAttack(kind: MobKind, dist: number): MobAttack | null {
+  if (kind.shot) return dist <= kind.shot.range ? 'shot' : null;
+  if (dist < REACH) return 'melee';
+  if (kind.ray && dist <= kind.ray.range) return 'ray';
+  return null;
 }
 
 type State = MobState;
 
-const REACH = 20; // starts an attack when this close (feet to feet)
+export const REACH = 20; // starts an attack when this close (feet to feet)
 // Windup (telegraph before the blow lands, so the hero can dodge), recover and stagger (the pause after being hit,
 // which interrupts a windup) are per kind: see `mobTimings` in systems/combat.ts.
 const LUNGE = 0.12;
@@ -60,6 +72,8 @@ export class Mob {
   private flash = 0;
   private poise = 0; // seconds left in which a hit cannot stagger it again
   private moving = false;
+  private attack: MobAttack = 'melee'; // what the current windup leads to
+  private aim = { x: 0, y: 1 }; // the line a ray locked on when its windup began
   private remote: { x: number; y: number } | null = null; // guest only: where the host says this mob is
   private bar = new Graphics();
   private readonly t: ReturnType<typeof mobTimings>;
@@ -190,10 +204,11 @@ export class Mob {
         break;
       case 'chase': {
         const { shot } = this.kind;
+        const attack = mobAttack(this.kind, dist);
         if (dist > this.kind.sight * 1.5) {
           this.state = 'idle';
           this.timer = 1;
-        } else if (shot ? dist <= shot.range : dist < REACH) {
+        } else if (attack) {
           // A shooter first backs away if the hero is on top of it (unless it is cornered, then it just shoots).
           if (
             shot &&
@@ -206,8 +221,10 @@ export class Mob {
           }
           this.state = 'windup';
           this.timer = this.t.windup;
+          this.attack = attack;
+          this.aim = { x: dx / (dist || 1), y: dy / (dist || 1) }; // a ray keeps this line: step aside to dodge it
           this.body.face(directionToward(dx, dy));
-          this.body.play(shot ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph; the blow lands as it ends
+          this.body.play(attack === 'shot' ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph; the blow lands as it ends
         } else {
           moving = this.walk(dx / dist, dy / dist, this.kind.speed * dt, world);
         }
@@ -215,8 +232,9 @@ export class Mob {
       }
       case 'windup':
         if (this.timer <= 0) {
-          if (this.kind.shot)
+          if (this.attack === 'shot')
             world.shoot(this, dx / (dist || 1), dy / (dist || 1)); // aimed as it lets go
+          else if (this.attack === 'ray') world.ray(this, this.aim.x, this.aim.y);
           else if (target && dist < REACH + 8) world.strike(this, target);
           this.state = 'recover';
           this.timer = this.t.recover;
@@ -247,14 +265,17 @@ export class Mob {
   }
 
   /** Guest: take the host's latest word on this mob. The body glides there over the next frames (updateRemote). */
-  setRemote({ x, y, facing, state: next, hp, timer, moving }: MobView) {
+  setRemote({ x, y, facing, state: next, hp, timer, moving }: MobView, heroes: MobWorld['heroes'] = []) {
     const respawned = this.state === 'dead' && next !== 'dead';
     if (hp < this.hp) {
       this.flash = 0.15;
       if (hp > 0 && next !== 'windup') this.body.play('hurt', this.t.stagger * 1000); // a mob mid-windup was not stopped
     }
     if (next === 'windup' && this.state !== 'windup') {
-      this.body.play(this.kind.shot ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph
+      const near = nearest(this.body, heroes);
+      const dist = near ? Math.hypot(near.x - this.body.x, near.y - this.body.y) : Infinity;
+      this.attack = mobAttack(this.kind, dist) ?? (this.kind.shot ? 'shot' : this.kind.ray ? 'ray' : 'melee');
+      this.body.play(this.attack === 'shot' ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph
     }
     if (hp !== this.hp) {
       this.hp = hp;
@@ -288,7 +309,8 @@ export class Mob {
   private present(dt: number, moving: boolean) {
     // Telegraph: blink yellow and draw back during the windup, then lunge forward as it strikes.
     const [fx, fy] = DIR_VEC[this.body.facing];
-    const lunging = !this.kind.shot && this.state === 'recover' && this.timer > this.t.recover - LUNGE;
+    const lunging =
+      this.attack === 'melee' && !this.kind.shot && this.state === 'recover' && this.timer > this.t.recover - LUNGE;
     if (this.state === 'windup') this.body.setOffset(-fx * 2, -fy * 2);
     else if (lunging) this.body.setOffset(fx * 5, fy * 5);
     else this.body.setOffset(0, 0);

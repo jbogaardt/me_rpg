@@ -5,7 +5,7 @@ import layout from './world';
 
 // The desert: the whole north-west, stepping down to the Greenwood. Dunes, a buried skull, red badlands, an oasis, a
 // ring of standing rocks, and a mesa with the legion's lost gear. A trail runs from the Greenwood (south) to the beach
-// (east). Dune raiders, orcs and the odd zombie: level 3-5.
+// (east). Dune raiders, orcs and the odd mummy: level 3-5.
 // Squares x 0-13 at y 0-3, stepping down to x 0-2 at y 11 (maps/world.ts).
 
 const W = worldOf(layout);
@@ -91,10 +91,10 @@ export default defineBiome({
       ['raider', 11.6, 4.6],
       ['orc', 8, 2.6],
       ['orc', 2.6, 3.8],
-      ['zombie', 8.4, 5.6],
+      ['mummy', 8.4, 5.6],
       ['raider', 1, 8.8],
       ['orc', 3.6, 9.4],
-      ['zombie', 12.6, 1.2],
+      ['mummy', 12.6, 1.2],
       ['orc', 6, 6.4],
     ] as const)
       z.mob(kind, ...near(x, y));
@@ -121,7 +121,7 @@ export default defineBiome({
     z.place('The Buried Skull', 64, 6);
 
     // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['raider', 'orc', 'raider', 'zombie', 'raider', 'skeleton'], {
+    z.roam(['raider', 'orc', 'raider', 'mummy', 'raider', 'skeleton'], {
       count: 14,
       seed: 103,
       avoid: [[...near(1.6, 10), 20]],

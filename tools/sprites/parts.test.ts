@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { PARTS } from '../../sprites/parts';
+import { PARTS, WHOLE_BODIES } from '../../sprites/parts';
 import { SLOTS, outfitLayers, outfitParts, type Outfit, type PartManifest } from '../../src/sprites/doll';
 import { MOB_KINDS } from '../../src/systems/combat';
 import { ITEMS } from '../../src/systems/items';
@@ -37,7 +37,7 @@ describe('sprite parts', () => {
 
   it.each(outfits)('%s has a body and a head, so it is a whole character', (_name, outfit) => {
     expect(outfit.body).toBeDefined();
-    expect(outfit.head).toBeDefined();
+    if (!WHOLE_BODIES.has(outfit.body ?? '')) expect(outfit.head).toBeDefined(); // a whole body brings its head
   });
 
   it('draws the body behind the head and the head behind its hair', () => {

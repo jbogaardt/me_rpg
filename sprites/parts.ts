@@ -44,6 +44,34 @@ add('head.frost', 'head/heads/undead/heads_skeleton', 'sky');
 add('body.zombie', 'body/special/body_zombie');
 add('head.zombie', 'head/heads/undead/heads_zombie');
 
+// --- Whole-character art that is not from the LPC generator ---
+// A ready-made doll sheet (832x1600, see src/sprites/doll.ts) copied as one layer by `npm run sprites -- build`. It
+// replaces body *and* head, so an outfit built on it needs no head (`WHOLE_BODIES`).
+export interface CustomPart {
+  /** The doll sheet, relative to the repo root. */
+  source: string;
+  /** Draw order (LPC bodies sit at 10). */
+  z: number;
+  notes: string;
+  authors: string[];
+  licenses: string[];
+  urls: string[];
+}
+
+export const CUSTOM_PARTS: Record<string, CustomPart> = {
+  'body.mummy': {
+    source: 'art/mummy/mummy_doll.png',
+    z: 10,
+    notes: 'Mummy mob, pixel art made for this game (generated, cleaned up and exported by tools in game-graphics)',
+    authors: ['jbogaardt'],
+    licenses: ['Project art'],
+    urls: ['https://github.com/jbogaardt/game-graphics'],
+  },
+};
+
+/** Bodies that already include their head. */
+export const WHOLE_BODIES: ReadonlySet<string> = new Set(Object.keys(CUSTOM_PARTS));
+
 // --- Hair ---
 for (const color of ['dark_brown', 'blonde', 'red', 'black', 'gray', 'white']) {
   add(`hair.plain_${color}`, 'hair/short/hair_plain', color);

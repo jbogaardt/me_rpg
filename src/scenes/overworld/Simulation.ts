@@ -30,6 +30,8 @@ import { Casting } from './Casting';
 import {
   ATTACK_COOLDOWN,
   BOLT_HEIGHT,
+  RAY_HALF_WIDTH,
+  RAY_SPEED,
   DEFEAT_LINES,
   HP_REGEN,
   HP_REGEN_DELAY,
@@ -82,6 +84,7 @@ export class Simulation {
         ),
       strike: (mob, target) => arena.inZone(z, () => this.hurtHero(mob, target)),
       shoot: (mob, ux, uy) => arena.inZone(z, () => this.mobShoot(mob, ux, uy)),
+      ray: (mob, ux, uy) => arena.inZone(z, () => this.mobRay(mob, ux, uy)),
     };
   }
 
@@ -281,6 +284,29 @@ export class Simulation {
       vy: round1(uy * shot.speed),
       color: shot.color,
     });
+  }
+
+  /**
+   * A ray caster fires its beam along (ux, uy), the line it locked on when its windup began: it burns every player
+   * on that line (one blinking with invulnerability is spared) up to the first wall. A guest is sent it as a `bolt`
+   * event moving at `RAY_SPEED`, which `Visuals.show` draws as a beam.
+   */
+  private mobRay(mob: Mob, ux: number, uy: number) {
+    const { ray } = mob.kind;
+    if (!ray) return;
+    const x = round1(mob.body.x + ux * 10);
+    const y = round1(mob.body.y - BOLT_HEIGHT + uy * 8);
+    const length = this.visuals.rayReach(x, y, ux, uy);
+    for (const p of this.arena.players()) {
+      if (p.safe) continue;
+      // distance from the player's feet to the beam's line on the ground
+      const [px, py] = [p.body.x - x, p.body.y - (y + BOLT_HEIGHT)];
+      const along = px * ux + py * uy;
+      if (along < -RAY_HALF_WIDTH || along > length + RAY_HALF_WIDTH) continue;
+      if (Math.abs(px * uy - py * ux) < RAY_HALF_WIDTH) this.hurtHero(mob, p.body);
+    }
+    this.visuals.foeRay(x, y, ux, uy, ray.color);
+    this.emit({ type: 'bolt', x, y, vx: round1(ux * RAY_SPEED), vy: round1(uy * RAY_SPEED), color: ray.color });
   }
 
   // --- Weather ---

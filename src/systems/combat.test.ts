@@ -1,3 +1,5 @@
+import { mobAttack, REACH } from '../entities/Mob';
+import { RAY_LENGTH } from '../scenes/overworld/constants';
 import { ITEMS } from './items';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -123,6 +125,21 @@ describe('MOB_KINDS', () => {
     expect(stagger).toBeGreaterThanOrEqual(0);
     expect(stagger).toBeLessThan(windup + recover); // a stun never outlasts a whole attack cycle
   });
+
+  it.each(Object.entries(MOB_KINDS).filter(([, k]) => k.ray))(
+    '%s fires a ray only from beyond melee reach and within sight',
+    (_name, kind) => {
+      const ray = kind.ray!;
+      expect(kind.shot).toBeUndefined();
+      expect(ray.range).toBeGreaterThan(REACH);
+      expect(ray.range).toBeLessThanOrEqual(kind.sight);
+      expect(ray.range).toBeLessThanOrEqual(RAY_LENGTH);
+      expect(mobAttack(kind, REACH - 1)).toBe('melee');
+      expect(mobAttack(kind, ray.range - 1)).toBe('ray');
+      expect(mobAttack(kind, ray.range + 1)).toBeNull();
+      expect(kind.windup ?? 0.45).toBeGreaterThanOrEqual(0.5); // time to step out of the line it locked
+    },
+  );
 
   it.each(Object.entries(MOB_KINDS).filter(([, k]) => k.shot))(
     '%s fires dodgeable shots from within sight',
