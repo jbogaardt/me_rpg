@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { newHero, type Item } from './combat';
-import { CROP_KINDS, CROP_STAGES, CROPS, cropStage, harvest, waterWith } from './crops';
+import {
+  CROP_KINDS,
+  CROP_STAGES,
+  CROPS,
+  cropCode,
+  cropFromCode,
+  cropStage,
+  harvest,
+  RIPE_CODE,
+  waterWith,
+} from './crops';
 import { BASE_PACK } from './inventory';
 import { ITEMS } from './items';
 
@@ -14,13 +24,22 @@ describe('crops', () => {
     }
   });
 
-  it('grow through the stages and ripen only at the end', () => {
-    expect(cropStage(0, 100)).toBe(0);
-    expect(cropStage(40, 100)).toBe(1);
-    expect(cropStage(70, 100)).toBe(2);
-    expect(cropStage(99.9, 100)).toBe(CROP_STAGES - 2);
-    expect(cropStage(100, 100)).toBe(CROP_STAGES - 1);
-    expect(cropStage(-5, 100)).toBe(0);
+  it('draw the phase while growing and the last stage when ripe', () => {
+    expect([0, 1, 2].map((phase) => cropStage({ ripe: false, phase }))).toEqual([0, 1, 2]);
+    expect(cropStage({ ripe: true, phase: 0 })).toBe(CROP_STAGES - 1);
+  });
+
+  it('travel to a guest as a small code and back', () => {
+    for (const ripe of [false, true])
+      for (const phase of ripe ? [0] : [0, 1, 2])
+        for (const dry of ripe ? [false] : [false, true]) {
+          const state = { ripe, phase, dry };
+          expect(cropFromCode(cropCode(state))).toEqual(state);
+        }
+    expect(cropCode({ ripe: true, phase: 0, dry: false })).toBe(RIPE_CODE);
+    expect(cropFromCode(RIPE_CODE + 1)).toBeNull();
+    expect(cropFromCode(-1)).toBeNull();
+    expect(cropFromCode(1.5)).toBeNull();
   });
 
   it('are picked into the pack', () => {
