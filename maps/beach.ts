@@ -95,5 +95,8 @@ export default defineBiome({
     z.place('The Wreck', 162, 34);
     z.place('Tide Pools', 136, 52);
     z.place("The Jungle's Edge", 193, 38);
+
+    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
+    z.roam(['raider', 'wolfkin', 'shade', 'raider'], { count: 6, seed: 104, avoid: [[...near(15.6, 2.8), 14]] });
   },
 });

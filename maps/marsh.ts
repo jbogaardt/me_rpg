@@ -160,5 +160,8 @@ export default defineBiome({
     // --- Names for the map: each shows once the player has explored round it ---------------------------------------
     z.place('The Drowned Causeway', 300, 84);
     z.place("The Troll's Isle", 290, 77);
+
+    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
+    z.roam(['bogGhoul', 'hexer', 'troll'], { count: 3, seed: 108, avoid: [[...near(30, 8.4), 14]] });
   },
 });

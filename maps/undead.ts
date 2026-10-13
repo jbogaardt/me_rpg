@@ -85,5 +85,12 @@ export default defineBiome({
     z.place('The Graveyard', 130, 89);
     z.place('The Ember Pool', 130, 67);
     z.place('The Chasm', 168, 68);
+
+    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
+    z.roam(['skeleton', 'zombie', 'zombie', 'skeleton', 'shade'], {
+      count: 10,
+      seed: 105,
+      avoid: [[...near(16, 9.2), 16]],
+    });
   },
 });

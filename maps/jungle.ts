@@ -101,5 +101,8 @@ export default defineBiome({
     // --- Names for the map: each shows once the player has explored round it ---------------------------------------
     z.place('The Lagoon', 257, 64);
     z.place('Overgrown Ruins', 260, 94);
+
+    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
+    z.roam(['warg', 'orc', 'warg', 'tuskGuard', 'orc'], { count: 9, seed: 106, avoid: [[...near(24, 7.2), 16]] });
   },
 });
