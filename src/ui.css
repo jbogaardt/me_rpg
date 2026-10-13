@@ -126,13 +126,13 @@
 #menu-btn, #map-btn, #inv-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
 #map-btn[hidden] { display: none; }
 /* The drink button, low and in the middle, clear of the D-pad and the A button. */
-#drink-btn {
+#prompt-btn {
   position: fixed; z-index: 2; left: 0; right: 0; margin: 0 auto; width: max-content; min-width: 96px; box-sizing: border-box;
   bottom: calc(28px + env(safe-area-inset-bottom)); height: 46px; padding: 0 24px; line-height: 46px; font-size: 20px;
   pointer-events: auto; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
 }
-#drink-btn[hidden] { display: none; }
-#drink-btn.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
+#prompt-btn[hidden] { display: none; }
+#prompt-btn.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
 
 /* --- Co-op map (src/hud/MapOverlay.ts): never takes input, so the game stays playable behind it --- */
 #map-overlay {

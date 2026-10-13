@@ -41,8 +41,8 @@ export class Hud {
   private gold = document.getElementById('hud-gold')!;
   private combos = document.getElementById('combo-hud')!;
   private tracker = document.getElementById('quest-tracker')!;
-  private drinkBtn = document.getElementById('drink-btn')!;
-  private drinkShown: string | null = null;
+  private promptBtn = document.getElementById('prompt-btn')!;
+  private promptShown: string | null = null;
   private shown = '';
   private shownCombos = '';
 
@@ -71,11 +71,11 @@ export class Hud {
   }
 
   /** The button beside water ("Drink", "Fill can"), or null to hide it. It presses the action key, so it works on touch and for a guest too. */
-  setDrink(text: string | null) {
-    if (text === this.drinkShown) return;
-    this.drinkShown = text;
-    this.drinkBtn.hidden = text === null;
-    if (text !== null) this.drinkBtn.textContent = text;
+  setPrompt(text: string | null) {
+    if (text === this.promptShown) return;
+    this.promptShown = text;
+    this.promptBtn.hidden = text === null;
+    if (text !== null) this.promptBtn.textContent = text;
   }
 
   private set(b: Bar, value: number, max: number) {

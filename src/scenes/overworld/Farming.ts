@@ -1,6 +1,7 @@
+import type { Plot } from '../../entities/Plot';
 import type { Player } from '../../entities/Player';
 import { CELL } from '../../map/types';
-import { harvest, isRipe, needsWater, plant, rain as waterFromRain, seedInPack, water } from '../../systems/crops';
+import { harvest, plant, rain as waterFromRain, RIPE, seedInPack, water } from '../../systems/crops';
 import { hasCan } from '../../systems/water';
 import type { Arena } from './Arena';
 import { PLOT_REACH } from './constants';
@@ -32,28 +33,52 @@ export class Farming {
   }
 
   /**
-   * The action key beside a plot (host and solo): pick a ripe plant, plant a seed in bare soil, or water a dry plant from the
-   * can. Returns true when it did something, so the hero does not swing.
+   * The plot beside the hero that the action key would do something to, and what: pick a ripe plant, plant a seed in bare
+   * soil, or water a dry plant (with a can). Read from what the plot shows, so a guest works it out too.
    */
+  private nearby(p: Player): { plot: Plot; job: 'harvest' | 'plant' | 'water' } | null {
+    let best: { plot: Plot; job: 'harvest' | 'plant' | 'water' } | null = null;
+    let bestDist = PLOT_REACH;
+    for (const plot of this.arena.plots) {
+      const dist = Math.hypot(p.body.x - plot.x, p.body.y - (plot.y - CELL / 2));
+      if (dist >= bestDist) continue;
+      const job = !plot.crop
+        ? seedInPack(p.hero)
+          ? 'plant'
+          : null
+        : plot.stage >= RIPE
+          ? 'harvest'
+          : !plot.wet && hasCan(p.hero)
+            ? 'water'
+            : null;
+      if (job) [best, bestDist] = [{ plot, job }, dist];
+    }
+    return best;
+  }
+
+  /** The label of the button to show beside a plot ("Harvest", "Plant", "Water"), or null (host, solo and guest alike). */
+  prompt(p: Player): string | null {
+    const near = this.nearby(p);
+    return near ? { harvest: 'Harvest', plant: 'Plant', water: 'Water' }[near.job] : null;
+  }
+
+  /** The action key beside a plot (host and solo). Returns true when it did something, so the hero does not swing. */
   tend(p: Player): boolean {
     const { clock } = this.arena;
-    const plot = this.arena.plots.find(
-      (c) =>
-        Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < PLOT_REACH &&
-        (isRipe(c.state) || (!c.state.crop && seedInPack(p.hero)) || (needsWater(c.state, clock) && hasCan(p.hero))),
-    );
-    if (!plot) return false;
+    const near = this.nearby(p);
+    if (!near) return false;
+    const { plot, job } = near;
     const [x, y] = [plot.x, plot.y - CELL];
-    const picking = isRipe(plot.state);
-    const done = !plot.state.crop
-      ? plant(p.hero, plot.state, clock)
-      : picking
-        ? harvest(p.hero, plot.state, clock)
-        : water(p.hero, plot.state, clock);
+    const done =
+      job === 'plant'
+        ? plant(p.hero, plot.state, clock)
+        : job === 'harvest'
+          ? harvest(p.hero, plot.state, clock)
+          : water(p.hero, plot.state, clock);
     plot.tend(clock);
     if (!done.text) return true;
-    if (picking && done.ok) this.sim.fx('levelUp', x, y + 10); // a little sparkle for the harvest
-    this.sim.text(x, y - 6, done.text, done.ok ? (picking || !plot.state.crop ? 0xa8e05a : 0x7ec8ff) : 0xff8a7a);
+    if (job === 'harvest' && done.ok) this.sim.fx('levelUp', x, y + 10); // a little sparkle for the harvest
+    this.sim.text(x, y - 6, done.text, done.ok ? (job === 'water' ? 0x7ec8ff : 0xa8e05a) : 0xff8a7a);
     return true;
   }
 }
