@@ -13,7 +13,7 @@ import { Mob, type MobWorld } from '../entities/Mob';
 import { WeatherLayer } from '../entities/WeatherLayer';
 import { CLIMATES, DEFAULT_CLIMATE, isClimate, Weather } from '../systems/weather';
 import { sheetGrid } from '../core/textures';
-import { zoneBounds } from '../map/bounds';
+import { mapBox } from '../map/bounds';
 import { MapView } from '../map/MapView';
 import { CELL, type MapData } from '../map/types';
 import { cellFeet } from '../map/doors';
@@ -155,9 +155,22 @@ export class ZoneState {
     if (bodies.length) this.world.layer.addChild(...bodies); // Pixi's addChild() with nothing to add throws
   }
 
-  /** Follow (x, y) with the camera, inside the zone's own cells (`dt` eases after the player; `snap` puts the view there at once). */
+  /** Follow (x, y) with the camera, inside the map (`dt` eases after the player; `snap` puts the view there at once). */
   follow(screenW: number, screenH: number, x: number, y: number, dt = 0, snap = false) {
-    this.camera.follow(screenW, screenH, x, y, zoneBounds(this.data), dt, snap);
+    this.camera.follow(screenW, screenH, x, y, mapBox(this.data), dt, snap);
+  }
+
+  /**
+   * Is this zone only being looked at from the next one over (its map drawn beside the player's, which they will walk
+   * into)? Then its weather stays out of the picture. Its mobs are drawn too (the scene keeps them wandering) unless
+   * `hideMobs`, as for a co-op guest, who is not told what they are doing.
+   */
+  setLookout(on: boolean, hideMobs = on) {
+    for (const m of this.mobs) m.body.visible = !(on && hideMobs) && m.body.alpha > 0;
+    if (this.weatherLayer) {
+      this.weatherLayer.view.visible = !on;
+      this.weatherLayer.view.alpha = 1;
+    }
   }
 
   /** What must outlive the zone being unloaded: the chests opened, what grows in the plots and the items lying on the ground. */

@@ -7,7 +7,8 @@ import { CELL, sortKey, type MapData } from './types';
 /**
  * Renders a MapData as two layers inside one render group (so the camera moving or zooming it is a single GPU
  * transform):
- *  - `ground`: the 32px ground cells (a cell may stack several layers).
+ *  - `ground`: the 32px ground cells (a cell may stack several layers). The margin of a neighbouring biome (surface
+ *    `beyond`) is not drawn, nor are objects standing in it: the scene lays that neighbour's own view beside this one.
  *  - `layer`: map objects (trees, rocks...) plus whatever the scene adds (characters, effects). Children are
  *    y-sorted by `zIndex`; the scene sets `zIndex` to a character's feet y so it sorts with the objects.
  *
@@ -24,6 +25,7 @@ export class MapView extends Container {
   private live = new Map<number, { ground: Container; objects: Sprite[] }>(); // built chunks by index
   private readonly cols: number; // chunks across
   private readonly rows: number;
+  private readonly beyond: number; // the surface index of a neighbour's margin, which another zone's view draws (-1 in a room)
 
   constructor(
     readonly data: MapData,
@@ -35,6 +37,7 @@ export class MapView extends Container {
     this.cols = Math.ceil(data.width / CHUNK);
     this.rows = Math.ceil(data.height / CHUNK);
     this.byChunk = chunksOfObjects(data);
+    this.beyond = data.surfaces.indexOf('beyond');
   }
 
   /** How many chunks are built (for tests and the memory check in the playtest). */
@@ -67,7 +70,7 @@ export class MapView extends Container {
     for (let row = cy * CHUNK; row < Math.min(data.height, (cy + 1) * CHUNK); row++) {
       for (let col = cx * CHUNK; col < Math.min(data.width, (cx + 1) * CHUNK); col++) {
         const cell = data.ground[row * data.width + col];
-        if (!cell) continue;
+        if (!cell || this.isBeyond(col, row)) continue;
         // A cell is one or more [sheet, x, y] layers, bottom first.
         for (let k = 0; k + 2 < cell.length; k += 3) {
           const texture = this.frame(cell[k]!, cell[k + 1]!, cell[k + 2]!, CELL, CELL);
@@ -82,6 +85,7 @@ export class MapView extends Container {
     const objects: Sprite[] = [];
     for (const i of this.byChunk[cy * this.cols + cx] ?? []) {
       const o = data.objects[i]!;
+      if (this.isBeyond(Math.floor((o.px + o.w / 2) / CELL), Math.floor((o.py + o.h - 1) / CELL))) continue;
       const texture = this.frame(o.s, o.x, o.y, o.w, o.h);
       if (!texture) continue;
       const sprite = new Sprite(texture);
@@ -92,6 +96,12 @@ export class MapView extends Container {
     }
     if (objects.length) this.layer.addChild(...objects);
     this.live.set(cy * this.cols + cx, { ground, objects });
+  }
+
+  /** Is this cell a neighbouring biome's margin? Only the zone's own cells are drawn here: the neighbour draws the rest. */
+  private isBeyond(col: number, row: number): boolean {
+    const { data } = this;
+    return this.beyond >= 0 && data.surface[row * data.width + col] === this.beyond;
   }
 
   private free(i: number, chunk: { ground: Container; objects: Sprite[] }) {
