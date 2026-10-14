@@ -109,6 +109,8 @@ export default defineBiome({
     ] as const)
       z.site('hoursand', ...near(x, y));
 
+    z.giver('zahra', ...z.near(80, 49)); // the sandwalker at the oasis (quests.json `givers`)
+
     z.scatter([...DRY_TREES], { count: 22, where: open, seed: 53 });
     z.scatter(['sandBoulder', 'sandBoulderB', 'sandSpire'], { count: 36, where: open, seed: 51 });
     z.scatter(['dryBush'], { count: 24, where: open, seed: 52 });

@@ -44,7 +44,6 @@ import { petSound } from '../systems/pets';
 import {
   CHAPTERS,
   GIVERS,
-  QUEST_GIVER,
   QUESTS,
   currentQuest,
   giverMark,
@@ -617,9 +616,8 @@ export class OverworldScene implements Scene {
   /** The quest markers for the local player: "!" over the giver with a task to hand out, "?" when one can be handed in; sites show only while wanted. */
   private updateQuests(z: ZoneState, dt: number) {
     const hero = this.hero;
-    const quest = giverMark(hero);
     for (const g of z.givers) {
-      const mark = g.giver === QUEST_GIVER ? quest : ''; // only the warden has tasks to hand out
+      const mark = giverMark(hero, g.giver); // "!" or "?" over whoever the current quest is about
       const text = mark ? `${mark} ${GIVERS[g.giver]?.tag ?? ''}` : (GIVERS[g.giver]?.tag ?? '');
       if (this.marked.get(g.body) === text) continue;
       this.marked.set(g.body, text);
@@ -658,7 +656,7 @@ export class OverworldScene implements Scene {
       this.story = { stage: log.stage, ready, chapter: q && log.taken ? q.chapter : -1 };
       return;
     }
-    if (q && s.stage === log.stage && !s.ready && ready) this.fieldNote = q.fieldNote;
+    if (q && q.fieldNote.length && s.stage === log.stage && !s.ready && ready) this.fieldNote = q.fieldNote;
     if (q && log.taken && startsChapter(q) && s.chapter !== q.chapter) {
       s.chapter = q.chapter;
       this.titleCard = { title: CHAPTERS[q.chapter]?.title ?? '', sub: `Chapter ${q.chapter + 1}` };
@@ -682,7 +680,6 @@ export class OverworldScene implements Scene {
   /** The quest arrow: points from the hero at where the quest leads (a thing in this zone, or the door towards it). */
   private pointTheWay(z: ZoneState, dt: number) {
     const hide = this.zones.transition.busy || !this.player.visible || !enabled('guide', z.name);
-    const warden = z.givers.find((g) => g.giver === QUEST_GIVER);
     const world = {
       zone: z.name,
       doors: z.data.doors,
@@ -691,7 +688,8 @@ export class OverworldScene implements Scene {
         const key = m.alive ? mobKey(m.kind) : undefined;
         return key ? [{ key, x: m.body.x, y: m.body.y }] : [];
       }),
-      giver: warden ? { x: warden.body.x, y: warden.body.y } : null,
+      givers: z.givers.map((g) => ({ id: g.giver, x: g.body.x, y: g.body.y })),
+      places: z.data.places.map((p) => ({ name: p.name, x: (p.col + 0.5) * CELL, y: (p.row + 0.5) * CELL })),
     };
     const guide = hide ? null : guideFor(this.hero, world, this.player);
     const { camera } = z;

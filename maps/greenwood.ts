@@ -164,6 +164,10 @@ export default defineBiome({
     ] as const)
       z.site('echostone', ...near(x, y));
 
+    // --- The people of the Greenwood's story (quests.json `givers`) ---------------------------------------------------------
+    z.giver('gruk', ...z.near(58, 128)); // the goblin elder, camped at the old ruins
+    z.giver('brannoch', ...z.near(33, 183)); // the hermit by the old lake
+
     z.scatter([...TREES], { count: 70, where: open, seed: 11 });
     z.scatter(['bush'], { count: 36, where: open, seed: 12 });
     z.scatter(['rock', 'rockSmall', 'rockB', 'rockC'], { count: 45, where: open, seed: 13 });

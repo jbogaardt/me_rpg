@@ -6,13 +6,67 @@
       "name": "Warden Maren",
       "look": "warden",
       "tag": "Maren",
-      "zone": "town"
+      "zone": "town",
+      "idle": [
+        "The lamp is steady tonight, and I mean to keep it that way. Go where the story needs you, stranger.",
+        "Open your map with M if you lose the thread. I will keep the light."
+      ]
     },
     "orin": {
       "name": "Orin the Trainer",
       "look": "trainer",
       "tag": "Trainer",
       "zone": "shop_wizard"
+    },
+    "hale": {
+      "name": "Captain Hale",
+      "look": "hale",
+      "tag": "Hale",
+      "zone": "town",
+      "idle": [
+        "Quiet on the north road tonight. Too quiet, if you ask me. Quiet is how it starts.",
+        "The Watch holds the gate. It is all we can do. You, you can do more. Mind yourself out there."
+      ]
+    },
+    "gruk": {
+      "name": "Gruk, goblin elder",
+      "look": "gruk",
+      "tag": "Gruk",
+      "zone": "greenwood",
+      "idle": [
+        "Gruk sits. Gruk listens. At night the bell calls, and Gruk does not answer. Remember that, boy.",
+        "The young ones are afraid of you, and they should be a little. But they will remember you did not strike first."
+      ]
+    },
+    "brannoch": {
+      "name": "Brannoch the hermit",
+      "look": "brannoch",
+      "tag": "Brannoch",
+      "zone": "greenwood",
+      "idle": [
+        "The lake keeps still, and so do I. It is a good way to hear what the Vale has left to say.",
+        "If you are going to wander, wander toward answers. There are more of them than you would think."
+      ]
+    },
+    "zahra": {
+      "name": "Zahra the sandwalker",
+      "look": "zahra",
+      "tag": "Zahra",
+      "zone": "desert",
+      "idle": [
+        "The dunes shift while you stand still, and they do not shift the way they used to. Watch your footing.",
+        "Water first, then questions. That is the rule of the sand."
+      ]
+    },
+    "voss": {
+      "name": "Sergeant Voss",
+      "look": "voss",
+      "tag": "Voss",
+      "zone": "frostlands",
+      "idle": [
+        "I was a soldier for thirty years. I am a statue for three. Neither is a good fit.",
+        "Keep your blade low and your feet moving. The cold is patient, but it can be outrun."
+      ]
     }
   },
   "sites": {
@@ -66,141 +120,66 @@
     {
       "title": "Voices in the Stone",
       "intro": [
-        "You have shown me you can walk where others freeze. Now I must ask you to listen, not fight.",
-        "The old Vale remembered itself in stone, and it is still talking, if someone is quiet enough to hear. It may tell us what broke."
+        "The Hollow wears a dead man's apron. That means this was never random, stranger. Someone did this, or something wearing him did.",
+        "The Vale remembers its own story in stone and in the people who stayed. We must go and listen to them, one after another, before the Stillness takes their words too."
       ]
     },
     {
       "title": "The Fallen Sand",
       "intro": [
-        "The Hourglass did not simply break. It scattered. Where its sand fell, the Stillness is thicker, and it has set guards there.",
-        "Whatever is behind this is gathering the pieces. We must find them first, and that means going where the guards are."
+        "The Hourglass did not simply break. It scattered. Where its sand fell, the Stillness is thickest, and it has set guards over every place it fell.",
+        "Whatever is behind this is gathering the pieces, and it moves faster than we do. We have to find them first, which means going where the guards are."
       ]
     },
     {
       "title": "The Frozen March",
       "intro": [
         "The road to the Spire runs through the cold east, and the cold east is where the Stillness has marched its soldiers.",
-        "This is the last of what I can ask of you for now, and the hardest. After it, we will know who we are fighting."
+        "This is the last I can ask of you for now, and the hardest. After it, we will know who we are really fighting."
       ]
     }
   ],
   "quests": [
     {
-      "id": "road",
+      "id": "watch",
       "chapter": 0,
-      "learned": "The Stillness is three winters old, and it has frightened even the goblins out of their burrows.",
-      "fieldNote": [
-        "The last goblin drops its dagger and runs for the trees, shaking. Tallies are scratched into every trunk here: three winters of them. It was never hunting you. It was running from something."
-      ],
-      "title": "Trouble on the Road",
-      "goal": "Drive off 5 goblins",
-      "unit": "goblins",
-      "hint": "Goblins prowl the Greenwood, the wild country around the crossroads. Walk the trails and they will come for you.",
+      "turnIn": "hale",
+      "title": "The Captain's Wound",
+      "goal": "Speak to Captain Hale",
+      "unit": "meeting",
+      "hint": "Captain Hale rests at the north end of the market square in Lanternrest. Press the action key beside him.",
       "where": {
-        "zones": ["greenwood"]
+        "zones": ["town"]
       },
       "objective": {
-        "t": "kill",
-        "kind": "goblin",
-        "count": 5
+        "t": "meet",
+        "count": 1
       },
       "reward": {
-        "gold": 30,
-        "xp": 30
+        "gold": 20,
+        "xp": 20
       },
+      "learned": "Captain Hale was struck down on the north road by a Shade that wore an apron, like a tradesman.",
+      "fieldNote": [],
       "offer": [
-        "The goblins used to keep to their burrows. Now they swarm the Greenwood roads, half mad with fear. Drive off five of them, and I will know what you are made of."
+        "Before anything else, a man needs your ears. Captain Hale of the Watch took a wound last night, and he will not tell me what struck him. He may tell a stranger.",
+        "He sits at the north end of the market. Go and hear him out."
       ],
-      "remind": ["Five goblins on the Greenwood roads. You will not need to look far; they will find you."],
+      "remind": ["Captain Hale, at the north end of the market square. Go and hear what he has to say."],
       "done": [
-        "Five fewer. The road breathes easier already.",
-        "They are not wicked, you know. Only frightened, and the Stillness feeds on fear. But stay, stranger: there is more I must tell you."
+        "So you are the stranger Maren keeps talking about. Forgive me if I do not stand.",
+        "I was on the north road at dusk when something stepped out of the trees. A Shade. It had no shadow of its own, and it wore an apron, of all things, like a tradesman. It touched my arm, and the cold has not left since.",
+        "Warmth would help. An Elixir from the apothecary on the square. I have no coin to spare, and I will not pretend I do not need it."
       ]
     },
     {
-      "id": "glimmer",
+      "id": "elixir",
       "chapter": 0,
-      "learned": "Glimmercaps glow wherever time still flows. The town lamp burns on them, and it is the last light in the Vale.",
-      "fieldNote": [
-        "The last glimmercap pulses once, like a heartbeat, then holds steady. Somewhere beyond the hush, time is still running."
-      ],
-      "title": "Glimmercaps",
-      "goal": "Gather 4 glimmercaps in the Greenwood",
-      "unit": "glimmercaps",
-      "hint": "Glimmercaps glow blue in the groves of the Greenwood. Search the area marked on your map.",
-      "where": {
-        "zones": ["greenwood"]
-      },
-      "objective": {
-        "t": "gather",
-        "site": "glimmercap",
-        "zone": "greenwood",
-        "count": 4
-      },
-      "reward": {
-        "gold": 50,
-        "xp": 45
-      },
-      "offer": [
-        "See the lamp behind me? It burns on glimmercaps, little mushrooms that glow wherever time still flows.",
-        "Our stock is nearly gone, and the Stillness spreads. Search the Greenwood groves for four of them. Touch each with the action key."
-      ],
-      "remind": [
-        "Four glimmercaps, glowing pale blue in the groves of the Greenwood. Touch each one with the action key."
-      ],
-      "done": [
-        "Look how the lamp leaps! Where time still flows, light keeps its colour.",
-        "Once the whole Vale ran like that, under the Great Hourglass. Then it broke. I will tell you the rest when you are ready."
-      ]
-    },
-    {
-      "id": "pack",
-      "chapter": 0,
-      "learned": "The Stillness traps whatever it touches in a single moment. For the wolfkin, that moment is hunger.",
-      "fieldNote": [
-        "The pack's howl cuts off mid-breath. In the quiet, you notice there are no birds anywhere. You have not heard one since you arrived."
-      ],
-      "title": "The Hungry Pack",
-      "goal": "Defeat 5 wolfkin",
-      "unit": "wolfkin",
-      "hint": "Wolfkin hunt in the Greenwood and the Eastwood, the forest east of the crossroads.",
-      "where": {
-        "zones": ["greenwood", "eastwood"]
-      },
-      "objective": {
-        "t": "kill",
-        "kind": "wolfkin",
-        "count": 5
-      },
-      "reward": {
-        "gold": 70,
-        "xp": 70
-      },
-      "offer": [
-        "The wolfkin of the eastern woods were never cruel. They guided travelers home through the snow. Now they hunt in the open, and nothing fills them.",
-        "That is the Stillness: it freezes a single moment, and the creature lives in it forever. For the wolfkin, that moment is hunger.",
-        "I hate to ask it. Thin their numbers before they reach the town: five wolfkin."
-      ],
-      "remind": [
-        "Five wolfkin. Grey fur, quick feet, and they see you from far off. Do not fight them in the open if you can help it."
-      ],
-      "done": [
-        "It is done, then. May they rest easier than they lived.",
-        "Do not pity them too much, though. Pity is how the Stillness gets in."
-      ]
-    },
-    {
-      "id": "medicine",
-      "chapter": 0,
-      "learned": "Shades are the Hollow: what is left of people the Stillness took. They leave a cold that does not heal.",
-      "fieldNote": [
-        "The potion is cold in your hand, and so is the air. Somewhere in town, a wounded man is waiting on you."
-      ],
-      "title": "Medicine for the Watch",
-      "goal": "Bring 1 Elixir from the apothecary",
+      "giver": "hale",
+      "title": "Warmth for the Watch",
+      "goal": "Bring 1 Elixir to Captain Hale",
       "unit": "elixir",
-      "hint": "Buy an Elixir at the Apothecary's Shop on the market square in Lanternrest, then bring it to Maren.",
+      "hint": "Buy an Elixir at the Apothecary's Shop on the market square in Lanternrest, then bring it to Captain Hale.",
       "where": {
         "zones": ["town"],
         "door": "shop_apothecary"
@@ -211,33 +190,134 @@
         "count": 1
       },
       "reward": {
-        "gold": 90,
-        "xp": 90
+        "gold": 30,
+        "xp": 30
       },
+      "learned": "The Shade that wounded Captain Hale lurks in the Northern Glade and seems to wait for travellers.",
+      "fieldNote": [
+        "The Elixir is cold in your hand, and so is the air. Somewhere in town, a wounded man is waiting on you."
+      ],
       "offer": [
-        "Captain Hale of the Watch took a wound from a Shade last night. It left no blood, only a cold that will not leave him.",
-        "An Elixir would warm him. The apothecary on the market square sells them, if you have the coin. Bring me one and I will see him through."
+        "The Apothecary's Shop, on the square. One Elixir. I will repay you in more than coin: a name, and where to find the thing that did this."
+      ],
+      "remind": ["An Elixir from the Apothecary's Shop. My arm will not wait forever."],
+      "done": [
+        "Ah. That is warmer than it has any right to be.",
+        "Now listen. It keeps to the Northern Glade, in the Greenwood, where the trees thin and the old path forks. It does not move like the others. It waits. It was waiting for me.",
+        "Find it and put it down, before it finds someone who cannot survive it."
+      ]
+    },
+    {
+      "id": "glade",
+      "chapter": 0,
+      "giver": "hale",
+      "title": "The Pale Lurker",
+      "goal": "Defeat the Pale Lurker in the Northern Glade",
+      "unit": "lurker",
+      "hint": "The Pale Lurker waits in the Northern Glade in the Greenwood, north of the crossroads. It hurls slow bolts, so keep moving and close the distance.",
+      "where": {
+        "zones": ["greenwood"]
+      },
+      "objective": {
+        "t": "kill",
+        "kind": "palelurker",
+        "count": 1,
+        "zone": "greenwood"
+      },
+      "reward": {
+        "gold": 50,
+        "xp": 55
+      },
+      "learned": "The Pale Lurker's apron bore a stitched name: O. Vale, and a tiny clock face.",
+      "fieldNote": [
+        "The Pale Lurker comes apart like smoke. Where it stood, a scrap of grey apron lies on the grass, stitched with a tiny clock face. It is still ticking."
+      ],
+      "offer": [
+        "They call it the Pale Lurker, those who have seen it and lived. It hurls cold, slow bolts, so keep moving, and do not let it keep its distance."
+      ],
+      "remind": ["The Pale Lurker, in the Northern Glade in the Greenwood. Keep moving, and close the distance."],
+      "done": [
+        "You came back, and not a scratch on you.",
+        "...What is that in your hand? An apron string? Let me see. There is a name stitched into the hem: \"O. Vale,\" and beneath it, a clock face.",
+        "Take this to Maren. She will know it."
+      ]
+    },
+    {
+      "id": "lamp",
+      "chapter": 0,
+      "title": "The Name on the Apron",
+      "goal": "Gather 3 glimmercaps in the Greenwood",
+      "unit": "glimmercaps",
+      "hint": "Glimmercaps glow blue in the groves of the Greenwood. Search the area marked on your map.",
+      "where": {
+        "zones": ["greenwood"]
+      },
+      "objective": {
+        "t": "gather",
+        "site": "glimmercap",
+        "zone": "greenwood",
+        "count": 3
+      },
+      "reward": {
+        "gold": 70,
+        "xp": 75
+      },
+      "learned": "The apron belonged to Orrin Vale, Keeper of the Great Hourglass: the Shade wore a dead man's clothes.",
+      "fieldNote": [
+        "The third glimmercap pulses once, like a heartbeat, then holds steady. Somewhere beyond the hush, time is still running."
+      ],
+      "offer": [
+        "Hale brought me the scrap. The thread is the old kind, the kind the Spire's clockmakers used, and it only shows its story in glimmer light.",
+        "Three glimmercaps from the Greenwood groves, and I can read it."
       ],
       "remind": [
-        "An Elixir from the apothecary, on the market square, and I will see to the Captain. Hurry, if you can."
+        "Three glimmercaps, glowing pale blue in the groves of the Greenwood. Touch each one with the action key."
       ],
       "done": [
-        "Bless you. Color is already coming back to his face, and he can speak: he saw what struck him.",
-        "A Shade: a shadow with no one left to cast it. The Hollow, we call them. What the Stillness leaves of people it takes.",
-        "You have more courage than coin, and I know the difference. This is for you."
+        "Look how the lamp leaps, and look at the thread! Under the glow, the stitching spells out a whole line: \"Orrin Vale, Keeper of the Great Hourglass.\"",
+        "Orrin kept the Hourglass. And the thing that wounded Hale was wearing his apron. I do not like that, stranger. I do not like it at all."
+      ]
+    },
+    {
+      "id": "gruk",
+      "chapter": 1,
+      "turnIn": "gruk",
+      "title": "The Goblin Elder",
+      "goal": "Speak to Gruk, the goblin elder",
+      "unit": "meeting",
+      "hint": "Gruk the goblin elder camps at the Old Ruins in the west of the Greenwood. He will not fight you: speak to him with the action key.",
+      "where": {
+        "zones": ["greenwood"]
+      },
+      "objective": {
+        "t": "meet",
+        "count": 1
+      },
+      "reward": {
+        "gold": 90,
+        "xp": 95
+      },
+      "learned": "A bell tolls from the Spire each night. Those who follow it come back cold and empty, wearing the clothes of men.",
+      "fieldNote": [],
+      "offer": [
+        "The goblins have been fleeing the north for three winters. Their elder, Gruk, camps at the old ruins in the Greenwood, and for once I think a talk would do more than a sword.",
+        "Go and listen to him. Listen the whole way through."
+      ],
+      "remind": ["Gruk the goblin elder, at the Old Ruins in the Greenwood. Speak to him, do not strike him."],
+      "done": [
+        "You are not hunting me. Good. Sit. Goblins do not bite, not the old ones.",
+        "We came south because of the bell. Every night at the same hour a bell tolls from the Spire, and the ones who follow it come back wrong. Cold. Empty. They put on the clothes of men and walk the roads.",
+        "There is a hermit by the old lake, Brannoch. He was at the Spire the night of the breaking. Ask him about the Hourglass. And tell him Gruk still owes him a debt."
       ]
     },
     {
       "id": "stones",
       "chapter": 1,
-      "learned": "The Great Hourglass broke into five shards, and you are untouched by the Stillness: the boy outside time.",
-      "fieldNote": [
-        "The runes go dark, but one of them is still faintly warm. The echo said: a child outside the glass. It was talking about you."
-      ],
-      "title": "Voices in the Stones",
+      "giver": "brannoch",
+      "title": "What the Stones Heard",
       "goal": "Touch 3 echo stones in the Greenwood",
       "unit": "echo stones",
-      "hint": "Echo stones stand at the old ruins in the west of the Greenwood, in the northern glade and by the old lake.",
+      "hint": "Echo stones stand at the old ruins in the west of the Greenwood, in the Northern Glade and by the Old Lake. Search the areas marked on your map.",
       "where": {
         "zones": ["greenwood"]
       },
@@ -249,68 +329,105 @@
       },
       "reward": {
         "gold": 110,
-        "xp": 130,
-        "items": ["wayfarersCharm"]
+        "xp": 125
       },
+      "learned": "The Great Hourglass broke into five shards, and you are untouched by the Stillness: the boy outside time.",
+      "fieldNote": [
+        "The last rune goes dark, but one of them stays faintly warm under your hand. The echo said: a child outside the glass. It was talking about you."
+      ],
       "offer": [
-        "Now I can tell you why I sent for you. Grey stones ring the old Greenwood: echo stones. They remember what the Vale once was.",
-        "Touch three of them. Their memory may show us where the Stillness began.",
-        "Go carefully. Shades and goblins haunt the ruins in the west."
+        "Gruk sent you? That old thief. Then you want the truth, not stories.",
+        "I stood at the Spire the night the Hourglass broke. The stones in the Greenwood heard every word, and they speak to anyone who holds still long enough.",
+        "Three of them: the old ruins, the glade, the lake. Listen, and then tell me I am a liar."
       ],
       "remind": [
-        "Three echo stones stand in the Greenwood: old grey pillars carved with runes. Touch each with the action key and listen."
+        "Three echo stones in the Greenwood: grey pillars carved with runes. Touch each with the action key and listen."
       ],
       "done": [
-        "You heard it too. The Great Hourglass broke into five shards, and the one who broke it had a clockmaker's hands.",
-        "And that last echo: a child outside the glass, untouched. Stranger, you came from no road I know. The Stillness slides off you like rain. You are outside of time.",
-        "That is why I called for you. You can walk where it freezes everyone else. Take this charm. It will quicken your feet."
+        "You heard it. The five shards. The child outside the glass. Do you understand what you are, boy?",
+        "The Stillness cannot hold you. It slides off you like rain. If there is a way to mend the Hourglass, it runs through someone like you.",
+        "Go back to Maren and tell her what the stones said. She has been waiting a long time to hear it."
       ]
     },
     {
       "id": "dead",
       "chapter": 1,
-      "learned": "Where time stops, the dead cannot rest. The graves are only the first place it shows.",
-      "fieldNote": [
-        "The last skeleton folds into a heap of bone, and the air relaxes a little, as if something let go of a held breath."
-      ],
-      "title": "The Restless Dead",
-      "goal": "Lay 6 skeletons to rest",
+      "giver": "brannoch",
+      "title": "The Apprentices",
+      "goal": "Lay 4 skeletons to rest in the Barrow Lands",
       "unit": "skeletons",
-      "hint": "Skeletons walk the Barrow Lands and the Eastwood. They throw bone shards from afar, so keep moving.",
+      "hint": "Brannoch's apprentices walk the Barrow Lands, north of the Greenwood. They throw bone shards from afar, so keep moving, then close in.",
       "where": {
-        "zones": ["undead", "eastwood"]
+        "zones": ["undead"]
       },
       "objective": {
         "t": "kill",
         "kind": "skeleton",
-        "count": 6
+        "count": 4,
+        "zone": "undead"
       },
       "reward": {
         "gold": 150,
-        "xp": 180,
+        "xp": 170,
+        "items": ["wayfarersCharm"]
+      },
+      "learned": "The skeletons of the Barrow Lands are Brannoch's lost apprentices, drawn off by the Spire's bell.",
+      "fieldNote": [
+        "The last skeleton folds into a heap of bone, and the air relaxes a little, as if something let go of a held breath."
+      ],
+      "offer": [
+        "There is one more thing, and I am ashamed to ask it. The Barrow Lands north of the Greenwood hold my old apprentices. They followed the bell. I cannot reach them, and I will not leave them walking.",
+        "Four of them carry the Spire's mark on their ribs. Lay them to rest. Quickly, if you can. Gently, if you must."
+      ],
+      "remind": [
+        "Four skeletons in the Barrow Lands, north of the Greenwood. They stay at range and throw bone shards: keep moving, then close in."
+      ],
+      "done": [
+        "Four fewer to carry the bell's song. Thank you, boy. I will say their names tonight, one each, and mean it.",
+        "A hermit has little to give. This charm was Orrin's. It keeps a body one step ahead of the cold. He would want it to go to you."
+      ]
+    },
+    {
+      "id": "zahra",
+      "chapter": 2,
+      "turnIn": "zahra",
+      "title": "The Sandwalker",
+      "goal": "Speak to Zahra at the Oasis",
+      "unit": "meeting",
+      "hint": "Zahra the sandwalker waits at the Oasis in the Sunscar Desert, far to the north-west past the Greenwood.",
+      "where": {
+        "zones": ["desert"]
+      },
+      "objective": {
+        "t": "meet",
+        "count": 1
+      },
+      "reward": {
+        "gold": 180,
+        "xp": 200,
         "items": ["wardensMantle"]
       },
+      "learned": "Every grain of Hourglass sand leans north, toward the Spire.",
+      "fieldNote": [],
       "offer": [
-        "Where time stops, the dead cannot rest. Skeletons walk the old graves in the Barrow Lands and the Eastwood, with bone shards in their fingers.",
-        "They keep their distance and throw. Keep moving and they cannot aim, then close in. Put six of them back to sleep."
+        "Brannoch's word has weight with me. Now we must find where the pieces went. There is a sandwalker, Zahra, at the oasis in the Sunscar Desert, far to the north-west. She reads the grains.",
+        "Go and ask her what they say. Take the long road, and drink before you thirst."
       ],
-      "remind": ["Six skeletons. They stay at range and flick bone shards, so keep moving, then close in."],
+      "remind": ["Zahra the sandwalker, at the Oasis in the Sunscar Desert, far to the north-west."],
       "done": [
-        "Six more at peace. The graves sleep a little deeper tonight.",
-        "My mother wore this mantle when she kept the lamp. It mends what hurts it can. Wear it well."
+        "A stranger, in this heat, asking about sand! Good. Most ask me about water.",
+        "The sand that fell when the Hourglass broke is still out here, in mounds that glitter. Every grain of it leans north, even lying still. Toward the Spire.",
+        "Maren sent this with a trader, for the cold nights out here. Her mother's mantle: it mends what the cold bites. Now sit, and I will tell you what I need."
       ]
     },
     {
       "id": "sand",
       "chapter": 2,
-      "learned": "The Hourglass sand falls toward the north, toward the Spire, and the Stillness is hunting the shards too.",
-      "fieldNote": [
-        "Every grain you hold tilts the same way, north, like a compass needle. Far off, a bell tolls once, and the sand goes still."
-      ],
-      "title": "Sand and Silence",
+      "giver": "zahra",
+      "title": "Grains of the Hourglass",
       "goal": "Gather 4 mounds of hourglass sand in the Sunscar Desert",
       "unit": "mounds",
-      "hint": "Hourglass sand lies scattered across the Sunscar Desert, far to the north-west. Raiders guard the dunes.",
+      "hint": "Hourglass sand lies scattered across the Sunscar Desert, far to the north-west. Raiders and worse guard the dunes. Search the areas marked on your map.",
       "where": {
         "zones": ["desert"]
       },
@@ -321,66 +438,108 @@
         "count": 4
       },
       "reward": {
-        "gold": 200,
-        "xp": 240,
+        "gold": 220,
+        "xp": 250,
         "items": ["duneglassBoots"]
       },
+      "learned": "The Hourglass sand points toward the Frozen Ledge in the Frostlands, where a shard fell.",
+      "fieldNote": [
+        "Every grain you hold tilts the same way, east and north, like a compass needle. Far off, a bell tolls once, and the sand goes still."
+      ],
       "offer": [
-        "When the Hourglass broke, its sand fell across the Vale. Where it lies, time pools thick and strange. It has gathered in the Sunscar Desert.",
-        "Raiders and worse prowl those dunes. Bring me four pinches and I will read the sand. Touch each glittering mound with the action key."
+        "Bring me four pinches of the glitter from the dunes. I can read where the shard that fell here went, and where its twin fell. Mind the raiders. And the ticking.",
+        "Press the action key beside each glittering mound."
       ],
       "remind": ["Four glittering mounds of hourglass sand in the Sunscar Desert. Mind the raiders."],
       "done": [
-        "I can read it. Look: every grain falls toward the north, toward the Spire.",
-        "The Stillness gathers where the shards lie, and it is not blind. It hunts them too. The raiders, the orcs, the frozen soldiers in the east: they are all guarding something.",
-        "These boots were made by a sandwalker who never once got lost. Take them."
+        "Now hold still. Watch the grains...",
+        "They all lean east, to the Frozen Ledge in the Frostlands. A shard fell there, and something stands guard.",
+        "But first the orcs. Their captain carries a banner that ticks. Do not call it a banner. It is a piece of the Hourglass frame, and he marches to it. Take it down. These boots are a sandwalker's. They will not let you sink."
       ]
     },
     {
       "id": "tusk",
       "chapter": 2,
-      "learned": "Something that does not speak is commanding the orcs, and it can be startled.",
-      "fieldNote": [
-        "The fallen orc's hand still beats a slow, steady rhythm against the ground. A ticking. Then it, too, goes quiet."
-      ],
-      "title": "The Tusk Banner",
-      "goal": "Defeat 4 orcs",
-      "unit": "orcs",
-      "hint": "Orcs hold the Sunscar Desert and the Tuskwood Jungle. They hit hard, so take them one at a time.",
+      "giver": "zahra",
+      "title": "The Ticking Banner",
+      "goal": "Defeat Tusk-Captain Urgath in the Sunscar Desert",
+      "unit": "captain",
+      "hint": "Tusk-Captain Urgath stands near the Ring of Stones in the Sunscar Desert. He hits hard and shrugs off stagger: hit, step back, hit again.",
       "where": {
-        "zones": ["desert", "jungle"]
+        "zones": ["desert"]
       },
       "objective": {
         "t": "kill",
-        "kind": "orc",
-        "count": 4
+        "kind": "tuskcaptain",
+        "count": 1,
+        "zone": "desert"
       },
       "reward": {
-        "gold": 260,
-        "xp": 320,
+        "gold": 270,
+        "xp": 310,
         "items": ["tuskbreakerHelm"]
       },
-      "offer": [
-        "Orcs have raised a banner in the Tuskwood Jungle and the Sunscar Desert. They answer to a voice that never speaks, and they march in step to a ticking no one else can hear.",
-        "Something is commanding them. Break four of them, and we will see whether the rest falter. Take your time. They hit hard, and they do not flinch."
+      "learned": "The Stillness commands through objects: a ticking banner moves the orcs like puppets.",
+      "fieldNote": [
+        "Urgath falls with his banner still clenched in his fist. The ticking stops. In the new silence you realise it was the only sound keeping time out here."
       ],
-      "remind": ["Four orcs. They do not flinch when struck, so fight them one at a time."],
+      "offer": [
+        "His name is Urgath. He stands near the Ring of Stones with the banner. Orcs march when he marches. Cut the banner down and the others may remember they are free.",
+        "He does not flinch when struck, so do not trade blows: hit, step away, hit again."
+      ],
+      "remind": [
+        "Tusk-Captain Urgath, near the Ring of Stones in the Sunscar Desert. He does not flinch, so hit and step away."
+      ],
       "done": [
-        "Four down, and the rest did not press on. So the voice can be startled, at least.",
-        "A banner-bearer's helm. Heavy, hungry, and uncannily good at finding coin. It is yours."
+        "The banner is silent at last. Look: a clock hand set in the shaft, stopped at the hour the Hourglass broke.",
+        "The Stillness commands through things like this. Whoever holds the pieces holds the orcs, the frozen soldiers, everything. Go east, to the Frozen Ledge. I will stay and keep watch on the dunes.",
+        "Take the captain's helm. He will not be needing it, and it is surprisingly good at finding coin."
       ]
     },
     {
-      "id": "frost",
+      "id": "ledge",
       "chapter": 3,
-      "learned": "The frozen soldiers guard the northern pass, the way to the Spire.",
+      "turnIn": "voss",
+      "title": "The Frozen Ledge",
+      "goal": "Reach the Frozen Ledge in the Frostlands",
+      "unit": "ledge",
+      "hint": "The Frozen Ledge lies in the far east of the Frostlands, along the town road east of Lanternrest. Search the area marked on your map.",
+      "where": {
+        "zones": ["frostlands"]
+      },
+      "objective": {
+        "t": "visit",
+        "place": "The Frozen Ledge",
+        "zone": "frostlands",
+        "count": 1
+      },
+      "reward": {
+        "gold": 330,
+        "xp": 380
+      },
+      "learned": "The soldiers of the Spire Guard are not enemies. They are frozen men, still awake inside.",
       "fieldNote": [
-        "Where the last frostbound fell, snow begins to drift again. For a moment, the flakes fall, not hang. Then the hush returns."
+        "Soldiers stand in the snow in perfect ranks, mid-march, frost on their eyelashes. Not one of them blinks. Not one, except the sergeant at the front, whose eyes follow you, wide and terribly alive."
       ],
-      "title": "Frostbound Vigil",
-      "goal": "Defeat 4 frostbound in the Frostlands",
+      "offer": [
+        "Now the last stretch, and the hardest. The sand leans east to the Frozen Ledge in the Frostlands, along the town road. A shard fell there, and the Stillness marched its soldiers to guard it.",
+        "Go and look. Only look, at first. Come back, if you must. But I think you will want to hear what they have to say."
+      ],
+      "remind": ["The Frozen Ledge in the far east of the Frostlands, along the town road east of Lanternrest."],
+      "done": [
+        "You... you move. You breathe. You are the first thing in three winters that has.",
+        "I am Sergeant Voss, of the Spire Guard. We were marching to the Spire the night the bell first tolled. We reached the ledge. The cold took us all, but it did not take our minds.",
+        "We are not your enemies. We are prisoners. Come closer. I have a great deal to tell you, and very little time before the bell calls again."
+      ]
+    },
+    {
+      "id": "release",
+      "chapter": 3,
+      "giver": "voss",
+      "title": "Peace for the Spire Guard",
+      "goal": "Release 4 frostbound in the Frostlands",
       "unit": "frostbound",
-      "hint": "The frozen soldiers stand in the Frostlands, east of Lanternrest along the town road.",
+      "hint": "The frozen soldiers walk the Frostlands, east of Lanternrest. They do not flinch, so strike, step back, and strike again.",
       "where": {
         "zones": ["frostlands"]
       },
@@ -391,66 +550,72 @@
         "zone": "frostlands"
       },
       "reward": {
-        "gold": 340,
-        "xp": 420,
+        "gold": 400,
+        "xp": 460,
         "items": ["sunforgedCuirass"]
       },
+      "learned": "Defeating a frostbound frees the man inside: the Spire Guard can be given peace.",
+      "fieldNote": [
+        "Where the last frostbound falls, snow begins to drift again. For a moment the flakes fall instead of hanging. Then the hush returns."
+      ],
       "offer": [
-        "East along the town road, the snow has stopped falling. Not melted: stopped. The frostbound stand in it, still as statues, guarding the cold.",
-        "They are the Stillness made flesh: soldiers frozen mid-march. Four of them block the northern pass, and the pass is the way to the Spire.",
-        "Their blades are cold iron and they do not flinch. Strike, step back, strike again."
+        "The ones who fell to the bell are on the ice now, mindless, marching in circles. They were my men. I cannot reach them. You can.",
+        "Four of them. It is not murder: the cold is all that is left in them, and when it breaks they are free. Do it quickly, and say their names if you know them."
       ],
       "remind": [
-        "Four frostbound in the Frostlands, east along the town road. They do not flinch, so hit and step back."
+        "Four frostbound in the Frostlands, east of Lanternrest. They do not flinch, so strike, step back, and strike again."
       ],
       "done": [
-        "You came back whole, with frost on your boots and not a flake in your hair. The Stillness fears you, stranger.",
-        "This cuirass was my father's. It was lit from the town lamp once, and it still holds the warmth. Wear it."
+        "I felt it. Each one. Like a knot coming undone in my own chest. Thank you.",
+        "This cuirass was my captain's. It was warmed at the town lamp once, long ago, and it has not forgotten. Wear it, and carry his warmth into the last of this.",
+        "One thing remains. The shard itself. A troll in the Frostlands swallowed it, and the cold has made the troll into its heart."
       ]
     },
     {
       "id": "heart",
       "chapter": 3,
-      "learned": "A shard of the Hourglass bears a name: Orrin, Clockmaker. Four shards remain, and the Stillness knows yours.",
-      "fieldNote": [
-        "The troll's heavy hand opens, and a splinter of glass rolls out, warm, ticking. Take it to Maren."
-      ],
-      "title": "The Heart of the Stillness",
-      "goal": "Defeat 2 trolls",
-      "unit": "trolls",
-      "hint": "Trolls roam the Frostlands, the Tuskwood Jungle and Gloamfen Marsh. The Frostlands are the nearest.",
+      "giver": "voss",
+      "turnIn": "maren",
+      "title": "The Stillheart",
+      "goal": "Defeat the Stillheart in the Frostlands",
+      "unit": "troll",
+      "hint": "The Stillheart prowls the Frostlands near Mirrorfrost Lake. It is huge, slow and cannot be stunned: keep your distance, bring potions, and take your time.",
       "where": {
-        "zones": ["frostlands", "jungle", "marsh"]
+        "zones": ["frostlands"]
       },
       "objective": {
         "t": "kill",
-        "kind": "troll",
-        "count": 2
+        "kind": "stillheart",
+        "count": 1,
+        "zone": "frostlands"
       },
       "reward": {
-        "gold": 500,
-        "xp": 650,
+        "gold": 520,
+        "xp": 620,
         "items": ["hourglassPendant"]
       },
+      "learned": "A shard of the Hourglass bears a name: Orrin, Clockmaker. Four shards remain, and the Stillness knows yours.",
+      "fieldNote": [
+        "The Stillheart's heavy hand opens, and a splinter of glass rolls out, warm, ticking. Take it to Maren in Lanternrest."
+      ],
       "offer": [
-        "Last, and worst. I can feel a splinter of the Hourglass in the trolls of the Vale, like a bad tooth. Two of them carry what we need.",
-        "They roam the Frostlands, the Tuskwood Jungle and Gloamfen Marsh. They are slow, they cannot be stunned, and they hit like falling roofs. Take potions. Take your time.",
-        "Bring down two, and I will see what they hold."
+        "It is called the Stillheart now. It lives near Mirrorfrost Lake. It is huge and slow and it cannot be stunned. Bring potions, and take your time.",
+        "Bring me down that thing, and bring the shard to Maren. She will know what to do with what is written on it."
       ],
       "remind": [
-        "Two trolls, in the Frostlands, the Tuskwood Jungle or Gloamfen Marsh. Huge, slow, and hard to stun. Keep your distance and keep potions close."
+        "The Stillheart, near Mirrorfrost Lake in the Frostlands. Bring potions. When it falls, take the shard to Maren in Lanternrest."
       ],
       "done": [
         "A shard of the Hourglass. It is warm, and it ticks. I hold it to the lamp, and the flame stands perfectly still.",
-        "There is a name scratched into the splinter: \"Orrin, Clockmaker.\" The keeper of the Spire. The one with the clockmaker's hands.",
+        "There is a name scratched into the splinter: \"Orrin, Clockmaker.\" The keeper of the Spire. The one whose apron the Shade wore.",
         "He did not break the Vale, stranger. He was the first thing the Stillness took, and it still wears him.",
         "Four shards remain, and the Stillness knows your name now. Keep this pendant close and keep moving. We will speak again when the next shard calls."
       ]
     }
   ],
   "epilogue": [
-    "The lamp burns steady tonight, and that is your doing.",
-    "Four shards of the Hourglass are still out there, and whatever wears the clockmaker's hands is still walking. But the Vale is not lost.",
+    "The lamp burns steadier than it has in three winters, and that is your doing, and Hale's, and Gruk's, and Brannoch's, and Zahra's, and Voss's. The Vale remembers who helped.",
+    "Four shards are still out there, and something that wears Orrin's hands is still walking the Spire stairs. But the Vale is not lost.",
     "Rest, stranger. The next part of this story is still being written."
   ]
 }
