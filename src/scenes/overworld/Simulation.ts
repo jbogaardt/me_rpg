@@ -57,6 +57,14 @@ import type { Visuals } from './Visuals';
 import type { Zones } from './Zones';
 
 /** Is this player thirsty and beside a pond in `z` that is not empty? (What the A button and the Drink button both ask.) */
+/** How close (px) an enemy must be for the A button to fight rather than drink by a pond: about six cells. */
+export const FOE_NEAR = CELL * 6;
+
+/** Is an enemy within `FOE_NEAR` of this player in `z`? Then A by a pond attacks instead of drinking. */
+export function foeNear(z: ZoneState, p: Player): boolean {
+  return z.mobs.some((m) => m.alive && Math.hypot(m.body.x - p.body.x, m.body.y - p.body.y) < FOE_NEAR);
+}
+
 export function canDrink(z: ZoneState, p: Player): boolean {
   if (!thirsty(p.hero.needs)) return false;
   const water = drinkableNear(z.data, p.body.x, p.body.y);
@@ -154,10 +162,15 @@ export class Simulation {
   }
 
   /**
-   * The action key (A) by a pond: stops a player who is drinking, or starts one who is thirsty at a pond that is not empty.
-   * Returns false when it does neither (then the key does what it otherwise would). Call it in the player's zone.
+   * The action key (A) by a pond: stops a player who is drinking, or starts one who is thirsty at a pond that is not empty,
+   * but only while no enemy is near (`foeNear`): in a fight A always attacks (and a drink in progress stops). Returns
+   * false when the key should do what it otherwise would. Call it in the player's zone.
    */
   pondAction(p: Player): boolean {
+    if (foeNear(this.arena.zone, p)) {
+      if (p.drinking) this.stopDrinking(p);
+      return false;
+    }
     if (p.drinking) {
       this.stopDrinking(p);
       return true;

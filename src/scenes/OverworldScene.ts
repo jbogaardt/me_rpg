@@ -64,7 +64,7 @@ import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
 import { HostLink } from './overworld/HostLink';
 import { PackSync } from './overworld/PackSync';
-import { canDrink, Simulation } from './overworld/Simulation';
+import { canDrink, foeNear, Simulation } from './overworld/Simulation';
 import { Trading } from './overworld/Trading';
 import { Training } from './overworld/Training';
 import { Visuals } from './overworld/Visuals';
@@ -413,7 +413,9 @@ export class OverworldScene implements Scene {
     const cmd = this.readCommand(dt, reading);
     if (cmd.dx || cmd.dy)
       this.guestDrinking = false; // walking off stops the drink (the host sees it too)
-    // A by a pond: the host starts or stops the drink (its `act`); keep this guest's button label in step.
+    // A by a pond: the host starts or stops the drink (its `act`; with an enemy near it attacks and stops any drink);
+    // keep this guest's button label in step.
+    else if (cmd.act && foeNear(this.arena.zone, this.arena.local)) this.guestDrinking = false;
     else if (cmd.act && (this.guestDrinking || canDrink(this.arena.zone, this.arena.local))) {
       this.guestDrinking = !this.guestDrinking;
     }
