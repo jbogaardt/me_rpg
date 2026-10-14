@@ -25,9 +25,10 @@ new kind needs no new code unless it needs new behaviour.
    attack, 0.7 s) and `stagger` (stun when hit, 0.3 s): fast kinds shorten them, big kinds set `stagger` near 0 so
    the hero cannot stun-lock them. Optional `behavior.shot: { range, speed, color: "#rrggbb" }` makes it a ranged attacker (it stops
    `range` px away, telegraphs with the cast pose, then fires a projectile worth its `attack` damage; keep `range <=
-   sight`, `speed` below ~190 so it can be dodged, and `windup >= 0.5`; unit tests check these). The starter hero deals about `5 + 2 = 7` per swing and has 30 HP, so a kind's
-   `attack`/`maxHp` should be playable against that (the unit test requires the hero can always hurt a kind:
-   `defense < 7`). Existing kinds span level 1 fodder (goblin 14 HP / wolfkin 22 HP) to a troll (96 HP, 15 attack).
+   sight`, `speed` below ~190 so it can be dodged, and `windup >= 0.5`; unit tests check these). The starter hero deals about `5 + 2 = 7` per swing and has 30 HP; fodder for levels 1-3
+   should be playable against that (the unit test requires the hero can always hurt a kind: `defense < 7`), while the deep
+   kinds are meant to be out of a fresh hero's reach (`balance.test.ts`). Existing kinds span level 1 fodder (goblin
+   22 HP / 8 attack, wolfkin 32 / 11) through the orc (91 / 24) to the snowman (230 / 40).
 3. **Place it**: in `public/content/<campaign>/scenarios.json`, add `{ "entity": "<id>", "x": col, "y": row }` to the node of
    the zone (cells of that zone's map; `npm run map -- layout <biome>` or the map preview helps find open ground), or
    add the id to a biome's `generation.roam` kinds in `public/content/<campaign>/biomes.json` to have it wander. Maps hold no
@@ -44,6 +45,8 @@ new kind needs no new code unless it needs new behaviour.
 - Damage is `power ± 15%` minus defense, min 1 (`rollDamage`). A kind with `defense` ≥ the hero's attack power is
   unkillable at level 1; keep it below.
 - Windup, recover and stagger default to 0.45 s / 0.7 s / 0.3 s and are overridable per kind (`mobTimings` in
-  `combat.ts`); reach, leash and the shooter's back-off distance are shared constants at the top of `Mob.ts`.
+  `combat.ts`); each windup is randomised ±20%. Reach, the lunge (`lungeOf`, from the kind's `speed`: a fast kind
+  pounces further), the whiff recovery, mending, leash and the shooter's back-off distance are shared constants at the
+  top of `Mob.ts`.
 - A stagger shorter than the hero's attack cooldown (0.35 s) lets a mob act between hits; the lower it is, the harder
   the fight. Ranged kinds are hardest when two or more shoot at once, so place them singly among melee mobs.
