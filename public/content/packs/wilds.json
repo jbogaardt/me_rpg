@@ -14,7 +14,7 @@
         "feet": "feet.boots_brown",
         "weapon": "weapon.dagger"
       },
-      "stats": { "hp": 18, "attack": 7, "defense": 0, "speed": 82, "sight": 160, "xp": 7, "gold": 4 },
+      "stats": { "hp": 22, "attack": 8, "defense": 0, "speed": 82, "sight": 160, "xp": 8, "gold": 4 },
       "behavior": { "windup": 0.3, "recover": 0.45, "stagger": 0.18 },
       "tags": ["common", "beast", "swamp"],
       "level": [1, 2]
@@ -24,7 +24,7 @@
       "name": "Wolfkin",
       "notes": "A fast hunter with no gear, spotting the hero from far away.",
       "sprite": { "body": "body.fur_grey", "head": "head.wolf", "legs": "legs.pants_brown" },
-      "stats": { "hp": 26, "attack": 10, "defense": 0, "speed": 96, "sight": 192, "xp": 13, "gold": 7 },
+      "stats": { "hp": 32, "attack": 11, "defense": 0, "speed": 96, "sight": 192, "xp": 14, "gold": 8 },
       "behavior": { "windup": 0.28, "recover": 0.4, "stagger": 0.12 },
       "tags": ["common", "hunter", "beast", "frost"],
       "level": [1, 3],
@@ -35,7 +35,7 @@
       "name": "Shade",
       "notes": "The original test enemy, now a caster: hangs back and hurls slow violet bolts you can sidestep. Level 1.",
       "sprite": { "body": "body.shade", "head": "head.shade", "weapon": "weapon.dagger" },
-      "stats": { "hp": 28, "attack": 9, "defense": 0, "speed": 60, "sight": 192, "xp": 13, "gold": 7 },
+      "stats": { "hp": 35, "attack": 10, "defense": 0, "speed": 60, "sight": 192, "xp": 14, "gold": 8 },
       "behavior": { "windup": 0.65, "recover": 1.3, "shot": { "range": 176, "speed": 135, "color": "#b06cff" } },
       "tags": ["ranged", "undead", "swamp"],
       "level": [1, 3]
@@ -50,7 +50,7 @@
         "weapon": "weapon.arming_iron",
         "shield": "shield.round_brown"
       },
-      "stats": { "hp": 36, "attack": 12, "defense": 1, "speed": 52, "sight": 208, "xp": 22, "gold": 12 },
+      "stats": { "hp": 47, "attack": 14, "defense": 2, "speed": 52, "sight": 208, "xp": 25, "gold": 14 },
       "behavior": { "windup": 0.55, "recover": 1, "shot": { "range": 192, "speed": 175, "color": "#e9e2c8" } },
       "tags": ["ranged", "undead", "frost"],
       "level": [3, 4]
@@ -65,7 +65,7 @@
         "torso": "torso.tunic_charcoal",
         "legs": "legs.pants_brown"
       },
-      "stats": { "hp": 52, "attack": 13, "defense": 0, "speed": 36, "sight": 128, "xp": 24, "gold": 14 },
+      "stats": { "hp": 68, "attack": 16, "defense": 1, "speed": 36, "sight": 128, "xp": 28, "gold": 16 },
       "behavior": {},
       "tags": ["brute", "undead", "swamp"],
       "level": [3, 5]
@@ -85,7 +85,7 @@
         "weapon": "weapon.arming_iron",
         "shield": "shield.kite_gray"
       },
-      "stats": { "hp": 150, "attack": 16, "defense": 3, "speed": 52, "sight": 208, "xp": 120, "gold": 80 },
+      "stats": { "hp": 195, "attack": 19, "defense": 4, "speed": 52, "sight": 208, "xp": 138, "gold": 92 },
       "behavior": { "windup": 0.6, "recover": 0.85, "stagger": 0.03 },
       "tags": ["boss", "undead"],
       "level": [3, 5]
@@ -126,7 +126,7 @@
       "notes": "The Frostfen's great beast: a smaller cousin of the Abominable Snowman, a boss for levels 3-5.",
       "scale": 2,
       "sprite": { "body": "body.snowman" },
-      "stats": { "hp": 170, "attack": 17, "defense": 3, "speed": 50, "sight": 192, "xp": 120, "gold": 70 },
+      "stats": { "hp": 221, "attack": 20, "defense": 4, "speed": 50, "sight": 192, "xp": 138, "gold": 80 },
       "behavior": { "windup": 0.6, "recover": 0.9, "stagger": 0.05 },
       "tags": ["boss", "frost", "beast"],
       "level": [3, 5]
@@ -143,7 +143,7 @@
         "headwear": "headwear.nasal",
         "weapon": "weapon.arming_steel"
       },
-      "stats": { "hp": 64, "attack": 15, "defense": 2, "speed": 62, "sight": 192, "xp": 30, "gold": 16 },
+      "stats": { "hp": 83, "attack": 18, "defense": 3, "speed": 62, "sight": 192, "xp": 34, "gold": 18 },
       "behavior": { "windup": 0.4, "recover": 0.6, "stagger": 0.1 },
       "tags": ["brute", "frost", "undead"],
       "level": [3, 5],

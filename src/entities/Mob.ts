@@ -32,12 +32,27 @@ export function mobAttack(kind: MobKind, dist: number, rayReady = true): MobAtta
 
 type State = MobState;
 
-export const REACH = 20;
+/**
+ * A melee mob starts its windup from this close (feet to feet). It is more than the sword's own reach (its hit circle
+ * ends about 38 px ahead of the hero), so a hero close enough to land a blow is close enough to be swung at.
+ */
+export const REACH = 32;
 /** The held pose of a ray caster: the sceptre thrust out (`slash` frame 3), and where its head is from the feet (left; mirrored for right). */
-const RAY_POSE = { anim: 'slash', col: 3, headX: 21, headY: -30 } as const; // starts an attack when this close (feet to feet)
+const RAY_POSE = { anim: 'slash', col: 3, headX: 21, headY: -30 } as const;
 // Windup (telegraph before the blow lands, so the hero can dodge), recover and stagger (the pause after being hit,
 // which interrupts a windup) are per kind: see `mobTimings` in systems/combat.ts.
-const LUNGE = 0.12;
+// The blow: as the windup ends the mob lunges along the way it was aiming (it tracks the hero only until the windup is
+// COMMITTED, then the aim is locked) and hits whoever is in front of it during the lunge. Stepping straight back has to
+// beat the windup and the lunge together; stepping aside once the aim is locked is the clean dodge.
+const LUNGE = 0.12; // seconds the lunge takes
+/** How far a kind lunges: quick kinds leap further, the slow ones barely step in. */
+export const lungeOf = (kind: MobKind) => Math.min(34, Math.max(14, kind.speed * 0.35)) * (kind.scale ?? 1);
+const HIT_AHEAD = 10; // the blow's hit circle is centred this far in front of the mob (times its scale)...
+const HIT_RADIUS = 22; // ...with this radius (times its scale)
+const CONTACT = 14; // the lunge stops this close to the hero (times its scale)
+const WINDUP_SPREAD = 0.2; // each windup is ±20% of the kind's, so the rhythm cannot be learned by heart
+const WHIFF_RECOVER = 0.4; // a blow that misses leaves it busy only this share of its recover before it presses in
+const MEND = 0.25; // share of its max HP a mob mends per second once it has lost the hero (no chip-and-run)
 // Stagger rules, so a hero cannot juggle a mob forever: after one stagger the mob shrugs off the next hits for POISE
 // seconds (the damage still lands, it is only pushed a little), and once COMMITTED of its windup has passed the blow
 // cannot be interrupted. It always gets to swing back.
@@ -77,6 +92,10 @@ export class Mob {
   private poise = 0; // seconds left in which a hit cannot stagger it again
   private moving = false;
   private attack: MobAttack = 'melee'; // what the current windup leads to
+  private windupLen = 0; // this windup's length (the kind's, give or take WINDUP_SPREAD)
+  private aim = { x: 1, y: 0 }; // where the blow will land: follows the hero until the windup is committed
+  private lunging = 0; // seconds of lunge left
+  private swing = false; // the lunge has not hit anyone yet
   private rayTimer = 0; // seconds until the next burn of a held ray
   private rayRest = 0; // seconds before it may cast another ray (after a break)
   private beam = new Graphics(); // the held ray, drawn from the sceptre to the hero (every client draws its own)
@@ -120,6 +139,8 @@ export class Mob {
     this.body.release();
     this.knock = { x: 0, y: 0 };
     this.poise = 0;
+    this.lunging = 0;
+    this.swing = false;
     this.drawBar();
   }
 
@@ -145,6 +166,7 @@ export class Mob {
     this.flash = 0.15;
     this.drawBar();
     if (this.hp <= 0) {
+      this.lunging = 0;
       this.beam.clear();
       this.body.release();
       this.knock = { x: vx * 180, y: vy * 180 };
@@ -156,7 +178,7 @@ export class Mob {
     if (this.state === 'channel') {
       this.breakRay(); // any blow breaks the beam, however poised: it is stunned and then only fights up close
     }
-    const committed = this.state === 'windup' && this.timer < this.t.windup * COMMITTED;
+    const committed = this.state === 'windup' && this.timer < this.windupLen * COMMITTED;
     if (this.poise > 0 || committed) {
       this.knock = { x: vx * SHOVE, y: vy * SHOVE }; // hurt, but not stopped
       return false;
@@ -164,6 +186,8 @@ export class Mob {
     this.knock = { x: vx * 180, y: vy * 180 };
     this.body.play('hurt', this.t.stagger * 1000);
     this.state = 'recover';
+    this.lunging = 0; // a staggering hit stops a lunge; the blow (if it has not landed) is lost
+    this.swing = false;
     this.timer = this.t.stagger;
     this.poise = this.t.stagger + POISE;
     return false;
@@ -229,6 +253,10 @@ export class Mob {
           this.state = 'chase';
           break;
         }
+        if (this.hp < this.kind.maxHp) {
+          this.hp = Math.min(this.kind.maxHp, this.hp + this.kind.maxHp * MEND * dt);
+          this.drawBar();
+        }
         if (this.state === 'wander') moving = this.walk(this.dir.x, this.dir.y, this.kind.speed * 0.5 * dt, world);
         if (this.timer <= 0) this.pickWander();
         break;
@@ -250,16 +278,22 @@ export class Mob {
             break;
           }
           this.state = 'windup';
-          this.timer = this.t.windup;
+          this.windupLen = this.t.windup * (1 + WINDUP_SPREAD * (Math.random() * 2 - 1));
+          this.timer = this.windupLen;
           this.attack = attack;
+          this.aim = { x: dx / (dist || 1), y: dy / (dist || 1) };
           this.body.face(attack === 'ray' ? sideToward(dx) : directionToward(dx, dy)); // the sceptre is only drawn left or right
-          this.body.play(attack === 'shot' ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph; the blow lands as it ends
+          this.body.play(attack === 'shot' ? 'cast' : 'slash', this.windupLen * 1000); // the pose is the telegraph; the blow lands as it ends
         } else {
           moving = this.walk(dx / dist, dy / dist, this.kind.speed * dt, world);
         }
         break;
       }
       case 'windup':
+        if (this.attack === 'melee' && target && this.timer > this.windupLen * COMMITTED) {
+          this.aim = { x: dx / (dist || 1), y: dy / (dist || 1) }; // still turning to follow; locked once committed
+          this.body.face(directionToward(dx, dy));
+        }
         if (this.timer <= 0) {
           if (this.attack === 'shot')
             world.shoot(this, dx / (dist || 1), dy / (dist || 1)); // aimed as it lets go
@@ -269,7 +303,10 @@ export class Mob {
             this.timer = this.kind.ray.duration;
             this.rayTimer = this.kind.ray.tick * 0.5;
             break;
-          } else if (target && dist < (REACH + 8) * (this.kind.scale ?? 1)) world.strike(this, target);
+          } else {
+            this.lunging = LUNGE;
+            this.swing = true;
+          }
           this.state = 'recover';
           this.timer = this.t.recover;
         }
@@ -290,6 +327,7 @@ export class Mob {
         break;
       }
       case 'recover':
+        if (this.lunging > 0) this.lunge(dt, world, target);
         if (this.timer <= 0) this.state = 'chase';
         break;
     }
@@ -361,10 +399,8 @@ export class Mob {
   private present(dt: number, moving: boolean) {
     // Telegraph: blink yellow and draw back during the windup, then lunge forward as it strikes.
     const [fx, fy] = DIR_VEC[this.body.facing];
-    const lunging =
-      this.attack === 'melee' && !this.kind.shot && this.state === 'recover' && this.timer > this.t.recover - LUNGE;
-    if (this.state === 'windup') this.body.setOffset(-fx * 2, -fy * 2);
-    else if (lunging) this.body.setOffset(fx * 5, fy * 5);
+    if (this.state === 'windup')
+      this.body.setOffset(-fx * 3, -fy * 3); // draws back before the lunge
     else this.body.setOffset(0, 0);
     const blink = this.state === 'windup' && Math.floor(this.timer * 16) % 2 === 0;
     this.drawBeam();
@@ -407,6 +443,33 @@ export class Mob {
   private fade() {
     this.body.alpha = Math.max(0, (this.timer - (RESPAWN - FADE)) / FADE);
     this.body.visible = this.body.alpha > 0;
+  }
+
+  /** One frame of the lunge: dash along the locked aim and strike the first hero in front of it; a miss is punished less. */
+  private lunge(dt: number, world: MobWorld, target: Character | undefined) {
+    const scale = this.kind.scale ?? 1;
+    const step = Math.min(dt, this.lunging);
+    this.lunging -= step;
+    const close = target && Math.hypot(target.x - this.body.x, target.y - this.body.y) < CONTACT * scale;
+    if (!close)
+      world.slide(
+        this.body,
+        this.aim.x * (lungeOf(this.kind) / LUNGE) * step,
+        this.aim.y * (lungeOf(this.kind) / LUNGE) * step,
+      );
+    if (this.swing) {
+      const cx = this.body.x + this.aim.x * HIT_AHEAD * scale;
+      const cy = this.body.y + this.aim.y * HIT_AHEAD * scale;
+      const hit = world.heroes.find((h) => Math.hypot(h.x - cx, h.y - cy) < HIT_RADIUS * scale);
+      if (hit) {
+        this.swing = false;
+        world.strike(this, hit);
+      }
+    }
+    if (this.lunging <= 0 && this.swing) {
+      this.swing = false; // it missed: it is barely winded, and comes straight back
+      this.timer = Math.min(this.timer, this.t.recover * WHIFF_RECOVER);
+    }
   }
 
   private walk(ux: number, uy: number, step: number, world: MobWorld): boolean {

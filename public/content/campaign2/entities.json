@@ -14,12 +14,12 @@
         "weapon": "weapon.dagger"
       },
       "stats": {
-        "hp": 16,
-        "attack": 7,
+        "hp": 20,
+        "attack": 8,
         "defense": 0,
         "speed": 86,
         "sight": 160,
-        "xp": 7,
+        "xp": 8,
         "gold": 4
       },
       "behavior": {
@@ -38,13 +38,13 @@
         "legs": "legs.pants_charcoal"
       },
       "stats": {
-        "hp": 24,
-        "attack": 9,
+        "hp": 30,
+        "attack": 10,
         "defense": 0,
         "speed": 100,
         "sight": 208,
-        "xp": 12,
-        "gold": 6
+        "xp": 13,
+        "gold": 7
       },
       "behavior": {
         "windup": 0.28,
@@ -64,13 +64,13 @@
         "weapon": "weapon.staff"
       },
       "stats": {
-        "hp": 30,
-        "attack": 10,
-        "defense": 0,
+        "hp": 39,
+        "attack": 12,
+        "defense": 1,
         "speed": 58,
         "sight": 208,
-        "xp": 16,
-        "gold": 9
+        "xp": 18,
+        "gold": 10
       },
       "behavior": {
         "windup": 0.7,
@@ -93,13 +93,13 @@
         "legs": "legs.pants_maroon"
       },
       "stats": {
-        "hp": 70,
-        "attack": 15,
-        "defense": 2,
+        "hp": 91,
+        "attack": 18,
+        "defense": 3,
         "speed": 50,
         "sight": 176,
-        "xp": 34,
-        "gold": 18
+        "xp": 39,
+        "gold": 21
       },
       "behavior": {
         "windup": 0.55,
@@ -123,13 +123,13 @@
         "shield": "shield.kite_gray"
       },
       "stats": {
-        "hp": 160,
-        "attack": 17,
-        "defense": 3,
+        "hp": 208,
+        "attack": 20,
+        "defense": 4,
         "speed": 52,
         "sight": 208,
-        "xp": 120,
-        "gold": 80
+        "xp": 138,
+        "gold": 92
       },
       "behavior": {
         "windup": 0.6,

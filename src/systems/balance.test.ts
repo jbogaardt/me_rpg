@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { attackPower, gainXp, MOB_KINDS, newHero, spellPower, xpToNext, type Hero, type Item } from './combat';
 import { itemOf } from './items';
+import { lungeOf, REACH } from '../entities/Mob';
 
 // Keeps the weapon classes and the biomes' enemies in step: a bow or a wand is not a better sword, and the deeper
 // a kind is meant to be fought, the harder it hits. The numbers are damage per second of plain attacks.
@@ -116,5 +117,25 @@ describe('enemy balance', () => {
       expect(blow / hero.stats.maxHp, `${kind.name} hit on a level ${level} hero`).toBeGreaterThan(0.05);
       expect(blow / hero.stats.maxHp, `${kind.name} hit on a level ${level} hero`).toBeLessThan(0.3);
     }
+  });
+
+  it('keeps the deep kinds out of reach of a fresh hero with the starting sword', () => {
+    const hero = newHero();
+    for (const key of ['troll', 'bogGhoul', 'tuskGuard', 'frostWarden', 'snowman']) {
+      const kind = MOB_KINDS[key]!;
+      const blow = kind.attack - hero.stats.defense;
+      expect(blow / hero.stats.maxHp, `${kind.name} on a level 1 hero`).toBeGreaterThan(0.8); // a mistake ends it
+      const swings = kind.maxHp / Math.max(1, attackPower(hero) - kind.defense);
+      expect(swings, `${kind.name}: sword blows at level 1`).toBeGreaterThan(60);
+    }
+  });
+
+  it('lunges a melee blow past where the sword reaches, quick kinds furthest', () => {
+    // The blow's circle reaches 32 px ahead of where the lunge ends; the hero's sword reaches about 38 px. A hero who
+    // pokes from the edge of their reach and only steps straight back as the blow comes is still caught.
+    const melee = Object.values(MOB_KINDS).filter((k) => !k.shot);
+    for (const kind of melee) expect(lungeOf(kind) + 32, kind.name).toBeGreaterThan(38 + 6);
+    expect(lungeOf(MOB_KINDS.warg!)).toBeGreaterThan(lungeOf(MOB_KINDS.zombie!));
+    expect(REACH).toBeGreaterThan(30);
   });
 });

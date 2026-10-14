@@ -11,13 +11,13 @@
         "weapon": "weapon.dagger"
       },
       "stats": {
-        "hp": 28,
-        "attack": 9,
+        "hp": 35,
+        "attack": 10,
         "defense": 0,
         "speed": 60,
         "sight": 192,
-        "xp": 13,
-        "gold": 7
+        "xp": 14,
+        "gold": 8
       },
       "behavior": {
         "windup": 0.65,
@@ -43,13 +43,13 @@
         "weapon": "weapon.arming_bronze"
       },
       "stats": {
-        "hp": 48,
-        "attack": 15,
-        "defense": 1,
+        "hp": 62,
+        "attack": 18,
+        "defense": 2,
         "speed": 70,
         "sight": 176,
-        "xp": 28,
-        "gold": 16
+        "xp": 32,
+        "gold": 18
       },
       "behavior": {
         "windup": 0.38,
@@ -70,13 +70,13 @@
         "weapon": "weapon.arming_steel"
       },
       "stats": {
-        "hp": 80,
-        "attack": 22,
-        "defense": 3,
+        "hp": 104,
+        "attack": 26,
+        "defense": 4,
         "speed": 62,
         "sight": 192,
-        "xp": 55,
-        "gold": 32
+        "xp": 63,
+        "gold": 37
       },
       "behavior": {
         "windup": 0.4,
@@ -97,12 +97,12 @@
         "weapon": "weapon.dagger"
       },
       "stats": {
-        "hp": 18,
-        "attack": 7,
+        "hp": 22,
+        "attack": 8,
         "defense": 0,
         "speed": 82,
         "sight": 160,
-        "xp": 7,
+        "xp": 8,
         "gold": 4
       },
       "behavior": {
@@ -121,13 +121,13 @@
         "legs": "legs.pants_brown"
       },
       "stats": {
-        "hp": 26,
-        "attack": 10,
+        "hp": 32,
+        "attack": 11,
         "defense": 0,
         "speed": 96,
         "sight": 192,
-        "xp": 13,
-        "gold": 7
+        "xp": 14,
+        "gold": 8
       },
       "behavior": {
         "windup": 0.28,
@@ -146,13 +146,13 @@
         "shield": "shield.round_brown"
       },
       "stats": {
-        "hp": 36,
-        "attack": 12,
-        "defense": 1,
+        "hp": 47,
+        "attack": 14,
+        "defense": 2,
         "speed": 52,
         "sight": 208,
-        "xp": 22,
-        "gold": 12
+        "xp": 25,
+        "gold": 14
       },
       "behavior": {
         "windup": 0.55,
@@ -175,13 +175,13 @@
         "legs": "legs.pants_brown"
       },
       "stats": {
-        "hp": 52,
-        "attack": 13,
-        "defense": 0,
+        "hp": 68,
+        "attack": 16,
+        "defense": 1,
         "speed": 36,
         "sight": 128,
-        "xp": 24,
-        "gold": 14
+        "xp": 28,
+        "gold": 16
       },
       "behavior": {}
     },
@@ -193,13 +193,13 @@
         "body": "body.mummy"
       },
       "stats": {
-        "hp": 60,
-        "attack": 14,
-        "defense": 1,
+        "hp": 78,
+        "attack": 17,
+        "defense": 2,
         "speed": 48,
         "sight": 192,
-        "xp": 30,
-        "gold": 17
+        "xp": 34,
+        "gold": 20
       },
       "behavior": {
         "windup": 0.6,
@@ -229,13 +229,13 @@
         "weapon": "weapon.arming_iron"
       },
       "stats": {
-        "hp": 70,
-        "attack": 20,
-        "defense": 2,
+        "hp": 91,
+        "attack": 24,
+        "defense": 3,
         "speed": 58,
         "sight": 176,
-        "xp": 40,
-        "gold": 22
+        "xp": 46,
+        "gold": 25
       },
       "behavior": {
         "windup": 0.4,
@@ -253,13 +253,13 @@
         "legs": "legs.pants_brown"
       },
       "stats": {
-        "hp": 130,
-        "attack": 26,
-        "defense": 4,
+        "hp": 176,
+        "attack": 32,
+        "defense": 6,
         "speed": 46,
         "sight": 160,
-        "xp": 90,
-        "gold": 50
+        "xp": 108,
+        "gold": 60
       },
       "behavior": {
         "windup": 0.5,
@@ -393,13 +393,13 @@
         "weapon": "weapon.dagger"
       },
       "stats": {
-        "hp": 60,
-        "attack": 24,
-        "defense": 2,
+        "hp": 81,
+        "attack": 30,
+        "defense": 4,
         "speed": 54,
         "sight": 224,
-        "xp": 62,
-        "gold": 34
+        "xp": 74,
+        "gold": 41
       },
       "behavior": {
         "windup": 0.6,
@@ -422,13 +422,13 @@
         "legs": "legs.pants_forest"
       },
       "stats": {
-        "hp": 100,
-        "attack": 24,
-        "defense": 3,
+        "hp": 135,
+        "attack": 30,
+        "defense": 5,
         "speed": 40,
         "sight": 144,
-        "xp": 68,
-        "gold": 38
+        "xp": 82,
+        "gold": 46
       },
       "behavior": {
         "windup": 0.55,
@@ -447,13 +447,13 @@
         "torso": "torso.leather"
       },
       "stats": {
-        "hp": 60,
-        "attack": 20,
-        "defense": 1,
+        "hp": 81,
+        "attack": 25,
+        "defense": 3,
         "speed": 106,
         "sight": 208,
-        "xp": 42,
-        "gold": 24
+        "xp": 50,
+        "gold": 29
       },
       "behavior": {
         "windup": 0.3,
@@ -476,13 +476,13 @@
         "shield": "shield.round_black"
       },
       "stats": {
-        "hp": 130,
-        "attack": 28,
-        "defense": 5,
+        "hp": 176,
+        "attack": 35,
+        "defense": 6,
         "speed": 56,
         "sight": 176,
-        "xp": 85,
-        "gold": 46
+        "xp": 102,
+        "gold": 57
       },
       "behavior": {
         "windup": 0.45,
@@ -505,13 +505,13 @@
         "shield": "shield.kite_gray"
       },
       "stats": {
-        "hp": 150,
-        "attack": 30,
+        "hp": 202,
+        "attack": 38,
         "defense": 6,
         "speed": 58,
         "sight": 192,
-        "xp": 100,
-        "gold": 56
+        "xp": 120,
+        "gold": 67
       },
       "behavior": {
         "windup": 0.45,
@@ -528,13 +528,13 @@
         "body": "body.snowman"
       },
       "stats": {
-        "hp": 170,
-        "attack": 32,
-        "defense": 5,
+        "hp": 230,
+        "attack": 40,
+        "defense": 6,
         "speed": 54,
         "sight": 192,
-        "xp": 110,
-        "gold": 62
+        "xp": 132,
+        "gold": 74
       },
       "behavior": {
         "windup": 0.6,
