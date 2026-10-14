@@ -3,7 +3,9 @@ import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import './ui.css';
-import { initAssets, loadSprites, loadZone, staticContent, unloadZone } from './assets';
+import { initAssets, loadSprites, loadZone, packContent, staticContent, unloadZone } from './assets';
+import { chooseCampaign, RANDOM } from './content/campaignChoice';
+import { setContentTag } from './net/session';
 import { ContentManager } from './content/ContentManager';
 import { SceneManager } from './core/Scene';
 import { createTouchControls } from './core/touch';
@@ -20,10 +22,18 @@ import { MOB_KINDS } from './systems/combat';
 import { ITEMS } from './systems/items';
 
 /**
- * The campaign the game plays: a folder of content under public/content/. Campaign 2 for now; a build can pick another
- * with VITE_CAMPAIGN (the browser tests use campaign1, the world the engine was built on).
+ * The world the game plays: a random campaign assembled from the packs (public/content/packs/) unless the address
+ * (`?campaign=campaign2`, `?seed=42`) or the build (VITE_CAMPAIGN; the browser tests use campaign1, the world the engine
+ * was built on) names another. See content/campaignChoice.ts.
  */
-const CAMPAIGN: string = import.meta.env.VITE_CAMPAIGN || 'campaign2';
+const CHOICE = chooseCampaign(
+  window.location.search,
+  import.meta.env.VITE_CAMPAIGN || RANDOM,
+  () => 1 + Math.floor(Math.random() * 999_999),
+);
+if (CHOICE.search !== null)
+  window.history.replaceState(null, '', window.location.pathname + CHOICE.search + window.location.hash);
+setContentTag(CHOICE.tag);
 
 void (async () => {
   const loading = new Loading();
@@ -64,8 +74,14 @@ void (async () => {
     await initAssets();
     // The game content (entities, biomes, scenarios) comes first: what art to preload and which zone to start in
     // depend on it. To read it from a database instead, pass another ContentSource here.
-    const content = await ContentManager.load(staticContent(CAMPAIGN));
+    const assembled = CHOICE.campaign === RANDOM ? packContent(CHOICE.seed) : null;
+    const content = await ContentManager.load(assembled ?? staticContent(CHOICE.campaign));
     content.install();
+    const assembly = assembled && (await assembled.assembly);
+    if (assembly)
+      console.info(
+        `Random campaign ${assembly.seed}: "${assembly.arc}" told by ${assembly.keeper} through ${assembly.regions.join(', ')}`,
+      );
     const start = content.getBiomeInfo(content.startNode.biome_type);
     const [sprites, zone] = await Promise.all([
       loadSprites(),
@@ -96,7 +112,7 @@ void (async () => {
 
     // Dev-only handle for playtest scripts (see .claude/skills/playtest); stripped from production builds.
     if (import.meta.env.DEV)
-      Object.assign(window, { __game: { app, scenes, overworld, content, campaign: CAMPAIGN, items: ITEMS } });
+      Object.assign(window, { __game: { app, scenes, overworld, content, campaign: CHOICE, assembly, items: ITEMS } });
   } catch (err) {
     loading.fail(err);
     throw err;

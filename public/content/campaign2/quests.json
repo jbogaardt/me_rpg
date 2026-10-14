@@ -1,14 +1,7 @@
 {
   "version": 1,
-  "giver": "ysolde",
-  "givers": {
-    "ysolde": {
-      "name": "Keeper Ysolde",
-      "look": "ysolde",
-      "tag": "Ysolde",
-      "zone": "emberfall_coast"
-    }
-  },
+  "giver": "keeper",
+  "givers": { "keeper": { "name": "Keeper Ysolde", "look": "ysolde", "tag": "Ysolde", "zone": "emberfall_coast" } },
   "sites": {
     "emberbloom": {
       "name": "Emberbloom",
@@ -49,19 +42,10 @@
       "title": "Hold the Landing",
       "goal": "Drive off 5 cinder imps",
       "hint": "Cinder imps swarm the ash fields of The Cinder Coast, all round the landing.",
-      "where": {
-        "zones": ["emberfall_coast"]
-      },
+      "where": { "zones": ["emberfall_coast"] },
       "unit": "imps",
-      "objective": {
-        "t": "kill",
-        "kind": "cinderImp",
-        "count": 5
-      },
-      "reward": {
-        "gold": 25,
-        "xp": 30
-      },
+      "objective": { "t": "kill", "kind": "cinderImp", "count": 5 },
+      "reward": { "gold": 25, "xp": 30 },
       "offer": ["The imps are thick around the landing today. Drive off five of them before they get into the stores."],
       "remind": ["Five imps. They are never far from the landing."],
       "done": [
@@ -77,21 +61,10 @@
       "title": "Read the Blooms",
       "goal": "Touch 4 emberblooms",
       "hint": "Emberblooms glow in the ash of The Cinder Coast: by The Glass Fields in the west, the woods in the north and The Smoking Pools in the east.",
-      "where": {
-        "zones": ["emberfall_coast"]
-      },
+      "where": { "zones": ["emberfall_coast"] },
       "unit": "blooms",
-      "objective": {
-        "t": "gather",
-        "site": "emberbloom",
-        "zone": "emberfall_coast",
-        "count": 4
-      },
-      "reward": {
-        "gold": 30,
-        "xp": 40,
-        "items": ["potion"]
-      },
+      "objective": { "t": "gather", "site": "emberbloom", "zone": "emberfall_coast", "count": 4 },
+      "reward": { "gold": 30, "xp": 40, "items": ["potion"] },
       "offer": ["The emberblooms tell the mountain's mood. Touch four of them and tell me how they burn."],
       "remind": ["Four emberblooms. West by the glass, north in the dead woods, east by the pools."],
       "done": [
@@ -107,19 +80,10 @@
       "title": "Hounds in the Ash",
       "goal": "Drive off 4 ash hounds",
       "hint": "Ash hounds roam the open ground of The Cinder Coast. They see you before you see them.",
-      "where": {
-        "zones": ["emberfall_coast"]
-      },
+      "where": { "zones": ["emberfall_coast"] },
       "unit": "hounds",
-      "objective": {
-        "t": "kill",
-        "kind": "ashHound",
-        "count": 4
-      },
-      "reward": {
-        "gold": 40,
-        "xp": 50
-      },
+      "objective": { "t": "kill", "kind": "ashHound", "count": 4 },
+      "reward": { "gold": 40, "xp": 50 },
       "offer": ["Before you climb, clear the hounds from the coast road. Four of them, and the way north is safe."],
       "remind": ["Four ash hounds. Watch the open ground."],
       "done": ["The road north is clear. Rest, and then the caldera."]
@@ -132,21 +96,10 @@
       "title": "Quench the Casters",
       "goal": "Defeat 4 ember casters",
       "hint": "Ember casters tend the lava lake of The Ember Caldera, north of the coast. Close in fast: they hurl fire from afar.",
-      "where": {
-        "zones": ["emberfall_caldera"]
-      },
+      "where": { "zones": ["emberfall_caldera"] },
       "unit": "casters",
-      "objective": {
-        "t": "kill",
-        "kind": "emberCaster",
-        "count": 4,
-        "zone": "emberfall_caldera"
-      },
-      "reward": {
-        "gold": 60,
-        "xp": 80,
-        "items": ["elixir"]
-      },
+      "objective": { "t": "kill", "kind": "emberCaster", "count": 4, "zone": "emberfall_caldera" },
+      "reward": { "gold": 60, "xp": 80, "items": ["elixir"] },
       "offer": [
         "Robed ones tend the lava in the caldera, feeding it. Stop four of them, and the guardian goes hungry."
       ],
@@ -163,21 +116,10 @@
       "title": "The Obsidian Warden",
       "goal": "Defeat the Obsidian Warden",
       "hint": "The Obsidian Warden stands on The Warden's Rim, at the far north of The Ember Caldera.",
-      "where": {
-        "zones": ["emberfall_caldera"]
-      },
+      "where": { "zones": ["emberfall_caldera"] },
       "unit": "wardens",
-      "objective": {
-        "t": "kill",
-        "kind": "obsidianWarden",
-        "count": 1,
-        "zone": "emberfall_caldera"
-      },
-      "reward": {
-        "gold": 150,
-        "xp": 150,
-        "items": ["steelSword"]
-      },
+      "objective": { "t": "kill", "kind": "obsidianWarden", "count": 1, "zone": "emberfall_caldera" },
+      "reward": { "gold": 150, "xp": 150, "items": ["steelSword"] },
       "offer": ["The guardian waits on the far rim of the caldera. It was a keeper like me, once. Free it."],
       "remind": ["The Obsidian Warden, on the rim. Mind its blade."],
       "done": [

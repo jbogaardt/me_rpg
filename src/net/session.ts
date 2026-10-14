@@ -106,6 +106,14 @@ interface Attempt {
   abort: AbortController;
 }
 
+let contentTag = '';
+/** Name the world this page plays (content/campaignChoice.ts `tag`): two players must be in the same one to play. */
+export const setContentTag = (tag: string) => {
+  contentTag = tag;
+};
+/** What a hello carries as `build`: the build, then the world, at most 64 characters. */
+const helloBuild = () => (contentTag ? `${__BUILD_ID__}#${contentTag}`.slice(0, 64) : __BUILD_ID__);
+
 export class Session {
   mode: Mode = 'off';
   /** Why the last attempt failed or the last connection ended (or what was wrong with a typed code). */
@@ -530,9 +538,13 @@ export class Session {
     switch (message.k) {
       case 'hello':
         this.endHandshake(link); // heard from them: no need to keep repeating ours
-        if (message.v !== PROTOCOL_VERSION || message.build !== __BUILD_ID__) {
+        if (message.v !== PROTOCOL_VERSION || message.build.split('#')[0] !== __BUILD_ID__) {
           link.close(
             'The other player is running a different version of the game. Both of you should reload the page.',
+          );
+        } else if (message.build !== helloBuild()) {
+          link.close(
+            'The other player is in a different world (another campaign or seed). Join with the host’s join link.',
           );
         }
         break;
@@ -600,7 +612,7 @@ export class Session {
   /** Version check: both sides send hello until they hear the other's (the first one can be lost). */
   private beginHandshake(link: Link) {
     this.endHandshake(link);
-    const hello = encodeMessage({ k: 'hello', v: PROTOCOL_VERSION, build: __BUILD_ID__ });
+    const hello = encodeMessage({ k: 'hello', v: PROTOCOL_VERSION, build: helloBuild() });
     link.send(hello);
     this.handshakes.set(
       link,

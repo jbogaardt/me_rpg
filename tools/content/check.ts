@@ -8,7 +8,7 @@ import * as prettier from 'prettier';
 import { roam } from '../../src/content/populate';
 import type { ContentManager } from '../../src/content/ContentManager';
 import type { MapData } from '../../src/map/types';
-import { campaigns, CONTENT_DIR, loadContentFromDisk, readContentFile } from './disk';
+import { campaigns, CONTENT_DIR, loadContentFromDisk, PACKS, readContentFile, readPacks } from './disk';
 
 export interface ContentReport {
   errors: string[];
@@ -59,8 +59,18 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
   // the training halls are reached by the trainer's magic, so only their way out is a door and nothing links to them.
   const walkable = (zone: string) => !zone.startsWith('training_');
   for (const [type, biome] of Object.entries(biomes)) {
-    const map = maps.get(biome.map);
-    if (!map || !walkable(biome.map)) continue;
+    const raw = maps.get(biome.map);
+    if (!raw) continue;
+    // Ports: each binding names a port of this map and one of the map it leads to.
+    for (const [name, to] of Object.entries(biome.ports)) {
+      if (!raw.ports.some((p) => p.name === name))
+        errors.push(`biomes.${type}.ports.${name}: ${biome.map} has no such port`);
+      const there = maps.get(to.map);
+      if (there && !there.ports.some((p) => p.name === to.port))
+        errors.push(`biomes.${type}.ports.${name}: ${to.map} has no port "${to.port}"`);
+    }
+    if (!walkable(biome.map)) continue;
+    const map = content.wire(biome.map, raw); // the doors as the game has them, ports included
     const doors = [...new Set(map.doors.map((d) => d.to.zone))].filter((z) => walkable(z) && mine.has(z)).sort();
     const linked = [
       ...new Set([
@@ -93,15 +103,43 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
       if (bad) errors.push(`${at}.spawn (${node.spawn.x},${node.spawn.y}) ${bad} of ${biome.map}`);
     }
   }
+  // The story can be done: a gather quest's zone has enough of its sites, and a kill quest's mob lives where it says.
+  const mapOf = new Map(Object.values(biomes).map((b) => [b.map, b] as const));
+  const livesIn = (map: string): Set<string> => {
+    const biome = mapOf.get(map);
+    const kinds = new Set(biome?.generation.roam?.flatMap((r) => r.kinds) ?? []);
+    for (const node of scenarios.nodes.values())
+      if (biomes[node.biome_type]?.map === map) for (const p of node.entities) kinds.add(p.entity);
+    return kinds;
+  };
+  for (const quest of content.content.quests.quests) {
+    const o = quest.objective;
+    const at = `quests.${quest.id}.objective`;
+    if (o.t === 'gather') {
+      const sites = maps.get(o.zone)?.sites.filter((s) => s.kind === o.site).length ?? 0;
+      if (sites < o.count) errors.push(`${at}: wants ${o.count} ${o.site} sites, ${o.zone} has ${sites}`);
+    } else if (o.t === 'kill') {
+      const zones = o.zone ? [o.zone] : [...mapOf.keys()];
+      if (!zones.some((z) => livesIn(z).has(o.kind)))
+        errors.push(`${at}: no "${o.kind}" lives in ${o.zone ?? 'any zone'} to defeat`);
+    }
+  }
   return { errors, warnings };
 }
 
-/** Check every campaign (a map no campaign draws from is an error too). Each report line names its campaign. */
+/** How many seeds `checkCampaigns` assembles from the packs: each must make a campaign that passes every check. */
+export const CHECKED_SEEDS = 40;
+
+/**
+ * Check every campaign, the packs' regions (all of them, `PACKS`) and the random campaigns of seeds 1 to
+ * `CHECKED_SEEDS` (a map no campaign or pack draws from is an error too). Each report line names its campaign.
+ */
 export function checkCampaigns(maps: Map<string, MapData>): ContentReport {
   const errors: string[] = [];
   const warnings: string[] = [];
   const used = new Set<string>();
-  for (const campaign of campaigns()) {
+  const seeds = Array.from({ length: CHECKED_SEEDS }, (_, i) => `random:${i + 1}`);
+  for (const campaign of [...campaigns(), PACKS, ...seeds]) {
     let content: ContentManager;
     try {
       content = loadContentFromDisk(campaign);
@@ -111,11 +149,33 @@ export function checkCampaigns(maps: Map<string, MapData>): ContentReport {
     }
     for (const b of Object.values(content.content.biomes)) used.add(b.map);
     const r = checkContent(content, maps);
+    const seeded = campaign.startsWith('random:');
     errors.push(...r.errors.map((e) => `${campaign}: ${e}`));
-    warnings.push(...r.warnings.map((w) => `${campaign}: ${w}`));
+    // A seed's roam rules are the packs' (warned about once, under PACKS).
+    if (!seeded) warnings.push(...r.warnings.map((w) => `${campaign}: ${w}`));
   }
   for (const name of maps.keys()) if (!used.has(name)) errors.push(`map "${name}" is in no campaign's biomes.json`);
   return { errors, warnings };
+}
+
+/** Write each pack region's `biome.tilesets` from its map, keeping the rest of the pack file as it is. */
+export async function syncPackTilesets(maps: Map<string, MapData>): Promise<string[]> {
+  const changed: string[] = [];
+  for (const pack of readPacks()) {
+    let dirty = false;
+    for (const [id, region] of Object.entries(pack.regions ?? {})) {
+      const map = maps.get(region.biome.map);
+      if (!map || sameList(region.biome.tilesets, map.sheets)) continue;
+      region.biome.tilesets = [...map.sheets];
+      changed.push(`${pack.id}.${id}`);
+      dirty = true;
+    }
+    if (!dirty) continue;
+    const target = path.join(CONTENT_DIR, PACKS, `${pack.id}.json`);
+    const options = (await prettier.resolveConfig(target)) ?? {};
+    fs.writeFileSync(target, await prettier.format(JSON.stringify(pack), { ...options, filepath: target }));
+  }
+  return changed;
 }
 
 /** Write each biome's `tilesets` from its map (what the map build decided), keeping the rest of biomes.json as it is. */

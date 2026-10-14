@@ -6,6 +6,7 @@ import type { ShopCounter } from '../../hud/ShopCounter';
 import type { MobWorld } from '../../entities/Mob';
 import { DIR_VEC } from '../../core/direction';
 import { nearBorder } from '../../map/bounds';
+import { doorArrival } from '../../content/ports';
 import { ARRIVE_CELLS, arrivalFacing, cellFeet, doorAt, doorsNear, neighbourLinks, type Link } from '../../map/doors';
 import { CELL, type CellPoint, type DoorSpawn } from '../../map/types';
 import { zoneTint } from '../../systems/places';
@@ -75,7 +76,8 @@ export class Zones {
   }
 
   /** Build the running state of a loaded zone and keep it (with what it remembers from before it was unloaded). */
-  add(zone: Zone): ZoneState {
+  add(loaded: Zone): ZoneState {
+    const zone = { ...loaded, data: this.content.wire(loaded.name, loaded.data) }; // ports become doors
     const biome = this.content.biomeOfMap(zone.name)?.[1];
     const population = this.content.populate(zone.name, zone.data, this.nodes.get(zone.name));
     const z = new ZoneState(zone, this.sprites, population, biome ? biome.climate : undefined);
@@ -215,7 +217,7 @@ export class Zones {
     const door = doorAt(this.arena.zoneOf(p).data, p.body.x, p.body.y);
     if (!door) return;
     const dest = this.arena.zones.get(door.to.zone);
-    if (dest) this.travel(p, dest, door.to, door);
+    if (dest) this.travel(p, dest, doorArrival(door, dest.data), door);
     else void this.ensure(door.to.zone); // not loaded yet: the player waits in the doorway and the next frame tries again
   }
 

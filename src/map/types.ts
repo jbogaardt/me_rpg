@@ -86,9 +86,21 @@ export interface SignSpawn extends CellPoint {
 /** Walking onto a door cell takes the player to another zone (`to.col`/`to.row` is where they appear). */
 export interface DoorSpawn extends CellPoint {
   w: number; // cells wide, starting at `col` (a hall's door is two cells wide, a tower's one)
-  to: { zone: string; col: number; row: number };
+  to: { zone: string; col: number; row: number; port?: string };
   /** The way a player walking through it is going across the world, on a gap between two biomes: the screen slides that way. */
   dir?: 'up' | 'down' | 'left' | 'right';
+}
+
+/**
+ * A doorway whose far side is the content's to decide, not the map's (a random campaign joins regions by their ports):
+ * the `w` cells from `col,row` are the doorway, `arrive` is where a player coming in through it appears. The content
+ * (biomes.json `ports`) binds it to another map's port, which makes it a door (`wireDoors`, src/content/ports.ts); a
+ * port nothing binds is walled up.
+ */
+export interface PortSpawn extends CellPoint {
+  name: string;
+  w: number;
+  arrive: CellPoint;
 }
 
 /**
@@ -119,6 +131,7 @@ export interface MapData {
   signs: SignSpawn[]; // signposts at the forks of the roads: the action key reads where each way leads
   sites: SiteSpawn[]; // where gather quests send the player; touched with the action key while a quest wants them
   doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
+  ports: PortSpawn[]; // doorways the content binds to other maps' ports (left out of the file when there are none)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
   /** The zone's weather (a key of CLIMATES in systems/weather.ts): what falls and blows there. Rooms have none. */
   climate: string;
@@ -130,8 +143,9 @@ export interface MapData {
  * `[part, px, py]` triples naming an entry of `parts` (`[sheet, x, y, w, h, tag, z]`, tag -1 for none, z null for the
  * default; tags index `tags`). Everything else is as in `MapData`.
  */
-export interface PackedMap extends Omit<MapData, 'version' | 'ground' | 'objects'> {
+export interface PackedMap extends Omit<MapData, 'version' | 'ground' | 'objects' | 'ports'> {
   version: 3;
+  ports?: PortSpawn[];
   palette: GroundCell[];
   ground: number[];
   tags: string[];
@@ -191,6 +205,7 @@ function unpacked(json: unknown): MapData {
     places: d.places ?? [],
     signs: d.signs ?? [],
     doors: d.doors ?? [],
+    ports: d.ports ?? [],
     indoor: d.indoor ?? false,
     climate: d.climate ?? 'temperate',
   };

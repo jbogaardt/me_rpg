@@ -38,7 +38,7 @@ export default defineZone({
     z.forest({ col: 28, row: H - 4, w: W - 25, h: 7 }, { trees: TREES, seed: 13 });
     z.forest({ col: -3, row: 2, w: 6, h: H - 6 }, { trees: TREES, seed: 14 });
     z.forest({ col: W - 3, row: 2, w: 6, h: H - 6 }, { trees: TREES, seed: 15 });
-    z.door(24, 36, 3, 'emberfall_coast', 35, 4);
+    z.port('south', 24, 36, 3, 25, 32); // where it leads is the content's (biomes.json ports)
 
     // The lava lake, and smaller vents round it.
     pond(z, { col: 17, row: 12, w: 16, h: 9 }, { water: 'lava', shore: 'mud' });

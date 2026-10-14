@@ -7,19 +7,20 @@ import { WHOLE_BODIES } from '../../sprites/parts';
 import { outfitLayers, type Outfit, type PartManifest } from '../../src/sprites/doll';
 import { attackPower, mobTimings, newHero } from '../../src/systems/combat';
 import { ROOT } from '../map/image';
-import { campaigns, loadContentFromDisk } from './disk';
+import { campaigns, loadContentFromDisk, PACKS } from './disk';
 
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/sprites/lpc/parts.json'), 'utf8')) as PartManifest;
 const HERO_SPEED = 120;
 
-describe.each(campaigns())('%s', (campaign) => {
+// The packs (every region and mob of them at once) are held to the same rules: any seed can put any of them in a game.
+describe.each([...campaigns(), PACKS])('%s', (campaign) => {
   const content = loadContentFromDisk(campaign);
   const { entities, quests, scenarios } = content.content;
   const mobs = Object.entries(entities).filter(([, e]) => e.type === 'mob');
 
   it('has enemies, people and a story', () => {
     expect(mobs.length).toBeGreaterThan(0);
-    expect(quests.quests.length).toBeGreaterThan(0);
+    if (campaign !== PACKS) expect(quests.quests.length).toBeGreaterThan(0); // the packs' stories are their arcs
     expect(scenarios.nodes.has(scenarios.start)).toBe(true);
   });
 

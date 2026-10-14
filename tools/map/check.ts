@@ -128,6 +128,23 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     if (door.w < 1) errors.push(`door at (${door.col},${door.row}) is ${door.w} cells wide`);
     if (!door.to.zone) errors.push(`door at (${door.col},${door.row}) leads nowhere`);
   }
+  const portNames = new Set<string>();
+  for (const port of d.ports) {
+    const at = `port "${port.name}" at (${port.col},${port.row})`;
+    if (portNames.has(port.name)) errors.push(`${at}: the name is used twice`);
+    portNames.add(port.name);
+    if (port.w < 1) errors.push(`${at} is ${port.w} cells wide`);
+    for (let i = 0; i < port.w; i++) {
+      points.push([`port ${port.name}`, { col: port.col + i, row: port.row }]);
+      doorCells.add(port.row * W + port.col + i);
+    }
+    points.push([`port ${port.name}'s arrival`, port.arrive]);
+  }
+  for (const port of d.ports)
+    if (doorCells.has(port.arrive.row * W + port.arrive.col))
+      errors.push(
+        `port "${port.name}" arrives on a doorway (${port.arrive.col},${port.arrive.row}), which would bounce the player back`,
+      );
   const chestPoints: [string, { col: number; row: number }][] = d.chests.map((c) => {
     if (!(CHEST_KINDS as readonly string[]).includes(c.kind))
       errors.push(`chest at (${c.col},${c.row}) has unknown kind "${c.kind}" (CHEST_KINDS)`);

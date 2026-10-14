@@ -58,6 +58,7 @@ describe('populate', () => {
   const biome = {
     name: 'M',
     links: [],
+    ports: {},
     map: 'm',
     climate: null,
     music: null,

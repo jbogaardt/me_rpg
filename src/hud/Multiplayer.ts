@@ -74,7 +74,7 @@ export class Multiplayer {
     });
     this.copyCode.addEventListener('click', () => void this.copy(this.copyCode, session.code ?? ''));
     this.copyLink.addEventListener('click', () => {
-      const base = window.location.origin + window.location.pathname;
+      const base = window.location.origin + window.location.pathname + window.location.search; // the world (?seed=) too
       void this.copy(this.copyLink, joinLink(base, session.code ?? ''));
     });
 

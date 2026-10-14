@@ -5,6 +5,7 @@ import {
   type ChestSpawn,
   type CropSpawn,
   type DoorSpawn,
+  type PortSpawn,
   type ShopSpawn,
   type GroundCell,
   type MapData,
@@ -75,6 +76,7 @@ export interface ZoneApi {
   place(name: string, col: number, row: number): unknown;
   sign(col: number, row: number, ways: SignSpawn['ways']): unknown;
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number): unknown;
+  port(name: string, col: number, row: number, w: number, arriveCol: number, arriveRow: number): unknown;
   indoor(): unknown;
   climate(name: ClimateName): unknown;
 }
@@ -219,6 +221,10 @@ export class WorldWindow implements ZoneApi {
     this.z.door(col - this.o.col, row - this.o.row, w, toZone, toCol, toRow); // the destination is the other zone's own cell
     return this;
   }
+  port(name: string, col: number, row: number, w: number, arriveCol: number, arriveRow: number) {
+    this.z.port(name, col - this.o.col, row - this.o.row, w, arriveCol - this.o.col, arriveRow - this.o.row);
+    return this;
+  }
   indoor() {
     this.z.indoor();
     return this;
@@ -318,6 +324,7 @@ export class Zone {
   private placeList: PlaceSpawn[] = [];
   private signList: SignSpawn[] = [];
   private doorList: DoorSpawn[] = [];
+  private portList: PortSpawn[] = [];
   private isIndoor = false;
   private weather: ClimateName = DEFAULT_CLIMATE;
 
@@ -808,6 +815,17 @@ export class Zone {
     return this;
   }
 
+  /**
+   * A port: a doorway (the `w` cells from (col, row), opened up like a door's) whose far side the content decides
+   * (biomes.json `ports`, bound by a random campaign's assembler or by hand). `arriveCol, arriveRow` is where a player
+   * coming in through it appears: an open cell just inside, not on the doorway. A port nothing binds is walled up.
+   */
+  port(name: string, col: number, row: number, w: number, arriveCol: number, arriveRow: number) {
+    this.portList.push({ name, col, row, w, arrive: { col: arriveCol, row: arriveRow } });
+    for (let i = 0; i < w; i++) this.forced.set(row * this.width + col + i, false);
+    return this;
+  }
+
   /** Mark the zone as a room: no weather, and no co-op overview map. */
   indoor() {
     this.isIndoor = true;
@@ -828,6 +846,7 @@ export class Zone {
       places: this.placeList,
       signs: this.signList,
       doors: this.doorList,
+      ports: this.portList,
       indoor: this.isIndoor,
       climate: this.weather,
     };
@@ -1013,6 +1032,7 @@ export class Zone {
       places: this.placeList,
       signs: this.signList,
       doors: this.doorList,
+      ports: this.portList,
       indoor: this.isIndoor,
       climate: this.weather,
     };

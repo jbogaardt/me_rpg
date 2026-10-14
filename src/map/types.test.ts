@@ -26,6 +26,7 @@ describe('parseMap', () => {
       givers: [],
       sites: [],
       places: [],
+      ports: [],
       signs: [],
       doors: [],
       indoor: false,

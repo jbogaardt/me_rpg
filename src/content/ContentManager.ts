@@ -10,6 +10,7 @@ import { setQuestContent } from '../systems/quests';
 import type { Outfit } from '../sprites/doll';
 import type { MapData } from '../map/types';
 import { populate, type Population } from './populate';
+import { wireDoors } from './ports';
 import {
   CONTENT_FILES,
   parseContent,
@@ -104,6 +105,11 @@ export class ContentManager {
   /** The biome drawn from a map, if any names it (a zone's name is its map's). */
   biomeOfMap(map: string): [type: string, biome: BiomeDef] | undefined {
     return Object.entries(this.content.biomes).find(([, b]) => b.map === map);
+  }
+
+  /** A map as the game uses it in this campaign: its ports wired to the maps the biome binds them to (src/content/ports.ts). */
+  wire(map: string, data: MapData): MapData {
+    return wireDoors(data, this.biomeOfMap(map)?.[1].ports);
   }
 
   getEntityBaseStats(id: string): EntityDef {

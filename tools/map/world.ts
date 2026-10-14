@@ -729,6 +729,9 @@ class BiomeWindow implements BiomeApi {
     this.z.door(col, row, w, toZone, toCol, toRow);
     this.take({ col: col - 1, row: row - 1, w: w + 2, h: 3 });
   }
+  port(): never {
+    throw new Error('A biome of the open-air world joins its neighbours by gaps (maps/world.ts), not ports');
+  }
   indoor() {
     throw new Error('a biome is open air; rooms are their own zones (maps/shop_*.ts)');
   }
@@ -975,6 +978,7 @@ function cut(
     places: e.places.map(local),
     signs: e.signs.map(local),
     doors: e.doors.map(local),
+    ports: [], // the world's biomes join by gaps, not ports
     indoor: false,
     climate: e.climate,
   };

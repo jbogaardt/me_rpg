@@ -8,6 +8,7 @@ import { isClimate } from '../systems/weather';
 import { SKILL_IDS } from '../systems/skills';
 import { SLOTS, type Outfit } from '../sprites/doll';
 import { ITEMS, type ItemId } from '../systems/items';
+import type { PortBinding } from './ports';
 import type { Chapter, Giver, Objective, Quest, QuestContent, Reward, SiteKind } from '../systems/quests';
 
 /** The files of a campaign's content, by name: `public/content/<campaign>/<name>.json` when served statically. */
@@ -75,6 +76,8 @@ export interface BiomeDef {
   links: string[];
   /** The map file it is drawn from: public/maps/<map>.json (built from maps/<map>.ts). */
   map: string;
+  /** Where its map's ports (`z.port`) lead, by port name: another biome's map and port (src/content/ports.ts). Unbound ports are walled up. */
+  ports: Record<string, PortBinding>;
   /** Its weather (a key of CLIMATES, systems/weather.ts); null for a room, which has none. */
   climate: string | null;
   /** Background music: not played yet (the game has no audio), kept for when it does. */
@@ -294,6 +297,16 @@ function readRoam(r: Reader, v: unknown, path: string): RoamRule | null {
   };
 }
 
+function readPorts(r: Reader, v: unknown, path: string): Record<string, PortBinding> {
+  const out: Record<string, PortBinding> = {};
+  if (v === undefined) return out;
+  for (const [name, b] of Object.entries(r.object(v, path) ?? {})) {
+    const o = r.object(b, `${path}.${name}`);
+    if (o) out[name] = { map: r.string(o.map, `${path}.${name}.map`), port: r.string(o.port, `${path}.${name}.port`) };
+  }
+  return out;
+}
+
 /** Read biomes.json. */
 export function parseBiomes(json: unknown, r = new Reader()): Record<string, BiomeDef> {
   const file = r.object(json, 'biomes.json');
@@ -315,6 +328,7 @@ export function parseBiomes(json: unknown, r = new Reader()): Record<string, Bio
       ...(b.tint === undefined ? {} : { tint: r.color(b.tint, `${path}.tint`) }),
       links: r.strings(b.links ?? [], `${path}.links`),
       map: r.string(b.map, `${path}.map`),
+      ports: readPorts(r, b.ports, `${path}.ports`),
       climate,
       music,
       tilesets: r.strings(b.tilesets ?? [], `${path}.tilesets`),
@@ -497,6 +511,15 @@ function crossCheck(r: Reader, c: Content) {
     b.links.forEach((to, i) => {
       if (!maps.has(to)) r.fail(`biomes.${type}.links[${i}]`, `"${to}" is not the map of any biome`);
     });
+  // A port binding goes both ways: a port leading to another map's port is led back to by it.
+  const byMap = new Map(Object.values(c.biomes).map((b) => [b.map, b]));
+  for (const [type, b] of Object.entries(c.biomes))
+    for (const [name, to] of Object.entries(b.ports)) {
+      const there = byMap.get(to.map);
+      if (!there) r.fail(`biomes.${type}.ports.${name}`, `"${to.map}" is not the map of any biome`);
+      else if (there.ports[to.port]?.map !== b.map || there.ports[to.port]?.port !== name)
+        r.fail(`biomes.${type}.ports.${name}`, `${to.map}'s port "${to.port}" does not lead back to it`);
+    }
   const q = c.quests;
   if (q.giver && !q.givers[q.giver]) r.fail('quests.json.giver', `"${q.giver}" is not in givers`);
   for (const [id, g] of Object.entries(q.givers)) {

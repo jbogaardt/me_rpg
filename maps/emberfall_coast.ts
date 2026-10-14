@@ -4,7 +4,8 @@ import { blob, pond, trail } from '../tools/map/helpers';
 
 // Campaign 2 (public/content/campaign2/): Emberfall Isle. The Cinder Coast is where the hero washes up: ash fields walled
 // by dead woods, smoking lava pools in the east, a glassy chasm in the west, and Keeper Ysolde's camp at the landing in
-// the south. A trail climbs north to the caldera (maps/emberfall_caldera.ts). Its enemies are the campaign's content.
+// the south. A trail climbs north (in campaign 2 to the caldera, maps/emberfall_caldera.ts) and one runs south to the
+// woods' edge: ports, so a random campaign can join the coast to any region. Its enemies are the content's.
 const W = 72;
 const H = 52;
 const TREES = [...DEAD_TREES];
@@ -32,16 +33,23 @@ export default defineZone({
       [34, 24],
       [56, 24],
     ]);
-    z.paint('mud', [...north, ...west, ...east]);
+    const south = trail([
+      [16, 28],
+      [16, 50],
+    ]);
+    z.paint('mud', [...north, ...west, ...east, ...south]);
     z.paint('soot', blob({ col: 29, row: 36, w: 13, h: 9 })); // the trodden ground of the camp
 
     // --- The woods round the island, with the way north open ------------------------------------------------------
     z.forest({ col: -3, row: -3, w: 36, h: 7 }, { trees: TREES, seed: 1 });
     z.forest({ col: 38, row: -3, w: W - 35, h: 7 }, { trees: TREES, seed: 2 });
-    z.forest({ col: -3, row: H - 4, w: W + 6, h: 7 }, { trees: TREES, seed: 3 });
+    z.forest({ col: -3, row: H - 4, w: 17, h: 7 }, { trees: TREES, seed: 3 });
+    z.forest({ col: 19, row: H - 4, w: W - 16, h: 7 }, { trees: TREES, seed: 6 });
     z.forest({ col: -3, row: 4, w: 7, h: H - 8 }, { trees: TREES, seed: 4 });
     z.forest({ col: W - 4, row: 4, w: 7, h: H - 8 }, { trees: TREES, seed: 5 });
-    z.door(34, 1, 3, 'emberfall_caldera', 25, 32);
+    // Where the ports lead is the content's (biomes.json `ports`); one nothing binds is walled up.
+    z.port('north', 34, 1, 3, 35, 4);
+    z.port('south', 15, H - 2, 3, 16, H - 6);
 
     // --- Lava pools in the east, a chasm of glass in the west ------------------------------------------------------
     pond(z, { col: 52, row: 13, w: 7, h: 4 }, { water: 'lava', shore: 'mud' });
@@ -86,10 +94,11 @@ export default defineZone({
 
     // --- Ysolde's camp at the landing -------------------------------------------------------------------------------
     z.spawn(35, 41);
-    z.giver('ysolde', 32, 39);
+    z.giver('keeper', 32, 39); // the campaign's keeper (quests.json `givers.keeper`)
     z.chest('wood', 'potion', 39, 38);
     z.chest('wood', 'bandageKit', 40, 38);
-    z.sign(37, 32, { up: 'emberfall_caldera', left: 'The Glass Fields', right: 'The Smoking Pools' });
+    z.sign(37, 32, { up: 'The North Trail', left: 'The Glass Fields', right: 'The Smoking Pools' });
+    z.place('The North Trail', 35, 7);
     z.place('The Landing', 35, 42);
     z.place('The Glass Fields', 14, 26);
     z.place('The Smoking Pools', 55, 18);

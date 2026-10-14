@@ -151,6 +151,22 @@ describe('parseContent', () => {
   });
 });
 
+describe('port bindings', () => {
+  it('must lead back the way they came', () => {
+    const f = files();
+    const biomes = (f.biomes as { biomes: Record<string, Record<string, unknown>> }).biomes;
+    const cave = { ...biomes.forest, name: 'The Cave', map: 'cave', links: [] };
+    biomes.cave = { ...cave, ports: { up: { map: 'greenwood', port: 'down' } } };
+    biomes.forest!.ports = { down: { map: 'cave', port: 'up' } };
+    expect(problems(f)).toEqual([]);
+    biomes.forest!.ports = { down: { map: 'cave', port: 'left' }, side: { map: 'moon', port: 'x' } };
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/biomes\.forest\.ports\.down: cave's port "left" does not lead back to it/);
+    expect(p).toMatch(/biomes\.forest\.ports\.side: "moon" is not the map of any biome/);
+    expect(p).toMatch(/biomes\.cave\.ports\.up: greenwood's port "down" does not lead back to it/);
+  });
+});
+
 describe('toMobKind', () => {
   it('turns an entity into the engine’s MobKind, colours as numbers', () => {
     const kind = toMobKind(parseContent(files()).entities.goblin!);

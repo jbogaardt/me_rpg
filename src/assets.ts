@@ -6,6 +6,7 @@ import { type PetSheet } from './systems/pets';
 import { MOB_KINDS } from './systems/combat';
 import { outfitParts, type Outfit, type PartManifest } from './sprites/doll';
 import { Wardrobe } from './sprites/Wardrobe';
+import { AssembledSource } from './content/AssembledSource';
 import type { ContentSource } from './content/ContentManager';
 import type { ContentFile } from './content/schema';
 
@@ -34,6 +35,14 @@ export const staticContent = (campaign: string): ContentSource => ({
     return Assets.load(alias);
   },
 });
+
+/** A random campaign assembled with `seed` from the packs (public/content/packs/, src/content/packs.ts). */
+export const packContent = (seed: number): AssembledSource =>
+  new AssembledSource(seed, (name) => {
+    const alias = `content:packs:${name}`;
+    register(alias, publicUrl(`content/packs/${name}.json`), 'json');
+    return Assets.load(alias);
+  });
 
 /** A loaded bundle entry, or a clear error instead of an undefined texture later. */
 function pick(loaded: Record<string, Texture>, key: string): Texture {
