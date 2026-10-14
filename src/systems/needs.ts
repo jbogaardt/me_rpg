@@ -1,6 +1,7 @@
 // Food and water: two meters (0..NEED_MAX) that drain with time and are refilled by eating and drinking supplies.
 // Pixi-free so the rules are unit-tested. A fed and watered hero mends a little faster, a hungry or thirsty one mends
-// more slowly, one with an empty meter stops mending, and one with both empty loses health (never the last point).
+// more slowly, one with an empty meter stops mending, one with no water loses health, and one with both empty loses it
+// faster (never the last point).
 // Standing at the edge of a pond, a hero can also drink from it (`drinkableNear`, `sipWater`): the water flows in steadily
 // and the pond drains as it does, drying up from the shore inwards, until it is dry; left alone it fills up again
 // (`PondLevels`, `pondCells`).
@@ -62,7 +63,10 @@ export const needWord = (kind: 'food' | 'water', value: number): string => {
 /** What the meters mean for mending, in a line ("" when all is well). */
 export function needsNote(n: Needs): string {
   const k = needsRegen(n);
-  if (k === 0) return starveRate(n, 1) > 0 ? 'Losing health to hunger and thirst' : 'Too weak to mend on your own';
+  if (k === 0) {
+    if (n.food <= 0 && n.water <= 0) return 'Losing health to hunger and thirst';
+    return n.water <= 0 ? 'Losing health to thirst' : 'Too weak to mend on your own';
+  }
   if (k < 1) return 'Mending slowly';
   if (k > 1) return 'Mending faster';
   return '';
@@ -70,10 +74,16 @@ export function needsNote(n: Needs): string {
 
 /** Share of max HP lost per second while food and water are both empty. The hero is left on 1 HP, never killed. */
 export const STARVE_SHARE = 0.03;
+/** Share of max HP lost per second while only the water meter is empty: thirst hurts on its own. */
+export const THIRST_SHARE = 0.02;
 
-/** HP lost per second to hunger and thirst: only when both meters are empty. */
+/**
+ * HP lost per second to hunger and thirst: an empty water meter hurts (`THIRST_SHARE`), both empty hurt more
+ * (`STARVE_SHARE`); an empty food meter alone only stops mending. Never kills: the caller leaves the last point.
+ */
 export function starveRate(n: Needs, maxHp: number): number {
-  return n.food <= 0 && n.water <= 0 ? STARVE_SHARE * maxHp : 0;
+  if (n.water > 0) return 0;
+  return (n.food <= 0 ? STARVE_SHARE : THIRST_SHARE) * maxHp;
 }
 
 /** Water per second while drinking from a pond: an empty meter takes about twelve seconds to fill. */

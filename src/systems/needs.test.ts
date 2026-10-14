@@ -45,10 +45,10 @@ describe('needs', () => {
     expect(needsRegen({ food: 100, water: 0 })).toBe(0);
   });
 
-  it('cost health only while both meters are empty', () => {
+  it('cost health when the water meter is empty, more with both empty', () => {
     expect(starveRate({ food: 5, water: 5 }, 100)).toBe(0);
     expect(starveRate({ food: 0, water: 5 }, 100)).toBe(0);
-    expect(starveRate({ food: 5, water: 0 }, 100)).toBe(0);
+    expect(starveRate({ food: 5, water: 0 }, 100)).toBeCloseTo(2); // thirst hurts on its own
     expect(starveRate({ food: 0, water: 0 }, 100)).toBeCloseTo(3);
   });
 
