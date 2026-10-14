@@ -5,7 +5,7 @@
 import { CELL } from '../map/types';
 import type { Hero } from './combat';
 import { nextZone, zoneName } from './places';
-import { GIVERS, QUEST_GIVER, currentQuest, progressText, questStatus, siteOpen } from './quests';
+import { GIVERS, completerOf, currentQuest, offererOf, progressText, questStatus, siteOpen } from './quests';
 
 export interface GuideWorld {
   /** The zone the hero is in. */
@@ -15,8 +15,10 @@ export interface GuideWorld {
   sites: { kind: string; index: number; x: number; y: number }[];
   /** The mobs alive here, by their MOB_KINDS key. */
   mobs: { key: string; x: number; y: number }[];
-  /** The quest giver here, if any. */
-  giver: { x: number; y: number } | null;
+  /** The quest givers here (a key of GIVERS and where they stand). */
+  givers: { id: string; x: number; y: number }[];
+  /** The named places of this zone (MapData.places), where they are in pixels. */
+  places: { name: string; x: number; y: number }[];
 }
 
 export interface Guide {
@@ -77,9 +79,11 @@ export function guideFor(hero: Hero, world: GuideWorld, from: { x: number; y: nu
   const q = currentQuest(hero.quests);
   if (!q) return null;
   const status = questStatus(hero);
-  const giver = GIVERS[QUEST_GIVER];
+  // A person (to be given a task, or to hand one in to) is a known place; most other things are to be found.
   const toGiver = status === 'offer' || status === 'ready';
-  const zones = toGiver ? [giver?.zone ?? 'town'] : q.where.zones;
+  const who = toGiver ? (status === 'offer' ? offererOf(q) : completerOf(q)) : '';
+  const giver = GIVERS[who];
+  const zones = toGiver ? [giver?.zone ?? ''] : q.where.zones;
 
   if (!zones.includes(world.zone)) {
     const next = nextZone(world.zone, zones);
@@ -91,7 +95,10 @@ export function guideFor(hero: Hero, world: GuideWorld, from: { x: number; y: nu
       : undefined;
     return door && next ? { x: door.x, y: door.y, label: zoneName(next) } : null;
   }
-  if (toGiver) return world.giver ? { ...world.giver, label: giver?.tag ?? '' } : null;
+  if (toGiver) {
+    const there = world.givers.find((g) => g.id === who);
+    return there ? { x: there.x, y: there.y, label: giver?.tag ?? '' } : null;
+  }
 
   const o = q.objective;
   if (o.t === 'bring') {
@@ -108,6 +115,11 @@ export function guideFor(hero: Hero, world: GuideWorld, from: { x: number; y: nu
     );
     return site ? area(site) : null;
   }
+  if (o.t === 'visit') {
+    const place = world.places.find((p) => p.name === o.place);
+    return place ? area(place) : null;
+  }
+  if (o.t === 'meet') return null; // done on taking it: there is nothing to look for
   const mob = nearest(
     world.mobs.filter((m) => m.key === o.kind),
     from,
@@ -119,12 +131,15 @@ export function guideFor(hero: Hero, world: GuideWorld, from: { x: number; y: nu
 export function trackerText(hero: Hero): string {
   const q = currentQuest(hero.quests);
   if (!q) return '';
-  const who = GIVERS[QUEST_GIVER]?.tag ?? 'the warden';
-  switch (questStatus(hero)) {
+  const status = questStatus(hero);
+  const person = GIVERS[status === 'offer' ? offererOf(q) : completerOf(q)];
+  switch (status) {
     case 'offer':
-      return `Speak to ${who} in ${zoneName(GIVERS[QUEST_GIVER]?.zone ?? 'town')}`;
+      return `Speak to ${person?.tag ?? 'the warden'} in ${zoneName(person?.zone ?? '')}`;
     case 'ready':
-      return `${q.title}: return to ${who}`;
+      return q.objective.t === 'meet' || q.objective.t === 'visit' || offererOf(q) !== completerOf(q)
+        ? `${q.title}: speak to ${person?.tag ?? 'them'} in ${zoneName(person?.zone ?? '')}`
+        : `${q.title}: return to ${person?.tag ?? 'the warden'}`;
     default:
       return `${q.title}: ${progressText(hero)}`;
   }

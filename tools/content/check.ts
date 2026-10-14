@@ -130,7 +130,15 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
       const zones = o.zone ? [o.zone] : [...mapOf.keys()];
       if (!zones.some((z) => livesIn(z).has(o.kind)))
         errors.push(`${at}: no "${o.kind}" lives in ${o.zone ?? 'any zone'} to defeat`);
+    } else if (o.t === 'visit') {
+      if (!maps.get(o.zone)?.places.some((p) => p.name === o.place))
+        errors.push(`${at}: ${o.zone} has no place called "${o.place}" (z.place)`);
     }
+  }
+  // Everyone the story names stands in the zone it says (z.giver in that map), so the arrow and the talk find them.
+  for (const [id, g] of Object.entries(content.content.quests.givers)) {
+    if (maps.has(g.zone) && !maps.get(g.zone)?.givers.some((s) => s.giver === id))
+      errors.push(`givers.${id}: ${g.zone} has nobody placed as "${id}" (z.giver)`);
   }
   return { errors, warnings };
 }

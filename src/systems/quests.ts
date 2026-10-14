@@ -11,6 +11,7 @@
 // the chain in story order, the epilogue), installed into the registries below at boot (`setQuestContent`). Add a quest
 // there. Sites (`MapData.sites`, placed with `z.site`) are where gather quests send the player; their kinds are SITE_KINDS.
 
+import { CELL } from '../map/types';
 import { MOB_KINDS, gainXp, type Hero, type MobKind, type QuestLog } from './combat';
 import { collect } from './chests';
 import { packFree, takeFromPack } from './inventory';
@@ -25,6 +26,8 @@ export interface Giver {
   tag: string;
   /** The zone they stand in (where a quest's arrow leads to hand a task in). */
   zone: string;
+  /** What they say when the hero speaks to them and they have nothing to do with the quest the hero is on. */
+  idle?: string[];
 }
 
 /** The givers of the campaign (its quests.json `givers`), installed by `setQuestContent`. */
@@ -55,7 +58,11 @@ export type Objective =
   /** Touch `count` different sites of a kind (SITE_KINDS) in `zone`. */
   | { t: 'gather'; site: string; zone: string; count: number }
   /** Hand over `count` of an item from the pack. */
-  | { t: 'bring'; item: ItemId; count: number };
+  | { t: 'bring'; item: ItemId; count: number }
+  /** Speak to the person who `turnIn` names (done the moment the quest is taken: the task is to go and find them). */
+  | { t: 'meet'; count: number }
+  /** Walk to a named place (a `MapData.places` entry) of `zone`: done on arriving within `VISIT_RADIUS` of it. */
+  | { t: 'visit'; place: string; zone: string; count: number };
 
 export interface Reward {
   gold: number;
@@ -74,6 +81,10 @@ export interface Chapter {
 export interface Quest {
   /** Short and stable: story keys are `<id>.offer` and so on. */
   id: string;
+  /** Who hands this quest out (a key of GIVERS); the chain's giver when left out. */
+  giver?: string;
+  /** Who it is handed in to and who pays (a key of GIVERS; a `meet` quest must name one); the one who handed it out when left out. */
+  turnIn?: string;
   /** Index into CHAPTERS. A chapter's quests are next to each other, and its first quest starts with the chapter's intro. */
   chapter: number;
   /** What the hero has learned once this is handed in: one line of the story, kept in the journal on the Quests tab. */
@@ -145,6 +156,15 @@ const bits = (n: number) => {
   return count;
 };
 
+/** Who hands a quest out. */
+export const offererOf = (q: Quest): string => q.giver ?? QUEST_GIVER;
+
+/** Who a quest is handed in to (and who pays): a different person from the one who gave it, for a message to carry. */
+export const completerOf = (q: Quest): string => q.turnIn ?? offererOf(q);
+
+/** How close (in cells) the hero must come to a place for a `visit` quest to count it. */
+export const VISIT_RADIUS = 7;
+
 /** The mob kind's key in MOB_KINDS (for counting kills), or undefined for a kind that is not in it. */
 export const mobKey = (kind: MobKind): string | undefined => Object.keys(MOB_KINDS).find((k) => MOB_KINDS[k] === kind);
 
@@ -160,6 +180,10 @@ export function progressOf(hero: Hero): number {
       return Math.min(o.count, bits(hero.quests.progress));
     case 'bring':
       return Math.min(o.count, hero.pack.filter((i) => i === itemOf(o.item)).length);
+    case 'meet':
+      return o.count; // going to find them is all there is to it
+    case 'visit':
+      return Math.min(o.count, hero.quests.progress);
   }
 }
 
@@ -205,6 +229,27 @@ export function recordKill(hero: Hero, kind: MobKind, zone: string): Progress | 
   const { objective: o } = q;
   if (mobKey(kind) !== o.kind || (o.zone && o.zone !== zone) || hero.quests.progress >= o.count) return null;
   hero.quests.progress++;
+  return report(hero);
+}
+
+/**
+ * The hero is at (x, y) pixels in `zone`, whose named places are `places`: counts a `visit` quest's place when they come
+ * within VISIT_RADIUS of it. Cheap when the current quest is not one (it is asked every tick).
+ */
+export function recordVisit(
+  hero: Hero,
+  zone: string,
+  places: readonly { name: string; col: number; row: number }[],
+  x: number,
+  y: number,
+): Progress | null {
+  const q = currentQuest(hero.quests);
+  if (!q || !hero.quests.taken || q.objective.t !== 'visit' || hero.quests.progress >= q.objective.count) return null;
+  const { objective: o } = q;
+  if (o.zone !== zone) return null;
+  const place = places.find((p) => p.name === o.place);
+  if (!place || Math.hypot(x / CELL - (place.col + 0.5), y / CELL - (place.row + 0.5)) > VISIT_RADIUS) return null;
+  hero.quests.progress = o.count;
   return report(hero);
 }
 
@@ -275,7 +320,8 @@ export function journal(log: QuestLog): { title: string; lines: string[] }[] {
 /** The story lines behind a key ("road.offer", "road.reward", "end"...), or null for one this build does not know. */
 export function linesFor(key: string): string[] | null {
   if (key === 'end') return EPILOGUE;
-  const [id, part] = key.split('.');
+  const [id = '', part] = key.split('.');
+  if (part === 'idle') return GIVERS[id] ? idleLines(id) : null;
   const q = QUESTS.find((quest) => quest.id === id);
   if (!q) return null;
   switch (part) {
@@ -291,6 +337,12 @@ export function linesFor(key: string): string[] | null {
       return null;
   }
 }
+
+/** What a person says when the hero has nothing to do with them just now. */
+const idleLines = (giverId: string): string[] => {
+  const lines = GIVERS[giverId]?.idle;
+  return lines && lines.length ? lines : ['...'];
+};
 
 /** Hand the reward over, if there is room for it. Nothing changes when there is not. */
 function pay(hero: Hero, q: Quest): { gear: boolean; levels: number } | null {
@@ -308,10 +360,11 @@ function pay(hero: Hero, q: Quest): { gear: boolean; levels: number } | null {
 }
 
 /**
- * The hero speaks to the quest giver: they are given the next task, reminded of the one they are on, or (if it is done)
- * paid for it and the chain moves on. The reply says which lines to show.
+ * The hero speaks to `giverId` (the chain's giver unless they name someone else): that person gives them the next task,
+ * reminds them of the one they are on, or (if it is done) takes it and pays, and the chain moves on. Someone who has nothing
+ * to do with the quest the hero is on just says their piece (`GIVERS[id].idle`). The reply says which lines to show.
  */
-export function talk(hero: Hero): Talk {
+export function talk(hero: Hero, giverId: string = QUEST_GIVER): Talk {
   const log = hero.quests;
   const q = currentQuest(log);
   const said = (key: string, lines: string[], extra: Partial<Talk> = {}): Talk => ({
@@ -322,15 +375,19 @@ export function talk(hero: Hero): Talk {
     paid: false,
     ...extra,
   });
-  if (!q) return said('end', EPILOGUE);
+  const idle = () => said(`${giverId}.idle`, idleLines(giverId));
+  if (!q) return giverId === QUEST_GIVER ? said('end', EPILOGUE) : idle();
+  const [offerer, completer] = [offererOf(q), completerOf(q)];
   switch (questStatus(hero)) {
     case 'offer':
+      if (giverId !== offerer) return idle();
       log.taken = true;
       log.progress = 0;
       return said(`${q.id}.offer`, offerLines(q));
     case 'active':
-      return said(`${q.id}.remind`, q.remind);
+      return giverId === offerer || giverId === completer ? said(`${q.id}.remind`, q.remind) : idle();
     default: {
+      if (giverId !== completer) return giverId === offerer ? said(`${q.id}.remind`, q.remind) : idle();
       const paid = pay(hero, q);
       if (!paid) return said(`${q.id}.full`, FULL_LINES);
       log.stage++;
@@ -341,10 +398,16 @@ export function talk(hero: Hero): Talk {
   }
 }
 
-/** The marker over the giver's head for this hero: "!" has a task to give, "?" is waiting for one to be handed in. */
-export function giverMark(hero: Hero): '!' | '?' | '' {
+/**
+ * The marker over a person's head for this hero: "!" has a task to give, "?" is waiting for one to be handed in. Only the
+ * person the current quest is about shows one (`giverId` left out means the chain's giver).
+ */
+export function giverMark(hero: Hero, giverId: string = QUEST_GIVER): '!' | '?' | '' {
+  const q = currentQuest(hero.quests);
+  if (!q) return '';
   const status = questStatus(hero);
-  return status === 'offer' ? '!' : status === 'ready' ? '?' : '';
+  if (status === 'offer') return giverId === offererOf(q) ? '!' : '';
+  return status === 'ready' && giverId === completerOf(q) ? '?' : '';
 }
 
 // --- The log on the wire (a guest is told its log in every `pack` message) ---

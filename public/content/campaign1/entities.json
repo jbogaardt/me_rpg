@@ -732,6 +732,117 @@
         "You could run for Lanternrest, or push on to the Barrow Lands if you are strong enough.",
         "Choose on the right; I will stay out of the way."
       ]
+    },
+    "hale": {
+      "type": "npc",
+      "name": "Captain Hale",
+      "sprite": {
+        "body": "body.olive",
+        "head": "head.human_olive",
+        "hair": "hair.plain_dark_brown",
+        "beard": "beard.brown",
+        "torso": "torso.legion_iron",
+        "legs": "legs.pants_charcoal",
+        "feet": "feet.boots_black",
+        "cape": "cape.maroon"
+      }
+    },
+    "gruk": {
+      "type": "npc",
+      "name": "Gruk, goblin elder",
+      "sprite": {
+        "body": "body.green",
+        "head": "head.goblin",
+        "torso": "torso.robe_red",
+        "legs": "legs.pants_brown",
+        "feet": "feet.boots_brown",
+        "weapon": "weapon.staff"
+      }
+    },
+    "brannoch": {
+      "type": "npc",
+      "name": "Brannoch the hermit",
+      "sprite": {
+        "body": "body.brown",
+        "head": "head.human_brown",
+        "hair": "hair.long_gray",
+        "beard": "beard.gray",
+        "torso": "torso.robe_blue",
+        "feet": "feet.boots_brown",
+        "cape": "cape.forest",
+        "weapon": "weapon.staff"
+      }
+    },
+    "zahra": {
+      "type": "npc",
+      "name": "Zahra the sandwalker",
+      "sprite": {
+        "body": "body.f_olive",
+        "head": "head.human_f_olive",
+        "hair": "hair.long_black",
+        "headwear": "headwear.bandana_tan",
+        "torso": "torso.f_tunic_tan",
+        "legs": "legs.f_pants_tan",
+        "feet": "feet.f_boots_brown",
+        "cape": "cape.tan"
+      }
+    },
+    "voss": {
+      "type": "npc",
+      "name": "Sergeant Voss",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.plain_gray",
+        "torso": "torso.plate_steel",
+        "legs": "legs.plate_steel",
+        "feet": "feet.plate_steel",
+        "headwear": "headwear.nasal",
+        "cape": "cape.white",
+        "weapon": "weapon.arming_steel"
+      }
+    },
+    "palelurker": {
+      "type": "mob",
+      "name": "The Pale Lurker",
+      "notes": "A story boss of the Greenwood (quest 'glade'): the Shade that wounded Captain Hale. A tougher, bigger Shade that hangs back and hurls slow bolts. Levels 2-3.",
+      "scale": 1.25,
+      "sprite": { "body": "body.shade", "head": "head.shade", "weapon": "weapon.dagger", "cape": "cape.charcoal" },
+      "stats": { "hp": 80, "attack": 11, "defense": 1, "speed": 66, "sight": 224, "xp": 40, "gold": 23 },
+      "behavior": { "windup": 0.6, "recover": 1.1, "shot": { "range": 192, "speed": 140, "color": "#d9b6ff" } }
+    },
+    "tuskcaptain": {
+      "type": "mob",
+      "name": "Tusk-Captain Urgath",
+      "notes": "A story boss of the Sunscar Desert (quest 'tusk'): the orc who carries the Tusk Banner. A bigger Orc that shrugs off a stagger. Levels 5-6.",
+      "scale": 1.4,
+      "sprite": {
+        "body": "body.dark_green",
+        "head": "head.orc_dark",
+        "headwear": "headwear.barbarian",
+        "torso": "torso.plate_steel",
+        "legs": "legs.pants_charcoal",
+        "feet": "feet.boots_black",
+        "weapon": "weapon.arming_steel",
+        "shield": "shield.round_black"
+      },
+      "stats": { "hp": 160, "attack": 24, "defense": 3, "speed": 60, "sight": 192, "xp": 100, "gold": 56 },
+      "behavior": { "windup": 0.45, "recover": 0.6, "stagger": 0.06 }
+    },
+    "stillheart": {
+      "type": "mob",
+      "name": "The Stillheart",
+      "notes": "The last story boss (quest 'heart'): a troll that has swallowed a splinter of the Hourglass and cannot be stunned. Frostlands, levels 8-10.",
+      "scale": 1.5,
+      "sprite": {
+        "body": "body.green",
+        "head": "head.troll",
+        "legs": "legs.pants_brown",
+        "feet": "feet.plate_iron",
+        "cape": "cape.navy"
+      },
+      "stats": { "hp": 240, "attack": 28, "defense": 5, "speed": 48, "sight": 176, "xp": 160, "gold": 80 },
+      "behavior": { "windup": 0.55, "recover": 0.9, "stagger": 0.03 }
     }
   }
 }

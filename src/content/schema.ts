@@ -455,7 +455,10 @@ function readObjective(r: Reader, v: unknown, path: string): Objective {
   if (o.t === 'bring') {
     return { t: 'bring', item: r.string(o.item, `${path}.item`), count };
   }
-  r.fail(`${path}.t`, 'must be "kill", "gather" or "bring"');
+  if (o.t === 'meet') return { t: 'meet', count: 1 };
+  if (o.t === 'visit')
+    return { t: 'visit', place: r.string(o.place, `${path}.place`), zone: r.string(o.zone, `${path}.zone`), count: 1 };
+  r.fail(`${path}.t`, 'must be "kill", "gather", "bring", "meet" or "visit"');
   return { t: 'kill', kind: '', count };
 }
 
@@ -482,6 +485,7 @@ export function parseQuests(json: unknown, r = new Reader()): QuestContent {
       tag: r.string(g.tag, `givers.${id}.tag`),
       zone: r.string(g.zone, `givers.${id}.zone`),
     };
+    if (g.idle !== undefined) giver.idle = r.strings(g.idle, `givers.${id}.idle`);
     out.givers[id] = giver;
   }
   for (const [id, v] of Object.entries(r.object(file.sites ?? {}, 'quests.json.sites') ?? {})) {
@@ -524,6 +528,8 @@ export function parseQuests(json: unknown, r = new Reader()): QuestContent {
       done: r.strings(o.done, `${p}.done`),
     };
     if (where.door !== undefined) q.where.door = r.string(where.door, `${p}.where.door`);
+    if (o.giver !== undefined) q.giver = r.string(o.giver, `${p}.giver`);
+    if (o.turnIn !== undefined) q.turnIn = r.string(o.turnIn, `${p}.turnIn`);
     return q;
   });
   out.epilogue = r.strings(file.epilogue ?? [], 'quests.json.epilogue');
@@ -784,6 +790,12 @@ function crossCheck(r: Reader, c: Content) {
     if ((o.t === 'kill' || o.t === 'gather') && o.zone !== undefined && !maps.has(o.zone))
       r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
     if (o.t === 'gather' && !q.sites[o.site]) r.fail(`${p}.objective.site`, `"${o.site}" is not in sites`);
+    if (o.t === 'visit' && !maps.has(o.zone)) r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
+    for (const key of ['giver', 'turnIn'] as const) {
+      const who = quest[key];
+      if (who !== undefined && !q.givers[who]) r.fail(`${p}.${key}`, `"${who}" is not in givers`);
+    }
+    if (o.t === 'meet' && !quest.turnIn) r.fail(`${p}.turnIn`, 'a "meet" quest must say who is to be met (turnIn)');
   });
   checkItems(r, c);
   checkAgainstCapabilities(r, c);
