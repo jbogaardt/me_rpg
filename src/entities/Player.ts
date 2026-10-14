@@ -1,7 +1,7 @@
 import type { Texture } from 'pixi.js';
 import type { Hero, Ranged } from '../systems/combat';
 import type { SkillId } from '../systems/skills';
-import { PLAYER_COLORS } from '../systems/looks';
+import { DM_COLOR, PLAYER_COLORS } from '../systems/looks';
 import { Character } from './Character';
 
 /** What a player wants to do this tick, from the keyboard / touch controls or from the network. */
@@ -46,6 +46,11 @@ export class Player {
   zone = '';
   /** Host/solo: drinking from a pond (the water gained so far, floated when they stop), or null. */
   drinking: { gained: number } | null = null;
+  /**
+   * The Dungeon Master (an online game's host, player 0): seen in the world but not one of the party. No mob hunts or
+   * hurts them, they share no XP, gold or quest credit, block nobody, and their action key neither attacks nor picks up.
+   */
+  dm = false;
   moving = false; // was trying to move this tick (drives the walk cycle, and the guest's copy of it)
 
   // Host: the last action counters honoured from a network player (see protocol.ts).
@@ -71,6 +76,12 @@ export class Player {
   /** Become another player number (a guest is seated by the host); the ring changes colour to match. */
   setSlot(slot: number) {
     this.slot = slot;
-    this.body.setAuraColor(PLAYER_COLORS[slot] ?? 0x4de3ff);
+    this.body.setAuraColor(this.dm ? DM_COLOR : (PLAYER_COLORS[slot] ?? 0x4de3ff));
+  }
+
+  /** Become (or stop being) the Dungeon Master; the ring turns gold. */
+  setDm(dm: boolean) {
+    this.dm = dm;
+    this.setSlot(this.slot);
   }
 }

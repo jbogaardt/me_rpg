@@ -6,13 +6,15 @@ import type { ShopCounter } from '../../hud/ShopCounter';
 import type { MobWorld } from '../../entities/Mob';
 import { DIR_VEC } from '../../core/direction';
 import { nearBorder } from '../../map/bounds';
+import { doorArrival, openPort, type PortBinding } from '../../content/ports';
 import { ARRIVE_CELLS, arrivalFacing, cellFeet, doorAt, doorsNear, neighbourLinks, type Link } from '../../map/doors';
-import { CELL, type CellPoint, type DoorSpawn } from '../../map/types';
+import { CELL, type CellPoint, type DoorSpawn, type MapData } from '../../map/types';
 import { zoneTint } from '../../systems/places';
 import { GroundItem } from '../../entities/GroundItem';
 import { ZoneState } from '../ZoneState';
 import { TRAINER_ROOM } from '../../systems/skills';
 import type { Arena } from './Arena';
+import type { ContentManager } from '../../content/ContentManager';
 
 const PREFETCH_REACH = 14 * CELL; // a door this close starts loading the zone behind it, so stepping through is instant
 const PREFETCH_EVERY = 0.5; // seconds between looking for doors to prefetch
@@ -24,8 +26,11 @@ const SLIP_RATE = 12; // per second: how fast the hero's drawing catches up with
 const WEATHER_FADE = 1.6; // seconds the last zone's weather takes to give way to the new one's
 const ARRIVE_GRACE = 1.8; // seconds of silent immunity on arriving in a zone (the transition takes up to 1 s, and the world runs behind it), so nothing waiting at the door ambushes you
 
-/** Loads a zone by name (assets.ts `loadZone`). The scene asks for the zones behind doors before the player gets there. */
-export type ZoneLoader = (name: string) => Promise<Zone>;
+/**
+ * Loads a zone by name (assets.ts `loadZone`); `tilesets` (the biome's, from the content) start loading alongside the
+ * map. The scene asks for the zones behind doors before the player gets there.
+ */
+export type ZoneLoader = (name: string, onProgress?: (fraction: number) => void, tilesets?: string[]) => Promise<Zone>;
 /** Frees what `ZoneLoader` loaded (assets.ts `unloadZone`). */
 export type ZoneUnloader = (zone: Zone) => Promise<void>;
 
@@ -51,6 +56,16 @@ export class Zones {
   private shown = new Map<ZoneState, Link>();
   /** The zone the local player just walked out of, whose weather gives way to the new one's. */
   private weatherFade: { from: ZoneState; t: number } | null = null;
+  /**
+   * The scenario node each zone is showing, where it is not the biome's own (the node named after it): who stands in a
+   * zone comes from its node (`ContentManager.populate`), now and whenever it is loaded again.
+   */
+  private nodes = new Map<string, string>();
+  /** Each loaded zone's map as it came (before its ports were wired), and the bindings it was wired with. */
+  private wiring = new Map<
+    string,
+    { raw: MapData; wired: Record<string, PortBinding>; bound: Record<string, PortBinding> }
+  >();
 
   constructor(
     private arena: Arena,
@@ -59,14 +74,20 @@ export class Zones {
     private unloadZone: ZoneUnloader,
     private ui: { shop: ShopCounter },
     renderer: Renderer,
+    private content: ContentManager,
   ) {
     this.transition = new ZoneTransition(renderer);
     this.root.addChild(this.stage, this.transition.view);
   }
 
   /** Build the running state of a loaded zone and keep it (with what it remembers from before it was unloaded). */
-  add(zone: Zone): ZoneState {
-    const z = new ZoneState(zone, this.sprites);
+  add(loaded: Zone): ZoneState {
+    const zone = { ...loaded, data: this.content.wire(loaded.name, loaded.data) }; // ports become doors
+    const bound = this.content.biomeOfMap(loaded.name)?.[1].ports;
+    this.wiring.set(loaded.name, { raw: loaded.data, wired: { ...bound }, bound: { ...bound } });
+    const biome = this.content.biomeOfMap(zone.name)?.[1];
+    const population = this.content.populate(zone.name, zone.data, this.nodes.get(zone.name));
+    const z = new ZoneState(zone, this.sprites, population, biome ? biome.climate : undefined);
     z.mobWorld = this.makeMobWorld(z);
     this.arena.zones.set(zone.name, z);
     const memory = this.arena.memory.get(zone.name);
@@ -115,6 +136,7 @@ export class Zones {
       this.unused.delete(z.name);
       arena.memory.set(z.name, z.remember());
       arena.zones.delete(z.name);
+      this.wiring.delete(z.name);
       z.dispose();
       void this.unloadZone(z.source).catch((err: unknown) => console.error(`Could not unload zone "${z.name}"`, err));
     }
@@ -122,7 +144,7 @@ export class Zones {
   }
 
   /** The first zone: where the game starts. The local player is put in it. */
-  addHome(zone: Zone): ZoneState {
+  addHome(zone: Zone, spawn: CellPoint = zone.data.spawn): ZoneState {
     const { arena } = this;
     const home = this.add(zone);
     arena.home = home;
@@ -130,9 +152,42 @@ export class Zones {
     arena.local.zone = home.name;
     home.world.layer.addChild(arena.player);
     this.stage.addChild(home.world);
-    arena.player.position.set(...cellFeet(zone.data.spawn));
+    arena.player.position.set(...cellFeet(spawn));
     arena.syncHeroBodies();
     return home;
+  }
+
+  /** The scenario node a zone shows (the biome's own unless a scenario was loaded over it). */
+  nodeOf(zone: string): string | undefined {
+    return this.nodes.get(zone) ?? this.content.biomeOfMap(zone)?.[0];
+  }
+
+  /**
+   * Make `zone` show the scenario node `node`: who stands in it comes from that node from now on, and if it is loaded
+   * its mobs and folk are replaced at once (the old ones are destroyed).
+   */
+  assign(zone: string, node: string) {
+    if (node === this.content.biomeOfMap(zone)?.[0]) this.nodes.delete(zone);
+    else this.nodes.set(zone, node);
+    this.repopulate(zone);
+  }
+
+  /** Every zone back to its biome's own node (co-op needs every player to agree on who stands where). */
+  resetNodes() {
+    const changed = [...this.nodes.keys()];
+    this.nodes.clear();
+    for (const zone of changed) this.repopulate(zone);
+  }
+
+  /** Is any zone showing a node other than its biome's own? */
+  get customised(): boolean {
+    return this.nodes.size > 0;
+  }
+
+  private repopulate(zone: string) {
+    const z = this.arena.zones.get(zone);
+    if (!z) return;
+    z.populate(this.content.populate(zone, z.data, this.nodes.get(zone)));
   }
 
   /** Start loading a zone if it is not loaded or loading yet. Resolves when it is ready (and does nothing if it already is). */
@@ -140,7 +195,7 @@ export class Zones {
     if (this.arena.zones.has(name)) return Promise.resolve();
     let pending = this.loading.get(name);
     if (!pending) {
-      pending = this.loadZone(name)
+      pending = this.loadZone(name, undefined, this.content.biomeOfMap(name)?.[1].tilesets)
         .then((zone) => {
           if (!this.arena.zones.has(name)) this.add(zone);
         })
@@ -170,7 +225,7 @@ export class Zones {
     const door = doorAt(this.arena.zoneOf(p).data, p.body.x, p.body.y);
     if (!door) return;
     const dest = this.arena.zones.get(door.to.zone);
-    if (dest) this.travel(p, dest, door.to, door);
+    if (dest) this.travel(p, dest, doorArrival(door, dest.data), door);
     else void this.ensure(door.to.zone); // not loaded yet: the player waits in the doorway and the next frame tries again
   }
 
@@ -390,6 +445,38 @@ export class Zones {
   }
 
   /** The scene is ending: free the zones it holds (the scene manager destroys the ones on the stage). */
+  /**
+   * A live world grew (content/world.ts): open the ports of loaded zones that the content now binds. Each becomes a door
+   * where it stands, its cells clear and its seal fades away; nothing else in the zone changes (its mobs, chests and
+   * whoever stands in it carry on). Says where each opened, in which zone, for the scene to mark it.
+   */
+  rewire(): { zone: string; x: number; y: number }[] {
+    const opened: { zone: string; x: number; y: number }[] = [];
+    for (const [name, z] of this.arena.zones) {
+      const was = this.wiring.get(name);
+      const now = this.content.biomeOfMap(name)?.[1].ports ?? {};
+      if (!was) continue;
+      for (const [port, to] of Object.entries(now)) {
+        if (was.bound[port]) continue;
+        const open = openPort(was.raw, was.wired, port, to); // the seals were drawn as it was first wired
+        if (!open) continue;
+        z.data.doors.push(open.door);
+        z.collision.unblock(open.cells);
+        const cleared = new Set(open.cells);
+        z.data.collision = z.data.collision.filter((c) => !cleared.has(c));
+        for (const i of open.seal) z.world.setObjectAlpha(i, 0);
+        was.bound = { ...was.bound, [port]: to };
+        const { door } = open;
+        opened.push({
+          zone: name,
+          x: (door.col + door.w / 2) * CELL,
+          y: (door.row + (door.h ?? 1) / 2) * CELL,
+        });
+      }
+    }
+    return opened;
+  }
+
   dispose() {
     for (const z of this.arena.zones.values()) if (z.world.parent !== this.stage) z.dispose();
   }

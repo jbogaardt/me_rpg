@@ -43,6 +43,8 @@ export class Character extends Container {
   private frames: FrameSet;
   private shownAnim: AnimName = 'idle'; // the frame on screen, so a new sheet can show the same one at once
   private shownCol = 0;
+  /** How many times a person's size it is drawn; collision (a `Body`) reads it too. */
+  size = 1;
   private sprite: Sprite;
   private aura = new Graphics();
   private direction: Direction = 'down';
@@ -93,6 +95,12 @@ export class Character extends Container {
   /** Colour the body (not the shadow), e.g. to flash on a hit. 0xffffff is untinted. */
   setTint(color: number) {
     this.sprite.tint = color;
+  }
+
+  /** Draw the body bigger or smaller than the usual 64px frame, still standing on the same feet point. */
+  setScale(factor: number) {
+    this.size = factor;
+    this.sprite.scale.set(factor);
   }
 
   /** Nudge the body off its feet point, e.g. to lunge into an attack. */

@@ -166,7 +166,7 @@ export function coverage(
 export interface RenderOptions {
   collision?: boolean; // red overlay on blocked cells
   grid?: boolean; // cell grid, with a brighter line every 5 cells
-  markers?: boolean; // spawn (green), NPC (pink), mobs (orange)
+  markers?: boolean; // spawn (green), NPC (pink)
   crop?: { col: number; row: number; w: number; h: number }; // in cells
   scale?: number; // integer nearest-neighbour upscale
 }
@@ -229,7 +229,6 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
     const mark = (col: number, row: number, rgb: number) => tint(col * CELL + 8, row * CELL + 8, 16, 16, rgb, 0.9);
     mark(data.spawn.col, data.spawn.row, 0x30e070);
     if (data.npc) mark(data.npc.col, data.npc.row, 0xff6b8a);
-    for (const m of data.mobs) mark(m.col, m.row, 0xff9020);
     for (const c of data.chests) mark(c.col, c.row, 0xffe040);
     for (const c of data.crops) mark(c.col, c.row, 0x80e040);
     for (const sh of data.shops) mark(sh.col, sh.row, 0x40c0ff);

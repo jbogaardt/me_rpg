@@ -3,6 +3,7 @@ import { itemCode, packCodes, packEntries } from '../systems/inventory';
 import { playerName } from '../systems/looks';
 import { MAX_OFFER_ITEMS, viewToWire, type TradeCommand, type TradeView } from '../systems/trade';
 import { bonuses } from './itemText';
+import { esc } from './html';
 
 // Player-to-player trading (HTML overlays; markup in index.html, styles in src/ui.css). Three pieces share this file:
 //  - the Trade tab of the pause menu: the other players, and a button to ask one (enabled only when they are close);
@@ -159,7 +160,7 @@ export class TradeUi {
     const them = playerName(view.with);
     $('trade-title').textContent = `Trading with ${them}`;
     const row = (item: Item, count: number, button: string) =>
-      `<li><div class="info"><b>${item.name}${count > 1 ? ` ×${count}` : ''}</b> <small>${bonuses(item)}</small></div>${button}</li>`;
+      `<li><div class="info"><b>${esc(item.name)}${count > 1 ? ` ×${count}` : ''}</b> <small>${bonuses(item)}</small></div>${button}</li>`;
     const group = (items: readonly Item[]) => {
       const out: { item: Item; count: number }[] = [];
       for (const item of items) {

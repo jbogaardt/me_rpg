@@ -11,9 +11,11 @@ describe('assetVersions', () => {
     fs.mkdirSync(path.join(root, 'sprites/lpc'), { recursive: true });
     fs.writeFileSync(path.join(root, 'maps/a.json'), '{"a":1}');
     fs.writeFileSync(path.join(root, 'sprites/lpc/b.png'), 'png');
+    fs.mkdirSync(path.join(root, 'content/one'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'content/one/c.json'), '{}');
     fs.writeFileSync(path.join(root, 'other.txt'), 'not fetched by the game');
     const before = assetVersions(root);
-    expect(Object.keys(before)).toEqual(['maps/a.json', 'sprites/lpc/b.png']);
+    expect(Object.keys(before)).toEqual(['maps/a.json', 'sprites/lpc/b.png', 'content/one/c.json']);
     expect(before['maps/a.json']).toMatch(/^[\w-]{8}$/);
 
     fs.writeFileSync(path.join(root, 'maps/a.json'), '{"a":2}');
@@ -28,5 +30,6 @@ describe('assetVersions', () => {
     expect(table['maps/greenwood.json']).toBeDefined();
     expect(table['tilesets/chests.png']).toBeDefined();
     expect(table['sprites/lpc/parts.json']).toBeDefined();
+    expect(table['content/campaign1/entities.json']).toBeDefined();
   });
 });

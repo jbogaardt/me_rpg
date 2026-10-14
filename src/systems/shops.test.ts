@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { MOB_KINDS, newHero, rollGold } from './combat';
 import { NPC_LOOKS } from './looks';
 import { BASE_PACK } from './inventory';
-import { buy, buyPrice, SHOPS, sell, sellPrice } from './shops';
-import { ITEMS } from './items';
+import { buy, buyPrice, SHOPS, sell, sellPrice, shopBuys } from './shops';
+import { ITEMS, itemOf } from './items';
 
 const smithy = SHOPS.smithy!;
 const apothecary = SHOPS.apothecary!;
@@ -13,7 +13,7 @@ describe('SHOPS', () => {
     for (const [id, shop] of Object.entries(SHOPS)) {
       expect(NPC_LOOKS[shop.keeper], id).toBeDefined();
       expect(shop.stock.length, id).toBeGreaterThan(0);
-      for (const item of shop.stock) expect(buyPrice(ITEMS[item]), `${id} ${item}`).toBeGreaterThan(0);
+      for (const item of shop.stock) expect(buyPrice(itemOf(item)), `${id} ${item}`).toBeGreaterThan(0);
     }
   });
 
@@ -27,12 +27,12 @@ describe('SHOPS', () => {
   });
 
   it('buys back only what it sells the kind of', () => {
-    expect(smithy.buys(ITEMS.steelSword)).toBe(true);
-    expect(smithy.buys(ITEMS.shortBow)).toBe(false); // a bow is the ranger's
-    expect(SHOPS.ranger!.buys(ITEMS.shortBow)).toBe(true);
-    expect(SHOPS.armory!.buys(ITEMS.greatHelm)).toBe(true);
-    expect(apothecary.buys(ITEMS.potion)).toBe(true);
-    expect(apothecary.buys(ITEMS.steelSword)).toBe(false);
+    expect(shopBuys(smithy, itemOf('steelSword'))).toBe(true);
+    expect(shopBuys(smithy, itemOf('shortBow'))).toBe(false); // a bow is the ranger's
+    expect(shopBuys(SHOPS.ranger!, itemOf('shortBow'))).toBe(true);
+    expect(shopBuys(SHOPS.armory!, itemOf('greatHelm'))).toBe(true);
+    expect(shopBuys(apothecary, itemOf('potion'))).toBe(true);
+    expect(shopBuys(apothecary, itemOf('steelSword'))).toBe(false);
   });
 
   it('pays less than it charges', () => {
@@ -45,10 +45,10 @@ describe('buy', () => {
     const hero = newHero();
     hero.gold = 100;
     const trade = buy(hero, smithy, 'bronzeSword');
-    expect(trade).toMatchObject({ ok: true, worn: ITEMS.bronzeSword });
+    expect(trade).toMatchObject({ ok: true, worn: itemOf('bronzeSword') });
     expect(hero.gold).toBe(60);
-    expect(hero.weapon).toBe(ITEMS.bronzeSword);
-    expect(hero.pack).toEqual([ITEMS.rustySword]);
+    expect(hero.weapon).toBe(itemOf('bronzeSword'));
+    expect(hero.pack).toEqual([itemOf('rustySword')]);
   });
 
   it('keeps gear that is no upgrade in the pack, without wearing it', () => {
@@ -58,8 +58,8 @@ describe('buy', () => {
     hero.gold = 100;
     const trade = buy(hero, smithy, 'bronzeSword');
     expect(trade.ok && trade.worn).toBeFalsy();
-    expect(hero.weapon).toBe(ITEMS.steelSword);
-    expect(hero.pack).toContain(ITEMS.bronzeSword);
+    expect(hero.weapon).toBe(itemOf('steelSword'));
+    expect(hero.pack).toContain(itemOf('bronzeSword'));
   });
 
   it('puts supplies in the pack', () => {
@@ -67,7 +67,7 @@ describe('buy', () => {
     hero.gold = 30;
     expect(buy(hero, apothecary, 'potion').ok).toBe(true);
     expect(buy(hero, apothecary, 'potion').ok).toBe(true);
-    expect(hero.pack).toEqual([ITEMS.potion, ITEMS.potion]);
+    expect(hero.pack).toEqual([itemOf('potion'), itemOf('potion')]);
     expect(hero.gold).toBe(0);
   });
 
@@ -77,13 +77,13 @@ describe('buy', () => {
     const trade = buy(hero, smithy, 'bronzeSword');
     expect(trade).toEqual({ ok: false, text: 'Not enough gold (1 short)' });
     expect(hero.gold).toBe(39);
-    expect(hero.weapon).toBe(ITEMS.rustySword);
+    expect(hero.weapon).toBe(itemOf('rustySword'));
   });
 
   it('refuses to buy with nowhere to put it, taking no gold', () => {
     const hero = newHero();
     hero.gold = 500;
-    hero.pack.push(...Array.from({ length: BASE_PACK }, () => ITEMS.potion));
+    hero.pack.push(...Array.from({ length: BASE_PACK }, () => itemOf('potion')));
     expect(buy(hero, apothecary, 'potion')).toEqual({ ok: false, text: 'Your pack is full' });
     expect(buy(hero, smithy, 'bronzeSword')).toEqual({ ok: false, text: 'Your pack is full' }); // the old sword would need a slot
     expect(hero.gold).toBe(500);
@@ -102,21 +102,21 @@ describe('buy', () => {
 describe('sell', () => {
   it('pays out and removes the item from the pack', () => {
     const hero = newHero();
-    hero.pack.push(ITEMS.steelSword, ITEMS.steelSword);
-    const trade = sell(hero, smithy, ITEMS.steelSword);
+    hero.pack.push(itemOf('steelSword'), itemOf('steelSword'));
+    const trade = sell(hero, smithy, itemOf('steelSword'));
     expect(trade).toEqual({ ok: true, text: 'Sold Steel Sword for 60g' });
     expect(hero.gold).toBe(60);
-    expect(hero.pack).toEqual([ITEMS.steelSword]);
+    expect(hero.pack).toEqual([itemOf('steelSword')]);
   });
 
   it('does not buy another trade, or what the hero does not have, or what is worn', () => {
     const hero = newHero();
-    hero.pack.push(ITEMS.potion);
-    expect(sell(hero, smithy, ITEMS.potion).ok).toBe(false);
-    expect(sell(hero, smithy, ITEMS.steelSword).ok).toBe(false);
-    expect(sell(hero, smithy, ITEMS.rustySword).ok).toBe(false); // worn, not in the pack
+    hero.pack.push(itemOf('potion'));
+    expect(sell(hero, smithy, itemOf('potion')).ok).toBe(false);
+    expect(sell(hero, smithy, itemOf('steelSword')).ok).toBe(false);
+    expect(sell(hero, smithy, itemOf('rustySword')).ok).toBe(false); // worn, not in the pack
     expect(hero.gold).toBe(0);
-    expect(hero.pack).toEqual([ITEMS.potion]);
+    expect(hero.pack).toEqual([itemOf('potion')]);
   });
 });
 

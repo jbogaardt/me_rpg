@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "start": "landing",
+  "nodes": [
+    {
+      "node_id": "landing",
+      "biome_type": "cinder_coast",
+      "entities": [
+        { "entity": "castaway", "x": 38, "y": 42 },
+        { "entity": "cinderImp", "x": 28, "y": 30 },
+        { "entity": "cinderImp", "x": 44, "y": 30 }
+      ],
+      "choices": [
+        {
+          "text": "Make camp and help the Keeper",
+          "next": "cinder_coast"
+        },
+        {
+          "text": "Climb straight to the caldera",
+          "next": "ember_caldera",
+          "requires": {
+            "stat": "level",
+            "min": 4
+          }
+        }
+      ]
+    },
+    {
+      "node_id": "cinder_coast",
+      "biome_type": "cinder_coast",
+      "entities": [
+        { "entity": "cinderImp", "x": 24, "y": 28 },
+        { "entity": "cinderImp", "x": 20, "y": 30 },
+        { "entity": "cinderImp", "x": 46, "y": 26 },
+        { "entity": "cinderImp", "x": 50, "y": 24 },
+        { "entity": "ashHound", "x": 16, "y": 12 },
+        { "entity": "ashHound", "x": 52, "y": 44 },
+        { "entity": "emberCaster", "x": 58, "y": 22 },
+        { "entity": "castaway", "x": 38, "y": 42 }
+      ],
+      "choices": []
+    },
+    {
+      "node_id": "ember_caldera",
+      "biome_type": "ember_caldera",
+      "entities": [
+        { "entity": "emberCaster", "x": 12, "y": 20 },
+        { "entity": "emberCaster", "x": 38, "y": 20 },
+        { "entity": "emberCaster", "x": 14, "y": 9 },
+        { "entity": "emberCaster", "x": 36, "y": 9 },
+        { "entity": "magmaBrute", "x": 10, "y": 26 },
+        { "entity": "obsidianWarden", "x": 25, "y": 6 }
+      ],
+      "choices": []
+    }
+  ]
+}

@@ -63,7 +63,9 @@ export class HostLink {
     this.events = [];
     this.feeds.clear();
     this.snapTimer = 0;
+    this.arena.setDm(this.arena.local, true); // hosting is running the world: the host is the Dungeon Master
     this.reconcile();
+    this.arena.applyTags();
   }
 
   /** The game stopped being a host: the friends' players leave, each with a notice floating where they stood. */
@@ -73,6 +75,7 @@ export class HostLink {
       this.remove(slot, (p) => this.sim.text(p.body.x, p.body.y - 54, `${playerName(slot)} left`, 0xffffff));
     }
     arena.local.body.setTag(null);
+    arena.setDm(arena.local, false); // back to playing their own hero, as they left it
     this.trading.reset();
   }
 

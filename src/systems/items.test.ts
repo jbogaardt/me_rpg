@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Outfit } from '../sprites/doll';
 import { GEAR_SLOTS, newHero, type GearSlot, type Item } from './combat';
-import { equip, ITEMS } from './items';
+import { equip, ITEMS, itemOf } from './items';
 import { SHOPS } from './shops';
 
 const everything = Object.entries(ITEMS);
@@ -18,7 +18,7 @@ describe('ITEMS', () => {
 
   it('keeps supplies out of the gear slots and gives them something to restore', () => {
     for (const [id, item] of everything.filter(([, i]) => !('slot' in i))) {
-      const use = (item as Item).use;
+      const use = item.use;
       expect((use?.hp ?? 0) + (use?.mp ?? 0) + (use?.food ?? 0) + (use?.water ?? 0) > 0, id).toBe(true);
     }
   });
@@ -86,13 +86,17 @@ describe('ITEMS', () => {
 describe('equip', () => {
   it('replaces only the slot the item belongs to', () => {
     const hero = newHero();
-    equip(hero, ITEMS.vikingHelm);
-    equip(hero, ITEMS.kiteShield);
-    equip(hero, ITEMS.shortBow);
-    expect(hero).toMatchObject({ head: ITEMS.vikingHelm, offhand: ITEMS.kiteShield, weapon: ITEMS.shortBow });
-    equip(hero, ITEMS.greatHelm);
-    expect(hero.head).toBe(ITEMS.greatHelm);
-    expect(hero.cape).toBe(ITEMS.travelerCloak);
+    equip(hero, itemOf('vikingHelm'));
+    equip(hero, itemOf('kiteShield'));
+    equip(hero, itemOf('shortBow'));
+    expect(hero).toMatchObject({
+      head: itemOf('vikingHelm'),
+      offhand: itemOf('kiteShield'),
+      weapon: itemOf('shortBow'),
+    });
+    equip(hero, itemOf('greatHelm'));
+    expect(hero.head).toBe(itemOf('greatHelm'));
+    expect(hero.cape).toBe(itemOf('travelerCloak'));
   });
 
   it('refuses an item with no slot', () => {

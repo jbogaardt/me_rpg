@@ -1,0 +1,395 @@
+{
+  "version": 1,
+  "biomes": {
+    "beach": {
+      "name": "Hourglass Shore",
+      "tint": "#a4e6ff",
+      "map": "beach",
+      "climate": "coast",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "trees_dry.png",
+        "object-layer.png",
+        "trees_green.png",
+        "interior.png",
+        "trees_jungle.png",
+        "trees_dead.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["raider", "wolfkin", "shade", "raider"],
+            "count": 6,
+            "seed": 104,
+            "apart": 12,
+            "avoid": [{ "x": 55, "y": 26, "radius": 14 }]
+          }
+        ]
+      },
+      "links": ["desert", "undead", "jungle"]
+    },
+    "desert": {
+      "name": "The Sunscar Desert",
+      "tint": "#ffc468",
+      "map": "desert",
+      "climate": "desert",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "dry_cliffs.png",
+        "trees_dry.png",
+        "object-layer.png",
+        "trees_green.png",
+        "trees_dead.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["raider", "orc", "raider", "mummy", "raider", "skeleton"],
+            "count": 14,
+            "seed": 103,
+            "apart": 12,
+            "avoid": [{ "x": 14, "y": 98, "radius": 20 }]
+          }
+        ]
+      },
+      "links": ["greenwood", "beach"]
+    },
+    "eastwood": {
+      "name": "The Eastwood",
+      "tint": "#a6e07c",
+      "map": "eastwood",
+      "climate": "temperate",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "lpc_swamp.png",
+        "Cliff_tileset.png",
+        "trees_jungle.png",
+        "object-layer.png",
+        "interior.png",
+        "trees_dead.png",
+        "trees_swamp.png",
+        "trees_green.png",
+        "trees_frost.png",
+        "frost_objects.png",
+        "town.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["wolfkin", "skeleton", "goblin", "shade", "zombie"],
+            "count": 7,
+            "seed": 102,
+            "apart": 12,
+            "avoid": [{ "x": 46, "y": 56, "radius": 16 }]
+          }
+        ]
+      },
+      "links": ["greenwood", "frostlands", "jungle"]
+    },
+    "frostlands": {
+      "name": "The Frostlands",
+      "tint": "#d6f2ff",
+      "map": "frostlands",
+      "climate": "frost",
+      "music": null,
+      "tilesets": [
+        "lpc_swamp.png",
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "frost_ground.png",
+        "Cliff_tileset.png",
+        "frost_cliffs.png",
+        "trees_jungle.png",
+        "object-layer.png",
+        "trees_swamp.png",
+        "trees_green.png",
+        "interior.png",
+        "trees_frost.png",
+        "frost_objects.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["frostbound", "warg", "frostWarden", "snowman", "skeleton", "troll", "hexer", "snowman"],
+            "count": 10,
+            "seed": 109,
+            "apart": 12,
+            "avoid": [{ "x": 118, "y": 64, "radius": 16 }]
+          }
+        ]
+      },
+      "links": ["town", "eastwood", "marsh"]
+    },
+    "greenwood": {
+      "name": "The Greenwood",
+      "tint": "#c8f28a",
+      "map": "greenwood",
+      "climate": "temperate",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "Cliff_tileset.png",
+        "trees_dry.png",
+        "object-layer.png",
+        "trees_green.png",
+        "trees_jungle.png",
+        "trees_dead.png",
+        "interior.png",
+        "town.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["goblin", "wolfkin", "goblin", "shade", "goblin", "wolfkin"],
+            "count": 14,
+            "seed": 101,
+            "apart": 12,
+            "avoid": [{ "x": 138, "y": 108, "radius": 34 }]
+          }
+        ]
+      },
+      "links": ["town", "desert", "undead", "eastwood"]
+    },
+    "jungle": {
+      "name": "The Tuskwood Jungle",
+      "tint": "#62e08c",
+      "map": "jungle",
+      "climate": "jungle",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "lpc_swamp.png",
+        "Cliff_tileset.png",
+        "trees_green.png",
+        "object-layer.png",
+        "interior.png",
+        "trees_jungle.png",
+        "trees_swamp.png",
+        "trees_dead.png",
+        "trees_frost.png",
+        "frost_objects.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["warg", "orc", "warg", "tuskGuard", "orc"],
+            "count": 9,
+            "seed": 106,
+            "apart": 12,
+            "avoid": [{ "x": 63, "y": 70, "radius": 16 }]
+          }
+        ]
+      },
+      "links": ["eastwood", "beach", "undead", "wetlands", "marsh"]
+    },
+    "marsh": {
+      "name": "Gloamfen Marsh",
+      "tint": "#9dbb6a",
+      "map": "marsh",
+      "climate": "swamp",
+      "music": null,
+      "tilesets": [
+        "ground_tiles.png",
+        "lpc_terrain.png",
+        "lpc_swamp.png",
+        "Cliff_tileset.png",
+        "trees_jungle.png",
+        "object-layer.png",
+        "trees_swamp.png",
+        "trees_green.png",
+        "interior.png",
+        "trees_frost.png",
+        "frost_objects.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["bogGhoul", "hexer", "troll"],
+            "count": 3,
+            "seed": 108,
+            "apart": 12,
+            "avoid": [{ "x": 43, "y": 35, "radius": 14 }]
+          }
+        ]
+      },
+      "links": ["jungle", "wetlands", "frostlands"]
+    },
+    "shop_apothecary": {
+      "name": "The Apothecary's Shop",
+      "map": "shop_apothecary",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {},
+      "links": ["town"]
+    },
+    "shop_armory": {
+      "name": "The Armorer's Hall",
+      "map": "shop_armory",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {},
+      "links": ["town"]
+    },
+    "shop_ranger": {
+      "name": "The Ranger's Lodge",
+      "map": "shop_ranger",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {},
+      "links": ["town"]
+    },
+    "shop_smithy": {
+      "name": "The Smith's Forge",
+      "map": "shop_smithy",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {},
+      "links": ["town"]
+    },
+    "shop_wizard": {
+      "name": "The Wizard's Sanctum",
+      "map": "shop_wizard",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {},
+      "links": ["town"]
+    },
+    "town": {
+      "name": "Lanternrest",
+      "tint": "#ffdc9a",
+      "map": "town",
+      "climate": "temperate",
+      "music": null,
+      "tilesets": [
+        "ground_tiles.png",
+        "lpc_terrain.png",
+        "trees_green.png",
+        "object-layer.png",
+        "interior.png",
+        "trees_frost.png",
+        "frost_objects.png",
+        "town.png"
+      ],
+      "generation": {},
+      "links": [
+        "greenwood",
+        "frostlands",
+        "shop_smithy",
+        "shop_armory",
+        "shop_apothecary",
+        "shop_ranger",
+        "shop_wizard"
+      ]
+    },
+    "training_adept": {
+      "name": "The Adept Training Hall",
+      "map": "training_adept",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
+      "generation": {},
+      "links": []
+    },
+    "training_apprentice": {
+      "name": "The Apprentice Training Hall",
+      "map": "training_apprentice",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
+      "generation": {},
+      "links": []
+    },
+    "training_journeyman": {
+      "name": "The Journeyman Training Hall",
+      "map": "training_journeyman",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
+      "generation": {},
+      "links": []
+    },
+    "training_novice": {
+      "name": "The Novice Training Hall",
+      "map": "training_novice",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
+      "generation": {},
+      "links": []
+    },
+    "undead": {
+      "name": "The Barrow Lands",
+      "tint": "#b394d6",
+      "map": "undead",
+      "climate": "undead",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "trees_dry.png",
+        "object-layer.png",
+        "trees_green.png",
+        "trees_jungle.png",
+        "interior.png",
+        "trees_dead.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["skeleton", "zombie", "zombie", "skeleton", "shade"],
+            "count": 10,
+            "seed": 105,
+            "apart": 12,
+            "avoid": [{ "x": 74, "y": 66, "radius": 16 }]
+          }
+        ]
+      },
+      "links": ["greenwood", "beach", "jungle"]
+    },
+    "wetlands": {
+      "name": "The Mirewater",
+      "tint": "#8cc48a",
+      "map": "wetlands",
+      "climate": "swamp",
+      "music": null,
+      "tilesets": [
+        "ground_tiles.png",
+        "lpc_terrain.png",
+        "lpc_swamp.png",
+        "trees_jungle.png",
+        "object-layer.png",
+        "interior.png",
+        "trees_swamp.png",
+        "trees_green.png",
+        "trees_dead.png",
+        "trees_frost.png",
+        "frost_objects.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["hexer", "bogGhoul", "warg", "zombie", "hexer"],
+            "count": 8,
+            "seed": 107,
+            "apart": 12,
+            "avoid": [{ "x": 70, "y": 30, "radius": 16 }]
+          }
+        ]
+      },
+      "links": ["jungle", "marsh"]
+    }
+  }
+}

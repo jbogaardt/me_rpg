@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { PARTS, WHOLE_BODIES } from '../../sprites/parts';
 import { SLOTS, outfitLayers, outfitParts, type Outfit, type PartManifest } from '../../src/sprites/doll';
 import { MOB_KINDS } from '../../src/systems/combat';
-import { ITEMS } from '../../src/systems/items';
+import { itemOf } from '../../src/systems/items';
 import { allPlayerOutfits, heroOutfit, HERO_BASE, NPC_LOOKS, PLAYER_BASES } from '../../src/systems/looks';
 import { newHero } from '../../src/systems/combat';
 import { ROOT } from '../map/image';
@@ -50,14 +50,14 @@ describe('sprite parts', () => {
 describe('hero gear looks', () => {
   it('starts with a sword and a cloak, drawn over the base clothes', () => {
     const o = heroOutfit(newHero());
-    expect(o.weapon).toBe(ITEMS.rustySword.look.weapon);
-    expect(o.cape).toBe(ITEMS.travelerCloak.look.cape);
+    expect(o.weapon).toBe(itemOf('rustySword').look!.weapon);
+    expect(o.cape).toBe(itemOf('travelerCloak').look!.cape);
     expect(o.torso).toBe(HERO_BASE.torso);
   });
 
   it('armor replaces base clothes in the slots it sets and leaves the rest', () => {
     const hero = newHero();
-    hero.chest = ITEMS.plateArmor;
+    hero.chest = itemOf('plateArmor');
     const o = heroOutfit(hero);
     expect(o.torso).toBe('torso.plate_steel');
     expect(o.hair).toBe(HERO_BASE.hair);

@@ -3,6 +3,7 @@
 import { CELL } from '../../map/types';
 
 export const SPEED = 120; // pixels per second
+export const DM_SPEED = 180; // the Dungeon Master gets about the world faster than the party
 export const ATTACK_COOLDOWN = 0.35;
 export const COMBO_COOLDOWN = 0.5; // seconds between two combos
 export const MELEE_REACH = 22; // radius of the sword's hit circle, centred just in front of the hero

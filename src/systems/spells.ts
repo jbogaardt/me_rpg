@@ -5,7 +5,7 @@
 // A combo is a string over u/d/l/r (up, down, left, right): five taps on a first-tier weapon, six on a second-tier one.
 // Two taps of the same direction never follow each other (on the on-screen pad a repeat means going back through the
 // middle, and the reader ignores a repeated tap), no combo is hidden inside another of the same weapon or inside a skill's
-// (systems/skills.ts), and **no spell is on two weapons**: each wand and tome has its own set, see items.ts.
+// (systems/skills.ts), and **no spell is on two weapons**: each wand and tome has its own set, see each campaign's items.json.
 
 export type ComboKey = 'u' | 'd' | 'l' | 'r';
 

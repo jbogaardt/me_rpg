@@ -101,6 +101,12 @@
    "z": 10
   }
  ],
+ "body.snowman": [
+  {
+   "file": "body.snowman.0.png",
+   "z": 10
+  }
+ ],
  "body.zombie": [
   {
    "file": "body.zombie.0.png",

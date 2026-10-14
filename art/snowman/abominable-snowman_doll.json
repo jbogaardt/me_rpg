@@ -1,0 +1,264 @@
+{
+ "cells": {
+  "walk.up": {
+   "tag": "walk_up",
+   "frames": [
+    0,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+   ]
+  },
+  "walk.left": {
+   "tag": "walk_left",
+   "frames": [
+    4,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31
+   ]
+  },
+  "walk.down": {
+   "tag": "walk_down",
+   "frames": [
+    8,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39
+   ]
+  },
+  "walk.right": {
+   "tag": "walk_right",
+   "frames": [
+    12,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47
+   ]
+  },
+  "idle.up": {
+   "tag": "idle_up",
+   "frames": [
+    0,
+    2
+   ]
+  },
+  "idle.left": {
+   "tag": "idle_left",
+   "frames": [
+    4,
+    6
+   ]
+  },
+  "idle.down": {
+   "tag": "idle_down",
+   "frames": [
+    8,
+    10
+   ]
+  },
+  "idle.right": {
+   "tag": "idle_right",
+   "frames": [
+    12,
+    14
+   ]
+  },
+  "cast.up": {
+   "tag": "smash_up",
+   "frames": [
+    48,
+    49,
+    50,
+    50,
+    52,
+    52,
+    53
+   ]
+  },
+  "cast.left": {
+   "tag": "smash_left",
+   "frames": [
+    54,
+    55,
+    56,
+    56,
+    58,
+    58,
+    59
+   ]
+  },
+  "cast.down": {
+   "tag": "smash_down",
+   "frames": [
+    60,
+    61,
+    62,
+    62,
+    64,
+    64,
+    65
+   ]
+  },
+  "cast.right": {
+   "tag": "smash_right",
+   "frames": [
+    66,
+    67,
+    68,
+    68,
+    70,
+    70,
+    71
+   ]
+  },
+  "hurt.any": {
+   "tag": "death_right",
+   "frames": [
+    76,
+    77,
+    78,
+    79,
+    79,
+    79
+   ]
+  },
+  "slash.up": {
+   "tag": "smash_up",
+   "frames": [
+    48,
+    49,
+    50,
+    51,
+    52,
+    53
+   ]
+  },
+  "slash.left": {
+   "tag": "smash_left",
+   "frames": [
+    54,
+    55,
+    56,
+    57,
+    58,
+    59
+   ]
+  },
+  "slash.down": {
+   "tag": "smash_down",
+   "frames": [
+    60,
+    61,
+    62,
+    63,
+    64,
+    65
+   ]
+  },
+  "slash.right": {
+   "tag": "smash_right",
+   "frames": [
+    66,
+    67,
+    68,
+    69,
+    70,
+    71
+   ]
+  },
+  "shoot.up": {
+   "tag": "smash_up",
+   "frames": [
+    48,
+    48,
+    48,
+    48,
+    48,
+    48,
+    49,
+    50,
+    50,
+    51,
+    52,
+    52,
+    53
+   ]
+  },
+  "shoot.left": {
+   "tag": "smash_left",
+   "frames": [
+    54,
+    54,
+    54,
+    54,
+    54,
+    54,
+    55,
+    56,
+    56,
+    57,
+    58,
+    58,
+    59
+   ]
+  },
+  "shoot.down": {
+   "tag": "smash_down",
+   "frames": [
+    60,
+    60,
+    60,
+    60,
+    60,
+    60,
+    61,
+    62,
+    62,
+    63,
+    64,
+    64,
+    65
+   ]
+  },
+  "shoot.right": {
+   "tag": "smash_right",
+   "frames": [
+    66,
+    66,
+    66,
+    66,
+    66,
+    66,
+    67,
+    68,
+    68,
+    69,
+    70,
+    70,
+    71
+   ]
+  }
+ },
+ "fallbacks": []
+}

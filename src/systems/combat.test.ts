@@ -1,5 +1,5 @@
 import { mobAttack, REACH } from '../entities/Mob';
-import { ITEMS } from './items';
+import { itemOf } from './items';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   attackPower,
@@ -86,23 +86,23 @@ describe('power helpers', () => {
     expect(attackPower(hero)).toBe(hero.stats.attack + (hero.weapon.attack ?? 0));
     expect(defensePower(hero)).toBe(hero.stats.defense + (hero.cape?.defense ?? 0));
     expect(spellPower(hero)).toBe(hero.stats.magic); // a sword adds nothing to spells
-    hero.weapon = ITEMS.apprenticeWand;
-    expect(spellPower(hero)).toBe(hero.stats.magic + ITEMS.apprenticeWand.focus.power);
+    hero.weapon = itemOf('apprenticeWand');
+    expect(spellPower(hero)).toBe(hero.stats.magic + itemOf('apprenticeWand').focus!.power);
   });
 
   it('count every piece of gear: armor and shields add defense, a second blade adds attack', () => {
     const hero = newHero();
     const [attack, defense] = [attackPower(hero), defensePower(hero)];
     Object.assign(hero, {
-      head: ITEMS.greatHelm,
-      chest: ITEMS.plateArmor,
-      legs: ITEMS.steelGreaves,
-      feet: ITEMS.steelBoots,
-      offhand: ITEMS.parryingDagger,
+      head: itemOf('greatHelm'),
+      chest: itemOf('plateArmor'),
+      legs: itemOf('steelGreaves'),
+      feet: itemOf('steelBoots'),
+      offhand: itemOf('parryingDagger'),
     });
     expect(defensePower(hero)).toBe(defense + 3 + 4 + 2 + 2);
     expect(attackPower(hero)).toBe(attack + 2);
-    hero.offhand = ITEMS.kiteShield;
+    hero.offhand = itemOf('kiteShield');
     expect(attackPower(hero)).toBe(attack);
     expect(defensePower(hero)).toBe(defense + 3 + 4 + 2 + 2 + 3);
   });

@@ -2,7 +2,19 @@ import { Character } from '../../entities/Character';
 import { Player } from '../../entities/Player';
 import type { Role } from '../../net/session';
 import { newHero, type Hero } from '../../systems/combat';
-import { heroOutfit, PLAYER_COLORS, playerName, playerOutfit, playerTag } from '../../systems/looks';
+import {
+  DM_COLOR,
+  DM_LOOK,
+  DM_NAME,
+  DM_SLOT,
+  DM_TAG,
+  heroOutfit,
+  PLAYER_COLORS,
+  playerName,
+  playerOutfit,
+  playerTag,
+} from '../../systems/looks';
+import type { Outfit } from '../../sprites/doll';
 import type { Wardrobe } from '../../sprites/Wardrobe';
 import type { ZoneMemory, ZoneState } from '../ZoneState';
 
@@ -130,6 +142,14 @@ export class Arena {
     return this.everyone().filter((p) => p.zone === this.zone.name);
   }
 
+  /**
+   * The party in the zone being worked in: the players the rules are about (who mobs hunt and hurt, who shares a kill,
+   * whom a heal reaches). The Dungeon Master is drawn with `players()` but is never one of these.
+   */
+  party(): Player[] {
+    return this.players().filter((p) => !p.dm);
+  }
+
   /** The player with this number, if they are in the zone being worked in. */
   playerNumbered(slot: number | undefined): Player | undefined {
     return this.players().find((p) => p.slot === slot);
@@ -143,10 +163,11 @@ export class Arena {
   /** Every character that blocks others in the zone being worked in. */
   bodies(): Character[] {
     return [
-      ...this.players().map((p) => p.body),
+      ...this.party().map((p) => p.body), // the Dungeon Master walks through everyone
       ...(this.npc ? [this.npc] : []),
       ...this.keepers.map((k) => k.body),
       ...this.givers.map((g) => g.body),
+      ...this.zone.folk.map((f) => f.body),
       ...this.mobs.filter((m) => m.alive).map((m) => m.body),
     ];
   }
@@ -158,7 +179,7 @@ export class Arena {
         0,
         z.heroBodies.length,
         ...this.everyone()
-          .filter((p) => p.zone === z.name)
+          .filter((p) => p.zone === z.name && !p.dm)
           .map((p) => p.body),
       );
     }
@@ -166,19 +187,43 @@ export class Arena {
 
   /** In a co-op game every player wears a coloured tag ("P2") over their head, so friends can tell each other apart. */
   applyTags() {
-    for (const p of this.everyone()) p.body.setTag(playerTag(p.slot), PLAYER_COLORS[p.slot]);
+    for (const p of this.everyone())
+      p.body.setTag(p.dm ? DM_TAG : playerTag(p.slot), p.dm ? DM_COLOR : PLAYER_COLORS[p.slot]);
+  }
+
+  /** How a player looks: the Dungeon Master's robe, else their own clothes with their gear over them. */
+  outfitOf(p: Player): Outfit {
+    return p.dm ? DM_LOOK : playerOutfit(p.slot, p.hero);
   }
 
   /** Redraw a player (the local one by default) for what they now wear. */
   refreshLook(p: Player = this.local) {
-    p.body.setSheet(this.wardrobe.sheet(playerOutfit(p.slot, p.hero)));
+    p.body.setSheet(this.wardrobe.sheet(this.outfitOf(p)));
+  }
+
+  /**
+   * Make a player the Dungeon Master or a hero again: their look, ring, tag and name follow, and the mobs and blocking
+   * stop (or start) counting them.
+   */
+  setDm(p: Player, dm: boolean) {
+    if (p.dm === dm) return;
+    p.setDm(dm);
+    p.drinking = null;
+    p.pendingShot = null;
+    p.body.alpha = 1;
+    p.body.setOffset(0, 0);
+    p.body.setTint(0xffffff);
+    this.refreshLook(p);
+    this.syncHeroBodies();
   }
 
   /** Put another player in the world. Their stats are theirs alone: they start as a fresh hero. */
   addRemote(slot: number, where: ZoneState = this.zone): Player {
     const hero = newHero();
-    hero.name = playerName(slot);
-    const remote = new Player(this.wardrobe.sheet(playerOutfit(slot, hero)), hero, slot);
+    const dm = slot === DM_SLOT; // online, player 0 is the host, and the host is the Dungeon Master
+    hero.name = dm ? DM_NAME : playerName(slot);
+    const remote = new Player(this.wardrobe.sheet(dm ? DM_LOOK : playerOutfit(slot, hero)), hero, slot);
+    remote.setDm(dm);
     remote.zone = where.name;
     where.world.layer.addChild(remote.body);
     this.remotes.set(slot, remote);

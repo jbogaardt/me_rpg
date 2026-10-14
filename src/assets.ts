@@ -6,6 +6,10 @@ import { type PetSheet } from './systems/pets';
 import { MOB_KINDS } from './systems/combat';
 import { outfitParts, type Outfit, type PartManifest } from './sprites/doll';
 import { Wardrobe } from './sprites/Wardrobe';
+import { AssembledSource } from './content/AssembledSource';
+import { LiveSource } from './content/LiveSource';
+import type { ContentSource } from './content/ContentManager';
+import type { ContentFile } from './content/schema';
 
 // Game assets go through the Pixi `Assets` cache: the character part manifest at boot (the part layers themselves are
 // plain images loaded by sprites/Wardrobe.ts), and one bundle per zone (its map JSON, then the tilesets that JSON names)
@@ -23,6 +27,35 @@ const publicUrl = (path: string) => {
 };
 const tilesetUrl = (file: string) => publicUrl(`tilesets/${file}`);
 const zoneUrl = (zone: string) => publicUrl(`maps/${zone}.json`);
+
+/** A campaign's content (public/content/<campaign>/*.json) served as static files: the source ContentManager reads at boot. */
+export const staticContent = (campaign: string): ContentSource => ({
+  fetch(file: ContentFile) {
+    const alias = `content:${campaign}:${file}`;
+    register(alias, publicUrl(`content/${campaign}/${file}.json`), 'json');
+    return Assets.load(alias);
+  },
+});
+
+/** A random campaign assembled with `seed` from the packs (public/content/packs/, src/content/packs.ts). */
+export const packContent = (seed: number): AssembledSource =>
+  new AssembledSource(seed, (name) => {
+    const alias = `content:packs:${name}`;
+    register(alias, publicUrl(`content/packs/${name}.json`), 'json');
+    return Assets.load(alias);
+  });
+
+/** A live world opened with `seed` (and `arc`, if named) from the packs, grown during play (content/world.ts). */
+export const liveContent = (seed: number, arc?: string): LiveSource =>
+  new LiveSource(
+    seed,
+    (name) => {
+      const alias = `content:packs:${name}`;
+      register(alias, publicUrl(`content/packs/${name}.json`), 'json');
+      return Assets.load(alias);
+    },
+    arc,
+  );
 
 /** A loaded bundle entry, or a clear error instead of an undefined texture later. */
 function pick(loaded: Record<string, Texture>, key: string): Texture {
@@ -47,8 +80,9 @@ export interface Sprites {
 const LPC_DIR = 'sprites/lpc/';
 
 /** Every sprite part the game can show without further loading: hero gear, NPC looks and every mob kind. */
-function requiredParts(): Set<string> {
+function requiredParts(extra: Outfit[]): Set<string> {
   const outfits: Outfit[] = [
+    ...extra,
     ...allPlayerOutfits(),
     ...Object.values(NPC_LOOKS),
     ...Object.values(MOB_KINDS).map((k) => k.look),
@@ -62,11 +96,12 @@ export async function initAssets() {
 }
 
 /** Load the character part manifest and the art for everything in `requiredParts()`, then return the wardrobe. */
-export async function loadSprites(onProgress?: Progress): Promise<Sprites> {
+/** `extra`: looks to load beyond the installed content's (a live world's, which may come to need any pack's). */
+export async function loadSprites(onProgress?: Progress, extra: Outfit[] = []): Promise<Sprites> {
   Assets.add({ alias: 'sprites:parts', src: publicUrl(`${LPC_DIR}parts.json`), parser: 'json' });
   const manifest = await Assets.load<PartManifest>('sprites:parts');
   const wardrobe = new Wardrobe(manifest, (file) => publicUrl(LPC_DIR + file));
-  await wardrobe.load(requiredParts(), onProgress);
+  await wardrobe.load(requiredParts(extra), onProgress);
   Assets.add({ alias: 'sprites:chests', src: tilesetUrl('chests.png') });
   Assets.add({ alias: 'sprites:crops', src: tilesetUrl('crops.png') });
   const pets = {} as Record<PetSheet, Texture>;
@@ -101,11 +136,16 @@ const tilesetAlias = (sheet: string) => `tileset:${sheet}`;
 
 /**
  * Load a zone: its map JSON (validated), then the tilesets it names (shared with other zones: each is loaded once and
- * counted, see `unloadZone`). Progress covers the tilesets.
+ * counted, see `unloadZone`). Progress covers the tilesets. `tilesets` (the biome's list in the content, which the map
+ * build keeps equal to the map's) start loading at once, alongside the map JSON, instead of after it.
  */
-export async function loadZone(name: string, onProgress?: Progress): Promise<Zone> {
+export async function loadZone(name: string, onProgress?: Progress, tilesets?: string[]): Promise<Zone> {
   const dataAlias = `zone:${name}:data`;
   register(dataAlias, zoneUrl(name), 'json');
+  for (const sheet of tilesets ?? []) {
+    register(tilesetAlias(sheet), tilesetUrl(sheet));
+    void Assets.load<Texture>(tilesetAlias(sheet)).catch(() => {}); // a head start only: the real load below reports failures
+  }
   const data = parseMap(await Assets.load(dataAlias));
   for (const sheet of data.sheets) {
     register(tilesetAlias(sheet), tilesetUrl(sheet));

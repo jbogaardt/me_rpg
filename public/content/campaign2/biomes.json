@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "biomes": {
+    "cinder_coast": {
+      "name": "The Cinder Coast",
+      "tint": "#ff9a4a",
+      "map": "emberfall_coast",
+      "ports": { "north": { "map": "emberfall_caldera", "port": "south" } },
+      "climate": "undead",
+      "music": null,
+      "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png", "interior.png"],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["cinderImp", "ashHound", "cinderImp", "emberCaster"],
+            "count": 8,
+            "seed": 201,
+            "apart": 10,
+            "avoid": [{ "x": 35, "y": 40, "radius": 12 }]
+          }
+        ]
+      },
+      "links": ["emberfall_caldera"]
+    },
+    "ember_caldera": {
+      "name": "The Ember Caldera",
+      "tint": "#ff5a2a",
+      "map": "emberfall_caldera",
+      "ports": { "south": { "map": "emberfall_coast", "port": "north" } },
+      "climate": "undead",
+      "music": null,
+      "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["emberCaster", "magmaBrute"],
+            "count": 4,
+            "seed": 202,
+            "apart": 9,
+            "avoid": [
+              { "x": 25, "y": 32, "radius": 8 },
+              { "x": 25, "y": 5, "radius": 7 }
+            ]
+          }
+        ]
+      },
+      "links": ["emberfall_coast"]
+    }
+  }
+}

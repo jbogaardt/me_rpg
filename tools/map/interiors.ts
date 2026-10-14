@@ -1,7 +1,6 @@
 // The inside of a shop: one small room per shop, built the same way for all four. The zone spec in maps/shop_<id>.ts
 // says where the door leads back to (the cell below the building's door in the overworld).
 
-import { SHOPS } from '../../src/systems/shops';
 import type { PrefabName } from './catalog';
 import type { ZoneApi } from './zone';
 
@@ -17,7 +16,6 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
  * front. `out` is where the door leads back to in the overworld.
  */
 export function shopInterior(z: ZoneApi, id: string, out: { zone: string; col: number; row: number }) {
-  if (!SHOPS[id]) throw new Error(`Unknown shop "${id}"`);
   z.indoor();
   z.fill('planks');
   z.fill('wall', { col: 0, row: 0, w: SHOP_ROOM.width, h: 2 });

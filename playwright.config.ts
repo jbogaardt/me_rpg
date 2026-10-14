@@ -28,7 +28,8 @@ export default defineConfig({
       url: 'http://localhost:4173',
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
-      env: { VITE_RELAY_URL: 'http://localhost:8787' },
+      // and against campaign 1, the world the tests were written for (E2E_CAMPAIGN picks another: campaign2...).
+      env: { VITE_RELAY_URL: 'http://localhost:8787', VITE_CAMPAIGN: process.env.E2E_CAMPAIGN || 'campaign1' },
     },
     {
       // The same relay code the Worker runs, in memory. See tools/relay/dev-server.ts.

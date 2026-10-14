@@ -114,14 +114,14 @@ export default defineBiome({
     z.pet('rat', ...near(31.2, 9.0));
 
     z.chest('oak', 'elixir', ...near(28.9, 7.6));
-    z.mob('troll', ...near(29.1, 7.8));
-    for (const [kind, x, y] of [
-      ['bogGhoul', 28.6, 8.4],
-      ['bogGhoul', 30.4, 7.4],
-      ['zombie', 30.4, 9.4],
-      ['hexer', 31.2, 8.4],
+    z.keepFree(...near(29.1, 7.8));
+    for (const [x, y] of [
+      [28.6, 8.4],
+      [30.4, 7.4],
+      [30.4, 9.4],
+      [31.2, 8.4],
     ] as const)
-      z.mob(kind, ...near(x, y));
+      z.keepFree(...near(x, y));
 
     // --- Life: reeds on the banks (beside the water, never in it), lily pads where the water is open ----------------
     const land = (c: number, r: number) => z.free(c, r) && !isWater(c, r);
@@ -160,8 +160,5 @@ export default defineBiome({
     // --- Names for the map: each shows once the player has explored round it ---------------------------------------
     z.place('The Drowned Causeway', 300, 84);
     z.place("The Troll's Isle", 290, 77);
-
-    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['bogGhoul', 'hexer', 'troll'], { count: 3, seed: 108, avoid: [[...near(30, 8.4), 14]] });
   },
 });

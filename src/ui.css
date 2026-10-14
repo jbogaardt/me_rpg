@@ -12,7 +12,7 @@
   --grad-xp: linear-gradient(90deg, #7c230f, #b3632a, #dc9e4c, #f5d175, #fdfca6);
 }
 
-#hud, #touch-controls, #menu, #shop, #dialog, #map-overlay, #trade, #trade-request, #trade-toast {
+#hud, #touch-controls, #menu, #shop, #dialog, #choices, #map-overlay, #trade, #trade-request, #trade-toast {
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
   font-family: var(--body);
 }
@@ -94,6 +94,10 @@
    XP and level are in the pause menu. */
 #hud-stats { display: flex; gap: 6px; flex: 0 1 400px; min-width: 0; margin-right: 8px; padding: 3px 4px; }
 #hud-stats .bar { flex: 1 1 0; min-width: 0; }
+#hud-stats[hidden] { display: none; }
+/* Online, the host is the Dungeon Master: no bars of their own, just who they are. */
+#hud-dm { flex: 0 1 auto; margin-right: auto; padding: 3px 10px; color: #ffd34d; font: 700 14px/18px var(--title); text-shadow: 0 1px 2px #000; }
+#hud-dm[hidden] { display: none; }
 .bar {
   position: relative; height: 14px; overflow: hidden;
   background: #17120c; border: 1px solid var(--gold-dim); border-radius: 2px; box-shadow: inset 0 1px 3px #000;
@@ -113,6 +117,7 @@
 /* Food and water: a second row of bars under HP and MP (Hud.ts sets --frac and the low/empty classes). */
 #hud-stats { flex-wrap: wrap; }
 #hud-needs { display: flex; gap: 6px; flex: 1 1 100%; min-width: 0; }
+#hud-needs[hidden] { display: none; }
 #hud-needs .bar { flex: 1 1 0; min-width: 0; height: 11px; }
 #hud-needs .label { font-size: 9px; line-height: 11px; }
 #hud-food .label::before { content: 'FOOD '; font-weight: 700; }
@@ -290,6 +295,36 @@
 .mp-roster li[data-state='waiting'] { opacity: 0.6; }
 .mp-roster li[data-state='joining'] .state { color: #a86a10; }
 .mp-roster li[data-state='connected'] .state, .mp-roster li[data-state='you'] .state { color: #2f6b2f; }
+/* The Dungeon Master's Party tab (hud/Party.ts): a roster row per player with a Go button. */
+.mp-roster.party .info { flex: 1 1 auto; min-width: 0; line-height: 1.2; }
+.mp-roster.party small { color: var(--ink-soft); font-size: 14px; }
+.mp-roster.party .mp-btn { flex: none; padding: 2px 14px; }
+/* The Story tab (hud/StoryTab.ts): the lands so far, and the roads the story may take next. */
+#menu-story .story-path { font-weight: 600; }
+#menu-story .story-hint, #menu-story .story-note { color: var(--ink-soft); font-size: 15px; }
+#menu-story .story-note { color: #9b2a1c; }
+.story-options { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 6px; }
+.story-options .mp-btn { width: 100%; text-align: left; padding: 6px 10px; }
+.story-options .tally { float: right; color: #ffe9a8; }
+/* The Dials tab (hud/Dials.ts): rows of small buttons, the current one lit. */
+#menu-dials h3 { margin: 10px 0 4px; font: 700 16px var(--title); }
+.dial-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.dial-btn { padding: 3px 10px; font: 600 14px var(--body); color: var(--ink); background: rgba(107, 84, 52, 0.12); border: 1px solid var(--gold-dim); border-radius: 3px; cursor: pointer; }
+.dial-btn.active { background: #6b5434; color: #ffe9a8; }
+.dial-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.dial-list li { display: flex; align-items: center; gap: 4px; }
+.dial-list .dial-name { flex: 1 1 auto; }
+/* The Cast tab (hud/Cast.ts): who may be brought in, and the form for a new person. */
+#menu-cast h3 { margin: 10px 0 4px; font: 700 16px var(--title); }
+.cast-form { display: grid; gap: 6px; margin-top: 6px; }
+.cast-form input, .cast-form select, .cast-form textarea { font: 15px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
+/* A player's view of the DM's vote (hud/VotePanel.ts): a column at the right edge, over the world. */
+#vote { position: fixed; z-index: 3; right: calc(8px + env(safe-area-inset-right)); top: 96px; width: min(260px, 60vw); padding: 6px 8px; }
+#vote[hidden] { display: none; }
+#vote .title { margin: 0 0 6px; font: 700 14px var(--title); color: #ffe9a8; text-align: center; }
+#vote .opts { display: grid; gap: 4px; }
+#vote .mp-btn { text-align: left; font-size: 14px; padding: 4px 8px; }
+#vote .mp-btn.active { filter: brightness(1.35); outline: 2px solid #ffd34d; }
 #mp-note { min-height: 1.3em; margin: 8px 0 0; font-size: 15px; color: var(--ink-soft); }
 #mp-note.error { color: #9b2a1c; font-weight: 600; }
 /* --- Controls tab: key/mouse editor (src/hud/Keybinds.ts) --- */
@@ -487,3 +522,13 @@
 .quest-chapter-title { margin: 0 0 4px; font: 600 15px var(--body); color: var(--ink-soft); letter-spacing: 0.04em; }
 .quest-chapter-title b { color: var(--ink); font-family: var(--title); }
 .quest-chapter { margin: 8px 0 2px; font: 700 14px var(--title); color: var(--ink); }
+
+/* --- Scenario choices (src/hud/Choices.ts): a column of buttons at the right edge --- */
+#choices {
+  position: fixed; z-index: 2; right: calc(12px + env(safe-area-inset-right)); top: 50%; transform: translateY(-50%);
+  width: min(260px, calc(100vw - 32px)); padding: 8px 12px 10px; pointer-events: auto;
+}
+#choices[hidden] { display: none; }
+#choices .title { margin: 0 0 4px; font: 700 15px var(--title); text-align: center; }
+#choices .mp-btn { width: 100%; text-align: left; }
+#choices .needs { display: block; font: 600 11px var(--body); color: #e8dcc0; }

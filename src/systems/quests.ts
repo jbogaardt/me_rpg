@@ -1,5 +1,5 @@
 // The story quests (Pixi-free). A warden in the town hands out one task at a time, in a chain that grows harder and tells
-// the first part of the game's story; the easy ones pay gold and XP, the hard ones also give rare gear (systems/items.ts,
+// the first part of the game's story; the easy ones pay gold and XP, the hard ones also give rare gear (the campaign's items.json,
 // `rare`) that no shop sells. Each hero keeps a `QuestLog` (combat.ts): how many quests are done, whether the current one
 // has been given, and its progress. The rules here either succeed completely or change nothing.
 //
@@ -7,13 +7,15 @@
 // to talk (`DoMsg` op `talk`), is told the answer as a story key (`Talk.key`, turned back into lines with `linesFor`) and
 // is told its log in every `pack` message.
 //
-// Add a quest by adding to QUESTS (the order is the story). Sites (`MapData.sites`, placed with `z.site`) are where gather
-// quests send the player; their kinds are SITE_KINDS.
+// The quests themselves are content: a campaign's public/content/<campaign>/quests.json (givers, site kinds, chapters,
+// the chain in story order, the epilogue), installed into the registries below at boot (`setQuestContent`). Add a quest
+// there. Sites (`MapData.sites`, placed with `z.site`) are where gather quests send the player; their kinds are SITE_KINDS.
 
+import { CELL } from '../map/types';
 import { MOB_KINDS, gainXp, type Hero, type MobKind, type QuestLog } from './combat';
 import { collect } from './chests';
 import { packFree, takeFromPack } from './inventory';
-import { ITEMS, type ItemId } from './items';
+import { itemOf, type ItemId } from './items';
 
 /** Someone who gives quests, standing in a zone (`z.giver(id, col, row)`, MapData.givers). */
 export interface Giver {
@@ -24,16 +26,15 @@ export interface Giver {
   tag: string;
   /** The zone they stand in (where a quest's arrow leads to hand a task in). */
   zone: string;
+  /** What they say when the hero speaks to them and they have nothing to do with the quest the hero is on. */
+  idle?: string[];
 }
 
-export const GIVERS: Record<string, Giver> = {
-  maren: { name: 'Warden Maren', look: 'warden', tag: 'Maren', zone: 'town' },
-  // The training wizard (systems/skills.ts): teaches spells that any weapon can carry. Not part of the quest chain.
-  orin: { name: 'Orin the Trainer', look: 'trainer', tag: 'Trainer', zone: 'shop_wizard' },
-};
+/** The givers of the campaign (its quests.json `givers`), installed by `setQuestContent`. */
+export const GIVERS: Record<string, Giver> = {};
 
-/** The giver whose chain QUESTS is (there is one story so far). */
-export const QUEST_GIVER = 'maren';
+/** The giver whose chain QUESTS is (quests.json `giver`; there is one story per campaign). */
+export let QUEST_GIVER = '';
 
 /** A place a gather quest sends the player to (`MapData.sites`): drawn as a glowing thing that is touched with the action key. */
 export interface SiteKind {
@@ -47,45 +48,8 @@ export interface SiteKind {
   notes: string[][];
 }
 
-export const SITE_KINDS: Record<string, SiteKind> = {
-  glimmercap: {
-    name: 'Glimmercap',
-    shape: 'mushroom',
-    color: 0x7fe8ff,
-    glow: 0x4aa8ff,
-    notes: [
-      ['A glimmercap, glowing softly blue. It is warm to the touch, and something inside it ticks like a tiny heart.'],
-    ],
-  },
-  echostone: {
-    name: 'Echo stone',
-    shape: 'stone',
-    color: 0xb8c4d8,
-    glow: 0xd8b8ff,
-    notes: [
-      [
-        'The stone hums under your hand, and an old voice speaks from inside it:',
-        '"The Great Hourglass turns, and the Vale turns with it. Seed and harvest, frost and thaw. Every hour has its keeper."',
-      ],
-      [
-        'Another voice, low and hurried:',
-        '"Someone climbs the Spire stairs at night. He has a clockmaker\'s hands. He casts no shadow. Do not let him reach the..." The voice breaks off.',
-      ],
-      [
-        'The last stone is cracked, and its voice cracks with it:',
-        '"It broke. The Hourglass broke into five shards. Whoever holds them holds the hours... But look: a child outside the glass, untouched by it..."',
-        'Silence. The runes go dark.',
-      ],
-    ],
-  },
-  hoursand: {
-    name: 'Hourglass sand',
-    shape: 'sand',
-    color: 0xffd86b,
-    glow: 0xffb13f,
-    notes: [['A glittering mound of gold sand. Each grain ticks as it falls, though nothing is falling.']],
-  },
-};
+/** The site kinds of the campaign (quests.json `sites`). */
+export const SITE_KINDS: Record<string, SiteKind> = {};
 
 /** What a quest asks for. */
 export type Objective =
@@ -94,7 +58,11 @@ export type Objective =
   /** Touch `count` different sites of a kind (SITE_KINDS) in `zone`. */
   | { t: 'gather'; site: string; zone: string; count: number }
   /** Hand over `count` of an item from the pack. */
-  | { t: 'bring'; item: ItemId; count: number };
+  | { t: 'bring'; item: ItemId; count: number }
+  /** Speak to the person who `turnIn` names (done the moment the quest is taken: the task is to go and find them). */
+  | { t: 'meet'; count: number }
+  /** Walk to a named place (a `MapData.places` entry) of `zone`: done on arriving within `VISIT_RADIUS` of it. */
+  | { t: 'visit'; place: string; zone: string; count: number };
 
 export interface Reward {
   gold: number;
@@ -113,6 +81,10 @@ export interface Chapter {
 export interface Quest {
   /** Short and stable: story keys are `<id>.offer` and so on. */
   id: string;
+  /** Who hands this quest out (a key of GIVERS); the chain's giver when left out. */
+  giver?: string;
+  /** Who it is handed in to and who pays (a key of GIVERS; a `meet` quest must name one); the one who handed it out when left out. */
+  turnIn?: string;
   /** Index into CHAPTERS. A chapter's quests are next to each other, and its first quest starts with the chapter's intro. */
   chapter: number;
   /** What the hero has learned once this is handed in: one line of the story, kept in the journal on the Quests tab. */
@@ -138,304 +110,38 @@ export interface Quest {
   done: string[];
 }
 
-/** The first part of the story, in four chapters (the quests of a chapter are next to each other in QUESTS). */
-export const CHAPTERS: Chapter[] = [
-  {
-    title: 'The Stilled Hour',
-    intro: [
-      'Ah, you are the stranger from the crossroads. I am Maren, Warden of Lanternrest, and I have watched the road for you.',
-      'Three winters ago, the night the sky cracked, the whole Vale held its breath, and it has not let it out since: clocks stopped, birds fell silent, roads forgot where they led. We call it the Stillness.',
-      'I keep the town lamp burning, because a flame that moves is proof that time still does. Help me keep it moving, and I will teach you what I know.',
-    ],
-  },
-  {
-    title: 'Voices in the Stone',
-    intro: [
-      'You have shown me you can walk where others freeze. Now I must ask you to listen, not fight.',
-      'The old Vale remembered itself in stone, and it is still talking, if someone is quiet enough to hear. It may tell us what broke.',
-    ],
-  },
-  {
-    title: 'The Fallen Sand',
-    intro: [
-      'The Hourglass did not simply break. It scattered. Where its sand fell, the Stillness is thicker, and it has set guards there.',
-      'Whatever is behind this is gathering the pieces. We must find them first, and that means going where the guards are.',
-    ],
-  },
-  {
-    title: 'The Frozen March',
-    intro: [
-      'The road to the Spire runs through the cold east, and the cold east is where the Stillness has marched its soldiers.',
-      'This is the last of what I can ask of you for now, and the hardest. After it, we will know who we are fighting.',
-    ],
-  },
-];
+/** The story's chapters (quests.json `chapters`; the quests of a chapter are next to each other in QUESTS). */
+export const CHAPTERS: Chapter[] = [];
 
-export const QUESTS: Quest[] = [
-  {
-    id: 'road',
-    chapter: 0,
-    learned: 'The Stillness is three winters old, and it has frightened even the goblins out of their burrows.',
-    fieldNote: [
-      'The last goblin drops its dagger and runs for the trees, shaking. Tallies are scratched into every trunk here: three winters of them. It was never hunting you. It was running from something.',
-    ],
-    title: 'Trouble on the Road',
-    goal: 'Drive off 5 goblins',
-    unit: 'goblins',
-    hint: 'Goblins prowl the Greenwood, the wild country around the crossroads. Walk the trails and they will come for you.',
-    where: { zones: ['greenwood'] },
-    objective: { t: 'kill', kind: 'goblin', count: 5 },
-    reward: { gold: 30, xp: 30 },
-    offer: [
-      'The goblins used to keep to their burrows. Now they swarm the Greenwood roads, half mad with fear. Drive off five of them, and I will know what you are made of.',
-    ],
-    remind: ['Five goblins on the Greenwood roads. You will not need to look far; they will find you.'],
-    done: [
-      'Five fewer. The road breathes easier already.',
-      'They are not wicked, you know. Only frightened, and the Stillness feeds on fear. But stay, stranger: there is more I must tell you.',
-    ],
-  },
-  {
-    id: 'glimmer',
-    chapter: 0,
-    learned:
-      'Glimmercaps glow wherever time still flows. The town lamp burns on them, and it is the last light in the Vale.',
-    fieldNote: [
-      'The last glimmercap pulses once, like a heartbeat, then holds steady. Somewhere beyond the hush, time is still running.',
-    ],
-    title: 'Glimmercaps',
-    goal: 'Gather 4 glimmercaps in the Greenwood',
-    unit: 'glimmercaps',
-    hint: 'Glimmercaps glow blue in the groves of the Greenwood. Search the area marked on your map.',
-    where: { zones: ['greenwood'] },
-    objective: { t: 'gather', site: 'glimmercap', zone: 'greenwood', count: 4 },
-    reward: { gold: 50, xp: 45 },
-    offer: [
-      'See the lamp behind me? It burns on glimmercaps, little mushrooms that glow wherever time still flows.',
-      'Our stock is nearly gone, and the Stillness spreads. Search the Greenwood groves for four of them. Touch each with the action key.',
-    ],
-    remind: ['Four glimmercaps, glowing pale blue in the groves of the Greenwood. Touch each one with the action key.'],
-    done: [
-      'Look how the lamp leaps! Where time still flows, light keeps its colour.',
-      'Once the whole Vale ran like that, under the Great Hourglass. Then it broke. I will tell you the rest when you are ready.',
-    ],
-  },
-  {
-    id: 'pack',
-    chapter: 0,
-    learned: 'The Stillness traps whatever it touches in a single moment. For the wolfkin, that moment is hunger.',
-    fieldNote: [
-      "The pack's howl cuts off mid-breath. In the quiet, you notice there are no birds anywhere. You have not heard one since you arrived.",
-    ],
-    title: 'The Hungry Pack',
-    goal: 'Defeat 5 wolfkin',
-    unit: 'wolfkin',
-    hint: 'Wolfkin hunt in the Greenwood and the Eastwood, the forest east of the crossroads.',
-    where: { zones: ['greenwood', 'eastwood'] },
-    objective: { t: 'kill', kind: 'wolfkin', count: 5 },
-    reward: { gold: 70, xp: 70 },
-    offer: [
-      'The wolfkin of the eastern woods were never cruel. They guided travelers home through the snow. Now they hunt in the open, and nothing fills them.',
-      'That is the Stillness: it freezes a single moment, and the creature lives in it forever. For the wolfkin, that moment is hunger.',
-      'I hate to ask it. Thin their numbers before they reach the town: five wolfkin.',
-    ],
-    remind: [
-      'Five wolfkin. Grey fur, quick feet, and they see you from far off. Do not fight them in the open if you can help it.',
-    ],
-    done: [
-      'It is done, then. May they rest easier than they lived.',
-      'Do not pity them too much, though. Pity is how the Stillness gets in.',
-    ],
-  },
-  {
-    id: 'medicine',
-    chapter: 0,
-    learned: 'Shades are the Hollow: what is left of people the Stillness took. They leave a cold that does not heal.',
-    fieldNote: [
-      'The potion is cold in your hand, and so is the air. Somewhere in town, a wounded man is waiting on you.',
-    ],
-    title: 'Medicine for the Watch',
-    goal: 'Bring 1 Elixir from the apothecary',
-    unit: 'elixir',
-    hint: "Buy an Elixir at the Apothecary's Shop on the market square in Lanternrest, then bring it to Maren.",
-    where: { zones: ['town'], door: 'shop_apothecary' },
-    objective: { t: 'bring', item: 'elixir', count: 1 },
-    reward: { gold: 90, xp: 90 },
-    offer: [
-      'Captain Hale of the Watch took a wound from a Shade last night. It left no blood, only a cold that will not leave him.',
-      'An Elixir would warm him. The apothecary on the market square sells them, if you have the coin. Bring me one and I will see him through.',
-    ],
-    remind: ['An Elixir from the apothecary, on the market square, and I will see to the Captain. Hurry, if you can.'],
-    done: [
-      'Bless you. Color is already coming back to his face, and he can speak: he saw what struck him.',
-      'A Shade: a shadow with no one left to cast it. The Hollow, we call them. What the Stillness leaves of people it takes.',
-      'You have more courage than coin, and I know the difference. This is for you.',
-    ],
-  },
-  {
-    id: 'stones',
-    chapter: 1,
-    learned:
-      'The Great Hourglass broke into five shards, and you are untouched by the Stillness: the boy outside time.',
-    fieldNote: [
-      'The runes go dark, but one of them is still faintly warm. The echo said: a child outside the glass. It was talking about you.',
-    ],
-    title: 'Voices in the Stones',
-    goal: 'Touch 3 echo stones in the Greenwood',
-    unit: 'echo stones',
-    hint: 'Echo stones stand at the old ruins in the west of the Greenwood, in the northern glade and by the old lake.',
-    where: { zones: ['greenwood'] },
-    objective: { t: 'gather', site: 'echostone', zone: 'greenwood', count: 3 },
-    reward: { gold: 110, xp: 130, items: ['wayfarersCharm'] },
-    offer: [
-      'Now I can tell you why I sent for you. Grey stones ring the old Greenwood: echo stones. They remember what the Vale once was.',
-      'Touch three of them. Their memory may show us where the Stillness began.',
-      'Go carefully. Shades and goblins haunt the ruins in the west.',
-    ],
-    remind: [
-      'Three echo stones stand in the Greenwood: old grey pillars carved with runes. Touch each with the action key and listen.',
-    ],
-    done: [
-      "You heard it too. The Great Hourglass broke into five shards, and the one who broke it had a clockmaker's hands.",
-      'And that last echo: a child outside the glass, untouched. Stranger, you came from no road I know. The Stillness slides off you like rain. You are outside of time.',
-      'That is why I called for you. You can walk where it freezes everyone else. Take this charm. It will quicken your feet.',
-    ],
-  },
-  {
-    id: 'dead',
-    chapter: 1,
-    learned: 'Where time stops, the dead cannot rest. The graves are only the first place it shows.',
-    fieldNote: [
-      'The last skeleton folds into a heap of bone, and the air relaxes a little, as if something let go of a held breath.',
-    ],
-    title: 'The Restless Dead',
-    goal: 'Lay 6 skeletons to rest',
-    unit: 'skeletons',
-    hint: 'Skeletons walk the Barrow Lands and the Eastwood. They throw bone shards from afar, so keep moving.',
-    where: { zones: ['undead', 'eastwood'] },
-    objective: { t: 'kill', kind: 'skeleton', count: 6 },
-    reward: { gold: 150, xp: 180, items: ['wardensMantle'] },
-    offer: [
-      'Where time stops, the dead cannot rest. Skeletons walk the old graves in the Barrow Lands and the Eastwood, with bone shards in their fingers.',
-      'They keep their distance and throw. Keep moving and they cannot aim, then close in. Put six of them back to sleep.',
-    ],
-    remind: ['Six skeletons. They stay at range and flick bone shards, so keep moving, then close in.'],
-    done: [
-      'Six more at peace. The graves sleep a little deeper tonight.',
-      'My mother wore this mantle when she kept the lamp. It mends what hurts it can. Wear it well.',
-    ],
-  },
-  {
-    id: 'sand',
-    chapter: 2,
-    learned:
-      'The Hourglass sand falls toward the north, toward the Spire, and the Stillness is hunting the shards too.',
-    fieldNote: [
-      'Every grain you hold tilts the same way, north, like a compass needle. Far off, a bell tolls once, and the sand goes still.',
-    ],
-    title: 'Sand and Silence',
-    goal: 'Gather 4 mounds of hourglass sand in the Sunscar Desert',
-    unit: 'mounds',
-    hint: 'Hourglass sand lies scattered across the Sunscar Desert, far to the north-west. Raiders guard the dunes.',
-    where: { zones: ['desert'] },
-    objective: { t: 'gather', site: 'hoursand', zone: 'desert', count: 4 },
-    reward: { gold: 200, xp: 240, items: ['duneglassBoots'] },
-    offer: [
-      'When the Hourglass broke, its sand fell across the Vale. Where it lies, time pools thick and strange. It has gathered in the Sunscar Desert.',
-      'Raiders and worse prowl those dunes. Bring me four pinches and I will read the sand. Touch each glittering mound with the action key.',
-    ],
-    remind: ['Four glittering mounds of hourglass sand in the Sunscar Desert. Mind the raiders.'],
-    done: [
-      'I can read it. Look: every grain falls toward the north, toward the Spire.',
-      'The Stillness gathers where the shards lie, and it is not blind. It hunts them too. The raiders, the orcs, the frozen soldiers in the east: they are all guarding something.',
-      'These boots were made by a sandwalker who never once got lost. Take them.',
-    ],
-  },
-  {
-    id: 'tusk',
-    chapter: 2,
-    learned: 'Something that does not speak is commanding the orcs, and it can be startled.',
-    fieldNote: [
-      "The fallen orc's hand still beats a slow, steady rhythm against the ground. A ticking. Then it, too, goes quiet.",
-    ],
-    title: 'The Tusk Banner',
-    goal: 'Defeat 4 orcs',
-    unit: 'orcs',
-    hint: 'Orcs hold the Sunscar Desert and the Tuskwood Jungle. They hit hard, so take them one at a time.',
-    where: { zones: ['desert', 'jungle'] },
-    objective: { t: 'kill', kind: 'orc', count: 4 },
-    reward: { gold: 260, xp: 320, items: ['tuskbreakerHelm'] },
-    offer: [
-      'Orcs have raised a banner in the Tuskwood Jungle and the Sunscar Desert. They answer to a voice that never speaks, and they march in step to a ticking no one else can hear.',
-      'Something is commanding them. Break four of them, and we will see whether the rest falter. Take your time. They hit hard, and they do not flinch.',
-    ],
-    remind: ['Four orcs. They do not flinch when struck, so fight them one at a time.'],
-    done: [
-      'Four down, and the rest did not press on. So the voice can be startled, at least.',
-      "A banner-bearer's helm. Heavy, hungry, and uncannily good at finding coin. It is yours.",
-    ],
-  },
-  {
-    id: 'frost',
-    chapter: 3,
-    learned: 'The frozen soldiers guard the northern pass, the way to the Spire.',
-    fieldNote: [
-      'Where the last frostbound fell, snow begins to drift again. For a moment, the flakes fall, not hang. Then the hush returns.',
-    ],
-    title: 'Frostbound Vigil',
-    goal: 'Defeat 4 frostbound in the Frostlands',
-    unit: 'frostbound',
-    hint: 'The frozen soldiers stand in the Frostlands, east of Lanternrest along the town road.',
-    where: { zones: ['frostlands'] },
-    objective: { t: 'kill', kind: 'frostbound', count: 4, zone: 'frostlands' },
-    reward: { gold: 340, xp: 420, items: ['sunforgedCuirass'] },
-    offer: [
-      'East along the town road, the snow has stopped falling. Not melted: stopped. The frostbound stand in it, still as statues, guarding the cold.',
-      'They are the Stillness made flesh: soldiers frozen mid-march. Four of them block the northern pass, and the pass is the way to the Spire.',
-      'Their blades are cold iron and they do not flinch. Strike, step back, strike again.',
-    ],
-    remind: ['Four frostbound in the Frostlands, east along the town road. They do not flinch, so hit and step back.'],
-    done: [
-      'You came back whole, with frost on your boots and not a flake in your hair. The Stillness fears you, stranger.',
-      "This cuirass was my father's. It was lit from the town lamp once, and it still holds the warmth. Wear it.",
-    ],
-  },
-  {
-    id: 'heart',
-    chapter: 3,
-    learned:
-      'A shard of the Hourglass bears a name: Orrin, Clockmaker. Four shards remain, and the Stillness knows yours.',
-    fieldNote: ["The troll's heavy hand opens, and a splinter of glass rolls out, warm, ticking. Take it to Maren."],
-    title: 'The Heart of the Stillness',
-    goal: 'Defeat 2 trolls',
-    unit: 'trolls',
-    hint: 'Trolls roam the Frostlands, the Tuskwood Jungle and Gloamfen Marsh. The Frostlands are the nearest.',
-    where: { zones: ['frostlands', 'jungle', 'marsh'] },
-    objective: { t: 'kill', kind: 'troll', count: 2 },
-    reward: { gold: 500, xp: 650, items: ['hourglassPendant'] },
-    offer: [
-      'Last, and worst. I can feel a splinter of the Hourglass in the trolls of the Vale, like a bad tooth. Two of them carry what we need.',
-      'They roam the Frostlands, the Tuskwood Jungle and Gloamfen Marsh. They are slow, they cannot be stunned, and they hit like falling roofs. Take potions. Take your time.',
-      'Bring down two, and I will see what they hold.',
-    ],
-    remind: [
-      'Two trolls, in the Frostlands, the Tuskwood Jungle or Gloamfen Marsh. Huge, slow, and hard to stun. Keep your distance and keep potions close.',
-    ],
-    done: [
-      'A shard of the Hourglass. It is warm, and it ticks. I hold it to the lamp, and the flame stands perfectly still.',
-      'There is a name scratched into the splinter: "Orrin, Clockmaker." The keeper of the Spire. The one with the clockmaker\'s hands.',
-      'He did not break the Vale, stranger. He was the first thing the Stillness took, and it still wears him.',
-      'Four shards remain, and the Stillness knows your name now. Keep this pendant close and keep moving. We will speak again when the next shard calls.',
-    ],
-  },
-];
+/** The quest chain, in story order (quests.json `quests`). */
+export const QUESTS: Quest[] = [];
 
-/** What Maren says once the whole chain is done (for now). */
-export const EPILOGUE: string[] = [
-  'The lamp burns steady tonight, and that is your doing.',
-  "Four shards of the Hourglass are still out there, and whatever wears the clockmaker's hands is still walking. But the Vale is not lost.",
-  'Rest, stranger. The next part of this story is still being written.',
-];
+/** What the giver says once the whole chain is done (quests.json `epilogue`). */
+export const EPILOGUE: string[] = [];
+
+/** Everything a campaign's quests.json holds, as the rules here use it. */
+export interface QuestContent {
+  giver: string;
+  givers: Record<string, Giver>;
+  sites: Record<string, SiteKind>;
+  chapters: Chapter[];
+  quests: Quest[];
+  epilogue: string[];
+}
+
+/** Install a campaign's quests (ContentManager.install). The records and lists keep their identity. */
+export function setQuestContent(c: QuestContent) {
+  QUEST_GIVER = c.giver;
+  const refill = <T>(record: Record<string, T>, from: Record<string, T>) => {
+    for (const key of Object.keys(record)) delete record[key];
+    Object.assign(record, from);
+  };
+  refill(GIVERS, c.givers);
+  refill(SITE_KINDS, c.sites);
+  CHAPTERS.splice(0, CHAPTERS.length, ...c.chapters);
+  QUESTS.splice(0, QUESTS.length, ...c.quests);
+  EPILOGUE.splice(0, EPILOGUE.length, ...c.epilogue);
+}
 
 // --- Where a hero stands ---
 
@@ -449,6 +155,15 @@ const bits = (n: number) => {
   for (let v = n; v > 0; v = Math.floor(v / 2)) count += v % 2;
   return count;
 };
+
+/** Who hands a quest out. */
+export const offererOf = (q: Quest): string => q.giver ?? QUEST_GIVER;
+
+/** Who a quest is handed in to (and who pays): a different person from the one who gave it, for a message to carry. */
+export const completerOf = (q: Quest): string => q.turnIn ?? offererOf(q);
+
+/** How close (in cells) the hero must come to a place for a `visit` quest to count it. */
+export const VISIT_RADIUS = 7;
 
 /** The mob kind's key in MOB_KINDS (for counting kills), or undefined for a kind that is not in it. */
 export const mobKey = (kind: MobKind): string | undefined => Object.keys(MOB_KINDS).find((k) => MOB_KINDS[k] === kind);
@@ -464,7 +179,11 @@ export function progressOf(hero: Hero): number {
     case 'gather':
       return Math.min(o.count, bits(hero.quests.progress));
     case 'bring':
-      return Math.min(o.count, hero.pack.filter((i) => i === ITEMS[o.item]).length);
+      return Math.min(o.count, hero.pack.filter((i) => i === itemOf(o.item)).length);
+    case 'meet':
+      return o.count; // going to find them is all there is to it
+    case 'visit':
+      return Math.min(o.count, hero.quests.progress);
   }
 }
 
@@ -486,7 +205,7 @@ export const progressText = (hero: Hero): string => {
 
 /** The reward as a sentence: "30 gold, 30 XP and the Wayfarer's Charm". */
 export function rewardText(r: Reward): string {
-  const parts = [`${r.gold} gold`, `${r.xp} XP`, ...(r.items ?? []).map((id) => ITEMS[id].name)];
+  const parts = [`${r.gold} gold`, `${r.xp} XP`, ...(r.items ?? []).map((id) => itemOf(id).name)];
   return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : (parts[0] ?? '');
 }
 
@@ -510,6 +229,27 @@ export function recordKill(hero: Hero, kind: MobKind, zone: string): Progress | 
   const { objective: o } = q;
   if (mobKey(kind) !== o.kind || (o.zone && o.zone !== zone) || hero.quests.progress >= o.count) return null;
   hero.quests.progress++;
+  return report(hero);
+}
+
+/**
+ * The hero is at (x, y) pixels in `zone`, whose named places are `places`: counts a `visit` quest's place when they come
+ * within VISIT_RADIUS of it. Cheap when the current quest is not one (it is asked every tick).
+ */
+export function recordVisit(
+  hero: Hero,
+  zone: string,
+  places: readonly { name: string; col: number; row: number }[],
+  x: number,
+  y: number,
+): Progress | null {
+  const q = currentQuest(hero.quests);
+  if (!q || !hero.quests.taken || q.objective.t !== 'visit' || hero.quests.progress >= q.objective.count) return null;
+  const { objective: o } = q;
+  if (o.zone !== zone) return null;
+  const place = places.find((p) => p.name === o.place);
+  if (!place || Math.hypot(x / CELL - (place.col + 0.5), y / CELL - (place.row + 0.5)) > VISIT_RADIUS) return null;
+  hero.quests.progress = o.count;
   return report(hero);
 }
 
@@ -580,7 +320,8 @@ export function journal(log: QuestLog): { title: string; lines: string[] }[] {
 /** The story lines behind a key ("road.offer", "road.reward", "end"...), or null for one this build does not know. */
 export function linesFor(key: string): string[] | null {
   if (key === 'end') return EPILOGUE;
-  const [id, part] = key.split('.');
+  const [id = '', part] = key.split('.');
+  if (part === 'idle') return GIVERS[id] ? idleLines(id) : null;
   const q = QUESTS.find((quest) => quest.id === id);
   if (!q) return null;
   switch (part) {
@@ -597,26 +338,33 @@ export function linesFor(key: string): string[] | null {
   }
 }
 
+/** What a person says when the hero has nothing to do with them just now. */
+const idleLines = (giverId: string): string[] => {
+  const lines = GIVERS[giverId]?.idle;
+  return lines && lines.length ? lines : ['...'];
+};
+
 /** Hand the reward over, if there is room for it. Nothing changes when there is not. */
 function pay(hero: Hero, q: Quest): { gear: boolean; levels: number } | null {
   const { reward, objective } = q;
   const freed = objective.t === 'bring' ? objective.count : 0;
   if (packFree(hero) + freed < (reward.items?.length ?? 0)) return null;
-  if (objective.t === 'bring') for (let i = 0; i < objective.count; i++) takeFromPack(hero, ITEMS[objective.item]);
+  if (objective.t === 'bring') for (let i = 0; i < objective.count; i++) takeFromPack(hero, itemOf(objective.item));
   hero.gold += reward.gold;
   let gear = false;
   for (const id of reward.items ?? []) {
     // Worn if it beats what is there, otherwise into the pack (there is room: it was checked above).
-    gear ||= collect(hero, { item: ITEMS[id] }).gear !== undefined;
+    gear ||= collect(hero, { item: itemOf(id) }).gear !== undefined;
   }
   return { gear, levels: gainXp(hero.stats, reward.xp) };
 }
 
 /**
- * The hero speaks to the quest giver: they are given the next task, reminded of the one they are on, or (if it is done)
- * paid for it and the chain moves on. The reply says which lines to show.
+ * The hero speaks to `giverId` (the chain's giver unless they name someone else): that person gives them the next task,
+ * reminds them of the one they are on, or (if it is done) takes it and pays, and the chain moves on. Someone who has nothing
+ * to do with the quest the hero is on just says their piece (`GIVERS[id].idle`). The reply says which lines to show.
  */
-export function talk(hero: Hero): Talk {
+export function talk(hero: Hero, giverId: string = QUEST_GIVER): Talk {
   const log = hero.quests;
   const q = currentQuest(log);
   const said = (key: string, lines: string[], extra: Partial<Talk> = {}): Talk => ({
@@ -627,15 +375,19 @@ export function talk(hero: Hero): Talk {
     paid: false,
     ...extra,
   });
-  if (!q) return said('end', EPILOGUE);
+  const idle = () => said(`${giverId}.idle`, idleLines(giverId));
+  if (!q) return giverId === QUEST_GIVER ? said('end', EPILOGUE) : idle();
+  const [offerer, completer] = [offererOf(q), completerOf(q)];
   switch (questStatus(hero)) {
     case 'offer':
+      if (giverId !== offerer) return idle();
       log.taken = true;
       log.progress = 0;
       return said(`${q.id}.offer`, offerLines(q));
     case 'active':
-      return said(`${q.id}.remind`, q.remind);
+      return giverId === offerer || giverId === completer ? said(`${q.id}.remind`, q.remind) : idle();
     default: {
+      if (giverId !== completer) return giverId === offerer ? said(`${q.id}.remind`, q.remind) : idle();
       const paid = pay(hero, q);
       if (!paid) return said(`${q.id}.full`, FULL_LINES);
       log.stage++;
@@ -646,10 +398,16 @@ export function talk(hero: Hero): Talk {
   }
 }
 
-/** The marker over the giver's head for this hero: "!" has a task to give, "?" is waiting for one to be handed in. */
-export function giverMark(hero: Hero): '!' | '?' | '' {
+/**
+ * The marker over a person's head for this hero: "!" has a task to give, "?" is waiting for one to be handed in. Only the
+ * person the current quest is about shows one (`giverId` left out means the chain's giver).
+ */
+export function giverMark(hero: Hero, giverId: string = QUEST_GIVER): '!' | '?' | '' {
+  const q = currentQuest(hero.quests);
+  if (!q) return '';
   const status = questStatus(hero);
-  return status === 'offer' ? '!' : status === 'ready' ? '?' : '';
+  if (status === 'offer') return giverId === offererOf(q) ? '!' : '';
+  return status === 'ready' && giverId === completerOf(q) ? '?' : '';
 }
 
 // --- The log on the wire (a guest is told its log in every `pack` message) ---

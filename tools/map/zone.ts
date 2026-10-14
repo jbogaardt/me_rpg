@@ -1,15 +1,16 @@
 import {
   CELL,
+  portSide,
   FLAT_Z,
   type CellPoint,
   type ChestSpawn,
   type CropSpawn,
   type DoorSpawn,
+  type PortSpawn,
   type ShopSpawn,
   type GroundCell,
   type MapData,
   type MapObject,
-  type MobSpawn,
   type GiverSpawn,
   type PetSpawn,
   type PlaceSpawn,
@@ -67,7 +68,6 @@ export interface ZoneApi {
   glare(col: number, row: number): unknown;
   spawn(col: number, row: number): unknown;
   npc(col: number, row: number): unknown;
-  mob(kind: string, col: number, row: number): unknown;
   chest(kind: string, loot: string, col: number, row: number): unknown;
   crop(kind: string, col: number, row: number): unknown;
   shop(shop: string, col: number, row: number): unknown;
@@ -77,6 +77,16 @@ export interface ZoneApi {
   place(name: string, col: number, row: number): unknown;
   sign(col: number, row: number, ways: SignSpawn['ways']): unknown;
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number): unknown;
+  port(
+    name: string,
+    col: number,
+    row: number,
+    w: number,
+    arriveCol: number,
+    arriveRow: number,
+    h?: number,
+    seal?: PrefabName[],
+  ): unknown;
   indoor(): unknown;
   climate(name: ClimateName): unknown;
 }
@@ -185,10 +195,6 @@ export class WorldWindow implements ZoneApi {
     this.z.npc(col - this.o.col, row - this.o.row);
     return this;
   }
-  mob(kind: string, col: number, row: number) {
-    this.z.mob(kind, col - this.o.col, row - this.o.row);
-    return this;
-  }
   chest(kind: string, loot: string, col: number, row: number) {
     this.z.chest(kind, loot, col - this.o.col, row - this.o.row);
     return this;
@@ -223,6 +229,19 @@ export class WorldWindow implements ZoneApi {
   }
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number) {
     this.z.door(col - this.o.col, row - this.o.row, w, toZone, toCol, toRow); // the destination is the other zone's own cell
+    return this;
+  }
+  port(
+    name: string,
+    col: number,
+    row: number,
+    w: number,
+    arriveCol: number,
+    arriveRow: number,
+    h = 1,
+    seal: PrefabName[] = [],
+  ) {
+    this.z.port(name, col - this.o.col, row - this.o.row, w, arriveCol - this.o.col, arriveRow - this.o.row, h, seal);
     return this;
   }
   indoor() {
@@ -315,7 +334,6 @@ export class Zone {
   readonly reasons = new Map<number, string>(); // why a cell was blocked by hand (silences check warnings)
   private spawnAt: CellPoint | null = null;
   private npcAt: CellPoint | null = null;
-  private mobList: MobSpawn[] = [];
   private chestList: ChestSpawn[] = [];
   private cropList: CropSpawn[] = [];
   private shopList: ShopSpawn[] = [];
@@ -325,6 +343,8 @@ export class Zone {
   private placeList: PlaceSpawn[] = [];
   private signList: SignSpawn[] = [];
   private doorList: DoorSpawn[] = [];
+  private portList: PortSpawn[] = [];
+  private seals = new Map<string, Placed[]>();
   private isIndoor = false;
   private weather: ClimateName = DEFAULT_CLIMATE;
 
@@ -744,12 +764,6 @@ export class Zone {
     return this;
   }
 
-  /** An enemy spawn; `kind` is a key of MOB_KINDS in src/systems/combat.ts. */
-  mob(kind: string, col: number, row: number) {
-    this.mobList.push({ kind, col, row });
-    return this;
-  }
-
   /** A crop plot (solid, so its cell is blocked; picked from beside it). `kind` is a key of CROPS (src/systems/crops.ts). */
   crop(kind: string, col: number, row: number) {
     this.cropList.push({ kind, col, row });
@@ -758,7 +772,7 @@ export class Zone {
     return this;
   }
 
-  /** A treasure chest (solid, so its cell is blocked). `kind` is a CHEST_KINDS name, `loot` a key of CHEST_LOOTS (src/systems/chests.ts). */
+  /** A treasure chest (solid, so its cell is blocked). `kind` is a CHEST_KINDS name, `loot` a key of the campaign's items.json `loots`. */
   chest(kind: string, loot: string, col: number, row: number) {
     this.chestList.push({ kind, loot, col, row });
     this.forced.set(row * this.width + col, true);
@@ -767,7 +781,7 @@ export class Zone {
   }
 
   /**
-   * A shopkeeper (`shop` is a key of SHOPS, src/systems/shops.ts) standing at (col, row), the cell below the door of its
+   * A shopkeeper (`shop` is a shop of the campaign's items.json) standing at (col, row), the cell below the door of its
    * building (`z.prop('smithy', ...)`). Characters block each other, so leave the cell open.
    */
   shop(shop: string, col: number, row: number) {
@@ -821,18 +835,56 @@ export class Zone {
     return this;
   }
 
+  /**
+   * A port: a doorway (the `w` cells from (col, row), opened up like a door's) whose far side the content decides
+   * (biomes.json `ports`, bound by a random campaign's assembler or by hand). `arriveCol, arriveRow` is where a player
+   * coming in through it appears: an open cell just inside, not on the doorway. A port nothing binds is walled up. Its
+   * edge (`side`) is the one it is nearest; it is joined only to a port on the opposite edge.
+   */
+  port(
+    name: string,
+    col: number,
+    row: number,
+    w: number,
+    arriveCol: number,
+    arriveRow: number,
+    h = 1,
+    seal: PrefabName[] = [],
+  ) {
+    const side = portSide(col, row, w, h, this.width, this.height);
+    this.portList.push({ name, col, row, w, h, arrive: { col: arriveCol, row: arriveRow }, side });
+    // What closes it when nothing binds it: the props given, one on each of its cells in turn (resolved in toMapData).
+    const placed: Placed[] = [];
+    let k = 0;
+    for (let r = 0; r < h; r++)
+      for (let i = 0; i < w; i++) {
+        const prefab = seal[k++ % Math.max(1, seal.length)];
+        if (!prefab) continue;
+        const p = PREFABS[prefab];
+        const span = Math.ceil(p.w / CELL) * CELL;
+        placed.push({
+          prefab,
+          px: (col + i) * CELL + Math.floor((span - p.w) / 2),
+          py: (row + r + 1) * CELL - p.h,
+          autoBlock: false,
+        });
+      }
+    this.seals.set(name, placed);
+    for (let r = 0; r < h; r++) for (let i = 0; i < w; i++) this.forced.set((row + r) * this.width + col + i, false);
+    return this;
+  }
+
   /** Mark the zone as a room: no weather, and no co-op overview map. */
   indoor() {
     this.isIndoor = true;
     return this;
   }
 
-  /** What the spec placed besides terrain and props: the start, NPC, mobs, chests, shopkeepers and doors. */
+  /** What the spec placed besides terrain and props: the start, NPC, chests, shopkeepers and doors. */
   entities() {
     return {
       spawn: this.spawnAt,
       npc: this.npcAt,
-      mobs: this.mobList,
       chests: this.chestList,
       crops: this.cropList,
       shops: this.shopList,
@@ -842,6 +894,7 @@ export class Zone {
       places: this.placeList,
       signs: this.signList,
       doors: this.doorList,
+      ports: this.portList,
       indoor: this.isIndoor,
       climate: this.weather,
     };
@@ -853,7 +906,7 @@ export class Zone {
    * owner of any cell touching it painted it (so a neighbour's sand fades softly across the seam; an opaque terrain,
    * which brings its own sea, is taken from the cell's owner alone); a prop or tree is
    * kept when the cell its foot stands on is its own zone's (or off the map, like a border forest's overhang). Points
-   * (spawn, mobs, doors...) are not carried over: read them from each zone's `entities()`.
+   * (spawn, chests, doors...) are not carried over: read them from each zone's `entities()`.
    */
   static compose(width: number, height: number, owner: Int16Array, zones: Zone[]): Zone {
     const out = new Zone(width, height);
@@ -978,6 +1031,27 @@ export class Zone {
       }
     }
 
+    // Each port's seal, as objects of its own (drawn only while nothing binds the port).
+    const ports = this.portList.map((port) => {
+      const seal = (this.seals.get(port.name) ?? []).flatMap((p) => {
+        const prefab = PREFABS[p.prefab];
+        return prefab.parts.map((part): MapObject => {
+          const o: MapObject = {
+            s: sheetIndex(prefab.sheet),
+            x: part.x,
+            y: part.y,
+            w: part.w,
+            h: part.h,
+            px: p.px + part.dx,
+            py: p.py + part.dy,
+          };
+          if (prefab.tag) o.tag = prefab.tag;
+          return o;
+        });
+      });
+      return seal.length ? { ...port, seal } : port;
+    });
+
     const blocked = new Set(this.blocked);
     // Props: block cells covered enough by the bottom band of their art. Prefabs differ in band/min,
     // so measure each (band, min) group separately.
@@ -1018,7 +1092,6 @@ export class Zone {
       ramps: [...this.ramps].sort((a, b) => a - b),
       spawn: this.spawnAt,
       npc: this.npcAt,
-      mobs: this.mobList,
       chests: this.chestList,
       crops: this.cropList,
       shops: this.shopList,
@@ -1028,6 +1101,7 @@ export class Zone {
       places: this.placeList,
       signs: this.signList,
       doors: this.doorList,
+      ports,
       indoor: this.isIndoor,
       climate: this.weather,
     };

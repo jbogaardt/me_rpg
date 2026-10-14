@@ -1,0 +1,556 @@
+{
+  "version": 1,
+  "id": "wilds",
+  "entities": {
+    "goblin": {
+      "type": "mob",
+      "name": "Goblin",
+      "notes": "Level 1 fodder: fragile and quick, hits lightly.",
+      "sprite": {
+        "body": "body.green",
+        "head": "head.goblin",
+        "torso": "torso.tunic_brown",
+        "legs": "legs.pants_charcoal",
+        "feet": "feet.boots_brown",
+        "weapon": "weapon.dagger"
+      },
+      "stats": { "hp": 22, "attack": 8, "defense": 0, "speed": 82, "sight": 160, "xp": 8, "gold": 4 },
+      "behavior": { "windup": 0.3, "recover": 0.45, "stagger": 0.18 },
+      "tags": ["common", "beast", "swamp"],
+      "level": [1, 2]
+    },
+    "wolfkin": {
+      "type": "mob",
+      "name": "Wolfkin",
+      "notes": "A fast hunter with no gear, spotting the hero from far away.",
+      "sprite": { "body": "body.fur_grey", "head": "head.wolf", "legs": "legs.pants_brown" },
+      "stats": { "hp": 32, "attack": 11, "defense": 0, "speed": 96, "sight": 192, "xp": 14, "gold": 8 },
+      "behavior": { "windup": 0.28, "recover": 0.4, "stagger": 0.12 },
+      "tags": ["common", "hunter", "beast", "frost"],
+      "level": [1, 3],
+      "plural": "wolfkin"
+    },
+    "shade": {
+      "type": "mob",
+      "name": "Shade",
+      "notes": "The original test enemy, now a caster: hangs back and hurls slow violet bolts you can sidestep. Level 1.",
+      "sprite": { "body": "body.shade", "head": "head.shade", "weapon": "weapon.dagger" },
+      "stats": { "hp": 35, "attack": 10, "defense": 0, "speed": 60, "sight": 192, "xp": 14, "gold": 8 },
+      "behavior": { "windup": 0.65, "recover": 1.3, "shot": { "range": 176, "speed": 135, "color": "#b06cff" } },
+      "tags": ["ranged", "undead", "swamp"],
+      "level": [1, 3]
+    },
+    "skeleton": {
+      "type": "mob",
+      "name": "Skeleton",
+      "notes": "Undead archer: keeps its distance and flicks bone shards, slowly but hard.",
+      "sprite": {
+        "body": "body.skeleton",
+        "head": "head.skeleton",
+        "weapon": "weapon.arming_iron",
+        "shield": "shield.round_brown"
+      },
+      "stats": { "hp": 47, "attack": 14, "defense": 2, "speed": 52, "sight": 208, "xp": 25, "gold": 14 },
+      "behavior": { "windup": 0.55, "recover": 1, "shot": { "range": 192, "speed": 175, "color": "#e9e2c8" } },
+      "tags": ["ranged", "undead", "frost"],
+      "level": [3, 4]
+    },
+    "zombie": {
+      "type": "mob",
+      "name": "Zombie",
+      "notes": "Shambling and tanky for its level, but very slow.",
+      "sprite": {
+        "body": "body.zombie",
+        "head": "head.zombie",
+        "torso": "torso.tunic_charcoal",
+        "legs": "legs.pants_brown"
+      },
+      "stats": { "hp": 68, "attack": 16, "defense": 1, "speed": 36, "sight": 128, "xp": 28, "gold": 16 },
+      "behavior": {},
+      "tags": ["brute", "undead", "swamp"],
+      "level": [3, 5]
+    },
+    "barrowLord": {
+      "type": "mob",
+      "name": "Barrow Lord",
+      "notes": "A long-dead lord in rusted plate, risen from its mound: a boss for levels 3-5.",
+      "scale": 1.5,
+      "sprite": {
+        "body": "body.skeleton",
+        "head": "head.skeleton",
+        "torso": "torso.plate_steel",
+        "legs": "legs.plate_steel",
+        "feet": "feet.plate_steel",
+        "headwear": "headwear.nasal",
+        "weapon": "weapon.arming_iron",
+        "shield": "shield.kite_gray"
+      },
+      "stats": { "hp": 195, "attack": 19, "defense": 4, "speed": 52, "sight": 208, "xp": 138, "gold": 92 },
+      "behavior": { "windup": 0.6, "recover": 0.85, "stagger": 0.03 },
+      "tags": ["boss", "undead"],
+      "level": [3, 5]
+    },
+    "ilsabet": {
+      "type": "npc",
+      "name": "Sage",
+      "sprite": {
+        "body": "body.f_light",
+        "head": "head.human_f_light",
+        "hair": "hair.long_gray",
+        "torso": "torso.robe_blue",
+        "headwear": "headwear.wizard_navy",
+        "weapon": "weapon.staff"
+      }
+    },
+    "wanderer": {
+      "type": "npc",
+      "name": "Wanderer",
+      "notes": "A traveller resting in the Mirewood: talks of the keeper.",
+      "sprite": {
+        "body": "body.bronze",
+        "head": "head.human_bronze",
+        "hair": "hair.spiked_black",
+        "beard": "beard.brown",
+        "torso": "torso.tunic_maroon",
+        "legs": "legs.pants_charcoal",
+        "feet": "feet.boots_black"
+      },
+      "lines": [
+        "Mind the woods past the camp. The things in them have grown bold.",
+        "The Keeper pays well for help, if you have a strong arm."
+      ]
+    },
+    "fenYeti": {
+      "type": "mob",
+      "name": "Fen Yeti",
+      "notes": "The Frostfen's great beast: a smaller cousin of the Abominable Snowman, a boss for levels 3-5.",
+      "scale": 2,
+      "sprite": { "body": "body.snowman" },
+      "stats": { "hp": 221, "attack": 20, "defense": 4, "speed": 50, "sight": 192, "xp": 138, "gold": 80 },
+      "behavior": { "windup": 0.6, "recover": 0.9, "stagger": 0.05 },
+      "tags": ["boss", "frost", "beast"],
+      "level": [3, 5]
+    },
+    "rimebound": {
+      "type": "mob",
+      "name": "Rimebound",
+      "notes": "An icy skeleton in rimed armour: the Frostfen's brute, a gentler cousin of the Frostbound. Levels 3-5.",
+      "sprite": {
+        "body": "body.frost",
+        "head": "head.frost",
+        "torso": "torso.plate_steel",
+        "legs": "legs.plate_steel",
+        "headwear": "headwear.nasal",
+        "weapon": "weapon.arming_steel"
+      },
+      "stats": { "hp": 83, "attack": 18, "defense": 3, "speed": 62, "sight": 192, "xp": 34, "gold": 18 },
+      "behavior": { "windup": 0.4, "recover": 0.6, "stagger": 0.1 },
+      "tags": ["brute", "frost", "undead"],
+      "level": [3, 5],
+      "plural": "rimebound"
+    }
+  },
+  "keepers": { "ilsabet": { "npc": "ilsabet", "name": "Keeper Ilsabet", "tag": "Ilsabet" } },
+  "regions": {
+    "mirewood": {
+      "biome": {
+        "name": "The Mirewood",
+        "tint": "#8fbf5a",
+        "map": "wilds_mirewood",
+        "climate": "swamp",
+        "music": null,
+        "tilesets": [
+          "ground_tiles.png",
+          "lpc_terrain.png",
+          "lpc_swamp.png",
+          "trees_swamp.png",
+          "object-layer.png",
+          "interior.png"
+        ]
+      },
+      "level": [1, 2],
+      "themes": ["swamp", "beast"],
+      "hub": true,
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "common": {}, "hunter": {}, "ranged": {} },
+      "roam": [
+        { "role": "common", "count": 5, "seed": 301, "apart": 8, "avoid": [{ "x": 25, "y": 20, "radius": 9 }] },
+        { "role": "hunter", "count": 3, "seed": 302, "apart": 8, "avoid": [{ "x": 25, "y": 20, "radius": 9 }] },
+        { "role": "ranged", "count": 2, "seed": 303, "apart": 8, "avoid": [{ "x": 25, "y": 20, "radius": 9 }] }
+      ],
+      "encounters": [
+        { "entity": "wanderer", "x": 28, "y": 25 },
+        { "role": "common", "x": 12, "y": 10 },
+        { "role": "common", "x": 40, "y": 20 }
+      ],
+      "sites": {
+        "bogcandle": {
+          "name": "Bog Candle",
+          "plural": "bog candles",
+          "shape": "mushroom",
+          "color": "#9ad86a",
+          "glow": "#e8ffb0",
+          "notes": [
+            ["A bog candle: a pale stalk that glows green over the water. It flickers as you touch it."],
+            ["Another bog candle, its light trembling as if something breathed on it."]
+          ]
+        }
+      }
+    },
+    "frostfen": {
+      "biome": {
+        "name": "The Frostfen",
+        "tint": "#a8dcff",
+        "map": "wilds_frostfen",
+        "climate": "frost",
+        "music": null,
+        "tilesets": ["frost_ground.png", "lpc_terrain.png", "trees_frost.png", "frost_objects.png"]
+      },
+      "level": [2, 4],
+      "themes": ["frost", "beast"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "common": {}, "ranged": {}, "brute": {}, "boss": {} },
+      "roam": [
+        {
+          "role": "common",
+          "count": 4,
+          "seed": 311,
+          "apart": 8,
+          "avoid": [
+            { "x": 22, "y": 5, "radius": 6 },
+            { "x": 22, "y": 28, "radius": 6 }
+          ]
+        },
+        {
+          "role": "ranged",
+          "count": 3,
+          "seed": 312,
+          "apart": 8,
+          "avoid": [
+            { "x": 22, "y": 5, "radius": 6 },
+            { "x": 22, "y": 28, "radius": 6 }
+          ]
+        },
+        {
+          "role": "brute",
+          "count": 2,
+          "seed": 313,
+          "apart": 8,
+          "avoid": [
+            { "x": 22, "y": 5, "radius": 6 },
+            { "x": 22, "y": 28, "radius": 6 }
+          ]
+        }
+      ],
+      "encounters": [
+        { "role": "brute", "x": 32, "y": 21 },
+        { "role": "ranged", "x": 10, "y": 20 },
+        { "role": "boss", "x": 38, "y": 18 }
+      ],
+      "sites": {
+        "froststone": {
+          "name": "Froststone",
+          "plural": "froststones",
+          "shape": "stone",
+          "color": "#bfe6ff",
+          "glow": "#ffffff",
+          "notes": [
+            ["A froststone, rimed in ice that never melts. It rings faintly under your hand."],
+            ["Another froststone. The ice on it is cracked, as though something knocked from inside."]
+          ]
+        }
+      }
+    },
+    "barrow": {
+      "capabilities": { "weather": { "calm": 0.4 } },
+      "biome": {
+        "name": "The Barrow",
+        "tint": "#b48cff",
+        "map": "wilds_barrow",
+        "climate": "undead",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"]
+      },
+      "level": [3, 5],
+      "themes": ["undead"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "ranged": {}, "brute": {}, "boss": {} },
+      "roam": [
+        {
+          "role": "ranged",
+          "count": 3,
+          "seed": 321,
+          "apart": 8,
+          "avoid": [
+            { "x": 22, "y": 5, "radius": 6 },
+            { "x": 22, "y": 28, "radius": 6 },
+            { "x": 12, "y": 14, "radius": 6 }
+          ]
+        },
+        {
+          "role": "brute",
+          "count": 3,
+          "seed": 322,
+          "apart": 8,
+          "avoid": [
+            { "x": 22, "y": 5, "radius": 6 },
+            { "x": 22, "y": 28, "radius": 6 },
+            { "x": 12, "y": 14, "radius": 6 }
+          ]
+        }
+      ],
+      "encounters": [
+        { "role": "boss", "x": 12, "y": 15 },
+        { "role": "brute", "x": 30, "y": 16 },
+        { "role": "ranged", "x": 38, "y": 28 }
+      ],
+      "sites": {
+        "gravelight": {
+          "name": "Gravelight",
+          "plural": "gravelights",
+          "shape": "stone",
+          "color": "#7a6aa8",
+          "glow": "#d8c8ff",
+          "notes": [
+            ["A gravelight: a cold violet flame on a stone. It does not warm your hand."],
+            ["Another gravelight. It leans away from you, toward the mound."]
+          ]
+        }
+      }
+    },
+    "frost_grotto": {
+      "biome": {
+        "name": "The Frost Grotto",
+        "tint": "#bfe6ff",
+        "map": "end_frost_grotto",
+        "climate": "frost",
+        "music": null,
+        "tilesets": ["frost_ground.png", "lpc_terrain.png", "trees_frost.png", "frost_objects.png"]
+      },
+      "level": [2, 5],
+      "themes": ["frost"],
+      "terminal": true,
+      "ports": { "north": "north" },
+      "foes": { "hunter": {} },
+      "roam": [],
+      "encounters": [
+        { "role": "hunter", "x": 11, "y": 13 },
+        { "role": "hunter", "x": 12, "y": 16 }
+      ]
+    },
+    "bog_hollow": {
+      "capabilities": { "map": false, "needs": { "drain": 2 } },
+      "biome": {
+        "name": "The Bog Hollow",
+        "tint": "#7fa85a",
+        "map": "end_bog_hollow",
+        "climate": "swamp",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "lpc_swamp.png", "trees_swamp.png", "object-layer.png"]
+      },
+      "level": [2, 5],
+      "themes": ["swamp"],
+      "terminal": true,
+      "ports": { "west": "west" },
+      "foes": { "ranged": {} },
+      "roam": [],
+      "encounters": [
+        { "role": "ranged", "x": 21, "y": 13 },
+        { "role": "ranged", "x": 24, "y": 14 }
+      ]
+    },
+    "old_shrine": {
+      "biome": {
+        "name": "The Old Shrine",
+        "tint": "#9a88c8",
+        "map": "end_old_shrine",
+        "climate": "undead",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"]
+      },
+      "level": [2, 5],
+      "themes": ["undead"],
+      "terminal": true,
+      "ports": { "east": "east" },
+      "foes": { "brute": {} },
+      "roam": [],
+      "encounters": [
+        { "role": "brute", "x": 8, "y": 10 },
+        { "role": "brute", "x": 9, "y": 13 }
+      ]
+    }
+  },
+  "arcs": {
+    "lost_lanterns": {
+      "title": "The Lost Lanterns",
+      "regions": 3,
+      "capabilities": { "map": false },
+      "chapters": [
+        {
+          "title": "The Dimming",
+          "intro": [
+            "You came in from the road? Then you saw the woods go dark behind you.",
+            "I am {keeper}. The lights that kept these lands safe are going out, one by one, and the creatures are bolder for it.",
+            "Help me, and we will find out who is putting them out."
+          ]
+        },
+        { "title": "Into {r2}", "intro": ["The trail leads on into {r2}, by {r1~r2.way}.", "{r1~r2.sign}"] },
+        {
+          "title": "The Mound",
+          "intro": [
+            "It all leads to {r3}.",
+            "{r2~r3.sign}",
+            "Something old is awake there, drinking the light. End it."
+          ]
+        }
+      ],
+      "quests": [
+        {
+          "id": "clear",
+          "chapter": 0,
+          "learned": "The {r1.common.lower} only came this close once the lights went out.",
+          "fieldNote": ["The last one flees into the dark between the trees."],
+          "title": "Clear the Camp",
+          "goal": "Drive off 5 {r1.common.lower}",
+          "hint": "{r1.common.plural} prowl all over {r1}.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.common.lower}",
+          "objective": { "t": "kill", "kind": "@r1.common", "count": 5 },
+          "reward": { "gold": 25, "xp": 30 },
+          "offer": ["The {r1.common.lower} come right up to the camp now. Drive off five of them."],
+          "remind": ["Five {r1.common.lower}, all round {r1}."],
+          "done": ["Better. We can breathe again.", "But they will be back while the lights stay dark."]
+        },
+        {
+          "id": "lights",
+          "chapter": 0,
+          "learned": "The {r1.site.lower} still burn, but weakly, as if something is drinking them.",
+          "fieldNote": ["Four lights, and every one of them dimmer than it should be."],
+          "title": "Count the Lights",
+          "goal": "Touch 4 {r1.site.lower}",
+          "hint": "{r1.site.plural} glow here and there in {r1}.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.site.lower}",
+          "objective": { "t": "gather", "site": "@r1.site", "zone": "@r1", "count": 4 },
+          "reward": { "gold": 30, "xp": 40, "items": ["potion"] },
+          "offer": ["Touch four of the {r1.site.lower} and tell me how they burn."],
+          "remind": ["Four {r1.site.lower}, in {r1}."],
+          "done": ["Dimmer, all of them. Something is drawing them away.", "The trail of it leads into {r2}."]
+        },
+        {
+          "id": "cold",
+          "chapter": 1,
+          "learned": "The {r2.ranged.lower} are not from {r2}: something sent them to guard the way.",
+          "fieldNote": ["The last one falls, and the cold seems to lift a little."],
+          "title": "Break the Guard",
+          "goal": "Defeat 3 {r2.ranged.lower}",
+          "hint": "{r2.ranged.plural} watch the way through {r2}. They strike from afar.",
+          "where": { "zones": ["@r2"] },
+          "unit": "{r2.ranged.lower}",
+          "objective": { "t": "kill", "kind": "@r2.ranged", "count": 3, "zone": "@r2" },
+          "reward": { "gold": 45, "xp": 60 },
+          "offer": ["The way through {r2} is guarded. Break three of the {r2.ranged.lower}."],
+          "remind": ["Three {r2.ranged.lower}, in {r2}."],
+          "done": ["Then the way is open. And whatever set them there knows you are coming."]
+        },
+        {
+          "id": "trace",
+          "chapter": 1,
+          "learned": "The {r2.site.lower} lean toward {r3}, like flames in a draught.",
+          "fieldNote": ["Three of them, all leaning the same way: toward {r3}."],
+          "title": "Follow the Draught",
+          "goal": "Touch 3 {r2.site.lower}",
+          "hint": "Look for {r2.site.lower} in {r2}.",
+          "where": { "zones": ["@r2"] },
+          "unit": "{r2.site.lower}",
+          "objective": { "t": "gather", "site": "@r2.site", "zone": "@r2", "count": 3 },
+          "reward": { "gold": 45, "xp": 60, "items": ["elixir"] },
+          "offer": ["The {r2.site.lower} of {r2} will show which way the light is flowing. Touch three."],
+          "remind": ["Three {r2.site.lower}, in {r2}."],
+          "done": ["{r3}. I should have known.", "Go by {r2~r3.way}, and go carefully."]
+        },
+        {
+          "id": "brutes",
+          "chapter": 2,
+          "learned": "The {r3.brute.lower} were the mound's first guards, long before the lights.",
+          "fieldNote": ["The third one crumbles, and the ground around the mound goes quiet."],
+          "title": "The Guards of the Mound",
+          "goal": "Defeat 3 {r3.brute.lower}",
+          "hint": "{r3.brute.plural} guard {r3}.",
+          "where": { "zones": ["@r3"] },
+          "unit": "{r3.brute.lower}",
+          "objective": { "t": "kill", "kind": "@r3.brute", "count": 3, "zone": "@r3" },
+          "reward": { "gold": 70, "xp": 90 },
+          "offer": ["Before you face what waits in {r3}, thin out its guards. Three {r3.brute.lower}."],
+          "remind": ["Three {r3.brute.lower}, in {r3}."],
+          "done": ["Now only the thing itself is left."]
+        },
+        {
+          "id": "end",
+          "chapter": 2,
+          "learned": "The {r3.boss} was drinking the lights to stay awake. It sleeps now, for good.",
+          "fieldNote": ["The {r3.boss} falls, and all across the land, the lights flare bright again."],
+          "title": "Put Out the Dark",
+          "goal": "Defeat the {r3.boss}",
+          "hint": "The {r3.boss} waits in {r3}.",
+          "where": { "zones": ["@r3"] },
+          "unit": "foes",
+          "objective": { "t": "kill", "kind": "@r3.boss", "count": 1, "zone": "@r3" },
+          "reward": { "gold": 150, "xp": 150, "items": ["steelSword"] },
+          "offer": ["The {r3.boss} is drinking the lights. End it, and they will burn again."],
+          "remind": ["The {r3.boss}, in {r3}."],
+          "done": [
+            "The lights are back. I can see them from here, every one.",
+            "Take this. You have earned more than a blade, but it is what I have."
+          ]
+        }
+      ],
+      "epilogue": [
+        "The lights burn bright across the land again.",
+        "Rest a while. When the road calls, you will hear it."
+      ],
+      "slots": [
+        {},
+        { "themes": ["frost", "swamp"] },
+        { "themes": ["undead"], "foes": { "boss": { "tags": ["undead"] } } }
+      ],
+      "crossings": { "r2~r3": { "tags": ["restless-dead"] } },
+      "keepers": ["ilsabet"]
+    }
+  },
+  "pairings": {
+    "rime_bog": {
+      "regions": ["mirewood", "frostfen"],
+      "tags": ["frost-creep"],
+      "lore": {
+        "way": "the old boardwalk where the bog of The Mirewood turns to ice and becomes The Frostfen",
+        "sign": {
+          "mirewood": "Frost has crept into the bog from The Frostfen: the reeds snap like glass and the pools skin over at noon.",
+          "frostfen": "Warm mist rolls up from The Mirewood and freezes on the pines in ghostly shapes."
+        }
+      }
+    },
+    "corpse_lights": {
+      "regions": ["mirewood", "barrow"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the sunken path that rises out of The Mirewood to the mound field of The Barrow",
+        "sign": {
+          "mirewood": "Corpse-lights drift down from The Barrow at dusk and hang over the bog, and the frogs fall silent.",
+          "barrow": "Bog water from The Mirewood seeps up into the graves, and the dead do not like it."
+        }
+      }
+    },
+    "grave_frost": {
+      "regions": ["frostfen", "barrow"],
+      "tags": ["restless-dead", "cold"],
+      "lore": {
+        "way": "the frozen causeway between The Frostfen and the standing stones of The Barrow",
+        "sign": {
+          "frostfen": "The cold of The Barrow is in the ice here: it does not melt, even in full sun.",
+          "barrow": "Rime from The Frostfen coats the standing stones, and the old names on them crack."
+        }
+      }
+    }
+  }
+}

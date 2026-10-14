@@ -38,7 +38,7 @@ run `npm run sprites -- check`, which is all `verify`/`build` need.
 4. **Look at it**: `npm run sprites -- preview body.light head.human_light hair.messy_dark_brown <new part> --anim walk`
    (also `--anim slash|idle|cast|hurt`, `--scale 3`, `--out file.png`), then Read `sprites/out/preview.png`. Check the
    swing (`--anim slash`) for weapons: if the blade is missing there, the weapon uses an unsupported oversize swing.
-5. **Use it**: a hero item (`src/systems/items.ts`, `slot: 'chest'`, `look: { torso: '...' }`; an off-hand item sets `shield`, and `{ mirror: true }` on the part flips a right-handed item such as the dagger into the left hand; place it in a chest with `CHEST_LOOTS`), an NPC (`NPC_LOOKS` in
+5. **Use it**: a hero item (content: the campaign's `public/content/<campaign>/items.json` `items`, or a pack's, e.g. `"slot": "chest", "look": { "torso": "..." }`, appended at the end since an item's place is its network code; an off-hand item sets `shield`, and `{ mirror: true }` on the part flips a right-handed item such as the dagger into the left hand; put it in a chest through that file's `loots` or on a shop's `stock`), an NPC (`NPC_LOOKS` in
    `src/systems/looks.ts`) or a mob (`look` on a `MobKind`, see `add-mob-kind`). `npm run verify` fails on an unknown
    part, a part in the wrong slot, or a character without body and head.
 

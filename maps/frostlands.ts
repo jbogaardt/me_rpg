@@ -54,7 +54,7 @@ export default defineBiome({
     z.chest('silver', 'hoard', 317, 201);
     z.chest('silver', 'vikingHelm', 321, 203);
     z.chest('silver', 'backpack', 322, 203);
-    z.mob('frostbound', 319, 202);
+    z.keepFree(319, 202);
 
     for (const [x, y, w, h] of [
       [28.4, 10.6, 1.4, 1.4],
@@ -67,20 +67,24 @@ export default defineBiome({
     ] as const)
       z.grove(blob(area(x, y, w, h)), { trees: FROST_TREES, fillers: ['frostBush', 'frostRockSmall'] });
 
-    for (const [kind, x, y] of [
-      ['frostbound', 29.4, 13],
-      ['frostbound', 26.6, 17.2],
-      ['frostWarden', 32.6, 12],
-      ['troll', 31.6, 22],
-      ['warg', 22.4, 22.4],
-      ['frostbound', 33, 17],
-      ['hexer', 24.6, 20.6],
-      ['troll', 28, 19.4],
-      ['frostbound', 30.4, 10.6],
-      ['warg', 27.2, 22.2],
-      ['frostWarden', 29.8, 16.6],
+    for (const [x, y] of [
+      [29.4, 13],
+      [26.6, 17.2],
+      [32.6, 12],
+      [31.6, 22],
+      [22.4, 22.4],
+      [33, 17],
+      [24.6, 20.6],
+      [28, 19.4],
+      [30.4, 10.6],
+      [27.2, 22.2],
+      [29.8, 16.6],
+      [27.4, 14.6],
+      [31.4, 20.4],
     ] as const)
-      z.mob(kind, ...near(x, y));
+      z.keepFree(...near(x, y));
+
+    z.giver('voss', ...z.near(314, 206)); // the sergeant who still stands at the frozen ledge (quests.json `givers`)
 
     z.scatter([...FROST_TREES], { count: 55, where: open, seed: 41 });
     z.scatter(['frostBush'], { count: 18, where: open, seed: 42 });
@@ -90,12 +94,5 @@ export default defineBiome({
     z.place('Mirrorfrost Lake', 266, 186);
     z.place('The Frozen Pond', 319, 119);
     z.place('The Frozen Ledge', 319, 202);
-
-    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['frostbound', 'warg', 'frostWarden', 'skeleton', 'troll', 'hexer'], {
-      count: 10,
-      seed: 109,
-      avoid: [[...near(30.8, 14.2), 16]],
-    });
   },
 });

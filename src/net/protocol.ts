@@ -19,15 +19,21 @@ import { cropFromCode, MAX_CROPS } from '../systems/crops';
 import type { PondState } from '../systems/needs';
 import { NEED_MAX } from '../systems/needs';
 import { questFromWire } from '../systems/quests';
-import { loadoutFromCode, MAX_HERO_COMBOS, MAX_SKILL_MASK } from '../systems/skills';
-import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../systems/inventory';
+import { loadoutFromCode, MAX_HERO_COMBOS, MAX_LOADOUT_CODE, MAX_SKILL_MASK } from '../systems/skills';
+import { GROUND_LIFETIME, itemCount, MAX_GROUND, type InvOpWire } from '../systems/inventory';
 import type { Note, SideWire, TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
+import { DIALS } from '../systems/capabilities';
 
-/** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 28;
+/**
+ * Bump when a message changes shape (or what one means); peers on different versions refuse to play together. v29: the
+ * host is the Dungeon Master, not a party member (player 0 in a snapshot is drawn as the DM). v30: `world`, a live
+ * world's log. v31: `dm` (the Dungeon Master's dials, time of day and vote) and the guest's vote `InputMsg.vt`. v32: the
+ * log's `cast` and `npc` entries, and longer entries.
+ */
+export const PROTOCOL_VERSION = 32;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -132,6 +138,8 @@ export interface InputMsg {
    * does each once and in order, and says how far it got in PackMsg.ack, so a lost packet only delays it.
    */
   inv?: [number, ...InvOpWire];
+  /** The guest's vote in the Dungeon Master's open vote: [the vote's id, the option's index]. Repeated like the keys. */
+  vt?: [number, number];
 }
 
 /**
@@ -235,7 +243,57 @@ export interface TradeMsg {
   note?: Note;
 }
 
-export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg | TrMsg | TradeMsg;
+/**
+ * Host -> guest: a stretch of a live world's log (content/world.ts `LogEntry`), entries `from`, `from + 1`... of the
+ * `total` the host has. The host cycles through the log a few entries at a time, newest first when one is added, so a
+ * guest that joined late or lost a packet catches up with nothing acknowledged; the guest's own World checks every
+ * entry (`World.apply`), so this only checks the shape.
+ */
+export interface WorldMsg {
+  k: 'world';
+  n: number;
+  total: number;
+  from: number;
+  entries: Record<string, unknown>[];
+}
+
+/**
+ * The most log entries one `world` message carries, the longest one may be (as JSON: a person the DM made, with their
+ * lines, is the longest), and how much a host puts in one message (a stretch stops short of it, keeping each message
+ * whole on the lossy channel).
+ */
+export const WORLD_CHUNK = 3;
+export const MAX_ENTRY = 800;
+export const WORLD_BUDGET = 900;
+const MAX_LOG = 500;
+
+/** The most choices a vote offers. */
+export const MAX_VOTE_OPTIONS = 6;
+const MAX_VOTE_LABEL = 80;
+
+/** A vote the Dungeon Master opened, as one friend is told it: the choices, how many chose each, and their own choice. */
+export interface VoteWire {
+  id: number;
+  options: string[];
+  tally: number[];
+  /** This friend's choice (-1: none yet). */
+  yours: number;
+}
+
+/**
+ * Host -> guest: what the Dungeon Master has set for everyone. `shift` moves the time of day (a fraction of a day, as
+ * systems/daynight.ts `DayClock.shift`); `dials` are the capabilities the DM switched (systems/capabilities.ts `DIALS`,
+ * each true or false); `vote` is the open vote, if any. Sent when it changes and once a second.
+ */
+export interface DmMsg {
+  k: 'dm';
+  n: number;
+  shift: number;
+  dials: Record<string, boolean>;
+  vote: VoteWire | null;
+}
+
+export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg | TrMsg | TradeMsg | WorldMsg | DmMsg;
 
 export const encodeMessage = (m: Message): string => JSON.stringify(m);
 
@@ -469,7 +527,7 @@ function parsePlayer(raw: unknown): PlayerSnap | null {
 function parseGround(raw: unknown): GroundSnap | null {
   if (!numbers(raw, 5)) return null;
   const [id, x, y, code, left] = raw as GroundSnap;
-  const ok = isCount(id) && isCoord(x) && isCoord(y) && isIndex(code, ITEM_COUNT + 1) && code > 0;
+  const ok = isCount(id) && isCoord(x) && isCoord(y) && isIndex(code, itemCount() + 1) && code > 0;
   return ok && left >= 0 && left <= GROUND_LIFETIME ? [id, x, y, code, left] : null;
 }
 
@@ -488,7 +546,7 @@ function parseMob(raw: unknown): MobSnap | null {
   return ok ? [index, x, y, dir, state, hp, timer, moving] : null;
 }
 
-const isCode = (v: unknown): v is number => isCount(v) && v <= ITEM_COUNT;
+const isCode = (v: unknown): v is number => isCount(v) && v <= itemCount();
 const codes = (v: unknown, length: number): v is number[] => numbers(v, length) && v.every(isCode);
 
 /** Parse and validate a raw channel message. Returns null for anything malformed. */
@@ -558,6 +616,8 @@ export function parseMessage(raw: unknown): Message | null {
       )) {
         return null;
       }
+      const vt = m.vt;
+      if (vt !== undefined && !(numbers(vt, 2) && isCount(vt[0]) && isIndex(vt[1], MAX_VOTE_OPTIONS))) return null;
       const base = {
         k: 'in',
         n: m.n,
@@ -568,6 +628,7 @@ export function parseMessage(raw: unknown): Message | null {
         ack: m.ack,
         vr: m.vr,
         ...(m.am === undefined ? {} : { am: m.am }),
+        ...(vt === undefined ? {} : { vt: [vt[0], vt[1]] as [number, number] }),
       } as const;
       if (m.inv === undefined) return base;
       const inv = m.inv;
@@ -643,7 +704,8 @@ export function parseMessage(raw: unknown): Message | null {
     case 'do':
       return isCount(m.n) &&
         TRADE_OPS.includes(m.op as TradeOp) &&
-        isCode(m.item) &&
+        isCount(m.item) &&
+        m.item <= Math.max(itemCount(), MAX_LOADOUT_CODE) && // an item code, or a loadout code (the `loadout` op)
         typeof m.shop === 'string' &&
         m.shop.length <= MAX_SHOP_ID
         ? { k: 'do', n: m.n, op: m.op as TradeOp, item: m.item, shop: m.shop }
@@ -701,6 +763,68 @@ export function parseMessage(raw: unknown): Message | null {
           (p: unknown) => numbers(p, 1 + GEAR_SLOTS.length) && isIndex(p[0], MAX_PLAYERS) && p.slice(1).every(isCode),
         );
       return ok && isCount(m.n) ? { k: 'looks', n: m.n, players: players as number[][] } : null;
+    }
+    case 'dm': {
+      const dials = m.dials;
+      const dialsOk =
+        !!dials &&
+        typeof dials === 'object' &&
+        !Array.isArray(dials) &&
+        Object.entries(dials).every(([id, on]) => (DIALS as readonly string[]).includes(id) && typeof on === 'boolean');
+      const v = m.vote as Partial<VoteWire> | null | undefined;
+      const voteOk =
+        v === null ||
+        (!!v &&
+          typeof v === 'object' &&
+          isCount(v.id) &&
+          Array.isArray(v.options) &&
+          v.options.length >= 1 &&
+          v.options.length <= MAX_VOTE_OPTIONS &&
+          v.options.every((o) => typeof o === 'string' && o.length <= MAX_VOTE_LABEL) &&
+          numbers(v.tally, v.options.length) &&
+          v.tally.every(isCount) &&
+          typeof v.yours === 'number' &&
+          Number.isInteger(v.yours) &&
+          v.yours >= -1 &&
+          v.yours < v.options.length);
+      return isCount(m.n) && isNum(m.shift) && Math.abs(m.shift) <= 1 && dialsOk && voteOk
+        ? {
+            k: 'dm',
+            n: m.n,
+            shift: m.shift,
+            dials: dials as Record<string, boolean>,
+            vote: v === null ? null : (v as VoteWire),
+          }
+        : null;
+    }
+    case 'world': {
+      const entries = m.entries;
+      const ok =
+        isCount(m.n) &&
+        isCount(m.total) &&
+        m.total <= MAX_LOG &&
+        isCount(m.from) &&
+        Array.isArray(entries) &&
+        entries.length >= 1 &&
+        entries.length <= WORLD_CHUNK &&
+        m.from + entries.length <= m.total &&
+        entries.every(
+          (e: unknown) =>
+            !!e &&
+            typeof e === 'object' &&
+            !Array.isArray(e) &&
+            typeof (e as { t?: unknown }).t === 'string' &&
+            JSON.stringify(e).length <= MAX_ENTRY,
+        );
+      return ok
+        ? {
+            k: 'world',
+            n: m.n as number,
+            total: m.total as number,
+            from: m.from as number,
+            entries: entries as Record<string, unknown>[],
+          }
+        : null;
     }
     case 'tr': {
       const cmd = parseTradeCommand(m.cmd);

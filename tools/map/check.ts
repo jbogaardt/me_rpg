@@ -1,13 +1,14 @@
 import { isTrialZone } from '../../src/systems/skills';
 import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
 import { CROPS, MAX_CROPS } from '../../src/systems/crops';
-import { MOB_KINDS } from '../../src/systems/combat';
+import { ITEMS } from '../../src/systems/items';
 import { PET_KINDS } from '../../src/systems/pets';
 import { GIVERS, SITE_KINDS } from '../../src/systems/quests';
 import { ZONE_NAMES } from '../../src/systems/places';
 import { SHOPS } from '../../src/systems/shops';
 import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
+import { doorCells as cellsOf, onDoor } from '../../src/map/doors';
 import { coverage, sheet } from './image';
 import { BARE_WALL } from './zone';
 import { CLASH_DE, groundReport } from './ground';
@@ -100,11 +101,6 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   // Points of interest are inside the map and on open ground.
   const points: [string, { col: number; row: number }][] = [['spawn', d.spawn]];
   if (d.npc) points.push(['npc', d.npc]);
-  for (const m of d.mobs) {
-    points.push([`mob ${m.kind}`, m]);
-    if (!MOB_KINDS[m.kind])
-      errors.push(`mob kind "${m.kind}" at (${m.col},${m.row}) isn't in MOB_KINDS (src/systems/combat.ts)`);
-  }
   for (const sh of d.shops) {
     points.push([`shopkeeper ${sh.shop}`, sh]);
     if (!SHOPS[sh.shop]) errors.push(`shopkeeper at (${sh.col},${sh.row}) runs unknown shop "${sh.shop}" (SHOPS)`);
@@ -127,13 +123,32 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   if (d.sites.length > 30) errors.push('a map holds at most 30 quest sites');
   const doorCells = new Set<number>();
   for (const door of d.doors) {
-    for (let i = 0; i < door.w; i++) {
-      points.push([`door to ${door.to.zone}`, { col: door.col + i, row: door.row }]);
-      doorCells.add(door.row * W + door.col + i);
+    for (const [col, row] of cellsOf(door)) {
+      points.push([`door to ${door.to.zone}`, { col, row }]);
+      doorCells.add(row * W + col);
     }
     if (door.w < 1) errors.push(`door at (${door.col},${door.row}) is ${door.w} cells wide`);
     if (!door.to.zone) errors.push(`door at (${door.col},${door.row}) leads nowhere`);
   }
+  const portNames = new Set<string>();
+  for (const port of d.ports) {
+    const at = `port "${port.name}" at (${port.col},${port.row})`;
+    if (portNames.has(port.name)) errors.push(`${at}: the name is used twice`);
+    portNames.add(port.name);
+    if (port.w < 1) errors.push(`${at} is ${port.w} cells wide`);
+    for (const [col, row] of cellsOf(port)) {
+      points.push([`port ${port.name}`, { col, row }]);
+      doorCells.add(row * W + col);
+    }
+    points.push([`port ${port.name}'s arrival`, port.arrive]);
+    if (!port.seal?.length)
+      errors.push(`${at} has no seal (z.port's last argument): left unbound it would be an open way to nowhere`);
+  }
+  for (const port of d.ports)
+    if (doorCells.has(port.arrive.row * W + port.arrive.col))
+      errors.push(
+        `port "${port.name}" arrives on a doorway (${port.arrive.col},${port.arrive.row}), which would bounce the player back`,
+      );
   const chestPoints: [string, { col: number; row: number }][] = d.chests.map((c) => {
     if (!(CHEST_KINDS as readonly string[]).includes(c.kind))
       errors.push(`chest at (${c.col},${c.row}) has unknown kind "${c.kind}" (CHEST_KINDS)`);
@@ -142,9 +157,16 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   });
   if (d.chests.length > 30) errors.push('a map holds at most 30 chests');
   for (const c of d.crops) {
-    if (!(c.kind in CROPS)) errors.push(`crop at (${c.col},${c.row}) has unknown kind "${c.kind}" (CROPS)`);
+    const kind = (CROPS as Record<string, { item: string }>)[c.kind];
+    if (!kind) errors.push(`crop at (${c.col},${c.row}) has unknown kind "${c.kind}" (CROPS)`);
+    else if (!ITEMS[kind.item])
+      errors.push(
+        `crop ${c.kind} at (${c.col},${c.row}) yields "${kind.item}", which this campaign's items.json lacks`,
+      );
     chestPoints.push([`crop ${c.kind}`, c]); // solid like a chest: picked from a reachable cell beside it
   }
+  if (d.crops.length && !Object.values(ITEMS).some((i) => i.waters))
+    errors.push("crop plots, but nothing in this campaign's items.json `waters` them");
   if (d.crops.length > MAX_CROPS) errors.push(`a map holds at most ${MAX_CROPS} crop plots`);
   // A signpost names at least two ways (a fork), each a zone or a place on this map, and is read from beside it.
   const placeNames = new Set(d.places.map((p) => p.name));
@@ -272,7 +294,7 @@ export function checkDoors(maps: Map<string, MapData>): string[] {
         errors.push(`${where} arrives outside "${door.to.zone}" at (${col},${row})`);
       } else if (target.collision.includes(index)) {
         errors.push(`${where} arrives on a blocked cell of "${door.to.zone}" (${col},${row})`);
-      } else if (target.doors.some((t) => row === t.row && col >= t.col && col < t.col + t.w)) {
+      } else if (target.doors.some((t) => onDoor(t, col, row))) {
         errors.push(
           `${where} arrives on a door of "${door.to.zone}" (${col},${row}), which would bounce the player back`,
         );

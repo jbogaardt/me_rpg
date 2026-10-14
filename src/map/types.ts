@@ -34,12 +34,12 @@ export interface CellPoint {
   row: number;
 }
 
-/** An enemy spawn point; `kind` is a key of MOB_KINDS (src/systems/combat.ts). */
+/** An enemy to spawn; `kind` is a key of MOB_KINDS (src/systems/combat.ts). Placed by the content (content/populate.ts), not the map. */
 export interface MobSpawn extends CellPoint {
   kind: string;
 }
 
-/** A treasure chest; `kind` picks its art (CHEST_KINDS) and `loot` is a key of CHEST_LOOTS (src/systems/chests.ts). */
+/** A treasure chest; `kind` picks its art (CHEST_KINDS) and `loot` is a key of the campaign's items.json `loots`. */
 export interface ChestSpawn extends CellPoint {
   kind: string;
   loot: string;
@@ -55,7 +55,7 @@ export interface PetSpawn extends CellPoint {
   kind: string;
 }
 
-/** A shopkeeper standing at `col,row`; `shop` is a key of SHOPS (src/systems/shops.ts). The building is a map prop. */
+/** A shopkeeper standing at `col,row`; `shop` is a shop of the campaign's items.json. The building is a map prop. */
 export interface ShopSpawn extends CellPoint {
   shop: string;
 }
@@ -86,9 +86,46 @@ export interface SignSpawn extends CellPoint {
 /** Walking onto a door cell takes the player to another zone (`to.col`/`to.row` is where they appear). */
 export interface DoorSpawn extends CellPoint {
   w: number; // cells wide, starting at `col` (a hall's door is two cells wide, a tower's one)
-  to: { zone: string; col: number; row: number };
+  h?: number; // cells tall, starting at `row` (default 1; a doorway on a map's east or west edge is a column)
+  to: { zone: string; col: number; row: number; port?: string };
   /** The way a player walking through it is going across the world, on a gap between two biomes: the screen slides that way. */
   dir?: 'up' | 'down' | 'left' | 'right';
+}
+
+/**
+ * A doorway whose far side is the content's to decide, not the map's (a random campaign joins regions by their ports):
+ * the `w` cells from `col,row` are the doorway, `arrive` is where a player coming in through it appears. The content
+ * (biomes.json `ports`) binds it to another map's port, which makes it a door (`wireDoors`, src/content/ports.ts); a
+ * port nothing binds is walled up.
+ */
+export interface PortSpawn extends CellPoint {
+  name: string;
+  w: number;
+  /** Cells tall (1 for a port on the north or south edge; an east or west port is a column). */
+  h: number;
+  arrive: CellPoint;
+  /** What closes it when nothing binds it (a rockfall, a thicket): drawn only then (`wireDoors`), so no open way leads nowhere. */
+  seal?: MapObject[];
+  /** The edge of the map it is on (`portSide`). A port is joined only to one on the opposite edge, so a player going north arrives in the south. */
+  side: 'north' | 'south' | 'east' | 'west';
+}
+
+/** The edge of a `width` x `height` map a doorway of `w` cells at `col,row` is nearest. */
+export function portSide(
+  col: number,
+  row: number,
+  w: number,
+  h: number,
+  width: number,
+  height: number,
+): PortSpawn['side'] {
+  const near: [PortSpawn['side'], number][] = [
+    ['north', row],
+    ['south', height - (row + h)],
+    ['west', col],
+    ['east', width - (col + w)],
+  ];
+  return near.reduce((a, b) => (b[1] < a[1] ? b : a))[0];
 }
 
 /**
@@ -110,7 +147,6 @@ export interface MapData {
   ramps: number[]; // cell indices of stairs/slopes, which connect levels
   spawn: CellPoint;
   npc: CellPoint | null;
-  mobs: MobSpawn[];
   chests: ChestSpawn[]; // solid; opened with the action key
   crops: CropSpawn[]; // solid plots; picked with the action key when ripe
   shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
@@ -120,6 +156,7 @@ export interface MapData {
   signs: SignSpawn[]; // signposts at the forks of the roads: the action key reads where each way leads
   sites: SiteSpawn[]; // where gather quests send the player; touched with the action key while a quest wants them
   doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
+  ports: PortSpawn[]; // doorways the content binds to other maps' ports (left out of the file when there are none)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
   /** The zone's weather (a key of CLIMATES in systems/weather.ts): what falls and blows there. Rooms have none. */
   climate: string;
@@ -131,8 +168,9 @@ export interface MapData {
  * `[part, px, py]` triples naming an entry of `parts` (`[sheet, x, y, w, h, tag, z]`, tag -1 for none, z null for the
  * default; tags index `tags`). Everything else is as in `MapData`.
  */
-export interface PackedMap extends Omit<MapData, 'version' | 'ground' | 'objects'> {
+export interface PackedMap extends Omit<MapData, 'version' | 'ground' | 'objects' | 'ports'> {
   version: 3;
+  ports?: PortSpawn[];
   palette: GroundCell[];
   ground: number[];
   tags: string[];
@@ -183,7 +221,6 @@ function unpacked(json: unknown): MapData {
     ramps: d.ramps ?? [],
     spawn: d.spawn ?? { col: 1, row: 1 },
     npc: d.npc ?? null,
-    mobs: d.mobs ?? [],
     chests: d.chests ?? [],
     crops: d.crops ?? [],
     shops: d.shops ?? [],
@@ -193,6 +230,10 @@ function unpacked(json: unknown): MapData {
     places: d.places ?? [],
     signs: d.signs ?? [],
     doors: d.doors ?? [],
+    ports: (d.ports ?? []).map((p) => {
+      const h = p.h ?? 1;
+      return { ...p, h, side: p.side ?? portSide(p.col, p.row, p.w, h, d.width!, d.height!) };
+    }),
     indoor: d.indoor ?? false,
     climate: d.climate ?? 'temperate',
   };

@@ -1,4 +1,5 @@
 import type { Container, Renderer } from 'pixi.js';
+import { enabled, flag } from '../systems/capabilities';
 import type { Sprites, Zone } from '../assets';
 import type { Aim } from '../core/aim';
 import { COMBO_WINDOW, COMBO_WINDOW_TOUCH, ComboReader } from '../core/combo';
@@ -14,6 +15,8 @@ import type { Mob } from '../entities/Mob';
 import type { Command, Player } from '../entities/Player';
 import { NO_COMMAND } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
+import type { Choices } from '../hud/Choices';
+import type { ContentManager } from '../content/ContentManager';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
@@ -23,6 +26,8 @@ import { GuideArrow } from '../entities/GuideArrow';
 import { guideFor } from '../systems/guide';
 import { zoneName } from '../systems/places';
 import type { Menu } from '../hud/Menu';
+import type { PartyRow } from '../hud/Party';
+import { PLAYER_COLORS, playerName } from '../systems/looks';
 import type { ShopCounter } from '../hud/ShopCounter';
 import type { TradeUi } from '../hud/Trade';
 import { CELL } from '../map/types';
@@ -41,7 +46,6 @@ import { petSound } from '../systems/pets';
 import {
   CHAPTERS,
   GIVERS,
-  QUEST_GIVER,
   QUESTS,
   currentQuest,
   giverMark,
@@ -69,6 +73,13 @@ import { Trading } from './overworld/Trading';
 import { Training } from './overworld/Training';
 import { Visuals } from './overworld/Visuals';
 import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
+import { Scenario } from './overworld/Scenario';
+import { Story } from './overworld/Story';
+import { DmDesk } from './overworld/DmDesk';
+import { VotePanel } from '../hud/VotePanel';
+import type { World } from '../content/world';
+import { particleEffect } from '../entities/ParticleEffect';
+import { floatText } from '../entities/effects';
 
 export type { ZoneLoader, ZoneUnloader };
 
@@ -94,6 +105,7 @@ export interface Ui {
   shop: ShopCounter;
   trade: TradeUi;
   dialog: Dialog;
+  choices: Choices;
   touch: TouchControls;
   session: Session;
 }
@@ -122,6 +134,12 @@ export class OverworldScene implements Scene {
   private pack: PackSync;
   private trading: Trading;
   private training: Training;
+  private scenario: Scenario;
+  /** A live world's story, steered by its Dungeon Master (inert for every other world). */
+  private liveStory: Story;
+  /** The Dungeon Master's controls: weather, time of day, capabilities for everyone, votes. */
+  private desk!: DmDesk;
+  private votePanel = new VotePanel();
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
@@ -149,9 +167,12 @@ export class OverworldScene implements Scene {
     loadZone: ZoneLoader,
     unloadZone: ZoneUnloader,
     renderer: Renderer,
+    content: ContentManager,
+    /** A live world (`?campaign=live`), grown during play by its Dungeon Master; null for every other world. */
+    world: World | null = null,
   ) {
     const arena = (this.arena = new Arena(sprites.wardrobe));
-    this.zones = new Zones(arena, sprites, loadZone, unloadZone, ui, renderer);
+    this.zones = new Zones(arena, sprites, loadZone, unloadZone, ui, renderer, content);
     const visuals = new Visuals(arena);
     const say = (lines: string[]) => ui.dialog.say(lines);
     // The simulation reports what a friend should see through the host link (which only records it while hosting).
@@ -173,7 +194,27 @@ export class OverworldScene implements Scene {
       return true;
     };
 
-    this.zones.addHome(zone);
+    // The game starts in the content's start node: its zone (`zone`, loaded by main.ts) shows that node's entities.
+    const start = content.startNode;
+    this.zones.assign(zone.name, start.node_id);
+    this.zones.addHome(zone, start.spawn && { col: start.spawn.x, row: start.spawn.y });
+    this.scenario = new Scenario(arena, this.zones, content, ui.choices, say);
+    this.liveStory = new Story(arena, this.zones, content, ui.session, world);
+    this.liveStory.onOpened = (zone, x, y) => {
+      const z = arena.zones.get(zone);
+      if (!z) return;
+      z.effects.add(floatText(x, y - 24, 'The way opens', 0xffd34d));
+      z.effects.add(particleEffect('levelUp', x, y));
+    };
+    this.liveStory.onGrew = (land) => this.banner.show(land, 'The story leads on to');
+    this.liveStory.onCast = (zone, x, y, name) => {
+      const z = arena.zones.get(zone);
+      if (!z) return;
+      z.effects.add(particleEffect('levelUp', x, y - 16));
+      z.effects.add(floatText(x, y - 56, name, 0xffd34d));
+    };
+    this.desk = new DmDesk(arena, ui.session, content, this.dayClock);
+    this.votePanel.onChoose = (i) => this.desk.castVote(i);
     this.zones.root.addChildAt(this.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     this.overlay = new MapOverlay();
@@ -184,6 +225,14 @@ export class OverworldScene implements Scene {
 
   get root(): Container {
     return this.zones.root;
+  }
+
+  /**
+   * Load a scenario node (public/content/scenarios.json): its biome's zone with the node's entities, the local player
+   * taken there, its choices shown. Solo only for now (it throws online).
+   */
+  loadScenario(nodeId: string): Promise<void> {
+    return this.scenario.load(nodeId);
   }
 
   // What playtest scripts poke at (see .claude/skills/playtest): the local player's body and hero, the zone's mobs and NPC,
@@ -225,13 +274,44 @@ export class OverworldScene implements Scene {
   enter() {
     this.ui.menu.inventory.attach({ apply: (op) => this.pack.localOp(op) });
     this.ui.menu.magic.attach({ equip: (wanted) => this.pack.setLoadout(wanted), zone: () => this.arena.zone.name });
+    this.ui.menu.party.attach({ rows: () => this.partyRows(), go: (slot) => this.dmGoTo(slot) });
+    this.ui.menu.story.attach({
+      canChoose: () => this.liveStory.canChoose,
+      view: () => this.liveStory.view(),
+      choose: (cue) => {
+        this.liveStory.choose(cue);
+        this.desk.closeVote(); // the DM's choice ends any vote
+      },
+      vote: () => (this.arena.role === 'host' ? this.desk.voteView() : null),
+      openVote: () => this.desk.openVote(this.liveStory.view()?.options ?? []),
+      closeVote: () => this.desk.closeVote(),
+    });
+    this.ui.menu.cast.attach({
+      castable: () => this.liveStory.castable(),
+      cast: (entity) => this.liveStory.castHere(entity),
+      make: (name, look, lines) => this.liveStory.makePerson(name, look, lines),
+      note: () => this.liveStory.lastNote,
+    });
+    this.ui.menu.dials.attach({
+      // Whoever runs the world: the online DM, or a solo player in a live world.
+      available: () => this.arena.local.dm || (this.arena.role === 'solo' && this.liveStory.live),
+      view: () => this.desk.dialsView(),
+      weather: (precip, wind) => this.desk.setWeather(precip, wind),
+      hour: (hour) => this.desk.setHour(hour),
+      dial: (id, on) => this.desk.setDial(id, on),
+    });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
-    if (this.ui.session.urlCode) this.ui.menu.toggle(this.hero, 'online');
+    if (this.ui.session.urlCode && enabled('coop')) this.ui.menu.toggle(this.hero, 'online');
   }
 
   exit() {
     this.ui.menu.inventory.attach(null);
     this.ui.menu.magic.attach(null);
+    this.ui.menu.party.attach(null);
+    this.ui.menu.story.attach(null);
+    this.ui.menu.dials.attach(null);
+    this.ui.menu.cast.attach(null);
+    this.votePanel.sync(null);
     this.overlay.setAvailable(false);
     this.harvestButtons.clear();
     this.ui.dialog.close();
@@ -256,19 +336,26 @@ export class OverworldScene implements Scene {
     const { arena } = this;
     this.syncRole(session.role);
     arena.clock += dt;
+    this.liveStory.update(dt); // a live world: the host sends its log, a guest grows its own from it
+    this.desk.update(dt); // the DM's dials, time of day and vote: the host tells its friends, a friend is told
+    this.votePanel.sync(this.desk.openVoteForGuest);
     const online = arena.role !== 'solo';
-    // The map shows the open-air zone you are in, as far as it has been explored; rooms have none.
+    // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
+    // without the map capability (it is still explored, so nothing changes if one is played later).
     const outdoors = !arena.zone.data.indoor;
-    this.overlay.setAvailable(outdoors);
+    const here = arena.zone.name;
+    const mapShown = outdoors && enabled('map', here);
+    this.overlay.setAvailable(mapShown);
     if (outdoors) {
       const seen = this.atlas.of(arena.zone.name, arena.zone.data);
+      if (!flag('map', 'fog', here)) seen.revealAll(); // a map without fog shows the whole zone at once
       // Everyone in this zone uncovers the map around them (a guest only knows the players in its own zone).
       for (const p of arena.players()) if (p.body.visible) seen.reveal(p.body.x, p.body.y);
       this.overlay.setZone(arena.zone.data, seen, arena.zone.name);
     }
-    menu.setOnline(online);
+    menu.setOnline(online, arena.local.dm);
     this.trading.sync(dt, online);
-    if (outdoors && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
+    if (mapShown && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
     if (!dialog.active && menuPressed()) {
       if (trade.open) this.trading.command({ c: 'cancel' });
       else if (shop.open) shop.close();
@@ -281,7 +368,7 @@ export class OverworldScene implements Scene {
     if (menu.open || shop.open || trade.open) {
       if (menu.open) menu.update();
       else if (shop.open) shop.update();
-      hud.update(this.hero); // gold changes at the counter
+      hud.update(this.hero, '', arena.zone.name, arena.local.dm); // gold changes at the counter
       if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
     }
 
@@ -293,7 +380,12 @@ export class OverworldScene implements Scene {
     // What the local player sees: the zone they are in (a door above may just have changed it).
     const z = arena.zone;
     z.effects.update(dt);
-    this.night.update(this.dayClock.time(), !z.data.indoor, arena.screen.width, arena.screen.height);
+    this.night.update(
+      this.dayClock.time(),
+      !z.data.indoor && enabled('dayNight', z.name),
+      arena.screen.width,
+      arena.screen.height,
+    );
     if (z.weatherLayer && z.ambient && z.weather) {
       // This biome's weather (the simulation rolls it, in every zone someone is in; a guest is told by the host).
       z.ambient.wind = z.weather.wind;
@@ -306,6 +398,8 @@ export class OverworldScene implements Scene {
 
     z.pondBeds.show(z.ponds.levels()); // the ponds drained by drinking, until rain fills them
     z.npc?.animate(dt * 1000, false);
+    for (const f of z.folk) f.body.animate(dt * 1000, false);
+    this.scenario.update(menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy);
     this.updateQuests(z, dt);
     this.announceArea();
     this.tellStory();
@@ -319,8 +413,11 @@ export class OverworldScene implements Scene {
       item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
     }
     for (const body of arena.bodies()) body.zIndex = body.y;
-    this.updateHarvestButtons(z, menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy);
-    hud.update(this.hero, this.combos.typed, this.arena.zone.name);
+    this.updateHarvestButtons(
+      z,
+      menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy || arena.local.dm,
+    );
+    hud.update(this.hero, this.combos.typed, this.arena.zone.name, this.arena.local.dm);
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.
@@ -421,7 +518,7 @@ export class OverworldScene implements Scene {
     }
     if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.guest.pressAction());
     if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);
-    this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy), cmd.aim);
+    this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy), cmd.aim, this.desk.voteInput);
   }
 
   /** Switch to `role` (a friend connected or everyone dropped), setting the world up for it. */
@@ -431,9 +528,40 @@ export class OverworldScene implements Scene {
     if (arena.role === 'host') this.host.leave();
     else if (arena.role === 'client') this.guest.leave();
     arena.role = 'solo'; // so nothing from here on is recorded for friends until the new role is set
+    this.desk.reset(); // what a DM set lasts for their game only
     if (role === 'host') this.host.enter();
     else if (role === 'client') this.guest.enter();
     arena.role = role;
+  }
+
+  // --- The Dungeon Master ---
+
+  /** The players as the Dungeon Master's Party tab lists them. */
+  private partyRows(): PartyRow[] {
+    const { arena } = this;
+    return [...arena.remotes.values()]
+      .filter((p) => !p.dm)
+      .map((p) => ({
+        slot: p.slot,
+        name: playerName(p.slot),
+        color: PLAYER_COLORS[p.slot] ?? 0xffffff,
+        level: p.hero.stats.level,
+        hp: p.hero.stats.hp,
+        maxHp: p.hero.stats.maxHp,
+        where: zoneName(p.zone),
+        quest: currentQuest(p.hero.quests)?.title ?? '',
+        here: p.zone === arena.local.zone,
+      }));
+  }
+
+  /** The Dungeon Master steps to a player's side, through the iris, wherever in the world they are. */
+  private dmGoTo(slot: number) {
+    const { arena } = this;
+    const p = arena.remotes.get(slot);
+    if (!arena.local.dm || !p || this.zones.transition.busy) return;
+    this.ui.menu.close();
+    const dest = arena.zoneOf(p);
+    this.zones.travel(arena.local, dest, { col: Math.floor(p.body.x / CELL), row: Math.floor(p.body.y / CELL) });
   }
 
   // --- What the action key does ---
@@ -489,8 +617,11 @@ export class OverworldScene implements Scene {
     const giver = arena.givers.find((g) => near(g.body, KEEPER_REACH));
     const site = arena.sites.find((s) => s.visible && near(s, SITE_REACH));
     const pet = arena.pets.find((p) => near(p));
+    const folk = arena.zone.folk.find((f) => near(f.body));
     if (dialog.active) {
       dialog.advance();
+    } else if (arena.local.dm && !lectern && !sign) {
+      // The Dungeon Master reads the world (signs, the lectern) but takes no part in it: no shops, quests or swings.
     } else if (lectern) {
       dialog.say(lecternPages());
     } else if (sign) {
@@ -512,6 +643,9 @@ export class OverworldScene implements Scene {
     } else if (pet) {
       pet.attend(this.player.x, this.player.y);
       dialog.say([petSound(pet.kind, pet.talks++)]);
+    } else if (folk) {
+      folk.body.face(directionToward(this.player.x - folk.body.x, this.player.y - folk.body.y));
+      dialog.say(folk.lines);
     } else if (npc?.visible && near(npc)) {
       npc.face(directionToward(this.player.x - npc.x, this.player.y - npc.y));
       dialog.say(NPC_LINES);
@@ -549,15 +683,17 @@ export class OverworldScene implements Scene {
 
   /** A player's action button (host and solo): open a chest within reach, pick something up, otherwise attack. */
   private act(p: Player) {
+    if (p.dm) return; // the Dungeon Master opens, picks and strikes nothing
     const chest = this.arena.chests.find(
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
     if (chest) return this.openChest(p, chest);
-    const crop = this.arena.crops.find((c) => c.ripe && this.inReach(p, c));
+    const farming = enabled('farming', this.arena.zone.name); // without it, crop plots are scenery
+    const crop = farming && this.arena.crops.find((c) => c.ripe && this.inReach(p, c));
     if (crop) return this.pickCrop(p, crop);
-    const dry = this.arena.crops.find(
-      (c) => c.thirsty && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH,
-    );
+    const dry =
+      farming &&
+      this.arena.crops.find((c) => c.thirsty && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH);
     if (dry) return this.waterCrop(p, dry);
     const site = this.arena.sites.find(
       (s) =>
@@ -582,9 +718,8 @@ export class OverworldScene implements Scene {
   /** The quest markers for the local player: "!" over the giver with a task to hand out, "?" when one can be handed in; sites show only while wanted. */
   private updateQuests(z: ZoneState, dt: number) {
     const hero = this.hero;
-    const quest = giverMark(hero);
     for (const g of z.givers) {
-      const mark = g.giver === QUEST_GIVER ? quest : ''; // only the warden has tasks to hand out
+      const mark = giverMark(hero, g.giver); // "!" or "?" over whoever the current quest is about
       const text = mark ? `${mark} ${GIVERS[g.giver]?.tag ?? ''}` : (GIVERS[g.giver]?.tag ?? '');
       if (this.marked.get(g.body) === text) continue;
       this.marked.set(g.body, text);
@@ -623,7 +758,7 @@ export class OverworldScene implements Scene {
       this.story = { stage: log.stage, ready, chapter: q && log.taken ? q.chapter : -1 };
       return;
     }
-    if (q && s.stage === log.stage && !s.ready && ready) this.fieldNote = q.fieldNote;
+    if (q && q.fieldNote.length && s.stage === log.stage && !s.ready && ready) this.fieldNote = q.fieldNote;
     if (q && log.taken && startsChapter(q) && s.chapter !== q.chapter) {
       s.chapter = q.chapter;
       this.titleCard = { title: CHAPTERS[q.chapter]?.title ?? '', sub: `Chapter ${q.chapter + 1}` };
@@ -646,8 +781,7 @@ export class OverworldScene implements Scene {
 
   /** The quest arrow: points from the hero at where the quest leads (a thing in this zone, or the door towards it). */
   private pointTheWay(z: ZoneState, dt: number) {
-    const hide = this.zones.transition.busy || !this.player.visible;
-    const warden = z.givers.find((g) => g.giver === QUEST_GIVER);
+    const hide = this.zones.transition.busy || !this.player.visible || !enabled('guide', z.name) || this.arena.local.dm; // the DM has no quest
     const world = {
       zone: z.name,
       doors: z.data.doors,
@@ -656,7 +790,8 @@ export class OverworldScene implements Scene {
         const key = m.alive ? mobKey(m.kind) : undefined;
         return key ? [{ key, x: m.body.x, y: m.body.y }] : [];
       }),
-      giver: warden ? { x: warden.body.x, y: warden.body.y } : null,
+      givers: z.givers.map((g) => ({ id: g.giver, x: g.body.x, y: g.body.y })),
+      places: z.data.places.map((p) => ({ name: p.name, x: (p.col + 0.5) * CELL, y: (p.row + 0.5) * CELL })),
     };
     const guide = hide ? null : guideFor(this.hero, world, this.player);
     const { camera } = z;
@@ -682,7 +817,7 @@ export class OverworldScene implements Scene {
     const { world } = arena.view;
     const scale = world.scale.x;
     const spots: HarvestSpot[] = z.crops.flatMap((c, key) =>
-      c.ripe && this.inReach(arena.local, c)
+      c.ripe && enabled('farming', z.name) && this.inReach(arena.local, c)
         ? [{ key, x: world.x + c.x * scale, y: world.y + (c.y - CELL * 1.6) * scale }]
         : [],
     );

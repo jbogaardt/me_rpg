@@ -4,7 +4,7 @@ import { encodeMessage, PROTOCOL_VERSION, type Message, type SnapMsg } from './p
 import type { Answers } from './relayClient';
 import { RelayError } from './relayClient';
 import type { SeatAnswer } from './relayApi';
-import { Session, statusLabel } from './session';
+import { Session, setContentTag, statusLabel } from './session';
 
 // The session's job is bookkeeping: which seat is in which state, when the code closes, who is told what. These
 // tests run it against a scripted link and relay, so every step of a game's life can be driven by hand.
@@ -803,6 +803,29 @@ describe('the version check', () => {
     await vi.advanceTimersByTimeAsync(3000);
     expect(link.sent.filter((m) => m.k === 'hello')).toHaveLength(hellos); // stopped
     expect(link.status).toBe('connected');
+  });
+
+  it('disconnects a friend playing another world (campaign or seed), and accepts one in the same', async () => {
+    setContentTag('random:42');
+    try {
+      const session = setup();
+      await session.createGame();
+      const link = await befriend(1);
+      expect(link.sent.find((m) => m.k === 'hello')).toEqual({
+        k: 'hello',
+        v: PROTOCOL_VERSION,
+        build: `${__BUILD_ID__}#random:42`,
+      });
+      link.receive({ k: 'hello', v: PROTOCOL_VERSION, build: `${__BUILD_ID__}#random:7` });
+      await flush();
+      expect(link.status).toBe('disconnected');
+      const same = await befriend(2);
+      same.receive({ k: 'hello', v: PROTOCOL_VERSION, build: `${__BUILD_ID__}#random:42` });
+      await flush();
+      expect(same.status).toBe('connected');
+    } finally {
+      setContentTag('');
+    }
   });
 
   it('checks the version even when their hello arrives before ours is sent', async () => {

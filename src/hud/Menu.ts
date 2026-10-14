@@ -11,6 +11,7 @@ import {
   xpToNext,
   type Hero,
 } from '../systems/combat';
+import { enabled } from '../systems/capabilities';
 import { tabStep } from '../core/controls';
 import { SKILLS } from '../systems/skills';
 import { arrows } from '../systems/spells';
@@ -22,12 +23,35 @@ import { questPage } from './QuestLog';
 import { AimSetting } from './AimSetting';
 import { Keybinds } from './Keybinds';
 import { Multiplayer } from './Multiplayer';
+import { Party } from './Party';
+import { StoryTab } from './StoryTab';
+import { Dials } from './Dials';
+import { CastTab } from './Cast';
+import { esc } from './html';
 
 // Pause menu (HTML overlay; markup in index.html). The game is frozen while it is open.
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
 // The Online tab (multiplayer connection) is Multiplayer.ts. Online play does not pause the world behind the menu.
 
-const TABS = ['status', 'inventory', 'magic', 'quests', 'controls', 'online', 'trade', 'credits']; // 'trade' (hud/Trade.ts) shows only in a co-op game
+// 'trade' (hud/Trade.ts) shows only to a player in a co-op game; 'party' (hud/Party.ts) only to its Dungeon Master, who has
+// no hero tabs (Status, Inventory, Magic, Quests, Trade) while they run the world.
+// 'story' (hud/StoryTab.ts) shows whoever may steer a live world's story: its DM, or a solo player.
+// 'dials' (hud/Dials.ts, "World") shows whoever runs the world: the online DM, or a solo player in a live world.
+// 'cast' (hud/Cast.ts) shows a live world's DM: bring foes and people in, make new people.
+const TABS = [
+  'status',
+  'inventory',
+  'magic',
+  'quests',
+  'party',
+  'story',
+  'dials',
+  'cast',
+  'controls',
+  'online',
+  'trade',
+  'credits',
+];
 
 export class Menu {
   open = false;
@@ -39,6 +63,18 @@ export class Menu {
 
   /** The Magic tab (the abilities learned from the trainer); the scene attaches its handlers while it runs. */
   readonly magic = new Magic(document.getElementById('menu-magic')!);
+
+  /** The Dungeon Master's Party tab; the scene attaches its handlers while it runs. */
+  readonly party = new Party(document.getElementById('menu-party')!);
+
+  /** A live world's Story tab; the scene attaches its handlers while it runs. */
+  readonly story = new StoryTab(document.getElementById('menu-story')!);
+
+  /** The World tab: weather, time of day and capabilities, for whoever runs the world. */
+  readonly dials = new Dials(document.getElementById('menu-dials')!);
+
+  /** A live world's Cast tab: who the DM brings in. */
+  readonly cast = new CastTab(document.getElementById('menu-cast')!);
 
   private keybinds: Keybinds;
   private aim: AimSetting;
@@ -58,12 +94,13 @@ export class Menu {
     this.root.hidden = !this.open;
     if (!this.open) this.keybinds.cancel();
     const index = tab ? TABS.indexOf(tab) : -1;
-    if (index >= 0) this.tab = index;
+    if (index >= 0 && !this.tabButton(TABS[index]!).hidden) this.tab = index;
     if (this.open) this.render(hero);
   }
 
   /** The inventory key: open the menu on the Inventory tab, or close it if that is already showing. */
   toggleInventory(hero: Hero) {
+    if (this.tabButton('inventory').hidden) return; // the Dungeon Master carries nothing
     if (this.open && TABS[this.tab] === 'inventory') this.close();
     else if (this.open) this.select(TABS.indexOf('inventory'));
     else this.toggle(hero, 'inventory');
@@ -91,6 +128,10 @@ export class Menu {
     const by = tabStep();
     if (by) this.step(by);
     this.renderQuests(); // online the world runs behind the menu, so a kill can move the log
+    if (TABS[this.tab] === 'party') this.party.render();
+    if (TABS[this.tab] === 'story') this.story.render();
+    if (TABS[this.tab] === 'dials') this.dials.render();
+    if (TABS[this.tab] === 'cast') this.cast.render();
   }
 
   /** The tab `by` places along from the current one, skipping tabs that are hidden. */
@@ -101,12 +142,40 @@ export class Menu {
     this.select(i);
   }
 
-  /** Called every frame: the Trade tab is only there while online. Leaves it if it goes away under the player. */
-  setOnline(online: boolean) {
-    const button = this.tabButton('trade');
-    if (button.hidden === !online) return;
-    button.hidden = !online;
-    if (!online && TABS[this.tab] === 'trade') this.select(0);
+  /**
+   * Called every frame: the Trade tab is only there while online (and trading is a capability of the campaign), the
+   * Online tab only with co-op, the Magic tab only with skills (systems/capabilities.ts). The Dungeon Master (`dm`, an
+   * online host) has the Party tab instead of the hero's tabs. Leaves a tab that goes away under the player.
+   */
+  setOnline(online: boolean, dm = false) {
+    const shown: Record<string, boolean> = {
+      status: !dm,
+      inventory: !dm,
+      quests: !dm,
+      magic: !dm && enabled('skills'),
+      party: dm,
+      story: this.story.available,
+      dials: this.dials.available,
+      cast: this.cast.available,
+      trade: online && !dm && enabled('trading'),
+      online: enabled('coop'),
+    };
+    let changed = false;
+    for (const [tab, on] of Object.entries(shown)) {
+      const button = this.tabButton(tab);
+      if (button.hidden === !on) continue;
+      button.hidden = !on;
+      changed = true;
+    }
+    if (changed && this.tabButton(TABS[this.tab]!).hidden) this.select(this.firstShown());
+  }
+
+  /** The first tab that is not hidden (Status for a player, Party for the Dungeon Master). */
+  private firstShown(): number {
+    return Math.max(
+      0,
+      TABS.findIndex((name) => !this.tabButton(name).hidden),
+    );
   }
 
   private tabButton(name: string) {
@@ -114,7 +183,12 @@ export class Menu {
   }
 
   private select(i: number) {
+    if (this.tabButton(TABS[i]!).hidden) i = this.firstShown();
     this.tab = i;
+    if (TABS[i] === 'party') this.party.render();
+    if (TABS[i] === 'story') this.story.render();
+    if (TABS[i] === 'dials') this.dials.render();
+    if (TABS[i] === 'cast') this.cast.render();
     if (TABS[i] === 'inventory' && this.hero) this.inventory.show(this.hero);
     if (TABS[i] === 'magic' && this.hero) this.magic.show(this.hero);
     for (const [j, name] of TABS.entries()) {
@@ -134,7 +208,7 @@ export class Menu {
       .join('<br />');
     const xpFrac = Math.max(0, Math.min(1, s.xp / next));
     document.getElementById('menu-status')!.innerHTML = `
-      <h2>${hero.name} <small>Level ${s.level}</small></h2>
+      <h2>${esc(hero.name)} <small>Level ${s.level}</small></h2>
       <dl>
         ${row('HP', `${Math.ceil(s.hp)} / ${s.maxHp}`)}
         ${row('MP', `${Math.floor(s.mp)} / ${s.maxMp}`)}

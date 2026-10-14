@@ -91,7 +91,10 @@ export class Visuals {
   private projectileStep(x: number, y: number, onHit?: (mob: Mob) => void): boolean {
     const { collision, mobs } = this.arena;
     if (collision.isBlocked(Math.floor(x / CELL), Math.floor((y + BOLT_HEIGHT) / CELL))) return true;
-    const mob = mobs.find((m) => m.alive && Math.abs(x - m.body.x) < 12 && Math.abs(y + BOLT_HEIGHT - m.body.y) < 16);
+    const mob = mobs.find(
+      (m) =>
+        m.alive && Math.abs(x - m.body.x) < 12 * m.body.size && Math.abs(y + BOLT_HEIGHT - m.body.y) < 16 * m.body.size,
+    );
     if (!mob) return false;
     onHit?.(mob);
     return true;

@@ -4,6 +4,8 @@ declare const __BUILD_ID__: string;
 interface ImportMetaEnv {
   /** Matchmaking relay base URL override (see src/net/relayConfig.ts). */
   readonly VITE_RELAY_URL?: string;
+  /** The campaign to play (a folder of public/content/); default campaign2, see src/main.ts. */
+  readonly VITE_CAMPAIGN?: string;
 }
 
 declare module 'virtual:asset-versions' {

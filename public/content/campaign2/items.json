@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "start": { "weapon": "rustySword", "cape": "travelerCloak" },
+  "items": {
+    "rustySword": {
+      "name": "Rusty Sword",
+      "value": 4,
+      "slot": "weapon",
+      "attack": 2,
+      "look": { "weapon": "weapon.arming_iron" }
+    },
+    "bronzeSword": {
+      "name": "Bronze Sword",
+      "value": 40,
+      "slot": "weapon",
+      "attack": 3,
+      "look": { "weapon": "weapon.arming_bronze" }
+    },
+    "steelSword": {
+      "name": "Steel Sword",
+      "value": 150,
+      "slot": "weapon",
+      "attack": 5,
+      "look": { "weapon": "weapon.arming_steel" }
+    },
+    "shortBow": {
+      "name": "Short Bow",
+      "value": 35,
+      "slot": "weapon",
+      "attack": 3,
+      "ranged": { "speed": 300, "range": 256, "cooldown": 0.45 },
+      "look": { "weapon": "weapon.bow_light" }
+    },
+    "woodenShield": {
+      "name": "Wooden Shield",
+      "value": 25,
+      "slot": "offhand",
+      "defense": 1,
+      "look": { "shield": "shield.round_brown" }
+    },
+    "clothHood": {
+      "name": "Cloth Hood",
+      "value": 15,
+      "slot": "head",
+      "defense": 1,
+      "look": { "headwear": "headwear.hood_brown" }
+    },
+    "leatherArmor": {
+      "name": "Leather Armor",
+      "value": 60,
+      "slot": "chest",
+      "defense": 2,
+      "look": { "torso": "torso.leather" }
+    },
+    "leatherBoots": {
+      "name": "Leather Boots",
+      "value": 20,
+      "slot": "feet",
+      "defense": 1,
+      "look": { "feet": "feet.boots_black" }
+    },
+    "travelerCloak": {
+      "name": "Traveler's Cloak",
+      "value": 30,
+      "slot": "cape",
+      "defense": 1,
+      "look": { "cape": "cape.maroon" }
+    },
+    "potion": { "name": "Potion", "value": 15, "use": { "hp": 20 } },
+    "elixir": { "name": "Elixir", "value": 60, "use": { "hp": 40, "mp": 40 } },
+    "bandageKit": { "name": "Bandage Kit", "value": 40, "slot": "tool", "defense": 1, "look": {} },
+    "sack": { "name": "Sack", "value": 50, "slot": "bag", "capacity": 4, "look": {} },
+    "bread": { "name": "Bread", "value": 5, "use": { "hp": 0, "food": 30 } },
+    "apple": { "name": "Apple", "value": 4, "use": { "hp": 0, "food": 12, "water": 12 } },
+    "waterskin": { "name": "Waterskin", "value": 5, "use": { "hp": 0, "water": 55 }, "waters": true }
+  },
+  "shops": {},
+  "loots": {
+    "potion": { "hp": 20 },
+    "elixir": { "hp": 40, "mp": 40 },
+    "bandageKit": { "item": "bandageKit" },
+    "sack": { "item": "sack" },
+    "relic": { "xp": 40 },
+    "coins": { "gold": 30 },
+    "purse": { "gold": 90 },
+    "hoard": { "gold": 200 }
+  }
+}

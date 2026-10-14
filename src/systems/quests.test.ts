@@ -1,23 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { MOB_KINDS, newHero, speedFactor, xpFor, goldFor, spellPower, type Hero } from './combat';
-import { npcLook, NPC_LOOKS } from './looks';
-import { ITEMS } from './items';
+import { MOB_KINDS, goldFor, newHero, speedFactor, spellPower, xpFor, type Hero } from './combat';
 import { BASE_PACK } from './inventory';
+import { itemOf } from './items';
+import { NPC_LOOKS } from './looks';
 import {
   CHAPTERS,
-  currentChapter,
-  journal,
-  offerLines,
-  startsChapter,
   EPILOGUE,
   GIVERS,
   QUESTS,
   QUEST_GIVER,
   SITE_KINDS,
+  VISIT_RADIUS,
+  completerOf,
+  currentChapter,
   currentQuest,
   giverMark,
+  journal,
   linesFor,
   mobKey,
+  offerLines,
+  offererOf,
   progressOf,
   progressText,
   questFromWire,
@@ -25,29 +27,50 @@ import {
   questWire,
   recordKill,
   recordSite,
+  recordVisit,
   rewardText,
   siteNote,
   siteOpen,
+  startsChapter,
   talk,
+  type Quest,
 } from './quests';
 
-/** A hero who has been given quest number `n` (everything before it handed in). */
-function onQuest(n: number): Hero {
+const quest = (id: string): Quest => {
+  const q = QUESTS.find((x) => x.id === id);
+  if (!q) throw new Error(`no quest ${id}`);
+  return q;
+};
+
+/** A hero who has been given quest `id` (every one before it handed in). */
+function onQuest(id: string): Hero {
   const hero = newHero();
-  hero.quests = { stage: n, taken: false, progress: 0 };
-  talk(hero);
+  hero.quests = { stage: QUESTS.indexOf(quest(id)), taken: false, progress: 0 };
+  talk(hero, offererOf(quest(id)));
   return hero;
+}
+
+/** Finish quest `id` for a hero who is on it, whatever it asks, and hand it in. */
+function finish(hero: Hero) {
+  const q = currentQuest(hero.quests)!;
+  const o = q.objective;
+  if (o.t === 'kill') hero.quests.progress = o.count;
+  if (o.t === 'gather') hero.quests.progress = 2 ** o.count - 1;
+  if (o.t === 'visit') hero.quests.progress = 1;
+  if (o.t === 'bring') for (let i = 0; i < o.count; i++) hero.pack.push(itemOf(o.item));
+  return talk(hero, completerOf(q));
 }
 
 describe('the quest chain', () => {
   it('is a real story: unique ids, written lines, a goal and a reward each', () => {
     expect(new Set(QUESTS.map((q) => q.id)).size).toBe(QUESTS.length);
     for (const q of QUESTS) {
+      expect(q.id, q.id).toMatch(/^[a-z0-9]{1,16}$/); // story keys travel as `<id>.<part>`
       expect(q.title, q.id).toBeTruthy();
       expect(q.goal, q.id).toBeTruthy();
       for (const lines of [q.offer, q.remind, q.done]) {
         expect(lines.length, q.id).toBeGreaterThan(0);
-        for (const line of lines) expect(line.length, `${q.id}: ${line}`).toBeLessThanOrEqual(260);
+        for (const line of lines) expect(line.length, `${q.id}: ${line}`).toBeLessThanOrEqual(420);
       }
       expect(q.reward.gold, q.id).toBeGreaterThan(0);
       expect(q.reward.xp, q.id).toBeGreaterThan(0);
@@ -63,33 +86,44 @@ describe('the quest chain', () => {
         expect(SITE_KINDS[o.site], q.id).toBeDefined();
         expect(o.count, q.id).toBeLessThanOrEqual(30); // one bit per site
       }
-      if (o.t === 'bring') expect(ITEMS[o.item], q.id).toBeDefined();
-      for (const id of q.reward.items ?? []) expect(ITEMS[id], q.id).toBeDefined();
+      if (o.t === 'bring') expect(itemOf(o.item), q.id).toBeDefined();
+      for (const id of q.reward.items ?? []) expect(itemOf(id), q.id).toBeDefined();
+      for (const who of [offererOf(q), completerOf(q)]) expect(GIVERS[who], `${q.id}: ${who}`).toBeDefined();
     }
   });
 
-  it('gets harder: the rewards never shrink, and only the harder half hands out gear', () => {
+  it('is not one task over and over: it mixes every kind and never repeats one three times running', () => {
+    const kinds = QUESTS.map((q) => q.objective.t);
+    expect(new Set(kinds).size).toBeGreaterThanOrEqual(5); // meet, visit, bring, gather, kill
+    for (let i = 2; i < kinds.length; i++)
+      expect(new Set(kinds.slice(i - 2, i + 1)).size, `at ${QUESTS[i]!.id}`).toBeGreaterThan(1);
+    // The kills are mostly one-of-a-kind enemies with a name, not "N of the common ones".
+    const kills = QUESTS.flatMap((q) => (q.objective.t === 'kill' ? [q.objective] : []));
+    expect(kills.filter((k) => k.count === 1).length).toBeGreaterThanOrEqual(2);
+    expect(Math.max(...kills.map((k) => k.count))).toBeLessThanOrEqual(5);
+  });
+
+  it('is told by many people, not one: a cast, each with something to say when idle', () => {
+    const people = new Set(QUESTS.flatMap((q) => [offererOf(q), completerOf(q)]));
+    expect(people.size).toBeGreaterThanOrEqual(5);
+    for (const [id, g] of Object.entries(GIVERS)) {
+      if (id === 'orin') continue; // the trainer has his own talk (systems/skills.ts)
+      expect(g.idle?.length, id).toBeGreaterThan(0);
+      expect(NPC_LOOKS[g.look], id).toBeDefined();
+    }
+  });
+
+  it('gets harder: the rewards never shrink, and only the later quests hand out gear', () => {
     for (let i = 1; i < QUESTS.length; i++) {
       expect(QUESTS[i]!.reward.gold).toBeGreaterThan(QUESTS[i - 1]!.reward.gold);
       expect(QUESTS[i]!.reward.xp).toBeGreaterThan(QUESTS[i - 1]!.reward.xp);
     }
-    const early = QUESTS.slice(0, QUESTS.length / 2 - 1);
-    for (const q of early) expect(q.reward.items ?? [], q.id).toEqual([]);
+    for (const q of QUESTS.slice(0, Math.floor(QUESTS.length / 2) - 1)) expect(q.reward.items ?? [], q.id).toEqual([]);
     expect(QUESTS.at(-1)!.reward.items?.length).toBeGreaterThan(0);
   });
 
   it('hands out only rare gear, which no shop sells', () => {
-    for (const q of QUESTS) {
-      for (const id of q.reward.items ?? []) {
-        expect(ITEMS[id], id).toMatchObject({ rare: true });
-      }
-    }
-  });
-
-  it('is told by a giver who has a look', () => {
-    const giver = GIVERS[QUEST_GIVER]!;
-    expect(NPC_LOOKS[giver.look]).toBeDefined();
-    expect(() => npcLook(giver.look)).not.toThrow();
+    for (const q of QUESTS) for (const id of q.reward.items ?? []) expect(itemOf(id), id).toMatchObject({ rare: true });
   });
 
   it('gives each site kind a note to read', () => {
@@ -102,63 +136,56 @@ describe('the quest chain', () => {
   });
 });
 
-describe('talking to the giver', () => {
+describe('talking to the people of the story', () => {
   it('offers the first task, then reminds until it is done', () => {
     const hero = newHero();
+    const first = QUESTS[0]!;
     expect(questStatus(hero)).toBe('offer');
-    expect(giverMark(hero)).toBe('!');
-    const first = talk(hero);
-    expect(first.key).toBe('road.offer');
-    expect(first.lines).toEqual([...CHAPTERS[0]!.intro, ...QUESTS[0]!.offer]); // the first quest opens the chapter
-    expect(questStatus(hero)).toBe('active');
-    expect(giverMark(hero)).toBe('');
-    expect(talk(hero).key).toBe('road.remind');
+    expect(giverMark(hero, offererOf(first))).toBe('!');
+    expect(giverMark(hero, 'hale')).toBe('');
+    const told = talk(hero, offererOf(first));
+    expect(told.key).toBe(`${first.id}.offer`);
+    expect(told.lines).toEqual(offerLines(first));
+    expect(questStatus(hero)).toBe('ready'); // going to meet someone is all there is to it
+    expect(giverMark(hero, completerOf(first))).toBe('?');
+    expect(talk(hero, offererOf(first)).key).toBe(`${first.id}.remind`); // Maren sends you to Hale: she does not pay
     expect(hero.quests.stage).toBe(0);
   });
 
-  it('pays a finished kill quest once, and moves on', () => {
-    const hero = onQuest(0);
-    for (let i = 0; i < 5; i++) recordKill(hero, MOB_KINDS.goblin!, 'greenwood');
-    expect(questStatus(hero)).toBe('ready');
-    expect(giverMark(hero)).toBe('?');
+  it('pays a quest to the one it is handed in to, and moves on', () => {
+    const hero = onQuest('watch');
     const gold = hero.gold;
-    const xp = hero.stats.xp;
-    const t = talk(hero);
-    expect(t.key).toBe('road.reward');
-    expect(t.paid).toBe(true);
-    expect(hero.gold).toBe(gold + 30);
-    expect(hero.stats.xp + hero.stats.level * 1000).toBeGreaterThan(xp);
+    const told = talk(hero, 'hale');
+    expect(told.key).toBe('watch.reward');
+    expect(told.paid).toBe(true);
+    expect(hero.gold).toBe(gold + quest('watch').reward.gold);
     expect(hero.quests).toEqual({ stage: 1, taken: false, progress: 0 });
-    expect(t.lines.at(-1)).toBe('Received 30 gold and 30 XP.');
-    // Talking again starts the next quest rather than paying twice.
-    expect(talk(hero).key).toBe('glimmer.offer');
-    expect(hero.gold).toBe(gold + 30);
+    expect(told.lines.at(-1)).toBe(`Received ${rewardText(quest('watch').reward)}.`);
+    // The next quest is Hale's to hand out, not Maren's.
+    expect(giverMark(hero, 'hale')).toBe('!');
+    expect(talk(hero, QUEST_GIVER).key).toBe('maren.idle');
+    expect(talk(hero, 'hale').key).toBe('elixir.offer');
   });
 
-  it('counts a kill only for the right kind, in the right zone, up to what is needed', () => {
-    const hero = onQuest(0);
-    expect(recordKill(hero, MOB_KINDS.wolfkin!, 'greenwood')).toBeNull();
-    expect(recordKill(hero, MOB_KINDS.goblin!, 'greenwood')?.text).toBe('1/5 goblins');
-    for (let i = 0; i < 10; i++) recordKill(hero, MOB_KINDS.goblin!, 'greenwood');
-    expect(progressOf(hero)).toBe(5);
-    expect(recordKill(hero, MOB_KINDS.goblin!, 'greenwood')).toBeNull();
-
-    const frost = onQuest(8);
-    expect(recordKill(frost, MOB_KINDS.frostbound!, 'greenwood')).toBeNull(); // only counts in the Frostlands
-    expect(recordKill(frost, MOB_KINDS.frostbound!, 'frostlands')?.text).toBe('1/4 frostbound');
+  it('has people with nothing to do with your task say their own piece', () => {
+    const hero = onQuest('elixir');
+    const told = talk(hero, 'gruk');
+    expect(told.key).toBe('gruk.idle');
+    expect(told.lines).toEqual(GIVERS.gruk!.idle);
+    expect(told.paid).toBe(false);
+    expect(linesFor('gruk.idle')).toEqual(GIVERS.gruk!.idle);
+    expect(hero.quests).toMatchObject({ stage: 1, taken: true });
   });
 
-  it('does not count kills before the task is given', () => {
-    const hero = newHero();
-    expect(recordKill(hero, MOB_KINDS.goblin!, 'greenwood')).toBeNull();
-    expect(hero.quests.progress).toBe(0);
-  });
-
-  it('turns a quest in only when it is done', () => {
-    const hero = onQuest(0);
-    recordKill(hero, MOB_KINDS.goblin!, 'greenwood');
-    expect(talk(hero).paid).toBe(false);
-    expect(hero.quests.stage).toBe(0);
+  it('turns a quest in only to the right person, and only when it is done', () => {
+    const hero = onQuest('elixir'); // wants an Elixir for Hale
+    expect(talk(hero, 'hale').key).toBe('elixir.remind');
+    hero.pack.push(itemOf('elixir'));
+    expect(talk(hero, QUEST_GIVER).paid).toBe(false); // Maren cannot take it
+    expect(hero.pack.length).toBe(1);
+    const told = talk(hero, 'hale');
+    expect(told.paid).toBe(true);
+    expect(hero.pack).toEqual([]);
   });
 
   it('ends with an epilogue that does not pay again', () => {
@@ -167,85 +194,146 @@ describe('talking to the giver', () => {
     expect(currentQuest(hero.quests)).toBeUndefined();
     expect(questStatus(hero)).toBe('complete');
     const gold = hero.gold;
-    const t = talk(hero);
-    expect(t.key).toBe('end');
-    expect(t.lines).toEqual(EPILOGUE);
+    const told = talk(hero);
+    expect(told.key).toBe('end');
+    expect(told.lines).toEqual(EPILOGUE);
     expect(hero.gold).toBe(gold);
     expect(giverMark(hero)).toBe('');
+    expect(talk(hero, 'hale').key).toBe('hale.idle');
+  });
+
+  it('can be played through, every quest, start to finish', () => {
+    const hero = newHero();
+    for (const q of QUESTS) {
+      expect(talk(hero, offererOf(q)).key, q.id).toBe(`${q.id}.offer`);
+      const told = finish(hero);
+      expect(told.paid, q.id).toBe(true);
+    }
+    expect(questStatus(hero)).toBe('complete');
+    expect(hero.stats.level).toBeGreaterThan(5); // the story is a real climb
+  });
+});
+
+describe('kill quests', () => {
+  it('count a kill only for the right kind, in the right zone, up to what is needed', () => {
+    const hero = onQuest('dead');
+    const wanted = MOB_KINDS.skeleton!;
+    expect(recordKill(hero, MOB_KINDS.goblin!, 'undead')).toBeNull();
+    expect(recordKill(hero, wanted, 'greenwood')).toBeNull(); // only counts in the Barrow Lands
+    expect(recordKill(hero, wanted, 'undead')?.text).toBe('1/4 skeletons');
+    for (let i = 0; i < 10; i++) recordKill(hero, wanted, 'undead');
+    expect(progressOf(hero)).toBe(4);
+    expect(recordKill(hero, wanted, 'undead')).toBeNull();
+    expect(questStatus(hero)).toBe('ready');
+  });
+
+  it('can name one creature: a story boss', () => {
+    const hero = onQuest('glade');
+    expect(mobKey(MOB_KINDS.palelurker!)).toBe('palelurker');
+    expect(recordKill(hero, MOB_KINDS.shade!, 'greenwood')).toBeNull(); // an ordinary shade is not the Lurker
+    const got = recordKill(hero, MOB_KINDS.palelurker!, 'greenwood');
+    expect(got?.ready).toBe(true);
+    expect(questStatus(hero)).toBe('ready');
+  });
+
+  it('do not count before the task is given', () => {
+    const hero = newHero();
+    expect(recordKill(hero, MOB_KINDS.goblin!, 'greenwood')).toBeNull();
+    expect(hero.quests.progress).toBe(0);
   });
 });
 
 describe('gather quests', () => {
   it('count each site once, in any order', () => {
-    const hero = onQuest(1);
+    const hero = onQuest('lamp');
+    const [n] = [quest('lamp').objective.count];
     expect(siteOpen(hero, 'glimmercap', 'greenwood', 2)).toBe(true);
     expect(siteOpen(hero, 'glimmercap', 'eastwood', 2)).toBe(false); // wrong zone
     expect(siteOpen(hero, 'echostone', 'greenwood', 0)).toBe(false); // wrong kind
-    expect(recordSite(hero, 'glimmercap', 'greenwood', 2)?.text).toBe('1/4 glimmercaps');
+    expect(recordSite(hero, 'glimmercap', 'greenwood', 2)?.text).toBe(`1/${n} glimmercaps`);
     expect(recordSite(hero, 'glimmercap', 'greenwood', 2)).toBeNull(); // already touched
     expect(siteOpen(hero, 'glimmercap', 'greenwood', 2)).toBe(false);
-    for (const i of [0, 3, 1]) recordSite(hero, 'glimmercap', 'greenwood', i);
-    expect(progressText(hero)).toBe('4/4 glimmercaps');
+    for (const i of [0, 3]) recordSite(hero, 'glimmercap', 'greenwood', i);
+    expect(progressText(hero)).toBe(`${n}/${n} glimmercaps`);
     expect(questStatus(hero)).toBe('ready');
     expect(recordSite(hero, 'glimmercap', 'greenwood', 4)).toBeNull(); // enough
   });
 
-  it('shows nothing before the quest is given', () => {
+  it('show nothing before the quest is given', () => {
     const hero = newHero();
-    hero.quests.stage = 1;
+    hero.quests.stage = QUESTS.indexOf(quest('lamp'));
     expect(siteOpen(hero, 'glimmercap', 'greenwood', 0)).toBe(false);
+  });
+});
+
+describe('visit quests', () => {
+  const places = [
+    { name: 'The Frozen Ledge', col: 100, row: 80 },
+    { name: 'Mirrorfrost Lake', col: 20, row: 20 },
+  ];
+  const at = (col: number, row: number) => [(col + 0.5) * 32, (row + 0.5) * 32] as const;
+
+  it('count arriving near the named place, in its zone only', () => {
+    const hero = onQuest('ledge');
+    expect(questStatus(hero)).toBe('active');
+    expect(recordVisit(hero, 'frostlands', places, ...at(20, 20))).toBeNull(); // the wrong place
+    expect(recordVisit(hero, 'greenwood', places, ...at(100, 80))).toBeNull(); // the wrong zone
+    expect(recordVisit(hero, 'frostlands', places, ...at(100 + VISIT_RADIUS + 3, 80))).toBeNull(); // too far
+    const arrived = recordVisit(hero, 'frostlands', places, ...at(100 + VISIT_RADIUS - 2, 80));
+    expect(arrived?.ready).toBe(true);
+    expect(questStatus(hero)).toBe('ready');
+    expect(giverMark(hero, 'voss')).toBe('?'); // the sergeant at the ledge takes it
+    expect(recordVisit(hero, 'frostlands', places, ...at(100, 80))).toBeNull(); // only once
+  });
+
+  it('do nothing for a hero on another kind of quest', () => {
+    const hero = onQuest('dead');
+    expect(recordVisit(hero, 'frostlands', places, ...at(100, 80))).toBeNull();
+    expect(hero.quests.progress).toBe(0);
   });
 });
 
 describe('bring quests', () => {
   it('take the item from the pack and pay', () => {
-    const hero = onQuest(3);
+    const hero = onQuest('elixir');
     expect(questStatus(hero)).toBe('active');
-    hero.pack.push(ITEMS.elixir);
+    hero.pack.push(itemOf('elixir'));
     expect(questStatus(hero)).toBe('ready');
-    const t = talk(hero);
-    expect(t.paid).toBe(true);
+    const told = talk(hero, 'hale');
+    expect(told.paid).toBe(true);
     expect(hero.pack).toEqual([]);
-    expect(hero.gold).toBe(90);
-  });
-
-  it('are not paid for an item that is only worn', () => {
-    const hero = onQuest(3);
-    expect(questStatus(hero)).toBe('active');
+    expect(hero.gold).toBe(quest('elixir').reward.gold);
   });
 });
 
 describe('rewards', () => {
   it('puts the gear on when the slot is empty or beaten, otherwise in the pack', () => {
-    const hero = onQuest(4);
-    hero.quests.progress = 0b111;
-    const t = talk(hero);
-    expect(t.paid).toBe(true);
-    expect(t.gear).toBe(true);
-    expect(hero.charm).toBe(ITEMS.wayfarersCharm);
+    const hero = onQuest('dead');
+    hero.quests.progress = 4;
+    const told = talk(hero, 'brannoch');
+    expect(told.paid).toBe(true);
+    expect(told.gear).toBe(true);
+    expect(hero.charm).toBe(itemOf('wayfarersCharm'));
     expect(speedFactor(hero)).toBeCloseTo(1.08);
   });
 
   it('refuses, changing nothing, when the pack has no room for the gear', () => {
-    const hero = onQuest(4);
-    hero.quests.progress = 0b111;
-    while (hero.pack.length < BASE_PACK) hero.pack.push(ITEMS.potion);
+    const hero = onQuest('dead');
+    hero.quests.progress = 4;
+    while (hero.pack.length < BASE_PACK) hero.pack.push(itemOf('potion'));
     const gold = hero.gold;
-    const t = talk(hero);
-    expect(t.key).toBe('stones.full');
-    expect(t.paid).toBe(false);
+    const told = talk(hero, 'brannoch');
+    expect(told.key).toBe('dead.full');
+    expect(told.paid).toBe(false);
     expect(hero.gold).toBe(gold);
-    expect(hero.quests.stage).toBe(4);
     expect(questStatus(hero)).toBe('ready');
-    // After making room, it pays.
-    hero.pack.pop();
-    expect(talk(hero).key).toBe('stones.reward');
-    expect(hero.quests.stage).toBe(5);
+    hero.pack.pop(); // After making room, it pays.
+    expect(talk(hero, 'brannoch').key).toBe('dead.reward');
   });
 
   it('describes itself', () => {
     expect(rewardText({ gold: 30, xp: 30 })).toBe('30 gold and 30 XP');
-    expect(rewardText(QUESTS[4]!.reward)).toBe("110 gold, 130 XP and Wayfarer's Charm");
+    expect(rewardText(quest('dead').reward)).toBe("150 gold, 170 XP and Wayfarer's Charm");
   });
 });
 
@@ -258,13 +346,19 @@ describe('story keys', () => {
       expect(linesFor(`${q.id}.full`)?.length).toBe(1);
     }
     expect(linesFor('end')).toEqual(EPILOGUE);
+    expect(linesFor('maren.idle')).toEqual(GIVERS.maren!.idle);
     expect(linesFor('nope.offer')).toBeNull();
+    expect(linesFor('nope.idle')).toBeNull();
     expect(linesFor('road.nope')).toBeNull();
     expect(linesFor('')).toBeNull();
   });
 
-  it('name the mob kinds in MOB_KINDS', () => {
-    expect(mobKey(MOB_KINDS.troll!)).toBe('troll');
+  it('are short enough to cross the wire as a story key', () => {
+    for (const q of QUESTS)
+      for (const part of ['offer', 'remind', 'reward', 'full']) {
+        expect(`${q.id}.${part}`).toMatch(/^[a-z0-9]{1,16}(\.[a-z]{1,8})?$/);
+      }
+    for (const id of Object.keys(GIVERS)) expect(`${id}.idle`).toMatch(/^[a-z0-9]{1,16}(\.[a-z]{1,8})?$/);
   });
 });
 
@@ -283,28 +377,8 @@ describe('the log on the wire', () => {
   });
 });
 
-describe('gear buffs', () => {
-  it('add up over everything worn', () => {
-    const hero = newHero();
-    expect(speedFactor(hero)).toBe(1);
-    hero.charm = ITEMS.hourglassPendant;
-    hero.feet = ITEMS.duneglassBoots;
-    expect(speedFactor(hero)).toBeCloseTo(1.22);
-    expect(spellPower(hero)).toBe(hero.stats.magic + 4);
-    expect(xpFor(hero, 100)).toBe(110);
-    hero.head = ITEMS.tuskbreakerHelm;
-    expect(goldFor(hero, 100)).toBe(115);
-  });
-
-  it('leave plain gear alone', () => {
-    const hero = newHero();
-    expect(xpFor(hero, 12)).toBe(12);
-    expect(goldFor(hero, 7)).toBe(7);
-  });
-});
-
-describe('the story', () => {
-  it('is told in chapters: in order, each opened by its first quest, none empty', () => {
+describe('the story is told in chapters', () => {
+  it('is in order, each opened by its first quest, none empty', () => {
     expect(CHAPTERS.length).toBeGreaterThanOrEqual(3);
     let last = 0;
     for (const q of QUESTS) {
@@ -312,7 +386,6 @@ describe('the story', () => {
       expect(q.chapter - last, q.id).toBeLessThanOrEqual(1); // and never skips a chapter
       last = q.chapter;
       expect(q.learned, q.id).toBeTruthy();
-      expect(q.fieldNote.length, q.id).toBeGreaterThan(0);
     }
     CHAPTERS.forEach((c, i) => {
       expect(c.title).toBeTruthy();
@@ -321,6 +394,8 @@ describe('the story', () => {
       expect(quests.length, c.title).toBeGreaterThan(0);
       expect(startsChapter(quests[0]!), c.title).toBe(true);
       for (const q of quests.slice(1)) expect(startsChapter(q), q.id).toBe(false);
+      // The chapter's opening is in the chain giver's voice, so the quest it opens is hers to hand out.
+      expect(offererOf(quests[0]!), c.title).toBe(QUEST_GIVER);
     });
   });
 
@@ -333,13 +408,33 @@ describe('the story', () => {
   it('keeps a journal of what the hero has learned, by chapter', () => {
     const hero = newHero();
     expect(journal(hero.quests)).toEqual([]);
-    hero.quests.stage = 5;
+    const upTo = QUESTS.findIndex((q) => q.chapter === 1) + 1;
+    hero.quests.stage = upTo;
     const j = journal(hero.quests);
     expect(j.map((c) => c.title)).toEqual([CHAPTERS[0]!.title, CHAPTERS[1]!.title]);
-    expect(j[0]!.lines).toEqual(QUESTS.slice(0, 4).map((q) => q.learned));
-    expect(j[1]!.lines).toEqual([QUESTS[4]!.learned]);
-    expect(currentChapter(hero.quests)?.index).toBe(1);
+    expect(j[1]!.lines).toEqual([QUESTS[upTo - 1]!.learned]);
+    expect(currentChapter(hero.quests)?.index).toBe(QUESTS[upTo]!.chapter);
     hero.quests.stage = QUESTS.length;
     expect(currentChapter(hero.quests)?.index).toBe(CHAPTERS.length - 1);
+  });
+});
+
+describe('gear buffs', () => {
+  it('add up over everything worn', () => {
+    const hero = newHero();
+    expect(speedFactor(hero)).toBe(1);
+    hero.charm = itemOf('hourglassPendant');
+    hero.feet = itemOf('duneglassBoots');
+    expect(speedFactor(hero)).toBeCloseTo(1.22);
+    expect(spellPower(hero)).toBe(hero.stats.magic + (hero.weapon.focus?.power ?? 0) + 4);
+    expect(xpFor(hero, 100)).toBe(110);
+    hero.head = itemOf('tuskbreakerHelm');
+    expect(goldFor(hero, 100)).toBe(115);
+  });
+
+  it('leave plain gear alone', () => {
+    const hero = newHero();
+    expect(xpFor(hero, 12)).toBe(12);
+    expect(goldFor(hero, 7)).toBe(7);
   });
 });

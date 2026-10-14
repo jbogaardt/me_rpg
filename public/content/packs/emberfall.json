@@ -1,0 +1,361 @@
+{
+  "version": 1,
+  "id": "emberfall",
+  "entities": {
+    "cinderImp": {
+      "type": "mob",
+      "name": "Cinder Imp",
+      "notes": "Emberfall's fodder: quick, flimsy, swarms the coast. Level 1.",
+      "sprite": {
+        "body": "body.dark_green",
+        "head": "head.goblin",
+        "torso": "torso.tunic_maroon",
+        "legs": "legs.pants_maroon",
+        "feet": "feet.boots_black",
+        "weapon": "weapon.dagger"
+      },
+      "stats": { "hp": 20, "attack": 8, "defense": 0, "speed": 86, "sight": 160, "xp": 8, "gold": 4 },
+      "behavior": { "windup": 0.3, "recover": 0.45, "stagger": 0.2 },
+      "tags": ["common", "fire"],
+      "level": [1, 2]
+    },
+    "ashHound": {
+      "type": "mob",
+      "name": "Ash Hound",
+      "notes": "A grey-furred hunter of the ash fields: fast, bites hard. Levels 1-2.",
+      "sprite": { "body": "body.fur_grey", "head": "head.wolf", "legs": "legs.pants_charcoal" },
+      "stats": { "hp": 30, "attack": 10, "defense": 0, "speed": 100, "sight": 208, "xp": 13, "gold": 7 },
+      "behavior": { "windup": 0.28, "recover": 0.42, "stagger": 0.12 },
+      "tags": ["hunter", "fire", "beast"],
+      "level": [1, 3]
+    },
+    "emberCaster": {
+      "type": "mob",
+      "name": "Ember Caster",
+      "notes": "A robed cultist who keeps its distance and lobs slow fireballs. Level 2.",
+      "sprite": {
+        "body": "body.olive",
+        "head": "head.orc_dark",
+        "torso": "torso.robe_red",
+        "headwear": "headwear.hood_brown",
+        "weapon": "weapon.staff"
+      },
+      "stats": { "hp": 39, "attack": 12, "defense": 1, "speed": 58, "sight": 208, "xp": 18, "gold": 10 },
+      "behavior": { "windup": 0.7, "recover": 1.2, "shot": { "range": 176, "speed": 125, "color": "#ff7a1a" } },
+      "tags": ["ranged", "fire"],
+      "level": [2, 4]
+    },
+    "magmaBrute": {
+      "type": "mob",
+      "name": "Magma Brute",
+      "notes": "A hulking troll in ember-red breeches; slow, hits hard, barely flinches. Level 3.",
+      "scale": 1.4,
+      "sprite": { "body": "body.green", "head": "head.troll", "legs": "legs.pants_maroon" },
+      "stats": { "hp": 91, "attack": 18, "defense": 3, "speed": 50, "sight": 176, "xp": 39, "gold": 21 },
+      "behavior": { "windup": 0.55, "recover": 0.8, "stagger": 0.06 },
+      "tags": ["brute", "fire"],
+      "level": [3, 5]
+    },
+    "obsidianWarden": {
+      "type": "mob",
+      "name": "Obsidian Warden",
+      "notes": "The caldera's guardian: gilded plate over bone, a burning blade. Campaign 2's boss, level 4.",
+      "scale": 1.6,
+      "sprite": {
+        "body": "body.skeleton",
+        "head": "head.skeleton",
+        "torso": "torso.plate_gold",
+        "legs": "legs.plate_steel",
+        "feet": "feet.plate_steel",
+        "headwear": "headwear.greathelm",
+        "weapon": "weapon.arming_gold",
+        "shield": "shield.kite_gray"
+      },
+      "stats": { "hp": 208, "attack": 20, "defense": 4, "speed": 52, "sight": 208, "xp": 138, "gold": 92 },
+      "behavior": { "windup": 0.6, "recover": 0.85, "stagger": 0.03 },
+      "tags": ["boss", "fire"],
+      "level": [3, 5]
+    },
+    "ysolde": {
+      "type": "npc",
+      "name": "Keeper Ysolde",
+      "sprite": {
+        "body": "body.f_olive",
+        "head": "head.human_f_olive",
+        "hair": "hair.long_red",
+        "torso": "torso.f_tunic_teal",
+        "legs": "legs.f_pants_charcoal",
+        "feet": "feet.f_boots_brown",
+        "cape": "cape.maroon",
+        "weapon": "weapon.staff"
+      }
+    },
+    "castaway": {
+      "type": "npc",
+      "name": "Castaway",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.messy_gray",
+        "beard": "beard.gray",
+        "torso": "torso.tunic_white",
+        "legs": "legs.pants_tan",
+        "feet": "feet.boots_brown"
+      },
+      "lines": [
+        "You're awake! The storm threw us both onto this cursed shore.",
+        "The Keeper by the fire knows this land. Talk to them first."
+      ]
+    }
+  },
+  "keepers": { "ysolde": { "npc": "ysolde", "name": "Keeper Ysolde", "tag": "Ysolde", "homes": ["cinder_coast"] } },
+  "regions": {
+    "cinder_coast": {
+      "biome": {
+        "name": "The Cinder Coast",
+        "tint": "#ff9a4a",
+        "map": "emberfall_coast",
+        "climate": "undead",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png", "interior.png"]
+      },
+      "level": [1, 2],
+      "themes": ["fire"],
+      "hub": true,
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "common": {}, "hunter": {}, "ranged": {} },
+      "roam": [
+        { "role": "common", "count": 5, "seed": 201, "apart": 10, "avoid": [{ "x": 35, "y": 40, "radius": 12 }] },
+        { "role": "hunter", "count": 3, "seed": 203, "apart": 10, "avoid": [{ "x": 35, "y": 40, "radius": 12 }] },
+        { "role": "ranged", "count": 1, "seed": 205, "apart": 10, "avoid": [{ "x": 35, "y": 40, "radius": 12 }] }
+      ],
+      "encounters": [
+        { "entity": "castaway", "x": 38, "y": 42 },
+        { "role": "common", "x": 24, "y": 28 },
+        { "role": "common", "x": 46, "y": 26 },
+        { "role": "hunter", "x": 16, "y": 12 },
+        { "role": "hunter", "x": 52, "y": 44 },
+        { "role": "ranged", "x": 58, "y": 22 }
+      ],
+      "sites": {
+        "emberbloom": {
+          "name": "Emberbloom",
+          "shape": "mushroom",
+          "color": "#ff7a2a",
+          "glow": "#ffcc4a",
+          "notes": [
+            ["An emberbloom, its petals glowing like coals. It is hot, but it does not burn you."],
+            ["Another emberbloom. Ash settles on it and flares away in tiny sparks."]
+          ],
+          "plural": "emberblooms"
+        }
+      }
+    },
+    "ember_caldera": {
+      "biome": {
+        "name": "The Ember Caldera",
+        "tint": "#ff5a2a",
+        "map": "emberfall_caldera",
+        "climate": "undead",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"]
+      },
+      "level": [3, 5],
+      "themes": ["fire"],
+      "ports": { "south": "south", "east": "east" },
+      "foes": { "ranged": {}, "brute": {}, "boss": {} },
+      "roam": [
+        {
+          "role": "ranged",
+          "count": 2,
+          "seed": 202,
+          "apart": 9,
+          "avoid": [
+            { "x": 25, "y": 32, "radius": 8 },
+            { "x": 25, "y": 5, "radius": 7 }
+          ]
+        },
+        {
+          "role": "brute",
+          "count": 2,
+          "seed": 204,
+          "apart": 9,
+          "avoid": [
+            { "x": 25, "y": 32, "radius": 8 },
+            { "x": 25, "y": 5, "radius": 7 }
+          ]
+        }
+      ],
+      "encounters": [
+        { "role": "ranged", "x": 12, "y": 20 },
+        { "role": "ranged", "x": 38, "y": 20 },
+        { "role": "ranged", "x": 14, "y": 9 },
+        { "role": "ranged", "x": 36, "y": 9 },
+        { "role": "brute", "x": 10, "y": 26 },
+        { "role": "boss", "x": 25, "y": 6 }
+      ]
+    },
+    "ember_cove": {
+      "biome": {
+        "name": "The Ember Cove",
+        "tint": "#ff7a3a",
+        "map": "end_ember_cove",
+        "climate": "undead",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"]
+      },
+      "level": [2, 5],
+      "themes": ["fire"],
+      "terminal": true,
+      "ports": { "south": "south" },
+      "foes": { "brute": {} },
+      "roam": [],
+      "encounters": [
+        { "role": "brute", "x": 11, "y": 6 },
+        { "role": "brute", "x": 12, "y": 9 }
+      ]
+    }
+  },
+  "arcs": {
+    "ember_trail": {
+      "title": "The Ember Trail",
+      "regions": 2,
+      "capabilities": { "needs": false },
+      "chapters": [
+        {
+          "title": "Ash and Ember",
+          "intro": [
+            "So you made it through. Few do, these days.",
+            "I am {keeper}, keeper of this camp. A fire under the land is waking, and everything that crawls out of the wild is angry about it.",
+            "Help me hold {r1}, and I will tell you why the ground burns."
+          ]
+        },
+        {
+          "title": "The Burning Heart",
+          "intro": [
+            "What I feared is true: the guardian of {r2} has woken, and it is calling the fire to itself.",
+            "{r1~r2.sign}",
+            "Take {r1~r2.way}. If it is not stopped, this land goes under, and the two of us with it."
+          ]
+        }
+      ],
+      "quests": [
+        {
+          "id": "hold",
+          "chapter": 0,
+          "learned": "The {r1.common.lower} are not hunting: they are fleeing something deeper in.",
+          "fieldNote": ["The last one scrambles off, glancing back the way it came rather than at you."],
+          "title": "Hold the Camp",
+          "goal": "Drive off 5 {r1.common.lower}",
+          "hint": "{r1.common.plural} swarm {r1}, all round the camp.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.common.lower}",
+          "objective": { "t": "kill", "kind": "@r1.common", "count": 5 },
+          "reward": { "gold": 25, "xp": 30 },
+          "offer": [
+            "The {r1.common.lower} are thick around the camp today. Drive off five of them before they get into the stores."
+          ],
+          "remind": ["Five {r1.common.lower}. They are never far."],
+          "done": [
+            "Good. The camp is ours again, for now.",
+            "They were running, you know. Not attacking. Something frightens them."
+          ]
+        },
+        {
+          "id": "read",
+          "chapter": 0,
+          "learned": "The {r1.site.lower} only open when the fire rises close under the ground.",
+          "fieldNote": [
+            "Four of them, all burning brighter than they should. Even the ground is warm under your feet."
+          ],
+          "title": "Read the Signs",
+          "goal": "Touch 4 {r1.site.lower}",
+          "hint": "{r1.site.plural} grow all over {r1}: look by its edges.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.site.lower}",
+          "objective": { "t": "gather", "site": "@r1.site", "zone": "@r1", "count": 4 },
+          "reward": { "gold": 30, "xp": 40, "items": ["potion"] },
+          "offer": ["The {r1.site.lower} tell the land's mood. Touch four of them and tell me how they burn."],
+          "remind": ["Four {r1.site.lower}, all over {r1}."],
+          "done": [
+            "Brighter than they should be. Much brighter.",
+            "Take this draught; you will need it where you are going next."
+          ]
+        },
+        {
+          "id": "road",
+          "chapter": 0,
+          "learned": "The {r1.hunter.lower} hunt in the open now; the woods are too hot for them.",
+          "fieldNote": ["The fourth one falls. Its hide is singed down to the skin."],
+          "title": "Clear the Road",
+          "goal": "Drive off 4 {r1.hunter.lower}",
+          "hint": "{r1.hunter.plural} roam the open ground of {r1}. They see you before you see them.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.hunter.lower}",
+          "objective": { "t": "kill", "kind": "@r1.hunter", "count": 4 },
+          "reward": { "gold": 40, "xp": 50 },
+          "offer": ["Before you go on, clear the {r1.hunter.lower} from the road. Four of them."],
+          "remind": ["Four {r1.hunter.lower}. Watch the open ground."],
+          "done": ["The road is clear. Rest, and then take {r1~r2.way}."]
+        },
+        {
+          "id": "tenders",
+          "chapter": 1,
+          "learned": "The {r2.ranged.lower} are feeding the fire, ember by ember, for their guardian.",
+          "fieldNote": ["The last one's fire gutters out. The air cools, just a little."],
+          "title": "Quench the Tenders",
+          "goal": "Defeat 4 {r2.ranged.lower}",
+          "hint": "{r2.ranged.plural} keep to {r2}: take {r1~r2.way}. Close in fast: they strike from afar.",
+          "where": { "zones": ["@r2"] },
+          "unit": "{r2.ranged.lower}",
+          "objective": { "t": "kill", "kind": "@r2.ranged", "count": 4, "zone": "@r2" },
+          "reward": { "gold": 60, "xp": 80, "items": ["elixir"] },
+          "offer": [
+            "Things in {r2} are feeding the fire. Stop four of the {r2.ranged.lower}, and the guardian goes hungry."
+          ],
+          "remind": ["Four {r2.ranged.lower}, in {r2}. Do not let them keep their distance."],
+          "done": ["The land is quieter already. One thing remains, and it is the hardest."]
+        },
+        {
+          "id": "guardian",
+          "chapter": 1,
+          "learned": "The {r2.boss} was a keeper once, before the fire took its mind.",
+          "fieldNote": ["The {r2.boss} kneels, and its fire cools to black. Far away, the ground stops trembling."],
+          "title": "The Guardian",
+          "goal": "Defeat the {r2.boss}",
+          "hint": "The {r2.boss} waits in {r2}.",
+          "where": { "zones": ["@r2"] },
+          "unit": "guardians",
+          "objective": { "t": "kill", "kind": "@r2.boss", "count": 1, "zone": "@r2" },
+          "reward": { "gold": 150, "xp": 150, "items": ["steelSword"] },
+          "offer": ["The guardian waits in {r2}. It was a keeper like me, once. Free it."],
+          "remind": ["The {r2.boss}, in {r2}. Mind its blows."],
+          "done": [
+            "It is done. I felt the land sigh.",
+            "Take this blade, forged here long ago. It is yours by right now."
+          ]
+        }
+      ],
+      "epilogue": [
+        "The fire sleeps again, and the land is calm for the first time in a year.",
+        "Stay as long as you like. This camp is yours as much as mine."
+      ],
+      "slots": [{}, { "themes": ["fire"], "foes": { "boss": { "tags": ["fire"] } } }],
+      "crossings": { "r1~r2": { "tags": ["fire"] } }
+    }
+  },
+  "pairings": {
+    "ash_trail": {
+      "regions": ["cinder_coast", "ember_caldera"],
+      "tags": ["fire", "ascent"],
+      "ports": ["north", "south"],
+      "lore": {
+        "way": "the ash trail that climbs north from The Cinder Coast into The Ember Caldera",
+        "sign": {
+          "cinder_coast": "Ash from The Ember Caldera falls on the camp like grey snow, and it is warm.",
+          "ember_caldera": "Far below, the smoke of the camp on The Cinder Coast rises thin and blue."
+        }
+      }
+    }
+  }
+}

@@ -6,6 +6,8 @@ export interface Body {
   y: number;
   /** Hidden bodies (e.g. a faded-out mob) don't block. */
   visible?: boolean;
+  /** How many times a person's width it is (default 1): a giant blocks and needs more room. */
+  size?: number;
 }
 
 // The collision box is a small rectangle around the feet: [dx, dy] corners in pixels.
@@ -30,6 +32,11 @@ export class Collision {
     this.blocked = new Set(blocked);
   }
 
+  /** Open these cells (by index, row * width + col): a doorway whose seal was cleared. */
+  unblock(cells: Iterable<number>) {
+    for (const cell of cells) this.blocked.delete(cell);
+  }
+
   /** Cells outside the map count as blocked. */
   isBlocked(col: number, row: number): boolean {
     if (col < 0 || row < 0 || col >= this.width || row >= this.height) return true;
@@ -37,16 +44,21 @@ export class Collision {
   }
 
   /** Whether feet at (x, y) fit the map. */
-  fitsMap(x: number, y: number): boolean {
-    return FOOT_BOX.every(([dx, dy]) => !this.isBlocked(Math.floor((x + dx) / CELL), Math.floor((y + dy) / CELL)));
+  fitsMap(x: number, y: number, size = 1): boolean {
+    return FOOT_BOX.every(
+      ([dx, dy]) =>
+        !this.isBlocked(Math.floor((x + dx * size) / CELL), Math.floor((y + dy * (1 + (size - 1) / 2)) / CELL)),
+    );
   }
 
   /** Whether `body` may step to (x, y): on open ground, and not pushing further into another body. */
   canMove(body: Body, x: number, y: number, others: Iterable<Body>): boolean {
-    if (!this.fitsMap(x, y)) return false;
+    const size = body.size ?? 1;
+    if (!this.fitsMap(x, y, size)) return false;
     for (const other of others) {
       if (other === body || other.visible === false) continue;
-      const overlaps = Math.abs(x - other.x) < BODY_W && Math.abs(y - other.y) < BODY_H;
+      const wide = (size + (other.size ?? 1)) / 2; // the two half-widths added up, as a share of two people
+      const overlaps = Math.abs(x - other.x) < BODY_W * wide && Math.abs(y - other.y) < BODY_H * wide;
       // Moving apart is always allowed, so bodies that end up overlapping (e.g. via knockback) can't get stuck.
       if (overlaps && Math.hypot(x - other.x, y - other.y) < Math.hypot(body.x - other.x, body.y - other.y)) {
         return false;

@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "entities": {
+    "cinderImp": {
+      "type": "mob",
+      "name": "Cinder Imp",
+      "notes": "Emberfall's fodder: quick, flimsy, swarms the coast. Level 1.",
+      "sprite": {
+        "body": "body.dark_green",
+        "head": "head.goblin",
+        "torso": "torso.tunic_maroon",
+        "legs": "legs.pants_maroon",
+        "feet": "feet.boots_black",
+        "weapon": "weapon.dagger"
+      },
+      "stats": {
+        "hp": 20,
+        "attack": 8,
+        "defense": 0,
+        "speed": 86,
+        "sight": 160,
+        "xp": 8,
+        "gold": 4
+      },
+      "behavior": {
+        "windup": 0.3,
+        "recover": 0.45,
+        "stagger": 0.2
+      }
+    },
+    "ashHound": {
+      "type": "mob",
+      "name": "Ash Hound",
+      "notes": "A grey-furred hunter of the ash fields: fast, bites hard. Levels 1-2.",
+      "sprite": {
+        "body": "body.fur_grey",
+        "head": "head.wolf",
+        "legs": "legs.pants_charcoal"
+      },
+      "stats": {
+        "hp": 30,
+        "attack": 10,
+        "defense": 0,
+        "speed": 100,
+        "sight": 208,
+        "xp": 13,
+        "gold": 7
+      },
+      "behavior": {
+        "windup": 0.28,
+        "recover": 0.42,
+        "stagger": 0.12
+      }
+    },
+    "emberCaster": {
+      "type": "mob",
+      "name": "Ember Caster",
+      "notes": "A robed cultist who keeps its distance and lobs slow fireballs. Level 2.",
+      "sprite": {
+        "body": "body.olive",
+        "head": "head.orc_dark",
+        "torso": "torso.robe_red",
+        "headwear": "headwear.hood_brown",
+        "weapon": "weapon.staff"
+      },
+      "stats": {
+        "hp": 39,
+        "attack": 12,
+        "defense": 1,
+        "speed": 58,
+        "sight": 208,
+        "xp": 18,
+        "gold": 10
+      },
+      "behavior": {
+        "windup": 0.7,
+        "recover": 1.2,
+        "shot": {
+          "range": 176,
+          "speed": 125,
+          "color": "#ff7a1a"
+        }
+      }
+    },
+    "magmaBrute": {
+      "type": "mob",
+      "name": "Magma Brute",
+      "notes": "A hulking troll in ember-red breeches; slow, hits hard, barely flinches. Level 3.",
+      "scale": 1.4,
+      "sprite": {
+        "body": "body.green",
+        "head": "head.troll",
+        "legs": "legs.pants_maroon"
+      },
+      "stats": {
+        "hp": 91,
+        "attack": 18,
+        "defense": 3,
+        "speed": 50,
+        "sight": 176,
+        "xp": 39,
+        "gold": 21
+      },
+      "behavior": {
+        "windup": 0.55,
+        "recover": 0.8,
+        "stagger": 0.06
+      }
+    },
+    "obsidianWarden": {
+      "type": "mob",
+      "name": "Obsidian Warden",
+      "notes": "The caldera's guardian: gilded plate over bone, a burning blade. Campaign 2's boss, level 4.",
+      "scale": 1.6,
+      "sprite": {
+        "body": "body.skeleton",
+        "head": "head.skeleton",
+        "torso": "torso.plate_gold",
+        "legs": "legs.plate_steel",
+        "feet": "feet.plate_steel",
+        "headwear": "headwear.greathelm",
+        "weapon": "weapon.arming_gold",
+        "shield": "shield.kite_gray"
+      },
+      "stats": {
+        "hp": 208,
+        "attack": 20,
+        "defense": 4,
+        "speed": 52,
+        "sight": 208,
+        "xp": 138,
+        "gold": 92
+      },
+      "behavior": {
+        "windup": 0.6,
+        "recover": 0.85,
+        "stagger": 0.03
+      }
+    },
+    "ysolde": {
+      "type": "npc",
+      "name": "Keeper Ysolde",
+      "sprite": {
+        "body": "body.f_olive",
+        "head": "head.human_f_olive",
+        "hair": "hair.long_red",
+        "torso": "torso.f_tunic_teal",
+        "legs": "legs.f_pants_charcoal",
+        "feet": "feet.f_boots_brown",
+        "cape": "cape.maroon",
+        "weapon": "weapon.staff"
+      }
+    },
+    "castaway": {
+      "type": "npc",
+      "name": "Castaway",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.messy_gray",
+        "beard": "beard.gray",
+        "torso": "torso.tunic_white",
+        "legs": "legs.pants_tan",
+        "feet": "feet.boots_brown"
+      },
+      "lines": [
+        "You're awake! The storm threw us both onto this cursed rock.",
+        "The Keeper by the fire knows the island. Talk to her first.",
+        "Or, if you're feeling brave, climb to the caldera. I'm not stopping you."
+      ]
+    }
+  }
+}

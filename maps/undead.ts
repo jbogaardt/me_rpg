@@ -44,8 +44,8 @@ export default defineBiome({
     for (let c = 126; c <= 144; c += 3) for (const r of [85, 89, 93]) z.prop('menhir', c, r);
     z.chest('iron', 'legionHelm', ...near(12.4, 9.5));
     z.chest('wood', 'coins', ...near(14.6, 8.3));
-    z.mob('skeleton', ...near(13.4, 8.8));
-    z.mob('skeleton', ...near(14, 9.4));
+    z.keepFree(...near(13.4, 8.8));
+    z.keepFree(...near(14, 9.4));
 
     // --- Chasms and a lava pool ------------------------------------------------------------------------------
     pond(z, area(16, 6.3, 1.8, 1), { water: 'abyss' });
@@ -62,20 +62,20 @@ export default defineBiome({
     ] as const)
       z.grove(blob(area(x, y, w, h)), { trees: [...KIT.trees], fillers: [...KIT.fillers] });
 
-    for (const [kind, x, y] of [
-      ['skeleton', 15, 7.4],
-      ['skeleton', 20.6, 7.2],
-      ['skeleton', 18, 10],
-      ['zombie', 11.6, 7.6],
-      ['zombie', 17.4, 8.6],
-      ['zombie', 15.2, 6.8],
-      ['skeleton', 21, 8.6],
-      ['zombie', 18.6, 6.4],
-      ['zombie', 19.4, 5.6],
-      ['skeleton', 13, 10.2],
-      ['shade', 16.6, 10.2],
+    for (const [x, y] of [
+      [15, 7.4],
+      [20.6, 7.2],
+      [18, 10],
+      [11.6, 7.6],
+      [17.4, 8.6],
+      [15.2, 6.8],
+      [21, 8.6],
+      [18.6, 6.4],
+      [19.4, 5.6],
+      [13, 10.2],
+      [16.6, 10.2],
     ] as const)
-      z.mob(kind, ...near(x, y));
+      z.keepFree(...near(x, y));
 
     z.scatter([...DEAD_TREES], { count: 40, where: open, seed: 71 });
     z.scatter(['deadBush'], { count: 14, where: open, seed: 72 });
@@ -85,12 +85,5 @@ export default defineBiome({
     z.place('The Graveyard', 130, 89);
     z.place('The Ember Pool', 130, 67);
     z.place('The Chasm', 168, 68);
-
-    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['skeleton', 'zombie', 'zombie', 'skeleton', 'shade'], {
-      count: 10,
-      seed: 105,
-      avoid: [[...near(16, 9.2), 16]],
-    });
   },
 });

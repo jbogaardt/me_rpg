@@ -1,6 +1,6 @@
 // Crops: plots in the world that grow a vegetable or fruit, ripen over a few minutes, and are picked with the action
 // key. Pure rules; the Pixi side is entities/Crop.ts. Add a crop by naming it here (the art is one row of
-// public/tilesets/crops.png, cut by tools/map/crops.ts) and giving its produce an item in systems/items.ts.
+// public/tilesets/crops.png, cut by tools/map/crops.ts) and giving its produce an item in each farming campaign's items.json.
 // The produce is eaten from the Inventory for food and water (see needs.ts). A plot only grows while it is watered:
 // a freshly picked one is dry and shows "Needs water" until a player waters it with a Waterskin from their pack.
 
@@ -88,8 +88,9 @@ export function canHarvest(hero: Hero, kind: string): boolean {
 export function harvest(hero: Hero, kind: string): Harvest {
   const crop = (CROPS as Record<string, CropKind>)[kind];
   if (!crop) return { ok: false, text: '', items: [] };
-  if (packFree(hero) < crop.yield) return { ok: false, text: 'Pack full', items: [] };
   const item = ITEMS[crop.item];
+  if (!item) return { ok: false, text: '', items: [] }; // a campaign without this produce (the map check warns)
+  if (packFree(hero) < crop.yield) return { ok: false, text: 'Pack full', items: [] };
   const items = Array.from({ length: crop.yield }, () => item);
   hero.pack.push(...items);
   return { ok: true, text: `${item.name} x${crop.yield}`, items };
@@ -100,10 +101,13 @@ export interface Watering {
   text: string;
 }
 
-/** Water a dry plot for the hero: one Waterskin from the pack is used up (the same Waterskin that quenches thirst). */
+/** Water a dry plot for the hero: one item that `waters` (a Waterskin, the same that quenches thirst) is used up from the pack. */
 export function waterWith(hero: Hero): Watering {
-  const skin = hero.pack.find((i) => i === ITEMS.waterskin);
-  if (!skin) return { ok: false, text: 'Need a Waterskin' };
+  const skin = hero.pack.find((i) => i.waters);
+  if (!skin) {
+    const any = Object.values(ITEMS).find((i) => i.waters);
+    return { ok: false, text: `Need a ${any?.name ?? 'Waterskin'}` };
+  }
   takeFromPack(hero, skin);
   return { ok: true, text: 'Watered' };
 }

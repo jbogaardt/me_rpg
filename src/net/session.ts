@@ -7,6 +7,8 @@ import {
   type DoMsg,
   type InputMsg,
   type LooksMsg,
+  type WorldMsg,
+  type DmMsg,
   type Message,
   type PackMsg,
   type SnapMsg,
@@ -83,6 +85,8 @@ export interface PeerInput {
   am?: number;
   /** The Inventory action the friend is waiting on (see InputMsg.inv), if any. */
   inv?: InputMsg['inv'];
+  /** The friend's vote in the Dungeon Master's open vote (see InputMsg.vt), if any. */
+  vt?: [number, number];
   /** False when nothing arrived recently: ignore `keys` (the counters stay valid). */
   fresh: boolean;
 }
@@ -105,6 +109,14 @@ interface Seat {
 interface Attempt {
   abort: AbortController;
 }
+
+let contentTag = '';
+/** Name the world this page plays (content/campaignChoice.ts `tag`): two players must be in the same one to play. */
+export const setContentTag = (tag: string) => {
+  contentTag = tag;
+};
+/** What a hello carries as `build`: the build, then the world, at most 64 characters. */
+const helloBuild = () => (contentTag ? `${__BUILD_ID__}#${contentTag}`.slice(0, 64) : __BUILD_ID__);
 
 export class Session {
   mode: Mode = 'off';
@@ -135,6 +147,9 @@ export class Session {
   private pack: PackMsg | null = null; // friend: the newest purse and pack from the host, not yet taken
   private newestPack = -1;
   private looks: LooksMsg | null = null; // friend: the newest list of what everyone wears
+  private world: WorldMsg[] = [];
+  private dm: DmMsg | null = null; // friend: the newest word from the Dungeon Master not yet taken
+  private newestDm = -1; // friend: stretches of a live world's log, not yet taken (each a different stretch)
   private newestLooks = -1;
   private tradeSteps = new Map<number, TrMsg[]>(); // host: each friend's trade commands, in order, not yet handled
   private nextTradeStep = new Map<number, number>(); // host: the number of the next command to take from each friend
@@ -323,7 +338,7 @@ export class Session {
   peerInput(slot: number, now = performance.now()): PeerInput | null {
     const last = this.inputs.get(slot);
     if (!last) return null;
-    const { keys, act, cb, ci, ack, vr, am, inv } = last.msg;
+    const { keys, act, cb, ci, ack, vr, am, inv, vt } = last.msg;
     return {
       keys,
       act,
@@ -333,6 +348,7 @@ export class Session {
       vr,
       ...(am ? { am } : {}),
       ...(inv ? { inv } : {}),
+      ...(vt ? { vt } : {}),
       fresh: now - last.at < INPUT_STALE_MS,
     };
   }
@@ -375,6 +391,20 @@ export class Session {
     const pack = this.pack;
     this.pack = null;
     return pack;
+  }
+
+  /** Friend: the newest word from the Dungeon Master (dials, time of day, vote) not yet taken, or null. */
+  takeDm(): DmMsg | null {
+    const dm = this.dm;
+    this.dm = null;
+    return dm;
+  }
+
+  /** Friend: the stretches of a live world's log that arrived since last asked. */
+  takeWorld(): WorldMsg[] {
+    const world = this.world;
+    this.world = [];
+    return world;
   }
 
   /** Friend: the newest list of everyone's gear not yet taken, or null. */
@@ -515,7 +545,9 @@ export class Session {
       this.beginHandshake(link);
     } else {
       this.endHandshake(link);
-      this.snapshot = this.pack = this.looks = this.trade = null;
+      this.snapshot = this.pack = this.looks = this.trade = this.dm = null;
+      this.world = [];
+      this.newestDm = -1;
     }
     if (status === 'disconnected' || status === 'failed' || status === 'idle') this.guestLink = null;
     this.notify();
@@ -530,9 +562,13 @@ export class Session {
     switch (message.k) {
       case 'hello':
         this.endHandshake(link); // heard from them: no need to keep repeating ours
-        if (message.v !== PROTOCOL_VERSION || message.build !== __BUILD_ID__) {
+        if (message.v !== PROTOCOL_VERSION || message.build.split('#')[0] !== __BUILD_ID__) {
           link.close(
             'The other player is running a different version of the game. Both of you should reload the page.',
+          );
+        } else if (message.build !== helloBuild()) {
+          link.close(
+            'The other player is in a different world (another campaign or seed). Join with the host’s join link.',
           );
         }
         break;
@@ -594,13 +630,22 @@ export class Session {
           this.looks = message;
         }
         break;
+      case 'world':
+        if (this.guestLink === link && this.world.length < 32) this.world.push(message);
+        break;
+      case 'dm':
+        if (this.guestLink === link && message.n > this.newestDm) {
+          this.newestDm = message.n;
+          this.dm = message;
+        }
+        break;
     }
   }
 
   /** Version check: both sides send hello until they hear the other's (the first one can be lost). */
   private beginHandshake(link: Link) {
     this.endHandshake(link);
-    const hello = encodeMessage({ k: 'hello', v: PROTOCOL_VERSION, build: __BUILD_ID__ });
+    const hello = encodeMessage({ k: 'hello', v: PROTOCOL_VERSION, build: helloBuild() });
     link.send(hello);
     this.handshakes.set(
       link,
@@ -677,7 +722,9 @@ export class Session {
     this.newestInput.clear();
     this.trades.clear();
     this.newestTrade.clear();
-    this.snapshot = this.pack = this.looks = null;
+    this.snapshot = this.pack = this.looks = this.dm = null;
+    this.world = [];
+    this.newestDm = -1;
     this.newestSnapshot = this.newestPack = this.newestLooks = this.newestTradeMsg = -1;
   }
 

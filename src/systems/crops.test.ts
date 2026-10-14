@@ -13,7 +13,7 @@ import {
   waterWith,
 } from './crops';
 import { BASE_PACK } from './inventory';
-import { ITEMS } from './items';
+import { ITEMS, itemOf } from './items';
 
 describe('crops', () => {
   it('give every crop an edible produce that feeds', () => {
@@ -47,12 +47,12 @@ describe('crops', () => {
     const hero = newHero();
     const got = harvest(hero, 'carrot');
     expect(got.ok).toBe(true);
-    expect(hero.pack).toEqual([ITEMS.carrot, ITEMS.carrot]);
+    expect(hero.pack).toEqual([itemOf('carrot'), itemOf('carrot')]);
   });
 
   it('are left alone when the pack has no room for the whole pick', () => {
     const hero = newHero();
-    hero.pack = Array.from({ length: BASE_PACK - 1 }, () => ITEMS.potion);
+    hero.pack = Array.from({ length: BASE_PACK - 1 }, () => itemOf('potion'));
     const got = harvest(hero, 'carrot'); // two carrots, one slot
     expect(got).toMatchObject({ ok: false, text: 'Pack full' });
     expect(hero.pack).toHaveLength(BASE_PACK - 1);
@@ -62,7 +62,7 @@ describe('crops', () => {
   it('say whether a whole pick fits the pack', () => {
     const hero = newHero();
     expect(canHarvest(hero, 'carrot')).toBe(true);
-    hero.pack = Array.from({ length: BASE_PACK - 1 }, () => ITEMS.potion);
+    hero.pack = Array.from({ length: BASE_PACK - 1 }, () => itemOf('potion'));
     expect(canHarvest(hero, 'carrot')).toBe(false);
     expect(canHarvest(hero, 'pumpkin')).toBe(true);
     expect(canHarvest(hero, 'nope')).toBe(false);
@@ -75,8 +75,8 @@ describe('crops', () => {
   it('are watered with a waterskin, which is used up', () => {
     const hero = newHero();
     expect(waterWith(hero)).toEqual({ ok: false, text: 'Need a Waterskin' });
-    hero.pack.push(ITEMS.waterskin, ITEMS.waterskin);
+    hero.pack.push(itemOf('waterskin'), itemOf('waterskin'));
     expect(waterWith(hero).ok).toBe(true);
-    expect(hero.pack).toEqual([ITEMS.waterskin]);
+    expect(hero.pack).toEqual([itemOf('waterskin')]);
   });
 });

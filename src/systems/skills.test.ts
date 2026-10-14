@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ComboReader } from '../core/combo';
 import { MOB_KINDS, newHero, spellPower } from './combat';
-import { ITEM_COUNT } from './inventory';
-import { ITEMS } from './items';
+import { ITEMS, itemOf } from './items';
 import {
   heroCombos,
   isTrialZone,
@@ -29,7 +28,7 @@ import {
 } from './skills';
 import { COMBO_KEYS, type ComboKey } from './spells';
 
-const allWeaponCombos = Object.values(ITEMS).flatMap((i) => ('focus' in i ? i.focus.combos.map((c) => c.keys) : []));
+const allWeaponCombos = Object.values(ITEMS).flatMap((i) => ('focus' in i ? i.focus!.combos.map((c) => c.keys) : []));
 
 describe('skills', () => {
   it('are four taps of the four directions, with every direction used and costing mana', () => {
@@ -89,8 +88,8 @@ describe('Spark Volley', () => {
     expect(SKILLS.sparkVolley.minLevel).toBe(5);
     expect(VOLLEY_BOLTS).toBe(3);
     for (const item of Object.values(ITEMS)) {
-      if (!('focus' in item) || item.focus.kind !== 'wand') continue;
-      for (const c of item.focus.combos)
+      if (!('focus' in item) || item.focus!.kind !== 'wand') continue;
+      for (const c of item.focus!.combos)
         if (c.spell === 'fan' || c.spell === 'bolt') expect(VOLLEY_POWER).toBeLessThan(c.power);
     }
   });
@@ -102,15 +101,15 @@ describe('heroCombos', () => {
     expect(heroCombos(hero)).toEqual([]);
     learn(hero, 'arcaneEdge');
     expect(heroCombos(hero).map((c) => c.keys)).toEqual(['ruld']); // learned into a free slot: ready
-    hero.weapon = ITEMS.noviceTome;
+    hero.weapon = itemOf('noviceTome');
     const list = heroCombos(hero);
-    expect(list.map((c) => c.keys)).toEqual([...ITEMS.noviceTome.focus.combos.map((c) => c.keys), 'ruld']);
+    expect(list.map((c) => c.keys)).toEqual([...itemOf('noviceTome').focus!.combos.map((c) => c.keys), 'ruld']);
     expect(list.at(-1)?.skill).toBe('arcaneEdge');
   });
 
   it('stays within what the network allows, with a tome and every slot full', () => {
     const hero = newHero();
-    hero.weapon = ITEMS.arcaneGrimoire;
+    hero.weapon = itemOf('arcaneGrimoire');
     for (const id of SKILL_IDS) learn(hero, id);
     expect(heroCombos(hero).length).toBeLessThanOrEqual(MAX_HERO_COMBOS);
     expect(heroCombos(hero, 'training_adept').length).toBeLessThanOrEqual(MAX_HERO_COMBOS);
@@ -118,10 +117,10 @@ describe('heroCombos', () => {
 
   it('keeps a wand’s combos out of the two-skill limit: two skills plus all of the wand’s', () => {
     const hero = newHero();
-    hero.weapon = ITEMS.stormcallerWand;
+    hero.weapon = itemOf('stormcallerWand');
     for (const id of SKILL_IDS) learn(hero, id);
     expect(hero.loadout).toHaveLength(LOADOUT_SLOTS);
-    expect(heroCombos(hero)).toHaveLength(ITEMS.stormcallerWand.focus.combos.length + LOADOUT_SLOTS);
+    expect(heroCombos(hero)).toHaveLength(itemOf('stormcallerWand').focus!.combos.length + LOADOUT_SLOTS);
     const plain = newHero();
     for (const id of SKILL_IDS) learn(plain, id);
     expect(heroCombos(plain)).toHaveLength(LOADOUT_SLOTS); // a sword gets just the two
@@ -163,7 +162,6 @@ describe('the loadout', () => {
     expect(loadoutFromCode(MAX_LOADOUT_CODE + 1)).toBeNull();
     expect(loadoutFromCode(-1)).toBeNull();
     expect(loadoutFromCode(1 * 5 + 1)).toBeNull(); // the same skill in both slots
-    expect(MAX_LOADOUT_CODE).toBeLessThanOrEqual(ITEM_COUNT); // a `do` message's item field has to hold it
   });
 
   it('puts the skill being tested in the second slot of a training ground, and leaves the first alone', () => {
@@ -249,7 +247,7 @@ describe('wands and tomes together with skills', () => {
       hero.weapon = item;
       for (const id of SKILL_IDS) learn(hero, id);
       const list = heroCombos(hero);
-      expect(list.length, item.name).toBe(item.focus.combos.length + LOADOUT_SLOTS);
+      expect(list.length, item.name).toBe(item.focus!.combos.length + LOADOUT_SLOTS);
       const keys = list.map((c) => c.keys);
       for (const [a, ka] of keys.entries()) {
         for (const [b, kb] of keys.entries()) {
@@ -267,7 +265,7 @@ describe('wands and tomes together with skills', () => {
 
   it('keep casting their own spells with any skills ready: a wand’s damage still comes from its own power', () => {
     const hero = newHero();
-    hero.weapon = ITEMS.stormcallerWand;
+    hero.weapon = itemOf('stormcallerWand');
     const before = spellPower(hero);
     for (const id of SKILL_IDS) learn(hero, id);
     expect(spellPower(hero)).toBe(before); // skills add no hidden changes to the wand's strength

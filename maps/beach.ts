@@ -60,7 +60,7 @@ export default defineBiome({
       z.prop('barrel', ...near(x, y));
     z.prop('darkBoulder', ...near(16.8, 3.4));
     z.chest('wood', 'purse', ...near(16.4, 3.6));
-    z.mob('raider', ...near(15.8, 3.6));
+    z.keepFree(...near(15.8, 3.6));
 
     // --- Tide pools and rocks --------------------------------------------------------------------------------
     for (const [x, y, w, h] of [
@@ -76,16 +76,16 @@ export default defineBiome({
     // --- A copse where the beach meets the jungle -----------------------------------------------------------
     z.grove(blob(area(18.8, 4.2, 1.2, 0.6)), { trees: TREES });
 
-    for (const [kind, x, y] of [
-      ['raider', 14.6, 2.2],
-      ['shade', 17.6, 4.4],
-      ['wolfkin', 13.2, 4.6],
-      ['wolfkin', 19.2, 3.4],
-      ['raider', 16.4, 5.4],
-      ['raider', 18.4, 1.8],
-      ['shade', 15, 5.6],
+    for (const [x, y] of [
+      [14.6, 2.2],
+      [17.6, 4.4],
+      [13.2, 4.6],
+      [19.2, 3.4],
+      [16.4, 5.4],
+      [18.4, 1.8],
+      [15, 5.6],
     ] as const)
-      z.mob(kind, ...near(x, y));
+      z.keepFree(...near(x, y));
 
     z.scatter(['sandBoulder', 'sandBoulderB', 'sandSpire'], { count: 18, where: open, seed: 61 });
     z.scatter(['rockSmall', 'rockC', 'rock'], { count: 20, where: open, seed: 62 });
@@ -95,8 +95,5 @@ export default defineBiome({
     z.place('The Wreck', 162, 34);
     z.place('Tide Pools', 136, 52);
     z.place("The Jungle's Edge", 193, 38);
-
-    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['raider', 'wolfkin', 'shade', 'raider'], { count: 6, seed: 104, avoid: [[...near(15.6, 2.8), 14]] });
   },
 });

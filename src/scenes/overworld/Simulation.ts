@@ -1,4 +1,5 @@
 import { DIR_VEC, dirIndex, directionToward } from '../../core/direction';
+import { enabled, setting } from '../../systems/capabilities';
 import type { Character } from '../../entities/Character';
 import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
@@ -29,10 +30,11 @@ import {
   POND_FLOW,
   rainFill,
   sipWater,
+  STILL_FILL,
   starveRate,
   thirsty,
 } from '../../systems/needs';
-import { GIVERS, QUEST_GIVER, recordKill, type Progress } from '../../systems/quests';
+import { GIVERS, QUEST_GIVER, recordKill, recordVisit, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
 import type { Strike } from '../../entities/WeatherLayer';
@@ -51,6 +53,7 @@ import {
   MELEE_REACH,
   MP_REGEN,
   SPEED,
+  DM_SPEED,
   auraTint,
 } from './constants';
 import type { Visuals } from './Visuals';
@@ -66,7 +69,7 @@ export function foeNear(z: ZoneState, p: Player): boolean {
 }
 
 export function canDrink(z: ZoneState, p: Player): boolean {
-  if (!thirsty(p.hero.needs)) return false;
+  if (!enabled('needs', z.name) || !thirsty(p.hero.needs)) return false;
   const water = drinkableNear(z.data, p.body.x, p.body.y);
   return !!water && z.ponds.level(pondId(z.data, water.cell)) < 1;
 }
@@ -205,6 +208,7 @@ export class Simulation {
 
   /** One tick for a player: cooldowns and regeneration, knockback, walking (or sliding on ice), and the poses. */
   updatePlayer(p: Player, cmd: Command, dt: number) {
+    if (p.dm) return this.updateDm(p, cmd, dt);
     const s = p.hero.stats;
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
@@ -216,13 +220,18 @@ export class Simulation {
     p.grace = Math.max(0, p.grace - dt);
     p.sinceHit += dt;
     if (p.pendingShot && (p.pendingShot.timer -= dt) <= 0) this.release(p);
-    drainNeeds(p.hero.needs, dt);
-    const fed = needsRegen(p.hero.needs); // hungry or thirsty heroes mend more slowly (systems/needs.ts)
+    // A campaign (or zone) without food and water: no hunger, plain mending, no starving; else as fast as it says.
+    const zone = this.arena.zone.name;
+    // A quest that sends the hero to a named place counts it on arriving (the host decides, for every player).
+    this.questNote(p, recordVisit(p.hero, zone, this.arena.data.places, p.body.x, p.body.y));
+    const needs = enabled('needs', zone);
+    if (needs) drainNeeds(p.hero.needs, dt * setting('needs', 'drain', zone));
+    const fed = needs ? needsRegen(p.hero.needs) : 1; // hungry or thirsty heroes mend more slowly (systems/needs.ts)
     s.mp = Math.min(s.maxMp, s.mp + (MP_REGEN * fed + gearMpRegen(p.hero)) * dt);
     // Gear that mends (a Warden's Mantle) works in the thick of a fight; the slow natural kind waits for a quiet spell.
     const mend = gearRegen(p.hero) + (p.sinceHit > HP_REGEN_DELAY ? HP_REGEN * fed : 0);
     if (mend) s.hp = Math.min(s.maxHp, s.hp + mend * dt);
-    const starving = starveRate(p.hero.needs, s.maxHp);
+    const starving = needs ? starveRate(p.hero.needs, s.maxHp) : 0;
     if (starving && s.hp > 1) s.hp = Math.max(1, s.hp - starving * dt); // empty meters wear you down, but never finish you
 
     if (p.knock.x || p.knock.y) {
@@ -241,6 +250,22 @@ export class Simulation {
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
     p.body.alpha = p.invuln > 0 && Math.floor(p.invuln * 16) % 2 === 0 ? 0.35 : 1;
     p.body.setTint(auraTint({ ward: p.ward > 0, edge: p.edge.charges > 0, guard: p.guard > 0 }));
+    p.body.animate(dt * 1000, p.moving);
+  }
+
+  /**
+   * The Dungeon Master's tick: they walk where they like, stopped by walls but by nobody else, never slip on ice, and
+   * have no meters to run down.
+   */
+  private updateDm(p: Player, { dx, dy }: Command, dt: number) {
+    const len = Math.hypot(dx, dy);
+    if (len) {
+      if (dx) p.body.face(dx > 0 ? 'right' : 'left');
+      else p.body.face(dy > 0 ? 'down' : 'up');
+      const step = (DM_SPEED * dt) / len;
+      this.arena.collision.slide(p.body, dx * step, dy * step, []);
+    }
+    p.moving = len > 0;
     p.body.animate(dt * 1000, p.moving);
   }
 
@@ -306,7 +331,7 @@ export class Simulation {
     const cy = p.body.y + vy * 16;
     const edge = this.takeEdge(p); // Arcane Edge: this swing carries extra magic
     for (const mob of this.arena.mobs) {
-      if (mob.alive && Math.hypot(mob.body.x - cx, mob.body.y - cy) < MELEE_REACH) {
+      if (mob.alive && Math.hypot(mob.body.x - cx, mob.body.y - cy) < MELEE_REACH + (mob.body.size - 1) * 14) {
         this.hitMob(mob, rollDamage(attackPower(p.hero) + edge, mob.kind.defense), vx, vy);
         if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
       }
@@ -351,6 +376,7 @@ export class Simulation {
 
   /** The player tapped out combo `index` of their wand or tome: cast its spell if there is the mana for it. */
   combo(p: Player, index: number) {
+    if (p.dm) return; // the Dungeon Master casts nothing at the party's foes
     this.casting.combo(p, index);
   }
 
@@ -364,7 +390,7 @@ export class Simulation {
       // Hits the first player it touches (one blinking with invulnerability lets it pass), stops at walls. The players
       // are looked up each step: someone may have joined or left while it flies.
       const hit = this.arena
-        .players()
+        .party()
         .find((p) => !p.safe && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14);
       if (hit) this.hurtHero(mob, hit.body);
       return hit !== undefined;
@@ -385,7 +411,7 @@ export class Simulation {
    */
   private mobRay(mob: Mob, target: Character): boolean {
     const { ray } = mob.kind;
-    const p = this.arena.players().find((q) => q.body === target);
+    const p = this.arena.party().find((q) => q.body === target);
     if (!ray || !p) return false;
     const { collision } = this.arena;
     const [dx, dy] = [target.x - mob.body.x, target.y - mob.body.y];
@@ -413,7 +439,7 @@ export class Simulation {
 
   /** Where the next lightning bolt lands: anywhere in a wide area around a random player, so it is unpredictable. */
   strikeTarget() {
-    const all = this.arena.players(); // the zone the weather is drawn in
+    const all = this.arena.party(); // the zone the weather is drawn in
     const p = all[Math.floor(Math.random() * all.length)] ?? this.arena.local;
     return { x: p.body.x + (Math.random() - 0.5) * 840, y: p.body.y + (Math.random() - 0.5) * 600 };
   }
@@ -423,8 +449,9 @@ export class Simulation {
    * rolls every occupied zone's weather (a guest is only told), and a storm picks where to strike in its own zone.
    */
   weather(dt: number) {
-    const { weather, ponds } = this.arena.zone;
-    if (!weather) return;
+    const { weather, ponds, name } = this.arena.zone;
+    if (weather && !enabled('weather', name)) weather.still(); // switched off: clear and still, here and for friends
+    if (!weather || !enabled('weather', name)) return ponds.rain(STILL_FILL, dt); // no weather: ponds seep back
     weather.update(dt);
     ponds.rain(rainFill(weather.precip, weather.intensity), dt); // only rain fills a pond someone drank from
     if (weather.strikeDue(dt)) this.lightning({ ...this.strikeTarget(), seed: Math.floor(Math.random() * 1e9) });
@@ -436,7 +463,7 @@ export class Simulation {
     this.emit({ type: 'lightning', ...strike });
     const { x, y } = strike;
     this.fx('hitSpark', x, y);
-    for (const p of this.arena.players()) {
+    for (const p of this.arena.party()) {
       if (p.safe || Math.hypot(p.body.x - x, p.body.y - y) > LIGHTNING_RADIUS) continue;
       this.harm(p, Math.max(1, Math.round(p.hero.stats.maxHp * LIGHTNING_DAMAGE)), x, y);
     }
@@ -449,14 +476,14 @@ export class Simulation {
     const damage = Math.round(rawDamage * this.casting.markFactor(mob)); // a foe marked by Spirit Mark takes more
     const killed = mob.hit(damage, vx, vy);
     // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
-    if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14, Math.atan2(vy, vx));
-    this.text(mob.body.x, mob.body.y - 54, String(damage), 0xffffff);
+    if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx));
+    this.text(mob.body.x, mob.body.y - 54 * mob.body.size, String(damage), 0xffffff);
     if (!killed) return;
     this.fx('mobPoof', mob.body.x, mob.body.y - 12);
-    this.text(mob.body.x, mob.body.y - 66, `+${mob.kind.xp} XP`, 0xffb13f);
+    this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${mob.kind.xp} XP`, 0xffb13f);
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
-    this.text(mob.body.x, mob.body.y - 78, `+${gold}g`, 0xffd34d);
-    for (const p of this.arena.players()) {
+    this.text(mob.body.x, mob.body.y - 78 * mob.body.size, `+${gold}g`, 0xffd34d);
+    for (const p of this.arena.party()) {
       p.hero.gold += goldFor(p.hero, gold); // gear can add to the purse and the XP, so each player gets their own share
       if (gainXp(p.hero.stats, xpFor(p.hero, mob.kind.xp))) this.levelUp(p);
       this.questNote(p, recordKill(p.hero, mob.kind, this.arena.zone.name)); // a quest counts the kill for everyone here
@@ -478,7 +505,7 @@ export class Simulation {
   }
 
   private hurtHero(mob: Mob, victim: Character) {
-    const p = this.arena.players().find((q) => q.body === victim);
+    const p = this.arena.party().find((q) => q.body === victim);
     if (!p || p.safe) return;
     this.harm(p, rollDamage(mob.kind.attack, defensePower(p.hero)), mob.body.x, mob.body.y);
   }

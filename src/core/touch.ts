@@ -53,11 +53,12 @@ function blockPageZoom() {
   for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
     document.addEventListener(type, (e) => e.preventDefault());
   }
-  // Outside the menu, shop and trade screens (whose buttons and code box need the browser's taps, focus and
+  // Outside the menu, shop, trade and choice screens (whose buttons and code box need the browser's taps, focus and
   // synthesized clicks) a touch is only ever game input, which reads pointer events (those still fire). Cancelling the touch's default action disables
   // double-tap zoom, pinch and the long-press callout on the canvas, D-pad, buttons and the gaps between them.
   const keepDefault = (target: EventTarget | null) =>
-    target instanceof Element && !!target.closest('#menu, #shop, #trade, #trade-request, input, textarea, select, a');
+    target instanceof Element &&
+    !!target.closest('#menu, #shop, #trade, #trade-request, #choices, input, textarea, select, a');
   for (const type of ['touchstart', 'touchmove'] as const) {
     document.addEventListener(type, (e) => !keepDefault(e.target) && e.preventDefault(), { passive: false });
   }

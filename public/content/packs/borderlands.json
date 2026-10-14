@@ -1,0 +1,260 @@
+{
+  "version": 1,
+  "id": "borderlands",
+  "pairings": {
+    "steam_pass": {
+      "regions": ["cinder_coast", "frostfen"],
+      "tags": ["thaw"],
+      "lore": {
+        "way": "the steaming pass where the ash of The Cinder Coast runs into the snow of The Frostfen",
+        "sign": {
+          "cinder_coast": "Snow is falling on hot ash: the whole camp hisses with steam, and the imps hate it.",
+          "frostfen": "The meres of The Frostfen are thawing at their edges, warmed from The Cinder Coast."
+        }
+      }
+    },
+    "burial_road": {
+      "regions": ["cinder_coast", "barrow"],
+      "tags": ["restless-dead", "fire"],
+      "lore": {
+        "way": "the old burial road from The Cinder Coast to the mounds of The Barrow",
+        "sign": {
+          "cinder_coast": "Bones have been washing up in the ash, burnt black, from the direction of The Barrow.",
+          "barrow": "The graves smell of smoke: something from The Cinder Coast has been digging."
+        }
+      }
+    },
+    "smoke_ravine": {
+      "regions": ["mirewood", "ember_caldera"],
+      "tags": ["fire"],
+      "lore": {
+        "way": "a long smoking ravine that climbs from The Mirewood up to The Ember Caldera",
+        "sign": {
+          "mirewood": "Smoke from The Ember Caldera settles on the bog, and the water runs warm and sour.",
+          "ember_caldera": "Steam from The Mirewood's bog curls up the ravine and dies on the lava."
+        }
+      }
+    },
+    "glass_tunnel": {
+      "regions": ["barrow", "ember_caldera"],
+      "tags": ["fire", "restless-dead"],
+      "lore": {
+        "way": "a tunnel of black glass that runs down under The Barrow into The Ember Caldera",
+        "sign": {
+          "barrow": "The graves of The Barrow are warm to the touch: the fire of The Ember Caldera runs under them.",
+          "ember_caldera": "Grave-dust from The Barrow drifts down the glass tunnel and burns in the heat."
+        }
+      }
+    },
+    "cove_coast": {
+      "regions": ["cinder_coast", "ember_cove"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a narrow ash gully off The Cinder Coast" }
+    },
+    "cove_caldera": {
+      "regions": ["ember_caldera", "ember_cove"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a crack in the rim of The Ember Caldera" }
+    },
+    "cove_barrow": {
+      "regions": ["barrow", "ember_cove"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a scorched path out of The Barrow" }
+    },
+    "grotto_frostfen": {
+      "regions": ["frostfen", "frost_grotto"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a snow-choked gully off The Frostfen" }
+    },
+    "grotto_mirewood": {
+      "regions": ["mirewood", "frost_grotto"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a cold, frosted path off The Mirewood" }
+    },
+    "grotto_barrow": {
+      "regions": ["barrow", "frost_grotto"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a rimed path out of The Barrow" }
+    },
+    "hollow_mirewood": {
+      "regions": ["mirewood", "bog_hollow"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a sunken track off The Mirewood" }
+    },
+    "hollow_frostfen": {
+      "regions": ["frostfen", "bog_hollow"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a thawing track off The Frostfen" }
+    },
+    "hollow_barrow": {
+      "regions": ["barrow", "bog_hollow"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a waterlogged path out of The Barrow" }
+    },
+    "shrine_barrow": {
+      "regions": ["barrow", "old_shrine"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a path of old stones out of The Barrow" }
+    },
+    "shrine_mirewood": {
+      "regions": ["mirewood", "old_shrine"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a path of old stones off The Mirewood" }
+    },
+    "shrine_frostfen": {
+      "regions": ["frostfen", "old_shrine"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a path of old stones off The Frostfen" }
+    },
+    "shrine_coast": {
+      "regions": ["cinder_coast", "old_shrine"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a path of old stones off The Cinder Coast" }
+    }
+  },
+  "arcs": {
+    "long_thaw": {
+      "title": "The Long Thaw",
+      "regions": 2,
+      "slots": [{}, { "themes": ["frost"], "foes": { "boss": { "tags": ["frost"] } } }],
+      "crossings": { "r1~r2": {} },
+      "chapters": [
+        {
+          "title": "Where Two Lands Meet",
+          "intro": [
+            "You came at a strange time.",
+            "{r1~r2.sign}",
+            "I am {keeper}. Something has gone wrong between {r1} and {r2}, and I mean to know what."
+          ],
+          "variants": [
+            {
+              "when": { "r1~r2": "thaw" },
+              "intro": [
+                "You came at a strange time.",
+                "{r1~r2.sign}",
+                "I am {keeper}. The fire of {r1} is eating into the ice of {r2}, and the ice is fighting back."
+              ]
+            },
+            {
+              "when": { "r1~r2": "frost-creep" },
+              "intro": [
+                "You came at a strange time.",
+                "{r1~r2.sign}",
+                "I am {keeper}. The cold of {r2} is reaching into {r1}, and it should not reach this far."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Heart of the Cold",
+          "intro": ["Whatever drives the cold lives deep in {r2}.", "Take {r1~r2.way}, and find it."]
+        }
+      ],
+      "quests": [
+        {
+          "id": "steady",
+          "chapter": 0,
+          "learned": "The {r1.common.lower} are restless because the land under them is changing.",
+          "fieldNote": ["The last one flees, slipping on ground that is half ice and half mud."],
+          "title": "Steady the Camp",
+          "goal": "Drive off 5 {r1.common.lower}",
+          "hint": "{r1.common.plural} are everywhere in {r1}.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.common.lower}",
+          "objective": { "t": "kill", "kind": "@r1.common", "count": 5 },
+          "reward": { "gold": 25, "xp": 30 },
+          "offer": [
+            "The {r1.common.lower} are half mad with the change in the air. Drive off five before they hurt someone."
+          ],
+          "remind": ["Five {r1.common.lower}, all over {r1}."],
+          "done": ["Good. Now we can think.", "{r1~r2.sign}"]
+        },
+        {
+          "id": "stones",
+          "chapter": 0,
+          "learned": "The {r2.site.lower} are where the cold of {r2} comes from.",
+          "fieldNote": ["Three of them, and each one colder than the last."],
+          "title": "Touch the Cold",
+          "goal": "Touch 3 {r2.site.lower}",
+          "hint": "{r2.site.plural} stand in {r2}: take {r1~r2.way}.",
+          "where": { "zones": ["@r2"] },
+          "unit": "{r2.site.lower}",
+          "objective": { "t": "gather", "site": "@r2.site", "zone": "@r2", "count": 3 },
+          "reward": { "gold": 35, "xp": 45, "items": ["potion"] },
+          "offer": ["Go into {r2} and lay your hand on three of the {r2.site.lower}. Tell me how cold they are."],
+          "remind": ["Three {r2.site.lower}, in {r2}."],
+          "done": ["Colder than ice has any right to be.", "Something is feeding them."],
+          "variants": [
+            {
+              "when": { "r1~r2": "thaw" },
+              "fieldNote": ["Three of them, sweating in the warm wind from {r1}, and refreezing as you watch."],
+              "learned": "The {r2.site.lower} are fighting the heat from {r1}: something wants {r2} to stay frozen.",
+              "done": ["They are fighting the thaw. Something in {r2} wants the cold to win."]
+            },
+            {
+              "when": { "r1~r2": "frost-creep" },
+              "fieldNote": ["Three of them, and the frost around each one is spreading toward {r1}."],
+              "learned": "The {r2.site.lower} are pushing the cold outward, toward {r1}.",
+              "done": ["They are spreading. If nothing stops them, {r1} will freeze solid by midwinter."]
+            }
+          ]
+        },
+        {
+          "id": "guards",
+          "chapter": 1,
+          "learned": "The {r2.brute.lower} guard the deep cold; they were sent, not born there.",
+          "fieldNote": ["The third one falls into the snow and does not get up."],
+          "title": "Break the Guard",
+          "goal": "Defeat 3 {r2.brute.lower}",
+          "hint": "{r2.brute.plural} stand guard in {r2}.",
+          "where": { "zones": ["@r2"] },
+          "unit": "{r2.brute.lower}",
+          "objective": { "t": "kill", "kind": "@r2.brute", "count": 3, "zone": "@r2" },
+          "reward": { "gold": 50, "xp": 70 },
+          "offer": ["The way to the heart of {r2} is guarded. Break three of the {r2.brute.lower}."],
+          "remind": ["Three {r2.brute.lower}, in {r2}."],
+          "done": ["Then only the heart is left."]
+        },
+        {
+          "id": "heart",
+          "chapter": 1,
+          "learned": "The {r2.boss} carried the cold in its body; with it gone, the land can find its balance.",
+          "fieldNote": ["The {r2.boss} falls with a sound like a frozen lake breaking. The wind changes."],
+          "title": "The Heart of the Cold",
+          "goal": "Defeat the {r2.boss}",
+          "hint": "The {r2.boss} waits deep in {r2}.",
+          "where": { "zones": ["@r2"] },
+          "unit": "foes",
+          "objective": { "t": "kill", "kind": "@r2.boss", "count": 1, "zone": "@r2" },
+          "reward": { "gold": 140, "xp": 150, "items": ["steelSword"] },
+          "offer": ["The cold has a heart, and it walks. The {r2.boss}. End it."],
+          "remind": ["The {r2.boss}, in {r2}."],
+          "done": [
+            "I felt it from here. The air is softer already.",
+            "Take this: it was waiting for someone like you."
+          ],
+          "variants": [
+            {
+              "when": { "r1~r2": "thaw" },
+              "done": [
+                "Fire and frost will settle now, the way they should: a little of each, and neither winning.",
+                "Take this: it was waiting for someone like you."
+              ]
+            },
+            {
+              "when": { "r1~r2": "frost-creep" },
+              "done": [
+                "The frost is drawing back from {r1}. The bog will be a bog again by spring.",
+                "Take this: it was waiting for someone like you."
+              ]
+            }
+          ]
+        }
+      ],
+      "epilogue": [
+        "{r1} and {r2} meet the way they always did: an uneasy border, but a quiet one.",
+        "Stay a while. There is always more to mend."
+      ]
+    }
+  }
+}

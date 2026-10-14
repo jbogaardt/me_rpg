@@ -1,10 +1,9 @@
 // Treasure chests: what they look like and what is inside. Pure rules; the Pixi side is entities/Chest.ts.
-// Add a loot by naming it here, then place a chest with `z.chest(kind, loot, col, row)` (see the build-zone skill).
+// Loots are content (items.json `loots`, read by src/content/schema.ts): add one there, then place a chest with `z.chest(kind, loot, col, row)` (see the build-zone skill).
 // Chests hold what the shops do not sell (rare gear, restoratives) and the odd purse.
 
 import { gainXp, type Hero, type Item } from './combat';
 import { addToPack, hasRoom, isBetter, wearIfBetter } from './inventory';
-import { ITEMS } from './items';
 
 /** Art variants, in the row order of public/tilesets/chests.png (each row: open frame, then closed frame). */
 export const CHEST_KINDS = ['wood', 'oak', 'iron', 'silver'] as const;
@@ -16,44 +15,13 @@ export type ChestLoot =
   | { xp: number }
   | { gold: number };
 
-export const CHEST_LOOTS: Record<string, ChestLoot> = {
-  bronzeSword: { item: ITEMS.bronzeSword },
-  steelSword: { item: ITEMS.steelSword },
-  silverSword: { item: ITEMS.silverSword },
-  shortBow: { item: ITEMS.shortBow },
-  recurveBow: { item: ITEMS.recurveBow },
-  greatBow: { item: ITEMS.greatBow },
-  woodenShield: { item: ITEMS.woodenShield },
-  ironShield: { item: ITEMS.ironShield },
-  kiteShield: { item: ITEMS.kiteShield },
-  parryingDagger: { item: ITEMS.parryingDagger },
-  clothHood: { item: ITEMS.clothHood },
-  nasalHelm: { item: ITEMS.nasalHelm },
-  kettleHat: { item: ITEMS.kettleHat },
-  vikingHelm: { item: ITEMS.vikingHelm },
-  legionHelm: { item: ITEMS.legionHelm },
-  greatHelm: { item: ITEMS.greatHelm },
-  leatherArmor: { item: ITEMS.leatherArmor },
-  legionArmor: { item: ITEMS.legionArmor },
-  plateArmor: { item: ITEMS.plateArmor },
-  paddedLeggings: { item: ITEMS.paddedLeggings },
-  ironGreaves: { item: ITEMS.ironGreaves },
-  steelGreaves: { item: ITEMS.steelGreaves },
-  leatherBoots: { item: ITEMS.leatherBoots },
-  foldedBoots: { item: ITEMS.foldedBoots },
-  ironBoots: { item: ITEMS.ironBoots },
-  steelBoots: { item: ITEMS.steelBoots },
-  whetstone: { item: ITEMS.whetstone },
-  bandageKit: { item: ITEMS.bandageKit },
-  sack: { item: ITEMS.sack },
-  backpack: { item: ITEMS.backpack },
-  potion: { hp: 20 },
-  elixir: { hp: 40, mp: 40 },
-  relic: { xp: 40 },
-  coins: { gold: 30 },
-  purse: { gold: 90 },
-  hoard: { gold: 200 },
-};
+/** The campaign's chest contents by id (content: items.json `loots`; empty until it is installed). */
+export const CHEST_LOOTS: Record<string, ChestLoot> = {};
+
+export function setLoots(loots: Record<string, ChestLoot>) {
+  for (const id of Object.keys(CHEST_LOOTS)) delete CHEST_LOOTS[id];
+  Object.assign(CHEST_LOOTS, loots);
+}
 
 export interface Found {
   text: string; // short, shown floating over the chest

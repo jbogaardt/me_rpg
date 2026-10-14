@@ -16,7 +16,7 @@ Maps are code. `maps/<zone>.ts` is the source of truth; `npm run map -- build` c
 2. `npm run map -- build` - prints errors (✗, must fix) and warnings (!, fix or justify).
 3. **Look at the result.** Read `maps/out/<zone>.png` (what players see) and
    `maps/out/<zone>.debug.png` (red = blocked, grid every cell, thicker every 5; green = spawn,
-   pink = NPC, orange = mobs). For detail: `npm run map -- render <zone> --crop col,row,w,h --scale 2 [--debug]`.
+   pink = NPC; enemies are content, not drawn here). For detail: `npm run map -- render <zone> --crop col,row,w,h --scale 2 [--debug]`.
 4. Iterate until it looks right and checks pass. Optionally play it: `npm run build && npx vite preview`
    and drive it with Playwright (Chromium is at /opt/pw-browsers/chromium in cloud sessions).
 5. Commit the spec **and** the generated JSON together.
@@ -37,12 +37,13 @@ ground first, then features, then overrides.
 | `z.stamp(name, col, row)` | Copies a pre-painted ground decoration (`skull`, `dune`, `crater`, `pit`) top-left at (col,row); opaque source cells only. No collision. |
 | `z.plateau(rect, {kind?, stairs?})` | Raised plateau. `rect` = walkable top (>= 4x4 cells). Rim rocks fill the 1-cell ring N/W/E and the rock face the 2 rows S of it (all blocked, plus the 4 corner cells of `rect`). `kind`: `'grass'` (default), `'frost'` (snow top; lay it on snow), `'dry'` (sand top). The top is always the rim's own ground; terrain painted over it doesn't show. `stairs`: centre columns of 3-wide staircases cut into the south face (`rect.col+2 <= c <= rect.col+w-3`, so w >= 5; >= 3 columns apart). Stairs are the only way up; the top gets level +1 and the stair cells become ramps. Put props/mobs on top with the usual calls. |
 | `z.block(rect, reason)` / `z.unblock(rect)` | Manual collision overrides, applied last. Use `block` for water/cliffs; the reason silences the invisible-wall warning. Don't hand-block props. |
-| `z.spawn(c, r)`, `z.npc(c, r)`, `z.mob(kind, c, r)` | Player start, the NPC, enemy spawns (`kind` must be in `MOB_KINDS`, `src/systems/combat.ts`). |
-| `z.shop(id, c, r)` | A shopkeeper (`id` is a key of `SHOPS`, `src/systems/shops.ts`) standing on an open cell, normally inside a shop room (`tools/map/interiors.ts` builds one). |
+| `z.spawn(c, r)`, `z.npc(c, r)` | Player start, the NPC. Enemies are not map data: they are placed by the zone's scenario node (`public/content/<campaign>/scenarios.json`, map cells) and roam by its biome's `generation.roam` (`public/content/<campaign>/biomes.json`); in a biome, `z.keepFree(c, r)` keeps a spot clear of later props for them. |
+| `z.shop(id, c, r)` | A shopkeeper (`id` is a shop of the map's campaign, its items.json `shops`) standing on an open cell, normally inside a shop room (`tools/map/interiors.ts` builds one). |
 | `z.door(c, r, w, toZone, toCol, toRow)` | A doorway: walking onto the `w` cells from (c, r) takes the player to (toCol, toRow) of another zone. The cells are forced open (a building's art would block them) and must be reachable. The arrival cell must be open and must not itself be a door; the other zone needs a door back (`npm run map -- check` verifies all of this across zones). |
-| `z.sign(c, r, ways)` | A signpost at a fork in the road: `ways` maps `up`/`down`/`left`/`right` to a zone key (`ZONE_NAMES`) or a `z.place` name on this map; the action key reads them (`systems/signs.ts`). In a biome, give the junction: it stands on the nearest free cell beside the road, never on it. Put one at every new fork. |
+| `z.sign(c, r, ways)` | A signpost at a fork in the road: `ways` maps `up`/`down`/`left`/`right` to a zone key (a biome `name` in the campaign's `biomes.json`) or a `z.place` name on this map; the action key reads them (`systems/signs.ts`). In a biome, give the junction: it stands on the nearest free cell beside the road, never on it. Put one at every new fork. |
+| `z.port(name, c, r, w, arriveC, arriveR, h, seal)` | A doorway whose far side the content decides (a campaign's biomes.json `ports`, or a random campaign's assembler): the `w` x `h` cells from (c, r) (an east or west port is a column: `w` 1, `h` 3), opened up like a door's; a player coming in through it appears at (arriveC, arriveR), an open cell just inside. Its edge is the one it is nearest, and it only ever joins a port on the opposite edge (leave north, arrive in the south). `seal` is the props drawn across it when nothing binds it (required). Pack regions join only by ports: one per edge, named after it (`north`, `east`...), with a trail running to it. A dead end is `deadEnd()` (tools/map/deadEnd.ts). |
 | `z.indoor()` | Marks the zone a room: no weather, no footprints or leaves, no co-op overview map. |
-| `z.chest(kind, loot, c, r)` | A treasure chest (`loot` is a key of `CHEST_LOOTS`, `src/systems/chests.ts`). Shops sell the common gear, so chests hold what no shop stocks, restoratives and gold purses. |
+| `z.chest(kind, loot, c, r)` | A treasure chest (`loot` is a key of the campaign's items.json `loots`). Shops sell the common gear, so chests hold what no shop stocks, restoratives and gold purses. |
 
 A `Rect` is `{ col, row, w, h }`.
 
@@ -103,7 +104,7 @@ Think in cells: for `plateau({col, row, w, h})` the top is cols `col..col+w-1`, 
   edge (a deep green over pale grass). Pick grounds close in colour, or one.
 
 - ✗ two open cells of different `level` touching without stairs (a hole in a plateau rim); a ramp on a blocked cell.
-- ✗ spawn/NPC/mob outside the map, on a blocked cell, or unreachable from the spawn; unknown mob kind;
+- ✗ spawn/NPC outside the map, on a blocked cell, or unreachable from the spawn; a scenario placement (public/content/) off open ground of its biome (`content:` lines);
   art reading outside its sheet; JSON out of date.
 - ! stairs that don't border a different level. Reachability respects levels: a plateau top is only reachable through stairs. Cliff art is exempt from the foliage check.
 - ! open cells unreachable from the spawn (sealed pockets); "player can walk into foliage" (open cell
@@ -112,7 +113,7 @@ Think in cells: for `plateau({col, row, w, h})` the top is cols `col..col+w-1`, 
 
 ## Zones and doors
 
-Every `maps/<name>.ts` is a zone; the game starts in `greenwood` (`START_ZONE`, `src/main.ts`) and loads others on demand when a player nears a door (`Zones.ensure`). To add a building with an inside: `z.prop(...)` the building, `z.door(...)` on its door cells, and a new `maps/<room>.ts` with `z.indoor()` and its own `z.door` back out (arrival cells must not be doors). The town (`maps/town.ts`, `SHOP_DOORS`) and `tools/map/interiors.ts` (`shopInterior`) are the worked example; a shop room is 11x9 with the keeper behind a counter.
+Every `maps/<name>.ts` is a zone; the game starts in the zone of the campaign's start node (`start` in `public/content/<campaign>/scenarios.json`: `greenwood` in campaign 1). Every map must belong to a campaign: a biome in its `biomes.json` (with `name`, `links` matching its doors; `npm run map -- build` writes `tilesets`) and loads others on demand when a player nears a door (`Zones.ensure`). To add a building with an inside: `z.prop(...)` the building, `z.door(...)` on its door cells, and a new `maps/<room>.ts` with `z.indoor()` and its own `z.door` back out (arrival cells must not be doors). The town (`maps/town.ts`, `SHOP_DOORS`) and `tools/map/interiors.ts` (`shopInterior`) are the worked example; a shop room is 11x9 with the keeper behind a counter.
 
 **The biomes** (the open-air world) are laid out in `maps/world.ts`: one character per 10x10-cell square, every border
 between two biomes shared exactly (the build makes them wander off the squares so they look carved, `wobble`), plus the

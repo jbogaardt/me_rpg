@@ -29,8 +29,9 @@ export function packMap(d: MapData): PackedMap {
     if (k === undefined) partIndex.set(key, (k = parts.push(part) - 1));
     objects.push(k, o.px, o.py);
   }
-  const { version: _v, ground: _g, objects: _o, ...rest } = d;
-  return { version: 3, ...rest, palette, ground, tags, parts, objects };
+  const { version: _v, ground: _g, objects: _o, ports, ...rest } = d;
+  // A map with no ports leaves the field out (parseMap reads it as none), so the files of maps without any stay as they were.
+  return { version: 3, ...rest, ...(ports.length ? { ports } : {}), palette, ground, tags, parts, objects };
 }
 
 /** The file contents for a map. */

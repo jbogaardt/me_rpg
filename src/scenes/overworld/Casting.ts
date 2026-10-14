@@ -417,7 +417,7 @@ export class Casting {
 
   /** The caster and the other players within Mend/Ward range (this zone). */
   private friends(p: Player): Player[] {
-    return this.arena.players().filter((q) => q === p || dist(q.body, p.body) <= HELP_RADIUS);
+    return this.arena.players().filter((q) => !q.dm && (q === p || dist(q.body, p.body) <= HELP_RADIUS));
   }
 
   /** Hit every foe within `radius` of `at`, knocking it away from the centre. */
