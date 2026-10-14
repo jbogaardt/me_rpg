@@ -5,6 +5,7 @@ import { newHero } from './combat';
 import { ITEMS, itemOf } from './items';
 import {
   allPlayerOutfits,
+  DM_LOOK,
   heroOutfit,
   HERO_BASE,
   PLAYER_BASES,
@@ -86,7 +87,8 @@ describe('player looks', () => {
 
   it('lists every item on every player up front so the game can load all the art before play', () => {
     const gear = Object.values(ITEMS).flatMap((item) => (item.look ? [item] : [])); // supplies have no look
-    expect(allPlayerOutfits()).toHaveLength(MAX_PLAYERS * gear.length);
+    expect(allPlayerOutfits()).toHaveLength(1 + MAX_PLAYERS * gear.length); // and the Dungeon Master's robe
+    expect(allPlayerOutfits()).toContainEqual(DM_LOOK);
     const parts = new Set(allPlayerOutfits().flatMap(outfitParts));
     for (const item of gear) for (const id of Object.values(item.look!)) expect(parts).toContain(id);
   });

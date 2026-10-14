@@ -58,6 +58,24 @@ export const PLAYER_BASES: readonly Outfit[] = [
 /** The ring under each player's feet and the tag over their head, by player number. */
 export const PLAYER_COLORS: readonly number[] = [0x4de3ff, 0xffb13f, 0xff6fb5, 0x8fe36a];
 
+/**
+ * The Dungeon Master: in an online game the host (player 0) runs the world and does not play. They are seen in it as
+ * this robed figure, tagged "DM", and take no part in the party's rules (see `Player.dm`). Solo there is no DM.
+ */
+export const DM_SLOT = 0;
+export const DM_LOOK: Outfit = {
+  body: 'body.f_light',
+  head: 'head.human_f_light',
+  hair: 'hair.long_gray',
+  torso: 'torso.robe_red',
+  headwear: 'headwear.wizard_navy',
+  cape: 'cape.charcoal',
+  weapon: 'weapon.staff',
+};
+export const DM_COLOR = 0xffd34d;
+export const DM_NAME = 'Dungeon Master';
+export const DM_TAG = 'DM';
+
 /** "Player 1" for the host, "Player 2" for the first friend, and so on. */
 export const playerName = (slot: number) => `Player ${slot + 1}`;
 
@@ -76,13 +94,13 @@ export function playerOutfit(slot: number, hero: Hero): Outfit {
 }
 
 /**
- * Every outfit a player can wear, as any player: each item of gear on its own over each base look. Gear in different
+ * Every outfit a player can wear, as any player (and the Dungeon Master's robe): each item of gear on its own over each base look. Gear in different
  * slots draws different parts, so this covers every part a player can show without listing every combination (the
  * game loads them all up front, and the tests check them).
  */
 export function allPlayerOutfits(): Outfit[] {
   const worn = Object.values(ITEMS).flatMap((item) => (item.look ? [item.look] : []));
-  return PLAYER_BASES.flatMap((base) => worn.map((look) => withGear(base, look)));
+  return [DM_LOOK, ...PLAYER_BASES.flatMap((base) => worn.map((look) => withGear(base, look)))];
 }
 
 /**

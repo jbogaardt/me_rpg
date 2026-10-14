@@ -45,9 +45,9 @@ export class Trading {
     private ui: { trade: TradeUi; menu: Menu; shop: ShopCounter },
   ) {
     this.book = new TradeBook({
-      hero: (slot) => arena.players().find((p) => p.slot === slot)?.hero,
+      hero: (slot) => arena.party().find((p) => p.slot === slot)?.hero,
       distance: (a, b) => {
-        const [pa, pb] = [a, b].map((slot) => arena.players().find((p) => p.slot === slot));
+        const [pa, pb] = [a, b].map((slot) => arena.party().find((p) => p.slot === slot));
         return pa && pb ? Math.hypot(pa.body.x - pb.body.x, pa.body.y - pb.body.y) : null;
       },
       name: playerName,
@@ -130,7 +130,7 @@ export class Trading {
       trade.toast(note.text, note.ok);
     }
     const contacts = [...arena.remotes.values()]
-      .filter((p) => p.body.visible)
+      .filter((p) => p.body.visible && !p.dm) // the Dungeon Master does not trade
       .map((p) => ({
         slot: p.slot,
         color: PLAYER_COLORS[p.slot] ?? 0xffffff,

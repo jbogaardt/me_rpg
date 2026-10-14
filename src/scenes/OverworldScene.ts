@@ -26,6 +26,8 @@ import { GuideArrow } from '../entities/GuideArrow';
 import { guideFor } from '../systems/guide';
 import { zoneName } from '../systems/places';
 import type { Menu } from '../hud/Menu';
+import type { PartyRow } from '../hud/Party';
+import { PLAYER_COLORS, playerName } from '../systems/looks';
 import type { ShopCounter } from '../hud/ShopCounter';
 import type { TradeUi } from '../hud/Trade';
 import { CELL } from '../map/types';
@@ -244,6 +246,7 @@ export class OverworldScene implements Scene {
   enter() {
     this.ui.menu.inventory.attach({ apply: (op) => this.pack.localOp(op) });
     this.ui.menu.magic.attach({ equip: (wanted) => this.pack.setLoadout(wanted), zone: () => this.arena.zone.name });
+    this.ui.menu.party.attach({ rows: () => this.partyRows(), go: (slot) => this.dmGoTo(slot) });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
     if (this.ui.session.urlCode && enabled('coop')) this.ui.menu.toggle(this.hero, 'online');
   }
@@ -251,6 +254,7 @@ export class OverworldScene implements Scene {
   exit() {
     this.ui.menu.inventory.attach(null);
     this.ui.menu.magic.attach(null);
+    this.ui.menu.party.attach(null);
     this.overlay.setAvailable(false);
     this.harvestButtons.clear();
     this.ui.dialog.close();
@@ -289,7 +293,7 @@ export class OverworldScene implements Scene {
       for (const p of arena.players()) if (p.body.visible) seen.reveal(p.body.x, p.body.y);
       this.overlay.setZone(arena.zone.data, seen, arena.zone.name);
     }
-    menu.setOnline(online);
+    menu.setOnline(online, arena.local.dm);
     this.trading.sync(dt, online);
     if (mapShown && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
     if (!dialog.active && menuPressed()) {
@@ -304,7 +308,7 @@ export class OverworldScene implements Scene {
     if (menu.open || shop.open || trade.open) {
       if (menu.open) menu.update();
       else if (shop.open) shop.update();
-      hud.update(this.hero, '', arena.zone.name); // gold changes at the counter
+      hud.update(this.hero, '', arena.zone.name, arena.local.dm); // gold changes at the counter
       if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
     }
 
@@ -349,8 +353,11 @@ export class OverworldScene implements Scene {
       item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
     }
     for (const body of arena.bodies()) body.zIndex = body.y;
-    this.updateHarvestButtons(z, menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy);
-    hud.update(this.hero, this.combos.typed, this.arena.zone.name);
+    this.updateHarvestButtons(
+      z,
+      menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy || arena.local.dm,
+    );
+    hud.update(this.hero, this.combos.typed, this.arena.zone.name, this.arena.local.dm);
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.
@@ -466,6 +473,36 @@ export class OverworldScene implements Scene {
     arena.role = role;
   }
 
+  // --- The Dungeon Master ---
+
+  /** The players as the Dungeon Master's Party tab lists them. */
+  private partyRows(): PartyRow[] {
+    const { arena } = this;
+    return [...arena.remotes.values()]
+      .filter((p) => !p.dm)
+      .map((p) => ({
+        slot: p.slot,
+        name: playerName(p.slot),
+        color: PLAYER_COLORS[p.slot] ?? 0xffffff,
+        level: p.hero.stats.level,
+        hp: p.hero.stats.hp,
+        maxHp: p.hero.stats.maxHp,
+        where: zoneName(p.zone),
+        quest: currentQuest(p.hero.quests)?.title ?? '',
+        here: p.zone === arena.local.zone,
+      }));
+  }
+
+  /** The Dungeon Master steps to a player's side, through the iris, wherever in the world they are. */
+  private dmGoTo(slot: number) {
+    const { arena } = this;
+    const p = arena.remotes.get(slot);
+    if (!arena.local.dm || !p || this.zones.transition.busy) return;
+    this.ui.menu.close();
+    const dest = arena.zoneOf(p);
+    this.zones.travel(arena.local, dest, { col: Math.floor(p.body.x / CELL), row: Math.floor(p.body.y / CELL) });
+  }
+
   // --- What the action key does ---
 
   /** The local player's controls this frame. While `reading` (a menu, a dialog) nothing typed counts toward a combo. */
@@ -522,6 +559,8 @@ export class OverworldScene implements Scene {
     const folk = arena.zone.folk.find((f) => near(f.body));
     if (dialog.active) {
       dialog.advance();
+    } else if (arena.local.dm && !lectern && !sign) {
+      // The Dungeon Master reads the world (signs, the lectern) but takes no part in it: no shops, quests or swings.
     } else if (lectern) {
       dialog.say(lecternPages());
     } else if (sign) {
@@ -583,6 +622,7 @@ export class OverworldScene implements Scene {
 
   /** A player's action button (host and solo): open a chest within reach, pick something up, otherwise attack. */
   private act(p: Player) {
+    if (p.dm) return; // the Dungeon Master opens, picks and strikes nothing
     const chest = this.arena.chests.find(
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
@@ -681,7 +721,7 @@ export class OverworldScene implements Scene {
 
   /** The quest arrow: points from the hero at where the quest leads (a thing in this zone, or the door towards it). */
   private pointTheWay(z: ZoneState, dt: number) {
-    const hide = this.zones.transition.busy || !this.player.visible || !enabled('guide', z.name);
+    const hide = this.zones.transition.busy || !this.player.visible || !enabled('guide', z.name) || this.arena.local.dm; // the DM has no quest
     const warden = z.givers.find((g) => g.giver === QUEST_GIVER);
     const world = {
       zone: z.name,

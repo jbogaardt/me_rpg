@@ -43,11 +43,21 @@ export class Hud {
   private needsRow = document.getElementById('hud-needs')!;
   private combos = document.getElementById('combo-hud')!;
   private tracker = document.getElementById('quest-tracker')!;
+  private stats = document.getElementById('hud-stats')!;
+  private dmBadge = document.getElementById('hud-dm')!;
   private shown = '';
   private shownCombos = '';
 
   /** `typed` is what the player has tapped toward a combo so far (lights the first arrows of the ones it leads to). */
-  update(hero: Hero, typed = '', zone = '') {
+  update(hero: Hero, typed = '', zone = '', dm = false) {
+    // The Dungeon Master (an online host) has no bars, combos or quest of their own: only a badge saying who they are.
+    this.dmBadge.hidden = !dm;
+    this.stats.hidden = dm;
+    if (dm) {
+      this.combos.hidden = this.tracker.hidden = true;
+      this.shown = this.shownCombos = 'dm';
+      return;
+    }
     this.updateCombos(hero, typed, zone);
     const s = hero.stats;
     const hp = Math.ceil(s.hp);

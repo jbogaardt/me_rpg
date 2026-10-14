@@ -1,6 +1,6 @@
 import { joinLink } from '../net/roomCode';
 import { statusLabel, type Mode, type RosterEntry, type Session } from '../net/session';
-import { PLAYER_COLORS, playerName } from '../systems/looks';
+import { DM_COLOR, DM_NAME, DM_SLOT, PLAYER_COLORS, playerName } from '../systems/looks';
 
 // The "Online" tab of the menu (markup in index.html, styles in src/ui.css): pick Solo / Host / Join. A host taps
 // Create Game and reads out the short code; up to three friends type it and tap Join Game; the host taps Start Game
@@ -139,7 +139,7 @@ export class Multiplayer {
 
   /** "Connected to Player 2 and Player 3", or for a friend, who the host is. */
   private connectedText(): string {
-    if (this.session.role === 'client') return 'Connected to Player 1 (host)';
+    if (this.session.role === 'client') return `Connected to the ${DM_NAME} (host)`;
     const names = this.session.connectedSlots().map(playerName);
     if (names.length <= 1) return `Connected to ${names[0] ?? 'Player 2'}`;
     return `Connected to ${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
@@ -160,10 +160,11 @@ export class Multiplayer {
         item.dataset.slot = String(slot);
         const swatch = document.createElement('span');
         swatch.className = 'swatch';
-        swatch.style.setProperty('--swatch', `#${(PLAYER_COLORS[slot] ?? 0x8a8478).toString(16).padStart(6, '0')}`);
+        const color = slot === DM_SLOT ? DM_COLOR : (PLAYER_COLORS[slot] ?? 0x8a8478); // the host is the Dungeon Master
+        swatch.style.setProperty('--swatch', `#${color.toString(16).padStart(6, '0')}`);
         const name = document.createElement('span');
         name.className = 'name';
-        name.textContent = playerName(slot);
+        name.textContent = slot === DM_SLOT ? DM_NAME : playerName(slot);
         const label = document.createElement('span');
         label.className = 'state';
         label.textContent = states[state];
@@ -182,12 +183,13 @@ export class Multiplayer {
         ? 'More friends can still join with the code. Tap Start Game when everyone is here.'
         : 'The game is live. Close this menu to play.';
     }
-    if (mode === 'off') return 'Playing solo. Choose Host to start a game, or Join to enter a friend’s.';
+    if (mode === 'off')
+      return 'Playing solo. Choose Host to run a game as its Dungeon Master, or Join to play in a friend’s.';
     if (!this.session.available) return 'Online play isn’t set up for this copy of the game yet.';
     if (mode === 'host') {
       if (code) return 'Tell your friends this code, or send them the join link. Up to 3 friends can join.';
       if (status === 'connecting') return 'Connecting…';
-      return 'Create a game to get a code for your friends.';
+      return 'You host as the Dungeon Master: you run the world and watch over it while up to 3 friends play. Your own hero waits until you play solo again.';
     }
     if (status === 'gathering' || status === 'awaiting' || status === 'connecting') return 'Connecting…';
     return 'Type the game code your friend gave you, then join.';

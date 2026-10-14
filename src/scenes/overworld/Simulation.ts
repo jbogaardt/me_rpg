@@ -53,6 +53,7 @@ import {
   MELEE_REACH,
   MP_REGEN,
   SPEED,
+  DM_SPEED,
   auraTint,
 } from './constants';
 import type { Visuals } from './Visuals';
@@ -207,6 +208,7 @@ export class Simulation {
 
   /** One tick for a player: cooldowns and regeneration, knockback, walking (or sliding on ice), and the poses. */
   updatePlayer(p: Player, cmd: Command, dt: number) {
+    if (p.dm) return this.updateDm(p, cmd, dt);
     const s = p.hero.stats;
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
@@ -246,6 +248,22 @@ export class Simulation {
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
     p.body.alpha = p.invuln > 0 && Math.floor(p.invuln * 16) % 2 === 0 ? 0.35 : 1;
     p.body.setTint(auraTint({ ward: p.ward > 0, edge: p.edge.charges > 0, guard: p.guard > 0 }));
+    p.body.animate(dt * 1000, p.moving);
+  }
+
+  /**
+   * The Dungeon Master's tick: they walk where they like, stopped by walls but by nobody else, never slip on ice, and
+   * have no meters to run down.
+   */
+  private updateDm(p: Player, { dx, dy }: Command, dt: number) {
+    const len = Math.hypot(dx, dy);
+    if (len) {
+      if (dx) p.body.face(dx > 0 ? 'right' : 'left');
+      else p.body.face(dy > 0 ? 'down' : 'up');
+      const step = (DM_SPEED * dt) / len;
+      this.arena.collision.slide(p.body, dx * step, dy * step, []);
+    }
+    p.moving = len > 0;
     p.body.animate(dt * 1000, p.moving);
   }
 
@@ -356,6 +374,7 @@ export class Simulation {
 
   /** The player tapped out combo `index` of their wand or tome: cast its spell if there is the mana for it. */
   combo(p: Player, index: number) {
+    if (p.dm) return; // the Dungeon Master casts nothing at the party's foes
     this.casting.combo(p, index);
   }
 
@@ -369,7 +388,7 @@ export class Simulation {
       // Hits the first player it touches (one blinking with invulnerability lets it pass), stops at walls. The players
       // are looked up each step: someone may have joined or left while it flies.
       const hit = this.arena
-        .players()
+        .party()
         .find((p) => !p.safe && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14);
       if (hit) this.hurtHero(mob, hit.body);
       return hit !== undefined;
@@ -390,7 +409,7 @@ export class Simulation {
    */
   private mobRay(mob: Mob, target: Character): boolean {
     const { ray } = mob.kind;
-    const p = this.arena.players().find((q) => q.body === target);
+    const p = this.arena.party().find((q) => q.body === target);
     if (!ray || !p) return false;
     const { collision } = this.arena;
     const [dx, dy] = [target.x - mob.body.x, target.y - mob.body.y];
@@ -418,7 +437,7 @@ export class Simulation {
 
   /** Where the next lightning bolt lands: anywhere in a wide area around a random player, so it is unpredictable. */
   strikeTarget() {
-    const all = this.arena.players(); // the zone the weather is drawn in
+    const all = this.arena.party(); // the zone the weather is drawn in
     const p = all[Math.floor(Math.random() * all.length)] ?? this.arena.local;
     return { x: p.body.x + (Math.random() - 0.5) * 840, y: p.body.y + (Math.random() - 0.5) * 600 };
   }
@@ -441,7 +460,7 @@ export class Simulation {
     this.emit({ type: 'lightning', ...strike });
     const { x, y } = strike;
     this.fx('hitSpark', x, y);
-    for (const p of this.arena.players()) {
+    for (const p of this.arena.party()) {
       if (p.safe || Math.hypot(p.body.x - x, p.body.y - y) > LIGHTNING_RADIUS) continue;
       this.harm(p, Math.max(1, Math.round(p.hero.stats.maxHp * LIGHTNING_DAMAGE)), x, y);
     }
@@ -461,7 +480,7 @@ export class Simulation {
     this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${mob.kind.xp} XP`, 0xffb13f);
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
     this.text(mob.body.x, mob.body.y - 78 * mob.body.size, `+${gold}g`, 0xffd34d);
-    for (const p of this.arena.players()) {
+    for (const p of this.arena.party()) {
       p.hero.gold += goldFor(p.hero, gold); // gear can add to the purse and the XP, so each player gets their own share
       if (gainXp(p.hero.stats, xpFor(p.hero, mob.kind.xp))) this.levelUp(p);
       this.questNote(p, recordKill(p.hero, mob.kind, this.arena.zone.name)); // a quest counts the kill for everyone here
@@ -483,7 +502,7 @@ export class Simulation {
   }
 
   private hurtHero(mob: Mob, victim: Character) {
-    const p = this.arena.players().find((q) => q.body === victim);
+    const p = this.arena.party().find((q) => q.body === victim);
     if (!p || p.safe) return;
     this.harm(p, rollDamage(mob.kind.attack, defensePower(p.hero)), mob.body.x, mob.body.y);
   }

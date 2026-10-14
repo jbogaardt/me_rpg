@@ -22,6 +22,7 @@
 
 
     <div id="hud">
+      <div id="hud-dm" class="panel thin wood" hidden>Dungeon Master</div>
       <div id="hud-stats" class="panel thin wood">
         <div id="hud-hp" class="bar"><div class="fill"></div><span class="label"></span></div>
         <div id="hud-mp" class="bar mirror"><div class="fill"></div><span class="label"></span></div>
@@ -139,6 +140,7 @@
             <div role="tab" data-tab="controls">Controls</div>
             <div role="tab" data-tab="online">Online</div>
             <div role="tab" data-tab="trade" hidden>Trade</div>
+            <div role="tab" data-tab="party" hidden>Party</div>
           </nav>
           <div class="close" role="button" aria-label="Close menu" data-key="Escape">✕</div>
         </header>
@@ -181,6 +183,7 @@
             </table>
           </section>
           <section id="menu-trade" hidden></section>
+          <section id="menu-party" hidden></section>
           <section id="menu-credits" hidden>
             <h2>Credits</h2>
             <dl class="credits">
@@ -211,7 +214,7 @@
             </p>
           </section>
           <section id="menu-online" hidden>
-            <h2>Multiplayer <small>up to 4 players</small></h2>
+            <h2>Multiplayer <small>a Dungeon Master and up to 3 players</small></h2>
             <div id="mp-mode" role="radiogroup" aria-label="Multiplayer mode">
               <button type="button" role="radio" data-mode="off" aria-checked="true">Solo / Off</button>
               <button type="button" role="radio" data-mode="host" aria-checked="false">Host</button>

@@ -3,7 +3,7 @@ import { mapPercent, minimapPixels } from '../map/minimap';
 import { CELL, type MapData } from '../map/types';
 import type { Guide } from '../systems/guide';
 import { zoneName } from '../systems/places';
-import { PLAYER_COLORS, playerName } from '../systems/looks';
+import { DM_COLOR, DM_NAME, DM_SLOT, PLAYER_COLORS, playerName } from '../systems/looks';
 
 // A semi-transparent map of the zone you are in that fills in as you explore it (only the cells seen are drawn, see
 // map/explored.ts), with a pin for you and, in co-op, one for each friend (every player in their own colour, like their
@@ -21,7 +21,11 @@ export interface Pin {
 /** Longest wait between repaints of an open map that is still filling in. */
 const REPAINT_MS = 400;
 
-const cssColor = (slot: number) => `#${(PLAYER_COLORS[slot] ?? 0xffb13f).toString(16).padStart(6, '0')}`;
+const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
+const cssColor = (slot: number) => hex(PLAYER_COLORS[slot] ?? 0xffb13f);
+/** Another player's pin: player 0 is the host, who online is always the Dungeon Master. */
+const otherColor = (slot: number) => (slot === DM_SLOT ? hex(DM_COLOR) : cssColor(slot));
+const otherName = (slot: number) => (slot === DM_SLOT ? DM_NAME : playerName(slot));
 
 export class MapOverlay {
   open = false;
@@ -152,7 +156,7 @@ export class MapOverlay {
         pin = document.createElement('span');
         pin.className = 'pin friend';
         pin.dataset.slot = String(p.slot);
-        pin.style.setProperty('--pin', cssColor(p.slot));
+        pin.style.setProperty('--pin', otherColor(p.slot));
         this.root.insertBefore(pin, this.legend);
         this.friends.set(p.slot, pin);
       }
@@ -165,8 +169,8 @@ export class MapOverlay {
       this.legend.replaceChildren(
         ...[me.slot, ...others.map((p) => p.slot)].flatMap((slot, i) => {
           const dot = document.createElement('i');
-          dot.style.setProperty('--pin', cssColor(slot));
-          return [dot, document.createTextNode(i === 0 ? 'You' : playerName(slot))];
+          dot.style.setProperty('--pin', i === 0 ? cssColor(slot) : otherColor(slot));
+          return [dot, document.createTextNode(i === 0 ? 'You' : otherName(slot))];
         }),
       );
     }

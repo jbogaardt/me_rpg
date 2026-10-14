@@ -26,8 +26,11 @@ import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
-/** Bump when a message changes shape; peers on different versions refuse to play together. */
-export const PROTOCOL_VERSION = 28;
+/**
+ * Bump when a message changes shape (or what one means); peers on different versions refuse to play together. v29: the
+ * host is the Dungeon Master, not a party member (player 0 in a snapshot is drawn as the DM).
+ */
+export const PROTOCOL_VERSION = 29;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;

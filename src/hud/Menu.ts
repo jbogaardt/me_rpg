@@ -23,12 +23,15 @@ import { questPage } from './QuestLog';
 import { AimSetting } from './AimSetting';
 import { Keybinds } from './Keybinds';
 import { Multiplayer } from './Multiplayer';
+import { Party } from './Party';
 
 // Pause menu (HTML overlay; markup in index.html). The game is frozen while it is open.
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
 // The Online tab (multiplayer connection) is Multiplayer.ts. Online play does not pause the world behind the menu.
 
-const TABS = ['status', 'inventory', 'magic', 'quests', 'controls', 'online', 'trade', 'credits']; // 'trade' (hud/Trade.ts) shows only in a co-op game
+// 'trade' (hud/Trade.ts) shows only to a player in a co-op game; 'party' (hud/Party.ts) only to its Dungeon Master, who has
+// no hero tabs (Status, Inventory, Magic, Quests, Trade) while they run the world.
+const TABS = ['status', 'inventory', 'magic', 'quests', 'party', 'controls', 'online', 'trade', 'credits'];
 
 export class Menu {
   open = false;
@@ -40,6 +43,9 @@ export class Menu {
 
   /** The Magic tab (the abilities learned from the trainer); the scene attaches its handlers while it runs. */
   readonly magic = new Magic(document.getElementById('menu-magic')!);
+
+  /** The Dungeon Master's Party tab; the scene attaches its handlers while it runs. */
+  readonly party = new Party(document.getElementById('menu-party')!);
 
   private keybinds: Keybinds;
   private aim: AimSetting;
@@ -65,6 +71,7 @@ export class Menu {
 
   /** The inventory key: open the menu on the Inventory tab, or close it if that is already showing. */
   toggleInventory(hero: Hero) {
+    if (this.tabButton('inventory').hidden) return; // the Dungeon Master carries nothing
     if (this.open && TABS[this.tab] === 'inventory') this.close();
     else if (this.open) this.select(TABS.indexOf('inventory'));
     else this.toggle(hero, 'inventory');
@@ -92,6 +99,7 @@ export class Menu {
     const by = tabStep();
     if (by) this.step(by);
     this.renderQuests(); // online the world runs behind the menu, so a kill can move the log
+    if (TABS[this.tab] === 'party') this.party.render();
   }
 
   /** The tab `by` places along from the current one, skipping tabs that are hidden. */
@@ -104,20 +112,35 @@ export class Menu {
 
   /**
    * Called every frame: the Trade tab is only there while online (and trading is a capability of the campaign), the
-   * Online tab only with co-op, the Magic tab only with skills (systems/capabilities.ts). Leaves a tab that goes away
-   * under the player.
+   * Online tab only with co-op, the Magic tab only with skills (systems/capabilities.ts). The Dungeon Master (`dm`, an
+   * online host) has the Party tab instead of the hero's tabs. Leaves a tab that goes away under the player.
    */
-  setOnline(online: boolean) {
-    this.show('trade', online && enabled('trading'));
-    this.show('online', enabled('coop'));
-    this.show('magic', enabled('skills'));
+  setOnline(online: boolean, dm = false) {
+    const shown: Record<string, boolean> = {
+      status: !dm,
+      inventory: !dm,
+      quests: !dm,
+      magic: !dm && enabled('skills'),
+      party: dm,
+      trade: online && !dm && enabled('trading'),
+      online: enabled('coop'),
+    };
+    let changed = false;
+    for (const [tab, on] of Object.entries(shown)) {
+      const button = this.tabButton(tab);
+      if (button.hidden === !on) continue;
+      button.hidden = !on;
+      changed = true;
+    }
+    if (changed && this.tabButton(TABS[this.tab]!).hidden) this.select(this.firstShown());
   }
 
-  private show(tab: string, shown: boolean) {
-    const button = this.tabButton(tab);
-    if (button.hidden === !shown) return;
-    button.hidden = !shown;
-    if (!shown && TABS[this.tab] === tab) this.select(0);
+  /** The first tab that is not hidden (Status for a player, Party for the Dungeon Master). */
+  private firstShown(): number {
+    return Math.max(
+      0,
+      TABS.findIndex((name) => !this.tabButton(name).hidden),
+    );
   }
 
   private tabButton(name: string) {
@@ -125,7 +148,9 @@ export class Menu {
   }
 
   private select(i: number) {
+    if (this.tabButton(TABS[i]!).hidden) i = this.firstShown();
     this.tab = i;
+    if (TABS[i] === 'party') this.party.render();
     if (TABS[i] === 'inventory' && this.hero) this.inventory.show(this.hero);
     if (TABS[i] === 'magic' && this.hero) this.magic.show(this.hero);
     for (const [j, name] of TABS.entries()) {

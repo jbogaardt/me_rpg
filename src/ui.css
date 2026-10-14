@@ -94,6 +94,10 @@
    XP and level are in the pause menu. */
 #hud-stats { display: flex; gap: 6px; flex: 0 1 400px; min-width: 0; margin-right: 8px; padding: 3px 4px; }
 #hud-stats .bar { flex: 1 1 0; min-width: 0; }
+#hud-stats[hidden] { display: none; }
+/* Online, the host is the Dungeon Master: no bars of their own, just who they are. */
+#hud-dm { flex: 0 1 auto; margin-right: auto; padding: 3px 10px; color: #ffd34d; font: 700 14px/18px var(--title); text-shadow: 0 1px 2px #000; }
+#hud-dm[hidden] { display: none; }
 .bar {
   position: relative; height: 14px; overflow: hidden;
   background: #17120c; border: 1px solid var(--gold-dim); border-radius: 2px; box-shadow: inset 0 1px 3px #000;
@@ -291,6 +295,10 @@
 .mp-roster li[data-state='waiting'] { opacity: 0.6; }
 .mp-roster li[data-state='joining'] .state { color: #a86a10; }
 .mp-roster li[data-state='connected'] .state, .mp-roster li[data-state='you'] .state { color: #2f6b2f; }
+/* The Dungeon Master's Party tab (hud/Party.ts): a roster row per player with a Go button. */
+.mp-roster.party .info { flex: 1 1 auto; min-width: 0; line-height: 1.2; }
+.mp-roster.party small { color: var(--ink-soft); font-size: 14px; }
+.mp-roster.party .mp-btn { flex: none; padding: 2px 14px; }
 #mp-note { min-height: 1.3em; margin: 8px 0 0; font-size: 15px; color: var(--ink-soft); }
 #mp-note.error { color: #9b2a1c; font-weight: 600; }
 /* --- Controls tab: key/mouse editor (src/hud/Keybinds.ts) --- */
