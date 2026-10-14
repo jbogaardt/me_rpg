@@ -9,8 +9,10 @@ import {
   candidates,
   checkPacks,
   crossingNeeds,
+  MAX_SIDE_REGIONS,
   mergePacks,
   OPPOSITE,
+  rng,
   pairingsBetween,
   STEP,
   type Pack,
@@ -244,4 +246,135 @@ describe('random campaigns from the packs', () => {
     }));
     expect(() => assemble(1, noHubs)).toThrow(AssemblyError);
   });
+
+  it('plays each story with the capabilities its arc switches off', () => {
+    for (const seed of SEEDS.slice(0, 30)) {
+      const a = assembleFromDisk(seed);
+      const scenarios = a.files.scenarios as { capabilities: unknown };
+      expect(scenarios.capabilities).toEqual(cat.arcs[a.arc].capabilities ?? {});
+    }
+    expect(cat.arcs.lost_lanterns.capabilities).toEqual({ map: false });
+  });
+
+  it('refuses an arc switching a capability that does not exist', () => {
+    const odd: Pack = {
+      version: 1,
+      id: 'odd',
+      arcs: { odd: { ...cat.arcs.ember_trail, capabilities: { jetpack: false } } },
+    };
+    expect(checkPacks(mergePacks([...packs, odd])).join()).toMatch(
+      /arcs\.odd\.capabilities\.jetpack: not a capability/,
+    );
+  });
+
+  it('refuses two packs defining one id, a map drawn by two regions, or a site in two', () => {
+    const copy: Pack = {
+      version: 1,
+      id: 'copycat',
+      entities: { goblin: packs.flatMap((p) => Object.values(p.entities ?? {}))[0] },
+      regions: { twin: { ...cat.regions.barrow, sites: cat.regions.mirewood.sites } },
+      pairings: { twin_road: { regions: ['twin', 'barrow'] } },
+    };
+    const p = checkPacks(mergePacks([...packs, copy])).join('\n');
+    expect(p).toMatch(/entities\.goblin: defined by both "wilds" and "copycat"/);
+    expect(p).toMatch(/regions\.twin: its map ".*" is also region "barrow"'s/);
+    expect(p).toMatch(/regions\.twin: its site ".*" is also region "mirewood"'s/);
+  });
 });
+
+/**
+ * A made-up catalog of `n` regions (every tenth a dead end, every seventh a hub), each paired with `per` others at
+ * random, and mobs of every role and theme: what thousands of packs would look like to the assembler.
+ */
+function synthetic(n: number, per: number): Pack[] {
+  const THEMES = ['fire', 'frost', 'swamp', 'undead', 'beast'];
+  const SIDES = ['north', 'south', 'east', 'west'] as const;
+  const rand = rng(7);
+  const entities: Pack['entities'] = { kp: { type: 'npc', name: 'K', sprite: { body: 'body.male' } } };
+  for (const t of THEMES)
+    for (const role of ['common', 'boss'])
+      for (let i = 0; i < 4; i++)
+        entities[`${t}_${role}_${i}`] = {
+          type: 'mob',
+          name: `${t} ${role}`,
+          tags: [role, t],
+          level: [1 + i * 3, 4 + i * 3],
+          sprite: { body: 'body.male' },
+        };
+  const regions: Pack['regions'] = {};
+  for (let i = 0; i < n; i++) {
+    const terminal = i % 10 === 9;
+    const side = SIDES[i % 4];
+    regions[`r${i}`] = {
+      biome: { name: `Region ${i}`, map: `map${i}`, climate: null, music: null, tilesets: [] },
+      level: [1 + (i % 4) * 3, 4 + (i % 4) * 3],
+      themes: [THEMES[i % 5]],
+      hub: !terminal && i % 7 === 0,
+      terminal,
+      ports: terminal ? { [side]: side } : { north: 'north', south: 'south', east: 'east', west: 'west' },
+      foes: { common: {}, boss: {} },
+      roam: [],
+    };
+  }
+  const pairings: Pack['pairings'] = {};
+  for (let i = 0; i < n; i++)
+    for (let k = 0; k < per; k++) {
+      const j = Math.floor(rand() * n);
+      if (j !== i) pairings[`p${i}_${k}`] = { regions: [`r${i}`, `r${j}`], tags: [THEMES[Math.floor(rand() * 5)]] };
+    }
+  const quest = (kind: string) => ({ id: kind, objective: { t: 'kill', kind, count: 1 } });
+  const arcs: Pack['arcs'] = {
+    // Cannot be told: its last region must be of a theme no region has. Found out at once, not by searching.
+    never: { title: 'Never', regions: 6, slots: [{}, {}, {}, {}, {}, { themes: ['void'] }], chapters: [], quests: [] },
+    plain: { title: 'Plain', regions: 3, chapters: [], quests: [quest('@r3.boss')] },
+    // Hard to tell: a winding chain of themes and a tagged crossing.
+    winding: {
+      title: 'Winding',
+      regions: 5,
+      slots: [{}, { themes: ['frost'] }, { themes: ['undead'] }, {}, { themes: ['fire'] }],
+      crossings: { 'r2~r3': { tags: ['swamp'] } },
+      chapters: [],
+      quests: [quest('@r5.boss'), quest('@r3.common')],
+    },
+  };
+  return [
+    {
+      version: 1,
+      id: 'synthetic',
+      entities,
+      keepers: { k: { npc: 'kp', name: 'K', tag: 'k' } },
+      regions,
+      pairings,
+      arcs,
+    },
+  ];
+}
+
+describe('the assembler at scale', () => {
+  it('builds a world from thousands of regions quickly, and its size does not grow with the catalog', () => {
+    for (const n of [200, 3000]) {
+      const packs = synthetic(n, 3);
+      expect(checkPacks(mergePacks(packs))).toEqual([]);
+      for (const seed of [1, 2, 3, 4]) {
+        const start = performance.now();
+        const a = assemble(seed, packs);
+        expect(performance.now() - start, `${n} regions, seed ${seed}`).toBeLessThan(2000);
+        const story = a.regions.filter((id) => !packs[0].regions![id].terminal);
+        expect(story.length).toBeLessThanOrEqual(cat_story(a) + MAX_SIDE_REGIONS);
+        expect(a.regions.length).toBeLessThan(5 + MAX_SIDE_REGIONS + 4 * (5 + MAX_SIDE_REGIONS));
+      }
+    }
+  });
+
+  it('gives up on an arc that cannot be told without searching every region', () => {
+    const packs = synthetic(3000, 3);
+    const only = packs.map((p): Pack => ({ ...p, arcs: { never: p.arcs!.never } }));
+    const start = performance.now();
+    expect(() => assemble(1, only)).toThrow(AssemblyError);
+    expect(performance.now() - start).toBeLessThan(2000);
+  });
+});
+
+/** How many regions the assembly's story runs through. */
+const cat_story = (a: { crossings: Record<string, string> }) =>
+  Object.keys(a.crossings).filter((k) => /^r\d+~r\d+$/.test(k)).length + 1;

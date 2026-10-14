@@ -1,4 +1,5 @@
 import { DIR_VEC, dirIndex, directionToward } from '../../core/direction';
+import { enabled } from '../../systems/capabilities';
 import type { Character } from '../../entities/Character';
 import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
@@ -29,6 +30,7 @@ import {
   POND_FLOW,
   rainFill,
   sipWater,
+  STILL_FILL,
   starveRate,
   thirsty,
 } from '../../systems/needs';
@@ -66,7 +68,7 @@ export function foeNear(z: ZoneState, p: Player): boolean {
 }
 
 export function canDrink(z: ZoneState, p: Player): boolean {
-  if (!thirsty(p.hero.needs)) return false;
+  if (!enabled('needs') || !thirsty(p.hero.needs)) return false;
   const water = drinkableNear(z.data, p.body.x, p.body.y);
   return !!water && z.ponds.level(pondId(z.data, water.cell)) < 1;
 }
@@ -216,13 +218,14 @@ export class Simulation {
     p.grace = Math.max(0, p.grace - dt);
     p.sinceHit += dt;
     if (p.pendingShot && (p.pendingShot.timer -= dt) <= 0) this.release(p);
-    drainNeeds(p.hero.needs, dt);
-    const fed = needsRegen(p.hero.needs); // hungry or thirsty heroes mend more slowly (systems/needs.ts)
+    const needs = enabled('needs'); // a campaign without food and water: no hunger, plain mending, no starving
+    if (needs) drainNeeds(p.hero.needs, dt);
+    const fed = needs ? needsRegen(p.hero.needs) : 1; // hungry or thirsty heroes mend more slowly (systems/needs.ts)
     s.mp = Math.min(s.maxMp, s.mp + (MP_REGEN * fed + gearMpRegen(p.hero)) * dt);
     // Gear that mends (a Warden's Mantle) works in the thick of a fight; the slow natural kind waits for a quiet spell.
     const mend = gearRegen(p.hero) + (p.sinceHit > HP_REGEN_DELAY ? HP_REGEN * fed : 0);
     if (mend) s.hp = Math.min(s.maxHp, s.hp + mend * dt);
-    const starving = starveRate(p.hero.needs, s.maxHp);
+    const starving = needs ? starveRate(p.hero.needs, s.maxHp) : 0;
     if (starving && s.hp > 1) s.hp = Math.max(1, s.hp - starving * dt); // empty meters wear you down, but never finish you
 
     if (p.knock.x || p.knock.y) {
@@ -424,7 +427,7 @@ export class Simulation {
    */
   weather(dt: number) {
     const { weather, ponds } = this.arena.zone;
-    if (!weather) return;
+    if (!weather) return ponds.rain(STILL_FILL, dt); // no weather (a room, or a campaign without it): ponds seep back
     weather.update(dt);
     ponds.rain(rainFill(weather.precip, weather.intensity), dt); // only rain fills a pond someone drank from
     if (weather.strikeDue(dt)) this.lightning({ ...this.strikeTarget(), seed: Math.floor(Math.random() * 1e9) });

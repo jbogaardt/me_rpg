@@ -11,6 +11,7 @@ import {
   xpToNext,
   type Hero,
 } from '../systems/combat';
+import { enabled } from '../systems/capabilities';
 import { tabStep } from '../core/controls';
 import { SKILLS } from '../systems/skills';
 import { arrows } from '../systems/spells';
@@ -58,7 +59,7 @@ export class Menu {
     this.root.hidden = !this.open;
     if (!this.open) this.keybinds.cancel();
     const index = tab ? TABS.indexOf(tab) : -1;
-    if (index >= 0) this.tab = index;
+    if (index >= 0 && !this.tabButton(TABS[index]!).hidden) this.tab = index;
     if (this.open) this.render(hero);
   }
 
@@ -101,12 +102,22 @@ export class Menu {
     this.select(i);
   }
 
-  /** Called every frame: the Trade tab is only there while online. Leaves it if it goes away under the player. */
+  /**
+   * Called every frame: the Trade tab is only there while online (and trading is a capability of the campaign), the
+   * Online tab only with co-op, the Magic tab only with skills (systems/capabilities.ts). Leaves a tab that goes away
+   * under the player.
+   */
   setOnline(online: boolean) {
-    const button = this.tabButton('trade');
-    if (button.hidden === !online) return;
-    button.hidden = !online;
-    if (!online && TABS[this.tab] === 'trade') this.select(0);
+    this.show('trade', online && enabled('trading'));
+    this.show('online', enabled('coop'));
+    this.show('magic', enabled('skills'));
+  }
+
+  private show(tab: string, shown: boolean) {
+    const button = this.tabButton(tab);
+    if (button.hidden === !shown) return;
+    button.hidden = !shown;
+    if (!shown && TABS[this.tab] === tab) this.select(0);
   }
 
   private tabButton(name: string) {

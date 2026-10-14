@@ -32,6 +32,7 @@
 
 import { CONTENT_VERSION, type ContentFile } from './schema';
 import type { PortBinding } from './ports';
+import { CAPABILITY_IDS, isCapability } from '../systems/capabilities';
 
 /** A pack file, as written. Everything is optional: a pack can be only mobs, only a region, only a story. */
 export interface Pack {
@@ -123,6 +124,8 @@ export interface ArcDef {
   crossings?: Record<string, { tags?: string[] }>;
   /** The keepers who may tell it (default: any). */
   keepers?: string[];
+  /** The engine's features this story switches off or on (systems/capabilities.ts), e.g. `{ "map": false }` for a tale told without a map. */
+  capabilities?: Record<string, boolean>;
   chapters: unknown[];
   quests: unknown[];
   epilogue?: string[];
@@ -185,7 +188,13 @@ function shuffled<T>(rand: () => number, list: readonly T[]): T[] {
   return out;
 }
 
-/** Every pack's sections merged into one catalog (a later pack's id wins over an earlier one's). */
+const SECTIONS = ['entities', 'keepers', 'regions', 'pairings', 'arcs'] as const;
+
+/**
+ * Every pack's sections merged into one catalog. An id is the same thing in every pack, so two packs defining one id
+ * is a clash (`clashes`, reported by `checkPacks`), never a silent override: with many packs from many authors, the
+ * last one loaded must not quietly change someone else's story. `pairs` indexes the pairings by region.
+ */
 export function mergePacks(packs: readonly Pack[]) {
   const all = {
     entities: {} as Record<string, PackEntity>,
@@ -193,14 +202,28 @@ export function mergePacks(packs: readonly Pack[]) {
     regions: {} as Record<string, RegionDef>,
     pairings: {} as Record<string, PairingDef>,
     arcs: {} as Record<string, ArcDef>,
+    /** Region -> region -> the ids of the pairings between them (both ways round, sorted). */
+    pairs: new Map<string, Map<string, string[]>>(),
+    clashes: [] as string[],
   };
+  const from: Record<string, string> = {};
   for (const p of packs) {
     if (p.version !== CONTENT_VERSION) throw new AssemblyError(`pack "${p.id}" has version ${p.version}`);
-    Object.assign(all.entities, p.entities);
-    Object.assign(all.keepers, p.keepers);
-    Object.assign(all.regions, p.regions);
-    Object.assign(all.pairings, p.pairings);
-    Object.assign(all.arcs, p.arcs);
+    for (const section of SECTIONS)
+      for (const [id, def] of Object.entries(p[section] ?? {})) {
+        const key = `${section}.${id}`;
+        if (from[key] !== undefined) all.clashes.push(`${key}: defined by both "${from[key]}" and "${p.id}"`);
+        from[key] = p.id;
+        (all[section] as Record<string, unknown>)[id] = def;
+      }
+  }
+  const pair = (a: string, b: string, id: string) => {
+    const row = all.pairs.get(a) ?? all.pairs.set(a, new Map()).get(a)!;
+    row.set(b, [...(row.get(b) ?? []), id].sort());
+  };
+  for (const [id, p] of Object.entries(all.pairings)) {
+    pair(p.regions[0], p.regions[1], id);
+    if (p.regions[0] !== p.regions[1]) pair(p.regions[1], p.regions[0], id);
   }
   return all;
 }
@@ -247,11 +270,11 @@ export function crossingNeeds(arc: ArcDef): { lore: Set<string>; tags: string[] 
 
 /** The pairings between two regions (either way round), by id. */
 export function pairingsBetween(cat: Catalog, a: string, b: string): string[] {
-  return Object.entries(cat.pairings)
-    .filter(([, p]) => (p.regions[0] === a && p.regions[1] === b) || (p.regions[0] === b && p.regions[1] === a))
-    .map(([id]) => id)
-    .sort();
+  return cat.pairs.get(a)?.get(b) ?? [];
 }
+
+/** The regions a pairing joins `a` to, sorted. */
+export const partnersOf = (cat: Catalog, a: string): string[] => [...(cat.pairs.get(a)?.keys() ?? [])].sort();
 
 /** The port a pairing joins `region` by, if it names one. */
 const pairedPort = (p: PairingDef, region: string): string | undefined => p.ports?.[p.regions[0] === region ? 0 : 1];
@@ -360,6 +383,9 @@ class Grid {
   }
 }
 
+/** How many regions a story's search may try before it gives an arc up. */
+export const STORY_BUDGET = 5000;
+
 /** A story: its regions in order, the pairing crossed at each step, the ports it crosses by, and where each stands. */
 interface Story {
   regions: string[];
@@ -376,24 +402,37 @@ interface Story {
 function storyFor(cat: Catalog, arc: ArcDef, rand: () => number): Story | null {
   const needs = arcNeeds(arc);
   const steps = crossingNeeds(arc);
+  // Which regions could stand in each slot at all, worked out once: the search below only walks pairings among them.
+  const eligible = needs.map(
+    (need, i) =>
+      new Set(
+        Object.entries(cat.regions)
+          .filter(([id, r]) => {
+            if (r.terminal || (i === 0) !== !!r.hub) return false;
+            if (i === 0 && !keepersFor(cat, arc, id).length) return false;
+            return meetsSlot(id, r, arc.slots?.[i]) && fills(cat, r, need, arc.slots?.[i]);
+          })
+          .map(([id]) => id),
+      ),
+  );
+  if (eligible.some((s) => !s.size)) return null;
   const chosen: string[] = [];
   const crossings: string[] = [];
   const joints: [string, string][] = [];
   const grid = new Grid(cat);
+  // The search is a depth-first walk with backtracking; a catalog of thousands of regions could make an arc that
+  // cannot be told take forever to prove so, so it gives up after `STORY_BUDGET` placements and the next arc is tried.
+  let budget = STORY_BUDGET;
   const go = (i: number): boolean => {
     if (i === needs.length) return true;
+    if (--budget < 0) return false;
     const prevId = chosen[chosen.length - 1];
     const prev = prevId ? cat.regions[prevId]! : null;
-    const options = Object.entries(cat.regions).filter(([id, r]) => {
-      if (chosen.includes(id) || r.terminal || (i === 0) !== !!r.hub) return false;
-      if (i === 0 && !keepersFor(cat, arc, id).length) return false;
-      if (prev && r.level[0] < prev.level[0]) return false;
-      return meetsSlot(id, r, arc.slots?.[i]) && fills(cat, r, needs[i]!, arc.slots?.[i]);
-    });
-    for (const [id] of shuffled(
-      rand,
-      options.sort(([a], [b]) => a.localeCompare(b)),
-    )) {
+    const pool = prevId ? partnersOf(cat, prevId) : [...eligible[0]!].sort();
+    const options = pool.filter(
+      (id) => eligible[i]!.has(id) && !chosen.includes(id) && (!prev || cat.regions[id]!.level[0] >= prev.level[0]),
+    );
+    for (const id of shuffled(rand, options)) {
       if (!prevId) {
         grid.place(id, 0, 0);
         chosen.push(id);
@@ -468,6 +507,9 @@ function entityJson(e: PackEntity): Record<string, unknown> {
  * no arc can be told with the regions and pairings there are. The files still go through `parseContent`
  * (ContentManager.load), so a bad pack fails like a bad campaign file.
  */
+/** The most side regions (beyond the story's own) a world gets. */
+export const MAX_SIDE_REGIONS = 3;
+
 export function assemble(seed: number, packs: readonly Pack[]): Assembly {
   const cat = mergePacks(packs);
   const problems = checkPacks(cat);
@@ -519,11 +561,14 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
     crossings[`${w.host}~${id}`] = w.pairing;
     return true;
   };
-  // Side regions: any other region that is neither a hub nor a dead end, sometimes.
-  for (const id of Object.keys(cat.regions).sort()) {
-    const r = cat.regions[id]!;
-    if (regions.includes(id) || r.hub || r.terminal || rand() < 0.5) continue;
-    attach(id);
+  // Side regions: up to `MAX_SIDE_REGIONS` others (neither hubs nor dead ends), each paired with a region already in.
+  // Only the partners of the regions in are candidates, so the size of the catalog never sets the size of the world.
+  for (let added = 0, tries = 12; added < MAX_SIDE_REGIONS;) {
+    const near = [...new Set(regions.flatMap((id) => partnersOf(cat, id)))]
+      .filter((id) => !regions.includes(id) && !cat.regions[id]!.hub && !cat.regions[id]!.terminal)
+      .sort();
+    if (!near.length || rand() < 0.35 || --tries < 0) break;
+    if (attach(pick(rand, near))) added++;
   }
   // Regions that ended up side by side are joined too, where both have a port facing the other and a pairing allows.
   for (const a of regions)
@@ -547,12 +592,11 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
       bind(a, b, portA, portB);
       crossings[`${a}~${b}`] = pairing;
     }
-  // Dead ends: bolt one onto every port still open that one suits (each dead end once); the rest stay sealed.
+  // Dead ends: bolt one onto every port still open that one suits (each dead end once); the rest stay sealed. Only
+  // dead ends paired with a region in are tried.
   for (const id of shuffled(
     rand,
-    Object.keys(cat.regions)
-      .filter((t) => cat.regions[t]!.terminal)
-      .sort(),
+    [...new Set(regions.flatMap((r) => partnersOf(cat, r)))].filter((t) => cat.regions[t]!.terminal).sort(),
   ))
     attach(id);
   const layout = Object.fromEntries(regions.map((id) => [id, grid.at.get(id)!])) as Record<string, [number, number]>;
@@ -673,7 +717,7 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
   const files: Record<ContentFile, unknown> = {
     entities: { version: CONTENT_VERSION, entities },
     biomes: { version: CONTENT_VERSION, biomes },
-    scenarios: { version: CONTENT_VERSION, start: story[0], nodes },
+    scenarios: { version: CONTENT_VERSION, start: story[0], capabilities: arc.capabilities ?? {}, nodes },
     quests: {
       version: CONTENT_VERSION,
       giver: 'keeper',
@@ -689,7 +733,16 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
 
 /** What is wrong with a set of packs, one problem per entry (empty when they can be assembled from). */
 export function checkPacks(cat: Catalog): string[] {
-  const out: string[] = [];
+  const out: string[] = [...cat.clashes];
+  // Each region draws its own map, and a site kind belongs to one region: both become ids in one campaign's files.
+  const owner = new Map<string, string>();
+  for (const [id, r] of Object.entries(cat.regions)) {
+    for (const key of [`map ${r.biome.map}`, ...Object.keys(r.sites ?? {}).map((s) => `site ${s}`)]) {
+      const was = owner.get(key);
+      if (was) out.push(`regions.${id}: its ${key.replace(' ', ' "')}" is also region "${was}"'s`);
+      else owner.set(key, id);
+    }
+  }
   const region = (id: string) => cat.regions[id];
   for (const [id, k] of Object.entries(cat.keepers)) {
     if (cat.entities[k.npc]?.type !== 'npc') out.push(`keepers.${id}.npc: "${k.npc}" is not an npc`);
@@ -726,6 +779,11 @@ export function checkPacks(cat: Catalog): string[] {
       }),
     );
     for (const k of arc.keepers ?? []) if (!cat.keepers[k]) out.push(`arcs.${id}.keepers: no keeper "${k}"`);
+    for (const [cap, on] of Object.entries(arc.capabilities ?? {}))
+      if (!isCapability(cap) || typeof on !== 'boolean')
+        out.push(
+          `arcs.${id}.capabilities.${cap}: not a capability set to true or false (${CAPABILITY_IDS.join(', ')})`,
+        );
     try {
       arcNeeds(arc);
       crossingNeeds(arc);

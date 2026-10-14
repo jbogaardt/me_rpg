@@ -1,4 +1,5 @@
 import type { Menu } from '../../hud/Menu';
+import { enabled } from '../../systems/capabilities';
 import type { ShopCounter } from '../../hud/ShopCounter';
 import type { TradeUi } from '../../hud/Trade';
 import type { TradeMsg, TrMsg } from '../../net/protocol';
@@ -58,6 +59,7 @@ export class Trading {
   /** A command from this player's trade UI: the host's book takes it directly; a friend sends it to the host. */
   command(cmd: TradeCommand) {
     const { arena } = this;
+    if (!enabled('trading')) return;
     if (arena.role === 'host') {
       this.book.apply(0, cmd);
     } else if (arena.role === 'client' && this.queue.length < MAX_TRADE_QUEUE) {
@@ -70,7 +72,7 @@ export class Trading {
   /** Host: do what the friends asked of the trade book, then let it end trades whose players walked apart. */
   handleSteps(dt: number) {
     for (const p of this.arena.remotes.values()) {
-      for (const step of this.session.takeTradeSteps(p.slot)) this.book.apply(p.slot, step.cmd);
+      for (const step of this.session.takeTradeSteps(p.slot)) if (enabled('trading')) this.book.apply(p.slot, step.cmd);
     }
     this.book.update(dt);
   }

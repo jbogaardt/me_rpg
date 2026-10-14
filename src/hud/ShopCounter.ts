@@ -2,7 +2,7 @@ import { tabStep } from '../core/controls';
 import type { Hero, Item } from '../systems/combat';
 import { isWorn, packEntries, upgrade } from '../systems/inventory';
 import { ITEMS, type ItemId } from '../systems/items';
-import { buyPrice, sellPrice, type Shop as ShopDef } from '../systems/shops';
+import { buyPrice, sellPrice, stockOf, type Shop as ShopDef } from '../systems/shops';
 import type { Outcome, Trader } from '../systems/trader';
 import { bonuses, combosHtml } from './itemText';
 
@@ -108,7 +108,7 @@ export class ShopCounter {
   }
 
   private buyRows(shop: ShopDef, hero: Hero): string {
-    return shop.stock
+    return stockOf(shop)
       .map((id) => {
         const item: Item = ITEMS[id];
         const price = buyPrice(item);

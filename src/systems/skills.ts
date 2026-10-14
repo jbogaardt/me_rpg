@@ -8,6 +8,7 @@
 // standing. A stronger skill needs a higher level and a harder wave. Add one by adding to SKILL_IDS and SKILLS, a training
 // zone (maps/training_*.ts) and its entry in TRIAL_ZONES' source (`trial.zone`).
 
+import { enabled } from './capabilities';
 import type { Hero } from './combat';
 import { arrows, directionWords, type Combo } from './spells';
 
@@ -186,7 +187,13 @@ export const skillLine = (s: Skill): string =>
  * The training wizard's words to a hero: what they know and how the two ability slots work, and either a trial for the
  * next skill (what to do there is in the lines), or why not yet, or that there is nothing more to teach.
  */
+/** What the trainer says in a campaign without skills. */
+export const NO_TRAINING = [
+  'The old ways of inner magic are not taught in these lands. A wand or a blade will have to do.',
+];
+
 export function trainerTalk(hero: Hero): TrainerTalk {
+  if (!enabled('skills')) return { lines: NO_TRAINING, trial: null };
   const skill = nextSkill(hero);
   const known = SKILL_IDS.filter((id) => knows(hero, id)).map((id) => SKILLS[id]);
   if (!skill) {
@@ -235,8 +242,9 @@ export interface SkillCombo {
 export type HeroCombo = (Combo & { skill?: undefined }) | SkillCombo;
 
 export function heroCombos(hero: Hero, zone = ''): HeroCombo[] {
-  const weapon: HeroCombo[] = [...(hero.weapon.focus?.combos ?? [])];
-  const innate: HeroCombo[] = activeSkills(hero, zone).map((id) => ({
+  // A campaign may switch either off (systems/capabilities.ts): this list is what the reader, HUD and caster all use.
+  const weapon: HeroCombo[] = enabled('combos') ? [...(hero.weapon.focus?.combos ?? [])] : [];
+  const innate: HeroCombo[] = (enabled('skills') ? activeSkills(hero, zone) : []).map((id) => ({
     keys: SKILLS[id].keys,
     cost: SKILLS[id].cost,
     skill: id,

@@ -1,4 +1,5 @@
 import { Application, BitmapFont, BitmapFontManager, CullerPlugin, extensions, TextureStyle } from 'pixi.js';
+import { disabledCapabilities } from './systems/capabilities';
 import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
@@ -82,6 +83,8 @@ void (async () => {
       console.info(
         `Random campaign ${assembly.seed}: "${assembly.arc}" told by ${assembly.keeper} through ${assembly.regions.join(', ')}`,
       );
+    const off = disabledCapabilities();
+    if (off.length) console.info(`This campaign plays without: ${off.join(', ')}`);
     const start = content.getBiomeInfo(content.startNode.biome_type);
     const [sprites, zone] = await Promise.all([
       loadSprites(),

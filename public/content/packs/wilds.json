@@ -382,6 +382,7 @@
     "lost_lanterns": {
       "title": "The Lost Lanterns",
       "regions": 3,
+      "capabilities": { "map": false },
       "chapters": [
         {
           "title": "The Dimming",

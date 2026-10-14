@@ -1,4 +1,5 @@
 import type { Hero } from '../systems/combat';
+import { enabled } from '../systems/capabilities';
 import { trackerText } from '../systems/guide';
 import { needLevel, needWord } from '../systems/needs';
 import { heroCombos, SKILLS } from '../systems/skills';
@@ -39,6 +40,7 @@ export class Hud {
   private food = bar('hud-food');
   private water = bar('hud-water');
   private gold = document.getElementById('hud-gold')!;
+  private needsRow = document.getElementById('hud-needs')!;
   private combos = document.getElementById('combo-hud')!;
   private tracker = document.getElementById('quest-tracker')!;
   private shown = '';
@@ -50,13 +52,14 @@ export class Hud {
     const s = hero.stats;
     const hp = Math.ceil(s.hp);
     const mp = Math.floor(s.mp);
-    const quest = trackerText(hero);
+    const quest = enabled('guide') ? trackerText(hero) : ''; // a campaign without the guide has no tracker line
     const key = `${hp}/${s.maxHp} ${mp}/${s.maxMp} ${hero.gold} ${Math.ceil(hero.needs.food)} ${Math.ceil(hero.needs.water)} ${quest}`;
     if (key === this.shown) return; // only touch the DOM when something changed
     this.shown = key;
     this.set(this.hp, hp, s.maxHp);
     this.hp.fill.style.backgroundColor = hpColor(hp / s.maxHp);
     this.set(this.mp, mp, s.maxMp);
+    this.needsRow.hidden = !enabled('needs');
     this.need(this.food, 'food', hero.needs.food);
     this.need(this.water, 'water', hero.needs.water);
     this.gold.querySelector('.label')!.textContent = String(hero.gold);

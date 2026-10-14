@@ -1,4 +1,5 @@
 import type { Container, Renderer } from 'pixi.js';
+import { enabled } from '../systems/capabilities';
 import type { Sprites, Zone } from '../assets';
 import type { Aim } from '../core/aim';
 import { COMBO_WINDOW, COMBO_WINDOW_TOUCH, ComboReader } from '../core/combo';
@@ -244,7 +245,7 @@ export class OverworldScene implements Scene {
     this.ui.menu.inventory.attach({ apply: (op) => this.pack.localOp(op) });
     this.ui.menu.magic.attach({ equip: (wanted) => this.pack.setLoadout(wanted), zone: () => this.arena.zone.name });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
-    if (this.ui.session.urlCode) this.ui.menu.toggle(this.hero, 'online');
+    if (this.ui.session.urlCode && enabled('coop')) this.ui.menu.toggle(this.hero, 'online');
   }
 
   exit() {
@@ -275,9 +276,11 @@ export class OverworldScene implements Scene {
     this.syncRole(session.role);
     arena.clock += dt;
     const online = arena.role !== 'solo';
-    // The map shows the open-air zone you are in, as far as it has been explored; rooms have none.
+    // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
+    // without the map capability (it is still explored, so nothing changes if one is played later).
     const outdoors = !arena.zone.data.indoor;
-    this.overlay.setAvailable(outdoors);
+    const mapShown = outdoors && enabled('map');
+    this.overlay.setAvailable(mapShown);
     if (outdoors) {
       const seen = this.atlas.of(arena.zone.name, arena.zone.data);
       // Everyone in this zone uncovers the map around them (a guest only knows the players in its own zone).
@@ -286,7 +289,7 @@ export class OverworldScene implements Scene {
     }
     menu.setOnline(online);
     this.trading.sync(dt, online);
-    if (outdoors && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
+    if (mapShown && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
     if (!dialog.active && menuPressed()) {
       if (trade.open) this.trading.command({ c: 'cancel' });
       else if (shop.open) shop.close();
@@ -311,7 +314,12 @@ export class OverworldScene implements Scene {
     // What the local player sees: the zone they are in (a door above may just have changed it).
     const z = arena.zone;
     z.effects.update(dt);
-    this.night.update(this.dayClock.time(), !z.data.indoor, arena.screen.width, arena.screen.height);
+    this.night.update(
+      this.dayClock.time(),
+      !z.data.indoor && enabled('dayNight'),
+      arena.screen.width,
+      arena.screen.height,
+    );
     if (z.weatherLayer && z.ambient && z.weather) {
       // This biome's weather (the simulation rolls it, in every zone someone is in; a guest is told by the host).
       z.ambient.wind = z.weather.wind;
@@ -577,11 +585,12 @@ export class OverworldScene implements Scene {
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
     if (chest) return this.openChest(p, chest);
-    const crop = this.arena.crops.find((c) => c.ripe && this.inReach(p, c));
+    const farming = enabled('farming'); // without it, crop plots are scenery
+    const crop = farming && this.arena.crops.find((c) => c.ripe && this.inReach(p, c));
     if (crop) return this.pickCrop(p, crop);
-    const dry = this.arena.crops.find(
-      (c) => c.thirsty && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH,
-    );
+    const dry =
+      farming &&
+      this.arena.crops.find((c) => c.thirsty && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH);
     if (dry) return this.waterCrop(p, dry);
     const site = this.arena.sites.find(
       (s) =>
@@ -670,7 +679,7 @@ export class OverworldScene implements Scene {
 
   /** The quest arrow: points from the hero at where the quest leads (a thing in this zone, or the door towards it). */
   private pointTheWay(z: ZoneState, dt: number) {
-    const hide = this.zones.transition.busy || !this.player.visible;
+    const hide = this.zones.transition.busy || !this.player.visible || !enabled('guide');
     const warden = z.givers.find((g) => g.giver === QUEST_GIVER);
     const world = {
       zone: z.name,
@@ -706,7 +715,7 @@ export class OverworldScene implements Scene {
     const { world } = arena.view;
     const scale = world.scale.x;
     const spots: HarvestSpot[] = z.crops.flatMap((c, key) =>
-      c.ripe && this.inReach(arena.local, c)
+      c.ripe && enabled('farming') && this.inReach(arena.local, c)
         ? [{ key, x: world.x + c.x * scale, y: world.y + (c.y - CELL * 1.6) * scale }]
         : [],
     );

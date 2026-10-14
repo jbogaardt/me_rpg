@@ -113,6 +113,7 @@
 /* Food and water: a second row of bars under HP and MP (Hud.ts sets --frac and the low/empty classes). */
 #hud-stats { flex-wrap: wrap; }
 #hud-needs { display: flex; gap: 6px; flex: 1 1 100%; min-width: 0; }
+#hud-needs[hidden] { display: none; }
 #hud-needs .bar { flex: 1 1 0; min-width: 0; height: 11px; }
 #hud-needs .label { font-size: 9px; line-height: 11px; }
 #hud-food .label::before { content: 'FOOD '; font-weight: 700; }

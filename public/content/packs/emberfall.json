@@ -220,6 +220,7 @@
     "ember_trail": {
       "title": "The Ember Trail",
       "regions": 2,
+      "capabilities": { "needs": false },
       "chapters": [
         {
           "title": "Ash and Ember",

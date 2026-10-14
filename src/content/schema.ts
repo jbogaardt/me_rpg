@@ -6,6 +6,7 @@
 import type { MobKind } from '../systems/combat';
 import { isClimate } from '../systems/weather';
 import { SKILL_IDS } from '../systems/skills';
+import { CAPABILITY_IDS, isCapability, type Capabilities } from '../systems/capabilities';
 import { SLOTS, type Outfit } from '../sprites/doll';
 import { ITEMS, type ItemId } from '../systems/items';
 import type { PortBinding } from './ports';
@@ -119,6 +120,8 @@ export interface ScenarioNode {
 export interface Scenarios {
   /** The node the game starts in. */
   start: string;
+  /** The engine's features this campaign switches on or off (systems/capabilities.ts); any not named are on. */
+  capabilities: Partial<Capabilities>;
   nodes: Map<string, ScenarioNode>;
 }
 
@@ -353,9 +356,16 @@ function readRequirement(r: Reader, v: unknown, path: string): Requirement | und
 export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
   const file = r.object(json, 'scenarios.json');
   const nodes = new Map<string, ScenarioNode>();
-  if (!file) return { start: '', nodes };
+  if (!file) return { start: '', capabilities: {}, nodes };
   r.version(file, 'scenarios.json');
   const start = r.string(file.start, 'scenarios.json.start');
+  const capabilities: Partial<Capabilities> = {};
+  for (const [id, on] of Object.entries(r.object(file.capabilities ?? {}, 'scenarios.json.capabilities') ?? {})) {
+    const at = `scenarios.json.capabilities.${id}`;
+    if (!isCapability(id)) r.fail(at, `is not a capability (${CAPABILITY_IDS.join(', ')})`);
+    else if (typeof on !== 'boolean') r.fail(at, 'must be true or false');
+    else capabilities[id] = on;
+  }
   r.array(file.nodes, 'scenarios.json.nodes').forEach((v, i) => {
     const o = r.object(v, `nodes[${i}]`);
     if (!o) return;
@@ -395,7 +405,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
     }
     nodes.set(id, node);
   });
-  return { start, nodes };
+  return { start, capabilities, nodes };
 }
 
 const SITE_SHAPES = ['mushroom', 'stone', 'sand'] as const;

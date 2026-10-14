@@ -5,6 +5,7 @@
 
 import { setMobKinds, type MobKind } from '../systems/combat';
 import { setNpcLooks } from '../systems/looks';
+import { setCapabilities } from '../systems/capabilities';
 import { setPlaces } from '../systems/places';
 import { setQuestContent } from '../systems/quests';
 import type { Outfit } from '../sprites/doll';
@@ -61,7 +62,7 @@ export class ContentManager {
   /**
    * Hand the content to the rule modules that look it up by id: `MOB_KINDS` (systems/combat.ts), `NPC_LOOKS`
    * (systems/looks.ts), the places (`ZONE_NAMES`, `ZONE_LINKS`, `ZONE_TINTS`, systems/places.ts) and the quests
-   * (`QUESTS`, `GIVERS`, `SITE_KINDS`..., systems/quests.ts). Call once after loading, before anything spawns or
+   * (`QUESTS`, `GIVERS`, `SITE_KINDS`..., systems/quests.ts) and the capabilities (systems/capabilities.ts). Call once after loading, before anything spawns or
    * preloads art.
    */
   install() {
@@ -79,6 +80,7 @@ export class ContentManager {
     }
     setPlaces(names, links, tints);
     setQuestContent(this.content.quests);
+    setCapabilities(this.content.scenarios.capabilities);
   }
 
   /** The node the game starts in. */

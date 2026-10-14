@@ -5,6 +5,7 @@
 // Each shop is a specialist: it sells a few kinds of things and only buys those kinds back (the wizard: wands and tomes). Money comes mostly from
 // enemies (see `MobKind.gold`); chests hold the odd purse and the gear that no shop stocks.
 
+import { enabled } from './capabilities';
 import type { GearSlot, Hero, Item } from './combat';
 import { addToPack, hasRoom, isBetter, takeFromPack, wearIfBetter } from './inventory';
 import { ITEMS, type ItemId } from './items';
@@ -120,13 +121,22 @@ export const SHOP_IDS = Object.keys(SHOPS);
 
 export type Trade = { ok: true; text: string; worn?: Item } | { ok: false; text: string };
 
+/** What a shop has for sale in this campaign: no bread or waterskins where nobody gets hungry (systems/capabilities.ts). */
+export function stockOf(shop: Pick<Shop, 'stock'>): readonly ItemId[] {
+  if (enabled('needs')) return shop.stock;
+  return shop.stock.filter((id) => {
+    const use: { hp?: number; mp?: number; food?: number; water?: number } | undefined = (ITEMS[id] as Item).use;
+    return !use || use.hp || use.mp || !(use.food || use.water);
+  });
+}
+
 /**
  * Buy one of a shop's items. Gear that beats what the hero wears is put on (what it replaces goes into the pack);
  * anything else goes into the pack.
  */
 export function buy(hero: Hero, shop: Shop, id: ItemId): Trade {
   const item: Item = ITEMS[id];
-  if (!shop.stock.includes(id)) return { ok: false, text: `${shop.name} does not sell that` };
+  if (!stockOf(shop).includes(id)) return { ok: false, text: `${shop.name} does not sell that` };
   const price = buyPrice(item);
   if (hero.gold < price) return { ok: false, text: `Not enough gold (${price - hero.gold} short)` };
   // Gear that beats what is worn goes on (the old piece takes a pack slot); anything else needs a free slot.

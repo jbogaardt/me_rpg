@@ -91,6 +91,16 @@ describe('parseContent', () => {
     expect(c.quests.sites.stone?.color).toBe(0xaabbcc);
   });
 
+  it('reads the capabilities a campaign switches off, and refuses ones that are not', () => {
+    const f = files();
+    (f.scenarios as { capabilities: unknown }).capabilities = { map: false, needs: false };
+    expect(parseContent(f).scenarios.capabilities).toEqual({ map: false, needs: false });
+    (f.scenarios as { capabilities: unknown }).capabilities = { jetpack: false, map: 'no' };
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/scenarios\.json\.capabilities\.jetpack: is not a capability/);
+    expect(p).toMatch(/scenarios\.json\.capabilities\.map: must be true or false/);
+  });
+
   it('checks the quests against the rest of the content', () => {
     const f = files();
     const q = f.quests as {

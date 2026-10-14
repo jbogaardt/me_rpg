@@ -89,6 +89,9 @@ export function rainFill(precip: string | null, intensity: number): number {
   return ((precip === 'storm' ? 2 : 1) * Math.max(0, intensity)) / RAIN_FILL_TIME;
 }
 
+/** Where there is no weather (a campaign without the capability), a dry pond fills from below in about eight minutes. */
+export const STILL_FILL = 1 / (RAIN_FILL_TIME * 4);
+
 /** How far (px) from a hero's feet to the edge of the water they may drink from: the bank cell beside it. */
 export const DRINK_REACH = CELL * 0.9;
 
