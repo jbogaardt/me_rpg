@@ -95,6 +95,11 @@ export class Character extends Container {
     this.sprite.tint = color;
   }
 
+  /** Draw the body bigger or smaller than the usual 64px frame, still standing on the same feet point. */
+  setScale(factor: number) {
+    this.sprite.scale.set(factor);
+  }
+
   /** Nudge the body off its feet point, e.g. to lunge into an attack. */
   setOffset(dx: number, dy: number) {
     this.sprite.position.set(dx, dy);

@@ -93,6 +93,7 @@ export class Mob {
   ) {
     this.t = mobTimings(kind);
     this.body = new Character(sheet);
+    this.body.setScale(kind.scale ?? 1);
     this.body.addChild(this.bar, this.beam);
     this.hp = kind.maxHp;
     this.reset();
@@ -435,10 +436,11 @@ export class Mob {
     this.bar.clear();
     if (this.hp >= this.kind.maxHp || this.hp <= 0) return;
     const w = 20;
+    const top = -56 * (this.kind.scale ?? 1);
     this.bar
-      .rect(-w / 2 - 1, -56, w + 2, 4)
+      .rect(-w / 2 - 1, top, w + 2, 4)
       .fill(0x000000)
-      .rect(-w / 2, -55, (w * this.hp) / this.kind.maxHp, 2)
+      .rect(-w / 2, top + 1, (w * this.hp) / this.kind.maxHp, 2)
       .fill(0xe7682f);
   }
 }

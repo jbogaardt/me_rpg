@@ -111,6 +111,8 @@ export interface QuestLog {
 
 export interface MobKind {
   name: string;
+  /** How much bigger than a person it is drawn (default 1); only the picture grows, not its collision body. */
+  scale?: number;
   look: Outfit; // sprite parts (ids from sprites/parts.ts); the AI and stats are shared by every kind
   maxHp: number;
   attack: number;
@@ -562,6 +564,7 @@ export const FROST_WARDEN: MobKind = {
 export const SNOWMAN: MobKind = {
   name: 'Abominable Snowman',
   look: { body: 'body.snowman' },
+  scale: 2,
   maxHp: 170,
   attack: 32,
   defense: 5,
