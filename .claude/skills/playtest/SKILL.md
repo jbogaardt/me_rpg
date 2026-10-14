@@ -31,7 +31,7 @@ await page.keyboard.press('KeyJ'); // talk to the NPC
 await page.screenshot({ path: 'shot.png' }); // then Read the PNG to look at it
 ```
 
-Keys: arrows/WASD move, Space/J/Enter/E action (talk or attack), K/Q cast, Esc/I/Tab menu.
+Keys: arrows/WASD move, Space or a left click is the action (talk or attack), spells are combos of direction taps, Esc/Tab menu, I inventory, M map.
 
 ## Two-player (co-op) test
 

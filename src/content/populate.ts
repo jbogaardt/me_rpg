@@ -5,7 +5,7 @@
 
 import type { MapData, MobSpawn } from '../map/types';
 import { mulberry32 } from '../systems/particles';
-import type { BiomeDef, EntityDef, RoamRule, ScenarioNode } from './schema';
+import type { BiomeDef, EntityDef, Placement, RoamRule, ScenarioNode } from './schema';
 
 /** A person placed by a scenario: drawn, blocks, and says its `lines` when talked to. */
 export interface FolkSpawn {
@@ -102,8 +102,8 @@ export function roam(map: Ground, rule: RoamRule, taken: [number, number][] = []
 }
 
 /**
- * Everyone a zone starts with: the node's placements (mobs, then the roamers of the biome's rules, in order) and the
- * people it places. With no node (a zone no scenario names), only the biome's roamers.
+ * Everyone a zone starts with: the node's placements (mobs, then the roamers of the biome's rules, then whoever a
+ * Dungeon Master cast there, in order) and the people it places. With no node (a zone no scenario names), only the biome's roamers.
  */
 export function populate(
   map: Ground,
@@ -113,14 +113,16 @@ export function populate(
 ): Population {
   const mobs: MobSpawn[] = [];
   const folk: FolkSpawn[] = [];
-  for (const p of node?.entities ?? []) {
+  const place = (p: Placement) => {
     const def = entities[p.entity];
     if (!def) throw new Error(`Scenario "${node?.node_id}" places unknown entity "${p.entity}"`);
     const at = { col: Math.round(p.x), row: Math.round(p.y) };
     if (def.type === 'mob') mobs.push({ kind: p.entity, ...at });
     else folk.push({ entity: p.entity, def, ...at });
-  }
+  };
+  (node?.entities ?? []).forEach(place);
   const taken: [number, number][] = [];
   for (const rule of biome?.generation.roam ?? []) mobs.push(...roam(map, rule, taken));
+  (node?.cast ?? []).forEach(place); // a Dungeon Master's, after the roamers: see ScenarioNode.cast
   return { mobs, folk };
 }

@@ -26,6 +26,7 @@ import { Multiplayer } from './Multiplayer';
 import { Party } from './Party';
 import { StoryTab } from './StoryTab';
 import { Dials } from './Dials';
+import { CastTab } from './Cast';
 
 // Pause menu (HTML overlay; markup in index.html). The game is frozen while it is open.
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
@@ -35,6 +36,7 @@ import { Dials } from './Dials';
 // no hero tabs (Status, Inventory, Magic, Quests, Trade) while they run the world.
 // 'story' (hud/StoryTab.ts) shows whoever may steer a live world's story: its DM, or a solo player.
 // 'dials' (hud/Dials.ts, "World") shows whoever runs the world: the online DM, or a solo player in a live world.
+// 'cast' (hud/Cast.ts) shows a live world's DM: bring foes and people in, make new people.
 const TABS = [
   'status',
   'inventory',
@@ -43,6 +45,7 @@ const TABS = [
   'party',
   'story',
   'dials',
+  'cast',
   'controls',
   'online',
   'trade',
@@ -68,6 +71,9 @@ export class Menu {
 
   /** The World tab: weather, time of day and capabilities, for whoever runs the world. */
   readonly dials = new Dials(document.getElementById('menu-dials')!);
+
+  /** A live world's Cast tab: who the DM brings in. */
+  readonly cast = new CastTab(document.getElementById('menu-cast')!);
 
   private keybinds: Keybinds;
   private aim: AimSetting;
@@ -124,6 +130,7 @@ export class Menu {
     if (TABS[this.tab] === 'party') this.party.render();
     if (TABS[this.tab] === 'story') this.story.render();
     if (TABS[this.tab] === 'dials') this.dials.render();
+    if (TABS[this.tab] === 'cast') this.cast.render();
   }
 
   /** The tab `by` places along from the current one, skipping tabs that are hidden. */
@@ -148,6 +155,7 @@ export class Menu {
       party: dm,
       story: this.story.available,
       dials: this.dials.available,
+      cast: this.cast.available,
       trade: online && !dm && enabled('trading'),
       online: enabled('coop'),
     };
@@ -179,6 +187,7 @@ export class Menu {
     if (TABS[i] === 'party') this.party.render();
     if (TABS[i] === 'story') this.story.render();
     if (TABS[i] === 'dials') this.dials.render();
+    if (TABS[i] === 'cast') this.cast.render();
     if (TABS[i] === 'inventory' && this.hero) this.inventory.show(this.hero);
     if (TABS[i] === 'magic' && this.hero) this.magic.show(this.hero);
     for (const [j, name] of TABS.entries()) {

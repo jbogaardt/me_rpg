@@ -314,6 +314,10 @@
 .dial-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .dial-list li { display: flex; align-items: center; gap: 4px; }
 .dial-list .dial-name { flex: 1 1 auto; }
+/* The Cast tab (hud/Cast.ts): who may be brought in, and the form for a new person. */
+#menu-cast h3 { margin: 10px 0 4px; font: 700 16px var(--title); }
+.cast-form { display: grid; gap: 6px; margin-top: 6px; }
+.cast-form input, .cast-form select, .cast-form textarea { font: 15px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
 /* A player's view of the DM's vote (hud/VotePanel.ts): a column at the right edge, over the world. */
 #vote { position: fixed; z-index: 3; right: calc(8px + env(safe-area-inset-right)); top: 96px; width: min(260px, 60vw); padding: 6px 8px; }
 #vote[hidden] { display: none; }

@@ -30,9 +30,10 @@ import { DIALS } from '../systems/capabilities';
 /**
  * Bump when a message changes shape (or what one means); peers on different versions refuse to play together. v29: the
  * host is the Dungeon Master, not a party member (player 0 in a snapshot is drawn as the DM). v30: `world`, a live
- * world's log. v31: `dm` (the Dungeon Master's dials, time of day and vote) and the guest's vote `InputMsg.vt`.
+ * world's log. v31: `dm` (the Dungeon Master's dials, time of day and vote) and the guest's vote `InputMsg.vt`. v32: the
+ * log's `cast` and `npc` entries, and longer entries.
  */
-export const PROTOCOL_VERSION = 31;
+export const PROTOCOL_VERSION = 32;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -256,9 +257,14 @@ export interface WorldMsg {
   entries: Record<string, unknown>[];
 }
 
-/** The most log entries one `world` message carries, and the longest one may be (as JSON). */
+/**
+ * The most log entries one `world` message carries, the longest one may be (as JSON: a person the DM made, with their
+ * lines, is the longest), and how much a host puts in one message (a stretch stops short of it, keeping each message
+ * whole on the lossy channel).
+ */
 export const WORLD_CHUNK = 3;
-const MAX_ENTRY = 400;
+export const MAX_ENTRY = 800;
+export const WORLD_BUDGET = 900;
 const MAX_LOG = 500;
 
 /** The most choices a vote offers. */

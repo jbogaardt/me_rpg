@@ -208,6 +208,12 @@ export class OverworldScene implements Scene {
       z.effects.add(particleEffect('levelUp', x, y));
     };
     this.liveStory.onGrew = (land) => this.banner.show(land, 'The story leads on to');
+    this.liveStory.onCast = (zone, x, y, name) => {
+      const z = arena.zones.get(zone);
+      if (!z) return;
+      z.effects.add(particleEffect('levelUp', x, y - 16));
+      z.effects.add(floatText(x, y - 56, name, 0xffd34d));
+    };
     this.desk = new DmDesk(arena, ui.session, content, this.dayClock);
     this.votePanel.onChoose = (i) => this.desk.castVote(i);
     this.zones.root.addChildAt(this.arrow, 1);
@@ -281,6 +287,12 @@ export class OverworldScene implements Scene {
       openVote: () => this.desk.openVote(this.liveStory.view()?.options ?? []),
       closeVote: () => this.desk.closeVote(),
     });
+    this.ui.menu.cast.attach({
+      castable: () => this.liveStory.castable(),
+      cast: (entity) => this.liveStory.castHere(entity),
+      make: (name, look, lines) => this.liveStory.makePerson(name, look, lines),
+      note: () => this.liveStory.lastNote,
+    });
     this.ui.menu.dials.attach({
       // Whoever runs the world: the online DM, or a solo player in a live world.
       available: () => this.arena.local.dm || (this.arena.role === 'solo' && this.liveStory.live),
@@ -299,6 +311,7 @@ export class OverworldScene implements Scene {
     this.ui.menu.party.attach(null);
     this.ui.menu.story.attach(null);
     this.ui.menu.dials.attach(null);
+    this.ui.menu.cast.attach(null);
     this.votePanel.sync(null);
     this.overlay.setAvailable(false);
     this.harvestButtons.clear();

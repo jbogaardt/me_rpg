@@ -122,6 +122,11 @@ export interface ScenarioNode {
   spawn?: { x: number; y: number };
   entities: Placement[];
   choices: Choice[];
+  /**
+   * Who a Dungeon Master brought in during play (a live world's `cast`, content/world.ts): placed after the biome's
+   * roamers, so a zone already built and one built later agree on the order of its mobs.
+   */
+  cast?: Placement[];
 }
 
 export interface Scenarios {
@@ -390,6 +395,18 @@ function readRequirement(r: Reader, v: unknown, path: string): Requirement | und
   return { stat: o.stat as (typeof REQUIREMENT_STATS)[number], min: r.number(o.min, `${path}.min`) };
 }
 
+/** A list of placements (`[{ entity, x, y }]`, cells of the map). */
+function placements(r: Reader, v: unknown, path: string): Placement[] {
+  return r.array(v ?? [], path).flatMap((e, j) => {
+    const p = r.object(e, `${path}[${j}]`);
+    if (!p) return [];
+    const at = `${path}[${j}]`;
+    return [
+      { entity: r.string(p.entity, `${at}.entity`), x: r.number(p.x, `${at}.x`, 0), y: r.number(p.y, `${at}.y`, 0) },
+    ];
+  });
+}
+
 /** Read scenarios.json. */
 export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
   const file = r.object(json, 'scenarios.json');
@@ -407,18 +424,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
     const node: ScenarioNode = {
       node_id: id,
       biome_type: r.string(o.biome_type, `${path}.biome_type`),
-      entities: r.array(o.entities ?? [], `${path}.entities`).flatMap((e, j) => {
-        const p = r.object(e, `${path}.entities[${j}]`);
-        if (!p) return [];
-        const at = `${path}.entities[${j}]`;
-        return [
-          {
-            entity: r.string(p.entity, `${at}.entity`),
-            x: r.number(p.x, `${at}.x`, 0),
-            y: r.number(p.y, `${at}.y`, 0),
-          },
-        ];
-      }),
+      entities: placements(r, o.entities, `${path}.entities`),
       choices: r.array(o.choices ?? [], `${path}.choices`).flatMap((c, j) => {
         const p = r.object(c, `${path}.choices[${j}]`);
         if (!p) return [];
@@ -431,6 +437,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
         return [choice];
       }),
     };
+    if (o.cast !== undefined) node.cast = placements(r, o.cast, `${path}.cast`);
     if (o.spawn !== undefined) {
       const s = r.object(o.spawn, `${path}.spawn`);
       if (s) node.spawn = { x: r.number(s.x, `${path}.spawn.x`, 0), y: r.number(s.y, `${path}.spawn.y`, 0) };
@@ -794,6 +801,9 @@ function crossCheck(r: Reader, c: Content) {
     if (!c.biomes[node.biome_type]) r.fail(`${path}.biome_type`, `"${node.biome_type}" is not in biomes.json`);
     node.entities.forEach((p, i) => {
       if (!c.entities[p.entity]) r.fail(`${path}.entities[${i}]`, `"${p.entity}" is not in entities.json`);
+    });
+    node.cast?.forEach((p, i) => {
+      if (!c.entities[p.entity]) r.fail(`${path}.cast[${i}]`, `"${p.entity}" is not in entities.json`);
     });
     node.choices.forEach((choice, i) => {
       if (!c.scenarios.nodes.has(choice.next)) r.fail(`${path}.choices[${i}].next`, `no node "${choice.next}"`);

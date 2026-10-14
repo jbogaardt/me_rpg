@@ -82,6 +82,18 @@ describe('populate', () => {
     expect(pop.folk).toEqual([{ entity: 'elder', def: entities.elder, col: 2, row: 3 }]);
   });
 
+  it('puts a Dungeon Master’s cast after the roamers, so a zone built later has its mobs in the same order', () => {
+    const cast = [
+      { entity: 'wolf', x: 30, y: 30 },
+      { entity: 'elder', x: 31, y: 30 },
+    ];
+    const before = populate(field(60), biome, node, entities);
+    const pop = populate(field(60), biome, { ...node, cast }, entities);
+    expect(pop.mobs.slice(0, 3)).toEqual(before.mobs);
+    expect(pop.mobs[3]).toEqual({ kind: 'wolf', col: 30, row: 30 });
+    expect(pop.folk[1]).toEqual({ entity: 'elder', def: entities.elder, col: 31, row: 30 });
+  });
+
   it('with no node, only the roamers', () => {
     expect(populate(field(60), biome, undefined, entities).mobs).toHaveLength(2);
   });

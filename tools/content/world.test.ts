@@ -117,4 +117,64 @@ describe('a world from its log', () => {
     for (const q of quests) for (const z of q.where?.zones ?? []) expect(placed).toContain(z);
     expect((world.files().quests as { epilogue: unknown[] }).epilogue).toEqual([]);
   });
+
+  it('lets its Dungeon Master bring foes in and make people, who are in the files after the roamers', () => {
+    const world = new World(7, packs);
+    world.open();
+    const region = world.storyRegions[0];
+    const { foes, people } = world.castable(region);
+    expect(foes.length).toBeGreaterThan(0);
+    expect(foes[0].role).toBeDefined(); // the land's own foes first
+    const look = world.lookOptions()[0].id;
+    const id = world.npcId('Old Wren');
+    expect(id).toBe('dm_old_wren');
+    world.apply({
+      t: 'npc',
+      id,
+      name: 'Old Wren',
+      look,
+      lines: ['The lanterns went out one by one.', 'Ask the keeper.'],
+    });
+    world.apply({ t: 'cast', region, entity: foes[0].id, x: 10, y: 12 });
+    world.apply({ t: 'cast', region, entity: id, x: 11, y: 12 });
+    expect(world.castable(region).people[0]).toEqual({ id, name: 'Old Wren' });
+    const files = world.files();
+    const content = parseContent(files);
+    expect(content.entities[id]).toMatchObject({
+      type: 'npc',
+      name: 'Old Wren',
+      lines: ['The lanterns went out one by one.', 'Ask the keeper.'],
+    });
+    expect(content.scenarios.nodes.get(region)?.cast).toEqual([
+      { entity: foes[0].id, x: 10, y: 12 },
+      { entity: id, x: 11, y: 12 },
+    ]);
+    // A log with them replays to the same world.
+    const again = new World(7, packs);
+    again.replay(world.log);
+    expect(again.files()).toEqual(world.files());
+    expect(people.length).toBeGreaterThan(0);
+  });
+
+  it('refuses a cast or a new person that breaks the rules', () => {
+    const world = new World(7, packs);
+    world.open();
+    const region = world.storyRegions[0];
+    const look = world.lookOptions()[0].id;
+    const mob = world.castable(region).foes[0].id;
+    const bad: LogEntry[] = [
+      { t: 'cast', region: 'nowhere', entity: mob, x: 1, y: 1 },
+      { t: 'cast', region, entity: 'nobody', x: 1, y: 1 },
+      { t: 'cast', region, entity: mob, x: -1, y: 1 },
+      { t: 'cast', region, entity: mob, x: 1.5, y: 1 },
+      { t: 'npc', id: 'goblin', name: 'Gob', look, lines: ['hi'] },
+      { t: 'npc', id: 'dm_x', name: '', look, lines: ['hi'] },
+      { t: 'npc', id: 'dm_x', name: 'X', look: mob, lines: ['hi'] },
+      { t: 'npc', id: 'dm_x', name: 'X', look, lines: [] },
+      { t: 'npc', id: 'dm_x', name: 'X', look, lines: ['a', 'b', 'c', 'd', 'e'] },
+      { t: 'npc', id: 'dm_x', name: 'X', look, lines: ['x'.repeat(200)] },
+    ];
+    for (const e of bad) expect(() => world.apply(e), JSON.stringify(e)).toThrow(WorldError);
+    expect(world.log).toHaveLength(world.storyRegions.length);
+  });
 });

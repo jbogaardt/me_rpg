@@ -443,7 +443,7 @@ describe('a live world’s log', () => {
       { ...world, entries: [] },
       { ...world, entries: [[1, 2]] },
       { ...world, entries: [{ region: 'x' }] },
-      { ...world, entries: [{ t: 'step', lines: 'x'.repeat(500) }] },
+      { ...world, entries: [{ t: 'step', lines: 'x'.repeat(900) }] },
       { ...world, total: 100000 },
     ];
     for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m).slice(0, 80)).toBeNull();

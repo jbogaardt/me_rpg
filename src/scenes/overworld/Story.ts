@@ -1,6 +1,7 @@
 import type { ContentManager } from '../../content/ContentManager';
-import { WorldError, type LogEntry, type StoryOption, type World } from '../../content/world';
-import { WORLD_CHUNK, type WorldMsg } from '../../net/protocol';
+import { WorldError, type Castable, type LogEntry, type StoryOption, type World } from '../../content/world';
+import { CELL } from '../../map/types';
+import { WORLD_BUDGET, WORLD_CHUNK, type WorldMsg } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import { zoneName } from '../../systems/places';
 import type { Arena } from './Arena';
@@ -95,6 +96,51 @@ export class Story {
     }
   }
 
+  /** Who the Dungeon Master may bring into the land where they stand (none outside a live world's regions). */
+  castable(): (Castable & { region: string; place: string; looks: { id: string; name: string }[] }) | null {
+    const region = this.regionHere();
+    if (!this.world || !region || !this.canChoose) return null;
+    const place = zoneName(this.arena.view.name);
+    return { ...this.world.castable(region), region, place, looks: this.world.lookOptions() };
+  }
+
+  /** The Dungeon Master brings `entity` to where they stand. */
+  castHere(entity: string) {
+    const region = this.regionHere();
+    if (!this.world || !region || !this.canChoose) return;
+    const { x, y } = this.arena.local.body;
+    this.tryAdd({ t: 'cast', region, entity, x: Math.floor(x / CELL), y: Math.floor(y / CELL) });
+  }
+
+  /** The Dungeon Master makes a new person (wearing the look of `look`) and brings them to where they stand. */
+  makePerson(name: string, look: string, lines: string[]) {
+    if (!this.world || !this.regionHere() || !this.canChoose) return;
+    const id = this.world.npcId(name);
+    if (this.tryAdd({ t: 'npc', id, name: name.trim(), look, lines: lines.map((l) => l.trim()).filter(Boolean) }))
+      this.castHere(id);
+  }
+
+  /** The region (of a live world) the local player stands in. */
+  private regionHere(): string | undefined {
+    const zone = this.arena.view.name;
+    return this.world?.regions.find((id) => this.world!.cat.regions[id]?.biome.map === zone);
+  }
+
+  private tryAdd(e: LogEntry): boolean {
+    try {
+      this.add(e);
+      this.note = '';
+      return true;
+    } catch (err) {
+      this.note = err instanceof Error ? err.message : String(err);
+      return false;
+    }
+  }
+
+  get lastNote(): string {
+    return this.note;
+  }
+
   /** Each frame: a friend takes what the host sent; the host sends. */
   update(dt: number) {
     if (!this.world) return;
@@ -109,9 +155,28 @@ export class Story {
     world.apply(e);
     this.content.reload(world.files());
     for (const o of this.zones.rewire()) this.onOpened(o.zone, o.x, o.y);
+    if (e.t === 'cast') this.admit(e);
     this.fresh = true;
     if (e.t === 'step') this.onGrew(zoneName(world.cat.regions[e.region]?.biome.map ?? e.region));
   }
+
+  /** Someone cast into a region whose zone is loaded steps in now (a zone loaded later has them from its content). */
+  private admit(e: Extract<LogEntry, { t: 'cast' }>) {
+    const map = this.world!.cat.regions[e.region]?.biome.map;
+    const z = map ? this.arena.zones.get(map) : undefined;
+    const def = this.content.content.entities[e.entity];
+    if (!z || !def) return;
+    const at = { col: e.x, row: e.y };
+    z.admit(
+      def.type === 'mob'
+        ? { mobs: [{ kind: e.entity, ...at }], folk: [] }
+        : { mobs: [], folk: [{ entity: e.entity, def, ...at }] },
+    );
+    this.onCast(map!, (e.x + 0.5) * CELL, (e.y + 1) * CELL, def.name);
+  }
+
+  /** Mark someone the DM brought in (the scene draws it locally). */
+  onCast: (zone: string, x: number, y: number, name: string) => void = () => {};
 
   /** A friend: take the entries of a stretch that follow on from what this page has, checking the ones it already has. */
   private receive(msg: WorldMsg) {
@@ -140,20 +205,30 @@ export class Story {
     this.sendTimer += dt;
     if (!log.length || !this.arena.remotes.size || (!this.fresh && this.sendTimer < WORLD_RESEND)) return;
     this.sendTimer = 0;
-    let from: number;
-    if (this.fresh) {
-      from = Math.max(0, log.length - WORLD_CHUNK);
-      this.fresh = false;
-    } else {
-      from = this.cursor < log.length ? this.cursor : 0;
-      this.cursor = from + WORLD_CHUNK >= log.length ? 0 : from + WORLD_CHUNK;
-    }
+    const tail = this.fresh;
+    this.fresh = false;
+    // As many entries as fit the budget (at least one): a person the DM made, with their lines, is a big one. New
+    // ones go out as a stretch ending with the newest; otherwise the round carries on from where it was.
+    const fits = (list: LogEntry[]) => list.length === 1 || JSON.stringify(list).length <= WORLD_BUDGET;
+    let from = tail ? log.length - 1 : this.cursor < log.length ? this.cursor : 0;
+    let entries: LogEntry[] = [log[from]!];
+    if (tail)
+      while (from > 0 && entries.length < WORLD_CHUNK && fits([log[from - 1]!, ...entries]))
+        entries = [log[--from]!, ...entries];
+    else
+      while (
+        from + entries.length < log.length &&
+        entries.length < WORLD_CHUNK &&
+        fits([...entries, log[from + entries.length]!])
+      )
+        entries = [...entries, log[from + entries.length]!];
+    if (!tail) this.cursor = from + entries.length >= log.length ? 0 : from + entries.length;
     const msg: WorldMsg = {
       k: 'world',
       n: ++this.seq,
       total: log.length,
       from,
-      entries: log.slice(from, from + WORLD_CHUNK),
+      entries: entries,
     };
     for (const slot of this.arena.remotes.keys()) this.session.sendTo(slot, msg);
   }

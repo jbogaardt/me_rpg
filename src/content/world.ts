@@ -60,7 +60,25 @@ export type LogEntry =
       to: string;
       foes: Record<string, string>;
     }
-  | { t: 'join'; a: string; b: string; portA: string; portB: string; pairing: string };
+  | { t: 'join'; a: string; b: string; portA: string; portB: string; pairing: string }
+  /** The Dungeon Master brought someone into a region: a foe or a person, standing on a cell of its map. */
+  | { t: 'cast'; region: string; entity: string; x: number; y: number }
+  /** The Dungeon Master made a new person: their name, the look of an npc of the packs they wear, and what they say. */
+  | { t: 'npc'; id: string; name: string; look: string; lines: string[] };
+
+/** What a Dungeon Master may make: an id of their own kind, a short name, and a few lines to say. */
+export const NPC_ID = /^dm_[a-z0-9_]{1,24}$/;
+export const MAX_NPC_NAME = 32;
+export const MAX_NPC_LINES = 4;
+export const MAX_NPC_LINE = 140;
+/** The largest map cell a cast may stand on. */
+const MAX_CELL = 1023;
+
+/** Who a Dungeon Master may bring into a region: its foes (and the packs' other mobs of its themes) and people. */
+export interface Castable {
+  foes: { id: string; name: string; role?: string }[];
+  people: { id: string; name: string }[];
+}
 
 /** A next step of the story as its Dungeon Master is offered it: what kind of land, over what kind of crossing. */
 export interface StoryOption {
@@ -103,6 +121,10 @@ export class World {
   /** The pairing at each joint: `r1~r2` along the story, `<a>~<b>` elsewhere. */
   private joints: Record<string, string> = {};
   private eligible: Set<string>[] = [];
+  /** Who the Dungeon Master cast into each region, in order. */
+  private cast = new Map<string, { entity: string; x: number; y: number }[]>();
+  /** The people the Dungeon Master made, by id. */
+  private people: Record<string, { name: string; look: string; lines: string[] }> = {};
 
   /** `seed` names the world (its roamers' placings, the solver's picks); `packs` are what it is built from. */
   constructor(
@@ -181,7 +203,9 @@ export class World {
     else if (!this.begun) throw new WorldError('the log must begin with "begin"');
     else if (e.t === 'step') this.applyStep(e);
     else if (e.t === 'side') this.applySide(e);
-    else this.applyJoin(e);
+    else if (e.t === 'join') this.applyJoin(e);
+    else if (e.t === 'cast') this.applyCast(e);
+    else this.applyNpc(e);
     this.log.push(e);
   }
 
@@ -346,9 +370,16 @@ export class World {
     for (const id of regions) {
       for (const mob of Object.values(this.foes[id] ?? {})) used.add(mob);
       for (const e of cat.regions[id]!.encounters ?? []) if ('entity' in e) used.add(e.entity);
+      for (const c of this.cast.get(id) ?? []) used.add(c.entity);
     }
     const entities: Record<string, unknown> = {};
     for (const id of [...used].sort()) {
+      const person = this.people[id];
+      if (person) {
+        const look = cat.entities[person.look]!;
+        entities[id] = { type: 'npc', name: person.name, sprite: look.sprite, lines: person.lines };
+        continue;
+      }
       const e = cat.entities[id];
       if (!e) throw new WorldError(`no entity "${id}" in any pack`);
       entities[id] = entityJson(e);
@@ -383,6 +414,7 @@ export class World {
           'entity' in e ? e : { entity: foes[e.role] ?? e.role, x: e.x, y: e.y },
         ),
         choices: [],
+        ...(this.cast.get(id)?.length ? { cast: this.cast.get(id)!.map((c) => ({ ...c })) } : {}),
       });
       for (const [site, def] of Object.entries(r.sites ?? {})) {
         const { plural: _p, ...rest } = def;
@@ -542,6 +574,69 @@ export class World {
     grid.use(e.b, e.portB);
     this.bind(e.a, e.b, e.portA, e.portB);
     this.joints[`${e.a}~${e.b}`] = e.pairing;
+  }
+
+  /** Who the Dungeon Master may bring into `region`: its foes and the packs' mobs of its themes, and people. */
+  castable(region: string): Castable {
+    const r = this.cat.regions[region];
+    if (!r || !this.story.grid.at.has(region)) return { foes: [], people: [] };
+    const own = this.foes[region] ?? {};
+    const roleOf = new Map(Object.entries(own).map(([role, id]) => [id, role]));
+    const foes = Object.entries(this.cat.entities)
+      .filter(([id, e]) => e.type === 'mob' && (roleOf.has(id) || e.tags?.some((t) => r.themes.includes(t))))
+      .map(([id, e]) => ({ id, name: e.name, ...(roleOf.has(id) ? { role: roleOf.get(id)! } : {}) }))
+      .sort((a, b) => Number(!a.role) - Number(!b.role) || a.name.localeCompare(b.name));
+    const people = [...Object.entries(this.people).map(([id, p]) => ({ id, name: p.name })), ...this.lookOptions()];
+    return { foes, people };
+  }
+
+  /** The packs' people, whose looks a new person may wear (and who may be cast as they are). */
+  lookOptions(): { id: string; name: string }[] {
+    return Object.entries(this.cat.entities)
+      .filter(([, e]) => e.type === 'npc')
+      .map(([id, e]) => ({ id, name: e.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** A fresh id for a person the Dungeon Master is making, from their name. */
+  npcId(name: string): string {
+    const base = `dm_${
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, 16) || 'person'
+    }`;
+    let id = base;
+    for (let n = 2; this.cat.entities[id] || this.people[id]; n++) id = `${base}_${n}`;
+    return id;
+  }
+
+  private applyCast(e: Extract<LogEntry, { t: 'cast' }>) {
+    if (!this.story.grid.at.has(e.region)) throw new WorldError(`"${e.region}" is not in the world`);
+    if (!this.cat.entities[e.entity] && !this.people[e.entity])
+      throw new WorldError(`nobody "${e.entity}" to bring in`);
+    const cell = (v: number) => Number.isInteger(v) && v >= 0 && v <= MAX_CELL;
+    if (!cell(e.x) || !cell(e.y)) throw new WorldError('a cast stands on a cell of the map');
+    const list = this.cast.get(e.region) ?? this.cast.set(e.region, []).get(e.region)!;
+    list.push({ entity: e.entity, x: e.x, y: e.y });
+  }
+
+  private applyNpc(e: Extract<LogEntry, { t: 'npc' }>) {
+    if (!NPC_ID.test(e.id) || this.cat.entities[e.id] || this.people[e.id])
+      throw new WorldError(`"${e.id}" cannot name a new person`);
+    const name = typeof e.name === 'string' ? e.name.trim() : '';
+    if (!name || name.length > MAX_NPC_NAME) throw new WorldError(`a person's name is 1 to ${MAX_NPC_NAME} letters`);
+    if (this.cat.entities[e.look]?.type !== 'npc')
+      throw new WorldError(`"${e.look}" is not a person whose look to wear`);
+    const lines = Array.isArray(e.lines) ? e.lines : [];
+    if (
+      !lines.length ||
+      lines.length > MAX_NPC_LINES ||
+      !lines.every((l) => typeof l === 'string' && l.trim() && l.length <= MAX_NPC_LINE)
+    )
+      throw new WorldError(`a person says 1 to ${MAX_NPC_LINES} lines of up to ${MAX_NPC_LINE} letters`);
+    this.people[e.id] = { name, look: e.look, lines: [...lines] };
   }
 
   // --- helpers ---

@@ -190,6 +190,16 @@ export class ZoneState {
   populate(population: Population) {
     for (const m of this.mobs) m.body.destroy({ children: true });
     for (const f of this.folk) f.body.destroy({ children: true });
+    this.mobs.splice(0, this.mobs.length);
+    this.folk.splice(0, this.folk.length);
+    this.admit(population);
+  }
+
+  /**
+   * Add these enemies and folk after those already here (a Dungeon Master cast them in): the same place a later build
+   * of the zone gives them (content/populate.ts puts a cast after the roamers), so mob indexes agree in co-op.
+   */
+  admit(population: Population) {
     const { wardrobe } = this.sprites;
     const mobs = population.mobs.map((m) => {
       const kind = MOB_KINDS[m.kind];
@@ -204,8 +214,8 @@ export class ZoneState {
       body.setTag(f.def.name, 0xffffff);
       return { entity: f.entity, name: f.def.name, lines: f.def.lines ?? [`${f.def.name} nods.`], body };
     });
-    this.mobs.splice(0, this.mobs.length, ...mobs);
-    this.folk.splice(0, this.folk.length, ...folk);
+    this.mobs.push(...mobs);
+    this.folk.push(...folk);
     const bodies = [...mobs.map((m) => m.body), ...folk.map((f) => f.body)];
     if (bodies.length) this.world.layer.addChild(...bodies);
   }
