@@ -81,7 +81,7 @@ export function playerOutfit(slot: number, hero: Hero): Outfit {
  * game loads them all up front, and the tests check them).
  */
 export function allPlayerOutfits(): Outfit[] {
-  const worn = Object.values(ITEMS).flatMap((item) => ('look' in item ? [item.look] : []));
+  const worn = Object.values(ITEMS).flatMap((item) => (item.look ? [item.look] : []));
   return PLAYER_BASES.flatMap((base) => worn.map((look) => withGear(base, look)));
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MOB_KINDS, newHero, speedFactor, xpFor, goldFor, spellPower, type Hero } from './combat';
 import { npcLook, NPC_LOOKS } from './looks';
-import { ITEMS } from './items';
+import { ITEMS, itemOf } from './items';
 import { BASE_PACK } from './inventory';
 import {
   CHAPTERS,
@@ -201,7 +201,7 @@ describe('bring quests', () => {
   it('take the item from the pack and pay', () => {
     const hero = onQuest(3);
     expect(questStatus(hero)).toBe('active');
-    hero.pack.push(ITEMS.elixir);
+    hero.pack.push(itemOf('elixir'));
     expect(questStatus(hero)).toBe('ready');
     const t = talk(hero);
     expect(t.paid).toBe(true);
@@ -222,14 +222,14 @@ describe('rewards', () => {
     const t = talk(hero);
     expect(t.paid).toBe(true);
     expect(t.gear).toBe(true);
-    expect(hero.charm).toBe(ITEMS.wayfarersCharm);
+    expect(hero.charm).toBe(itemOf('wayfarersCharm'));
     expect(speedFactor(hero)).toBeCloseTo(1.08);
   });
 
   it('refuses, changing nothing, when the pack has no room for the gear', () => {
     const hero = onQuest(4);
     hero.quests.progress = 0b111;
-    while (hero.pack.length < BASE_PACK) hero.pack.push(ITEMS.potion);
+    while (hero.pack.length < BASE_PACK) hero.pack.push(itemOf('potion'));
     const gold = hero.gold;
     const t = talk(hero);
     expect(t.key).toBe('stones.full');
@@ -287,12 +287,12 @@ describe('gear buffs', () => {
   it('add up over everything worn', () => {
     const hero = newHero();
     expect(speedFactor(hero)).toBe(1);
-    hero.charm = ITEMS.hourglassPendant;
-    hero.feet = ITEMS.duneglassBoots;
+    hero.charm = itemOf('hourglassPendant');
+    hero.feet = itemOf('duneglassBoots');
     expect(speedFactor(hero)).toBeCloseTo(1.22);
     expect(spellPower(hero)).toBe(hero.stats.magic + 4);
     expect(xpFor(hero, 100)).toBe(110);
-    hero.head = ITEMS.tuskbreakerHelm;
+    hero.head = itemOf('tuskbreakerHelm');
     expect(goldFor(hero, 100)).toBe(115);
   });
 

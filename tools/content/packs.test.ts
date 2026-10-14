@@ -278,6 +278,34 @@ describe('random campaigns from the packs', () => {
     );
   });
 
+  it('gives every story the packs’ goods, and lets an arc choose the starting gear', () => {
+    const a = assembleFromDisk(SEEDS[0]);
+    const goods = a.files.items as { start: unknown; items: Record<string, unknown>; loots: Record<string, unknown> };
+    expect(Object.keys(goods.items)).toEqual(Object.keys(cat.items));
+    expect(goods.loots).toEqual(cat.loots);
+    expect(goods.start).toEqual(cat.start);
+    const wizardly: Pack[] = packs.map((p) => ({
+      ...p,
+      arcs: Object.fromEntries(
+        Object.entries(p.arcs ?? {}).map(([id, arc]) => [id, { ...arc, start: { weapon: 'apprenticeWand' } }]),
+      ),
+    }));
+    const b = assemble(SEEDS[0], wizardly);
+    expect((b.files.items as { start: unknown }).start).toEqual({ weapon: 'apprenticeWand' });
+    expect(() => parseContent(b.files)).not.toThrow();
+  });
+
+  it('refuses two packs saying what a hero starts with, and a shop whose keeper is nobody', () => {
+    const odd: Pack = {
+      version: 1,
+      id: 'odd',
+      start: { weapon: 'rustySword' },
+      shops: { stall: { name: 'Stall', tag: 'Grocer', keeper: 'nobody', greeting: [], stock: [], buys: [] } },
+    };
+    expect(checkPacks(mergePacks([...packs, odd])).join()).toMatch(/start: set by both "outfitters" and "odd"/);
+    expect(checkPacks(mergePacks([...packs, odd])).join()).toMatch(/shops\.stall\.keeper: "nobody" is not an npc/);
+  });
+
   it('refuses an arc switching a capability that does not exist', () => {
     const odd: Pack = {
       version: 1,
@@ -368,6 +396,8 @@ function synthetic(n: number, per: number): Pack[] {
       regions,
       pairings,
       arcs,
+      start: { weapon: 'stick' },
+      items: { stick: { name: 'Stick', value: 1, slot: 'weapon', attack: 1, look: {} } },
     },
   ];
 }

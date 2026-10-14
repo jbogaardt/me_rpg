@@ -39,7 +39,7 @@ export interface MobSpawn extends CellPoint {
   kind: string;
 }
 
-/** A treasure chest; `kind` picks its art (CHEST_KINDS) and `loot` is a key of CHEST_LOOTS (src/systems/chests.ts). */
+/** A treasure chest; `kind` picks its art (CHEST_KINDS) and `loot` is a key of the campaign's items.json `loots`. */
 export interface ChestSpawn extends CellPoint {
   kind: string;
   loot: string;
@@ -55,7 +55,7 @@ export interface PetSpawn extends CellPoint {
   kind: string;
 }
 
-/** A shopkeeper standing at `col,row`; `shop` is a key of SHOPS (src/systems/shops.ts). The building is a map prop. */
+/** A shopkeeper standing at `col,row`; `shop` is a shop of the campaign's items.json. The building is a map prop. */
 export interface ShopSpawn extends CellPoint {
   shop: string;
 }

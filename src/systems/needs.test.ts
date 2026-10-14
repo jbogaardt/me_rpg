@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newHero } from './combat';
-import { ITEMS } from './items';
+import { itemOf } from './items';
 import { useFromPack } from './inventory';
 import { CELL } from '../map/types';
 import {
@@ -64,8 +64,8 @@ describe('eating and drinking', () => {
   it('uses up a ration and fills the meter', () => {
     const hero = newHero();
     hero.needs = { food: 30, water: 100 };
-    hero.pack.push(ITEMS.bread);
-    const used = useFromPack(hero, ITEMS.bread);
+    hero.pack.push(itemOf('bread'));
+    const used = useFromPack(hero, itemOf('bread'));
     expect(used?.text).toBe('+30 food');
     expect(hero.needs.food).toBe(60);
     expect(hero.pack).toHaveLength(0);
@@ -73,8 +73,8 @@ describe('eating and drinking', () => {
 
   it('is refused (and kept) when the meter is already full', () => {
     const hero = newHero();
-    hero.pack.push(ITEMS.waterskin);
-    expect(useFromPack(hero, ITEMS.waterskin)).toBeNull();
+    hero.pack.push(itemOf('waterskin'));
+    expect(useFromPack(hero, itemOf('waterskin'))).toBeNull();
     expect(hero.pack).toHaveLength(1);
   });
 

@@ -2,7 +2,7 @@
 
 import type { Direction } from '../core/direction';
 import type { Outfit } from '../sprites/doll';
-import { ITEMS } from './items';
+import { startGear } from './items';
 import { newNeeds, type Needs } from './needs';
 import type { Focus } from './spells';
 import type { SkillId } from './skills';
@@ -76,6 +76,8 @@ export interface Item {
   focus?: Focus;
   /** Set on supplies (no slot): drinking one restores this much HP, MP, food and water, from the pack. */
   use?: { hp: number; mp?: number; food?: number; water?: number };
+  /** Crops are watered with it (a waterskin): one is used up per watering (systems/crops.ts). */
+  waters?: boolean;
   /** Set on bags (slot `bag`): extra pack slots while it is worn. */
   capacity?: number;
   /** Sprite parts this item puts on the hero (see sprites/parts.ts); drawn over the hero's base look. */
@@ -166,8 +168,7 @@ export function newHero(): Hero {
   return {
     name: 'Hero',
     stats: { level: 1, xp: 0, hp: 30, maxHp: 30, mp: 20, maxMp: 20, attack: 5, defense: 1, magic: 8 },
-    weapon: ITEMS.rustySword,
-    cape: ITEMS.travelerCloak,
+    ...startGear(),
     pack: [],
     gold: 0,
     quests: { stage: 0, taken: false, progress: 0 },

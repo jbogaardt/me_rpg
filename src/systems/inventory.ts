@@ -3,7 +3,7 @@
 // succeeds completely or changes nothing and says why.
 
 import { gainXp, GEAR_SLOTS, type GearSlot, type Hero, type Item } from './combat';
-import { ITEMS, type ItemId } from './items';
+import { ITEMS, itemCodeOf, itemIds } from './items';
 import { NEED_MAX, refill } from './needs';
 
 /** Pack slots with no bag. A sack or backpack (slot `bag`, `capacity`) adds to it while worn. */
@@ -257,17 +257,17 @@ export function useFromPack(hero: Hero, item: Item): Used | null {
 }
 
 // --- Item codes: how a hero's gear and pack travel over the network (src/net/protocol.ts). A code is the item's
-// place in ITEMS plus one (0 means nothing), so the same build on both sides agrees on every code.
+// place in the campaign's items plus one (0 means nothing), so the same build on both sides agrees on every code.
 
-export const ITEM_IDS = Object.keys(ITEMS) as ItemId[];
-export const ITEM_COUNT = ITEM_IDS.length;
+/** How many items the campaign has: the highest code. */
+export const itemCount = (): number => itemIds().length;
 
 /** The code of an item (0 if it is not one of ITEMS). */
-export const itemCode = (item: Item): number => ITEM_IDS.findIndex((id) => ITEMS[id] === item) + 1;
+export const itemCode = (item: Item): number => itemCodeOf(item);
 
 /** The item with this code, or undefined for 0 and unknown codes. */
 export const itemFromCode = (code: number): Item | undefined => {
-  const id = ITEM_IDS[code - 1];
+  const id = itemIds()[code - 1];
   return id ? ITEMS[id] : undefined;
 };
 

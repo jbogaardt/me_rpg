@@ -1,5 +1,5 @@
 import { MOB_KINDS } from '../systems/combat';
-import { ITEMS } from '../systems/items';
+import { itemOf } from '../systems/items';
 import { iconKind } from '../systems/inventory';
 import { SITE_KINDS, type Quest } from '../systems/quests';
 import { iconSvg } from './itemIcons';
@@ -38,8 +38,8 @@ export function questArt(q: Quest, portrait: (mobKind: string) => string | null)
     picture = siteSvg(o.site);
     caption = SITE_KINDS[o.site]?.name ?? '';
   } else {
-    const item = ITEMS[o.item];
-    picture = `<span class="item-art tier${'rare' in item ? 4 : 1}">${iconSvg(iconKind(item))}</span>`;
+    const item = itemOf(o.item);
+    picture = `<span class="item-art tier${item.rare ? 4 : 1}">${iconSvg(iconKind(item))}</span>`;
     caption = item.name;
   }
   return picture ? `<figure class="quest-art">${picture}<figcaption>${caption}</figcaption></figure>` : '';

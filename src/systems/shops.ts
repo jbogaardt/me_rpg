@@ -7,9 +7,9 @@
 
 import { enabledAnywhere } from './capabilities';
 import { onlyFeeds } from './needs';
-import type { GearSlot, Hero, Item } from './combat';
+import type { Hero, Item } from './combat';
 import { addToPack, hasRoom, isBetter, takeFromPack, wearIfBetter } from './inventory';
-import { ITEMS, type ItemId } from './items';
+import { itemOf, type ItemId } from './items';
 
 /** A shop pays this share of an item's value when buying it back. */
 export const SELL_RATE = 0.4;
@@ -24,108 +24,50 @@ export interface Shop {
   name: string;
   /** Short label floating over the shopkeeper. */
   tag: string;
-  /** Who stands at the counter: a key of NPC_LOOKS (systems/looks.ts). */
+  /** Who stands at the counter: an npc entity (NPC_LOOKS, systems/looks.ts). */
   keeper: string;
   /** What the shopkeeper says before the counter opens. */
   greeting: string[];
   /** What it sells, in the order shown. */
   stock: readonly ItemId[];
-  /** What it buys back from the pack: only its own trade. */
-  buys: (item: Item) => boolean;
+  /** What it buys back from the pack (only its own trade): gear slots and kinds (`TRADE_KINDS`), any of them. */
+  buys: readonly string[];
 }
 
-const isSlot =
-  (...slots: GearSlot[]) =>
-  (item: Item) =>
-    item.slot !== undefined && slots.includes(item.slot);
+/** Kinds of goods a shop can buy back, besides a gear slot: plain weapons, bows, wands and tomes, supplies. */
+export const TRADE_KINDS = ['blade', 'bow', 'caster', 'supply'] as const;
+
 const isBow = (item: Item) => item.ranged !== undefined;
 const isCaster = (item: Item) => item.focus !== undefined;
-const isBlade = (item: Item) => item.slot === 'weapon' && !isBow(item) && !isCaster(item);
-const isSupply = (item: Item) => item.use !== undefined;
-
-export const SHOPS: Record<string, Shop> = {
-  smithy: {
-    id: 'smithy',
-    name: "Brannoch's Forge",
-    tag: 'Blacksmith',
-    keeper: 'smith',
-    greeting: ['Steel and iron, fresh from the fire.', 'Blades and shields: that is my trade.'],
-    stock: ['bronzeSword', 'steelSword', 'silverSword', 'woodenShield', 'ironShield', 'kiteShield'],
-    buys: (item) => isBlade(item) || isSlot('offhand')(item),
-  },
-  armory: {
-    id: 'armory',
-    name: "Halda's Armory",
-    tag: 'Armorer',
-    keeper: 'armorer',
-    greeting: ['Mind the dents. Everything here has saved a life.', 'Helms, plate, leggings. Take your pick.'],
-    stock: [
-      'clothHood',
-      'nasalHelm',
-      'kettleHat',
-      'greatHelm',
-      'leatherArmor',
-      'plateArmor',
-      'paddedLeggings',
-      'ironGreaves',
-      'steelGreaves',
-    ],
-    buys: isSlot('head', 'chest', 'legs'),
-  },
-  ranger: {
-    id: 'ranger',
-    name: "The Ranger's Lodge",
-    tag: 'Ranger',
-    keeper: 'ranger',
-    greeting: ['A good bow keeps trouble at arm... or arrow... length.', 'Bows, boots and cloaks for the road.'],
-    stock: [
-      'shortBow',
-      'recurveBow',
-      'greatBow',
-      'leatherBoots',
-      'foldedBoots',
-      'ironBoots',
-      'steelBoots',
-      'travelerCloak',
-    ],
-    buys: (item) => isBow(item) || isSlot('feet', 'cape')(item),
-  },
-  apothecary: {
-    id: 'apothecary',
-    name: "Wren's Apothecary",
-    tag: 'Apothecary',
-    keeper: 'apothecary',
-    greeting: [
-      'Potions for the bruised, elixirs for the brave.',
-      'And bread, meat and water for the hungry. Keep your food and water up and you mend faster.',
-      'Use them from the Inventory tab of your menu.',
-    ],
-    stock: ['potion', 'elixir', 'bread', 'roastMeat', 'apple', 'waterskin'],
-    buys: isSupply,
-  },
-  wizard: {
-    id: 'wizard',
-    name: "Orlen's Sanctum",
-    tag: 'Wizard',
-    keeper: 'wizard',
-    greeting: [
-      'Wands for the quick, tomes for the patient.',
-      'Tap the right arrows in the right order and the weapon does the rest.',
-    ],
-    stock: ['apprenticeWand', 'stormcallerWand', 'noviceTome', 'arcaneGrimoire'],
-    buys: isCaster,
-  },
+const KIND_TEST: Record<(typeof TRADE_KINDS)[number], (item: Item) => boolean> = {
+  blade: (item) => item.slot === 'weapon' && !isBow(item) && !isCaster(item),
+  bow: isBow,
+  caster: isCaster,
+  supply: (item) => item.use !== undefined,
 };
 
-/** Shop ids, for maps and tests. */
-export const SHOP_IDS = Object.keys(SHOPS);
+/** Does a shop buy this item back? A slot in `buys` takes anything worn there (`weapon` every weapon). */
+export function shopBuys(shop: Pick<Shop, 'buys'>, item: Item): boolean {
+  return shop.buys.some((what) => {
+    const test = KIND_TEST[what as keyof typeof KIND_TEST] as ((item: Item) => boolean) | undefined;
+    return test ? test(item) : item.slot === what;
+  });
+}
+
+/** The campaign's shops by id (content: items.json `shops`; empty until it is installed). */
+export const SHOPS: Record<string, Shop> = {};
+
+export function setShops(shops: Record<string, Shop>) {
+  for (const id of Object.keys(SHOPS)) delete SHOPS[id];
+  Object.assign(SHOPS, shops);
+}
 
 export type Trade = { ok: true; text: string; worn?: Item } | { ok: false; text: string };
 
 /** What a shop has for sale in this campaign: no bread or waterskins where nobody gets hungry (systems/capabilities.ts). */
 export function stockOf(shop: Pick<Shop, 'stock'>): readonly ItemId[] {
   if (enabledAnywhere('needs')) return shop.stock;
-  return shop.stock.filter((id) => !onlyFeeds(ITEMS[id] as Item));
+  return shop.stock.filter((id) => !onlyFeeds(itemOf(id)));
 }
 
 /**
@@ -133,8 +75,8 @@ export function stockOf(shop: Pick<Shop, 'stock'>): readonly ItemId[] {
  * anything else goes into the pack.
  */
 export function buy(hero: Hero, shop: Shop, id: ItemId): Trade {
-  const item: Item = ITEMS[id];
   if (!stockOf(shop).includes(id)) return { ok: false, text: `${shop.name} does not sell that` };
+  const item = itemOf(id);
   const price = buyPrice(item);
   if (hero.gold < price) return { ok: false, text: `Not enough gold (${price - hero.gold} short)` };
   // Gear that beats what is worn goes on (the old piece takes a pack slot); anything else needs a free slot.
@@ -152,7 +94,7 @@ export function buy(hero: Hero, shop: Shop, id: ItemId): Trade {
 
 /** Sell one of `item` from the pack, if this shop deals in it. */
 export function sell(hero: Hero, shop: Shop, item: Item): Trade {
-  if (!shop.buys(item)) return { ok: false, text: `${shop.name} has no use for that` };
+  if (!shopBuys(shop, item)) return { ok: false, text: `${shop.name} has no use for that` };
   if (!takeFromPack(hero, item)) return { ok: false, text: 'You do not have that' };
   const price = sellPrice(item);
   hero.gold += price;

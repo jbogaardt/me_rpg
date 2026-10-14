@@ -5,17 +5,20 @@
 
 import type { MobKind } from '../systems/combat';
 import { isClimate } from '../systems/weather';
-import { SKILL_IDS } from '../systems/skills';
+import { SKILL_IDS, SKILLS } from '../systems/skills';
 import { CapabilityTable, checkCapabilities, type CapabilitySpec } from '../systems/capabilities';
 import { onlyFeeds } from '../systems/needs';
 import { CROPS } from '../systems/crops';
 import { SLOTS, type Outfit } from '../sprites/doll';
-import { ITEMS, type ItemId } from '../systems/items';
+import { GEAR_SLOTS, type GearSlot, type Item } from '../systems/combat';
+import type { ItemId, StartGear } from '../systems/items';
+import { TRADE_KINDS, type Shop } from '../systems/shops';
+import { COMBO_KEYS, SPELL_IDS, type Combo, type SpellId } from '../systems/spells';
 import type { PortBinding } from './ports';
 import type { Chapter, Giver, Objective, Quest, QuestContent, Reward, SiteKind } from '../systems/quests';
 
 /** The files of a campaign's content, by name: `public/content/<campaign>/<name>.json` when served statically. */
-export const CONTENT_FILES = ['entities', 'biomes', 'scenarios', 'quests'] as const;
+export const CONTENT_FILES = ['entities', 'biomes', 'scenarios', 'quests', 'items'] as const;
 export type ContentFile = (typeof CONTENT_FILES)[number];
 
 /** The version of the content files' format this code reads. */
@@ -129,12 +132,26 @@ export interface Scenarios {
   nodes: Map<string, ScenarioNode>;
 }
 
+// --- items.json -----------------------------------------------------------------------------------------------------
+
+/** What a chest holds, as content: an item by id, or a restorative, XP or gold (systems/chests.ts `ChestLoot`). */
+export type LootDef = { item: ItemId } | { hp: number; mp?: number } | { xp: number } | { gold: number };
+
+/** The campaign's goods: what a hero starts with, every item (in code order), the shops and the chests' contents. */
+export interface ItemContent {
+  start: StartGear;
+  items: Record<string, Item>;
+  shops: Record<string, Shop>;
+  loots: Record<string, LootDef>;
+}
+
 /** Everything the content files hold, validated. */
 export interface Content {
   entities: Record<string, EntityDef>;
   biomes: Record<string, BiomeDef>;
   scenarios: Scenarios;
   quests: QuestContent;
+  items: ItemContent;
 }
 
 /** A content file that does not have the shape it must: every problem found, one per line. */
@@ -424,7 +441,6 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
 }
 
 const SITE_SHAPES = ['mushroom', 'stone', 'sand'] as const;
-const isItem = (id: string): id is ItemId => id in ITEMS;
 
 function readObjective(r: Reader, v: unknown, path: string): Objective {
   const o = r.object(v, path) ?? {};
@@ -437,9 +453,7 @@ function readObjective(r: Reader, v: unknown, path: string): Objective {
   if (o.t === 'gather')
     return { t: 'gather', site: r.string(o.site, `${path}.site`), zone: r.string(o.zone, `${path}.zone`), count };
   if (o.t === 'bring') {
-    const item = r.string(o.item, `${path}.item`);
-    if (!isItem(item)) r.fail(`${path}.item`, `"${item}" is not an item (src/systems/items.ts)`);
-    return { t: 'bring', item: item as ItemId, count };
+    return { t: 'bring', item: r.string(o.item, `${path}.item`), count };
   }
   r.fail(`${path}.t`, 'must be "kill", "gather" or "bring"');
   return { t: 'kill', kind: '', count };
@@ -448,11 +462,7 @@ function readObjective(r: Reader, v: unknown, path: string): Objective {
 function readReward(r: Reader, v: unknown, path: string): Reward {
   const o = r.object(v, path) ?? {};
   const reward: Reward = { gold: r.number(o.gold, `${path}.gold`, 0), xp: r.number(o.xp, `${path}.xp`, 0) };
-  if (o.items !== undefined)
-    reward.items = r.strings(o.items, `${path}.items`).map((id, i) => {
-      if (!isItem(id)) r.fail(`${path}.items[${i}]`, `"${id}" is not an item (src/systems/items.ts)`);
-      return id as ItemId;
-    });
+  if (o.items !== undefined) reward.items = r.strings(o.items, `${path}.items`);
   return reward;
 }
 
@@ -520,6 +530,214 @@ export function parseQuests(json: unknown, r = new Reader()): QuestContent {
   return out;
 }
 
+const MAX_SHOP_ID = 24; // the network carries a shop's id in a `do` message (src/net/protocol.ts)
+const ITEM_NUMBERS = [
+  'value',
+  'attack',
+  'defense',
+  'speed',
+  'magic',
+  'regen',
+  'mpRegen',
+  'xpBonus',
+  'goldBonus',
+] as const;
+const isSlot = (v: unknown): v is GearSlot => (GEAR_SLOTS as readonly unknown[]).includes(v);
+
+function readCombo(r: Reader, v: unknown, path: string): Combo | null {
+  const o = r.object(v, path);
+  if (!o) return null;
+  const keys = r.string(o.keys, `${path}.keys`);
+  if (![...keys].every((k) => (COMBO_KEYS as readonly string[]).includes(k)))
+    r.fail(`${path}.keys`, `must be made of ${COMBO_KEYS.join('')}`);
+  if (/(.)\1/.test(keys)) r.fail(`${path}.keys`, 'repeats a direction (the reader ignores a repeated tap)');
+  if (keys.length < 4) r.fail(`${path}.keys`, 'must be at least four taps');
+  if (!(SPELL_IDS as readonly unknown[]).includes(o.spell))
+    r.fail(`${path}.spell`, `must be a spell (${SPELL_IDS.join(', ')})`);
+  const combo: Combo = {
+    keys,
+    spell: o.spell as SpellId,
+    cost: r.number(o.cost, `${path}.cost`, 1),
+    power: r.number(o.power, `${path}.power`, 0),
+  };
+  const count = r.optionalNumber(o.count, `${path}.count`, 1);
+  if (count !== undefined) combo.count = count;
+  return combo;
+}
+
+function readItem(r: Reader, v: unknown, path: string): Item | null {
+  const o = r.object(v, path);
+  if (!o) return null;
+  const known = new Set<string>([
+    ...ITEM_NUMBERS,
+    'name',
+    'slot',
+    'rare',
+    'waters',
+    'ranged',
+    'focus',
+    'use',
+    'capacity',
+    'look',
+  ]);
+  for (const key of Object.keys(o)) if (!known.has(key)) r.fail(`${path}.${key}`, 'is not a field of an item');
+  const item: Item = { name: r.string(o.name, `${path}.name`) };
+  for (const key of ITEM_NUMBERS) {
+    const n = r.optionalNumber(o[key], `${path}.${key}`, key === 'value' ? 0 : -Infinity);
+    if (n !== undefined) item[key] = n;
+  }
+  if (o.slot !== undefined) {
+    if (isSlot(o.slot)) item.slot = o.slot;
+    else r.fail(`${path}.slot`, `must be a gear slot (${GEAR_SLOTS.join(', ')})`);
+  }
+  if (o.rare !== undefined) item.rare = o.rare === true;
+  if (o.waters !== undefined) item.waters = o.waters === true;
+  if (o.look !== undefined) {
+    const look = r.object(o.look, `${path}.look`) ?? {};
+    item.look = {};
+    for (const [slot, part] of Object.entries(look)) {
+      if (!(SLOTS as readonly string[]).includes(slot))
+        r.fail(`${path}.look.${slot}`, `is not a slot (${SLOTS.join(', ')})`);
+      else item.look[slot as (typeof SLOTS)[number]] = r.string(part, `${path}.look.${slot}`);
+    }
+  }
+  if (o.ranged !== undefined) {
+    const g = r.object(o.ranged, `${path}.ranged`) ?? {};
+    item.ranged = {
+      speed: r.number(g.speed, `${path}.ranged.speed`, 1),
+      range: r.number(g.range, `${path}.ranged.range`, 1),
+      cooldown: r.number(g.cooldown, `${path}.ranged.cooldown`, 0.05),
+    };
+  }
+  if (o.focus !== undefined) {
+    const f = r.object(o.focus, `${path}.focus`) ?? {};
+    if (f.kind !== 'wand' && f.kind !== 'tome') r.fail(`${path}.focus.kind`, 'must be "wand" or "tome"');
+    const combos = r
+      .array(f.combos, `${path}.focus.combos`)
+      .flatMap((c, i) => readCombo(r, c, `${path}.focus.combos[${i}]`) ?? []);
+    // The reader fires the first combo the typed taps end with, so one hidden inside another (or a skill's) never casts.
+    const all = [...combos.map((c) => c.keys), ...SKILL_IDS.map((id) => SKILLS[id].keys)];
+    combos.forEach((c, i) => {
+      for (const other of all)
+        if (other !== c.keys && other.includes(c.keys))
+          r.fail(`${path}.focus.combos[${i}].keys`, `is inside "${other}"`);
+        else if (other !== c.keys && c.keys.includes(other))
+          r.fail(`${path}.focus.combos[${i}].keys`, `holds "${other}"`);
+    });
+    item.focus = {
+      kind: f.kind === 'tome' ? 'tome' : 'wand',
+      power: r.number(f.power, `${path}.focus.power`, 0),
+      cooldown: r.number(f.cooldown, `${path}.focus.cooldown`, 0.05),
+      combos,
+    };
+  }
+  if (o.use !== undefined) {
+    const u = r.object(o.use, `${path}.use`) ?? {};
+    item.use = { hp: r.number(u.hp ?? 0, `${path}.use.hp`, 0) };
+    for (const key of ['mp', 'food', 'water'] as const) {
+      const n = r.optionalNumber(u[key], `${path}.use.${key}`, 0);
+      if (n !== undefined) item.use[key] = n;
+    }
+  }
+  const capacity = r.optionalNumber(o.capacity, `${path}.capacity`, 1);
+  if (capacity !== undefined) item.capacity = capacity;
+  if (item.slot === undefined && !item.use) r.fail(path, 'needs a gear `slot` or a `use` (a supply)');
+  if (item.slot !== undefined && item.use) r.fail(path, 'is worn (`slot`) or used (`use`), not both');
+  if (item.slot !== undefined && !item.look) item.look = {};
+  if ((item.ranged || item.focus) && item.slot !== 'weapon') r.fail(path, 'a bow, wand or tome is a weapon');
+  if (item.ranged && item.focus) r.fail(path, 'is a bow or a wand/tome, not both');
+  if (item.capacity !== undefined && item.slot !== 'bag') r.fail(`${path}.capacity`, 'only a bag has capacity');
+  return item;
+}
+
+function readLoot(r: Reader, v: unknown, path: string): LootDef | null {
+  const o = r.object(v, path);
+  if (!o) return null;
+  if (o.item !== undefined) return { item: r.string(o.item, `${path}.item`) };
+  if (o.gold !== undefined) return { gold: r.number(o.gold, `${path}.gold`, 1) };
+  if (o.xp !== undefined) return { xp: r.number(o.xp, `${path}.xp`, 1) };
+  if (o.hp !== undefined) {
+    const loot: { hp: number; mp?: number } = { hp: r.number(o.hp, `${path}.hp`, 0) };
+    const mp = r.optionalNumber(o.mp, `${path}.mp`, 0);
+    if (mp !== undefined) loot.mp = mp;
+    return loot;
+  }
+  r.fail(path, 'needs "item", "gold", "xp" or "hp"');
+  return null;
+}
+
+/** Read items.json: the starting gear, the items (their order is their network codes), the shops and the loots. */
+export function parseItems(json: unknown, r = new Reader()): ItemContent {
+  const out: ItemContent = { start: { weapon: '' }, items: {}, shops: {}, loots: {} };
+  const file = r.object(json, 'items.json');
+  if (!file) return out;
+  r.version(file, 'items.json');
+  const start = r.object(file.start, 'items.json.start') ?? {};
+  for (const [slot, id] of Object.entries(start)) {
+    if (!isSlot(slot)) r.fail(`items.json.start.${slot}`, `is not a gear slot (${GEAR_SLOTS.join(', ')})`);
+    else out.start[slot] = r.string(id, `items.json.start.${slot}`);
+  }
+  if (!out.start.weapon) r.fail('items.json.start.weapon', 'a hero always starts with a weapon');
+  for (const [id, v] of Object.entries(r.object(file.items, 'items.json.items') ?? {})) {
+    const item = readItem(r, v, `items.${id}`);
+    if (item) out.items[id] = item;
+  }
+  for (const [id, v] of Object.entries(r.object(file.shops ?? {}, 'items.json.shops') ?? {})) {
+    const p = `shops.${id}`;
+    const o = r.object(v, p);
+    if (!o) continue;
+    if (id.length > MAX_SHOP_ID) r.fail(p, `the id is longer than ${MAX_SHOP_ID} characters`);
+    const buys = r.strings(o.buys, `${p}.buys`);
+    buys.forEach((b, i) => {
+      if (!isSlot(b) && !(TRADE_KINDS as readonly string[]).includes(b))
+        r.fail(`${p}.buys[${i}]`, `must be a gear slot or ${TRADE_KINDS.join(', ')}`);
+    });
+    out.shops[id] = {
+      id,
+      name: r.string(o.name, `${p}.name`),
+      tag: r.string(o.tag, `${p}.tag`),
+      keeper: r.string(o.keeper, `${p}.keeper`),
+      greeting: r.strings(o.greeting, `${p}.greeting`),
+      stock: r.strings(o.stock, `${p}.stock`),
+      buys,
+    };
+  }
+  for (const [id, v] of Object.entries(r.object(file.loots ?? {}, 'items.json.loots') ?? {})) {
+    const loot = readLoot(r, v, `loots.${id}`);
+    if (loot) out.loots[id] = loot;
+  }
+  return out;
+}
+
+/** The checks of items.json against itself and the other files: every item named exists and fits where it is named. */
+function checkItems(r: Reader, c: Content) {
+  const { items, shops, loots, start } = c.items;
+  const has = (id: string) => items[id] !== undefined;
+  for (const [slot, id] of Object.entries(start)) {
+    const item = items[id];
+    if (!item) r.fail(`items.json.start.${slot}`, `"${id}" is not an item`);
+    else if (item.slot !== slot) r.fail(`items.json.start.${slot}`, `"${id}" is not worn there`);
+  }
+  for (const [id, shop] of Object.entries(shops)) {
+    if (c.entities[shop.keeper]?.type !== 'npc')
+      r.fail(`shops.${id}.keeper`, `"${shop.keeper}" is not an npc in entities.json`);
+    shop.stock.forEach((s, i) => {
+      if (!has(s)) r.fail(`shops.${id}.stock[${i}]`, `"${s}" is not an item`);
+      else if (items[s]!.rare) r.fail(`shops.${id}.stock[${i}]`, `"${s}" is rare: no shop sells it`);
+    });
+  }
+  for (const [id, loot] of Object.entries(loots))
+    if ('item' in loot && !has(loot.item)) r.fail(`loots.${id}.item`, `"${loot.item}" is not an item`);
+  for (const quest of c.quests.quests) {
+    const p = `quests.${quest.id}`;
+    const o = quest.objective;
+    if (o.t === 'bring' && !has(o.item)) r.fail(`${p}.objective.item`, `"${o.item}" is not an item in items.json`);
+    (quest.reward.items ?? []).forEach((id, i) => {
+      if (!has(id)) r.fail(`${p}.reward.items[${i}]`, `"${id}" is not an item in items.json`);
+    });
+  }
+}
+
 /** The checks across files: every id one file names must exist in the file it names. */
 function crossCheck(r: Reader, c: Content) {
   const mob = (id: string) => c.entities[id]?.type === 'mob';
@@ -567,6 +785,7 @@ function crossCheck(r: Reader, c: Content) {
       r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
     if (o.t === 'gather' && !q.sites[o.site]) r.fail(`${p}.objective.site`, `"${o.site}" is not in sites`);
   });
+  checkItems(r, c);
   checkAgainstCapabilities(r, c);
   if (c.scenarios.start && !c.scenarios.nodes.has(c.scenarios.start))
     r.fail('scenarios.json.start', `no node "${c.scenarios.start}"`);
@@ -593,7 +812,8 @@ function checkAgainstCapabilities(r: Reader, c: Content) {
   const caps = capabilityTable(c);
   const produce = new Set<string>(Object.values(CROPS).map((crop) => crop.item));
   const why = (id: string): string | null => {
-    if (!caps.anywhere('needs') && isItem(id) && onlyFeeds(ITEMS[id] as { use?: object }))
+    const item = c.items.items[id];
+    if (!caps.anywhere('needs') && item && onlyFeeds(item))
       return `"${id}" only feeds, and this campaign has no food and water (capabilities.needs)`;
     if (!caps.anywhere('farming') && produce.has(id))
       return `"${id}" only grows on a farm, and this campaign has no farming (capabilities.farming)`;
@@ -620,7 +840,7 @@ function checkAgainstCapabilities(r: Reader, c: Content) {
       });
 }
 
-/** Read and check all three files. Throws a `ContentError` listing every problem. */
+/** Read and check all the files. Throws a `ContentError` listing every problem. */
 export function parseContent(files: Record<ContentFile, unknown>): Content {
   const r = new Reader();
   const content: Content = {
@@ -628,6 +848,7 @@ export function parseContent(files: Record<ContentFile, unknown>): Content {
     biomes: parseBiomes(files.biomes, r),
     scenarios: parseScenarios(files.scenarios, r),
     quests: parseQuests(files.quests, r),
+    items: parseItems(files.items, r),
   };
   crossCheck(r, content);
   if (r.problems.length) throw new ContentError(r.problems);

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { newHero, type Hero } from './combat';
 import { BASE_PACK, itemCode } from './inventory';
-import { ITEMS } from './items';
+import { itemOf } from './items';
 import {
   canGive,
   REQUEST_SECONDS,
@@ -13,8 +13,8 @@ import {
   type TradeEnv,
 } from './trade';
 
-const sword = itemCode(ITEMS.steelSword);
-const potion = itemCode(ITEMS.potion);
+const sword = itemCode(itemOf('steelSword'));
+const potion = itemCode(itemOf('potion'));
 
 let heroes: Map<number, Hero>;
 let gap: number;
@@ -29,7 +29,7 @@ beforeEach(() => {
     name: (slot) => `P${slot + 1}`,
   };
   book = new TradeBook(env);
-  heroes.get(0)!.pack.push(ITEMS.steelSword, ITEMS.potion, ITEMS.potion);
+  heroes.get(0)!.pack.push(itemOf('steelSword'), itemOf('potion'), itemOf('potion'));
   heroes.get(0)!.gold = 100;
   heroes.get(1)!.gold = 50;
 });
@@ -112,15 +112,15 @@ describe('offers', () => {
   it('shows each side what the other put on the table', () => {
     open();
     book.apply(0, { c: 'offer', items: [sword, potion], gold: 30 });
-    expect(book.viewFor(0)?.mine).toMatchObject({ items: [ITEMS.steelSword, ITEMS.potion], gold: 30 });
-    expect(book.viewFor(1)?.theirs).toMatchObject({ items: [ITEMS.steelSword, ITEMS.potion], gold: 30 });
+    expect(book.viewFor(0)?.mine).toMatchObject({ items: [itemOf('steelSword'), itemOf('potion')], gold: 30 });
+    expect(book.viewFor(1)?.theirs).toMatchObject({ items: [itemOf('steelSword'), itemOf('potion')], gold: 30 });
   });
 
   it('keeps out what the player does not have', () => {
     open();
-    book.apply(0, { c: 'offer', items: [potion, potion, potion, itemCode(ITEMS.greatHelm), 99999], gold: 5000 });
+    book.apply(0, { c: 'offer', items: [potion, potion, potion, itemCode(itemOf('greatHelm')), 99999], gold: 5000 });
     const mine = book.viewFor(0)!.mine;
-    expect(mine.items).toEqual([ITEMS.potion, ITEMS.potion]); // only two potions in the pack
+    expect(mine.items).toEqual([itemOf('potion'), itemOf('potion')]); // only two potions in the pack
     expect(mine.gold).toBe(100);
   });
 
@@ -161,8 +161,8 @@ describe('settling', () => {
     book.apply(1, { c: 'ready', on: true });
 
     const [a, b] = [heroes.get(0)!, heroes.get(1)!];
-    expect(a.pack).toEqual([ITEMS.potion]);
-    expect(b.pack).toEqual([ITEMS.steelSword, ITEMS.potion]);
+    expect(a.pack).toEqual([itemOf('potion')]);
+    expect(b.pack).toEqual([itemOf('steelSword'), itemOf('potion')]);
     expect(a.gold).toBe(90); // 100 - 30 + 20
     expect(b.gold).toBe(60); // 50 + 30 - 20
     expect(book.viewFor(0)).toBeNull();
@@ -177,7 +177,7 @@ describe('settling', () => {
     book.apply(0, { c: 'ready', on: true });
     book.apply(0, { c: 'ready', on: false });
     book.apply(1, { c: 'ready', on: true });
-    expect(heroes.get(0)!.pack).toContain(ITEMS.steelSword);
+    expect(heroes.get(0)!.pack).toContain(itemOf('steelSword'));
     expect(book.viewFor(0)).not.toBeNull();
   });
 
@@ -197,11 +197,11 @@ describe('settling', () => {
   it('changes nothing when the other pack has no room', () => {
     open();
     const b = heroes.get(1)!;
-    while (b.pack.length < BASE_PACK) b.pack.push(ITEMS.potion);
+    while (b.pack.length < BASE_PACK) b.pack.push(itemOf('potion'));
     book.apply(0, { c: 'offer', items: [sword], gold: 0 });
     book.apply(0, { c: 'ready', on: true });
     book.apply(1, { c: 'ready', on: true });
-    expect(heroes.get(0)!.pack).toContain(ITEMS.steelSword);
+    expect(heroes.get(0)!.pack).toContain(itemOf('steelSword'));
     expect(b.pack).toHaveLength(BASE_PACK);
     expect(book.noteFor(0)?.text).toContain('too full');
   });
@@ -209,13 +209,13 @@ describe('settling', () => {
   it('lets a full pack swap one for one', () => {
     open();
     const b = heroes.get(1)!;
-    while (b.pack.length < BASE_PACK) b.pack.push(ITEMS.potion);
+    while (b.pack.length < BASE_PACK) b.pack.push(itemOf('potion'));
     book.apply(0, { c: 'offer', items: [sword], gold: 0 });
     book.apply(1, { c: 'offer', items: [potion], gold: 0 });
     book.apply(0, { c: 'ready', on: true });
     book.apply(1, { c: 'ready', on: true });
     expect(b.pack).toHaveLength(BASE_PACK);
-    expect(b.pack).toContain(ITEMS.steelSword);
+    expect(b.pack).toContain(itemOf('steelSword'));
   });
 
   it('can be a gift: one side offers nothing', () => {
@@ -272,8 +272,8 @@ describe('ending', () => {
 describe('canGive', () => {
   it('needs every listed item and enough gold', () => {
     const hero = heroes.get(0)!;
-    expect(canGive(hero, { items: [ITEMS.potion, ITEMS.potion], gold: 100 })).toBe(true);
-    expect(canGive(hero, { items: [ITEMS.potion, ITEMS.potion, ITEMS.potion], gold: 0 })).toBe(false);
+    expect(canGive(hero, { items: [itemOf('potion'), itemOf('potion')], gold: 100 })).toBe(true);
+    expect(canGive(hero, { items: [itemOf('potion'), itemOf('potion'), itemOf('potion')], gold: 0 })).toBe(false);
     expect(canGive(hero, { items: [], gold: 101 })).toBe(false);
   });
 });

@@ -33,6 +33,7 @@
 import { CONTENT_VERSION, type ContentFile } from './schema';
 import type { PortBinding } from './ports';
 import { checkCapabilities, type CapabilitySpec } from '../systems/capabilities';
+import type { StartGear } from '../systems/items';
 
 /** A pack file, as written. Everything is optional: a pack can be only mobs, only a region, only a story. */
 export interface Pack {
@@ -43,6 +44,12 @@ export interface Pack {
   regions?: Record<string, RegionDef>;
   pairings?: Record<string, PairingDef>;
   arcs?: Record<string, ArcDef>;
+  /** Goods, as in items.json: items (in code order, pack after pack), shops and chest loots. */
+  items?: Record<string, unknown>;
+  shops?: Record<string, { keeper?: string } & Record<string, unknown>>;
+  loots?: Record<string, unknown>;
+  /** What a hero starts with (items.json `start`); one pack says it, an arc may override it. */
+  start?: StartGear;
 }
 
 /** An entity as in entities.json, plus what the assembler reads. */
@@ -128,6 +135,8 @@ export interface ArcDef {
   keepers?: string[];
   /** The engine's features this story switches off or on (systems/capabilities.ts), e.g. `{ "map": false }` for a tale told without a map. */
   capabilities?: CapabilitySpec;
+  /** The gear a hero starts this story in (default the packs' `start`): a wizard's tale may start with a wand. */
+  start?: StartGear;
   chapters: unknown[];
   quests: unknown[];
   epilogue?: string[];
@@ -190,7 +199,7 @@ function shuffled<T>(rand: () => number, list: readonly T[]): T[] {
   return out;
 }
 
-const SECTIONS = ['entities', 'keepers', 'regions', 'pairings', 'arcs'] as const;
+const SECTIONS = ['entities', 'keepers', 'regions', 'pairings', 'arcs', 'items', 'shops', 'loots'] as const;
 
 /**
  * Every pack's sections merged into one catalog. An id is the same thing in every pack, so two packs defining one id
@@ -204,6 +213,10 @@ export function mergePacks(packs: readonly Pack[]) {
     regions: {} as Record<string, RegionDef>,
     pairings: {} as Record<string, PairingDef>,
     arcs: {} as Record<string, ArcDef>,
+    items: {} as Record<string, unknown>,
+    shops: {} as Record<string, { keeper?: string } & Record<string, unknown>>,
+    loots: {} as Record<string, unknown>,
+    start: undefined as StartGear | undefined,
     /** Region -> region -> the ids of the pairings between them (both ways round, sorted). */
     pairs: new Map<string, Map<string, string[]>>(),
     clashes: [] as string[],
@@ -211,6 +224,11 @@ export function mergePacks(packs: readonly Pack[]) {
   const from: Record<string, string> = {};
   for (const p of packs) {
     if (p.version !== CONTENT_VERSION) throw new AssemblyError(`pack "${p.id}" has version ${p.version}`);
+    if (p.start) {
+      if (from.start !== undefined) all.clashes.push(`start: set by both "${from.start}" and "${p.id}"`);
+      from.start = p.id;
+      all.start = p.start;
+    }
     for (const section of SECTIONS)
       for (const [id, def] of Object.entries(p[section] ?? {})) {
         const key = `${section}.${id}`;
@@ -619,7 +637,7 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
   }
 
   // Entities: the mobs picked, the keeper, and whoever an encounter names.
-  const used = new Set<string>([keeper.npc]);
+  const used = new Set<string>([keeper.npc, ...shopKeepers(cat)]);
   for (const id of regions) {
     for (const mob of Object.values(foes[id]!)) used.add(mob);
     for (const e of cat.regions[id]!.encounters ?? []) if ('entity' in e) used.add(e.entity);
@@ -721,6 +739,7 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
     entities: { version: CONTENT_VERSION, entities },
     biomes: { version: CONTENT_VERSION, biomes },
     scenarios: { version: CONTENT_VERSION, start: story[0], capabilities: arc.capabilities ?? {}, nodes },
+    items: goodsFile(cat, arc.start),
     quests: {
       version: CONTENT_VERSION,
       giver: 'keeper',
@@ -734,9 +753,24 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
   return { seed, arc: arcId, keeper: keeperId, regions, foes, crossings, layout, files };
 }
 
+/** The npcs who keep the packs' shops (every assembled campaign has every shop, so they are always in it). */
+const shopKeepers = (cat: Catalog): string[] => Object.values(cat.shops).flatMap((s) => s.keeper ?? []);
+
+/** items.json of an assembled campaign: every pack's goods (schema.ts `parseItems` checks them like a campaign's). */
+const goodsFile = (cat: Catalog, start?: StartGear) => ({
+  version: CONTENT_VERSION,
+  start: start ?? cat.start ?? {},
+  items: cat.items,
+  shops: cat.shops,
+  loots: cat.loots,
+});
+
 /** What is wrong with a set of packs, one problem per entry (empty when they can be assembled from). */
 export function checkPacks(cat: Catalog): string[] {
   const out: string[] = [...cat.clashes];
+  if (!cat.start) out.push('start: no pack says what a hero starts with');
+  for (const [id, shop] of Object.entries(cat.shops))
+    if (cat.entities[shop.keeper ?? '']?.type !== 'npc') out.push(`shops.${id}.keeper: "${shop.keeper}" is not an npc`);
   // Each region draws its own map, and a site kind belongs to one region: both become ids in one campaign's files.
   const owner = new Map<string, string>();
   for (const [id, r] of Object.entries(cat.regions)) {
@@ -863,5 +897,6 @@ export function catalogCampaign(packs: readonly Pack[]): Record<ContentFile, unk
       quests: [],
       epilogue: [],
     },
+    items: goodsFile(cat),
   };
 }

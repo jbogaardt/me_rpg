@@ -22,7 +22,7 @@ export function lecternPages(): string[] {
     'Tap the arrows in order (W A S D, or the D-pad) with a wand or tome in hand, and its spell goes off for MP.',
   ];
   for (const item of Object.values(ITEMS)) {
-    if (!('focus' in item)) continue;
+    if (!item.focus) continue;
     const combos = item.focus.combos.map((c) => `${arrows(c.keys)} ${SPELLS[c.spell].name} (${c.cost} MP)`);
     pages.push(`${item.name}: ${combos.join('   ')}`);
   }

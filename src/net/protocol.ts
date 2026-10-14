@@ -19,8 +19,8 @@ import { cropFromCode, MAX_CROPS } from '../systems/crops';
 import type { PondState } from '../systems/needs';
 import { NEED_MAX } from '../systems/needs';
 import { questFromWire } from '../systems/quests';
-import { loadoutFromCode, MAX_HERO_COMBOS, MAX_SKILL_MASK } from '../systems/skills';
-import { GROUND_LIFETIME, ITEM_COUNT, MAX_GROUND, type InvOpWire } from '../systems/inventory';
+import { loadoutFromCode, MAX_HERO_COMBOS, MAX_LOADOUT_CODE, MAX_SKILL_MASK } from '../systems/skills';
+import { GROUND_LIFETIME, itemCount, MAX_GROUND, type InvOpWire } from '../systems/inventory';
 import type { Note, SideWire, TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
@@ -469,7 +469,7 @@ function parsePlayer(raw: unknown): PlayerSnap | null {
 function parseGround(raw: unknown): GroundSnap | null {
   if (!numbers(raw, 5)) return null;
   const [id, x, y, code, left] = raw as GroundSnap;
-  const ok = isCount(id) && isCoord(x) && isCoord(y) && isIndex(code, ITEM_COUNT + 1) && code > 0;
+  const ok = isCount(id) && isCoord(x) && isCoord(y) && isIndex(code, itemCount() + 1) && code > 0;
   return ok && left >= 0 && left <= GROUND_LIFETIME ? [id, x, y, code, left] : null;
 }
 
@@ -488,7 +488,7 @@ function parseMob(raw: unknown): MobSnap | null {
   return ok ? [index, x, y, dir, state, hp, timer, moving] : null;
 }
 
-const isCode = (v: unknown): v is number => isCount(v) && v <= ITEM_COUNT;
+const isCode = (v: unknown): v is number => isCount(v) && v <= itemCount();
 const codes = (v: unknown, length: number): v is number[] => numbers(v, length) && v.every(isCode);
 
 /** Parse and validate a raw channel message. Returns null for anything malformed. */
@@ -643,7 +643,8 @@ export function parseMessage(raw: unknown): Message | null {
     case 'do':
       return isCount(m.n) &&
         TRADE_OPS.includes(m.op as TradeOp) &&
-        isCode(m.item) &&
+        isCount(m.item) &&
+        m.item <= Math.max(itemCount(), MAX_LOADOUT_CODE) && // an item code, or a loadout code (the `loadout` op)
         typeof m.shop === 'string' &&
         m.shop.length <= MAX_SHOP_ID
         ? { k: 'do', n: m.n, op: m.op as TradeOp, item: m.item, shop: m.shop }

@@ -1,5 +1,5 @@
 // The story quests (Pixi-free). A warden in the town hands out one task at a time, in a chain that grows harder and tells
-// the first part of the game's story; the easy ones pay gold and XP, the hard ones also give rare gear (systems/items.ts,
+// the first part of the game's story; the easy ones pay gold and XP, the hard ones also give rare gear (the campaign's items.json,
 // `rare`) that no shop sells. Each hero keeps a `QuestLog` (combat.ts): how many quests are done, whether the current one
 // has been given, and its progress. The rules here either succeed completely or change nothing.
 //
@@ -14,7 +14,7 @@
 import { MOB_KINDS, gainXp, type Hero, type MobKind, type QuestLog } from './combat';
 import { collect } from './chests';
 import { packFree, takeFromPack } from './inventory';
-import { ITEMS, type ItemId } from './items';
+import { itemOf, type ItemId } from './items';
 
 /** Someone who gives quests, standing in a zone (`z.giver(id, col, row)`, MapData.givers). */
 export interface Giver {
@@ -159,7 +159,7 @@ export function progressOf(hero: Hero): number {
     case 'gather':
       return Math.min(o.count, bits(hero.quests.progress));
     case 'bring':
-      return Math.min(o.count, hero.pack.filter((i) => i === ITEMS[o.item]).length);
+      return Math.min(o.count, hero.pack.filter((i) => i === itemOf(o.item)).length);
   }
 }
 
@@ -181,7 +181,7 @@ export const progressText = (hero: Hero): string => {
 
 /** The reward as a sentence: "30 gold, 30 XP and the Wayfarer's Charm". */
 export function rewardText(r: Reward): string {
-  const parts = [`${r.gold} gold`, `${r.xp} XP`, ...(r.items ?? []).map((id) => ITEMS[id].name)];
+  const parts = [`${r.gold} gold`, `${r.xp} XP`, ...(r.items ?? []).map((id) => itemOf(id).name)];
   return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : (parts[0] ?? '');
 }
 
@@ -297,12 +297,12 @@ function pay(hero: Hero, q: Quest): { gear: boolean; levels: number } | null {
   const { reward, objective } = q;
   const freed = objective.t === 'bring' ? objective.count : 0;
   if (packFree(hero) + freed < (reward.items?.length ?? 0)) return null;
-  if (objective.t === 'bring') for (let i = 0; i < objective.count; i++) takeFromPack(hero, ITEMS[objective.item]);
+  if (objective.t === 'bring') for (let i = 0; i < objective.count; i++) takeFromPack(hero, itemOf(objective.item));
   hero.gold += reward.gold;
   let gear = false;
   for (const id of reward.items ?? []) {
     // Worn if it beats what is there, otherwise into the pack (there is room: it was checked above).
-    gear ||= collect(hero, { item: ITEMS[id] }).gear !== undefined;
+    gear ||= collect(hero, { item: itemOf(id) }).gear !== undefined;
   }
   return { gear, levels: gainXp(hero.stats, reward.xp) };
 }

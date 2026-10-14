@@ -15,7 +15,7 @@ import {
   type SettingDef,
 } from './capabilities';
 import { newHero } from './combat';
-import { ITEMS } from './items';
+import { itemOf } from './items';
 import { lecternPages } from './lectern';
 import { SHOPS, stockOf } from './shops';
 import { heroCombos, NO_TRAINING, trainerTalk } from './skills';
@@ -42,7 +42,7 @@ describe('capabilities', () => {
 describe('what each switch takes away', () => {
   const wizard = () => {
     const hero = newHero();
-    hero.weapon = ITEMS.apprenticeWand;
+    hero.weapon = itemOf('apprenticeWand');
     hero.skills = ['arcaneEdge'];
     hero.loadout = ['arcaneEdge'];
     return hero;

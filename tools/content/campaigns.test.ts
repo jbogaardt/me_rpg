@@ -1,4 +1,4 @@
-// Every campaign's content is held to the rules campaign 1's enemies and people are (systems/combat.test.ts and
+// Every campaign's content is held to the rules campaign 1's enemies, people and items are (systems/combat.test.ts and
 // tools/sprites/parts.test.ts check campaign 1, which the other tests run on): playable, readable enemies, real art.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,7 +15,7 @@ const HERO_SPEED = 120;
 // The packs (every region and mob of them at once) are held to the same rules: any seed can put any of them in a game.
 describe.each([...campaigns(), PACKS])('%s', (campaign) => {
   const content = loadContentFromDisk(campaign);
-  const { entities, quests, scenarios } = content.content;
+  const { entities, quests, scenarios, items } = content.content;
   const mobs = Object.entries(entities).filter(([, e]) => e.type === 'mob');
 
   it('has enemies, people and a story', () => {
@@ -45,5 +45,27 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
       expect(kind.shot.speed).toBeLessThan(HERO_SPEED * 1.6);
       expect(windup).toBeGreaterThanOrEqual(0.5);
     }
+  });
+
+  it.each(Object.entries(items.items))(
+    'item %s is priced and drawn with real parts, each in its own slot',
+    (_id, item) => {
+      expect(item.value ?? 0).toBeGreaterThan(0);
+      for (const [slot, part] of Object.entries(item.look ?? {})) {
+        expect(manifest[part], `${slot}: ${part}`).toBeDefined();
+        expect(part.startsWith(`${slot}.`), `${part} is not a ${slot} part`).toBe(true);
+      }
+    },
+  );
+
+  it('gives every wand and tome its own spells and strings (no spell or combo on two weapons)', () => {
+    const combos = Object.values(items.items).flatMap((i) => i.focus?.combos ?? []);
+    expect(new Set(combos.map((c) => c.spell)).size).toBe(combos.length);
+    expect(new Set(combos.map((c) => c.keys)).size).toBe(combos.length);
+  });
+
+  it('never sells one item in two shops', () => {
+    const sold = Object.values(items.shops).flatMap((s) => s.stock);
+    expect(new Set(sold).size).toBe(sold.length);
   });
 });

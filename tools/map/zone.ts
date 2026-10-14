@@ -772,7 +772,7 @@ export class Zone {
     return this;
   }
 
-  /** A treasure chest (solid, so its cell is blocked). `kind` is a CHEST_KINDS name, `loot` a key of CHEST_LOOTS (src/systems/chests.ts). */
+  /** A treasure chest (solid, so its cell is blocked). `kind` is a CHEST_KINDS name, `loot` a key of the campaign's items.json `loots`. */
   chest(kind: string, loot: string, col: number, row: number) {
     this.chestList.push({ kind, loot, col, row });
     this.forced.set(row * this.width + col, true);
@@ -781,7 +781,7 @@ export class Zone {
   }
 
   /**
-   * A shopkeeper (`shop` is a key of SHOPS, src/systems/shops.ts) standing at (col, row), the cell below the door of its
+   * A shopkeeper (`shop` is a shop of the campaign's items.json) standing at (col, row), the cell below the door of its
    * building (`z.prop('smithy', ...)`). Characters block each other, so leave the cell open.
    */
   shop(shop: string, col: number, row: number) {

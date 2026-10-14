@@ -8,6 +8,9 @@ import { setNpcLooks } from '../systems/looks';
 import { setCapabilities } from '../systems/capabilities';
 import { setPlaces } from '../systems/places';
 import { setQuestContent } from '../systems/quests';
+import { itemOf, setItems } from '../systems/items';
+import { setShops } from '../systems/shops';
+import { setLoots, type ChestLoot } from '../systems/chests';
 import type { Outfit } from '../sprites/doll';
 import type { MapData } from '../map/types';
 import { populate, type Population } from './populate';
@@ -63,7 +66,7 @@ export class ContentManager {
   /**
    * Hand the content to the rule modules that look it up by id: `MOB_KINDS` (systems/combat.ts), `NPC_LOOKS`
    * (systems/looks.ts), the places (`ZONE_NAMES`, `ZONE_LINKS`, `ZONE_TINTS`, systems/places.ts) and the quests
-   * (`QUESTS`, `GIVERS`, `SITE_KINDS`..., systems/quests.ts) and the capabilities (systems/capabilities.ts). Call once after loading, before anything spawns or
+   * (`QUESTS`, `GIVERS`, `SITE_KINDS`..., systems/quests.ts), the goods (`ITEMS`, `SHOPS`, `CHEST_LOOTS`) and the capabilities (systems/capabilities.ts). Call once after loading, before anything spawns or
    * preloads art.
    */
   install() {
@@ -80,6 +83,13 @@ export class ContentManager {
       links[b.map] = b.links;
     }
     setPlaces(names, links, tints);
+    const goods = this.content.items;
+    setItems(goods.items, goods.start);
+    setShops(goods.shops);
+    const loots: Record<string, ChestLoot> = {};
+    for (const [id, loot] of Object.entries(goods.loots))
+      loots[id] = 'item' in loot ? { item: itemOf(loot.item) } : loot;
+    setLoots(loots);
     setQuestContent(this.content.quests);
     const caps = capabilityTable(this.content);
     setCapabilities(caps.campaign, caps.zones);

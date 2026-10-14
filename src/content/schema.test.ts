@@ -56,6 +56,27 @@ const files = (): Record<ContentFile, unknown> => ({
     ],
     epilogue: ['The end.'],
   },
+  items: {
+    version: 1,
+    start: { weapon: 'stick' },
+    items: {
+      stick: { name: 'Stick', value: 1, slot: 'weapon', attack: 1, look: { weapon: 'weapon.arming_iron' } },
+      potion: { name: 'Potion', value: 15, use: { hp: 20 } },
+      bread: { name: 'Bread', value: 5, use: { hp: 0, food: 30 } },
+      potato: { name: 'Potato', value: 3, use: { hp: 0, food: 22 } },
+    },
+    shops: {
+      stall: {
+        name: 'Stall',
+        tag: 'Grocer',
+        keeper: 'elder',
+        greeting: ['Fresh.'],
+        stock: ['potion'],
+        buys: ['supply'],
+      },
+    },
+    loots: { coins: { gold: 30 }, stick: { item: 'stick' } },
+  },
   scenarios: {
     version: 1,
     start: 'woods',
@@ -207,6 +228,93 @@ describe('port bindings', () => {
     expect(p).toMatch(/biomes\.forest\.ports\.down: cave's port "left" does not lead back to it/);
     expect(p).toMatch(/biomes\.forest\.ports\.side: "moon" is not the map of any biome/);
     expect(p).toMatch(/biomes\.cave\.ports\.up: greenwood's port "down" does not lead back to it/);
+  });
+});
+
+describe('items.json', () => {
+  type Goods = {
+    start: Record<string, string>;
+    items: Record<string, Record<string, unknown>>;
+    shops: Record<string, Record<string, unknown>>;
+    loots: Record<string, unknown>;
+  };
+  const goods = (f: Record<ContentFile, unknown>) => f.items as Goods;
+
+  it('reads items, shops and loots, in the order the codes follow', () => {
+    const c = parseContent(files()).items;
+    expect(Object.keys(c.items)).toEqual(['stick', 'potion', 'bread', 'potato']);
+    expect(c.items.stick).toEqual({
+      name: 'Stick',
+      value: 1,
+      slot: 'weapon',
+      attack: 1,
+      look: { weapon: 'weapon.arming_iron' },
+    });
+    expect(c.shops.stall).toMatchObject({ id: 'stall', keeper: 'elder', stock: ['potion'], buys: ['supply'] });
+    expect(c.loots).toEqual({ coins: { gold: 30 }, stick: { item: 'stick' } });
+    expect(c.start).toEqual({ weapon: 'stick' });
+  });
+
+  it('refuses an item that is not one', () => {
+    const f = files();
+    const g = goods(f);
+    g.items.wand = {
+      name: 'Wand',
+      value: 9,
+      slot: 'head',
+      focus: { kind: 'staff', power: 1, cooldown: 0.5, combos: [{ keys: 'uuld', spell: 'boom', cost: 0, power: 1 }] },
+    };
+    g.items.rock = { name: 'Rock', value: 1, colour: 'grey' };
+    g.items.both = { name: 'Both', value: 1, slot: 'cape', use: { hp: 1 }, look: { cape: 'cape.maroon' } };
+    g.items.inner = {
+      name: 'Inner',
+      value: 1,
+      slot: 'weapon',
+      focus: {
+        kind: 'wand',
+        power: 1,
+        cooldown: 0.5,
+        combos: [
+          { keys: 'urul', spell: 'bolt', cost: 5, power: 1 },
+          { keys: 'urulr', spell: 'fan', cost: 5, power: 1 },
+        ],
+      },
+    };
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/items\.wand: a bow, wand or tome is a weapon/);
+    expect(p).toMatch(/items\.wand\.focus\.kind: must be "wand" or "tome"/);
+    expect(p).toMatch(/items\.wand\.focus\.combos\[0\]\.keys: repeats a direction/);
+    expect(p).toMatch(/items\.wand\.focus\.combos\[0\]\.spell: must be a spell/);
+    expect(p).toMatch(/items\.wand\.focus\.combos\[0\]\.cost: must be a number of at least 1/);
+    expect(p).toMatch(/items\.rock\.colour: is not a field of an item/);
+    expect(p).toMatch(/items\.rock: needs a gear `slot` or a `use`/);
+    expect(p).toMatch(/items\.both: is worn \(`slot`\) or used \(`use`\), not both/);
+    expect(p).toMatch(/items\.inner\.focus\.combos\[0\]\.keys: is inside "urulr"/);
+  });
+
+  it('checks every item named, the start, the shops and the loots', () => {
+    const f = files();
+    const g = goods(f);
+    g.start = { weapon: 'potion', cape: 'cloak' };
+    g.shops.stall = { ...g.shops.stall, keeper: 'goblin', stock: ['potion', 'crown'], buys: ['supply', 'hats'] };
+    g.loots.crate = { item: 'crown' };
+    g.loots.empty = {};
+    (f.quests as { quests: { reward: { items: string[] } }[] }).quests[0]!.reward.items = ['crown'];
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/items\.json\.start\.weapon: "potion" is not worn there/);
+    expect(p).toMatch(/items\.json\.start\.cape: "cloak" is not an item/);
+    expect(p).toMatch(/shops\.stall\.keeper: "goblin" is not an npc/);
+    expect(p).toMatch(/shops\.stall\.stock\[1\]: "crown" is not an item/);
+    expect(p).toMatch(/shops\.stall\.buys\[1\]: must be a gear slot or blade, bow, caster, supply/);
+    expect(p).toMatch(/loots\.crate\.item: "crown" is not an item/);
+    expect(p).toMatch(/loots\.empty: needs "item", "gold", "xp" or "hp"/);
+    expect(p).toMatch(/quests\.cull\.reward\.items\[0\]: "crown" is not an item in items\.json/);
+  });
+
+  it('keeps rare items out of the shops', () => {
+    const f = files();
+    goods(f).items.potion!.rare = true;
+    expect(problems(f).join('\n')).toMatch(/shops\.stall\.stock\[0\]: "potion" is rare/);
   });
 });
 

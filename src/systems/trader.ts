@@ -4,7 +4,8 @@
 // are written against this one interface and do not know which they have.
 
 import type { Hero, Item } from './combat';
-import { ITEM_IDS, itemCode, useFromPack, wearFromPack } from './inventory';
+import { itemCode, useFromPack, wearFromPack } from './inventory';
+import { idOfItem } from './items';
 import { buy, sell, type Shop } from './shops';
 
 /** What happened, in words for the player. `gear` is set when what the hero wears changed (the sprite must be redrawn). */
@@ -29,7 +30,7 @@ export interface Trader {
 export function localTrader(hero: Hero): Trader {
   return {
     buy(shop, item) {
-      const id = ITEM_IDS[itemCode(item) - 1];
+      const id = idOfItem(item);
       if (!id) return { ok: false, text: 'That is not for sale' };
       const trade = buy(hero, shop, id);
       return { ok: trade.ok, text: trade.text, gear: trade.ok && trade.worn !== undefined };

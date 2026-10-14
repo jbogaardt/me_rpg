@@ -8,7 +8,7 @@ describe('lectern', () => {
     for (const item of Object.values(ITEMS)) {
       if (!('focus' in item)) continue;
       expect(text).toContain(item.name);
-      for (const c of item.focus.combos) expect(text).toContain(`${c.cost} MP`);
+      for (const c of item.focus!.combos) expect(text).toContain(`${c.cost} MP`);
     }
   });
 
