@@ -147,6 +147,7 @@ export class Arena {
       ...(this.npc ? [this.npc] : []),
       ...this.keepers.map((k) => k.body),
       ...this.givers.map((g) => g.body),
+      ...this.zone.folk.map((f) => f.body),
       ...this.mobs.filter((m) => m.alive).map((m) => m.body),
     ];
   }

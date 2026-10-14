@@ -1,6 +1,7 @@
 dist/
 node_modules/
-public/
+public/*
+!public/content/
 art/
 maps/out/
 .claude/

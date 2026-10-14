@@ -46,7 +46,7 @@ export default defineBiome({
     z.prop('bush', 258, 119);
     z.chest('oak', 'purse', 253, 119);
     z.chest('oak', 'potion', 259, 121);
-    z.mob('skeleton', 256, 120);
+    z.keepFree(256, 120);
 
     // --- A woodland pond --------------------------------------------------------------------------------------
     const water = pond(z, area(25, 14.2, 1.6, 1), { shore: 'mud' });
@@ -56,7 +56,7 @@ export default defineBiome({
 
     // --- The end of the tongue: a hidden clearing --------------------------------------------------------------
     z.chest('iron', 'relic', ...near(21.6, 20));
-    z.mob('wolfkin', ...near(22.4, 19));
+    z.keepFree(...near(22.4, 19));
 
     for (const [x, y, w, h] of [
       [21.4, 11.6, 1.4, 1.2],
@@ -69,19 +69,19 @@ export default defineBiome({
     ] as const)
       z.grove(blob(area(x, y, w, h)), { trees: TREES });
 
-    for (const [kind, x, y] of [
-      ['wolfkin', 21.6, 14],
-      ['wolfkin', 26.6, 14.8],
-      ['skeleton', 23.8, 12],
-      ['zombie', 26.4, 12.8],
-      ['shade', 21.8, 17.2],
-      ['skeleton', 24.2, 15.4],
-      ['shade', 23.4, 18],
-      ['wolfkin', 25.2, 12.4],
-      ['goblin', 22.4, 16.2],
-      ['skeleton', 27.2, 14.2],
+    for (const [x, y] of [
+      [21.6, 14],
+      [26.6, 14.8],
+      [23.8, 12],
+      [26.4, 12.8],
+      [21.8, 17.2],
+      [24.2, 15.4],
+      [23.4, 18],
+      [25.2, 12.4],
+      [22.4, 16.2],
+      [27.2, 14.2],
     ] as const)
-      z.mob(kind, ...near(x, y));
+      z.keepFree(...near(x, y));
 
     z.scatter([...TREES], { count: 40, where: open, seed: 31 });
     z.scatter(['bush'], { count: 16, where: open, seed: 32 });
@@ -92,12 +92,5 @@ export default defineBiome({
     z.place('The Wooded Hill', 256, 120);
     z.place('Woodland Pond', 258, 143);
     z.place('The Hidden Clearing', 216, 200);
-
-    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['wolfkin', 'skeleton', 'goblin', 'shade', 'zombie'], {
-      count: 7,
-      seed: 102,
-      avoid: [[...near(23.4, 14), 16]],
-    });
   },
 });

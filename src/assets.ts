@@ -6,6 +6,8 @@ import { type PetSheet } from './systems/pets';
 import { MOB_KINDS } from './systems/combat';
 import { outfitParts, type Outfit, type PartManifest } from './sprites/doll';
 import { Wardrobe } from './sprites/Wardrobe';
+import type { ContentSource } from './content/ContentManager';
+import type { ContentFile } from './content/schema';
 
 // Game assets go through the Pixi `Assets` cache: the character part manifest at boot (the part layers themselves are
 // plain images loaded by sprites/Wardrobe.ts), and one bundle per zone (its map JSON, then the tilesets that JSON names)
@@ -23,6 +25,15 @@ const publicUrl = (path: string) => {
 };
 const tilesetUrl = (file: string) => publicUrl(`tilesets/${file}`);
 const zoneUrl = (zone: string) => publicUrl(`maps/${zone}.json`);
+
+/** The game content (public/content/*.json) served as static files: the source ContentManager reads at boot. */
+export const staticContent: ContentSource = {
+  fetch(file: ContentFile) {
+    const alias = `content:${file}`;
+    register(alias, publicUrl(`content/${file}.json`), 'json');
+    return Assets.load(alias);
+  },
+};
 
 /** A loaded bundle entry, or a clear error instead of an undefined texture later. */
 function pick(loaded: Record<string, Texture>, key: string): Texture {
@@ -101,11 +112,16 @@ const tilesetAlias = (sheet: string) => `tileset:${sheet}`;
 
 /**
  * Load a zone: its map JSON (validated), then the tilesets it names (shared with other zones: each is loaded once and
- * counted, see `unloadZone`). Progress covers the tilesets.
+ * counted, see `unloadZone`). Progress covers the tilesets. `tilesets` (the biome's list in the content, which the map
+ * build keeps equal to the map's) start loading at once, alongside the map JSON, instead of after it.
  */
-export async function loadZone(name: string, onProgress?: Progress): Promise<Zone> {
+export async function loadZone(name: string, onProgress?: Progress, tilesets?: string[]): Promise<Zone> {
   const dataAlias = `zone:${name}:data`;
   register(dataAlias, zoneUrl(name), 'json');
+  for (const sheet of tilesets ?? []) {
+    register(tilesetAlias(sheet), tilesetUrl(sheet));
+    void Assets.load<Texture>(tilesetAlias(sheet)).catch(() => {}); // a head start only: the real load below reports failures
+  }
   const data = parseMap(await Assets.load(dataAlias));
   for (const sheet of data.sheets) {
     register(tilesetAlias(sheet), tilesetUrl(sheet));

@@ -66,7 +66,7 @@ export default defineBiome({
     z.prop('menhir', ...at(26.4, 9.3));
     z.prop('rockB', ...at(25.6, 9.8));
     z.chest('oak', 'purse', ...near(26, 9.4));
-    z.mob('troll', ...near(26, 9.7));
+    z.keepFree(...near(26, 9.7));
 
     for (const [x, y, w, h] of [
       [20.4, 0.6, 1.2, 1.6],
@@ -80,19 +80,19 @@ export default defineBiome({
       z.grove(blob(area(x, y, w, h)), { trees: [...KIT.trees], fillers: [...KIT.fillers] });
     z.chest('wood', 'potion', ...near(20.6, 3.2));
 
-    for (const [kind, x, y] of [
-      ['orc', 21.6, 1.6],
-      ['orc', 25.4, 4.4],
-      ['orc', 27, 9.4],
-      ['warg', 24, 6.4],
-      ['warg', 23.2, 9.6],
-      ['tuskGuard', 21.6, 4.2],
-      ['tuskGuard', 20.6, 2.4],
-      ['troll', 26.8, 6.4],
-      ['orc', 23.6, 2],
-      ['warg', 25.6, 8.2],
+    for (const [x, y] of [
+      [21.6, 1.6],
+      [25.4, 4.4],
+      [27, 9.4],
+      [24, 6.4],
+      [23.2, 9.6],
+      [21.6, 4.2],
+      [20.6, 2.4],
+      [26.8, 6.4],
+      [23.6, 2],
+      [25.6, 8.2],
     ] as const)
-      z.mob(kind, ...near(x, y));
+      z.keepFree(...near(x, y));
 
     z.scatter([...JUNGLE_TREES], { count: 45, where: open, seed: 81 });
     z.scatter(['jungleBush'], { count: 20, where: open, seed: 82 });
@@ -101,8 +101,5 @@ export default defineBiome({
     // --- Names for the map: each shows once the player has explored round it ---------------------------------------
     z.place('The Lagoon', 257, 64);
     z.place('Overgrown Ruins', 260, 94);
-
-    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['warg', 'orc', 'warg', 'tuskGuard', 'orc'], { count: 9, seed: 106, avoid: [[...near(24, 7.2), 16]] });
   },
 });

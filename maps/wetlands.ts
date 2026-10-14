@@ -55,7 +55,7 @@ export default defineBiome({
 
     // --- The east strip and its hidden chest ------------------------------------------------------------------
     z.chest('oak', 'purse', ...near(32.8, 9.2));
-    z.mob('warg', ...near(32.8, 8.2));
+    z.keepFree(...near(32.8, 8.2));
     z.chest('wood', 'potion', ...near(28.6, 1.6));
 
     for (const [x, y, w, h] of [
@@ -66,18 +66,18 @@ export default defineBiome({
     ] as const)
       z.grove(blob(area(x, y, w, h)), { trees: [...KIT.trees], fillers: [...KIT.fillers] });
 
-    for (const [kind, x, y] of [
-      ['bogGhoul', 26, 2.2],
-      ['bogGhoul', 30.4, 2.6],
-      ['zombie', 32.6, 1.4],
-      ['warg', 30, 6.2],
-      ['hexer', 24.6, 2.6],
-      ['hexer', 28.6, 0.8],
-      ['hexer', 32.8, 7],
-      ['zombie', 27, 4.4],
-      ['warg', 33, 4.6],
+    for (const [x, y] of [
+      [26, 2.2],
+      [30.4, 2.6],
+      [32.6, 1.4],
+      [30, 6.2],
+      [24.6, 2.6],
+      [28.6, 0.8],
+      [32.8, 7],
+      [27, 4.4],
+      [33, 4.6],
     ] as const)
-      z.mob(kind, ...near(x, y));
+      z.keepFree(...near(x, y));
 
     z.scatter([...SWAMP_TREES], { count: 35, where: open, seed: 91 });
     z.scatter(['swampBush', 'bush'], { count: 16, where: open, seed: 92 });
@@ -86,8 +86,5 @@ export default defineBiome({
     // --- Names for the map: each shows once the player has explored round it ---------------------------------------
     z.place('Mirewater Pools', 290, 25);
     z.place('The Hidden Shore', 328, 92);
-
-    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['hexer', 'bogGhoul', 'warg', 'zombie', 'hexer'], { count: 8, seed: 107, avoid: [[...near(29, 3.2), 16]] });
   },
 });

@@ -75,7 +75,7 @@ export default defineBiome({
     z.chest('oak', 'elixir', 36, 153);
     z.chest('oak', 'purse', 32, 153);
     z.chest('oak', 'bandageKit', 37, 155);
-    z.mob('shade', 34, 154);
+    z.keepFree(34, 154);
 
     // --- Old ruins: cracked flags in the grass and what is left standing ----------------------------------------
     z.patch('stone', area(5, 11.8, 1.6, 1)); // old flags, with the tileset's own grassy edge
@@ -87,7 +87,7 @@ export default defineBiome({
     ] as const)
       z.prop('menhir', ...at(x, y));
     z.chest('wood', 'whetstone', ...near(5.9, 12.4));
-    z.mob('goblin', ...near(5.8, 12.2));
+    z.keepFree(...near(5.8, 12.2));
 
     // --- The old lake in the south-west, and a pond further down ----------------------------------------------
     const lake = pond(z, area(1.6, 17.6, 3, 1.8), { shore: 'sand' });
@@ -103,12 +103,12 @@ export default defineBiome({
     // --- A grassy hill in the far south-west ------------------------------------------------------------------
     z.plateau({ col: 40, row: 196, w: 8, h: 5 }, { stairs: [43] });
     z.chest('oak', 'relic', 45, 197);
-    z.mob('wolfkin', 42, 198);
+    z.keepFree(42, 198);
 
     // --- The northern glade, between the desert and the undead lands --------------------------------------------
     z.chest('oak', 'potion', ...near(8.2, 8.2));
-    z.mob('shade', ...near(7.6, 9));
-    z.mob('goblin', ...near(8.6, 9.6));
+    z.keepFree(...near(7.6, 9));
+    z.keepFree(...near(8.6, 9.6));
 
     // --- Groves, so the meadow is not one big field -----------------------------------------------------------
     for (const [x, y, w, h] of [
@@ -127,25 +127,25 @@ export default defineBiome({
     ] as const)
       z.grove(blob(area(x, y, w, h)), { trees: TREES });
 
-    // Level 1-2 fodder: goblins near the start, wolfkin and shades further out.
-    for (const [kind, x, y] of [
-      ['goblin', 12, 14.6],
-      ['goblin', 16, 12.4],
-      ['goblin', 6, 13.2],
-      ['goblin', 17, 15.6],
-      ['goblin', 3.6, 13.6],
-      ['goblin', 10, 12.4],
-      ['wolfkin', 19.6, 12.2],
-      ['wolfkin', 1.6, 19.6],
-      ['wolfkin', 7, 17.6],
-      ['wolfkin', 12.6, 16.2],
-      ['wolfkin', 4.4, 22],
-      ['shade', 10.6, 15.8],
-      ['shade', 4.4, 11.8],
-      ['shade', 7.6, 20.4],
-      ['shade', 19.4, 16],
+    // Spots kept free of props for the enemies the scenario places here (public/content/scenarios.json).
+    for (const [x, y] of [
+      [12, 14.6],
+      [16, 12.4],
+      [6, 13.2],
+      [17, 15.6],
+      [3.6, 13.6],
+      [10, 12.4],
+      [19.6, 12.2],
+      [1.6, 19.6],
+      [7, 17.6],
+      [12.6, 16.2],
+      [4.4, 22],
+      [10.6, 15.8],
+      [4.4, 11.8],
+      [7.6, 20.4],
+      [19.4, 16],
     ] as const)
-      z.mob(kind, ...near(x, y));
+      z.keepFree(...near(x, y));
 
     // --- Where the story quests send you (systems/quests.ts): glimmercaps in the groves, an echo stone at each of three
     // old places (the notes they play are read in the order you touch them). They only show while a quest wants them.
@@ -176,12 +176,5 @@ export default defineBiome({
     z.place('Mossback Hill', 44, 198);
     z.place('The Old Lake', 30, 185);
     z.place('The Northern Glade', 80, 86);
-
-    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['goblin', 'wolfkin', 'goblin', 'shade', 'goblin', 'wolfkin'], {
-      count: 14,
-      seed: 101,
-      avoid: [[...near(14, 15), 34]],
-    });
   },
 });

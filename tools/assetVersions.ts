@@ -12,7 +12,7 @@ import path from 'node:path';
 import type { Plugin } from 'vite';
 
 /** Folders under public/ whose files the game fetches by URL. */
-export const VERSIONED_DIRS = ['maps', 'tilesets', 'sprites/lpc', 'sprites/pets'];
+export const VERSIONED_DIRS = ['maps', 'tilesets', 'sprites/lpc', 'sprites/pets', 'content'];
 
 /** Short content hash of every file in these folders of `root`, keyed by path relative to `root` (`maps/x.json`). */
 export function assetVersions(root: string, dirs = VERSIONED_DIRS): Record<string, string> {

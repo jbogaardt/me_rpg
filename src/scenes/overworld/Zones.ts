@@ -13,6 +13,7 @@ import { GroundItem } from '../../entities/GroundItem';
 import { ZoneState } from '../ZoneState';
 import { TRAINER_ROOM } from '../../systems/skills';
 import type { Arena } from './Arena';
+import type { ContentManager } from '../../content/ContentManager';
 
 const PREFETCH_REACH = 14 * CELL; // a door this close starts loading the zone behind it, so stepping through is instant
 const PREFETCH_EVERY = 0.5; // seconds between looking for doors to prefetch
@@ -24,8 +25,11 @@ const SLIP_RATE = 12; // per second: how fast the hero's drawing catches up with
 const WEATHER_FADE = 1.6; // seconds the last zone's weather takes to give way to the new one's
 const ARRIVE_GRACE = 1.8; // seconds of silent immunity on arriving in a zone (the transition takes up to 1 s, and the world runs behind it), so nothing waiting at the door ambushes you
 
-/** Loads a zone by name (assets.ts `loadZone`). The scene asks for the zones behind doors before the player gets there. */
-export type ZoneLoader = (name: string) => Promise<Zone>;
+/**
+ * Loads a zone by name (assets.ts `loadZone`); `tilesets` (the biome's, from the content) start loading alongside the
+ * map. The scene asks for the zones behind doors before the player gets there.
+ */
+export type ZoneLoader = (name: string, onProgress?: (fraction: number) => void, tilesets?: string[]) => Promise<Zone>;
 /** Frees what `ZoneLoader` loaded (assets.ts `unloadZone`). */
 export type ZoneUnloader = (zone: Zone) => Promise<void>;
 
@@ -51,6 +55,11 @@ export class Zones {
   private shown = new Map<ZoneState, Link>();
   /** The zone the local player just walked out of, whose weather gives way to the new one's. */
   private weatherFade: { from: ZoneState; t: number } | null = null;
+  /**
+   * The scenario node each zone is showing, where it is not the biome's own (the node named after it): who stands in a
+   * zone comes from its node (`ContentManager.populate`), now and whenever it is loaded again.
+   */
+  private nodes = new Map<string, string>();
 
   constructor(
     private arena: Arena,
@@ -59,6 +68,7 @@ export class Zones {
     private unloadZone: ZoneUnloader,
     private ui: { shop: ShopCounter },
     renderer: Renderer,
+    private content: ContentManager,
   ) {
     this.transition = new ZoneTransition(renderer);
     this.root.addChild(this.stage, this.transition.view);
@@ -66,7 +76,9 @@ export class Zones {
 
   /** Build the running state of a loaded zone and keep it (with what it remembers from before it was unloaded). */
   add(zone: Zone): ZoneState {
-    const z = new ZoneState(zone, this.sprites);
+    const biome = this.content.biomeOfMap(zone.name)?.[1];
+    const population = this.content.populate(zone.name, zone.data, this.nodes.get(zone.name));
+    const z = new ZoneState(zone, this.sprites, population, biome ? biome.climate : undefined);
     z.mobWorld = this.makeMobWorld(z);
     this.arena.zones.set(zone.name, z);
     const memory = this.arena.memory.get(zone.name);
@@ -122,7 +134,7 @@ export class Zones {
   }
 
   /** The first zone: where the game starts. The local player is put in it. */
-  addHome(zone: Zone): ZoneState {
+  addHome(zone: Zone, spawn: CellPoint = zone.data.spawn): ZoneState {
     const { arena } = this;
     const home = this.add(zone);
     arena.home = home;
@@ -130,9 +142,42 @@ export class Zones {
     arena.local.zone = home.name;
     home.world.layer.addChild(arena.player);
     this.stage.addChild(home.world);
-    arena.player.position.set(...cellFeet(zone.data.spawn));
+    arena.player.position.set(...cellFeet(spawn));
     arena.syncHeroBodies();
     return home;
+  }
+
+  /** The scenario node a zone shows (the biome's own unless a scenario was loaded over it). */
+  nodeOf(zone: string): string | undefined {
+    return this.nodes.get(zone) ?? this.content.biomeOfMap(zone)?.[0];
+  }
+
+  /**
+   * Make `zone` show the scenario node `node`: who stands in it comes from that node from now on, and if it is loaded
+   * its mobs and folk are replaced at once (the old ones are destroyed).
+   */
+  assign(zone: string, node: string) {
+    if (node === this.content.biomeOfMap(zone)?.[0]) this.nodes.delete(zone);
+    else this.nodes.set(zone, node);
+    this.repopulate(zone);
+  }
+
+  /** Every zone back to its biome's own node (co-op needs every player to agree on who stands where). */
+  resetNodes() {
+    const changed = [...this.nodes.keys()];
+    this.nodes.clear();
+    for (const zone of changed) this.repopulate(zone);
+  }
+
+  /** Is any zone showing a node other than its biome's own? */
+  get customised(): boolean {
+    return this.nodes.size > 0;
+  }
+
+  private repopulate(zone: string) {
+    const z = this.arena.zones.get(zone);
+    if (!z) return;
+    z.populate(this.content.populate(zone, z.data, this.nodes.get(zone)));
   }
 
   /** Start loading a zone if it is not loaded or loading yet. Resolves when it is ready (and does nothing if it already is). */
@@ -140,7 +185,7 @@ export class Zones {
     if (this.arena.zones.has(name)) return Promise.resolve();
     let pending = this.loading.get(name);
     if (!pending) {
-      pending = this.loadZone(name)
+      pending = this.loadZone(name, undefined, this.content.biomeOfMap(name)?.[1].tilesets)
         .then((zone) => {
           if (!this.arena.zones.has(name)) this.add(zone);
         })

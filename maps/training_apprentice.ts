@@ -14,13 +14,5 @@ export default defineZone({
       [11, 6],
       [12, 11],
     ]);
-    z.mob('orc', 5, 4);
-    z.mob('orc', 11, 3);
-    z.mob('orc', 18, 4);
-    z.mob('frostbound', 8, 6);
-    z.mob('frostbound', 15, 6);
-    z.mob('skeleton', 3, 3);
-    z.mob('skeleton', 20, 3);
-    z.mob('troll', 12, 4);
   },
 });

@@ -34,7 +34,7 @@ export interface CellPoint {
   row: number;
 }
 
-/** An enemy spawn point; `kind` is a key of MOB_KINDS (src/systems/combat.ts). */
+/** An enemy to spawn; `kind` is a key of MOB_KINDS (src/systems/combat.ts). Placed by the content (content/populate.ts), not the map. */
 export interface MobSpawn extends CellPoint {
   kind: string;
 }
@@ -110,7 +110,6 @@ export interface MapData {
   ramps: number[]; // cell indices of stairs/slopes, which connect levels
   spawn: CellPoint;
   npc: CellPoint | null;
-  mobs: MobSpawn[];
   chests: ChestSpawn[]; // solid; opened with the action key
   crops: CropSpawn[]; // solid plots; picked with the action key when ripe
   shops: ShopSpawn[]; // shopkeepers: the action key opens their counter
@@ -183,7 +182,6 @@ function unpacked(json: unknown): MapData {
     ramps: d.ramps ?? [],
     spawn: d.spawn ?? { col: 1, row: 1 },
     npc: d.npc ?? null,
-    mobs: d.mobs ?? [],
     chests: d.chests ?? [],
     crops: d.crops ?? [],
     shops: d.shops ?? [],

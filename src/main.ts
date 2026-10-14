@@ -3,9 +3,11 @@ import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import './ui.css';
-import { initAssets, loadSprites, loadZone, unloadZone } from './assets';
+import { initAssets, loadSprites, loadZone, staticContent, unloadZone } from './assets';
+import { ContentManager } from './content/ContentManager';
 import { SceneManager } from './core/Scene';
 import { createTouchControls } from './core/touch';
+import { Choices } from './hud/Choices';
 import { Dialog } from './hud/Dialog';
 import { Hud } from './hud/Hud';
 import { Loading } from './hud/Loading';
@@ -16,8 +18,6 @@ import { Session } from './net/session';
 import { OverworldScene } from './scenes/OverworldScene';
 import { MOB_KINDS } from './systems/combat';
 import { ITEMS } from './systems/items';
-
-const START_ZONE = 'greenwood';
 
 void (async () => {
   const loading = new Loading();
@@ -56,9 +56,14 @@ void (async () => {
     });
 
     await initAssets();
+    // The game content (entities, biomes, scenarios) comes first: what art to preload and which zone to start in
+    // depend on it. To read it from a database instead, pass another ContentSource here.
+    const content = await ContentManager.load(staticContent);
+    content.install();
+    const start = content.getBiomeInfo(content.startNode.biome_type);
     const [sprites, zone] = await Promise.all([
       loadSprites(),
-      loadZone(START_ZONE, (fraction) => loading.progress(fraction)),
+      loadZone(start.map, (fraction) => loading.progress(fraction), start.tilesets),
     ]);
 
     const scenes = new SceneManager(app);
@@ -70,6 +75,7 @@ void (async () => {
       shop: new ShopCounter(),
       trade: new TradeUi(),
       dialog: new Dialog(),
+      choices: new Choices(),
       touch,
       session,
     };
@@ -77,13 +83,13 @@ void (async () => {
       const look = MOB_KINDS[kind]?.look;
       return look ? sprites.wardrobe.portrait(look) : null;
     };
-    const overworld = new OverworldScene(zone, sprites, ui, loadZone, unloadZone, app.renderer);
+    const overworld = new OverworldScene(zone, sprites, ui, loadZone, unloadZone, app.renderer, content);
     scenes.change(overworld);
     scenes.start();
     loading.done();
 
     // Dev-only handle for playtest scripts (see .claude/skills/playtest); stripped from production builds.
-    if (import.meta.env.DEV) Object.assign(window, { __game: { app, scenes, overworld, items: ITEMS } });
+    if (import.meta.env.DEV) Object.assign(window, { __game: { app, scenes, overworld, content, items: ITEMS } });
   } catch (err) {
     loading.fail(err);
     throw err;

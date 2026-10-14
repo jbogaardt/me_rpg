@@ -85,132 +85,18 @@ export function allPlayerOutfits(): Outfit[] {
   return PLAYER_BASES.flatMap((base) => worn.map((look) => withGear(base, look)));
 }
 
-/** NPC looks by name. Each pairs a body with a matching head (and body-shaped garments); hair, hats and weapons mix freely. */
-export const NPC_LOOKS: Record<string, Outfit> = {
-  elder: {
-    body: 'body.light',
-    head: 'head.human_light',
-    hair: 'hair.plain_white',
-    beard: 'beard.gray',
-    torso: 'torso.tunic_tan',
-    legs: 'legs.pants_brown',
-    feet: 'feet.boots_brown',
-    cape: 'cape.forest',
-  },
-  merchant: {
-    body: 'body.bronze',
-    head: 'head.human_bronze',
-    hair: 'hair.spiked_black',
-    beard: 'beard.brown',
-    torso: 'torso.tunic_maroon',
-    legs: 'legs.pants_charcoal',
-    feet: 'feet.boots_black',
-  },
-  guard: {
-    body: 'body.olive',
-    head: 'head.human_olive',
-    torso: 'torso.plate_steel',
-    legs: 'legs.plate_steel',
-    feet: 'feet.boots_black',
-    headwear: 'headwear.nasal',
-    weapon: 'weapon.arming_steel',
-    shield: 'shield.round_brown',
-  },
-  sage: {
-    body: 'body.f_light',
-    head: 'head.human_f_light',
-    hair: 'hair.long_gray',
-    torso: 'torso.robe_blue',
-    headwear: 'headwear.wizard_navy',
-    weapon: 'weapon.staff',
-  },
-  villager: {
-    body: 'body.f_brown',
-    head: 'head.human_f_brown',
-    hair: 'hair.long_black',
-    torso: 'torso.f_tunic_teal',
-    legs: 'legs.f_pants_white',
-    feet: 'feet.f_boots_brown',
-  },
-  // The quest giver in the town (GIVERS in systems/quests.ts): white-haired, in maroon, leaning on her staff.
-  warden: {
-    body: 'body.f_brown',
-    head: 'head.human_f_brown',
-    hair: 'hair.long_white',
-    torso: 'torso.f_tunic_maroon',
-    legs: 'legs.f_pants_charcoal',
-    feet: 'feet.f_boots_brown',
-    cape: 'cape.teal',
-    weapon: 'weapon.staff',
-  },
-  // The training wizard (GIVERS.orin in systems/quests.ts): grey-bearded, in a navy hat and a teal cloak.
-  trainer: {
-    body: 'body.light',
-    head: 'head.human_light',
-    beard: 'beard.gray',
-    torso: 'torso.tunic_navy',
-    legs: 'legs.pants_charcoal',
-    feet: 'feet.boots_brown',
-    headwear: 'headwear.wizard_navy',
-    cape: 'cape.teal',
-    weapon: 'weapon.staff',
-  },
-  // The shopkeepers (see SHOPS in systems/shops.ts).
-  smith: {
-    body: 'body.bronze',
-    head: 'head.human_bronze',
-    hair: 'hair.plain_black',
-    beard: 'beard.brown',
-    torso: 'torso.tunic_charcoal',
-    legs: 'legs.pants_charcoal',
-    feet: 'feet.boots_black',
-    cape: 'cape.brown',
-  },
-  armorer: {
-    body: 'body.f_olive',
-    head: 'head.human_f_olive',
-    hair: 'hair.long_red',
-    torso: 'torso.f_tunic_charcoal',
-    legs: 'legs.f_pants_charcoal',
-    feet: 'feet.f_boots_brown',
-    headwear: 'headwear.kettle',
-    shield: 'shield.round_silver',
-  },
-  ranger: {
-    body: 'body.light',
-    head: 'head.human_light',
-    hair: 'hair.messy_red',
-    torso: 'torso.tunic_forest',
-    legs: 'legs.pants_forest',
-    feet: 'feet.boots_brown',
-    headwear: 'headwear.hood_brown',
-    cape: 'cape.forest',
-  },
-  apothecary: {
-    body: 'body.brown',
-    head: 'head.human_brown',
-    hair: 'hair.plain_white',
-    beard: 'beard.gray',
-    torso: 'torso.robe_red',
-    weapon: 'weapon.staff',
-  },
-  wizard: {
-    body: 'body.f_brown',
-    head: 'head.human_f_brown',
-    hair: 'hair.long_gray',
-    torso: 'torso.robe_blue',
-    headwear: 'headwear.wizard_navy',
-    weapon: 'weapon.staff',
-  },
-  farmhand: {
-    body: 'body.light',
-    head: 'head.human_light',
-    hair: 'hair.messy_blonde',
-    torso: 'torso.tunic_white',
-    legs: 'legs.pants_tan',
-    feet: 'feet.boots_brown',
-  },
-};
+/**
+ * NPC looks by name: the `npc` entities of public/content/entities.json (their `sprite`), installed at boot by
+ * `ContentManager.install`. Each pairs a body with a matching head (and body-shaped garments); hair, hats and weapons mix
+ * freely.
+ */
+export const NPC_LOOKS: Record<string, Outfit> = {};
+
+/** Replace the NPC looks (the content's), keeping the record's identity. */
+export function setNpcLooks(looks: Record<string, Outfit>) {
+  for (const key of Object.keys(NPC_LOOKS)) delete NPC_LOOKS[key];
+  Object.assign(NPC_LOOKS, looks);
+}
 
 /** The NPC the overworld places (maps carry one NPC cell; the look is chosen here). */
 export const OVERWORLD_NPC = 'elder';

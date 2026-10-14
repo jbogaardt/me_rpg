@@ -9,7 +9,6 @@ import {
   type GroundCell,
   type MapData,
   type MapObject,
-  type MobSpawn,
   type GiverSpawn,
   type PetSpawn,
   type PlaceSpawn,
@@ -67,7 +66,6 @@ export interface ZoneApi {
   glare(col: number, row: number): unknown;
   spawn(col: number, row: number): unknown;
   npc(col: number, row: number): unknown;
-  mob(kind: string, col: number, row: number): unknown;
   chest(kind: string, loot: string, col: number, row: number): unknown;
   crop(kind: string, col: number, row: number): unknown;
   shop(shop: string, col: number, row: number): unknown;
@@ -183,10 +181,6 @@ export class WorldWindow implements ZoneApi {
   }
   npc(col: number, row: number) {
     this.z.npc(col - this.o.col, row - this.o.row);
-    return this;
-  }
-  mob(kind: string, col: number, row: number) {
-    this.z.mob(kind, col - this.o.col, row - this.o.row);
     return this;
   }
   chest(kind: string, loot: string, col: number, row: number) {
@@ -315,7 +309,6 @@ export class Zone {
   readonly reasons = new Map<number, string>(); // why a cell was blocked by hand (silences check warnings)
   private spawnAt: CellPoint | null = null;
   private npcAt: CellPoint | null = null;
-  private mobList: MobSpawn[] = [];
   private chestList: ChestSpawn[] = [];
   private cropList: CropSpawn[] = [];
   private shopList: ShopSpawn[] = [];
@@ -744,12 +737,6 @@ export class Zone {
     return this;
   }
 
-  /** An enemy spawn; `kind` is a key of MOB_KINDS in src/systems/combat.ts. */
-  mob(kind: string, col: number, row: number) {
-    this.mobList.push({ kind, col, row });
-    return this;
-  }
-
   /** A crop plot (solid, so its cell is blocked; picked from beside it). `kind` is a key of CROPS (src/systems/crops.ts). */
   crop(kind: string, col: number, row: number) {
     this.cropList.push({ kind, col, row });
@@ -827,12 +814,11 @@ export class Zone {
     return this;
   }
 
-  /** What the spec placed besides terrain and props: the start, NPC, mobs, chests, shopkeepers and doors. */
+  /** What the spec placed besides terrain and props: the start, NPC, chests, shopkeepers and doors. */
   entities() {
     return {
       spawn: this.spawnAt,
       npc: this.npcAt,
-      mobs: this.mobList,
       chests: this.chestList,
       crops: this.cropList,
       shops: this.shopList,
@@ -853,7 +839,7 @@ export class Zone {
    * owner of any cell touching it painted it (so a neighbour's sand fades softly across the seam; an opaque terrain,
    * which brings its own sea, is taken from the cell's owner alone); a prop or tree is
    * kept when the cell its foot stands on is its own zone's (or off the map, like a border forest's overhang). Points
-   * (spawn, mobs, doors...) are not carried over: read them from each zone's `entities()`.
+   * (spawn, chests, doors...) are not carried over: read them from each zone's `entities()`.
    */
   static compose(width: number, height: number, owner: Int16Array, zones: Zone[]): Zone {
     const out = new Zone(width, height);
@@ -1018,7 +1004,6 @@ export class Zone {
       ramps: [...this.ramps].sort((a, b) => a - b),
       spawn: this.spawnAt,
       npc: this.npcAt,
-      mobs: this.mobList,
       chests: this.chestList,
       crops: this.cropList,
       shops: this.shopList,

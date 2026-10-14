@@ -16,11 +16,5 @@ export default defineZone({
       [8, 13],
       [19, 13],
     ]);
-    z.mob('warlord', 6, 4);
-    z.mob('warlord', 13, 3);
-    z.mob('warlord', 21, 4);
-    z.mob('wraith', 3, 3);
-    z.mob('wraith', 24, 3);
-    z.mob('wraith', 13, 8);
   },
 });

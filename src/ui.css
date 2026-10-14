@@ -12,7 +12,7 @@
   --grad-xp: linear-gradient(90deg, #7c230f, #b3632a, #dc9e4c, #f5d175, #fdfca6);
 }
 
-#hud, #touch-controls, #menu, #shop, #dialog, #map-overlay, #trade, #trade-request, #trade-toast {
+#hud, #touch-controls, #menu, #shop, #dialog, #choices, #map-overlay, #trade, #trade-request, #trade-toast {
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
   font-family: var(--body);
 }
@@ -487,3 +487,13 @@
 .quest-chapter-title { margin: 0 0 4px; font: 600 15px var(--body); color: var(--ink-soft); letter-spacing: 0.04em; }
 .quest-chapter-title b { color: var(--ink); font-family: var(--title); }
 .quest-chapter { margin: 8px 0 2px; font: 700 14px var(--title); color: var(--ink); }
+
+/* --- Scenario choices (src/hud/Choices.ts): a column of buttons at the right edge --- */
+#choices {
+  position: fixed; z-index: 2; right: calc(12px + env(safe-area-inset-right)); top: 50%; transform: translateY(-50%);
+  width: min(260px, calc(100vw - 32px)); padding: 8px 12px 10px; pointer-events: auto;
+}
+#choices[hidden] { display: none; }
+#choices .title { margin: 0 0 4px; font: 700 15px var(--title); text-align: center; }
+#choices .mp-btn { width: 100%; text-align: left; }
+#choices .needs { display: block; font: 600 11px var(--body); color: #e8dcc0; }

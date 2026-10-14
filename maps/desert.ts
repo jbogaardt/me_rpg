@@ -42,7 +42,7 @@ export default defineBiome({
     z.chest('iron', 'legionArmor', 20, 12);
     z.chest('iron', 'purse', 13, 12);
     z.chest('iron', 'parryingDagger', 13, 9);
-    z.mob('raider', 17, 10);
+    z.keepFree(17, 10);
 
     // --- An oasis --------------------------------------------------------------------------------------------
     const water = pond(z, area(6.8, 4.1, 2, 1.1), { shore: 'meadow' });
@@ -84,20 +84,20 @@ export default defineBiome({
     ] as const)
       z.grove(blob(area(x, y, w, h)), { trees: DRY_TREES, fillers: ['sandBoulder', 'rockSmall'] });
 
-    for (const [kind, x, y] of [
-      ['raider', 5.6, 1.6],
-      ['raider', 10.6, 2.4],
-      ['raider', 2.6, 6.6],
-      ['raider', 11.6, 4.6],
-      ['orc', 8, 2.6],
-      ['orc', 2.6, 3.8],
-      ['mummy', 8.4, 5.6],
-      ['raider', 1, 8.8],
-      ['orc', 3.6, 9.4],
-      ['mummy', 12.6, 1.2],
-      ['orc', 6, 6.4],
+    for (const [x, y] of [
+      [5.6, 1.6],
+      [10.6, 2.4],
+      [2.6, 6.6],
+      [11.6, 4.6],
+      [8, 2.6],
+      [2.6, 3.8],
+      [8.4, 5.6],
+      [1, 8.8],
+      [3.6, 9.4],
+      [12.6, 1.2],
+      [6, 6.4],
     ] as const)
-      z.mob(kind, ...near(x, y));
+      z.keepFree(...near(x, y));
 
     // --- Hourglass sand: where the Great Hourglass's sand fell (the story quest "Sand and Silence", systems/quests.ts) ---
     for (const [x, y] of [
@@ -119,12 +119,5 @@ export default defineBiome({
     z.place('The Oasis', 78, 46);
     z.place('The Ring of Stones', 35, 50);
     z.place('The Buried Skull', 64, 6);
-
-    // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['raider', 'orc', 'raider', 'mummy', 'raider', 'skeleton'], {
-      count: 14,
-      seed: 103,
-      avoid: [[...near(1.6, 10), 20]],
-    });
   },
 });

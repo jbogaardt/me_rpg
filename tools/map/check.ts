@@ -1,7 +1,6 @@
 import { isTrialZone } from '../../src/systems/skills';
 import { CHEST_KINDS, CHEST_LOOTS } from '../../src/systems/chests';
 import { CROPS, MAX_CROPS } from '../../src/systems/crops';
-import { MOB_KINDS } from '../../src/systems/combat';
 import { PET_KINDS } from '../../src/systems/pets';
 import { GIVERS, SITE_KINDS } from '../../src/systems/quests';
 import { ZONE_NAMES } from '../../src/systems/places';
@@ -100,11 +99,6 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   // Points of interest are inside the map and on open ground.
   const points: [string, { col: number; row: number }][] = [['spawn', d.spawn]];
   if (d.npc) points.push(['npc', d.npc]);
-  for (const m of d.mobs) {
-    points.push([`mob ${m.kind}`, m]);
-    if (!MOB_KINDS[m.kind])
-      errors.push(`mob kind "${m.kind}" at (${m.col},${m.row}) isn't in MOB_KINDS (src/systems/combat.ts)`);
-  }
   for (const sh of d.shops) {
     points.push([`shopkeeper ${sh.shop}`, sh]);
     if (!SHOPS[sh.shop]) errors.push(`shopkeeper at (${sh.col},${sh.row}) runs unknown shop "${sh.shop}" (SHOPS)`);

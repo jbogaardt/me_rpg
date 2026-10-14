@@ -194,7 +194,6 @@ describe('checkMap', () => {
     const r = field((z) => {
       z.spawn(2, 2);
       z.npc(4, 4);
-      z.mob('shade', 8, 8);
     });
     expect(r.errors).toEqual([]);
   });
@@ -230,20 +229,12 @@ describe('checkMap', () => {
     expect(inside.errors.join('\n')).toMatch(/shopkeeper armory .* blocked cell/);
   });
 
-  it('errors on an unknown mob kind', () => {
-    const r = field((z) => {
-      z.spawn(2, 2);
-      z.mob('dragon', 5, 5);
-    });
-    expect(r.errors.join('\n')).toMatch(/mob kind "dragon"/);
-  });
-
   it('errors when something is sealed off from the spawn', () => {
     const r = field((z) => {
       z.spawn(1, 1);
       z.block({ col: 6, row: 6, w: 3, h: 3 }, 'moat');
       z.unblock({ col: 7, row: 7, w: 1, h: 1 });
-      z.mob('shade', 7, 7);
+      z.npc(7, 7);
     });
     expect(r.errors.join('\n')).toMatch(/can't be reached/);
   });
@@ -255,7 +246,7 @@ describe('checkMap', () => {
       const r = field((z) => {
         z.plateau(top, { stairs: [5] });
         z.spawn(5, 9);
-        z.mob('shade', 5, 3);
+        z.npc(5, 3);
       });
       expect(r.errors).toEqual([]);
       expect(r.warnings).toEqual([]);
@@ -265,7 +256,7 @@ describe('checkMap', () => {
       const r = field((z) => {
         z.plateau(top);
         z.spawn(5, 9);
-        z.mob('shade', 5, 3);
+        z.npc(5, 3);
       });
       expect(r.errors.join('\n')).toMatch(/can't be reached/);
     });

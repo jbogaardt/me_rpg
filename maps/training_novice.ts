@@ -14,16 +14,5 @@ export default defineZone({
       [10, 6],
       [11, 11],
     ]);
-    for (const [col, row] of [
-      [4, 4],
-      [8, 3],
-      [14, 3],
-      [18, 4],
-    ] as const)
-      z.mob('goblin', col, row);
-    z.mob('wolfkin', 6, 6);
-    z.mob('wolfkin', 15, 6);
-    z.mob('shade', 3, 3);
-    z.mob('shade', 19, 3);
   },
 });

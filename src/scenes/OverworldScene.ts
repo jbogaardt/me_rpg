@@ -14,6 +14,8 @@ import type { Mob } from '../entities/Mob';
 import type { Command, Player } from '../entities/Player';
 import { NO_COMMAND } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
+import type { Choices } from '../hud/Choices';
+import type { ContentManager } from '../content/ContentManager';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
@@ -69,6 +71,7 @@ import { Trading } from './overworld/Trading';
 import { Training } from './overworld/Training';
 import { Visuals } from './overworld/Visuals';
 import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
+import { Scenario } from './overworld/Scenario';
 
 export type { ZoneLoader, ZoneUnloader };
 
@@ -94,6 +97,7 @@ export interface Ui {
   shop: ShopCounter;
   trade: TradeUi;
   dialog: Dialog;
+  choices: Choices;
   touch: TouchControls;
   session: Session;
 }
@@ -122,6 +126,7 @@ export class OverworldScene implements Scene {
   private pack: PackSync;
   private trading: Trading;
   private training: Training;
+  private scenario: Scenario;
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
@@ -149,9 +154,10 @@ export class OverworldScene implements Scene {
     loadZone: ZoneLoader,
     unloadZone: ZoneUnloader,
     renderer: Renderer,
+    content: ContentManager,
   ) {
     const arena = (this.arena = new Arena(sprites.wardrobe));
-    this.zones = new Zones(arena, sprites, loadZone, unloadZone, ui, renderer);
+    this.zones = new Zones(arena, sprites, loadZone, unloadZone, ui, renderer, content);
     const visuals = new Visuals(arena);
     const say = (lines: string[]) => ui.dialog.say(lines);
     // The simulation reports what a friend should see through the host link (which only records it while hosting).
@@ -173,7 +179,11 @@ export class OverworldScene implements Scene {
       return true;
     };
 
-    this.zones.addHome(zone);
+    // The game starts in the content's start node: its zone (`zone`, loaded by main.ts) shows that node's entities.
+    const start = content.startNode;
+    this.zones.assign(zone.name, start.node_id);
+    this.zones.addHome(zone, start.spawn && { col: start.spawn.x, row: start.spawn.y });
+    this.scenario = new Scenario(arena, this.zones, content, ui.choices, say);
     this.zones.root.addChildAt(this.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     this.overlay = new MapOverlay();
@@ -184,6 +194,14 @@ export class OverworldScene implements Scene {
 
   get root(): Container {
     return this.zones.root;
+  }
+
+  /**
+   * Load a scenario node (public/content/scenarios.json): its biome's zone with the node's entities, the local player
+   * taken there, its choices shown. Solo only for now (it throws online).
+   */
+  loadScenario(nodeId: string): Promise<void> {
+    return this.scenario.load(nodeId);
   }
 
   // What playtest scripts poke at (see .claude/skills/playtest): the local player's body and hero, the zone's mobs and NPC,
@@ -306,6 +324,8 @@ export class OverworldScene implements Scene {
 
     z.pondBeds.show(z.ponds.levels()); // the ponds drained by drinking, until rain fills them
     z.npc?.animate(dt * 1000, false);
+    for (const f of z.folk) f.body.animate(dt * 1000, false);
+    this.scenario.update(menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy);
     this.updateQuests(z, dt);
     this.announceArea();
     this.tellStory();
@@ -489,6 +509,7 @@ export class OverworldScene implements Scene {
     const giver = arena.givers.find((g) => near(g.body, KEEPER_REACH));
     const site = arena.sites.find((s) => s.visible && near(s, SITE_REACH));
     const pet = arena.pets.find((p) => near(p));
+    const folk = arena.zone.folk.find((f) => near(f.body));
     if (dialog.active) {
       dialog.advance();
     } else if (lectern) {
@@ -512,6 +533,9 @@ export class OverworldScene implements Scene {
     } else if (pet) {
       pet.attend(this.player.x, this.player.y);
       dialog.say([petSound(pet.kind, pet.talks++)]);
+    } else if (folk) {
+      folk.body.face(directionToward(this.player.x - folk.body.x, this.player.y - folk.body.y));
+      dialog.say(folk.lines);
     } else if (npc?.visible && near(npc)) {
       npc.face(directionToward(this.player.x - npc.x, this.player.y - npc.y));
       dialog.say(NPC_LINES);

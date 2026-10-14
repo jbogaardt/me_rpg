@@ -1,0 +1,339 @@
+{
+  "version": 1,
+  "biomes": {
+    "beach": {
+      "map": "beach",
+      "climate": "coast",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "trees_dry.png",
+        "object-layer.png",
+        "trees_green.png",
+        "interior.png",
+        "trees_jungle.png",
+        "trees_dead.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["raider", "wolfkin", "shade", "raider"],
+            "count": 6,
+            "seed": 104,
+            "apart": 12,
+            "avoid": [{ "x": 55, "y": 26, "radius": 14 }]
+          }
+        ]
+      }
+    },
+    "desert": {
+      "map": "desert",
+      "climate": "desert",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "dry_cliffs.png",
+        "trees_dry.png",
+        "object-layer.png",
+        "trees_green.png",
+        "trees_dead.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["raider", "orc", "raider", "mummy", "raider", "skeleton"],
+            "count": 14,
+            "seed": 103,
+            "apart": 12,
+            "avoid": [{ "x": 14, "y": 98, "radius": 20 }]
+          }
+        ]
+      }
+    },
+    "eastwood": {
+      "map": "eastwood",
+      "climate": "temperate",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "lpc_swamp.png",
+        "Cliff_tileset.png",
+        "trees_jungle.png",
+        "object-layer.png",
+        "interior.png",
+        "trees_dead.png",
+        "trees_swamp.png",
+        "trees_green.png",
+        "trees_frost.png",
+        "frost_objects.png",
+        "town.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["wolfkin", "skeleton", "goblin", "shade", "zombie"],
+            "count": 7,
+            "seed": 102,
+            "apart": 12,
+            "avoid": [{ "x": 46, "y": 56, "radius": 16 }]
+          }
+        ]
+      }
+    },
+    "frostlands": {
+      "map": "frostlands",
+      "climate": "frost",
+      "music": null,
+      "tilesets": [
+        "lpc_swamp.png",
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "frost_ground.png",
+        "Cliff_tileset.png",
+        "frost_cliffs.png",
+        "trees_jungle.png",
+        "object-layer.png",
+        "trees_swamp.png",
+        "trees_green.png",
+        "interior.png",
+        "trees_frost.png",
+        "frost_objects.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["frostbound", "warg", "frostWarden", "snowman", "skeleton", "troll", "hexer", "snowman"],
+            "count": 10,
+            "seed": 109,
+            "apart": 12,
+            "avoid": [{ "x": 118, "y": 64, "radius": 16 }]
+          }
+        ]
+      }
+    },
+    "greenwood": {
+      "map": "greenwood",
+      "climate": "temperate",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "Cliff_tileset.png",
+        "trees_dry.png",
+        "object-layer.png",
+        "trees_green.png",
+        "trees_jungle.png",
+        "trees_dead.png",
+        "interior.png",
+        "town.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["goblin", "wolfkin", "goblin", "shade", "goblin", "wolfkin"],
+            "count": 14,
+            "seed": 101,
+            "apart": 12,
+            "avoid": [{ "x": 138, "y": 108, "radius": 34 }]
+          }
+        ]
+      }
+    },
+    "jungle": {
+      "map": "jungle",
+      "climate": "jungle",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "lpc_swamp.png",
+        "Cliff_tileset.png",
+        "trees_green.png",
+        "object-layer.png",
+        "interior.png",
+        "trees_jungle.png",
+        "trees_swamp.png",
+        "trees_dead.png",
+        "trees_frost.png",
+        "frost_objects.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["warg", "orc", "warg", "tuskGuard", "orc"],
+            "count": 9,
+            "seed": 106,
+            "apart": 12,
+            "avoid": [{ "x": 63, "y": 70, "radius": 16 }]
+          }
+        ]
+      }
+    },
+    "marsh": {
+      "map": "marsh",
+      "climate": "swamp",
+      "music": null,
+      "tilesets": [
+        "ground_tiles.png",
+        "lpc_terrain.png",
+        "lpc_swamp.png",
+        "Cliff_tileset.png",
+        "trees_jungle.png",
+        "object-layer.png",
+        "trees_swamp.png",
+        "trees_green.png",
+        "interior.png",
+        "trees_frost.png",
+        "frost_objects.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["bogGhoul", "hexer", "troll"],
+            "count": 3,
+            "seed": 108,
+            "apart": 12,
+            "avoid": [{ "x": 43, "y": 35, "radius": 14 }]
+          }
+        ]
+      }
+    },
+    "shop_apothecary": {
+      "map": "shop_apothecary",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {}
+    },
+    "shop_armory": {
+      "map": "shop_armory",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {}
+    },
+    "shop_ranger": {
+      "map": "shop_ranger",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {}
+    },
+    "shop_smithy": {
+      "map": "shop_smithy",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {}
+    },
+    "shop_wizard": {
+      "map": "shop_wizard",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {}
+    },
+    "town": {
+      "map": "town",
+      "climate": "temperate",
+      "music": null,
+      "tilesets": [
+        "ground_tiles.png",
+        "lpc_terrain.png",
+        "trees_green.png",
+        "object-layer.png",
+        "interior.png",
+        "trees_frost.png",
+        "frost_objects.png",
+        "town.png"
+      ],
+      "generation": {}
+    },
+    "training_adept": {
+      "map": "training_adept",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
+      "generation": {}
+    },
+    "training_apprentice": {
+      "map": "training_apprentice",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
+      "generation": {}
+    },
+    "training_journeyman": {
+      "map": "training_journeyman",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
+      "generation": {}
+    },
+    "training_novice": {
+      "map": "training_novice",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
+      "generation": {}
+    },
+    "undead": {
+      "map": "undead",
+      "climate": "undead",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "trees_dry.png",
+        "object-layer.png",
+        "trees_green.png",
+        "trees_jungle.png",
+        "interior.png",
+        "trees_dead.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["skeleton", "zombie", "zombie", "skeleton", "shade"],
+            "count": 10,
+            "seed": 105,
+            "apart": 12,
+            "avoid": [{ "x": 74, "y": 66, "radius": 16 }]
+          }
+        ]
+      }
+    },
+    "wetlands": {
+      "map": "wetlands",
+      "climate": "swamp",
+      "music": null,
+      "tilesets": [
+        "ground_tiles.png",
+        "lpc_terrain.png",
+        "lpc_swamp.png",
+        "trees_jungle.png",
+        "object-layer.png",
+        "interior.png",
+        "trees_swamp.png",
+        "trees_green.png",
+        "trees_dead.png",
+        "trees_frost.png",
+        "frost_objects.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["hexer", "bogGhoul", "warg", "zombie", "hexer"],
+            "count": 8,
+            "seed": 107,
+            "apart": 12,
+            "avoid": [{ "x": 70, "y": 30, "radius": 16 }]
+          }
+        ]
+      }
+    }
+  }
+}
