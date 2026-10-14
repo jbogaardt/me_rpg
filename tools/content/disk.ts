@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ContentManager } from '../../src/content/ContentManager';
 import { CONTENT_FILES, parseContent, type ContentFile } from '../../src/content/schema';
-import { assemble, catalogCampaign, type Assembly, type Pack } from '../../src/content/packs';
+import { catalogCampaign, type Assembly, type Pack } from '../../src/content/packs';
+import { assemble } from '../../src/content/world';
 import type { PackIndex } from '../../src/content/AssembledSource';
 
 export const CONTENT_DIR = path.resolve(import.meta.dirname, '../../public/content');

@@ -2,7 +2,8 @@
 // a seed (packs.ts) and serves the resulting files. Pixi-free; how a pack file is fetched is the caller's.
 import type { ContentSource } from './ContentManager';
 import type { ContentFile } from './schema';
-import { assemble, type Assembly, type Pack } from './packs';
+import type { Assembly, Pack } from './packs';
+import { assemble } from './world';
 
 /** public/content/packs/index.json: the packs a random campaign is made from. */
 export interface PackIndex {

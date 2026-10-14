@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { ContentManager } from '../../src/content/ContentManager';
 import {
   arcNeeds,
-  assemble,
   AssemblyError,
   candidates,
   checkPacks,
@@ -18,6 +17,7 @@ import {
   type Pack,
 } from '../../src/content/packs';
 import { wireDoors } from '../../src/content/ports';
+import { assemble } from '../../src/content/world';
 import { parseMap, type MapData } from '../../src/map/types';
 import fs from 'node:fs';
 import path from 'node:path';

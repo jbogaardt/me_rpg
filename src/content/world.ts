@@ -1,0 +1,709 @@
+// A world built as it is played: a story arc's regions joined one step at a time, from a log of choices. Pixi-free and
+// tested.
+//
+// The log is the world. Its first entry (`begin`) names the arc, the keeper who tells it and the hub it starts in; each
+// `step` adds the story's next region, `side` a region beside the story (a side region or a dead end) and `join` a
+// door between two regions that ended up side by side. Every entry is fully resolved (the region, the ports, the
+// pairing crossed and the mob picked for each foe role), so replaying a log needs no random numbers and gives the same
+// world in every browser and in every later version of the solver. `apply` checks an entry against the packs' rules
+// (pairings, ports on opposite edges, a free grid cell whose neighbours all pair with it, the arc's slots) before
+// taking it, so no log can make a broken world.
+//
+// Who writes the log: `assemble` (packs.ts) writes a whole random world at once, as an automatic Dungeon Master; a
+// live world (`?campaign=live`) is written during play by its Dungeon Master, who chooses the story and leaves the maps
+// to the solver: `options()` offers the next step as story cues (the kind of land, the kind of crossing), only those
+// after which the rest of the arc can still be told, and `choose(cue)` picks a region and ports that fit. `files()`
+// writes the campaign as it stands, so the engine and every check see an ordinary campaign: a story not yet finished
+// carries the quests whose regions are already placed.
+
+import { CONTENT_VERSION, type ContentFile } from './schema';
+import type { PortBinding } from './ports';
+import {
+  AssemblyError,
+  arcNeeds,
+  candidates,
+  checkPacks,
+  eligibleFor,
+  Grid,
+  keepersFor,
+  mergePacks,
+  nextPlacements,
+  OPPOSITE,
+  pairedPort,
+  pairingsBetween,
+  partnersOf,
+  rng,
+  STEP,
+  storyFor,
+  type ArcDef,
+  type Catalog,
+  type Assembly,
+  MAX_SIDE_REGIONS,
+  type Pack,
+  entityJson,
+  goodsFile,
+  type Placement,
+  type Side,
+  type Story,
+} from './packs';
+
+/** One entry of a world's log (see the top of the file). `foes` is the mob picked for each foe role of the region. */
+export type LogEntry =
+  | { t: 'begin'; arc: string; keeper: string; region: string; foes: Record<string, string> }
+  | { t: 'step'; region: string; pairing: string; from: string; to: string; foes: Record<string, string> }
+  | {
+      t: 'side';
+      region: string;
+      host: string;
+      pairing: string;
+      from: string;
+      to: string;
+      foes: Record<string, string>;
+    }
+  | { t: 'join'; a: string; b: string; portA: string; portB: string; pairing: string };
+
+/** A next step of the story as its Dungeon Master is offered it: what kind of land, over what kind of crossing. */
+export interface StoryOption {
+  /** Stable while the world does not change: what `choose` is given. */
+  cue: string;
+  /** "Into frost, over a thaw crossing". */
+  label: string;
+  theme: string;
+  tags: string[];
+}
+
+/** A log that cannot be applied: what is wrong with it. */
+export class WorldError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WorldError';
+  }
+}
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** How far into an arc's story a value reaches: the highest region it names (r1 = 1), from `@r2.boss`, `{r2}`, `"r1~r2"`... */
+function reach(value: unknown): number {
+  let most = 0;
+  for (const m of JSON.stringify(value ?? null).matchAll(/(?<![\w])r(\d+)(?=[.~}"])/g))
+    most = Math.max(most, Number(m[1]));
+  return most;
+}
+
+export class World {
+  readonly cat: Catalog;
+  readonly log: LogEntry[] = [];
+  private arcId = '';
+  private keeperId = '';
+  private story: Story;
+  /** Regions beside the story, in the order they came. */
+  private sides: string[] = [];
+  private foes: Record<string, Record<string, string>> = {};
+  private bindings = new Map<string, Record<string, PortBinding>>();
+  /** The pairing at each joint: `r1~r2` along the story, `<a>~<b>` elsewhere. */
+  private joints: Record<string, string> = {};
+  private eligible: Set<string>[] = [];
+
+  /** `seed` names the world (its roamers' placings, the solver's picks); `packs` are what it is built from. */
+  constructor(
+    readonly seed: number,
+    packs: readonly Pack[] | Catalog,
+  ) {
+    this.cat = Array.isArray(packs) ? mergePacks(packs) : (packs as Catalog);
+    const problems = checkPacks(this.cat);
+    if (problems.length) throw new AssemblyError(problems.join('; '));
+    this.story = { regions: [], crossings: [], joints: [], grid: new Grid(this.cat) };
+  }
+
+  get begun(): boolean {
+    return this.arcId !== '';
+  }
+  get arc(): ArcDef | undefined {
+    return this.cat.arcs[this.arcId];
+  }
+  get arcName(): string {
+    return this.arcId;
+  }
+  get keeper(): string {
+    return this.keeperId;
+  }
+  /** The story's regions placed so far, r1 first. */
+  get storyRegions(): readonly string[] {
+    return this.story.regions;
+  }
+  /** Every region in the world: the story's, then the others. */
+  get regions(): string[] {
+    return [...this.story.regions, ...this.sides];
+  }
+  /** Has the story reached its last region? */
+  get complete(): boolean {
+    const arc = this.arc;
+    return !!arc && this.story.regions.length === arc.regions;
+  }
+  get layout(): Record<string, [number, number]> {
+    return Object.fromEntries(this.regions.map((id) => [id, this.story.grid.at.get(id)!]));
+  }
+  get crossings(): Record<string, string> {
+    return { ...this.joints };
+  }
+  get foesByRegion(): Record<string, Record<string, string>> {
+    return this.foes;
+  }
+
+  /** The arcs that can be told from the packs (their whole story fits somewhere), sorted. */
+  tellableArcs(): string[] {
+    return Object.keys(this.cat.arcs)
+      .sort()
+      .filter((id) => storyFor(this.cat, this.cat.arcs[id]!, rng(this.seed)) !== null);
+  }
+
+  /**
+   * The first entry of a world telling `arcId` (default: one the seed picks among those that can be told): a hub its
+   * story can be told from, and a keeper at home there. Not applied.
+   */
+  beginning(arcId?: string): LogEntry {
+    const rand = rng(this.seed);
+    const arcs = arcId ? [arcId] : this.tellableArcs();
+    const id = arcs[Math.floor(rand() * arcs.length)];
+    const arc = id ? this.cat.arcs[id] : undefined;
+    if (!id || !arc) throw new WorldError(arcId ? `no arc "${arcId}"` : 'no story arc can be told with these packs');
+    const story = storyFor(this.cat, arc, rand);
+    if (!story) throw new WorldError(`arc "${id}" cannot be told with these packs`);
+    const region = story.regions[0]!;
+    const keepers = keepersFor(this.cat, arc, region);
+    const keeper = keepers[Math.floor(rand() * keepers.length)]!;
+    return { t: 'begin', arc: id, keeper, region, foes: this.foesFor(region, 0, rand, arc) };
+  }
+
+  /** Apply one entry, or throw a `WorldError` saying why it does not fit (the world is then unchanged). */
+  apply(e: LogEntry) {
+    if (e.t === 'begin') this.applyBegin(e);
+    else if (!this.begun) throw new WorldError('the log must begin with "begin"');
+    else if (e.t === 'step') this.applyStep(e);
+    else if (e.t === 'side') this.applySide(e);
+    else this.applyJoin(e);
+    this.log.push(e);
+  }
+
+  /** Apply a whole log (from an empty world). */
+  replay(log: readonly LogEntry[]) {
+    for (const e of log) this.apply(e);
+  }
+
+  /**
+   * The story's next step, as cues for its Dungeon Master: each a kind of land and of crossing that some region fits,
+   * and after which the rest of the arc can still be told. Empty when the story is complete (or not begun).
+   */
+  options(): StoryOption[] {
+    const arc = this.arc;
+    if (!arc || this.complete) return [];
+    const byCue = new Map<string, { option: StoryOption; placements: Placement[] }>();
+    for (const p of nextPlacements(this.cat, arc, this.story, this.eligible)) {
+      const option = this.cueOf(p);
+      const group = byCue.get(option.cue) ?? byCue.set(option.cue, { option, placements: [] }).get(option.cue)!;
+      group.placements.push(p);
+    }
+    return [...byCue.values()]
+      .filter((g) => g.placements.some((p) => this.leavesStory(p)))
+      .map((g) => g.option)
+      .sort((a, b) => a.cue.localeCompare(b.cue));
+  }
+
+  /** The step for cue `cue` (from `options`): a region, pairing and ports that fit it, and its foes. Not applied. */
+  choose(cue: string): LogEntry {
+    const arc = this.arc;
+    if (!arc || this.complete) throw new WorldError('the story has no next step');
+    const i = this.story.regions.length;
+    const rand = rng(this.seed * 31 + i);
+    const fits = nextPlacements(this.cat, arc, this.story, this.eligible).filter((p) => this.cueOf(p).cue === cue);
+    for (const p of shuffle(rand, fits))
+      if (this.leavesStory(p))
+        return {
+          t: 'step',
+          region: p.region,
+          pairing: p.pairing,
+          from: p.from,
+          to: p.to,
+          foes: this.foesFor(p.region, i, rand),
+        };
+    throw new WorldError(`no region fits "${cue}" any more`);
+  }
+
+  /** The step of `story` (a whole story found by the search) that comes next: for an automatic Dungeon Master. */
+  stepFrom(story: Story, rand: () => number): LogEntry {
+    const i = this.story.regions.length;
+    const region = story.regions[i];
+    const pairing = story.crossings[i - 1];
+    const joint = story.joints[i - 1];
+    if (!region || !pairing || !joint) throw new WorldError('that story has no next step');
+    return { t: 'step', region, pairing, from: joint[0], to: joint[1], foes: this.foesFor(region, i, rand) };
+  }
+
+  /**
+   * A region beside the world (a side region, or a dead end when `deadEnd`) through a pairing with one already in it,
+   * if one has room: for an automatic Dungeon Master (a live world keeps its open ports for the story). Not applied.
+   */
+  sideEntry(rand: () => number, deadEnd = false): LogEntry | null {
+    const near = [...new Set(this.regions.flatMap((id) => partnersOf(this.cat, id)))]
+      .filter(
+        (id) =>
+          !this.story.grid.at.has(id) && !this.cat.regions[id]!.hub && !!this.cat.regions[id]!.terminal === deadEnd,
+      )
+      .sort();
+    const pickFrom = deadEnd ? shuffle(rand, near) : near.length ? [near[Math.floor(rand() * near.length)]!] : [];
+    for (const id of pickFrom) {
+      const ways = this.regions.flatMap((host) =>
+        pairingsBetween(this.cat, host, id).flatMap((pairing) =>
+          this.story.grid.ways(host, id, pairing).map((w) => ({ ...w, host, pairing })),
+        ),
+      );
+      if (!ways.length) continue;
+      const w = ways[Math.floor(rand() * ways.length)]!;
+      return {
+        t: 'side',
+        region: id,
+        host: w.host,
+        pairing: w.pairing,
+        from: w.from,
+        to: w.to,
+        foes: this.foesFor(id, -1, rand),
+      };
+    }
+    return null;
+  }
+
+  /** The doors between regions that ended up side by side and could be joined (both have a facing port and a pairing). */
+  joinEntries(): LogEntry[] {
+    const out: LogEntry[] = [];
+    const grid = this.story.grid;
+    const used = new Set<string>();
+    for (const a of this.regions)
+      for (const b of this.regions) {
+        if (a >= b || this.joints[`${a}~${b}`] || this.joints[`${b}~${a}`]) continue;
+        const [ax, ay] = grid.at.get(a)!;
+        const [bx, by] = grid.at.get(b)!;
+        const side = (Object.entries(STEP) as [Side, [number, number]][]).find(
+          ([, [dx, dy]]) => ax + dx === bx && ay + dy === by,
+        )?.[0];
+        if (!side) continue;
+        const portA = grid.free.get(a)!.find((p) => this.cat.regions[a]!.ports[p] === side && !used.has(`${a}.${p}`));
+        const portB = grid.free
+          .get(b)!
+          .find((p) => this.cat.regions[b]!.ports[p] === OPPOSITE[side] && !used.has(`${b}.${p}`));
+        if (!portA || !portB) continue;
+        const pairing = pairingsBetween(this.cat, a, b).find((pid) => {
+          const p = this.cat.pairings[pid]!;
+          return [pairedPort(p, a) ?? portA, pairedPort(p, b) ?? portB].join() === [portA, portB].join();
+        });
+        if (!pairing) continue;
+        used.add(`${a}.${portA}`).add(`${b}.${portB}`);
+        out.push({ t: 'join', a, b, portA, portB, pairing });
+      }
+    return out;
+  }
+
+  /**
+   * The arc's quests the world can tell so far: in story order, up to the first that names a region not yet placed (in
+   * itself, its variants or its chapter's intro).
+   */
+  told(): { chapter?: number }[] {
+    const arc = this.arc;
+    if (!arc) return [];
+    const placed = this.story.regions.length;
+    const out: { chapter?: number }[] = [];
+    for (const q of arc.quests as { chapter?: number }[]) {
+      if (Math.max(reach(q), reach(arc.chapters[q.chapter ?? 0])) > placed) break;
+      out.push(q);
+    }
+    return out;
+  }
+
+  /**
+   * How a live world opens: its beginning (`arcId`, or one the seed picks), then as many story steps as it takes to
+   * have something to tell (an arc whose first chapter already speaks of the road to region 2 needs region 2 placed),
+   * each the first cue the solver offers. The Dungeon Master chooses every step after these. Applied.
+   */
+  open(arcId?: string): LogEntry[] {
+    this.apply(this.beginning(arcId));
+    while (!this.complete && !this.told().length) {
+      const first = this.options()[0];
+      if (!first) throw new WorldError(`arc "${this.arcId}" cannot be told from here`);
+      this.apply(this.choose(first.cue));
+    }
+    return [...this.log];
+  }
+
+  /** The campaign files of the world as it stands (schema.ts checks them like any campaign's). */
+  files(): Record<ContentFile, unknown> {
+    const arc = this.arc;
+    if (!arc) throw new WorldError('the world has not begun');
+    const { cat } = this;
+    const story = this.story.regions;
+    const keeper = cat.keepers[this.keeperId]!;
+    const regions = this.regions;
+
+    const used = new Set<string>([keeper.npc, ...Object.values(cat.shops).flatMap((s) => s.keeper ?? [])]);
+    for (const id of regions) {
+      for (const mob of Object.values(this.foes[id] ?? {})) used.add(mob);
+      for (const e of cat.regions[id]!.encounters ?? []) if ('entity' in e) used.add(e.entity);
+    }
+    const entities: Record<string, unknown> = {};
+    for (const id of [...used].sort()) {
+      const e = cat.entities[id];
+      if (!e) throw new WorldError(`no entity "${id}" in any pack`);
+      entities[id] = entityJson(e);
+    }
+
+    const biomes: Record<string, unknown> = {};
+    const nodes: unknown[] = [];
+    const sites: Record<string, unknown> = {};
+    for (const id of regions) {
+      const r = cat.regions[id]!;
+      const foes = this.foes[id] ?? {};
+      const ports = { ...(this.bindings.get(id) ?? {}) }; // a copy: later steps bind more of them
+      biomes[id] = {
+        ...r.biome,
+        ...(r.capabilities ? { capabilities: r.capabilities } : {}),
+        links: Object.values(ports).map((b) => b.map),
+        ports,
+        generation: {
+          roam: r.roam.map((rule) => ({
+            kinds: [foes[rule.role] ?? rule.role],
+            count: rule.count,
+            seed: rule.seed + this.seed,
+            apart: rule.apart ?? 8,
+            avoid: rule.avoid ?? [],
+          })),
+        },
+      };
+      nodes.push({
+        node_id: id,
+        biome_type: id,
+        entities: (r.encounters ?? []).map((e) =>
+          'entity' in e ? e : { entity: foes[e.role] ?? e.role, x: e.x, y: e.y },
+        ),
+        choices: [],
+      });
+      for (const [site, def] of Object.entries(r.sites ?? {})) {
+        const { plural: _p, ...rest } = def;
+        sites[site] = rest;
+      }
+    }
+
+    // The story told so far: its quests up to the first that names a region not yet placed (with its chapter's), its
+    // variants chosen and its roles filled in. The epilogue only once the story is complete.
+    const quests = this.told();
+    const lastChapter = Math.max(-1, ...quests.map((q) => q.chapter ?? 0));
+    const chapters = this.complete ? arc.chapters : arc.chapters.slice(0, lastChapter + 1);
+
+    const regionAt = (token: string) => {
+      const m = /^r(\d+)$/.exec(token);
+      const id = m && story[Number(m[1]) - 1];
+      if (!id) throw new WorldError(`arc "${this.arcId}" names "${token}"`);
+      return id;
+    };
+    const crossingOf = (a: string, b: string) => {
+      const [i, j] = [Number(a.slice(1)), Number(b.slice(1))];
+      const pairing = this.story.crossings[Math.min(i, j) - 1];
+      if (!pairing) throw new WorldError(`arc "${this.arcId}" names "${a}~${b}"`);
+      return pairing;
+    };
+    const matches = (when: Record<string, string>) =>
+      Object.entries(when).every(([key, want]) => {
+        if (key === 'keeper') return want === this.keeperId;
+        const pair = /^(r\d+)~(r\d+)$/.exec(key);
+        if (pair) {
+          const id = crossingOf(pair[1]!, pair[2]!);
+          return want === id || !!cat.pairings[id]!.tags?.includes(want);
+        }
+        const region = regionAt(key);
+        return want.startsWith('theme:') ? cat.regions[region]!.themes.includes(want.slice(6)) : want === region;
+      });
+    const siteOf = (region: string) => Object.keys(cat.regions[region]!.sites ?? {})[0] ?? '';
+    const ids = (token: string) => {
+      const [r, what] = token.split('.');
+      const region = regionAt(r!);
+      if (!what) return cat.regions[region]!.biome.map;
+      if (what === 'site') return siteOf(region);
+      return this.foes[region]![what] ?? '';
+    };
+    const text = (token: string): string => {
+      const [head, what, form] = token.split('.');
+      if (head === 'keeper') return what === 'tag' ? keeper.tag : keeper.name;
+      const pair = /^(r\d+)~(r\d+)$/.exec(head!);
+      if (pair) {
+        const line = cat.pairings[crossingOf(pair[1]!, pair[2]!)]!.lore?.[what ?? ''];
+        const seen = typeof line === 'string' ? line : line?.[regionAt(pair[1]!)];
+        if (seen === undefined) throw new WorldError(`arc "${this.arcId}" quotes "${token}", which its pairing lacks`);
+        return seen;
+      }
+      const region = regionAt(head!);
+      if (!what) return cat.regions[region]!.biome.name;
+      const thing =
+        what === 'site' ? cat.regions[region]!.sites?.[siteOf(region)] : cat.entities[this.foes[region]![what] ?? ''];
+      if (!thing) throw new WorldError(`arc "${this.arcId}" names "${token}", which region "${region}" does not have`);
+      return named(thing, form);
+    };
+    const r1 = cat.regions[story[0]!]!;
+    return {
+      entities: { version: CONTENT_VERSION, entities },
+      biomes: { version: CONTENT_VERSION, biomes },
+      scenarios: { version: CONTENT_VERSION, start: story[0], capabilities: arc.capabilities ?? {}, nodes },
+      items: goodsFile(cat, arc.start),
+      quests: {
+        version: CONTENT_VERSION,
+        giver: 'keeper',
+        givers: { keeper: { name: keeper.name, look: keeper.npc, tag: keeper.tag, zone: r1.biome.map } },
+        sites,
+        chapters: resolveArc(applyVariants(chapters, matches), ids, text),
+        quests: resolveArc(applyVariants(quests, matches), ids, text),
+        epilogue: this.complete ? resolveArc(arc.epilogue ?? [], ids, text) : [],
+      },
+    };
+  }
+
+  // --- applying ---
+
+  private applyBegin(e: Extract<LogEntry, { t: 'begin' }>) {
+    if (this.begun) throw new WorldError('the world has already begun');
+    const arc = this.cat.arcs[e.arc];
+    if (!arc) throw new WorldError(`no arc "${e.arc}"`);
+    const eligible = eligibleFor(this.cat, arc);
+    if (!eligible[0]?.has(e.region)) throw new WorldError(`"${e.region}" cannot begin arc "${e.arc}"`);
+    if (!keepersFor(this.cat, arc, e.region).includes(e.keeper))
+      throw new WorldError(`keeper "${e.keeper}" cannot tell arc "${e.arc}" from "${e.region}"`);
+    this.checkFoes(e.region, 0, e.foes, arc);
+    this.arcId = e.arc;
+    this.keeperId = e.keeper;
+    this.eligible = eligible;
+    this.story.grid.place(e.region, 0, 0);
+    this.story.regions.push(e.region);
+    this.bindings.set(e.region, {});
+    this.foes[e.region] = { ...e.foes };
+  }
+
+  private applyStep(e: Extract<LogEntry, { t: 'step' }>) {
+    const arc = this.arc!;
+    if (this.complete) throw new WorldError('the story is already complete');
+    const i = this.story.regions.length;
+    const fits = nextPlacements(this.cat, arc, this.story, this.eligible).some(
+      (p) => p.region === e.region && p.pairing === e.pairing && p.from === e.from && p.to === e.to,
+    );
+    if (!fits) throw new WorldError(`"${e.region}" cannot be the story's region ${i + 1} that way`);
+    this.checkFoes(e.region, i, e.foes, arc);
+    const prev = this.story.regions[i - 1]!;
+    const [x, y] = this.cellBy(prev, e.from);
+    this.story.grid.place(e.region, x, y);
+    this.story.grid.use(prev, e.from);
+    this.story.grid.use(e.region, e.to);
+    this.story.regions.push(e.region);
+    this.story.crossings.push(e.pairing);
+    this.story.joints.push([e.from, e.to]);
+    this.bindings.set(e.region, {});
+    this.bind(prev, e.region, e.from, e.to);
+    this.joints[`r${i}~r${i + 1}`] = e.pairing;
+    this.foes[e.region] = { ...e.foes };
+  }
+
+  private applySide(e: Extract<LogEntry, { t: 'side' }>) {
+    const { cat } = this;
+    const grid = this.story.grid;
+    if (!grid.at.has(e.host)) throw new WorldError(`"${e.host}" is not in the world`);
+    if (grid.at.has(e.region) || !cat.regions[e.region] || cat.regions[e.region]!.hub)
+      throw new WorldError(`"${e.region}" cannot stand beside the world`);
+    if (!pairingsBetween(cat, e.host, e.region).includes(e.pairing))
+      throw new WorldError(`pairing "${e.pairing}" does not join "${e.host}" and "${e.region}"`);
+    const way = grid.ways(e.host, e.region, e.pairing).find((w) => w.from === e.from && w.to === e.to);
+    if (!way) throw new WorldError(`"${e.region}" does not fit by port "${e.from}" of "${e.host}"`);
+    this.checkFoes(e.region, -1, e.foes);
+    grid.place(e.region, way.x, way.y);
+    grid.use(e.host, e.from);
+    grid.use(e.region, e.to);
+    this.sides.push(e.region);
+    this.bindings.set(e.region, {});
+    this.bind(e.host, e.region, e.from, e.to);
+    this.joints[`${e.host}~${e.region}`] = e.pairing;
+    this.foes[e.region] = { ...e.foes };
+  }
+
+  private applyJoin(e: Extract<LogEntry, { t: 'join' }>) {
+    const grid = this.story.grid;
+    const [a, b] = [grid.at.get(e.a), grid.at.get(e.b)];
+    if (!a || !b) throw new WorldError(`"${e.a}" and "${e.b}" are not both in the world`);
+    const side = this.cat.regions[e.a]!.ports[e.portA];
+    const facing = this.cat.regions[e.b]!.ports[e.portB];
+    if (!side || facing !== OPPOSITE[side] || a[0] + STEP[side][0] !== b[0] || a[1] + STEP[side][1] !== b[1])
+      throw new WorldError(`"${e.a}" and "${e.b}" do not face each other by those ports`);
+    if (!grid.free.get(e.a)!.includes(e.portA) || !grid.free.get(e.b)!.includes(e.portB))
+      throw new WorldError('a port of that join is already used');
+    if (!pairingsBetween(this.cat, e.a, e.b).includes(e.pairing))
+      throw new WorldError(`pairing "${e.pairing}" does not join "${e.a}" and "${e.b}"`);
+    grid.use(e.a, e.portA);
+    grid.use(e.b, e.portB);
+    this.bind(e.a, e.b, e.portA, e.portB);
+    this.joints[`${e.a}~${e.b}`] = e.pairing;
+  }
+
+  // --- helpers ---
+
+  /** The cell a region's port leads to. */
+  private cellBy(region: string, port: string): [number, number] {
+    const [x, y] = this.story.grid.at.get(region)!;
+    const side = this.cat.regions[region]!.ports[port]!;
+    return [x + STEP[side][0], y + STEP[side][1]];
+  }
+
+  private bind(a: string, b: string, portA: string, portB: string) {
+    this.bindings.get(a)![portA] = { map: this.cat.regions[b]!.biome.map, port: portB };
+    this.bindings.get(b)![portB] = { map: this.cat.regions[a]!.biome.map, port: portA };
+  }
+
+  /** The cue a placement serves: the kind of land (its theme the arc's slot asks for, else its first) and of crossing. */
+  private cueOf(p: Placement): StoryOption {
+    const region = this.cat.regions[p.region]!;
+    const slot = this.arc?.slots?.[this.story.regions.length];
+    const theme = region.themes.find((t) => !slot?.themes || slot.themes.includes(t)) ?? region.themes[0] ?? 'wild';
+    const tags = [...(this.cat.pairings[p.pairing]!.tags ?? [])].sort();
+    const label = `Into ${theme} lands${tags.length ? `, over a ${tags.join(' and ')} crossing` : ''}`;
+    return { cue: `${theme}|${tags.join(',')}`, label: cap(label), theme, tags };
+  }
+
+  /** Can the rest of the arc still be told once `p` is placed? (A bounded search; see STORY_BUDGET.) */
+  private leavesStory(p: Placement): boolean {
+    const story: Story = {
+      regions: [...this.story.regions, p.region],
+      crossings: [...this.story.crossings, p.pairing],
+      joints: [...this.story.joints, [p.from, p.to]],
+      grid: this.story.grid.clone(),
+    };
+    const prev = this.story.regions[this.story.regions.length - 1]!;
+    story.grid.place(p.region, p.x, p.y);
+    story.grid.use(prev, p.from);
+    story.grid.use(p.region, p.to);
+    return storyFor(this.cat, this.arc!, rng(this.seed), story) !== null;
+  }
+
+  /** A mob for each foe role of `region` (story slot `slot`, or -1 off the story): a different one per role where it can. Picked with `rand`. */
+  foesFor(region: string, slot: number, rand: () => number, arc = this.arc): Record<string, string> {
+    const r = this.cat.regions[region]!;
+    const extra = slot >= 0 ? arc?.slots?.[slot]?.foes : undefined;
+    const out: Record<string, string> = {};
+    for (const role of Object.keys(r.foes).sort()) {
+      const options = candidates(this.cat, r, role, extra?.[role]?.tags);
+      if (!options.length) throw new AssemblyError(`no mob can be the ${role} of region "${region}"`);
+      const fresh = options.filter((m) => !Object.values(out).includes(m));
+      const from = fresh.length ? fresh : options;
+      out[role] = from[Math.floor(rand() * from.length)]!;
+    }
+    return out;
+  }
+
+  /** Are these the foes a region may have (every role filled, each by a mob that fits it)? */
+  private checkFoes(region: string, slot: number, foes: Record<string, string>, arc = this.arc) {
+    const r = this.cat.regions[region];
+    if (!r) throw new WorldError(`no region "${region}"`);
+    const extra = slot >= 0 ? arc?.slots?.[slot]?.foes : undefined;
+    for (const role of Object.keys(r.foes)) {
+      const mob = foes[role];
+      if (!mob || !candidates(this.cat, r, role, extra?.[role]?.tags).includes(mob))
+        throw new WorldError(`"${mob ?? '(none)'}" cannot be the ${role} of "${region}"`);
+    }
+    // The arc's own needs of this slot: the roles it names must be among the region's (eligibleFor checked the region).
+    if (arc && slot >= 0)
+      for (const role of arcNeeds(arc)[slot]?.roles ?? [])
+        if (!foes[role]) throw new WorldError(`"${region}" has no ${role}`);
+  }
+}
+
+function shuffle<T>(rand: () => number, list: readonly T[]): T[] {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j]!, out[i]!];
+  }
+  return out;
+}
+
+/** Apply each object's first matching variant (`variants: [{ when, ...fields }]`) in place of its own fields. */
+function applyVariants(list: unknown[], matches: (when: Record<string, string>) => boolean): unknown[] {
+  return list.map((item) => {
+    if (!item || typeof item !== 'object' || !('variants' in item)) return item;
+    const { variants, ...base } = item as { variants: { when?: Record<string, string> }[] };
+    const hit = variants.find((v) => matches(v.when ?? {}));
+    if (!hit) return base;
+    const { when: _w, ...fields } = hit;
+    return { ...base, ...fields };
+  });
+}
+
+/** Fill `{...}` text tokens and `"@..."` ids in an arc's JSON. */
+function resolveArc(value: unknown, ids: (token: string) => string, text: (token: string) => string): unknown {
+  if (typeof value === 'string') {
+    if (value.startsWith('@')) return ids(value.slice(1));
+    return value.replace(/\{([\w.~]+)\}/g, (_, token: string) => text(token));
+  }
+  if (Array.isArray(value)) return value.map((v) => resolveArc(v, ids, text));
+  if (value && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, resolveArc(v, ids, text)]));
+  return value;
+}
+
+/** A mob's or site's name as a story token asks for it: `{r1.common}` the name, `.plural`, `.lower` (plural, lower case). */
+function named(thing: { name: string; plural?: string }, form: string | undefined): string {
+  const plural = thing.plural ?? `${thing.name}s`;
+  if (form === 'plural') return plural;
+  if (form === 'lower') return plural.toLowerCase();
+  return thing.name;
+}
+
+/**
+ * Assemble a whole random campaign from packs with a seed: an automatic Dungeon Master that picks an arc whose story
+ * can be told (`storyFor`), writes its steps into a world's log, adds up to `MAX_SIDE_REGIONS` side regions, joins
+ * regions that ended up side by side, and bolts a dead end onto every open port one suits. Throws an `AssemblyError`
+ * when the packs have problems (`checkPacks`) or no arc can be told. The files still go through `parseContent`
+ * (ContentManager.load), so a bad pack fails like a bad campaign file.
+ */
+export function assemble(seed: number, packs: readonly Pack[]): Assembly {
+  const world = new World(seed, packs);
+  const { cat } = world;
+  const rand = rng(seed);
+  let arcId = '';
+  let found: Story | null = null;
+  for (const id of shuffle(rand, Object.keys(cat.arcs).sort())) {
+    found = storyFor(cat, cat.arcs[id]!, rand);
+    if (found) {
+      arcId = id;
+      break;
+    }
+  }
+  if (!found) throw new AssemblyError('no story arc can be told with these regions and pairings');
+  const arc = cat.arcs[arcId]!;
+  const r1 = found.regions[0]!;
+  const keepers = keepersFor(cat, arc, r1);
+  const keeper = keepers[Math.floor(rand() * keepers.length)]!;
+  world.apply({ t: 'begin', arc: arcId, keeper, region: r1, foes: world.foesFor(r1, 0, rand, arc) });
+  while (!world.complete) world.apply(world.stepFrom(found, rand));
+  // Side regions: up to `MAX_SIDE_REGIONS` others (neither hubs nor dead ends), each paired with a region already in.
+  for (let added = 0, tries = 12; added < MAX_SIDE_REGIONS;) {
+    if (rand() < 0.35 || --tries < 0) break;
+    const side = world.sideEntry(rand);
+    if (side) {
+      world.apply(side);
+      added++;
+    }
+  }
+  for (const join of world.joinEntries()) world.apply(join);
+  // Dead ends: one onto every port still open that one suits (each dead end once); the rest stay sealed.
+  for (let end = world.sideEntry(rand, true); end; end = world.sideEntry(rand, true)) world.apply(end);
+  return {
+    seed,
+    arc: arcId,
+    keeper,
+    regions: world.regions,
+    foes: world.foesByRegion,
+    crossings: world.crossings,
+    layout: world.layout,
+    files: world.files(),
+    log: [...world.log],
+  };
+}
