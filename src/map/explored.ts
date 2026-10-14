@@ -36,6 +36,15 @@ export class Explored {
     return added;
   }
 
+  /** Reveal every cell at once (a map with no fog). */
+  revealAll() {
+    if (this.whole) return;
+    this.whole = true;
+    this.cells.fill(1);
+    this.version++;
+  }
+  private whole = false;
+
   /** Number of cells seen. */
   count(): number {
     let n = 0;

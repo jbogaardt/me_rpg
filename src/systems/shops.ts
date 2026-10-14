@@ -5,7 +5,8 @@
 // Each shop is a specialist: it sells a few kinds of things and only buys those kinds back (the wizard: wands and tomes). Money comes mostly from
 // enemies (see `MobKind.gold`); chests hold the odd purse and the gear that no shop stocks.
 
-import { enabled } from './capabilities';
+import { enabledAnywhere } from './capabilities';
+import { onlyFeeds } from './needs';
 import type { GearSlot, Hero, Item } from './combat';
 import { addToPack, hasRoom, isBetter, takeFromPack, wearIfBetter } from './inventory';
 import { ITEMS, type ItemId } from './items';
@@ -123,11 +124,8 @@ export type Trade = { ok: true; text: string; worn?: Item } | { ok: false; text:
 
 /** What a shop has for sale in this campaign: no bread or waterskins where nobody gets hungry (systems/capabilities.ts). */
 export function stockOf(shop: Pick<Shop, 'stock'>): readonly ItemId[] {
-  if (enabled('needs')) return shop.stock;
-  return shop.stock.filter((id) => {
-    const use: { hp?: number; mp?: number; food?: number; water?: number } | undefined = (ITEMS[id] as Item).use;
-    return !use || use.hp || use.mp || !(use.food || use.water);
-  });
+  if (enabledAnywhere('needs')) return shop.stock;
+  return shop.stock.filter((id) => !onlyFeeds(ITEMS[id] as Item));
 }
 
 /**

@@ -52,14 +52,15 @@ export class Hud {
     const s = hero.stats;
     const hp = Math.ceil(s.hp);
     const mp = Math.floor(s.mp);
-    const quest = enabled('guide') ? trackerText(hero) : ''; // a campaign without the guide has no tracker line
-    const key = `${hp}/${s.maxHp} ${mp}/${s.maxMp} ${hero.gold} ${Math.ceil(hero.needs.food)} ${Math.ceil(hero.needs.water)} ${quest}`;
+    const quest = enabled('guide', zone) ? trackerText(hero) : ''; // a campaign (or zone) without the guide has no tracker line
+    const needs = enabled('needs', zone);
+    const key = `${needs} ${hp}/${s.maxHp} ${mp}/${s.maxMp} ${hero.gold} ${Math.ceil(hero.needs.food)} ${Math.ceil(hero.needs.water)} ${quest}`;
     if (key === this.shown) return; // only touch the DOM when something changed
     this.shown = key;
     this.set(this.hp, hp, s.maxHp);
     this.hp.fill.style.backgroundColor = hpColor(hp / s.maxHp);
     this.set(this.mp, mp, s.maxMp);
-    this.needsRow.hidden = !enabled('needs');
+    this.needsRow.hidden = !needs;
     this.need(this.food, 'food', hero.needs.food);
     this.need(this.water, 'water', hero.needs.water);
     this.gold.querySelector('.label')!.textContent = String(hero.gold);

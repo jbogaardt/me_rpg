@@ -32,7 +32,7 @@
 
 import { CONTENT_VERSION, type ContentFile } from './schema';
 import type { PortBinding } from './ports';
-import { CAPABILITY_IDS, isCapability } from '../systems/capabilities';
+import { checkCapabilities, type CapabilitySpec } from '../systems/capabilities';
 
 /** A pack file, as written. Everything is optional: a pack can be only mobs, only a region, only a story. */
 export interface Pack {
@@ -102,6 +102,8 @@ export interface RegionDef {
   encounters?: ({ role: string; x: number; y: number } | { entity: string; x: number; y: number })[];
   /** Its gather sites (as quests.json `sites`; the map places them with `z.site`). */
   sites?: Record<string, { name: string; plural?: string; [key: string]: unknown }>;
+  /** Its zone's own word on the zone-scoped capabilities (no map in this cave), written into its biome. */
+  capabilities?: CapabilitySpec;
 }
 
 /** What an arc asks of one of its regions. */
@@ -125,7 +127,7 @@ export interface ArcDef {
   /** The keepers who may tell it (default: any). */
   keepers?: string[];
   /** The engine's features this story switches off or on (systems/capabilities.ts), e.g. `{ "map": false }` for a tale told without a map. */
-  capabilities?: Record<string, boolean>;
+  capabilities?: CapabilitySpec;
   chapters: unknown[];
   quests: unknown[];
   epilogue?: string[];
@@ -638,6 +640,7 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
     const links = Object.values(ports).map((b) => b.map);
     biomes[id] = {
       ...r.biome,
+      ...(r.capabilities ? { capabilities: r.capabilities } : {}),
       links,
       ports,
       generation: {
@@ -771,6 +774,7 @@ export function checkPacks(cat: Catalog): string[] {
     const sides = Object.values(r.ports);
     if (new Set(sides).size !== sides.length) out.push(`regions.${id}.ports: two ports on one edge`);
     if (r.terminal && (r.hub || sides.length !== 1)) out.push(`regions.${id}: a dead end has one port and is no hub`);
+    out.push(...checkCapabilities(r.capabilities, `regions.${id}.capabilities`, 'zone'));
   }
   for (const [id, arc] of Object.entries(cat.arcs)) {
     arc.slots?.forEach((slot, i) =>
@@ -779,11 +783,7 @@ export function checkPacks(cat: Catalog): string[] {
       }),
     );
     for (const k of arc.keepers ?? []) if (!cat.keepers[k]) out.push(`arcs.${id}.keepers: no keeper "${k}"`);
-    for (const [cap, on] of Object.entries(arc.capabilities ?? {}))
-      if (!isCapability(cap) || typeof on !== 'boolean')
-        out.push(
-          `arcs.${id}.capabilities.${cap}: not a capability set to true or false (${CAPABILITY_IDS.join(', ')})`,
-        );
+    out.push(...checkCapabilities(arc.capabilities, `arcs.${id}.capabilities`));
     try {
       arcNeeds(arc);
       crossingNeeds(arc);
@@ -829,7 +829,16 @@ export function catalogCampaign(packs: readonly Pack[]): Record<ContentFile, unk
             apart: rule.apart ?? 8,
             avoid: rule.avoid ?? [],
           }));
-          return [id, { ...r.biome, links: [], ports: {}, generation: { roam } }];
+          return [
+            id,
+            {
+              ...r.biome,
+              ...(r.capabilities ? { capabilities: r.capabilities } : {}),
+              links: [],
+              ports: {},
+              generation: { roam },
+            },
+          ];
         }),
       ),
     },

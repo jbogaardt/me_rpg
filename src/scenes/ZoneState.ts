@@ -1,5 +1,5 @@
 import type { Sprites, Zone } from '../assets';
-import { enabled } from '../systems/capabilities';
+import { enabled, setting } from '../systems/capabilities';
 import { Camera } from '../core/camera';
 import { Ambient } from '../entities/ambient';
 import { Character } from '../entities/Character';
@@ -122,9 +122,13 @@ export class ZoneState {
     this.weatherLayer = data.indoor ? null : new WeatherLayer(this.world.layer);
     // No sky in a room, nor in a campaign without weather (systems/capabilities.ts).
     this.weather =
-      data.indoor || climate === null || !enabled('weather')
+      data.indoor || climate === null || !enabled('weather', zone.name)
         ? null
-        : new Weather(CLIMATES[isClimate(climate) ? climate : DEFAULT_CLIMATE]);
+        : new Weather(
+            CLIMATES[isClimate(climate) ? climate : DEFAULT_CLIMATE],
+            Math.random,
+            setting('weather', 'calm', zone.name),
+          );
 
     this.npc = data.npc ? new Character(sprites.wardrobe.sheet(npcLook(OVERWORLD_NPC))) : null;
     this.npc?.position.set(...cellFeet(data.npc!));

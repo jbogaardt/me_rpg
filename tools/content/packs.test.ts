@@ -256,14 +256,36 @@ describe('random campaigns from the packs', () => {
     expect(cat.arcs.lost_lanterns.capabilities).toEqual({ map: false });
   });
 
+  it('gives a region’s own capabilities to its zone, and refuses a region switching a campaign-wide one', () => {
+    const a = SEEDS.map(assembleFromDisk).find((x) => x.regions.includes('bog_hollow'))!;
+    const biomes = (a.files.biomes as { biomes: Record<string, { capabilities?: unknown }> }).biomes;
+    expect(biomes.bog_hollow.capabilities).toEqual({ map: false, needs: { drain: 2 } });
+    const odd: Pack = {
+      version: 1,
+      id: 'odd',
+      regions: {
+        oddity: {
+          ...cat.regions.barrow,
+          biome: { ...cat.regions.barrow.biome, map: 'odd_map' },
+          sites: {},
+          capabilities: { coop: false },
+        },
+      },
+      pairings: { odd_way: { regions: ['oddity', 'barrow'] } },
+    };
+    expect(checkPacks(mergePacks([...packs, odd])).join()).toMatch(
+      /regions\.oddity\.capabilities\.coop: is set for the whole campaign, not per zone/,
+    );
+  });
+
   it('refuses an arc switching a capability that does not exist', () => {
     const odd: Pack = {
       version: 1,
       id: 'odd',
-      arcs: { odd: { ...cat.arcs.ember_trail, capabilities: { jetpack: false } } },
+      arcs: { odd: { ...cat.arcs.ember_trail, capabilities: { jetpack: false } as never } },
     };
     expect(checkPacks(mergePacks([...packs, odd])).join()).toMatch(
-      /arcs\.odd\.capabilities\.jetpack: not a capability/,
+      /arcs\.odd\.capabilities\.jetpack: is not a capability/,
     );
   });
 

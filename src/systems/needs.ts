@@ -76,6 +76,12 @@ export function starveRate(n: Needs, maxHp: number): number {
   return n.food <= 0 && n.water <= 0 ? STARVE_SHARE * maxHp : 0;
 }
 
+/** An item whose only use is to feed or water (bread, a waterskin, a crop's produce): no use where nobody hungers. */
+export function onlyFeeds(item: { use?: { hp?: number; mp?: number; food?: number; water?: number } }): boolean {
+  const use = item.use;
+  return !!use && !use.hp && !use.mp && !!(use.food || use.water);
+}
+
 /** Water per second while drinking from a pond: an empty meter takes about twelve seconds to fill. */
 export const POND_FLOW = 8;
 /** Water each cell of a pond holds: the Greenwood's small pond (71 cells) has about one thirsty hero's worth. */

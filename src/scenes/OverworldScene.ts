@@ -1,5 +1,5 @@
 import type { Container, Renderer } from 'pixi.js';
-import { enabled } from '../systems/capabilities';
+import { enabled, flag } from '../systems/capabilities';
 import type { Sprites, Zone } from '../assets';
 import type { Aim } from '../core/aim';
 import { COMBO_WINDOW, COMBO_WINDOW_TOUCH, ComboReader } from '../core/combo';
@@ -279,10 +279,12 @@ export class OverworldScene implements Scene {
     // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
     // without the map capability (it is still explored, so nothing changes if one is played later).
     const outdoors = !arena.zone.data.indoor;
-    const mapShown = outdoors && enabled('map');
+    const here = arena.zone.name;
+    const mapShown = outdoors && enabled('map', here);
     this.overlay.setAvailable(mapShown);
     if (outdoors) {
       const seen = this.atlas.of(arena.zone.name, arena.zone.data);
+      if (!flag('map', 'fog', here)) seen.revealAll(); // a map without fog shows the whole zone at once
       // Everyone in this zone uncovers the map around them (a guest only knows the players in its own zone).
       for (const p of arena.players()) if (p.body.visible) seen.reveal(p.body.x, p.body.y);
       this.overlay.setZone(arena.zone.data, seen, arena.zone.name);
@@ -302,7 +304,7 @@ export class OverworldScene implements Scene {
     if (menu.open || shop.open || trade.open) {
       if (menu.open) menu.update();
       else if (shop.open) shop.update();
-      hud.update(this.hero); // gold changes at the counter
+      hud.update(this.hero, '', arena.zone.name); // gold changes at the counter
       if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
     }
 
@@ -316,7 +318,7 @@ export class OverworldScene implements Scene {
     z.effects.update(dt);
     this.night.update(
       this.dayClock.time(),
-      !z.data.indoor && enabled('dayNight'),
+      !z.data.indoor && enabled('dayNight', z.name),
       arena.screen.width,
       arena.screen.height,
     );
@@ -585,7 +587,7 @@ export class OverworldScene implements Scene {
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
     if (chest) return this.openChest(p, chest);
-    const farming = enabled('farming'); // without it, crop plots are scenery
+    const farming = enabled('farming', this.arena.zone.name); // without it, crop plots are scenery
     const crop = farming && this.arena.crops.find((c) => c.ripe && this.inReach(p, c));
     if (crop) return this.pickCrop(p, crop);
     const dry =
@@ -679,7 +681,7 @@ export class OverworldScene implements Scene {
 
   /** The quest arrow: points from the hero at where the quest leads (a thing in this zone, or the door towards it). */
   private pointTheWay(z: ZoneState, dt: number) {
-    const hide = this.zones.transition.busy || !this.player.visible || !enabled('guide');
+    const hide = this.zones.transition.busy || !this.player.visible || !enabled('guide', z.name);
     const warden = z.givers.find((g) => g.giver === QUEST_GIVER);
     const world = {
       zone: z.name,
@@ -715,7 +717,7 @@ export class OverworldScene implements Scene {
     const { world } = arena.view;
     const scale = world.scale.x;
     const spots: HarvestSpot[] = z.crops.flatMap((c, key) =>
-      c.ripe && enabled('farming') && this.inReach(arena.local, c)
+      c.ripe && enabled('farming', z.name) && this.inReach(arena.local, c)
         ? [{ key, x: world.x + c.x * scale, y: world.y + (c.y - CELL * 1.6) * scale }]
         : [],
     );

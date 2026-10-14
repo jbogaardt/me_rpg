@@ -262,6 +262,7 @@
       }
     },
     "barrow": {
+      "capabilities": { "weather": { "calm": 0.4 } },
       "biome": {
         "name": "The Barrow",
         "tint": "#b48cff",
@@ -338,6 +339,7 @@
       ]
     },
     "bog_hollow": {
+      "capabilities": { "map": false, "needs": { "drain": 2 } },
       "biome": {
         "name": "The Bog Hollow",
         "tint": "#7fa85a",

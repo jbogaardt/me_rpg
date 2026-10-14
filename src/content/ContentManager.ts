@@ -13,6 +13,7 @@ import type { MapData } from '../map/types';
 import { populate, type Population } from './populate';
 import { wireDoors } from './ports';
 import {
+  capabilityTable,
   CONTENT_FILES,
   parseContent,
   toMobKind,
@@ -80,7 +81,8 @@ export class ContentManager {
     }
     setPlaces(names, links, tints);
     setQuestContent(this.content.quests);
-    setCapabilities(this.content.scenarios.capabilities);
+    const caps = capabilityTable(this.content);
+    setCapabilities(caps.campaign, caps.zones);
   }
 
   /** The node the game starts in. */

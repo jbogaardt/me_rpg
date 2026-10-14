@@ -70,6 +70,8 @@ export class Weather {
   constructor(
     private climate: Climate = CLIMATES[DEFAULT_CLIMATE],
     private rng: () => number = Math.random,
+    /** The share of the time it is clear and still (a campaign may tune it: `weather.calm`). */
+    private calm = CLEAR_SHARE,
   ) {
     this.thunder = new Lightning(rng);
     this.begin(this.pick());
@@ -148,9 +150,9 @@ export class Weather {
     return DURATION[0] + this.rng() * (DURATION[1] - DURATION[0]);
   }
 
-  /** The next spell: clear (CLEAR_SHARE of the time), else precipitation alone, wind alone, or both. */
+  /** The next spell: clear (`calm` of the time, CLEAR_SHARE unless tuned), else precipitation alone, wind alone, or both. */
   private pick(): { precip: Precip | null; windLevel: number } {
-    if (this.rng() < CLEAR_SHARE) return { precip: null, windLevel: 0 };
+    if (this.rng() < this.calm) return { precip: null, windLevel: 0 };
     const roll = this.rng();
     const precip = roll < 0.75 ? this.weighted(this.climate.precip) : null; // precipitation alone or with wind
     const wind = roll >= 0.4 ? WIND_LEVELS[this.weighted(this.climate.wind)] : 0; // wind alone or with precipitation

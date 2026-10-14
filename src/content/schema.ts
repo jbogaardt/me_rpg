@@ -6,7 +6,9 @@
 import type { MobKind } from '../systems/combat';
 import { isClimate } from '../systems/weather';
 import { SKILL_IDS } from '../systems/skills';
-import { CAPABILITY_IDS, isCapability, type Capabilities } from '../systems/capabilities';
+import { CapabilityTable, checkCapabilities, type CapabilitySpec } from '../systems/capabilities';
+import { onlyFeeds } from '../systems/needs';
+import { CROPS } from '../systems/crops';
 import { SLOTS, type Outfit } from '../sprites/doll';
 import { ITEMS, type ItemId } from '../systems/items';
 import type { PortBinding } from './ports';
@@ -87,6 +89,8 @@ export interface BiomeDef {
   tilesets: string[];
   /** What is generated when it loads: for now, the enemies that roam it. */
   generation: { roam?: RoamRule[] };
+  /** Its zone's own word on the capabilities whose scope is a zone (no map in this cave, double hunger in this swamp). */
+  capabilities?: CapabilitySpec;
 }
 
 // --- scenarios.json -------------------------------------------------------------------------------------------------
@@ -120,8 +124,8 @@ export interface ScenarioNode {
 export interface Scenarios {
   /** The node the game starts in. */
   start: string;
-  /** The engine's features this campaign switches on or off (systems/capabilities.ts); any not named are on. */
-  capabilities: Partial<Capabilities>;
+  /** The engine's features this campaign switches off or tunes (systems/capabilities.ts); any not named are on. */
+  capabilities: CapabilitySpec;
   nodes: Map<string, ScenarioNode>;
 }
 
@@ -337,8 +341,25 @@ export function parseBiomes(json: unknown, r = new Reader()): Record<string, Bio
       tilesets: r.strings(b.tilesets ?? [], `${path}.tilesets`),
       generation: roam ? { roam: roam.flatMap((v, i) => readRoam(r, v, `${path}.generation.roam[${i}]`) ?? []) } : {},
     };
+    if (b.capabilities !== undefined)
+      out[type].capabilities = readCapabilities(r, b.capabilities, `${path}.capabilities`, 'zone');
   }
   return out;
+}
+
+/** A capability spec (systems/capabilities.ts `checkCapabilities` says what is wrong with it). */
+function readCapabilities(r: Reader, v: unknown, path: string, scope: 'campaign' | 'zone'): CapabilitySpec {
+  const problems = checkCapabilities(v, path, scope);
+  for (const p of problems) r.problems.push(p);
+  // Kept even when something in it is wrong (the problems stop the load anyway), so the other checks still see it.
+  return typeof v === 'object' && v !== null && !Array.isArray(v) ? v : {};
+}
+
+/** The capabilities a campaign's content sets: the campaign's, and each biome's for its zone (map). */
+export function capabilityTable(c: Pick<Content, 'scenarios' | 'biomes'>): CapabilityTable {
+  const zones: Record<string, CapabilitySpec> = {};
+  for (const b of Object.values(c.biomes)) if (b.capabilities) zones[b.map] = b.capabilities;
+  return new CapabilityTable(c.scenarios.capabilities, zones);
 }
 
 function readRequirement(r: Reader, v: unknown, path: string): Requirement | undefined {
@@ -359,13 +380,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
   if (!file) return { start: '', capabilities: {}, nodes };
   r.version(file, 'scenarios.json');
   const start = r.string(file.start, 'scenarios.json.start');
-  const capabilities: Partial<Capabilities> = {};
-  for (const [id, on] of Object.entries(r.object(file.capabilities ?? {}, 'scenarios.json.capabilities') ?? {})) {
-    const at = `scenarios.json.capabilities.${id}`;
-    if (!isCapability(id)) r.fail(at, `is not a capability (${CAPABILITY_IDS.join(', ')})`);
-    else if (typeof on !== 'boolean') r.fail(at, 'must be true or false');
-    else capabilities[id] = on;
-  }
+  const capabilities = readCapabilities(r, file.capabilities, 'scenarios.json.capabilities', 'campaign');
   r.array(file.nodes, 'scenarios.json.nodes').forEach((v, i) => {
     const o = r.object(v, `nodes[${i}]`);
     if (!o) return;
@@ -552,6 +567,7 @@ function crossCheck(r: Reader, c: Content) {
       r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
     if (o.t === 'gather' && !q.sites[o.site]) r.fail(`${p}.objective.site`, `"${o.site}" is not in sites`);
   });
+  checkAgainstCapabilities(r, c);
   if (c.scenarios.start && !c.scenarios.nodes.has(c.scenarios.start))
     r.fail('scenarios.json.start', `no node "${c.scenarios.start}"`);
   for (const node of c.scenarios.nodes.values()) {
@@ -567,6 +583,41 @@ function crossCheck(r: Reader, c: Content) {
         r.fail(`${path}.choices[${i}].requires.skill`, `"${req.skill}" is not a skill (${SKILL_IDS.join(', ')})`);
     });
   }
+}
+
+/**
+ * Content that asks for what its own capabilities switch off: a choice needing a skill in a campaign without skills,
+ * a quest that wants or pays food or water where nobody hungers, or a crop's produce where nothing is farmed.
+ */
+function checkAgainstCapabilities(r: Reader, c: Content) {
+  const caps = capabilityTable(c);
+  const produce = new Set<string>(Object.values(CROPS).map((crop) => crop.item));
+  const why = (id: string): string | null => {
+    if (!caps.anywhere('needs') && isItem(id) && onlyFeeds(ITEMS[id] as { use?: object }))
+      return `"${id}" only feeds, and this campaign has no food and water (capabilities.needs)`;
+    if (!caps.anywhere('farming') && produce.has(id))
+      return `"${id}" only grows on a farm, and this campaign has no farming (capabilities.farming)`;
+    return null;
+  };
+  for (const quest of c.quests.quests) {
+    const p = `quests.${quest.id}`;
+    const o = quest.objective;
+    const wanted = o.t === 'bring' ? why(o.item) : null;
+    if (wanted) r.fail(`${p}.objective.item`, wanted);
+    for (const [i, item] of (quest.reward.items ?? []).entries()) {
+      const paid = why(item);
+      if (paid) r.fail(`${p}.reward.items[${i}]`, paid);
+    }
+  }
+  if (!caps.enabled('skills'))
+    for (const node of c.scenarios.nodes.values())
+      node.choices.forEach((choice, i) => {
+        if (choice.requires && 'skill' in choice.requires)
+          r.fail(
+            `nodes.${node.node_id}.choices[${i}].requires`,
+            'needs a skill, and this campaign has no skills (capabilities.skills)',
+          );
+      });
 }
 
 /** Read and check all three files. Throws a `ContentError` listing every problem. */

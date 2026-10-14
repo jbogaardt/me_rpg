@@ -1,5 +1,5 @@
 import { DIR_VEC, dirIndex, directionToward } from '../../core/direction';
-import { enabled } from '../../systems/capabilities';
+import { enabled, setting } from '../../systems/capabilities';
 import type { Character } from '../../entities/Character';
 import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
@@ -68,7 +68,7 @@ export function foeNear(z: ZoneState, p: Player): boolean {
 }
 
 export function canDrink(z: ZoneState, p: Player): boolean {
-  if (!enabled('needs') || !thirsty(p.hero.needs)) return false;
+  if (!enabled('needs', z.name) || !thirsty(p.hero.needs)) return false;
   const water = drinkableNear(z.data, p.body.x, p.body.y);
   return !!water && z.ponds.level(pondId(z.data, water.cell)) < 1;
 }
@@ -218,8 +218,10 @@ export class Simulation {
     p.grace = Math.max(0, p.grace - dt);
     p.sinceHit += dt;
     if (p.pendingShot && (p.pendingShot.timer -= dt) <= 0) this.release(p);
-    const needs = enabled('needs'); // a campaign without food and water: no hunger, plain mending, no starving
-    if (needs) drainNeeds(p.hero.needs, dt);
+    // A campaign (or zone) without food and water: no hunger, plain mending, no starving; else as fast as it says.
+    const zone = this.arena.zone.name;
+    const needs = enabled('needs', zone);
+    if (needs) drainNeeds(p.hero.needs, dt * setting('needs', 'drain', zone));
     const fed = needs ? needsRegen(p.hero.needs) : 1; // hungry or thirsty heroes mend more slowly (systems/needs.ts)
     s.mp = Math.min(s.maxMp, s.mp + (MP_REGEN * fed + gearMpRegen(p.hero)) * dt);
     // Gear that mends (a Warden's Mantle) works in the thick of a fight; the slow natural kind waits for a quiet spell.

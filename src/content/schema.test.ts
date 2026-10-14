@@ -98,7 +98,40 @@ describe('parseContent', () => {
     (f.scenarios as { capabilities: unknown }).capabilities = { jetpack: false, map: 'no' };
     const p = problems(f).join('\n');
     expect(p).toMatch(/scenarios\.json\.capabilities\.jetpack: is not a capability/);
-    expect(p).toMatch(/scenarios\.json\.capabilities\.map: must be true or false/);
+    expect(p).toMatch(/scenarios\.json\.capabilities\.map: must be true, false or an object of settings/);
+  });
+
+  it('reads a biome’s own capabilities for its zone, but not campaign-wide ones', () => {
+    const f = files();
+    const biome = (f.biomes as { biomes: Record<string, { capabilities?: unknown }> }).biomes.forest!;
+    biome.capabilities = { map: false, needs: { drain: 2 } };
+    expect(parseContent(f).biomes.forest?.capabilities).toEqual({ map: false, needs: { drain: 2 } });
+    biome.capabilities = { coop: false, needs: { drain: 99, thirst: 1 } };
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/biomes\.forest\.capabilities\.coop: is set for the whole campaign, not per zone/);
+    expect(p).toMatch(/biomes\.forest\.capabilities\.needs\.drain: must be a number from 0 to 10/);
+    expect(p).toMatch(/biomes\.forest\.capabilities\.needs\.thirst: is not a setting of needs \(drain\)/);
+  });
+
+  it('refuses content asking for what its own capabilities switch off', () => {
+    const f = files();
+    const s = f.scenarios as { capabilities: unknown; nodes: { choices: { requires?: unknown }[] }[] };
+    const q = f.quests as { quests: { objective: object; reward: { items: string[] } }[] };
+    s.capabilities = { skills: false, needs: false, farming: false, trading: true, coop: false };
+    s.nodes[0]!.choices[0]!.requires = { skill: 'arcaneEdge' };
+    q.quests[0]!.objective = { t: 'bring', item: 'bread', count: 2 };
+    q.quests[0]!.reward.items = ['potato'];
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/nodes\.woods\.choices\[0\]\.requires: needs a skill, and this campaign has no skills/);
+    expect(p).toMatch(/quests\.cull\.objective\.item: "bread" only feeds/);
+    expect(p).toMatch(/quests\.cull\.reward\.items\[0\]: "potato" only feeds/);
+    expect(p).toMatch(/scenarios\.json\.capabilities\.trading: needs coop, which is switched off/);
+    // A zone that does feed its heroes makes bread worth asking for again.
+    s.capabilities = { needs: false };
+    s.nodes[0]!.choices[0]!.requires = undefined;
+    q.quests[0]!.reward.items = [];
+    (f.biomes as { biomes: Record<string, { capabilities?: unknown }> }).biomes.forest!.capabilities = { needs: true };
+    expect(problems(f)).toEqual([]);
   });
 
   it('checks the quests against the rest of the content', () => {
