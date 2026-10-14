@@ -122,7 +122,7 @@
       "level": [1, 2],
       "themes": ["fire"],
       "hub": true,
-      "ports": ["north", "south"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
       "foes": { "common": {}, "hunter": {}, "ranged": {} },
       "roam": [
         { "role": "common", "count": 5, "seed": 201, "apart": 10, "avoid": [{ "x": 35, "y": 40, "radius": 12 }] },
@@ -162,7 +162,7 @@
       },
       "level": [3, 5],
       "themes": ["fire"],
-      "ports": ["south"],
+      "ports": { "south": "south", "east": "east" },
       "foes": { "ranged": {}, "brute": {}, "boss": {} },
       "roam": [
         {
@@ -193,6 +193,26 @@
         { "role": "ranged", "x": 36, "y": 9 },
         { "role": "brute", "x": 10, "y": 26 },
         { "role": "boss", "x": 25, "y": 6 }
+      ]
+    },
+    "ember_cove": {
+      "biome": {
+        "name": "The Ember Cove",
+        "tint": "#ff7a3a",
+        "map": "end_ember_cove",
+        "climate": "undead",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"]
+      },
+      "level": [2, 5],
+      "themes": ["fire"],
+      "terminal": true,
+      "ports": { "south": "south" },
+      "foes": { "brute": {} },
+      "roam": [],
+      "encounters": [
+        { "role": "brute", "x": 11, "y": 6 },
+        { "role": "brute", "x": 12, "y": 9 }
       ]
     }
   },

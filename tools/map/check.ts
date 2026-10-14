@@ -7,6 +7,7 @@ import { ZONE_NAMES } from '../../src/systems/places';
 import { SHOPS } from '../../src/systems/shops';
 import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
+import { doorCells as cellsOf, onDoor } from '../../src/map/doors';
 import { coverage, sheet } from './image';
 import { BARE_WALL } from './zone';
 import { CLASH_DE, groundReport } from './ground';
@@ -121,9 +122,9 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   if (d.sites.length > 30) errors.push('a map holds at most 30 quest sites');
   const doorCells = new Set<number>();
   for (const door of d.doors) {
-    for (let i = 0; i < door.w; i++) {
-      points.push([`door to ${door.to.zone}`, { col: door.col + i, row: door.row }]);
-      doorCells.add(door.row * W + door.col + i);
+    for (const [col, row] of cellsOf(door)) {
+      points.push([`door to ${door.to.zone}`, { col, row }]);
+      doorCells.add(row * W + col);
     }
     if (door.w < 1) errors.push(`door at (${door.col},${door.row}) is ${door.w} cells wide`);
     if (!door.to.zone) errors.push(`door at (${door.col},${door.row}) leads nowhere`);
@@ -134,11 +135,13 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     if (portNames.has(port.name)) errors.push(`${at}: the name is used twice`);
     portNames.add(port.name);
     if (port.w < 1) errors.push(`${at} is ${port.w} cells wide`);
-    for (let i = 0; i < port.w; i++) {
-      points.push([`port ${port.name}`, { col: port.col + i, row: port.row }]);
-      doorCells.add(port.row * W + port.col + i);
+    for (const [col, row] of cellsOf(port)) {
+      points.push([`port ${port.name}`, { col, row }]);
+      doorCells.add(row * W + col);
     }
     points.push([`port ${port.name}'s arrival`, port.arrive]);
+    if (!port.seal?.length)
+      errors.push(`${at} has no seal (z.port's last argument): left unbound it would be an open way to nowhere`);
   }
   for (const port of d.ports)
     if (doorCells.has(port.arrive.row * W + port.arrive.col))
@@ -283,7 +286,7 @@ export function checkDoors(maps: Map<string, MapData>): string[] {
         errors.push(`${where} arrives outside "${door.to.zone}" at (${col},${row})`);
       } else if (target.collision.includes(index)) {
         errors.push(`${where} arrives on a blocked cell of "${door.to.zone}" (${col},${row})`);
-      } else if (target.doors.some((t) => row === t.row && col >= t.col && col < t.col + t.w)) {
+      } else if (target.doors.some((t) => onDoor(t, col, row))) {
         errors.push(
           `${where} arrives on a door of "${door.to.zone}" (${col},${row}), which would bounce the player back`,
         );

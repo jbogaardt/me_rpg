@@ -26,7 +26,8 @@
 // `assemble(seed, packs)` picks an arc and the regions it needs (r1 a hub, the rest in rising level, each meeting its
 // slot, able to fill the roles the arc names, and paired with the one before it as the arc asks), a keeper at home in
 // r1, may add side regions (each paired with a region it joins), joins them port to port, picks the mobs for each
-// role, and writes the files. The same seed and packs always give the same campaign (co-op relies on it).
+// role, and writes the files. Ports join only ports on the opposite edge (`OPPOSITE`): leave a region by its north
+// port and you arrive at the south of the next. The same seed and packs always give the same campaign (co-op relies on it).
 // `checkPacks` lists what is wrong with a set of packs (dangling ids, unknown ports, a region nothing pairs with).
 
 import { CONTENT_VERSION, type ContentFile } from './schema';
@@ -83,8 +84,10 @@ export interface RegionDef {
   themes: string[];
   /** It has a `keeper` spot and can start a story. */
   hub?: boolean;
-  /** The ports of its map (`z.port` names). */
-  ports: string[];
+  /** A dead end with one port, bolted onto a port nothing else uses (never in a story). */
+  terminal?: boolean;
+  /** The ports of its map (`z.port` names) and the edge each is on (checked against the map). */
+  ports: Record<string, Side>;
   /** The roles of the foes that live here, each with tags the mob must also carry. */
   foes: Record<string, { tags?: string[] }>;
   roam: {
@@ -134,8 +137,10 @@ export interface Assembly {
   regions: string[];
   /** Region id -> role -> mob id. */
   foes: Record<string, Record<string, string>>;
-  /** The pairing crossed at each step of the story (`"r1~r2"`) and at each side region's joint (`"<a>~<b>"`). */
+  /** The pairing crossed at each step of the story (`"r1~r2"`) and at each other joint (`"<a>~<b>"`). */
   crossings: Record<string, string>;
+  /** Where each region stands on the world grid ([x, y], north is -y): its ports lead to the next cell their way. */
+  layout: Record<string, [number, number]>;
   files: Record<ContentFile, unknown>;
 }
 
@@ -146,6 +151,12 @@ export class AssemblyError extends Error {
     this.name = 'AssemblyError';
   }
 }
+
+/** The edge of its map a port is on. A port joins only a port on the opposite edge: leave by the north, arrive in the south. */
+export type Side = 'north' | 'south' | 'east' | 'west';
+export const OPPOSITE: Record<Side, Side> = { north: 'south', south: 'north', east: 'west', west: 'east' };
+/** One step across the world grid in each direction (north is up). */
+export const STEP: Record<Side, [number, number]> = { north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0] };
 
 /** A small seeded random generator (mulberry32): the same seed, the same numbers, in every browser. */
 export function rng(seed: number): () => number {
@@ -282,76 +293,136 @@ const keepersFor = (cat: Catalog, arc: ArcDef, r1: string) =>
     .map(([id]) => id)
     .sort();
 
-/** A story: its regions in order, and the pairing crossed at each step. */
+/**
+ * The world as it is built: each region on a cell of a grid. A port leads only to the region in the next cell its
+ * way, by that region's port on the facing edge, so walking north, east, south and west always comes back to where it
+ * started. Undoable, for the story's search.
+ */
+class Grid {
+  readonly at = new Map<string, [number, number]>();
+  private cells = new Map<string, string>();
+  /** Each placed region's ports not yet used. */
+  readonly free = new Map<string, string[]>();
+  constructor(private cat: Catalog) {}
+
+  static key = (x: number, y: number) => `${x},${y}`;
+  regionAt = (x: number, y: number) => this.cells.get(Grid.key(x, y));
+
+  place(id: string, x: number, y: number) {
+    this.at.set(id, [x, y]);
+    this.cells.set(Grid.key(x, y), id);
+    this.free.set(id, Object.keys(this.cat.regions[id]!.ports).sort());
+  }
+  remove(id: string) {
+    const [x, y] = this.at.get(id)!;
+    this.at.delete(id);
+    this.cells.delete(Grid.key(x, y));
+    this.free.delete(id);
+  }
+  use(id: string, port: string) {
+    this.free.set(
+      id,
+      this.free.get(id)!.filter((p) => p !== port),
+    );
+  }
+  unuse(id: string, port: string) {
+    this.free.get(id)!.push(port);
+  }
+
+  /**
+   * May `id` stand on (x, y)? The cell must be empty, and every region already beside it must be one a pairing joins
+   * it to (neighbours are neighbours, door or no door), except for a dead end, which only has to suit `host`.
+   */
+  fits(id: string, x: number, y: number, host: string): boolean {
+    if (this.regionAt(x, y)) return false;
+    if (this.cat.regions[id]!.terminal) return true;
+    return Object.values(STEP).every(([dx, dy]) => {
+      const n = this.regionAt(x + dx, y + dy);
+      return !n || n === host || pairingsBetween(this.cat, n, id).length > 0;
+    });
+  }
+
+  /** The ways `id` (not placed yet) can join `host` by `pairing`: a free port of the host, and the cell it leads to. */
+  ways(host: string, id: string, pairing: string): { from: string; to: string; x: number; y: number }[] {
+    const p = this.cat.pairings[pairing]!;
+    const [fixedHost, fixedId] = [pairedPort(p, host), pairedPort(p, id)];
+    const [hx, hy] = this.at.get(host)!;
+    const out: { from: string; to: string; x: number; y: number }[] = [];
+    for (const from of this.free.get(host)!) {
+      if (fixedHost && fixedHost !== from) continue;
+      const side = this.cat.regions[host]!.ports[from]!;
+      const [x, y] = [hx + STEP[side][0], hy + STEP[side][1]];
+      if (!this.fits(id, x, y, host)) continue;
+      for (const [to, theirs] of Object.entries(this.cat.regions[id]!.ports).sort())
+        if (theirs === OPPOSITE[side] && (!fixedId || fixedId === to)) out.push({ from, to, x, y });
+    }
+    return out;
+  }
+}
+
+/** A story: its regions in order, the pairing crossed at each step, the ports it crosses by, and where each stands. */
 interface Story {
   regions: string[];
   crossings: string[];
+  joints: [string, string][];
+  grid: Grid;
 }
 
 /**
  * Pick the story's regions in order (r1 a hub some keeper of the arc lives in, then non-hubs in rising level, each
- * meeting its slot and paired with the one before as the arc asks, with a port to go on from), or null.
+ * meeting its slot, paired with the one before as the arc asks and standing in the next cell of the grid that way),
+ * or null.
  */
 function storyFor(cat: Catalog, arc: ArcDef, rand: () => number): Story | null {
   const needs = arcNeeds(arc);
   const steps = crossingNeeds(arc);
   const chosen: string[] = [];
   const crossings: string[] = [];
-  const used = new Map<string, Set<string>>(); // ports a pairing has claimed, by region
-  const claim = (p: PairingDef, region: string): boolean => {
-    const port = pairedPort(p, region);
-    if (!port) return true;
-    const taken = used.get(region) ?? new Set();
-    if (taken.has(port) || !cat.regions[region]!.ports.includes(port)) return false;
-    used.set(region, taken.add(port));
-    return true;
-  };
-  const release = (p: PairingDef, region: string) => {
-    const port = pairedPort(p, region);
-    if (port) used.get(region)?.delete(port);
-  };
+  const joints: [string, string][] = [];
+  const grid = new Grid(cat);
   const go = (i: number): boolean => {
     if (i === needs.length) return true;
     const prevId = chosen[chosen.length - 1];
     const prev = prevId ? cat.regions[prevId]! : null;
-    const last = i === needs.length - 1;
     const options = Object.entries(cat.regions).filter(([id, r]) => {
-      if (chosen.includes(id) || (i === 0) !== !!r.hub) return false;
+      if (chosen.includes(id) || r.terminal || (i === 0) !== !!r.hub) return false;
       if (i === 0 && !keepersFor(cat, arc, id).length) return false;
       if (prev && r.level[0] < prev.level[0]) return false;
-      const portsNeeded = (i > 0 ? 1 : 0) + (last ? 0 : 1);
-      return (
-        r.ports.length >= portsNeeded && meetsSlot(id, r, arc.slots?.[i]) && fills(cat, r, needs[i]!, arc.slots?.[i])
-      );
+      return meetsSlot(id, r, arc.slots?.[i]) && fills(cat, r, needs[i]!, arc.slots?.[i]);
     });
     for (const [id] of shuffled(
       rand,
       options.sort(([a], [b]) => a.localeCompare(b)),
     )) {
-      const ways = prevId
-        ? pairingsBetween(cat, prevId, id).filter((p) => serves(cat.pairings[p]!, steps[i - 1]!))
-        : [''];
-      for (const way of shuffled(rand, ways)) {
-        const p = way ? cat.pairings[way]! : null;
-        if (p && !claim(p, prevId!)) continue;
-        if (p && !claim(p, id)) {
-          release(p, prevId!);
-          continue;
-        }
+      if (!prevId) {
+        grid.place(id, 0, 0);
         chosen.push(id);
-        if (p) crossings.push(way);
         if (go(i + 1)) return true;
         chosen.pop();
-        if (p) {
-          crossings.pop();
-          release(p, prevId!);
-          release(p, id);
-        }
+        grid.remove(id);
+        continue;
+      }
+      const ways = pairingsBetween(cat, prevId, id)
+        .filter((p) => serves(cat.pairings[p]!, steps[i - 1]!))
+        .flatMap((p) => grid.ways(prevId, id, p).map((w) => ({ ...w, pairing: p })));
+      for (const w of shuffled(rand, ways)) {
+        grid.place(id, w.x, w.y);
+        grid.use(prevId, w.from);
+        grid.use(id, w.to);
+        chosen.push(id);
+        crossings.push(w.pairing);
+        joints.push([w.from, w.to]);
+        if (go(i + 1)) return true;
+        chosen.pop();
+        crossings.pop();
+        joints.pop();
+        grid.remove(id);
+        grid.unuse(prevId, w.from);
       }
     }
     return false;
   };
-  return go(0) ? { regions: chosen, crossings } : null;
+  return go(0) ? { regions: chosen, crossings, joints, grid } : null;
 }
 
 /** Apply each object's first matching variant (`variants: [{ when, ...fields }]`) in place of its own fields. */
@@ -417,69 +488,74 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
   const keeperId = pick(rand, keepersFor(cat, arc, story[0]!));
   const keeper = cat.keepers[keeperId]!;
 
-  // Join the story's regions by the pairings it crosses: their own ports first, then any free ones.
+  // The world: the story's regions where its search put them, joined by the ports it crossed by.
   const regions = [...story];
-  const free = new Map(regions.map((id) => [id, [...cat.regions[id]!.ports]]));
+  const grid = found.grid;
   const bindings = new Map<string, Record<string, PortBinding>>(regions.map((id) => [id, {}]));
   const crossings: Record<string, string> = {};
-  const take = (region: string, port: string | undefined) => {
-    const list = free.get(region)!;
-    const i = port ? list.indexOf(port) : Math.floor(rand() * list.length);
-    if (i < 0 || !list.length) throw new AssemblyError(`region "${region}" has no free port ${port ?? ''}`);
-    return list.splice(i, 1)[0]!;
-  };
-  const join = (a: string, b: string, pairing: string) => {
-    const p = cat.pairings[pairing]!;
-    const portA = take(a, pairedPort(p, a));
-    const portB = take(b, pairedPort(p, b));
+  const bind = (a: string, b: string, portA: string, portB: string) => {
     bindings.get(a)![portA] = { map: cat.regions[b]!.biome.map, port: portB };
     bindings.get(b)![portB] = { map: cat.regions[a]!.biome.map, port: portA };
   };
-  // Ports a story pairing names are claimed before any free port is handed out.
-  for (const [i, pairing] of found.crossings.entries()) {
-    const p = cat.pairings[pairing]!;
-    for (const r of [story[i]!, story[i + 1]!]) {
-      const port = pairedPort(p, r);
-      if (port) free.get(r)!.splice(free.get(r)!.indexOf(port), 1);
-    }
-  }
-  for (const [i, pairing] of found.crossings.entries()) {
-    const [a, b] = [story[i]!, story[i + 1]!];
-    const p = cat.pairings[pairing]!;
-    for (const r of [a, b]) {
-      const port = pairedPort(p, r);
-      if (port) free.get(r)!.push(port); // given back just for this join
-    }
-    join(a, b, pairing);
-    crossings[`r${i + 1}~r${i + 2}`] = pairing;
-  }
-  // Side regions: any other non-hub region, sometimes, where a pairing joins it to one already in, by free ports.
-  for (const id of Object.keys(cat.regions).sort()) {
-    const r = cat.regions[id]!;
-    if (regions.includes(id) || r.hub || rand() < 0.5) continue;
-    free.set(id, [...r.ports]);
-    const joints = regions.flatMap((host) =>
-      pairingsBetween(cat, host, id)
-        .filter((pid) => {
-          const p = cat.pairings[pid]!;
-          const fits = (region: string) => {
-            const port = pairedPort(p, region);
-            return port ? free.get(region)!.includes(port) : free.get(region)!.length > 0;
-          };
-          return fits(host) && fits(id);
-        })
-        .map((pid) => [host, pid] as const),
+  found.joints.forEach(([from, to], i) => {
+    bind(story[i]!, story[i + 1]!, from, to);
+    crossings[`r${i + 1}~r${i + 2}`] = found.crossings[i]!;
+  });
+  /** Put `id` beside a region already in, through a pairing, if one has room for it; false when none has. */
+  const attach = (id: string): boolean => {
+    const ways = regions.flatMap((host) =>
+      pairingsBetween(cat, host, id).flatMap((pairing) =>
+        grid.ways(host, id, pairing).map((w) => ({ ...w, host, pairing })),
+      ),
     );
-    if (!joints.length) {
-      free.delete(id);
-      continue;
-    }
-    const [host, pairing] = pick(rand, joints);
+    if (!ways.length) return false;
+    const w = pick(rand, ways);
+    grid.place(id, w.x, w.y);
+    grid.use(w.host, w.from);
+    grid.use(id, w.to);
     regions.push(id);
     bindings.set(id, {});
-    join(host, id, pairing);
-    crossings[`${host}~${id}`] = pairing;
+    bind(w.host, id, w.from, w.to);
+    crossings[`${w.host}~${id}`] = w.pairing;
+    return true;
+  };
+  // Side regions: any other region that is neither a hub nor a dead end, sometimes.
+  for (const id of Object.keys(cat.regions).sort()) {
+    const r = cat.regions[id]!;
+    if (regions.includes(id) || r.hub || r.terminal || rand() < 0.5) continue;
+    attach(id);
   }
+  // Regions that ended up side by side are joined too, where both have a port facing the other and a pairing allows.
+  for (const a of regions)
+    for (const b of regions) {
+      if (a >= b || crossings[`${a}~${b}`] || crossings[`${b}~${a}`]) continue;
+      const [ax, ay] = grid.at.get(a)!;
+      const [bx, by] = grid.at.get(b)!;
+      const side = (Object.entries(STEP) as [Side, [number, number]][]).find(
+        ([, [dx, dy]]) => ax + dx === bx && ay + dy === by,
+      )?.[0];
+      if (!side) continue;
+      const portA = grid.free.get(a)!.find((p) => cat.regions[a]!.ports[p] === side);
+      const portB = grid.free.get(b)!.find((p) => cat.regions[b]!.ports[p] === OPPOSITE[side]);
+      const pairing = pairingsBetween(cat, a, b).find((pid) => {
+        const p = cat.pairings[pid]!;
+        return [pairedPort(p, a) ?? portA, pairedPort(p, b) ?? portB].join() === [portA, portB].join();
+      });
+      if (!portA || !portB || !pairing) continue;
+      grid.use(a, portA);
+      grid.use(b, portB);
+      bind(a, b, portA, portB);
+      crossings[`${a}~${b}`] = pairing;
+    }
+  // Dead ends: bolt one onto every port still open that one suits (each dead end once); the rest stay sealed.
+  for (const id of shuffled(
+    rand,
+    Object.keys(cat.regions)
+      .filter((t) => cat.regions[t]!.terminal)
+      .sort(),
+  ))
+    attach(id);
+  const layout = Object.fromEntries(regions.map((id) => [id, grid.at.get(id)!])) as Record<string, [number, number]>;
 
   // The foes of each region, by role (a story region's slot may ask more of them).
   const foes: Record<string, Record<string, string>> = {};
@@ -608,7 +684,7 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
       epilogue: resolveArc(arc.epilogue ?? [], ids, text),
     },
   };
-  return { seed, arc: arcId, keeper: keeperId, regions, foes, crossings, files };
+  return { seed, arc: arcId, keeper: keeperId, regions, foes, crossings, layout, files };
 }
 
 /** What is wrong with a set of packs, one problem per entry (empty when they can be assembled from). */
@@ -625,17 +701,24 @@ export function checkPacks(cat: Catalog): string[] {
     if (a === b) out.push(`pairings.${id}: pairs "${a}" with itself`);
     p.regions.forEach((r, i) => {
       if (!region(r)) out.push(`pairings.${id}: no region "${r}"`);
-      else if (p.ports && !region(r)!.ports.includes(p.ports[i]!))
+      else if (p.ports && !region(r)!.ports[p.ports[i]!])
         out.push(`pairings.${id}.ports: "${r}" has no port "${p.ports[i]}"`);
       paired.add(r);
     });
+    const [sa, sb] = p.ports ? [region(a)?.ports[p.ports[0]], region(b)?.ports[p.ports[1]]] : [];
+    if (sa && sb && OPPOSITE[sa] !== sb)
+      out.push(`pairings.${id}.ports: "${p.ports![0]}" (${sa}) and "${p.ports![1]}" (${sb}) are not on opposite edges`);
     for (const [key, line] of Object.entries(p.lore ?? {}))
       if (typeof line !== 'string')
         for (const seen of Object.keys(line))
           if (!p.regions.includes(seen)) out.push(`pairings.${id}.lore.${key}: "${seen}" is not one of its regions`);
   }
-  for (const id of Object.keys(cat.regions))
+  for (const [id, r] of Object.entries(cat.regions)) {
     if (!paired.has(id)) out.push(`regions.${id}: no pairing joins it to anything`);
+    const sides = Object.values(r.ports);
+    if (new Set(sides).size !== sides.length) out.push(`regions.${id}.ports: two ports on one edge`);
+    if (r.terminal && (r.hub || sides.length !== 1)) out.push(`regions.${id}: a dead end has one port and is no hub`);
+  }
   for (const [id, arc] of Object.entries(cat.arcs)) {
     arc.slots?.forEach((slot, i) =>
       slot.regions?.forEach((r) => {

@@ -3,6 +3,7 @@
 // does the binding itself. When a zone is loaded the bound ports become ordinary doors (`wireDoors`), so travel,
 // prefetching and co-op see nothing new; a port nothing binds is walled up.
 
+import { doorCells } from '../map/doors';
 import type { CellPoint, DoorSpawn, MapData } from '../map/types';
 
 /** Where a port leads: the port `port` of the map `map`. */
@@ -14,19 +15,30 @@ export interface PortBinding {
 /**
  * The map as the game uses it: each bound port made a door to the other map's port (`to.port` names it; the arrival is
  * that port's `arrive`, read from the other map when the player goes through, `portArrival`), and each unbound port's
- * cells blocked. Returns a new MapData; `data` is not changed. A map with no ports comes back as it is.
+ * cells blocked and its `seal` drawn across them. Returns a new MapData; `data` is not changed. A map with no ports comes back as it is.
  */
 export function wireDoors(data: MapData, bindings: Record<string, PortBinding> | undefined): MapData {
   if (!data.ports.length) return data;
   const doors: DoorSpawn[] = [...data.doors];
   const blocked = new Set(data.collision);
+  const objects = [...data.objects];
   for (const port of data.ports) {
     const to = bindings?.[port.name];
-    if (to)
-      doors.push({ col: port.col, row: port.row, w: port.w, to: { zone: to.map, col: -1, row: -1, port: to.port } });
-    else for (let i = 0; i < port.w; i++) blocked.add(port.row * data.width + port.col + i);
+    if (to) {
+      const door: DoorSpawn = {
+        col: port.col,
+        row: port.row,
+        w: port.w,
+        to: { zone: to.map, col: -1, row: -1, port: to.port },
+      };
+      if (port.h > 1) door.h = port.h;
+      doors.push(door);
+    } else {
+      for (const [c, r] of doorCells(port)) blocked.add(r * data.width + c);
+      objects.push(...(port.seal ?? [])); // the doorway is seen to be closed
+    }
   }
-  return { ...data, doors, collision: [...blocked].sort((a, b) => a - b) };
+  return { ...data, doors, objects, collision: [...blocked].sort((a, b) => a - b) };
 }
 
 /** Where a player coming in through `port` appears (the map's spawn if it has no such port). */

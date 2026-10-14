@@ -10,9 +10,16 @@ import {
   checkPacks,
   crossingNeeds,
   mergePacks,
+  OPPOSITE,
   pairingsBetween,
+  STEP,
   type Pack,
 } from '../../src/content/packs';
+import { wireDoors } from '../../src/content/ports';
+import { parseMap, type MapData } from '../../src/map/types';
+import fs from 'node:fs';
+import path from 'node:path';
+import { ROOT } from '../map/image';
 import { parseContent } from '../../src/content/schema';
 import { assembleFromDisk, readPacks } from './disk';
 
@@ -57,6 +64,26 @@ describe('random campaigns from the packs', () => {
       for (const to of Object.values(biome.ports)) reached.add(to.map);
     }
     expect(reached.size).toBe(a.regions.length);
+    // The world is one grid: no two regions on a cell; every door leads to the next cell its way, onto the facing edge
+    // (leave north, arrive in the south), so any walk that comes back to a cell comes back to the same region.
+    const cells = new Set(Object.values(a.layout).map(([x, y]) => `${x},${y}`));
+    expect(cells.size).toBe(a.regions.length);
+    for (const [id, b] of Object.entries(biomes))
+      for (const [port, to] of Object.entries(b.ports)) {
+        const other = Object.keys(biomes).find((k) => biomes[k].map === to.map)!;
+        const side = cat.regions[id].ports[port];
+        const [x, y] = a.layout[id];
+        expect(a.layout[other], `${id}.${port}`).toEqual([x + STEP[side][0], y + STEP[side][1]]);
+        expect(cat.regions[other].ports[to.port]).toBe(OPPOSITE[side]);
+      }
+    // Regions side by side are paired (a dead end only has to suit the region it hangs off).
+    for (const [p, [x, y]] of Object.entries(a.layout))
+      for (const [q, [u, v]] of Object.entries(a.layout))
+        if (p < q && Math.abs(x - u) + Math.abs(y - v) === 1 && !cat.regions[p].terminal && !cat.regions[q].terminal)
+          expect(pairingsBetween(cat, p, q), `${p} beside ${q}`).not.toEqual([]);
+    // A dead end hangs off exactly one region.
+    for (const id of a.regions.filter((r) => cat.regions[r].terminal))
+      expect(Object.keys(biomes[id].ports)).toHaveLength(1);
     // Each role of a region is a different mob (the packs have enough of them), so no two quests ask for the same.
     for (const [id, roles] of Object.entries(a.foes))
       expect(new Set(Object.values(roles)).size, id).toBe(Object.keys(roles).length);
@@ -88,6 +115,54 @@ describe('random campaigns from the packs', () => {
     expect(quests.givers[quests.giver].zone).toBe(biomes[scenarios.start].map);
   });
 
+  it('walks back to where it started: north, east, south and west through any doors come home', () => {
+    for (const seed of SEEDS) {
+      const a = assembleFromDisk(seed);
+      const biomes = (
+        a.files.biomes as { biomes: Record<string, { map: string; ports: Record<string, { map: string }> }> }
+      ).biomes;
+      const byMap = new Map(Object.entries(biomes).map(([id, b]) => [b.map, id]));
+      // Wander through doors at random, keeping count of the steps taken: wherever the walk is, the steps add up to
+      // where that region stands, so returning to a region always means returning to the same spot.
+      let here = a.regions[0];
+      let pos: [number, number] = [0, 0];
+      for (let i = 0; i < 60; i++) {
+        const doors = Object.entries(biomes[here].ports);
+        if (!doors.length) break;
+        const [port, to] = doors[(seed * 7 + i * 13) % doors.length];
+        const [dx, dy] = STEP[cat.regions[here].ports[port]];
+        pos = [pos[0] + dx, pos[1] + dy];
+        here = byMap.get(to.map)!;
+        expect(pos).toEqual(a.layout[here]);
+      }
+    }
+  });
+
+  it('bolts dead ends onto open ports, and seals the ports left open', () => {
+    const made = SEEDS.map(assembleFromDisk);
+    const ends = Object.keys(cat.regions).filter((id) => cat.regions[id].terminal);
+    for (const id of ends)
+      expect(
+        made.some((a) => a.regions.includes(id)),
+        id,
+      ).toBe(true);
+    const map = (name: string): MapData =>
+      parseMap(JSON.parse(fs.readFileSync(path.join(ROOT, 'public/maps', `${name}.json`), 'utf8')));
+    for (const a of made.slice(0, 20)) {
+      const biomes = (a.files.biomes as { biomes: Record<string, { map: string; ports: Record<string, unknown> }> })
+        .biomes;
+      for (const b of Object.values(biomes)) {
+        const raw = map(b.map);
+        const wired = wireDoors(raw, b.ports as never);
+        const open = raw.ports.filter((p) => !b.ports[p.name]);
+        const sealed = open.reduce((n, p) => n + (p.seal?.length ?? 0), 0);
+        expect(sealed, `${b.map}: every open port is sealed`).toBeGreaterThanOrEqual(open.length);
+        expect(wired.objects.length - raw.objects.length).toBe(sealed);
+        expect(wired.doors.length - raw.doors.length).toBe(raw.ports.length - open.length);
+      }
+    }
+  });
+
   it('tells a cross-biome quest by the pairing it crosses', () => {
     const told = SEEDS.map(assembleFromDisk).filter((a) => a.arc === 'long_thaw');
     const by = (pairing: string) => {
@@ -111,7 +186,8 @@ describe('random campaigns from the packs', () => {
       id: 'broken',
       keepers: { ghost: { npc: 'nobody', name: 'Ghost', tag: 'Ghost', homes: ['frostfen'] } },
       pairings: {
-        nowhere: { regions: ['mirewood', 'atlantis'], ports: ['east', 'north'] },
+        nowhere: { regions: ['mirewood', 'atlantis'], ports: ['northwest', 'north'] },
+        askew: { regions: ['mirewood', 'frostfen'], ports: ['north', 'north'] },
         mirror: { regions: ['barrow', 'barrow'], lore: { sign: { moon: 'x' } } },
       },
       arcs: {
@@ -129,7 +205,8 @@ describe('random campaigns from the packs', () => {
     expect(p).toMatch(/keepers\.ghost\.npc: "nobody" is not an npc/);
     expect(p).toMatch(/keepers\.ghost\.homes: "frostfen" is not a hub region/);
     expect(p).toMatch(/pairings\.nowhere: no region "atlantis"/);
-    expect(p).toMatch(/pairings\.nowhere\.ports: "mirewood" has no port "east"/);
+    expect(p).toMatch(/pairings\.nowhere\.ports: "mirewood" has no port "northwest"/);
+    expect(p).toMatch(/pairings\.askew\.ports: "north" \(north\) and "north" \(north\) are not on opposite edges/);
     expect(p).toMatch(/pairings\.mirror: pairs "barrow" with itself/);
     expect(p).toMatch(/pairings\.mirror\.lore\.sign: "moon" is not one of its regions/);
     expect(p).toMatch(/arcs\.leap\.slots\[1\]: no region "atlantis"/);

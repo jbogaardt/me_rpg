@@ -171,7 +171,7 @@
       "level": [1, 2],
       "themes": ["swamp", "beast"],
       "hub": true,
-      "ports": ["north", "northwest", "south"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
       "foes": { "common": {}, "hunter": {}, "ranged": {} },
       "roam": [
         { "role": "common", "count": 5, "seed": 301, "apart": 8, "avoid": [{ "x": 25, "y": 20, "radius": 9 }] },
@@ -208,7 +208,7 @@
       },
       "level": [2, 4],
       "themes": ["frost", "beast"],
-      "ports": ["north", "south"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
       "foes": { "common": {}, "ranged": {}, "brute": {}, "boss": {} },
       "roam": [
         {
@@ -272,7 +272,7 @@
       },
       "level": [3, 5],
       "themes": ["undead"],
-      "ports": ["north", "south"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
       "foes": { "ranged": {}, "brute": {}, "boss": {} },
       "roam": [
         {
@@ -316,6 +316,66 @@
           ]
         }
       }
+    },
+    "frost_grotto": {
+      "biome": {
+        "name": "The Frost Grotto",
+        "tint": "#bfe6ff",
+        "map": "end_frost_grotto",
+        "climate": "frost",
+        "music": null,
+        "tilesets": ["frost_ground.png", "lpc_terrain.png", "trees_frost.png", "frost_objects.png"]
+      },
+      "level": [2, 5],
+      "themes": ["frost"],
+      "terminal": true,
+      "ports": { "north": "north" },
+      "foes": { "hunter": {} },
+      "roam": [],
+      "encounters": [
+        { "role": "hunter", "x": 11, "y": 13 },
+        { "role": "hunter", "x": 12, "y": 16 }
+      ]
+    },
+    "bog_hollow": {
+      "biome": {
+        "name": "The Bog Hollow",
+        "tint": "#7fa85a",
+        "map": "end_bog_hollow",
+        "climate": "swamp",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "lpc_swamp.png", "trees_swamp.png", "object-layer.png"]
+      },
+      "level": [2, 5],
+      "themes": ["swamp"],
+      "terminal": true,
+      "ports": { "west": "west" },
+      "foes": { "ranged": {} },
+      "roam": [],
+      "encounters": [
+        { "role": "ranged", "x": 21, "y": 13 },
+        { "role": "ranged", "x": 24, "y": 14 }
+      ]
+    },
+    "old_shrine": {
+      "biome": {
+        "name": "The Old Shrine",
+        "tint": "#9a88c8",
+        "map": "end_old_shrine",
+        "climate": "undead",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"]
+      },
+      "level": [2, 5],
+      "themes": ["undead"],
+      "terminal": true,
+      "ports": { "east": "east" },
+      "foes": { "brute": {} },
+      "roam": [],
+      "encounters": [
+        { "role": "brute", "x": 8, "y": 10 },
+        { "role": "brute", "x": 9, "y": 13 }
+      ]
     }
   },
   "arcs": {

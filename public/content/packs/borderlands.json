@@ -45,6 +45,71 @@
           "ember_caldera": "Grave-dust from The Barrow drifts down the glass tunnel and burns in the heat."
         }
       }
+    },
+    "cove_coast": {
+      "regions": ["cinder_coast", "ember_cove"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a narrow ash gully off The Cinder Coast" }
+    },
+    "cove_caldera": {
+      "regions": ["ember_caldera", "ember_cove"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a crack in the rim of The Ember Caldera" }
+    },
+    "cove_barrow": {
+      "regions": ["barrow", "ember_cove"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a scorched path out of The Barrow" }
+    },
+    "grotto_frostfen": {
+      "regions": ["frostfen", "frost_grotto"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a snow-choked gully off The Frostfen" }
+    },
+    "grotto_mirewood": {
+      "regions": ["mirewood", "frost_grotto"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a cold, frosted path off The Mirewood" }
+    },
+    "grotto_barrow": {
+      "regions": ["barrow", "frost_grotto"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a rimed path out of The Barrow" }
+    },
+    "hollow_mirewood": {
+      "regions": ["mirewood", "bog_hollow"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a sunken track off The Mirewood" }
+    },
+    "hollow_frostfen": {
+      "regions": ["frostfen", "bog_hollow"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a thawing track off The Frostfen" }
+    },
+    "hollow_barrow": {
+      "regions": ["barrow", "bog_hollow"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a waterlogged path out of The Barrow" }
+    },
+    "shrine_barrow": {
+      "regions": ["barrow", "old_shrine"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a path of old stones out of The Barrow" }
+    },
+    "shrine_mirewood": {
+      "regions": ["mirewood", "old_shrine"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a path of old stones off The Mirewood" }
+    },
+    "shrine_frostfen": {
+      "regions": ["frostfen", "old_shrine"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a path of old stones off The Frostfen" }
+    },
+    "shrine_coast": {
+      "regions": ["cinder_coast", "old_shrine"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a path of old stones off The Cinder Coast" }
     }
   },
   "arcs": {

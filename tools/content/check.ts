@@ -6,6 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as prettier from 'prettier';
 import { roam } from '../../src/content/populate';
+import { OPPOSITE } from '../../src/content/packs';
+import { onDoor } from '../../src/map/doors';
 import type { ContentManager } from '../../src/content/ContentManager';
 import type { MapData } from '../../src/map/types';
 import { campaigns, CONTENT_DIR, loadContentFromDisk, PACKS, readContentFile, readPacks } from './disk';
@@ -23,7 +25,7 @@ function standable(map: MapData, x: number, y: number): string | null {
   const i = row * map.width + col;
   if (map.surfaces[map.surface[i]] === 'beyond') return 'is in the neighbouring biome';
   if (map.collision.includes(i)) return 'is on a blocked cell';
-  if (map.doors.some((d) => d.row === row && col >= d.col && col < d.col + d.w)) return 'is on a door';
+  if (map.doors.some((d) => onDoor(d, col, row)) || map.ports.some((p) => onDoor(p, col, row))) return 'is on a door';
   return null;
 }
 
@@ -66,8 +68,14 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
       if (!raw.ports.some((p) => p.name === name))
         errors.push(`biomes.${type}.ports.${name}: ${biome.map} has no such port`);
       const there = maps.get(to.map);
-      if (there && !there.ports.some((p) => p.name === to.port))
-        errors.push(`biomes.${type}.ports.${name}: ${to.map} has no port "${to.port}"`);
+      const far = there?.ports.find((p) => p.name === to.port);
+      if (there && !far) errors.push(`biomes.${type}.ports.${name}: ${to.map} has no port "${to.port}"`);
+      // Leave by the north, arrive in the south: a binding joins ports on opposite edges.
+      const near = raw.ports.find((p) => p.name === name);
+      if (near && far && OPPOSITE[near.side] !== far.side)
+        errors.push(
+          `biomes.${type}.ports.${name}: joins its ${near.side} edge to the ${far.side} edge of ${to.map}; a port leads to the opposite edge`,
+        );
     }
     if (!walkable(biome.map)) continue;
     const map = content.wire(biome.map, raw); // the doors as the game has them, ports included
@@ -154,6 +162,19 @@ export function checkCampaigns(maps: Map<string, MapData>): ContentReport {
     // A seed's roam rules are the packs' (warned about once, under PACKS).
     if (!seeded) warnings.push(...r.warnings.map((w) => `${campaign}: ${w}`));
   }
+  // A pack region's ports are its map's, on the edges it says.
+  for (const pack of readPacks())
+    for (const [id, region] of Object.entries(pack.regions ?? {})) {
+      const map = maps.get(region.biome.map);
+      if (!map) continue;
+      const at = `${PACKS}: ${pack.id}.regions.${id}.ports`;
+      const declared = Object.entries(region.ports)
+        .map(([n, side]) => `${n}:${side}`)
+        .sort();
+      const actual = map.ports.map((p) => `${p.name}:${p.side}`).sort();
+      if (declared.join() !== actual.join())
+        errors.push(`${at}: [${declared.join(', ')}], but ${region.biome.map} has [${actual.join(', ')}]`);
+    }
   for (const name of maps.keys()) if (!used.has(name)) errors.push(`map "${name}" is in no campaign's biomes.json`);
   return { errors, warnings };
 }

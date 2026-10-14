@@ -86,6 +86,7 @@ export interface SignSpawn extends CellPoint {
 /** Walking onto a door cell takes the player to another zone (`to.col`/`to.row` is where they appear). */
 export interface DoorSpawn extends CellPoint {
   w: number; // cells wide, starting at `col` (a hall's door is two cells wide, a tower's one)
+  h?: number; // cells tall, starting at `row` (default 1; a doorway on a map's east or west edge is a column)
   to: { zone: string; col: number; row: number; port?: string };
   /** The way a player walking through it is going across the world, on a gap between two biomes: the screen slides that way. */
   dir?: 'up' | 'down' | 'left' | 'right';
@@ -100,7 +101,31 @@ export interface DoorSpawn extends CellPoint {
 export interface PortSpawn extends CellPoint {
   name: string;
   w: number;
+  /** Cells tall (1 for a port on the north or south edge; an east or west port is a column). */
+  h: number;
   arrive: CellPoint;
+  /** What closes it when nothing binds it (a rockfall, a thicket): drawn only then (`wireDoors`), so no open way leads nowhere. */
+  seal?: MapObject[];
+  /** The edge of the map it is on (`portSide`). A port is joined only to one on the opposite edge, so a player going north arrives in the south. */
+  side: 'north' | 'south' | 'east' | 'west';
+}
+
+/** The edge of a `width` x `height` map a doorway of `w` cells at `col,row` is nearest. */
+export function portSide(
+  col: number,
+  row: number,
+  w: number,
+  h: number,
+  width: number,
+  height: number,
+): PortSpawn['side'] {
+  const near: [PortSpawn['side'], number][] = [
+    ['north', row],
+    ['south', height - (row + h)],
+    ['west', col],
+    ['east', width - (col + w)],
+  ];
+  return near.reduce((a, b) => (b[1] < a[1] ? b : a))[0];
 }
 
 /**
@@ -205,7 +230,10 @@ function unpacked(json: unknown): MapData {
     places: d.places ?? [],
     signs: d.signs ?? [],
     doors: d.doors ?? [],
-    ports: d.ports ?? [],
+    ports: (d.ports ?? []).map((p) => {
+      const h = p.h ?? 1;
+      return { ...p, h, side: p.side ?? portSide(p.col, p.row, p.w, h, d.width!, d.height!) };
+    }),
     indoor: d.indoor ?? false,
     climate: d.climate ?? 'temperate',
   };

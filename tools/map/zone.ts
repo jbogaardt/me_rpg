@@ -1,5 +1,6 @@
 import {
   CELL,
+  portSide,
   FLAT_Z,
   type CellPoint,
   type ChestSpawn,
@@ -76,7 +77,16 @@ export interface ZoneApi {
   place(name: string, col: number, row: number): unknown;
   sign(col: number, row: number, ways: SignSpawn['ways']): unknown;
   door(col: number, row: number, w: number, toZone: string, toCol: number, toRow: number): unknown;
-  port(name: string, col: number, row: number, w: number, arriveCol: number, arriveRow: number): unknown;
+  port(
+    name: string,
+    col: number,
+    row: number,
+    w: number,
+    arriveCol: number,
+    arriveRow: number,
+    h?: number,
+    seal?: PrefabName[],
+  ): unknown;
   indoor(): unknown;
   climate(name: ClimateName): unknown;
 }
@@ -221,8 +231,17 @@ export class WorldWindow implements ZoneApi {
     this.z.door(col - this.o.col, row - this.o.row, w, toZone, toCol, toRow); // the destination is the other zone's own cell
     return this;
   }
-  port(name: string, col: number, row: number, w: number, arriveCol: number, arriveRow: number) {
-    this.z.port(name, col - this.o.col, row - this.o.row, w, arriveCol - this.o.col, arriveRow - this.o.row);
+  port(
+    name: string,
+    col: number,
+    row: number,
+    w: number,
+    arriveCol: number,
+    arriveRow: number,
+    h = 1,
+    seal: PrefabName[] = [],
+  ) {
+    this.z.port(name, col - this.o.col, row - this.o.row, w, arriveCol - this.o.col, arriveRow - this.o.row, h, seal);
     return this;
   }
   indoor() {
@@ -325,6 +344,7 @@ export class Zone {
   private signList: SignSpawn[] = [];
   private doorList: DoorSpawn[] = [];
   private portList: PortSpawn[] = [];
+  private seals = new Map<string, Placed[]>();
   private isIndoor = false;
   private weather: ClimateName = DEFAULT_CLIMATE;
 
@@ -818,11 +838,39 @@ export class Zone {
   /**
    * A port: a doorway (the `w` cells from (col, row), opened up like a door's) whose far side the content decides
    * (biomes.json `ports`, bound by a random campaign's assembler or by hand). `arriveCol, arriveRow` is where a player
-   * coming in through it appears: an open cell just inside, not on the doorway. A port nothing binds is walled up.
+   * coming in through it appears: an open cell just inside, not on the doorway. A port nothing binds is walled up. Its
+   * edge (`side`) is the one it is nearest; it is joined only to a port on the opposite edge.
    */
-  port(name: string, col: number, row: number, w: number, arriveCol: number, arriveRow: number) {
-    this.portList.push({ name, col, row, w, arrive: { col: arriveCol, row: arriveRow } });
-    for (let i = 0; i < w; i++) this.forced.set(row * this.width + col + i, false);
+  port(
+    name: string,
+    col: number,
+    row: number,
+    w: number,
+    arriveCol: number,
+    arriveRow: number,
+    h = 1,
+    seal: PrefabName[] = [],
+  ) {
+    const side = portSide(col, row, w, h, this.width, this.height);
+    this.portList.push({ name, col, row, w, h, arrive: { col: arriveCol, row: arriveRow }, side });
+    // What closes it when nothing binds it: the props given, one on each of its cells in turn (resolved in toMapData).
+    const placed: Placed[] = [];
+    let k = 0;
+    for (let r = 0; r < h; r++)
+      for (let i = 0; i < w; i++) {
+        const prefab = seal[k++ % Math.max(1, seal.length)];
+        if (!prefab) continue;
+        const p = PREFABS[prefab];
+        const span = Math.ceil(p.w / CELL) * CELL;
+        placed.push({
+          prefab,
+          px: (col + i) * CELL + Math.floor((span - p.w) / 2),
+          py: (row + r + 1) * CELL - p.h,
+          autoBlock: false,
+        });
+      }
+    this.seals.set(name, placed);
+    for (let r = 0; r < h; r++) for (let i = 0; i < w; i++) this.forced.set((row + r) * this.width + col + i, false);
     return this;
   }
 
@@ -983,6 +1031,27 @@ export class Zone {
       }
     }
 
+    // Each port's seal, as objects of its own (drawn only while nothing binds the port).
+    const ports = this.portList.map((port) => {
+      const seal = (this.seals.get(port.name) ?? []).flatMap((p) => {
+        const prefab = PREFABS[p.prefab];
+        return prefab.parts.map((part): MapObject => {
+          const o: MapObject = {
+            s: sheetIndex(prefab.sheet),
+            x: part.x,
+            y: part.y,
+            w: part.w,
+            h: part.h,
+            px: p.px + part.dx,
+            py: p.py + part.dy,
+          };
+          if (prefab.tag) o.tag = prefab.tag;
+          return o;
+        });
+      });
+      return seal.length ? { ...port, seal } : port;
+    });
+
     const blocked = new Set(this.blocked);
     // Props: block cells covered enough by the bottom band of their art. Prefabs differ in band/min,
     // so measure each (band, min) group separately.
@@ -1032,7 +1101,7 @@ export class Zone {
       places: this.placeList,
       signs: this.signList,
       doors: this.doorList,
-      ports: this.portList,
+      ports,
       indoor: this.isIndoor,
       climate: this.weather,
     };

@@ -8,14 +8,25 @@ import { CELL, type DoorSpawn, type MapData } from './types';
 export function doorAt(data: Pick<MapData, 'doors'>, x: number, y: number): DoorSpawn | undefined {
   const col = Math.floor(x / CELL);
   const row = Math.floor((y - 1) / CELL);
-  return data.doors.find((d) => d.row === row && col >= d.col && col < d.col + d.w);
+  return data.doors.find((d) => onDoor(d, col, row));
+}
+
+/** Is the cell (col, row) one of the door's? */
+export const onDoor = (d: Pick<DoorSpawn, 'col' | 'row' | 'w' | 'h'>, col: number, row: number) =>
+  row >= d.row && row < d.row + (d.h ?? 1) && col >= d.col && col < d.col + d.w;
+
+/** Every cell of a door, as [col, row]. */
+export function doorCells(d: Pick<DoorSpawn, 'col' | 'row' | 'w' | 'h'>): [number, number][] {
+  const out: [number, number][] = [];
+  for (let r = 0; r < (d.h ?? 1); r++) for (let c = 0; c < d.w; c++) out.push([d.col + c, d.row + r]);
+  return out;
 }
 
 /** The doors within `radius` pixels of (x, y): the zones a player may be about to enter, worth loading ahead. */
 export function doorsNear(data: Pick<MapData, 'doors'>, x: number, y: number, radius: number): DoorSpawn[] {
   return data.doors.filter((d) => {
     const cx = Math.max(d.col * CELL, Math.min(x, (d.col + d.w) * CELL));
-    const cy = Math.max(d.row * CELL, Math.min(y, (d.row + 1) * CELL));
+    const cy = Math.max(d.row * CELL, Math.min(y, (d.row + (d.h ?? 1)) * CELL));
     return Math.hypot(x - cx, y - cy) <= radius;
   });
 }
@@ -36,7 +47,7 @@ export function arrivalFacing(
   for (const d of dest.doors) {
     if (d.to.zone !== from) continue;
     const dx = arrival.col - Math.max(d.col, Math.min(arrival.col, d.col + d.w - 1));
-    const dy = arrival.row - d.row;
+    const dy = arrival.row - Math.max(d.row, Math.min(arrival.row, d.row + (d.h ?? 1) - 1));
     if (!best || Math.abs(dx) + Math.abs(dy) < Math.abs(best.dx) + Math.abs(best.dy)) best = { dx, dy };
   }
   if (!best) return 'down';

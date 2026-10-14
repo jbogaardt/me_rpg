@@ -7,6 +7,8 @@ import { blob, pond, trail } from '../tools/map/helpers';
 const W = 50;
 const H = 38;
 const TREES = [...DEAD_TREES];
+/** What closes a port nothing leads through. */
+const SEAL = ['deadBush', 'darkBoulder', 'deadBush'] as const;
 
 export default defineZone({
   name: 'emberfall_caldera',
@@ -31,14 +33,23 @@ export default defineZone({
         [24, 6],
       ]),
     ]);
+    z.paint(
+      'mud',
+      trail([
+        [38, 20],
+        [48, 20],
+      ]),
+    );
     z.paint('soot', blob({ col: 19, row: 2, w: 12, h: 7 })); // the Warden's ground
 
     z.forest({ col: -3, row: -3, w: W + 6, h: 5 }, { trees: TREES, seed: 11 });
     z.forest({ col: -3, row: H - 4, w: 26, h: 7 }, { trees: TREES, seed: 12 });
     z.forest({ col: 28, row: H - 4, w: W - 25, h: 7 }, { trees: TREES, seed: 13 });
     z.forest({ col: -3, row: 2, w: 6, h: H - 6 }, { trees: TREES, seed: 14 });
-    z.forest({ col: W - 3, row: 2, w: 6, h: H - 6 }, { trees: TREES, seed: 15 });
-    z.port('south', 24, 36, 3, 25, 32); // where it leads is the content's (biomes.json ports)
+    z.forest({ col: W - 3, row: 2, w: 6, h: 16 }, { trees: TREES, seed: 15 });
+    z.forest({ col: W - 3, row: 23, w: 6, h: H - 27 }, { trees: TREES, seed: 16 });
+    z.port('south', 24, 36, 3, 25, 32, 1, [...SEAL]);
+    z.port('east', W - 1, 19, 1, W - 4, 20, 3, [...SEAL]); // where it leads is the content's (biomes.json ports)
 
     // The lava lake, and smaller vents round it.
     pond(z, { col: 17, row: 12, w: 16, h: 9 }, { water: 'lava', shore: 'mud' });

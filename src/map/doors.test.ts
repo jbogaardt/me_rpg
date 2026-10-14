@@ -10,6 +10,18 @@ const door = (col: number, row: number, w: number, zone: string): DoorSpawn => (
 });
 const outside = { doors: [door(16, 45, 2, 'shop_smithy'), door(22, 45, 1, 'shop_armory')] };
 
+describe('a doorway on an east or west edge (a column, `h` cells tall)', () => {
+  const east = { doors: [{ ...door(49, 19, 1, 'next'), h: 3 }] };
+  it('takes the player on any of its cells, not beside them', () => {
+    for (const row of [19, 20, 21]) expect(doorAt(east, ...cellFeet({ col: 49, row }))?.to.zone).toBe('next');
+    expect(doorAt(east, ...cellFeet({ col: 49, row: 22 }))).toBeUndefined();
+    expect(doorAt(east, ...cellFeet({ col: 48, row: 20 }))).toBeUndefined();
+  });
+  it('turns the player away from it on arrival', () => {
+    expect(arrivalFacing({ doors: [{ ...door(49, 19, 1, 'from'), h: 3 }] }, 'from', { col: 46, row: 20 })).toBe('left');
+  });
+});
+
 describe('doorAt', () => {
   it('finds the door whose cells the feet stand on', () => {
     expect(doorAt(outside, ...cellFeet({ col: 16, row: 45 }))?.to.zone).toBe('shop_smithy');

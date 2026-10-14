@@ -9,6 +9,8 @@ import { blob, pond, trail } from '../tools/map/helpers';
 const W = 72;
 const H = 52;
 const TREES = [...DEAD_TREES];
+/** What closes a port nothing leads through. */
+const SEAL = ['deadBush', 'darkBoulder', 'deadBush'] as const;
 const FILLERS = ['deadBush', 'darkSpire'] as const;
 
 export default defineZone({
@@ -27,11 +29,11 @@ export default defineZone({
     ]);
     const west = trail([
       [34, 28],
-      [12, 28],
+      [1, 28],
     ]);
     const east = trail([
       [34, 24],
-      [56, 24],
+      [70, 24],
     ]);
     const south = trail([
       [16, 28],
@@ -45,11 +47,15 @@ export default defineZone({
     z.forest({ col: 38, row: -3, w: W - 35, h: 7 }, { trees: TREES, seed: 2 });
     z.forest({ col: -3, row: H - 4, w: 17, h: 7 }, { trees: TREES, seed: 3 });
     z.forest({ col: 19, row: H - 4, w: W - 16, h: 7 }, { trees: TREES, seed: 6 });
-    z.forest({ col: -3, row: 4, w: 7, h: H - 8 }, { trees: TREES, seed: 4 });
-    z.forest({ col: W - 4, row: 4, w: 7, h: H - 8 }, { trees: TREES, seed: 5 });
+    z.forest({ col: -3, row: 4, w: 7, h: 22 }, { trees: TREES, seed: 4 });
+    z.forest({ col: -3, row: 31, w: 7, h: H - 35 }, { trees: TREES, seed: 7 });
+    z.forest({ col: W - 4, row: 4, w: 7, h: 18 }, { trees: TREES, seed: 5 });
+    z.forest({ col: W - 4, row: 27, w: 7, h: H - 31 }, { trees: TREES, seed: 8 });
     // Where the ports lead is the content's (biomes.json `ports`); one nothing binds is walled up.
-    z.port('north', 34, 1, 3, 35, 4);
-    z.port('south', 15, H - 2, 3, 16, H - 6);
+    z.port('north', 34, 1, 3, 35, 4, 1, [...SEAL]);
+    z.port('south', 15, H - 2, 3, 16, H - 6, 1, [...SEAL]);
+    z.port('west', 0, 27, 1, 3, 28, 3, [...SEAL]);
+    z.port('east', W - 1, 23, 1, W - 4, 24, 3, [...SEAL]);
 
     // --- Lava pools in the east, a chasm of glass in the west ------------------------------------------------------
     pond(z, { col: 52, row: 13, w: 7, h: 4 }, { water: 'lava', shore: 'mud' });
@@ -64,7 +70,7 @@ export default defineZone({
       [5, 33, 9, 9],
       [46, 37, 12, 8],
       [22, 13, 8, 6],
-      [59, 17, 7, 9],
+      [60, 7, 6, 7],
     ] as const)
       z.grove(blob({ col, row, w, h }), { trees: TREES, fillers: [...FILLERS], density: 0.9, fill: true });
     for (const [name, col, row] of [
