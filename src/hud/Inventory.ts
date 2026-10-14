@@ -12,6 +12,7 @@ import {
 import { iconSvg } from './itemIcons';
 import { buffTexts } from './itemText';
 import { combosHtml } from './itemText';
+import { esc } from './html';
 
 // The Inventory tab of the pause menu: what the hero wears (a slot each, including both hands, a tool and a bag),
 // and the pack of carried items. Tap or click a slot to pick it, then use the buttons under the grids; a double
@@ -89,7 +90,7 @@ export class Inventory {
     this.selected = sel;
     const slotButton = (item: Item | undefined, attrs: string, label: string, picked: boolean) =>
       `<button type="button" class="slot ${item ? `tier${itemTier(item)}` : 'empty'}${picked ? ' picked' : ''}" ${attrs}
-        aria-label="${item ? item.name : `${label} (empty)`}" title="${item ? item.name : label}">
+        aria-label="${item ? esc(item.name) : `${label} (empty)`}" title="${item ? esc(item.name) : label}">
         ${item ? iconSvg(iconKind(item)) : ''}<span class="lbl">${label}</span></button>`;
 
     const worn = GEAR_SLOTS.map((slot) =>
@@ -133,7 +134,8 @@ export class Inventory {
         d.attack ? `${d.attack > 0 ? '+' : ''}${d.attack} ATK` : '',
         d.defense ? `${d.defense > 0 ? '+' : ''}${d.defense} DEF` : '',
       ].filter(Boolean);
-      if (hero[slot] && bits.length) versus = `<small class="versus">vs ${hero[slot].name}: ${bits.join(', ')}</small>`;
+      if (hero[slot] && bits.length)
+        versus = `<small class="versus">vs ${esc(hero[slot].name)}: ${bits.join(', ')}</small>`;
     }
     const buttons: string[] = [];
     const btn = (action: string, text: string) =>
@@ -151,7 +153,7 @@ export class Inventory {
     return `
       <div class="inv-item">
         <span class="icon tier${itemTier(item)}">${iconSvg(iconKind(item))}</span>
-        <div><strong>${item.name}</strong> <small>${where}</small><br /><small>${stats(item) || 'No bonus'}</small> ${versus}${combosHtml(item)}</div>
+        <div><strong>${esc(item.name)}</strong> <small>${where}</small><br /><small>${stats(item) || 'No bonus'}</small> ${versus}${combosHtml(item)}</div>
       </div>
       <div class="inv-actions">${buttons.join('')}</div>${msg}`;
   }

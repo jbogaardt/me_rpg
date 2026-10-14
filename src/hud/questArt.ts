@@ -3,6 +3,7 @@ import { itemOf } from '../systems/items';
 import { iconKind } from '../systems/inventory';
 import { GIVERS, SITE_KINDS, completerOf, type Quest } from '../systems/quests';
 import { iconSvg } from './itemIcons';
+import { esc } from './html';
 
 /** Pictures for the quest page: what the thing a quest wants looks like, so the player knows it when they see it. */
 
@@ -50,5 +51,5 @@ export function questArt(q: Quest, portrait: (mobKind: string) => string | null)
     picture = `<span class="item-art tier${item.rare ? 4 : 1}">${iconSvg(iconKind(item))}</span>`;
     caption = item.name;
   }
-  return picture ? `<figure class="quest-art">${picture}<figcaption>${caption}</figcaption></figure>` : '';
+  return picture ? `<figure class="quest-art">${picture}<figcaption>${esc(caption)}</figcaption></figure>` : '';
 }

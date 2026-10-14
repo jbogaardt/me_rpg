@@ -14,6 +14,7 @@ import {
   questStatus,
   rewardText,
 } from '../systems/quests';
+import { esc } from './html';
 
 /**
  * The Quests tab of the pause menu: the task the hero is on, what it pays, and the ones already handed in. Rules and the
@@ -27,7 +28,7 @@ export function questPage(hero: Hero, portrait: (mobKind: string) => string | nu
     now = `<p class="quest-note">Every task is done, for now. The next part of the story is still being written.</p>`;
   } else if (status === 'offer') {
     const from = GIVERS[offererOf(q)];
-    now = `<h3>${q.title} <small>not started</small></h3><p class="quest-note">Speak to ${from?.name ?? 'the warden'} in ${zoneName(from?.zone ?? '')} for a new task. An arrow on screen points the way.</p>`;
+    now = `<h3>${esc(q.title)} <small>not started</small></h3><p class="quest-note">Speak to ${esc(from?.name ?? 'the warden')} in ${esc(zoneName(from?.zone ?? ''))} for a new task. An arrow on screen points the way.</p>`;
   } else {
     const done = status === 'ready';
     const to = GIVERS[completerOf(q)];
@@ -35,11 +36,11 @@ export function questPage(hero: Hero, portrait: (mobKind: string) => string | nu
       !done && q.objective.t !== 'bring' && q.objective.t !== 'meet'
         ? `<p class="quest-note">Press M to open the map: the gold <b>?</b> circle marks the area to search.</p>`
         : '';
-    now = `<h3>${q.title} <small>${done ? 'ready to hand in' : 'in progress'}</small></h3>
-      <div class="quest-look">${questArt(q, portrait)}<div><p>${q.goal}</p>
-      <p class="quest-hint">${q.hint}</p>${search}</div></div>
-      <p class="quest-progress${done ? ' done' : ''}">${progressText(hero)}</p>
-      <p class="quest-note">${done ? `${q.objective.t === 'meet' || q.objective.t === 'visit' || offererOf(q) !== completerOf(q) ? 'Speak to' : 'Return to'} ${to?.name ?? 'the warden'} in ${zoneName(to?.zone ?? '')}.` : `Reward: ${rewardText(q.reward)}.`}</p>`;
+    now = `<h3>${esc(q.title)} <small>${done ? 'ready to hand in' : 'in progress'}</small></h3>
+      <div class="quest-look">${questArt(q, portrait)}<div><p>${esc(q.goal)}</p>
+      <p class="quest-hint">${esc(q.hint)}</p>${search}</div></div>
+      <p class="quest-progress${done ? ' done' : ''}">${esc(progressText(hero))}</p>
+      <p class="quest-note">${done ? `${q.objective.t === 'meet' || q.objective.t === 'visit' || offererOf(q) !== completerOf(q) ? 'Speak to' : 'Return to'} ${esc(to?.name ?? 'the warden')} in ${esc(zoneName(to?.zone ?? ''))}.` : `Reward: ${esc(rewardText(q.reward))}.`}</p>`;
   }
   // The story so far: what the hero has learned, chapter by chapter (the quest titles they handed in are under each).
   const story = journal(hero.quests);
@@ -48,13 +49,13 @@ export function questPage(hero: Hero, portrait: (mobKind: string) => string | nu
       story
         .map(
           (c) =>
-            `<h4 class="quest-chapter">${c.title}</h4><ul class="quest-done">${c.lines.map((l) => `<li>${l}</li>`).join('')}</ul>`,
+            `<h4 class="quest-chapter">${esc(c.title)}</h4><ul class="quest-done">${c.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>`,
         )
         .join('')
     : '';
   const chapter = currentChapter(hero.quests);
   const heading = chapter
-    ? `<p class="quest-chapter-title">Chapter ${chapter.index + 1} of ${CHAPTERS.length}: <b>${chapter.chapter.title}</b>${q ? '' : ' <small>(the end of part one)</small>'}</p>`
+    ? `<p class="quest-chapter-title">Chapter ${chapter.index + 1} of ${CHAPTERS.length}: <b>${esc(chapter.chapter.title)}</b>${q ? '' : ' <small>(the end of part one)</small>'}</p>`
     : '';
   return `<h2>Quests</h2>${heading}${now}${past}`;
 }

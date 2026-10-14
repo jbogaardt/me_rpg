@@ -27,6 +27,7 @@ import { Party } from './Party';
 import { StoryTab } from './StoryTab';
 import { Dials } from './Dials';
 import { CastTab } from './Cast';
+import { esc } from './html';
 
 // Pause menu (HTML overlay; markup in index.html). The game is frozen while it is open.
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
@@ -207,7 +208,7 @@ export class Menu {
       .join('<br />');
     const xpFrac = Math.max(0, Math.min(1, s.xp / next));
     document.getElementById('menu-status')!.innerHTML = `
-      <h2>${hero.name} <small>Level ${s.level}</small></h2>
+      <h2>${esc(hero.name)} <small>Level ${s.level}</small></h2>
       <dl>
         ${row('HP', `${Math.ceil(s.hp)} / ${s.maxHp}`)}
         ${row('MP', `${Math.floor(s.mp)} / ${s.maxMp}`)}

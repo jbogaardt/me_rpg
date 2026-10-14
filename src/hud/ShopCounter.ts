@@ -5,6 +5,7 @@ import { ITEMS, itemOf } from '../systems/items';
 import { buyPrice, sellPrice, shopBuys, stockOf, type Shop as ShopDef } from '../systems/shops';
 import type { Outcome, Trader } from '../systems/trader';
 import { bonuses, combosHtml } from './itemText';
+import { esc } from './html';
 
 // A shopkeeper's counter (HTML overlay; markup in index.html, styles in src/ui.css). Two tabs: what the shop sells,
 // and what the hero can sell it from the pack (a shop only buys its own trade). The rules are systems/shops.ts;
@@ -123,7 +124,7 @@ export class ShopCounter {
                 ? ` <em class="down">▼ ${-delta}</em>`
                 : '';
         const afford = hero.gold >= price;
-        return `<li${afford ? '' : ' class="poor"'}><div class="info"><b>${item.name}</b> <small>${bonuses(item)}</small>${versus}${combosHtml(item)}</div><span class="price">${price}g</span><button type="button" class="item-btn" data-act="buy" data-id="${id}"${afford ? '' : ' disabled'}>Buy</button></li>`;
+        return `<li${afford ? '' : ' class="poor"'}><div class="info"><b>${esc(item.name)}</b> <small>${bonuses(item)}</small>${versus}${combosHtml(item)}</div><span class="price">${price}g</span><button type="button" class="item-btn" data-act="buy" data-id="${id}"${afford ? '' : ' disabled'}>Buy</button></li>`;
       })
       .join('');
   }
@@ -142,7 +143,7 @@ export class ShopCounter {
           : item.use
             ? `<button type="button" class="item-btn" data-act="use" data-pack="${i}">Drink</button>`
             : '';
-        return `<li${trade ? '' : ' class="poor"'}><div class="info"><b>${item.name}${count > 1 ? ` ×${count}` : ''}</b> <small>${bonuses(item)}</small></div>${sellBtn}${other}</li>`;
+        return `<li${trade ? '' : ' class="poor"'}><div class="info"><b>${esc(item.name)}${count > 1 ? ` ×${count}` : ''}</b> <small>${bonuses(item)}</small></div>${sellBtn}${other}</li>`;
       })
       .join('');
   }

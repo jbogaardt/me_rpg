@@ -2,6 +2,7 @@ import type { Hero } from '../systems/combat';
 import { activeSkills, knows, LOADOUT_SLOTS, SKILL_IDS, SKILLS, skillOfZone, type SkillId } from '../systems/skills';
 import { arrows, directionWords } from '../systems/spells';
 import { combosHtml } from './itemText';
+import { esc } from './html';
 
 /** What the scene lets the Magic tab do. */
 export interface MagicHandlers {
@@ -72,7 +73,7 @@ export class Magic {
     }).join('');
 
     const weapon = hero.weapon.focus
-      ? `<h3>${hero.weapon.name} <small>its combos do not use the slots</small></h3>${combosHtml(hero.weapon)}`
+      ? `<h3>${esc(hero.weapon.name)} <small>its combos do not use the slots</small></h3>${combosHtml(hero.weapon)}`
       : '';
     this.root.innerHTML = `
       <h2>Abilities <small>${LOADOUT_SLOTS} ready at a time</small></h2>
