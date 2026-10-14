@@ -67,6 +67,15 @@ export const CUSTOM_PARTS: Record<string, CustomPart> = {
     licenses: ['Project art'],
     urls: ['https://github.com/jbogaardt/game-graphics'],
   },
+  'body.snowman': {
+    source: 'art/snowman/abominable-snowman_doll.png',
+    z: 10,
+    notes:
+      'Abominable Snowman mob, pixel art made for this game (generated, cleaned up and exported by tools in game-graphics)',
+    authors: ['jbogaardt'],
+    licenses: ['Project art'],
+    urls: ['https://github.com/jbogaardt/game-graphics'],
+  },
 };
 
 /** Bodies that already include their head. */

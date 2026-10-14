@@ -79,6 +79,8 @@ export default defineBiome({
       ['frostbound', 30.4, 10.6],
       ['warg', 27.2, 22.2],
       ['frostWarden', 29.8, 16.6],
+      ['snowman', 27.4, 14.6],
+      ['snowman', 31.4, 20.4],
     ] as const)
       z.mob(kind, ...near(x, y));
 
@@ -92,7 +94,7 @@ export default defineBiome({
     z.place('The Frozen Ledge', 319, 202);
 
     // --- Wandering enemies: spread over the rest of the ground so no stretch is empty (never on top of the start) ---
-    z.roam(['frostbound', 'warg', 'frostWarden', 'skeleton', 'troll', 'hexer'], {
+    z.roam(['frostbound', 'warg', 'frostWarden', 'snowman', 'skeleton', 'troll', 'hexer', 'snowman'], {
       count: 10,
       seed: 109,
       avoid: [[...near(30.8, 14.2), 16]],

@@ -558,6 +558,22 @@ export const FROST_WARDEN: MobKind = {
   stagger: 0.05,
 };
 
+/** Deep-Frostlands brute: a huge, slow yeti that hits very hard and shrugs off being struck. Levels 7-9. */
+export const SNOWMAN: MobKind = {
+  name: 'Abominable Snowman',
+  look: { body: 'body.snowman' },
+  maxHp: 170,
+  attack: 32,
+  defense: 5,
+  xp: 110,
+  gold: 62,
+  speed: 54,
+  sight: 6 * 32,
+  windup: 0.6,
+  recover: 0.9,
+  stagger: 0.05,
+};
+
 /** What a mob is doing, in the order used on the wire (src/net/protocol.ts). */
 export const MOB_STATES = ['idle', 'wander', 'chase', 'windup', 'recover', 'dead', 'channel'] as const;
 export type MobState = (typeof MOB_STATES)[number];
@@ -595,6 +611,7 @@ export const MOB_KINDS: Record<string, MobKind> = {
   warg: WARG,
   tuskGuard: TUSK_GUARD,
   frostWarden: FROST_WARDEN,
+  snowman: SNOWMAN,
 };
 
 /** The gear a hero is wearing, in slot order. */

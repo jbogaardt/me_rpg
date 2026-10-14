@@ -71,7 +71,7 @@ describe('weapon balance', () => {
 
 describe('enemy balance', () => {
   const open = ['goblin', 'wolfkin', 'shade', 'raider', 'skeleton', 'zombie', 'orc', 'frostbound', 'troll'];
-  const deep = ['hexer', 'bogGhoul', 'warg', 'tuskGuard', 'frostWarden'];
+  const deep = ['hexer', 'bogGhoul', 'warg', 'tuskGuard', 'frostWarden', 'snowman'];
 
   it('gives the deeper kinds more of everything than the greenwood fodder', () => {
     for (const key of deep) {
@@ -107,6 +107,7 @@ describe('enemy balance', () => {
       ['bogGhoul', 7, 12],
       ['tuskGuard', 8, 14],
       ['frostWarden', 8, 14],
+      ['snowman', 8, 14],
     ] as const;
     for (const [key, level, armour] of cases) {
       const kind = MOB_KINDS[key]!;
