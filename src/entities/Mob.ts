@@ -25,7 +25,7 @@ export type MobAttack = 'melee' | 'shot' | 'ray';
 
 export function mobAttack(kind: MobKind, dist: number, rayReady = true): MobAttack | null {
   if (kind.shot) return dist <= kind.shot.range ? 'shot' : null;
-  if (dist < REACH) return 'melee';
+  if (dist < REACH * (kind.scale ?? 1)) return 'melee';
   if (kind.ray && rayReady && dist <= kind.ray.range) return 'ray';
   return null;
 }
@@ -269,7 +269,7 @@ export class Mob {
             this.timer = this.kind.ray.duration;
             this.rayTimer = this.kind.ray.tick * 0.5;
             break;
-          } else if (target && dist < REACH + 8) world.strike(this, target);
+          } else if (target && dist < (REACH + 8) * (this.kind.scale ?? 1)) world.strike(this, target);
           this.state = 'recover';
           this.timer = this.t.recover;
         }

@@ -43,6 +43,8 @@ export class Character extends Container {
   private frames: FrameSet;
   private shownAnim: AnimName = 'idle'; // the frame on screen, so a new sheet can show the same one at once
   private shownCol = 0;
+  /** How many times a person's size it is drawn; collision (a `Body`) reads it too. */
+  size = 1;
   private sprite: Sprite;
   private aura = new Graphics();
   private direction: Direction = 'down';
@@ -97,6 +99,7 @@ export class Character extends Container {
 
   /** Draw the body bigger or smaller than the usual 64px frame, still standing on the same feet point. */
   setScale(factor: number) {
+    this.size = factor;
     this.sprite.scale.set(factor);
   }
 

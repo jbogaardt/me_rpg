@@ -30,6 +30,16 @@ describe('Collision', () => {
     expect(c.fitsMap(5 * CELL - 7, y)).toBe(true);
   });
 
+  it('gives a giant a wider foot box and a wider body', () => {
+    const [x, y] = centre(4, 3);
+    expect(c.fitsMap(5 * CELL - 7, y)).toBe(true);
+    expect(c.fitsMap(5 * CELL - 7, y, 2)).toBe(false);
+    const giant: Body = { x, y, size: 2 };
+    const person = { x: x - 20, y }; // 20px apart: clear of a person, inside a giant's reach
+    expect(c.canMove(person, person.x + 3, y, [giant])).toBe(false);
+    expect(c.canMove(person, person.x + 3, y, [{ x, y }])).toBe(true);
+  });
+
   it('slides along a wall: the blocked axis stops, the free axis moves', () => {
     const b = body(4, 3);
     b.x = 5 * CELL - 8; // touching the wall

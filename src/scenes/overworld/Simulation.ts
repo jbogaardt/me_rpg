@@ -306,7 +306,7 @@ export class Simulation {
     const cy = p.body.y + vy * 16;
     const edge = this.takeEdge(p); // Arcane Edge: this swing carries extra magic
     for (const mob of this.arena.mobs) {
-      if (mob.alive && Math.hypot(mob.body.x - cx, mob.body.y - cy) < MELEE_REACH) {
+      if (mob.alive && Math.hypot(mob.body.x - cx, mob.body.y - cy) < MELEE_REACH + (mob.body.size - 1) * 14) {
         this.hitMob(mob, rollDamage(attackPower(p.hero) + edge, mob.kind.defense), vx, vy);
         if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
       }
@@ -449,13 +449,13 @@ export class Simulation {
     const damage = Math.round(rawDamage * this.casting.markFactor(mob)); // a foe marked by Spirit Mark takes more
     const killed = mob.hit(damage, vx, vy);
     // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
-    if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14, Math.atan2(vy, vx));
-    this.text(mob.body.x, mob.body.y - 54, String(damage), 0xffffff);
+    if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx));
+    this.text(mob.body.x, mob.body.y - 54 * mob.body.size, String(damage), 0xffffff);
     if (!killed) return;
     this.fx('mobPoof', mob.body.x, mob.body.y - 12);
-    this.text(mob.body.x, mob.body.y - 66, `+${mob.kind.xp} XP`, 0xffb13f);
+    this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${mob.kind.xp} XP`, 0xffb13f);
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
-    this.text(mob.body.x, mob.body.y - 78, `+${gold}g`, 0xffd34d);
+    this.text(mob.body.x, mob.body.y - 78 * mob.body.size, `+${gold}g`, 0xffd34d);
     for (const p of this.arena.players()) {
       p.hero.gold += goldFor(p.hero, gold); // gear can add to the purse and the XP, so each player gets their own share
       if (gainXp(p.hero.stats, xpFor(p.hero, mob.kind.xp))) this.levelUp(p);
