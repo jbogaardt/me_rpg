@@ -108,7 +108,7 @@
       ]
     }
   },
-  "keepers": { "ysolde": { "npc": "ysolde", "name": "Keeper Ysolde", "tag": "Ysolde" } },
+  "keepers": { "ysolde": { "npc": "ysolde", "name": "Keeper Ysolde", "tag": "Ysolde", "homes": ["cinder_coast"] } },
   "regions": {
     "cinder_coast": {
       "biome": {
@@ -213,7 +213,8 @@
           "title": "The Burning Heart",
           "intro": [
             "What I feared is true: the guardian of {r2} has woken, and it is calling the fire to itself.",
-            "If it is not stopped, this land goes under, and the two of us with it."
+            "{r1~r2.sign}",
+            "Take {r1~r2.way}. If it is not stopped, this land goes under, and the two of us with it."
           ]
         }
       ],
@@ -274,7 +275,7 @@
           "reward": { "gold": 40, "xp": 50 },
           "offer": ["Before you go on, clear the {r1.hunter.lower} from the road. Four of them."],
           "remind": ["Four {r1.hunter.lower}. Watch the open ground."],
-          "done": ["The road is clear. Rest, and then {r2}."]
+          "done": ["The road is clear. Rest, and then take {r1~r2.way}."]
         },
         {
           "id": "tenders",
@@ -283,7 +284,7 @@
           "fieldNote": ["The last one's fire gutters out. The air cools, just a little."],
           "title": "Quench the Tenders",
           "goal": "Defeat 4 {r2.ranged.lower}",
-          "hint": "{r2.ranged.plural} keep to {r2}, beyond {r1}. Close in fast: they strike from afar.",
+          "hint": "{r2.ranged.plural} keep to {r2}: take {r1~r2.way}. Close in fast: they strike from afar.",
           "where": { "zones": ["@r2"] },
           "unit": "{r2.ranged.lower}",
           "objective": { "t": "kill", "kind": "@r2.ranged", "count": 4, "zone": "@r2" },
@@ -317,7 +318,23 @@
       "epilogue": [
         "The fire sleeps again, and the land is calm for the first time in a year.",
         "Stay as long as you like. This camp is yours as much as mine."
-      ]
+      ],
+      "slots": [{}, { "themes": ["fire"], "foes": { "boss": { "tags": ["fire"] } } }],
+      "crossings": { "r1~r2": { "tags": ["fire"] } }
+    }
+  },
+  "pairings": {
+    "ash_trail": {
+      "regions": ["cinder_coast", "ember_caldera"],
+      "tags": ["fire", "ascent"],
+      "ports": ["north", "south"],
+      "lore": {
+        "way": "the ash trail that climbs north from The Cinder Coast into The Ember Caldera",
+        "sign": {
+          "cinder_coast": "Ash from The Ember Caldera falls on the camp like grey snow, and it is warm.",
+          "ember_caldera": "Far below, the smoke of the camp on The Cinder Coast rises thin and blue."
+        }
+      }
     }
   }
 }
