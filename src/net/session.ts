@@ -7,6 +7,7 @@ import {
   type DoMsg,
   type InputMsg,
   type LooksMsg,
+  type WorldMsg,
   type Message,
   type PackMsg,
   type SnapMsg,
@@ -143,6 +144,7 @@ export class Session {
   private pack: PackMsg | null = null; // friend: the newest purse and pack from the host, not yet taken
   private newestPack = -1;
   private looks: LooksMsg | null = null; // friend: the newest list of what everyone wears
+  private world: WorldMsg[] = []; // friend: stretches of a live world's log, not yet taken (each a different stretch)
   private newestLooks = -1;
   private tradeSteps = new Map<number, TrMsg[]>(); // host: each friend's trade commands, in order, not yet handled
   private nextTradeStep = new Map<number, number>(); // host: the number of the next command to take from each friend
@@ -385,6 +387,13 @@ export class Session {
     return pack;
   }
 
+  /** Friend: the stretches of a live world's log that arrived since last asked. */
+  takeWorld(): WorldMsg[] {
+    const world = this.world;
+    this.world = [];
+    return world;
+  }
+
   /** Friend: the newest list of everyone's gear not yet taken, or null. */
   takeLooks(): LooksMsg | null {
     const looks = this.looks;
@@ -524,6 +533,7 @@ export class Session {
     } else {
       this.endHandshake(link);
       this.snapshot = this.pack = this.looks = this.trade = null;
+      this.world = [];
     }
     if (status === 'disconnected' || status === 'failed' || status === 'idle') this.guestLink = null;
     this.notify();
@@ -605,6 +615,9 @@ export class Session {
           this.newestLooks = message.n;
           this.looks = message;
         }
+        break;
+      case 'world':
+        if (this.guestLink === link && this.world.length < 32) this.world.push(message);
         break;
     }
   }
@@ -690,6 +703,7 @@ export class Session {
     this.trades.clear();
     this.newestTrade.clear();
     this.snapshot = this.pack = this.looks = null;
+    this.world = [];
     this.newestSnapshot = this.newestPack = this.newestLooks = this.newestTradeMsg = -1;
   }
 

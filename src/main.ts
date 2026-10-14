@@ -4,8 +4,9 @@ import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import './ui.css';
-import { initAssets, loadSprites, loadZone, packContent, staticContent, unloadZone } from './assets';
-import { chooseCampaign, DEFAULT_WORLD, RANDOM } from './content/campaignChoice';
+import { initAssets, liveContent, loadSprites, loadZone, packContent, staticContent, unloadZone } from './assets';
+import { chooseCampaign, DEFAULT_WORLD, LIVE, RANDOM } from './content/campaignChoice';
+import { worldLooks } from './content/LiveSource';
 import { setContentTag } from './net/session';
 import { ContentManager } from './content/ContentManager';
 import { SceneManager } from './core/Scene';
@@ -76,8 +77,14 @@ void (async () => {
     // The game content (entities, biomes, scenarios) comes first: what art to preload and which zone to start in
     // depend on it. To read it from a database instead, pass another ContentSource here.
     const assembled = CHOICE.campaign === RANDOM ? packContent(CHOICE.seed) : null;
-    const content = await ContentManager.load(assembled ?? staticContent(CHOICE.campaign));
+    const live = CHOICE.campaign === LIVE ? liveContent(CHOICE.seed, CHOICE.arc) : null;
+    const content = await ContentManager.load(assembled ?? live ?? staticContent(CHOICE.campaign));
     content.install();
+    const world = live && (await live.world);
+    if (world)
+      console.info(
+        `Live world ${CHOICE.seed}: "${world.arcName}" told by ${world.keeper}, from ${world.storyRegions[0]}`,
+      );
     const assembly = assembled && (await assembled.assembly);
     if (assembly)
       console.info(
@@ -87,7 +94,7 @@ void (async () => {
     if (off.length) console.info(`This campaign plays without: ${off.join(', ')}`);
     const start = content.getBiomeInfo(content.startNode.biome_type);
     const [sprites, zone] = await Promise.all([
-      loadSprites(),
+      loadSprites(undefined, world ? worldLooks(world) : []), // a live world may come to need any pack's people
       loadZone(start.map, (fraction) => loading.progress(fraction), start.tilesets),
     ]);
 
@@ -108,14 +115,16 @@ void (async () => {
       const look = MOB_KINDS[kind]?.look;
       return look ? sprites.wardrobe.portrait(look) : null;
     };
-    const overworld = new OverworldScene(zone, sprites, ui, loadZone, unloadZone, app.renderer, content);
+    const overworld = new OverworldScene(zone, sprites, ui, loadZone, unloadZone, app.renderer, content, world);
     scenes.change(overworld);
     scenes.start();
     loading.done();
 
     // Dev-only handle for playtest scripts (see .claude/skills/playtest); stripped from production builds.
     if (import.meta.env.DEV)
-      Object.assign(window, { __game: { app, scenes, overworld, content, campaign: CHOICE, assembly, items: ITEMS } });
+      Object.assign(window, {
+        __game: { app, scenes, overworld, content, campaign: CHOICE, assembly, world, items: ITEMS },
+      });
   } catch (err) {
     loading.fail(err);
     throw err;

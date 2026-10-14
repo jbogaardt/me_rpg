@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseMap } from '../map/types';
-import { doorArrival, portArrival, wireDoors } from './ports';
+import { doorArrival, openPort, portArrival, wireDoors } from './ports';
 
 const map = (
   ports: {
@@ -45,6 +45,31 @@ describe('ports', () => {
     const both = wireDoors(side, { south: { map: 'b', port: 'north' }, east: { map: 'c', port: 'west' } });
     expect(both.objects).toEqual([]);
     expect(both.doors.find((d) => d.to.zone === 'c')).toMatchObject({ col: 9, row: 4, w: 1, h: 3 });
+  });
+
+  it('opens a sealed port of a zone already built: its door, the cells to clear and the seal to fade', () => {
+    const rock = { s: 0, x: 0, y: 0, w: 32, h: 32, px: 288, py: 160 };
+    const log = { s: 0, x: 32, y: 0, w: 32, h: 32, px: 128, py: 288 };
+    const side = map([
+      { name: 'east', col: 9, row: 4, w: 1, h: 3, arrive: { col: 7, row: 5 }, seal: [rock] },
+      { name: 'south', col: 4, row: 9, w: 2, arrive: { col: 4, row: 7 }, seal: [log, log] },
+    ]);
+    const before = wireDoors(side, undefined); // both sealed: rock at 0, the two logs at 1 and 2
+    const open = openPort(side, undefined, 'south', { map: 'b', port: 'north' })!;
+    expect(open.door).toMatchObject({ col: 4, row: 9, w: 2, to: { zone: 'b', port: 'north' } });
+    expect(open.cells).toEqual([94, 95]);
+    expect(open.seal).toEqual([1, 2]);
+    expect(open.seal.map((i) => before.objects[i])).toEqual([log, log]);
+    // Opened once, it is a door: wiring the map again with the binding gives the same door and no seal for it.
+    const after = wireDoors(side, { south: { map: 'b', port: 'north' } });
+    expect(after.doors).toEqual([open.door]);
+    expect(after.collision).not.toContain(94);
+    expect(openPort(side, { south: { map: 'b', port: 'north' } }, 'south', { map: 'b', port: 'north' })).toBeNull();
+    expect(openPort(side, undefined, 'west', { map: 'b', port: 'east' })).toBeNull();
+    // With the south already open, the east's rock is still the first seal drawn.
+    expect(openPort(side, { south: { map: 'b', port: 'north' } }, 'east', { map: 'c', port: 'west' })!.seal).toEqual([
+      0,
+    ]);
   });
 
   it('leaves a map with no ports as it is', () => {

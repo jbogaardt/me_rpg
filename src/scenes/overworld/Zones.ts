@@ -6,9 +6,9 @@ import type { ShopCounter } from '../../hud/ShopCounter';
 import type { MobWorld } from '../../entities/Mob';
 import { DIR_VEC } from '../../core/direction';
 import { nearBorder } from '../../map/bounds';
-import { doorArrival } from '../../content/ports';
+import { doorArrival, openPort, type PortBinding } from '../../content/ports';
 import { ARRIVE_CELLS, arrivalFacing, cellFeet, doorAt, doorsNear, neighbourLinks, type Link } from '../../map/doors';
-import { CELL, type CellPoint, type DoorSpawn } from '../../map/types';
+import { CELL, type CellPoint, type DoorSpawn, type MapData } from '../../map/types';
 import { zoneTint } from '../../systems/places';
 import { GroundItem } from '../../entities/GroundItem';
 import { ZoneState } from '../ZoneState';
@@ -61,6 +61,11 @@ export class Zones {
    * zone comes from its node (`ContentManager.populate`), now and whenever it is loaded again.
    */
   private nodes = new Map<string, string>();
+  /** Each loaded zone's map as it came (before its ports were wired), and the bindings it was wired with. */
+  private wiring = new Map<
+    string,
+    { raw: MapData; wired: Record<string, PortBinding>; bound: Record<string, PortBinding> }
+  >();
 
   constructor(
     private arena: Arena,
@@ -78,6 +83,8 @@ export class Zones {
   /** Build the running state of a loaded zone and keep it (with what it remembers from before it was unloaded). */
   add(loaded: Zone): ZoneState {
     const zone = { ...loaded, data: this.content.wire(loaded.name, loaded.data) }; // ports become doors
+    const bound = this.content.biomeOfMap(loaded.name)?.[1].ports;
+    this.wiring.set(loaded.name, { raw: loaded.data, wired: { ...bound }, bound: { ...bound } });
     const biome = this.content.biomeOfMap(zone.name)?.[1];
     const population = this.content.populate(zone.name, zone.data, this.nodes.get(zone.name));
     const z = new ZoneState(zone, this.sprites, population, biome ? biome.climate : undefined);
@@ -129,6 +136,7 @@ export class Zones {
       this.unused.delete(z.name);
       arena.memory.set(z.name, z.remember());
       arena.zones.delete(z.name);
+      this.wiring.delete(z.name);
       z.dispose();
       void this.unloadZone(z.source).catch((err: unknown) => console.error(`Could not unload zone "${z.name}"`, err));
     }
@@ -437,6 +445,38 @@ export class Zones {
   }
 
   /** The scene is ending: free the zones it holds (the scene manager destroys the ones on the stage). */
+  /**
+   * A live world grew (content/world.ts): open the ports of loaded zones that the content now binds. Each becomes a door
+   * where it stands, its cells clear and its seal fades away; nothing else in the zone changes (its mobs, chests and
+   * whoever stands in it carry on). Says where each opened, in which zone, for the scene to mark it.
+   */
+  rewire(): { zone: string; x: number; y: number }[] {
+    const opened: { zone: string; x: number; y: number }[] = [];
+    for (const [name, z] of this.arena.zones) {
+      const was = this.wiring.get(name);
+      const now = this.content.biomeOfMap(name)?.[1].ports ?? {};
+      if (!was) continue;
+      for (const [port, to] of Object.entries(now)) {
+        if (was.bound[port]) continue;
+        const open = openPort(was.raw, was.wired, port, to); // the seals were drawn as it was first wired
+        if (!open) continue;
+        z.data.doors.push(open.door);
+        z.collision.unblock(open.cells);
+        const cleared = new Set(open.cells);
+        z.data.collision = z.data.collision.filter((c) => !cleared.has(c));
+        for (const i of open.seal) z.world.setObjectAlpha(i, 0);
+        was.bound = { ...was.bound, [port]: to };
+        const { door } = open;
+        opened.push({
+          zone: name,
+          x: (door.col + door.w / 2) * CELL,
+          y: (door.row + (door.h ?? 1) / 2) * CELL,
+        });
+      }
+    }
+    return opened;
+  }
+
   dispose() {
     for (const z of this.arena.zones.values()) if (z.world.parent !== this.stage) z.dispose();
   }

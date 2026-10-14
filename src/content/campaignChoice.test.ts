@@ -31,4 +31,18 @@ describe('chooseCampaign', () => {
     expect(chooseCampaign('?seed=42', 'campaign1', seed).tag).toBe('random:42'); // a seed alone asks for a random world
     expect(chooseCampaign('?seed=abc', 'campaign1', seed).campaign).toBe('campaign1');
   });
+
+  it('chooses a live world with its seed and, if named, its arc', () => {
+    expect(chooseCampaign('?campaign=live&seed=7&arc=lost_lanterns', 'campaign1', () => 1)).toEqual({
+      campaign: 'live',
+      seed: 7,
+      arc: 'lost_lanterns',
+      search: null,
+      tag: 'live:7:lost_lanterns',
+    });
+    const fresh = chooseCampaign('?campaign=live', 'campaign1', () => 99);
+    expect(fresh).toMatchObject({ campaign: 'live', seed: 99, tag: 'live:99' });
+    expect(fresh.search).toBe('?campaign=live&seed=99');
+    expect(chooseCampaign('?campaign=live&seed=3&arc=../x', 'campaign1', () => 1).arc).toBeUndefined();
+  });
 });

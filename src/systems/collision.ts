@@ -32,6 +32,11 @@ export class Collision {
     this.blocked = new Set(blocked);
   }
 
+  /** Open these cells (by index, row * width + col): a doorway whose seal was cleared. */
+  unblock(cells: Iterable<number>) {
+    for (const cell of cells) this.blocked.delete(cell);
+  }
+
   /** Cells outside the map count as blocked. */
   isBlocked(col: number, row: number): boolean {
     if (col < 0 || row < 0 || col >= this.width || row >= this.height) return true;

@@ -28,9 +28,10 @@ import { PRECIPS, type WeatherSnap } from '../systems/weather';
 
 /**
  * Bump when a message changes shape (or what one means); peers on different versions refuse to play together. v29: the
- * host is the Dungeon Master, not a party member (player 0 in a snapshot is drawn as the DM).
+ * host is the Dungeon Master, not a party member (player 0 in a snapshot is drawn as the DM). v30: `world`, a live
+ * world's log.
  */
-export const PROTOCOL_VERSION = 29;
+export const PROTOCOL_VERSION = 30;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -238,7 +239,26 @@ export interface TradeMsg {
   note?: Note;
 }
 
-export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg | TrMsg | TradeMsg;
+/**
+ * Host -> guest: a stretch of a live world's log (content/world.ts `LogEntry`), entries `from`, `from + 1`... of the
+ * `total` the host has. The host cycles through the log a few entries at a time, newest first when one is added, so a
+ * guest that joined late or lost a packet catches up with nothing acknowledged; the guest's own World checks every
+ * entry (`World.apply`), so this only checks the shape.
+ */
+export interface WorldMsg {
+  k: 'world';
+  n: number;
+  total: number;
+  from: number;
+  entries: Record<string, unknown>[];
+}
+
+/** The most log entries one `world` message carries, and the longest one may be (as JSON). */
+export const WORLD_CHUNK = 3;
+const MAX_ENTRY = 400;
+const MAX_LOG = 500;
+
+export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg | TrMsg | TradeMsg | WorldMsg;
 
 export const encodeMessage = (m: Message): string => JSON.stringify(m);
 
@@ -705,6 +725,35 @@ export function parseMessage(raw: unknown): Message | null {
           (p: unknown) => numbers(p, 1 + GEAR_SLOTS.length) && isIndex(p[0], MAX_PLAYERS) && p.slice(1).every(isCode),
         );
       return ok && isCount(m.n) ? { k: 'looks', n: m.n, players: players as number[][] } : null;
+    }
+    case 'world': {
+      const entries = m.entries;
+      const ok =
+        isCount(m.n) &&
+        isCount(m.total) &&
+        m.total <= MAX_LOG &&
+        isCount(m.from) &&
+        Array.isArray(entries) &&
+        entries.length >= 1 &&
+        entries.length <= WORLD_CHUNK &&
+        m.from + entries.length <= m.total &&
+        entries.every(
+          (e: unknown) =>
+            !!e &&
+            typeof e === 'object' &&
+            !Array.isArray(e) &&
+            typeof (e as { t?: unknown }).t === 'string' &&
+            JSON.stringify(e).length <= MAX_ENTRY,
+        );
+      return ok
+        ? {
+            k: 'world',
+            n: m.n as number,
+            total: m.total as number,
+            from: m.from as number,
+            entries: entries as Record<string, unknown>[],
+          }
+        : null;
     }
     case 'tr': {
       const cmd = parseTradeCommand(m.cmd);

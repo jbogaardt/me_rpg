@@ -308,6 +308,34 @@ test('up to four players: friends join, leave, and a new friend takes the empty 
   }
 });
 
+test('in a live world the Dungeon Master chooses where the story goes, and the friend’s world grows with it', async ({
+  browser,
+}) => {
+  test.setTimeout(240_000);
+  const world = '/?campaign=live&seed=4';
+  const host = await open(browser, world);
+  const code = await createGame(host);
+  const friend = await open(browser, world);
+  await joinWithCode(friend, code);
+  await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 2', { timeout: 30_000 });
+  await host.locator('#mp-start').click();
+  await friend.keyboard.press('Escape');
+  await expect(friend.locator('#menu [data-tab="story"]')).toBeHidden(); // only the DM steers the story
+
+  // The DM sees the story so far and the roads it may take, as story cues rather than maps.
+  await host.keyboard.press('Escape');
+  await host.locator('#menu [data-tab="story"]').click();
+  await expect(host.locator('#menu-story h2')).toContainText('1 of 3 lands');
+  const road = host.locator('#menu-story [data-cue]').first();
+  await expect(road).toContainText(/^Into \w+ lands/);
+  await road.click();
+  await expect(host.locator('#menu-story h2')).toContainText('2 of 3 lands');
+  const land = (await host.locator('#menu-story .story-path').textContent())!.split(' → ').pop()!;
+  await expect(host.locator('#area-banner .title')).toHaveText(land);
+  // The friend's page is told and grows its own world to match.
+  await expect(friend.locator('#area-banner .title')).toHaveText(land, { timeout: 30_000 });
+});
+
 test('a join link opens the game ready to join, and the code is not left in the address bar', async ({ browser }) => {
   const host = await open(browser, '/');
   const code = await createGame(host);

@@ -19,6 +19,7 @@ import {
   type DoMsg,
   type InputMsg,
   type LooksMsg,
+  type WorldMsg,
   type PackMsg,
   type GroundSnap,
   type MobSnap,
@@ -381,6 +382,37 @@ describe('messages', () => {
   it('rounds to a tenth', () => {
     expect(round1(12.3456)).toBe(12.3);
     expect(round1(-0.04)).toBe(-0);
+  });
+});
+
+describe('a live world’s log', () => {
+  const step = {
+    t: 'step',
+    region: 'frostfen',
+    pairing: 'thaw_road',
+    from: 'east',
+    to: 'west',
+    foes: { common: 'goblin' },
+  };
+  const world: WorldMsg = { k: 'world', n: 3, total: 5, from: 2, entries: [step, { ...step, region: 'barrow' }] };
+
+  it('round-trips a stretch of the log, small enough for one packet', () => {
+    expect(parseMessage(encodeMessage(world))).toEqual(world);
+    const full: WorldMsg = { ...world, entries: [step, step, step] };
+    expect(encodeMessage(full).length).toBeLessThan(1100);
+  });
+
+  it('refuses a stretch that is too long, runs past the log, or holds something that is not an entry', () => {
+    const bad = [
+      { ...world, entries: [step, step, step, step] },
+      { ...world, from: 4 },
+      { ...world, entries: [] },
+      { ...world, entries: [[1, 2]] },
+      { ...world, entries: [{ region: 'x' }] },
+      { ...world, entries: [{ t: 'step', lines: 'x'.repeat(500) }] },
+      { ...world, total: 100000 },
+    ];
+    for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m).slice(0, 80)).toBeNull();
   });
 });
 

@@ -75,6 +75,10 @@ import { Training } from './overworld/Training';
 import { Visuals } from './overworld/Visuals';
 import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
 import { Scenario } from './overworld/Scenario';
+import { Story } from './overworld/Story';
+import type { World } from '../content/world';
+import { particleEffect } from '../entities/ParticleEffect';
+import { floatText } from '../entities/effects';
 
 export type { ZoneLoader, ZoneUnloader };
 
@@ -130,6 +134,8 @@ export class OverworldScene implements Scene {
   private trading: Trading;
   private training: Training;
   private scenario: Scenario;
+  /** A live world's story, steered by its Dungeon Master (inert for every other world). */
+  private liveStory: Story;
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
@@ -158,6 +164,8 @@ export class OverworldScene implements Scene {
     unloadZone: ZoneUnloader,
     renderer: Renderer,
     content: ContentManager,
+    /** A live world (`?campaign=live`), grown during play by its Dungeon Master; null for every other world. */
+    world: World | null = null,
   ) {
     const arena = (this.arena = new Arena(sprites.wardrobe));
     this.zones = new Zones(arena, sprites, loadZone, unloadZone, ui, renderer, content);
@@ -187,6 +195,14 @@ export class OverworldScene implements Scene {
     this.zones.assign(zone.name, start.node_id);
     this.zones.addHome(zone, start.spawn && { col: start.spawn.x, row: start.spawn.y });
     this.scenario = new Scenario(arena, this.zones, content, ui.choices, say);
+    this.liveStory = new Story(arena, this.zones, content, ui.session, world);
+    this.liveStory.onOpened = (zone, x, y) => {
+      const z = arena.zones.get(zone);
+      if (!z) return;
+      z.effects.add(floatText(x, y - 24, 'The way opens', 0xffd34d));
+      z.effects.add(particleEffect('levelUp', x, y));
+    };
+    this.liveStory.onGrew = (land) => this.banner.show(land, 'The story leads on to');
     this.zones.root.addChildAt(this.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     this.overlay = new MapOverlay();
@@ -247,6 +263,11 @@ export class OverworldScene implements Scene {
     this.ui.menu.inventory.attach({ apply: (op) => this.pack.localOp(op) });
     this.ui.menu.magic.attach({ equip: (wanted) => this.pack.setLoadout(wanted), zone: () => this.arena.zone.name });
     this.ui.menu.party.attach({ rows: () => this.partyRows(), go: (slot) => this.dmGoTo(slot) });
+    this.ui.menu.story.attach({
+      canChoose: () => this.liveStory.canChoose,
+      view: () => this.liveStory.view(),
+      choose: (cue) => this.liveStory.choose(cue),
+    });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
     if (this.ui.session.urlCode && enabled('coop')) this.ui.menu.toggle(this.hero, 'online');
   }
@@ -255,6 +276,7 @@ export class OverworldScene implements Scene {
     this.ui.menu.inventory.attach(null);
     this.ui.menu.magic.attach(null);
     this.ui.menu.party.attach(null);
+    this.ui.menu.story.attach(null);
     this.overlay.setAvailable(false);
     this.harvestButtons.clear();
     this.ui.dialog.close();
@@ -279,6 +301,7 @@ export class OverworldScene implements Scene {
     const { arena } = this;
     this.syncRole(session.role);
     arena.clock += dt;
+    this.liveStory.update(dt); // a live world: the host sends its log, a guest grows its own from it
     const online = arena.role !== 'solo';
     // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
     // without the map capability (it is still explored, so nothing changes if one is played later).

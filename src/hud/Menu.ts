@@ -24,6 +24,7 @@ import { AimSetting } from './AimSetting';
 import { Keybinds } from './Keybinds';
 import { Multiplayer } from './Multiplayer';
 import { Party } from './Party';
+import { StoryTab } from './StoryTab';
 
 // Pause menu (HTML overlay; markup in index.html). The game is frozen while it is open.
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
@@ -31,7 +32,8 @@ import { Party } from './Party';
 
 // 'trade' (hud/Trade.ts) shows only to a player in a co-op game; 'party' (hud/Party.ts) only to its Dungeon Master, who has
 // no hero tabs (Status, Inventory, Magic, Quests, Trade) while they run the world.
-const TABS = ['status', 'inventory', 'magic', 'quests', 'party', 'controls', 'online', 'trade', 'credits'];
+// 'story' (hud/StoryTab.ts) shows whoever may steer a live world's story: its DM, or a solo player.
+const TABS = ['status', 'inventory', 'magic', 'quests', 'party', 'story', 'controls', 'online', 'trade', 'credits'];
 
 export class Menu {
   open = false;
@@ -46,6 +48,9 @@ export class Menu {
 
   /** The Dungeon Master's Party tab; the scene attaches its handlers while it runs. */
   readonly party = new Party(document.getElementById('menu-party')!);
+
+  /** A live world's Story tab; the scene attaches its handlers while it runs. */
+  readonly story = new StoryTab(document.getElementById('menu-story')!);
 
   private keybinds: Keybinds;
   private aim: AimSetting;
@@ -100,6 +105,7 @@ export class Menu {
     if (by) this.step(by);
     this.renderQuests(); // online the world runs behind the menu, so a kill can move the log
     if (TABS[this.tab] === 'party') this.party.render();
+    if (TABS[this.tab] === 'story') this.story.render();
   }
 
   /** The tab `by` places along from the current one, skipping tabs that are hidden. */
@@ -122,6 +128,7 @@ export class Menu {
       quests: !dm,
       magic: !dm && enabled('skills'),
       party: dm,
+      story: this.story.available,
       trade: online && !dm && enabled('trading'),
       online: enabled('coop'),
     };
@@ -151,6 +158,7 @@ export class Menu {
     if (this.tabButton(TABS[i]!).hidden) i = this.firstShown();
     this.tab = i;
     if (TABS[i] === 'party') this.party.render();
+    if (TABS[i] === 'story') this.story.render();
     if (TABS[i] === 'inventory' && this.hero) this.inventory.show(this.hero);
     if (TABS[i] === 'magic' && this.hero) this.magic.show(this.hero);
     for (const [j, name] of TABS.entries()) {

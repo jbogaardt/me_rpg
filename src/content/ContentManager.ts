@@ -51,9 +51,25 @@ export class UrlContentSource implements ContentSource {
 export class ContentManager {
   private mobKinds: Record<string, MobKind> = {};
 
-  constructor(readonly content: Content) {
-    for (const [id, def] of Object.entries(content.entities))
+  constructor(public content: Content) {
+    this.readMobs();
+  }
+
+  private readMobs() {
+    this.mobKinds = {};
+    for (const [id, def] of Object.entries(this.content.entities))
       if (def.type === 'mob') this.mobKinds[id] = toMobKind(def);
+  }
+
+  /**
+   * A live world grew (content/world.ts): check its new files and install them in place of the old. The goods are
+   * kept as they were (a live world's never change, and heroes hold the very item objects, whose codes travel over the
+   * network), so nothing anyone carries is disturbed; the people, places, quests and capabilities are replaced.
+   */
+  reload(files: Record<ContentFile, unknown>) {
+    this.content = parseContent(files);
+    this.readMobs();
+    this.install(false);
   }
 
   /** Fetch every file from `source` (in parallel) and check them. Throws a `ContentError` listing every problem. */
@@ -69,7 +85,7 @@ export class ContentManager {
    * (`QUESTS`, `GIVERS`, `SITE_KINDS`..., systems/quests.ts), the goods (`ITEMS`, `SHOPS`, `CHEST_LOOTS`) and the capabilities (systems/capabilities.ts). Call once after loading, before anything spawns or
    * preloads art.
    */
-  install() {
+  install(goods = true) {
     setMobKinds(this.mobKinds);
     const looks: Record<string, Outfit> = {};
     for (const [id, def] of Object.entries(this.content.entities)) if (def.type === 'npc') looks[id] = def.sprite;
@@ -83,13 +99,14 @@ export class ContentManager {
       links[b.map] = b.links;
     }
     setPlaces(names, links, tints);
-    const goods = this.content.items;
-    setItems(goods.items, goods.start);
-    setShops(goods.shops);
-    const loots: Record<string, ChestLoot> = {};
-    for (const [id, loot] of Object.entries(goods.loots))
-      loots[id] = 'item' in loot ? { item: itemOf(loot.item) } : loot;
-    setLoots(loots);
+    if (goods) {
+      const { items, start, shops, loots: chests } = this.content.items;
+      setItems(items, start);
+      setShops(shops);
+      const loots: Record<string, ChestLoot> = {};
+      for (const [id, loot] of Object.entries(chests)) loots[id] = 'item' in loot ? { item: itemOf(loot.item) } : loot;
+      setLoots(loots);
+    }
     setQuestContent(this.content.quests);
     const caps = capabilityTable(this.content);
     setCapabilities(caps.campaign, caps.zones);

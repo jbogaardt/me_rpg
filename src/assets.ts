@@ -7,6 +7,7 @@ import { MOB_KINDS } from './systems/combat';
 import { outfitParts, type Outfit, type PartManifest } from './sprites/doll';
 import { Wardrobe } from './sprites/Wardrobe';
 import { AssembledSource } from './content/AssembledSource';
+import { LiveSource } from './content/LiveSource';
 import type { ContentSource } from './content/ContentManager';
 import type { ContentFile } from './content/schema';
 
@@ -44,6 +45,18 @@ export const packContent = (seed: number): AssembledSource =>
     return Assets.load(alias);
   });
 
+/** A live world opened with `seed` (and `arc`, if named) from the packs, grown during play (content/world.ts). */
+export const liveContent = (seed: number, arc?: string): LiveSource =>
+  new LiveSource(
+    seed,
+    (name) => {
+      const alias = `content:packs:${name}`;
+      register(alias, publicUrl(`content/packs/${name}.json`), 'json');
+      return Assets.load(alias);
+    },
+    arc,
+  );
+
 /** A loaded bundle entry, or a clear error instead of an undefined texture later. */
 function pick(loaded: Record<string, Texture>, key: string): Texture {
   const texture = loaded[key];
@@ -67,8 +80,9 @@ export interface Sprites {
 const LPC_DIR = 'sprites/lpc/';
 
 /** Every sprite part the game can show without further loading: hero gear, NPC looks and every mob kind. */
-function requiredParts(): Set<string> {
+function requiredParts(extra: Outfit[]): Set<string> {
   const outfits: Outfit[] = [
+    ...extra,
     ...allPlayerOutfits(),
     ...Object.values(NPC_LOOKS),
     ...Object.values(MOB_KINDS).map((k) => k.look),
@@ -82,11 +96,12 @@ export async function initAssets() {
 }
 
 /** Load the character part manifest and the art for everything in `requiredParts()`, then return the wardrobe. */
-export async function loadSprites(onProgress?: Progress): Promise<Sprites> {
+/** `extra`: looks to load beyond the installed content's (a live world's, which may come to need any pack's). */
+export async function loadSprites(onProgress?: Progress, extra: Outfit[] = []): Promise<Sprites> {
   Assets.add({ alias: 'sprites:parts', src: publicUrl(`${LPC_DIR}parts.json`), parser: 'json' });
   const manifest = await Assets.load<PartManifest>('sprites:parts');
   const wardrobe = new Wardrobe(manifest, (file) => publicUrl(LPC_DIR + file));
-  await wardrobe.load(requiredParts(), onProgress);
+  await wardrobe.load(requiredParts(extra), onProgress);
   Assets.add({ alias: 'sprites:chests', src: tilesetUrl('chests.png') });
   Assets.add({ alias: 'sprites:crops', src: tilesetUrl('crops.png') });
   const pets = {} as Record<PetSheet, Texture>;
