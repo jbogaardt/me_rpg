@@ -42,6 +42,7 @@
 
     <!-- The combos of the wand or tome in hand, lit as they are tapped (src/hud/Hud.ts). Empty for any other weapon. -->
     <!-- The name of the area just entered, big in the top middle (src/hud/AreaBanner.ts). -->
+    <div id="vote" class="panel thin wood" hidden><p class="title">The Dungeon Master asks: where next?</p><div class="opts"></div></div>
     <div id="area-banner" aria-live="polite"><div class="sub"></div><div class="title"></div></div>
 
     <!-- The current scenario node's choices (public/content/scenarios.json; src/hud/Choices.ts). Solo only for now. -->
@@ -142,6 +143,7 @@
             <div role="tab" data-tab="trade" hidden>Trade</div>
             <div role="tab" data-tab="party" hidden>Party</div>
             <div role="tab" data-tab="story" hidden>Story</div>
+            <div role="tab" data-tab="dials" hidden>World</div>
           </nav>
           <div class="close" role="button" aria-label="Close menu" data-key="Escape">✕</div>
         </header>
@@ -186,6 +188,7 @@
           <section id="menu-trade" hidden></section>
           <section id="menu-party" hidden></section>
           <section id="menu-story" hidden></section>
+          <section id="menu-dials" hidden></section>
           <section id="menu-credits" hidden>
             <h2>Credits</h2>
             <dl class="credits">

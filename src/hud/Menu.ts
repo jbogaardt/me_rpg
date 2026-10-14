@@ -25,6 +25,7 @@ import { Keybinds } from './Keybinds';
 import { Multiplayer } from './Multiplayer';
 import { Party } from './Party';
 import { StoryTab } from './StoryTab';
+import { Dials } from './Dials';
 
 // Pause menu (HTML overlay; markup in index.html). The game is frozen while it is open.
 // Tabs switch with a tap/click or Left/Right; the close button and menu keys are handled by the scene.
@@ -33,7 +34,20 @@ import { StoryTab } from './StoryTab';
 // 'trade' (hud/Trade.ts) shows only to a player in a co-op game; 'party' (hud/Party.ts) only to its Dungeon Master, who has
 // no hero tabs (Status, Inventory, Magic, Quests, Trade) while they run the world.
 // 'story' (hud/StoryTab.ts) shows whoever may steer a live world's story: its DM, or a solo player.
-const TABS = ['status', 'inventory', 'magic', 'quests', 'party', 'story', 'controls', 'online', 'trade', 'credits'];
+// 'dials' (hud/Dials.ts, "World") shows whoever runs the world: the online DM, or a solo player in a live world.
+const TABS = [
+  'status',
+  'inventory',
+  'magic',
+  'quests',
+  'party',
+  'story',
+  'dials',
+  'controls',
+  'online',
+  'trade',
+  'credits',
+];
 
 export class Menu {
   open = false;
@@ -51,6 +65,9 @@ export class Menu {
 
   /** A live world's Story tab; the scene attaches its handlers while it runs. */
   readonly story = new StoryTab(document.getElementById('menu-story')!);
+
+  /** The World tab: weather, time of day and capabilities, for whoever runs the world. */
+  readonly dials = new Dials(document.getElementById('menu-dials')!);
 
   private keybinds: Keybinds;
   private aim: AimSetting;
@@ -106,6 +123,7 @@ export class Menu {
     this.renderQuests(); // online the world runs behind the menu, so a kill can move the log
     if (TABS[this.tab] === 'party') this.party.render();
     if (TABS[this.tab] === 'story') this.story.render();
+    if (TABS[this.tab] === 'dials') this.dials.render();
   }
 
   /** The tab `by` places along from the current one, skipping tabs that are hidden. */
@@ -129,6 +147,7 @@ export class Menu {
       magic: !dm && enabled('skills'),
       party: dm,
       story: this.story.available,
+      dials: this.dials.available,
       trade: online && !dm && enabled('trading'),
       online: enabled('coop'),
     };
@@ -159,6 +178,7 @@ export class Menu {
     this.tab = i;
     if (TABS[i] === 'party') this.party.render();
     if (TABS[i] === 'story') this.story.render();
+    if (TABS[i] === 'dials') this.dials.render();
     if (TABS[i] === 'inventory' && this.hero) this.inventory.show(this.hero);
     if (TABS[i] === 'magic' && this.hero) this.magic.show(this.hero);
     for (const [j, name] of TABS.entries()) {

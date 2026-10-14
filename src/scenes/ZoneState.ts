@@ -1,5 +1,5 @@
 import type { Sprites, Zone } from '../assets';
-import { enabled, setting } from '../systems/capabilities';
+import { setting } from '../systems/capabilities';
 import { Camera } from '../core/camera';
 import { Ambient } from '../entities/ambient';
 import { Character } from '../entities/Character';
@@ -120,9 +120,10 @@ export class ZoneState {
     this.world.layer.addChild(this.pondBeds);
     this.ambient = data.indoor ? null : new Ambient(this.world.layer, data);
     this.weatherLayer = data.indoor ? null : new WeatherLayer(this.world.layer);
-    // No sky in a room, nor in a campaign without weather (systems/capabilities.ts).
+    // No sky in a room. A campaign (or a Dungeon Master) without weather keeps it clear and still (Simulation.weather
+    // asks systems/capabilities.ts each tick, so switching it on or off takes effect at once).
     this.weather =
-      data.indoor || climate === null || !enabled('weather', zone.name)
+      data.indoor || climate === null
         ? null
         : new Weather(
             CLIMATES[isClimate(climate) ? climate : DEFAULT_CLIMATE],

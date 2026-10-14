@@ -5,7 +5,7 @@
 
 import { setMobKinds, type MobKind } from '../systems/combat';
 import { setNpcLooks } from '../systems/looks';
-import { setCapabilities } from '../systems/capabilities';
+import { setCapabilities, withDials, type Dial } from '../systems/capabilities';
 import { setPlaces } from '../systems/places';
 import { setQuestContent } from '../systems/quests';
 import { itemOf, setItems } from '../systems/items';
@@ -50,6 +50,8 @@ export class UrlContentSource implements ContentSource {
 
 export class ContentManager {
   private mobKinds: Record<string, MobKind> = {};
+  /** What the Dungeon Master has switched during play (systems/capabilities.ts `DIALS`), over the content's own word. */
+  private dials: Partial<Record<Dial, boolean>> = {};
 
   constructor(public content: Content) {
     this.readMobs();
@@ -108,8 +110,23 @@ export class ContentManager {
       setLoots(loots);
     }
     setQuestContent(this.content.quests);
+    this.installCapabilities();
+  }
+
+  /** The Dungeon Master switched capabilities for everyone (or a guest was told so): install them over the content's. */
+  setDials(dials: Partial<Record<Dial, boolean>>) {
+    this.dials = { ...dials };
+    this.installCapabilities();
+  }
+
+  get dialsSet(): Partial<Record<Dial, boolean>> {
+    return this.dials;
+  }
+
+  private installCapabilities() {
     const caps = capabilityTable(this.content);
-    setCapabilities(caps.campaign, caps.zones);
+    const { campaign, zones } = withDials(caps.campaign, caps.zones, this.dials);
+    setCapabilities(campaign, zones);
   }
 
   /** The node the game starts in. */

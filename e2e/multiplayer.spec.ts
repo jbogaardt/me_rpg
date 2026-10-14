@@ -328,12 +328,25 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   await expect(host.locator('#menu-story h2')).toContainText('1 of 3 lands');
   const road = host.locator('#menu-story [data-cue]').first();
   await expect(road).toContainText(/^Into \w+ lands/);
+  // A vote needs two roads to choose between: this world's first step has one, so there is nothing to ask the party.
+  await expect(host.locator('#menu-story [data-cue]')).toHaveCount(1);
+  await expect(host.locator('#menu-story [data-ask]')).toHaveCount(0);
   await road.click();
+  await expect(friend.locator('#vote')).toBeHidden();
   await expect(host.locator('#menu-story h2')).toContainText('2 of 3 lands');
   const land = (await host.locator('#menu-story .story-path').textContent())!.split(' → ').pop()!;
   await expect(host.locator('#area-banner .title')).toHaveText(land);
   // The friend's page is told and grows its own world to match.
   await expect(friend.locator('#area-banner .title')).toHaveText(land, { timeout: 30_000 });
+
+  // The DM's World tab switches things for everyone: this story is told without a map; the DM hands one out, then
+  // takes it back to the story as written.
+  await host.locator('#menu [data-tab="dials"]').click();
+  await expect(friend.locator('#map-btn')).toBeHidden();
+  await host.locator('#menu-dials [data-dial="map"][data-on="true"]').click();
+  await expect(friend.locator('#map-btn')).toBeVisible({ timeout: 15_000 });
+  await host.locator('#menu-dials [data-dial="map"][data-on=""]').click();
+  await expect(friend.locator('#map-btn')).toBeHidden({ timeout: 15_000 });
 });
 
 test('a join link opens the game ready to join, and the code is not left in the address bar', async ({ browser }) => {

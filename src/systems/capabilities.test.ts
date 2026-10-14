@@ -11,6 +11,8 @@ import {
   flag,
   setCapabilities,
   setting,
+  withDials,
+  DIALS,
   type Capability,
   type SettingDef,
 } from './capabilities';
@@ -139,5 +141,28 @@ describe('settings, zones and what needs what', () => {
           expect(def.default).toBeGreaterThanOrEqual(def.min);
           expect(def.default).toBeLessThanOrEqual(def.max);
         }
+  });
+});
+
+describe('the Dungeon Master’s dials', () => {
+  it('lays a switch over the campaign and every zone, and keeps a switched-on capability’s settings', () => {
+    const campaign = { needs: { drain: 2 }, map: false } as const;
+    const zones = { swamp: { needs: false, map: true }, cave: { weather: false } };
+    const { campaign: c, zones: z } = withDials(campaign, zones, { needs: true, map: false, weather: true });
+    expect(c).toEqual({ needs: { drain: 2 }, map: false, weather: true });
+    expect(z).toEqual({ swamp: {}, cave: {} });
+    const table = new CapabilityTable(c, z);
+    expect(table.enabled('needs', 'swamp')).toBe(true);
+    expect(table.enabled('map', 'swamp')).toBe(false);
+    expect(table.enabled('weather', 'cave')).toBe(true);
+  });
+
+  it('changes nothing with no dials set', () => {
+    const zones = { swamp: { needs: false } };
+    expect(withDials({ map: false }, zones, {})).toEqual({ campaign: { map: false }, zones });
+  });
+
+  it('only offers capabilities that change what a zone shows, never what a hero has or who can play', () => {
+    for (const id of DIALS) expect(CAPABILITIES[id].scope).toBe('zone');
   });
 });

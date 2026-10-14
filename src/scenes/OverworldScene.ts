@@ -76,6 +76,8 @@ import { Visuals } from './overworld/Visuals';
 import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
 import { Scenario } from './overworld/Scenario';
 import { Story } from './overworld/Story';
+import { DmDesk } from './overworld/DmDesk';
+import { VotePanel } from '../hud/VotePanel';
 import type { World } from '../content/world';
 import { particleEffect } from '../entities/ParticleEffect';
 import { floatText } from '../entities/effects';
@@ -136,6 +138,9 @@ export class OverworldScene implements Scene {
   private scenario: Scenario;
   /** A live world's story, steered by its Dungeon Master (inert for every other world). */
   private liveStory: Story;
+  /** The Dungeon Master's controls: weather, time of day, capabilities for everyone, votes. */
+  private desk!: DmDesk;
+  private votePanel = new VotePanel();
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
@@ -203,6 +208,8 @@ export class OverworldScene implements Scene {
       z.effects.add(particleEffect('levelUp', x, y));
     };
     this.liveStory.onGrew = (land) => this.banner.show(land, 'The story leads on to');
+    this.desk = new DmDesk(arena, ui.session, content, this.dayClock);
+    this.votePanel.onChoose = (i) => this.desk.castVote(i);
     this.zones.root.addChildAt(this.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     this.overlay = new MapOverlay();
@@ -266,7 +273,21 @@ export class OverworldScene implements Scene {
     this.ui.menu.story.attach({
       canChoose: () => this.liveStory.canChoose,
       view: () => this.liveStory.view(),
-      choose: (cue) => this.liveStory.choose(cue),
+      choose: (cue) => {
+        this.liveStory.choose(cue);
+        this.desk.closeVote(); // the DM's choice ends any vote
+      },
+      vote: () => (this.arena.role === 'host' ? this.desk.voteView() : null),
+      openVote: () => this.desk.openVote(this.liveStory.view()?.options ?? []),
+      closeVote: () => this.desk.closeVote(),
+    });
+    this.ui.menu.dials.attach({
+      // Whoever runs the world: the online DM, or a solo player in a live world.
+      available: () => this.arena.local.dm || (this.arena.role === 'solo' && this.liveStory.live),
+      view: () => this.desk.dialsView(),
+      weather: (precip, wind) => this.desk.setWeather(precip, wind),
+      hour: (hour) => this.desk.setHour(hour),
+      dial: (id, on) => this.desk.setDial(id, on),
     });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
     if (this.ui.session.urlCode && enabled('coop')) this.ui.menu.toggle(this.hero, 'online');
@@ -277,6 +298,8 @@ export class OverworldScene implements Scene {
     this.ui.menu.magic.attach(null);
     this.ui.menu.party.attach(null);
     this.ui.menu.story.attach(null);
+    this.ui.menu.dials.attach(null);
+    this.votePanel.sync(null);
     this.overlay.setAvailable(false);
     this.harvestButtons.clear();
     this.ui.dialog.close();
@@ -302,6 +325,8 @@ export class OverworldScene implements Scene {
     this.syncRole(session.role);
     arena.clock += dt;
     this.liveStory.update(dt); // a live world: the host sends its log, a guest grows its own from it
+    this.desk.update(dt); // the DM's dials, time of day and vote: the host tells its friends, a friend is told
+    this.votePanel.sync(this.desk.openVoteForGuest);
     const online = arena.role !== 'solo';
     // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
     // without the map capability (it is still explored, so nothing changes if one is played later).
@@ -481,7 +506,7 @@ export class OverworldScene implements Scene {
     }
     if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.guest.pressAction());
     if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);
-    this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy), cmd.aim);
+    this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy), cmd.aim, this.desk.voteInput);
   }
 
   /** Switch to `role` (a friend connected or everyone dropped), setting the world up for it. */
@@ -491,6 +516,7 @@ export class OverworldScene implements Scene {
     if (arena.role === 'host') this.host.leave();
     else if (arena.role === 'client') this.guest.leave();
     arena.role = 'solo'; // so nothing from here on is recorded for friends until the new role is set
+    this.desk.reset(); // what a DM set lasts for their game only
     if (role === 'host') this.host.enter();
     else if (role === 'client') this.guest.enter();
     arena.role = role;

@@ -36,7 +36,7 @@ export class GuestLink {
   private actCount = 0; // action presses so far, sent as a counter
   private comboCount = 0; // combos cast so far (a counter too), and which one the last was
   private comboIndex = 0;
-  private sent = { keys: -1, act: -1, cb: -1, ack: -1, vr: -1, inv: 0 };
+  private sent = { keys: -1, act: -1, cb: -1, ack: -1, vr: -1, inv: 0, vt: '' };
   private solo: Hero | null = null; // the solo hero (stats, gold, pack, gear), put back on disconnect
 
   constructor(
@@ -70,7 +70,7 @@ export class GuestLink {
     local.target = null;
     this.lastEvent = -1;
     this.actCount = this.comboCount = this.comboIndex = this.inputSeq = 0;
-    this.sent = { keys: -1, act: -1, cb: -1, ack: -1, vr: -1, inv: 0 };
+    this.sent = { keys: -1, act: -1, cb: -1, ack: -1, vr: -1, inv: 0, vt: '' };
     this.inputTimer = 0;
     arena.applyTags();
   }
@@ -134,7 +134,7 @@ export class GuestLink {
   }
 
   /** Send the controls: when they change, and otherwise at INPUT_HZ so a lost packet is soon corrected. */
-  sendInput(dt: number, keys: number, aim?: Aim) {
+  sendInput(dt: number, keys: number, aim?: Aim, vote?: [number, number]) {
     const { arena } = this;
     this.inputTimer += dt;
     const ack = Math.max(0, this.lastEvent);
@@ -147,7 +147,8 @@ export class GuestLink {
       this.comboCount !== this.sent.cb ||
       ack !== this.sent.ack ||
       vr !== this.sent.vr ||
-      (pending?.seq ?? 0) !== this.sent.inv;
+      (pending?.seq ?? 0) !== this.sent.inv ||
+      String(vote) !== this.sent.vt;
     if (!changed && this.inputTimer < 1 / INPUT_HZ) return;
     this.inputTimer = 0;
     const msg = {
@@ -161,9 +162,10 @@ export class GuestLink {
       vr,
       ...(aim ? { am: encodeAim(aim) } : {}),
       ...(pending ? { inv: [pending.seq, ...encodeOp(pending.op)] as [number, ...InvOpWire] } : {}),
+      ...(vote ? { vt: vote } : {}), // the DM's open vote: this player's choice, repeated like the keys
     } as const;
     if (this.session.send(msg)) {
-      this.sent = { keys, act: this.actCount, cb: this.comboCount, ack, vr, inv: pending?.seq ?? 0 };
+      this.sent = { keys, act: this.actCount, cb: this.comboCount, ack, vr, inv: pending?.seq ?? 0, vt: String(vote) };
     }
   }
 

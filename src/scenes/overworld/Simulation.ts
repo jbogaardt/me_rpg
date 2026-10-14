@@ -447,8 +447,9 @@ export class Simulation {
    * rolls every occupied zone's weather (a guest is only told), and a storm picks where to strike in its own zone.
    */
   weather(dt: number) {
-    const { weather, ponds } = this.arena.zone;
-    if (!weather) return ponds.rain(STILL_FILL, dt); // no weather (a room, or a campaign without it): ponds seep back
+    const { weather, ponds, name } = this.arena.zone;
+    if (weather && !enabled('weather', name)) weather.still(); // switched off: clear and still, here and for friends
+    if (!weather || !enabled('weather', name)) return ponds.rain(STILL_FILL, dt); // no weather: ponds seep back
     weather.update(dt);
     ponds.rain(rainFill(weather.precip, weather.intensity), dt); // only rain fills a pond someone drank from
     if (weather.strikeDue(dt)) this.lightning({ ...this.strikeTarget(), seed: Math.floor(Math.random() * 1e9) });

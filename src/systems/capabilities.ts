@@ -211,6 +211,44 @@ export class CapabilityTable {
 let current = new CapabilityTable();
 
 /** Install a campaign's capabilities, and its zones' overrides by zone (map) name. Anything not named is on. */
+/**
+ * The capabilities a Dungeon Master may switch during play, for everyone (each true or false): the ones that only
+ * change what a zone shows or asks, never what a hero has earned or whom they can play with.
+ */
+export const DIALS = [
+  'map',
+  'guide',
+  'needs',
+  'weather',
+  'dayNight',
+  'farming',
+] as const satisfies readonly Capability[];
+export type Dial = (typeof DIALS)[number];
+
+/**
+ * The campaign's and zones' specs with the Dungeon Master's dials laid over them: a dial is the word on that capability
+ * everywhere, so it is set on the campaign (keeping its settings when switched on) and taken out of every zone's.
+ */
+export function withDials(
+  campaign: CapabilitySpec,
+  zones: Record<string, CapabilitySpec>,
+  dials: Partial<Record<Dial, boolean>>,
+): { campaign: CapabilitySpec; zones: Record<string, CapabilitySpec> } {
+  const set = Object.entries(dials) as [Dial, boolean][];
+  if (!set.length) return { campaign, zones };
+  const out: CapabilitySpec = { ...campaign };
+  for (const [id, on] of set) {
+    const was = campaign[id];
+    out[id] = on ? (typeof was === 'object' ? was : true) : false;
+  }
+  const strip = (spec: CapabilitySpec) => {
+    const copy: CapabilitySpec = { ...spec };
+    for (const [id] of set) delete copy[id];
+    return copy;
+  };
+  return { campaign: out, zones: Object.fromEntries(Object.entries(zones).map(([z, spec]) => [z, strip(spec)])) };
+}
+
 export function setCapabilities(campaign: CapabilitySpec = {}, zones: Record<string, CapabilitySpec> = {}) {
   current = new CapabilityTable(campaign, zones);
 }

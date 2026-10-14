@@ -95,6 +95,13 @@ export class Weather {
   }
 
   /** Jump straight to some weather (dev tools and tests); it then runs its normal course. */
+  /** No weather at all, right now and until it is let run again (a campaign or Dungeon Master without weather). */
+  still() {
+    this.precip = null;
+    this.windLevel = 0;
+    this.intensity = 0;
+  }
+
   force(precip: Precip | null, windLevel = 0) {
     this.precip = precip;
     this.windLevel = windLevel;

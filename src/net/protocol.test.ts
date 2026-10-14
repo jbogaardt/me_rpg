@@ -20,6 +20,7 @@ import {
   type InputMsg,
   type LooksMsg,
   type WorldMsg,
+  type DmMsg,
   type PackMsg,
   type GroundSnap,
   type MobSnap,
@@ -382,6 +383,39 @@ describe('messages', () => {
   it('rounds to a tenth', () => {
     expect(round1(12.3456)).toBe(12.3);
     expect(round1(-0.04)).toBe(-0);
+  });
+});
+
+describe('the Dungeon Master’s word and the party’s votes', () => {
+  const dm: DmMsg = {
+    k: 'dm',
+    n: 4,
+    shift: -0.25,
+    dials: { map: false, weather: true },
+    vote: { id: 2, options: ['Into frost lands, over a thaw crossing', 'Into swamp lands'], tally: [2, 1], yours: 0 },
+  };
+
+  it('round-trips the dials, the clock and an open vote', () => {
+    expect(parseMessage(encodeMessage(dm))).toEqual(dm);
+    expect(parseMessage(encodeMessage({ ...dm, vote: null }))).toEqual({ ...dm, vote: null });
+    const input = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300, vt: [2, 1] };
+    expect(parseMessage(JSON.stringify(input))).toEqual(input);
+  });
+
+  it('refuses a dial that is not one, a tally that does not match, or a vote for a choice that is not there', () => {
+    const bad = [
+      { ...dm, dials: { coop: false } },
+      { ...dm, dials: { map: 'off' } },
+      { ...dm, shift: 3 },
+      { ...dm, vote: { ...dm.vote!, tally: [1] } },
+      { ...dm, vote: { ...dm.vote!, yours: 2 } },
+      { ...dm, vote: { ...dm.vote!, options: [], tally: [] } },
+      { ...dm, vote: { ...dm.vote!, options: ['x'.repeat(200), 'y'] } },
+    ];
+    for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m).slice(0, 80)).toBeNull();
+    const input = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
+    expect(parseMessage(JSON.stringify({ ...input, vt: [2, 9] }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...input, vt: [2] }))).toBeNull();
   });
 });
 

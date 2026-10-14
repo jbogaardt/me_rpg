@@ -25,13 +25,14 @@ import type { Note, SideWire, TradeCommand, TradeViewWire } from '../systems/tra
 import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
+import { DIALS } from '../systems/capabilities';
 
 /**
  * Bump when a message changes shape (or what one means); peers on different versions refuse to play together. v29: the
  * host is the Dungeon Master, not a party member (player 0 in a snapshot is drawn as the DM). v30: `world`, a live
- * world's log.
+ * world's log. v31: `dm` (the Dungeon Master's dials, time of day and vote) and the guest's vote `InputMsg.vt`.
  */
-export const PROTOCOL_VERSION = 30;
+export const PROTOCOL_VERSION = 31;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -136,6 +137,8 @@ export interface InputMsg {
    * does each once and in order, and says how far it got in PackMsg.ack, so a lost packet only delays it.
    */
   inv?: [number, ...InvOpWire];
+  /** The guest's vote in the Dungeon Master's open vote: [the vote's id, the option's index]. Repeated like the keys. */
+  vt?: [number, number];
 }
 
 /**
@@ -258,7 +261,33 @@ export const WORLD_CHUNK = 3;
 const MAX_ENTRY = 400;
 const MAX_LOG = 500;
 
-export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg | TrMsg | TradeMsg | WorldMsg;
+/** The most choices a vote offers. */
+export const MAX_VOTE_OPTIONS = 6;
+const MAX_VOTE_LABEL = 80;
+
+/** A vote the Dungeon Master opened, as one friend is told it: the choices, how many chose each, and their own choice. */
+export interface VoteWire {
+  id: number;
+  options: string[];
+  tally: number[];
+  /** This friend's choice (-1: none yet). */
+  yours: number;
+}
+
+/**
+ * Host -> guest: what the Dungeon Master has set for everyone. `shift` moves the time of day (a fraction of a day, as
+ * systems/daynight.ts `DayClock.shift`); `dials` are the capabilities the DM switched (systems/capabilities.ts `DIALS`,
+ * each true or false); `vote` is the open vote, if any. Sent when it changes and once a second.
+ */
+export interface DmMsg {
+  k: 'dm';
+  n: number;
+  shift: number;
+  dials: Record<string, boolean>;
+  vote: VoteWire | null;
+}
+
+export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg | TrMsg | TradeMsg | WorldMsg | DmMsg;
 
 export const encodeMessage = (m: Message): string => JSON.stringify(m);
 
@@ -581,6 +610,8 @@ export function parseMessage(raw: unknown): Message | null {
       )) {
         return null;
       }
+      const vt = m.vt;
+      if (vt !== undefined && !(numbers(vt, 2) && isCount(vt[0]) && isIndex(vt[1], MAX_VOTE_OPTIONS))) return null;
       const base = {
         k: 'in',
         n: m.n,
@@ -591,6 +622,7 @@ export function parseMessage(raw: unknown): Message | null {
         ack: m.ack,
         vr: m.vr,
         ...(m.am === undefined ? {} : { am: m.am }),
+        ...(vt === undefined ? {} : { vt: [vt[0], vt[1]] as [number, number] }),
       } as const;
       if (m.inv === undefined) return base;
       const inv = m.inv;
@@ -725,6 +757,39 @@ export function parseMessage(raw: unknown): Message | null {
           (p: unknown) => numbers(p, 1 + GEAR_SLOTS.length) && isIndex(p[0], MAX_PLAYERS) && p.slice(1).every(isCode),
         );
       return ok && isCount(m.n) ? { k: 'looks', n: m.n, players: players as number[][] } : null;
+    }
+    case 'dm': {
+      const dials = m.dials;
+      const dialsOk =
+        !!dials &&
+        typeof dials === 'object' &&
+        !Array.isArray(dials) &&
+        Object.entries(dials).every(([id, on]) => (DIALS as readonly string[]).includes(id) && typeof on === 'boolean');
+      const v = m.vote as Partial<VoteWire> | null | undefined;
+      const voteOk =
+        v === null ||
+        (!!v &&
+          typeof v === 'object' &&
+          isCount(v.id) &&
+          Array.isArray(v.options) &&
+          v.options.length >= 1 &&
+          v.options.length <= MAX_VOTE_OPTIONS &&
+          v.options.every((o) => typeof o === 'string' && o.length <= MAX_VOTE_LABEL) &&
+          numbers(v.tally, v.options.length) &&
+          v.tally.every(isCount) &&
+          typeof v.yours === 'number' &&
+          Number.isInteger(v.yours) &&
+          v.yours >= -1 &&
+          v.yours < v.options.length);
+      return isCount(m.n) && isNum(m.shift) && Math.abs(m.shift) <= 1 && dialsOk && voteOk
+        ? {
+            k: 'dm',
+            n: m.n,
+            shift: m.shift,
+            dials: dials as Record<string, boolean>,
+            vote: v === null ? null : (v as VoteWire),
+          }
+        : null;
     }
     case 'world': {
       const entries = m.entries;

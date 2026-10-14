@@ -564,7 +564,8 @@ export class World {
     const slot = this.arc?.slots?.[this.story.regions.length];
     const theme = region.themes.find((t) => !slot?.themes || slot.themes.includes(t)) ?? region.themes[0] ?? 'wild';
     const tags = [...(this.cat.pairings[p.pairing]!.tags ?? [])].sort();
-    const label = `Into ${theme} lands${tags.length ? `, over a ${tags.join(' and ')} crossing` : ''}`;
+    const kind = tags.join(' and ');
+    const label = `Into ${theme} lands${kind ? `, over ${/^[aeiou]/.test(kind) ? 'an' : 'a'} ${kind} crossing` : ''}`;
     return { cue: `${theme}|${tags.join(',')}`, label: cap(label), theme, tags };
   }
 

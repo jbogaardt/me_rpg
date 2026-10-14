@@ -4,12 +4,17 @@
 // content.
 
 import type { StoryView } from '../scenes/overworld/Story';
+import type { VoteView } from '../scenes/overworld/DmDesk';
 
 export interface StoryHandlers {
   /** May this page steer the story (a live world, and its DM or a solo player)? */
   canChoose(): boolean;
   view(): StoryView | null;
   choose(cue: string): void;
+  /** The party's vote on the next step (null: nobody to ask, as solo). */
+  vote(): VoteView | null;
+  openVote(): void;
+  closeVote(): void;
 }
 
 export class StoryTab {
@@ -18,8 +23,11 @@ export class StoryTab {
 
   constructor(private root: HTMLElement) {
     root.addEventListener('click', (e) => {
-      const button = (e.target as HTMLElement).closest<HTMLElement>('[data-cue]');
+      const target = e.target as HTMLElement;
+      const button = target.closest<HTMLElement>('[data-cue]');
       if (button?.dataset.cue) this.handlers?.choose(button.dataset.cue);
+      else if (target.closest('[data-ask]')) this.handlers?.openVote();
+      else if (target.closest('[data-close]')) this.handlers?.closeVote();
     });
   }
 
@@ -36,7 +44,8 @@ export class StoryTab {
   /** Draw the tab, only when what it shows changed (it is called every frame while open). */
   render() {
     const view = this.handlers?.view() ?? null;
-    const key = JSON.stringify(view);
+    const vote = this.handlers?.vote() ?? null;
+    const key = JSON.stringify([view, vote]);
     if (key === this.shown) return;
     this.shown = key;
     if (!view) {
@@ -63,11 +72,22 @@ export class StoryTab {
         const button = el('button', o.label, 'mp-btn panel thin wood');
         button.type = 'button';
         button.dataset.cue = o.cue;
+        if (vote?.open) button.append(el('small', ` ${vote.tally[o.cue] ?? 0} of ${vote.voters}`, 'tally'));
         item.append(button);
         list.append(item);
       }
       if (!view.options.length) parts.push(el('p', 'No road leads on from here.'));
       parts.push(list);
+      if (vote && view.options.length > 1) {
+        const ask = el('button', vote.open ? 'Close the vote' : 'Ask the party', 'mp-btn panel thin wood');
+        ask.type = 'button';
+        ask.dataset[vote.open ? 'close' : 'ask'] = '1';
+        parts.push(ask);
+        if (vote.open)
+          parts.push(
+            el('p', 'The party is voting. Choose a road when you are ready: the choice is yours.', 'story-hint'),
+          );
+      }
     }
     if (view.note) parts.push(el('p', view.note, 'story-note'));
     this.root.replaceChildren(...parts);

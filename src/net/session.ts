@@ -8,6 +8,7 @@ import {
   type InputMsg,
   type LooksMsg,
   type WorldMsg,
+  type DmMsg,
   type Message,
   type PackMsg,
   type SnapMsg,
@@ -84,6 +85,8 @@ export interface PeerInput {
   am?: number;
   /** The Inventory action the friend is waiting on (see InputMsg.inv), if any. */
   inv?: InputMsg['inv'];
+  /** The friend's vote in the Dungeon Master's open vote (see InputMsg.vt), if any. */
+  vt?: [number, number];
   /** False when nothing arrived recently: ignore `keys` (the counters stay valid). */
   fresh: boolean;
 }
@@ -144,7 +147,9 @@ export class Session {
   private pack: PackMsg | null = null; // friend: the newest purse and pack from the host, not yet taken
   private newestPack = -1;
   private looks: LooksMsg | null = null; // friend: the newest list of what everyone wears
-  private world: WorldMsg[] = []; // friend: stretches of a live world's log, not yet taken (each a different stretch)
+  private world: WorldMsg[] = [];
+  private dm: DmMsg | null = null; // friend: the newest word from the Dungeon Master not yet taken
+  private newestDm = -1; // friend: stretches of a live world's log, not yet taken (each a different stretch)
   private newestLooks = -1;
   private tradeSteps = new Map<number, TrMsg[]>(); // host: each friend's trade commands, in order, not yet handled
   private nextTradeStep = new Map<number, number>(); // host: the number of the next command to take from each friend
@@ -333,7 +338,7 @@ export class Session {
   peerInput(slot: number, now = performance.now()): PeerInput | null {
     const last = this.inputs.get(slot);
     if (!last) return null;
-    const { keys, act, cb, ci, ack, vr, am, inv } = last.msg;
+    const { keys, act, cb, ci, ack, vr, am, inv, vt } = last.msg;
     return {
       keys,
       act,
@@ -343,6 +348,7 @@ export class Session {
       vr,
       ...(am ? { am } : {}),
       ...(inv ? { inv } : {}),
+      ...(vt ? { vt } : {}),
       fresh: now - last.at < INPUT_STALE_MS,
     };
   }
@@ -385,6 +391,13 @@ export class Session {
     const pack = this.pack;
     this.pack = null;
     return pack;
+  }
+
+  /** Friend: the newest word from the Dungeon Master (dials, time of day, vote) not yet taken, or null. */
+  takeDm(): DmMsg | null {
+    const dm = this.dm;
+    this.dm = null;
+    return dm;
   }
 
   /** Friend: the stretches of a live world's log that arrived since last asked. */
@@ -532,8 +545,9 @@ export class Session {
       this.beginHandshake(link);
     } else {
       this.endHandshake(link);
-      this.snapshot = this.pack = this.looks = this.trade = null;
+      this.snapshot = this.pack = this.looks = this.trade = this.dm = null;
       this.world = [];
+      this.newestDm = -1;
     }
     if (status === 'disconnected' || status === 'failed' || status === 'idle') this.guestLink = null;
     this.notify();
@@ -619,6 +633,12 @@ export class Session {
       case 'world':
         if (this.guestLink === link && this.world.length < 32) this.world.push(message);
         break;
+      case 'dm':
+        if (this.guestLink === link && message.n > this.newestDm) {
+          this.newestDm = message.n;
+          this.dm = message;
+        }
+        break;
     }
   }
 
@@ -702,8 +722,9 @@ export class Session {
     this.newestInput.clear();
     this.trades.clear();
     this.newestTrade.clear();
-    this.snapshot = this.pack = this.looks = null;
+    this.snapshot = this.pack = this.looks = this.dm = null;
     this.world = [];
+    this.newestDm = -1;
     this.newestSnapshot = this.newestPack = this.newestLooks = this.newestTradeMsg = -1;
   }
 
