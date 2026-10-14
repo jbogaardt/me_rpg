@@ -21,6 +21,7 @@
       "node_id": "desert",
       "biome_type": "desert",
       "entities": [
+        { "entity": "tuskcaptain", "x": 38, "y": 54 },
         { "entity": "raider", "x": 17, "y": 10 },
         { "entity": "raider", "x": 56, "y": 16 },
         { "entity": "raider", "x": 106, "y": 24 },
@@ -59,6 +60,7 @@
       "node_id": "frostlands",
       "biome_type": "frostlands",
       "entities": [
+        { "entity": "stillheart", "x": 80, "y": 100 },
         { "entity": "frostbound", "x": 131, "y": 126 },
         { "entity": "frostbound", "x": 106, "y": 54 },
         { "entity": "frostbound", "x": 78, "y": 96 },
@@ -80,6 +82,7 @@
       "node_id": "greenwood",
       "biome_type": "greenwood",
       "entities": [
+        { "entity": "palelurker", "x": 82, "y": 48 },
         { "entity": "shade", "x": 34, "y": 114 },
         { "entity": "goblin", "x": 58, "y": 82 },
         { "entity": "wolfkin", "x": 42, "y": 158 },

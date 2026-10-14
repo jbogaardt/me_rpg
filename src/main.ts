@@ -21,6 +21,7 @@ import { TradeUi } from './hud/Trade';
 import { Session } from './net/session';
 import { OverworldScene } from './scenes/OverworldScene';
 import { MOB_KINDS } from './systems/combat';
+import { NPC_LOOKS } from './systems/looks';
 import { ITEMS } from './systems/items';
 
 /**
@@ -112,7 +113,7 @@ void (async () => {
       session,
     };
     ui.menu.portrait = (kind) => {
-      const look = MOB_KINDS[kind]?.look;
+      const look = MOB_KINDS[kind]?.look ?? NPC_LOOKS[kind]; // a monster's id, or a person's (a quest's meet)
       return look ? sprites.wardrobe.portrait(look) : null;
     };
     const overworld = new OverworldScene(zone, sprites, ui, loadZone, unloadZone, app.renderer, content, world);

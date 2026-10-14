@@ -71,6 +71,7 @@ export default defineBiome({
 
     // --- Warden Maren: keeper of the town lamp, and the one who hands out the story quests (systems/quests.ts) -------------
     z.giver('maren', ...z.near(...at(16.9, 20.3)));
+    z.giver('hale', ...z.near(...at(15.4, 19.6))); // Captain Hale of the Watch, by the north end of the market
 
     // --- A pond and gardens in the west of town ---------------------------------------------------------------
     const water = pond(z, area(11.6, 20.6, 1.6, 1), { shore: 'sand' });

@@ -34,7 +34,7 @@ import {
   starveRate,
   thirsty,
 } from '../../systems/needs';
-import { GIVERS, QUEST_GIVER, recordKill, type Progress } from '../../systems/quests';
+import { GIVERS, QUEST_GIVER, recordKill, recordVisit, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
 import type { Strike } from '../../entities/WeatherLayer';
@@ -222,6 +222,8 @@ export class Simulation {
     if (p.pendingShot && (p.pendingShot.timer -= dt) <= 0) this.release(p);
     // A campaign (or zone) without food and water: no hunger, plain mending, no starving; else as fast as it says.
     const zone = this.arena.zone.name;
+    // A quest that sends the hero to a named place counts it on arriving (the host decides, for every player).
+    this.questNote(p, recordVisit(p.hero, zone, this.arena.data.places, p.body.x, p.body.y));
     const needs = enabled('needs', zone);
     if (needs) drainNeeds(p.hero.needs, dt * setting('needs', 'drain', zone));
     const fed = needs ? needsRegen(p.hero.needs) : 1; // hungry or thirsty heroes mend more slowly (systems/needs.ts)
