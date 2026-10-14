@@ -5,7 +5,7 @@ import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import './ui.css';
 import { initAssets, loadSprites, loadZone, packContent, staticContent, unloadZone } from './assets';
-import { chooseCampaign, RANDOM } from './content/campaignChoice';
+import { chooseCampaign, DEFAULT_WORLD, RANDOM } from './content/campaignChoice';
 import { setContentTag } from './net/session';
 import { ContentManager } from './content/ContentManager';
 import { SceneManager } from './core/Scene';
@@ -23,13 +23,13 @@ import { MOB_KINDS } from './systems/combat';
 import { ITEMS } from './systems/items';
 
 /**
- * The world the game plays: a random campaign assembled from the packs (public/content/packs/) unless the address
- * (`?campaign=campaign2`, `?seed=42`) or the build (VITE_CAMPAIGN; the browser tests use campaign1, the world the engine
- * was built on) names another. See content/campaignChoice.ts.
+ * The world the game plays: campaign 1, the sandbox where new capabilities are built, unless the address
+ * (`?campaign=campaign2`, `?campaign=random`, `?seed=42` for a random campaign assembled from the packs) or the build
+ * (VITE_CAMPAIGN) names another. See content/campaignChoice.ts.
  */
 const CHOICE = chooseCampaign(
   window.location.search,
-  import.meta.env.VITE_CAMPAIGN || RANDOM,
+  import.meta.env.VITE_CAMPAIGN || DEFAULT_WORLD,
   () => 1 + Math.floor(Math.random() * 999_999),
 );
 if (CHOICE.search !== null)

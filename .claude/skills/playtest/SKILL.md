@@ -13,7 +13,7 @@ Two layers, use the cheapest that answers the question:
 
 ## Ad-hoc driving (screenshots, poking state)
 
-`npm run dev` serves the game and, **in dev only**, exposes `window.__game = { app, scenes, overworld, items }` (`overworld.equip(items.steelSword)` changes the hero's gear and look). `scenes.current` is
+`npm run dev` serves the game (campaign 1, the sandbox; `?campaign=campaign2`, `?campaign=random` or `?seed=N` for another world) and, **in dev only**, exposes `window.__game = { app, scenes, overworld, content, campaign, assembly, items }` (`items` is the campaign's item registry: `overworld.equip(items.steelSword)` changes the hero's gear and look). `scenes.current` is
 the running `OverworldScene`; its fields are TypeScript-`private` but reachable at runtime (`player`, `npc`,
 `mobs`, `hero`, `world`, `camera`). Production builds don't have the handle.
 

@@ -1,9 +1,12 @@
 // Which world the page plays (Pixi-free, tested): a campaign folder (public/content/<campaign>/) or a random campaign
-// assembled from the packs with a seed. The page's address says which (`?campaign=campaign1`, `?seed=1234`), else the
-// build's default; a random campaign's seed is written into the address, so a reload or a shared link (and a co-op
+// assembled from the packs with a seed. The page's address says which (`?campaign=campaign2`, `?campaign=random`, or a
+// `?seed=1234` alone, which means a random one), else the build's default (campaign 1, the sandbox); a random campaign's seed is written into the address, so a reload or a shared link (and a co-op
 // join link, which keeps the address) gives the same world.
 
 export const RANDOM = 'random';
+
+/** The world a build plays unless told otherwise: campaign 1, the sandbox where new capabilities are built and tried. */
+export const DEFAULT_WORLD = 'campaign1';
 
 export interface CampaignChoice {
   /** A campaign folder, or `random`. */
@@ -21,7 +24,8 @@ const isSeed = (s: string | null): s is string => !!s && /^\d{1,9}$/.test(s);
 export function chooseCampaign(search: string, fallback: string, newSeed: () => number): CampaignChoice {
   const params = new URLSearchParams(search);
   const named = params.get('campaign');
-  const campaign = named && /^[\w-]{1,40}$/.test(named) ? named : fallback;
+  const valid = named && /^[\w-]{1,40}$/.test(named) ? named : null;
+  const campaign = valid ?? (isSeed(params.get('seed')) ? RANDOM : fallback); // a seed alone asks for a random world
   if (campaign !== RANDOM) return { campaign, seed: 0, search: null, tag: campaign };
   const given = params.get('seed');
   const seed = isSeed(given) ? Number(given) : newSeed();

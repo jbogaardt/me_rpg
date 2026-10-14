@@ -33,6 +33,10 @@ new kind needs no new code unless it needs new behaviour.
    add the id to a biome's `generation.roam` kinds in `public/content/<campaign>/biomes.json` to have it wander. Maps hold no
    enemies. `npm run map -- check` fails a placement on blocked ground. Loading needs nothing else: `src/assets.ts`
    preloads every part used by `MOB_KINDS`, so the new look is loaded and composed automatically.
+   **Random worlds**: a mob that should turn up in random campaigns goes in a pack (`public/content/packs/<id>.json`
+   `entities`) with its `tags` (a role: `common`/`hunter`/`ranged`/`brute`/`boss`, and a theme: `fire`/`frost`/`swamp`/
+   `undead`/`beast`), a `level` band and a `plural`; the assembler casts it in a region of a matching theme. Build it in
+   campaign 1 (the sandbox) first, then copy it into a pack when it fits other worlds.
 4. **Verify**: `npm run verify` (the `MOB_KINDS` tests check stats are sane and `tools/sprites/parts.test.ts` checks the look only uses real parts in their own slots) and, to see it, the `playtest` skill.
 
 ## Tuning notes

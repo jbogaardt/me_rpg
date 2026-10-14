@@ -28,5 +28,7 @@ describe('chooseCampaign', () => {
       tag: 'random:777',
     });
     expect(chooseCampaign('?seed=abc', 'random', seed).seed).toBe(777);
+    expect(chooseCampaign('?seed=42', 'campaign1', seed).tag).toBe('random:42'); // a seed alone asks for a random world
+    expect(chooseCampaign('?seed=abc', 'campaign1', seed).campaign).toBe('campaign1');
   });
 });
