@@ -7,9 +7,11 @@ import type { MobKind } from '../systems/combat';
 import { isClimate } from '../systems/weather';
 import { SKILL_IDS } from '../systems/skills';
 import { SLOTS, type Outfit } from '../sprites/doll';
+import { ITEMS, type ItemId } from '../systems/items';
+import type { Chapter, Giver, Objective, Quest, QuestContent, Reward, SiteKind } from '../systems/quests';
 
-/** The files of the content, by name: `public/content/<name>.json` when served statically. */
-export const CONTENT_FILES = ['entities', 'biomes', 'scenarios'] as const;
+/** The files of a campaign's content, by name: `public/content/<campaign>/<name>.json` when served statically. */
+export const CONTENT_FILES = ['entities', 'biomes', 'scenarios', 'quests'] as const;
 export type ContentFile = (typeof CONTENT_FILES)[number];
 
 /** The version of the content files' format this code reads. */
@@ -65,6 +67,12 @@ export interface RoamRule {
 }
 
 export interface BiomeDef {
+  /** What the area is called on screen (the banner on arriving, the map's heading, quest hints). */
+  name: string;
+  /** The colour the door transition's rim glows on arriving (`#rrggbb`); a default for rooms and others. */
+  tint?: string;
+  /** The zones (maps) a player can walk to from here, through a door or a gap: the quest guide finds its way with them. */
+  links: string[];
   /** The map file it is drawn from: public/maps/<map>.json (built from maps/<map>.ts). */
   map: string;
   /** Its weather (a key of CLIMATES, systems/weather.ts); null for a room, which has none. */
@@ -116,6 +124,7 @@ export interface Content {
   entities: Record<string, EntityDef>;
   biomes: Record<string, BiomeDef>;
   scenarios: Scenarios;
+  quests: QuestContent;
 }
 
 /** A content file that does not have the shape it must: every problem found, one per line. */
@@ -302,6 +311,9 @@ export function parseBiomes(json: unknown, r = new Reader()): Record<string, Bio
     const gen = b.generation === undefined ? {} : r.object(b.generation, `${path}.generation`);
     const roam = gen?.roam === undefined ? undefined : r.array(gen.roam, `${path}.generation.roam`);
     out[type] = {
+      name: r.string(b.name, `${path}.name`),
+      ...(b.tint === undefined ? {} : { tint: r.color(b.tint, `${path}.tint`) }),
+      links: r.strings(b.links ?? [], `${path}.links`),
       map: r.string(b.map, `${path}.map`),
       climate,
       music,
@@ -372,6 +384,103 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
   return { start, nodes };
 }
 
+const SITE_SHAPES = ['mushroom', 'stone', 'sand'] as const;
+const isItem = (id: string): id is ItemId => id in ITEMS;
+
+function readObjective(r: Reader, v: unknown, path: string): Objective {
+  const o = r.object(v, path) ?? {};
+  const count = r.number(o.count, `${path}.count`, 1);
+  if (o.t === 'kill') {
+    const kill: Objective = { t: 'kill', kind: r.string(o.kind, `${path}.kind`), count };
+    if (o.zone !== undefined) kill.zone = r.string(o.zone, `${path}.zone`);
+    return kill;
+  }
+  if (o.t === 'gather')
+    return { t: 'gather', site: r.string(o.site, `${path}.site`), zone: r.string(o.zone, `${path}.zone`), count };
+  if (o.t === 'bring') {
+    const item = r.string(o.item, `${path}.item`);
+    if (!isItem(item)) r.fail(`${path}.item`, `"${item}" is not an item (src/systems/items.ts)`);
+    return { t: 'bring', item: item as ItemId, count };
+  }
+  r.fail(`${path}.t`, 'must be "kill", "gather" or "bring"');
+  return { t: 'kill', kind: '', count };
+}
+
+function readReward(r: Reader, v: unknown, path: string): Reward {
+  const o = r.object(v, path) ?? {};
+  const reward: Reward = { gold: r.number(o.gold, `${path}.gold`, 0), xp: r.number(o.xp, `${path}.xp`, 0) };
+  if (o.items !== undefined)
+    reward.items = r.strings(o.items, `${path}.items`).map((id, i) => {
+      if (!isItem(id)) r.fail(`${path}.items[${i}]`, `"${id}" is not an item (src/systems/items.ts)`);
+      return id as ItemId;
+    });
+  return reward;
+}
+
+/** Read quests.json: the givers, site kinds, chapters, the chain in story order and the epilogue. */
+export function parseQuests(json: unknown, r = new Reader()): QuestContent {
+  const file = r.object(json, 'quests.json');
+  const out: QuestContent = { giver: '', givers: {}, sites: {}, chapters: [], quests: [], epilogue: [] };
+  if (!file) return out;
+  r.version(file, 'quests.json');
+  out.giver = r.string(file.giver, 'quests.json.giver');
+  for (const [id, v] of Object.entries(r.object(file.givers, 'quests.json.givers') ?? {})) {
+    const g = r.object(v, `givers.${id}`);
+    if (!g) continue;
+    const giver: Giver = {
+      name: r.string(g.name, `givers.${id}.name`),
+      look: r.string(g.look, `givers.${id}.look`),
+      tag: r.string(g.tag, `givers.${id}.tag`),
+      zone: r.string(g.zone, `givers.${id}.zone`),
+    };
+    out.givers[id] = giver;
+  }
+  for (const [id, v] of Object.entries(r.object(file.sites ?? {}, 'quests.json.sites') ?? {})) {
+    const p = `sites.${id}`;
+    const o = r.object(v, p);
+    if (!o) continue;
+    if (!(SITE_SHAPES as readonly unknown[]).includes(o.shape))
+      r.fail(`${p}.shape`, `must be ${SITE_SHAPES.join(', ')}`);
+    const site: SiteKind = {
+      name: r.string(o.name, `${p}.name`),
+      shape: SITE_SHAPES.includes(o.shape as (typeof SITE_SHAPES)[number]) ? (o.shape as SiteKind['shape']) : 'stone',
+      color: parseInt(r.color(o.color, `${p}.color`).slice(1), 16),
+      glow: parseInt(r.color(o.glow, `${p}.glow`).slice(1), 16),
+      notes: r.array(o.notes, `${p}.notes`).map((n, i) => r.strings(n, `${p}.notes[${i}]`)),
+    };
+    out.sites[id] = site;
+  }
+  out.chapters = r.array(file.chapters, 'quests.json.chapters').map((v, i): Chapter => {
+    const o = r.object(v, `chapters[${i}]`) ?? {};
+    return { title: r.string(o.title, `chapters[${i}].title`), intro: r.strings(o.intro, `chapters[${i}].intro`) };
+  });
+  out.quests = r.array(file.quests, 'quests.json.quests').map((v, i): Quest => {
+    const o = r.object(v, `quests[${i}]`) ?? {};
+    const p = `quests.${typeof o.id === 'string' ? o.id : i}`;
+    const where = r.object(o.where, `${p}.where`) ?? {};
+    const q: Quest = {
+      id: r.string(o.id, `${p}.id`),
+      chapter: r.number(o.chapter, `${p}.chapter`, 0),
+      learned: r.string(o.learned, `${p}.learned`),
+      fieldNote: r.strings(o.fieldNote, `${p}.fieldNote`),
+      title: r.string(o.title, `${p}.title`),
+      goal: r.string(o.goal, `${p}.goal`),
+      hint: r.string(o.hint, `${p}.hint`),
+      where: { zones: r.strings(where.zones, `${p}.where.zones`) },
+      unit: r.string(o.unit, `${p}.unit`),
+      objective: readObjective(r, o.objective, `${p}.objective`),
+      reward: readReward(r, o.reward, `${p}.reward`),
+      offer: r.strings(o.offer, `${p}.offer`),
+      remind: r.strings(o.remind, `${p}.remind`),
+      done: r.strings(o.done, `${p}.done`),
+    };
+    if (where.door !== undefined) q.where.door = r.string(where.door, `${p}.where.door`);
+    return q;
+  });
+  out.epilogue = r.strings(file.epilogue ?? [], 'quests.json.epilogue');
+  return out;
+}
+
 /** The checks across files: every id one file names must exist in the file it names. */
 function crossCheck(r: Reader, c: Content) {
   const mob = (id: string) => c.entities[id]?.type === 'mob';
@@ -383,6 +492,33 @@ function crossCheck(r: Reader, c: Content) {
         if (!mob(k)) r.fail(`biomes.${type}.generation.roam[${i}]`, `"${k}" is not a mob in entities.json`);
       if (rule.count > 0 && rule.kinds.length === 0) r.fail(`biomes.${type}.generation.roam[${i}]`, 'has no kinds');
     });
+  const maps = new Set(Object.values(c.biomes).map((b) => b.map));
+  for (const [type, b] of Object.entries(c.biomes))
+    b.links.forEach((to, i) => {
+      if (!maps.has(to)) r.fail(`biomes.${type}.links[${i}]`, `"${to}" is not the map of any biome`);
+    });
+  const q = c.quests;
+  if (q.giver && !q.givers[q.giver]) r.fail('quests.json.giver', `"${q.giver}" is not in givers`);
+  for (const [id, g] of Object.entries(q.givers)) {
+    if (c.entities[g.look]?.type !== 'npc') r.fail(`givers.${id}.look`, `"${g.look}" is not an npc in entities.json`);
+    if (!maps.has(g.zone)) r.fail(`givers.${id}.zone`, `"${g.zone}" is not the map of any biome`);
+  }
+  const ids = new Set<string>();
+  q.quests.forEach((quest) => {
+    const p = `quests.${quest.id}`;
+    if (ids.has(quest.id)) r.fail(p, 'id is used twice');
+    ids.add(quest.id);
+    if (!q.chapters[quest.chapter]) r.fail(`${p}.chapter`, `no chapter ${quest.chapter}`);
+    for (const z of quest.where.zones)
+      if (!maps.has(z)) r.fail(`${p}.where.zones`, `"${z}" is not the map of any biome`);
+    if (quest.where.door && !maps.has(quest.where.door))
+      r.fail(`${p}.where.door`, `"${quest.where.door}" is not the map of any biome`);
+    const o = quest.objective;
+    if (o.t === 'kill' && !mob(o.kind)) r.fail(`${p}.objective.kind`, `"${o.kind}" is not a mob in entities.json`);
+    if ((o.t === 'kill' || o.t === 'gather') && o.zone !== undefined && !maps.has(o.zone))
+      r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
+    if (o.t === 'gather' && !q.sites[o.site]) r.fail(`${p}.objective.site`, `"${o.site}" is not in sites`);
+  });
   if (c.scenarios.start && !c.scenarios.nodes.has(c.scenarios.start))
     r.fail('scenarios.json.start', `no node "${c.scenarios.start}"`);
   for (const node of c.scenarios.nodes.values()) {
@@ -407,6 +543,7 @@ export function parseContent(files: Record<ContentFile, unknown>): Content {
     entities: parseEntities(files.entities, r),
     biomes: parseBiomes(files.biomes, r),
     scenarios: parseScenarios(files.scenarios, r),
+    quests: parseQuests(files.quests, r),
   };
   crossCheck(r, content);
   if (r.problems.length) throw new ContentError(r.problems);

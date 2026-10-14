@@ -10,8 +10,8 @@ import path from 'node:path';
 import { parseMap } from '../../src/map/types';
 import { generateAll, loadLayout, zoneNames } from './all';
 import { type Report } from './check';
-import { checkContent, syncTilesets } from '../content/check';
-import { loadContentFromDisk } from '../content/disk';
+import { checkCampaigns, syncTilesets } from '../content/check';
+import { campaigns } from '../content/disk';
 import { mapJson } from './encode';
 import { renderMap, ROOT, writePng, type RenderOptions } from './image';
 import { World } from './world';
@@ -78,14 +78,15 @@ async function main() {
       console.log(`  ✗ ${e}`);
       failed = true;
     }
-    // The content (public/content/) against these maps: biomes, scenario placements, roamers.
+    // Every campaign's content (public/content/<campaign>/) against these maps: biomes, scenario placements, roamers.
     const maps = new Map([...zones].map(([name, z]) => [name, z.data]));
-    if (cmd === 'build') {
-      const synced = await syncTilesets(maps);
-      if (synced.length)
-        console.log(`content: wrote the tilesets of ${synced.join(', ')} to public/content/biomes.json`);
-    }
-    const content = checkContent(loadContentFromDisk(), maps);
+    if (cmd === 'build')
+      for (const campaign of campaigns()) {
+        const synced = await syncTilesets(maps, campaign);
+        if (synced.length)
+          console.log(`content: wrote the tilesets of ${synced.join(', ')} to ${campaign}/biomes.json`);
+      }
+    const content = checkCampaigns(maps);
     for (const w of content.warnings) console.log(`  ! content: ${w}`);
     for (const e of content.errors) console.log(`  ✗ content: ${e}`);
     if (!content.errors.length) console.log('  ✓ content: all checks pass');

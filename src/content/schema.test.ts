@@ -19,6 +19,9 @@ const files = (): Record<ContentFile, unknown> => ({
     version: 1,
     biomes: {
       forest: {
+        name: 'The Forest',
+        tint: '#88cc44',
+        links: [],
         map: 'greenwood',
         climate: 'temperate',
         music: null,
@@ -26,6 +29,32 @@ const files = (): Record<ContentFile, unknown> => ({
         generation: { roam: [{ kinds: ['goblin'], count: 2, seed: 1, apart: 5, avoid: [] }] },
       },
     },
+  },
+  quests: {
+    version: 1,
+    giver: 'elder',
+    givers: { elder: { name: 'The Elder', look: 'elder', tag: 'Elder', zone: 'greenwood' } },
+    sites: { stone: { name: 'Stone', shape: 'stone', color: '#aabbcc', glow: '#ffffff', notes: [['It hums.']] } },
+    chapters: [{ title: 'One', intro: ['Listen.'] }],
+    quests: [
+      {
+        id: 'cull',
+        chapter: 0,
+        learned: 'Goblins fear the dark.',
+        fieldNote: ['Done.'],
+        title: 'Cull',
+        goal: 'Drive off 2 goblins',
+        hint: 'In The Forest.',
+        where: { zones: ['greenwood'] },
+        unit: 'goblins',
+        objective: { t: 'kill', kind: 'goblin', count: 2 },
+        reward: { gold: 5, xp: 5, items: ['potion'] },
+        offer: ['Go.'],
+        remind: ['Still?'],
+        done: ['Thanks.'],
+      },
+    ],
+    epilogue: ['The end.'],
   },
   scenarios: {
     version: 1,
@@ -57,6 +86,31 @@ describe('parseContent', () => {
     expect(c.entities.goblin?.stats?.hp).toBe(20);
     expect(c.biomes.forest?.generation.roam?.[0]?.kinds).toEqual(['goblin']);
     expect(c.scenarios.nodes.get('woods')?.choices[0]?.requires).toEqual({ stat: 'level', min: 3 });
+    expect(c.biomes.forest?.name).toBe('The Forest');
+    expect(c.quests.quests[0]?.objective).toEqual({ t: 'kill', kind: 'goblin', count: 2 });
+    expect(c.quests.sites.stone?.color).toBe(0xaabbcc);
+  });
+
+  it('checks the quests against the rest of the content', () => {
+    const f = files();
+    const q = f.quests as {
+      giver: string;
+      givers: Record<string, { look: string; zone: string }>;
+      quests: { chapter: number; objective: object; reward: { items: string[] }; where: { zones: string[] } }[];
+    };
+    q.giver = 'nobody';
+    q.givers.elder!.look = 'goblin';
+    q.quests[0]!.chapter = 4;
+    q.quests[0]!.objective = { t: 'gather', site: 'tree', zone: 'greenwood', count: 2 };
+    q.quests[0]!.reward.items = ['crown'];
+    q.quests[0]!.where.zones = ['moon'];
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/quests\.json\.giver: "nobody" is not in givers/);
+    expect(p).toMatch(/givers\.elder\.look: "goblin" is not an npc/);
+    expect(p).toMatch(/quests\.cull\.chapter: no chapter 4/);
+    expect(p).toMatch(/"tree" is not in sites/);
+    expect(p).toMatch(/"crown" is not an item/);
+    expect(p).toMatch(/"moon" is not the map of any biome/);
   });
 
   it('lists every problem with where it is', () => {

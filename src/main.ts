@@ -19,6 +19,12 @@ import { OverworldScene } from './scenes/OverworldScene';
 import { MOB_KINDS } from './systems/combat';
 import { ITEMS } from './systems/items';
 
+/**
+ * The campaign the game plays: a folder of content under public/content/. Campaign 2 for now; a build can pick another
+ * with VITE_CAMPAIGN (the browser tests use campaign1, the world the engine was built on).
+ */
+const CAMPAIGN: string = import.meta.env.VITE_CAMPAIGN || 'campaign2';
+
 void (async () => {
   const loading = new Loading();
   try {
@@ -58,7 +64,7 @@ void (async () => {
     await initAssets();
     // The game content (entities, biomes, scenarios) comes first: what art to preload and which zone to start in
     // depend on it. To read it from a database instead, pass another ContentSource here.
-    const content = await ContentManager.load(staticContent);
+    const content = await ContentManager.load(staticContent(CAMPAIGN));
     content.install();
     const start = content.getBiomeInfo(content.startNode.biome_type);
     const [sprites, zone] = await Promise.all([
@@ -89,7 +95,8 @@ void (async () => {
     loading.done();
 
     // Dev-only handle for playtest scripts (see .claude/skills/playtest); stripped from production builds.
-    if (import.meta.env.DEV) Object.assign(window, { __game: { app, scenes, overworld, content, items: ITEMS } });
+    if (import.meta.env.DEV)
+      Object.assign(window, { __game: { app, scenes, overworld, content, campaign: CAMPAIGN, items: ITEMS } });
   } catch (err) {
     loading.fail(err);
     throw err;

@@ -8,6 +8,7 @@ import { checkCrossings, checkDoors, checkMap, checkSeams, type Report } from '.
 import { ROOT } from './image';
 import { buildWorld, World, type BiomeSpec, type WorldLayout } from './world';
 import { buildSpec, Zone, type ZoneSpec } from './zone';
+import { withCampaignOf } from '../content/disk';
 
 export const MAPS_DIR = path.join(ROOT, 'maps');
 /** maps/world.ts is the biome layout (tools/map/world.ts); every other file in maps/ is a zone or a biome. */
@@ -49,13 +50,13 @@ export async function generateAll(): Promise<{
   const zones = new Map<string, { data: MapData; report: Report }>();
   const layout = await loadLayout();
   for (const [name, { data, reasons }] of buildWorld(layout, specs.filter(isBiome)))
-    zones.set(name, { data, report: checkMap(data, reasons) });
+    zones.set(name, { data, report: withCampaignOf(name, () => checkMap(data, reasons)) });
   for (const spec of specs) {
     if (isBiome(spec)) continue;
     const z = new Zone(spec.width, spec.height);
     buildSpec(spec, z);
     const data = z.toMapData();
-    zones.set(spec.name, { data, report: checkMap(data, z.reasons) });
+    zones.set(spec.name, { data, report: withCampaignOf(spec.name, () => checkMap(data, z.reasons)) });
   }
   const maps = new Map([...zones].map(([n, z]) => [n, z.data]));
   return { zones, errors: [...checkSeams(new World(layout), maps), ...checkDoors(maps), ...checkCrossings(maps)] };

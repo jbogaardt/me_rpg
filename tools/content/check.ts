@@ -8,7 +8,7 @@ import * as prettier from 'prettier';
 import { roam } from '../../src/content/populate';
 import type { ContentManager } from '../../src/content/ContentManager';
 import type { MapData } from '../../src/map/types';
-import { CONTENT_DIR, readContentFile } from './disk';
+import { campaigns, CONTENT_DIR, loadContentFromDisk, readContentFile } from './disk';
 
 export interface ContentReport {
   errors: string[];
@@ -29,13 +29,16 @@ function standable(map: MapData, x: number, y: number): string | null {
 
 const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((s, i) => s === b[i]);
 
+/**
+ * Check one campaign's content against the maps. Its biomes must draw from maps that exist; `maps` may hold other
+ * campaigns' maps too (see `checkCampaigns` for a map no campaign uses).
+ */
 export function checkContent(content: ContentManager, maps: Map<string, MapData>): ContentReport {
   const errors: string[] = [];
   const warnings: string[] = [];
   const { biomes, scenarios } = content.content;
-  const named = new Set<string>();
+  const mine = new Set(Object.values(biomes).map((b) => b.map));
   for (const [type, biome] of Object.entries(biomes)) {
-    named.add(biome.map);
     const map = maps.get(biome.map);
     if (!map) {
       errors.push(`biomes.${type}.map: no map "${biome.map}" (public/maps/)`);
@@ -52,7 +55,29 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
         warnings.push(`biomes.${type}.generation.roam[${i}] places ${placed} of ${rule.count}: not enough open ground`);
     });
   }
-  for (const name of maps.keys()) if (!named.has(name)) errors.push(`map "${name}" has no biome in biomes.json`);
+  // The links are the doors: every zone a map has a door to (in this campaign) is linked, and nothing else, except that
+  // the training halls are reached by the trainer's magic, so only their way out is a door and nothing links to them.
+  const walkable = (zone: string) => !zone.startsWith('training_');
+  for (const [type, biome] of Object.entries(biomes)) {
+    const map = maps.get(biome.map);
+    if (!map || !walkable(biome.map)) continue;
+    const doors = [...new Set(map.doors.map((d) => d.to.zone))].filter((z) => walkable(z) && mine.has(z)).sort();
+    const linked = [
+      ...new Set([
+        ...biome.links,
+        ...Object.values(biomes).flatMap((b) => (b.links.includes(biome.map) ? [b.map] : [])),
+      ]),
+    ]
+      .filter(walkable)
+      .sort();
+    if (doors.join() !== linked.join())
+      errors.push(
+        `biomes.${type}.links: linked to [${linked.join(', ')}], but its doors lead to [${doors.join(', ')}]`,
+      );
+    for (const d of map.doors)
+      if (!mine.has(d.to.zone))
+        errors.push(`map "${biome.map}" has a door to "${d.to.zone}", not a map of this campaign`);
+  }
 
   for (const node of scenarios.nodes.values()) {
     const biome = biomes[node.biome_type];
@@ -71,9 +96,33 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
   return { errors, warnings };
 }
 
+/** Check every campaign (a map no campaign draws from is an error too). Each report line names its campaign. */
+export function checkCampaigns(maps: Map<string, MapData>): ContentReport {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const used = new Set<string>();
+  for (const campaign of campaigns()) {
+    let content: ContentManager;
+    try {
+      content = loadContentFromDisk(campaign);
+    } catch (err) {
+      errors.push(`${campaign}: ${err instanceof Error ? err.message : String(err)}`);
+      continue;
+    }
+    for (const b of Object.values(content.content.biomes)) used.add(b.map);
+    const r = checkContent(content, maps);
+    errors.push(...r.errors.map((e) => `${campaign}: ${e}`));
+    warnings.push(...r.warnings.map((w) => `${campaign}: ${w}`));
+  }
+  for (const name of maps.keys()) if (!used.has(name)) errors.push(`map "${name}" is in no campaign's biomes.json`);
+  return { errors, warnings };
+}
+
 /** Write each biome's `tilesets` from its map (what the map build decided), keeping the rest of biomes.json as it is. */
-export async function syncTilesets(maps: Map<string, MapData>): Promise<string[]> {
-  const file = readContentFile('biomes') as { biomes?: Record<string, { map?: string; tilesets?: string[] }> };
+export async function syncTilesets(maps: Map<string, MapData>, campaign: string): Promise<string[]> {
+  const file = readContentFile('biomes', campaign) as {
+    biomes?: Record<string, { map?: string; tilesets?: string[] }>;
+  };
   const changed: string[] = [];
   for (const [type, biome] of Object.entries(file.biomes ?? {})) {
     const map = biome.map && maps.get(biome.map);
@@ -82,7 +131,7 @@ export async function syncTilesets(maps: Map<string, MapData>): Promise<string[]
     changed.push(type);
   }
   if (changed.length) {
-    const target = path.join(CONTENT_DIR, 'biomes.json');
+    const target = path.join(CONTENT_DIR, campaign, 'biomes.json');
     const options = (await prettier.resolveConfig(target)) ?? {};
     fs.writeFileSync(target, await prettier.format(JSON.stringify(file), { ...options, filepath: target }));
   }

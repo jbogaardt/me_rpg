@@ -5,7 +5,7 @@ description: Add a new enemy type to me_rpg (a new MobKind with its own stats an
 
 # Add a mob kind
 
-A mob kind is data: an entity with `"type": "mob"` in `public/content/entities.json` (loaded into `MOB_KINDS`, `src/systems/combat.ts`, at boot) whose `sprite` is a paper-doll look (a set of sprite parts). The AI
+A mob kind is data: an entity with `"type": "mob"` in `public/content/<campaign>/entities.json` (loaded into `MOB_KINDS`, `src/systems/combat.ts`, at boot) whose `sprite` is a paper-doll look (a set of sprite parts). The AI
 (`src/entities/Mob.ts`: idle/wander → chase → telegraphed windup → strike → recover) is shared by every kind, so a
 new kind needs no new code unless it needs new behaviour.
 
@@ -17,7 +17,7 @@ new kind needs no new code unless it needs new behaviour.
    wolf, skeleton (any cloth colour), zombie, plus every human skin tone. A mob needs at least a `body` and `head`. If
    you need art that isn't packed yet (another helmet, hair, colour, monster head), use the `add-sprite-part` skill first.
    Weapons must have 128px swing art (arming sword family, dagger); others vanish or clip in the swing.
-2. **Kind** in `public/content/entities.json`: add an entry under `entities` (its id is what scenarios and biomes
+2. **Kind** in `public/content/<campaign>/entities.json`: add an entry under `entities` (its id is what scenarios and biomes
    name): `type: "mob"`, `name`, `notes` (what it is for and its level band), `sprite` (the look), optional `scale`, and
    `stats`: `hp`, `attack`, `defense`, `xp` (on kill), `gold` (dropped on kill, rolled ±30%; keep it rising with `xp`, a test checks), `speed` (px/s while chasing), `sight`
    (px; starts chasing inside this). `src/content/schema.ts` (`toMobKind`) turns it into the engine's `MobKind`. Optional
@@ -28,9 +28,9 @@ new kind needs no new code unless it needs new behaviour.
    sight`, `speed` below ~190 so it can be dodged, and `windup >= 0.5`; unit tests check these). The starter hero deals about `5 + 2 = 7` per swing and has 30 HP, so a kind's
    `attack`/`maxHp` should be playable against that (the unit test requires the hero can always hurt a kind:
    `defense < 7`). Existing kinds span level 1 fodder (goblin 14 HP / wolfkin 22 HP) to a troll (96 HP, 15 attack).
-3. **Place it**: in `public/content/scenarios.json`, add `{ "entity": "<id>", "x": col, "y": row }` to the node of
+3. **Place it**: in `public/content/<campaign>/scenarios.json`, add `{ "entity": "<id>", "x": col, "y": row }` to the node of
    the zone (cells of that zone's map; `npm run map -- layout <biome>` or the map preview helps find open ground), or
-   add the id to a biome's `generation.roam` kinds in `public/content/biomes.json` to have it wander. Maps hold no
+   add the id to a biome's `generation.roam` kinds in `public/content/<campaign>/biomes.json` to have it wander. Maps hold no
    enemies. `npm run map -- check` fails a placement on blocked ground. Loading needs nothing else: `src/assets.ts`
    preloads every part used by `MOB_KINDS`, so the new look is loaded and composed automatically.
 4. **Verify**: `npm run verify` (the `MOB_KINDS` tests check stats are sane and `tools/sprites/parts.test.ts` checks the look only uses real parts in their own slots) and, to see it, the `playtest` skill.

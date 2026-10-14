@@ -1,57 +1,20 @@
 // Where things are (Pixi-free): what each zone is called on screen, and how the zones connect, so the game can announce an
 // area, label it on the map, and point the way to a quest's goal. Quest text (systems/quests.ts) uses these names.
 
-/** What a zone is called: the big title on arriving, and the map's heading. Keys are zone names (maps/<name>.ts). */
-export const ZONE_NAMES: Record<string, string> = {
-  greenwood: 'The Greenwood',
-  town: 'Lanternrest',
-  eastwood: 'The Eastwood',
-  desert: 'The Sunscar Desert',
-  beach: 'Hourglass Shore',
-  undead: 'The Barrow Lands',
-  jungle: 'The Tuskwood Jungle',
-  wetlands: 'The Mirewater',
-  marsh: 'Gloamfen Marsh',
-  frostlands: 'The Frostlands',
-  shop_smithy: "The Smith's Forge",
-  shop_armory: "The Armorer's Hall",
-  shop_apothecary: "The Apothecary's Shop",
-  shop_ranger: "The Ranger's Lodge",
-  shop_wizard: "The Wizard's Sanctum",
-  training_novice: 'The Novice Training Hall',
-  training_apprentice: 'The Apprentice Training Hall',
-  training_journeyman: 'The Journeyman Training Hall',
-  training_adept: 'The Adept Training Hall',
-};
+/** What a zone is called: the big title on arriving, and the map's heading. Keys are zone names (maps/<name>.ts); the campaign's biomes.json `name`s. */
+export const ZONE_NAMES: Record<string, string> = {};
 
 /** The name of a zone, or the zone's own key for one with no name. */
 export const zoneName = (zone: string): string => ZONE_NAMES[zone] ?? zone;
 
-/** Which open-air zones touch (a gap in the border between them, maps/world.ts). A shop room joins only the town (the training halls are reached by the trainer's magic, not on foot, so they are not linked). */
-export const ZONE_LINKS: readonly (readonly [string, string])[] = [
-  ['town', 'greenwood'],
-  ['town', 'frostlands'],
-  ['desert', 'greenwood'],
-  ['undead', 'greenwood'],
-  ['greenwood', 'eastwood'],
-  ['eastwood', 'frostlands'],
-  ['jungle', 'eastwood'],
-  ['desert', 'beach'],
-  ['beach', 'undead'],
-  ['beach', 'jungle'],
-  ['undead', 'jungle'],
-  ['jungle', 'wetlands'],
-  ['jungle', 'marsh'],
-  ['wetlands', 'marsh'],
-  ['marsh', 'frostlands'],
-  ...['shop_smithy', 'shop_armory', 'shop_apothecary', 'shop_ranger', 'shop_wizard'].map(
-    (shop) => [shop, 'town'] as const,
-  ),
-];
+/** Which zones a player can walk between (biomes.json `links`, checked against the maps' doors by `npm run map -- check`; the training halls are reached by the trainer's magic, so nothing links to them). */
+export const ZONE_LINKS: (readonly [string, string])[] = [];
+
+/** Each zone's neighbours, in its own `links` order first (the guide prefers the earlier of two equally short ways). */
+const NEIGHBOURS = new Map<string, string[]>();
 
 /** The zones next to `zone`. */
-export const neighbours = (zone: string): string[] =>
-  ZONE_LINKS.flatMap(([a, b]) => (a === zone ? [b] : b === zone ? [a] : []));
+export const neighbours = (zone: string): string[] => NEIGHBOURS.get(zone) ?? [];
 
 /**
  * The first zone to walk into to get from `from` to the nearest of `goals` (fewest zones crossed), or null when already in
@@ -83,18 +46,40 @@ export function nextZone(from: string, goals: readonly string[]): string | null 
 }
 
 /** The colour a zone flashes when you walk into it (the rim of the door transition's circle, entities/ZoneTransition.ts). */
-export const ZONE_TINTS: Readonly<Record<string, number>> = {
-  greenwood: 0xc8f28a,
-  town: 0xffdc9a,
-  eastwood: 0xa6e07c,
-  desert: 0xffc468,
-  beach: 0xa4e6ff,
-  undead: 0xb394d6,
-  jungle: 0x62e08c,
-  wetlands: 0x8cc48a,
-  marsh: 0x9dbb6a,
-  frostlands: 0xd6f2ff,
-};
+export const ZONE_TINTS: Record<string, number> = {};
+
+/**
+ * Install a campaign's places (ContentManager.install, from biomes.json, keyed by each biome's map): `names`, `tints`,
+ * and `links`, each zone's neighbours in order. A link goes both ways and is kept once in ZONE_LINKS.
+ */
+export function setPlaces(
+  names: Record<string, string>,
+  links: Record<string, string[]>,
+  tints: Record<string, number>,
+) {
+  for (const key of Object.keys(ZONE_NAMES)) delete ZONE_NAMES[key];
+  Object.assign(ZONE_NAMES, names);
+  for (const key of Object.keys(ZONE_TINTS)) delete ZONE_TINTS[key];
+  Object.assign(ZONE_TINTS, tints);
+  ZONE_LINKS.splice(0, ZONE_LINKS.length);
+  NEIGHBOURS.clear();
+  const add = (a: string, b: string) => {
+    const list = NEIGHBOURS.get(a) ?? [];
+    if (!list.includes(b)) list.push(b);
+    NEIGHBOURS.set(a, list);
+  };
+  const seen = new Set<string>();
+  for (const [a, tos] of Object.entries(links)) for (const b of tos) add(a, b);
+  for (const [a, tos] of Object.entries(links))
+    for (const b of tos) {
+      if (a === b) continue;
+      add(b, a);
+      const key = [a, b].sort().join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      ZONE_LINKS.push([a, b]);
+    }
+}
 
 export const zoneTint = (zone: string): number =>
   ZONE_TINTS[zone] ?? (zone.startsWith('shop_') ? 0xffdc9a : zone.startsWith('training_') ? 0xb394d6 : 0xffffff);

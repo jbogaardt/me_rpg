@@ -55,7 +55,15 @@ describe('populate', () => {
     wolf: { type: 'mob', name: 'Wolf', sprite: { body: 'b' } },
     elder: { type: 'npc', name: 'Elder', sprite: { body: 'b' } },
   };
-  const biome = { map: 'm', climate: null, music: null, tilesets: [], generation: { roam: [rule({ count: 2 })] } };
+  const biome = {
+    name: 'M',
+    links: [],
+    map: 'm',
+    climate: null,
+    music: null,
+    tilesets: [],
+    generation: { roam: [rule({ count: 2 })] },
+  };
   const node = {
     node_id: 'n',
     biome_type: 'm',

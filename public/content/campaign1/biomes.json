@@ -2,6 +2,8 @@
   "version": 1,
   "biomes": {
     "beach": {
+      "name": "Hourglass Shore",
+      "tint": "#a4e6ff",
       "map": "beach",
       "climate": "coast",
       "music": null,
@@ -25,9 +27,12 @@
             "avoid": [{ "x": 55, "y": 26, "radius": 14 }]
           }
         ]
-      }
+      },
+      "links": ["desert", "undead", "jungle"]
     },
     "desert": {
+      "name": "The Sunscar Desert",
+      "tint": "#ffc468",
       "map": "desert",
       "climate": "desert",
       "music": null,
@@ -50,9 +55,12 @@
             "avoid": [{ "x": 14, "y": 98, "radius": 20 }]
           }
         ]
-      }
+      },
+      "links": ["greenwood", "beach"]
     },
     "eastwood": {
+      "name": "The Eastwood",
+      "tint": "#a6e07c",
       "map": "eastwood",
       "climate": "temperate",
       "music": null,
@@ -81,9 +89,12 @@
             "avoid": [{ "x": 46, "y": 56, "radius": 16 }]
           }
         ]
-      }
+      },
+      "links": ["greenwood", "frostlands", "jungle"]
     },
     "frostlands": {
+      "name": "The Frostlands",
+      "tint": "#d6f2ff",
       "map": "frostlands",
       "climate": "frost",
       "music": null,
@@ -112,9 +123,12 @@
             "avoid": [{ "x": 118, "y": 64, "radius": 16 }]
           }
         ]
-      }
+      },
+      "links": ["town", "eastwood", "marsh"]
     },
     "greenwood": {
+      "name": "The Greenwood",
+      "tint": "#c8f28a",
       "map": "greenwood",
       "climate": "temperate",
       "music": null,
@@ -140,9 +154,12 @@
             "avoid": [{ "x": 138, "y": 108, "radius": 34 }]
           }
         ]
-      }
+      },
+      "links": ["town", "desert", "undead", "eastwood"]
     },
     "jungle": {
+      "name": "The Tuskwood Jungle",
+      "tint": "#62e08c",
       "map": "jungle",
       "climate": "jungle",
       "music": null,
@@ -170,9 +187,12 @@
             "avoid": [{ "x": 63, "y": 70, "radius": 16 }]
           }
         ]
-      }
+      },
+      "links": ["eastwood", "beach", "undead", "wetlands", "marsh"]
     },
     "marsh": {
+      "name": "Gloamfen Marsh",
+      "tint": "#9dbb6a",
       "map": "marsh",
       "climate": "swamp",
       "music": null,
@@ -199,44 +219,57 @@
             "avoid": [{ "x": 43, "y": 35, "radius": 14 }]
           }
         ]
-      }
+      },
+      "links": ["jungle", "wetlands", "frostlands"]
     },
     "shop_apothecary": {
+      "name": "The Apothecary's Shop",
       "map": "shop_apothecary",
       "climate": null,
       "music": null,
       "tilesets": ["interior.png", "object-layer.png"],
-      "generation": {}
+      "generation": {},
+      "links": ["town"]
     },
     "shop_armory": {
+      "name": "The Armorer's Hall",
       "map": "shop_armory",
       "climate": null,
       "music": null,
       "tilesets": ["interior.png", "object-layer.png"],
-      "generation": {}
+      "generation": {},
+      "links": ["town"]
     },
     "shop_ranger": {
+      "name": "The Ranger's Lodge",
       "map": "shop_ranger",
       "climate": null,
       "music": null,
       "tilesets": ["interior.png", "object-layer.png"],
-      "generation": {}
+      "generation": {},
+      "links": ["town"]
     },
     "shop_smithy": {
+      "name": "The Smith's Forge",
       "map": "shop_smithy",
       "climate": null,
       "music": null,
       "tilesets": ["interior.png", "object-layer.png"],
-      "generation": {}
+      "generation": {},
+      "links": ["town"]
     },
     "shop_wizard": {
+      "name": "The Wizard's Sanctum",
       "map": "shop_wizard",
       "climate": null,
       "music": null,
       "tilesets": ["interior.png", "object-layer.png"],
-      "generation": {}
+      "generation": {},
+      "links": ["town"]
     },
     "town": {
+      "name": "Lanternrest",
+      "tint": "#ffdc9a",
       "map": "town",
       "climate": "temperate",
       "music": null,
@@ -250,37 +283,56 @@
         "frost_objects.png",
         "town.png"
       ],
-      "generation": {}
+      "generation": {},
+      "links": [
+        "greenwood",
+        "frostlands",
+        "shop_smithy",
+        "shop_armory",
+        "shop_apothecary",
+        "shop_ranger",
+        "shop_wizard"
+      ]
     },
     "training_adept": {
+      "name": "The Adept Training Hall",
       "map": "training_adept",
       "climate": null,
       "music": null,
       "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
-      "generation": {}
+      "generation": {},
+      "links": []
     },
     "training_apprentice": {
+      "name": "The Apprentice Training Hall",
       "map": "training_apprentice",
       "climate": null,
       "music": null,
       "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
-      "generation": {}
+      "generation": {},
+      "links": []
     },
     "training_journeyman": {
+      "name": "The Journeyman Training Hall",
       "map": "training_journeyman",
       "climate": null,
       "music": null,
       "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
-      "generation": {}
+      "generation": {},
+      "links": []
     },
     "training_novice": {
+      "name": "The Novice Training Hall",
       "map": "training_novice",
       "climate": null,
       "music": null,
       "tilesets": ["interior.png", "lpc_terrain.png", "object-layer.png"],
-      "generation": {}
+      "generation": {},
+      "links": []
     },
     "undead": {
+      "name": "The Barrow Lands",
+      "tint": "#b394d6",
       "map": "undead",
       "climate": "undead",
       "music": null,
@@ -304,9 +356,12 @@
             "avoid": [{ "x": 74, "y": 66, "radius": 16 }]
           }
         ]
-      }
+      },
+      "links": ["greenwood", "beach", "jungle"]
     },
     "wetlands": {
+      "name": "The Mirewater",
+      "tint": "#8cc48a",
       "map": "wetlands",
       "climate": "swamp",
       "music": null,
@@ -333,7 +388,8 @@
             "avoid": [{ "x": 70, "y": 30, "radius": 16 }]
           }
         ]
-      }
+      },
+      "links": ["jungle", "marsh"]
     }
   }
 }

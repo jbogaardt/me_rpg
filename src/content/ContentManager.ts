@@ -5,6 +5,8 @@
 
 import { setMobKinds, type MobKind } from '../systems/combat';
 import { setNpcLooks } from '../systems/looks';
+import { setPlaces } from '../systems/places';
+import { setQuestContent } from '../systems/quests';
 import type { Outfit } from '../sprites/doll';
 import type { MapData } from '../map/types';
 import { populate, type Population } from './populate';
@@ -56,14 +58,26 @@ export class ContentManager {
   }
 
   /**
-   * Hand the entities to the rule modules that look them up by id (`MOB_KINDS` in systems/combat.ts, `NPC_LOOKS` in
-   * systems/looks.ts). Call once after loading, before anything spawns or preloads art.
+   * Hand the content to the rule modules that look it up by id: `MOB_KINDS` (systems/combat.ts), `NPC_LOOKS`
+   * (systems/looks.ts), the places (`ZONE_NAMES`, `ZONE_LINKS`, `ZONE_TINTS`, systems/places.ts) and the quests
+   * (`QUESTS`, `GIVERS`, `SITE_KINDS`..., systems/quests.ts). Call once after loading, before anything spawns or
+   * preloads art.
    */
   install() {
     setMobKinds(this.mobKinds);
     const looks: Record<string, Outfit> = {};
     for (const [id, def] of Object.entries(this.content.entities)) if (def.type === 'npc') looks[id] = def.sprite;
     setNpcLooks(looks);
+    const names: Record<string, string> = {};
+    const tints: Record<string, number> = {};
+    const links: Record<string, string[]> = {};
+    for (const b of Object.values(this.content.biomes)) {
+      names[b.map] = b.name;
+      if (b.tint) tints[b.map] = parseInt(b.tint.slice(1), 16);
+      links[b.map] = b.links;
+    }
+    setPlaces(names, links, tints);
+    setQuestContent(this.content.quests);
   }
 
   /** The node the game starts in. */

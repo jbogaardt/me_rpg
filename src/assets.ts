@@ -26,14 +26,14 @@ const publicUrl = (path: string) => {
 const tilesetUrl = (file: string) => publicUrl(`tilesets/${file}`);
 const zoneUrl = (zone: string) => publicUrl(`maps/${zone}.json`);
 
-/** The game content (public/content/*.json) served as static files: the source ContentManager reads at boot. */
-export const staticContent: ContentSource = {
+/** A campaign's content (public/content/<campaign>/*.json) served as static files: the source ContentManager reads at boot. */
+export const staticContent = (campaign: string): ContentSource => ({
   fetch(file: ContentFile) {
-    const alias = `content:${file}`;
-    register(alias, publicUrl(`content/${file}.json`), 'json');
+    const alias = `content:${campaign}:${file}`;
+    register(alias, publicUrl(`content/${campaign}/${file}.json`), 'json');
     return Assets.load(alias);
   },
-};
+});
 
 /** A loaded bundle entry, or a clear error instead of an undefined texture later. */
 function pick(loaded: Record<string, Texture>, key: string): Texture {

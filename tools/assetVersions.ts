@@ -17,16 +17,19 @@ export const VERSIONED_DIRS = ['maps', 'tilesets', 'sprites/lpc', 'sprites/pets'
 /** Short content hash of every file in these folders of `root`, keyed by path relative to `root` (`maps/x.json`). */
 export function assetVersions(root: string, dirs = VERSIONED_DIRS): Record<string, string> {
   const table: Record<string, string> = {};
-  for (const dir of dirs) {
+  // Each listed folder and every folder inside it (content/<campaign>/...).
+  const walk = (dir: string) => {
     const abs = path.join(root, dir);
-    if (!fs.existsSync(abs)) continue;
+    if (!fs.existsSync(abs)) return;
     for (const name of fs.readdirSync(abs).sort()) {
       const file = path.join(abs, name);
+      if (fs.statSync(file).isDirectory()) walk(`${dir}/${name}`);
       if (!fs.statSync(file).isFile()) continue;
       const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('base64url');
       table[`${dir}/${name}`] = hash.slice(0, 8);
     }
-  }
+  };
+  for (const dir of dirs) walk(dir);
   return table;
 }
 

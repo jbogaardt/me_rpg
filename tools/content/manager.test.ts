@@ -22,7 +22,7 @@ describe('ContentManager', () => {
   it('fetches each file once and answers by id', async () => {
     const { src, asked } = source();
     const content = await ContentManager.load(src);
-    expect(asked.sort()).toEqual(['biomes', 'entities', 'scenarios']);
+    expect(asked.sort()).toEqual(['biomes', 'entities', 'quests', 'scenarios']);
     expect(content.startNode.node_id).toBe('greenwood');
     expect(content.getScenario('greenwood').biome_type).toBe('greenwood');
     expect(content.getBiomeInfo('greenwood').climate).toBe('temperate');
