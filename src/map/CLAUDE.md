@@ -1,5 +1,14 @@
-# src/map (map format and streaming)
+# src/map: map format and streaming
 
-Keep it up to date in the same change ("above"/"below" in the text mean this file or the root map).
+`types.ts` holds `MapData` and `parseMap` (the packed on-disk format is written by `tools/map`; see
+`tools/map/CLAUDE.md`). `MapView` draws a map as a render group with a `ground` layer and a y-sorted `layer` holding
+map objects plus everything the scene adds.
 
-- **`src/map/`** — `types.ts` (`MapData`, `parseMap`) and `MapView.ts`: a render group with a `ground` layer and a y-sorted `layer` holding map objects (cullable via `CullerPlugin`) plus everything the scene adds (characters, effects). **It streams**: the map is cut into `CHUNK` (16) cell chunks (`map/chunks.ts`, Pixi-free, tested) and `update(view)`, called every frame after the camera moves (and by `Zones.show`), builds the chunks round the view (each chunk's ground its own render group, its objects added to `layer`) and frees the ones left two chunks behind, so a big zone costs about what a small one does; only the map data stays. Add entities to `world.layer`, never to the `MapView` itself, and don't rely on a map object's sprite existing.
+- **It streams**: the map is cut into chunks and `update(view)`, called every frame after the camera moves, builds the
+  chunks round the view and frees those left behind, so a big zone costs about what a small one does and only the data
+  stays. **Add entities to `world.layer`, never to the `MapView` itself, and don't rely on a map object's sprite
+  existing.** A neighbour's margin (surface `beyond`) is not drawn here; the neighbour's own view is.
+- `MapView.setObjectAlpha` fades a map object by index (lily pads on a drained pond, a port's seal, the drawn copy of a
+  barrel an entity replaced); the fade is kept while its chunk is freed and rebuilt.
+- Pure helpers (`chunks.ts`, `doors.ts`, `explored.ts`, `minimap.ts`, `outline.ts`, `bounds.ts`, `transition.ts`) are
+  Pixi-free and unit-tested; keep new map maths there.

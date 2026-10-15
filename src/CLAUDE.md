@@ -1,5 +1,10 @@
-# src (boot and assets)
+# src: boot and assets
 
-Keep it up to date in the same change ("above"/"below" in the text mean this file or the root map).
+`main.ts` boots: the Pixi `Application`, the content (`ContentManager.load`, then `install()`), assets and the start
+zone behind the loading overlay, the shared DOM UI, then a `SceneManager` with an `OverworldScene`.
 
-- **`src/assets.ts`** — all loading goes through the Pixi `Assets` manifest: the sprite part manifest (the part layers used at boot are loaded by `Wardrobe.load` as images, see Characters) and per zone `loadZone(name)`: the map JSON, read by `parseMap`, then the tilesets it names, each loaded once under `tileset:<file>` and counted per zone using it, so `unloadZone(zone)` frees exactly the sheets no other loaded zone needs. Every URL under `public/` the game fetches (maps, tilesets, `parts.json`, part layers) carries `?v=<hash of that file>` from `virtual:asset-versions` (`tools/assetVersions.ts`, a Vite plugin that hashes `public/maps`, `public/tilesets` and `public/sprites/lpc` at build time; empty in the dev server), so a deploy never pairs new code with a cached old map or sheet, and a file that did not change keeps its URL and stays cached. A new folder of fetched files goes in `VERSIONED_DIRS`. `__BUILD_ID__` is only the co-op version handshake. Don't call `Assets.load` ad hoc elsewhere (the `Wardrobe` is the one sanctioned exception, for sprite layers, which it loads as `<img>` elements).
+**All loading goes through `assets.ts`** and the Pixi `Assets` manifest: sprite parts (as images, via the `Wardrobe`)
+and per zone `loadZone(name)`, whose tilesets are loaded once and reference-counted so `unloadZone` frees exactly what no
+other loaded zone needs. Don't call `Assets.load` ad hoc elsewhere. **Every fetched URL under `public/` carries
+`?v=<content hash>`** (`virtual:asset-versions`), so a deploy never pairs new code with a cached old map or sheet; a new
+folder of fetched files goes in `VERSIONED_DIRS`. `__BUILD_ID__` is only the co-op version handshake.
