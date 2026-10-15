@@ -14,7 +14,9 @@ import { GEAR_SLOTS, type GearSlot, type Item } from '../systems/combat';
 import type { ItemId, StartGear } from '../systems/items';
 import { TRADE_KINDS, type Shop } from '../systems/shops';
 import { COMBO_KEYS, SPELL_IDS, type Combo, type SpellId } from '../systems/spells';
+import { parseEpics, type EpicTemplate } from '../systems/dmEpics';
 import type { PortBinding } from './ports';
+import { splitStory } from './story';
 import type { Chapter, Giver, Objective, Quest, QuestContent, Reward, SiteKind } from '../systems/quests';
 
 /** The files of a campaign's content, by name: `public/content/<campaign>/<name>.json` when served statically. */
@@ -156,6 +158,8 @@ export interface Content {
   biomes: Record<string, BiomeDef>;
   scenarios: Scenarios;
   quests: QuestContent;
+  /** The party epics the campaign's quests.json holds (the Dungeon Master's, beside its own story). */
+  epics: EpicTemplate[];
   items: ItemContent;
 }
 
@@ -887,11 +891,16 @@ function checkAgainstCapabilities(r: Reader, c: Content) {
 /** Read and check all the files. Throws a `ContentError` listing every problem. */
 export function parseContent(files: Record<ContentFile, unknown>): Content {
   const r = new Reader();
+  const story = splitStory(files.quests); // the epic form of quests.json, as the flat quests and the party epics
+  for (const problem of story.problems) r.fail('quests.json', problem);
+  const epics = parseEpics(story.epics);
+  if (typeof epics === 'string') r.fail('quests.json.epics', epics);
   const content: Content = {
     entities: parseEntities(files.entities, r),
     biomes: parseBiomes(files.biomes, r),
     scenarios: parseScenarios(files.scenarios, r),
-    quests: parseQuests(files.quests, r),
+    quests: parseQuests(story.quests, r),
+    epics: typeof epics === 'string' ? [] : epics,
     items: parseItems(files.items, r),
   };
   crossCheck(r, content);

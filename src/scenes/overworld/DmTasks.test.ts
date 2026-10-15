@@ -6,7 +6,7 @@ import type { DmDesk } from './DmDesk';
 import { DmTasks } from './DmTasks';
 import type { Simulation } from './Simulation';
 
-function game(role: 'host' | 'solo' = 'host') {
+function game(role: 'host' | 'solo' | 'client' = 'host') {
   const player = (slot: number, x: number, hp = 50) =>
     ({ slot, zone: 'fen', body: { x, y: 100 }, hero: { stats: { hp, maxHp: 50, level: 3 } } }) as never;
   const party = [player(1, 100), player(2, 120)];
@@ -126,15 +126,16 @@ describe('the DM’s quest, on the host', () => {
     expect(tasks.result!.minHealth).toBeCloseTo(0.2);
   });
 
-  it('can be pointed at the way, called off, and does nothing for a player who is not hosting', () => {
+  it('can be pointed at the way, called off, and does nothing for a friend (a guest only draws)', () => {
     const { tasks, arena, give } = game();
     give();
     tasks.giveHint();
     expect(arena.task!.hint).toBe(true);
     tasks.cancel();
     expect(arena.task).toBeNull();
-    const solo = game('solo');
-    expect(solo.give()).toBe(false);
-    expect(solo.arena.task).toBeNull();
+    const friend = game('client');
+    expect(friend.give()).toBe(false);
+    expect(friend.arena.task).toBeNull();
+    expect(game('solo').give()).toBe(true); // a solo player is their own host
   });
 });

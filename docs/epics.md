@@ -1,0 +1,50 @@
+# Epics: one quest format for a story, a saga, a party and a hero
+
+Read this before touching `content/epics.json`, `content/story.ts`, `systems/dmEpics.ts`, `systems/dmPeople.ts`,
+`DmEpics.ts`, `DmTasks.ts`, or a campaign's `quests.json`. How the Dungeon Master fits is in `docs/dungeon-master.md`.
+
+## One format
+
+A campaign's story and the DM's sagas are written in one file shape (`content/story.ts`): `people`, `sites`, `welcome`,
+`epilogue` and `epics`. An epic with `"scope": "hero"` is the campaign's own story, played by each hero through the
+quest log: chapters of steps, told by the people with offer, remind and done words, objectives bound to the campaign's
+own zones, mobs and items. An epic with `"scope": "party"` (the default) is a saga the Dungeon Master tells the whole
+party. Both are `epics` of one file, so a story is written in one place whether it is played alone, online or both.
+`splitStory` turns the file into the flat form `parseQuests` has always read, so no check or engine reader changed; a
+flat file (random and live worlds' generators still write one) passes through. `tools/content/story.test.ts` holds the
+epic form to the old flat file, and `tools/content/migrateStory.ts` moved the sandbox campaigns over.
+
+## DM epics (`scope: party`)
+
+An epic is a saga of steps as **data**, with no land and no content id: a step is a `hop` from where the saga starts, a
+person has a name and a look word. It is planned onto whatever world is played by walking its zone links, so one epic runs
+in any biome that has the lands; each carries a gauge (difficulty, length, reach). The built-in sagas are
+`content/epics.json`; a campaign's `quests.json` may hold more, and an AI may write one (`DmBot.epic`): `parseEpic` checks
+all of them as strictly as a world entry (an unknown person, a person met twice or never, too long a line).
+
+A step is a quest kind (hunt, gather, find, visit: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
+`DmTasks.ts` runs it) or `meet`. For `meet` the DM makes the step's person (an `npc` then a `cast` entry of the live world,
+on open ground in the step's land, wearing the look a word names), the party is sent to find them (a `visit` quest at
+their feet, so the tracker and the map are the usual ones), and on reaching them they speak a line at a time in the DM's
+voice and may give something to carry (`gives`, named in the telling for a later step to ask for). The party gets a
+**search area, never an arrow**; the DM can point the way. A failed or cancelled step ends the saga. A step is read to
+every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the whole party while it is taken
+(`Quest.capabilities`). Epics with people need a live world (people are log entries, which friends already receive).
+
+**People's words follow the epic**: a person has `lines` (before the party is sent to them), `after` (once met) and
+`finished` (once the whole epic is done), like a campaign giver's offer, remind and done lines; each change is a `voice`
+entry of the world log (the person's new lines, replacing the old: protocol v42), applied to the person where they stand
+on every page.
+
+## Who runs it
+
+The host, and a solo player (their own host): `DmEpics`, `DmTasks` and the DM's words work wherever the page is not a
+friend, so an epic is told alone as it is to a party. A friend only draws it (the `dm` message and the world log). A solo
+player in a live world is offered an epic by the director's card; the sandbox campaign has no way to begin one by hand
+yet. Online only the DM's quests count: the story chain's givers only pass the time of day.
+
+## Not yet
+
+Items in the pack (`gives` is the DM's word), a person who turns on the party, branching, the packs' arcs (a third quest
+format that assembles live worlds) and one runtime for the hero's quest log and the party's epics (two engines read the
+one format today).

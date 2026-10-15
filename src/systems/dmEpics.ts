@@ -24,7 +24,7 @@ export interface EpicStep {
   gives?: string;
 }
 
-/** A person of a epic: made by the DM and set in the land of the step that sends the party to them. */
+/** A person of an epic: made by the DM and set in the land of the step that sends the party to them. */
 export interface TalePerson {
   name: string;
   /** A word that picks the look they wear from the world's people ("monk", "smith"); any look if none fits. */
@@ -48,7 +48,7 @@ export interface EpicTemplate {
   opening: string;
   ending: string;
   steps: EpicStep[];
-  /** The epic's people by key (only a epic with `meet` steps has any). They are made in a live world only. */
+  /** The epic's people by key (only an epic with `meet` steps has any). They are made in a live world only. */
   people?: Record<string, TalePerson>;
 }
 
@@ -195,12 +195,12 @@ const list = (v: unknown, min: number, max: number, each: number): string[] | nu
     : null;
 
 /**
- * A epic as data (a JSON file of the content, or one an AI wrote), checked as strictly as the page checks a world: the
- * parsed epic, or the first thing wrong with it. Nothing in a epic names a content id: lands are hops from where it
+ * An epic as data (a JSON file of the content, or one an AI wrote), checked as strictly as the page checks a world: the
+ * parsed epic, or the first thing wrong with it. Nothing in an epic names a content id: lands are hops from where it
  * starts, people have a name and a look hint, and a step is one of the DM's quest kinds or a meeting.
  */
 export function parseEpic(raw: unknown): EpicTemplate | string {
-  if (typeof raw !== 'object' || raw === null) return 'a epic is an object';
+  if (typeof raw !== 'object' || raw === null) return 'an epic is an object';
   const r = raw as Record<string, unknown>;
   const id = typeof r.id === 'string' && ID.test(r.id) ? r.id : null;
   if (!id) return 'id: lowercase letters, digits and _, 2 to 32 long';

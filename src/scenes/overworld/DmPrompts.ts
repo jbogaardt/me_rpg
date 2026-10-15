@@ -315,7 +315,7 @@ export class DmPrompts {
         return;
       case 'next': // nothing asked of the party for a while (or they asked): the same choice as the Epic button
       case 'epic': {
-        if (this.arena.role !== 'host') return;
+        if (this.arena.role === 'client') return;
         if (this.epics.active) {
           show('An epic quest is running', this.runningOptions(), null, 'Point the way, or call the whole saga off.');
           return;

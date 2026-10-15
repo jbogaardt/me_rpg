@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "welcome": [
+    "Welcome to Emberfall Isle.",
+    "A fire under the land is waking. Keep together, and keep your eyes on the ash."
+  ],
+  "giver": "keeper",
+  "givers": { "keeper": { "name": "Keeper Ysolde", "look": "ysolde", "tag": "Ysolde", "zone": "emberfall_coast" } },
+  "sites": {
+    "emberbloom": {
+      "name": "Emberbloom",
+      "shape": "mushroom",
+      "color": "#ff7a2a",
+      "glow": "#ffcc4a",
+      "notes": [
+        ["An emberbloom, its petals glowing like coals. It is hot, but it does not burn you."],
+        ["Another emberbloom. Ash settles on it and flares away in tiny sparks."]
+      ]
+    }
+  },
+  "chapters": [
+    {
+      "title": "Ash and Ember",
+      "intro": [
+        "So the sea gave you back. Few it does, on Emberfall.",
+        "I am Ysolde, Keeper of this landing. The fire under the island is waking, and everything that crawls out of the ash is angry about it.",
+        "Help me hold the landing, and I will tell you why the mountain burns."
+      ]
+    },
+    {
+      "title": "The Molten Heart",
+      "intro": [
+        "The blooms tell me what I feared: the caldera's guardian has woken, and it is calling the island's fire to itself.",
+        "If it is not stopped, Emberfall goes under, and the two of us with it. The way up starts at the north end of the coast."
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "id": "imps",
+      "chapter": 0,
+      "learned": "The imps are not hunting: they are fleeing the heat rising from the caldera.",
+      "fieldNote": [
+        "The last imp scrambles off into the ash, glancing back at the smoking mountain rather than at you."
+      ],
+      "title": "Hold the Landing",
+      "goal": "Drive off 5 cinder imps",
+      "hint": "Cinder imps swarm the ash fields of The Cinder Coast, all round the landing.",
+      "where": { "zones": ["emberfall_coast"] },
+      "unit": "imps",
+      "objective": { "t": "kill", "kind": "cinderImp", "count": 5 },
+      "reward": { "gold": 25, "xp": 30 },
+      "offer": ["The imps are thick around the landing today. Drive off five of them before they get into the stores."],
+      "remind": ["Five imps. They are never far from the landing."],
+      "done": [
+        "Good. The landing is ours again, for now.",
+        "They were running, you know. Not attacking. Something up the mountain frightens them."
+      ]
+    },
+    {
+      "id": "blooms",
+      "chapter": 0,
+      "learned": "Emberblooms only open when the mountain's fire rises close under the ground.",
+      "fieldNote": ["Four blooms, all burning brighter than they should. Even the ash is warm under your feet."],
+      "title": "Read the Blooms",
+      "goal": "Touch 4 emberblooms",
+      "hint": "Emberblooms glow in the ash of The Cinder Coast: by The Glass Fields in the west, the woods in the north and The Smoking Pools in the east.",
+      "where": { "zones": ["emberfall_coast"] },
+      "unit": "blooms",
+      "objective": { "t": "gather", "site": "emberbloom", "zone": "emberfall_coast", "count": 4 },
+      "reward": { "gold": 30, "xp": 40, "items": ["potion"] },
+      "offer": ["The emberblooms tell the mountain's mood. Touch four of them and tell me how they burn."],
+      "remind": ["Four emberblooms. West by the glass, north in the dead woods, east by the pools."],
+      "done": [
+        "Brighter than they should be. Much brighter.",
+        "Take this draught; you will need it where you are going next."
+      ]
+    },
+    {
+      "id": "hounds",
+      "chapter": 0,
+      "learned": "The ash hounds hunt in the open now; the woods are too hot for them.",
+      "fieldNote": ["The fourth hound falls. Its fur is singed down to the skin."],
+      "title": "Hounds in the Ash",
+      "goal": "Drive off 4 ash hounds",
+      "hint": "Ash hounds roam the open ground of The Cinder Coast. They see you before you see them.",
+      "where": { "zones": ["emberfall_coast"] },
+      "unit": "hounds",
+      "objective": { "t": "kill", "kind": "ashHound", "count": 4 },
+      "reward": { "gold": 40, "xp": 50 },
+      "offer": ["Before you climb, clear the hounds from the coast road. Four of them, and the way north is safe."],
+      "remind": ["Four ash hounds. Watch the open ground."],
+      "done": ["The road north is clear. Rest, and then the caldera."]
+    },
+    {
+      "id": "casters",
+      "chapter": 1,
+      "learned": "The casters are feeding the lava lake, ember by ember, for their guardian.",
+      "fieldNote": ["The last caster's fire gutters out. The lava lake below sinks, just a little."],
+      "title": "Quench the Casters",
+      "goal": "Defeat 4 ember casters",
+      "hint": "Ember casters tend the lava lake of The Ember Caldera, north of the coast. Close in fast: they hurl fire from afar.",
+      "where": { "zones": ["emberfall_caldera"] },
+      "unit": "casters",
+      "objective": { "t": "kill", "kind": "emberCaster", "count": 4, "zone": "emberfall_caldera" },
+      "reward": { "gold": 60, "xp": 80, "items": ["elixir"] },
+      "offer": [
+        "Robed ones tend the lava in the caldera, feeding it. Stop four of them, and the guardian goes hungry."
+      ],
+      "remind": ["Four casters, in the caldera. Do not let them keep their distance."],
+      "done": ["The mountain is quieter already. One thing remains, and it is the hardest."]
+    },
+    {
+      "id": "warden",
+      "chapter": 1,
+      "learned": "The Obsidian Warden was the island's keeper once, before the fire took its mind.",
+      "fieldNote": [
+        "The Obsidian Warden kneels, and its golden plate cools to black. Far below, the lava stops rising."
+      ],
+      "title": "The Obsidian Warden",
+      "goal": "Defeat the Obsidian Warden",
+      "hint": "The Obsidian Warden stands on The Warden's Rim, at the far north of The Ember Caldera.",
+      "where": { "zones": ["emberfall_caldera"] },
+      "unit": "wardens",
+      "objective": { "t": "kill", "kind": "obsidianWarden", "count": 1, "zone": "emberfall_caldera" },
+      "reward": { "gold": 150, "xp": 150, "items": ["steelSword"] },
+      "offer": ["The guardian waits on the far rim of the caldera. It was a keeper like me, once. Free it."],
+      "remind": ["The Obsidian Warden, on the rim. Mind its blade."],
+      "done": [
+        "It is done. I felt the mountain sigh.",
+        "Take this blade, forged on this island long ago. It is yours by right now."
+      ]
+    }
+  ],
+  "epilogue": [
+    "Emberfall sleeps again, and the sea is calm for the first time in a year.",
+    "There will be a ship, one day. Until then, the landing is yours as much as mine."
+  ]
+}

@@ -7,11 +7,9 @@ cross-checks are in `schema.ts`; the file headers of `packs.ts`, `world.ts`, `po
 ## Campaigns
 
 A campaign is a folder `public/content/<campaign>/` of five JSON files: `entities`, `biomes`, `quests`, `items`,
-`scenarios`. `ContentManager` fetches them through a `ContentSource` (one method, so a database is just another
-source), validates them with `parseContent` (a bad file stops the boot with every problem listed) and `install()`s them
-into the registries the rules read **by id** (`MOB_KINDS`, `ITEMS`, `QUESTS`, `SHOPS`...). The engine reads registries
-and properties, never a content id, so a new world needs no engine change; a new *kind* of thing is a schema field with
-its reader, its cross-checks (every id it names must exist) and an install step.
+`scenarios`. `quests.json` is the campaign's **story as an epic file** (`story.ts`, `docs/epics.md`): its people, sites, welcome,
+epilogue and epics, the story each hero plays and any sagas the DM may tell. `splitStory` turns it into the flat form
+`parseQuests` reads.
 
 Campaign 1 is the sandbox (every feature is built and tried there first); campaign 2 is a small world that proves the
 engine runs other content. Tests install campaign 1 (`tools/content/setup.ts`); `campaigns.test.ts` holds every
@@ -64,7 +62,7 @@ road per step; branching grows with the packs' regions per theme and pairings.
 ## Epics
 
 `epics.json` holds the DM's epics: sagas of several quests and people, the same shape an AI may write (`parseEpic` in
-`systems/dmEpics.ts`; `epics.ts` parses the file at load, so a bad epic stops the boot). A epic names no land and no
+`systems/dmEpics.ts`; `epics.ts` parses the file at load, so a bad epic stops the boot). An epic names no land and no
 content id (steps are hops from where it starts, people a name and a look word), so one epic runs in any world. Epics with
 people need a live world, since the people are `npc`/`cast` entries of its log (`docs/dungeon-master.md`).
 

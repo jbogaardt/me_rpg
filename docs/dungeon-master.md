@@ -7,7 +7,10 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
 
 - **There is one way to host, and the host is the DM.** Hosting is running the world, not playing in it. From the first
   friend's connection player 0 has `dm` set (`Arena.setDm`); a guest knows that with nothing on the wire (`DM_SLOT`).
-  Solo has no DM (a solo player in a live world gets only the story cards).
+  Solo has no DM (a solo player in a live world gets only the cards), but a solo player is their own host: the epic
+  runner (`DmEpics`, `DmTasks`) and the DM's words work in solo too, so an epic is told alone as it is to a party; only a
+  friend (a guest) never runs one. A solo player begins one from the card the director offers in a live world; the
+  sandbox campaign has no way to begin one by hand yet.
 - **A human DM steers, never spawns.** They shape how hard the world pushes (pressure) and what happens in it (story,
   sky, quests), never what is in it. The old person form and Cast tab are gone; the log's `cast`/`npc` entries are the door
   for AI help: the DM bot (below) makes a person and sets them near the party through them.
@@ -38,26 +41,9 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 - **Hot buttons** (`hud/DmBar.ts`): Smite (a lightning storm; foes die with no XP, gold or credit, the party is never
   hurt), Freeze, Reset zone, Stop time. **Stop time** lets the party walk and take doors but stands foes, crops, weather
   and everything else still. All are ordinary events and mob states, so friends see them through the usual snapshots.
-- **Epic quests** (`content/epics.json`, `dmEpics.ts`, `DmEpics.ts` on the host, `dmPeople.ts`): the DM's only quests.
-  There are no one-shot quests to hand out (they were bare tasks): an epic is a saga of steps, as **data** with no land and
-  no content id (a step is a `hop` from where it starts; a person has a name and a look word), planned onto whatever world
-  is played by walking its zone links, so one epic runs in any biome that has the lands; each carries a gauge
-  (difficulty, length, reach). A step is a quest kind (hunt, gather, find, visit: `dmTasks.ts` rules, `dmQuests.ts`
-  writes each from the land, `DmTasks.ts` runs it) or `meet`: the DM makes the step's person (an `npc` then a `cast` entry
-  of the live world, on open ground in the step's land, wearing the look a word names), the party is sent to find them
-  (a `visit` quest at their feet, so the tracker and the map are the usual ones), and on reaching them they speak a line
-  at a time in the DM's voice and may give something to carry (`gives`, named in the telling for a later step to ask
-  for). So a quest is several people and lands: hear a courier's trouble, clear the road, find her, carry the letter to
-  a sage. The party gets a **search area, never an arrow**; the DM can point the way. A failed or cancelled step ends
-  the saga. **Online only the DM's quests count**: the story chain's givers only pass the time of day. A step is read to
-  every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the whole party while it is taken
-  (`Quest.capabilities`). `parseEpic` checks an epic as strictly as a world entry (an unknown person, a person met twice
-  or never, too long a line), the same for the content's and for one an AI writes (`DmBot.epic`). Epics with people need
-  a live world and the host (people are log entries, which friends already receive). **People's words follow the epic**:
-  a person has `lines` (before the party is sent to them), `after` (once met) and `finished` (once the whole epic is done),
-  like a campaign giver's offer, remind and done lines; each change is a `voice` entry of the world log (the person's
-  new lines, replacing the old: v42), applied to the person where they stand on every page. Not yet: items in the pack
-  (`gives` is the DM's word), a person who turns on the party, branching.
+- **Epic quests** (`docs/epics.md`): the DM's only quests, sagas of steps with people, as data: `content/epics.json` and
+  the campaign's own `quests.json`; run by `DmEpics` on the host (and in solo). A step is a quest kind or a meeting with a
+  person the DM makes; people's words follow the story. No one-shot quests are handed out.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` lets the DM raise or fetch a fallen player (a defeat still wakes them at the start, whole).
   **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive

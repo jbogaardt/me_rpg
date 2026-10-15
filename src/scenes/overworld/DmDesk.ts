@@ -118,7 +118,7 @@ export class DmDesk {
   /** The DM speaks to the party: the words appear on every friend's screen (and the DM's own). False if there were none. */
   say(text: string): boolean {
     const words = cleanSay(text);
-    if (!words || this.arena.role !== 'host') return false;
+    if (!words || this.arena.role === 'client') return false; // solo speaks to itself (its own screen)
     this.said = { id: ++this.saySeq, text: words, left: sayTime(words) };
     this.timer = DM_RESEND; // tell them now
     this.onSay(words);

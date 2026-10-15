@@ -161,7 +161,7 @@ class Dm {
     return true;
   }
 
-  /** Begin a epic (epics.ts); false when none could be told here (the caller offers a plain quest). */
+  /** Begin an epic (epics.ts); false when none could be told here (the caller offers a plain quest). */
   private async tell(s: PageState): Promise<boolean> {
     const page = {
       teller: { epic: (raw: unknown) => this.call('epic', raw) },

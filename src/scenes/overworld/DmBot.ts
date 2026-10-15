@@ -51,7 +51,7 @@ export interface DmBotState {
   waiting: number;
   /** A DM quest is running. */
   questing: boolean;
-  /** A epic (a saga of several quests and people) is being told: between its steps `questing` is false. */
+  /** An epic (a saga of several quests and people) is being told: between its steps `questing` is false. */
   epic: boolean;
   /** The card up now, if any. */
   card: DmBotCard | null;
@@ -89,7 +89,7 @@ export interface DmBotApi {
   spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
   /** The epics the content ships with (data: `epic` takes one back, or one an AI wrote in the same form). */
   stockEpics(): EpicTemplate[];
-  /** Tell a epic from where the DM stands. Checked as strictly as a file of epics; the note says what is wrong. */
+  /** Tell an epic from where the DM stands. Checked as strictly as a file of epics; the note says what is wrong. */
   epic(raw: unknown): { ok: boolean; note: string };
   /** Go to a friend (the Party tab's Go). */
   goTo: (slot: number) => void;
@@ -104,7 +104,7 @@ export interface DmBotParts {
   card: DmCard;
   tasks: DmTasks;
   epics: DmEpics;
-  stock: EpicTemplate[];
+  stock: () => EpicTemplate[];
   goTo: (slot: number) => void;
 }
 
@@ -192,7 +192,7 @@ export function createDmBot({
       const note = story.lastNote;
       return { ok: !note, note };
     },
-    stockEpics: () => stock,
+    stockEpics: () => stock(),
     epic(raw) {
       const epic = parseEpic(raw);
       return typeof epic === 'string' ? { ok: false, note: epic } : epics.beginEpic(epic);

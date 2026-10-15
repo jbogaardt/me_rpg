@@ -138,7 +138,7 @@ export class DmTasks {
 
   /** Give a quest written elsewhere (a saga's step), with the DM's telling of it. False if one is running or there is no game to give it in. */
   start(offer: QuestOffer, note = ''): boolean {
-    if (this.arena.role !== 'host' || this.active) return false;
+    if (this.arena.role === 'client' || this.active) return false;
     this.book.cancel();
     if (!this.book.call(offer)) return false;
     this.kills = 0;
@@ -195,14 +195,14 @@ export class DmTasks {
   /** The DM's own instructions for the quest running: every player is told them in place of the usual telling. */
   setNote(text: string): boolean {
     const words = cleanNote(text);
-    if (this.arena.role !== 'host' || !this.active || !words) return false;
+    if (this.arena.role === 'client' || !this.active || !words) return false;
     this.note = words;
     this.publish();
     return true;
   }
 
   update(dt: number) {
-    if (this.arena.role !== 'host') return;
+    if (this.arena.role === 'client') return;
     const task = this.book.task;
     if (!task) return;
     if (task.state !== 'active') {

@@ -17,6 +17,7 @@ import type { Dialog } from '../hud/Dialog';
 import type { Choices } from '../hud/Choices';
 import type { ContentManager } from '../content/ContentManager';
 import { STOCK_EPICS } from '../content/epics';
+import type { EpicTemplate } from '../systems/dmEpics';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
@@ -117,6 +118,7 @@ export class OverworldScene implements Scene {
   private scenario: Scenario;
   /** A live world's story, steered by its Dungeon Master (inert for every other world). */
   private liveStory: Story;
+  private epicsOnOffer!: () => EpicTemplate[];
   /** The Dungeon Master's controls: weather, time of day, capabilities for everyone, votes. */
   private desk!: DmDesk;
   private votePanel = new VotePanel();
@@ -153,6 +155,7 @@ export class OverworldScene implements Scene {
     /** A live world (`?campaign=live`), grown during play by its Dungeon Master; null for every other world. */
     world: World | null = null,
   ) {
+    this.epicsOnOffer = () => [...STOCK_EPICS, ...content.content.epics];
     const arena = (this.arena = new Arena(sprites.wardrobe));
     this.zones = new Zones(arena, sprites, loadZone, unloadZone, ui, renderer, content);
     const visuals = new Visuals(arena);
@@ -201,7 +204,16 @@ export class OverworldScene implements Scene {
     this.requests.onAsk = (i, text) => this.desk.ask(i, text);
     this.powers = new DmPowers(arena, this.sim);
     this.tasks = new DmTasks(arena, this.sim, this.desk);
-    this.epics = new DmEpics(arena, this.zones, content, this.tasks, this.desk, this.sim, this.liveStory, STOCK_EPICS);
+    this.epics = new DmEpics(
+      arena,
+      this.zones,
+      content,
+      this.tasks,
+      this.desk,
+      this.sim,
+      this.liveStory,
+      this.epicsOnOffer,
+    );
     this.narration = new DmNarration(arena, ui.session, this.desk);
     this.revive = new DmRevive(arena, this.sim, this.zones);
     this.possession = new DmPossession(arena, this.sim);
@@ -643,7 +655,7 @@ export class OverworldScene implements Scene {
       card: this.dmCard,
       tasks: this.tasks,
       epics: this.epics,
-      stock: STOCK_EPICS,
+      stock: this.epicsOnOffer,
       goTo: (slot) => this.partyUi.goTo(slot),
     });
   }

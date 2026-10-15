@@ -65,7 +65,7 @@ function game(far = false, story: unknown = null) {
   const said: string[] = [];
   const desk = { say: (t: string) => said.push(t) } as unknown as DmDesk;
   const tasks = new DmTasks(arena, sim, desk);
-  const epics = new DmEpics(arena, zones, content, tasks, desk, sim, story as never, STOCK_EPICS);
+  const epics = new DmEpics(arena, zones, content, tasks, desk, sim, story as never, () => STOCK_EPICS);
   const pick = (id: string) => {
     const { items } = epics.options();
     return items.findIndex((i) => i.label.startsWith(id));
@@ -144,11 +144,13 @@ describe('epic quests, on the host', () => {
     expect(b.said.at(-1)).toContain('lost');
   });
 
-  it('is only told by the host', () => {
+  it('is told by the host or a solo player, never by a friend', () => {
     const { arena, epics, pick } = game();
     const i = pick('Quiet Errands');
-    (arena as { role: string }).role = 'solo';
+    (arena as { role: string }).role = 'client';
     expect(epics.begin(i)).toBe(false);
+    (arena as { role: string }).role = 'solo';
+    expect(epics.begin(i)).toBe(true);
   });
 });
 

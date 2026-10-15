@@ -75,10 +75,10 @@ export class DmEpics {
     private tasks: DmTasks,
     private desk: DmDesk,
     private sim: Simulation,
-    /** The live world the people of a epic are made in (none: sagas with people are not offered). */
+    /** The live world the people of an epic are made in (none: sagas with people are not offered). */
     private story: Story | null = null,
-    /** Epics from the content, offered beside the built-in sagas. */
-    private stock: EpicTemplate[] = [],
+    /** The epics on offer: the content's, and those the campaign's own file holds (asked afresh: a live world reloads its content). */
+    private stock: () => EpicTemplate[] = () => [],
   ) {
     this.graph = {
       neighbours,
@@ -119,7 +119,7 @@ export class DmEpics {
 
   /** The sagas this land can start (a page of them; `more` says there are others to turn to). */
   options(): { items: EpicOffer[]; more: boolean } {
-    const all = epicsFrom(this.arena.view.name, this.graph, this.turn, this.stock, this.canMake);
+    const all = epicsFrom(this.arena.view.name, this.graph, this.turn, this.stock(), this.canMake);
     const start = (this.page * PAGE) % Math.max(1, all.length);
     const shown = all.slice(start, start + PAGE);
     this.offered = shown.map((s) => s.plan);
@@ -142,7 +142,7 @@ export class DmEpics {
   /** The DM begins the saga at `index` of the last options. False if one is running or there is no game to tell it in. */
   begin(index: number): boolean {
     const plan = this.offered[index];
-    if (!plan || this.run || this.arena.role !== 'host' || this.tasks.active) return false;
+    if (!plan || this.run || this.arena.role === 'client' || this.tasks.active) return false;
     this.turn++;
     this.run = { plan, step: 0, next: true, speech: null, ids: new Map() };
     this.desk.say(cleanSay(`${plan.epic.title}. ${plan.epic.opening}`));
@@ -150,16 +150,15 @@ export class DmEpics {
   }
 
   /**
-   * Begin a epic written elsewhere (an AI's, or the content's) from where the DM stands: it is read as strictly as a
+   * Begin an epic written elsewhere (an AI's, or the content's) from where the DM stands: it is read as strictly as a
    * file of epics (`parseEpic` was run by the caller) and planned onto this world like any saga.
    */
   beginEpic(epic: EpicTemplate): { ok: boolean; note: string } {
-    if (this.arena.role !== 'host' && this.arena.role !== 'solo')
-      return { ok: false, note: 'only the host tells a epic' };
+    if (this.arena.role === 'client') return { ok: false, note: 'only the host tells an epic' };
     if (this.run || this.tasks.active) return { ok: false, note: 'a quest is already running' };
     if (needsPeople(epic) && !this.canMake) return { ok: false, note: 'people can only be made in a live world' };
     const plan = planEpic(epic, this.arena.view.name, this.graph, this.turn);
-    if (!plan) return { ok: false, note: 'a epic is not told in a shop' };
+    if (!plan) return { ok: false, note: 'an epic is not told in a shop' };
     this.turn++;
     this.run = { plan, step: 0, next: true, speech: null, ids: new Map() };
     this.desk.say(cleanSay(`${epic.title}. ${epic.opening}`));

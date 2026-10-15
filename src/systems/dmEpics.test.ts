@@ -150,7 +150,7 @@ describe('epics as data', () => {
     expect(withLines(['Thanks.'])).toMatchObject({ people: { mira: { after: ['Thanks.'], finished: ['Done.'] } } });
     for (const bad of [[], ['x'.repeat(141)], 'nope', [1]]) expect(typeof withLines(bad)).toBe('string');
   });
-  it('refuses each way a epic can be wrong, naming where', () => {
+  it('refuses each way an epic can be wrong, naming where', () => {
     const bad = (f: (t: ReturnType<typeof epic>) => void): string => {
       const t = epic();
       f(t);

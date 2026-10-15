@@ -133,7 +133,7 @@ export class ClaudeEpicWriter implements EpicWriter {
   async write({ area, looks, told, stock }: Parameters<EpicWriter['write']>[0]): Promise<unknown> {
     const example = stock[0];
     const prompt =
-      `Write a new epic for the party, who are in ${area}. A epic is a short saga of 3 to 6 steps. A step is one of: ` +
+      `Write a new epic for the party, who are in ${area}. An epic is a short saga of 3 to 6 steps. A step is one of: ` +
       `"hunt" (clear foes), "gather" (collect from the land), "find" (search for a hidden thing), "visit" (reach a place), ` +
       `or "meet" (find one of the epic's people, who speaks and may hand over an item to carry on). Give it 2 or 3 people ` +
       `with a name, "lines" (what they say before they are met), "after" (once met), "finished" (once the saga is done) and a "look" word from: ${looks.map((l) => l.name).join(', ')}. Every person is met by exactly one "meet" step. ` +

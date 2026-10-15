@@ -11,7 +11,7 @@ export interface PageState extends Table {
   lobbyOpen: boolean;
   dm: boolean;
   waiting: number;
-  /** A epic is being told (between its steps `questing` is false). */
+  /** An epic is being told (between its steps `questing` is false). */
   epic: boolean;
   card: Card | null;
 }

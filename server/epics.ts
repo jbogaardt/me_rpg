@@ -1,10 +1,10 @@
-// The DM's epics: what the bot tells the party instead of a plain quest. A epic is a saga of several quests and people
+// The DM's epics: what the bot tells the party instead of a plain quest. An epic is a saga of several quests and people
 // (src/systems/dmEpics.ts: steps of hunt, gather, find, visit and meet, people with a name and a look word), as JSON. A
 // `EpicWriter` supplies one: the mock tells the content's own epics in turn; a creative model writes a new one for the
 // place (claude.ts). Whatever it writes, the page parses it as strictly as a file of epics and refuses a bad one, and the
 // bot then tells a stock epic instead, so a poor invention is never played.
 
-/** A epic as the page's `stockEpics()` gives it (only what the writer needs to read). */
+/** An epic as the page's `stockEpics()` gives it (only what the writer needs to read). */
 export interface StockTale {
   id: string;
   title: string;
@@ -12,7 +12,7 @@ export interface StockTale {
 }
 
 export interface EpicWriter {
-  /** A epic for the place: raw JSON for the page to check, or null if there is none to tell. `told` are the ids already told. */
+  /** An epic for the place: raw JSON for the page to check, or null if there is none to tell. `told` are the ids already told. */
   write(want: {
     area: string;
     looks: { id: string; name: string }[];
@@ -38,7 +38,7 @@ export class MockEpicWriter implements EpicWriter {
 }
 
 /**
- * Tell a epic: the writer's if the page accepts it, else a stock epic, else false (the caller offers a plain quest).
+ * Tell an epic: the writer's if the page accepts it, else a stock epic, else false (the caller offers a plain quest).
  * Returns the id and title told, for the log.
  */
 export async function tellEpic(
@@ -52,7 +52,7 @@ export async function tellEpic(
     if (typeof raw !== 'object' || raw === null) return null;
     const result = await page.teller.epic(raw);
     if (!result.ok) {
-      console.warn('the page refused a epic:', result.note);
+      console.warn('the page refused an epic:', result.note);
       return null;
     }
     const t = raw as { id?: unknown; title?: unknown };
