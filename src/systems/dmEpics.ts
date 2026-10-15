@@ -6,13 +6,31 @@
 
 import type { TaskKind } from './dmTasks';
 
+/** What a step may be: one of the DM's quests, or going to meet one of the tale's people. */
+export type StepKind = TaskKind | 'meet';
+
 /** One step of a saga. */
 export interface EpicStep {
-  kind: TaskKind;
+  kind: StepKind;
   /** How many lands from where the saga starts this step is set (0: here, 1: the next land over...). */
   hop: number;
   /** What the DM tells the party for this step, in a line or two. `{area}` is the land it is set in, `{from}` the last. */
   tell: string;
+  /** Meet: the key of the person (in `EpicTemplate.people`) the party is sent to find. Each person is met once. */
+  who?: string;
+  /** Meet: what they say once the party reaches them, a line at a time (1 to `MAX_SAYS`). */
+  says?: string[];
+  /** Meet: something the party takes from them and carries on (shown in the DM's words; the tale's later steps may ask for it). */
+  gives?: string;
+}
+
+/** A person of a tale: made by the DM and set in the land of the step that sends the party to them. */
+export interface TalePerson {
+  name: string;
+  /** A word that picks the look they wear from the world's people ("monk", "smith"); any look if none fits. */
+  look?: string;
+  /** What they say to anyone who talks to them (1 to 4 short lines), once they have been made. */
+  lines: string[];
 }
 
 export interface EpicTemplate {
@@ -26,6 +44,8 @@ export interface EpicTemplate {
   opening: string;
   ending: string;
   steps: EpicStep[];
+  /** The tale's people by key (only a tale with `meet` steps has any). They are made in a live world only. */
+  people?: Record<string, TalePerson>;
 }
 
 /** The lands of a world, as a saga needs to see them. */
@@ -54,7 +74,7 @@ export interface Gauge {
 }
 
 /** Rough minutes for one quest of each kind, and for walking between two lands. */
-const MINUTES: Record<TaskKind, number> = { hunt: 4, gather: 5, find: 6, visit: 3 };
+const MINUTES: Record<StepKind, number> = { hunt: 4, gather: 5, find: 6, visit: 3, meet: 2 };
 const TRAVEL = 1.5;
 
 export const EPICS: EpicTemplate[] = [
@@ -354,10 +374,128 @@ export function tellStep(step: EpicStep, area: string, from: string): string {
   return step.tell.replace('{area}', area).replace('{from}', from || area);
 }
 
-/** The sagas a start can tell, planned, easiest and shortest first. */
-export function epicsFrom(start: string, graph: ZoneGraph, seed = 0): { plan: EpicPlan; gauge: Gauge }[] {
-  return EPICS.flatMap((e) => {
-    const plan = planEpic(e, start, graph, seed);
-    return plan ? [{ plan, gauge: gauge(plan) }] : [];
-  }).sort((a, b) => a.gauge.difficulty - b.gauge.difficulty || a.gauge.minutes - b.gauge.minutes);
+/**
+ * The sagas a start can tell, planned, easiest and shortest first. `tales` are the data-made ones that join the built-in
+ * sagas; `people` says whether this world can make people (a live world), without which a saga with people is left out.
+ */
+export function epicsFrom(
+  start: string,
+  graph: ZoneGraph,
+  seed = 0,
+  tales: EpicTemplate[] = [],
+  people = false,
+): { plan: EpicPlan; gauge: Gauge }[] {
+  return [...EPICS, ...tales]
+    .filter((e) => people || !needsPeople(e))
+    .flatMap((e) => {
+      const plan = planEpic(e, start, graph, seed);
+      return plan ? [{ plan, gauge: gauge(plan) }] : [];
+    })
+    .sort((a, b) => a.gauge.difficulty - b.gauge.difficulty || a.gauge.minutes - b.gauge.minutes);
+}
+
+/** Does the saga send the party to people? Those can only be told where the DM can make people. */
+export const needsPeople = (e: EpicTemplate): boolean => e.steps.some((s) => s.kind === 'meet');
+
+// --- tales as data ---
+
+export const MAX_STEPS = 8;
+export const MAX_SAYS = 3;
+export const MAX_SAY = 150;
+export const MAX_ITEM = 40;
+const KINDS: StepKind[] = ['hunt', 'gather', 'find', 'visit', 'meet'];
+const ID = /^[a-z][a-z0-9_]{1,31}$/;
+const KEY = /^[a-z][a-z0-9_]{0,15}$/;
+
+const words = (v: unknown, max: number): string | null =>
+  typeof v === 'string' && v.trim() && v.trim().length <= max ? v.trim() : null;
+const list = (v: unknown, min: number, max: number, each: number): string[] | null =>
+  Array.isArray(v) && v.length >= min && v.length <= max && v.every((l) => words(l, each) !== null)
+    ? v.map((l: string) => l.trim())
+    : null;
+
+/**
+ * A tale as data (a JSON file of the content, or one an AI wrote), checked as strictly as the page checks a world: the
+ * parsed tale, or the first thing wrong with it. Nothing in a tale names a content id: lands are hops from where it
+ * starts, people have a name and a look hint, and a step is one of the DM's quest kinds or a meeting.
+ */
+export function parseTale(raw: unknown): EpicTemplate | string {
+  if (typeof raw !== 'object' || raw === null) return 'a tale is an object';
+  const r = raw as Record<string, unknown>;
+  const id = typeof r.id === 'string' && ID.test(r.id) ? r.id : null;
+  if (!id) return 'id: lowercase letters, digits and _, 2 to 32 long';
+  const title = words(r.title, 40);
+  const tagline = words(r.tagline, 100);
+  const opening = words(r.opening, 230);
+  const ending = words(r.ending, 230);
+  if (!title || !tagline || !opening || !ending)
+    return `${id}: a title, tagline, opening and ending (short) are needed`;
+  const difficulty = r.difficulty;
+  if (!Number.isInteger(difficulty) || (difficulty as number) < 1 || (difficulty as number) > 5)
+    return `${id}.difficulty: a whole number 1 to 5`;
+  const people: Record<string, TalePerson> = {};
+  if (r.people !== undefined) {
+    if (typeof r.people !== 'object' || r.people === null || Array.isArray(r.people)) return `${id}.people: an object`;
+    for (const [key, p] of Object.entries(r.people)) {
+      const q = (typeof p === 'object' && p !== null ? p : {}) as Record<string, unknown>;
+      const name = words(q.name, 32);
+      const lines = list(q.lines, 1, 4, 140);
+      const look = q.look === undefined ? undefined : words(q.look, 20);
+      if (!KEY.test(key) || !name || !lines || look === null)
+        return `${id}.people.${key}: a name (32), lines (1 to 4 of 140), maybe a look word`;
+      people[key] = { name, lines, ...(look ? { look } : {}) };
+    }
+  }
+  if (!Array.isArray(r.steps) || r.steps.length < 2 || r.steps.length > MAX_STEPS)
+    return `${id}.steps: 2 to ${MAX_STEPS} steps`;
+  const met = new Set<string>();
+  const steps: EpicStep[] = [];
+  for (const [i, raw] of r.steps.entries()) {
+    const at = `${id}.steps[${i}]`;
+    const q = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+    const kind = KINDS.find((k) => k === q.kind);
+    const tell = words(q.tell, 230);
+    const hop = q.hop;
+    if (!kind || !tell || !Number.isInteger(hop) || (hop as number) < 0 || (hop as number) > 5)
+      return `${at}: a kind (${KINDS.join(', ')}), a hop 0 to 5 and a tell (short)`;
+    if (kind !== 'meet') {
+      if (q.who !== undefined || q.says !== undefined || q.gives !== undefined)
+        return `${at}: only a meet step has who, says or gives`;
+      steps.push({ kind, hop: hop as number, tell });
+      continue;
+    }
+    const who = typeof q.who === 'string' ? q.who : '';
+    const says = list(q.says, 1, MAX_SAYS, MAX_SAY);
+    const gives = q.gives === undefined ? undefined : words(q.gives, MAX_ITEM);
+    if (!people[who]) return `${at}.who: "${who}" is not one of the tale's people`;
+    if (met.has(who)) return `${at}.who: "${who}" is met twice (each person is met once)`;
+    if (!says || gives === null) return `${at}: says (1 to ${MAX_SAYS} lines of ${MAX_SAY}) and maybe what they give`;
+    met.add(who);
+    steps.push({ kind, hop: hop as number, tell, who, says, ...(gives ? { gives } : {}) });
+  }
+  const unmet = Object.keys(people).filter((k) => !met.has(k));
+  if (unmet.length) return `${id}.people: ${unmet.join(', ')} never met`;
+  return {
+    id,
+    title,
+    tagline,
+    difficulty: difficulty as 1 | 2 | 3 | 4 | 5,
+    opening,
+    ending,
+    steps,
+    ...(Object.keys(people).length ? { people } : {}),
+  };
+}
+
+/** Parse a file of tales (an array): all of them, or the first problem. */
+export function parseTales(raw: unknown): EpicTemplate[] | string {
+  if (!Array.isArray(raw)) return 'a file of tales is an array';
+  const out: EpicTemplate[] = [];
+  for (const t of raw) {
+    const tale = parseTale(t);
+    if (typeof tale === 'string') return tale;
+    if (out.some((o) => o.id === tale.id) || EPICS.some((e) => e.id === tale.id)) return `${tale.id}: id used twice`;
+    out.push(tale);
+  }
+  return out;
 }

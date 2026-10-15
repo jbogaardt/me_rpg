@@ -11,6 +11,8 @@ export interface PageState extends Table {
   lobbyOpen: boolean;
   dm: boolean;
   waiting: number;
+  /** A tale is being told (between its steps `questing` is false). */
+  tale: boolean;
   card: Card | null;
 }
 
@@ -57,7 +59,7 @@ export function nextStep(s: PageState, c: Clock, startAt = 0): Step {
     return { kind: 'follow', slot: first.slot };
   if (s.card) return { kind: 'card' };
   if (s.waiting > 0) return { kind: 'inbox' };
-  if (!s.lobbyOpen && !s.questing && c.now - c.lastQuest >= QUEST_GAP_MS) return { kind: 'quest' };
+  if (!s.lobbyOpen && !s.questing && !s.tale && c.now - c.lastQuest >= QUEST_GAP_MS) return { kind: 'quest' };
   return idle;
 }
 

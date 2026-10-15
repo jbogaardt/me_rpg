@@ -46,6 +46,17 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 - **Epic quests** (`dmEpics.ts`, `DmEpics.ts`): sagas, chains of DM quests across lands, as templates with no content
   id, planned onto whatever world is played by walking its zone links; each carries a gauge (difficulty, length, reach).
   A failed or cancelled step ends the saga.
+- **Tales** (`content/tales.json`, `dmEpics.ts` `parseTale`, `dmPeople.ts`): a saga as data, with **people**. A step is a
+  quest kind or `meet`: the DM makes the step's person (an `npc` then a `cast` entry of the live world, on open ground in
+  the step's land, wearing the look a word names), the party is sent to find them (a `visit` quest at their feet, so the
+  tracker and the map are the usual ones), and on reaching them they speak a line at a time in the DM's voice and may give
+  something to carry (`gives`, named in the telling for a later step to ask for). So a quest can be several people and
+  lands: hear a courier's trouble, clear the road, find her, carry the letter to a sage. A tale names no land and no
+  content id (a step is a `hop` from where it starts; a person has a name and a look word), so it runs in any biome that
+  has the lands. It is checked like any world entry: `parseTale` refuses a bad tale (an unknown person, a person met
+  twice or never, too long a line), the same check for the content's tales and those an AI writes (`DmBot.tale`). Tales
+  with people need a live world and the host (people are log entries, which friends already receive); nothing new is on
+  the wire. Not yet: items in the pack (`gives` is the DM's word), a person who turns on the party, branching.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` lets the DM raise or fetch a fallen player (a defeat still wakes them at the start, whole).
   **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive

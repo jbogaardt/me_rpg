@@ -8,10 +8,12 @@
 
 import type { DmCard } from '../../hud/DmCard';
 import type { Session } from '../../net/session';
-import { CELL } from '../../map/types';
+import { openGroundNear } from '../../systems/dmPeople';
 import { zoneName } from '../../systems/places';
 import type { Arena } from './Arena';
+import { parseTale, type EpicTemplate } from '../../systems/dmEpics';
 import type { DmDesk } from './DmDesk';
+import type { DmEpics } from './DmEpics';
 import type { CardKind, DmPrompts } from './DmPrompts';
 import type { DmTasks } from './DmTasks';
 import type { Story, StoryView } from './Story';
@@ -49,6 +51,8 @@ export interface DmBotState {
   waiting: number;
   /** A DM quest is running. */
   questing: boolean;
+  /** A tale (a saga of several quests and people) is being told: between its steps `questing` is false. */
+  tale: boolean;
   /** The card up now, if any. */
   card: DmBotCard | null;
   /** The live story and its next roads (null when the world is not a live one). */
@@ -83,6 +87,10 @@ export interface DmBotApi {
   looks(): { id: string; name: string }[];
   /** Make a person and put them near the party, on open ground in the area the DM stands in. */
   spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
+  /** The tales the content ships with (data: `tale` takes one back, or one an AI wrote in the same form). */
+  stockTales(): EpicTemplate[];
+  /** Tell a tale from where the DM stands. Checked as strictly as a file of tales; the note says what is wrong. */
+  tale(raw: unknown): { ok: boolean; note: string };
   /** Go to a friend (the Party tab's Go). */
   goTo: (slot: number) => void;
 }
@@ -95,6 +103,8 @@ export interface DmBotParts {
   prompts: DmPrompts;
   card: DmCard;
   tasks: DmTasks;
+  epics: DmEpics;
+  tales: EpicTemplate[];
   goTo: (slot: number) => void;
 }
 
@@ -103,7 +113,18 @@ export function wantsDmBot(search: string): boolean {
   return new URLSearchParams(search).has('dmbot');
 }
 
-export function createDmBot({ session, arena, story, desk, prompts, card, tasks, goTo }: DmBotParts): DmBotApi {
+export function createDmBot({
+  session,
+  arena,
+  story,
+  desk,
+  prompts,
+  card,
+  tasks,
+  epics,
+  tales,
+  goTo,
+}: DmBotParts): DmBotApi {
   const cardView = (): DmBotCard | null => card.view;
   const friends = (): DmBotFriend[] => {
     const here = arena.zoneOf(arena.local);
@@ -129,6 +150,7 @@ export function createDmBot({ session, arena, story, desk, prompts, card, tasks,
       area: zoneName(arena.zoneOf(arena.local).name),
       waiting: prompts.waiting.count,
       questing: tasks.active,
+      tale: epics.active,
       card: cardView(),
       story: story.view(),
     }),
@@ -159,7 +181,7 @@ export function createDmBot({ session, arena, story, desk, prompts, card, tasks,
     spawn(person) {
       const world = story.world;
       const z = arena.zoneOf(arena.local);
-      const region = world?.regions.find((r) => world.cat.regions[r]?.biome.map === z.name);
+      const region = story.regionOf(z.name);
       if (!world || !region) return { ok: false, note: 'this is not a place of the live world' };
       const at = openGroundNear(
         z.collision,
@@ -170,37 +192,11 @@ export function createDmBot({ session, arena, story, desk, prompts, card, tasks,
       const note = story.lastNote;
       return { ok: !note, note };
     },
+    stockTales: () => tales,
+    tale(raw) {
+      const tale = parseTale(raw);
+      return typeof tale === 'string' ? { ok: false, note: tale } : epics.beginTale(tale);
+    },
     goTo,
   };
-}
-
-/** Distance (cells) from the party within which a new person stands: close enough to find, not on top of anyone. */
-const NEAR = { min: 3, max: 8 };
-
-/** A free cell 3 to 8 cells from the nearest hero (nearest ring first), or null. Open ground only, and not a doorway's cell. */
-export function openGroundNear(
-  collision: { isBlocked(col: number, row: number): boolean },
-  heroes: { body: { x: number; y: number } }[],
-): { col: number; row: number } | null {
-  const lead = heroes[heroes.length - 1]; // the DM, last, stands with the party
-  if (!lead) return null;
-  const home = { col: Math.floor(lead.body.x / CELL), row: Math.floor(lead.body.y / CELL) };
-  const apart = (col: number, row: number) =>
-    Math.min(
-      ...heroes.map((h) =>
-        Math.max(Math.abs(col - Math.floor(h.body.x / CELL)), Math.abs(row - Math.floor(h.body.y / CELL))),
-      ),
-    );
-  for (let r = NEAR.min; r <= NEAR.max; r++)
-    for (let d = -r; d <= r; d++)
-      for (const [col, row] of [
-        [home.col + d, home.row - r],
-        [home.col + d, home.row + r],
-        [home.col - r, home.row + d],
-        [home.col + r, home.row + d],
-      ] as const) {
-        const clear = [-1, 0, 1].every((a) => [-1, 0, 1].every((b) => !collision.isBlocked(col + a, row + b)));
-        if (clear && apart(col, row) >= NEAR.min) return { col, row };
-      }
-  return null;
 }

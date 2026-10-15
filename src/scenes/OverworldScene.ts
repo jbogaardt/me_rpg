@@ -16,6 +16,7 @@ import { NO_COMMAND } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
 import type { Choices } from '../hud/Choices';
 import type { ContentManager } from '../content/ContentManager';
+import { STOCK_TALES } from '../content/tales';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
@@ -200,7 +201,7 @@ export class OverworldScene implements Scene {
     this.requests.onAsk = (i, text) => this.desk.ask(i, text);
     this.powers = new DmPowers(arena, this.sim);
     this.tasks = new DmTasks(arena, this.sim, this.desk);
-    this.epics = new DmEpics(arena, this.zones, content, this.tasks, this.desk, this.sim);
+    this.epics = new DmEpics(arena, this.zones, content, this.tasks, this.desk, this.sim, this.liveStory, STOCK_TALES);
     this.narration = new DmNarration(arena, ui.session, this.desk);
     this.revive = new DmRevive(arena, this.sim, this.zones);
     this.possession = new DmPossession(arena, this.sim);
@@ -381,7 +382,7 @@ export class OverworldScene implements Scene {
     this.votePanel.sync(this.desk.openVoteForGuest);
     this.powers.update(dt); // the DM's storm in flight and cooldowns
     this.tasks.update(dt);
-    this.epics.update();
+    this.epics.update(dt);
     this.storyUi.syncRelic();
     this.revive.update(dt);
     this.narration.update(dt);
@@ -641,6 +642,8 @@ export class OverworldScene implements Scene {
       prompts: this.prompts,
       card: this.dmCard,
       tasks: this.tasks,
+      epics: this.epics,
+      tales: STOCK_TALES,
       goTo: (slot) => this.partyUi.goTo(slot),
     });
   }

@@ -96,6 +96,12 @@ export class Story {
     }
   }
 
+  /** The region of the live world whose map is the zone `zone` (undefined when it is none, or the world is not a live one). */
+  regionOf(zone: string): string | undefined {
+    const { world } = this;
+    return world?.regions.find((r) => world.cat.regions[r]?.biome.map === zone);
+  }
+
   /** The Dungeon Master made someone and put them on a cell of a region's map: a new person, then their casting. */
   bring(person: { name: string; look: string; lines: string[] }, region: string, x: number, y: number) {
     if (!this.world || !this.canChoose) return;

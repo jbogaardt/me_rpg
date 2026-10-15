@@ -15,10 +15,11 @@ import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
 import { JevRouter } from './jev';
 import { MockFallback, MockRouter } from './mocks';
-import { ClaudeConjurer, ClaudeFallback, ClaudeNarrator } from './claude';
+import { ClaudeConjurer, ClaudeFallback, ClaudeNarrator, ClaudeTaleWriter } from './claude';
 import { MockConjurer, shouldConjure, type Conjurer } from './conjure';
 import { MockNarrator, beatFor, type Memory, type Narrator } from './narrate';
 import { decideCard, type Card, type Move } from './router';
+import { MockTaleWriter, tellTale, type StockTale, type TaleWriter } from './tales';
 import { SETTLE_MS, nextStep, type Clock, type PageState } from './turn';
 
 const DEFAULT_URL = 'https://jbogaardt.github.io/me_rpg/?campaign=live';
@@ -39,6 +40,8 @@ interface PageBot {
   reply(text: string): boolean;
   say(text: string): boolean;
   looks(): { id: string; name: string }[];
+  stockTales(): StockTale[];
+  tale(raw: unknown): { ok: boolean; note: string };
   spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
   goTo(slot: number): void;
 }
@@ -66,6 +69,9 @@ class Dm {
   private narrator: Narrator = CLAUDE ? new ClaudeNarrator() : new MockNarrator();
   private conjurer: Conjurer = CLAUDE ? new ClaudeConjurer() : new MockConjurer();
   /** People made so far, and when the last was (ms). */
+  private writer: TaleWriter = CLAUDE ? new ClaudeTaleWriter() : new MockTaleWriter();
+  /** Ids of the tales told so far. */
+  private told: string[] = [];
   private made = 0;
   private lastMade = -Infinity;
   private memory: Memory = { prev: null, spoke: 0 };
@@ -130,6 +136,7 @@ class Dm {
       }
       case 'quest': {
         this.clock.lastQuest = this.clock.now;
+        if (s.story && (await this.tell(s))) return; // a tale of people and places, when the world can hold one
         const card = await this.call('open', 'next');
         if (card) await this.answer(card, s);
         return;
@@ -153,6 +160,20 @@ class Dm {
     log(`narrating (${beat.kind}):`, line);
     await this.say(line);
     if (shouldConjure(beat, this.made, this.clock.now - this.lastMade)) await this.conjure(s);
+    return true;
+  }
+
+  /** Begin a tale (tales.ts); false when none could be told here (the caller offers a plain quest). */
+  private async tell(s: PageState): Promise<boolean> {
+    const page = {
+      teller: { tale: (raw: unknown) => this.call('tale', raw) },
+      looks: await this.call('looks'),
+      stock: await this.call('stockTales'),
+    };
+    const told = await tellTale(this.writer, page, s.area, this.told);
+    if (!told) return false;
+    this.told.push(told.id);
+    log(`telling “${told.title}”`);
     return true;
   }
 

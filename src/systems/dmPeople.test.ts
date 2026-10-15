@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { CELL } from '../../map/types';
-import { openGroundNear } from './DmBot';
+import { CELL } from '../map/types';
+import { openGroundNear } from './dmPeople';
 
 const hero = (col: number, row: number) => ({ body: { x: (col + 0.5) * CELL, y: (row + 0.5) * CELL } });
 const open = { isBlocked: (col: number, row: number) => col < 0 || row < 0 || col > 30 || row > 30 };
+
+import { pickLook } from './dmPeople';
 
 describe('openGroundNear', () => {
   it('stands a new person 3 or more cells from every hero, on open ground', () => {
@@ -25,5 +27,19 @@ describe('openGroundNear', () => {
   });
   it('needs someone to stand near', () => {
     expect(openGroundNear(open, [])).toBeNull();
+  });
+});
+
+describe('pickLook', () => {
+  const looks = [
+    { id: 'a', name: 'Castaway' },
+    { id: 'b', name: 'Old Monk' },
+    { id: 'c', name: 'Smith' },
+  ];
+  it('wears the look the hint names, else the next in turn', () => {
+    expect(pickLook(looks, 'monk', 0)).toBe('b');
+    expect(pickLook(looks, 'dragon', 4)).toBe('b');
+    expect(pickLook(looks, undefined, 2)).toBe('c');
+    expect(pickLook([], 'monk', 0)).toBeNull();
   });
 });

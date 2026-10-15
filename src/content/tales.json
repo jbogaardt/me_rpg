@@ -1,0 +1,180 @@
+[
+  {
+    "id": "lost_courier",
+    "title": "The Lost Courier",
+    "tagline": "A sealed letter, three strangers and a message that must arrive.",
+    "difficulty": 2,
+    "opening": "A letter was given to a courier, and the courier never arrived. Somebody, somewhere, is still waiting for it. Let us see who.",
+    "ending": "The letter reached the hand it was meant for, and the world is a little less lost for it.",
+    "people": {
+      "postmaster": {
+        "name": "Aldis the Postmaster",
+        "look": "keeper",
+        "lines": ["No courier has come through in days. I fear the worst.", "If you find the letter, do not open it."]
+      },
+      "courier": {
+        "name": "Wren the Courier",
+        "look": "wanderer",
+        "lines": ["I ran. I am not proud of it, but I ran.", "Take the letter. Take it to the one it was meant for."]
+      },
+      "reader": {
+        "name": "Sage Orrin",
+        "look": "sage",
+        "lines": ["Letters from the old road. Rare, these days.", "Whoever sent this knew more than they wrote."]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "postmaster",
+        "tell": "The postmaster in {area} is beside himself. Find Aldis, and hear what happened.",
+        "says": [
+          "A courier left here three days ago with a sealed letter, and has not been seen since.",
+          "She was last bound for the lands beyond. Find her, if you can, and the letter with her."
+        ]
+      },
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "Whatever stopped the courier is still out there in {area}. Clear the road before you follow it."
+      },
+      {
+        "kind": "meet",
+        "hop": 1,
+        "who": "courier",
+        "gives": "the Sealed Letter",
+        "tell": "A frightened traveller is hiding in {area}. Find Wren the courier.",
+        "says": [
+          "You came for the letter. Good. I could not carry it another step.",
+          "It is for the old sage who keeps the lore. Please, see it into their hands."
+        ]
+      },
+      {
+        "kind": "meet",
+        "hop": 2,
+        "who": "reader",
+        "tell": "The sage the letter is for lives in {area}. Carry the Sealed Letter there and give it over.",
+        "says": [
+          "Ah. So it has come at last. You have done more than you know.",
+          "What it says is not for you, but this I will tell you: the roads will be safer for it."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "silent_bell",
+    "title": "The Silent Bell",
+    "tagline": "A bell that stopped ringing, a keeper with a secret, a trail to follow.",
+    "difficulty": 3,
+    "opening": "There was a bell in the lands that rang every dusk. It has gone silent, and the silence has begun to spread.",
+    "ending": "The bell rang again at dusk, and everyone who heard it knew the long silence was over.",
+    "people": {
+      "ringer": {
+        "name": "Old Maren the Ringer",
+        "look": "keeper",
+        "lines": [
+          "Forty years I rang that bell. Now there is only quiet.",
+          "Find what took the clapper, and bring it home."
+        ]
+      },
+      "smith": {
+        "name": "Dorrin Ashhand",
+        "look": "sage",
+        "lines": [
+          "I mend what breaks, but I cannot mend what is missing.",
+          "Bring me the clapper and the bell will sing."
+        ]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "ringer",
+        "tell": "The bell-ringer in {area} has a sorrow to tell. Find Old Maren.",
+        "says": [
+          "The bell hangs there still, but its voice is gone. The clapper was taken in the night.",
+          "Whoever took it left tracks heading out. Follow them."
+        ]
+      },
+      {
+        "kind": "find",
+        "hop": 1,
+        "tell": "The tracks end in {area}. The clapper is hidden somewhere near. Search the land until you have it."
+      },
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "Whatever carried it off has made its den in {area}, and it will not give the clapper up without a fight."
+      },
+      {
+        "kind": "meet",
+        "hop": 2,
+        "who": "smith",
+        "gives": "a Mended Clapper",
+        "tell": "Take the clapper to the smith in {area}. Find Dorrin Ashhand.",
+        "says": [
+          "A fine piece, and nearly whole. Give me a moment at the anvil.",
+          "There. Carry it back to the bell, and may it ring true."
+        ]
+      },
+      {
+        "kind": "visit",
+        "hop": 0,
+        "tell": "The bell hangs where it always did, in {area}. Return the clapper to it, and let it ring."
+      }
+    ]
+  },
+  {
+    "id": "wanderers_debt",
+    "title": "The Wanderer's Debt",
+    "tagline": "A stranger owes a favour to someone he has never met, and you are the road between.",
+    "difficulty": 2,
+    "opening": "A wanderer on the road owes a debt he cannot pay. Perhaps you can pay it for him, and learn something on the way.",
+    "ending": "The debt is paid, the wanderer is free, and two strangers parted as friends.",
+    "people": {
+      "wanderer": {
+        "name": "Corwin the Wanderer",
+        "look": "wanderer",
+        "lines": [
+          "I owe someone a debt, and I do not even know their face.",
+          "They live beyond the next land, so I am told."
+        ]
+      },
+      "creditor": {
+        "name": "Keeper Hale",
+        "look": "keeper",
+        "lines": ["A debt? I had forgotten it entirely.", "Odd, to be repaid by strangers."]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "wanderer",
+        "gives": "a Pouch of Old Coins",
+        "tell": "A traveller in {area} is looking for help with a debt. Find Corwin.",
+        "says": [
+          "Take these coins, friends. They are what I owe, and a little more.",
+          "The one I owe lives some way off. Please, find them. I cannot."
+        ]
+      },
+      {
+        "kind": "gather",
+        "hop": 1,
+        "tell": "On the road to the creditor, {area} offers what a gift ought to have beside it. Gather it as you pass."
+      },
+      {
+        "kind": "meet",
+        "hop": 2,
+        "who": "creditor",
+        "tell": "The creditor is in {area}. Find Keeper Hale, and settle the debt.",
+        "says": [
+          "These are the old coins, aren't they? My grandmother's pouch.",
+          "Tell Corwin the debt is paid, and something more besides. He is welcome at my fire."
+        ]
+      }
+    ]
+  }
+]

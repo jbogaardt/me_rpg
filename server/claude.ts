@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { MockConjurer, type Conjurer, type Person } from './conjure';
 import { MockNarrator, PERSONA, type Beat, type Narrator } from './narrate';
 import { MAX_REPLY, type CreativeFallback, type ImproviseRequest } from './router';
+import type { TaleWriter } from './tales';
 
 /** One headless call: a system prompt and a prompt in, the model's text out. Rejects on any failure. */
 export type Ask = (system: string, prompt: string) => Promise<string>;
@@ -124,4 +125,21 @@ export function readPerson(raw: unknown, looks: { id: string }[]): Person | null
   if (!Array.isArray(lines) || !lines.length || lines.length > 4) return null;
   if (!lines.every((l) => typeof l === 'string' && l.trim() && l.length <= 140)) return null;
   return { name: name.trim(), look, lines: lines as string[] };
+}
+
+/** A new tale for the place, written by Claude in the page's tale format (the page checks it; see tales.ts). */
+export class ClaudeTaleWriter implements TaleWriter {
+  constructor(private ask: Ask = askClaude) {}
+  async write({ area, looks, told, stock }: Parameters<TaleWriter['write']>[0]): Promise<unknown> {
+    const example = stock[0];
+    const prompt =
+      `Write a new tale for the party, who are in ${area}. A tale is a short saga of 3 to 6 steps. A step is one of: ` +
+      `"hunt" (clear foes), "gather" (collect from the land), "find" (search for a hidden thing), "visit" (reach a place), ` +
+      `or "meet" (find one of the tale's people, who speaks and may hand over an item to carry on). Give it 2 or 3 people ` +
+      `with a name and a "look" word from: ${looks.map((l) => l.name).join(', ')}. Every person is met by exactly one "meet" step. ` +
+      `"hop" is how many lands from here the step is set (0 to 3). Make it a story with a reason, a turn and a payoff, not ` +
+      `a list of chores. Do not reuse these ids: ${told.join(', ') || 'none'}. Reply with the JSON only, in exactly this form:\n` +
+      JSON.stringify(example);
+    return jsonIn(await this.ask(`${PERSONA} ${RULES}`, prompt));
+  }
 }

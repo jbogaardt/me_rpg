@@ -39,6 +39,10 @@ different version away), so point it at the site they use. Against a local build
   friend fell low, the table went quiet) and a `Narrator` words it through the DM's `say`. It never talks over a card, a
   lobby or a line spoken in the last 20 s. The mock narrator uses stock lines; a creative model slots in behind the same
   interface.
+- `tales.ts` is what the bot tells instead of a plain quest (`quest` step, live worlds): a tale of several quests and
+  people (`src/content/tales.json`; the page runs it, `DmBot.tale`). A `TaleWriter` supplies one: the mock tells the
+  content's tales in turn, `DM_BOT_CLAUDE=1` has Claude write a new one for the place in the same JSON. The page checks it as
+  strictly as the content's own and refuses a bad one; the bot then tells a stock tale, then a plain quest.
 - `conjure.ts` makes people: on arriving somewhere new (at most 6 a game, 2 minutes apart) a `Conjurer` invents a
   stranger (name, a look from the world's people, up to 4 short lines) and the page's `spawn` sets them near the party.
   The mock conjurer has a few stock characters; the page refuses anything the world's checks refuse.

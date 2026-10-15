@@ -11,6 +11,7 @@ const state = (over: Partial<PageState> = {}): PageState => ({
   card: null,
   area: 'Greenwood',
   questing: false,
+  tale: false,
   story: null,
   friends: [{ slot: 1, area: 'Greenwood', hp: 1, near: true }],
   ...over,

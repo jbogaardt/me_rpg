@@ -6,6 +6,9 @@ import {
   gauge,
   gaugeText,
   layers,
+  parseTale,
+  parseTales,
+  needsPeople,
   planEpic,
   stars,
   tellStep,
@@ -115,5 +118,59 @@ describe('the sagas', () => {
       expect(list[i]!.gauge.difficulty).toBeGreaterThanOrEqual(list[i - 1]!.gauge.difficulty);
     for (const { gauge: g } of list) expect(g.difficulty).toBeGreaterThanOrEqual(1);
     expect(epicsFrom('shop', big)).toEqual([]);
+  });
+});
+
+describe('tales as data', () => {
+  const tale = () => ({
+    id: 'a_tale',
+    title: 'A Tale',
+    tagline: 'Short.',
+    difficulty: 2,
+    opening: 'It begins.',
+    ending: 'It ends.',
+    people: { mira: { name: 'Mira', look: 'sage', lines: ['Hello.'] } },
+    steps: [
+      { kind: 'meet', hop: 0, who: 'mira', tell: 'Find Mira in {area}.', says: ['Well met.'], gives: 'a Key' },
+      { kind: 'hunt', hop: 1, tell: 'Clear {area}.' },
+    ],
+  });
+  it('accepts a good tale and knows it needs people', () => {
+    const parsed = parseTale(tale());
+    expect(typeof parsed).toBe('object');
+    expect(needsPeople(parsed as never)).toBe(true);
+  });
+  it('refuses each way a tale can be wrong, naming where', () => {
+    const bad = (f: (t: ReturnType<typeof tale>) => void): string => {
+      const t = tale();
+      f(t);
+      const r = parseTale(t);
+      return typeof r === 'string' ? r : 'ok';
+    };
+    expect(bad((t) => (t.id = 'Bad Id'))).toContain('id');
+    expect(bad((t) => (t.difficulty = 9))).toContain('difficulty');
+    expect(bad((t) => (t.steps = t.steps.slice(0, 1)))).toContain('steps');
+    expect(bad((t) => (t.steps[0]!.who = 'nobody'))).toContain('not one of the tale');
+    expect(bad((t) => (t.steps[0]!.says = []))).toContain('says');
+    expect(bad((t) => ((t.steps[1] as { who?: string }).who = 'mira'))).toContain('only a meet step');
+    expect(bad((t) => t.steps.push({ kind: 'meet', hop: 1, who: 'mira', tell: 'x', says: ['y'] } as never))).toContain(
+      'twice',
+    );
+    expect(bad((t) => (t.steps[1] = { kind: 'dig', hop: 1, tell: 'x' } as never))).toContain('kind');
+    expect(bad((t) => (t.steps[0]!.tell = 'x'.repeat(300)))).toContain('tell');
+    expect(bad((t) => ((t.people.mira as { name: string }).name = ''))).toContain('people.mira');
+    expect(bad((t) => ((t.people as Record<string, unknown>).ghost = { name: 'G', lines: ['boo'] }))).toContain(
+      'never met',
+    );
+  });
+  it('refuses a file with a repeated id, or the id of a built-in saga', () => {
+    expect(typeof parseTales([tale(), tale()])).toBe('string');
+    expect(typeof parseTales([{ ...tale(), id: EPICS[0]!.id }])).toBe('string');
+    expect(Array.isArray(parseTales([tale()]))).toBe(true);
+  });
+  it('leaves sagas with people out where none can be made', () => {
+    const t = parseTale(tale()) as never;
+    expect(epicsFrom('a', big, 0, [t], false).some((e) => e.plan.epic.id === 'a_tale')).toBe(false);
+    expect(epicsFrom('a', big, 0, [t], true).some((e) => e.plan.epic.id === 'a_tale')).toBe(true);
   });
 });

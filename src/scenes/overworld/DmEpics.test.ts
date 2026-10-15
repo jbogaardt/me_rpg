@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { ContentManager } from '../../content/ContentManager';
+import { STOCK_TALES } from '../../content/tales';
 import { TASK_LINGER } from '../../systems/dmTasks';
 import { setPlaces } from '../../systems/places';
 import type { Arena } from './Arena';
@@ -10,14 +11,15 @@ import type { Simulation } from './Simulation';
 import type { Zones } from './Zones';
 
 /** Two open lands, a and b, and a shop off a; a has a place to reach, b has none, and the party stands at the place. */
-function game(far = false) {
+function game(far = false, story: unknown = null) {
   setPlaces({ a: 'The Glen', b: 'The Fen', shop: 'Shop' }, { a: ['b', 'shop'] }, {});
   const zone = (name: string, places: { name: string; col: number; row: number }[]) =>
     ({
       name,
       sites: [],
+      folk: [] as { name: string; body: { x: number; y: number } }[],
       data: { width: 100, height: 100, places, spawn: { col: 3, row: 3 } },
-      collision: { fitsMap: () => true },
+      collision: { fitsMap: () => true, isBlocked: () => false },
     }) as never;
   const a = zone('a', [{ name: 'The Old Mill', col: 10, row: 10 }]);
   const b = zone('b', [{ name: 'The Ford', col: 20, row: 20 }]);
@@ -62,12 +64,12 @@ function game(far = false) {
   const said: string[] = [];
   const desk = { say: (t: string) => said.push(t) } as unknown as DmDesk;
   const tasks = new DmTasks(arena, sim, desk);
-  const epics = new DmEpics(arena, zones, content, tasks, desk, sim);
+  const epics = new DmEpics(arena, zones, content, tasks, desk, sim, story as never, STOCK_TALES);
   const pick = (id: string) => {
     const { items } = epics.options();
     return items.findIndex((i) => i.label.startsWith(id));
   };
-  return { arena, epics, tasks, paid, said, loaded, pick, party, b };
+  return { arena, epics, tasks, paid, said, loaded, pick, party, a, b };
 }
 
 describe('epic quests, on the host', () => {
@@ -146,5 +148,87 @@ describe('epic quests, on the host', () => {
     const i = pick('Quiet Errands');
     (arena as { role: string }).role = 'solo';
     expect(epics.begin(i)).toBe(false);
+  });
+});
+
+describe('tales with people, on the host', () => {
+  beforeAll(() => setPlaces({}, {}, {}));
+
+  /** A live world that makes people: `bring` puts them in zone a's folk like the real cast does. */
+  function live(canChoose = true) {
+    const brought: { name: string; look: string }[] = [];
+    let a: { folk: { name: string; body: { x: number; y: number } }[] } | null = null;
+    const story = {
+      canChoose,
+      lastNote: '',
+      regionOf: () => 'r1',
+      world: {
+        lookOptions: () => [
+          { id: 'keeper_look', name: 'Keeper Ysolde' },
+          { id: 'sage_look', name: 'Sage' },
+        ],
+      },
+      bring(person: { name: string; look: string }, _region: string, col: number, row: number) {
+        brought.push(person);
+        a!.folk.push({ name: person.name, body: { x: (col + 0.5) * 32, y: (row + 1) * 32 } });
+      },
+    };
+    const g = game(false, story);
+    a = g.a;
+    return { ...g, brought };
+  }
+
+  it('offers tales with people only where people can be made', () => {
+    expect(
+      live()
+        .epics.options()
+        .items.some((i) => i.label.startsWith('The Lost Courier')),
+    ).toBe(true);
+    const solo = live(false).epics.options().items;
+    expect(solo.some((i) => i.label.startsWith('The Lost Courier'))).toBe(false);
+  });
+
+  it('makes the person, sends the party to them, lets them speak, and moves on', () => {
+    const { arena, epics, tasks, party, said, brought, pick } = live();
+    const i = pick('The Lost Courier');
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(epics.begin(i)).toBe(true);
+    epics.update(0);
+    expect(brought.map((p) => [p.name, p.look])).toEqual([['Aldis the Postmaster', 'keeper_look']]);
+    expect(arena.task).toMatchObject({
+      kind: 'visit',
+      title: 'Find Aldis the Postmaster',
+      epic: { step: 1, total: 4 },
+    });
+    // the party walks to them: the quest is done and they speak, a line at a time
+    const t = arena.task as unknown as { x: number; y: number };
+    const me = party[0] as unknown as { body: { x: number; y: number } };
+    me.body.x = t.x;
+    me.body.y = t.y;
+    tasks.update(0.1);
+    tasks.update(TASK_LINGER + 1);
+    expect(said.some((s) => s.startsWith('Aldis the Postmaster: “A courier left'))).toBe(false); // not yet: next update
+    epics.update(0);
+    expect(said.at(-1)).toContain('Aldis the Postmaster: “A courier left');
+    epics.update(1);
+    expect(said.at(-1)).toContain('A courier left'); // still the first: each line stays a few seconds
+    epics.update(5);
+    expect(said.at(-1)).toContain('Find her, if you can');
+    epics.update(5); // the speech is over: the next step begins (its land is loaded first)
+    epics.update(0);
+    epics.update(0);
+    expect(arena.task).toMatchObject({ epic: { step: 2, total: 4 } });
+    expect(epics.active).toBe(true);
+  });
+
+  it('ends the tale when the person cannot be made', () => {
+    const g = live();
+    const ground = (g.a as unknown as { collision: { fitsMap: () => boolean; isBlocked: () => boolean } }).collision;
+    ground.fitsMap = () => false;
+    ground.isBlocked = () => true;
+    g.epics.begin(g.pick('The Lost Courier'));
+    g.epics.update(0);
+    expect(g.epics.active).toBe(false);
+    expect(g.said.at(-1)).toContain('fall quiet');
   });
 });
