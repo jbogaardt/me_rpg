@@ -1,18 +1,8 @@
 import type { Container, Renderer } from 'pixi.js';
 import { enabled, flag } from '../systems/capabilities';
 import type { Sprites, Zone } from '../assets';
-import type { Aim } from '../core/aim';
-import { COMBO_WINDOW, COMBO_WINDOW_TOUCH, ComboReader } from '../core/combo';
-import {
-  actionDown,
-  actionPressed,
-  actionTouchedOnly,
-  clickedAt,
-  mapPressed,
-  menuPressed,
-  pointerAim,
-  stopPressed,
-} from '../core/controls';
+import type {} from '../core/aim';
+import { actionPressed, clickedAt, mapPressed, menuPressed, stopPressed } from '../core/controls';
 import { directionToward } from '../core/direction';
 import type { ZoneState } from './ZoneState';
 import type { Scene } from '../core/Scene';
@@ -21,7 +11,7 @@ import type { Character } from '../entities/Character';
 import type { Chest } from '../entities/Chest';
 import type { Crop } from '../entities/Crop';
 import type { Mob } from '../entities/Mob';
-import type { Command, Player } from '../entities/Player';
+import type { Player } from '../entities/Player';
 import { NO_COMMAND } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
 import type { Choices } from '../hud/Choices';
@@ -31,10 +21,9 @@ import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
 import { AreaBanner } from '../hud/AreaBanner';
 import { DRINK_KEY, HarvestButtons, type HarvestSpot } from '../hud/HarvestButtons';
-import { zoneName } from '../systems/places';
+import {} from '../systems/places';
 import type { Menu } from '../hud/Menu';
-import type { PartyRow } from '../hud/Party';
-import { PLAYER_COLORS, playerName } from '../systems/looks';
+import type {} from '../hud/Party';
 import type { ShopCounter } from '../hud/ShopCounter';
 import type { TradeUi } from '../hud/Trade';
 import { CELL } from '../map/types';
@@ -48,11 +37,11 @@ import type { QuestSite } from '../entities/QuestSite';
 import { equip } from '../systems/items';
 import { lecternIn, lecternPages } from '../systems/lectern';
 import { signLines, signNear } from '../systems/signs';
-import { heroCombos, TRAINER, trainerTalk, type Skill } from '../systems/skills';
+import { TRAINER, trainerTalk, type Skill } from '../systems/skills';
 import { petSound } from '../systems/pets';
-import { currentQuest, progressOf, recordSite, siteNote, siteOpen } from '../systems/quests';
+import { progressOf, recordSite, siteNote, siteOpen } from '../systems/quests';
 import { SHOPS } from '../systems/shops';
-import type { ComboKey } from '../systems/spells';
+import type {} from '../systems/spells';
 import type { Precip } from '../systems/weather';
 import { DayClock } from '../systems/daynight';
 import { NightLayer } from '../entities/NightLayer';
@@ -70,6 +59,8 @@ import { Visuals } from './overworld/Visuals';
 import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
 import { Scenario } from './overworld/Scenario';
 import { StoryUi } from './overworld/StoryUi';
+import { LocalInput } from './overworld/LocalInput';
+import { PartyUi } from './overworld/PartyUi';
 import { Story } from './overworld/Story';
 import { DmDesk } from './overworld/DmDesk';
 import { DmPowers } from './overworld/DmPowers';
@@ -88,16 +79,6 @@ import { particleEffect } from '../entities/ParticleEffect';
 import { floatText } from '../entities/effects';
 
 export type { ZoneLoader, ZoneUnloader };
-
-const aimOf = (aim: Aim | null) => (aim ? { aim } : {});
-
-/** The direction presses a combo is made of, in the order a frame with several is read. */
-const COMBO_PRESSES: readonly (readonly [ComboKey, 'up' | 'down' | 'left' | 'right'])[] = [
-  ['u', 'up'],
-  ['d', 'down'],
-  ['l', 'left'],
-  ['r', 'right'],
-];
 
 const NPC_LINES = [
   'Greetings, traveler. Something is wrong with the Vale: the clocks stopped, and the dead walk.',
@@ -164,8 +145,8 @@ export class OverworldScene implements Scene {
   private storyUi!: StoryUi; // what the local player is told and shown about their quests
   private harvestButtons = new HarvestButtons();
   private guestDrinking = false; // guest: asked the host to let it drink (see `drinking`)
-  private combos = new ComboReader();
-  private comboSet = ''; // the combos the reader is following (a different set starts it afresh)
+  private input!: LocalInput; // this keyboard's controls as a Command
+  private partyUi!: PartyUi; // the DM's Party tab
   private atlas = new Atlas(); // what the players have seen of each zone, for the map
   private dayClock = new DayClock(); // the hour comes from the wall clock, so co-op players agree with nothing sent
   private night = new NightLayer();
@@ -246,6 +227,8 @@ export class OverworldScene implements Scene {
     this.epics.onDone = () => this.prompts.suggest('story'); // a saga is done: the story may have a next road
     // The DM's words show on every screen (never over a DM who is busy being a foe).
     this.desk.onSay = (text) => !this.possession.active && this.dmBar.speak(text, arena.clock);
+    this.input = new LocalInput(arena, this.zones, () => ui.touch.active);
+    this.partyUi = new PartyUi(arena, this.zones, ui.menu, () => this.possession.release());
     this.storyUi = new StoryUi(arena, ui, this.zones, this.banner, this.overlay, () => this.possession.active);
     this.zones.root.addChildAt(this.storyUi.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
@@ -305,7 +288,7 @@ export class OverworldScene implements Scene {
   enter() {
     this.ui.menu.inventory.attach({ apply: (op) => this.pack.localOp(op) });
     this.ui.menu.magic.attach({ equip: (wanted) => this.pack.setLoadout(wanted), zone: () => this.arena.zone.name });
-    this.ui.menu.party.attach({ rows: () => this.partyRows(), go: (slot) => this.dmGoTo(slot) });
+    this.ui.menu.party.attach({ rows: () => this.partyUi.rows(), go: (slot) => this.partyUi.goTo(slot) });
     this.dmBar.attach({
       say: (text) => this.desk.say(text),
       note: (text) => this.tasks.setNote(text),
@@ -476,7 +459,7 @@ export class OverworldScene implements Scene {
     );
     hud.update(
       this.hero,
-      this.combos.typed,
+      this.input.typed,
       this.arena.zone.name,
       this.arena.local.dm,
       this.storyUi.taskLine(),
@@ -519,7 +502,7 @@ export class OverworldScene implements Scene {
     // next door once it is over.
     const busy = this.zones.transition.busy;
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
-    const raw = this.readCommand(dt, reading);
+    const raw = this.input.command(dt, reading);
     this.possession.drive(raw, reading); // a possessed foe takes the DM's keys; the DM's own body stands still
     const cmd = this.possession.active ? NO_COMMAND : reading ? { ...raw, dx: 0, dy: 0 } : raw;
     const guests = [...arena.remotes.values()].map((p) => ({ p, cmd: this.host.command(p) }));
@@ -579,7 +562,7 @@ export class OverworldScene implements Scene {
     for (const crop of this.arena.crops) crop.grow(dt, false); // only the host says when a plot is ripe
     const busy = this.zones.transition.busy;
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
-    const cmd = this.readCommand(dt, reading);
+    const cmd = this.input.command(dt, reading);
     if (cmd.dx || cmd.dy)
       this.guestDrinking = false; // walking off stops the drink (the host sees it too)
     // A by a pond: the host starts or stops the drink (its `act`; with an enemy near it attacks and stops any drink);
@@ -620,74 +603,7 @@ export class OverworldScene implements Scene {
     arena.role = role;
   }
 
-  // --- The Dungeon Master ---
-
-  /** The players as the Dungeon Master's Party tab lists them. */
-  private partyRows(): PartyRow[] {
-    const { arena } = this;
-    return [...arena.remotes.values()]
-      .filter((p) => !p.dm)
-      .map((p) => ({
-        slot: p.slot,
-        name: playerName(p.slot),
-        color: PLAYER_COLORS[p.slot] ?? 0xffffff,
-        level: p.hero.stats.level,
-        hp: p.hero.stats.hp,
-        maxHp: p.hero.stats.maxHp,
-        where: zoneName(p.zone),
-        quest: currentQuest(p.hero.quests)?.title ?? '',
-        here: p.zone === arena.local.zone,
-      }));
-  }
-
-  /** The Dungeon Master steps to a player's side, through the iris, wherever in the world they are. */
-  private dmGoTo(slot: number) {
-    const { arena } = this;
-    const p = arena.remotes.get(slot);
-    if (!arena.local.dm || !p || this.zones.transition.busy) return;
-    this.possession.release(); // a held foe stays where it is: the DM goes alone
-    this.ui.menu.close();
-    const dest = arena.zoneOf(p);
-    this.zones.travel(arena.local, dest, { col: Math.floor(p.body.x / CELL), row: Math.floor(p.body.y / CELL) });
-  }
-
   // --- What the action key does ---
-
-  /** The local player's controls this frame. While `reading` (a menu, a dialog) nothing typed counts toward a combo. */
-  private readCommand(dt: number, reading: boolean): Command {
-    const combo = this.readCombo(dt, reading);
-    return {
-      dx: (actionDown('right') ? 1 : 0) - (actionDown('left') ? 1 : 0),
-      dy: (actionDown('down') ? 1 : 0) - (actionDown('up') ? 1 : 0),
-      act: actionPressed('attack'),
-      ...(combo === undefined ? {} : { combo }),
-      ...aimOf(pointerAim(this.zones.heroOnScreen())),
-    };
-  }
-
-  /**
-   * Feed the direction presses of this frame to the combo reader and say which combo of the wand or tome in hand was
-   * just finished, if any. Presses are the move actions as bound, and the on-screen pad (the D-pad also moves the hero).
-   */
-  private readCombo(dt: number, reading: boolean): number | undefined {
-    const combos = heroCombos(this.hero, this.arena.zone.name).map((c) => c.keys); // the wand or tome in hand, then the skills ready
-    const set = combos.join();
-    if (reading || this.comboSet !== set) {
-      this.combos.reset();
-      this.comboSet = set;
-    }
-    if (reading) return undefined;
-    this.combos.tick(dt, this.ui.touch.active ? COMBO_WINDOW_TOUCH : COMBO_WINDOW);
-    const pressed = COMBO_PRESSES.filter(([, action]) => actionPressed(action));
-    // A thumb that lands on a diagonal of the pad presses two directions at once: that is a slip, not two taps, so ignore it.
-    if (pressed.length > 1 && pressed.every(([, action]) => actionTouchedOnly(action))) return undefined;
-    let done: number | undefined;
-    for (const [key] of pressed) {
-      const i = this.combos.press(key, combos);
-      if (i >= 0) done = i;
-    }
-    return done;
-  }
 
   /** The local player's action button: advance the dialog, talk when next to the NPC or a shopkeeper, otherwise `attack`. */
   private handleAction(pressed: boolean, attack: () => void) {
