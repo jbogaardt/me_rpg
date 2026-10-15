@@ -35,6 +35,43 @@ export default tseslint.config(
     files: ['tools/**/*.ts', 'maps/**/*.ts', '*.config.{js,ts}', 'e2e/**/*.ts'],
     languageOptions: { globals: { ...globals.node } },
   },
+  // Layer boundaries (see CLAUDE.md "Where a feature belongs"): rules, networking and content are Pixi-free and know
+  // nothing of what draws them; entities never reach into the network.
+  {
+    files: ['src/systems/**/*.ts', 'src/net/**/*.ts', 'src/content/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['pixi.js', 'pixi.js/*'],
+              message: 'systems, net and content are Pixi-free (unit-tested without a browser).',
+            },
+            {
+              group: ['**/entities', '**/entities/*', '**/scenes', '**/scenes/*', '**/hud', '**/hud/*'],
+              message: 'systems, net and content must not depend on what draws or drives them.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/entities/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['**/net', '**/net/*'], message: "entities never import net/ (the wire format is net's)." },
+          ],
+        },
+      ],
+    },
+  },
   // Config files at the repo root aren't part of a tsconfig project.
   { files: ['*.config.{js,ts}'], ...tseslint.configs.disableTypeChecked },
   prettier,

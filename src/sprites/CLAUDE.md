@@ -4,7 +4,7 @@ Heroes, NPCs and mobs are stacks of layers composed at runtime. `doll.ts` (Pixi-
 `Outfit` (a part id per slot); `outfitLayers` orders layers by `z` so a cape or sword can sit both behind and in front of
 the body. Add or change art with the `add-sprite-part` skill.
 
-- **`parts.ts` is the source of truth for which art ships** (id `<slot>.<name>` to a generator item, body type, colour).
+- **`sprites/parts.ts` (at the repo root, with the build tool in `tools/sprites`) is the source of truth for which art ships** (id `<slot>.<name>` to a generator item, body type, colour).
   `npm run sprites -- build` (needs a clone of the LPC generator, `LPC_DIR`) packs layers into `public/sprites/lpc/`,
   `parts.json` and `credits.csv`. **Never hand-edit those; commit them with the catalog.** `check` runs in `verify`.
 - **`Wardrobe` loads parts as plain `<img>` elements, not Pixi textures** (they are only drawn onto a canvas, and a
