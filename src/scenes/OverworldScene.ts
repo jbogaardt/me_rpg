@@ -32,7 +32,7 @@ import { MapOverlay } from '../hud/MapOverlay';
 import { AreaBanner } from '../hud/AreaBanner';
 import { DRINK_KEY, HarvestButtons, type HarvestSpot } from '../hud/HarvestButtons';
 import { GuideArrow } from '../entities/GuideArrow';
-import { SEARCH_RADIUS, guideFor, searchMiddle, type Guide } from '../systems/guide';
+import { SEARCH_RADIUS, doorToward, guideFor, searchMiddle, type Guide } from '../systems/guide';
 import { zoneName } from '../systems/places';
 import type { Menu } from '../hud/Menu';
 import type { PartyRow } from '../hud/Party';
@@ -93,6 +93,7 @@ import { DmBar } from '../hud/DmBar';
 import { DmCard } from '../hud/DmCard';
 import { DmPrompts } from './overworld/DmPrompts';
 import { DmTasks } from './overworld/DmTasks';
+import { DmEpics } from './overworld/DmEpics';
 import { DmRevive } from './overworld/DmRevive';
 import { DmPossession } from './overworld/DmPossession';
 import { DmNarration } from './overworld/DmNarration';
@@ -169,6 +170,7 @@ export class OverworldScene implements Scene {
   private powers!: DmPowers;
   private prompts!: DmPrompts;
   private tasks!: DmTasks;
+  private epics!: DmEpics;
   private narration!: DmNarration;
   private revive!: DmRevive;
   private possession!: DmPossession;
@@ -250,13 +252,24 @@ export class OverworldScene implements Scene {
     };
     this.desk = new DmDesk(arena, ui.session, content, this.dayClock);
     this.votePanel.onChoose = (i) => this.desk.castVote(i);
-    this.requests.onAsk = (i) => this.desk.ask(i);
+    this.requests.onAsk = (i, text) => this.desk.ask(i, text);
+    this.epics.onDone = () => this.prompts.suggest('story'); // a saga is done: the story may have a next road
     this.powers = new DmPowers(arena, this.sim);
     this.tasks = new DmTasks(arena, this.sim, this.desk);
+    this.epics = new DmEpics(arena, this.zones, content, this.tasks, this.desk, this.sim);
     this.narration = new DmNarration(arena, ui.session, this.desk);
     this.revive = new DmRevive(arena, this.sim, this.zones);
     this.possession = new DmPossession(arena, this.sim);
-    this.prompts = new DmPrompts(arena, this.liveStory, this.desk, this.powers, this.dmCard, this.tasks, this.revive);
+    this.prompts = new DmPrompts(
+      arena,
+      this.liveStory,
+      this.desk,
+      this.powers,
+      this.dmCard,
+      this.tasks,
+      this.revive,
+      this.epics,
+    );
     // The DM's words show on every screen (never over a DM who is busy being a foe).
     this.desk.onSay = (text) => !this.possession.active && this.dmBar.speak(text, arena.clock);
     this.zones.root.addChildAt(this.arrow, 1);
@@ -338,6 +351,8 @@ export class OverworldScene implements Scene {
       fallen: () => this.revive.fallen.length,
       release: () => this.possession.release(),
       waits: () => this.powers.view(),
+      reply: (text) => this.prompts.reply(text),
+      canReply: () => this.prompts.canReply,
     });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
     const { session } = this.ui;
@@ -383,6 +398,7 @@ export class OverworldScene implements Scene {
     this.votePanel.sync(this.desk.openVoteForGuest);
     this.powers.update(dt); // the DM's storm in flight and cooldowns
     this.tasks.update(dt);
+    this.epics.update();
     this.syncRelic();
     this.revive.update(dt);
     this.narration.update(dt);
@@ -392,7 +408,7 @@ export class OverworldScene implements Scene {
     document.body.classList.toggle('dm-possessing', this.possession.active); // no pop-ups while a foe is held
     if (this.possession.active && this.dmCard.open) this.dmCard.hide();
     this.dmBar.update(arena.local.dm, arena.clock, arena.timeStopped, this.possession.name, this.ui.touch.active);
-    this.requests.update(arena.role === 'client', this.desk.askWait);
+    this.requests.update(arena.role === 'client', dt);
     this.prompts.update(
       dt,
       this.ui.dialog.active || this.ui.menu.open || this.zones.transition.busy || this.possession.active,
@@ -540,13 +556,13 @@ export class OverworldScene implements Scene {
     const commandOf = (p: Player) => (p === arena.local ? cmd : (guests.find((g) => g.p === p)?.cmd ?? NO_COMMAND));
     const here = arena.zone;
 
-    // The Dungeon Master stopped time: only they move; players, foes, plots, weather and the clock on the ground stand still.
+    // The Dungeon Master stopped time: the players can still walk (and take doors), but foes, plots, weather, the clock on the ground and what players do besides move stand still.
     const stopped = host && arena.timeStopped;
     if (host || !dialog.active) {
       for (const z of arena.occupiedZones()) {
         arena.inZone(z, () => {
           const present = arena.players();
-          for (const p of present) if (!stopped || p.dm) sim.updatePlayer(p, commandOf(p), dt);
+          for (const p of present) sim.updatePlayer(p, commandOf(p), dt); // time stopped or not, the party can walk
           if (!stopped) {
             for (const mob of z.mobs) mob.update(dt, z.mobWorld);
             for (const crop of z.crops) crop.grow(dt);
@@ -576,7 +592,7 @@ export class OverworldScene implements Scene {
     if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.act(arena.local));
     if (!stopped) for (const g of guests) if (g.cmd.act) arena.inZone(arena.zoneOf(g.p), () => this.act(g.p));
     if (!reading) this.zones.checkDoors(arena.local);
-    if (!stopped) for (const g of guests) this.zones.checkDoors(g.p);
+    for (const g of guests) this.zones.checkDoors(g.p);
     this.possession.follow();
     if (host) {
       this.host.broadcast(dt);
@@ -623,6 +639,7 @@ export class OverworldScene implements Scene {
     arena.pressure = role === 'host' ? this.ui.session.hostPressure : 'steady'; // what the host chose in the lobby
     this.powers.reset();
     this.tasks.reset();
+    this.epics.reset();
     this.revive.reset();
     this.possession.reset();
     this.narration.reset();
@@ -950,7 +967,12 @@ export class OverworldScene implements Scene {
       open && task.hint && !this.arena.local.dm && !this.zones.transition.busy
         ? { x: task.x, y: task.y, label: 'The way' }
         : null;
-    const target = calling ?? known;
+    // A quest set in another land (a saga's next step): the arrow leads to the door that goes that way.
+    const toward =
+      task && task.state === 'active' && task.zone !== z.name && !this.arena.local.dm && !this.zones.transition.busy
+        ? doorToward(z.data.doors, this.player, z.name, task.zone)
+        : null;
+    const target = calling ?? toward ?? known;
     this.arrow.update(
       dt,
       at(this.player.x, this.player.y - 20),

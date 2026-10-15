@@ -1,13 +1,14 @@
 import type { CardOption, DmCard } from '../../hud/DmCard';
 import { PRESSURES, PRESSURE_LABEL, isPressure } from '../../systems/dmPowers';
 import { Director, type Suggestion } from '../../systems/dmDirector';
-import { Inbox, REQUESTS, describe } from '../../systems/dmRequests';
+import { Inbox, MESSAGE_CODE, REPLIES, REQUESTS, describe, type InboxKind } from '../../systems/dmRequests';
 import { playerName } from '../../systems/looks';
 import { classify } from '../../systems/dmTasks';
 import { QUESTS } from '../../systems/quests';
 import { PRECIPS, type Precip } from '../../systems/weather';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
+import type { DmEpics } from './DmEpics';
 import type { DmPowers } from './DmPowers';
 import type { DmRevive } from './DmRevive';
 import type { DmTasks } from './DmTasks';
@@ -28,7 +29,7 @@ const HOURS: { id: string; label: string; hour: number }[] = [
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** What a card can be: everything the director suggests, and what the bar opens on demand. */
-export type CardKind = Suggestion | 'task' | 'sky' | 'pressure';
+export type CardKind = Suggestion | 'task' | 'sky' | 'pressure' | 'epic' | 'message';
 
 /**
  * What the Dungeon Master is asked, and when: the DM steers by reacting. `systems/dmDirector.ts` watches the party (their
@@ -45,6 +46,8 @@ export class DmPrompts {
   private inbox = new Inbox();
   private seen = new Map<number, number>(); // the last request counter heard from each friend
   private now = 0;
+  /** The seats of whoever asked for the card now up (or last up): a reply goes to them. */
+  private askers: { slots: number[]; at: number } = { slots: [], at: -Infinity };
 
   constructor(
     private arena: Arena,
@@ -54,6 +57,7 @@ export class DmPrompts {
     private card: DmCard,
     private tasks: DmTasks,
     private revive: DmRevive,
+    private epics: DmEpics,
   ) {
     card.onPick = (kind, id) => this.pick(kind, id);
     card.onDismiss = () => this.director.snooze(SNOOZE);
@@ -102,11 +106,15 @@ export class DmPrompts {
   /** Friends' requests that have come in since last looked (each friend's counter grows with each). */
   private hear() {
     if (this.arena.role !== 'host') return;
-    for (const [slot, id, code] of this.desk.requestsHeard()) {
+    for (const { slot, id, code, text } of this.desk.requestsHeard()) {
       if (this.seen.get(slot) === id) continue;
       this.seen.set(slot, id);
-      const ask = REQUESTS[code];
-      if (ask) this.inbox.add(ask.kind, this.now, playerName(slot));
+      if (code === MESSAGE_CODE) {
+        if (text) this.inbox.add('message', this.now, playerName(slot), slot, text);
+      } else {
+        const ask = REQUESTS[code];
+        if (ask) this.inbox.add(ask.kind, this.now, playerName(slot), slot);
+      }
     }
   }
 
@@ -116,16 +124,51 @@ export class DmPrompts {
     return { count: this.inbox.size, first: first ? describe(first) : '' };
   }
 
+  /** Something for the director's own use: a nudge goes in the inbox (the epic ending asks the story's next road). */
+  suggest(kind: InboxKind) {
+    if (kind === 'story' && !this.hasStory) return;
+    this.inbox.add(kind, this.now);
+  }
+
+  /** Can the DM answer someone now (the bar's Reply button)? */
+  get canReply(): boolean {
+    return this.askers.slots.length > 0 && this.now - this.askers.at < 180;
+  }
+
+  /** The DM answers whoever asked for the card now up, with their own words, privately. */
+  reply(text: string): boolean {
+    return this.canReply && this.desk.replyTo(this.askers.slots, text);
+  }
+
   /** The DM taps Requests: the oldest suggestion becomes a card (one that no longer applies is skipped). */
   openInbox() {
     for (let item = this.inbox.take(); item; item = this.inbox.take()) {
+      if (item.kind === 'message') {
+        this.askers = { slots: item.slots, at: this.now };
+        this.card.show({
+          kind: 'message',
+          title: `${item.from.join(' & ')} says`,
+          note: `“${item.text ?? ''}”`,
+          options: [...this.replyOptions(), { id: '@quest', label: 'Give them a quest' }],
+          seconds: null,
+        });
+        return;
+      }
       this.open(item.kind);
       if (this.card.open) {
-        if (item.from.length)
+        if (item.slots.length) {
+          this.askers = { slots: item.slots, at: this.now };
           this.card.setNote(`${item.from.join(' & ')} asked: ${describe(item).split(': ')[1] ?? ''}.`);
+          this.card.refresh([...this.card.options, ...this.replyOptions()]); // and the DM may answer them
+        }
         return;
       }
     }
+  }
+
+  /** Canned answers to whoever asked. */
+  private replyOptions(): CardOption[] {
+    return REPLIES.slice(0, 3).map((r, i) => ({ id: `r:${i}`, label: `Reply: ${r}` }));
   }
 
   /** Is there a live story whose next step the DM may choose? */
@@ -144,7 +187,7 @@ export class DmPrompts {
   /** Put a card up now. */
   open(kind: CardKind, note = '') {
     if (!this.runsWorld) return;
-    if (kind !== 'task' && kind !== 'sky' && kind !== 'pressure') this.inbox.drop(kind); // asked for by hand: no longer waiting
+    if (kind !== 'task' && kind !== 'pressure' && kind !== 'message') this.inbox.drop(kind); // asked for by hand: no longer waiting
     const show = (title: string, options: CardOption[], seconds: number | null = CARD_TIME, text = note) =>
       this.card.show({ kind, title, note: text, options, seconds });
     switch (kind) {
@@ -244,6 +287,27 @@ export class DmPrompts {
       case 'sky':
         show('How does the sky look?', this.skyOptions(false));
         return;
+      case 'message':
+        return; // only from the inbox
+      case 'epic': {
+        if (this.arena.role !== 'host') return;
+        if (this.epics.active) {
+          show('An epic quest is running', this.questOptions(), null, 'Point the way, or call the whole saga off.');
+          return;
+        }
+        const { items, more } = this.epics.options();
+        if (!items.length) {
+          show('No epic quest here', [], CARD_TIME, 'Stand in open country, away from a shop, to begin one.');
+          return;
+        }
+        show(
+          'Choose an epic quest',
+          [...items, ...(more ? [{ id: '@more', label: 'Other epic quests…' }] : [])],
+          null,
+          'Each is a chain of quests across several lands. Stars: how hard. Then how long, how many steps and lands.',
+        );
+        return;
+      }
       case 'pressure':
         show('How hard should the world push?', this.pressureOptions());
     }
@@ -315,8 +379,19 @@ export class DmPrompts {
       }
       return;
     }
+    if (id.startsWith('r:')) {
+      this.desk.replyTo(this.askers.slots, REPLIES[Number(id.slice(2))] ?? '');
+      return; // the card stays: answering is not deciding
+    }
+    if (id === '@more') {
+      this.epics.turnPage();
+      this.open('epic');
+      return;
+    }
     this.card.hide();
-    if (kind === 'revive') {
+    if (id === '@quest') this.open('next');
+    else if (id.startsWith('e:')) this.epics.begin(Number(id.slice(2)));
+    else if (kind === 'revive') {
       const [how, slot] = id.split(':');
       const n = Number(slot);
       if (how === 'where') this.revive.raiseWhere(n);
@@ -350,6 +425,7 @@ export class DmPrompts {
   }
 
   reset() {
+    this.askers = { slots: [], at: -Infinity };
     this.director.reset();
     this.inbox.clear();
     this.seen.clear();

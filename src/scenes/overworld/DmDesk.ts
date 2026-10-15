@@ -3,7 +3,7 @@ import type { DmMsg, VoteWire } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import { DIALS, enabled, type Dial } from '../../systems/capabilities';
 import type { DayClock } from '../../systems/daynight';
-import { REQUESTS, REQUEST_GAP } from '../../systems/dmRequests';
+import { MESSAGE_CODE, REQUESTS, cleanAsk } from '../../systems/dmRequests';
 import { cleanSay, sayTime } from '../../systems/dmPowers';
 import { taskFromWire, taskWire } from '../../systems/dmTasks';
 import { questDials } from '../../systems/quests';
@@ -64,9 +64,12 @@ export class DmDesk {
   private said: { id: number; text: string; left: number } | null = null;
   private saySeq = 0;
   private lastSay = 0;
-  private asked: [number, number] | undefined;
+  private asked: [number, number] | [number, number, string] | undefined;
   private askSeq = 0;
-  private askedAt = -Infinity;
+  /** Host: what the DM answered each friend, privately, and how long it still goes out. */
+  private replies = new Map<number, { id: number; text: string; left: number }>();
+  private replySeq = 0;
+  private lastReply = 0;
   /** A friend heard the DM: the scene shows the words. */
   onSay: (text: string) => void = () => {};
 
@@ -177,7 +180,9 @@ export class DmDesk {
     const base = { shift: Math.round(this.clock.shift * 1e4) / 1e4, dials: this.content.effectiveDials };
     const hold = this.arena.timeStopped;
     const task = this.arena.task;
-    const sig = JSON.stringify([base, vote?.id, [...(vote?.chosen ?? [])], say?.[0], hold, task]);
+    for (const [slot, r] of this.replies) if ((r.left -= dt) <= 0) this.replies.delete(slot);
+    const replied = [...this.replies].map(([slot, r]) => [slot, r.id]);
+    const sig = JSON.stringify([base, vote?.id, [...(vote?.chosen ?? [])], say?.[0], hold, task, replied]);
     if (sig === this.sentSig && this.timer < DM_RESEND) return;
     this.sentSig = sig;
     this.timer = 0;
@@ -188,6 +193,9 @@ export class DmDesk {
         n: ++this.seq,
         ...base,
         ...(say ? { say } : {}),
+        ...(this.replies.has(slot)
+          ? { reply: [this.replies.get(slot)!.id, this.replies.get(slot)!.text] as [number, string] }
+          : {}),
         ...(hold ? { hold: 1 as const } : {}),
         ...(task ? { task: taskWire(task) } : {}),
         vote: vote
@@ -218,6 +226,10 @@ export class DmDesk {
       this.lastSay = msg.say[0];
       this.onSay(msg.say[1]);
     }
+    if (msg.reply && msg.reply[0] !== this.lastReply) {
+      this.lastReply = msg.reply[0];
+      this.onSay(msg.reply[1]); // the DM's answer to this friend alone, shown as the DM's words
+    }
     this.told = msg.vote;
     if (!msg.vote || this.mine?.id !== msg.vote.id) this.mine = null;
   }
@@ -242,32 +254,45 @@ export class DmDesk {
     return [this.mine.id, this.mine.index];
   }
 
-  /** Friend: ask the Dungeon Master for something (an index of `REQUESTS`). False while the last ask is still cooling down. */
-  ask(code: number): boolean {
-    if (this.arena.role !== 'client' || this.askWait > 0 || code < 0 || code >= REQUESTS.length) return false;
+  /**
+   * Friend: ask the Dungeon Master for something: an index of `REQUESTS`, or (`MESSAGE_CODE` with `text`) words of their own.
+   * There is no waiting between asks. False for nothing to say.
+   */
+  ask(code: number, text = ''): boolean {
+    if (this.arena.role !== 'client') return false;
+    if (code === MESSAGE_CODE) {
+      const words = cleanAsk(text);
+      if (!words) return false;
+      this.asked = [++this.askSeq, code, words];
+      return true;
+    }
+    if (code < 0 || code >= REQUESTS.length) return false;
     this.asked = [++this.askSeq, code];
-    this.askedAt = this.arena.clock;
     return true;
   }
 
-  /** Seconds before this friend may ask again. */
-  get askWait(): number {
-    return Math.max(0, Math.ceil(REQUEST_GAP - (this.arena.clock - this.askedAt)));
-  }
-
-  /** What rides in this friend's input: the latest request, [counter, which]. */
-  get requestInput(): [number, number] | undefined {
+  /** What rides in this friend's input: the latest request, [counter, which, words?]. */
+  get requestInput(): [number, number] | [number, number, string] | undefined {
     return this.asked;
   }
 
-  /** Host: each friend's latest request as [slot, counter, which]; the caller keeps what it has already seen. */
-  requestsHeard(): [number, number, number][] {
-    const out: [number, number, number][] = [];
+  /** Host: each friend's latest request; the caller keeps what it has already seen (each friend's counter grows). */
+  requestsHeard(): { slot: number; id: number; code: number; text?: string }[] {
+    const out: { slot: number; id: number; code: number; text?: string }[] = [];
     for (const slot of this.arena.remotes.keys()) {
       const rq = this.session.peerInput(slot)?.rq;
-      if (rq) out.push([slot, rq[0], rq[1]]);
+      if (rq) out.push({ slot, id: rq[0], code: rq[1], ...(rq[2] ? { text: rq[2] } : {}) });
     }
     return out;
+  }
+
+  /** Host: answer friends privately (their seats): the words appear on their screens alone. False if there were none to say. */
+  replyTo(slots: number[], text: string): boolean {
+    const words = cleanSay(text);
+    if (!words || this.arena.role !== 'host' || !slots.length) return false;
+    for (const slot of slots) this.replies.set(slot, { id: ++this.replySeq, text: words, left: sayTime(words) });
+    this.timer = DM_RESEND; // tell them now
+    return true;
   }
 
   /** Back to solo (or a new game): forget what the DM said; the clock and capabilities go back to the content's. */
@@ -277,7 +302,8 @@ export class DmDesk {
     this.mine = null;
     this.asked = undefined;
     this.askSeq = 0;
-    this.askedAt = -Infinity;
+    this.replies.clear();
+    this.lastReply = 0;
     this.dialSig = '';
     this.sentSig = '';
     this.said = null;

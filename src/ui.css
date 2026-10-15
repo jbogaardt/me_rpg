@@ -350,13 +350,16 @@ body.dm-ui:not(.dm-possessing) #btn-a { display: none; }
 #dm-hot [hidden] { display: none; }
 @keyframes nudge { 50% { outline-color: transparent; } }
 #req-btn[hidden] { display: none; }
-#req-btn.waiting { opacity: 0.6; }
-#request { position: fixed; z-index: 4; right: calc(8px + env(safe-area-inset-right)); top: calc(64px + env(safe-area-inset-top)); width: min(260px, calc(100vw - 16px)); padding: 8px 12px 10px; box-sizing: border-box; font-family: var(--body); }
+#req-btn.sent { filter: brightness(1.5) drop-shadow(0 0 6px rgba(242, 211, 138, 0.9)); }
+#request { position: fixed; z-index: 4; right: calc(8px + env(safe-area-inset-right)); top: calc(64px + env(safe-area-inset-top)); width: min(300px, calc(100vw - 16px)); padding: 8px 12px 10px; box-sizing: border-box; font-family: var(--body); }
 #request[hidden] { display: none; }
 #request .title { margin: 0 0 6px; font: 700 16px var(--title); }
 #request .opts { display: grid; gap: 6px; }
 #request .mp-btn { width: 100%; text-align: left; padding: 6px 10px; }
-#request .mp-btn:disabled { opacity: 0.55; cursor: default; }
+#request form { display: flex; gap: 6px; margin-top: 8px; min-width: 0; }
+#request input { flex: 1; min-width: 0; font: 16px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
+#request form .mp-btn { width: auto; padding: 4px 10px; }
+#dm-card .mp-btn { white-space: pre-line; }
 body.touch-ui #request .mp-btn { min-height: 44px; }
 #dm-hot .mp-btn { padding: 6px 10px; font-size: 14px; white-space: nowrap; text-align: left; }
 #dm-hot .mp-btn:disabled { opacity: 0.55; cursor: default; }

@@ -90,7 +90,7 @@ export interface PeerInput {
   /** The friend's vote in the Dungeon Master's open vote (see InputMsg.vt), if any. */
   vt?: [number, number];
   /** The friend's latest request to the Dungeon Master (see InputMsg.rq), if any. */
-  rq?: [number, number];
+  rq?: [number, number] | [number, number, string];
   /** False when nothing arrived recently: ignore `keys` (the counters stay valid). */
   fresh: boolean;
 }

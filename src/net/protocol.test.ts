@@ -411,6 +411,13 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
       expect(parseMessage(JSON.stringify({ ...dm, say }))).toBeNull();
   });
 
+  it('round-trips the DM’s private reply and refuses one that is empty, too long or not a pair', () => {
+    const reply = { ...dm, reply: [2, 'On my way.'] as [number, string] };
+    expect(parseMessage(encodeMessage(reply))).toEqual(reply);
+    for (const r of [[2, ''], [2, 'x'.repeat(500)], [-1, 'hi'], ['a', 'hi'], [2], 'hi'])
+      expect(parseMessage(JSON.stringify({ ...dm, reply: r }))).toBeNull();
+  });
+
   it('round-trips a quest the DM gave and refuses one that is not a quest', () => {
     const quest = [0, 0, 2, 5, 'the_fen', 512, 99, 'Hunt 5 Goblins', 0, 1, 'goblin'] as Task;
     const task = { ...dm, task: quest };
@@ -452,6 +459,14 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
     expect(parseMessage(JSON.stringify({ ...input, rq: [0, 2] }))).toBeNull();
     expect(parseMessage(JSON.stringify({ ...input, rq: [1, 99] }))).toBeNull();
     expect(parseMessage(JSON.stringify({ ...input, rq: [1] }))).toBeNull();
+    // a friend's own words ride as the third value, only with the code that means words, and are never empty or long
+    expect(parseMessage(JSON.stringify({ ...input, rq: [2, 7, 'help at the bridge'] }))).toMatchObject({
+      rq: [2, 7, 'help at the bridge'],
+    });
+    expect(parseMessage(JSON.stringify({ ...input, rq: [2, 7] }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...input, rq: [2, 3, 'words with a canned code'] }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...input, rq: [2, 7, ''] }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...input, rq: [2, 7, 'x'.repeat(121)] }))).toBeNull();
   });
 });
 

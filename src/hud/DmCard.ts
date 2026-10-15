@@ -46,6 +46,11 @@ export class DmCard {
     });
   }
 
+  /** The buttons now on the card. */
+  get options(): CardOption[] {
+    return this.spec?.options ?? [];
+  }
+
   get kind(): string | null {
     return this.spec?.kind ?? null;
   }

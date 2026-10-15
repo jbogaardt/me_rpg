@@ -74,6 +74,25 @@ function nearest<T extends { x: number; y: number }>(points: T[], from: { x: num
   return best;
 }
 
+/**
+ * The arrow towards a land to be reached (a saga's next step): the door of this zone that leads on the way there, or null
+ * when already there (or no way is known).
+ */
+export function doorToward(
+  doors: GuideWorld['doors'],
+  from: { x: number; y: number },
+  zone: string,
+  goal: string,
+): Guide | null {
+  const next = nextZone(zone, [goal]);
+  if (!next) return null;
+  const door = nearest(
+    doors.filter((d) => d.to.zone === next).map((d) => doorCentre(d)),
+    from,
+  );
+  return door ? { x: door.x, y: door.y, label: zoneName(goal) } : null;
+}
+
 /** Where the arrow should point for this hero's quest, or null when there is nothing to point at (all done, or nothing to find here). */
 export function guideFor(hero: Hero, world: GuideWorld, from: { x: number; y: number }): Guide | null {
   const q = currentQuest(hero.quests);

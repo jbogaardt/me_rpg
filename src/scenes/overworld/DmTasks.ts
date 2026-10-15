@@ -18,6 +18,7 @@ import type { Player } from '../../entities/Player';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
 import type { Simulation } from './Simulation';
+import type { ZoneState } from '../ZoneState';
 
 /** What the DM says as a quest ends: their voice, to every screen (the telling of a new one is each player's own dialog). */
 const END: Record<'done' | 'failed', string> = { done: 'Well done.', failed: 'The chance has passed.' };
@@ -44,6 +45,7 @@ export class DmTasks {
   private seq = 0;
   private turn = 0;
   private note = '';
+  private epic: { title: string; step: number; total: number } | null = null;
   /** The offers on the card now: a pick is an index into this. */
   offers: QuestOffer[] = [];
 
@@ -100,8 +102,12 @@ export class DmTasks {
 
   /** What the DM's land holds. */
   private land(): Land {
+    return this.landOf(this.arena.view);
+  }
+
+  /** What a loaded land holds, as the DM's quests (and a saga's steps) need to know it. */
+  landOf(zone: ZoneState): Land {
     const { arena } = this;
-    const zone = arena.view;
     const party = arena.party();
     const level = party.length ? party.reduce((a, p) => a + p.hero.stats.level, 0) / party.length : 1;
     const here = party.filter((p) => p.zone === zone.name);
@@ -110,7 +116,9 @@ export class DmTasks {
           x: here.reduce((a, p) => a + p.body.x, 0) / here.length,
           y: here.reduce((a, p) => a + p.body.y, 0) / here.length,
         }
-      : { x: arena.local.body.x, y: arena.local.body.y };
+      : zone === arena.view
+        ? { x: arena.local.body.x, y: arena.local.body.y }
+        : { x: (zone.data.spawn.col + 0.5) * CELL, y: (zone.data.spawn.row + 0.5) * CELL }; // nobody there yet: from where one arrives
     const mobs = arena.inZone(zone, () =>
       arena.mobs.flatMap((m) => {
         const key = m.alive ? mobKey(m.kind) : undefined;
@@ -145,7 +153,12 @@ export class DmTasks {
   /** Give the quest on the card at `index`. False if one is running or there is no game to give it in. */
   call(index: number): boolean {
     const offer = this.offers[index];
-    if (this.arena.role !== 'host' || this.active || !offer) return false;
+    return !!offer && this.start(offer);
+  }
+
+  /** Give a quest written elsewhere (a saga's step), with the DM's telling of it. False if one is running or there is no game to give it in. */
+  start(offer: QuestOffer, note = ''): boolean {
+    if (this.arena.role !== 'host' || this.active) return false;
     this.book.cancel();
     if (!this.book.call(offer)) return false;
     this.kills = 0;
@@ -155,7 +168,7 @@ export class DmTasks {
     this.linger = 0;
     this.retarget = 0;
     this.seq++;
-    this.note = '';
+    this.note = cleanNote(note);
     this.publish();
     return true;
   }
@@ -179,12 +192,25 @@ export class DmTasks {
     this.publish();
   }
 
-  /** The DM calls it off. */
-  cancel() {
+  /** The DM calls it off (`byDm` false: it has only run its course). */
+  cancel(byDm = true) {
+    const was = this.active;
     this.book.cancel();
     this.note = '';
     this.publish();
+    if (byDm && was) this.onCancel();
   }
+
+  /** The quest's step in a saga, shown to the party with it (null when it is a quest of its own). */
+  setEpic(epic: { title: string; step: number; total: number } | null) {
+    this.epic = epic;
+    this.publish();
+  }
+
+  /** A quest has run its course: how it ended. */
+  onFinish: (state: TaskState) => void = () => {};
+  /** The DM called a running quest off. */
+  onCancel: () => void = () => {};
 
   /** The DM's own instructions for the quest running: every player is told them in place of the usual telling. */
   setNote(text: string): boolean {
@@ -200,7 +226,7 @@ export class DmTasks {
     const task = this.book.task;
     if (!task) return;
     if (task.state !== 'active') {
-      if ((this.linger -= dt) <= 0) this.cancel();
+      if ((this.linger -= dt) <= 0) this.cancel(false);
       return;
     }
     const party = this.arena.party();
@@ -261,13 +287,18 @@ export class DmTasks {
         );
       }
     }
-    this.desk.say(END[result === 'done' ? 'done' : 'failed']);
+    if (!this.epic) this.desk.say(END[result === 'done' ? 'done' : 'failed']); // a saga says its own words
     this.linger = TASK_LINGER;
+    this.onFinish(result);
   }
 
   private publish() {
     this.arena.task = this.book.task
-      ? { ...viewOf(this.book.task), ...(this.note && this.active ? { note: this.note } : {}) }
+      ? {
+          ...viewOf(this.book.task),
+          ...(this.note && this.active ? { note: this.note } : {}),
+          ...(this.epic ? { epic: this.epic } : {}),
+        }
       : null;
   }
 
@@ -277,6 +308,7 @@ export class DmTasks {
     this.touched = [];
     this.finder = null;
     this.note = '';
+    this.epic = null;
     this.arena.task = null;
   }
 }

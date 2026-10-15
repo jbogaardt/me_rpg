@@ -350,6 +350,10 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   await inbox.click();
   await expect(host.locator('#dm-card')).toBeVisible();
   expect(await host.locator('#dm-card [data-opt]').count()).toBeGreaterThanOrEqual(2);
+  // The DM answers the friend privately, and the card stays up: answering is not deciding.
+  await host.locator('#dm-card [data-opt="r:0"]').click();
+  await expect(friend.locator('#dm-speech')).toContainText('On my way.', { timeout: 15_000 });
+  await expect(host.locator('#dm-card')).toBeVisible();
   await host.locator('canvas').click({ position: { x: 20, y: 20 } });
   await expect(host.locator('#dm-card')).toBeHidden();
 

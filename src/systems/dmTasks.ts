@@ -205,6 +205,8 @@ export interface TaskView {
   hint: boolean;
   /** The DM's own instructions for it, when they wrote some (they replace the usual telling). */
   note?: string;
+  /** The saga it is a step of, when it is one (systems/dmEpics.ts): its name, which step this is (1-based) and how many. */
+  epic?: { title: string; step: number; total: number };
 }
 
 export const viewOf = (t: Task): TaskView => ({
@@ -223,18 +225,20 @@ export const viewOf = (t: Task): TaskView => ({
 
 /** The tracker line: what was asked and how it stands. */
 export function taskText(v: TaskView): string {
-  if (v.state === 'done') return `${v.title}: done!`;
-  if (v.state === 'failed') return `${v.title}: failed`;
-  return v.goal > 1 ? `${v.title} (${v.progress}/${v.goal})` : v.title;
+  const saga = v.epic ? `${v.epic.title} ${v.epic.step}/${v.epic.total}: ` : '';
+  if (v.state === 'done') return `${saga}${v.title}: done!`;
+  if (v.state === 'failed') return `${saga}${v.title}: failed`;
+  return `${saga}${v.goal > 1 ? `${v.title} (${v.progress}/${v.goal})` : v.title}`;
 }
 
 /**
- * [kind, state, progress, goal, zone, x, y, title, bits, hint, what, note?]: how a quest travels in a `dm` message (the
- * note only when the DM wrote instructions).
+ * [kind, state, progress, goal, zone, x, y, title, bits, hint, what, note?, epic?]: how a quest travels in a `dm` message
+ * (the note, '' for none, only when the DM wrote instructions or it is a saga's step; the saga as "step/total title").
  */
 export type TaskWire =
   | [number, number, number, number, string, number, number, string, number, number, string]
-  | [number, number, number, number, string, number, number, string, number, number, string, string];
+  | [number, number, number, number, string, number, number, string, number, number, string, string]
+  | [number, number, number, number, string, number, number, string, number, number, string, string, string];
 
 export const taskWire = (v: TaskView): TaskWire =>
   [
@@ -249,7 +253,8 @@ export const taskWire = (v: TaskView): TaskWire =>
     v.bits,
     v.hint ? 1 : 0,
     v.what,
-    ...(v.note ? [v.note] : []),
+    ...(v.note || v.epic ? [v.note ?? ''] : []),
+    ...(v.epic ? [`${v.epic.step}/${v.epic.total} ${v.epic.title}`] : []),
   ] as TaskWire;
 
 const MAX_ZONE = 48;
@@ -259,8 +264,8 @@ const MAX_COORD = 100_000;
 
 /** A quest from a message, or null if it is not one. */
 export function taskFromWire(w: unknown): TaskView | null {
-  if (!Array.isArray(w) || (w.length !== 11 && w.length !== 12)) return null;
-  const [k, s, progress, goal, zone, x, y, title, bits, hint, what, note] = w as unknown[];
+  if (!Array.isArray(w) || w.length < 11 || w.length > 13) return null;
+  const [k, s, progress, goal, zone, x, y, title, bits, hint, what, note, saga] = w as unknown[];
   const kind = typeof k === 'number' ? TASK_KINDS[k] : undefined;
   const state = typeof s === 'number' ? TASK_STATES[s] : undefined;
   const whole = (n: unknown, max: number): n is number =>
@@ -278,6 +283,27 @@ export function taskFromWire(w: unknown): TaskView | null {
     return null;
   if (!text(zone, MAX_ZONE, 1) || !text(title, MAX_TITLE, 1) || !text(what, MAX_WHAT)) return null;
   if (!whole(bits, 0x7fffffff) || (hint !== 0 && hint !== 1)) return null;
-  if (note !== undefined && !text(note, MAX_NOTE, 1)) return null;
-  return { kind, state, progress, goal, zone, x, y, title, what, bits, hint: hint === 1, ...(note ? { note } : {}) };
+  if (note !== undefined && !text(note, MAX_NOTE)) return null;
+  let epic: TaskView['epic'];
+  if (saga !== undefined) {
+    const m = typeof saga === 'string' ? /^(\d{1,3})\/(\d{1,3}) (.{1,48})$/.exec(saga) : null;
+    if (!m) return null;
+    epic = { step: Number(m[1]), total: Number(m[2]), title: m[3]! };
+    if (epic.step < 1 || epic.step > epic.total) return null;
+  }
+  return {
+    kind,
+    state,
+    progress,
+    goal,
+    zone,
+    x,
+    y,
+    title,
+    what,
+    bits,
+    hint: hint === 1,
+    ...(note ? { note } : {}),
+    ...(epic ? { epic } : {}),
+  };
 }

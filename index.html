@@ -48,13 +48,14 @@
     <div id="dm-bar" class="panel thin wood" hidden>
       <button type="button" class="handle" aria-expanded="true">DM tools</button>
       <div class="tools">
-        <form autocomplete="off"><input type="text" placeholder="Speak to the party, or write new instructions…" aria-label="Speak to the party" enterkeyhint="send" /><button type="submit" class="mp-btn panel thin wood">Speak</button><button type="button" class="mp-btn panel thin wood" data-power="note" title="Replace the running quest's telling with these words" hidden>As instructions</button></form>
+        <form autocomplete="off"><input type="text" placeholder="Speak to the party, or write new instructions…" aria-label="Speak to the party" enterkeyhint="send" /><button type="submit" class="mp-btn panel thin wood">Speak</button><button type="button" class="mp-btn panel thin wood" data-power="reply" title="Answer the player who asked, privately" hidden>Reply</button><button type="button" class="mp-btn panel thin wood" data-power="note" title="Replace the running quest's telling with these words" hidden>As instructions</button></form>
         <div class="row">
           <p class="hint"></p>
           <button type="button" class="mp-btn panel thin wood" data-power="release" hidden>Let go</button>
         </div>
         <div class="powers">
           <button type="button" class="mp-btn panel thin wood" data-power="task">Quest</button>
+          <button type="button" class="mp-btn panel thin wood" data-power="epic" title="A saga of quests across several lands">Epic quest</button>
           <button type="button" class="mp-btn panel thin wood" data-power="cancel" hidden>Cancel quest</button>
           <button type="button" class="mp-btn panel thin wood" data-power="story" hidden>Story</button>
           <button type="button" class="mp-btn panel thin wood" data-power="sky">Sky</button>
@@ -79,6 +80,7 @@
     <div id="request" class="panel thin paper" role="group" aria-label="Ask the Dungeon Master" hidden>
       <p class="title">Ask the Dungeon Master</p>
       <div class="opts"></div>
+      <form autocomplete="off"><input type="text" placeholder="Or tell the Dungeon Master something…" aria-label="Tell the Dungeon Master something" enterkeyhint="send" /><button type="submit" class="mp-btn panel thin wood">Send</button></form>
     </div>
     <div id="dm-hold" class="panel thin wood" role="status" hidden></div>
     <!-- A choice offered to the Dungeon Master at the right moment (src/hud/DmCard.ts, scenes/overworld/DmPrompts.ts). -->

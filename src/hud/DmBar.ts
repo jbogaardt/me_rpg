@@ -25,7 +25,11 @@ export interface DmBarHandlers {
   stop(): boolean;
   reset(): boolean;
   /** Open the card for the sky (weather, time of day) or the pressure now, rather than waiting for the moment. */
-  card(kind: 'story' | 'sky' | 'pressure' | 'task' | 'revive'): void;
+  card(kind: 'story' | 'sky' | 'pressure' | 'task' | 'revive' | 'epic'): void;
+  /** Answer whoever asked for the card up, with these words, privately. */
+  reply(text: string): boolean;
+  /** Is there someone to answer (the Reply button shows only then)? */
+  canReply(): boolean;
   /** How many fallen players could be raised (the Raise button shows only then). */
   fallen(): number;
   /** Let go of the foe being possessed (the Let go button: a phone has no Esc). */
@@ -68,6 +72,10 @@ export class DmBar {
     });
     this.speech.querySelector('.close')!.addEventListener('click', () => this.dismissSpeech());
     power('inbox').addEventListener('click', () => this.handlers?.openInbox());
+    power('reply').addEventListener('click', () => {
+      if (this.handlers?.reply(this.input.value)) this.input.value = '';
+    });
+    power('epic').addEventListener('click', () => this.handlers?.card('epic'));
     power('release').addEventListener('click', () => this.handlers?.release());
     window.addEventListener('pointerdown', (e) => {
       if (!(e.target instanceof HTMLCanvasElement)) return;
@@ -123,7 +131,7 @@ export class DmBar {
       const fallen = this.handlers!.fallen();
       const questing = this.handlers!.questing();
       const waiting = this.handlers!.waiting();
-      const key = `${waiting.count}${waiting.first} ${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen} ${touch} ${questing}`;
+      const key = `${waiting.count}${waiting.first} ${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen} ${touch} ${questing} ${this.handlers!.canReply()}`;
       if (key !== this.shown) {
         this.shown = key;
         const set = (name: string, text: string, wait = 0, lit = false) => {
@@ -145,6 +153,7 @@ export class DmBar {
         inbox.hidden = waiting.count === 0;
         inbox.textContent = waiting.count > 1 ? `💬 Requests (${waiting.count})` : '💬 Request';
         inbox.title = waiting.first;
+        document.querySelector<HTMLElement>('[data-power="reply"]')!.hidden = !this.handlers!.canReply();
         document.querySelector<HTMLElement>('[data-power="cancel"]')!.hidden = !questing;
         document.querySelector<HTMLElement>('[data-power="note"]')!.hidden = !questing;
         set('story', 'Story');

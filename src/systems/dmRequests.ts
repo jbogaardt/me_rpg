@@ -1,27 +1,42 @@
-// Requests and suggestions for the Dungeon Master, held in an inbox instead of popping up (Pixi-free, tested; core engine,
-// co-op). The director's own nudges ("it is going too easy") and a player's canned requests ("we're lost") are the same
-// thing to the DM: a suggestion of a card they may open when they like, shown as a count on a button, never as a popup.
+// Requests, suggestions and replies between the party and the Dungeon Master (Pixi-free, tested; core engine, co-op). The
+// director's own nudges ("it is going too easy") and a player's asks ("we're lost", or a few words of their own) are the
+// same thing to the DM: something waiting in an inbox, shown as a count on a button, never a popup. The DM answers back:
+// a canned reply or their own words, sent to whoever asked and shown only to them.
 
 import type { Suggestion } from './dmDirector';
 
-/** What a player may ask of the DM: each is a canned line (nothing typed) that maps to the card it brings up. */
-export const REQUESTS: { label: string; kind: Suggestion }[] = [
+/** What an inbox item can be: the director's suggestions, a card a player asks for by name, or a player's own words. */
+export type InboxKind = Suggestion | 'sky' | 'epic' | 'message';
+
+/** What a player may ask of the DM with one tap: each maps to the card it brings up for the DM. */
+export const REQUESTS: { label: string; kind: InboxKind }[] = [
   { label: 'We are lost', kind: 'lost' },
   { label: 'This is too hard', kind: 'struggle' },
   { label: 'This is too easy', kind: 'easy' },
   { label: 'Give us a quest', kind: 'next' },
+  { label: 'Give us an epic quest', kind: 'epic' },
+  { label: 'Change the weather', kind: 'sky' },
   { label: 'Let us move on', kind: 'story' },
 ];
 
-/** Seconds a player waits between requests, and a request waits unanswered before it is dropped. */
-export const REQUEST_GAP = 20;
+/** The code of "something I typed", after the canned ones. */
+export const MESSAGE_CODE = REQUESTS.length;
+/** The most letters a player may type to the DM. */
+export const MAX_ASK = 120;
+
+/** The DM's canned replies. */
+export const REPLIES = ['On my way.', 'Give me a moment.', 'Not right now.', 'Good idea. Doing it.'];
+
+/** A player's words as they will be sent: trimmed, one line, no longer than `MAX_ASK`. */
+export const cleanAsk = (text: string): string => text.replace(/\s+/g, ' ').trim().slice(0, MAX_ASK).trim();
+
+/** Seconds a request waits unanswered before it is dropped (a nudge of the director's, which goes stale, much sooner). */
 export const REQUEST_LIFE = 180;
 export const SUGGESTION_LIFE = 90;
 /** The most a DM's inbox holds. */
 export const INBOX_MAX = 8;
 
-/** What the DM sees about a suggestion (the director's own have no one asking). */
-const NOTE: Record<Suggestion, string> = {
+const NOTE: Record<InboxKind, string> = {
   revive: 'Someone has fallen',
   story: 'The story waits for a road',
   struggle: 'The party is struggling',
@@ -31,12 +46,19 @@ const NOTE: Record<Suggestion, string> = {
   done: 'A quest just ended',
   next: 'Nothing has been asked of the party',
   land: 'The party reached a new land',
+  sky: 'How does the sky look?',
+  epic: 'An epic quest could begin',
+  message: 'A message',
 };
 
 export interface InboxItem {
-  kind: Suggestion;
+  kind: InboxKind;
   /** Who asked (names), empty for the director. */
   from: string[];
+  /** The seats of those who asked, to answer them. */
+  slots: number[];
+  /** What they wrote, for a message. */
+  text?: string;
   /** When it arrived (seconds on the inbox's clock). */
   at: number;
 }
@@ -53,18 +75,30 @@ export class Inbox {
     return this.items;
   }
 
-  /** A suggestion arrives. One of a kind waits at a time (a second asker is added to the first). */
-  add(kind: Suggestion, now: number, from = '') {
-    const have = this.items.find((i) => i.kind === kind);
+  /**
+   * Something arrives. One of a kind waits at a time (a second asker is added to the first); every message waits on its own
+   * (the same words from the same seat twice are one).
+   */
+  add(kind: InboxKind, now: number, from = '', slot?: number, text?: string) {
+    const have = this.items.find((i) =>
+      kind === 'message' ? i.kind === 'message' && i.text === text && i.slots.includes(slot ?? -1) : i.kind === kind,
+    );
     if (have) {
       if (from && !have.from.includes(from)) have.from.push(from);
+      if (slot !== undefined && !have.slots.includes(slot)) have.slots.push(slot);
       return;
     }
     if (this.items.length >= INBOX_MAX) this.items.shift();
-    this.items.push({ kind, from: from ? [from] : [], at: now });
+    this.items.push({
+      kind,
+      from: from ? [from] : [],
+      slots: slot === undefined ? [] : [slot],
+      ...(text ? { text } : {}),
+      at: now,
+    });
   }
 
-  /** The oldest suggestion, taken out. */
+  /** The oldest item, taken out. */
   take(): InboxItem | undefined {
     return this.items.shift();
   }
@@ -74,9 +108,9 @@ export class Inbox {
     this.items = this.items.filter((i) => now - i.at < (i.from.length ? REQUEST_LIFE : SUGGESTION_LIFE));
   }
 
-  /** The DM dealt with this kind by hand: it is no longer waiting. */
-  drop(kind: Suggestion) {
-    this.items = this.items.filter((i) => i.kind !== kind);
+  /** The DM dealt with this kind by hand: it is no longer waiting (messages are never dropped this way). */
+  drop(kind: InboxKind) {
+    this.items = this.items.filter((i) => i.kind !== kind || i.kind === 'message');
   }
 
   clear() {
@@ -84,8 +118,9 @@ export class Inbox {
   }
 }
 
-/** One line for an item: "Player 2: We are lost" or "It is going too easy". */
+/** One line for an item: "Player 2: We are lost", "Player 2: “come help”" or "It is going too easy". */
 export function describe(item: InboxItem): string {
+  if (item.kind === 'message') return `${item.from.join(' & ')}: “${item.text ?? ''}”`;
   if (!item.from.length) return NOTE[item.kind];
   const ask = REQUESTS.find((r) => r.kind === item.kind)?.label ?? NOTE[item.kind];
   return `${item.from.join(' & ')}: ${ask}`;

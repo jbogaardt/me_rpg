@@ -6,7 +6,15 @@ import type { Player } from '../../entities/Player';
 import type { Menu } from '../../hud/Menu';
 import type { ShopCounter } from '../../hud/ShopCounter';
 import { decodeMob } from '../../net/mobWire';
-import { decodeEvent, FLAG, MAX_VIEW, pondsFromWire, type PlayerSnap, type SnapMsg } from '../../net/protocol';
+import {
+  decodeEvent,
+  FLAG,
+  MAX_VIEW,
+  pondsFromWire,
+  type InputMsg,
+  type PlayerSnap,
+  type SnapMsg,
+} from '../../net/protocol';
 import type { Session } from '../../net/session';
 import { newHero, type Hero } from '../../systems/combat';
 import { encodeOp, type InvOpWire } from '../../systems/inventory';
@@ -134,7 +142,7 @@ export class GuestLink {
   }
 
   /** Send the controls: when they change, and otherwise at INPUT_HZ so a lost packet is soon corrected. */
-  sendInput(dt: number, keys: number, aim?: Aim, vote?: [number, number], request?: [number, number]) {
+  sendInput(dt: number, keys: number, aim?: Aim, vote?: [number, number], request?: InputMsg['rq']) {
     const { arena } = this;
     this.inputTimer += dt;
     const ack = Math.max(0, this.lastEvent);

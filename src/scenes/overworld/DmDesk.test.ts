@@ -11,6 +11,7 @@ import { DmDesk } from './DmDesk';
 function host() {
   const sent: [number, Message][] = [];
   const votes = new Map<number, [number, number]>();
+  const asks = new Map<number, [number, number] | [number, number, string]>();
   const arena = {
     role: 'host',
     timeStopped: false,
@@ -25,7 +26,8 @@ function host() {
     sendTo: (slot: number, m: Message) => sent.push([slot, m]),
     peerInput: (slot: number) => {
       const vt = votes.get(slot);
-      return (vt ? { vt } : {}) as PeerInput;
+      const rq = asks.get(slot);
+      return { ...(vt ? { vt } : {}), ...(rq ? { rq } : {}) } as PeerInput;
     },
   } as unknown as Session;
   let dials: Partial<Record<Dial, boolean>> = {};
@@ -42,7 +44,7 @@ function host() {
   const clock = new DayClock(() => 0);
   const desk = new DmDesk(arena, session, content, clock);
   const last = (slot: number) => [...sent].reverse().find(([s]) => s === slot)?.[1] as DmMsg | undefined;
-  return { desk, sent, votes, last, clock, arena, content: () => dials };
+  return { desk, sent, votes, asks, last, clock, arena, content: () => dials };
 }
 
 const roads = [
@@ -97,6 +99,43 @@ describe('the Dungeon Master’s desk', () => {
     desk.say('Run');
     desk.update(0);
     expect(last(1)!.say).toEqual([2, 'Run']);
+  });
+
+  it('answers a friend privately: only their screen gets the words, and only for a while', () => {
+    const { desk, last } = host();
+    expect(desk.replyTo([], 'hello')).toBe(false);
+    expect(desk.replyTo([1], '   ')).toBe(false);
+    expect(desk.replyTo([1], '  On   my\nway  ')).toBe(true);
+    desk.update(0);
+    expect(last(1)!.reply).toEqual([1, 'On my way']);
+    expect(last(2)!.reply).toBeUndefined();
+    expect(last(1)!.say).toBeUndefined(); // not said to the world
+    desk.update(9);
+    expect(last(1)!.reply).toBeUndefined();
+  });
+
+  it('hears what a friend asks, canned or in their own words', () => {
+    const { desk, asks } = host();
+    expect(desk.requestsHeard()).toEqual([]);
+    asks.set(1, [1, 0]);
+    asks.set(2, [4, 7, 'come to the bridge']);
+    expect(desk.requestsHeard()).toEqual([
+      { slot: 1, id: 1, code: 0 },
+      { slot: 2, id: 4, code: 7, text: 'come to the bridge' },
+    ]);
+  });
+
+  it('lets a friend ask as often as they like, and only with something to say', () => {
+    const { desk, arena } = host();
+    (arena as { role: string }).role = 'client';
+    expect(desk.ask(0)).toBe(true);
+    expect(desk.requestInput).toEqual([1, 0]);
+    expect(desk.ask(0)).toBe(true); // no waiting
+    expect(desk.requestInput).toEqual([2, 0]);
+    expect(desk.ask(99)).toBe(false);
+    expect(desk.ask(7, '   ')).toBe(false);
+    expect(desk.ask(7, '  help \n me ')).toBe(true);
+    expect(desk.requestInput).toEqual([3, 7, 'help me']);
   });
 
   it('tells every friend the quest the DM gave, and stops saying it when it is over', () => {

@@ -150,8 +150,20 @@ describe('what the party sees', () => {
     expect(wire).toHaveLength(12);
     expect(taskFromWire(JSON.parse(JSON.stringify(wire)))).toEqual(v);
     expect(taskFromWire([...wire.slice(0, 11), 'x'.repeat(241)])).toBeNull();
-    expect(taskFromWire([...wire.slice(0, 11), ''])).toBeNull();
     expect(taskWire(viewOf(b.task!))).toHaveLength(11);
+  });
+
+  it('carries a saga’s step as a thirteenth value, with an empty note when the DM wrote none', () => {
+    const b = new TaskBook();
+    b.call(offer({}));
+    const v = { ...viewOf(b.task!), epic: { title: 'The Long Road', step: 2, total: 5 } };
+    const wire = taskWire(v);
+    expect(wire).toHaveLength(13);
+    expect(wire[11]).toBe('');
+    expect(taskFromWire(JSON.parse(JSON.stringify(wire)))).toEqual(v);
+    for (const bad of ['2/5', '0/5 X', '6/5 X', 'x/5 X', '2/5 ' + 'x'.repeat(60)])
+      expect(taskFromWire([...wire.slice(0, 12), bad])).toBeNull();
+    expect(taskText(v)).toContain('The Long Road 2/5: ');
   });
 
   it('says what was asked and how it stands, and pays by the size of the ask', () => {

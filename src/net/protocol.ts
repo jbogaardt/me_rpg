@@ -27,7 +27,7 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 import { DIALS } from '../systems/capabilities';
 import { MAX_SAY } from '../systems/dmPowers';
-import { REQUESTS as DM_REQUESTS } from '../systems/dmRequests';
+import { MAX_ASK, REQUESTS as DM_REQUESTS } from '../systems/dmRequests';
 
 const MAX_REQUESTS = DM_REQUESTS.length;
 import { taskFromWire, type TaskWire } from '../systems/dmTasks';
@@ -40,9 +40,10 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v34: `DmMsg.hold`, time stopped by the Dungeon Master. v35: `DmMsg.task`, a task the DM called for the party.
  * v36: `FLAG.hidden`, the DM out of sight while they possess a foe. v37: `DmMsg.task` carries a real quest (title, what, bits, hint).
  * v38: `DmMsg.task` may carry the DM's own instructions for it (a note); `DmMsg.say` may be up to 240 letters.
- * v39: the guest's request to the DM, `InputMsg.rq`.
+ * v39: the guest's request to the DM, `InputMsg.rq`. v40: `rq` may carry words of the guest's own and `DmMsg.reply` the
+ * DM's private answer; `DmMsg.task` may be a saga's step (a note '' and the saga's name and place in it).
  */
-export const PROTOCOL_VERSION = 39;
+export const PROTOCOL_VERSION = 40;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -150,7 +151,7 @@ export interface InputMsg {
   /** The guest's vote in the Dungeon Master's open vote: [the vote's id, the option's index]. Repeated like the keys. */
   vt?: [number, number];
   /** The guest's latest request to the Dungeon Master: [a counter that grows with each, which canned request]. Repeated like the keys. */
-  rq?: [number, number];
+  rq?: [number, number] | [number, number, string];
 }
 
 /**
@@ -304,6 +305,8 @@ export interface DmMsg {
   vote: VoteWire | null;
   /** What the DM just said: [a number that changes with each saying, the words]; repeated for a few seconds, then absent. */
   say?: [number, string];
+  /** The DM's private answer to this friend: [a number that changes with each, the words]; repeated for a few seconds. */
+  reply?: [number, string];
   /** 1 while the DM has stopped time (everyone but them stands still); absent otherwise. */
   hold?: 1;
   /** The task the DM has called for the party (systems/dmTasks.ts `taskWire`); absent when there is none. */
@@ -636,8 +639,18 @@ export function parseMessage(raw: unknown): Message | null {
       const vt = m.vt;
       if (vt !== undefined && !(numbers(vt, 2) && isCount(vt[0]) && isIndex(vt[1], MAX_VOTE_OPTIONS))) return null;
       const rq = m.rq;
-      if (rq !== undefined && !(numbers(rq, 2) && isCount(rq[0]) && rq[0] > 0 && isIndex(rq[1], MAX_REQUESTS)))
-        return null;
+      if (rq !== undefined) {
+        const ok =
+          Array.isArray(rq) &&
+          (rq.length === 2 || rq.length === 3) &&
+          isCount(rq[0]) &&
+          rq[0] > 0 &&
+          isIndex(rq[1], MAX_REQUESTS + 1) &&
+          (rq.length === 2
+            ? rq[1] < MAX_REQUESTS
+            : rq[1] === MAX_REQUESTS && typeof rq[2] === 'string' && rq[2].length >= 1 && rq[2].length <= MAX_ASK);
+        if (!ok) return null;
+      }
       const base = {
         k: 'in',
         n: m.n,
@@ -649,7 +662,9 @@ export function parseMessage(raw: unknown): Message | null {
         vr: m.vr,
         ...(m.am === undefined ? {} : { am: m.am }),
         ...(vt === undefined ? {} : { vt: [vt[0], vt[1]] as [number, number] }),
-        ...(rq === undefined ? {} : { rq: [rq[0], rq[1]] as [number, number] }),
+        ...(rq === undefined
+          ? {}
+          : { rq: (rq.length === 2 ? [rq[0], rq[1]] : [rq[0], rq[1], rq[2]]) as InputMsg['rq'] }),
       } as const;
       if (m.inv === undefined) return base;
       const inv = m.inv;
@@ -818,8 +833,24 @@ export function parseMessage(raw: unknown): Message | null {
           s[1].length >= 1 &&
           s[1].length <= MAX_SAY);
       const holdOk = m.hold === undefined || m.hold === 1;
+      const replyOk =
+        m.reply === undefined ||
+        (Array.isArray(m.reply) &&
+          m.reply.length === 2 &&
+          isCount(m.reply[0]) &&
+          typeof m.reply[1] === 'string' &&
+          m.reply[1].length >= 1 &&
+          m.reply[1].length <= MAX_SAY);
       const taskOk = m.task === undefined || taskFromWire(m.task) !== null;
-      return isCount(m.n) && isNum(m.shift) && Math.abs(m.shift) <= 1 && dialsOk && voteOk && sayOk && holdOk && taskOk
+      return isCount(m.n) &&
+        isNum(m.shift) &&
+        Math.abs(m.shift) <= 1 &&
+        dialsOk &&
+        voteOk &&
+        sayOk &&
+        holdOk &&
+        replyOk &&
+        taskOk
         ? {
             k: 'dm',
             n: m.n,
@@ -829,6 +860,7 @@ export function parseMessage(raw: unknown): Message | null {
             ...(s === undefined ? {} : { say: s as [number, string] }),
             ...(m.hold === 1 ? { hold: 1 as const } : {}),
             ...(m.task === undefined ? {} : { task: m.task as TaskWire }),
+            ...(m.reply === undefined ? {} : { reply: m.reply as [number, string] }),
           }
         : null;
     }
