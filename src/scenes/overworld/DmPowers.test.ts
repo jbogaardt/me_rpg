@@ -132,7 +132,7 @@ describe('the director’s two moves', () => {
     const { powers, arena } = world();
     const hurt = { slot: 1, zone: 'z', body: { x: 0, y: 0 }, hero: { stats: { hp: 10, maxHp: 90 } } };
     const whole = { slot: 2, zone: 'z', body: { x: 0, y: 0 }, hero: { stats: { hp: 50, maxHp: 50 } } };
-    Object.assign(arena, { party: () => [hurt, whole], zoneOf: () => ({ name: 'z' }) });
+    Object.assign(arena, { partyAll: () => [hurt, whole], zoneOf: () => ({ name: 'z' }) });
     powers.easeOff();
     expect(arena.pressure).toBe('gentle');
     expect(hurt.hero.stats.hp).toBe(40);

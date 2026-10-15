@@ -35,6 +35,7 @@ function game(far = false) {
     view: a,
     local: { zone: 'a', body: { x: 0, y: 0 } },
     party: () => party,
+    partyAll: () => party,
     mobs: [],
     zones: new Map([['a', a]]),
     inZone: <T>(_z: unknown, fn: () => T) => fn(),

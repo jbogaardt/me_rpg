@@ -75,7 +75,8 @@ export class DmRevive {
   }
 
   private move(slot: number, dest: Arena['view'], x: number, y: number): boolean {
-    const p = this.arena.party().find((q) => q.slot === slot);
+    // Anywhere in the world: a fallen player wakes at the start, which is not the zone the DM is in (`party()` is only the zone's).
+    const p = this.arena.everyone().find((q) => q.slot === slot && !q.dm);
     if (!p) return false;
     this.zones.travel(p, dest, { col: Math.floor(x / CELL), row: Math.floor(y / CELL) });
     this.arena.inZone(dest, () => {

@@ -25,7 +25,7 @@ export interface DmBarHandlers {
   stop(): boolean;
   reset(): boolean;
   /** Open the card for the sky (weather, time of day) or the pressure now, rather than waiting for the moment. */
-  card(kind: 'story' | 'sky' | 'pressure' | 'task' | 'revive' | 'epic'): void;
+  card(kind: 'story' | 'sky' | 'pressure' | 'task' | 'revive' | 'epic' | 'suggest'): void;
   /** Answer whoever asked for the card up, with these words, privately. */
   reply(text: string): boolean;
   /** Is there someone to answer (the Reply button shows only then)? */
@@ -75,6 +75,7 @@ export class DmBar {
     power('reply').addEventListener('click', () => {
       if (this.handlers?.reply(this.input.value)) this.input.value = '';
     });
+    power('suggest').addEventListener('click', () => this.handlers?.card('suggest'));
     power('epic').addEventListener('click', () => this.handlers?.card('epic'));
     power('release').addEventListener('click', () => this.handlers?.release());
     window.addEventListener('pointerdown', (e) => {

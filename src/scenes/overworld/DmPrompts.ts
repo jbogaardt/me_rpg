@@ -29,7 +29,7 @@ const HOURS: { id: string; label: string; hour: number }[] = [
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** What a card can be: everything the director suggests, and what the bar opens on demand. */
-export type CardKind = Suggestion | 'task' | 'sky' | 'pressure' | 'epic' | 'message';
+export type CardKind = Suggestion | 'task' | 'sky' | 'pressure' | 'epic' | 'message' | 'suggest';
 
 /**
  * What the Dungeon Master is asked, and when: the DM steers by reacting. `systems/dmDirector.ts` watches the party (their
@@ -78,7 +78,7 @@ export class DmPrompts {
     this.inbox.expire(this.now);
     this.card.update(dt);
     if (this.card.kind === 'story') this.card.refresh(this.storyOptions());
-    const party = this.arena.party();
+    const party = this.arena.partyAll();
     const fracs = party.map((p) => p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp));
     const t = this.tasks.view;
     const pace = this.tasks.pace;
@@ -122,6 +122,37 @@ export class DmPrompts {
   get waiting(): { count: number; first: string } {
     const first = this.inbox.list[0];
     return { count: this.inbox.size, first: first ? describe(first) : '' };
+  }
+
+  /**
+   * What the DM could do right now, written from how things stand (the Suggest button): what is waiting in the inbox first,
+   * then what fits the party's health, the quest and the story. Never more than five.
+   */
+  suggestions(): { kind: InboxKind; label: string }[] {
+    const out: { kind: InboxKind; label: string }[] = [];
+    const add = (kind: InboxKind, label: string) => {
+      if (!out.some((o) => o.kind === kind)) out.push({ kind, label });
+    };
+    for (const item of this.inbox.list) if (item.kind !== 'message') add(item.kind, describe(item));
+    if (this.revive.fallen.length) add('revive', 'Someone has fallen: raise them?');
+    if (this.hasStory) add('story', 'Choose where the story goes next');
+    const party = this.arena.partyAll();
+    const fracs = party.map((p) => p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp));
+    const min = fracs.length ? Math.min(...fracs) : 1;
+    const avg = fracs.length ? fracs.reduce((a, b) => a + b, 0) / fracs.length : 1;
+    const t = this.tasks.view;
+    const pace = this.tasks.pace;
+    if (min < 0.5) add('struggle', 'The party is hurt: ease off?');
+    if (t?.state === 'active') {
+      if (avg >= 0.8) add('easy', 'They are in fine shape: turn up the heat?');
+      if (pace && !pace.hint && pace.sinceProgress >= 45) add('lost', 'No progress for a while: point the way?');
+      add('twist', 'Make it more interesting');
+    } else {
+      add('next', 'Give the party a quest');
+      add('epic', 'Begin an epic quest across several lands');
+    }
+    add('sky', 'Change the sky');
+    return out.slice(0, 5);
   }
 
   /** Something for the director's own use: a nudge goes in the inbox (the epic ending asks the story's next road). */
@@ -180,14 +211,14 @@ export class DmPrompts {
   /** The party has finished every task told so far and there is a road to take. */
   private storyReady(): boolean {
     if (!this.hasStory) return false;
-    const done = Math.max(0, ...this.arena.party().map((p) => p.hero.quests.stage));
+    const done = Math.max(0, ...this.arena.partyAll().map((p) => p.hero.quests.stage));
     return done >= QUESTS.length;
   }
 
   /** Put a card up now. */
   open(kind: CardKind, note = '') {
     if (!this.runsWorld) return;
-    if (kind !== 'task' && kind !== 'pressure' && kind !== 'message') this.inbox.drop(kind); // asked for by hand: no longer waiting
+    if (kind !== 'task' && kind !== 'pressure' && kind !== 'message' && kind !== 'suggest') this.inbox.drop(kind); // asked for by hand: no longer waiting
     const show = (title: string, options: CardOption[], seconds: number | null = CARD_TIME, text = note) =>
       this.card.show({ kind, title, note: text, options, seconds });
     switch (kind) {
@@ -289,6 +320,14 @@ export class DmPrompts {
         return;
       case 'message':
         return; // only from the inbox
+      case 'suggest':
+        show(
+          'What could you do now?',
+          this.suggestions().map((s) => ({ id: `s:${s.kind}`, label: s.label })),
+          null,
+          'Each opens the choice it names. Nothing happens until you pick.',
+        );
+        return;
       case 'epic': {
         if (this.arena.role !== 'host') return;
         if (this.epics.active) {
@@ -382,6 +421,11 @@ export class DmPrompts {
     if (id.startsWith('r:')) {
       this.desk.replyTo(this.askers.slots, REPLIES[Number(id.slice(2))] ?? '');
       return; // the card stays: answering is not deciding
+    }
+    if (id.startsWith('s:')) {
+      this.card.hide();
+      this.open(id.slice(2) as CardKind);
+      return;
     }
     if (id === '@more') {
       this.epics.turnPage();

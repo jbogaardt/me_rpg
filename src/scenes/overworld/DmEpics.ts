@@ -153,7 +153,7 @@ export class DmEpics {
     this.run = null;
     this.tasks.setEpic(null);
     const { xp, gold } = epicReward(plan);
-    for (const p of this.arena.party()) this.sim.reward(p, xp, gold);
+    for (const p of this.arena.partyAll()) this.sim.reward(p, xp, gold);
     this.desk.say(cleanSay(plan.epic.ending));
     this.onDone();
   }

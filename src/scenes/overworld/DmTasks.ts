@@ -108,7 +108,7 @@ export class DmTasks {
   /** What a loaded land holds, as the DM's quests (and a saga's steps) need to know it. */
   landOf(zone: ZoneState): Land {
     const { arena } = this;
-    const party = arena.party();
+    const party = arena.partyAll();
     const level = party.length ? party.reduce((a, p) => a + p.hero.stats.level, 0) / party.length : 1;
     const here = party.filter((p) => p.zone === zone.name);
     const centre = here.length
@@ -229,7 +229,7 @@ export class DmTasks {
       if ((this.linger -= dt) <= 0) this.cancel(false);
       return;
     }
-    const party = this.arena.party();
+    const party = this.arena.partyAll();
     const fracs = party.map((p) => p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp));
     this.retarget -= dt;
     const at = this.retarget <= 0 ? this.target(party) : undefined;

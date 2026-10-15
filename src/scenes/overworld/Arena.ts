@@ -158,6 +158,11 @@ export class Arena {
     return this.players().filter((p) => !p.dm);
   }
 
+  /** The whole party wherever they are in the world, not just the zone being worked in (the DM's tasks follow them anywhere). */
+  partyAll(): Player[] {
+    return this.everyone().filter((p) => !p.dm);
+  }
+
   /** The player with this number, if they are in the zone being worked in. */
   playerNumbered(slot: number | undefined): Player | undefined {
     return this.players().find((p) => p.slot === slot);

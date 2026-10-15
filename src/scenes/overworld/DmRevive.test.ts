@@ -14,13 +14,15 @@ function game(role: 'host' | 'solo' = 'host') {
   ]);
   const player = (slot: number, name: string) => ({ slot, hero: { name }, body: { x: 0, y: 0 } }) as unknown as Player;
   const party = [player(1, 'Ana'), player(2, 'Bo')];
-  const dm = { body: { x: 320, y: 480 } };
+  const dm = { dm: true, slot: 0, body: { x: 320, y: 480 } };
   const arena = {
     role,
     zones,
     view: wood,
     local: dm,
-    party: () => party,
+    // `party()` is only the zone being worked in (the DM's); the fallen wake at the start, so they are elsewhere
+    party: () => [],
+    everyone: () => [dm, ...party],
     inZone: <T>(_z: unknown, fn: () => T) => fn(),
   } as unknown as Arena;
   const moved: { slot: number; zone: string; cell: { col: number; row: number } }[] = [];

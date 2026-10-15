@@ -15,6 +15,7 @@ function game(role: 'host' | 'solo' = 'host') {
     task: null,
     local: { zone: 'fen', body: { x: 0, y: 0 } },
     party: () => party,
+    partyAll: () => party,
     zones: new Map(),
     inZone: <T>(_z: unknown, fn: () => T) => fn(),
     zoneOf: () => ({ name: 'fen' }),
@@ -67,6 +68,14 @@ describe('the DM’s quest, on the host', () => {
     expect(arena.task).toBeNull();
     give();
     expect(arena.task!.note).toBeUndefined();
+  });
+
+  it('follows the whole party, even when the DM stands in another land', () => {
+    const { tasks, arena, give } = game();
+    (arena as unknown as { party: () => unknown[] }).party = () => []; // nobody in the DM's own land
+    give({ kind: 'visit', title: 'Reach the Mill', zone: 'fen', goal: 1, what: 'The Mill', x: 100, y: 100 });
+    tasks.update(0.1); // the party (in the fen) stands at the place
+    expect(arena.task!.state).toBe('done');
   });
 
   it('counts only the kills of its foe in its zone, pays the whole party, and says well done', () => {

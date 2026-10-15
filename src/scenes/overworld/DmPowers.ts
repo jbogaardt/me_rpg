@@ -137,7 +137,7 @@ export class DmPowers {
   /** Ease off: the world pushes gently, and the party catches its breath (a third of their health comes back). */
   easeOff() {
     this.arena.pressure = 'gentle';
-    for (const p of this.arena.party()) {
+    for (const p of this.arena.partyAll()) {
       const s = p.hero.stats;
       const back = Math.round(s.maxHp * 0.33);
       if (s.hp >= s.maxHp || back <= 0) continue;
