@@ -48,16 +48,27 @@ void (async () => {
     extensions.add(CullerPlugin); // skips drawing `cullable` objects (map props) that are off screen
 
     const app = new Application();
-    await app.init({
-      background: '#000000',
-      resizeTo: window,
-      antialias: false,
-      roundPixels: true,
-      // Render at the device's pixel density so the canvas stays crisp on phones and retina screens.
-      // app.screen and layout stay in CSS pixels (autoDensity).
-      resolution: window.devicePixelRatio || 1,
-      autoDensity: true,
-    });
+    try {
+      await app.init({
+        // Pixi's canvas fallback cannot draw this game (it crashes in drawImage), so never fall back to it: with no
+        // WebGL or WebGPU the start fails with a message that says what to turn on (below).
+        preference: ['webgl', 'webgpu'],
+        background: '#000000',
+        resizeTo: window,
+        antialias: false,
+        roundPixels: true,
+        // Render at the device's pixel density so the canvas stays crisp on phones and retina screens.
+        // app.screen and layout stay in CSS pixels (autoDensity).
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+      });
+    } catch (err) {
+      console.error('renderer failed to start', err);
+      throw new Error(
+        'This browser cannot draw the game: graphics acceleration (WebGL) is off. In Chrome, open Settings > System, turn on "Use graphics acceleration when available", restart Chrome, and check that chrome://gpu says WebGL is hardware accelerated.',
+        { cause: err },
+      );
+    }
     document.body.appendChild(app.canvas);
 
     // Glyph atlas for floating combat text (white + black outline, tinted per use). The world layer is
