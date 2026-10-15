@@ -189,7 +189,7 @@ export class ZoneState {
     });
     const cropFrames = sheetGrid(sprites.crops, CROP_STAGES, CROP_KINDS.length, CELL, CELL * 2);
     this.crops = data.crops.map((c) => new Crop(c, cropFrames));
-    for (const spot of barrelSpots(data.objects)) {
+    for (const spot of barrelSpots(data)) {
       const texture = this.world.objectTexture(data.objects[spot.object]!);
       if (!texture) continue; // no art to carry: leave the map's own drawing
       this.world.setObjectAlpha(spot.object, 0);

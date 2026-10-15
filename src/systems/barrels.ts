@@ -3,7 +3,7 @@
 // where it stands, is carried over a player's head while held and is set down in front of them. Core engine: it asks
 // the map's tag, never a content id.
 import { DIR_VEC, type Direction } from '../core/direction';
-import { CELL, type MapObject } from '../map/types';
+import { CELL, type MapData } from '../map/types';
 import { Collision, type Body } from './collision';
 
 /** The tag of a map object that can be carried. */
@@ -27,11 +27,19 @@ export interface BarrelSpot {
   y: number;
 }
 
-/** The barrels of a map, in object order (which is their number everywhere), up to `MAX_BARRELS`. */
-export function barrelSpots(objects: readonly MapObject[]): BarrelSpot[] {
+/**
+ * The barrels of a map, in object order (which is their number everywhere), up to `MAX_BARRELS`. A barrel standing in a
+ * neighbouring biome's margin (surface `beyond`) is that neighbour's own to carry, not this map's.
+ */
+export function barrelSpots(data: Pick<MapData, 'objects' | 'surfaces' | 'surface' | 'width'>): BarrelSpot[] {
+  const beyond = data.surfaces.indexOf('beyond');
   const out: BarrelSpot[] = [];
-  objects.forEach((o, object) => {
-    if (o.tag === BARREL_TAG && out.length < MAX_BARRELS) out.push({ object, x: o.px + o.w / 2, y: o.py + o.h });
+  data.objects.forEach((o, object) => {
+    if (o.tag !== BARREL_TAG || out.length >= MAX_BARRELS) return;
+    const [x, y] = [o.px + o.w / 2, o.py + o.h];
+    const cell = Math.floor((y - 1) / CELL) * data.width + Math.floor(x / CELL);
+    if (beyond >= 0 && data.surface[cell] === beyond) return;
+    out.push({ object, x, y });
   });
   return out;
 }
