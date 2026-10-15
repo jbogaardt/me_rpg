@@ -12,10 +12,10 @@ The game is intended to become Zelda-like: real-time action combat, item collect
 
 ## Where a feature belongs (decide this for every new feature)
 
-Every feature lives in one of these layers; say which in its bullet below when you add or change it, and keep the line between them clean:
+Every feature lives in one of these layers; say which in the owning file's design notes (map below) when you add or change it, and keep the line between them clean:
 
 - **Core engine** (`src/core`, `src/net`, `src/map`, `src/entities`, the rules in `src/systems`, the map pipeline): what every world needs and no story would switch off (moving, combat, doors and zones, co-op, the inventory). It is written against registries and properties, **never against a content id**: no `itemOf('waterskin')`, no `'greenwood'` in `src/` (ask an item property such as `waters`, a role such as `QUEST_GIVER`, or a biome's own data instead). Known leftovers from campaign 1, to clear when touched: the trainer `TRAINER = 'orin'`, the skills' training grounds (`SKILLS[].zone`) and the `'town'` fallbacks in `guide.ts`/`QuestLog.ts`.
-- **Capability** (`CAPABILITIES` in `src/systems/capabilities.ts`): an engine system some stories want and others do not (the map, hunger, combos, weather...). It is gated with `enabled(id, zone)` at its one choke point, tuned with `setting`, switched per campaign, arc, biome or region, and the content checks refuse content that asks for it where it is off (`checkAgainstCapabilities`). When a new system is something a story could do without, make it a capability in the same change (see Capabilities below).
+- **Capability** (`CAPABILITIES` in `src/systems/capabilities.ts`): an engine system some stories want and others do not (the map, hunger, combos, weather...). It is gated with `enabled(id, zone)` at its one choke point, tuned with `setting`, switched per campaign, arc, biome or region, and the content checks refuse content that asks for it where it is off (`checkAgainstCapabilities`). When a new system is something a story could do without, make it a capability in the same change (see `src/systems/CLAUDE.md`).
 - **Content** (a campaign's five files, validated by `src/content/schema.ts`): what a world holds (who, where, what story, which goods). A new *kind* of thing is a schema field with its reader and cross-checks (every id it names must exist), an install step in `ContentManager.install` into a registry the engine reads, and a check in `tools/content/campaigns.test.ts` or the map check where a rule spans campaigns.
 - **Packs** (`public/content/packs/`, `src/content/packs.ts`): the same content in mix-and-match form for random worlds; a new content kind gets a pack section (merged with the clash check, validated by `checkPacks`) once it is general enough. Campaign 1 gets a feature first; the packs get it when it no longer assumes campaign 1's world.
 - **Co-op** is not a layer but a question for every layer (see Conventions): what the host owns and what a guest is sent.
@@ -31,8 +31,8 @@ Every feature lives in one of these layers; say which in its bullet below when y
 - `npm run test:e2e` — Playwright smoke tests against the production build (set `PW_CHROMIUM` to a local Chromium, e.g. `/opt/pw-browsers/chromium-*/chrome-linux/chrome` in cloud sessions)
 - `npm run typecheck` — typecheck only (game, `tools/`, `e2e/`, `relay/`)
 - `npm run relay` — the matchmaking relay in memory on `http://localhost:8787` (use with `VITE_RELAY_URL=http://localhost:8787 npm run dev` to try online play locally)
-- `npm run map -- build|check|render|layout …` — zone specs → map JSON + previews + checks; `layout <biome>` prints a biome's walls, gaps and open ground (see Map pipeline)
-- `npm run sprites -- build|check|preview …` — LPC part catalog → packed layer sheets (see Characters). `build` needs a clone of the LPC generator (`LPC_DIR`); `check` (run by `verify` and `build`) does not
+- `npm run map -- build|check|render|layout …` — zone specs → map JSON + previews + checks; `layout <biome>` prints a biome's walls, gaps and open ground (see `tools/map/CLAUDE.md`)
+- `npm run sprites -- build|check|preview …` — LPC part catalog → packed layer sheets (see `src/sprites/CLAUDE.md`). `build` needs a clone of the LPC generator (`LPC_DIR`); `check` (run by `verify` and `build`) does not
 
 CI (`.github/workflows/ci.yml`) runs `verify`, `build` and the e2e tests on every pull request; the deploy workflow runs `verify` before publishing.
 
@@ -47,6 +47,7 @@ Other project skills: `build-zone` (any map change), `add-mob-kind` (new enemy),
 Pixi-free logic (rules, collision, camera maths, map format) is kept separate from Pixi code so it is unit-tested without a browser; keep it that way.
 
 - `src/main.ts` boots: creates the PixiJS `Application` (async `app.init`, wrapped in a `void` IIFE — avoid top-level await), registers the manifest, loads the content (`ContentManager.load(staticContent)`, then `install()`), loads assets and the start node's zone behind the loading overlay, creates the shared DOM UI (`Hud`, `Menu`, `Dialog`, touch controls) and starts a `SceneManager` with an `OverworldScene`.
+
 ## Where the detail lives (progressive disclosure)
 
 These files describe design philosophy, architecture and the traps that bite, not facts a grep finds: constants, field names and formats live in the code and its file headers (**put an explanation there when a header lacks one**). Directory-scoped `CLAUDE.md` files load when you work in that directory. **When a change alters a design rule or invariant, update the file that owns it in the same change:**
@@ -70,7 +71,7 @@ The project is in rapid development, and this is how every session (Claude or hu
 
 ## Conventions
 
-- **Name the layer** (see Where a feature belongs): every new feature is core engine, a capability, content or a pack section, and its bullet in this file says so. A system a story could do without is a capability from the start; a new kind of thing in the world is content, never an id in `src/`.
+- **Name the layer** (see Where a feature belongs): every new feature is core engine, a capability, content or a pack section, and the owning file's notes say so. A system a story could do without is a capability from the start; a new kind of thing in the world is content, never an id in `src/`.
 - **Keep multiplayer in sync with single player.** Co-op is not an afterthought: whenever a feature touches gameplay state (stats, gold, pack, gear, shops, chests, combat, mobs, map objects, a new key or menu tab), decide how it behaves for the host and for a guest *in the same change*. The host owns every hero and all simulation; a guest only sends wishes (`do`, `tr`, input) and renders what it is told (`snap`, `pack`, `looks`, `trade`). If something is solo/host-only for now, say so in the UI (e.g. the guest's "kept by the host" note) and in this file. Anything new that a guest must see goes through `src/net/protocol.ts` (validated in `parseMessage`, version bumped, a `protocol.test.ts` case) and `session.ts`; anything new that needs a guest's input is a numbered/ackable command, not a raw event. Add unit tests for the pure rules and an `e2e/multiplayer.spec.ts` case when a flow spans two players. **When you change a single-player system, update the co-op text (and the matching text in the other direction; see the map above for which file) so the docs always describe both.**
 
 - TypeScript is strict plus `noUncheckedIndexedAccess` and `verbatimModuleSyntax` for game code (`tools/` indexes freely). Prefer a clear error over `!` when data can be missing; `!` is fine for DOM lookups that `index.html` guarantees.
