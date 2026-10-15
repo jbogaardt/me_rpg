@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "npm run typecheck && npm run map -- check && npm run sprites -- check && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tools && tsc --noEmit -p e2e && tsc --noEmit -p relay",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tools && tsc --noEmit -p e2e && tsc --noEmit -p relay && tsc --noEmit -p server",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -17,7 +17,8 @@
     "map": "tsx tools/map/cli.ts",
     "tilesets": "tsx tools/map/recolor.ts && tsx tools/map/trees.ts && prettier --write tools/map/treeAtlas.ts && tsx tools/map/town.ts && tsx tools/map/interior.ts && tsx tools/map/crops.ts",
     "sprites": "tsx tools/sprites/cli.ts",
-    "relay": "tsx tools/relay/dev-server.ts"
+    "relay": "tsx tools/relay/dev-server.ts",
+    "dm-bot": "tsx server/host.ts"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.3.0",

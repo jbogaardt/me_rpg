@@ -52,6 +52,12 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   it through the usual damage rules. Their own body rides invisibly on it (`Player.hidden`, `FLAG.hidden`) so the camera,
   zone and friends' view follow, and they can never die. While possessing, pop-ups are hidden and the director waits.
 
+## A bot as the DM
+
+`?dmbot` puts a handle on the page (`DmBot.ts`) that an outside script drives (`server/`): it hosts, hears each friend's
+request (`DmPrompts.onHeard`), takes a story road and replies, all through the host's own steps. Nothing new is on the
+wire, and without `?dmbot` the handle does not exist.
+
 ## Co-op rules
 
 The host owns everything; friends are told. The host sends each friend a `dm` message when it changes and once a second.

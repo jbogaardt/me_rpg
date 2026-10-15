@@ -32,7 +32,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['tools/**/*.ts', 'maps/**/*.ts', '*.config.{js,ts}', 'e2e/**/*.ts'],
+    files: ['tools/**/*.ts', 'maps/**/*.ts', '*.config.{js,ts}', 'e2e/**/*.ts', 'server/**/*.ts'],
     languageOptions: { globals: { ...globals.node } },
   },
   // Layer boundaries (see CLAUDE.md "Where a feature belongs"): rules, networking and content are Pixi-free and know

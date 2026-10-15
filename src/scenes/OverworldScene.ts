@@ -55,6 +55,7 @@ import { LocalInput } from './overworld/LocalInput';
 import { Interactions } from './overworld/Interactions';
 import { PartyUi } from './overworld/PartyUi';
 import { Story } from './overworld/Story';
+import { createDmBot, type DmBotApi } from './overworld/DmBot';
 import { DmDesk } from './overworld/DmDesk';
 import { DmPowers } from './overworld/DmPowers';
 import { DmBar } from '../hud/DmBar';
@@ -630,6 +631,11 @@ export class OverworldScene implements Scene {
   }
 
   /** Put gear on the hero: stats follow the item and the sprite is recomposed with its parts. */
+  /** The handle an outside Dungeon Master drives this host through (`?dmbot`, see overworld/DmBot.ts). */
+  dmBot(): DmBotApi {
+    return createDmBot(this.ui.session, this.arena, this.liveStory, this.desk, this.prompts);
+  }
+
   equip(item: Item) {
     equip(this.hero, item);
     this.arena.refreshLook();

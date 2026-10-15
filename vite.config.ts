@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [assetVersionsPlugin()],
   test: {
     // Unit tests cover the Pixi-free logic (rules, collision, camera, map format, map checks).
-    include: ['src/**/*.test.ts', 'tools/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tools/**/*.test.ts', 'server/**/*.test.ts'],
     environment: 'node',
     // The content (public/content/*.json) is installed before every test file, as main.ts does at boot.
     setupFiles: ['tools/content/setup.ts'],

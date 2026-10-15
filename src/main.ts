@@ -20,6 +20,7 @@ import { Menu } from './hud/Menu';
 import { ShopCounter } from './hud/ShopCounter';
 import { TradeUi } from './hud/Trade';
 import { Session } from './net/session';
+import { wantsDmBot } from './scenes/overworld/DmBot';
 import { OverworldScene } from './scenes/OverworldScene';
 import { MOB_KINDS } from './systems/combat';
 import { NPC_LOOKS } from './systems/looks';
@@ -143,6 +144,9 @@ void (async () => {
     scenes.change(overworld);
     scenes.start();
     loading.done();
+
+    // The handle an outside Dungeon Master drives this page through (tools/dm-bot), only when the address asks for it.
+    if (wantsDmBot(window.location.search)) Object.assign(window, { dmBot: overworld.dmBot() });
 
     // Dev-only handle for playtest scripts (see .claude/skills/playtest); stripped from production builds.
     if (import.meta.env.DEV)
