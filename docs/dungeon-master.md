@@ -54,9 +54,9 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 
 ## A bot as the DM
 
-`?dmbot` puts a handle on the page (`DmBot.ts`) that an outside script drives (`server/`): it hosts, hears each friend's
-request (`DmPrompts.onHeard`), takes a story road and replies, all through the host's own steps. Nothing new is on the
-wire, and without `?dmbot` the handle does not exist.
+The DM can be a program (`server/`, the DM bot): `?dmbot` puts a handle on the page (`DmBot.ts`) through which an outside
+script hosts, opens the inbox, answers cards, takes story roads, replies, speaks, follows the party and starts the game.
+Every call is a step the bar already offers, so nothing new is on the wire; without `?dmbot` the handle does not exist.
 
 ## Co-op rules
 

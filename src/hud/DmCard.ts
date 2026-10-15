@@ -55,6 +55,13 @@ export class DmCard {
     return this.spec?.kind ?? null;
   }
 
+  /** The card as it reads now (null when none is up). */
+  get view(): { kind: string; title: string; note: string; options: CardOption[] } | null {
+    if (!this.spec) return null;
+    const { kind, options } = this.spec;
+    return { kind, title: this.title.textContent ?? '', note: this.note.textContent ?? '', options };
+  }
+
   get open(): boolean {
     return this.spec !== null;
   }

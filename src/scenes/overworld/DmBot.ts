@@ -1,76 +1,155 @@
-// The handle an outside Dungeon Master drives the host through (tools/dm-bot). `?dmbot` in the address puts it on
-// `window.dmBot` (main.ts); without it nothing here exists. A headless browser hosts the game, each friend's request to
-// the DM (`DmPrompts.onHeard`) is handed to `window.onPlayerAction`, which the bot's script exposes, and the script answers
-// through the same handle: choose the live story's next step, reply to the friend. It adds nothing to co-op: it drives
-// the host's own steps (`Session.createGame`, `Story.choose`, `DmDesk.replyTo`), so friends see what a person hosting
-// would show them, through the usual messages. Core engine (the host), off unless asked for.
+// The handle an outside Dungeon Master drives the host through (server/, the DM bot). `?dmbot` in the address puts it on
+// `window.dmBot` (main.ts); without it nothing here exists. A headless browser hosts the game and the bot runs the DM's
+// whole job through it, polling: it opens what waits in the DM's inbox (the director's nudges, the friends' requests and
+// words), answers each card as a person would tap it, replies, speaks, keeps up with the party and starts the game. It
+// adds nothing to co-op and no rule: every call is a step the DM bar already offers (`DmPrompts`, `Story.choose`,
+// `DmDesk`, `PartyUi.goTo`, `Session`), so friends see what a person hosting would show them. Core engine (the host),
+// off unless asked for.
 
+import type { DmCard } from '../../hud/DmCard';
 import type { Session } from '../../net/session';
+import { zoneName } from '../../systems/places';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
-import type { DmPrompts } from './DmPrompts';
+import type { CardKind, DmPrompts } from './DmPrompts';
+import type { DmTasks } from './DmTasks';
 import type { Story, StoryView } from './Story';
 
-/** What the bot is told with every action, and can ask for at any time. */
+/** A card waiting for the DM's answer, as the bar shows it. */
+export interface DmBotCard {
+  kind: string;
+  title: string;
+  note: string;
+  options: { id: string; label: string; on?: boolean }[];
+}
+
+/** A friend at the table. */
+export interface DmBotFriend {
+  slot: number;
+  area: string;
+  /** Health from 0 to 1. */
+  hp: number;
+  /** In the same zone as the DM. */
+  near: boolean;
+}
+
+/** How things stand, for the bot's decisions. */
 export interface DmBotState {
   role: Session['role'];
   /** The game code friends type, while the lobby is open. */
   code: string | null;
-  /** The friends' player numbers. */
-  friends: number[];
+  lobbyOpen: boolean;
+  /** This page is the DM (from the first friend's connection). */
+  dm: boolean;
+  friends: DmBotFriend[];
   /** The area the DM stands in. */
   area: string;
+  /** Things waiting in the DM's inbox. */
+  waiting: number;
+  /** A DM quest is running. */
+  questing: boolean;
+  /** The card up now, if any. */
+  card: DmBotCard | null;
   /** The live story and its next roads (null when the world is not a live one). */
   story: StoryView | null;
 }
 
+/** The cards the bot may put up on its own (the bar's buttons). */
+export const BOT_CARDS = ['next', 'epic', 'sky', 'pressure', 'story', 'suggest', 'task'] as const satisfies CardKind[];
+export type BotCardKind = (typeof BOT_CARDS)[number];
+
 export interface DmBotApi {
   /** Open a game for friends (the menu's Create): resolves to its code, or null if it could not be made. */
   host(): Promise<string | null>;
-  /** Close the lobby: the game goes on with whoever is connected. */
+  /** Close the lobby and begin: the DM's welcome is told and the game goes on with whoever is connected. */
   start(): void;
   state(): DmBotState;
+  /** The Requests button: the oldest thing waiting becomes the card (null when nothing could be shown). */
+  openInbox(): DmBotCard | null;
+  /** Put up one of the bar's cards now. */
+  open(kind: BotCardKind): DmBotCard | null;
+  /** Tap an option of the card up now. False when there is no such option. */
+  pick(id: string): boolean;
+  /** Send the card away unanswered. */
+  dismiss(): void;
   /** Take the live story down this road (a `cue` from `state().story.options`). */
   choose(cue: string): { ok: boolean; note: string };
-  /** Answer one friend privately, as the DM's words. */
-  reply(slot: number, text: string): boolean;
+  /** Answer whoever asked for the card up now, privately. */
+  reply(text: string): boolean;
+  /** Speak to everyone. */
+  say(text: string): boolean;
+  /** Go to a friend (the Party tab's Go). */
+  goTo: (slot: number) => void;
 }
 
-/** The function the bot's script puts on the page (`page.exposeBinding`). */
-type ActionListener = (slot: number, text: string, state: DmBotState) => unknown;
+export interface DmBotParts {
+  session: Session;
+  arena: Arena;
+  story: Story;
+  desk: DmDesk;
+  prompts: DmPrompts;
+  card: DmCard;
+  tasks: DmTasks;
+  goTo: (slot: number) => void;
+}
 
 /** Does this address ask for the bot handle? */
 export function wantsDmBot(search: string): boolean {
   return new URLSearchParams(search).has('dmbot');
 }
 
-export function createDmBot(session: Session, arena: Arena, story: Story, desk: DmDesk, prompts: DmPrompts): DmBotApi {
-  const state = (): DmBotState => ({
-    role: session.role,
-    code: session.code,
-    friends: [...arena.remotes.keys()],
-    area: arena.view.name,
-    story: story.view(),
-  });
-  prompts.onHeard = (slot, text) => {
-    const listener = (window as { onPlayerAction?: ActionListener }).onPlayerAction;
-    if (typeof listener !== 'function') return;
-    try {
-      void Promise.resolve(listener(slot, text, state())).catch((err: unknown) => console.warn('dm bot', err));
-    } catch (err) {
-      console.warn('dm bot', err); // the bot going wrong must never stop the game
-    }
+export function createDmBot({ session, arena, story, desk, prompts, card, tasks, goTo }: DmBotParts): DmBotApi {
+  const cardView = (): DmBotCard | null => card.view;
+  const friends = (): DmBotFriend[] => {
+    const here = arena.zoneOf(arena.local);
+    return [...arena.remotes.entries()].map(([slot, p]) => {
+      const z = arena.zoneOf(p);
+      return {
+        slot,
+        area: zoneName(z.name),
+        hp: p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp),
+        near: z === here,
+      };
+    });
   };
   return {
     host: () => session.createGame(),
     start: () => session.startGame(),
-    state,
+    state: () => ({
+      role: session.role,
+      code: session.code,
+      lobbyOpen: session.lobbyOpen,
+      dm: arena.local.dm,
+      friends: friends(),
+      area: zoneName(arena.zoneOf(arena.local).name),
+      waiting: prompts.waiting.count,
+      questing: tasks.active,
+      card: cardView(),
+      story: story.view(),
+    }),
+    openInbox() {
+      prompts.openInbox();
+      return cardView();
+    },
+    open(kind) {
+      if (!(BOT_CARDS as readonly string[]).includes(kind)) return null;
+      prompts.open(kind);
+      return cardView();
+    },
+    pick(id) {
+      const kind = card.kind;
+      if (!kind || !card.options.some((o) => o.id === id)) return false;
+      card.onPick(kind, id);
+      return true;
+    },
+    dismiss: () => card.dismiss(),
     choose(cue) {
-      const before = story.view()?.placed.length ?? 0;
       story.choose(cue);
       const note = story.lastNote;
-      return { ok: !note && (story.view()?.placed.length ?? 0) >= before, note };
+      return { ok: !note, note };
     },
-    reply: (slot, text) => desk.replyTo([slot], text),
+    reply: (text) => prompts.reply(text),
+    say: (text) => desk.say(text),
+    goTo,
   };
 }

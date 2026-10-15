@@ -31,7 +31,7 @@ Every feature lives in one of these layers; say which in the owning file's desig
 - `npm run test:e2e` — Playwright smoke tests against the production build (set `PW_CHROMIUM` to a local Chromium, e.g. `/opt/pw-browsers/chromium-*/chrome-linux/chrome` in cloud sessions)
 - `npm run typecheck` — typecheck only (game, `tools/`, `e2e/`, `relay/`)
 - `npm run relay` — the matchmaking relay in memory on `http://localhost:8787` (use with `VITE_RELAY_URL=http://localhost:8787 npm run dev` to try online play locally)
-- `npm run dm-bot -- [url]` — the autonomous Dungeon Master: hosts a game of the page headless and answers friends' requests (`server/README.md`; its AI services are mocked for now)
+- `npm run dm-bot -- [url]` — the autonomous Dungeon Master: hosts a game of the page headless, prints its code and runs the DM's whole job (`server/README.md`; its AI services are mocked for now)
 - `npm run map -- build|check|render|layout …` — zone specs → map JSON + previews + checks; `layout <biome>` prints a biome's walls, gaps and open ground (see `tools/map/CLAUDE.md`)
 - `npm run sprites -- build|check|preview …` — LPC part catalog → packed layer sheets (see `src/sprites/CLAUDE.md`). `build` needs a clone of the LPC generator (`LPC_DIR`); `check` (run by `verify` and `build`) does not
 
@@ -57,7 +57,7 @@ These files describe design philosophy, architecture and the traps that bite, no
 - `src/scenes/CLAUDE.md`: the overworld, arena, simulation, zones and doors. `src/systems/CLAUDE.md`: capabilities, combat, balance, with design notes on quests, magic, survival, economy and props.
 - `src/net/CLAUDE.md`: co-op design, the protocol rules, trading. `relay/CLAUDE.md`: the matchmaking Worker.
 - `tools/map/CLAUDE.md` and `maps/CLAUDE.md`: the map pipeline, catalog, world layout, shop buildings.
-- `docs/dungeon-master.md`: the host as Dungeon Master, the bar, director, DM quests, epics, possession. `server/README.md`: the bot that hosts as DM from outside the game.
+- `docs/dungeon-master.md`: the host as Dungeon Master, the bar, director, DM quests, epics, possession. `server/README.md`: the bot that runs the DM from outside the game.
 
 ## Working procedure (rapid dev mode)
 

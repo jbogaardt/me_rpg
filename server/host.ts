@@ -1,29 +1,42 @@
-// The autonomous Dungeon Master: a headless browser that hosts a game of the deployed page, hears each friend's request
-// to the DM and answers it through the page's bot handle (src/scenes/overworld/DmBot.ts, switched on by `?dmbot`). All
-// WebRTC stays in the browser; Node only decides (router.ts) and calls back into the page. See server/README.md.
+// The autonomous Dungeon Master: run it on any machine with Node and it hosts a game of the deployed page in a headless
+// browser, prints the two-word code for the players, and runs the DM's whole job from then on. All WebRTC stays in the
+// browser; this script only reads the page's state, decides (router.ts, turn.ts) and taps the DM's controls through the
+// page's bot handle (src/scenes/overworld/DmBot.ts, switched on by `?dmbot`). See server/README.md.
 //
 //   npm run dm-bot                                   # the live site, a new live world
 //   npm run dm-bot -- 'http://localhost:4173/?campaign=live&seed=7'
 //
-// Env: PW_CHROMIUM (a local Chromium, e.g. /opt/pw-browsers/chromium-*/chrome-linux/chrome), DM_BOT_HEADED=1 to watch.
+// Env: PW_CHROMIUM (a local Chromium), DM_BOT_HEADED=1 to watch, DM_BOT_START=n to begin once n players are in.
+// Type `help` in the terminal for the operator's commands.
 
+import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
 import { MockFallback, MockRouter } from './mocks';
-import { evaluateAction, type TableState } from './router';
+import { decideCard, type Card, type Move } from './router';
+import { SETTLE_MS, nextStep, type Clock, type PageState } from './turn';
 
 const DEFAULT_URL = 'https://jbogaardt.github.io/me_rpg/?campaign=live';
-/** How often the bot checks that its game code still works (the relay forgets an idle code after ten minutes). */
-const WATCH_MS = 30_000;
+const TICK_MS = 1500;
 
 /** The page's bot handle (DmBot.ts's DmBotApi), as far as this script calls it. */
 interface PageBot {
   host(): Promise<string | null>;
-  state(): TableState & { role: string; code: string | null };
+  start(): void;
+  state(): PageState;
+  openInbox(): Card | null;
+  open(kind: string): Card | null;
+  pick(id: string): boolean;
+  dismiss(): void;
   choose(cue: string): { ok: boolean; note: string };
-  reply(slot: number, text: string): boolean;
+  reply(text: string): boolean;
+  say(text: string): boolean;
+  goTo(slot: number): void;
 }
-// Runs in the page: `page.evaluate` sends only a function's source, so each one names the handle itself.
+// `page.evaluate` sends only a function's source, so each call below names the handle itself.
 type InPage = { dmBot: PageBot };
+
+const playerName = (slot: number) => `Player ${slot + 1}`;
+const log = (...parts: unknown[]) => console.log(new Date().toLocaleTimeString(), ...parts);
 
 function botUrl(given: string | undefined): string {
   const url = new URL(given ?? DEFAULT_URL);
@@ -31,66 +44,189 @@ function botUrl(given: string | undefined): string {
   return url.toString();
 }
 
-const roadsOf = (state: TableState) => state.story?.options ?? [];
+/** The DM's job, one step at a time. */
+class Dm {
+  private clock: Clock = { now: 0, lastHost: -Infinity, lastFollow: -Infinity, lastQuest: 0, settled: 0 };
+  /** When each friend at the table connected, and whether they have been announced as in. */
+  private friends = new Map<number, { at: number; in: boolean }>();
+  private lastCode: string | null = null;
+  /** The card last answered: met again unchanged, the answer did nothing, so it is sent away. */
+  private answered = '';
+  private latest: PageState | null = null;
+  private services = {
+    router: new MockRouter(() => this.latest?.story?.options ?? []),
+    fallback: new MockFallback(),
+  };
+
+  constructor(
+    private page: Page,
+    private startAt: number,
+  ) {}
+
+  /** Call the page's handle by name (`page.evaluate` sends only a function's source and plain values). */
+  private call<K extends keyof PageBot>(
+    name: K,
+    ...args: Parameters<PageBot[K]>
+  ): Promise<Awaited<ReturnType<PageBot[K]>>> {
+    return this.page.evaluate(
+      ([n, a]) => {
+        const bot = (globalThis as unknown as InPage).dmBot as unknown as Record<string, (...x: unknown[]) => unknown>;
+        return bot[n]?.(...a);
+      },
+      [name, args] as [string, unknown[]],
+    ) as Promise<Awaited<ReturnType<PageBot[K]>>>;
+  }
+
+  state = () => this.call('state');
+  start = () => this.call('start');
+  say = (text: string) => this.call('say', text);
+
+  async tick() {
+    const s = await this.state();
+    this.latest = s;
+    this.clock.now = Date.now();
+    this.report(s);
+    const step = nextStep(s, this.clock, this.startAt);
+    switch (step.kind) {
+      case 'host': {
+        this.clock.lastHost = this.clock.now;
+        const code = await this.call('host');
+        if (!code) log('could not open a game (is the relay reachable?); trying again soon');
+        return;
+      }
+      case 'start':
+        log('beginning the game');
+        await this.start();
+        return;
+      case 'follow':
+        this.clock.lastFollow = this.clock.now;
+        log(`going to ${playerName(step.slot)}`);
+        await this.call('goTo', step.slot);
+        return;
+      case 'card':
+        if (s.card) await this.answer(s.card, s);
+        return;
+      case 'inbox': {
+        const card = await this.call('openInbox');
+        if (card) await this.answer(card, s);
+        return;
+      }
+      case 'quest': {
+        this.clock.lastQuest = this.clock.now;
+        const card = await this.call('open', 'next');
+        if (card) await this.answer(card, s);
+        return;
+      }
+      case 'idle':
+        return;
+    }
+  }
+
+  private async answer(card: Card, s: PageState) {
+    const key = JSON.stringify(card);
+    if (key === this.answered) {
+      await this.call('dismiss');
+      this.answered = '';
+      return;
+    }
+    const move = await decideCard(card, s, this.services);
+    log(`card “${card.title}”${card.note ? ` (${card.note})` : ''} →`, describe(move, card));
+    if (move.reply) await this.call('reply', move.reply);
+    if (move.road) {
+      const chosen = await this.call('choose', move.road);
+      if (!chosen.ok) log('the page refused the road:', chosen.note);
+    }
+    if (move.pick) await this.call('pick', move.pick);
+    if (move.road || !move.pick) await this.call('dismiss');
+    this.answered = move.pick ? key : '';
+  }
+
+  /** Say what changed at the table. */
+  private report(s: PageState) {
+    if (s.code !== this.lastCode) {
+      if (s.code) log(`GAME CODE: ${s.code}   (players: Menu > Online > Join, and type it)`);
+      else if (this.lastCode) log('the code is closed');
+      this.lastCode = s.code;
+    }
+    const here = new Set(s.friends.map((f) => f.slot));
+    for (const slot of here) if (!this.friends.has(slot)) this.friends.set(slot, { at: this.clock.now, in: false });
+    for (const [slot, f] of this.friends) {
+      if (!here.has(slot)) {
+        this.friends.delete(slot);
+        if (f.in) log(`${playerName(slot)} left`);
+      } else if (!f.in && this.clock.now - f.at >= SETTLE_MS) {
+        f.in = true;
+        log(`${playerName(slot)} is in`);
+      }
+    }
+    this.clock.settled = [...this.friends.values()].filter((f) => f.in).length;
+  }
+}
+
+function describe(move: Move, card: Card): string {
+  const label = card.options.find((o) => o.id === move.pick)?.label;
+  const what = move.road ? `road ${move.road}` : label ? `“${label}”` : 'nothing';
+  const sure = move.confidence === null ? '' : ` ${(move.confidence * 100).toFixed(0)}%`;
+  return `${what} [${move.source}${sure}]${move.reply ? ` reply: ${move.reply}` : ''}`;
+}
+
+/** The operator's terminal: begin the game, speak as the DM, look at the table. */
+function console_(dm: Dm, stop: () => void) {
+  const help = 'commands: start | say <words> | status | quit';
+  const rl = createInterface({ input: process.stdin });
+  rl.on('line', (line) => {
+    const [command = '', ...rest] = line.trim().split(/\s+/);
+    const run = async () => {
+      if (command === 'start') await dm.start();
+      else if (command === 'say') await dm.say(rest.join(' '));
+      else if (command === 'status') {
+        const s = await dm.state();
+        const friends = s.friends.map((f) => `${playerName(f.slot)} in ${f.area} (${Math.round(f.hp * 100)}%)`);
+        log(
+          `${s.lobbyOpen ? `lobby open, code ${s.code}` : 'playing'}; DM in ${s.area}; ${friends.join(', ') || 'nobody'}`,
+        );
+        log(`inbox ${s.waiting}, quest ${s.questing ? 'running' : 'none'}, story ${s.story?.title ?? 'none'}`);
+      } else if (command === 'quit') stop();
+      else if (command) log(help);
+    };
+    run().catch((err: unknown) => log('command failed:', err));
+  });
+  log(help);
+}
 
 async function main() {
   const url = botUrl(process.argv[2]);
+  const startAt = Number(process.env.DM_BOT_START ?? 0) || 0;
   const browser = await chromium.launch({
     headless: !process.env.DM_BOT_HEADED,
     executablePath: process.env.PW_CHROMIUM || undefined,
     // As playwright.config.ts: software WebGL for the game, and plain-IP WebRTC candidates.
     args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--disable-features=WebRtcHideLocalIpsWithMdns'],
   });
-  const page = await browser.newPage({ viewport: { width: 640, height: 480 } });
-  page.on('pageerror', (err) => console.error('page error:', err.message));
+  const page = await browser.newPage({ viewport: { width: 960, height: 640 } });
+  page.on('pageerror', (err) => log('page error:', err.message));
 
-  // One action at a time, in the order they came: a decision may change the roads the next one is weighed against.
-  let latest: TableState | null = null;
-  const services = {
-    router: new MockRouter(() => roadsOf(latest ?? { area: '', friends: [], story: null })),
-    fallback: new MockFallback(),
-  };
-  let queue = Promise.resolve();
-  await page.exposeBinding('onPlayerAction', (_source, slot: number, text: string, state: TableState) => {
-    queue = queue
-      .then(() => act(page, slot, text, state))
-      .catch((err: unknown) => console.error('action failed:', err));
-    async function act(page: Page, slot: number, text: string, state: TableState) {
-      latest = state;
-      const decision = await evaluateAction(state, text, services);
-      console.log(`player ${slot + 1}: “${text}” → ${decision.source}`, decision.cue ?? '', decision.confidence ?? '');
-      if (decision.cue) {
-        const chosen = await page.evaluate((cue) => (globalThis as unknown as InPage).dmBot.choose(cue), decision.cue);
-        if (!chosen.ok) console.warn('the page refused the road:', chosen.note);
-      }
-      await page.evaluate(([s, words]) => (globalThis as unknown as InPage).dmBot.reply(s, words), [
-        slot,
-        decision.reply,
-      ] as const);
-    }
-  });
-
-  console.log('opening', url);
+  log('opening', url);
   await page.goto(url);
   // A live world without a seed reloads once with one, so wait for the handle rather than for the first load.
   await page.waitForFunction(() => 'dmBot' in globalThis, null, { timeout: 120_000 });
 
-  const host = async () => {
-    const code = await page.evaluate(() => (globalThis as unknown as InPage).dmBot.host());
-    console.log(code ? `game code: ${code}` : 'could not open a game (relay unreachable?)');
+  const dm = new Dm(page, startAt);
+  let stopped = false;
+  const stop = () => {
+    stopped = true;
+    void browser.close().then(() => process.exit(0));
   };
-  await host();
-  // A friend can only join while the code works: open a new one when it lapses and nobody is at the table.
-  setInterval(() => {
-    void page
-      .evaluate(() => (globalThis as unknown as InPage).dmBot.state())
-      .then((state) => (!state.code && state.friends.length === 0 ? host() : undefined))
-      .catch((err: unknown) => console.error('watch failed:', err));
-  }, WATCH_MS);
-
-  const stop = () => void browser.close().then(() => process.exit(0));
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
+  console_(dm, stop);
+  log(startAt ? `the game begins once ${startAt} player(s) are in` : 'type `start` once your players are in');
+
+  // One step at a time: each waits for the last, so two decisions never race on the same card.
+  while (!stopped) {
+    await dm.tick().catch((err: unknown) => log('tick failed:', err));
+    await new Promise((r) => setTimeout(r, TICK_MS));
+  }
 }
 
 main().catch((err: unknown) => {

@@ -633,7 +633,16 @@ export class OverworldScene implements Scene {
   /** Put gear on the hero: stats follow the item and the sprite is recomposed with its parts. */
   /** The handle an outside Dungeon Master drives this host through (`?dmbot`, see overworld/DmBot.ts). */
   dmBot(): DmBotApi {
-    return createDmBot(this.ui.session, this.arena, this.liveStory, this.desk, this.prompts);
+    return createDmBot({
+      session: this.ui.session,
+      arena: this.arena,
+      story: this.liveStory,
+      desk: this.desk,
+      prompts: this.prompts,
+      card: this.dmCard,
+      tasks: this.tasks,
+      goTo: (slot) => this.partyUi.goTo(slot),
+    });
   }
 
   equip(item: Item) {

@@ -48,8 +48,6 @@ export class DmPrompts {
   private now = 0;
   /** The seats of whoever asked for the card now up (or last up): a reply goes to them. */
   private askers: { slots: number[]; at: number } = { slots: [], at: -Infinity };
-  /** Told each friend's request once, in words (the bot handle, DmBot.ts). */
-  onHeard: ((slot: number, text: string) => void) | null = null;
 
   constructor(
     private arena: Arena,
@@ -117,8 +115,6 @@ export class DmPrompts {
         const ask = REQUESTS[code];
         if (ask) this.inbox.add(ask.kind, this.now, playerName(slot), slot);
       }
-      const words = code === MESSAGE_CODE ? text : REQUESTS[code]?.label;
-      if (words) this.onHeard?.(slot, words);
     }
   }
 

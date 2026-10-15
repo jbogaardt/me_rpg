@@ -3,12 +3,14 @@ import { MockFallback, MockRouter } from './mocks';
 import {
   CONFIDENCE,
   HOLD_REPLY,
-  NO_ROAD,
-  choiceQuestion,
-  evaluateAction,
+  NONE,
+  cardQuestion,
+  decideCard,
   readImprovised,
+  wordsOf,
+  type Card,
   type Road,
-  type TableState,
+  type Table,
 } from './router';
 
 const roads: Road[] = [
@@ -16,71 +18,111 @@ const roads: Road[] = [
   { cue: 'desert/ford', label: 'Into sand, over a ford', theme: 'desert', tags: ['heat', 'dunes'] },
   { cue: 'swamp/bridge', label: 'Into the fen, over a bridge', theme: 'swamp', tags: ['bog', 'mist'] },
 ];
-const table = (options: Road[] = roads): TableState => ({
+const table = (options: Road[] = roads): Table => ({
   area: 'Greenwood',
-  friends: [1],
+  friends: [{ slot: 1, area: 'Greenwood', hp: 1, near: true }],
+  questing: false,
   story: { title: 'The Long Road', placed: ['Greenwood'], total: 4, options, complete: false },
 });
+/** A friend's own words, as the page puts them on a card. */
+const message = (text: string): Card => ({
+  kind: 'message',
+  title: 'Player 2 says',
+  note: `“${text}”`,
+  options: [
+    { id: 'r:0', label: 'Reply: On my way.' },
+    { id: '@quest', label: 'Give them a quest' },
+  ],
+});
+const struggle: Card = {
+  kind: 'struggle',
+  title: 'The party is struggling',
+  note: 'They are hurt.',
+  options: [
+    { id: 'ease', label: 'Ease off' },
+    { id: 'stay', label: 'Stay the course' },
+  ],
+};
 const mocks = () => ({ router: new MockRouter(() => roads), fallback: new MockFallback() });
 
-describe('evaluateAction', () => {
-  it('takes the road the router is sure of', async () => {
-    const d = await evaluateAction(table(), 'I want to see the snow', mocks());
-    expect(d).toMatchObject({ source: 'router', cue: 'frost/thaw' });
-    expect(d.confidence).toBeGreaterThanOrEqual(CONFIDENCE);
+describe('decideCard', () => {
+  it('takes the road a friend asks for when the router is sure', async () => {
+    const m = await decideCard(message('I want to see the snow'), table(), mocks());
+    expect(m).toMatchObject({ source: 'router', road: 'frost/thaw', pick: null });
+    expect(m.confidence).toBeGreaterThanOrEqual(CONFIDENCE);
+    expect(m.reply).toContain('frost');
   });
 
-  it('asks the fallback when the router is unsure', async () => {
-    const d = await evaluateAction(table(), 'I juggle three apples', mocks());
-    expect(d.source).toBe('fallback');
-    expect(d.cue).toBeNull();
-    expect(d.confidence).toBeLessThan(CONFIDENCE);
-    expect(d.reply).toContain('juggle');
+  it('improvises a reply when nothing fits the words', async () => {
+    const m = await decideCard(message('I juggle three apples'), table(), mocks());
+    expect(m).toMatchObject({ source: 'fallback', pick: null, road: null });
+    expect(m.reply).toContain('juggle');
   });
 
-  it('never forces a lone road on an action that has nothing to do with it', async () => {
-    const d = await evaluateAction(table(roads.slice(0, 1)), 'I juggle three apples', mocks());
-    expect(d.source).toBe('fallback');
-    expect(d.cue).toBeNull();
+  it('never forces a lone road on words that have nothing to do with it', async () => {
+    const m = await decideCard(message('I juggle three apples'), table(roads.slice(0, 1)), mocks());
+    expect(m.road).toBeNull();
   });
 
-  it('goes straight to the fallback when there is no road to choose', async () => {
-    let asked = false;
-    const router = { choose: () => ((asked = true), Promise.reject(new Error('unused'))) };
-    const d = await evaluateAction(table([]), 'Let us move on', { router, fallback: new MockFallback() });
-    expect(asked).toBe(false);
-    expect(d).toMatchObject({ source: 'fallback', cue: null, confidence: null });
+  it('hands out a quest when asked for one', async () => {
+    expect(await decideCard(message('Give us a quest'), table([]), mocks())).toMatchObject({ pick: '@quest' });
+    // words the router cannot place: the fallback still hears "task"
+    expect(await decideCard(message('Any task for us'), table([]), mocks())).toMatchObject({
+      source: 'fallback',
+      pick: '@quest',
+    });
+  });
+
+  it('answers a director card with an option and no reply', async () => {
+    expect(await decideCard(struggle, table(), mocks())).toMatchObject({ source: 'router', pick: 'ease', reply: null });
   });
 
   it('survives both services failing', async () => {
     const fail = () => Promise.reject(new Error('down'));
-    const d = await evaluateAction(table(), 'snow', { router: { choose: fail }, fallback: { improvise: fail } });
-    expect(d).toEqual({ source: 'silent', cue: null, reply: HOLD_REPLY, confidence: null });
+    const services = { router: { choose: fail }, fallback: { improvise: fail } };
+    expect(await decideCard(message('hello'), table(), services)).toMatchObject({
+      source: 'silent',
+      reply: HOLD_REPLY,
+    });
+    expect(await decideCard(struggle, table(), services)).toMatchObject({ source: 'silent', pick: null, reply: null });
   });
 
-  it('ignores a confident pick that is not one of the roads', async () => {
+  it('ignores a confident pick that was not offered', async () => {
     const router = { choose: () => Promise.resolve({ choice: 'made/up', confidence: 0.99, distribution: {} }) };
-    const d = await evaluateAction(table(), 'snow', { router, fallback: new MockFallback() });
-    expect(d.source).toBe('fallback');
+    const m = await decideCard(struggle, table(), { router, fallback: new MockFallback() });
+    expect(m).toMatchObject({ source: 'fallback', pick: 'ease' });
   });
 });
 
-describe('choiceQuestion', () => {
-  it('offers the roads by cue, with the action in the state', () => {
-    const q = choiceQuestion(table(), 'hello')!;
-    expect(q.options.map((o) => o.id)).toEqual([...roads.map((r) => r.cue), NO_ROAD]);
-    expect(JSON.parse(q.state)).toMatchObject({ action: 'hello', area: 'Greenwood' });
+describe('cardQuestion', () => {
+  it('offers a message card its options, the roads and none, never the canned replies', () => {
+    const ids = cardQuestion(message('hi'), table()).options.map((o) => o.id);
+    expect(ids).toEqual(['@quest', ...roads.map((r) => `road:${r.cue}`), NONE]);
+  });
+
+  it('offers a director card no roads', () => {
+    expect(cardQuestion(struggle, table()).options.map((o) => o.id)).toEqual(['ease', 'stay', NONE]);
+  });
+});
+
+describe('wordsOf', () => {
+  it('reads a friend’s words or ask off the card', () => {
+    expect(wordsOf(message('Hello there'))).toBe('Hello there');
+    expect(wordsOf({ ...struggle, note: 'Player 2 asked: we are lost.' })).toBe('we are lost');
+    expect(wordsOf(struggle)).toBeNull();
   });
 });
 
 describe('readImprovised', () => {
-  it('keeps a reply and drops a cue the page did not offer', () => {
-    expect(readImprovised('{"reply":" Hm. ","cue":"nowhere"}', roads)).toEqual({ reply: 'Hm.', cue: null });
-    expect(readImprovised({ reply: 'Go', cue: 'desert/ford' }, roads)).toEqual({ reply: 'Go', cue: 'desert/ford' });
+  const options = cardQuestion(struggle, table()).options;
+  it('keeps what was offered and drops what was not', () => {
+    expect(readImprovised('{"reply":" Hm. ","pick":"nowhere"}', options)).toEqual({ reply: 'Hm.', pick: null });
+    expect(readImprovised({ pick: 'ease' }, options)).toEqual({ pick: 'ease', reply: null });
+    expect(readImprovised({ pick: NONE }, options)).toEqual({ pick: null, reply: null });
   });
 
   it('refuses what is not a usable answer', () => {
-    for (const bad of ['not json', '{}', '{"reply":""}', null, 42, { reply: 7 }])
-      expect(readImprovised(bad, roads)).toBeNull();
+    for (const bad of ['not json', '{}', '{"reply":""}', null, 42, { reply: 7 }, { pick: 'nowhere' }])
+      expect(readImprovised(bad, options)).toBeNull();
   });
 });
