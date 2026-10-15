@@ -1,7 +1,7 @@
 import type { CardOption, DmCard } from '../../hud/DmCard';
 import { PRESSURES, PRESSURE_LABEL, isPressure } from '../../systems/dmPowers';
 import { Director, type Suggestion } from '../../systems/dmDirector';
-import { TASK_KINDS, TASK_LABEL, type TaskKind } from '../../systems/dmTasks';
+import { classify } from '../../systems/dmTasks';
 import { QUESTS } from '../../systems/quests';
 import { PRECIPS, type Precip } from '../../systems/weather';
 import type { Arena } from './Arena';
@@ -68,11 +68,22 @@ export class DmPrompts {
     const party = this.arena.party();
     const fracs = party.map((p) => p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp));
     const t = this.tasks.view;
+    const pace = this.tasks.pace;
+    const result = this.tasks.result;
     const kind = this.director.tick(dt, {
       busy: busy || this.card.open,
       fallen: this.revive.unoffered !== undefined,
       storyReady: this.storyReady(),
-      task: t && { id: this.tasks.id, kind: t.kind, active: t.state === 'active', progress: t.progress, goal: t.goal },
+      task: t && {
+        id: this.tasks.id,
+        active: t.state === 'active',
+        progress: t.progress,
+        goal: t.goal,
+        age: pace?.age ?? 0,
+        sinceProgress: pace?.sinceProgress ?? 0,
+        hint: pace?.hint ?? t.hint,
+        finished: t.state !== 'active' && result ? classify(result) : null,
+      },
       health: fracs.length ? { avg: fracs.reduce((a, b) => a + b, 0) / fracs.length, min: Math.min(...fracs) } : null,
       area: this.arena.view.name,
     });
@@ -150,17 +161,47 @@ export class DmPrompts {
       case 'twist':
         show('Make it interesting', this.twistOptions(), CARD_TIME, 'Halfway there: something should happen.');
         return;
-      case 'next':
-        if (this.arena.role !== 'host') return; // a task needs a party
-        show('What now?', this.taskOptions(), CARD_TIME, 'Nothing has been asked of them for a while.');
+      case 'next': {
+        if (this.arena.role !== 'host') return; // a quest needs a party
+        const options = this.questOptions();
+        if (!options.length) return; // the land offers nothing to ask
+        show('Which quest?', options, CARD_TIME, 'Nothing has been asked of them for a while.');
         return;
+      }
+      case 'lost':
+        show(
+          'They seem lost',
+          [
+            { id: 'hint', label: 'Point the way' },
+            { id: 'stay', label: 'Let them wander' },
+          ],
+          CARD_TIME,
+          'No progress for a long while.',
+        );
+        return;
+      case 'done': {
+        const how = this.tasks.result ? classify(this.tasks.result) : 'plain';
+        show(
+          how === 'rough' ? 'That was hard-won' : 'That was easy work',
+          [
+            how === 'rough' ? { id: 'ease', label: 'Give them a breather' } : { id: 'heat', label: 'Raise the stakes' },
+            { id: 'stay', label: 'Keep the pace' },
+          ],
+          CARD_TIME,
+          how === 'rough' ? 'Someone nearly fell, or did.' : 'Quick, and nobody was hurt.',
+        );
+        return;
+      }
       case 'land':
         show('A new land', this.skyOptions(true), CARD_TIME, 'How does the sky look?');
         return;
-      case 'task':
+      case 'task': {
         if (this.arena.role !== 'host') return;
-        show(this.tasks.active ? 'A task is running' : 'What does the party do?', this.taskOptions(), CARD_TIME, '');
+        const options = this.questOptions();
+        if (!this.tasks.active && !options.length) return;
+        show(this.tasks.active ? 'A quest is running' : 'Which quest?', options, CARD_TIME, '');
         return;
+      }
       case 'sky':
         show('How does the sky look?', this.skyOptions(false));
         return;
@@ -181,10 +222,14 @@ export class DmPrompts {
     return options;
   }
 
-  /** The tasks to call, or, with one running, a way to call it off. */
-  private taskOptions(): CardOption[] {
-    if (this.tasks.active) return [{ id: '@cancel', label: 'Call it off' }];
-    return TASK_KINDS.map((k) => ({ id: k, label: TASK_LABEL[k] }));
+  /** The quests the land offers (a few of different kinds), or, with one running, a hint and a way to call it off. */
+  private questOptions(): CardOption[] {
+    if (this.tasks.active)
+      return [
+        { id: 'hint', label: 'Point the way' },
+        { id: '@cancel', label: 'Call it off' },
+      ];
+    return this.tasks.offersHere(3).map((o, i) => ({ id: `q:${i}`, label: o.title }));
   }
 
   /** The sky: with `short` just clear, the land's own weather and night; else everything the climate allows. */
@@ -248,6 +293,10 @@ export class DmPrompts {
       this.powers.closeIn();
       this.desk.say('They are coming.');
     } else if (id === '@cancel') this.tasks.cancel();
+    else if (id === 'hint') {
+      this.tasks.giveHint();
+      this.desk.say('Look for the signs.');
+    } else if (id.startsWith('q:')) this.tasks.call(Number(id.slice(2)));
     else if (id.startsWith('w:')) {
       const precip = id.slice(2);
       const valid = precip === '' ? null : (PRECIPS as readonly string[]).includes(precip) ? (precip as Precip) : null;
@@ -256,7 +305,6 @@ export class DmPrompts {
       const hour = HOURS.find((h) => h.id === id)?.hour;
       if (hour !== undefined) this.desk.setHour(hour);
     } else if (isPressure(id)) this.powers.setPressure(id);
-    else if ((TASK_KINDS as readonly string[]).includes(id)) this.tasks.call(id as TaskKind);
     // "stay the course" (or anything else) changes nothing
   }
 

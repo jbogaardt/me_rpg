@@ -99,11 +99,23 @@ describe('the Dungeon Master’s desk', () => {
     expect(last(1)!.say).toEqual([2, 'Run']);
   });
 
-  it('tells every friend the task the DM called, and stops saying it when it is over', () => {
+  it('tells every friend the quest the DM gave, and stops saying it when it is over', () => {
     const { desk, last, arena } = host();
-    arena.task = { kind: 'defend', state: 'active', progress: 3, goal: 60, zone: 'fen', x: 10, y: 20 };
+    arena.task = {
+      kind: 'gather',
+      state: 'active',
+      title: 'Gather 3 Echostones',
+      progress: 1,
+      goal: 3,
+      zone: 'fen',
+      x: 10,
+      y: 20,
+      what: 'echostone',
+      bits: 2,
+      hint: false,
+    };
     desk.update(0);
-    expect(last(2)!.task).toEqual([1, 0, 3, 60, 'fen', 10, 20]);
+    expect(last(2)!.task).toEqual([1, 0, 1, 3, 'fen', 10, 20, 'Gather 3 Echostones', 2, 0, 'echostone']);
     arena.task = null;
     desk.update(0.01);
     expect(last(2)!.task).toBeUndefined();

@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { CELL, type SiteSpawn } from '../map/types';
+import { RELIC_KIND, RELIC_LOOK } from '../systems/dmQuests';
 import { SITE_KINDS, type SiteKind } from '../systems/quests';
 
 /**
@@ -17,7 +18,7 @@ export class QuestSite extends Container {
 
   constructor(spawn: SiteSpawn, index: number) {
     super();
-    const look = SITE_KINDS[spawn.kind];
+    const look = SITE_KINDS[spawn.kind] ?? (spawn.kind === RELIC_KIND ? RELIC_LOOK : undefined);
     if (!look) throw new Error(`Unknown quest site kind "${spawn.kind}"`);
     [this.kind, this.index, this.look] = [spawn.kind, index, look];
     this.position.set((spawn.col + 0.5) * CELL, (spawn.row + 1) * CELL - 4);

@@ -1,6 +1,7 @@
 import { DIR_VEC, dirIndex, directionToward } from '../../core/direction';
 import { enabled, setting } from '../../systems/capabilities';
 import { PRESSURE_FACTOR } from '../../systems/dmPowers';
+import { mobKey } from '../../systems/quests';
 import type { Character } from '../../entities/Character';
 import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
@@ -89,7 +90,7 @@ export class Simulation {
   /** A party member was knocked out (not in a trial) where they stood, before they wake at the start: the DM may raise them. */
   onDefeat: (p: Player, zone: string, x: number, y: number) => void = () => {};
   /** A foe fell to the party (the DM's tasks count the kills in their zone). */
-  onKill: (zone: string) => void = () => {};
+  onKill: (zone: string, key: string) => void = () => {};
 
   constructor(
     private arena: Arena,
@@ -489,7 +490,7 @@ export class Simulation {
     if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx));
     this.text(mob.body.x, mob.body.y - 54 * mob.body.size, String(damage), 0xffffff);
     if (!killed) return;
-    this.onKill(this.arena.zone.name);
+    this.onKill(this.arena.zone.name, mobKey(mob.kind) ?? '');
     this.fx('mobPoof', mob.body.x, mob.body.y - 12);
     this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${mob.kind.xp} XP`, 0xffb13f);
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP

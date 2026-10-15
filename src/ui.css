@@ -313,6 +313,8 @@
 #dm-bar input { flex: 1; min-width: 0; font: 16px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
 #dm-bar [hidden] { display: none; }
 #dm-bar .hint { margin: 0; font: 600 14px var(--body); color: #ffe9a8; }
+#dm-bar .rarely summary { cursor: pointer; font: 600 14px var(--body); color: var(--ink-soft); padding: 2px 0; }
+#dm-bar .rarely[open] summary { margin-bottom: 4px; }
 #dm-bar .powers { display: flex; flex-wrap: wrap; gap: 6px; }
 #dm-bar .mp-btn { padding: 4px 10px; font-size: 14px; white-space: nowrap; }
 #dm-bar .mp-btn:disabled { opacity: 0.55; cursor: default; }

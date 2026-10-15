@@ -32,7 +32,7 @@ import { MapOverlay } from '../hud/MapOverlay';
 import { AreaBanner } from '../hud/AreaBanner';
 import { DRINK_KEY, HarvestButtons, type HarvestSpot } from '../hud/HarvestButtons';
 import { GuideArrow } from '../entities/GuideArrow';
-import { guideFor } from '../systems/guide';
+import { SEARCH_RADIUS, guideFor, searchMiddle, type Guide } from '../systems/guide';
 import { zoneName } from '../systems/places';
 import type { Menu } from '../hud/Menu';
 import type { PartyRow } from '../hud/Party';
@@ -94,6 +94,7 @@ import { DmRevive } from './overworld/DmRevive';
 import { DmPossession } from './overworld/DmPossession';
 import { DmNarration } from './overworld/DmNarration';
 import { taskText } from '../systems/dmTasks';
+import { RELIC_KIND } from '../systems/dmQuests';
 import { VotePanel } from '../hud/VotePanel';
 import type { World } from '../content/world';
 import { particleEffect } from '../entities/ParticleEffect';
@@ -364,6 +365,7 @@ export class OverworldScene implements Scene {
     this.votePanel.sync(this.desk.openVoteForGuest);
     this.powers.update(dt); // the DM's storm in flight and cooldowns
     this.tasks.update(dt);
+    this.syncRelic();
     this.revive.update(dt);
     this.narration.update(dt);
     if (arena.local.dm && !this.ui.dialog.active && !this.ui.menu.open && stopPressed()) this.powers.toggleStop();
@@ -751,7 +753,7 @@ export class OverworldScene implements Scene {
     const site = this.arena.sites.find(
       (s) =>
         Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH &&
-        siteOpen(p.hero, s.kind, this.arena.zone.name, s.index),
+        (siteOpen(p.hero, s.kind, this.arena.zone.name, s.index) || this.questWants(this.arena.zone.name, s)),
     );
     if (site) return this.touchSite(p, site);
     if (this.sim.pondAction(p)) return; // A by a pond drinks (or stops drinking) instead of swinging
@@ -762,6 +764,10 @@ export class OverworldScene implements Scene {
 
   /** A player touches a quest site that their quest wants: it counts once for them, and the world sees the sparkle. */
   private touchSite(p: Player, site: QuestSite) {
+    if (this.questWants(this.arena.zone.name, site) && this.tasks.touchSite(p, site.kind, site.index)) {
+      this.sim.fx('levelUp', site.x, site.y - 6); // the DM's quest counts it for the whole party
+      return;
+    }
     const progress = recordSite(p.hero, site.kind, this.arena.zone.name, site.index);
     if (!progress) return;
     this.sim.fx('levelUp', site.x, site.y - 6);
@@ -779,7 +785,7 @@ export class OverworldScene implements Scene {
       g.body.setTag(text, mark ? 0xffd34d : 0xffffff);
     }
     for (const s of z.sites) {
-      s.setOpen(siteOpen(hero, s.kind, z.name, s.index));
+      s.setOpen(siteOpen(hero, s.kind, z.name, s.index) || this.questWants(z.name, s));
       s.update(dt);
     }
     for (const g of z.givers) g.body.animate(dt * 1000, false);
@@ -856,11 +862,12 @@ export class OverworldScene implements Scene {
     const at = (x: number, y: number) => ({ x: z.world.x + x * camera.zoom, y: z.world.y + y * camera.zoom });
     // A person or a door gets the arrow; something to be found is only an area on the map (M).
     const known = guide && guide.radius === undefined ? guide : null;
-    // A task the DM called points at its ground (for "follow me" the DM is in sight), over any quest arrow.
+    // The DM's quest: a search area on the map (the party works out the rest), and an arrow only once the DM points the way.
     const task = this.arena.task;
+    const open = !!task && task.state === 'active' && task.zone === z.name;
     const calling =
-      task && task.state === 'active' && task.zone === z.name && !this.arena.local.dm && !this.zones.transition.busy
-        ? { x: task.x, y: task.y, label: task.kind === 'follow' ? 'The DM' : 'The DM calls' }
+      open && task.hint && !this.arena.local.dm && !this.zones.transition.busy
+        ? { x: task.x, y: task.y, label: 'The way' }
         : null;
     const target = calling ?? known;
     this.arrow.update(
@@ -869,7 +876,32 @@ export class OverworldScene implements Scene {
       target && at(target.x, target.y - 12),
       target?.label ?? '',
     );
-    this.overlay.setGuide(guide);
+    const questGuide: Guide | null = open
+      ? task.hint
+        ? { x: task.x, y: task.y, label: task.title }
+        : { ...searchMiddle(task.x, task.y), label: task.title, radius: SEARCH_RADIUS }
+      : null;
+    this.overlay.setGuide(questGuide ?? guide);
+  }
+
+  /** Does the DM's quest want this site (a plant or stone to gather that is not yet touched, or the hidden relic)? */
+  private questWants(zone: string, site: QuestSite): boolean {
+    const t = this.arena.task;
+    if (!t || t.state !== 'active' || t.zone !== zone) return false;
+    if (t.kind === 'find') return site.kind === RELIC_KIND;
+    return t.kind === 'gather' && site.kind === t.what && !(t.bits & (1 << site.index));
+  }
+
+  /** The relic of a "find" quest is a site that appears where the DM hid it (on every page) and goes when it is found. */
+  private syncRelic() {
+    const t = this.arena.task;
+    const want = t && t.state === 'active' && t.kind === 'find' ? t : null;
+    for (const z of this.arena.zones.values()) {
+      const have = z.sites.find((x) => x.kind === RELIC_KIND);
+      if (want && z.name === want.zone && !have)
+        z.addSite({ kind: RELIC_KIND, col: Math.floor(want.x / CELL), row: Math.floor(want.y / CELL) });
+      else if (have && !(want && z.name === want.zone)) z.removeSite(have);
+    }
   }
 
   /**

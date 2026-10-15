@@ -35,9 +35,9 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * world's log. v31: `dm` (the Dungeon Master's dials, time of day and vote) and the guest's vote `InputMsg.vt`. v32: the
  * log's `cast` and `npc` entries, and longer entries. v33: `DmMsg.say`, what the Dungeon Master says to the party.
  * v34: `DmMsg.hold`, time stopped by the Dungeon Master. v35: `DmMsg.task`, a task the DM called for the party.
- * v36: `FLAG.hidden`, the DM out of sight while they possess a foe.
+ * v36: `FLAG.hidden`, the DM out of sight while they possess a foe. v37: `DmMsg.task` carries a real quest (title, what, bits, hint).
  */
-export const PROTOCOL_VERSION = 36;
+export const PROTOCOL_VERSION = 37;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;

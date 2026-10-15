@@ -10,12 +10,16 @@ const state = (s: Partial<DirectorState> = {}): DirectorState => ({
   area: 'greenwood',
   ...s,
 });
-const task = (progress: number, goal = 10, id = 1, kind: 'hunt' | 'defend' | 'follow' = 'hunt') => ({
+const task = (progress: number, goal = 10, id = 1, extra: Partial<NonNullable<DirectorState['task']>> = {}) => ({
   id,
-  kind,
   active: true,
   progress,
   goal,
+  age: 20,
+  sinceProgress: 5,
+  hint: false,
+  finished: null,
+  ...extra,
 });
 
 /** Run the director with a quiet world for `seconds`, returning the first card it offered. */
@@ -73,10 +77,11 @@ describe('the director', () => {
     expect(worn.tick(1, state({ task: task(5), health: { avg: 0.45, min: 0.4 } }))).toBe('struggle');
   });
 
-  it('does not stir a "follow me" with twists, and starts afresh for each new task', () => {
+  it('judges a one-step quest (find, reach) by how long it has taken, and starts afresh for each new quest', () => {
     const d = new Director();
-    waitFor(d, CARD_GAP, state({ task: task(0, 3, 1, 'follow') }));
-    expect(d.tick(1, state({ task: task(3, 3, 1, 'follow'), health: { avg: 1, min: 1 } }))).toBeNull();
+    waitFor(d, CARD_GAP, state({ task: task(0, 1, 1, { age: 30 }) }));
+    expect(d.tick(1, state({ task: task(0, 1, 1, { age: 40 }), health: { avg: 1, min: 1 } }))).toBeNull();
+    expect(d.tick(1, state({ task: task(0, 1, 1, { age: 80 }), health: { avg: 1, min: 1 } }))).toBe('easy');
     const e = new Director();
     waitFor(e, CARD_GAP, state({ task: task(0, 10, 1) }));
     expect(e.tick(1, state({ task: task(5, 10, 1), health: { avg: 1, min: 1 } }))).toBe('easy');
@@ -84,14 +89,37 @@ describe('the director', () => {
     expect(e.tick(1, state({ task: task(5, 10, 2), health: { avg: 1, min: 1 } }))).toBe('easy');
   });
 
-  it('asks about the sky when the party reaches a new land, and nudges soon after a task ends', () => {
+  it('notices a party that is lost, once, and again only much later; not once the DM has pointed the way', () => {
+    const d = new Director();
+    waitFor(d, CARD_GAP, state({ task: task(0, 5, 1, { sinceProgress: 10 }) }));
+    expect(d.tick(1, state({ task: task(0, 5, 1, { sinceProgress: 95 }) }))).toBe('lost');
+    expect(waitFor(d, 60, state({ task: task(0, 5, 1, { sinceProgress: 150 }) }))).toBeNull();
+    expect(waitFor(d, 70, state({ task: task(0, 5, 1, { sinceProgress: 220 }) }))).toBe('lost');
+    const e = new Director();
+    waitFor(e, CARD_GAP, state({ task: task(0, 5, 1, { sinceProgress: 10 }) }));
+    expect(e.tick(1, state({ task: task(0, 5, 1, { sinceProgress: 200, hint: true }) }))).toBeNull();
+  });
+
+  it('nudges the DM when a quest ends quick and easy or hard-won, once, but not when it was neither', () => {
+    const smooth = new Director();
+    waitFor(smooth, CARD_GAP, state({ task: task(0) }));
+    smooth.tick(1, state({ task: task(10) }));
+    expect(smooth.tick(4, state({ task: task(10, 10, 1, { active: false, finished: 'smooth' }) }))).toBe('done');
+    expect(smooth.tick(4, state({ task: task(10, 10, 1, { active: false, finished: 'smooth' }) }))).toBeNull();
+    const plain = new Director();
+    waitFor(plain, CARD_GAP, state({ task: task(0) }));
+    plain.tick(1, state({ task: task(10) }));
+    expect(plain.tick(4, state({ task: task(10, 10, 1, { active: false, finished: 'plain' }) }))).toBeNull();
+  });
+
+  it('asks about the sky when the party reaches a new land, and nudges soon after a quest ends', () => {
     const d = new Director();
     waitFor(d, CARD_GAP, state());
     expect(d.tick(1, state({ area: 'eastwood' }))).toBe('land');
     const e = new Director();
     waitFor(e, CARD_GAP, state({ task: task(0) }));
     e.tick(1, state({ task: task(10) }));
-    e.tick(1, state({ task: { ...task(10), active: false } })); // done
+    e.tick(1, state({ task: { ...task(10), active: false, finished: 'plain' } })); // done
     expect(waitFor(e, 12, state())).toBe('next');
   });
 

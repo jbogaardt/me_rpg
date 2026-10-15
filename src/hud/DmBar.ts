@@ -1,5 +1,6 @@
-// The Dungeon Master's bar, always in reach like the player's [I] menu: one line to speak to the party, and the few
-// big things a DM does (Stop time [T], Smite, Freeze, Reset zone, the Sky, the Pressure). Also where the words a DM
+// The Dungeon Master's bar, always in reach like the player's [I] menu: one line to speak to the party, the nudges a DM
+// gives (a Quest, the Story, the Sky, the Pressure) and, tucked under "Rarely", the big tools (Stop time [T], Smite, Freeze,
+// Reset zone). Also where the words a DM
 // speaks appear, for everyone, and the "time is stopped" notice. Built once from index.html (`#dm-bar`, `#dm-speech`,
 // `#dm-hold`); textContent only.
 

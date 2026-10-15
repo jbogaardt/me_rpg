@@ -386,6 +386,8 @@ describe('messages', () => {
   });
 });
 
+type Task = [number, number, number, number, string, number, number, string, number, number, string];
+
 describe('the Dungeon Master’s word and the party’s votes', () => {
   const dm: DmMsg = {
     k: 'dm',
@@ -409,14 +411,20 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
       expect(parseMessage(JSON.stringify({ ...dm, say }))).toBeNull();
   });
 
-  it('round-trips a task the DM called and refuses one that is not a task', () => {
-    const task = {
-      ...dm,
-      task: [1, 0, 12, 60, 'the_fen', 512, 99] as [number, number, number, number, string, number, number],
-    };
+  it('round-trips a quest the DM gave and refuses one that is not a quest', () => {
+    const quest = [0, 0, 2, 5, 'the_fen', 512, 99, 'Hunt 5 Goblins', 0, 1, 'goblin'] as Task;
+    const task = { ...dm, task: quest };
     expect(parseMessage(encodeMessage(task))).toEqual(task);
-    for (const bad of [[9, 0, 0, 1, 'z', 0, 0], [1, 0, 0, 1, '', 0, 0], [1, 0, 0, 1, 'z', 0], 'defend', 7])
-      expect(parseMessage(JSON.stringify({ ...dm, task: bad }))).toBeNull();
+    const broken = [
+      [9, 0, 0, 1, 'z', 0, 0, 'x', 0, 0, ''],
+      [0, 0, 0, 1, '', 0, 0, 'x', 0, 0, ''],
+      [0, 0, 0, 1, 'z', 0, 0, '', 0, 0, ''],
+      [0, 0, 0, 1, 'z', 0, 0, 'x', 0, 2, ''],
+      [0, 0, 0, 1, 'z', 0, 0, 'x', 0, 0],
+      'defend',
+      7,
+    ];
+    for (const bad of broken) expect(parseMessage(JSON.stringify({ ...dm, task: bad }))).toBeNull();
   });
 
   it('round-trips stopped time and refuses a hold that is not 1', () => {

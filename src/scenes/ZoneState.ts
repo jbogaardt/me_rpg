@@ -15,7 +15,7 @@ import { CLIMATES, DEFAULT_CLIMATE, isClimate, Weather } from '../systems/weathe
 import { sheetGrid } from '../core/textures';
 import { mapBox } from '../map/bounds';
 import { MapView } from '../map/MapView';
-import { CELL, type MapData } from '../map/types';
+import { CELL, type MapData, type SiteSpawn } from '../map/types';
 import { cellFeet } from '../map/doors';
 import { MOB_KINDS, type Item } from '../systems/combat';
 import type { Population } from '../content/populate';
@@ -97,6 +97,21 @@ export class ZoneState {
   readonly pondBeds: PondBeds;
   /** Set by the scene, which owns the combat rules mobs call back into. */
   mobWorld!: MobWorld;
+
+  /** A quest site that appears during play (the DM's relic): it is drawn with the zone's other objects. */
+  addSite(spawn: SiteSpawn): QuestSite {
+    const index = this.sites.filter((x) => x.kind === spawn.kind).length;
+    const site = new QuestSite(spawn, index);
+    this.sites.push(site);
+    this.world.layer.addChild(site);
+    return site;
+  }
+
+  removeSite(site: QuestSite) {
+    const i = this.sites.indexOf(site);
+    if (i >= 0) this.sites.splice(i, 1);
+    site.destroy();
+  }
 
   /**
    * `population` is who stands here (content/populate.ts, from the scenario node and the biome); `climate` the biome's

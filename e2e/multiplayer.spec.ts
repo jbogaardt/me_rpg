@@ -376,11 +376,12 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   const land = (await host.locator('#area-banner .title').textContent())!;
   await expect(friend.locator('#area-banner .title')).toHaveText(land, { timeout: 30_000 });
 
-  // The DM calls a task for the party; the friend sees it in their tracker.
+  // The DM gives a quest written from the land: the friend sees it in their tracker (and works out the rest themselves).
   await host.locator('#dm-bar [data-power="task"]').click();
-  await host.locator('#dm-card [data-opt="hunt"]').click();
-  await expect(friend.locator('#quest-tracker')).toContainText('hunt here', { timeout: 15_000 });
-  await expect(host.locator('#hud-dm')).toContainText('hunt here');
+  await expect(host.locator('#dm-card .title')).toHaveText('Which quest?');
+  await host.locator('#dm-card [data-opt^="q:"]').first().click();
+  await expect(friend.locator('#quest-tracker')).toContainText(/Hunt|Gather|Reach|Find/, { timeout: 15_000 });
+  await expect(host.locator('#hud-dm')).toContainText(/Hunt|Gather|Reach|Find/);
 
   // The pressure is one dial on the bar, set from a card.
   await host.locator('#dm-bar [data-power="pressure"]').click();
@@ -409,6 +410,9 @@ test('the Dungeon Master can run the game from a phone: folded tools, thumb-size
   await expect(bar).toBeVisible();
   await expect(bar.locator('[data-power="smite"]')).toBeHidden();
   await bar.locator('.handle').tap();
+  await expect(bar.locator('[data-power="task"]')).toBeVisible();
+  await expect(bar.locator('[data-power="smite"]')).toBeHidden(); // the big tools are under "Rarely"
+  await bar.locator('.rarely summary').tap();
   await expect(bar.locator('[data-power="smite"]')).toBeVisible();
   await expect(bar.locator('.hint')).toHaveText('Tap a foe to possess it.');
   await expect(bar.locator('[data-power="stop"]')).toHaveText('Stop time'); // no key to name on a phone
@@ -439,10 +443,11 @@ test('the Dungeon Master can run the game from a phone: folded tools, thumb-size
   await expect(card).toBeVisible();
   expect(await overlaps('#dm-card', '#dpad')).toBe(false);
   expect(await overlaps('#dm-card', '#buttons')).toBe(false);
-  const height = await card.locator('[data-opt="hunt"]').evaluate((b) => b.getBoundingClientRect().height);
+  const first = card.locator('[data-opt^="q:"]').first();
+  const height = await first.evaluate((b) => b.getBoundingClientRect().height);
   expect(height).toBeGreaterThanOrEqual(44);
-  await card.locator('[data-opt="hunt"]').tap();
-  await expect(friend.locator('#quest-tracker')).toContainText('hunt here', { timeout: 15_000 });
+  await first.tap();
+  await expect(friend.locator('#quest-tracker')).toContainText(/Hunt|Gather|Reach|Find/, { timeout: 15_000 });
 });
 
 test('a host picks a story in the lobby and a friend joins with only the code, landing in the same world', async ({
