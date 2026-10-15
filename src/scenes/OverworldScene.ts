@@ -3,13 +3,13 @@ import { enabled, flag } from '../systems/capabilities';
 import type { Sprites, Zone } from '../assets';
 import type {} from '../core/aim';
 import { actionPressed, clickedAt, mapPressed, menuPressed, stopPressed } from '../core/controls';
-import { directionToward } from '../core/direction';
-import type { ZoneState } from './ZoneState';
+import {} from '../core/direction';
+import type {} from './ZoneState';
 import type { Scene } from '../core/Scene';
 import type { TouchControls } from '../core/touch';
 import type { Character } from '../entities/Character';
-import type { Chest } from '../entities/Chest';
-import type { Crop } from '../entities/Crop';
+import type {} from '../entities/Chest';
+import type {} from '../entities/Crop';
 import type { Mob } from '../entities/Mob';
 import type { Player } from '../entities/Player';
 import { NO_COMMAND } from '../entities/Player';
@@ -20,39 +20,31 @@ import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
 import { AreaBanner } from '../hud/AreaBanner';
-import { DRINK_KEY, HarvestButtons, type HarvestSpot } from '../hud/HarvestButtons';
 import {} from '../systems/places';
 import type { Menu } from '../hud/Menu';
 import type {} from '../hud/Party';
 import type { ShopCounter } from '../hud/ShopCounter';
 import type { TradeUi } from '../hud/Trade';
-import { CELL } from '../map/types';
+import {} from '../map/types';
 import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
-import { CHEST_LOOTS, collect } from '../systems/chests';
-import { harvest, waterWith } from '../systems/crops';
-import { drinkableNear, thirsty } from '../systems/needs';
 import type { Hero, Item } from '../systems/combat';
-import type { QuestSite } from '../entities/QuestSite';
+import type {} from '../entities/QuestSite';
 import { equip } from '../systems/items';
-import { lecternIn, lecternPages } from '../systems/lectern';
-import { signLines, signNear } from '../systems/signs';
-import { TRAINER, trainerTalk, type Skill } from '../systems/skills';
-import { petSound } from '../systems/pets';
-import { progressOf, recordSite, siteNote, siteOpen } from '../systems/quests';
-import { SHOPS } from '../systems/shops';
+import {} from '../systems/pets';
+import {} from '../systems/shops';
 import type {} from '../systems/spells';
 import type { Precip } from '../systems/weather';
 import { DayClock } from '../systems/daynight';
 import { NightLayer } from '../entities/NightLayer';
 import { Arena } from './overworld/Arena';
-import { CHEST_REACH, CROP_REACH, KEEPER_REACH, PICKUP_REACH, SIGN_REACH, SITE_REACH } from './overworld/constants';
+import { PICKUP_REACH } from './overworld/constants';
 import { Barrels } from './overworld/Barrels';
 import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
 import { HostLink } from './overworld/HostLink';
 import { PackSync } from './overworld/PackSync';
-import { canDrink, foeNear, Simulation } from './overworld/Simulation';
+import { Simulation } from './overworld/Simulation';
 import { Trading } from './overworld/Trading';
 import { Training } from './overworld/Training';
 import { Visuals } from './overworld/Visuals';
@@ -60,6 +52,7 @@ import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
 import { Scenario } from './overworld/Scenario';
 import { StoryUi } from './overworld/StoryUi';
 import { LocalInput } from './overworld/LocalInput';
+import { Interactions } from './overworld/Interactions';
 import { PartyUi } from './overworld/PartyUi';
 import { Story } from './overworld/Story';
 import { DmDesk } from './overworld/DmDesk';
@@ -79,11 +72,6 @@ import { particleEffect } from '../entities/ParticleEffect';
 import { floatText } from '../entities/effects';
 
 export type { ZoneLoader, ZoneUnloader };
-
-const NPC_LINES = [
-  'Greetings, traveler. Something is wrong with the Vale: the clocks stopped, and the dead walk.',
-  'Follow the road south to Lanternrest. Warden Maren keeps its lamp lit, and she has been waiting for a stranger like you.',
-];
 
 /** The HTML overlays shared by every scene. They are created once in main.ts. */
 export interface Ui {
@@ -143,8 +131,7 @@ export class OverworldScene implements Scene {
   private overlay = new MapOverlay();
   private banner = new AreaBanner();
   private storyUi!: StoryUi; // what the local player is told and shown about their quests
-  private harvestButtons = new HarvestButtons();
-  private guestDrinking = false; // guest: asked the host to let it drink (see `drinking`)
+  private interact!: Interactions; // what the action key does
   private input!: LocalInput; // this keyboard's controls as a Command
   private partyUi!: PartyUi; // the DM's Party tab
   private atlas = new Atlas(); // what the players have seen of each zone, for the map
@@ -230,9 +217,20 @@ export class OverworldScene implements Scene {
     this.input = new LocalInput(arena, this.zones, () => ui.touch.active);
     this.partyUi = new PartyUi(arena, this.zones, ui.menu, () => this.possession.release());
     this.storyUi = new StoryUi(arena, ui, this.zones, this.banner, this.overlay, () => this.possession.active);
+    this.interact = new Interactions(
+      arena,
+      ui,
+      this.sim,
+      this.pack,
+      this.training,
+      this.tasks,
+      this.barrels,
+      this.ground,
+      this.storyUi,
+      () => this.guest.pressAction(),
+    );
     this.zones.root.addChildAt(this.storyUi.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
-    this.harvestButtons.onPick = (key) => this.harvestPressed(key);
     ui.shop.onGearChange = () => arena.refreshLook();
     ui.shop.trader = () => this.pack.trader();
   }
@@ -327,7 +325,7 @@ export class OverworldScene implements Scene {
     this.dmCard.hide();
     this.votePanel.sync(null);
     this.overlay.setAvailable(false);
-    this.harvestButtons.clear();
+    this.interact.clear();
     this.ui.dialog.close();
     this.ui.shop.close();
     if (this.ui.menu.open) this.ui.menu.toggle(this.hero);
@@ -453,7 +451,7 @@ export class OverworldScene implements Scene {
       item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
     }
     for (const body of arena.bodies()) body.zIndex = body.y;
-    this.updateHarvestButtons(
+    this.interact.updateHarvestButtons(
       z,
       menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy || arena.local.dm,
     );
@@ -543,8 +541,9 @@ export class OverworldScene implements Scene {
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
-    if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.act(arena.local));
-    if (!stopped) for (const g of guests) if (g.cmd.act) arena.inZone(arena.zoneOf(g.p), () => this.act(g.p));
+    if (!menu.open && !shop.open && !trade.open && !busy)
+      this.interact.handleAction(cmd.act, () => this.interact.act(arena.local));
+    if (!stopped) for (const g of guests) if (g.cmd.act) arena.inZone(arena.zoneOf(g.p), () => this.interact.act(g.p));
     if (!reading) this.zones.checkDoors(arena.local);
     for (const g of guests) this.zones.checkDoors(g.p);
     this.possession.follow();
@@ -563,15 +562,9 @@ export class OverworldScene implements Scene {
     const busy = this.zones.transition.busy;
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
     const cmd = this.input.command(dt, reading);
-    if (cmd.dx || cmd.dy)
-      this.guestDrinking = false; // walking off stops the drink (the host sees it too)
-    // A by a pond: the host starts or stops the drink (its `act`; with an enemy near it attacks and stops any drink);
-    // keep this guest's button label in step.
-    else if (cmd.act && foeNear(this.arena.zone, this.arena.local)) this.guestDrinking = false;
-    else if (cmd.act && (this.guestDrinking || canDrink(this.arena.zone, this.arena.local))) {
-      this.guestDrinking = !this.guestDrinking;
-    }
-    if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.guest.pressAction());
+    this.interact.trackGuestDrink(cmd); // a guest's own idea of whether it is drinking
+    if (!menu.open && !shop.open && !trade.open && !busy)
+      this.interact.handleAction(cmd.act, () => this.guest.pressAction());
     if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);
     this.guest.sendInput(
       dt,
@@ -601,235 +594,6 @@ export class OverworldScene implements Scene {
     if (role === 'host') this.host.enter();
     else if (role === 'client') this.guest.enter();
     arena.role = role;
-  }
-
-  // --- What the action key does ---
-
-  /** The local player's action button: advance the dialog, talk when next to the NPC or a shopkeeper, otherwise `attack`. */
-  private handleAction(pressed: boolean, attack: () => void) {
-    if (!pressed) return;
-    const { dialog } = this.ui;
-    const { arena } = this;
-    const near = (body: { x: number; y: number }, reach = CELL * 1.5) =>
-      Math.hypot(this.player.x - body.x, this.player.y - body.y) < reach;
-    const stand = lecternIn(arena.zone.name);
-    const lectern = stand && near({ x: stand.x, y: stand.y - CELL / 2 }, CELL * 1.5);
-    const sign = signNear(arena.zone.data.signs, this.player.x, this.player.y, SIGN_REACH);
-    const keeper = arena.keepers.find((k) => near(k.body, KEEPER_REACH));
-    const npc = arena.npc;
-    const giver = arena.givers.find((g) => near(g.body, KEEPER_REACH));
-    const site = arena.sites.find((s) => s.visible && near(s, SITE_REACH));
-    const pet = arena.pets.find((p) => near(p));
-    const folk = arena.zone.folk.find((f) => near(f.body));
-    if (dialog.active) {
-      dialog.advance();
-    } else if (arena.local.dm && !lectern && !sign) {
-      // The Dungeon Master reads the world (signs, the lectern) but takes no part in it: no shops, quests or swings.
-    } else if (lectern) {
-      dialog.say(lecternPages());
-    } else if (sign) {
-      // Read like talking to an NPC: close enough is enough, and the hero turns to face the board.
-      this.player.face(
-        directionToward((sign.col + 0.5) * CELL - this.player.x, (sign.row + 0.5) * CELL - this.player.y),
-      );
-      dialog.say(signLines(sign.ways));
-    } else if (keeper) {
-      this.talkToKeeper(keeper);
-    } else if (giver) {
-      giver.body.face(directionToward(this.player.x - giver.body.x, this.player.y - giver.body.y));
-      if (giver.giver === TRAINER) this.talkToTrainer();
-      else this.pack.talkToGiver(giver.giver);
-    } else if (site) {
-      // Touching a site the quest wants: read what it says, and let the action count it (the host decides, for a guest).
-      dialog.say(siteNote(site.kind, progressOf(this.hero)));
-      attack();
-    } else if (pet) {
-      pet.attend(this.player.x, this.player.y);
-      dialog.say([petSound(pet.kind, pet.talks++)]);
-    } else if (folk) {
-      folk.body.face(directionToward(this.player.x - folk.body.x, this.player.y - folk.body.y));
-      dialog.say(folk.lines);
-    } else if (npc?.visible && near(npc)) {
-      npc.face(directionToward(this.player.x - npc.x, this.player.y - npc.y));
-      dialog.say(NPC_LINES);
-    } else {
-      attack();
-    }
-  }
-
-  /**
-   * The training wizard tells the player what they know and what is next; when a trial follows, it begins once the last line
-   * is dismissed (solo and the host send the player there; a guest asks the host).
-   */
-  private talkToTrainer() {
-    const { lines, trial } = trainerTalk(this.hero);
-    this.ui.dialog.say(lines, trial ? () => this.beginTrial(trial) : undefined);
-  }
-
-  private beginTrial(skill: Skill) {
-    const { arena } = this;
-    if (arena.role === 'client') {
-      this.pack.askTrial(TRAINER);
-      return;
-    }
-    const refused = this.training.start(arena.local, skill);
-    if (refused) this.ui.dialog.say([refused]);
-  }
-
-  /** A shopkeeper greets the player, then the counter opens (for a guest the host settles each trade). */
-  private talkToKeeper({ shop: id, body }: { shop: string; body: Character }) {
-    const shop = SHOPS[id];
-    if (!shop) return;
-    body.face(directionToward(this.player.x - body.x, this.player.y - body.y));
-    this.ui.dialog.say(shop.greeting, () => this.ui.shop.show(shop, this.hero));
-  }
-
-  /** A player's action button (host and solo): open a chest within reach, pick something up, otherwise attack. */
-  private act(p: Player) {
-    if (p.dm) return; // the Dungeon Master opens, picks and strikes nothing
-    if (this.barrels.setDown(p)) return; // carrying a barrel: A sets it down
-    const chest = this.arena.chests.find(
-      (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
-    );
-    if (chest) return this.openChest(p, chest);
-    const farming = enabled('farming', this.arena.zone.name); // without it, crop plots are scenery
-    const crop = farming && this.arena.crops.find((c) => c.ripe && this.inReach(p, c));
-    if (crop) return this.pickCrop(p, crop);
-    const dry =
-      farming &&
-      this.arena.crops.find((c) => c.thirsty && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH);
-    if (dry) return this.waterCrop(p, dry);
-    const site = this.arena.sites.find(
-      (s) =>
-        Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH &&
-        (siteOpen(p.hero, s.kind, this.arena.zone.name, s.index) || this.storyUi.questWants(this.arena.zone.name, s)),
-    );
-    if (site) return this.touchSite(p, site);
-    if (this.barrels.pickUp(p)) return;
-    if (this.sim.pondAction(p)) return; // A by a pond drinks (or stops drinking) instead of swinging
-    const loose = this.ground.nearest(p);
-    if (loose) this.ground.pickUp(p, loose);
-    else this.sim.attack(p);
-  }
-
-  /** A player touches a quest site that their quest wants: it counts once for them, and the world sees the sparkle. */
-  private touchSite(p: Player, site: QuestSite) {
-    if (this.storyUi.questWants(this.arena.zone.name, site) && this.tasks.touchSite(p, site.kind, site.index)) {
-      this.sim.fx('levelUp', site.x, site.y - 6); // the DM's quest counts it for the whole party
-      return;
-    }
-    const progress = recordSite(p.hero, site.kind, this.arena.zone.name, site.index);
-    if (!progress) return;
-    this.sim.fx('levelUp', site.x, site.y - 6);
-    this.sim.questNote(p, progress);
-  }
-
-  /**
-   * The Harvest button of every ripe plot the local player can reach, drawn by the plant, and a Drink button at the edge
-   * of a pond the player stands beside while they are thirsty and it is not empty (none while a menu or door is up).
-   */
-  private updateHarvestButtons(z: ZoneState, hidden: boolean) {
-    const { arena } = this;
-    if (hidden) return this.harvestButtons.clear();
-    const { world } = arena.view;
-    const scale = world.scale.x;
-    const spots: HarvestSpot[] = z.crops.flatMap((c, key) =>
-      c.ripe && enabled('farming', z.name) && this.inReach(arena.local, c)
-        ? [{ key, x: world.x + c.x * scale, y: world.y + (c.y - CELL * 1.6) * scale }]
-        : [],
-    );
-    const drinking = this.drinking();
-    // An empty pond has nothing to give: no button (a guest knows the levels from the host's snapshot).
-    const water = (drinking || canDrink(z, arena.local)) && drinkableNear(z.data, this.player.x, this.player.y);
-    if (water) {
-      const label = drinking ? 'Stop' : 'Drink';
-      spots.push({ key: DRINK_KEY, label, x: world.x + water.x * scale, y: world.y + water.y * scale });
-    }
-    this.harvestButtons.update(spots);
-  }
-
-  private inReach(p: Player, crop: Crop) {
-    return Math.hypot(p.body.x - crop.x, p.body.y - (crop.y - CELL / 2)) < CROP_REACH;
-  }
-
-  /** The player pressed a plot's Harvest button: pick it here, or, as a guest, ask the host (an action press picks the plot beside them). */
-  private harvestPressed(key: number) {
-    if (key === DRINK_KEY) return this.drinkPressed();
-    const crop = this.arena.crops[key];
-    if (!crop?.ripe || !this.inReach(this.arena.local, crop)) return;
-    if (this.arena.role === 'client') this.guest.pressAction();
-    else this.pickCrop(this.arena.local, crop);
-  }
-
-  /**
-   * Is the local player drinking? Solo and the host know; a guest only knows it asked, and assumes it stopped once it
-   * walks, is full, or asks to stop (the host stops it for the same reasons).
-   */
-  private drinking(): boolean {
-    const { arena } = this;
-    if (arena.role !== 'client') return arena.local.drinking !== null;
-    if (!thirsty(this.hero.needs)) this.guestDrinking = false;
-    return this.guestDrinking;
-  }
-
-  /** The player pressed Drink (or Stop) by a pond: start or stop here, or, as a guest, ask the host (who keeps the meters). */
-  private drinkPressed() {
-    const { arena } = this;
-    const on = !this.drinking();
-    if (on && !drinkableNear(arena.zone.data, this.player.x, this.player.y)) return;
-    if (arena.role === 'client') {
-      this.guestDrinking = on;
-      this.pack.askDrink(on);
-    } else if (on) this.sim.startDrinking(arena.local);
-    else this.sim.stopDrinking(arena.local);
-  }
-
-  /** A player picks a ripe crop plot: the produce goes to their pack and the plot starts again as a sprout. */
-  private pickCrop(p: Player, crop: Crop) {
-    const { sim } = this;
-    const got = harvest(p.hero, crop.kind);
-    const [x, y] = [crop.x, crop.y - CELL];
-    if (!got.ok) {
-      sim.text(x, y - 14, got.text, 0xff8a7a);
-      return;
-    }
-    crop.pick();
-    sim.fx('levelUp', x, y + 6);
-    sim.text(x, y - 14, got.text, 0xa8e868);
-  }
-
-  /** A player waters a dry plot with a Waterskin from their pack. */
-  private waterCrop(p: Player, crop: Crop) {
-    const { sim } = this;
-    const [x, y] = [crop.x, crop.y - CELL];
-    const result = waterWith(p.hero);
-    if (!result.ok) {
-      sim.text(x, y - 14, result.text, 0xff8a7a);
-      return;
-    }
-    crop.water();
-    sim.fx('levelUp', x, y + 6);
-    sim.text(x, y - 14, result.text, 0x8fc8ff);
-  }
-
-  private openChest(p: Player, chest: Chest) {
-    const { sim, arena } = this;
-    const loot = CHEST_LOOTS[chest.loot];
-    if (!loot) return;
-    const found = collect(p.hero, loot);
-    const [x, y] = [chest.x, chest.y - CELL];
-    if (found.refused) {
-      sim.text(x, y - 14, found.text, 0xff8a7a);
-      return;
-    }
-    chest.setOpen(true);
-    sim.fx('levelUp', x, y + 6);
-    sim.text(x, y - 14, found.text, 0xffd34d);
-    if (found.gear) arena.refreshLook(p);
-    if (found.levels) {
-      sim.text(p.body.x, p.body.y - 62, 'LEVEL UP!', 0xffb13f);
-      sim.fx('levelUp', p.body.x, p.body.y - 14);
-    }
   }
 
   /** Put gear on the hero: stats follow the item and the sprite is recomposed with its parts. */
