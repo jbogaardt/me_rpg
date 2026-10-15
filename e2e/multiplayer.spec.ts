@@ -342,6 +342,7 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
 
   // Nothing pops up: a suggestion (the director's, or a friend's request) waits behind a Requests button, and a click on
   // the game sends the card it opens away (nobody hunts for a close button).
+  if (await friend.locator('#menu').isVisible()) await friend.keyboard.press('Escape'); // the friend's menu is in the way
   await friend.locator('#req-btn').click();
   await friend.locator('#request [data-ask="0"]').click();
   const inbox = host.locator('#dm-hot [data-power="inbox"]');

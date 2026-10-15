@@ -15,6 +15,7 @@ import { Choices } from './hud/Choices';
 import { Dialog } from './hud/Dialog';
 import { Hud } from './hud/Hud';
 import { Loading } from './hud/Loading';
+import { installProblemBanner } from './hud/ProblemBanner';
 import { Menu } from './hud/Menu';
 import { ShopCounter } from './hud/ShopCounter';
 import { TradeUi } from './hud/Trade';
@@ -37,6 +38,7 @@ const CHOICE = chooseCampaign(
 if (CHOICE.search !== null)
   window.history.replaceState(null, '', window.location.pathname + CHOICE.search + window.location.hash);
 setContentTag(CHOICE.tag);
+installProblemBanner();
 
 void (async () => {
   const loading = new Loading();

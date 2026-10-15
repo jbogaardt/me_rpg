@@ -366,7 +366,7 @@ body.touch-ui #request .mp-btn { min-height: 44px; }
 #dm-hot .mp-btn { padding: 6px 10px; font-size: 14px; white-space: nowrap; text-align: left; }
 #dm-hot .mp-btn:disabled { opacity: 0.55; cursor: default; }
 #dm-hot .mp-btn.on { filter: brightness(1.35); outline: 2px solid #ffd34d; }
-body.touch-ui #dm-hot { top: auto; transform: none; bottom: calc(160px + env(safe-area-inset-bottom)); right: calc(12px + env(safe-area-inset-right)); grid-template-columns: repeat(2, auto); }
+body.touch-ui #dm-hot { top: auto; transform: none; bottom: calc(176px + env(safe-area-inset-bottom)); right: calc(12px + env(safe-area-inset-right)); grid-template-columns: repeat(2, auto); }
 body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 15px; }
 #dm-speech::before { content: 'The Dungeon Master speaks'; display: block; font: 700 12px var(--title); color: #7c230f; letter-spacing: 0.06em; text-transform: uppercase; }
 #dm-hold { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: 8px; padding: 4px 14px; font: 700 15px var(--title); color: #9fe8ff; text-shadow: 0 1px 2px #000; pointer-events: none; }
@@ -593,3 +593,8 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
 #choices .title { margin: 0 0 4px; font: 700 15px var(--title); text-align: center; }
 #choices .mp-btn { width: 100%; text-align: left; }
 #choices .needs { display: block; font: 600 11px var(--body); color: #e8dcc0; }
+
+/* A report on screen when the game throws (src/hud/ProblemBanner.ts). */
+#problem { position: fixed; z-index: 9; left: 8px; bottom: 8px; max-width: min(520px, calc(100vw - 16px)); box-sizing: border-box; padding: 8px 34px 8px 12px; background: #5a1414; color: #ffe9e9; border: 1px solid #ff8b8b; border-radius: 4px; font: 600 14px/1.3 var(--body, sans-serif); }
+#problem p { margin: 0; }
+#problem button { position: absolute; top: 2px; right: 4px; width: 28px; height: 28px; background: none; border: 0; color: #ffe9e9; font: 700 16px var(--body, sans-serif); cursor: pointer; }
