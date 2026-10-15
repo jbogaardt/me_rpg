@@ -1,5 +1,5 @@
 // Named map assets for zone specs. Every coordinate here was checked against the sheets in
-// public/tilesets/ (see the map pitfalls in CLAUDE.md); add new entries only after looking at the art.
+// public/tilesets/ (see the map pitfalls in tools/map/CLAUDE.md); add new entries only after looking at the art.
 
 import { TREE_ATLAS } from './treeAtlas';
 

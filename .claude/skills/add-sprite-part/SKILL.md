@@ -5,7 +5,7 @@ description: Add or change character art in me_rpg - a new hair style, armor, he
 
 # Add a character part
 
-Characters are stacks of layers composed at runtime (CLAUDE.md, "Characters (paper-doll)"). Art comes from the
+Characters are stacks of layers composed at runtime (src/sprites/CLAUDE.md). Art comes from the
 Universal LPC Spritesheet Character Generator; `sprites/parts.ts` lists which of it ships. A part id is
 `<slot>.<name>` (slots: `body head eyes hair beard torso legs feet hands cape headwear weapon shield`).
 
@@ -42,7 +42,7 @@ run `npm run sprites -- check`, which is all `verify`/`build` need.
    `src/systems/looks.ts`) or a mob (`look` on a `MobKind`, see `add-mob-kind`). `npm run verify` fails on an unknown
    part, a part in the wrong slot, or a character without body and head.
 
-## Limits (see CLAUDE.md for the full list)
+## Limits (see src/sprites/CLAUDE.md for the full list)
 
 - Weapons need 128px swing art (`slash_128`): the arming sword family and the dagger work; longsword, mace, axe, scythe,
   rapier, saber, glowsword and polearms use 192px "oversize" swings and are not packed yet. Spears/staves have

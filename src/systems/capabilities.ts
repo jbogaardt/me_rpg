@@ -11,8 +11,8 @@
 // Every capability is listed in `CAPABILITIES`: what switching it off does, whether a zone may override it, what it
 // needs on (`requires`) and its settings with their defaults and bounds. `checkCapabilities` is the one validator,
 // used for campaign files and packs alike. tools/content/capabilities.test.ts checks that each capability is asked
-// about somewhere in src/ and that CLAUDE.md lists it. Adding one: an entry here, `enabled('<id>', zone)` at the gate
-// (and `setting` for anything tuned), a line in CLAUDE.md.
+// about somewhere in src/ and that src/systems/CLAUDE.md lists it. Adding one: an entry here, `enabled('<id>', zone)` at the gate
+// (and `setting` for anything tuned), a line in src/systems/CLAUDE.md.
 //
 // Co-op: both players play the same content (the world check of net/session.ts), so both have the same capabilities;
 // the host gates the rules, each side gates its own screens.

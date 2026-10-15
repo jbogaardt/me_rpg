@@ -1,5 +1,5 @@
 // Every capability (src/systems/capabilities.ts) is a switch wired to something and known to the docs: one that nothing
-// asks `enabled()` about would do nothing when a campaign turns it off, and one CLAUDE.md does not list is one nobody knows of.
+// asks `enabled()` about would do nothing when a campaign turns it off, and one src/systems/CLAUDE.md does not list is one nobody knows of.
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -17,13 +17,13 @@ function sources(dir = path.join(ROOT, 'src')): string[] {
 
 describe('capabilities', () => {
   const code = sources().map((f) => fs.readFileSync(f, 'utf8'));
-  const docs = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8');
-  it.each(CAPABILITY_IDS)('%s is gated in the code and listed in CLAUDE.md', (id) => {
+  const docs = fs.readFileSync(path.join(ROOT, 'src/systems/CLAUDE.md'), 'utf8');
+  it.each(CAPABILITY_IDS)('%s is gated in the code and listed in src/systems/CLAUDE.md', (id) => {
     expect(
       code.some((text) => new RegExp(`enabled\\('${id}'[,)]`).test(text)),
       `nothing asks enabled('${id}')`,
     ).toBe(true);
-    expect(docs.includes(`\`${id}\``), `CLAUDE.md does not list "${id}"`).toBe(true);
+    expect(docs.includes(`\`${id}\``), `src/systems/CLAUDE.md does not list "${id}"`).toBe(true);
     expect(CAPABILITIES[id].off.length).toBeGreaterThan(10);
   });
 });

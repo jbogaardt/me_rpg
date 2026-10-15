@@ -3,7 +3,7 @@
 // `rare`) that no shop sells. Each hero keeps a `QuestLog` (combat.ts): how many quests are done, whether the current one
 // has been given, and its progress. The rules here either succeed completely or change nothing.
 //
-// The host owns every hero (see CLAUDE.md, Co-op): solo and the host talk and count kills directly; a guest asks the host
+// The host owns every hero (see src/net/CLAUDE.md, Co-op): solo and the host talk and count kills directly; a guest asks the host
 // to talk (`DoMsg` op `talk`), is told the answer as a story key (`Talk.key`, turned back into lines with `linesFor`) and
 // is told its log in every `pack` message.
 //

@@ -69,7 +69,7 @@ filter), `ridge`.
   tile hides what is under it, so paint the biome's base terrain first and erase it (`{ erase: true }`) under a plaza.
 - Ground fills: `grass`, `sand`, `snow`, `water`, `ice`, `stone`, and from the LPC atlas `sea`, `cobble`, `flagstone`, `crackedStone`. `patch(name, rect)` blends sand/snow/stone into grass
   via a ring. **`water` and `ice` rings blend into sand / snow, not grass**: lay a sand (or snow) patch first and put the
-  water patch 1 cell inside its fill (the lake in `maps/frostlands.ts`). `snow`/`ice` are recolours (see Biomes in CLAUDE.md);
+  water patch 1 cell inside its fill (the lake in `maps/frostlands.ts`). `snow`/`ice` are recolours (see tools/map/CLAUDE.md);
   re-run `npm run tilesets` after editing `tools/map/recolor.ts`. Water/ice rects are walkable until you `block` the inner cells.
 - Interior pieces (`interior.png`, drawn by `tools/map/interior.ts`): ground `planks`, `wall`, `mat`; prefabs `counter` (4x1.5), `shelf<Shop>` (3x2) and `sign<Shop>` (4x2) for each of smithy/armory/ranger/apothecary.
 - Prefabs: trees `treeA`..`treeF` (+ `frostTree*`, `dryTree*`, `jungleTree*`, `deadTree*`, `swampTree*`; LPC trees of 3-4 cells, the bottom 75% blocks, the crown is walk-behind; use the `TREES`/`FROST_TREES`... arrays), bushes
