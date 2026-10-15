@@ -18,6 +18,8 @@ export interface EpicWriter {
     looks: { id: string; name: string }[];
     told: string[];
     stock: StockTale[];
+    /** The page's complaint about the last try, when this is a second go. */
+    refused?: string;
   }): Promise<unknown>;
 }
 
@@ -47,12 +49,14 @@ export async function tellEpic(
   area: string,
   told: string[],
 ): Promise<{ id: string; title: string } | null> {
-  const want = { area, looks: page.looks, told, stock: page.stock };
+  const want: Parameters<EpicWriter['write']>[0] = { area, looks: page.looks, told, stock: page.stock };
+  let refused = '';
   const tryTale = async (raw: unknown): Promise<{ id: string; title: string } | null> => {
     if (typeof raw !== 'object' || raw === null) return null;
     const result = await page.teller.epic(raw);
     if (!result.ok) {
       console.warn('the page refused an epic:', result.note);
+      refused = result.note;
       return null;
     }
     const t = raw as { id?: unknown; title?: unknown };
@@ -66,6 +70,15 @@ export async function tellEpic(
   }
   const told1 = await tryTale(raw);
   if (told1) return told1;
+  if (refused && raw !== null) {
+    // The writer may mend it once, told what the page objected to.
+    try {
+      const told2 = await tryTale(await writer.write({ ...want, refused }));
+      if (told2) return told2;
+    } catch (err) {
+      console.warn('the epic writer failed:', err instanceof Error ? err.message : err);
+    }
+  }
   const stock = nextStock(page.stock, told);
   return stock && raw !== stock ? tryTale(stock) : null;
 }

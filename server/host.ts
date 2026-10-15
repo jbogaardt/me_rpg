@@ -20,7 +20,7 @@ import { MockConjurer, shouldConjure, type Conjurer } from './conjure';
 import { MockNarrator, beatFor, type Memory, type Narrator } from './narrate';
 import { decideCard, type Card, type Move } from './router';
 import { MockEpicWriter, tellEpic, type StockTale, type EpicWriter } from './epics';
-import { SETTLE_MS, nextStep, type Clock, type PageState } from './turn';
+import { SETTLE_MS, heldCard, nextStep, type Clock, type PageState, type Pressure } from './turn';
 
 const DEFAULT_URL = 'https://jbogaardt.github.io/me_rpg/?campaign=live';
 const TICK_MS = 1500;
@@ -66,6 +66,8 @@ class Dm {
   /** The card last answered: met again unchanged, the answer did nothing, so it is sent away. */
   private answered = '';
   private latest: PageState | null = null;
+  /** The last pressure the DM set (turn up the heat / ease off), so the opposite card is not answered straight away. */
+  private pressure: Pressure | null = null;
   private narrator: Narrator = CLAUDE ? new ClaudeNarrator() : new MockNarrator();
   private conjurer: Conjurer = CLAUDE ? new ClaudeConjurer() : new MockConjurer();
   /** People made so far, and when the last was (ms). */
@@ -195,6 +197,11 @@ class Dm {
       this.answered = '';
       return;
     }
+    if (heldCard(card, this.pressure, this.clock.now)) {
+      log(`card “${card.title}” → held (the opposite was answered a moment ago)`);
+      await this.call('dismiss');
+      return;
+    }
     const move = await decideCard(card, s, this.services);
     log(`card “${card.title}”${card.note ? ` (${card.note})` : ''} →`, describe(move, card));
     if (move.reply) await this.call('reply', move.reply);
@@ -205,6 +212,7 @@ class Dm {
     if (move.pick) await this.call('pick', move.pick);
     if (move.road || !move.pick) await this.call('dismiss');
     this.answered = move.pick ? key : '';
+    if (move.pick === 'heat' || move.pick === 'ease') this.pressure = { id: move.pick, at: this.clock.now };
   }
 
   /** Say what changed at the table. */
@@ -271,6 +279,15 @@ async function main() {
   });
   const page = await browser.newPage({ viewport: { width: 960, height: 640 } });
   page.on('pageerror', (err) => log('page error:', err.message));
+  // The window was closed (or crashed): there is no table to run any more, so stop rather than fail every tick.
+  browser.on('disconnected', () => {
+    log('the browser closed: stopping');
+    process.exit(0);
+  });
+  page.on('close', () => {
+    log('the page closed: stopping');
+    void browser.close().finally(() => process.exit(0));
+  });
 
   log(CLAUDE ? 'wording with headless Claude Code' : 'wording with stock lines (DM_BOT_CLAUDE=1 for Claude)');
   log(process.env.TYPESAFE_API_KEY ? 'deciding with Jev' : 'no TYPESAFE_API_KEY: deciding with the mock router');

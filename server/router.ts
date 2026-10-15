@@ -181,7 +181,11 @@ export async function decideCard(
   try {
     const raw = await services.fallback.improvise({ card, table, words, options: question.options });
     const made = readImprovised(raw, question.options);
-    if (made) return moveOf('fallback', made.pick, made.reply ?? (words ? HOLD_REPLY : null), confidence);
+    if (made) {
+      // Words with no pick and nobody who asked ("Rise, friend" after choosing to do nothing) would say the opposite of what is done.
+      const reply = !made.pick && !words ? null : (made.reply ?? (words ? HOLD_REPLY : null));
+      return moveOf('fallback', made.pick, reply, confidence);
+    }
   } catch (err) {
     console.warn('fallback failed', err);
   }

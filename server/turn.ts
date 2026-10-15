@@ -64,3 +64,22 @@ export function nextStep(s: PageState, c: Clock, startAt = 0): Step {
 }
 
 const idle: Step = { kind: 'idle' };
+
+/** How long after setting the pressure the opposite card (struggling after turning up the heat, and back) is held. */
+export const PRESSURE_HOLD_MS = 120_000;
+
+/** The pressure the DM last set: the id of the option picked (`heat` or `ease`) and when (ms, the bot's clock). */
+export interface Pressure {
+  id: 'heat' | 'ease';
+  at: number;
+}
+
+/**
+ * A pressure card that asks for the opposite of what was just set: the party's health swings with every fight, so
+ * answering each wobble has the DM easing off and turning up the heat within seconds. It is sent away instead.
+ */
+export function heldCard(card: Card, last: Pressure | null, now: number): boolean {
+  if (!last || now - last.at >= PRESSURE_HOLD_MS) return false;
+  const opposite = last.id === 'heat' ? 'ease' : 'heat';
+  return card.options.some((o) => o.id === opposite) && !card.options.some((o) => o.id === last.id);
+}

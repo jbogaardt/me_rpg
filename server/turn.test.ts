@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { FOLLOW_MS, HOST_RETRY_MS, QUEST_GAP_MS, nextStep, type Clock, type PageState } from './turn';
+import {
+  FOLLOW_MS,
+  HOST_RETRY_MS,
+  PRESSURE_HOLD_MS,
+  QUEST_GAP_MS,
+  heldCard,
+  nextStep,
+  type Clock,
+  type PageState,
+} from './turn';
 
 const friend = (slot: number, near = true) => ({ slot, area: 'Greenwood', hp: 1, near });
 const state = (over: Partial<PageState> = {}): PageState => ({
@@ -39,6 +48,27 @@ describe('nextStep', () => {
     const away = state({ friends: [friend(2, false), friend(3, false)] });
     expect(nextStep(away, clock())).toEqual({ kind: 'follow', slot: 2 });
     expect(nextStep(away, { ...clock(), lastFollow: 100_000 - FOLLOW_MS + 1 }).kind).toBe('idle');
+  });
+
+  it('holds a pressure card that asks for the opposite of what was just set', () => {
+    const struggle = {
+      ...card,
+      options: [
+        { id: 'ease', label: 'Ease off' },
+        { id: 'stay', label: 'Stay' },
+      ],
+    };
+    const easy = {
+      ...card,
+      options: [
+        { id: 'heat', label: 'Heat' },
+        { id: 'stay', label: 'Stay' },
+      ],
+    };
+    expect(heldCard(struggle, { id: 'heat', at: 0 }, 1000)).toBe(true);
+    expect(heldCard(easy, { id: 'heat', at: 0 }, 1000)).toBe(false); // the same ask again is answered as before
+    expect(heldCard(struggle, { id: 'heat', at: 0 }, PRESSURE_HOLD_MS)).toBe(false);
+    expect(heldCard(struggle, null, 0)).toBe(false);
   });
 
   it('answers the card up before opening the inbox', () => {

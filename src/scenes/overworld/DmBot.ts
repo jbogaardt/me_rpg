@@ -7,6 +7,7 @@
 // off unless asked for.
 
 import type { DmCard } from '../../hud/DmCard';
+import { CELL } from '../../map/types';
 import type { Session } from '../../net/session';
 import { openGroundNear } from '../../systems/dmPeople';
 import { zoneName } from '../../systems/places';
@@ -32,9 +33,12 @@ export interface DmBotFriend {
   area: string;
   /** Health from 0 to 1. */
   hp: number;
-  /** In the same zone as the DM. */
+  /** In the same zone as the DM and within `NEAR_CELLS` of them (the bot goes to the party when nobody is). */
   near: boolean;
 }
+
+/** How close a friend counts as near the DM, in cells: far enough to stay put while they fight, near enough to be at hand. */
+export const NEAR_CELLS = 14;
 
 /** How things stand, for the bot's decisions. */
 export interface DmBotState {
@@ -134,7 +138,8 @@ export function createDmBot({
         slot,
         area: zoneName(z.name),
         hp: p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp),
-        near: z === here,
+        near:
+          z === here && Math.hypot(p.body.x - arena.local.body.x, p.body.y - arena.local.body.y) <= NEAR_CELLS * CELL,
       };
     });
   };

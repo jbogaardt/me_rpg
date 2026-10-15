@@ -8,7 +8,7 @@ const stock: StockTale[] = [
 const accepts: Teller = { epic: () => Promise.resolve({ ok: true, note: '' }) };
 const refuses = (): { teller: Teller; seen: unknown[] } => {
   const seen: unknown[] = [];
-  return { seen, teller: { epic: (raw) => (seen.push(raw), Promise.resolve({ ok: seen.length > 1, note: 'no' })) } };
+  return { seen, teller: { epic: (raw) => (seen.push(raw), Promise.resolve({ ok: seen.length > 2, note: 'no' })) } };
 };
 const page = (teller: Teller) => ({ teller, looks: [], stock });
 
@@ -30,9 +30,24 @@ describe('tellEpic', () => {
     const { teller, seen } = refuses();
     const bad = { write: () => Promise.resolve({ id: 'bad', title: 'Bad' }) };
     expect(await tellEpic(bad, page(teller), 'Glen', [])).toEqual({ id: 'one', title: 'One' });
-    expect(seen).toHaveLength(2);
+    expect(seen).toHaveLength(3); // the writer's, its second go, then the stock
     const broken = { write: () => Promise.reject(new Error('down')) };
     expect(await tellEpic(broken, page(accepts), 'Glen', ['one'])).toEqual({ id: 'two', title: 'Two' });
+  });
+  it('gives the writer one more go, told what the page refused', async () => {
+    const asked: (string | undefined)[] = [];
+    const writer = {
+      write: ({ refused }: { refused?: string }) => (
+        asked.push(refused),
+        Promise.resolve({ id: `try${asked.length}`, title: 'T' })
+      ),
+    };
+    let calls = 0;
+    const teller: Teller = {
+      epic: () => Promise.resolve(++calls === 1 ? { ok: false, note: 'steps[2]: a tell' } : { ok: true, note: '' }),
+    };
+    expect(await tellEpic(writer, page(teller), 'Glen', [])).toEqual({ id: 'try2', title: 'T' });
+    expect(asked).toEqual([undefined, 'steps[2]: a tell']);
   });
   it('tells nothing when there is nothing to tell, so a plain quest is offered', async () => {
     const none = { write: () => Promise.resolve(null) };

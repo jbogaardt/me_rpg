@@ -38,6 +38,28 @@ export const askClaude: Ask = (system, prompt) =>
     );
   });
 
+/** The most letters of a narrated line (the page trims the DM's words again). */
+export const MAX_LINE = 240;
+
+/**
+ * A model's narration as words the DM can say: stage directions (`*kneels beside you*`) are cut, quotes stripped, and a
+ * long answer is cut at a sentence. Empty when nothing is left or it will not fit (the caller uses a stock line).
+ */
+export function cleanLine(raw: string): string {
+  const spoken = raw
+    .replace(/\*[^*]*\*/g, ' ')
+    .replace(/[*_"“”]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const sentences = spoken.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? [];
+  let line = '';
+  for (const s of sentences.slice(0, 2)) {
+    if ((line + s).length > MAX_LINE) break;
+    line += s;
+  }
+  return line.trim();
+}
+
 /** The first JSON object in a model's text (it may wrap it in a fence or a sentence). */
 export function jsonIn(text: string): unknown {
   const start = text.indexOf('{');
@@ -81,12 +103,14 @@ export class ClaudeNarrator implements Narrator {
       quiet: 'The party has gone quiet and nothing has happened for a while.',
     }[beat.kind];
     try {
-      const text = (
-        await this.ask(PERSONA, `${moment} Say one or two short sentences to them, in character. Plain text only.`)
-      )
-        .replace(/^["“]|["”]$/g, '')
-        .trim();
-      if (text && text.length <= 240) return text;
+      const text = cleanLine(
+        await this.ask(
+          PERSONA,
+          `${moment} Say one or two short sentences to them, in character, as spoken words only: no stage ` +
+            `directions, no actions, no asterisks, no quotation marks. You are not beside them; you speak from afar.`,
+        ),
+      );
+      if (text) return text;
     } catch (err) {
       console.warn('claude narration failed:', err instanceof Error ? err.message : err);
     }
@@ -130,16 +154,18 @@ export function readPerson(raw: unknown, looks: { id: string }[]): Person | null
 /** A new epic for the place, written by Claude in the page's epic format (the page checks it; see epics.ts). */
 export class ClaudeEpicWriter implements EpicWriter {
   constructor(private ask: Ask = askClaude) {}
-  async write({ area, looks, told, stock }: Parameters<EpicWriter['write']>[0]): Promise<unknown> {
+  async write({ area, looks, told, stock, refused }: Parameters<EpicWriter['write']>[0]): Promise<unknown> {
     const example = stock[0];
     const prompt =
       `Write a new epic for the party, who are in ${area}. An epic is a short saga of 3 to 6 steps. A step is one of: ` +
       `"hunt" (clear foes), "gather" (collect from the land), "find" (search for a hidden thing), "visit" (reach a place), ` +
       `or "meet" (find one of the epic's people, who speaks and may hand over an item to carry on). Give it 2 or 3 people ` +
       `with a name, "lines" (what they say before they are met), "after" (once met), "finished" (once the saga is done) and a "look" word from: ${looks.map((l) => l.name).join(', ')}. Every person is met by exactly one "meet" step. ` +
-      `"hop" is how many lands from here the step is set (0 to 3). Make it a story with a reason, a turn and a payoff, not ` +
+      `"hop" is how many lands from here the step is set (0 to 3). EVERY step, not only some, has a "kind", a whole-number ` +
+      `"hop" and a "tell" (what the DM says to send them there, one short sentence under 200 letters). Make it a story with a reason, a turn and a payoff, not ` +
       `a list of chores. Do not reuse these ids: ${told.join(', ') || 'none'}. Reply with the JSON only, in exactly this form:\n` +
-      JSON.stringify(example);
+      JSON.stringify(example) +
+      (refused ? `\nYour last try was refused: ${refused}. Fix exactly that and answer again.` : '');
     return jsonIn(await this.ask(`${PERSONA} ${RULES}`, prompt));
   }
 }
