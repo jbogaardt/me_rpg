@@ -1,5 +1,14 @@
-# relay (matchmaking Worker)
+# relay: matchmaking Worker
 
-Keep it up to date in the same change ("above"/"below" in the text mean this file or the root map).
+A Cloudflare Worker with Durable Objects (one per game code, plus one for rate limits); `src/index.ts` is the only file
+that touches Cloudflare APIs, the rest (`room.ts`, `router.ts`, `limiter.ts`) is pure and runs unchanged in Node against
+an in-memory backend (`tools/relay/memory.ts`), which is what the tests and the e2e dev server use. It carries only the
+connection details that start a game; gameplay never goes through it.
 
-- **Relay (`relay/`, Cloudflare Worker + Durable Objects)** — one Durable Object per game code (`room.ts`: seats with one offer each; join takes the next free seat, a seat whose friend never answers is freed after 60 s; answer; cursor-based long-poll for the host; the host can reopen a seat, close the game to newcomers, or cancel; 10-minute expiry), a public router (`router.ts`: CORS to the game's origin, per-client rate limits, picking a free code, validating that only list words reach storage), `limiter.ts`, and `index.ts` (the only file that touches Cloudflare APIs). The logic is pure and runs unchanged in Node against an in-memory backend (`tools/relay/memory.ts`), which is what the tests (`tools/relay/*.test.ts`, including the real client against the real router) and the dev server use. Deployed by Cloudflare's own git integration (Workers Builds, root directory `relay`, set up in the Cloudflare dashboard, not in this repo), so a push to `main` that changes `relay/` redeploys it; it lives at `https://me-rpg-relay.jbogaardt.workers.dev` (`relayConfig.ts`) and setup is in `relay/README.md`. Changing the API: edit `src/net/relayApi.ts` first, then both sides, and bump `API_VERSION` (the path prefix) if old clients would misbehave: the game and the relay deploy separately, a minute or two apart.
+- **It deploys separately**: Cloudflare builds it from `main` (root directory `relay`, set up in the dashboard, not in
+  this repo), so a push that changes `relay/` or `src/net/relayApi.ts` redeploys it a minute or two apart from the
+  game. A relay change only reaches players once that build finishes. **Test these first**: they can break everyone's
+  co-op setup.
+- Changing the API: edit `src/net/relayApi.ts` first, then both sides, and bump `API_VERSION` (the path prefix) if old
+  clients would misbehave.
+- Live at `https://me-rpg-relay.jbogaardt.workers.dev` (`src/net/relayConfig.ts`); setup is in `relay/README.md`.

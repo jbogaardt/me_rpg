@@ -1,3 +1,9 @@
+// The state of an online game, shared by the menu and the game loop (Pixi-free, tested): the mode and role (solo, host,
+// client), the host's code and open lobby, parked incoming messages and the version handshake. The host keeps a `Seat` per
+// friend (waiting, joining, connected), refills a seat with a fresh offer when its friend leaves while the code is open,
+// and ends the game when the last friend leaves after Start; a friend's drop never affects the others. Runs
+// `createGame()` / `joinGame()` / `startGame()` over `PeerLink` and the relay client. See src/net/CLAUDE.md.
+
 import { LinkClosed, PeerLink, type Link, type LinkFactory, type LinkStatus } from './PeerLink';
 import {
   encodeMessage,
