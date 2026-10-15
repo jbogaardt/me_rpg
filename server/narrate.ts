@@ -46,20 +46,36 @@ export function beatFor(s: PageState, m: Memory, now: number): Beat | null {
   return null;
 }
 
+/**
+ * Who the DM is. The words are a wise old wanderer's: warm, a little cryptic, never an announcement. The mock narrator
+ * below speaks in this voice; a creative model is given this as its system prompt.
+ */
+export const PERSONA =
+  'You are the Dungeon Master of a fantasy adventure, played as a wise old wanderer in the manner of a gentle wizard: ' +
+  'warm, dry-witted, a little cryptic, fond of the travellers. You speak in one or two short sentences, in character, ' +
+  'never about game systems, numbers, menus or the word "player". You hint rather than instruct, and you never repeat yourself.';
+
 const LINES: Record<Beat['kind'], ((b: Beat) => string)[]> = {
   arrive: [
-    (b) => `${b.kind === 'arrive' ? b.area : 'This place'} opens before you. Stay alert.`,
-    (b) => `You step into ${b.kind === 'arrive' ? b.area : 'new ground'}. Something here is watching.`,
-    (b) => `The air shifts as you reach ${b.kind === 'arrive' ? b.area : 'a new place'}.`,
+    (b) =>
+      `Ah, ${b.kind === 'arrive' ? b.area : 'this place'}. I had hoped we would come here, though not so soon. Walk softly.`,
+    (b) =>
+      `${b.kind === 'arrive' ? b.area : 'This place'} has a long memory, my friends. Be kind to it, and it may be kind to you.`,
+    (b) =>
+      `Mark this place well: ${b.kind === 'arrive' ? b.area : 'it'}. Old roads meet here, and old troubles with them.`,
   ],
-  done: [() => 'Well done. The road ahead is yours to choose.', () => 'That deed is done, and word of it will travel.'],
+  done: [
+    () => 'Well done, though do not think the road is finished with you. It never is.',
+    () => 'A small deed, you may say. But great doors turn on small hinges.',
+  ],
   hurt: [
-    () => 'One of you is badly hurt. Fall back, or fight on at your peril.',
-    () => 'Blood on the ground. The fight turns grim.',
+    () => 'Courage is no armour, friends. One of you has paid dearly. Look to each other.',
+    () => 'Hold! There is wisdom in a step back, and no shame in it.',
   ],
   quiet: [
-    (b) => `All is still in ${b.kind === 'quiet' ? b.area : 'this place'}, too still. Something stirs in the distance.`,
-    () => 'Time passes. Will you press on, or rest while you can?',
+    (b) =>
+      `Hm. ${b.kind === 'quiet' ? b.area : 'This place'} is quiet. Too quiet, I think. Quiet is often the breath before the tale turns.`,
+    () => 'Take your time, if you must. But the world does not wait as patiently as I.',
   ],
 };
 

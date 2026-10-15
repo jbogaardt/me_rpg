@@ -14,6 +14,7 @@ import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
 import { JevRouter } from './jev';
 import { MockFallback, MockRouter } from './mocks';
+import { MockConjurer, shouldConjure } from './conjure';
 import { MockNarrator, beatFor, type Memory } from './narrate';
 import { decideCard, type Card, type Move } from './router';
 import { SETTLE_MS, nextStep, type Clock, type PageState } from './turn';
@@ -33,6 +34,8 @@ interface PageBot {
   choose(cue: string): { ok: boolean; note: string };
   reply(text: string): boolean;
   say(text: string): boolean;
+  looks(): { id: string; name: string }[];
+  spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
   goTo(slot: number): void;
 }
 // `page.evaluate` sends only a function's source, so each call below names the handle itself.
@@ -57,6 +60,10 @@ class Dm {
   private answered = '';
   private latest: PageState | null = null;
   private narrator = new MockNarrator();
+  private conjurer = new MockConjurer();
+  /** People made so far, and when the last was (ms). */
+  private made = 0;
+  private lastMade = -Infinity;
   private memory: Memory = { prev: null, spoke: 0 };
   private services = {
     router: process.env.TYPESAFE_API_KEY ? new JevRouter() : new MockRouter(() => this.latest?.story?.options ?? []),
@@ -141,7 +148,21 @@ class Dm {
     m.spoke = this.clock.now;
     log(`narrating (${beat.kind}):`, line);
     await this.say(line);
+    if (shouldConjure(beat, this.made, this.clock.now - this.lastMade)) await this.conjure(s);
     return true;
+  }
+
+  /** Bring a stranger into the story, near the party. */
+  private async conjure(s: PageState) {
+    this.lastMade = this.clock.now;
+    const looks = await this.call('looks');
+    const person = await this.conjurer.person({ area: s.area, looks, made: this.made });
+    if (!person) return;
+    const result = await this.call('spawn', person);
+    if (!result.ok) return log('could not bring in', person.name + ':', result.note);
+    this.made++;
+    log(`brought in ${person.name} (${looks.find((l) => l.id === person.look)?.name ?? person.look})`);
+    await this.say(`Hm, someone is near. Seek out ${person.name}; I think they have been waiting for you.`);
   }
 
   private async answer(card: Card, s: PageState) {

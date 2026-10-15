@@ -96,6 +96,19 @@ export class Story {
     }
   }
 
+  /** The Dungeon Master made someone and put them on a cell of a region's map: a new person, then their casting. */
+  bring(person: { name: string; look: string; lines: string[] }, region: string, x: number, y: number) {
+    if (!this.world || !this.canChoose) return;
+    try {
+      const id = this.world.npcId(person.name);
+      this.add({ t: 'npc', id, name: person.name, look: person.look, lines: person.lines });
+      this.add({ t: 'cast', region, entity: id, x, y });
+      this.note = '';
+    } catch (err) {
+      this.note = err instanceof Error ? err.message : String(err);
+    }
+  }
+
   get lastNote(): string {
     return this.note;
   }

@@ -38,6 +38,11 @@ different version away), so point it at the site they use. Against a local build
   friend fell low, the table went quiet) and a `Narrator` words it through the DM's `say`. It never talks over a card, a
   lobby or a line spoken in the last 20 s. The mock narrator uses stock lines; a creative model slots in behind the same
   interface.
+- `conjure.ts` makes people: on arriving somewhere new (at most 6 a game, 2 minutes apart) a `Conjurer` invents a
+  stranger (name, a look from the world's people, up to 4 short lines) and the page's `spawn` sets them near the party.
+  The mock conjurer has a few stock characters; the page refuses anything the world's checks refuse.
+- The DM's voice (`PERSONA` in `narrate.ts`) is a gentle wizard: warm, dry, cryptic, never an alert. The mock lines speak
+  in it; a creative model is given it as its system prompt.
 - `router.ts` answers a card (`decideCard`): a fast router answers one choice question over the card's options (plus
   the story's roads for a player's words, and "nothing"); at confidence 0.80 or more its pick is taken. Otherwise a
   creative fallback picks and writes the reply; its JSON is checked before use, so it can only choose what was offered.

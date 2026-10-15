@@ -8,9 +8,9 @@ Read this before touching the DM bar, director, cards, DM quests, epics, possess
 - **There is one way to host, and the host is the DM.** Hosting is running the world, not playing in it. From the first
   friend's connection player 0 has `dm` set (`Arena.setDm`); a guest knows that with nothing on the wire (`DM_SLOT`).
   Solo has no DM (a solo player in a live world gets only the story cards).
-- **The DM steers, never spawns.** They shape how hard the world pushes (pressure) and what happens in it (story, sky,
-  quests), never what is in it. The old person form and Cast tab are gone; the log's `cast`/`npc` entries remain as the
-  door for AI help.
+- **A human DM steers, never spawns.** They shape how hard the world pushes (pressure) and what happens in it (story,
+  sky, quests), never what is in it. The old person form and Cast tab are gone; the log's `cast`/`npc` entries are the door
+  for AI help: the DM bot (below) makes a person and sets them near the party through them.
 - **Steer by reacting, not by digging.** No admin panel: a bar that is always there, big tools as hot buttons, and cards
   that appear at the right moment with two or three buttons and go away if ignored. **Nothing pops up for the DM**:
   director nudges and player requests wait in an inbox (a count on a button). There are no cooldowns; a DM is never made
@@ -55,7 +55,9 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 ## A bot as the DM
 
 The DM can be a program (`server/`, the DM bot): `?dmbot` puts a handle on the page (`DmBot.ts`) through which an outside
-script hosts, opens the inbox, answers cards, takes story roads, replies, speaks, follows the party, starts the game and narrates unasked (new areas, a quest done, a hurt friend, a quiet table).
+script hosts, opens the inbox, answers cards, takes story roads, replies, speaks, follows the party, starts the game and narrates unasked, in a wise old wanderer's voice (new areas, a quest done, a hurt friend, a quiet table), and
+brings in a stranger on reaching a new area (`spawn`: an `npc` then a `cast` entry on open ground 3-8 cells from the party,
+checked by the world like any entry, so a bad invention is refused).
 Every call is a step the bar already offers, so nothing new is on the wire; without `?dmbot` the handle does not exist.
 
 ## Co-op rules

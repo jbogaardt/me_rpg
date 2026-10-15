@@ -8,6 +8,7 @@
 
 import type { DmCard } from '../../hud/DmCard';
 import type { Session } from '../../net/session';
+import { CELL } from '../../map/types';
 import { zoneName } from '../../systems/places';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
@@ -78,6 +79,10 @@ export interface DmBotApi {
   reply(text: string): boolean;
   /** Speak to everyone. */
   say(text: string): boolean;
+  /** The looks a new person may wear (empty when the world is not a live one). */
+  looks(): { id: string; name: string }[];
+  /** Make a person and put them near the party, on open ground in the area the DM stands in. */
+  spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
   /** Go to a friend (the Party tab's Go). */
   goTo: (slot: number) => void;
 }
@@ -150,6 +155,52 @@ export function createDmBot({ session, arena, story, desk, prompts, card, tasks,
     },
     reply: (text) => prompts.reply(text),
     say: (text) => desk.say(text),
+    looks: () => story.world?.lookOptions() ?? [],
+    spawn(person) {
+      const world = story.world;
+      const z = arena.zoneOf(arena.local);
+      const region = world?.regions.find((r) => world.cat.regions[r]?.biome.map === z.name);
+      if (!world || !region) return { ok: false, note: 'this is not a place of the live world' };
+      const at = openGroundNear(
+        z.collision,
+        [...arena.remotes.values(), arena.local].filter((p) => arena.zoneOf(p) === z),
+      );
+      if (!at) return { ok: false, note: 'there is no open ground near the party' };
+      story.bring(person, region, at.col, at.row);
+      const note = story.lastNote;
+      return { ok: !note, note };
+    },
     goTo,
   };
+}
+
+/** Distance (cells) from the party within which a new person stands: close enough to find, not on top of anyone. */
+const NEAR = { min: 3, max: 8 };
+
+/** A free cell 3 to 8 cells from the nearest hero (nearest ring first), or null. Open ground only, and not a doorway's cell. */
+export function openGroundNear(
+  collision: { isBlocked(col: number, row: number): boolean },
+  heroes: { body: { x: number; y: number } }[],
+): { col: number; row: number } | null {
+  const lead = heroes[heroes.length - 1]; // the DM, last, stands with the party
+  if (!lead) return null;
+  const home = { col: Math.floor(lead.body.x / CELL), row: Math.floor(lead.body.y / CELL) };
+  const apart = (col: number, row: number) =>
+    Math.min(
+      ...heroes.map((h) =>
+        Math.max(Math.abs(col - Math.floor(h.body.x / CELL)), Math.abs(row - Math.floor(h.body.y / CELL))),
+      ),
+    );
+  for (let r = NEAR.min; r <= NEAR.max; r++)
+    for (let d = -r; d <= r; d++)
+      for (const [col, row] of [
+        [home.col + d, home.row - r],
+        [home.col + d, home.row + r],
+        [home.col - r, home.row + d],
+        [home.col + r, home.row + d],
+      ] as const) {
+        const clear = [-1, 0, 1].every((a) => [-1, 0, 1].every((b) => !collision.isBlocked(col + a, row + b)));
+        if (clear && apart(col, row) >= NEAR.min) return { col, row };
+      }
+  return null;
 }
