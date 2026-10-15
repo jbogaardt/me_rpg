@@ -9,6 +9,8 @@ import {
   cropStage,
   canHarvest,
   harvest,
+  rainWaters,
+  RAIN_WATERS_AT,
   RIPE_CODE,
   waterWith,
 } from './crops';
@@ -78,5 +80,12 @@ describe('crops', () => {
     hero.pack.push(itemOf('waterskin'), itemOf('waterskin'));
     expect(waterWith(hero).ok).toBe(true);
     expect(hero.pack).toEqual([itemOf('waterskin')]);
+  });
+
+  it('are watered by rain or a storm once it has set in, never by snow, sand or ash', () => {
+    expect(rainWaters('rain', 1)).toBe(true);
+    expect(rainWaters('storm', RAIN_WATERS_AT)).toBe(true);
+    expect(rainWaters('rain', RAIN_WATERS_AT / 2)).toBe(false); // only just starting
+    for (const precip of ['snow', 'blizzard', 'sand', 'ash', null]) expect(rainWaters(precip, 1)).toBe(false);
   });
 });

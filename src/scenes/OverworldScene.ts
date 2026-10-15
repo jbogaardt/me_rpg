@@ -34,7 +34,7 @@ import { CELL } from '../map/types';
 import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
 import { CHEST_LOOTS, collect } from '../systems/chests';
-import { harvest, waterWith } from '../systems/crops';
+import { harvest, rainWaters, waterWith } from '../systems/crops';
 import { drinkableNear, thirsty } from '../systems/needs';
 import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
@@ -467,7 +467,12 @@ export class OverworldScene implements Scene {
           const present = arena.players();
           for (const p of present) sim.updatePlayer(p, commandOf(p), dt);
           for (const mob of z.mobs) mob.update(dt, z.mobWorld);
-          for (const crop of z.crops) crop.grow(dt);
+          // Rain waters every dry plot in the zone, as a Waterskin would (the snapshot tells a guest it is wet).
+          const raining = !!z.weather && rainWaters(z.weather.precip, z.weather.intensity);
+          for (const crop of z.crops) {
+            if (raining && crop.thirsty) crop.water();
+            crop.grow(dt);
+          }
           this.ground.age(dt);
           sim.weather(dt);
           for (const p of present) {

@@ -111,3 +111,10 @@ export function waterWith(hero: Hero): Watering {
   takeFromPack(hero, skin);
   return { ok: true, text: 'Watered' };
 }
+
+/** How hard rain must be falling (its weather intensity, 0..1) before it waters the plots: a drizzle easing in does not. */
+export const RAIN_WATERS_AT = 0.4;
+
+/** Does this weather water the crop plots? Rain or a storm once it has set in; snow, sand, ash and clear skies do not. */
+export const rainWaters = (precip: string | null, intensity: number): boolean =>
+  (precip === 'rain' || precip === 'storm') && intensity >= RAIN_WATERS_AT;
