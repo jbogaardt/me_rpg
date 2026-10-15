@@ -44,6 +44,20 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v39: the guest's request to the DM, `InputMsg.rq`. v40: `rq` may carry words of the guest's own and `DmMsg.reply` the
  * DM's private answer; `DmMsg.task` may be a saga's step (a note '' and the saga's name and place in it).
  * v41: `SnapMsg.barrels`, the barrels players have moved or are carrying.
+ * Older: v28 made a negative `SnapMsg.ponds` level mean refilling after running dry; v27 made `drink` start (item
+ * 1) or stop (item 0) a steady drink and added `SnapMsg.ponds`; v26 added the `drink` op of `do`; v25 added the
+ * mob state `channel` (the Mummy's held ray); v24 added the `frost` fx of Stasis; v23 made `SnapMsg.crops` a state
+ * code per plot (phase, dry or ripe); v22 and v21 added the crop plots' state; v20 added `PackMsg.needs`, food and
+ * water; v19 swapped Swift Surge for Spark Volley, so `FLAG.guard` moved to 32 and `FLAG.haste` is gone; v18 added
+ * `PackMsg.loadout` and the `loadout` op; v17 added `PackMsg.skills`, the `train` op and `FLAG.edge`; v16 added
+ * the charm slot (every worn/looks array is one longer), `PackMsg.quests` and `say.story`, and the `talk` op of
+ * `do`; v15 replaced the magic counter `mag` with the combo counter `cb` and index `ci`, added `FLAG.ward` and the
+ * spell fx; v14 made the weather per zone: precipitation, wind level, intensity and direction in `SnapMsg.w`; v13
+ * added the optional mouse aim `am` to inputs; v6 added `do`, `pack` and `looks`, v7 the per-zone snapshot, v8
+ * added `tr` and `trade`, v9 Inventory actions, ground items and `pack.ack`; v10 sends only the mobs near a
+ * friend, the ground only when it changes, event acks and player numbers on events; v11 added the host's weather
+ * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
+ * within a size budget.
  */
 export const PROTOCOL_VERSION = 41;
 

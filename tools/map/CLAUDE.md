@@ -1,6 +1,6 @@
 # tools/map and maps/ (the map pipeline)
 
-Also use the `build-zone` skill for any map change. Detail moved out of the root `CLAUDE.md` (which has the layers, commands, procedure and conventions); words such as "above" or "below" inside these bullets refer to this file or the map in the root. Keep the bullet for a feature up to date in the same change.
+Also use the `build-zone` skill for any map change. Keep it up to date in the same change ("above"/"below" in the text mean this file or the root map).
 
 - **Shop buildings** — `public/tilesets/town.png`, built by `tools/map/town.ts` (part of `npm run tilesets`) from the CC0 "Town RPG Pack" by Luis Zuno in `art/town_rpg_pack/` (16px art, doubled to the 32px grid): the pack's inn and tall house are cut out, roofs recoloured, the tall house given the inn's door, and an emblem painted over each door. Coordinates are `BUILDINGS` in `tools/map/catalog.ts`; the prefabs `smithy`, `apothecary`, `wizard` (6x7 cells) and `armory`, `ranger` (3x9) are solid from the ground up. Each building has a door (see Zones and doors) into its shop room.
 - **Map pipeline** — maps are built by agents from code, not painted: **use the `build-zone` skill** (`.claude/skills/build-zone/SKILL.md`) for any map change.
