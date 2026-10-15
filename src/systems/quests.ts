@@ -390,9 +390,10 @@ function pay(hero: Hero, q: Quest): { gear: boolean; levels: number } | null {
 /**
  * The hero speaks to `giverId` (the chain's giver unless they name someone else): that person gives them the next task,
  * reminds them of the one they are on, or (if it is done) takes it and pays, and the chain moves on. Someone who has nothing
- * to do with the quest the hero is on just says their piece (`GIVERS[id].idle`). The reply says which lines to show.
+ * to do with the quest the hero is on just says their piece (`GIVERS[id].idle`), and so does everyone when `story` is off
+ * (online, where only the Dungeon Master's quests count). The reply says which lines to show.
  */
-export function talk(hero: Hero, giverId: string = QUEST_GIVER): Talk {
+export function talk(hero: Hero, giverId: string = QUEST_GIVER, story = true): Talk {
   const log = hero.quests;
   const q = currentQuest(log);
   const said = (key: string, lines: string[], extra: Partial<Talk> = {}): Talk => ({
@@ -404,6 +405,7 @@ export function talk(hero: Hero, giverId: string = QUEST_GIVER): Talk {
     ...extra,
   });
   const idle = () => said(`${giverId}.idle`, idleLines(giverId));
+  if (!story) return idle(); // online the Dungeon Master gives the quests: everyone else only passes the time of day
   if (!q) return giverId === QUEST_GIVER ? said('end', EPILOGUE) : idle();
   const [offerer, completer] = [offererOf(q), completerOf(q)];
   switch (questStatus(hero)) {

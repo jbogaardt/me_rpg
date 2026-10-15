@@ -313,13 +313,10 @@
 #dm-bar input { flex: 1; min-width: 0; font: 16px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
 #dm-bar [hidden] { display: none; }
 #dm-bar .hint { margin: 0; font: 600 14px var(--body); color: #ffe9a8; }
-#dm-bar .rarely summary { cursor: pointer; font: 600 14px var(--body); color: var(--ink-soft); padding: 2px 0; }
-#dm-bar .rarely[open] summary { margin-bottom: 4px; }
 #dm-bar .powers { display: flex; flex-wrap: wrap; gap: 6px; }
 #dm-bar .mp-btn { padding: 4px 10px; font-size: 14px; white-space: nowrap; }
 #dm-bar .mp-btn:disabled { opacity: 0.55; cursor: default; }
 #dm-bar .mp-btn.on { filter: brightness(1.35); outline: 2px solid #ffd34d; }
-#dm-bar [data-power="smite"] { color: #ffd34d; }
 #dm-bar .handle { display: block; margin: 0; padding: 6px 12px; font: 700 15px var(--title); color: #ffe9a8; background: none; border: 0; text-align: left; cursor: pointer; }
 #dm-bar .handle::after { content: ' ▾'; }
 #dm-bar.folded .handle::after { content: ' ▸'; }
@@ -338,8 +335,22 @@ body.touch-ui #dm-card .mp-btn { min-height: 44px; padding: 10px 12px; font-size
 body.touch-ui #dm-card .close { width: 44px; height: 44px; top: 0; right: 0; }
 body.touch-ui #dm-hold { top: auto; bottom: 42%; }
 body.touch-ui #hud-dm { max-width: calc(100vw - 170px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#dm-speech { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: 18%; max-width: min(520px, calc(100vw - 32px)); padding: 8px 14px; text-align: center; font: 600 18px/1.3 var(--body); color: var(--ink); pointer-events: none; }
+#dm-speech { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: 18%; max-width: min(520px, calc(100vw - 32px)); padding: 8px 34px 8px 14px; text-align: center; font: 600 18px/1.3 var(--body); color: var(--ink); pointer-events: none; }
+#dm-speech .text { margin: 0; }
+#dm-speech .close { position: absolute; top: 2px; right: 4px; width: 32px; height: 32px; pointer-events: auto; background: none; border: 0; font: 700 18px var(--body); color: var(--ink-soft); cursor: pointer; }
+body.touch-ui #dm-speech .close { width: 44px; height: 44px; top: 0; right: 0; }
 #dm-speech[hidden] { display: none; }
+body.dm-possessing #dm-speech, body.dm-possessing #dm-card, body.dm-possessing #area-banner { display: none; }
+/* The DM has no use for Inventory or Attack on screen: the hot buttons take their place (Attack comes back to strike as a possessed foe). */
+body.dm-ui #inv-btn { display: none; }
+body.dm-ui:not(.dm-possessing) #btn-a { display: none; }
+#dm-hot { position: fixed; z-index: 2; right: calc(12px + env(safe-area-inset-right)); top: 40%; transform: translateY(-50%); display: grid; gap: 6px; font-family: var(--body); }
+#dm-hot[hidden] { display: none; }
+#dm-hot .mp-btn { padding: 6px 10px; font-size: 14px; white-space: nowrap; text-align: left; }
+#dm-hot .mp-btn:disabled { opacity: 0.55; cursor: default; }
+#dm-hot .mp-btn.on { filter: brightness(1.35); outline: 2px solid #ffd34d; }
+body.touch-ui #dm-hot { top: auto; transform: none; bottom: calc(160px + env(safe-area-inset-bottom)); right: calc(12px + env(safe-area-inset-right)); grid-template-columns: repeat(2, auto); }
+body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 15px; }
 #dm-speech::before { content: 'The Dungeon Master speaks'; display: block; font: 700 12px var(--title); color: #7c230f; letter-spacing: 0.06em; text-transform: uppercase; }
 #dm-hold { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: 8px; padding: 4px 14px; font: 700 15px var(--title); color: #9fe8ff; text-shadow: 0 1px 2px #000; pointer-events: none; }
 #dm-hold[hidden] { display: none; }

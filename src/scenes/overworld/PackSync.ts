@@ -82,7 +82,7 @@ export class PackSync {
       this.session.send({ k: 'do', n: ++this.doSeq, op: 'talk', item: 0, shop: giver });
       return;
     }
-    const told = talk(arena.hero, giver);
+    const told = talk(arena.hero, giver, arena.role === 'solo');
     this.afterTalk(arena.local, told);
     this.ui.dialog.say(told.lines);
   }
@@ -197,7 +197,7 @@ export class PackSync {
     if (Math.hypot(p.body.x - giver.body.x, p.body.y - giver.body.y) > KEEPER_REACH + CELL) {
       return { ok: false, text: 'Too far away' };
     }
-    const told = talk(p.hero, giverId);
+    const told = talk(p.hero, giverId, false); // a friend's quests are the Dungeon Master's
     if (told.levels) this.levelUp(p);
     return { ok: true, text: '', gear: told.gear, story: told.key };
   }

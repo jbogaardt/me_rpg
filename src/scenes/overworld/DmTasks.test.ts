@@ -47,13 +47,26 @@ function game(role: 'host' | 'solo' = 'host') {
 }
 
 describe('the DM’s quest, on the host', () => {
-  it('a quest given is announced and shown to everyone, one at a time', () => {
+  it('a quest given is shown to everyone (each screen tells it itself), one at a time', () => {
     const { tasks, arena, said, give } = game();
     expect(give()).toBe(true);
     expect(arena.task).toMatchObject({ kind: 'hunt', title: 'Hunt 2 Goblins', state: 'active', progress: 0, goal: 2 });
-    expect(said).toHaveLength(1);
+    expect(said).toHaveLength(0);
     expect(give()).toBe(false);
     expect(tasks.pace).toMatchObject({ age: 0, hint: false });
+  });
+
+  it('carries the DM’s own instructions for the running quest, and drops them when it ends', () => {
+    const { tasks, arena, give } = game();
+    expect(tasks.setNote('Go north.')).toBe(false); // nothing running yet
+    give();
+    expect(tasks.setNote('  Go\n north, past the mill.  ')).toBe(true);
+    expect(arena.task!.note).toBe('Go north, past the mill.');
+    expect(tasks.setNote('   ')).toBe(false);
+    tasks.cancel();
+    expect(arena.task).toBeNull();
+    give();
+    expect(arena.task!.note).toBeUndefined();
   });
 
   it('counts only the kills of its foe in its zone, pays the whole party, and says well done', () => {

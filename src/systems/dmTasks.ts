@@ -4,6 +4,8 @@
 // map, never an arrow (the DM can hand out a hint when they are lost). One at a time; the host owns it, friends are told.
 // They sit beside the story's quest chain: the chain is the spine of the tale, these are the DM's tool.
 
+import { MAX_NOTE } from './dmBrief';
+
 export const TASK_KINDS = ['hunt', 'gather', 'find', 'visit'] as const;
 export type TaskKind = (typeof TASK_KINDS)[number];
 export const TASK_STATES = ['active', 'done', 'failed'] as const;
@@ -201,6 +203,8 @@ export interface TaskView {
   what: string;
   bits: number;
   hint: boolean;
+  /** The DM's own instructions for it, when they wrote some (they replace the usual telling). */
+  note?: string;
 }
 
 export const viewOf = (t: Task): TaskView => ({
@@ -224,22 +228,29 @@ export function taskText(v: TaskView): string {
   return v.goal > 1 ? `${v.title} (${v.progress}/${v.goal})` : v.title;
 }
 
-/** [kind, state, progress, goal, zone, x, y, title, bits, hint, what]: how a quest travels in a `dm` message. */
-export type TaskWire = [number, number, number, number, string, number, number, string, number, number, string];
+/**
+ * [kind, state, progress, goal, zone, x, y, title, bits, hint, what, note?]: how a quest travels in a `dm` message (the
+ * note only when the DM wrote instructions).
+ */
+export type TaskWire =
+  | [number, number, number, number, string, number, number, string, number, number, string]
+  | [number, number, number, number, string, number, number, string, number, number, string, string];
 
-export const taskWire = (v: TaskView): TaskWire => [
-  TASK_KINDS.indexOf(v.kind),
-  TASK_STATES.indexOf(v.state),
-  v.progress,
-  v.goal,
-  v.zone,
-  v.x,
-  v.y,
-  v.title,
-  v.bits,
-  v.hint ? 1 : 0,
-  v.what,
-];
+export const taskWire = (v: TaskView): TaskWire =>
+  [
+    TASK_KINDS.indexOf(v.kind),
+    TASK_STATES.indexOf(v.state),
+    v.progress,
+    v.goal,
+    v.zone,
+    v.x,
+    v.y,
+    v.title,
+    v.bits,
+    v.hint ? 1 : 0,
+    v.what,
+    ...(v.note ? [v.note] : []),
+  ] as TaskWire;
 
 const MAX_ZONE = 48;
 const MAX_TITLE = 64;
@@ -248,8 +259,8 @@ const MAX_COORD = 100_000;
 
 /** A quest from a message, or null if it is not one. */
 export function taskFromWire(w: unknown): TaskView | null {
-  if (!Array.isArray(w) || w.length !== 11) return null;
-  const [k, s, progress, goal, zone, x, y, title, bits, hint, what] = w as unknown[];
+  if (!Array.isArray(w) || (w.length !== 11 && w.length !== 12)) return null;
+  const [k, s, progress, goal, zone, x, y, title, bits, hint, what, note] = w as unknown[];
   const kind = typeof k === 'number' ? TASK_KINDS[k] : undefined;
   const state = typeof s === 'number' ? TASK_STATES[s] : undefined;
   const whole = (n: unknown, max: number): n is number =>
@@ -267,5 +278,6 @@ export function taskFromWire(w: unknown): TaskView | null {
     return null;
   if (!text(zone, MAX_ZONE, 1) || !text(title, MAX_TITLE, 1) || !text(what, MAX_WHAT)) return null;
   if (!whole(bits, 0x7fffffff) || (hint !== 0 && hint !== 1)) return null;
-  return { kind, state, progress, goal, zone, x, y, title, what, bits, hint: hint === 1 };
+  if (note !== undefined && !text(note, MAX_NOTE, 1)) return null;
+  return { kind, state, progress, goal, zone, x, y, title, what, bits, hint: hint === 1, ...(note ? { note } : {}) };
 }

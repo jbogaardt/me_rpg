@@ -47,7 +47,9 @@ import { harvest, waterWith } from '../systems/crops';
 import { drinkableNear, thirsty } from '../systems/needs';
 import type { Hero, Item } from '../systems/combat';
 import type { QuestSite } from '../entities/QuestSite';
-import { equip } from '../systems/items';
+import { ITEMS, equip } from '../systems/items';
+import { MOB_KINDS } from '../systems/combat';
+import { briefing } from '../systems/dmBrief';
 import { lecternIn, lecternPages } from '../systems/lectern';
 import { signLines, signNear } from '../systems/signs';
 import { heroCombos, TRAINER, trainerTalk, type Skill } from '../systems/skills';
@@ -57,6 +59,7 @@ import {
   GIVERS,
   QUESTS,
   currentQuest,
+  SITE_KINDS,
   giverMark,
   mobKey,
   progressOf,
@@ -93,7 +96,7 @@ import { DmTasks } from './overworld/DmTasks';
 import { DmRevive } from './overworld/DmRevive';
 import { DmPossession } from './overworld/DmPossession';
 import { DmNarration } from './overworld/DmNarration';
-import { taskText } from '../systems/dmTasks';
+import { taskText, type TaskView } from '../systems/dmTasks';
 import { RELIC_KIND } from '../systems/dmQuests';
 import { VotePanel } from '../hud/VotePanel';
 import type { World } from '../content/world';
@@ -178,6 +181,9 @@ export class OverworldScene implements Scene {
   private story = { stage: -1, ready: false, chapter: -1 };
   private fieldNote: string[] | null = null; // narration waiting for the dialog to be free
   private titleCard: { title: string; sub: string } | null = null; // a chapter banner waiting its turn
+  private taskSig = ''; // the DM's quest the local player was last told about
+  private taskNote = ''; // and the instructions the DM last wrote for it
+  private taskBrief: string[] | null = null; // the telling of it, waiting for the dialog to be free
   private visited = new Set<string>(); // zones the local player has been in (the banner says "new area" the first time)
   private arrow = new GuideArrow(); // the quest arrow, over the world and under the door transition
   private marked = new WeakMap<Character, string>(); // the tag last put over each quest giver
@@ -248,7 +254,8 @@ export class OverworldScene implements Scene {
     this.revive = new DmRevive(arena, this.sim, this.zones);
     this.possession = new DmPossession(arena, this.sim);
     this.prompts = new DmPrompts(arena, this.liveStory, this.desk, this.powers, this.dmCard, this.tasks, this.revive);
-    this.desk.onSay = (text) => this.dmBar.speak(text, arena.clock); // the DM's words show on every screen
+    // The DM's words show on every screen (never over a DM who is busy being a foe).
+    this.desk.onSay = (text) => !this.possession.active && this.dmBar.speak(text, arena.clock);
     this.zones.root.addChildAt(this.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     this.overlay = new MapOverlay();
@@ -311,6 +318,12 @@ export class OverworldScene implements Scene {
     this.ui.menu.party.attach({ rows: () => this.partyRows(), go: (slot) => this.dmGoTo(slot) });
     this.dmBar.attach({
       say: (text) => this.desk.say(text),
+      note: (text) => this.tasks.setNote(text),
+      cancelQuest: () => {
+        this.tasks.cancel();
+        this.desk.say('Forget that task. New instructions will follow.');
+      },
+      questing: () => this.tasks.active,
       smite: () => this.powers.smite(),
       freeze: () => this.powers.freeze(),
       stop: () => this.powers.toggleStop(),
@@ -370,8 +383,14 @@ export class OverworldScene implements Scene {
     this.narration.update(dt);
     if (arena.local.dm && !this.ui.dialog.active && !this.ui.menu.open && stopPressed()) this.powers.toggleStop();
     document.body.classList.toggle('touch-ui', this.ui.touch.active); // the DM's bar and cards lay out for a phone
+    document.body.classList.toggle('dm-ui', arena.local.dm); // the DM's hot buttons take the place of Inventory and Attack
+    document.body.classList.toggle('dm-possessing', this.possession.active); // no pop-ups while a foe is held
+    if (this.possession.active && this.dmCard.open) this.dmCard.hide();
     this.dmBar.update(arena.local.dm, arena.clock, arena.timeStopped, this.possession.name, this.ui.touch.active);
-    this.prompts.update(dt, this.ui.dialog.active || this.ui.menu.open || this.zones.transition.busy);
+    this.prompts.update(
+      dt,
+      this.ui.dialog.active || this.ui.menu.open || this.zones.transition.busy || this.possession.active,
+    );
     const online = arena.role !== 'solo';
     // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
     // without the map capability (it is still explored, so nothing changes if one is played later).
@@ -387,6 +406,7 @@ export class OverworldScene implements Scene {
       this.overlay.setZone(arena.zone.data, seen, arena.zone.name);
     }
     menu.setOnline(online, arena.local.dm);
+    if (menu.open && online) menu.dmQuest = arena.task && { view: arena.task, pages: this.briefOf(arena.task) };
     this.trading.sync(dt, online);
     if (mapShown && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
     this.possession.update();
@@ -395,6 +415,8 @@ export class OverworldScene implements Scene {
     if (click && free && !this.possession.active) this.possession.clickAt(click, this.ui.touch.active); // the DM clicks or taps a foe to possess it
     if (this.dmCard.open && menuPressed())
       this.dmCard.dismiss(); // Esc sends a card away first
+    else if (this.dmBar.speaking && menuPressed())
+      this.dmBar.dismissSpeech(); // then the DM's words, which should never block the screen
     else if (this.possession.active && menuPressed())
       this.possession.release(); // then lets go of a foe, instead of opening the menu
     else if (!dialog.active && menuPressed()) {
@@ -409,7 +431,7 @@ export class OverworldScene implements Scene {
     if (menu.open || shop.open || trade.open) {
       if (menu.open) menu.update();
       else if (shop.open) shop.update();
-      hud.update(this.hero, '', arena.zone.name, arena.local.dm, this.taskLine()); // gold changes at the counter
+      hud.update(this.hero, '', arena.zone.name, arena.local.dm, this.taskLine(), arena.role === 'solo'); // gold changes at the counter
       if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
     }
 
@@ -444,6 +466,7 @@ export class OverworldScene implements Scene {
     this.updateQuests(z, dt);
     this.announceArea();
     this.tellStory();
+    this.tellTask();
     this.pointTheWay(z, dt);
     for (const k of z.keepers) k.body.animate(dt * 1000, false);
     for (const pet of z.pets) {
@@ -458,7 +481,14 @@ export class OverworldScene implements Scene {
       z,
       menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy || arena.local.dm,
     );
-    hud.update(this.hero, this.combos.typed, this.arena.zone.name, this.arena.local.dm, this.taskLine());
+    hud.update(
+      this.hero,
+      this.combos.typed,
+      this.arena.zone.name,
+      this.arena.local.dm,
+      this.taskLine(),
+      arena.role === 'solo',
+    );
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.
@@ -614,6 +644,7 @@ export class OverworldScene implements Scene {
     const { arena } = this;
     const p = arena.remotes.get(slot);
     if (!arena.local.dm || !p || this.zones.transition.busy) return;
+    this.possession.release(); // a held foe stays where it is: the DM goes alone
     this.ui.menu.close();
     const dest = arena.zoneOf(p);
     this.zones.travel(arena.local, dest, { col: Math.floor(p.body.x / CELL), row: Math.floor(p.body.y / CELL) });
@@ -777,15 +808,16 @@ export class OverworldScene implements Scene {
   /** The quest markers for the local player: "!" over the giver with a task to hand out, "?" when one can be handed in; sites show only while wanted. */
   private updateQuests(z: ZoneState, dt: number) {
     const hero = this.hero;
+    const story = this.arena.role === 'solo'; // online the party has only the Dungeon Master's quests
     for (const g of z.givers) {
-      const mark = giverMark(hero, g.giver); // "!" or "?" over whoever the current quest is about
+      const mark = story ? giverMark(hero, g.giver) : ''; // "!" or "?" over whoever the current quest is about
       const text = mark ? `${mark} ${GIVERS[g.giver]?.tag ?? ''}` : (GIVERS[g.giver]?.tag ?? '');
       if (this.marked.get(g.body) === text) continue;
       this.marked.set(g.body, text);
       g.body.setTag(text, mark ? 0xffd34d : 0xffffff);
     }
     for (const s of z.sites) {
-      s.setOpen(siteOpen(hero, s.kind, z.name, s.index) || this.questWants(z.name, s));
+      s.setOpen((story && siteOpen(hero, s.kind, z.name, s.index)) || this.questWants(z.name, s));
       s.update(dt);
     }
     for (const g of z.givers) g.body.animate(dt * 1000, false);
@@ -796,6 +828,7 @@ export class OverworldScene implements Scene {
     const name = this.arena.zone.name;
     if (name === this.announced || this.zones.transition.busy) return;
     this.announced = name;
+    if (this.possession.active) return; // no pop-ups while a foe is held
     const fresh = !this.visited.has(name);
     this.visited.add(name);
     this.banner.show(zoneName(name), fresh && !this.arena.zone.data.indoor ? 'New area discovered' : '');
@@ -838,6 +871,40 @@ export class OverworldScene implements Scene {
     }
   }
 
+  /**
+   * The Dungeon Master gave the party a quest (or wrote new instructions for it): tell it as a conversation, in pages, the
+   * way a person who gives a quest would. Built here from the quest every screen already has, so nothing more is sent.
+   */
+  private tellTask() {
+    const { dialog, menu } = this.ui;
+    const t = this.arena.task;
+    const active = !!t && t.state === 'active' && !this.arena.local.dm;
+    const sig = active ? `${t.kind}|${t.zone}|${t.what}|${t.x},${t.y}|${t.title}` : '';
+    const note = active ? (t.note ?? '') : '';
+    if (sig !== this.taskSig) {
+      this.taskSig = sig;
+      this.taskNote = note;
+      this.taskBrief = active ? this.briefOf(t) : null;
+    } else if (note !== this.taskNote) {
+      this.taskNote = note;
+      if (note) this.taskBrief = [note];
+    }
+    if (!this.taskBrief || dialog.active || menu.open || this.zones.transition.busy) return;
+    dialog.say(this.taskBrief);
+    this.taskBrief = null;
+  }
+
+  /** The pages that tell a DM quest: the DM's own words when they wrote some, else the usual telling. */
+  private briefOf(t: TaskView): string[] {
+    if (t.note) return [t.note];
+    return briefing(t, {
+      foe: (key) => MOB_KINDS[key]?.name ?? key,
+      site: (kind) => SITE_KINDS[kind]?.name ?? kind,
+      item: (id) => (ITEMS[id] ? `the ${ITEMS[id].name}` : id),
+      area: (zone) => zoneName(zone),
+    });
+  }
+
   /** The task the DM called, as the tracker line ('' when there is none). */
   private taskLine(): string {
     return this.arena.task ? taskText(this.arena.task) : '';
@@ -857,7 +924,8 @@ export class OverworldScene implements Scene {
       givers: z.givers.map((g) => ({ id: g.giver, x: g.body.x, y: g.body.y })),
       places: z.data.places.map((p) => ({ name: p.name, x: (p.col + 0.5) * CELL, y: (p.row + 0.5) * CELL })),
     };
-    const guide = hide ? null : guideFor(this.hero, world, this.player);
+    // The story's quest arrow is solo only: online the Dungeon Master's quest is the only one the party has.
+    const guide = hide || this.arena.role !== 'solo' ? null : guideFor(this.hero, world, this.player);
     const { camera } = z;
     const at = (x: number, y: number) => ({ x: z.world.x + x * camera.zoom, y: z.world.y + y * camera.zoom });
     // A person or a door gets the arrow; something to be found is only an area on the map (M).

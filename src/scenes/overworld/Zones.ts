@@ -222,6 +222,7 @@ export class Zones {
 
   /** Take a player through a door they are standing on, if there is one (and its zone is loaded). */
   checkDoors(p: Player) {
+    if (p.hidden) return; // a DM riding on a possessed foe goes where the foe goes, never through a door of their own
     const door = doorAt(this.arena.zoneOf(p).data, p.body.x, p.body.y);
     if (!door) return;
     const dest = this.arena.zones.get(door.to.zone);

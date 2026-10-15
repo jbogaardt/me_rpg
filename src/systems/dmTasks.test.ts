@@ -142,6 +142,18 @@ describe('what the party sees', () => {
     for (const bad of broken) expect(taskFromWire(bad)).toBeNull();
   });
 
+  it('carries the DM’s instructions as a twelfth value, within their limit', () => {
+    const b = new TaskBook();
+    b.call(offer({}));
+    const v = { ...viewOf(b.task!), note: 'Go north, past the mill.' };
+    const wire = taskWire(v);
+    expect(wire).toHaveLength(12);
+    expect(taskFromWire(JSON.parse(JSON.stringify(wire)))).toEqual(v);
+    expect(taskFromWire([...wire.slice(0, 11), 'x'.repeat(241)])).toBeNull();
+    expect(taskFromWire([...wire.slice(0, 11), ''])).toBeNull();
+    expect(taskWire(viewOf(b.task!))).toHaveLength(11);
+  });
+
   it('says what was asked and how it stands, and pays by the size of the ask', () => {
     const v = viewOf({
       ...new TaskBook().task!,

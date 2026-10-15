@@ -1,4 +1,5 @@
 import { CELL } from '../../map/types';
+import { cleanNote } from '../../systems/dmBrief';
 import { collect } from '../../systems/chests';
 import { RELIC_KIND, questOffers, relicsFor, type Land } from '../../systems/dmQuests';
 import {
@@ -8,7 +9,6 @@ import {
   viewOf,
   type Presence,
   type QuestOffer,
-  type TaskKind,
   type TaskResult,
   type TaskState,
 } from '../../systems/dmTasks';
@@ -19,13 +19,7 @@ import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
 import type { Simulation } from './Simulation';
 
-/** What the DM says as a quest is given and as it ends: their voice, to every screen. */
-const CALL: Record<TaskKind, string> = {
-  hunt: 'Something is overrunning this land. Deal with it.',
-  gather: 'The land holds what we need. Go and find it.',
-  find: 'Somewhere in this land lies something old. Seek it out.',
-  visit: 'There is a place you must reach. How you get there is up to you.',
-};
+/** What the DM says as a quest ends: their voice, to every screen (the telling of a new one is each player's own dialog). */
 const END: Record<'done' | 'failed', string> = { done: 'Well done.', failed: 'The chance has passed.' };
 
 /** How often (s) the quest's target (the foes, the nearest site) is looked for again. */
@@ -49,6 +43,7 @@ export class DmTasks {
   private retarget = 0;
   private seq = 0;
   private turn = 0;
+  private note = '';
   /** The offers on the card now: a pick is an index into this. */
   offers: QuestOffer[] = [];
 
@@ -160,7 +155,7 @@ export class DmTasks {
     this.linger = 0;
     this.retarget = 0;
     this.seq++;
-    this.desk.say(CALL[offer.kind]);
+    this.note = '';
     this.publish();
     return true;
   }
@@ -187,7 +182,17 @@ export class DmTasks {
   /** The DM calls it off. */
   cancel() {
     this.book.cancel();
+    this.note = '';
     this.publish();
+  }
+
+  /** The DM's own instructions for the quest running: every player is told them in place of the usual telling. */
+  setNote(text: string): boolean {
+    const words = cleanNote(text);
+    if (this.arena.role !== 'host' || !this.active || !words) return false;
+    this.note = words;
+    this.publish();
+    return true;
   }
 
   update(dt: number) {
@@ -261,7 +266,9 @@ export class DmTasks {
   }
 
   private publish() {
-    this.arena.task = this.book.task ? viewOf(this.book.task) : null;
+    this.arena.task = this.book.task
+      ? { ...viewOf(this.book.task), ...(this.note && this.active ? { note: this.note } : {}) }
+      : null;
   }
 
   reset() {
@@ -269,6 +276,7 @@ export class DmTasks {
     this.kills = 0;
     this.touched = [];
     this.finder = null;
+    this.note = '';
     this.arena.task = null;
   }
 }

@@ -1,14 +1,21 @@
-// The Dungeon Master's bar, always in reach like the player's [I] menu: one line to speak to the party, the nudges a DM
-// gives (a Quest, the Story, the Sky, the Pressure) and, tucked under "Rarely", the big tools (Stop time [T], Smite, Freeze,
-// Reset zone). Also where the words a DM
-// speaks appear, for everyone, and the "time is stopped" notice. Built once from index.html (`#dm-bar`, `#dm-speech`,
+// The Dungeon Master's bar, always in reach like the player's [I] menu: one line to speak to the party (or to write the
+// running quest's instructions), the nudges a DM gives (a Quest, Cancel quest, the Story, the Sky, the Pressure), and beside
+// it the hot buttons for the big tools (Smite, Freeze, Stop time [T], Reset zone), which stand in for the Inventory and
+// Attack buttons the DM has no use for. Also where the words a DM speaks appear, for everyone (with a ✕: they never have to
+// block the screen), and the "time is stopped" notice. Built once from index.html (`#dm-bar`, `#dm-hot`, `#dm-speech`,
 // `#dm-hold`); textContent only.
 
 import { codeLabel, FIXED_KEYS } from '../core/bindings';
-import { MAX_SAY, PRESSURE_LABEL, SAY_SHOW, type Pressure } from '../systems/dmPowers';
+import { MAX_SAY, PRESSURE_LABEL, sayTime, type Pressure } from '../systems/dmPowers';
 
 export interface DmBarHandlers {
   say(text: string): boolean;
+  /** Write the running quest's instructions. */
+  note(text: string): boolean;
+  /** Call the running quest off. */
+  cancelQuest(): void;
+  /** Is a quest of the DM's running (the Cancel and instructions buttons show only then)? */
+  questing(): boolean;
   smite(): boolean;
   freeze(): boolean;
   stop(): boolean;
@@ -29,6 +36,8 @@ export class DmBar {
   private form = this.bar.querySelector('form')!;
   private input = this.bar.querySelector('input')!;
   private speech = document.getElementById('dm-speech')!;
+  private speechText = this.speech.querySelector<HTMLElement>('.text')!;
+  private hot = document.getElementById('dm-hot')!;
   private hold = document.getElementById('dm-hold')!;
   private hint = this.bar.querySelector<HTMLElement>('.hint')!;
   private handlers: DmBarHandlers | null = null;
@@ -44,14 +53,21 @@ export class DmBar {
       e.preventDefault();
       if (this.handlers?.say(this.input.value)) this.input.value = '';
     });
-    const power = (name: string) => this.bar.querySelector<HTMLButtonElement>(`[data-power="${name}"]`)!;
+    const power = (name: string) => document.querySelector<HTMLButtonElement>(`[data-power="${name}"]`)!;
     power('smite').addEventListener('click', () => this.handlers?.smite());
     power('freeze').addEventListener('click', () => this.handlers?.freeze());
     power('stop').addEventListener('click', () => this.handlers?.stop());
     power('reset').addEventListener('click', () => this.handlers?.reset());
+    power('cancel').addEventListener('click', () => this.handlers?.cancelQuest());
+    power('note').addEventListener('click', () => {
+      if (this.handlers?.note(this.input.value)) this.input.value = '';
+    });
+    this.speech.querySelector('.close')!.addEventListener('click', () => this.dismissSpeech());
     power('release').addEventListener('click', () => this.handlers?.release());
     window.addEventListener('pointerdown', (e) => {
-      if (e.target instanceof HTMLCanvasElement && this.open) {
+      if (!(e.target instanceof HTMLCanvasElement)) return;
+      this.dismissSpeech(); // a click on the game sends the DM's words away: nobody hunts for a close button
+      if (this.open) {
         this.open = false; // the DM went back to the game
         this.shown = '';
       }
@@ -75,6 +91,7 @@ export class DmBar {
   /** Each frame: the bar for a DM (with each power's wait), the stopped-time notice for all, the speech fading. */
   update(dm: boolean, now: number, stopped: boolean, possessing = '', touch = false) {
     this.bar.hidden = !dm || !this.handlers;
+    this.hot.hidden = this.bar.hidden;
     const folded = !this.open;
     this.bar.classList.toggle('folded', folded);
     this.bar.classList.toggle('holding', possessing !== ''); // a folded bar still shows the way out while a foe is held
@@ -88,7 +105,7 @@ export class DmBar {
       : touch
         ? 'Tap a foe to possess it.'
         : 'Click a foe to possess it.';
-    this.bar.querySelector<HTMLElement>('[data-power="release"]')!.hidden = !possessing;
+    document.querySelector<HTMLElement>('[data-power="release"]')!.hidden = !possessing;
     if (this.hint.textContent !== possess) this.hint.textContent = possess;
     this.hold.textContent = dm
       ? touch
@@ -99,28 +116,31 @@ export class DmBar {
       const w = this.handlers!.waits();
       const story = this.handlers!.story();
       const fallen = this.handlers!.fallen();
-      const key = `${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen} ${touch}`;
+      const questing = this.handlers!.questing();
+      const key = `${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen} ${touch} ${questing}`;
       if (key !== this.shown) {
         this.shown = key;
         const set = (name: string, text: string, wait = 0, lit = false) => {
-          const b = this.bar.querySelector<HTMLButtonElement>(`[data-power="${name}"]`)!;
+          const b = document.querySelector<HTMLButtonElement>(`[data-power="${name}"]`)!;
           b.disabled = wait > 0;
           b.textContent = wait > 0 ? `${text} (${wait})` : text;
           b.classList.toggle('on', lit);
         };
-        set('smite', 'Smite', w.smite);
-        set('freeze', 'Freeze', w.freeze);
-        set('reset', 'Reset zone', w.reset);
+        set('smite', '⚡ Smite', w.smite);
+        set('freeze', '❄ Freeze', w.freeze);
+        set('reset', '↺ Reset zone', w.reset);
         set(
           'stop',
-          w.stopped ? 'Resume time' : touch ? 'Stop time' : `Stop time [${codeLabel(FIXED_KEYS.stop[0])}]`,
+          w.stopped ? '▶ Resume time' : touch ? '⏸ Stop time' : `⏸ Stop time [${codeLabel(FIXED_KEYS.stop[0])}]`,
           0,
           w.stopped,
         );
+        document.querySelector<HTMLElement>('[data-power="cancel"]')!.hidden = !questing;
+        document.querySelector<HTMLElement>('[data-power="note"]')!.hidden = !questing;
         set('story', 'Story');
-        this.bar.querySelector<HTMLElement>('[data-power="revive"]')!.hidden = fallen === 0;
+        document.querySelector<HTMLElement>('[data-power="revive"]')!.hidden = fallen === 0;
         set('revive', fallen > 1 ? `Raise (${fallen})` : 'Raise');
-        this.bar.querySelector<HTMLElement>('[data-power="story"]')!.hidden = !story;
+        document.querySelector<HTMLElement>('[data-power="story"]')!.hidden = !story;
         set('sky', 'Sky');
         set('pressure', `Pressure: ${PRESSURE_LABEL[w.pressure]}`);
       }
@@ -130,8 +150,18 @@ export class DmBar {
 
   /** Show what the Dungeon Master said (on every player's screen for a few seconds). */
   speak(text: string, now: number) {
-    this.speech.textContent = text;
+    this.speechText.textContent = text;
     this.speech.hidden = false;
-    this.hideAt = now + SAY_SHOW;
+    this.hideAt = now + sayTime(text);
+  }
+
+  /** Is something the DM said still on screen? */
+  get speaking(): boolean {
+    return !this.speech.hidden;
+  }
+
+  /** Send the DM's words away (the ✕, Esc, or a click on the game). */
+  dismissSpeech() {
+    this.speech.hidden = true;
   }
 }

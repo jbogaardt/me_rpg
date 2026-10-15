@@ -59,7 +59,7 @@ function blockPageZoom() {
   const keepDefault = (target: EventTarget | null) =>
     target instanceof Element &&
     !!target.closest(
-      '#menu, #shop, #trade, #trade-request, #choices, #dm-bar, #dm-card, #vote, input, textarea, select, a',
+      '#menu, #shop, #trade, #trade-request, #choices, #dm-bar, #dm-card, #dm-hot, #dm-speech, #vote, input, textarea, select, a',
     );
   for (const type of ['touchstart', 'touchmove'] as const) {
     document.addEventListener(type, (e) => !keepDefault(e.target) && e.preventDefault(), { passive: false });

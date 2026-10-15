@@ -48,8 +48,8 @@ export class Hud {
   private shown = '';
   private shownCombos = '';
 
-  /** `typed` is what the player has tapped toward a combo so far (lights the first arrows of the ones it leads to). */
-  update(hero: Hero, typed = '', zone = '', dm = false, task = '') {
+  /** `story`: the story's own quest shows in the tracker (solo); online only the Dungeon Master's does. `typed` is what the player has tapped toward a combo so far (lights the first arrows of the ones it leads to). */
+  update(hero: Hero, typed = '', zone = '', dm = false, task = '', story = true) {
     // The Dungeon Master (an online host) has no bars, combos or quest of their own: only a badge saying who they are.
     this.dmBadge.hidden = !dm;
     const badge = task ? `Dungeon Master · ${task}` : 'Dungeon Master';
@@ -64,7 +64,7 @@ export class Hud {
     const s = hero.stats;
     const hp = Math.ceil(s.hp);
     const mp = Math.floor(s.mp);
-    const quest = task || (enabled('guide', zone) ? trackerText(hero) : ''); // a campaign (or zone) without the guide has no tracker line
+    const quest = task || (story && enabled('guide', zone) ? trackerText(hero) : ''); // a campaign (or zone) without the guide has no tracker line
     const needs = enabled('needs', zone);
     const key = `${needs} ${hp}/${s.maxHp} ${mp}/${s.maxMp} ${hero.gold} ${Math.ceil(hero.needs.food)} ${Math.ceil(hero.needs.water)} ${quest}`;
     if (key === this.shown) return; // only touch the DOM when something changed

@@ -3,7 +3,7 @@ import type { DmMsg, VoteWire } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import { DIALS, enabled, type Dial } from '../../systems/capabilities';
 import type { DayClock } from '../../systems/daynight';
-import { cleanSay, SAY_SHOW } from '../../systems/dmPowers';
+import { cleanSay, sayTime } from '../../systems/dmPowers';
 import { taskFromWire, taskWire } from '../../systems/dmTasks';
 import { questDials } from '../../systems/quests';
 import { CLIMATES, isClimate, PRECIPS, type Precip } from '../../systems/weather';
@@ -112,7 +112,7 @@ export class DmDesk {
   say(text: string): boolean {
     const words = cleanSay(text);
     if (!words || this.arena.role !== 'host') return false;
-    this.said = { id: ++this.saySeq, text: words, left: SAY_SHOW };
+    this.said = { id: ++this.saySeq, text: words, left: sayTime(words) };
     this.timer = DM_RESEND; // tell them now
     this.onSay(words);
     return true;

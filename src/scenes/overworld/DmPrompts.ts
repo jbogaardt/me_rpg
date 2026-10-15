@@ -292,8 +292,10 @@ export class DmPrompts {
     } else if (id === 'close') {
       this.powers.closeIn();
       this.desk.say('They are coming.');
-    } else if (id === '@cancel') this.tasks.cancel();
-    else if (id === 'hint') {
+    } else if (id === '@cancel') {
+      this.tasks.cancel();
+      this.desk.say('Forget that task. New instructions will follow.');
+    } else if (id === 'hint') {
       this.tasks.giveHint();
       this.desk.say('Look for the signs.');
     } else if (id.startsWith('q:')) this.tasks.call(Number(id.slice(2)));

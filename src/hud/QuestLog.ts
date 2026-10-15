@@ -15,6 +15,7 @@ import {
   rewardText,
 } from '../systems/quests';
 import { esc } from './html';
+import { taskText, type TaskView } from '../systems/dmTasks';
 
 /**
  * The Quests tab of the pause menu: the task the hero is on, what it pays, and the ones already handed in. Rules and the
@@ -58,4 +59,18 @@ export function questPage(hero: Hero, portrait: (mobKind: string) => string | nu
     ? `<p class="quest-chapter-title">Chapter ${chapter.index + 1} of ${CHAPTERS.length}: <b>${esc(chapter.chapter.title)}</b>${q ? '' : ' <small>(the end of part one)</small>'}</p>`
     : '';
   return `<h2>Quests</h2>${heading}${now}${past}`;
+}
+
+/**
+ * The Quests tab online, where the story's own quests are put away and the Dungeon Master's are the only ones: what was
+ * asked, how it stands, and the telling the party was given (`pages`, from systems/dmBrief.ts).
+ */
+export function dmQuestPage(task: TaskView | null, pages: string[]): string {
+  if (!task)
+    return `<h2>Quests</h2><p class="quest-note">The Dungeon Master has asked nothing of the party right now. A task will come when the story needs one.</p>`;
+  const state = task.state === 'done' ? 'done' : task.state === 'failed' ? 'called off' : 'in progress';
+  return `<h2>Quests</h2><h3>${esc(task.title)} <small>${state}</small></h3>
+    <p class="quest-progress${task.state === 'done' ? ' done' : ''}">${esc(taskText(task))}</p>
+    ${pages.map((p) => `<p class="quest-note">${esc(p)}</p>`).join('')}
+    ${task.state === 'active' ? `<p class="quest-note">Open the map (M): the gold <b>?</b> circle marks where to search.</p>` : ''}`;
 }

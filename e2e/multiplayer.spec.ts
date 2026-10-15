@@ -405,17 +405,19 @@ test('the Dungeon Master can run the game from a phone: folded tools, thumb-size
   await expect(host.locator('#touch-controls')).toBeVisible();
   await expect(host.locator('body')).toHaveClass(/touch-ui/);
 
-  // The tools start folded away so the screen stays clear; the handle opens them.
+  // The nudges start folded away so the screen stays clear (the handle opens them); the big tools are hot buttons, always there.
   const bar = host.locator('#dm-bar');
+  const hot = host.locator('#dm-hot');
   await expect(bar).toBeVisible();
-  await expect(bar.locator('[data-power="smite"]')).toBeHidden();
+  await expect(bar.locator('[data-power="task"]')).toBeHidden();
+  await expect(hot.locator('[data-power="smite"]')).toBeVisible();
+  await expect(hot.locator('[data-power="freeze"]')).toBeVisible();
+  await expect(host.locator('#inv-btn')).toBeHidden(); // the DM has no inventory
+  await expect(host.locator('#btn-a')).toBeHidden(); // and no attack, until they hold a foe
   await bar.locator('.handle').tap();
   await expect(bar.locator('[data-power="task"]')).toBeVisible();
-  await expect(bar.locator('[data-power="smite"]')).toBeHidden(); // the big tools are under "Rarely"
-  await bar.locator('.rarely summary').tap();
-  await expect(bar.locator('[data-power="smite"]')).toBeVisible();
   await expect(bar.locator('.hint')).toHaveText('Tap a foe to possess it.');
-  await expect(bar.locator('[data-power="stop"]')).toHaveText('Stop time'); // no key to name on a phone
+  await expect(hot.locator('[data-power="stop"]')).toContainText('Stop time'); // no key to name on a phone
 
   // The bar and the pad never cover each other.
   const overlaps = async (a: string, b: string) =>
@@ -429,12 +431,14 @@ test('the Dungeon Master can run the game from a phone: folded tools, thumb-size
     );
   expect(await overlaps('#dm-bar', '#dpad')).toBe(false);
   expect(await overlaps('#dm-bar', '#buttons')).toBe(false);
+  expect(await overlaps('#dm-hot', '#dpad')).toBe(false);
+  expect(await overlaps('#dm-hot', '#buttons')).toBe(false);
 
   // Time stops from a button (there is no T on a phone), and the friend is told.
-  await bar.locator('[data-power="stop"]').tap();
+  await hot.locator('[data-power="stop"]').tap();
   await expect(host.locator('#dm-hold')).toContainText('Tap Resume time');
   await expect(friend.locator('#dm-hold')).toBeVisible({ timeout: 15_000 });
-  await bar.locator('[data-power="stop"]').tap();
+  await hot.locator('[data-power="stop"]').tap();
   await expect(friend.locator('#dm-hold')).toBeHidden({ timeout: 15_000 });
 
   // A card is large enough for a thumb, clear of the pad, and the pick works: the friend sees the task.

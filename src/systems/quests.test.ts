@@ -153,6 +153,15 @@ describe('talking to the people of the story', () => {
     expect(hero.quests.stage).toBe(0);
   });
 
+  it('online (story off) every giver only passes the time of day: no offer, no progress', () => {
+    const hero = newHero();
+    const first = QUESTS[0]!;
+    const told = talk(hero, offererOf(first), false);
+    expect(told.key).toBe(`${offererOf(first)}.idle`);
+    expect(hero.quests.taken).toBe(false);
+    expect(questStatus(hero)).toBe('offer');
+  });
+
   it('pays a quest to the one it is handed in to, and moves on', () => {
     const hero = onQuest('watch');
     const gold = hero.gold;

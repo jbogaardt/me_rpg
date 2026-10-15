@@ -19,7 +19,8 @@ import type { Session } from '../net/session';
 import type { TouchControls } from '../core/touch';
 import { Inventory } from './Inventory';
 import { Magic } from './Magic';
-import { questPage } from './QuestLog';
+import { dmQuestPage, questPage } from './QuestLog';
+import type { TaskView } from '../systems/dmTasks';
 import { AimSetting } from './AimSetting';
 import { Keybinds } from './Keybinds';
 import { Multiplayer } from './Multiplayer';
@@ -123,6 +124,7 @@ export class Menu {
    * online host) has the Party tab instead of the hero's tabs. Leaves a tab that goes away under the player.
    */
   setOnline(online: boolean, dm = false) {
+    this.onlineParty = online && !dm;
     const shown: Record<string, boolean> = {
       status: !dm,
       inventory: !dm,
@@ -196,11 +198,16 @@ export class Menu {
   /** A picture URL for what a kill quest hunts (set by main.ts from the wardrobe); null until it is. */
   portrait: (mobKind: string) => string | null = () => null;
   private questShown = '';
+  private onlineParty = false;
+  /** Online, the Quests tab shows the Dungeon Master's quest (set by the scene while the menu is open) instead of the story's. */
+  dmQuest: { view: TaskView; pages: string[] } | null = null;
   /** Draw the Quests tab, only when it would change (it is checked every frame while the menu is open). */
   private renderQuests() {
     const hero = this.hero;
     if (!hero) return;
-    const html = questPage(hero, (kind) => this.portrait(kind));
+    const html = this.onlineParty
+      ? dmQuestPage(this.dmQuest?.view ?? null, this.dmQuest?.pages ?? [])
+      : questPage(hero, (kind) => this.portrait(kind));
     if (html === this.questShown) return;
     this.questShown = html;
     document.getElementById('menu-quests')!.innerHTML = html;

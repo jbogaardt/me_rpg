@@ -47,30 +47,32 @@
     <div id="dm-bar" class="panel thin wood" hidden>
       <button type="button" class="handle" aria-expanded="true">DM tools</button>
       <div class="tools">
-        <form autocomplete="off"><input type="text" placeholder="Speak to the party…" aria-label="Speak to the party" enterkeyhint="send" /><button type="submit" class="mp-btn panel thin wood">Speak</button></form>
+        <form autocomplete="off"><input type="text" placeholder="Speak to the party, or write new instructions…" aria-label="Speak to the party" enterkeyhint="send" /><button type="submit" class="mp-btn panel thin wood">Speak</button><button type="button" class="mp-btn panel thin wood" data-power="note" title="Replace the running quest's telling with these words" hidden>As instructions</button></form>
         <div class="row">
           <p class="hint"></p>
           <button type="button" class="mp-btn panel thin wood" data-power="release" hidden>Let go</button>
         </div>
         <div class="powers">
           <button type="button" class="mp-btn panel thin wood" data-power="task">Quest</button>
+          <button type="button" class="mp-btn panel thin wood" data-power="cancel" hidden>Cancel quest</button>
           <button type="button" class="mp-btn panel thin wood" data-power="story" hidden>Story</button>
           <button type="button" class="mp-btn panel thin wood" data-power="sky">Sky</button>
           <button type="button" class="mp-btn panel thin wood" data-power="pressure">Pressure</button>
           <button type="button" class="mp-btn panel thin wood" data-power="revive" hidden>Raise</button>
         </div>
-        <details class="rarely">
-          <summary>Rarely</summary>
-          <div class="powers">
-            <button type="button" class="mp-btn panel thin wood" data-power="stop">Stop time</button>
-            <button type="button" class="mp-btn panel thin wood" data-power="smite">Smite</button>
-            <button type="button" class="mp-btn panel thin wood" data-power="freeze">Freeze</button>
-            <button type="button" class="mp-btn panel thin wood" data-power="reset">Reset zone</button>
-          </div>
-        </details>
       </div>
     </div>
-    <div id="dm-speech" class="panel thin paper" role="status" hidden></div>
+    <div id="dm-speech" class="panel thin paper" role="status" hidden>
+      <button type="button" class="close" aria-label="Dismiss">✕</button>
+      <p class="text"></p>
+    </div>
+    <!-- The DM's hot buttons (src/hud/DmBar.ts): the big tools one tap away, where the Inventory and Attack buttons would do nothing. -->
+    <div id="dm-hot" role="group" aria-label="Dungeon Master tools" hidden>
+      <button type="button" class="mp-btn panel thin wood" data-power="smite" title="Lightning on every foe here">⚡ Smite</button>
+      <button type="button" class="mp-btn panel thin wood" data-power="freeze" title="Hold every foe here still">❄ Freeze</button>
+      <button type="button" class="mp-btn panel thin wood" data-power="stop" title="Stop time">⏸ Stop time</button>
+      <button type="button" class="mp-btn panel thin wood" data-power="reset" title="Foes back home at full health">↺ Reset zone</button>
+    </div>
     <div id="dm-hold" class="panel thin wood" role="status" hidden></div>
     <!-- A choice offered to the Dungeon Master at the right moment (src/hud/DmCard.ts, scenes/overworld/DmPrompts.ts). -->
     <div id="dm-card" class="panel thin paper" role="group" aria-label="The Dungeon Master chooses" hidden>
