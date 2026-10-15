@@ -402,6 +402,13 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
     expect(parseMessage(JSON.stringify(input))).toEqual(input);
   });
 
+  it('round-trips what the DM says and refuses a saying that is empty, too long or not a pair', () => {
+    const said = { ...dm, say: [3, 'The fen stirs.'] as [number, string] };
+    expect(parseMessage(encodeMessage(said))).toEqual(said);
+    for (const say of [[3, ''], [3, 'x'.repeat(500)], [-1, 'hi'], ['a', 'hi'], [3], 'hi'])
+      expect(parseMessage(JSON.stringify({ ...dm, say }))).toBeNull();
+  });
+
   it('refuses a dial that is not one, a tally that does not match, or a vote for a choice that is not there', () => {
     const bad = [
       { ...dm, dials: { coop: false } },

@@ -457,12 +457,16 @@ export class Simulation {
     if (weather.strikeDue(dt)) this.lightning({ ...this.strikeTarget(), seed: Math.floor(Math.random() * 1e9) });
   }
 
-  /** A bolt landed (only the host or a solo game decides this): friends see it, and it burns whoever stands there. */
-  lightning(strike: Strike) {
+  /**
+   * A bolt landed (only the host or a solo game decides this): friends see it, and it burns whoever stands there
+   * (unless it is the Dungeon Master's, `harmless`).
+   */
+  lightning(strike: Strike, harmless = false) {
     this.arena.zone.weatherLayer?.strike(strike);
     this.emit({ type: 'lightning', ...strike });
     const { x, y } = strike;
     this.fx('hitSpark', x, y);
+    if (harmless) return;
     for (const p of this.arena.party()) {
       if (p.safe || Math.hypot(p.body.x - x, p.body.y - y) > LIGHTNING_RADIUS) continue;
       this.harm(p, Math.max(1, Math.round(p.hero.stats.maxHp * LIGHTNING_DAMAGE)), x, y);

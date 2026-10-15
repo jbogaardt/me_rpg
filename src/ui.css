@@ -325,6 +325,17 @@
 #vote .opts { display: grid; gap: 4px; }
 #vote .mp-btn { text-align: left; font-size: 14px; padding: 4px 8px; }
 #vote .mp-btn.active { filter: brightness(1.35); outline: 2px solid #ffd34d; }
+/* The Dungeon Master's bar (hud/DmBar.ts) along the bottom, and their words on every screen. */
+#dm-bar { position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); bottom: calc(8px + env(safe-area-inset-bottom)); display: flex; gap: 6px; align-items: center; padding: 6px 8px; width: min(560px, calc(100vw - 16px)); box-sizing: border-box; font-family: var(--body); }
+#dm-bar[hidden] { display: none; }
+#dm-bar form { display: flex; flex: 1; gap: 6px; min-width: 0; }
+#dm-bar input { flex: 1; min-width: 0; font: 15px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
+#dm-bar .mp-btn { padding: 4px 10px; font-size: 14px; white-space: nowrap; }
+#dm-bar .mp-btn:disabled { opacity: 0.55; cursor: default; }
+#dm-bar [data-power="smite"] { color: #ffd34d; }
+#dm-speech { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: 18%; max-width: min(520px, calc(100vw - 32px)); padding: 8px 14px; text-align: center; font: 600 18px/1.3 var(--body); color: var(--ink); pointer-events: none; }
+#dm-speech[hidden] { display: none; }
+#dm-speech::before { content: 'The Dungeon Master speaks'; display: block; font: 700 12px var(--title); color: #7c230f; letter-spacing: 0.06em; text-transform: uppercase; }
 #mp-note { min-height: 1.3em; margin: 8px 0 0; font-size: 15px; color: var(--ink-soft); }
 #mp-note.error { color: #9b2a1c; font-weight: 600; }
 /* --- Controls tab: key/mouse editor (src/hud/Keybinds.ts) --- */

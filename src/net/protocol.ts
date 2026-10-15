@@ -26,14 +26,15 @@ import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 import { DIALS } from '../systems/capabilities';
+import { MAX_SAY } from '../systems/dmPowers';
 
 /**
  * Bump when a message changes shape (or what one means); peers on different versions refuse to play together. v29: the
  * host is the Dungeon Master, not a party member (player 0 in a snapshot is drawn as the DM). v30: `world`, a live
  * world's log. v31: `dm` (the Dungeon Master's dials, time of day and vote) and the guest's vote `InputMsg.vt`. v32: the
- * log's `cast` and `npc` entries, and longer entries.
+ * log's `cast` and `npc` entries, and longer entries. v33: `DmMsg.say`, what the Dungeon Master says to the party.
  */
-export const PROTOCOL_VERSION = 32;
+export const PROTOCOL_VERSION = 33;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -291,6 +292,8 @@ export interface DmMsg {
   shift: number;
   dials: Record<string, boolean>;
   vote: VoteWire | null;
+  /** What the DM just said: [a number that changes with each saying, the words]; repeated for a few seconds, then absent. */
+  say?: [number, string];
 }
 
 export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg | TrMsg | TradeMsg | WorldMsg | DmMsg;
@@ -787,13 +790,23 @@ export function parseMessage(raw: unknown): Message | null {
           Number.isInteger(v.yours) &&
           v.yours >= -1 &&
           v.yours < v.options.length);
-      return isCount(m.n) && isNum(m.shift) && Math.abs(m.shift) <= 1 && dialsOk && voteOk
+      const s = m.say;
+      const sayOk =
+        s === undefined ||
+        (Array.isArray(s) &&
+          s.length === 2 &&
+          isCount(s[0]) &&
+          typeof s[1] === 'string' &&
+          s[1].length >= 1 &&
+          s[1].length <= MAX_SAY);
+      return isCount(m.n) && isNum(m.shift) && Math.abs(m.shift) <= 1 && dialsOk && voteOk && sayOk
         ? {
             k: 'dm',
             n: m.n,
             shift: m.shift,
             dials: dials as Record<string, boolean>,
             vote: v === null ? null : (v as VoteWire),
+            ...(s === undefined ? {} : { say: s as [number, string] }),
           }
         : null;
     }

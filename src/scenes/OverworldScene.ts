@@ -76,6 +76,8 @@ import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
 import { Scenario } from './overworld/Scenario';
 import { Story } from './overworld/Story';
 import { DmDesk } from './overworld/DmDesk';
+import { DmPowers } from './overworld/DmPowers';
+import { DmBar } from '../hud/DmBar';
 import { VotePanel } from '../hud/VotePanel';
 import type { World } from '../content/world';
 import { particleEffect } from '../entities/ParticleEffect';
@@ -140,6 +142,8 @@ export class OverworldScene implements Scene {
   /** The Dungeon Master's controls: weather, time of day, capabilities for everyone, votes. */
   private desk!: DmDesk;
   private votePanel = new VotePanel();
+  private dmBar = new DmBar();
+  private powers!: DmPowers;
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
@@ -215,6 +219,8 @@ export class OverworldScene implements Scene {
     };
     this.desk = new DmDesk(arena, ui.session, content, this.dayClock);
     this.votePanel.onChoose = (i) => this.desk.castVote(i);
+    this.powers = new DmPowers(arena, this.sim);
+    this.desk.onSay = (text) => this.dmBar.speak(text, arena.clock); // the DM's words show on every screen
     this.zones.root.addChildAt(this.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     this.overlay = new MapOverlay();
@@ -300,6 +306,12 @@ export class OverworldScene implements Scene {
       hour: (hour) => this.desk.setHour(hour),
       dial: (id, on) => this.desk.setDial(id, on),
     });
+    this.dmBar.attach({
+      say: (text) => this.desk.say(text),
+      smite: () => this.powers.smite(),
+      freeze: () => this.powers.freeze(),
+      waits: () => this.powers.view(),
+    });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
     if (this.ui.session.urlCode && enabled('coop')) this.ui.menu.toggle(this.hero, 'online');
   }
@@ -311,6 +323,7 @@ export class OverworldScene implements Scene {
     this.ui.menu.story.attach(null);
     this.ui.menu.dials.attach(null);
     this.ui.menu.cast.attach(null);
+    this.dmBar.attach(null);
     this.votePanel.sync(null);
     this.overlay.setAvailable(false);
     this.harvestButtons.clear();
@@ -339,6 +352,8 @@ export class OverworldScene implements Scene {
     this.liveStory.update(dt); // a live world: the host sends its log, a guest grows its own from it
     this.desk.update(dt); // the DM's dials, time of day and vote: the host tells its friends, a friend is told
     this.votePanel.sync(this.desk.openVoteForGuest);
+    this.powers.update(dt); // the DM's storm in flight and cooldowns
+    this.dmBar.update(arena.local.dm, arena.clock);
     const online = arena.role !== 'solo';
     // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
     // without the map capability (it is still explored, so nothing changes if one is played later).
@@ -529,6 +544,7 @@ export class OverworldScene implements Scene {
     else if (arena.role === 'client') this.guest.leave();
     arena.role = 'solo'; // so nothing from here on is recorded for friends until the new role is set
     this.desk.reset(); // what a DM set lasts for their game only
+    this.powers.reset();
     if (role === 'host') this.host.enter();
     else if (role === 'client') this.guest.enter();
     arena.role = role;

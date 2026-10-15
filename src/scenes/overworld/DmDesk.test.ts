@@ -75,6 +75,23 @@ describe('the Dungeon Master’s desk', () => {
     expect(last(1)!.vote).toBeNull();
   });
 
+  it('sends what the DM says to every friend for a few seconds, then stops', () => {
+    const { desk, last } = host();
+    const heard: string[] = [];
+    desk.onSay = (t) => heard.push(t);
+    expect(desk.say('   ')).toBe(false);
+    expect(desk.say('  Beware\nthe  fen  ')).toBe(true);
+    expect(heard).toEqual(['Beware the fen']);
+    desk.update(0);
+    expect(last(1)!.say).toEqual([1, 'Beware the fen']);
+    expect(last(2)!.say).toEqual([1, 'Beware the fen']);
+    desk.update(9);
+    expect(last(1)!.say).toBeUndefined();
+    desk.say('Run');
+    desk.update(0);
+    expect(last(1)!.say).toEqual([2, 'Run']);
+  });
+
   it('asks nothing with fewer than two roads', () => {
     const { desk } = host();
     desk.openVote(roads.slice(0, 1));
@@ -109,5 +126,27 @@ describe('a friend at the Dungeon Master’s table', () => {
     desk.update(0);
     expect(desk.openVoteForGuest).toBeNull();
     expect(desk.voteInput).toBeUndefined();
+  });
+
+  it('shows what the DM said once, however often the host repeats it', () => {
+    let msg: DmMsg | null = null;
+    const session = { takeDm: () => [msg, (msg = null)][0] } as unknown as Session;
+    const content = { setDials: () => {} } as unknown as ContentManager;
+    const desk = new DmDesk({ role: 'client' } as unknown as Arena, session, content, new DayClock(() => 0));
+    const heard: string[] = [];
+    desk.onSay = (t) => heard.push(t);
+    const word = (n: number, say?: [number, string]): DmMsg => ({
+      k: 'dm',
+      n,
+      shift: 0,
+      dials: {},
+      vote: null,
+      ...(say ? { say } : {}),
+    });
+    for (const m of [word(1, [1, 'Hush']), word(2, [1, 'Hush']), word(3), word(4, [2, 'Run'])]) {
+      msg = m;
+      desk.update(0);
+    }
+    expect(heard).toEqual(['Hush', 'Run']);
   });
 });

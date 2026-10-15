@@ -43,6 +43,13 @@
     <!-- The combos of the wand or tome in hand, lit as they are tapped (src/hud/Hud.ts). Empty for any other weapon. -->
     <!-- The name of the area just entered, big in the top middle (src/hud/AreaBanner.ts). -->
     <div id="vote" class="panel thin wood" hidden><p class="title">The Dungeon Master asks: where next?</p><div class="opts"></div></div>
+    <!-- The Dungeon Master's bar (src/hud/DmBar.ts): speak, Smite, Freeze; and what the DM said, shown to everyone. -->
+    <div id="dm-bar" class="panel thin wood" hidden>
+      <form autocomplete="off"><input type="text" placeholder="Speak to the party…" aria-label="Speak to the party" /><button type="submit" class="mp-btn panel thin wood">Speak</button></form>
+      <button type="button" class="mp-btn panel thin wood" data-power="smite">Smite</button>
+      <button type="button" class="mp-btn panel thin wood" data-power="freeze">Freeze</button>
+    </div>
+    <div id="dm-speech" class="panel thin paper" role="status" hidden></div>
     <div id="area-banner" aria-live="polite"><div class="sub"></div><div class="title"></div></div>
 
     <!-- The current scenario node's choices (public/content/scenarios.json; src/hud/Choices.ts). Solo only for now. -->
