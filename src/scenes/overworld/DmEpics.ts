@@ -57,6 +57,8 @@ export class DmEpics {
     next: boolean;
     /** A person the party has reached, speaking: the lines still to say and the seconds until the next. */
     speech: { lines: string[]; wait: number } | null;
+    /** The id the world gave each person made so far (by their key in the epic). */
+    ids: Map<string, string>;
   } | null = null;
   private offered: EpicPlan[] = [];
   private turn = 0;
@@ -142,7 +144,7 @@ export class DmEpics {
     const plan = this.offered[index];
     if (!plan || this.run || this.arena.role !== 'host' || this.tasks.active) return false;
     this.turn++;
-    this.run = { plan, step: 0, next: true, speech: null };
+    this.run = { plan, step: 0, next: true, speech: null, ids: new Map() };
     this.desk.say(cleanSay(`${plan.epic.title}. ${plan.epic.opening}`));
     return true;
   }
@@ -159,7 +161,7 @@ export class DmEpics {
     const plan = planEpic(epic, this.arena.view.name, this.graph, this.turn);
     if (!plan) return { ok: false, note: 'a epic is not told in a shop' };
     this.turn++;
-    this.run = { plan, step: 0, next: true, speech: null };
+    this.run = { plan, step: 0, next: true, speech: null, ids: new Map() };
     this.desk.say(cleanSay(`${epic.title}. ${epic.opening}`));
     return { ok: true, note: '' };
   }
@@ -207,8 +209,9 @@ export class DmEpics {
       : openGroundNear(z.collision, [spawn]);
     const look = story.world ? pickLook(story.world.lookOptions(), person.look, run.step) : null;
     if (!cell || !look) return undefined;
-    story.bring({ name: person.name, look, lines: person.lines }, region, cell.col, cell.row);
-    if (story.lastNote) return undefined;
+    const id = story.bring({ name: person.name, look, lines: person.lines }, region, cell.col, cell.row);
+    if (!id || story.lastNote) return undefined;
+    if (step.who) run.ids.set(step.who, id);
     const folk = z.folk.find((f) => f.name === person.name);
     const at = folk ? { x: folk.body.x, y: folk.body.y } : { x: (cell.col + 0.5) * CELL, y: (cell.row + 1) * CELL };
     return { kind: 'visit', title: `Find ${person.name}`, zone, goal: 1, what: person.name, ...at };
@@ -219,6 +222,7 @@ export class DmEpics {
     const person = step.who ? run.plan.epic.people?.[step.who] : undefined;
     const lines = (step.says ?? []).map((l) => `${person?.name ?? 'Someone'}: “${l}”`);
     if (step.gives) lines.push(`${person?.name ?? 'They'} gives you ${step.gives}. Keep it safe.`);
+    this.say(run, step.who, person?.after); // from now on they speak of what has happened
     run.speech = { lines, wait: 0 };
   }
 
@@ -249,7 +253,15 @@ export class DmEpics {
     return undefined;
   }
 
+  /** A person of the epic says something else from now on (their lines are a log entry, so friends have them too). */
+  private say(run: NonNullable<DmEpics['run']>, who: string | undefined, lines: string[] | undefined) {
+    const id = who ? run.ids.get(who) : undefined;
+    if (id && lines) this.story?.voice(id, lines);
+  }
+
   private complete(plan: EpicPlan) {
+    const run = this.run;
+    if (run) for (const [who, person] of Object.entries(plan.epic.people ?? {})) this.say(run, who, person.finished);
     this.run = null;
     this.tasks.setEpic(null);
     const { xp, gold } = epicReward(plan);

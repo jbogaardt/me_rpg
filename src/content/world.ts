@@ -64,7 +64,9 @@ export type LogEntry =
   /** The Dungeon Master brought someone into a region: a foe or a person, standing on a cell of its map. */
   | { t: 'cast'; region: string; entity: string; x: number; y: number }
   /** The Dungeon Master made a new person: their name, the look of an npc of the packs they wear, and what they say. */
-  | { t: 'npc'; id: string; name: string; look: string; lines: string[] };
+  | { t: 'npc'; id: string; name: string; look: string; lines: string[] }
+  /** The Dungeon Master's person now says something else (the tale moved on): their new lines, replacing the old. */
+  | { t: 'voice'; id: string; lines: string[] };
 
 /** What a Dungeon Master may make: an id of their own kind, a short name, and a few lines to say. */
 export const NPC_ID = /^dm_[a-z0-9_]{1,24}$/;
@@ -205,7 +207,8 @@ export class World {
     else if (e.t === 'side') this.applySide(e);
     else if (e.t === 'join') this.applyJoin(e);
     else if (e.t === 'cast') this.applyCast(e);
-    else this.applyNpc(e);
+    else if (e.t === 'npc') this.applyNpc(e);
+    else this.applyVoice(e);
     this.log.push(e);
   }
 
@@ -630,14 +633,25 @@ export class World {
     if (!name || name.length > MAX_NPC_NAME) throw new WorldError(`a person's name is 1 to ${MAX_NPC_NAME} letters`);
     if (this.cat.entities[e.look]?.type !== 'npc')
       throw new WorldError(`"${e.look}" is not a person whose look to wear`);
-    const lines = Array.isArray(e.lines) ? e.lines : [];
+    this.people[e.id] = { name, look: e.look, lines: this.checkLines(e.lines) };
+  }
+
+  private applyVoice(e: Extract<LogEntry, { t: 'voice' }>) {
+    const person = this.people[e.id];
+    if (!person) throw new WorldError(`"${e.id}" is not a person the Dungeon Master made`);
+    person.lines = this.checkLines(e.lines);
+  }
+
+  /** What a person of the DM's says: 1 to `MAX_NPC_LINES` lines, each short. */
+  private checkLines(raw: unknown): string[] {
+    const lines = Array.isArray(raw) ? raw : [];
     if (
       !lines.length ||
       lines.length > MAX_NPC_LINES ||
       !lines.every((l) => typeof l === 'string' && l.trim() && l.length <= MAX_NPC_LINE)
     )
       throw new WorldError(`a person says 1 to ${MAX_NPC_LINES} lines of up to ${MAX_NPC_LINE} letters`);
-    this.people[e.id] = { name, look: e.look, lines: [...lines] };
+    return [...(lines as string[])];
   }
 
   // --- helpers ---

@@ -103,12 +103,25 @@ export class Story {
   }
 
   /** The Dungeon Master made someone and put them on a cell of a region's map: a new person, then their casting. */
-  bring(person: { name: string; look: string; lines: string[] }, region: string, x: number, y: number) {
-    if (!this.world || !this.canChoose) return;
+  bring(person: { name: string; look: string; lines: string[] }, region: string, x: number, y: number): string | null {
+    if (!this.world || !this.canChoose) return null;
     try {
       const id = this.world.npcId(person.name);
       this.add({ t: 'npc', id, name: person.name, look: person.look, lines: person.lines });
       this.add({ t: 'cast', region, entity: id, x, y });
+      this.note = '';
+      return id;
+    } catch (err) {
+      this.note = err instanceof Error ? err.message : String(err);
+      return null;
+    }
+  }
+
+  /** The Dungeon Master's person says something else from now on (the tale has moved on). */
+  voice(id: string, lines: string[]) {
+    if (!this.world || !this.canChoose) return;
+    try {
+      this.add({ t: 'voice', id, lines });
       this.note = '';
     } catch (err) {
       this.note = err instanceof Error ? err.message : String(err);
@@ -134,6 +147,7 @@ export class Story {
     this.content.reload(world.files());
     for (const o of this.zones.rewire()) this.onOpened(o.zone, o.x, o.y);
     if (e.t === 'cast') this.admit(e);
+    if (e.t === 'voice') this.revoice(e);
     this.fresh = true;
     if (e.t === 'step') this.onGrew(zoneName(world.cat.regions[e.region]?.biome.map ?? e.region));
   }
@@ -151,6 +165,11 @@ export class Story {
         : { mobs: [], folk: [{ entity: e.entity, def, ...at }] },
     );
     this.onCast(map!, (e.x + 0.5) * CELL, (e.y + 1) * CELL, def.name);
+  }
+
+  /** The person is already standing somewhere loaded: their words change there too (a zone loaded later has them from its content). */
+  private revoice(e: Extract<LogEntry, { t: 'voice' }>) {
+    for (const z of this.arena.zones.values()) for (const f of z.folk) if (f.entity === e.id) f.lines = [...e.lines];
   }
 
   /** Mark someone the DM brought in (the scene draws it locally). */

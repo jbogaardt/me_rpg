@@ -497,6 +497,12 @@ describe('a live world’s log', () => {
     expect(encodeMessage(full).length).toBeLessThan(1100);
   });
 
+  it('carries the DM’s person saying something else (a voice entry)', () => {
+    const voice = { t: 'voice', id: 'dm_wren', lines: ['You found the keeper. Good.'] };
+    const m: WorldMsg = { ...world, entries: [step, voice] };
+    expect(parseMessage(encodeMessage(m))).toEqual(m);
+  });
+
   it('refuses a stretch that is too long, runs past the log, or holds something that is not an entry', () => {
     const bad = [
       { ...world, entries: [step, step, step, step] },

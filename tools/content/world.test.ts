@@ -149,11 +149,28 @@ describe('a world from its log', () => {
       { entity: foes[0].id, x: 10, y: 12 },
       { entity: id, x: 11, y: 12 },
     ]);
+    // The tale moves on: they say something else from now on, and a replay agrees.
+    world.apply({ t: 'voice', id, lines: ['You found the keeper. Good.'] });
+    expect(parseContent(world.files()).entities[id]).toMatchObject({ lines: ['You found the keeper. Good.'] });
     // A log with them replays to the same world.
     const again = new World(7, packs);
     again.replay(world.log);
     expect(again.files()).toEqual(world.files());
     expect(people.length).toBeGreaterThan(0);
+  });
+
+  it('refuses a new voice for nobody the DM made, or with lines that do not fit', () => {
+    const world = new World(7, packs);
+    world.open();
+    const look = world.lookOptions()[0].id;
+    world.apply({ t: 'npc', id: 'dm_x', name: 'X', look, lines: ['hi'] });
+    const bad: LogEntry[] = [
+      { t: 'voice', id: 'nobody', lines: ['hi'] },
+      { t: 'voice', id: look, lines: ['hi'] },
+      { t: 'voice', id: 'dm_x', lines: [] },
+      { t: 'voice', id: 'dm_x', lines: ['x'.repeat(200)] },
+    ];
+    for (const e of bad) expect(() => world.apply(e), JSON.stringify(e)).toThrow(WorldError);
   });
 
   it('refuses a cast or a new person that breaks the rules', () => {

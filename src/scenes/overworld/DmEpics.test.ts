@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { ContentManager } from '../../content/ContentManager';
 import { STOCK_EPICS } from '../../content/epics';
+import { parseEpic } from '../../systems/dmEpics';
 import { TASK_LINGER } from '../../systems/dmTasks';
 import { setPlaces } from '../../systems/places';
 import type { Arena } from './Arena';
@@ -157,6 +158,7 @@ describe('epics with people, on the host', () => {
   /** A live world that makes people: `bring` puts them in zone a's folk like the real cast does. */
   function live(canChoose = true) {
     const brought: { name: string; look: string }[] = [];
+    const voiced: [string, string[]][] = [];
     let a: { folk: { name: string; body: { x: number; y: number } }[] } | null = null;
     const story = {
       canChoose,
@@ -171,11 +173,13 @@ describe('epics with people, on the host', () => {
       bring(person: { name: string; look: string }, _region: string, col: number, row: number) {
         brought.push(person);
         a!.folk.push({ name: person.name, body: { x: (col + 0.5) * 32, y: (row + 1) * 32 } });
+        return `dm_${person.name.split(' ')[0]!.toLowerCase()}`;
       },
+      voice: (id: string, lines: string[]) => voiced.push([id, lines]),
     };
     const g = game(false, story);
     a = g.a;
-    return { ...g, brought };
+    return { ...g, brought, voiced };
   }
 
   it('offers epics with people only where people can be made', () => {
@@ -189,7 +193,7 @@ describe('epics with people, on the host', () => {
   });
 
   it('makes the person, sends the party to them, lets them speak, and moves on', () => {
-    const { arena, epics, tasks, party, said, brought, pick } = live();
+    const { arena, epics, tasks, party, said, brought, voiced, pick } = live();
     const i = pick('The Lost Courier');
     expect(i).toBeGreaterThanOrEqual(0);
     expect(epics.begin(i)).toBe(true);
@@ -215,6 +219,7 @@ describe('epics with people, on the host', () => {
     epics.update(5);
     expect(said.at(-1)).toContain('Find her, if you can');
     epics.update(5); // the speech is over: the next step begins (its land is loaded first)
+    expect(voiced).toEqual([['dm_aldis', expect.arrayContaining([expect.stringContaining('You found the courier')])]]);
     epics.update(0);
     epics.update(0);
     expect(arena.task).toMatchObject({ epic: { step: 2, total: 4 } });
@@ -230,5 +235,40 @@ describe('epics with people, on the host', () => {
     g.epics.update(0);
     expect(g.epics.active).toBe(false);
     expect(g.said.at(-1)).toContain('fall quiet');
+  });
+
+  it('has each person say their last words when the whole epic is done', () => {
+    const { arena, epics, tasks, party, voiced } = live();
+    const epic = parseEpic({
+      id: 'short_one',
+      title: 'Short One',
+      tagline: 'Meet, then reach.',
+      difficulty: 1,
+      opening: 'It begins.',
+      ending: 'It is over.',
+      people: { mira: { name: 'Mira', lines: ['Hello.'], after: ['Thank you.'], finished: ['It is over, friends.'] } },
+      steps: [
+        { kind: 'meet', hop: 0, who: 'mira', tell: 'Find Mira.', says: ['Well met.'] },
+        { kind: 'visit', hop: 0, tell: 'Go to the mill.' },
+      ],
+    });
+    if (typeof epic === 'string') throw new Error(epic);
+    expect(epics.beginEpic(epic)).toEqual({ ok: true, note: '' });
+    epics.update(0);
+    const me = party[0] as unknown as { body: { x: number; y: number } };
+    const t = arena.task as unknown as { x: number; y: number };
+    [me.body.x, me.body.y] = [t.x, t.y];
+    tasks.update(0.1);
+    tasks.update(TASK_LINGER + 1);
+    epics.update(0);
+    epics.update(5);
+    epics.update(5);
+    expect(voiced).toEqual([['dm_mira', ['Thank you.']]]);
+    epics.update(0); // the second step: the party goes to the mill
+    [me.body.x, me.body.y] = [330, 330];
+    tasks.update(0.1);
+    tasks.update(TASK_LINGER + 1);
+    expect(epics.active).toBe(false);
+    expect(voiced.at(-1)).toEqual(['dm_mira', ['It is over, friends.']]);
   });
 });

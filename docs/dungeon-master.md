@@ -53,9 +53,11 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the whole party while it is taken
   (`Quest.capabilities`). `parseEpic` checks an epic as strictly as a world entry (an unknown person, a person met twice
   or never, too long a line), the same for the content's and for one an AI writes (`DmBot.epic`). Epics with people need
-  a live world and the host (people are log entries, which friends already receive); nothing new is on the wire. Not
-  yet: people's lines that change with the epic's state, items in the pack (`gives` is the DM's word), a person who turns
-  on the party, branching.
+  a live world and the host (people are log entries, which friends already receive). **People's words follow the epic**:
+  a person has `lines` (before the party is sent to them), `after` (once met) and `finished` (once the whole epic is done),
+  like a campaign giver's offer, remind and done lines; each change is a `voice` entry of the world log (the person's
+  new lines, replacing the old: v42), applied to the person where they stand on every page. Not yet: items in the pack
+  (`gives` is the DM's word), a person who turns on the party, branching.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` lets the DM raise or fetch a fallen player (a defeat still wakes them at the start, whole).
   **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive

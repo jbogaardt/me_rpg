@@ -140,6 +140,16 @@ describe('epics as data', () => {
     expect(typeof parsed).toBe('object');
     expect(needsPeople(parsed as never)).toBe(true);
   });
+  it('accepts the words a person says after and when it is over, and refuses bad ones', () => {
+    const withLines = (v: unknown) => {
+      const t = epic();
+      (t.people.mira as Record<string, unknown>).after = v;
+      (t.people.mira as Record<string, unknown>).finished = ['Done.'];
+      return parseEpic(t);
+    };
+    expect(withLines(['Thanks.'])).toMatchObject({ people: { mira: { after: ['Thanks.'], finished: ['Done.'] } } });
+    for (const bad of [[], ['x'.repeat(141)], 'nope', [1]]) expect(typeof withLines(bad)).toBe('string');
+  });
   it('refuses each way a epic can be wrong, naming where', () => {
     const bad = (f: (t: ReturnType<typeof epic>) => void): string => {
       const t = epic();

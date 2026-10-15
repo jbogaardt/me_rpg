@@ -275,17 +275,23 @@
       "postmaster": {
         "name": "Aldis the Postmaster",
         "look": "keeper",
-        "lines": ["No courier has come through in days. I fear the worst.", "If you find the letter, do not open it."]
+        "lines": ["No courier has come through in days. I fear the worst.", "If you find the letter, do not open it."],
+        "after": ["You found the courier? Thank the stars. I will not send another on that road alone."],
+        "finished": ["The letter arrived! I have had word. You have the thanks of the whole post."]
       },
       "courier": {
         "name": "Wren the Courier",
         "look": "wanderer",
-        "lines": ["I ran. I am not proud of it, but I ran.", "Take the letter. Take it to the one it was meant for."]
+        "lines": ["I ran. I am not proud of it, but I ran.", "Take the letter. Take it to the one it was meant for."],
+        "after": ["I am no longer afraid of that road. Not with the letter in good hands."],
+        "finished": ["I ride again tomorrow. Perhaps I will tell the tale of the day strangers saved my route."]
       },
       "reader": {
         "name": "Sage Orrin",
         "look": "sage",
-        "lines": ["Letters from the old road. Rare, these days.", "Whoever sent this knew more than they wrote."]
+        "lines": ["Letters from the old road. Rare, these days.", "Whoever sent this knew more than they wrote."],
+        "after": ["I have read it twice now. It says more than I care to repeat."],
+        "finished": ["Come back one day. I will have a good deal more to tell you."]
       }
     },
     "steps": [
@@ -341,7 +347,9 @@
         "lines": [
           "Forty years I rang that bell. Now there is only quiet.",
           "Find what took the clapper, and bring it home."
-        ]
+        ],
+        "after": ["You have the clapper? Then there is hope for my bell yet."],
+        "finished": ["Did you hear it ring? Forty years, and I wept like a child. Thank you."]
       },
       "smith": {
         "name": "Dorrin Ashhand",
@@ -349,7 +357,9 @@
         "lines": [
           "I mend what breaks, but I cannot mend what is missing.",
           "Bring me the clapper and the bell will sing."
-        ]
+        ],
+        "after": ["It rings true now. Take care of it, and take care of each other."],
+        "finished": ["I heard the bell from here this dusk. It made the whole forge feel lighter."]
       }
     },
     "steps": [
@@ -405,12 +415,16 @@
         "lines": [
           "I owe someone a debt, and I do not even know their face.",
           "They live beyond the next land, so I am told."
-        ]
+        ],
+        "after": ["You have the coins? Then I am a free man, or near enough."],
+        "finished": ["The debt is paid, and I am lighter for it. Whatever road you take, I wish you a kinder one."]
       },
       "creditor": {
         "name": "Keeper Hale",
         "look": "keeper",
-        "lines": ["A debt? I had forgotten it entirely.", "Odd, to be repaid by strangers."]
+        "lines": ["A debt? I had forgotten it entirely.", "Odd, to be repaid by strangers."],
+        "after": ["Odd to be repaid by strangers, but I will not refuse a good deed."],
+        "finished": ["Corwin sat at my fire last night. I did not know a debt could make a friend."]
       }
     },
     "steps": [

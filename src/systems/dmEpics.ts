@@ -29,8 +29,12 @@ export interface TalePerson {
   name: string;
   /** A word that picks the look they wear from the world's people ("monk", "smith"); any look if none fits. */
   look?: string;
-  /** What they say to anyone who talks to them (1 to 4 short lines), once they have been made. */
+  /** What they say to anyone who talks to them (1 to 4 short lines) before the party has been sent to them. */
   lines: string[];
+  /** What they say once the party has met them (their step is done); else they keep to `lines`. */
+  after?: string[];
+  /** What they say once the whole epic is done; else they keep to what they last said. */
+  finished?: string[];
 }
 
 export interface EpicTemplate {
@@ -217,9 +221,17 @@ export function parseEpic(raw: unknown): EpicTemplate | string {
       const name = words(q.name, 32);
       const lines = list(q.lines, 1, 4, 140);
       const look = q.look === undefined ? undefined : words(q.look, 20);
-      if (!KEY.test(key) || !name || !lines || look === null)
+      const after = q.after === undefined ? undefined : list(q.after, 1, 4, 140);
+      const finished = q.finished === undefined ? undefined : list(q.finished, 1, 4, 140);
+      if (!KEY.test(key) || !name || !lines || look === null || after === null || finished === null)
         return `${id}.people.${key}: a name (32), lines (1 to 4 of 140), maybe a look word`;
-      people[key] = { name, lines, ...(look ? { look } : {}) };
+      people[key] = {
+        name,
+        lines,
+        ...(look ? { look } : {}),
+        ...(after ? { after } : {}),
+        ...(finished ? { finished } : {}),
+      };
     }
   }
   if (!Array.isArray(r.steps) || r.steps.length < 2 || r.steps.length > MAX_STEPS)
