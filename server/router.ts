@@ -2,7 +2,7 @@
 // director's nudges, a friend's request, a friend's own words), and every answer is one of the card's options, maybe a
 // road of the live story, maybe a reply. Two tiers decide:
 //
-// 1. A fast router (planned: the Jev API) answers one `choice` question over the card's options, the story's roads (for
+// 1. A fast router (the Jev API, jev.ts; a mock without a key) answers one `choice` question over the card's options, the story's roads (for
 //    a friend's words) and `NONE`. Its pick counts only when it is sure (`CONFIDENCE`).
 // 2. Otherwise a creative fallback (planned: Claude Haiku) improvises: an option and words for whoever asked. Its JSON is
 //    checked here first (`readImprovised`), so a bad answer can only lose its pick, never reach the game.
@@ -51,9 +51,17 @@ export interface Table {
   story: { title: string; placed: string[]; total: number; options: Road[]; complete: boolean } | null;
 }
 
-/** A `choice` question: the state as JSON text, the question, and the ids it may answer. */
+/** What a question is asked about: the card, the player's words (if theirs) and the table, as named JSON fields. */
+export interface QuestionState {
+  card: { kind: string; title: string; note: string };
+  /** The player's own words or ask, when the card is theirs. */
+  playerWords: string | null;
+  table: Table;
+}
+
+/** A `choice` question: the state, the question, and the ids it may answer. */
 export interface ChoiceQuestion {
-  state: string;
+  state: QuestionState;
   question: string;
   options: Option[];
 }
@@ -111,10 +119,12 @@ export function optionsFor(card: Card, table: Table): Option[] {
 export function cardQuestion(card: Card, table: Table): ChoiceQuestion {
   const words = wordsOf(card);
   return {
-    state: JSON.stringify({ card: { kind: card.kind, title: card.title, note: card.note }, words, table }),
+    state: { card: { kind: card.kind, title: card.title, note: card.note }, playerWords: words, table },
     question: words
-      ? "You are the Dungeon Master. Based on the player's words, which of these is the most logical outcome?"
-      : 'You are the Dungeon Master. Which of these is the best answer to how things stand?',
+      ? 'You are the Dungeon Master of a co-op adventure. A player said `playerWords` (see `card` for how it reached ' +
+        'you and `table` for the party and the story). Which of these is the most fitting response?'
+      : 'You are the Dungeon Master of a co-op adventure. `card` says what is going on and `table` how the party and ' +
+        'the story stand. Which of these is the best thing to do now?',
     options: optionsFor(card, table),
   };
 }

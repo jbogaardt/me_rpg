@@ -37,8 +37,10 @@ different version away), so point it at the site they use. Against a local build
 - `router.ts` answers a card (`decideCard`): a fast router answers one choice question over the card's options (plus
   the story's roads for a player's words, and "nothing"); at confidence 0.80 or more its pick is taken. Otherwise a
   creative fallback picks and writes the reply; its JSON is checked before use, so it can only choose what was offered.
-- The AI services are mocked (`mocks.ts`) until the real APIs are chosen: put a real `ChoiceRouter` and
-  `CreativeFallback` in their place in `host.ts`. API keys belong in the bot's environment, never in the page or the repo.
+- The router is TypeSafe's Jev (`jev.ts`, the `@typesafe-ai/sdk` client) when `TYPESAFE_API_KEY` is set, and a
+  word-matching mock (`mocks.ts`) otherwise; the bot says which at start. `TYPESAFE_DEFAULT_MODEL` pins a model
+  (`jev-latest` by default). The creative fallback is still the mock until a model is chosen for it.
+- API keys belong in the bot's environment, never in the page or the repo: `TYPESAFE_API_KEY=... npm run dm-bot`.
 
 The bot can do what a person at the DM bar can, and no more: it cannot invent places or monsters. New people for a
 live world (the world log's `npc` and `cast` entries, validated and sent to every player) are the next door to open.

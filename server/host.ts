@@ -6,11 +6,13 @@
 //   npm run dm-bot                                   # the live site, a new live world
 //   npm run dm-bot -- 'http://localhost:4173/?campaign=live&seed=7'
 //
-// Env: PW_CHROMIUM (a local Chromium), DM_BOT_HEADED=1 to watch, DM_BOT_START=n to begin once n players are in.
+// Env: PW_CHROMIUM (a local Chromium), DM_BOT_HEADED=1 to watch, DM_BOT_START=n to begin once n players are in,
+// TYPESAFE_API_KEY to route with Jev (jev.ts; without it a mock decides).
 // Type `help` in the terminal for the operator's commands.
 
 import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
+import { JevRouter } from './jev';
 import { MockFallback, MockRouter } from './mocks';
 import { decideCard, type Card, type Move } from './router';
 import { SETTLE_MS, nextStep, type Clock, type PageState } from './turn';
@@ -54,7 +56,7 @@ class Dm {
   private answered = '';
   private latest: PageState | null = null;
   private services = {
-    router: new MockRouter(() => this.latest?.story?.options ?? []),
+    router: process.env.TYPESAFE_API_KEY ? new JevRouter() : new MockRouter(() => this.latest?.story?.options ?? []),
     fallback: new MockFallback(),
   };
 
@@ -206,6 +208,7 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 960, height: 640 } });
   page.on('pageerror', (err) => log('page error:', err.message));
 
+  log(process.env.TYPESAFE_API_KEY ? 'deciding with Jev' : 'no TYPESAFE_API_KEY: deciding with the mock router');
   log('opening', url);
   await page.goto(url);
   // A live world without a seed reloads once with one, so wait for the handle rather than for the first load.

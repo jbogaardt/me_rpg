@@ -31,7 +31,7 @@ export class MockRouter implements ChoiceRouter {
   constructor(private roads: () => Road[] = () => []) {}
 
   choose(question: ChoiceQuestion): Promise<ChoiceAnswer> {
-    const said = (JSON.parse(question.state) as { words?: string | null }).words;
+    const said = question.state.playerWords;
     const ids = question.options.map((o) => o.id);
     if (!said) {
       const first = ids.find((id) => id !== NONE) ?? NONE;
