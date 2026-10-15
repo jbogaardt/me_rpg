@@ -594,5 +594,6 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
 
 /* A report on screen when the game throws (src/hud/ProblemBanner.ts). */
 #problem { position: fixed; z-index: 9; left: 8px; bottom: 8px; max-width: min(520px, calc(100vw - 16px)); box-sizing: border-box; padding: 8px 34px 8px 12px; background: #5a1414; color: #ffe9e9; border: 1px solid #ff8b8b; border-radius: 4px; font: 600 14px/1.3 var(--body, sans-serif); }
-#problem p { margin: 0; }
+#problem p { margin: 0 0 4px; }
+#problem ul { margin: 0; padding-left: 18px; font-weight: 500; font-size: 12px; word-break: break-word; }
 #problem button { position: absolute; top: 2px; right: 4px; width: 28px; height: 28px; background: none; border: 0; color: #ffe9e9; font: 700 16px var(--body, sans-serif); cursor: pointer; }
