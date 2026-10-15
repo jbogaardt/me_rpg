@@ -253,7 +253,6 @@ export class OverworldScene implements Scene {
     this.desk = new DmDesk(arena, ui.session, content, this.dayClock);
     this.votePanel.onChoose = (i) => this.desk.castVote(i);
     this.requests.onAsk = (i, text) => this.desk.ask(i, text);
-    this.epics.onDone = () => this.prompts.suggest('story'); // a saga is done: the story may have a next road
     this.powers = new DmPowers(arena, this.sim);
     this.tasks = new DmTasks(arena, this.sim, this.desk);
     this.epics = new DmEpics(arena, this.zones, content, this.tasks, this.desk, this.sim);
@@ -270,6 +269,7 @@ export class OverworldScene implements Scene {
       this.revive,
       this.epics,
     );
+    this.epics.onDone = () => this.prompts.suggest('story'); // a saga is done: the story may have a next road
     // The DM's words show on every screen (never over a DM who is busy being a foe).
     this.desk.onSay = (text) => !this.possession.active && this.dmBar.speak(text, arena.clock);
     this.zones.root.addChildAt(this.arrow, 1);
