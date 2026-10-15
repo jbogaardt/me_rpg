@@ -32,17 +32,17 @@ different version away), so point it at the site they use. Against a local build
   WebRTC stays in the browser, as with a person hosting.
 - `?dmbot` puts `window.dmBot` on the page (`src/scenes/overworld/DmBot.ts`): the table's state and the DM bar's own
   controls (open the inbox, put up a card, pick an option, take a story road, reply, speak, go to a player, start).
-- Every tick `turn.ts` picks one step: open a game, begin, go to the party, answer the card up, open the inbox, or offer
-  a quest when nothing is asked of the party. Everything the DM is asked arrives as a card: the director's nudges
+- Every tick `turn.ts` picks one step: open a game, begin, go to the party, answer the card up, open the inbox, or begin an
+  epic quest when nothing is asked of the party. Everything the DM is asked arrives as a card: the director's nudges
   (struggling, too easy, a fallen player, a new land, the story's next road) and the players' requests and own words.
 - `narrate.ts` is the DM speaking up unasked: `beatFor` spots a moment (the party reached a new area, a quest ended, a
   friend fell low, the table went quiet) and a `Narrator` words it through the DM's `say`. It never talks over a card, a
   lobby or a line spoken in the last 20 s. The mock narrator uses stock lines; a creative model slots in behind the same
   interface.
-- `tales.ts` is what the bot tells instead of a plain quest (`quest` step, live worlds): a tale of several quests and
-  people (`src/content/tales.json`; the page runs it, `DmBot.tale`). A `TaleWriter` supplies one: the mock tells the
-  content's tales in turn, `DM_BOT_CLAUDE=1` has Claude write a new one for the place in the same JSON. The page checks it as
-  strictly as the content's own and refuses a bad one; the bot then tells a stock tale, then a plain quest.
+- `epics.ts` is what the bot tells when nothing is asked of the party (`quest` step): an epic of several quests and
+  people (`src/content/epics.json`; the page runs it, `DmBot.epic`). A `EpicWriter` supplies one: the mock tells the
+  content's epics in turn, `DM_BOT_CLAUDE=1` has Claude write a new one for the place in the same JSON. The page checks it as
+  strictly as the content's own and refuses a bad one; the bot then tells a stock epic, else waits.
 - `conjure.ts` makes people: on arriving somewhere new (at most 6 a game, 2 minutes apart) a `Conjurer` invents a
   stranger (name, a look from the world's people, up to 4 short lines) and the page's `spawn` sets them near the party.
   The mock conjurer has a few stock characters; the page refuses anything the world's checks refuse.

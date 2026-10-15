@@ -1,6 +1,6 @@
 # The Dungeon Master (co-op host)
 
-Read this before touching the DM bar, director, cards, DM quests, epics, possession, revive or narration. Code:
+Read this before touching the DM bar, director, cards, epics, possession, revive or narration. Code:
 `src/scenes/overworld/Dm*.ts`, `src/systems/dm*.ts`, `src/hud/Dm*.ts`; each pure file's header says what it does.
 
 ## Philosophy
@@ -38,25 +38,24 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 - **Hot buttons** (`hud/DmBar.ts`): Smite (a lightning storm; foes die with no XP, gold or credit, the party is never
   hurt), Freeze, Reset zone, Stop time. **Stop time** lets the party walk and take doors but stands foes, crops, weather
   and everything else still. All are ordinary events and mob states, so friends see them through the usual snapshots.
-- **DM quests** (`dmTasks.ts` rules, `dmQuests.ts` offers, `DmTasks.ts` on the host): real quests written from the land
-  the DM stands in (hunt, gather, reach a place, find a relic), one at a time beside the story chain, paid to the whole
-  party. The party gets a **search area, never an arrow**; the DM can point the way. **Online only the DM's quests
-  count**: the story chain's givers only pass the time of day. A quest is read to every player like an NPC's
-  (`dmBrief.ts`), and a quest can switch capabilities for the whole party while it is taken (`Quest.capabilities`).
-- **Epic quests** (`dmEpics.ts`, `DmEpics.ts`): sagas, chains of DM quests across lands, as templates with no content
-  id, planned onto whatever world is played by walking its zone links; each carries a gauge (difficulty, length, reach).
-  A failed or cancelled step ends the saga.
-- **Tales** (`content/tales.json`, `dmEpics.ts` `parseTale`, `dmPeople.ts`): a saga as data, with **people**. A step is a
-  quest kind or `meet`: the DM makes the step's person (an `npc` then a `cast` entry of the live world, on open ground in
-  the step's land, wearing the look a word names), the party is sent to find them (a `visit` quest at their feet, so the
-  tracker and the map are the usual ones), and on reaching them they speak a line at a time in the DM's voice and may give
-  something to carry (`gives`, named in the telling for a later step to ask for). So a quest can be several people and
-  lands: hear a courier's trouble, clear the road, find her, carry the letter to a sage. A tale names no land and no
-  content id (a step is a `hop` from where it starts; a person has a name and a look word), so it runs in any biome that
-  has the lands. It is checked like any world entry: `parseTale` refuses a bad tale (an unknown person, a person met
-  twice or never, too long a line), the same check for the content's tales and those an AI writes (`DmBot.tale`). Tales
-  with people need a live world and the host (people are log entries, which friends already receive); nothing new is on
-  the wire. Not yet: items in the pack (`gives` is the DM's word), a person who turns on the party, branching.
+- **Epic quests** (`content/epics.json`, `dmEpics.ts`, `DmEpics.ts` on the host, `dmPeople.ts`): the DM's only quests.
+  There are no one-shot quests to hand out (they were bare tasks): an epic is a saga of steps, as **data** with no land and
+  no content id (a step is a `hop` from where it starts; a person has a name and a look word), planned onto whatever world
+  is played by walking its zone links, so one epic runs in any biome that has the lands; each carries a gauge
+  (difficulty, length, reach). A step is a quest kind (hunt, gather, find, visit: `dmTasks.ts` rules, `dmQuests.ts`
+  writes each from the land, `DmTasks.ts` runs it) or `meet`: the DM makes the step's person (an `npc` then a `cast` entry
+  of the live world, on open ground in the step's land, wearing the look a word names), the party is sent to find them
+  (a `visit` quest at their feet, so the tracker and the map are the usual ones), and on reaching them they speak a line
+  at a time in the DM's voice and may give something to carry (`gives`, named in the telling for a later step to ask
+  for). So a quest is several people and lands: hear a courier's trouble, clear the road, find her, carry the letter to
+  a sage. The party gets a **search area, never an arrow**; the DM can point the way. A failed or cancelled step ends
+  the saga. **Online only the DM's quests count**: the story chain's givers only pass the time of day. A step is read to
+  every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the whole party while it is taken
+  (`Quest.capabilities`). `parseEpic` checks an epic as strictly as a world entry (an unknown person, a person met twice
+  or never, too long a line), the same for the content's and for one an AI writes (`DmBot.epic`). Epics with people need
+  a live world and the host (people are log entries, which friends already receive); nothing new is on the wire. Not
+  yet: people's lines that change with the epic's state, items in the pack (`gives` is the DM's word), a person who turns
+  on the party, branching.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` lets the DM raise or fetch a fallen player (a defeat still wakes them at the start, whole).
   **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive

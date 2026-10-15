@@ -3,7 +3,7 @@
 // relic could be) and turns it into a few honest asks: "Hunt 5 Goblins", "Gather 3 Echostones", "Reach the Old Mill",
 // "Find the Wayfarer's Charm". The party is left to work out how.
 
-import type { QuestOffer, TaskKind } from './dmTasks';
+import type { QuestOffer } from './dmTasks';
 import type { SiteKind } from './quests';
 
 /** The site kind of a hidden relic: an engine kind with a look of its own, not content. */
@@ -73,23 +73,6 @@ export function allOffers(land: Land): QuestOffer[] {
   const at = relic ? land.spot() : null;
   if (relic && at)
     out.push({ kind: 'find', title: `Find ${relic.name}`, zone: land.zone, goal: 1, what: relic.id, x: at.x, y: at.y });
-  return out;
-}
-
-/**
- * Up to `n` offers of different kinds (a hunt, a gather, a find...), which of each rotating with `turn` so the same
- * quest is not offered every time.
- */
-export function questOffers(land: Land, n: number, turn: number): QuestOffer[] {
-  const byKind = new Map<TaskKind, QuestOffer[]>();
-  for (const o of allOffers(land)) byKind.set(o.kind, [...(byKind.get(o.kind) ?? []), o]);
-  const kinds = [...byKind.keys()];
-  const out: QuestOffer[] = [];
-  for (let i = 0; i < kinds.length && out.length < n; i++) {
-    const kind = kinds[(i + turn) % kinds.length]!;
-    const list = byKind.get(kind)!;
-    out.push(list[turn % list.length]!);
-  }
   return out;
 }
 

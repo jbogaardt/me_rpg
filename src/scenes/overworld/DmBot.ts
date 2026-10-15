@@ -11,7 +11,7 @@ import type { Session } from '../../net/session';
 import { openGroundNear } from '../../systems/dmPeople';
 import { zoneName } from '../../systems/places';
 import type { Arena } from './Arena';
-import { parseTale, type EpicTemplate } from '../../systems/dmEpics';
+import { parseEpic, type EpicTemplate } from '../../systems/dmEpics';
 import type { DmDesk } from './DmDesk';
 import type { DmEpics } from './DmEpics';
 import type { CardKind, DmPrompts } from './DmPrompts';
@@ -51,8 +51,8 @@ export interface DmBotState {
   waiting: number;
   /** A DM quest is running. */
   questing: boolean;
-  /** A tale (a saga of several quests and people) is being told: between its steps `questing` is false. */
-  tale: boolean;
+  /** A epic (a saga of several quests and people) is being told: between its steps `questing` is false. */
+  epic: boolean;
   /** The card up now, if any. */
   card: DmBotCard | null;
   /** The live story and its next roads (null when the world is not a live one). */
@@ -60,7 +60,7 @@ export interface DmBotState {
 }
 
 /** The cards the bot may put up on its own (the bar's buttons). */
-export const BOT_CARDS = ['next', 'epic', 'sky', 'pressure', 'story', 'suggest', 'task'] as const satisfies CardKind[];
+export const BOT_CARDS = ['next', 'epic', 'sky', 'pressure', 'story', 'suggest'] as const satisfies CardKind[];
 export type BotCardKind = (typeof BOT_CARDS)[number];
 
 export interface DmBotApi {
@@ -87,10 +87,10 @@ export interface DmBotApi {
   looks(): { id: string; name: string }[];
   /** Make a person and put them near the party, on open ground in the area the DM stands in. */
   spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
-  /** The tales the content ships with (data: `tale` takes one back, or one an AI wrote in the same form). */
-  stockTales(): EpicTemplate[];
-  /** Tell a tale from where the DM stands. Checked as strictly as a file of tales; the note says what is wrong. */
-  tale(raw: unknown): { ok: boolean; note: string };
+  /** The epics the content ships with (data: `epic` takes one back, or one an AI wrote in the same form). */
+  stockEpics(): EpicTemplate[];
+  /** Tell a epic from where the DM stands. Checked as strictly as a file of epics; the note says what is wrong. */
+  epic(raw: unknown): { ok: boolean; note: string };
   /** Go to a friend (the Party tab's Go). */
   goTo: (slot: number) => void;
 }
@@ -104,7 +104,7 @@ export interface DmBotParts {
   card: DmCard;
   tasks: DmTasks;
   epics: DmEpics;
-  tales: EpicTemplate[];
+  stock: EpicTemplate[];
   goTo: (slot: number) => void;
 }
 
@@ -122,7 +122,7 @@ export function createDmBot({
   card,
   tasks,
   epics,
-  tales,
+  stock,
   goTo,
 }: DmBotParts): DmBotApi {
   const cardView = (): DmBotCard | null => card.view;
@@ -150,7 +150,7 @@ export function createDmBot({
       area: zoneName(arena.zoneOf(arena.local).name),
       waiting: prompts.waiting.count,
       questing: tasks.active,
-      tale: epics.active,
+      epic: epics.active,
       card: cardView(),
       story: story.view(),
     }),
@@ -192,10 +192,10 @@ export function createDmBot({
       const note = story.lastNote;
       return { ok: !note, note };
     },
-    stockTales: () => tales,
-    tale(raw) {
-      const tale = parseTale(raw);
-      return typeof tale === 'string' ? { ok: false, note: tale } : epics.beginTale(tale);
+    stockEpics: () => stock,
+    epic(raw) {
+      const epic = parseEpic(raw);
+      return typeof epic === 'string' ? { ok: false, note: epic } : epics.beginEpic(epic);
     },
     goTo,
   };

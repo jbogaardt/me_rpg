@@ -29,7 +29,7 @@ const HOURS: { id: string; label: string; hour: number }[] = [
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** What a card can be: everything the director suggests, and what the bar opens on demand. */
-export type CardKind = Suggestion | 'task' | 'sky' | 'pressure' | 'epic' | 'message' | 'suggest';
+export type CardKind = Suggestion | 'sky' | 'pressure' | 'epic' | 'message' | 'suggest';
 
 /**
  * What the Dungeon Master is asked, and when: the DM steers by reacting. `systems/dmDirector.ts` watches the party (their
@@ -148,8 +148,7 @@ export class DmPrompts {
       if (pace && !pace.hint && pace.sinceProgress >= 45) add('lost', 'No progress for a while: point the way?');
       add('twist', 'Make it more interesting');
     } else {
-      add('next', 'Give the party a quest');
-      add('epic', 'Begin an epic quest across several lands');
+      add('epic', 'Begin an epic quest across lands and people');
     }
     add('sky', 'Change the sky');
     return out.slice(0, 5);
@@ -218,7 +217,7 @@ export class DmPrompts {
   /** Put a card up now. */
   open(kind: CardKind, note = '') {
     if (!this.runsWorld) return;
-    if (kind !== 'task' && kind !== 'pressure' && kind !== 'message' && kind !== 'suggest') this.inbox.drop(kind); // asked for by hand: no longer waiting
+    if (kind !== 'pressure' && kind !== 'message' && kind !== 'suggest') this.inbox.drop(kind); // asked for by hand: no longer waiting
     const show = (title: string, options: CardOption[], seconds: number | null = CARD_TIME, text = note) =>
       this.card.show({ kind, title, note: text, options, seconds });
     switch (kind) {
@@ -274,13 +273,6 @@ export class DmPrompts {
       case 'twist':
         show('Make it interesting', this.twistOptions(), CARD_TIME, 'Halfway there: something should happen.');
         return;
-      case 'next': {
-        if (this.arena.role !== 'host') return; // a quest needs a party
-        const options = this.questOptions();
-        if (!options.length) return; // the land offers nothing to ask
-        show('Which quest?', options, CARD_TIME, 'Nothing has been asked of them for a while.');
-        return;
-      }
       case 'lost':
         show(
           'They seem lost',
@@ -308,13 +300,6 @@ export class DmPrompts {
       case 'land':
         show('A new land', this.skyOptions(true), CARD_TIME, 'How does the sky look?');
         return;
-      case 'task': {
-        if (this.arena.role !== 'host') return;
-        const options = this.questOptions();
-        if (!this.tasks.active && !options.length) return;
-        show(this.tasks.active ? 'A quest is running' : 'Which quest?', options, CARD_TIME, '');
-        return;
-      }
       case 'sky':
         show('How does the sky look?', this.skyOptions(false));
         return;
@@ -328,10 +313,11 @@ export class DmPrompts {
           'Each opens the choice it names. Nothing happens until you pick.',
         );
         return;
+      case 'next': // nothing asked of the party for a while (or they asked): the same choice as the Epic button
       case 'epic': {
         if (this.arena.role !== 'host') return;
         if (this.epics.active) {
-          show('An epic quest is running', this.questOptions(), null, 'Point the way, or call the whole saga off.');
+          show('An epic quest is running', this.runningOptions(), null, 'Point the way, or call the whole saga off.');
           return;
         }
         const { items, more } = this.epics.options();
@@ -364,14 +350,14 @@ export class DmPrompts {
     return options;
   }
 
-  /** The quests the land offers (a few of different kinds), or, with one running, a hint and a way to call it off. */
-  private questOptions(): CardOption[] {
-    if (this.tasks.active)
-      return [
-        { id: 'hint', label: 'Point the way' },
-        { id: '@cancel', label: 'Call it off' },
-      ];
-    return this.tasks.offersHere(3).map((o, i) => ({ id: `q:${i}`, label: o.title }));
+  /** With a quest running: a hint, and a way to call it off. */
+  private runningOptions(): CardOption[] {
+    return this.tasks.active
+      ? [
+          { id: 'hint', label: 'Point the way' },
+          { id: '@cancel', label: 'Call it off' },
+        ]
+      : [];
   }
 
   /** The sky: with `short` just clear, the land's own weather and night; else everything the climate allows. */
@@ -456,8 +442,7 @@ export class DmPrompts {
     } else if (id === 'hint') {
       this.tasks.giveHint();
       this.desk.say('Look for the signs.');
-    } else if (id.startsWith('q:')) this.tasks.call(Number(id.slice(2)));
-    else if (id.startsWith('w:')) {
+    } else if (id.startsWith('w:')) {
       const precip = id.slice(2);
       const valid = precip === '' ? null : (PRECIPS as readonly string[]).includes(precip) ? (precip as Precip) : null;
       this.desk.setWeather(valid, valid === 'storm' || valid === 'blizzard' ? 1 : valid ? 0.5 : 0);

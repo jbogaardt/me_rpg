@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allOffers, questOffers, relicsFor, type Land } from './dmQuests';
+import { allOffers, relicsFor, type Land } from './dmQuests';
 
 const land = (l: Partial<Land> = {}): Land => ({
   zone: 'fen',
@@ -40,15 +40,6 @@ describe('quests written from a land', () => {
       }),
     );
     expect(bare).toEqual([]);
-  });
-
-  it('offers a few of different kinds, and not the same ones every time', () => {
-    const a = questOffers(land(), 3, 0);
-    expect(new Set(a.map((o) => o.kind)).size).toBe(a.length);
-    expect(a).toHaveLength(3);
-    const b = questOffers(land(), 3, 1);
-    expect(b.map((o) => o.title)).not.toEqual(a.map((o) => o.title));
-    expect(questOffers(land({ mobs: [], sites: [], places: [] }), 3, 0).map((o) => o.kind)).toEqual(['find']);
   });
 
   it('chooses relics worth about what a hero of that level would have earned', () => {

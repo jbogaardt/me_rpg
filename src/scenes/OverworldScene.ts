@@ -16,7 +16,7 @@ import { NO_COMMAND } from '../entities/Player';
 import type { Dialog } from '../hud/Dialog';
 import type { Choices } from '../hud/Choices';
 import type { ContentManager } from '../content/ContentManager';
-import { STOCK_TALES } from '../content/tales';
+import { STOCK_EPICS } from '../content/epics';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
@@ -201,7 +201,7 @@ export class OverworldScene implements Scene {
     this.requests.onAsk = (i, text) => this.desk.ask(i, text);
     this.powers = new DmPowers(arena, this.sim);
     this.tasks = new DmTasks(arena, this.sim, this.desk);
-    this.epics = new DmEpics(arena, this.zones, content, this.tasks, this.desk, this.sim, this.liveStory, STOCK_TALES);
+    this.epics = new DmEpics(arena, this.zones, content, this.tasks, this.desk, this.sim, this.liveStory, STOCK_EPICS);
     this.narration = new DmNarration(arena, ui.session, this.desk);
     this.revive = new DmRevive(arena, this.sim, this.zones);
     this.possession = new DmPossession(arena, this.sim);
@@ -643,7 +643,7 @@ export class OverworldScene implements Scene {
       card: this.dmCard,
       tasks: this.tasks,
       epics: this.epics,
-      tales: STOCK_TALES,
+      stock: STOCK_EPICS,
       goTo: (slot) => this.partyUi.goTo(slot),
     });
   }

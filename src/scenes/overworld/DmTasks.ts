@@ -1,7 +1,7 @@
 import { CELL } from '../../map/types';
 import { cleanNote } from '../../systems/dmBrief';
 import { collect } from '../../systems/chests';
-import { RELIC_KIND, questOffers, relicsFor, type Land } from '../../systems/dmQuests';
+import { RELIC_KIND, relicsFor, type Land } from '../../systems/dmQuests';
 import {
   TASK_LINGER,
   TaskBook,
@@ -43,11 +43,8 @@ export class DmTasks {
   private linger = 0;
   private retarget = 0;
   private seq = 0;
-  private turn = 0;
   private note = '';
   private epic: { title: string; step: number; total: number } | null = null;
-  /** The offers on the card now: a pick is an index into this. */
-  offers: QuestOffer[] = [];
 
   constructor(
     private arena: Arena,
@@ -94,17 +91,6 @@ export class DmTasks {
 
   private presence = (p: Player): Presence => ({ zone: p.zone, x: p.body.x, y: p.body.y });
 
-  /** Quests written from the land the DM stands in: a few of different kinds (the next of each on every call). */
-  offersHere(n = 3): QuestOffer[] {
-    this.offers = questOffers(this.land(), n, this.turn++);
-    return this.offers;
-  }
-
-  /** What the DM's land holds. */
-  private land(): Land {
-    return this.landOf(this.arena.view);
-  }
-
   /** What a loaded land holds, as the DM's quests (and a saga's steps) need to know it. */
   landOf(zone: ZoneState): Land {
     const { arena } = this;
@@ -148,12 +134,6 @@ export class DmTasks {
         return null;
       },
     };
-  }
-
-  /** Give the quest on the card at `index`. False if one is running or there is no game to give it in. */
-  call(index: number): boolean {
-    const offer = this.offers[index];
-    return !!offer && this.start(offer);
   }
 
   /** Give a quest written elsewhere (a saga's step), with the DM's telling of it. False if one is running or there is no game to give it in. */

@@ -1,0 +1,445 @@
+[
+  {
+    "id": "quiet_errands",
+    "title": "Quiet Errands",
+    "tagline": "A few chores close to home that turn out to matter.",
+    "difficulty": 1,
+    "opening": "It begins small, the way these things do. A few errands, and a feeling that they are not as idle as they seem.",
+    "ending": "The errands are done, and the land is a little safer for them. Small things, rightly done, add up.",
+    "steps": [
+      {
+        "kind": "gather",
+        "hop": 0,
+        "tell": "First, the simple part: {area} holds what we need, and the rest of what follows depends on it. Bring it together."
+      },
+      {
+        "kind": "visit",
+        "hop": 0,
+        "tell": "Next, someone must see for themselves what has become of a place in {area}. Go, look, and carry back the truth."
+      },
+      {
+        "kind": "hunt",
+        "hop": 0,
+        "tell": "What you saw was no accident. Whatever is stirring in {area} must be put down before it spreads."
+      }
+    ]
+  },
+  {
+    "id": "long_road",
+    "title": "The Long Road",
+    "tagline": "A journey out through the lands, with trouble at every stop.",
+    "difficulty": 2,
+    "opening": "A road runs out of here through the lands, and every stop along it holds a task. Walk it to the end.",
+    "ending": "The road is walked, and those who walked it are not the ones who set out.",
+    "steps": [
+      {
+        "kind": "visit",
+        "hop": 1,
+        "tell": "The road begins in {area}. Go there first and see what waits. Nobody has been that way in some time."
+      },
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "The road is not safe. In {area}, creatures have claimed it. Clear them, and travellers can pass again."
+      },
+      {
+        "kind": "gather",
+        "hop": 2,
+        "tell": "Beyond {from} lies {area}, where what we need grows. Take it, and the road pays for itself."
+      },
+      {
+        "kind": "find",
+        "hop": 2,
+        "tell": "At the road's end, in {area}, something old lies hidden. Find it, and the journey will have meant something."
+      }
+    ]
+  },
+  {
+    "id": "great_hunt",
+    "title": "The Great Hunt",
+    "tagline": "Drive the danger back, land by land, to its source.",
+    "difficulty": 3,
+    "opening": "A threat has been spreading from land to land. Follow it back to where it began, and do not stop until it does.",
+    "ending": "The hunt is over. Whatever drove the beasts has gone quiet, and the lands breathe again.",
+    "steps": [
+      {
+        "kind": "hunt",
+        "hop": 0,
+        "tell": "It starts here, in {area}. Thin their numbers, then follow where they flee."
+      },
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "They have run to {area}, and they are angrier. Bring them down before they dig in."
+      },
+      {
+        "kind": "hunt",
+        "hop": 2,
+        "tell": "Now {area}. Whatever is leading them is near. Deal with those around it first."
+      },
+      {
+        "kind": "visit",
+        "hop": 3,
+        "tell": "Their trail ends in {area}. Reach the place where it stops, and be ready for what you find."
+      }
+    ]
+  },
+  {
+    "id": "harvest_dark",
+    "title": "A Harvest Against the Dark",
+    "tagline": "Gather what the lands hold, while something stalks the gatherers.",
+    "difficulty": 2,
+    "opening": "The lands still give, if you know where to look, and something has noticed. Gather fast, and gather together.",
+    "ending": "The harvest is in. It will keep the settlements through the dark, and that is all anyone asked.",
+    "steps": [
+      {
+        "kind": "gather",
+        "hop": 0,
+        "tell": "The nearest of it grows here in {area}. Take what you can carry and keep your guard up."
+      },
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "Something follows the gatherers. In {area} it has gone from watching to hunting. End it."
+      },
+      {
+        "kind": "gather",
+        "hop": 1,
+        "tell": "More grows in {area}, past where the stalker lurked. Take it too."
+      }
+    ]
+  },
+  {
+    "id": "lost_relics",
+    "title": "The Lost Relics",
+    "tagline": "Three old things, scattered across the lands, each worth a story.",
+    "difficulty": 3,
+    "opening": "Three things were hidden long ago in three different lands. Each is worth finding. Together, they are worth more.",
+    "ending": "All three are found. Whatever they were made for, they will not sit in the dark any longer.",
+    "steps": [
+      {
+        "kind": "find",
+        "hop": 1,
+        "tell": "The first lies somewhere in {area}. The old stories say it glows when someone worthy is near."
+      },
+      {
+        "kind": "find",
+        "hop": 2,
+        "tell": "The second is in {area}. It has had longer to be forgotten, so it will be harder to see."
+      },
+      {
+        "kind": "find",
+        "hop": 3,
+        "tell": "The third lies in {area}, farthest of all. If you have come this far, you will know what to look for."
+      }
+    ]
+  },
+  {
+    "id": "far_shrine",
+    "title": "Pilgrimage to the Far Shrine",
+    "tagline": "A long walk to a far place, with the lands watching.",
+    "difficulty": 3,
+    "opening": "There is a shrine at the far edge of the world, and a long, patient way to get there. Walk it with care.",
+    "ending": "The shrine is reached, and the long walk is over. Rest now. You have earned the quiet.",
+    "steps": [
+      {
+        "kind": "visit",
+        "hop": 1,
+        "tell": "The pilgrimage starts in {area}. Go there and begin."
+      },
+      {
+        "kind": "visit",
+        "hop": 2,
+        "tell": "Then {area}. The way is longer than it looks, and the land does not care that you are tired."
+      },
+      {
+        "kind": "visit",
+        "hop": 3,
+        "tell": "On to {area}. Others have turned back here. Do not."
+      },
+      {
+        "kind": "hunt",
+        "hop": 3,
+        "tell": "The shrine is guarded in {area}. Clear the way, and you will be let in."
+      }
+    ]
+  },
+  {
+    "id": "frontier_siege",
+    "title": "The Siege of the Frontier",
+    "tagline": "Hold the line, then carry the fight out into the wild.",
+    "difficulty": 4,
+    "opening": "The frontier is under siege and the settlements are calling for help. Break the siege, then take the fight to those behind it.",
+    "ending": "The siege is broken, and those who laid it are scattered. The frontier will hold for now.",
+    "steps": [
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "The first wave has reached {area}. Break it, or there will be nothing left to defend."
+      },
+      {
+        "kind": "gather",
+        "hop": 2,
+        "tell": "We need supplies to hold out. They grow in {area}. Bring them back, quickly."
+      },
+      {
+        "kind": "hunt",
+        "hop": 2,
+        "tell": "A second wave is gathering in {area}. Strike it while it is still forming."
+      },
+      {
+        "kind": "hunt",
+        "hop": 3,
+        "tell": "The leaders are in {area}. Bring them down and the rest will break."
+      },
+      {
+        "kind": "find",
+        "hop": 3,
+        "tell": "In {area} they dropped what they came for. Find it, so they cannot come back for it."
+      }
+    ]
+  },
+  {
+    "id": "beyond_edge",
+    "title": "Beyond the Edge of the Map",
+    "tagline": "Into the farthest lands, where nobody has gone and returned.",
+    "difficulty": 4,
+    "opening": "Past the lands everyone knows are the lands almost nobody does. Go as far as the paths go, and then a little farther.",
+    "ending": "You have gone farther than anyone, and come back. That is worth a story, and you will tell it well.",
+    "steps": [
+      {
+        "kind": "visit",
+        "hop": 2,
+        "tell": "Start in {area}, where the maps begin to thin. Reach the place at its heart."
+      },
+      {
+        "kind": "gather",
+        "hop": 3,
+        "tell": "In {area}, things grow that grow nowhere else. Gather them: the proof will be needed."
+      },
+      {
+        "kind": "hunt",
+        "hop": 4,
+        "tell": "The farthest land, {area}, is no longer empty. Whatever lives there does not welcome visitors."
+      },
+      {
+        "kind": "find",
+        "hop": 4,
+        "tell": "At the very edge of {area} there is something left by whoever came here first. Find it."
+      }
+    ]
+  },
+  {
+    "id": "hollow_crown",
+    "title": "The Hollow Crown",
+    "tagline": "A king's lost regalia, a trail of grave-robbers, a long reckoning.",
+    "difficulty": 5,
+    "opening": "A crown was stolen, and with it, the right to rule. Follow the trail wherever it goes. Nobody who followed it has returned.",
+    "ending": "The crown is found, and the trail is closed. What happens to it next is a story for another day.",
+    "steps": [
+      {
+        "kind": "find",
+        "hop": 1,
+        "tell": "The first piece of the regalia is hidden in {area}. The thieves did not think anyone would look there."
+      },
+      {
+        "kind": "hunt",
+        "hop": 2,
+        "tell": "In {area}, the thieves have made a camp and set guards. Break it."
+      },
+      {
+        "kind": "visit",
+        "hop": 3,
+        "tell": "Their trail leads to {area}. Reach the place where it ends, and see who waits."
+      },
+      {
+        "kind": "hunt",
+        "hop": 3,
+        "tell": "There are too many in {area} to simply walk past. Fight through."
+      },
+      {
+        "kind": "find",
+        "hop": 4,
+        "tell": "The crown itself is somewhere in {area}. After all this, you will know it when you see it."
+      }
+    ]
+  },
+  {
+    "id": "lost_courier",
+    "title": "The Lost Courier",
+    "tagline": "A sealed letter, three strangers and a message that must arrive.",
+    "difficulty": 2,
+    "opening": "A letter was given to a courier, and the courier never arrived. Somebody, somewhere, is still waiting for it. Let us see who.",
+    "ending": "The letter reached the hand it was meant for, and the world is a little less lost for it.",
+    "people": {
+      "postmaster": {
+        "name": "Aldis the Postmaster",
+        "look": "keeper",
+        "lines": ["No courier has come through in days. I fear the worst.", "If you find the letter, do not open it."]
+      },
+      "courier": {
+        "name": "Wren the Courier",
+        "look": "wanderer",
+        "lines": ["I ran. I am not proud of it, but I ran.", "Take the letter. Take it to the one it was meant for."]
+      },
+      "reader": {
+        "name": "Sage Orrin",
+        "look": "sage",
+        "lines": ["Letters from the old road. Rare, these days.", "Whoever sent this knew more than they wrote."]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "postmaster",
+        "tell": "The postmaster in {area} is beside himself. Find Aldis, and hear what happened.",
+        "says": [
+          "A courier left here three days ago with a sealed letter, and has not been seen since.",
+          "She was last bound for the lands beyond. Find her, if you can, and the letter with her."
+        ]
+      },
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "Whatever stopped the courier is still out there in {area}. Clear the road before you follow it."
+      },
+      {
+        "kind": "meet",
+        "hop": 1,
+        "who": "courier",
+        "gives": "the Sealed Letter",
+        "tell": "A frightened traveller is hiding in {area}. Find Wren the courier.",
+        "says": [
+          "You came for the letter. Good. I could not carry it another step.",
+          "It is for the old sage who keeps the lore. Please, see it into their hands."
+        ]
+      },
+      {
+        "kind": "meet",
+        "hop": 2,
+        "who": "reader",
+        "tell": "The sage the letter is for lives in {area}. Carry the Sealed Letter there and give it over.",
+        "says": [
+          "Ah. So it has come at last. You have done more than you know.",
+          "What it says is not for you, but this I will tell you: the roads will be safer for it."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "silent_bell",
+    "title": "The Silent Bell",
+    "tagline": "A bell that stopped ringing, a keeper with a secret, a trail to follow.",
+    "difficulty": 3,
+    "opening": "There was a bell in the lands that rang every dusk. It has gone silent, and the silence has begun to spread.",
+    "ending": "The bell rang again at dusk, and everyone who heard it knew the long silence was over.",
+    "people": {
+      "ringer": {
+        "name": "Old Maren the Ringer",
+        "look": "keeper",
+        "lines": [
+          "Forty years I rang that bell. Now there is only quiet.",
+          "Find what took the clapper, and bring it home."
+        ]
+      },
+      "smith": {
+        "name": "Dorrin Ashhand",
+        "look": "sage",
+        "lines": [
+          "I mend what breaks, but I cannot mend what is missing.",
+          "Bring me the clapper and the bell will sing."
+        ]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "ringer",
+        "tell": "The bell-ringer in {area} has a sorrow to tell. Find Old Maren.",
+        "says": [
+          "The bell hangs there still, but its voice is gone. The clapper was taken in the night.",
+          "Whoever took it left tracks heading out. Follow them."
+        ]
+      },
+      {
+        "kind": "find",
+        "hop": 1,
+        "tell": "The tracks end in {area}. The clapper is hidden somewhere near. Search the land until you have it."
+      },
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "Whatever carried it off has made its den in {area}, and it will not give the clapper up without a fight."
+      },
+      {
+        "kind": "meet",
+        "hop": 2,
+        "who": "smith",
+        "gives": "a Mended Clapper",
+        "tell": "Take the clapper to the smith in {area}. Find Dorrin Ashhand.",
+        "says": [
+          "A fine piece, and nearly whole. Give me a moment at the anvil.",
+          "There. Carry it back to the bell, and may it ring true."
+        ]
+      },
+      {
+        "kind": "visit",
+        "hop": 0,
+        "tell": "The bell hangs where it always did, in {area}. Return the clapper to it, and let it ring."
+      }
+    ]
+  },
+  {
+    "id": "wanderers_debt",
+    "title": "The Wanderer's Debt",
+    "tagline": "A stranger owes a favour to someone he has never met, and you are the road between.",
+    "difficulty": 2,
+    "opening": "A wanderer on the road owes a debt he cannot pay. Perhaps you can pay it for him, and learn something on the way.",
+    "ending": "The debt is paid, the wanderer is free, and two strangers parted as friends.",
+    "people": {
+      "wanderer": {
+        "name": "Corwin the Wanderer",
+        "look": "wanderer",
+        "lines": [
+          "I owe someone a debt, and I do not even know their face.",
+          "They live beyond the next land, so I am told."
+        ]
+      },
+      "creditor": {
+        "name": "Keeper Hale",
+        "look": "keeper",
+        "lines": ["A debt? I had forgotten it entirely.", "Odd, to be repaid by strangers."]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "wanderer",
+        "gives": "a Pouch of Old Coins",
+        "tell": "A traveller in {area} is looking for help with a debt. Find Corwin.",
+        "says": [
+          "Take these coins, friends. They are what I owe, and a little more.",
+          "The one I owe lives some way off. Please, find them. I cannot."
+        ]
+      },
+      {
+        "kind": "gather",
+        "hop": 1,
+        "tell": "On the road to the creditor, {area} offers what a gift ought to have beside it. Gather it as you pass."
+      },
+      {
+        "kind": "meet",
+        "hop": 2,
+        "who": "creditor",
+        "tell": "The creditor is in {area}. Find Keeper Hale, and settle the debt.",
+        "says": [
+          "These are the old coins, aren't they? My grandmother's pouch.",
+          "Tell Corwin the debt is paid, and something more besides. He is welcome at my fire."
+        ]
+      }
+    ]
+  }
+]

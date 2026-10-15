@@ -61,11 +61,11 @@ the arc be told (`Story.ts` grows it; the new ports open in loaded zones with `Z
 the log in rotating chunks (`WorldMsg`) and a friend applies the entries that follow its own. Today's packs offer one
 road per step; branching grows with the packs' regions per theme and pairings.
 
-## Tales
+## Epics
 
-`tales.json` holds the DM's tales: sagas of several quests and people, the same shape an AI may write (`parseTale` in
-`systems/dmEpics.ts`; `tales.ts` parses the file at load, so a bad tale stops the boot). A tale names no land and no
-content id (steps are hops from where it starts, people a name and a look word), so one tale runs in any world. Tales with
+`epics.json` holds the DM's epics: sagas of several quests and people, the same shape an AI may write (`parseEpic` in
+`systems/dmEpics.ts`; `epics.ts` parses the file at load, so a bad epic stops the boot). A epic names no land and no
+content id (steps are hops from where it starts, people a name and a look word), so one epic runs in any world. Epics with
 people need a live world, since the people are `npc`/`cast` entries of its log (`docs/dungeon-master.md`).
 
 ## Checks

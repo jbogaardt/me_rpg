@@ -15,11 +15,11 @@ import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
 import { JevRouter } from './jev';
 import { MockFallback, MockRouter } from './mocks';
-import { ClaudeConjurer, ClaudeFallback, ClaudeNarrator, ClaudeTaleWriter } from './claude';
+import { ClaudeConjurer, ClaudeFallback, ClaudeNarrator, ClaudeEpicWriter } from './claude';
 import { MockConjurer, shouldConjure, type Conjurer } from './conjure';
 import { MockNarrator, beatFor, type Memory, type Narrator } from './narrate';
 import { decideCard, type Card, type Move } from './router';
-import { MockTaleWriter, tellTale, type StockTale, type TaleWriter } from './tales';
+import { MockEpicWriter, tellEpic, type StockTale, type EpicWriter } from './epics';
 import { SETTLE_MS, nextStep, type Clock, type PageState } from './turn';
 
 const DEFAULT_URL = 'https://jbogaardt.github.io/me_rpg/?campaign=live';
@@ -40,8 +40,8 @@ interface PageBot {
   reply(text: string): boolean;
   say(text: string): boolean;
   looks(): { id: string; name: string }[];
-  stockTales(): StockTale[];
-  tale(raw: unknown): { ok: boolean; note: string };
+  stockEpics(): StockTale[];
+  epic(raw: unknown): { ok: boolean; note: string };
   spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
   goTo(slot: number): void;
 }
@@ -69,8 +69,8 @@ class Dm {
   private narrator: Narrator = CLAUDE ? new ClaudeNarrator() : new MockNarrator();
   private conjurer: Conjurer = CLAUDE ? new ClaudeConjurer() : new MockConjurer();
   /** People made so far, and when the last was (ms). */
-  private writer: TaleWriter = CLAUDE ? new ClaudeTaleWriter() : new MockTaleWriter();
-  /** Ids of the tales told so far. */
+  private writer: EpicWriter = CLAUDE ? new ClaudeEpicWriter() : new MockEpicWriter();
+  /** Ids of the epics told so far. */
   private told: string[] = [];
   private made = 0;
   private lastMade = -Infinity;
@@ -136,9 +136,7 @@ class Dm {
       }
       case 'quest': {
         this.clock.lastQuest = this.clock.now;
-        if (s.story && (await this.tell(s))) return; // a tale of people and places, when the world can hold one
-        const card = await this.call('open', 'next');
-        if (card) await this.answer(card, s);
+        await this.tell(s); // an epic of people and places; when none can be told here, the party is left to explore
         return;
       }
       case 'idle':
@@ -163,14 +161,14 @@ class Dm {
     return true;
   }
 
-  /** Begin a tale (tales.ts); false when none could be told here (the caller offers a plain quest). */
+  /** Begin a epic (epics.ts); false when none could be told here (the caller offers a plain quest). */
   private async tell(s: PageState): Promise<boolean> {
     const page = {
-      teller: { tale: (raw: unknown) => this.call('tale', raw) },
+      teller: { epic: (raw: unknown) => this.call('epic', raw) },
       looks: await this.call('looks'),
-      stock: await this.call('stockTales'),
+      stock: await this.call('stockEpics'),
     };
-    const told = await tellTale(this.writer, page, s.area, this.told);
+    const told = await tellEpic(this.writer, page, s.area, this.told);
     if (!told) return false;
     this.told.push(told.id);
     log(`telling “${told.title}”`);

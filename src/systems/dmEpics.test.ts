@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { STOCK_EPICS as EPICS } from '../content/epics';
 import {
-  EPICS,
   epicReward,
   epicsFrom,
   gauge,
   gaugeText,
   layers,
-  parseTale,
-  parseTales,
+  parseEpic,
+  parseEpics,
   needsPeople,
   planEpic,
   stars,
@@ -105,26 +105,26 @@ describe('the sagas', () => {
         expect(tellStep(s, 'The Fen', 'The Glen').length).toBeLessThanOrEqual(240); // a DM's note
         expect(tellStep(s, 'The Fen', 'The Glen')).not.toMatch(/[{}]/);
       }
-      // hops never go backwards by more than a land, so a saga keeps moving outward
+      // a saga goes out a land at a time (it may also come back: a bell is returned where it hangs)
       const hops = e.steps.map((s) => s.hop);
-      hops.forEach((h, i) => i && expect(h).toBeGreaterThanOrEqual(hops[i - 1]!));
+      hops.forEach((h, i) => i && expect(h).toBeLessThanOrEqual(hops[i - 1]! + 1));
     }
   });
 
   it('are offered easiest and shortest first, and every difficulty is in range', () => {
-    const list = epicsFrom('a', big);
+    const list = epicsFrom('a', big, 0, EPICS, true);
     expect(list).toHaveLength(EPICS.length);
     for (let i = 1; i < list.length; i++)
       expect(list[i]!.gauge.difficulty).toBeGreaterThanOrEqual(list[i - 1]!.gauge.difficulty);
     for (const { gauge: g } of list) expect(g.difficulty).toBeGreaterThanOrEqual(1);
-    expect(epicsFrom('shop', big)).toEqual([]);
+    expect(epicsFrom('shop', big, 0, EPICS, true)).toEqual([]);
   });
 });
 
-describe('tales as data', () => {
-  const tale = () => ({
+describe('epics as data', () => {
+  const epic = () => ({
     id: 'a_tale',
-    title: 'A Tale',
+    title: 'A Epic',
     tagline: 'Short.',
     difficulty: 2,
     opening: 'It begins.',
@@ -135,22 +135,22 @@ describe('tales as data', () => {
       { kind: 'hunt', hop: 1, tell: 'Clear {area}.' },
     ],
   });
-  it('accepts a good tale and knows it needs people', () => {
-    const parsed = parseTale(tale());
+  it('accepts a good epic and knows it needs people', () => {
+    const parsed = parseEpic(epic());
     expect(typeof parsed).toBe('object');
     expect(needsPeople(parsed as never)).toBe(true);
   });
-  it('refuses each way a tale can be wrong, naming where', () => {
-    const bad = (f: (t: ReturnType<typeof tale>) => void): string => {
-      const t = tale();
+  it('refuses each way a epic can be wrong, naming where', () => {
+    const bad = (f: (t: ReturnType<typeof epic>) => void): string => {
+      const t = epic();
       f(t);
-      const r = parseTale(t);
+      const r = parseEpic(t);
       return typeof r === 'string' ? r : 'ok';
     };
     expect(bad((t) => (t.id = 'Bad Id'))).toContain('id');
     expect(bad((t) => (t.difficulty = 9))).toContain('difficulty');
     expect(bad((t) => (t.steps = t.steps.slice(0, 1)))).toContain('steps');
-    expect(bad((t) => (t.steps[0]!.who = 'nobody'))).toContain('not one of the tale');
+    expect(bad((t) => (t.steps[0]!.who = 'nobody'))).toContain('not one of the epic');
     expect(bad((t) => (t.steps[0]!.says = []))).toContain('says');
     expect(bad((t) => ((t.steps[1] as { who?: string }).who = 'mira'))).toContain('only a meet step');
     expect(bad((t) => t.steps.push({ kind: 'meet', hop: 1, who: 'mira', tell: 'x', says: ['y'] } as never))).toContain(
@@ -163,13 +163,12 @@ describe('tales as data', () => {
       'never met',
     );
   });
-  it('refuses a file with a repeated id, or the id of a built-in saga', () => {
-    expect(typeof parseTales([tale(), tale()])).toBe('string');
-    expect(typeof parseTales([{ ...tale(), id: EPICS[0]!.id }])).toBe('string');
-    expect(Array.isArray(parseTales([tale()]))).toBe(true);
+  it('refuses a file with a repeated id', () => {
+    expect(typeof parseEpics([epic(), epic()])).toBe('string');
+    expect(Array.isArray(parseEpics([epic()]))).toBe(true);
   });
   it('leaves sagas with people out where none can be made', () => {
-    const t = parseTale(tale()) as never;
+    const t = parseEpic(epic()) as never;
     expect(epicsFrom('a', big, 0, [t], false).some((e) => e.plan.epic.id === 'a_tale')).toBe(false);
     expect(epicsFrom('a', big, 0, [t], true).some((e) => e.plan.epic.id === 'a_tale')).toBe(true);
   });

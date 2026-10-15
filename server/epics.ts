@@ -1,18 +1,18 @@
-// The DM's tales: what the bot tells the party instead of a plain quest. A tale is a saga of several quests and people
+// The DM's epics: what the bot tells the party instead of a plain quest. A epic is a saga of several quests and people
 // (src/systems/dmEpics.ts: steps of hunt, gather, find, visit and meet, people with a name and a look word), as JSON. A
-// `TaleWriter` supplies one: the mock tells the content's own tales in turn; a creative model writes a new one for the
-// place (claude.ts). Whatever it writes, the page parses it as strictly as a file of tales and refuses a bad one, and the
-// bot then tells a stock tale instead, so a poor invention is never played.
+// `EpicWriter` supplies one: the mock tells the content's own epics in turn; a creative model writes a new one for the
+// place (claude.ts). Whatever it writes, the page parses it as strictly as a file of epics and refuses a bad one, and the
+// bot then tells a stock epic instead, so a poor invention is never played.
 
-/** A tale as the page's `stockTales()` gives it (only what the writer needs to read). */
+/** A epic as the page's `stockEpics()` gives it (only what the writer needs to read). */
 export interface StockTale {
   id: string;
   title: string;
   [key: string]: unknown;
 }
 
-export interface TaleWriter {
-  /** A tale for the place: raw JSON for the page to check, or null if there is none to tell. `told` are the ids already told. */
+export interface EpicWriter {
+  /** A epic for the place: raw JSON for the page to check, or null if there is none to tell. `told` are the ids already told. */
   write(want: {
     area: string;
     looks: { id: string; name: string }[];
@@ -21,28 +21,28 @@ export interface TaleWriter {
   }): Promise<unknown>;
 }
 
-/** What the page takes (the page's `DmBotApi.tale`), as far as telling goes. */
+/** What the page takes (the page's `DmBotApi.epic`), as far as telling goes. */
 export interface Teller {
-  tale(raw: unknown): Promise<{ ok: boolean; note: string }>;
+  epic(raw: unknown): Promise<{ ok: boolean; note: string }>;
 }
 
-/** The tale the stock offers next: the first not yet told, else the one told longest ago. */
+/** The epic the stock offers next: the first not yet told, else the one told longest ago. */
 export function nextStock(stock: StockTale[], told: string[]): StockTale | null {
   return stock.find((t) => !told.includes(t.id)) ?? stock.find((t) => t.id === told[0]) ?? stock[0] ?? null;
 }
 
-export class MockTaleWriter implements TaleWriter {
-  write({ told, stock }: Parameters<TaleWriter['write']>[0]): Promise<unknown> {
+export class MockEpicWriter implements EpicWriter {
+  write({ told, stock }: Parameters<EpicWriter['write']>[0]): Promise<unknown> {
     return Promise.resolve(nextStock(stock, told));
   }
 }
 
 /**
- * Tell a tale: the writer's if the page accepts it, else a stock tale, else false (the caller offers a plain quest).
+ * Tell a epic: the writer's if the page accepts it, else a stock epic, else false (the caller offers a plain quest).
  * Returns the id and title told, for the log.
  */
-export async function tellTale(
-  writer: TaleWriter,
+export async function tellEpic(
+  writer: EpicWriter,
   page: { teller: Teller; looks: { id: string; name: string }[]; stock: StockTale[] },
   area: string,
   told: string[],
@@ -50,9 +50,9 @@ export async function tellTale(
   const want = { area, looks: page.looks, told, stock: page.stock };
   const tryTale = async (raw: unknown): Promise<{ id: string; title: string } | null> => {
     if (typeof raw !== 'object' || raw === null) return null;
-    const result = await page.teller.tale(raw);
+    const result = await page.teller.epic(raw);
     if (!result.ok) {
-      console.warn('the page refused a tale:', result.note);
+      console.warn('the page refused a epic:', result.note);
       return null;
     }
     const t = raw as { id?: unknown; title?: unknown };
@@ -62,7 +62,7 @@ export async function tellTale(
   try {
     raw = await writer.write(want);
   } catch (err) {
-    console.warn('the tale writer failed:', err instanceof Error ? err.message : err);
+    console.warn('the epic writer failed:', err instanceof Error ? err.message : err);
   }
   const told1 = await tryTale(raw);
   if (told1) return told1;

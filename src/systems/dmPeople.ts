@@ -1,4 +1,4 @@
-// People the Dungeon Master brings into a tale (Pixi-free, tested; core engine). Where a stranger may stand, and which
+// People the Dungeon Master brings into a epic (Pixi-free, tested; core engine). Where a stranger may stand, and which
 // of the world's looks they wear. Nothing here names a content id: it reads cells and the looks a world offers.
 
 import { CELL } from '../map/types';

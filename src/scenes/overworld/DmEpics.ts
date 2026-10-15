@@ -73,10 +73,10 @@ export class DmEpics {
     private tasks: DmTasks,
     private desk: DmDesk,
     private sim: Simulation,
-    /** The live world the people of a tale are made in (none: sagas with people are not offered). */
+    /** The live world the people of a epic are made in (none: sagas with people are not offered). */
     private story: Story | null = null,
-    /** Tales from the content, offered beside the built-in sagas. */
-    private tales: EpicTemplate[] = [],
+    /** Epics from the content, offered beside the built-in sagas. */
+    private stock: EpicTemplate[] = [],
   ) {
     this.graph = {
       neighbours,
@@ -88,9 +88,9 @@ export class DmEpics {
     tasks.onFinish = (state) => {
       const run = this.run;
       if (!run) return;
-      if (state !== 'done') return this.end('The thread of the tale is lost. The saga ends here.');
+      if (state !== 'done') return this.end('The thread of the epic is lost. The saga ends here.');
       const step = run.plan.epic.steps[run.step];
-      if (step?.kind === 'meet') return this.meet(run, step); // they speak first, then the tale goes on
+      if (step?.kind === 'meet') return this.meet(run, step); // they speak first, then the epic goes on
       this.advance(run);
     };
     tasks.onCancel = () => {
@@ -117,7 +117,7 @@ export class DmEpics {
 
   /** The sagas this land can start (a page of them; `more` says there are others to turn to). */
   options(): { items: EpicOffer[]; more: boolean } {
-    const all = epicsFrom(this.arena.view.name, this.graph, this.turn, this.tales, this.canMake);
+    const all = epicsFrom(this.arena.view.name, this.graph, this.turn, this.stock, this.canMake);
     const start = (this.page * PAGE) % Math.max(1, all.length);
     const shown = all.slice(start, start + PAGE);
     this.offered = shown.map((s) => s.plan);
@@ -148,19 +148,19 @@ export class DmEpics {
   }
 
   /**
-   * Begin a tale written elsewhere (an AI's, or the content's) from where the DM stands: it is read as strictly as a
-   * file of tales (`parseTale` was run by the caller) and planned onto this world like any saga.
+   * Begin a epic written elsewhere (an AI's, or the content's) from where the DM stands: it is read as strictly as a
+   * file of epics (`parseEpic` was run by the caller) and planned onto this world like any saga.
    */
-  beginTale(tale: EpicTemplate): { ok: boolean; note: string } {
+  beginEpic(epic: EpicTemplate): { ok: boolean; note: string } {
     if (this.arena.role !== 'host' && this.arena.role !== 'solo')
-      return { ok: false, note: 'only the host tells a tale' };
+      return { ok: false, note: 'only the host tells a epic' };
     if (this.run || this.tasks.active) return { ok: false, note: 'a quest is already running' };
-    if (needsPeople(tale) && !this.canMake) return { ok: false, note: 'people can only be made in a live world' };
-    const plan = planEpic(tale, this.arena.view.name, this.graph, this.turn);
-    if (!plan) return { ok: false, note: 'a tale is not told in a shop' };
+    if (needsPeople(epic) && !this.canMake) return { ok: false, note: 'people can only be made in a live world' };
+    const plan = planEpic(epic, this.arena.view.name, this.graph, this.turn);
+    if (!plan) return { ok: false, note: 'a epic is not told in a shop' };
     this.turn++;
     this.run = { plan, step: 0, next: true, speech: null };
-    this.desk.say(cleanSay(`${tale.title}. ${tale.opening}`));
+    this.desk.say(cleanSay(`${epic.title}. ${epic.opening}`));
     return { ok: true, note: '' };
   }
 
@@ -214,7 +214,7 @@ export class DmEpics {
     return { kind: 'visit', title: `Find ${person.name}`, zone, goal: 1, what: person.name, ...at };
   }
 
-  /** The party has reached the person: they speak, a line at a time, and then the tale goes on. */
+  /** The party has reached the person: they speak, a line at a time, and then the epic goes on. */
   private meet(run: NonNullable<DmEpics['run']>, step: EpicStep) {
     const person = step.who ? run.plan.epic.people?.[step.who] : undefined;
     const lines = (step.says ?? []).map((l) => `${person?.name ?? 'Someone'}: “${l}”`);

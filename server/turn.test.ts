@@ -12,7 +12,7 @@ const state = (over: Partial<PageState> = {}): PageState => ({
   area: 'Greenwood',
   friends: [friend(1)],
   questing: true,
-  tale: false,
+  epic: false,
   story: null,
   ...over,
 });
@@ -48,7 +48,7 @@ describe('nextStep', () => {
 
   it('offers a quest when nothing is asked of the party, once the game has begun', () => {
     expect(nextStep(state({ questing: false }), clock()).kind).toBe('quest');
-    expect(nextStep(state({ questing: false, tale: true }), clock()).kind).toBe('idle'); // between a tale's steps
+    expect(nextStep(state({ questing: false, epic: true }), clock()).kind).toBe('idle'); // between a epic's steps
     expect(nextStep(state({ questing: false, lobbyOpen: true, code: 'a-b' }), clock()).kind).toBe('idle');
     expect(nextStep(state({ questing: false }), { ...clock(), lastQuest: 100_000 - QUEST_GAP_MS + 1 }).kind).toBe(
       'idle',

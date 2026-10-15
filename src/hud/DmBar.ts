@@ -1,5 +1,5 @@
 // The Dungeon Master's bar, always in reach like the player's [I] menu: one line to speak to the party (or to write the
-// running quest's instructions), the nudges a DM gives (a Quest, Cancel quest, the Story, the Sky, the Pressure), and beside
+// running quest's instructions), the nudges a DM gives (an Epic quest, Cancel quest, the Story, the Sky, the Pressure), and beside
 // it the hot buttons for the big tools (Smite, Freeze, Stop time [T], Reset zone), which stand in for the Inventory and
 // Attack buttons the DM has no use for. Also where the words a DM speaks appear, for everyone (with a ✕: they never have to
 // block the screen), and the "time is stopped" notice. Built once from index.html (`#dm-bar`, `#dm-hot`, `#dm-speech`,
@@ -25,7 +25,7 @@ export interface DmBarHandlers {
   stop(): boolean;
   reset(): boolean;
   /** Open the card for the sky (weather, time of day) or the pressure now, rather than waiting for the moment. */
-  card(kind: 'story' | 'sky' | 'pressure' | 'task' | 'revive' | 'epic' | 'suggest'): void;
+  card(kind: 'story' | 'sky' | 'pressure' | 'revive' | 'epic' | 'suggest'): void;
   /** Answer whoever asked for the card up, with these words, privately. */
   reply(text: string): boolean;
   /** Is there someone to answer (the Reply button shows only then)? */
@@ -91,7 +91,6 @@ export class DmBar {
       this.shown = ''; // draw again
     });
     power('revive').addEventListener('click', () => this.handlers?.card('revive'));
-    power('task').addEventListener('click', () => this.handlers?.card('task'));
     power('story').addEventListener('click', () => this.handlers?.card('story'));
     power('sky').addEventListener('click', () => this.handlers?.card('sky'));
     power('pressure').addEventListener('click', () => this.handlers?.card('pressure'));

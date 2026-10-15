@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { ContentManager } from '../../content/ContentManager';
-import { STOCK_TALES } from '../../content/tales';
+import { STOCK_EPICS } from '../../content/epics';
 import { TASK_LINGER } from '../../systems/dmTasks';
 import { setPlaces } from '../../systems/places';
 import type { Arena } from './Arena';
@@ -64,7 +64,7 @@ function game(far = false, story: unknown = null) {
   const said: string[] = [];
   const desk = { say: (t: string) => said.push(t) } as unknown as DmDesk;
   const tasks = new DmTasks(arena, sim, desk);
-  const epics = new DmEpics(arena, zones, content, tasks, desk, sim, story as never, STOCK_TALES);
+  const epics = new DmEpics(arena, zones, content, tasks, desk, sim, story as never, STOCK_EPICS);
   const pick = (id: string) => {
     const { items } = epics.options();
     return items.findIndex((i) => i.label.startsWith(id));
@@ -151,7 +151,7 @@ describe('epic quests, on the host', () => {
   });
 });
 
-describe('tales with people, on the host', () => {
+describe('epics with people, on the host', () => {
   beforeAll(() => setPlaces({}, {}, {}));
 
   /** A live world that makes people: `bring` puts them in zone a's folk like the real cast does. */
@@ -178,7 +178,7 @@ describe('tales with people, on the host', () => {
     return { ...g, brought };
   }
 
-  it('offers tales with people only where people can be made', () => {
+  it('offers epics with people only where people can be made', () => {
     expect(
       live()
         .epics.options()
@@ -221,7 +221,7 @@ describe('tales with people, on the host', () => {
     expect(epics.active).toBe(true);
   });
 
-  it('ends the tale when the person cannot be made', () => {
+  it('ends the epic when the person cannot be made', () => {
     const g = live();
     const ground = (g.a as unknown as { collision: { fitsMap: () => boolean; isBlocked: () => boolean } }).collision;
     ground.fitsMap = () => false;

@@ -41,8 +41,7 @@ function game(role: 'host' | 'solo' = 'host') {
     ...o,
   });
   const give = (o: Partial<QuestOffer> = {}) => {
-    tasks.offers = [offer(o)];
-    return tasks.call(0);
+    return tasks.start(offer(o));
   };
   return { tasks, arena, sim, party, paid, said, give };
 }

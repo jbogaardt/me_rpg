@@ -387,10 +387,10 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   const land = (await host.locator('#area-banner .title').textContent())!;
   await expect(friend.locator('#area-banner .title')).toHaveText(land, { timeout: 30_000 });
 
-  // The DM gives a quest written from the land: the friend sees it in their tracker (and works out the rest themselves).
-  await host.locator('#dm-bar [data-power="task"]').click();
-  await expect(host.locator('#dm-card .title')).toHaveText('Which quest?');
-  await host.locator('#dm-card [data-opt^="q:"]').first().click();
+  // The DM begins an epic quest, written onto the land: the friend sees its first step in their tracker (and works out the rest themselves).
+  await host.locator('#dm-bar [data-power="epic"]').click();
+  await expect(host.locator('#dm-card .title')).toHaveText('Choose an epic quest');
+  await host.locator('#dm-card [data-opt^="e:"]').first().click();
   await expect(friend.locator('#quest-tracker')).toContainText(/Hunt|Gather|Reach|Find/, { timeout: 15_000 });
   await expect(host.locator('#hud-dm')).toContainText(/Hunt|Gather|Reach|Find/);
 
@@ -420,13 +420,13 @@ test('the Dungeon Master can run the game from a phone: folded tools, thumb-size
   const bar = host.locator('#dm-bar');
   const hot = host.locator('#dm-hot');
   await expect(bar).toBeVisible();
-  await expect(bar.locator('[data-power="task"]')).toBeHidden();
+  await expect(bar.locator('[data-power="epic"]')).toBeHidden();
   await expect(hot.locator('[data-power="smite"]')).toBeVisible();
   await expect(hot.locator('[data-power="freeze"]')).toBeVisible();
   await expect(host.locator('#inv-btn')).toBeHidden(); // the DM has no inventory
   await expect(host.locator('#btn-a')).toBeHidden(); // and no attack, until they hold a foe
   await bar.locator('.handle').tap();
-  await expect(bar.locator('[data-power="task"]')).toBeVisible();
+  await expect(bar.locator('[data-power="epic"]')).toBeVisible();
   await expect(bar.locator('.hint')).toHaveText('Tap a foe to possess it.');
   await expect(hot.locator('[data-power="stop"]')).toContainText('Stop time'); // no key to name on a phone
 
@@ -453,12 +453,12 @@ test('the Dungeon Master can run the game from a phone: folded tools, thumb-size
   await expect(friend.locator('#dm-hold')).toBeHidden({ timeout: 15_000 });
 
   // A card is large enough for a thumb, clear of the pad, and the pick works: the friend sees the task.
-  await bar.locator('[data-power="task"]').tap();
+  await bar.locator('[data-power="epic"]').tap();
   const card = host.locator('#dm-card');
   await expect(card).toBeVisible();
   expect(await overlaps('#dm-card', '#dpad')).toBe(false);
   expect(await overlaps('#dm-card', '#buttons')).toBe(false);
-  const first = card.locator('[data-opt^="q:"]').first();
+  const first = card.locator('[data-opt^="e:"]').first();
   const height = await first.evaluate((b) => b.getBoundingClientRect().height);
   expect(height).toBeGreaterThanOrEqual(44);
   await first.tap();
