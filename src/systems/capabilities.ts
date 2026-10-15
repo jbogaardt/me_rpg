@@ -88,6 +88,11 @@ export const CAPABILITIES = {
     off: 'Always day: the night shade never falls.',
     scope: 'zone',
   },
+  carrying: {
+    name: 'Carrying barrels',
+    off: 'Barrels stay where they stand: they still block, but cannot be picked up or moved.',
+    scope: 'zone',
+  },
   coop: {
     name: 'Online co-op',
     off: 'The Online tab is hidden: no hosting or joining (a join link is ignored).',

@@ -1,4 +1,5 @@
 import type { Player } from '../../entities/Player';
+import { enabled } from '../../systems/capabilities';
 import { dropSpot, heldSpot, nearestBarrel } from '../../systems/barrels';
 import type { Arena } from './Arena';
 import { foeNear, type Simulation } from './Simulation';
@@ -28,7 +29,7 @@ export class Barrels {
   /** The action key beside a loose barrel: pick it up, unless a foe is near (then the key swings). True if one was picked up. */
   pickUp(p: Player): boolean {
     const { arena } = this;
-    if (foeNear(arena.zone, p)) return false;
+    if (!enabled('carrying', arena.zone.name) || foeNear(arena.zone, p)) return false;
     const loose = nearestBarrel(
       arena.barrels.filter((b) => !b.carried),
       p.body.x,
