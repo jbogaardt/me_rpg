@@ -34,6 +34,10 @@ different version away), so point it at the site they use. Against a local build
 - Every tick `turn.ts` picks one step: open a game, begin, go to the party, answer the card up, open the inbox, or offer
   a quest when nothing is asked of the party. Everything the DM is asked arrives as a card: the director's nudges
   (struggling, too easy, a fallen player, a new land, the story's next road) and the players' requests and own words.
+- `narrate.ts` is the DM speaking up unasked: `beatFor` spots a moment (the party reached a new area, a quest ended, a
+  friend fell low, the table went quiet) and a `Narrator` words it through the DM's `say`. It never talks over a card, a
+  lobby or a line spoken in the last 20 s. The mock narrator uses stock lines; a creative model slots in behind the same
+  interface.
 - `router.ts` answers a card (`decideCard`): a fast router answers one choice question over the card's options (plus
   the story's roads for a player's words, and "nothing"); at confidence 0.80 or more its pick is taken. Otherwise a
   creative fallback picks and writes the reply; its JSON is checked before use, so it can only choose what was offered.

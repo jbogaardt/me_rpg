@@ -14,6 +14,7 @@ import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
 import { JevRouter } from './jev';
 import { MockFallback, MockRouter } from './mocks';
+import { MockNarrator, beatFor, type Memory } from './narrate';
 import { decideCard, type Card, type Move } from './router';
 import { SETTLE_MS, nextStep, type Clock, type PageState } from './turn';
 
@@ -55,6 +56,8 @@ class Dm {
   /** The card last answered: met again unchanged, the answer did nothing, so it is sent away. */
   private answered = '';
   private latest: PageState | null = null;
+  private narrator = new MockNarrator();
+  private memory: Memory = { prev: null, spoke: 0 };
   private services = {
     router: process.env.TYPESAFE_API_KEY ? new JevRouter() : new MockRouter(() => this.latest?.story?.options ?? []),
     fallback: new MockFallback(),
@@ -88,6 +91,7 @@ class Dm {
     this.latest = s;
     this.clock.now = Date.now();
     this.report(s);
+    if (await this.narrate(s)) return;
     const step = nextStep(s, this.clock, this.startAt);
     switch (step.kind) {
       case 'host': {
@@ -122,6 +126,22 @@ class Dm {
       case 'idle':
         return;
     }
+  }
+
+  /** Speak up on a moment worth a word (narrate.ts); true when it did. */
+  private async narrate(s: PageState): Promise<boolean> {
+    const m = this.memory;
+    // The clock starts when the table does, and the game's own welcome counts as the DM's first word.
+    if (!m.spoke || s.lobbyOpen) m.spoke = this.clock.now;
+    const beat = beatFor(s, m, this.clock.now);
+    m.prev = s;
+    if (!beat) return false;
+    const line = await this.narrator.line(beat);
+    if (!line) return false;
+    m.spoke = this.clock.now;
+    log(`narrating (${beat.kind}):`, line);
+    await this.say(line);
+    return true;
   }
 
   private async answer(card: Card, s: PageState) {
