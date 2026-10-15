@@ -13,6 +13,7 @@
 
 import { CELL } from '../map/types';
 import { MOB_KINDS, gainXp, type Hero, type MobKind, type QuestLog } from './combat';
+import type { Dial } from './capabilities';
 import { collect } from './chests';
 import { packFree, takeFromPack } from './inventory';
 import { itemOf, type ItemId } from './items';
@@ -76,6 +77,8 @@ export interface Chapter {
   title: string;
   /** Said before the first quest's offer, to set the scene and say why the next task matters. */
   intro: string[];
+  /** What the Dungeon Master says to the party as this chapter begins (online): the tale told from above, not by the keeper. */
+  narration?: string[];
 }
 
 export interface Quest {
@@ -108,6 +111,26 @@ export interface Quest {
   remind: string[];
   /** The task is handed in (a line naming the reward follows automatically). */
   done: string[];
+  /**
+   * The capabilities this quest switches for the whole party while someone has it taken and not handed in (only the
+   * zone-scoped ones a Dungeon Master may switch, `DIALS`): a hide-and-seek quest turns the map and guide off, a harvest
+   * turns farming on, a famine turns food and water on. The host works it out and tells everyone (`questDials`).
+   */
+  capabilities?: Partial<Record<Dial, boolean>>;
+}
+
+/**
+ * What the party's current quests switch (`Quest.capabilities`): each hero's current quest, if they have taken it and not
+ * handed it in; the first hero to say a thing wins. Host and solo only: a friend is told the result.
+ */
+export function questDials(heroes: readonly Hero[]): Partial<Record<Dial, boolean>> {
+  const out: Partial<Record<Dial, boolean>> = {};
+  for (const h of heroes) {
+    const q = h.quests.taken ? currentQuest(h.quests) : undefined;
+    if (!q?.capabilities) continue;
+    for (const [id, on] of Object.entries(q.capabilities) as [Dial, boolean][]) if (out[id] === undefined) out[id] = on;
+  }
+  return out;
 }
 
 /** The story's chapters (quests.json `chapters`; the quests of a chapter are next to each other in QUESTS). */
@@ -119,6 +142,9 @@ export const QUESTS: Quest[] = [];
 /** What the giver says once the whole chain is done (quests.json `epilogue`). */
 export const EPILOGUE: string[] = [];
 
+/** What the Dungeon Master says to the party as the game starts (quests.json `welcome`; empty: `DEFAULT_WELCOME`). */
+export const WELCOME: string[] = [];
+
 /** Everything a campaign's quests.json holds, as the rules here use it. */
 export interface QuestContent {
   giver: string;
@@ -127,6 +153,7 @@ export interface QuestContent {
   chapters: Chapter[];
   quests: Quest[];
   epilogue: string[];
+  welcome: string[];
 }
 
 /** Install a campaign's quests (ContentManager.install). The records and lists keep their identity. */
@@ -141,6 +168,7 @@ export function setQuestContent(c: QuestContent) {
   CHAPTERS.splice(0, CHAPTERS.length, ...c.chapters);
   QUESTS.splice(0, QUESTS.length, ...c.quests);
   EPILOGUE.splice(0, EPILOGUE.length, ...c.epilogue);
+  WELCOME.splice(0, WELCOME.length, ...c.welcome);
 }
 
 // --- Where a hero stands ---

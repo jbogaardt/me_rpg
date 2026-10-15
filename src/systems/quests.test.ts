@@ -22,6 +22,7 @@ import {
   offererOf,
   progressOf,
   progressText,
+  questDials,
   questFromWire,
   questStatus,
   questWire,
@@ -436,5 +437,40 @@ describe('gear buffs', () => {
     const hero = newHero();
     expect(xpFor(hero, 12)).toBe(12);
     expect(goldFor(hero, 7)).toBe(7);
+  });
+});
+
+describe('what the party’s quests switch', () => {
+  /** Run `fn` with the first quest switching `caps` (the quest object is shared, so it is put back). */
+  const switching = (caps: Quest['capabilities'], fn: () => void) => {
+    const q = QUESTS[0]!;
+    const saved = q.capabilities;
+    q.capabilities = caps;
+    try {
+      fn();
+    } finally {
+      q.capabilities = saved;
+    }
+  };
+  const on = (taken: boolean): Hero => {
+    const h = newHero();
+    h.quests = { stage: 0, taken, progress: 0 };
+    return h;
+  };
+
+  it('switches what a taken quest says, and nothing for one not yet taken', () => {
+    switching({ map: false, needs: true }, () => {
+      expect(questDials([on(true)])).toEqual({ map: false, needs: true });
+      expect(questDials([on(false)])).toEqual({});
+    });
+  });
+
+  it('lets the first hero to say a thing win, and ignores a hero with no quest left', () => {
+    const done = newHero();
+    done.quests = { stage: QUESTS.length, taken: true, progress: 0 };
+    switching({ map: false }, () => {
+      expect(questDials([done, on(true)])).toEqual({ map: false });
+      expect(questDials([])).toEqual({});
+    });
   });
 });

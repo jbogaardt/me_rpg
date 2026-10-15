@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseCampaign } from './campaignChoice';
+import { chooseCampaign, queryForTag, worldFor } from './campaignChoice';
 
 describe('chooseCampaign', () => {
   const seed = () => 777;
@@ -44,5 +44,32 @@ describe('chooseCampaign', () => {
     expect(fresh).toMatchObject({ campaign: 'live', seed: 99, tag: 'live:99' });
     expect(fresh.search).toBe('?campaign=live&seed=99');
     expect(chooseCampaign('?campaign=live&seed=3&arc=../x', 'campaign1', () => 1).arc).toBeUndefined();
+  });
+});
+
+describe('worlds by tag', () => {
+  it('turns a world tag into the address that opens it', () => {
+    expect(queryForTag('campaign2')).toBe('?campaign=campaign2');
+    expect(queryForTag('random:42')).toBe('?campaign=random&seed=42');
+    expect(queryForTag('live:7')).toBe('?campaign=live&seed=7');
+    expect(queryForTag('live:7:lost_lanterns')).toBe('?campaign=live&seed=7&arc=lost_lanterns');
+    for (const bad of ['', '../x', 'live', 'live:x', 'live:7:a b', 'campaign1:3', 'live:7:a:b'])
+      expect(queryForTag(bad)).toBeNull();
+  });
+
+  it('round-trips through chooseCampaign', () => {
+    for (const tag of ['campaign1', 'random:9', 'live:12', 'live:12:long_thaw']) {
+      const choice = chooseCampaign(queryForTag(tag)!, 'campaign1', () => 1);
+      expect(choice.tag).toBe(tag);
+    }
+  });
+
+  it('moves a host only when the page does not already play what they picked', () => {
+    const seed = () => 555;
+    expect(worldFor('current', 'campaign1', seed)).toBeNull();
+    expect(worldFor('live', 'campaign1', seed)).toBe('live:555');
+    expect(worldFor('live', 'live:8', seed)).toBeNull(); // already in a new story
+    expect(worldFor('campaign1', 'campaign1', seed)).toBeNull();
+    expect(worldFor('campaign2', 'live:8', seed)).toBe('campaign2');
   });
 });

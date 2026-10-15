@@ -818,6 +818,8 @@ describe('the version check', () => {
       });
       link.receive({ k: 'hello', v: PROTOCOL_VERSION, build: `${__BUILD_ID__}#random:7` });
       await flush();
+      expect(link.status).toBe('connected'); // the friend is given a moment to move over to this world
+      await vi.advanceTimersByTimeAsync(7000);
       expect(link.status).toBe('disconnected');
       const same = await befriend(2);
       same.receive({ k: 'hello', v: PROTOCOL_VERSION, build: `${__BUILD_ID__}#random:42` });
@@ -826,6 +828,36 @@ describe('the version check', () => {
     } finally {
       setContentTag('');
     }
+  });
+
+  it('moves a friend who typed only the code to the host’s world, to join again there', async () => {
+    const session = setup();
+    const moved = vi.fn();
+    session.worldMismatch = moved;
+    relay.join.mockResolvedValue({ slot: 1, offer: 'zO', guestToken: 't' });
+    await session.joinGame('mighty-apples');
+    const link = links[0]!;
+    link.receive({ k: 'hello', v: PROTOCOL_VERSION, build: `${__BUILD_ID__}#live:42` });
+    expect(moved).toHaveBeenCalledWith('live:42', 'mighty-apples');
+    expect(link.closeCalls).toBe(1);
+  });
+
+  it('turns a friend away from a host in another world when the page cannot move', async () => {
+    const session = setup();
+    relay.join.mockResolvedValue({ slot: 1, offer: 'zO', guestToken: 't' });
+    await session.joinGame('mighty-apples');
+    const link = links[0]!;
+    link.receive({ k: 'hello', v: PROTOCOL_VERSION, build: `${__BUILD_ID__}#live:42` });
+    expect(link.closeCalls).toBe(1);
+  });
+
+  it('reads a join link that asks to join at once, and a plan to host at once', () => {
+    expect(new Session('#join=mighty-apples&go=1', null, undefined, null).autoJoin).toBe(true);
+    expect(new Session('#join=mighty-apples', null, undefined, null).autoJoin).toBe(false);
+    const host = new Session('', null, undefined, { pressure: 'fierce' });
+    expect(host.autoCreate).toBe(true);
+    expect(host.mode).toBe('host');
+    expect(host.hostPressure).toBe('fierce');
   });
 
   it('checks the version even when their hello arrives before ours is sent', async () => {

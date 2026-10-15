@@ -53,6 +53,11 @@ let aimPoint: { x: number; y: number } | null = null;
 const trackAimPoint = (e: PointerEvent) => {
   if (e.target instanceof HTMLCanvasElement) aimPoint = { x: e.clientX, y: e.clientY };
 };
+// A finger (or pen) tapping the game canvas this frame: the Dungeon Master taps a foe to possess it. Cleared by endFrame().
+let tapPoint: { x: number; y: number } | null = null;
+window.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse' && e.target instanceof HTMLCanvasElement) tapPoint = { x: e.clientX, y: e.clientY };
+});
 window.addEventListener('pointermove', (e) => e.pointerType === 'mouse' && trackAimPoint(e));
 window.addEventListener('pointerdown', trackAimPoint);
 window.addEventListener('pointercancel', () => {
@@ -77,6 +82,8 @@ export const input = {
   wasTouched: (...codes: string[]) => codes.some((c) => virtualPressed.has(c)),
   /** The mouse pointer, or the last tap, over the game in CSS px; null before there has been one. */
   pointer: (): { x: number; y: number } | null => aimPoint,
+  /** Where a finger tapped the game this frame (CSS px), or null. */
+  tap: (): { x: number; y: number } | null => tapPoint,
   /** Hold or release a key from an on-screen control, as if it were typed on the keyboard. */
   setVirtual(code: string, down: boolean) {
     if (down && !virtual.has(code)) virtualPressed.add(code);
@@ -91,6 +98,7 @@ export const input = {
     };
   },
   endFrame() {
+    tapPoint = null;
     pressed.clear();
     virtualPressed.clear();
   },

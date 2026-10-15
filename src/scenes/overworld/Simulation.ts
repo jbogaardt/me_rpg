@@ -1,5 +1,7 @@
 import { DIR_VEC, dirIndex, directionToward } from '../../core/direction';
 import { enabled, setting } from '../../systems/capabilities';
+import { PRESSURE_FACTOR } from '../../systems/dmPowers';
+import { mobKey } from '../../systems/quests';
 import type { Character } from '../../entities/Character';
 import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
@@ -85,6 +87,10 @@ export class Simulation {
   private casting: Casting;
   /** Set by the scene: a training ground handles a defeat in a trial itself (returns true when it did). */
   trialDefeat: (p: Player) => boolean = () => false;
+  /** A party member was knocked out (not in a trial) where they stood, before they wake at the start: the DM may raise them. */
+  onDefeat: (p: Player, zone: string, x: number, y: number) => void = () => {};
+  /** A foe fell to the party (the DM's tasks count the kills in their zone). */
+  onKill: (zone: string, key: string) => void = () => {};
 
   constructor(
     private arena: Arena,
@@ -427,7 +433,7 @@ export class Simulation {
     if (p.safe) return true; // warded or just arrived: the beam holds but does nothing
     this.harm(
       p,
-      rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero)),
+      this.pressed(rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero))),
       mob.body.x,
       mob.body.y,
       true,
@@ -457,12 +463,16 @@ export class Simulation {
     if (weather.strikeDue(dt)) this.lightning({ ...this.strikeTarget(), seed: Math.floor(Math.random() * 1e9) });
   }
 
-  /** A bolt landed (only the host or a solo game decides this): friends see it, and it burns whoever stands there. */
-  lightning(strike: Strike) {
+  /**
+   * A bolt landed (only the host or a solo game decides this): friends see it, and it burns whoever stands there
+   * (unless it is the Dungeon Master's, `harmless`).
+   */
+  lightning(strike: Strike, harmless = false) {
     this.arena.zone.weatherLayer?.strike(strike);
     this.emit({ type: 'lightning', ...strike });
     const { x, y } = strike;
     this.fx('hitSpark', x, y);
+    if (harmless) return;
     for (const p of this.arena.party()) {
       if (p.safe || Math.hypot(p.body.x - x, p.body.y - y) > LIGHTNING_RADIUS) continue;
       this.harm(p, Math.max(1, Math.round(p.hero.stats.maxHp * LIGHTNING_DAMAGE)), x, y);
@@ -473,12 +483,14 @@ export class Simulation {
 
   /** Every player takes the kill's XP and gold (in solo, just the one). */
   hitMob(mob: Mob, rawDamage: number, vx: number, vy: number, bolt = false) {
-    const damage = Math.round(rawDamage * this.casting.markFactor(mob)); // a foe marked by Spirit Mark takes more
+    // a foe marked by Spirit Mark takes more; the DM's pressure makes the world harder or gentler to hurt
+    const damage = Math.max(1, Math.round((rawDamage * this.casting.markFactor(mob)) / this.pressure()));
     const killed = mob.hit(damage, vx, vy);
     // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
     if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx));
     this.text(mob.body.x, mob.body.y - 54 * mob.body.size, String(damage), 0xffffff);
     if (!killed) return;
+    this.onKill(this.arena.zone.name, mobKey(mob.kind) ?? '');
     this.fx('mobPoof', mob.body.x, mob.body.y - 12);
     this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${mob.kind.xp} XP`, 0xffb13f);
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
@@ -488,6 +500,16 @@ export class Simulation {
       if (gainXp(p.hero.stats, xpFor(p.hero, mob.kind.xp))) this.levelUp(p);
       this.questNote(p, recordKill(p.hero, mob.kind, this.arena.zone.name)); // a quest counts the kill for everyone here
     }
+  }
+
+  /** Pay `p` for something the party did together (a DM's task): XP and gold, with the usual gear bonuses and level-ups. */
+  reward(p: Player, xp: number, gold: number) {
+    this.arena.inZone(this.arena.zoneOf(p), () => {
+      p.hero.gold += goldFor(p.hero, gold);
+      this.text(p.body.x, p.body.y - 66, `+${xp} XP`, 0xffb13f);
+      this.text(p.body.x, p.body.y - 78, `+${gold}g`, 0xffd34d);
+      if (gainXp(p.hero.stats, xpFor(p.hero, xp))) this.levelUp(p);
+    });
   }
 
   /** Float a quest's progress ("3/5 goblins") over the player, and a nudge once it can be handed in. */
@@ -507,7 +529,17 @@ export class Simulation {
   private hurtHero(mob: Mob, victim: Character) {
     const p = this.arena.party().find((q) => q.body === victim);
     if (!p || p.safe) return;
-    this.harm(p, rollDamage(mob.kind.attack, defensePower(p.hero)), mob.body.x, mob.body.y);
+    this.harm(p, this.pressed(rollDamage(mob.kind.attack, defensePower(p.hero))), mob.body.x, mob.body.y);
+  }
+
+  /** The DM's pressure as a factor: 0.7 gentle, 1 steady, 1.5 fierce (`systems/dmPowers.ts`). */
+  private pressure(): number {
+    return PRESSURE_FACTOR[this.arena.pressure];
+  }
+
+  /** What a foe's blow does under the DM's pressure (never less than 1). */
+  private pressed(damage: number): number {
+    return Math.max(1, Math.round(damage * this.pressure()));
   }
 
   /** Damage a player and knock them away from (fromX, fromY): the shared tail of a mob's hit and a lightning strike. */
@@ -537,6 +569,7 @@ export class Simulation {
   private defeat(p: Player) {
     if (this.trialDefeat(p)) return;
     const { arena } = this;
+    if (!p.dm) this.onDefeat(p, p.zone, p.body.x, p.body.y);
     const { home } = arena;
     const s = p.hero.stats;
     s.hp = s.maxHp;

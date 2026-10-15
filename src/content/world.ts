@@ -490,6 +490,7 @@ export class World {
         chapters: resolveArc(applyVariants(chapters, matches), ids, text),
         quests: resolveArc(applyVariants(quests, matches), ids, text),
         epilogue: this.complete ? resolveArc(arc.epilogue ?? [], ids, text) : [],
+        welcome: resolveArc(arc.welcome ?? [], ids, text),
       },
     };
   }

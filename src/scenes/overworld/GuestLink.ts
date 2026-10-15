@@ -243,7 +243,7 @@ export class GuestLink {
     p.body.face(DIRS[dir] ?? 'down');
     p.flags = flags;
     if (!p.target) p.body.position.set(x, y); // first word from the host: appear there
-    p.body.visible = true;
+    p.body.visible = (flags & FLAG.hidden) === 0; // the DM is out of sight while they possess a foe
     p.target = { x, y };
   }
 

@@ -1,5 +1,8 @@
+import { HOST_STORIES, queryForTag, worldFor } from '../content/campaignChoice';
+import { saveHostPlan } from '../net/hostPlan';
 import { joinLink } from '../net/roomCode';
-import { statusLabel, type Mode, type RosterEntry, type Session } from '../net/session';
+import { getContentTag, statusLabel, type Mode, type RosterEntry, type Session } from '../net/session';
+import { isPressure } from '../systems/dmPowers';
 import { DM_COLOR, DM_NAME, DM_SLOT, PLAYER_COLORS, playerName } from '../systems/looks';
 
 // The "Online" tab of the menu (markup in index.html, styles in src/ui.css): pick Solo / Host / Join. A host taps
@@ -42,6 +45,8 @@ export class Multiplayer {
   private activePanel = $('mp-active');
   private connected = document.querySelector<HTMLElement>('#mp-active .mp-connected')!;
 
+  private story = $<HTMLSelectElement>('mp-story');
+  private pressure = $<HTMLSelectElement>('mp-pressure');
   private create = $<HTMLButtonElement>('mp-create');
   private share = $('mp-share');
   private codeOut = $('mp-code');
@@ -65,7 +70,15 @@ export class Multiplayer {
       button.addEventListener('click', () => session.setMode(button.dataset.mode as Mode));
     }
 
-    this.create.addEventListener('click', () => void this.session.createGame());
+    this.story.replaceChildren(
+      ...HOST_STORIES.map((s) => {
+        const option = document.createElement('option');
+        option.value = s.id;
+        option.textContent = s.label;
+        return option;
+      }),
+    );
+    this.create.addEventListener('click', () => this.createGame());
     this.joinGo.addEventListener('click', () => void this.session.joinGame(this.codeIn.value));
     this.disconnect.addEventListener('click', () => session.disconnect());
     this.start.addEventListener('click', () => {
@@ -91,6 +104,23 @@ export class Multiplayer {
     if (session.urlCode) this.codeIn.value = session.urlCode;
     session.onChange(() => this.render());
     this.render();
+  }
+
+  /**
+   * Create the game with what the host picked. A different story is a different world, which the page plays from its
+   * address: so the page moves there (nobody types it) and creates the game as it opens, with the same choices.
+   */
+  private createGame() {
+    const pressure = isPressure(this.pressure.value) ? this.pressure.value : 'steady';
+    this.session.hostPressure = pressure;
+    const tag = worldFor(this.story.value, getContentTag(), () => 1 + Math.floor(Math.random() * 999_999));
+    const query = tag ? queryForTag(tag) : null;
+    if (query) {
+      saveHostPlan({ pressure });
+      window.location.assign(window.location.pathname + query);
+      return;
+    }
+    void this.session.createGame();
   }
 
   private async copy(button: HTMLButtonElement, text: string) {

@@ -9,6 +9,16 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 // They also run one after another rather than in parallel: the four-player test alone keeps five of these pages busy.
 test.describe.configure({ mode: 'default', timeout: 120_000 });
 
+/** A phone: a narrow touch screen, so the on-screen pad and buttons show and the DM's tools lay out for a thumb. */
+async function openPhone(browser: Browser, url: string): Promise<Page> {
+  const page = await (
+    await browser.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true })
+  ).newPage();
+  await page.goto(url);
+  await expect(page.locator('#loading')).toBeHidden({ timeout: 90_000 });
+  return page;
+}
+
 async function open(browser: Browser, url: string): Promise<Page> {
   const page = await (await browser.newContext({ viewport: { width: 640, height: 480 } })).newPage();
   await page.goto(url);
@@ -320,33 +330,152 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 2', { timeout: 30_000 });
   await host.locator('#mp-start').click();
   await friend.keyboard.press('Escape');
-  await expect(friend.locator('#menu [data-tab="story"]')).toBeHidden(); // only the DM steers the story
+  await expect(friend.locator('#dm-bar')).toBeHidden(); // only the DM steers the story and the world
 
-  // The DM sees the story so far and the roads it may take, as story cues rather than maps.
-  await host.keyboard.press('Escape');
-  await host.locator('#menu [data-tab="story"]').click();
-  await expect(host.locator('#menu-story h2')).toContainText('1 of 3 lands');
-  const road = host.locator('#menu-story [data-cue]').first();
+  // The DM opens the game with the story's own welcome, to every screen.
+  await expect(friend.locator('#dm-speech')).toContainText('Welcome', { timeout: 30_000 });
+
+  // The DM has a bar that is always there: no menu to dig through.
+  await expect(host.locator('#menu')).toBeHidden();
+  await expect(host.locator('#dm-bar')).toBeVisible();
+  await expect(host.locator('#dm-bar input')).toBeHidden(); // the tools are folded away: they would cover the action
+
+  // A card appears on its own (something to react to: a fallen friend, or "what now?" once it has been quiet), with a
+  // few buttons, and a click on the game sends it away (nobody hunts for a close button).
+  await expect(host.locator('#dm-card')).toBeVisible({ timeout: 90_000 });
+  expect(await host.locator('#dm-card [data-opt]').count()).toBeGreaterThanOrEqual(2);
+  await host.locator('canvas').click({ position: { x: 20, y: 20 } });
+  await expect(host.locator('#dm-card')).toBeHidden();
+
+  await host.locator('#dm-bar .handle').click();
+  await expect(host.locator('#dm-bar input')).toBeVisible();
+
+  // The DM speaks and the friend reads it.
+  await host.locator('#dm-bar input').fill('Beware the fen.');
+  await host.locator('#dm-bar form button').click();
+  await expect(friend.locator('#dm-speech')).toContainText('Beware the fen.', { timeout: 15_000 });
+
+  // The DM stops time with the hotkey, so everyone is told, and starts it again.
+  await host.keyboard.press('KeyT');
+  await expect(friend.locator('#dm-hold')).toBeVisible({ timeout: 15_000 });
+  await host.keyboard.press('KeyT');
+  await expect(friend.locator('#dm-hold')).toBeHidden({ timeout: 15_000 });
+
+  // The Story button offers the roads the story may take next, as cues rather than maps (a vote needs two roads to
+  // choose between: this world's first step has one, so there is nothing to ask the party).
+  await host.locator('#dm-bar [data-power="story"]').click();
+  await expect(host.locator('#dm-card .title')).toHaveText('Where does the story go next?');
+  const road = host.locator('#dm-card [data-opt]').first();
   await expect(road).toContainText(/^Into \w+ lands/);
-  // A vote needs two roads to choose between: this world's first step has one, so there is nothing to ask the party.
-  await expect(host.locator('#menu-story [data-cue]')).toHaveCount(1);
-  await expect(host.locator('#menu-story [data-ask]')).toHaveCount(0);
+  await expect(host.locator('#dm-card [data-opt]')).toHaveCount(1);
   await road.click();
+  await expect(host.locator('#dm-card')).toBeHidden();
   await expect(friend.locator('#vote')).toBeHidden();
-  await expect(host.locator('#menu-story h2')).toContainText('2 of 3 lands');
-  const land = (await host.locator('#menu-story .story-path').textContent())!.split(' → ').pop()!;
-  await expect(host.locator('#area-banner .title')).toHaveText(land);
-  // The friend's page is told and grows its own world to match.
+  // Both pages grow their world to match: the new land is named on each.
+  await expect(host.locator('#area-banner .title')).not.toHaveText('', { timeout: 15_000 });
+  const land = (await host.locator('#area-banner .title').textContent())!;
   await expect(friend.locator('#area-banner .title')).toHaveText(land, { timeout: 30_000 });
 
-  // The DM's World tab switches things for everyone: this story is told without a map; the DM hands one out, then
-  // takes it back to the story as written.
-  await host.locator('#menu [data-tab="dials"]').click();
-  await expect(friend.locator('#map-btn')).toBeHidden();
-  await host.locator('#menu-dials [data-dial="map"][data-on="true"]').click();
-  await expect(friend.locator('#map-btn')).toBeVisible({ timeout: 15_000 });
-  await host.locator('#menu-dials [data-dial="map"][data-on=""]').click();
-  await expect(friend.locator('#map-btn')).toBeHidden({ timeout: 15_000 });
+  // The DM gives a quest written from the land: the friend sees it in their tracker (and works out the rest themselves).
+  await host.locator('#dm-bar [data-power="task"]').click();
+  await expect(host.locator('#dm-card .title')).toHaveText('Which quest?');
+  await host.locator('#dm-card [data-opt^="q:"]').first().click();
+  await expect(friend.locator('#quest-tracker')).toContainText(/Hunt|Gather|Reach|Find/, { timeout: 15_000 });
+  await expect(host.locator('#hud-dm')).toContainText(/Hunt|Gather|Reach|Find/);
+
+  // The pressure is one dial on the bar, set from a card.
+  await host.locator('#dm-bar [data-power="pressure"]').click();
+  await host.locator('#dm-card [data-opt="fierce"]').click();
+  await expect(host.locator('#dm-bar [data-power="pressure"]')).toHaveText('Pressure: Turn it up');
+});
+
+test('the Dungeon Master can run the game from a phone: folded tools, thumb-sized cards, clear of the pad', async ({
+  browser,
+}) => {
+  test.setTimeout(240_000);
+  const world = '/?campaign=live&seed=4';
+  const host = await openPhone(browser, world);
+  const code = await createGame(host);
+  const friend = await open(browser, world);
+  await joinWithCode(friend, code);
+  await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 2', { timeout: 30_000 });
+  await host.locator('#mp-start').click();
+  // A physical key (the menu was opened with one) hides the touch controls; a touch brings them back.
+  await host.touchscreen.tap(195, 400);
+  await expect(host.locator('#touch-controls')).toBeVisible();
+  await expect(host.locator('body')).toHaveClass(/touch-ui/);
+
+  // The tools start folded away so the screen stays clear; the handle opens them.
+  const bar = host.locator('#dm-bar');
+  await expect(bar).toBeVisible();
+  await expect(bar.locator('[data-power="smite"]')).toBeHidden();
+  await bar.locator('.handle').tap();
+  await expect(bar.locator('[data-power="task"]')).toBeVisible();
+  await expect(bar.locator('[data-power="smite"]')).toBeHidden(); // the big tools are under "Rarely"
+  await bar.locator('.rarely summary').tap();
+  await expect(bar.locator('[data-power="smite"]')).toBeVisible();
+  await expect(bar.locator('.hint')).toHaveText('Tap a foe to possess it.');
+  await expect(bar.locator('[data-power="stop"]')).toHaveText('Stop time'); // no key to name on a phone
+
+  // The bar and the pad never cover each other.
+  const overlaps = async (a: string, b: string) =>
+    host.evaluate(
+      ([x, y]) => {
+        const r = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+        const [p, q] = [r(x!), r(y!)];
+        return p.left < q.right && p.right > q.left && p.top < q.bottom && p.bottom > q.top;
+      },
+      [a, b],
+    );
+  expect(await overlaps('#dm-bar', '#dpad')).toBe(false);
+  expect(await overlaps('#dm-bar', '#buttons')).toBe(false);
+
+  // Time stops from a button (there is no T on a phone), and the friend is told.
+  await bar.locator('[data-power="stop"]').tap();
+  await expect(host.locator('#dm-hold')).toContainText('Tap Resume time');
+  await expect(friend.locator('#dm-hold')).toBeVisible({ timeout: 15_000 });
+  await bar.locator('[data-power="stop"]').tap();
+  await expect(friend.locator('#dm-hold')).toBeHidden({ timeout: 15_000 });
+
+  // A card is large enough for a thumb, clear of the pad, and the pick works: the friend sees the task.
+  await bar.locator('[data-power="task"]').tap();
+  const card = host.locator('#dm-card');
+  await expect(card).toBeVisible();
+  expect(await overlaps('#dm-card', '#dpad')).toBe(false);
+  expect(await overlaps('#dm-card', '#buttons')).toBe(false);
+  const first = card.locator('[data-opt^="q:"]').first();
+  const height = await first.evaluate((b) => b.getBoundingClientRect().height);
+  expect(height).toBeGreaterThanOrEqual(44);
+  await first.tap();
+  await expect(friend.locator('#quest-tracker')).toContainText(/Hunt|Gather|Reach|Find/, { timeout: 15_000 });
+});
+
+test('a host picks a story in the lobby and a friend joins with only the code, landing in the same world', async ({
+  browser,
+}) => {
+  test.setTimeout(300_000);
+  const host = await open(browser, '/');
+  await openOnlineTab(host, 'host');
+  await host.locator('#mp-story').selectOption('live');
+  await host.locator('#mp-pressure').selectOption('fierce');
+  await host.locator('#mp-create').click();
+  // The page moves to the world they chose and creates the game by itself: nobody types an address.
+  await expect(host.locator('#mp-code')).toHaveText(/^[a-z]+-[a-z]+$/, { timeout: 120_000 });
+  const hostUrl = new URL(host.url());
+  expect(hostUrl.searchParams.get('campaign')).toBe('live');
+  const code = (await host.locator('#mp-code').textContent())!;
+
+  // The friend opens the plain game and types the code: they are moved to the host's world and join again there.
+  const friend = await open(browser, '/');
+  await joinWithCode(friend, code);
+  await expect(friend.locator('#mp-active .mp-connected')).toHaveText('Connected to the Dungeon Master (host)', {
+    timeout: 180_000,
+  });
+  const friendUrl = new URL(friend.url());
+  expect(friendUrl.searchParams.get('campaign')).toBe('live');
+  expect(friendUrl.searchParams.get('seed')).toBe(hostUrl.searchParams.get('seed'));
+  expect(friendUrl.hash).toBe('');
+  await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 2', { timeout: 60_000 });
 });
 
 test('a join link opens the game ready to join, and the code is not left in the address bar', async ({ browser }) => {

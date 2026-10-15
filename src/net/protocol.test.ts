@@ -386,6 +386,8 @@ describe('messages', () => {
   });
 });
 
+type Task = [number, number, number, number, string, number, number, string, number, number, string];
+
 describe('the Dungeon Master’s word and the party’s votes', () => {
   const dm: DmMsg = {
     k: 'dm',
@@ -400,6 +402,35 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
     expect(parseMessage(encodeMessage({ ...dm, vote: null }))).toEqual({ ...dm, vote: null });
     const input = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300, vt: [2, 1] };
     expect(parseMessage(JSON.stringify(input))).toEqual(input);
+  });
+
+  it('round-trips what the DM says and refuses a saying that is empty, too long or not a pair', () => {
+    const said = { ...dm, say: [3, 'The fen stirs.'] as [number, string] };
+    expect(parseMessage(encodeMessage(said))).toEqual(said);
+    for (const say of [[3, ''], [3, 'x'.repeat(500)], [-1, 'hi'], ['a', 'hi'], [3], 'hi'])
+      expect(parseMessage(JSON.stringify({ ...dm, say }))).toBeNull();
+  });
+
+  it('round-trips a quest the DM gave and refuses one that is not a quest', () => {
+    const quest = [0, 0, 2, 5, 'the_fen', 512, 99, 'Hunt 5 Goblins', 0, 1, 'goblin'] as Task;
+    const task = { ...dm, task: quest };
+    expect(parseMessage(encodeMessage(task))).toEqual(task);
+    const broken = [
+      [9, 0, 0, 1, 'z', 0, 0, 'x', 0, 0, ''],
+      [0, 0, 0, 1, '', 0, 0, 'x', 0, 0, ''],
+      [0, 0, 0, 1, 'z', 0, 0, '', 0, 0, ''],
+      [0, 0, 0, 1, 'z', 0, 0, 'x', 0, 2, ''],
+      [0, 0, 0, 1, 'z', 0, 0, 'x', 0, 0],
+      'defend',
+      7,
+    ];
+    for (const bad of broken) expect(parseMessage(JSON.stringify({ ...dm, task: bad }))).toBeNull();
+  });
+
+  it('round-trips stopped time and refuses a hold that is not 1', () => {
+    const held = { ...dm, hold: 1 as const };
+    expect(parseMessage(encodeMessage(held))).toEqual(held);
+    for (const hold of [0, 2, true, 'yes']) expect(parseMessage(JSON.stringify({ ...dm, hold }))).toBeNull();
   });
 
   it('refuses a dial that is not one, a tally that does not match, or a vote for a choice that is not there', () => {

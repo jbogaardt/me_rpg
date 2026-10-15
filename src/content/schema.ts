@@ -6,7 +6,7 @@
 import type { MobKind } from '../systems/combat';
 import { isClimate } from '../systems/weather';
 import { SKILL_IDS, SKILLS } from '../systems/skills';
-import { CapabilityTable, checkCapabilities, type CapabilitySpec } from '../systems/capabilities';
+import { CapabilityTable, checkCapabilities, DIALS, type CapabilitySpec, type Dial } from '../systems/capabilities';
 import { onlyFeeds } from '../systems/needs';
 import { CROPS } from '../systems/crops';
 import { SLOTS, type Outfit } from '../sprites/doll';
@@ -479,7 +479,7 @@ function readReward(r: Reader, v: unknown, path: string): Reward {
 /** Read quests.json: the givers, site kinds, chapters, the chain in story order and the epilogue. */
 export function parseQuests(json: unknown, r = new Reader()): QuestContent {
   const file = r.object(json, 'quests.json');
-  const out: QuestContent = { giver: '', givers: {}, sites: {}, chapters: [], quests: [], epilogue: [] };
+  const out: QuestContent = { giver: '', givers: {}, sites: {}, chapters: [], quests: [], epilogue: [], welcome: [] };
   if (!file) return out;
   r.version(file, 'quests.json');
   out.giver = r.string(file.giver, 'quests.json.giver');
@@ -512,7 +512,12 @@ export function parseQuests(json: unknown, r = new Reader()): QuestContent {
   }
   out.chapters = r.array(file.chapters, 'quests.json.chapters').map((v, i): Chapter => {
     const o = r.object(v, `chapters[${i}]`) ?? {};
-    return { title: r.string(o.title, `chapters[${i}].title`), intro: r.strings(o.intro, `chapters[${i}].intro`) };
+    const chapter: Chapter = {
+      title: r.string(o.title, `chapters[${i}].title`),
+      intro: r.strings(o.intro, `chapters[${i}].intro`),
+    };
+    if (o.narration !== undefined) chapter.narration = r.strings(o.narration, `chapters[${i}].narration`);
+    return chapter;
   });
   out.quests = r.array(file.quests, 'quests.json.quests').map((v, i): Quest => {
     const o = r.object(v, `quests[${i}]`) ?? {};
@@ -537,9 +542,24 @@ export function parseQuests(json: unknown, r = new Reader()): QuestContent {
     if (where.door !== undefined) q.where.door = r.string(where.door, `${p}.where.door`);
     if (o.giver !== undefined) q.giver = r.string(o.giver, `${p}.giver`);
     if (o.turnIn !== undefined) q.turnIn = r.string(o.turnIn, `${p}.turnIn`);
+    if (o.capabilities !== undefined) q.capabilities = readQuestDials(r, o.capabilities, `${p}.capabilities`);
     return q;
   });
   out.epilogue = r.strings(file.epilogue ?? [], 'quests.json.epilogue');
+  out.welcome = r.strings(file.welcome ?? [], 'quests.json.welcome');
+  return out;
+}
+
+/** What a quest switches while it is taken: only the capabilities a Dungeon Master may switch (`DIALS`), each true or false. */
+function readQuestDials(r: Reader, v: unknown, path: string): Partial<Record<Dial, boolean>> {
+  const out: Partial<Record<Dial, boolean>> = {};
+  const o = r.object(v, path);
+  if (!o) return out;
+  for (const [id, on] of Object.entries(o)) {
+    if (!(DIALS as readonly string[]).includes(id)) r.fail(`${path}.${id}`, `must be one of ${DIALS.join(', ')}`);
+    else if (typeof on !== 'boolean') r.fail(`${path}.${id}`, 'must be true or false');
+    else out[id as Dial] = on;
+  }
   return out;
 }
 
@@ -832,12 +852,14 @@ function crossCheck(r: Reader, c: Content) {
  */
 function checkAgainstCapabilities(r: Reader, c: Content) {
   const caps = capabilityTable(c);
+  // a quest that switches food and water or farming on makes the goods it names fair, wherever it is told
+  const quest = (id: Dial) => c.quests.quests.some((q) => q.capabilities?.[id] === true);
   const produce = new Set<string>(Object.values(CROPS).map((crop) => crop.item));
   const why = (id: string): string | null => {
     const item = c.items.items[id];
-    if (!caps.anywhere('needs') && item && onlyFeeds(item))
+    if (!caps.anywhere('needs') && !quest('needs') && item && onlyFeeds(item))
       return `"${id}" only feeds, and this campaign has no food and water (capabilities.needs)`;
-    if (!caps.anywhere('farming') && produce.has(id))
+    if (!caps.anywhere('farming') && !quest('farming') && produce.has(id))
       return `"${id}" only grows on a farm, and this campaign has no farming (capabilities.farming)`;
     return null;
   };

@@ -155,6 +155,28 @@ describe('parseContent', () => {
     expect(problems(f)).toEqual([]);
   });
 
+  it('reads what a quest switches while it is taken, and refuses what is not a dial', () => {
+    const f = files();
+    const q = f.quests as { quests: { capabilities?: unknown }[] };
+    q.quests[0]!.capabilities = { map: false, needs: true };
+    expect(parseContent(f).quests.quests[0]?.capabilities).toEqual({ map: false, needs: true });
+    q.quests[0]!.capabilities = { coop: false, map: 'off', farming: true };
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/quests\.cull\.capabilities\.coop: must be one of/);
+    expect(p).toMatch(/quests\.cull\.capabilities\.map: must be true or false/);
+  });
+
+  it('lets a quest that switches food and water on ask for food', () => {
+    const f = files();
+    const s = f.scenarios as { capabilities: unknown };
+    const q = f.quests as { quests: { objective: object; capabilities?: unknown }[] };
+    s.capabilities = { needs: false };
+    q.quests[0]!.objective = { t: 'bring', item: 'bread', count: 2 };
+    expect(problems(f).join('\n')).toMatch(/only feeds/);
+    q.quests[0]!.capabilities = { needs: true };
+    expect(problems(f)).toEqual([]);
+  });
+
   it('checks the quests against the rest of the content', () => {
     const f = files();
     const q = f.quests as {

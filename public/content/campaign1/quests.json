@@ -1,5 +1,10 @@
 {
   "version": 1,
+  "welcome": [
+    "Welcome, travellers, to the Vale.",
+    "Time itself has stilled: the Great Hourglass is broken, and the world holds its breath.",
+    "Stay close to one another, and listen. I will call on you when the tale needs you."
+  ],
   "giver": "maren",
   "givers": {
     "maren": {
@@ -111,6 +116,7 @@
   "chapters": [
     {
       "title": "The Stilled Hour",
+      "narration": ["The hour stands still. Seek out Warden Maren in Lanternrest."],
       "intro": [
         "Ah, you are the stranger from the crossroads. I am Maren, Warden of Lanternrest, and I have watched the road for you.",
         "Three winters ago, the night the sky cracked, the whole Vale held its breath, and it has not let it out since: clocks stopped, birds fell silent, roads forgot where they led. We call it the Stillness.",
@@ -119,6 +125,7 @@
     },
     {
       "title": "Voices in the Stone",
+      "narration": ["Something whispers from the old stones. Follow the voices."],
       "intro": [
         "The Hollow wears a dead man's apron. That means this was never random, stranger. Someone did this, or something wearing him did.",
         "The Vale remembers its own story in stone and in the people who stayed. We must go and listen to them, one after another, before the Stillness takes their words too."
@@ -126,6 +133,7 @@
     },
     {
       "title": "The Fallen Sand",
+      "narration": ["Beyond the green, the sand has begun to swallow what was once safe."],
       "intro": [
         "The Hourglass did not simply break. It scattered. Where its sand fell, the Stillness is thickest, and it has set guards over every place it fell.",
         "Whatever is behind this is gathering the pieces, and it moves faster than we do. We have to find them first, which means going where the guards are."
@@ -133,6 +141,7 @@
     },
     {
       "title": "The Frozen March",
+      "narration": ["North, the cold marches south to meet you. Go warily."],
       "intro": [
         "The road to the Spire runs through the cold east, and the cold east is where the Stillness has marched its soldiers.",
         "This is the last I can ask of you for now, and the hardest. After it, we will know who we are really fighting."

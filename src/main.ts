@@ -5,7 +5,7 @@ import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import './ui.css';
 import { initAssets, liveContent, loadSprites, loadZone, packContent, staticContent, unloadZone } from './assets';
-import { chooseCampaign, DEFAULT_WORLD, LIVE, RANDOM } from './content/campaignChoice';
+import { chooseCampaign, DEFAULT_WORLD, LIVE, queryForTag, RANDOM } from './content/campaignChoice';
 import { worldLooks } from './content/LiveSource';
 import { setContentTag } from './net/session';
 import { ContentManager } from './content/ContentManager';
@@ -102,6 +102,11 @@ void (async () => {
     const scenes = new SceneManager(app);
     const touch = createTouchControls(() => scenes.resize());
     const session = new Session();
+    // A friend only needs the host's code: if the host is in another world, this page moves there and joins again.
+    session.worldMismatch = (tag, code) => {
+      const query = queryForTag(tag);
+      if (query) window.location.assign(`${window.location.pathname}${query}#join=${code}&go=1`);
+    };
     const ui = {
       hud: new Hud(),
       menu: new Menu(session, touch),

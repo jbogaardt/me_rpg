@@ -13,6 +13,9 @@ function host() {
   const votes = new Map<number, [number, number]>();
   const arena = {
     role: 'host',
+    timeStopped: false,
+    task: null,
+    party: () => [],
     remotes: new Map([
       [1, { dm: false }],
       [2, { dm: false }],
@@ -30,12 +33,16 @@ function host() {
     get dialsSet() {
       return dials;
     },
+    get effectiveDials() {
+      return dials;
+    },
+    setQuestDials: () => {},
     setDials: (d: Partial<Record<Dial, boolean>>) => (dials = { ...d }),
   } as unknown as ContentManager;
   const clock = new DayClock(() => 0);
   const desk = new DmDesk(arena, session, content, clock);
   const last = (slot: number) => [...sent].reverse().find(([s]) => s === slot)?.[1] as DmMsg | undefined;
-  return { desk, sent, votes, last, clock, content: () => dials };
+  return { desk, sent, votes, last, clock, arena, content: () => dials };
 }
 
 const roads = [
@@ -75,6 +82,55 @@ describe('the Dungeon Master’s desk', () => {
     expect(last(1)!.vote).toBeNull();
   });
 
+  it('sends what the DM says to every friend for a few seconds, then stops', () => {
+    const { desk, last } = host();
+    const heard: string[] = [];
+    desk.onSay = (t) => heard.push(t);
+    expect(desk.say('   ')).toBe(false);
+    expect(desk.say('  Beware\nthe  fen  ')).toBe(true);
+    expect(heard).toEqual(['Beware the fen']);
+    desk.update(0);
+    expect(last(1)!.say).toEqual([1, 'Beware the fen']);
+    expect(last(2)!.say).toEqual([1, 'Beware the fen']);
+    desk.update(9);
+    expect(last(1)!.say).toBeUndefined();
+    desk.say('Run');
+    desk.update(0);
+    expect(last(1)!.say).toEqual([2, 'Run']);
+  });
+
+  it('tells every friend the quest the DM gave, and stops saying it when it is over', () => {
+    const { desk, last, arena } = host();
+    arena.task = {
+      kind: 'gather',
+      state: 'active',
+      title: 'Gather 3 Echostones',
+      progress: 1,
+      goal: 3,
+      zone: 'fen',
+      x: 10,
+      y: 20,
+      what: 'echostone',
+      bits: 2,
+      hint: false,
+    };
+    desk.update(0);
+    expect(last(2)!.task).toEqual([1, 0, 1, 3, 'fen', 10, 20, 'Gather 3 Echostones', 2, 0, 'echostone']);
+    arena.task = null;
+    desk.update(0.01);
+    expect(last(2)!.task).toBeUndefined();
+  });
+
+  it('tells every friend while time is stopped, and stops saying it when it starts again', () => {
+    const { desk, last, arena } = host();
+    arena.timeStopped = true;
+    desk.update(0);
+    expect(last(1)!.hold).toBe(1);
+    arena.timeStopped = false;
+    desk.update(0.01);
+    expect(last(1)!.hold).toBeUndefined();
+  });
+
   it('asks nothing with fewer than two roads', () => {
     const { desk } = host();
     desk.openVote(roads.slice(0, 1));
@@ -109,5 +165,41 @@ describe('a friend at the Dungeon Master’s table', () => {
     desk.update(0);
     expect(desk.openVoteForGuest).toBeNull();
     expect(desk.voteInput).toBeUndefined();
+  });
+
+  it('knows time is stopped while the host says so', () => {
+    let msg: DmMsg | null = null;
+    const session = { takeDm: () => [msg, (msg = null)][0] } as unknown as Session;
+    const content = { setDials: () => {} } as unknown as ContentManager;
+    const arena = { role: 'client', timeStopped: false } as unknown as Arena;
+    const desk = new DmDesk(arena, session, content, new DayClock(() => 0));
+    msg = { k: 'dm', n: 1, shift: 0, dials: {}, vote: null, hold: 1 };
+    desk.update(0);
+    expect(arena.timeStopped).toBe(true);
+    msg = { k: 'dm', n: 2, shift: 0, dials: {}, vote: null };
+    desk.update(0);
+    expect(arena.timeStopped).toBe(false);
+  });
+
+  it('shows what the DM said once, however often the host repeats it', () => {
+    let msg: DmMsg | null = null;
+    const session = { takeDm: () => [msg, (msg = null)][0] } as unknown as Session;
+    const content = { setDials: () => {} } as unknown as ContentManager;
+    const desk = new DmDesk({ role: 'client' } as unknown as Arena, session, content, new DayClock(() => 0));
+    const heard: string[] = [];
+    desk.onSay = (t) => heard.push(t);
+    const word = (n: number, say?: [number, string]): DmMsg => ({
+      k: 'dm',
+      n,
+      shift: 0,
+      dials: {},
+      vote: null,
+      ...(say ? { say } : {}),
+    });
+    for (const m of [word(1, [1, 'Hush']), word(2, [1, 'Hush']), word(3), word(4, [2, 'Run'])]) {
+      msg = m;
+      desk.update(0);
+    }
+    expect(heard).toEqual(['Hush', 'Run']);
   });
 });

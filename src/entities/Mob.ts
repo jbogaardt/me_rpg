@@ -81,6 +81,16 @@ function nearest(from: Character, heroes: MobWorld['heroes']): Character | undef
  * In a co-op game the guest's copy of a mob doesn't think: `setRemote` feeds it the host's state and
  * `updateRemote` just draws it.
  */
+/** What the Dungeon Master asks of a mob they hold (see `Mob.setDrive`). */
+export interface Drive {
+  dx: number;
+  dy: number;
+  /** Strike now (a press). */
+  attack: boolean;
+  /** Which way to strike (unit vector) when they aim with the mouse; absent: the way it last walked. */
+  aim?: { x: number; y: number };
+}
+
 export class Mob {
   readonly body: Character;
   hp: number;
@@ -134,6 +144,8 @@ export class Mob {
     this.state = 'idle';
     this.timer = 1;
     this.frozen = 0;
+    this.beckoned = null;
+    this.driver = null;
     this.rayRest = 0;
     this.beam.clear();
     this.body.release();
@@ -206,6 +218,46 @@ export class Mob {
   /** Held still by a spell (Stasis) for this many seconds: it neither moves nor attacks (host and solo; a guest just sees it stand). */
   private frozen = 0;
 
+  /** Called away to a spot by the Dungeon Master (a defended ground): an idle foe walks there until it sees a hero. */
+  private beckoned: { x: number; y: number; left: number } | null = null;
+
+  beckon(x: number, y: number, seconds: number) {
+    if (this.state !== 'dead') this.beckoned = { x, y, left: seconds };
+  }
+
+  /**
+   * The Dungeon Master is driving this mob (possession): where to walk, whether to strike, and which way to aim. Set every
+   * frame by the host while they hold it; null and the mob's own mind takes over again where it stands.
+   */
+  private driver: Drive | null = null;
+  private lastAim = { x: 0, y: 1 };
+
+  setDrive(drive: Drive | null) {
+    this.driver = drive;
+  }
+
+  get driven(): boolean {
+    return this.driver !== null;
+  }
+
+  /** One frame of being driven: walk, or begin a blow (a shot for a shooter, a lunge for the rest). True if it moved. */
+  private drive(d: Drive, dt: number, world: MobWorld): boolean {
+    const len = Math.hypot(d.dx, d.dy);
+    if (len > 0) this.lastAim = { x: d.dx / len, y: d.dy / len };
+    if (d.attack) {
+      const aim = d.aim ?? this.lastAim;
+      this.state = 'windup';
+      this.attack = this.kind.shot ? 'shot' : 'melee'; // a ray kind fights close when driven
+      this.windupLen = this.t.windup;
+      this.timer = this.windupLen;
+      this.aim = { x: aim.x, y: aim.y };
+      this.body.face(directionToward(aim.x, aim.y));
+      this.body.play(this.attack === 'shot' ? 'cast' : 'slash', this.windupLen * 1000);
+      return false;
+    }
+    return len > 0 ? this.walk(d.dx / len, d.dy / len, this.kind.speed * dt, world) : false;
+  }
+
   /** Freeze the mob in place for `seconds` (a longer freeze already on it wins). */
   freeze(seconds: number) {
     if (this.state === 'dead') return;
@@ -246,6 +298,7 @@ export class Mob {
     const dist = target ? Math.hypot(dx, dy) : Infinity; // nobody here: nothing to chase
     let moving = false;
     this.timer -= dt;
+    if (this.driver && (this.state === 'idle' || this.state === 'wander')) this.state = 'chase';
     switch (this.state) {
       case 'idle':
       case 'wander':
@@ -257,10 +310,25 @@ export class Mob {
           this.hp = Math.min(this.kind.maxHp, this.hp + this.kind.maxHp * MEND * dt);
           this.drawBar();
         }
+        if (this.beckoned) {
+          const b = this.beckoned;
+          const [bx, by] = [b.x - this.body.x, b.y - this.body.y];
+          const far = Math.hypot(bx, by);
+          b.left -= dt;
+          if (b.left <= 0 || far < 64) this.beckoned = null;
+          else {
+            moving = this.walk(bx / far, by / far, this.kind.speed * 0.7 * dt, world);
+            break; // on its way: it does not wander off
+          }
+        }
         if (this.state === 'wander') moving = this.walk(this.dir.x, this.dir.y, this.kind.speed * 0.5 * dt, world);
         if (this.timer <= 0) this.pickWander();
         break;
       case 'chase': {
+        if (this.driver) {
+          moving = this.drive(this.driver, dt, world);
+          break;
+        }
         const { shot } = this.kind;
         const attack = mobAttack(this.kind, dist, this.rayRest <= 0);
         if (dist > this.kind.sight * 1.5) {
@@ -290,13 +358,13 @@ export class Mob {
         break;
       }
       case 'windup':
-        if (this.attack === 'melee' && target && this.timer > this.windupLen * COMMITTED) {
+        if (this.attack === 'melee' && target && !this.driver && this.timer > this.windupLen * COMMITTED) {
           this.aim = { x: dx / (dist || 1), y: dy / (dist || 1) }; // still turning to follow; locked once committed
           this.body.face(directionToward(dx, dy));
         }
         if (this.timer <= 0) {
           if (this.attack === 'shot')
-            world.shoot(this, dx / (dist || 1), dy / (dist || 1)); // aimed as it lets go
+            world.shoot(this, this.driver ? this.aim.x : dx / (dist || 1), this.driver ? this.aim.y : dy / (dist || 1)); // aimed as it lets go
           else if (this.attack === 'ray' && this.kind.ray) {
             this.state = 'channel'; // hold the beam on the hero until it runs out or something breaks it
             this.body.hold(RAY_POSE.anim, RAY_POSE.col);

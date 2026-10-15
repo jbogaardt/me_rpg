@@ -3,7 +3,16 @@ import { enabled, flag } from '../systems/capabilities';
 import type { Sprites, Zone } from '../assets';
 import type { Aim } from '../core/aim';
 import { COMBO_WINDOW, COMBO_WINDOW_TOUCH, ComboReader } from '../core/combo';
-import { actionDown, actionPressed, actionTouchedOnly, mapPressed, menuPressed, pointerAim } from '../core/controls';
+import {
+  actionDown,
+  actionPressed,
+  actionTouchedOnly,
+  clickedAt,
+  mapPressed,
+  menuPressed,
+  pointerAim,
+  stopPressed,
+} from '../core/controls';
 import { directionToward } from '../core/direction';
 import type { ZoneState } from './ZoneState';
 import type { Scene } from '../core/Scene';
@@ -23,7 +32,7 @@ import { MapOverlay } from '../hud/MapOverlay';
 import { AreaBanner } from '../hud/AreaBanner';
 import { DRINK_KEY, HarvestButtons, type HarvestSpot } from '../hud/HarvestButtons';
 import { GuideArrow } from '../entities/GuideArrow';
-import { guideFor } from '../systems/guide';
+import { SEARCH_RADIUS, guideFor, searchMiddle, type Guide } from '../systems/guide';
 import { zoneName } from '../systems/places';
 import type { Menu } from '../hud/Menu';
 import type { PartyRow } from '../hud/Party';
@@ -76,6 +85,16 @@ import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
 import { Scenario } from './overworld/Scenario';
 import { Story } from './overworld/Story';
 import { DmDesk } from './overworld/DmDesk';
+import { DmPowers } from './overworld/DmPowers';
+import { DmBar } from '../hud/DmBar';
+import { DmCard } from '../hud/DmCard';
+import { DmPrompts } from './overworld/DmPrompts';
+import { DmTasks } from './overworld/DmTasks';
+import { DmRevive } from './overworld/DmRevive';
+import { DmPossession } from './overworld/DmPossession';
+import { DmNarration } from './overworld/DmNarration';
+import { taskText } from '../systems/dmTasks';
+import { RELIC_KIND } from '../systems/dmQuests';
 import { VotePanel } from '../hud/VotePanel';
 import type { World } from '../content/world';
 import { particleEffect } from '../entities/ParticleEffect';
@@ -140,6 +159,14 @@ export class OverworldScene implements Scene {
   /** The Dungeon Master's controls: weather, time of day, capabilities for everyone, votes. */
   private desk!: DmDesk;
   private votePanel = new VotePanel();
+  private dmBar = new DmBar();
+  private dmCard = new DmCard();
+  private powers!: DmPowers;
+  private prompts!: DmPrompts;
+  private tasks!: DmTasks;
+  private narration!: DmNarration;
+  private revive!: DmRevive;
+  private possession!: DmPossession;
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
@@ -215,6 +242,13 @@ export class OverworldScene implements Scene {
     };
     this.desk = new DmDesk(arena, ui.session, content, this.dayClock);
     this.votePanel.onChoose = (i) => this.desk.castVote(i);
+    this.powers = new DmPowers(arena, this.sim);
+    this.tasks = new DmTasks(arena, this.sim, this.desk);
+    this.narration = new DmNarration(arena, ui.session, this.desk);
+    this.revive = new DmRevive(arena, this.sim, this.zones);
+    this.possession = new DmPossession(arena, this.sim);
+    this.prompts = new DmPrompts(arena, this.liveStory, this.desk, this.powers, this.dmCard, this.tasks, this.revive);
+    this.desk.onSay = (text) => this.dmBar.speak(text, arena.clock); // the DM's words show on every screen
     this.zones.root.addChildAt(this.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     this.overlay = new MapOverlay();
@@ -275,42 +309,32 @@ export class OverworldScene implements Scene {
     this.ui.menu.inventory.attach({ apply: (op) => this.pack.localOp(op) });
     this.ui.menu.magic.attach({ equip: (wanted) => this.pack.setLoadout(wanted), zone: () => this.arena.zone.name });
     this.ui.menu.party.attach({ rows: () => this.partyRows(), go: (slot) => this.dmGoTo(slot) });
-    this.ui.menu.story.attach({
-      canChoose: () => this.liveStory.canChoose,
-      view: () => this.liveStory.view(),
-      choose: (cue) => {
-        this.liveStory.choose(cue);
-        this.desk.closeVote(); // the DM's choice ends any vote
-      },
-      vote: () => (this.arena.role === 'host' ? this.desk.voteView() : null),
-      openVote: () => this.desk.openVote(this.liveStory.view()?.options ?? []),
-      closeVote: () => this.desk.closeVote(),
-    });
-    this.ui.menu.cast.attach({
-      castable: () => this.liveStory.castable(),
-      cast: (entity) => this.liveStory.castHere(entity),
-      make: (name, look, lines) => this.liveStory.makePerson(name, look, lines),
-      note: () => this.liveStory.lastNote,
-    });
-    this.ui.menu.dials.attach({
-      // Whoever runs the world: the online DM, or a solo player in a live world.
-      available: () => this.arena.local.dm || (this.arena.role === 'solo' && this.liveStory.live),
-      view: () => this.desk.dialsView(),
-      weather: (precip, wind) => this.desk.setWeather(precip, wind),
-      hour: (hour) => this.desk.setHour(hour),
-      dial: (id, on) => this.desk.setDial(id, on),
+    this.dmBar.attach({
+      say: (text) => this.desk.say(text),
+      smite: () => this.powers.smite(),
+      freeze: () => this.powers.freeze(),
+      stop: () => this.powers.toggleStop(),
+      reset: () => this.powers.resetZone(),
+      card: (kind) => this.prompts.open(kind),
+      story: () => this.prompts.hasStory,
+      fallen: () => this.revive.fallen.length,
+      release: () => this.possession.release(),
+      waits: () => this.powers.view(),
     });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
-    if (this.ui.session.urlCode && enabled('coop')) this.ui.menu.toggle(this.hero, 'online');
+    const { session } = this.ui;
+    if ((session.urlCode || session.autoCreate) && enabled('coop')) this.ui.menu.toggle(this.hero, 'online');
+    // Moved here to join a host's world, or to host the world just chosen: carry on without another tap.
+    if (session.autoJoin && session.urlCode && enabled('coop')) void session.joinGame(session.urlCode);
+    else if (session.autoCreate && enabled('coop')) void session.createGame();
   }
 
   exit() {
     this.ui.menu.inventory.attach(null);
     this.ui.menu.magic.attach(null);
     this.ui.menu.party.attach(null);
-    this.ui.menu.story.attach(null);
-    this.ui.menu.dials.attach(null);
-    this.ui.menu.cast.attach(null);
+    this.dmBar.attach(null);
+    this.dmCard.hide();
     this.votePanel.sync(null);
     this.overlay.setAvailable(false);
     this.harvestButtons.clear();
@@ -339,6 +363,15 @@ export class OverworldScene implements Scene {
     this.liveStory.update(dt); // a live world: the host sends its log, a guest grows its own from it
     this.desk.update(dt); // the DM's dials, time of day and vote: the host tells its friends, a friend is told
     this.votePanel.sync(this.desk.openVoteForGuest);
+    this.powers.update(dt); // the DM's storm in flight and cooldowns
+    this.tasks.update(dt);
+    this.syncRelic();
+    this.revive.update(dt);
+    this.narration.update(dt);
+    if (arena.local.dm && !this.ui.dialog.active && !this.ui.menu.open && stopPressed()) this.powers.toggleStop();
+    document.body.classList.toggle('touch-ui', this.ui.touch.active); // the DM's bar and cards lay out for a phone
+    this.dmBar.update(arena.local.dm, arena.clock, arena.timeStopped, this.possession.name, this.ui.touch.active);
+    this.prompts.update(dt, this.ui.dialog.active || this.ui.menu.open || this.zones.transition.busy);
     const online = arena.role !== 'solo';
     // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
     // without the map capability (it is still explored, so nothing changes if one is played later).
@@ -356,7 +389,15 @@ export class OverworldScene implements Scene {
     menu.setOnline(online, arena.local.dm);
     this.trading.sync(dt, online);
     if (mapShown && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
-    if (!dialog.active && menuPressed()) {
+    this.possession.update();
+    const click = clickedAt();
+    const free = !menu.open && !shop.open && !trade.open && !dialog.active && !this.zones.transition.busy;
+    if (click && free && !this.possession.active) this.possession.clickAt(click, this.ui.touch.active); // the DM clicks or taps a foe to possess it
+    if (this.dmCard.open && menuPressed())
+      this.dmCard.dismiss(); // Esc sends a card away first
+    else if (this.possession.active && menuPressed())
+      this.possession.release(); // then lets go of a foe, instead of opening the menu
+    else if (!dialog.active && menuPressed()) {
       if (trade.open) this.trading.command({ c: 'cancel' });
       else if (shop.open) shop.close();
       else menu.toggle(this.hero);
@@ -368,7 +409,7 @@ export class OverworldScene implements Scene {
     if (menu.open || shop.open || trade.open) {
       if (menu.open) menu.update();
       else if (shop.open) shop.update();
-      hud.update(this.hero, '', arena.zone.name, arena.local.dm); // gold changes at the counter
+      hud.update(this.hero, '', arena.zone.name, arena.local.dm, this.taskLine()); // gold changes at the counter
       if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
     }
 
@@ -417,7 +458,7 @@ export class OverworldScene implements Scene {
       z,
       menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy || arena.local.dm,
     );
-    hud.update(this.hero, this.combos.typed, this.arena.zone.name, this.arena.local.dm);
+    hud.update(this.hero, this.combos.typed, this.arena.zone.name, this.arena.local.dm, this.taskLine());
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.
@@ -456,48 +497,55 @@ export class OverworldScene implements Scene {
     const busy = this.zones.transition.busy;
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
     const raw = this.readCommand(dt, reading);
-    const cmd = reading ? { ...raw, dx: 0, dy: 0 } : raw;
+    this.possession.drive(raw, reading); // a possessed foe takes the DM's keys; the DM's own body stands still
+    const cmd = this.possession.active ? NO_COMMAND : reading ? { ...raw, dx: 0, dy: 0 } : raw;
     const guests = [...arena.remotes.values()].map((p) => ({ p, cmd: this.host.command(p) }));
     const commandOf = (p: Player) => (p === arena.local ? cmd : (guests.find((g) => g.p === p)?.cmd ?? NO_COMMAND));
     const here = arena.zone;
 
+    // The Dungeon Master stopped time: only they move; players, foes, plots, weather and the clock on the ground stand still.
+    const stopped = host && arena.timeStopped;
     if (host || !dialog.active) {
       for (const z of arena.occupiedZones()) {
         arena.inZone(z, () => {
           const present = arena.players();
-          for (const p of present) sim.updatePlayer(p, commandOf(p), dt);
-          for (const mob of z.mobs) mob.update(dt, z.mobWorld);
-          // Rain waters every dry plot in the zone, as a Waterskin would (the snapshot tells a guest it is wet).
-          const raining = !!z.weather && rainWaters(z.weather.precip, z.weather.intensity);
-          for (const crop of z.crops) {
-            if (raining && crop.thirsty) crop.water();
-            crop.grow(dt);
-          }
-          this.ground.age(dt);
-          sim.weather(dt);
-          for (const p of present) {
-            const combo = commandOf(p).combo;
-            if (combo !== undefined) sim.combo(p, combo);
+          for (const p of present) if (!stopped || p.dm) sim.updatePlayer(p, commandOf(p), dt);
+          if (!stopped) {
+            for (const mob of z.mobs) mob.update(dt, z.mobWorld);
+            // Rain waters every dry plot in the zone, as a Waterskin would (the snapshot tells a guest it is wet).
+            const raining = !!z.weather && rainWaters(z.weather.precip, z.weather.intensity);
+            for (const crop of z.crops) {
+              if (raining && crop.thirsty) crop.water();
+              crop.grow(dt);
+            }
+            this.ground.age(dt);
+            sim.weather(dt);
+            for (const p of present) {
+              const combo = commandOf(p).combo;
+              if (combo !== undefined) sim.combo(p, combo);
+            }
           }
           if (z !== here) z.effects.update(dt); // the local zone's effects are updated with the rest of what is drawn
         });
       }
       // The zones drawn beside this one keep their mobs wandering, so nothing looks frozen across the border.
       const occupied = new Set(arena.occupiedZones());
-      for (const z of this.zones.lookouts()) {
-        if (occupied.has(z)) continue;
-        arena.inZone(z, () => {
-          for (const mob of z.mobs) mob.update(dt, z.mobWorld);
-        });
-      }
-      this.training.update(dt);
+      if (!stopped)
+        for (const z of this.zones.lookouts()) {
+          if (occupied.has(z)) continue;
+          arena.inZone(z, () => {
+            for (const mob of z.mobs) mob.update(dt, z.mobWorld);
+          });
+        }
+      if (!stopped) this.training.update(dt);
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
     if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.act(arena.local));
-    for (const g of guests) if (g.cmd.act) arena.inZone(arena.zoneOf(g.p), () => this.act(g.p));
+    if (!stopped) for (const g of guests) if (g.cmd.act) arena.inZone(arena.zoneOf(g.p), () => this.act(g.p));
     if (!reading) this.zones.checkDoors(arena.local);
-    for (const g of guests) this.zones.checkDoors(g.p);
+    if (!stopped) for (const g of guests) this.zones.checkDoors(g.p);
+    this.possession.follow();
     if (host) {
       this.host.broadcast(dt);
       this.pack.send(dt);
@@ -534,6 +582,13 @@ export class OverworldScene implements Scene {
     else if (arena.role === 'client') this.guest.leave();
     arena.role = 'solo'; // so nothing from here on is recorded for friends until the new role is set
     this.desk.reset(); // what a DM set lasts for their game only
+    arena.pressure = role === 'host' ? this.ui.session.hostPressure : 'steady'; // what the host chose in the lobby
+    this.powers.reset();
+    this.tasks.reset();
+    this.revive.reset();
+    this.possession.reset();
+    this.narration.reset();
+    this.prompts.reset();
     if (role === 'host') this.host.enter();
     else if (role === 'client') this.guest.enter();
     arena.role = role;
@@ -703,7 +758,7 @@ export class OverworldScene implements Scene {
     const site = this.arena.sites.find(
       (s) =>
         Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH &&
-        siteOpen(p.hero, s.kind, this.arena.zone.name, s.index),
+        (siteOpen(p.hero, s.kind, this.arena.zone.name, s.index) || this.questWants(this.arena.zone.name, s)),
     );
     if (site) return this.touchSite(p, site);
     if (this.sim.pondAction(p)) return; // A by a pond drinks (or stops drinking) instead of swinging
@@ -714,6 +769,10 @@ export class OverworldScene implements Scene {
 
   /** A player touches a quest site that their quest wants: it counts once for them, and the world sees the sparkle. */
   private touchSite(p: Player, site: QuestSite) {
+    if (this.questWants(this.arena.zone.name, site) && this.tasks.touchSite(p, site.kind, site.index)) {
+      this.sim.fx('levelUp', site.x, site.y - 6); // the DM's quest counts it for the whole party
+      return;
+    }
     const progress = recordSite(p.hero, site.kind, this.arena.zone.name, site.index);
     if (!progress) return;
     this.sim.fx('levelUp', site.x, site.y - 6);
@@ -731,7 +790,7 @@ export class OverworldScene implements Scene {
       g.body.setTag(text, mark ? 0xffd34d : 0xffffff);
     }
     for (const s of z.sites) {
-      s.setOpen(siteOpen(hero, s.kind, z.name, s.index));
+      s.setOpen(siteOpen(hero, s.kind, z.name, s.index) || this.questWants(z.name, s));
       s.update(dt);
     }
     for (const g of z.givers) g.body.animate(dt * 1000, false);
@@ -784,6 +843,11 @@ export class OverworldScene implements Scene {
     }
   }
 
+  /** The task the DM called, as the tracker line ('' when there is none). */
+  private taskLine(): string {
+    return this.arena.task ? taskText(this.arena.task) : '';
+  }
+
   /** The quest arrow: points from the hero at where the quest leads (a thing in this zone, or the door towards it). */
   private pointTheWay(z: ZoneState, dt: number) {
     const hide = this.zones.transition.busy || !this.player.visible || !enabled('guide', z.name) || this.arena.local.dm; // the DM has no quest
@@ -803,13 +867,46 @@ export class OverworldScene implements Scene {
     const at = (x: number, y: number) => ({ x: z.world.x + x * camera.zoom, y: z.world.y + y * camera.zoom });
     // A person or a door gets the arrow; something to be found is only an area on the map (M).
     const known = guide && guide.radius === undefined ? guide : null;
+    // The DM's quest: a search area on the map (the party works out the rest), and an arrow only once the DM points the way.
+    const task = this.arena.task;
+    const open = !!task && task.state === 'active' && task.zone === z.name;
+    const calling =
+      open && task.hint && !this.arena.local.dm && !this.zones.transition.busy
+        ? { x: task.x, y: task.y, label: 'The way' }
+        : null;
+    const target = calling ?? known;
     this.arrow.update(
       dt,
       at(this.player.x, this.player.y - 20),
-      known && at(known.x, known.y - 12),
-      known?.label ?? '',
+      target && at(target.x, target.y - 12),
+      target?.label ?? '',
     );
-    this.overlay.setGuide(guide);
+    const questGuide: Guide | null = open
+      ? task.hint
+        ? { x: task.x, y: task.y, label: task.title }
+        : { ...searchMiddle(task.x, task.y), label: task.title, radius: SEARCH_RADIUS }
+      : null;
+    this.overlay.setGuide(questGuide ?? guide);
+  }
+
+  /** Does the DM's quest want this site (a plant or stone to gather that is not yet touched, or the hidden relic)? */
+  private questWants(zone: string, site: QuestSite): boolean {
+    const t = this.arena.task;
+    if (!t || t.state !== 'active' || t.zone !== zone) return false;
+    if (t.kind === 'find') return site.kind === RELIC_KIND;
+    return t.kind === 'gather' && site.kind === t.what && !(t.bits & (1 << site.index));
+  }
+
+  /** The relic of a "find" quest is a site that appears where the DM hid it (on every page) and goes when it is found. */
+  private syncRelic() {
+    const t = this.arena.task;
+    const want = t && t.state === 'active' && t.kind === 'find' ? t : null;
+    for (const z of this.arena.zones.values()) {
+      const have = z.sites.find((x) => x.kind === RELIC_KIND);
+      if (want && z.name === want.zone && !have)
+        z.addSite({ kind: RELIC_KIND, col: Math.floor(want.x / CELL), row: Math.floor(want.y / CELL) });
+      else if (have && !(want && z.name === want.zone)) z.removeSite(have);
+    }
   }
 
   /**

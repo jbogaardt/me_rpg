@@ -3,6 +3,9 @@ import type { DmMsg, VoteWire } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import { DIALS, enabled, type Dial } from '../../systems/capabilities';
 import type { DayClock } from '../../systems/daynight';
+import { cleanSay, SAY_SHOW } from '../../systems/dmPowers';
+import { taskFromWire, taskWire } from '../../systems/dmTasks';
+import { questDials } from '../../systems/quests';
 import { CLIMATES, isClimate, PRECIPS, type Precip } from '../../systems/weather';
 import type { Arena } from './Arena';
 
@@ -55,6 +58,13 @@ export class DmDesk {
   private told: VoteWire | null = null;
   private mine: { id: number; index: number } | null = null;
   private dialSig = '';
+  private questSig = '{}';
+  /** Host: what the DM last said and how long it still goes out; guest: the newest saying shown. */
+  private said: { id: number; text: string; left: number } | null = null;
+  private saySeq = 0;
+  private lastSay = 0;
+  /** A friend heard the DM: the scene shows the words. */
+  onSay: (text: string) => void = () => {};
 
   constructor(
     private arena: Arena,
@@ -98,6 +108,16 @@ export class DmDesk {
     };
   }
 
+  /** The DM speaks to the party: the words appear on every friend's screen (and the DM's own). False if there were none. */
+  say(text: string): boolean {
+    const words = cleanSay(text);
+    if (!words || this.arena.role !== 'host') return false;
+    this.said = { id: ++this.saySeq, text: words, left: SAY_SHOW };
+    this.timer = DM_RESEND; // tell them now
+    this.onSay(words);
+    return true;
+  }
+
   /** Ask the party to choose among `options` (the story's next steps); a new vote replaces an open one. */
   openVote(options: { cue: string; label: string }[]) {
     if (options.length < 2) return;
@@ -123,9 +143,20 @@ export class DmDesk {
   // --- Each frame ---
 
   update(dt: number) {
+    if (this.arena.role !== 'client') this.questSwitches();
     if (this.arena.role === 'host') this.host(dt);
     else if (this.arena.role === 'client') this.guest();
     else if (this.vote) this.vote = null; // solo there is nobody to ask
+  }
+
+  /** Solo and host: what the party's quests switch (a hide-and-seek quest turns the map off...), told to friends via `dials`. */
+  private questSwitches() {
+    const heroes = this.arena.party().map((p) => p.hero);
+    const now = questDials(heroes);
+    const sig = JSON.stringify(now);
+    if (sig === this.questSig) return;
+    this.questSig = sig;
+    this.content.setQuestDials(now);
   }
 
   private host(dt: number) {
@@ -137,8 +168,12 @@ export class DmDesk {
       }
     }
     this.timer += dt;
-    const base = { shift: Math.round(this.clock.shift * 1e4) / 1e4, dials: this.content.dialsSet };
-    const sig = JSON.stringify([base, vote?.id, [...(vote?.chosen ?? [])]]);
+    if (this.said && (this.said.left -= dt) <= 0) this.said = null;
+    const say = this.said ? ([this.said.id, this.said.text] as [number, string]) : undefined;
+    const base = { shift: Math.round(this.clock.shift * 1e4) / 1e4, dials: this.content.effectiveDials };
+    const hold = this.arena.timeStopped;
+    const task = this.arena.task;
+    const sig = JSON.stringify([base, vote?.id, [...(vote?.chosen ?? [])], say?.[0], hold, task]);
     if (sig === this.sentSig && this.timer < DM_RESEND) return;
     this.sentSig = sig;
     this.timer = 0;
@@ -148,6 +183,9 @@ export class DmDesk {
         k: 'dm',
         n: ++this.seq,
         ...base,
+        ...(say ? { say } : {}),
+        ...(hold ? { hold: 1 as const } : {}),
+        ...(task ? { task: taskWire(task) } : {}),
         vote: vote
           ? {
               id: vote.id,
@@ -165,10 +203,16 @@ export class DmDesk {
     const msg = this.session.takeDm();
     if (!msg) return;
     this.clock.shift = msg.shift;
+    this.arena.timeStopped = msg.hold === 1;
+    this.arena.task = msg.task ? taskFromWire(msg.task) : null;
     const sig = JSON.stringify(msg.dials);
     if (sig !== this.dialSig) {
       this.dialSig = sig;
       this.content.setDials(msg.dials);
+    }
+    if (msg.say && msg.say[0] !== this.lastSay) {
+      this.lastSay = msg.say[0];
+      this.onSay(msg.say[1]);
     }
     this.told = msg.vote;
     if (!msg.vote || this.mine?.id !== msg.vote.id) this.mine = null;
@@ -201,7 +245,13 @@ export class DmDesk {
     this.mine = null;
     this.dialSig = '';
     this.sentSig = '';
+    this.said = null;
+    this.lastSay = 0;
+    this.arena.timeStopped = false;
+    this.arena.task = null;
     this.clock.shift = 0;
     this.content.setDials({});
+    this.content.setQuestDials({});
+    this.questSig = '{}';
   }
 }
