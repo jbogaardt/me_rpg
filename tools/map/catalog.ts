@@ -277,6 +277,8 @@ export interface Prefab {
   solid: { band: number; min: number } | null;
   /** What the object is, copied to MapObject.tag so game systems (leaf fall, rustling...) can find it. */
   tag?: string;
+  /** Picked up and carried in play (systems/barrels.ts): it blocks as a body there, so the map blocks no cell for it. */
+  movable?: boolean;
   about: string;
 }
 
@@ -642,7 +644,8 @@ export const PREFABS = {
     parts: [part(321, 18, 28, 40)],
     solid: { band: 24, min: 0.3 },
     tag: 'barrel',
-    about: 'Wooden barrel (1 cell wide).',
+    movable: true,
+    about: 'Wooden barrel (1 cell wide). Players pick it up and move it; it blocks only where it stands.',
   },
   flowerRed: {
     sheet: OBJECT_SHEET,

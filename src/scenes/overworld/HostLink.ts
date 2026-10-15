@@ -1,4 +1,5 @@
 import { decodeAim } from '../../core/aim';
+import { barrelsWire } from '../../systems/barrels';
 import { dirIndex } from '../../core/direction';
 import { NO_COMMAND, type Command, type Player } from '../../entities/Player';
 import { cellFeet } from '../../map/doors';
@@ -158,6 +159,7 @@ export class HostLink {
       let world = shared.get(z.name);
       if (!world) {
         const ponds = pondsWire(z.ponds.levels());
+        const barrels = barrelsWire(z.barrels);
         world = {
           base: {
             k: 'snap',
@@ -168,6 +170,7 @@ export class HostLink {
             chests: z.chests.reduce((mask, c, i) => (c.opened ? mask | (1 << i) : mask), 0),
             crops: z.crops.map((c) => c.code()),
             ...(ponds ? { ponds } : {}),
+            ...(barrels ? { barrels } : {}),
             w: z.weather?.snapshot() ?? NO_WEATHER,
           },
           states: z.mobs.map((m) => encodeMob(m.view())),

@@ -94,6 +94,7 @@ export class Zones {
     if (memory) {
       for (const i of memory.opened) z.chests[i]?.setOpen(true);
       memory.crops.forEach((m, i) => z.crops[i]?.restore(m));
+      for (const [i, x, y] of memory.barrels ?? []) z.barrels[i]?.setDown(x, y);
       z.ponds.setLevels(memory.ponds ?? []);
       for (const { item, x, y, id, age } of memory.ground) {
         const g = new GroundItem(item, x, y, id, age);

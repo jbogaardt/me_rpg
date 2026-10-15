@@ -26,6 +26,7 @@ import {
   TREES,
   type CliffKind,
   type GroundName,
+  type Prefab,
   type PrefabName,
   type StampName,
 } from './catalog';
@@ -1027,7 +1028,7 @@ export class Zone {
         if (prefab.tag) o.tag = prefab.tag;
         objects.push(o);
         // All parts end on the prefab's bottom, so the band is measured from each part's own bottom.
-        if (p.autoBlock && prefab.solid) autoParts.push({ o, ...prefab.solid });
+        if (p.autoBlock && prefab.solid && !(prefab as Prefab).movable) autoParts.push({ o, ...prefab.solid });
       }
     }
 

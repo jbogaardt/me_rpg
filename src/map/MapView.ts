@@ -2,7 +2,7 @@ import { Container, Sprite, type Texture } from 'pixi.js';
 import { makeFrame } from '../core/textures';
 import type { ViewRect } from '../core/camera';
 import { chunkRange, chunksOfObjects, CHUNK } from './chunks';
-import { CELL, sortKey, type MapData } from './types';
+import { CELL, sortKey, type MapData, type MapObject } from './types';
 
 /** A built chunk: its ground, and its objects' sprites with their indices in `MapData.objects`. */
 interface Chunk {
@@ -120,6 +120,11 @@ export class MapView extends Container {
     else this.fade.set(index, alpha);
     const sprite = this.sprites.get(index);
     if (sprite) this.applyFade(sprite, alpha);
+  }
+
+  /** The art of a map object, for an entity that stands in its place (a barrel being carried). Null if its sheet is missing. */
+  objectTexture(o: MapObject): Texture | null {
+    return this.frame(o.s, o.x, o.y, o.w, o.h);
   }
 
   private applyFade(sprite: Sprite, alpha: number) {

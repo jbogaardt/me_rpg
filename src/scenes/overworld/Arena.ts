@@ -1,4 +1,5 @@
 import { Character } from '../../entities/Character';
+import type { Barrel } from '../../entities/Barrel';
 import { Player } from '../../entities/Player';
 import type { Role } from '../../net/session';
 import { newHero, type Hero } from '../../systems/combat';
@@ -128,6 +129,9 @@ export class Arena {
     return this.zone.chests;
   }
 
+  get barrels() {
+    return this.zone.barrels;
+  }
   get crops() {
     return this.zone.crops;
   }
@@ -174,7 +178,7 @@ export class Arena {
   }
 
   /** Every character that blocks others in the zone being worked in. */
-  bodies(): Character[] {
+  bodies(): (Character | Barrel)[] {
     return [
       ...this.party().map((p) => p.body), // the Dungeon Master walks through everyone
       ...(this.npc ? [this.npc] : []),
@@ -182,6 +186,7 @@ export class Arena {
       ...this.givers.map((g) => g.body),
       ...this.zone.folk.map((f) => f.body),
       ...this.mobs.filter((m) => m.alive).map((m) => m.body),
+      ...this.barrels.filter((b) => !b.carried), // a carried barrel blocks nobody
     ];
   }
 

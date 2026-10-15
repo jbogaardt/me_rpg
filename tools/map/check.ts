@@ -227,8 +227,9 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
 
   // Collision matches the art.
   const cov = coverage(d);
-  // Cliff art is flat ground (its grass fringe is walkable), so it doesn't count as foliage to walk into.
-  const foliage = coverage({ ...d, objects: d.objects.filter((o) => o.tag !== 'cliff') });
+  // Cliff art is flat ground (its grass fringe is walkable), so it doesn't count as foliage to walk into. Nor does a
+  // barrel: it is carried in play and blocks as a body (systems/barrels.ts), so the map leaves its cell open.
+  const foliage = coverage({ ...d, objects: d.objects.filter((o) => o.tag !== 'cliff' && o.tag !== 'barrel') });
   const hidden: number[] = [];
   const walls: number[] = [];
   cov.forEach((c, i) => {

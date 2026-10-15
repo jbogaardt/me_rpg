@@ -1,4 +1,5 @@
 import { encodeAim, type Aim } from '../../core/aim';
+import { barrelsFromWire } from '../../systems/barrels';
 import { DIRS, DIR_VEC } from '../../core/direction';
 import { glide } from '../../core/interp';
 import { floatText } from '../../entities/effects';
@@ -225,6 +226,15 @@ export class GuestLink {
     arena.zone.weather?.setRemote(snap.w); // this biome's own sky
     arena.chests.forEach((c, i) => c.setOpen((snap.chests & (1 << i)) !== 0));
     arena.crops.forEach((c, i) => c.setCode(snap.crops[i] ?? RIPE_CODE));
+    const moved = barrelsFromWire(snap.barrels); // a barrel the host does not list is at home
+    arena.barrels.forEach((b, i) => {
+      const at = moved.get(i);
+      if (!at) b.setDown(b.home.x, b.home.y);
+      else if (at.carried) {
+        b.carrier = -1; // somebody's: the guest only draws it
+        b.carryAt(at.x, at.y);
+      } else b.setDown(at.x, at.y);
+    });
     arena.zone.ponds.setLevels(pondsFromWire(snap.ponds)); // drained by someone's drinking, until rain fills them
     if (snap.ground) this.ground.sync(snap.ground); // absent: the same items as before
     for (const [index, ...state] of snap.mobs)

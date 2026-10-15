@@ -3,6 +3,7 @@ import { setting } from '../systems/capabilities';
 import { Camera } from '../core/camera';
 import { Ambient } from '../entities/ambient';
 import { Character } from '../entities/Character';
+import { Barrel } from '../entities/Barrel';
 import { Chest } from '../entities/Chest';
 import { Crop, type CropMemory } from '../entities/Crop';
 import { Effects } from '../entities/effects';
@@ -21,6 +22,7 @@ import { MOB_KINDS, type Item } from '../systems/combat';
 import type { Population } from '../content/populate';
 import { CHEST_LOOTS } from '../systems/chests';
 import { CROP_KINDS, CROP_STAGES } from '../systems/crops';
+import { barrelSpots } from '../systems/barrels';
 import { Collision } from '../systems/collision';
 import { npcLook, OVERWORLD_NPC } from '../systems/looks';
 import { PET_KINDS } from '../systems/pets';
@@ -34,6 +36,7 @@ import { PondBeds } from '../entities/PondBeds';
 export interface ZoneMemory {
   opened: number[]; // indices of opened chests
   crops: CropMemory[]; // each crop plot: its phase, progress and whether it is watered
+  barrels?: [number, number, number][]; // each barrel moved from home: its number, x and y
   ground: { item: Item; x: number; y: number; id: number; age: number }[];
   ponds?: PondState[]; // each drained pond: its id, how far it is drained, whether refilling (only rain fills it)
 }
@@ -88,6 +91,8 @@ export class ZoneState {
   readonly folk: Folk[] = [];
   readonly chests: Chest[];
   readonly crops: Crop[];
+  /** Barrels to pick up and move: they block where they stand (not while carried). Their drawn map copies are hidden. */
+  readonly barrels: Barrel[] = [];
   readonly ground: GroundItem[] = [];
   /** The bodies of the players here, which mobs hunt and which block others. The scene keeps it in step. */
   readonly heroBodies: Character[] = [];
@@ -184,6 +189,12 @@ export class ZoneState {
     });
     const cropFrames = sheetGrid(sprites.crops, CROP_STAGES, CROP_KINDS.length, CELL, CELL * 2);
     this.crops = data.crops.map((c) => new Crop(c, cropFrames));
+    for (const spot of barrelSpots(data.objects)) {
+      const texture = this.world.objectTexture(data.objects[spot.object]!);
+      if (!texture) continue; // no art to carry: leave the map's own drawing
+      this.world.setObjectAlpha(spot.object, 0);
+      this.barrels.push(new Barrel(spot, texture));
+    }
     const bodies = [
       ...(this.npc ? [this.npc] : []),
       ...this.keepers.map((k) => k.body),
@@ -192,6 +203,7 @@ export class ZoneState {
       ...this.pets,
       ...this.chests,
       ...this.crops,
+      ...this.barrels,
     ];
     if (bodies.length) this.world.layer.addChild(...bodies); // Pixi's addChild() with nothing to add throws
     this.populate(population);
@@ -258,6 +270,9 @@ export class ZoneState {
     return {
       opened: this.chests.flatMap((c, i) => (c.opened ? [i] : [])),
       crops: this.crops.map((c) => c.remember()),
+      barrels: this.barrels.flatMap((b, i): [number, number, number][] =>
+        b.x !== b.home.x || b.y !== b.home.y ? [[i, b.x, b.y]] : [],
+      ),
       ground: this.ground.map((g) => ({ item: g.item, x: g.x, y: g.y, id: g.id, age: g.age })),
       ponds: this.ponds.levels(),
     };

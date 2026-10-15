@@ -76,6 +76,7 @@ import { DayClock } from '../systems/daynight';
 import { NightLayer } from '../entities/NightLayer';
 import { Arena } from './overworld/Arena';
 import { CHEST_REACH, CROP_REACH, KEEPER_REACH, PICKUP_REACH, SIGN_REACH, SITE_REACH } from './overworld/constants';
+import { Barrels } from './overworld/Barrels';
 import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
 import { HostLink } from './overworld/HostLink';
@@ -155,6 +156,7 @@ export class OverworldScene implements Scene {
   private zones: Zones;
   private sim: Simulation;
   private ground: Ground;
+  private barrels: Barrels;
   private pack: PackSync;
   private trading: Trading;
   private training: Training;
@@ -216,6 +218,7 @@ export class OverworldScene implements Scene {
     this.sim = new Simulation(arena, visuals, this.zones, (e) => this.host.emit(e), say);
     this.zones.makeMobWorld = (z) => this.sim.mobWorldFor(z);
     this.ground = new Ground(arena, this.sim);
+    this.barrels = new Barrels(arena, this.sim);
     this.pack = new PackSync(arena, ui.session, ui, this.ground);
     this.trading = new Trading(arena, ui.session, ui);
     this.host = new HostLink(arena, ui.session, this.sim, this.pack, this.trading);
@@ -576,6 +579,7 @@ export class OverworldScene implements Scene {
           if (z !== here) z.effects.update(dt); // the local zone's effects are updated with the rest of what is drawn
         });
       }
+      this.barrels.update(); // carried barrels ride with whoever carries them
       // The zones drawn beside this one keep their mobs wandering, so nothing looks frozen across the border.
       const occupied = new Set(arena.occupiedZones());
       if (!stopped)
@@ -800,6 +804,7 @@ export class OverworldScene implements Scene {
   /** A player's action button (host and solo): open a chest within reach, pick something up, otherwise attack. */
   private act(p: Player) {
     if (p.dm) return; // the Dungeon Master opens, picks and strikes nothing
+    if (this.barrels.setDown(p)) return; // carrying a barrel: A sets it down
     const chest = this.arena.chests.find(
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
@@ -817,6 +822,7 @@ export class OverworldScene implements Scene {
         (siteOpen(p.hero, s.kind, this.arena.zone.name, s.index) || this.questWants(this.arena.zone.name, s)),
     );
     if (site) return this.touchSite(p, site);
+    if (this.barrels.pickUp(p)) return;
     if (this.sim.pondAction(p)) return; // A by a pond drinks (or stops drinking) instead of swinging
     const loose = this.ground.nearest(p);
     if (loose) this.ground.pickUp(p, loose);

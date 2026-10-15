@@ -301,6 +301,16 @@ describe('messages', () => {
     for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m).slice(0, 80)).toBeNull();
   });
 
+  it('carries moved barrels in a snapshot, and rejects a bad list', () => {
+    const base = parseMessage(JSON.stringify(snap));
+    expect(base?.k).toBe('snap');
+    const withBarrels = parseMessage(JSON.stringify({ ...snap, barrels: [0, 100, 120, 0, 2, 40, 50, 1] }));
+    expect(withBarrels && withBarrels.k === 'snap' ? withBarrels.barrels : null).toEqual([
+      0, 100, 120, 0, 2, 40, 50, 1,
+    ]);
+    expect(parseMessage(JSON.stringify({ ...snap, barrels: [0, 1, 2] }))).toBeNull();
+  });
+
   it('carries drained ponds, and rejects bad ones', () => {
     const wire = pondsWire([
       [42, 0.5, false],

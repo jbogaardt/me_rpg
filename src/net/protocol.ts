@@ -12,6 +12,7 @@
 //  - Both sides drop anything whose sequence number isn't newer than the last one seen.
 // Everything from the peer is untrusted input: parseMessage() validates the shape and ranges, never throws.
 
+import { validBarrelsWire } from '../systems/barrels';
 import { AIM_STEPS } from '../core/aim';
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
@@ -42,8 +43,9 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v38: `DmMsg.task` may carry the DM's own instructions for it (a note); `DmMsg.say` may be up to 240 letters.
  * v39: the guest's request to the DM, `InputMsg.rq`. v40: `rq` may carry words of the guest's own and `DmMsg.reply` the
  * DM's private answer; `DmMsg.task` may be a saga's step (a note '' and the saga's name and place in it).
+ * v41: `SnapMsg.barrels`, the barrels players have moved or are carrying.
  */
-export const PROTOCOL_VERSION = 40;
+export const PROTOCOL_VERSION = 41;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -178,6 +180,8 @@ export interface SnapMsg {
    * filling up again after running dry. Absent: every pond full.
    */
   ponds?: number[];
+  /** Barrels of that zone away from home (systems/barrels.ts `barrelsWire`: number, x, y, carried 0/1, flat). Absent: all at home. */
+  barrels?: number[];
   w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
   ground?: GroundSnap[];
@@ -717,7 +721,8 @@ export function parseMessage(raw: unknown): Message | null {
         !Array.isArray(m.crops) ||
         m.crops.length > MAX_CROPS ||
         !m.crops.every((c: unknown) => cropFromCode(c) !== null) ||
-        (m.ponds !== undefined && !isPonds(m.ponds))
+        (m.ponds !== undefined && !isPonds(m.ponds)) ||
+        (m.barrels !== undefined && !validBarrelsWire(m.barrels))
       ) {
         return null;
       }
@@ -732,6 +737,7 @@ export function parseMessage(raw: unknown): Message | null {
         chests: m.chests,
         crops: m.crops as number[],
         ...(m.ponds === undefined ? {} : { ponds: m.ponds as number[] }),
+        ...(m.barrels === undefined ? {} : { barrels: m.barrels as number[] }),
         w: m.w,
         ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
         events: events as EventWire[],
