@@ -48,7 +48,7 @@ describe('the docs', () => {
   it.each(docs.map(rel))('%s names only files and symbols that exist', (file) => {
     const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
     const gone: string[] = [];
-    for (const raw of new Set([...text.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]!.trim()))) {
+    for (const raw of new Set([...text.matchAll(/`([^`\n]+)`/g)].map((m) => m[1].trim()))) {
       if (/^[\w./-]+\.(ts|md|json|sh|yml|html|css)$/.test(raw)) {
         const exists =
           fs.existsSync(path.join(ROOT, raw)) ||
@@ -70,13 +70,10 @@ describe('the engine', () => {
   // Core engine code is written against registries and properties, never a content id (CLAUDE.md, "Where a feature
   // belongs"). The known leftover from campaign 1 is allow-listed; clear it when touched, don't add to it.
   const ALLOWED = new Set(['src/systems/skills.ts']);
-  const biomes = Object.keys(
-    (
-      JSON.parse(fs.readFileSync(path.join(ROOT, 'public/content/campaign1/biomes.json'), 'utf8')) as {
-        biomes?: Record<string, unknown>;
-      }
-    ).biomes ?? JSON.parse(fs.readFileSync(path.join(ROOT, 'public/content/campaign1/biomes.json'), 'utf8')),
-  ).filter((id) => /^[a-z]+$/.test(id));
+  const file = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/content/campaign1/biomes.json'), 'utf8')) as {
+    biomes?: Record<string, unknown>;
+  } & Record<string, unknown>;
+  const biomes = Object.keys(file.biomes ?? file).filter((id) => /^[a-z]+$/.test(id));
 
   it('has campaign 1 biome ids to look for', () => expect(biomes.length).toBeGreaterThan(5));
   it('names no campaign 1 biome in game code', () => {
