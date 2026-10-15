@@ -99,6 +99,7 @@ import { DmNarration } from './overworld/DmNarration';
 import { taskText, type TaskView } from '../systems/dmTasks';
 import { RELIC_KIND } from '../systems/dmQuests';
 import { VotePanel } from '../hud/VotePanel';
+import { RequestPanel } from '../hud/RequestPanel';
 import type { World } from '../content/world';
 import { particleEffect } from '../entities/ParticleEffect';
 import { floatText } from '../entities/effects';
@@ -164,6 +165,7 @@ export class OverworldScene implements Scene {
   private votePanel = new VotePanel();
   private dmBar = new DmBar();
   private dmCard = new DmCard();
+  private requests = new RequestPanel();
   private powers!: DmPowers;
   private prompts!: DmPrompts;
   private tasks!: DmTasks;
@@ -248,6 +250,7 @@ export class OverworldScene implements Scene {
     };
     this.desk = new DmDesk(arena, ui.session, content, this.dayClock);
     this.votePanel.onChoose = (i) => this.desk.castVote(i);
+    this.requests.onAsk = (i) => this.desk.ask(i);
     this.powers = new DmPowers(arena, this.sim);
     this.tasks = new DmTasks(arena, this.sim, this.desk);
     this.narration = new DmNarration(arena, ui.session, this.desk);
@@ -324,6 +327,8 @@ export class OverworldScene implements Scene {
         this.desk.say('Forget that task. New instructions will follow.');
       },
       questing: () => this.tasks.active,
+      waiting: () => this.prompts.waiting,
+      openInbox: () => this.prompts.openInbox(),
       smite: () => this.powers.smite(),
       freeze: () => this.powers.freeze(),
       stop: () => this.powers.toggleStop(),
@@ -387,6 +392,7 @@ export class OverworldScene implements Scene {
     document.body.classList.toggle('dm-possessing', this.possession.active); // no pop-ups while a foe is held
     if (this.possession.active && this.dmCard.open) this.dmCard.hide();
     this.dmBar.update(arena.local.dm, arena.clock, arena.timeStopped, this.possession.name, this.ui.touch.active);
+    this.requests.update(arena.role === 'client', this.desk.askWait);
     this.prompts.update(
       dt,
       this.ui.dialog.active || this.ui.menu.open || this.zones.transition.busy || this.possession.active,
@@ -415,6 +421,7 @@ export class OverworldScene implements Scene {
     if (click && free && !this.possession.active) this.possession.clickAt(click, this.ui.touch.active); // the DM clicks or taps a foe to possess it
     if (this.dmCard.open && menuPressed())
       this.dmCard.dismiss(); // Esc sends a card away first
+    else if (this.requests.open && menuPressed()) this.requests.close();
     else if (this.dmBar.speaking && menuPressed())
       this.dmBar.dismissSpeech(); // then the DM's words, which should never block the screen
     else if (this.possession.active && menuPressed())
@@ -596,7 +603,13 @@ export class OverworldScene implements Scene {
     }
     if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.guest.pressAction());
     if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);
-    this.guest.sendInput(dt, reading ? 0 : packKeys(cmd.dx, cmd.dy), cmd.aim, this.desk.voteInput);
+    this.guest.sendInput(
+      dt,
+      reading ? 0 : packKeys(cmd.dx, cmd.dy),
+      cmd.aim,
+      this.desk.voteInput,
+      this.desk.requestInput,
+    );
   }
 
   /** Switch to `role` (a friend connected or everyone dropped), setting the world up for it. */

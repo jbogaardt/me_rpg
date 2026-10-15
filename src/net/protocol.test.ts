@@ -447,6 +447,11 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
     const input = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
     expect(parseMessage(JSON.stringify({ ...input, vt: [2, 9] }))).toBeNull();
     expect(parseMessage(JSON.stringify({ ...input, vt: [2] }))).toBeNull();
+    // a friend's request to the DM: [counter, which], the counter above zero and the request one that exists
+    expect(parseMessage(JSON.stringify({ ...input, rq: [1, 2] }))).toMatchObject({ rq: [1, 2] });
+    expect(parseMessage(JSON.stringify({ ...input, rq: [0, 2] }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...input, rq: [1, 99] }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...input, rq: [1] }))).toBeNull();
   });
 });
 

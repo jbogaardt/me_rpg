@@ -14,6 +14,10 @@ export interface DmBarHandlers {
   note(text: string): boolean;
   /** Call the running quest off. */
   cancelQuest(): void;
+  /** What waits behind the Requests button: how many, and the oldest in words. */
+  waiting(): { count: number; first: string };
+  /** Open the oldest request or suggestion as a card. */
+  openInbox(): void;
   /** Is a quest of the DM's running (the Cancel and instructions buttons show only then)? */
   questing(): boolean;
   smite(): boolean;
@@ -63,6 +67,7 @@ export class DmBar {
       if (this.handlers?.note(this.input.value)) this.input.value = '';
     });
     this.speech.querySelector('.close')!.addEventListener('click', () => this.dismissSpeech());
+    power('inbox').addEventListener('click', () => this.handlers?.openInbox());
     power('release').addEventListener('click', () => this.handlers?.release());
     window.addEventListener('pointerdown', (e) => {
       if (!(e.target instanceof HTMLCanvasElement)) return;
@@ -117,7 +122,8 @@ export class DmBar {
       const story = this.handlers!.story();
       const fallen = this.handlers!.fallen();
       const questing = this.handlers!.questing();
-      const key = `${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen} ${touch} ${questing}`;
+      const waiting = this.handlers!.waiting();
+      const key = `${waiting.count}${waiting.first} ${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen} ${touch} ${questing}`;
       if (key !== this.shown) {
         this.shown = key;
         const set = (name: string, text: string, wait = 0, lit = false) => {
@@ -135,6 +141,10 @@ export class DmBar {
           0,
           w.stopped,
         );
+        const inbox = document.querySelector<HTMLButtonElement>('[data-power="inbox"]')!;
+        inbox.hidden = waiting.count === 0;
+        inbox.textContent = waiting.count > 1 ? `💬 Requests (${waiting.count})` : '💬 Request';
+        inbox.title = waiting.first;
         document.querySelector<HTMLElement>('[data-power="cancel"]')!.hidden = !questing;
         document.querySelector<HTMLElement>('[data-power="note"]')!.hidden = !questing;
         set('story', 'Story');

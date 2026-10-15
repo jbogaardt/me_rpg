@@ -36,6 +36,7 @@
         <!-- The map button shows in open-air zones (src/hud/MapOverlay.ts). -->
         <div id="inv-btn" role="button" aria-label="Inventory" data-key="KeyI">I</div>
         <div id="map-btn" role="button" aria-label="Map" data-key="KeyM" hidden>M</div>
+        <div id="req-btn" role="button" aria-label="Ask the Dungeon Master" title="Ask the Dungeon Master" hidden>💬</div>
         <div id="menu-btn" role="button" aria-label="Menu" data-key="Escape">☰</div>
       </div>
     </div>
@@ -68,10 +69,16 @@
     </div>
     <!-- The DM's hot buttons (src/hud/DmBar.ts): the big tools one tap away, where the Inventory and Attack buttons would do nothing. -->
     <div id="dm-hot" role="group" aria-label="Dungeon Master tools" hidden>
+      <button type="button" class="mp-btn panel thin wood" data-power="inbox" hidden>💬 Request</button>
       <button type="button" class="mp-btn panel thin wood" data-power="smite" title="Lightning on every foe here">⚡ Smite</button>
       <button type="button" class="mp-btn panel thin wood" data-power="freeze" title="Hold every foe here still">❄ Freeze</button>
       <button type="button" class="mp-btn panel thin wood" data-power="stop" title="Stop time">⏸ Stop time</button>
       <button type="button" class="mp-btn panel thin wood" data-power="reset" title="Foes back home at full health">↺ Reset zone</button>
+    </div>
+    <!-- A player's canned requests to the Dungeon Master (src/hud/RequestPanel.ts). -->
+    <div id="request" class="panel thin paper" role="group" aria-label="Ask the Dungeon Master" hidden>
+      <p class="title">Ask the Dungeon Master</p>
+      <div class="opts"></div>
     </div>
     <div id="dm-hold" class="panel thin wood" role="status" hidden></div>
     <!-- A choice offered to the Dungeon Master at the right moment (src/hud/DmCard.ts, scenes/overworld/DmPrompts.ts). -->

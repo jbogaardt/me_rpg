@@ -340,9 +340,15 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   await expect(host.locator('#dm-bar')).toBeVisible();
   await expect(host.locator('#dm-bar input')).toBeHidden(); // the tools are folded away: they would cover the action
 
-  // A card appears on its own (something to react to: a fallen friend, or "what now?" once it has been quiet), with a
-  // few buttons, and a click on the game sends it away (nobody hunts for a close button).
-  await expect(host.locator('#dm-card')).toBeVisible({ timeout: 90_000 });
+  // Nothing pops up: a suggestion (the director's, or a friend's request) waits behind a Requests button, and a click on
+  // the game sends the card it opens away (nobody hunts for a close button).
+  await friend.locator('#req-btn').click();
+  await friend.locator('#request [data-ask="0"]').click();
+  const inbox = host.locator('#dm-hot [data-power="inbox"]');
+  await expect(inbox).toBeVisible({ timeout: 30_000 });
+  await expect(host.locator('#dm-card')).toBeHidden();
+  await inbox.click();
+  await expect(host.locator('#dm-card')).toBeVisible();
   expect(await host.locator('#dm-card [data-opt]').count()).toBeGreaterThanOrEqual(2);
   await host.locator('canvas').click({ position: { x: 20, y: 20 } });
   await expect(host.locator('#dm-card')).toBeHidden();

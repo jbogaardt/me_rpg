@@ -1,6 +1,8 @@
 import type { CardOption, DmCard } from '../../hud/DmCard';
 import { PRESSURES, PRESSURE_LABEL, isPressure } from '../../systems/dmPowers';
 import { Director, type Suggestion } from '../../systems/dmDirector';
+import { Inbox, REQUESTS, describe } from '../../systems/dmRequests';
+import { playerName } from '../../systems/looks';
 import { classify } from '../../systems/dmTasks';
 import { QUESTS } from '../../systems/quests';
 import { PRECIPS, type Precip } from '../../systems/weather';
@@ -39,6 +41,10 @@ export type CardKind = Suggestion | 'task' | 'sky' | 'pressure';
 export class DmPrompts {
   private director = new Director();
   private twists = 0;
+  /** What is waiting for the DM, behind a button: the director's nudges and the players' requests (no popups). */
+  private inbox = new Inbox();
+  private seen = new Map<number, number>(); // the last request counter heard from each friend
+  private now = 0;
 
   constructor(
     private arena: Arena,
@@ -63,6 +69,9 @@ export class DmPrompts {
       if (this.card.open) this.card.hide();
       return;
     }
+    this.now += dt;
+    this.hear();
+    this.inbox.expire(this.now);
     this.card.update(dt);
     if (this.card.kind === 'story') this.card.refresh(this.storyOptions());
     const party = this.arena.party();
@@ -71,7 +80,7 @@ export class DmPrompts {
     const pace = this.tasks.pace;
     const result = this.tasks.result;
     const kind = this.director.tick(dt, {
-      busy: busy || this.card.open,
+      busy: busy || this.card.open || this.inbox.size > 0, // one thing waiting at a time: the DM catches up first
       fallen: this.revive.unoffered !== undefined,
       storyReady: this.storyReady(),
       task: t && {
@@ -87,7 +96,36 @@ export class DmPrompts {
       health: fracs.length ? { avg: fracs.reduce((a, b) => a + b, 0) / fracs.length, min: Math.min(...fracs) } : null,
       area: this.arena.view.name,
     });
-    if (kind) this.open(kind);
+    if (kind) this.inbox.add(kind, this.now); // it waits behind the Requests button: nothing pops up
+  }
+
+  /** Friends' requests that have come in since last looked (each friend's counter grows with each). */
+  private hear() {
+    if (this.arena.role !== 'host') return;
+    for (const [slot, id, code] of this.desk.requestsHeard()) {
+      if (this.seen.get(slot) === id) continue;
+      this.seen.set(slot, id);
+      const ask = REQUESTS[code];
+      if (ask) this.inbox.add(ask.kind, this.now, playerName(slot));
+    }
+  }
+
+  /** What waits for the DM: a count and the oldest in words, for the button. */
+  get waiting(): { count: number; first: string } {
+    const first = this.inbox.list[0];
+    return { count: this.inbox.size, first: first ? describe(first) : '' };
+  }
+
+  /** The DM taps Requests: the oldest suggestion becomes a card (one that no longer applies is skipped). */
+  openInbox() {
+    for (let item = this.inbox.take(); item; item = this.inbox.take()) {
+      this.open(item.kind);
+      if (this.card.open) {
+        if (item.from.length)
+          this.card.setNote(`${item.from.join(' & ')} asked: ${describe(item).split(': ')[1] ?? ''}.`);
+        return;
+      }
+    }
   }
 
   /** Is there a live story whose next step the DM may choose? */
@@ -106,6 +144,7 @@ export class DmPrompts {
   /** Put a card up now. */
   open(kind: CardKind, note = '') {
     if (!this.runsWorld) return;
+    if (kind !== 'task' && kind !== 'sky' && kind !== 'pressure') this.inbox.drop(kind); // asked for by hand: no longer waiting
     const show = (title: string, options: CardOption[], seconds: number | null = CARD_TIME, text = note) =>
       this.card.show({ kind, title, note: text, options, seconds });
     switch (kind) {
@@ -312,6 +351,8 @@ export class DmPrompts {
 
   reset() {
     this.director.reset();
+    this.inbox.clear();
+    this.seen.clear();
     this.card.hide();
   }
 }

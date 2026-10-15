@@ -131,16 +131,16 @@
 .bar.xp .fill { background-image: var(--grad-xp); }
 
 /* Square wooden buttons from the kit */
-.wood-btn, #menu-btn, #map-btn, #inv-btn, #btn-a, #menu .close, #shop .close, #trade .close {
+.wood-btn, #menu-btn, #map-btn, #inv-btn, #req-btn, #btn-a, #menu .close, #shop .close, #trade .close {
   background: url('./ui/button.png') center / 100% 100% no-repeat;
   color: var(--gold); font-family: var(--title); font-weight: 700; text-align: center;
   text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
-#menu-btn, #map-btn, #inv-btn, #menu .close, #shop .close, #trade .close { background-image: url('./ui/button-small.png'); }
-#menu-btn.pressed, #map-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #menu .close.pressed, #shop .close.pressed, #trade .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
+#menu-btn, #map-btn, #inv-btn, #req-btn, #menu .close, #shop .close, #trade .close { background-image: url('./ui/button-small.png'); }
+#menu-btn.pressed, #map-btn.pressed, #req-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #menu .close.pressed, #shop .close.pressed, #trade .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
 #hud-buttons { display: flex; gap: 6px; flex: none; }
-#menu-btn, #map-btn, #inv-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
+#menu-btn, #map-btn, #inv-btn, #req-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
 #map-btn[hidden] { display: none; }
 
 /* --- Co-op map (src/hud/MapOverlay.ts): never takes input, so the game stays playable behind it --- */
@@ -346,6 +346,18 @@ body.dm-ui #inv-btn { display: none; }
 body.dm-ui:not(.dm-possessing) #btn-a { display: none; }
 #dm-hot { position: fixed; z-index: 2; right: calc(12px + env(safe-area-inset-right)); top: 40%; transform: translateY(-50%); display: grid; gap: 6px; font-family: var(--body); }
 #dm-hot[hidden] { display: none; }
+#dm-hot [data-power="inbox"] { filter: brightness(1.35); outline: 2px solid #ffd34d; animation: nudge 1.6s ease-in-out infinite; }
+#dm-hot [hidden] { display: none; }
+@keyframes nudge { 50% { outline-color: transparent; } }
+#req-btn[hidden] { display: none; }
+#req-btn.waiting { opacity: 0.6; }
+#request { position: fixed; z-index: 4; right: calc(8px + env(safe-area-inset-right)); top: calc(64px + env(safe-area-inset-top)); width: min(260px, calc(100vw - 16px)); padding: 8px 12px 10px; box-sizing: border-box; font-family: var(--body); }
+#request[hidden] { display: none; }
+#request .title { margin: 0 0 6px; font: 700 16px var(--title); }
+#request .opts { display: grid; gap: 6px; }
+#request .mp-btn { width: 100%; text-align: left; padding: 6px 10px; }
+#request .mp-btn:disabled { opacity: 0.55; cursor: default; }
+body.touch-ui #request .mp-btn { min-height: 44px; }
 #dm-hot .mp-btn { padding: 6px 10px; font-size: 14px; white-space: nowrap; text-align: left; }
 #dm-hot .mp-btn:disabled { opacity: 0.55; cursor: default; }
 #dm-hot .mp-btn.on { filter: brightness(1.35); outline: 2px solid #ffd34d; }

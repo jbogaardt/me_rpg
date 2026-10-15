@@ -3,6 +3,7 @@ import type { DmMsg, VoteWire } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import { DIALS, enabled, type Dial } from '../../systems/capabilities';
 import type { DayClock } from '../../systems/daynight';
+import { REQUESTS, REQUEST_GAP } from '../../systems/dmRequests';
 import { cleanSay, sayTime } from '../../systems/dmPowers';
 import { taskFromWire, taskWire } from '../../systems/dmTasks';
 import { questDials } from '../../systems/quests';
@@ -63,6 +64,9 @@ export class DmDesk {
   private said: { id: number; text: string; left: number } | null = null;
   private saySeq = 0;
   private lastSay = 0;
+  private asked: [number, number] | undefined;
+  private askSeq = 0;
+  private askedAt = -Infinity;
   /** A friend heard the DM: the scene shows the words. */
   onSay: (text: string) => void = () => {};
 
@@ -238,11 +242,42 @@ export class DmDesk {
     return [this.mine.id, this.mine.index];
   }
 
+  /** Friend: ask the Dungeon Master for something (an index of `REQUESTS`). False while the last ask is still cooling down. */
+  ask(code: number): boolean {
+    if (this.arena.role !== 'client' || this.askWait > 0 || code < 0 || code >= REQUESTS.length) return false;
+    this.asked = [++this.askSeq, code];
+    this.askedAt = this.arena.clock;
+    return true;
+  }
+
+  /** Seconds before this friend may ask again. */
+  get askWait(): number {
+    return Math.max(0, Math.ceil(REQUEST_GAP - (this.arena.clock - this.askedAt)));
+  }
+
+  /** What rides in this friend's input: the latest request, [counter, which]. */
+  get requestInput(): [number, number] | undefined {
+    return this.asked;
+  }
+
+  /** Host: each friend's latest request as [slot, counter, which]; the caller keeps what it has already seen. */
+  requestsHeard(): [number, number, number][] {
+    const out: [number, number, number][] = [];
+    for (const slot of this.arena.remotes.keys()) {
+      const rq = this.session.peerInput(slot)?.rq;
+      if (rq) out.push([slot, rq[0], rq[1]]);
+    }
+    return out;
+  }
+
   /** Back to solo (or a new game): forget what the DM said; the clock and capabilities go back to the content's. */
   reset() {
     this.vote = null;
     this.told = null;
     this.mine = null;
+    this.asked = undefined;
+    this.askSeq = 0;
+    this.askedAt = -Infinity;
     this.dialSig = '';
     this.sentSig = '';
     this.said = null;

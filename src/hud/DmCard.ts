@@ -65,6 +65,12 @@ export class DmCard {
     this.root.hidden = false;
   }
 
+  /** Replace the card's line of explanation (who asked, say). */
+  setNote(text: string) {
+    this.note.textContent = text;
+    this.note.hidden = !text;
+  }
+
   /** Change the buttons (a tally moved) without restarting the card's time. */
   refresh(options: CardOption[]) {
     if (!this.spec) return;

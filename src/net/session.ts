@@ -89,6 +89,8 @@ export interface PeerInput {
   inv?: InputMsg['inv'];
   /** The friend's vote in the Dungeon Master's open vote (see InputMsg.vt), if any. */
   vt?: [number, number];
+  /** The friend's latest request to the Dungeon Master (see InputMsg.rq), if any. */
+  rq?: [number, number];
   /** False when nothing arrived recently: ignore `keys` (the counters stay valid). */
   fresh: boolean;
 }
@@ -364,7 +366,7 @@ export class Session {
   peerInput(slot: number, now = performance.now()): PeerInput | null {
     const last = this.inputs.get(slot);
     if (!last) return null;
-    const { keys, act, cb, ci, ack, vr, am, inv, vt } = last.msg;
+    const { keys, act, cb, ci, ack, vr, am, inv, vt, rq } = last.msg;
     return {
       keys,
       act,
@@ -375,6 +377,7 @@ export class Session {
       ...(am ? { am } : {}),
       ...(inv ? { inv } : {}),
       ...(vt ? { vt } : {}),
+      ...(rq ? { rq } : {}),
       fresh: now - last.at < INPUT_STALE_MS,
     };
   }
