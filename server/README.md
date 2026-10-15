@@ -12,6 +12,7 @@ npm ci                                                  # once (Playwright comes
 npx playwright install chromium                         # once, unless PW_CHROMIUM points at a Chromium already there
 npm run dm-bot                                          # the live site, a new live world (?campaign=live)
 DM_BOT_START=3 npm run dm-bot                           # begin by itself once 3 players are in
+DM_BOT_CLAUDE=1 npm run dm-bot                            # reply, narrate and invent people with headless Claude Code (your login, no key)
 npm run dm-bot -- 'https://jbogaardt.github.io/me_rpg/?campaign=live&seed=42'   # a world of your choosing
 ```
 
@@ -41,6 +42,10 @@ different version away), so point it at the site they use. Against a local build
 - `conjure.ts` makes people: on arriving somewhere new (at most 6 a game, 2 minutes apart) a `Conjurer` invents a
   stranger (name, a look from the world's people, up to 4 short lines) and the page's `spawn` sets them near the party.
   The mock conjurer has a few stock characters; the page refuses anything the world's checks refuse.
+- `claude.ts` is the creative tier through a headless Claude Code session (`DM_BOT_CLAUDE=1`): `claude -p` on a small model,
+  no tools, nothing saved, run from an empty folder, so a machine already logged in to Claude Code needs no API key. It
+  words replies, narration and new people; each answer is checked like the mocks' (a person's name, look and lines), and
+  any failure or timeout (30 s) falls back to the mock. Player words go in as quoted data, never as instructions.
 - The DM's voice (`PERSONA` in `narrate.ts`) is a gentle wizard: warm, dry, cryptic, never an alert. The mock lines speak
   in it; a creative model is given it as its system prompt.
 - `router.ts` answers a card (`decideCard`): a fast router answers one choice question over the card's options (plus

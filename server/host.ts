@@ -7,20 +7,24 @@
 //   npm run dm-bot -- 'http://localhost:4173/?campaign=live&seed=7'
 //
 // Env: PW_CHROMIUM (a local Chromium), DM_BOT_HEADED=1 to watch, DM_BOT_START=n to begin once n players are in,
-// TYPESAFE_API_KEY to route with Jev (jev.ts; without it a mock decides).
+// TYPESAFE_API_KEY to route with Jev (jev.ts; without it a mock decides), DM_BOT_CLAUDE=1 to word replies, narration
+// and new people with a headless Claude Code session (claude.ts; your own login, no key).
 // Type `help` in the terminal for the operator's commands.
 
 import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
 import { JevRouter } from './jev';
 import { MockFallback, MockRouter } from './mocks';
-import { MockConjurer, shouldConjure } from './conjure';
-import { MockNarrator, beatFor, type Memory } from './narrate';
+import { ClaudeConjurer, ClaudeFallback, ClaudeNarrator } from './claude';
+import { MockConjurer, shouldConjure, type Conjurer } from './conjure';
+import { MockNarrator, beatFor, type Memory, type Narrator } from './narrate';
 import { decideCard, type Card, type Move } from './router';
 import { SETTLE_MS, nextStep, type Clock, type PageState } from './turn';
 
 const DEFAULT_URL = 'https://jbogaardt.github.io/me_rpg/?campaign=live';
 const TICK_MS = 1500;
+/** The creative tier through a headless Claude Code session (claude.ts) instead of the mocks. */
+const CLAUDE = Boolean(process.env.DM_BOT_CLAUDE);
 
 /** The page's bot handle (DmBot.ts's DmBotApi), as far as this script calls it. */
 interface PageBot {
@@ -59,15 +63,15 @@ class Dm {
   /** The card last answered: met again unchanged, the answer did nothing, so it is sent away. */
   private answered = '';
   private latest: PageState | null = null;
-  private narrator = new MockNarrator();
-  private conjurer = new MockConjurer();
+  private narrator: Narrator = CLAUDE ? new ClaudeNarrator() : new MockNarrator();
+  private conjurer: Conjurer = CLAUDE ? new ClaudeConjurer() : new MockConjurer();
   /** People made so far, and when the last was (ms). */
   private made = 0;
   private lastMade = -Infinity;
   private memory: Memory = { prev: null, spoke: 0 };
   private services = {
     router: process.env.TYPESAFE_API_KEY ? new JevRouter() : new MockRouter(() => this.latest?.story?.options ?? []),
-    fallback: new MockFallback(),
+    fallback: CLAUDE ? new ClaudeFallback() : new MockFallback(),
   };
 
   constructor(
@@ -249,6 +253,7 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 960, height: 640 } });
   page.on('pageerror', (err) => log('page error:', err.message));
 
+  log(CLAUDE ? 'wording with headless Claude Code' : 'wording with stock lines (DM_BOT_CLAUDE=1 for Claude)');
   log(process.env.TYPESAFE_API_KEY ? 'deciding with Jev' : 'no TYPESAFE_API_KEY: deciding with the mock router');
   log('opening', url);
   await page.goto(url);

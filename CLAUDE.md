@@ -31,7 +31,7 @@ Every feature lives in one of these layers; say which in the owning file's desig
 - `npm run test:e2e` — Playwright smoke tests against the production build (set `PW_CHROMIUM` to a local Chromium, e.g. `/opt/pw-browsers/chromium-*/chrome-linux/chrome` in cloud sessions)
 - `npm run typecheck` — typecheck only (game, `tools/`, `e2e/`, `relay/`)
 - `npm run relay` — the matchmaking relay in memory on `http://localhost:8787` (use with `VITE_RELAY_URL=http://localhost:8787 npm run dev` to try online play locally)
-- `npm run dm-bot -- [url]` — the autonomous Dungeon Master: hosts a game of the page headless, prints its code and runs the DM's whole job (`server/README.md`; Jev routes with `TYPESAFE_API_KEY`, the creative fallback is still a mock)
+- `npm run dm-bot -- [url]` — the autonomous Dungeon Master: hosts a game of the page headless, prints its code and runs the DM's whole job (`server/README.md`; Jev routes with `TYPESAFE_API_KEY`, the creative tier is a mock, or headless Claude Code with `DM_BOT_CLAUDE=1`)
 - `npm run map -- build|check|render|layout …` — zone specs → map JSON + previews + checks; `layout <biome>` prints a biome's walls, gaps and open ground (see `tools/map/CLAUDE.md`)
 - `npm run sprites -- build|check|preview …` — LPC part catalog → packed layer sheets (see `src/sprites/CLAUDE.md`). `build` needs a clone of the LPC generator (`LPC_DIR`); `check` (run by `verify` and `build`) does not
 
