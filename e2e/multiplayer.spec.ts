@@ -9,6 +9,16 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 // They also run one after another rather than in parallel: the four-player test alone keeps five of these pages busy.
 test.describe.configure({ mode: 'default', timeout: 120_000 });
 
+/** A phone: a narrow touch screen, so the on-screen pad and buttons show and the DM's tools lay out for a thumb. */
+async function openPhone(browser: Browser, url: string): Promise<Page> {
+  const page = await (
+    await browser.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true })
+  ).newPage();
+  await page.goto(url);
+  await expect(page.locator('#loading')).toBeHidden({ timeout: 90_000 });
+  return page;
+}
+
 async function open(browser: Browser, url: string): Promise<Page> {
   const page = await (await browser.newContext({ viewport: { width: 640, height: 480 } })).newPage();
   await page.goto(url);
@@ -365,6 +375,63 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   await host.locator('#dm-bar [data-power="pressure"]').click();
   await host.locator('#dm-card [data-opt="fierce"]').click();
   await expect(host.locator('#dm-bar [data-power="pressure"]')).toHaveText('Pressure: Turn it up');
+});
+
+test('the Dungeon Master can run the game from a phone: folded tools, thumb-sized cards, clear of the pad', async ({
+  browser,
+}) => {
+  test.setTimeout(240_000);
+  const world = '/?campaign=live&seed=4';
+  const host = await openPhone(browser, world);
+  const code = await createGame(host);
+  const friend = await open(browser, world);
+  await joinWithCode(friend, code);
+  await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 2', { timeout: 30_000 });
+  await host.locator('#mp-start').click();
+  // A physical key (the menu was opened with one) hides the touch controls; a touch brings them back.
+  await host.touchscreen.tap(195, 400);
+  await expect(host.locator('#touch-controls')).toBeVisible();
+  await expect(host.locator('body')).toHaveClass(/touch-ui/);
+
+  // The tools start folded away so the screen stays clear; the handle opens them.
+  const bar = host.locator('#dm-bar');
+  await expect(bar).toBeVisible();
+  await expect(bar.locator('[data-power="smite"]')).toBeHidden();
+  await bar.locator('.handle').tap();
+  await expect(bar.locator('[data-power="smite"]')).toBeVisible();
+  await expect(bar.locator('.hint')).toHaveText('Tap a foe to possess it.');
+  await expect(bar.locator('[data-power="stop"]')).toHaveText('Stop time'); // no key to name on a phone
+
+  // The bar and the pad never cover each other.
+  const overlaps = async (a: string, b: string) =>
+    host.evaluate(
+      ([x, y]) => {
+        const r = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+        const [p, q] = [r(x!), r(y!)];
+        return p.left < q.right && p.right > q.left && p.top < q.bottom && p.bottom > q.top;
+      },
+      [a, b],
+    );
+  expect(await overlaps('#dm-bar', '#dpad')).toBe(false);
+  expect(await overlaps('#dm-bar', '#buttons')).toBe(false);
+
+  // Time stops from a button (there is no T on a phone), and the friend is told.
+  await bar.locator('[data-power="stop"]').tap();
+  await expect(host.locator('#dm-hold')).toContainText('Tap Resume time');
+  await expect(friend.locator('#dm-hold')).toBeVisible({ timeout: 15_000 });
+  await bar.locator('[data-power="stop"]').tap();
+  await expect(friend.locator('#dm-hold')).toBeHidden({ timeout: 15_000 });
+
+  // A card is large enough for a thumb, clear of the pad, and the pick works: the friend sees the task.
+  await bar.locator('[data-power="task"]').tap();
+  const card = host.locator('#dm-card');
+  await expect(card).toBeVisible();
+  expect(await overlaps('#dm-card', '#dpad')).toBe(false);
+  expect(await overlaps('#dm-card', '#buttons')).toBe(false);
+  const height = await card.locator('[data-opt="hunt"]').evaluate((b) => b.getBoundingClientRect().height);
+  expect(height).toBeGreaterThanOrEqual(44);
+  await card.locator('[data-opt="hunt"]').tap();
+  await expect(friend.locator('#quest-tracker')).toContainText('hunt here', { timeout: 15_000 });
 });
 
 test('a host picks a story in the lobby and a friend joins with only the code, landing in the same world', async ({

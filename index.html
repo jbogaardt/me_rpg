@@ -45,18 +45,24 @@
     <div id="vote" class="panel thin wood" hidden><p class="title">The Dungeon Master asks: where next?</p><div class="opts"></div></div>
     <!-- The Dungeon Master's bar (src/hud/DmBar.ts): speak, Smite, Freeze; and what the DM said, shown to everyone. -->
     <div id="dm-bar" class="panel thin wood" hidden>
-      <form autocomplete="off"><input type="text" placeholder="Speak to the party…" aria-label="Speak to the party" /><button type="submit" class="mp-btn panel thin wood">Speak</button></form>
-      <p class="hint"></p>
-      <div class="powers">
-        <button type="button" class="mp-btn panel thin wood" data-power="stop">Stop time</button>
-        <button type="button" class="mp-btn panel thin wood" data-power="smite">Smite</button>
-        <button type="button" class="mp-btn panel thin wood" data-power="freeze">Freeze</button>
-        <button type="button" class="mp-btn panel thin wood" data-power="reset">Reset zone</button>
-        <button type="button" class="mp-btn panel thin wood" data-power="revive" hidden>Raise</button>
-        <button type="button" class="mp-btn panel thin wood" data-power="task">Call a task</button>
-        <button type="button" class="mp-btn panel thin wood" data-power="story" hidden>Story</button>
-        <button type="button" class="mp-btn panel thin wood" data-power="sky">Sky</button>
-        <button type="button" class="mp-btn panel thin wood" data-power="pressure">Pressure</button>
+      <button type="button" class="handle" aria-expanded="true">DM tools</button>
+      <div class="tools">
+        <form autocomplete="off"><input type="text" placeholder="Speak to the party…" aria-label="Speak to the party" enterkeyhint="send" /><button type="submit" class="mp-btn panel thin wood">Speak</button></form>
+        <div class="row">
+          <p class="hint"></p>
+          <button type="button" class="mp-btn panel thin wood" data-power="release" hidden>Let go</button>
+        </div>
+        <div class="powers">
+          <button type="button" class="mp-btn panel thin wood" data-power="stop">Stop time</button>
+          <button type="button" class="mp-btn panel thin wood" data-power="smite">Smite</button>
+          <button type="button" class="mp-btn panel thin wood" data-power="freeze">Freeze</button>
+          <button type="button" class="mp-btn panel thin wood" data-power="reset">Reset zone</button>
+          <button type="button" class="mp-btn panel thin wood" data-power="revive" hidden>Raise</button>
+          <button type="button" class="mp-btn panel thin wood" data-power="task">Call a task</button>
+          <button type="button" class="mp-btn panel thin wood" data-power="story" hidden>Story</button>
+          <button type="button" class="mp-btn panel thin wood" data-power="sky">Sky</button>
+          <button type="button" class="mp-btn panel thin wood" data-power="pressure">Pressure</button>
+        </div>
       </div>
     </div>
     <div id="dm-speech" class="panel thin paper" role="status" hidden></div>

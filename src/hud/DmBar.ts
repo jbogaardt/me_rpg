@@ -16,6 +16,8 @@ export interface DmBarHandlers {
   card(kind: 'story' | 'sky' | 'pressure' | 'task' | 'revive'): void;
   /** How many fallen players could be raised (the Raise button shows only then). */
   fallen(): number;
+  /** Let go of the foe being possessed (the Let go button: a phone has no Esc). */
+  release(): void;
   /** Is there a live story to steer (the Story button shows only then)? */
   story(): boolean;
   waits(): { smite: number; freeze: number; reset: number; stopped: boolean; pressure: Pressure };
@@ -31,6 +33,10 @@ export class DmBar {
   private handlers: DmBarHandlers | null = null;
   private hideAt = 0;
   private shown = '';
+  private handle = this.bar.querySelector<HTMLButtonElement>('.handle')!;
+  /** On a phone the tools start folded away (the screen is small, and the D-pad needs room); the handle opens them. */
+  private open = true;
+  private sawTouch = false;
 
   constructor() {
     this.input.maxLength = MAX_SAY;
@@ -43,6 +49,11 @@ export class DmBar {
     power('freeze').addEventListener('click', () => this.handlers?.freeze());
     power('stop').addEventListener('click', () => this.handlers?.stop());
     power('reset').addEventListener('click', () => this.handlers?.reset());
+    power('release').addEventListener('click', () => this.handlers?.release());
+    this.handle.addEventListener('click', () => {
+      this.open = !this.open;
+      this.shown = ''; // draw again
+    });
     power('revive').addEventListener('click', () => this.handlers?.card('revive'));
     power('task').addEventListener('click', () => this.handlers?.card('task'));
     power('story').addEventListener('click', () => this.handlers?.card('story'));
@@ -56,22 +67,35 @@ export class DmBar {
   }
 
   /** Each frame: the bar for a DM (with each power's wait), the stopped-time notice for all, the speech fading. */
-  update(dm: boolean, now: number, stopped: boolean, possessing = '') {
+  update(dm: boolean, now: number, stopped: boolean, possessing = '', touch = false) {
     this.bar.hidden = !dm || !this.handlers;
+    if (touch && !this.sawTouch) this.open = false; // first time on a phone: folded away
+    this.sawTouch = touch;
+    const folded = touch && !this.open;
+    this.bar.classList.toggle('folded', folded);
+    this.bar.classList.toggle('holding', possessing !== ''); // a folded bar still shows the way out while a foe is held
+    this.handle.setAttribute('aria-expanded', String(!folded));
     this.hold.hidden = !stopped;
     this.hint.hidden = !dm || !this.handlers;
     const possess = possessing
-      ? `You are the ${possessing}. Move and strike as it would. Esc lets go.`
-      : 'Click a foe to possess it.';
+      ? touch
+        ? `You are the ${possessing}. The pad moves it, A strikes.`
+        : `You are the ${possessing}. Move and strike as it would. Esc lets go.`
+      : touch
+        ? 'Tap a foe to possess it.'
+        : 'Click a foe to possess it.';
+    this.bar.querySelector<HTMLElement>('[data-power="release"]')!.hidden = !possessing;
     if (this.hint.textContent !== possess) this.hint.textContent = possess;
     this.hold.textContent = dm
-      ? `Time is stopped. Press ${FIXED_KEYS.stop.map(codeLabel).join(' / ')} to carry on.`
+      ? touch
+        ? 'Time is stopped. Tap Resume time to carry on.'
+        : `Time is stopped. Press ${FIXED_KEYS.stop.map(codeLabel).join(' / ')} to carry on.`
       : 'The Dungeon Master has stopped time.';
     if (!this.bar.hidden) {
       const w = this.handlers!.waits();
       const story = this.handlers!.story();
       const fallen = this.handlers!.fallen();
-      const key = `${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen}`;
+      const key = `${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen} ${touch}`;
       if (key !== this.shown) {
         this.shown = key;
         const set = (name: string, text: string, wait = 0, lit = false) => {
@@ -83,7 +107,12 @@ export class DmBar {
         set('smite', 'Smite', w.smite);
         set('freeze', 'Freeze', w.freeze);
         set('reset', 'Reset zone', w.reset);
-        set('stop', w.stopped ? 'Resume time' : `Stop time [${codeLabel(FIXED_KEYS.stop[0])}]`, 0, w.stopped);
+        set(
+          'stop',
+          w.stopped ? 'Resume time' : touch ? 'Stop time' : `Stop time [${codeLabel(FIXED_KEYS.stop[0])}]`,
+          0,
+          w.stopped,
+        );
         set('story', 'Story');
         this.bar.querySelector<HTMLElement>('[data-power="revive"]')!.hidden = fallen === 0;
         set('revive', fallen > 1 ? `Raise (${fallen})` : 'Raise');

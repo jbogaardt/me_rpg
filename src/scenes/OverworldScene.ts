@@ -317,6 +317,7 @@ export class OverworldScene implements Scene {
       card: (kind) => this.prompts.open(kind),
       story: () => this.prompts.hasStory,
       fallen: () => this.revive.fallen.length,
+      release: () => this.possession.release(),
       waits: () => this.powers.view(),
     });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
@@ -366,7 +367,8 @@ export class OverworldScene implements Scene {
     this.revive.update(dt);
     this.narration.update(dt);
     if (arena.local.dm && !this.ui.dialog.active && !this.ui.menu.open && stopPressed()) this.powers.toggleStop();
-    this.dmBar.update(arena.local.dm, arena.clock, arena.timeStopped, this.possession.name);
+    document.body.classList.toggle('touch-ui', this.ui.touch.active); // the DM's bar and cards lay out for a phone
+    this.dmBar.update(arena.local.dm, arena.clock, arena.timeStopped, this.possession.name, this.ui.touch.active);
     this.prompts.update(dt, this.ui.dialog.active || this.ui.menu.open || this.zones.transition.busy);
     const online = arena.role !== 'solo';
     // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
@@ -388,7 +390,7 @@ export class OverworldScene implements Scene {
     this.possession.update();
     const click = clickedAt();
     const free = !menu.open && !shop.open && !trade.open && !dialog.active && !this.zones.transition.busy;
-    if (click && free && !this.possession.active) this.possession.clickAt(click); // the DM clicks a foe to possess it
+    if (click && free && !this.possession.active) this.possession.clickAt(click, this.ui.touch.active); // the DM clicks or taps a foe to possess it
     if (this.possession.active && menuPressed())
       this.possession.release(); // Esc lets go instead of opening the menu
     else if (!dialog.active && menuPressed()) {

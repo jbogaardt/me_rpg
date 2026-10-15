@@ -38,8 +38,9 @@ export const menuPressed = () => input.wasPressed(...FIXED_KEYS.menu);
 /** The map key (M, or the M button) went down this frame. */
 export const mapPressed = () => input.wasPressed(...FIXED_KEYS.map);
 
-/** Where the mouse was clicked (CSS px, over the game) this frame, or null: the DM clicks a foe to possess it. */
-export const clickedAt = (): { x: number; y: number } | null => (input.wasHit('Mouse0') ? input.pointer() : null);
+/** Where the game was clicked or tapped (CSS px) this frame, or null: the DM clicks or taps a foe to possess it. */
+export const clickedAt = (): { x: number; y: number } | null =>
+  input.wasHit('Mouse0') ? input.pointer() : input.tap();
 
 /** The Dungeon Master's stop-time key (T) went down this frame. */
 export const stopPressed = () => input.wasPressed(...FIXED_KEYS.stop);

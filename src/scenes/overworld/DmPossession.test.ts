@@ -58,6 +58,12 @@ describe('possessing a foe', () => {
     expect(dmBody.x).toBe(130);
   });
 
+  it('lets a finger be a little off: a tap that would miss a click still takes the foe', () => {
+    const off = { x: onNear.x + 70, y: onNear.y }; // 35 px away in the world: outside a click's reach, inside a finger's
+    expect(game().p.clickAt(off)).toBe(false);
+    expect(game().p.clickAt(off, true)).toBe(true);
+  });
+
   it('hands the DM’s keys to the foe, and nothing while a menu has them', () => {
     const { p, mobs } = game();
     p.clickAt(onNear);

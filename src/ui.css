@@ -318,6 +318,24 @@
 #dm-bar .mp-btn:disabled { opacity: 0.55; cursor: default; }
 #dm-bar .mp-btn.on { filter: brightness(1.35); outline: 2px solid #ffd34d; }
 #dm-bar [data-power="smite"] { color: #ffd34d; }
+#dm-bar .handle { display: none; margin: 0; padding: 6px 12px; font: 700 15px var(--title); color: #ffe9a8; background: none; border: 0; text-align: left; cursor: pointer; }
+#dm-bar .handle::after { content: ' ▾'; }
+#dm-bar.folded .handle::after { content: ' ▸'; }
+#dm-bar .row { display: flex; align-items: center; gap: 8px; }
+#dm-bar .row .hint { flex: 1 1 auto; }
+/* On a phone the bar goes to the top (the pad and buttons own the bottom), folds away until the handle opens it, and every button is a thumb's size. */
+body.touch-ui #dm-bar { top: calc(60px + env(safe-area-inset-top)); bottom: auto; left: 8px; right: 8px; transform: none; width: auto; max-height: 55vh; overflow-y: auto; }
+body.touch-ui #dm-bar .handle { display: block; }
+body.touch-ui #dm-bar.folded { right: auto; width: max-content; }
+body.touch-ui #dm-bar.folded .tools { display: none; }
+body.touch-ui #dm-bar.folded.holding .tools { display: block; }
+body.touch-ui #dm-bar.folded.holding .tools > :not(.row) { display: none; }
+body.touch-ui #dm-bar .mp-btn { min-height: 40px; padding: 6px 12px; font-size: 15px; }
+body.touch-ui #dm-card { bottom: auto; top: calc(110px + env(safe-area-inset-top)); }
+body.touch-ui #dm-card .mp-btn { min-height: 44px; padding: 10px 12px; font-size: 16px; }
+body.touch-ui #dm-card .close { width: 44px; height: 44px; top: 0; right: 0; }
+body.touch-ui #dm-hold { top: auto; bottom: 42%; }
+body.touch-ui #hud-dm { max-width: calc(100vw - 170px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #dm-speech { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: 18%; max-width: min(520px, calc(100vw - 32px)); padding: 8px 14px; text-align: center; font: 600 18px/1.3 var(--body); color: var(--ink); pointer-events: none; }
 #dm-speech[hidden] { display: none; }
 #dm-speech::before { content: 'The Dungeon Master speaks'; display: block; font: 700 12px var(--title); color: #7c230f; letter-spacing: 0.06em; text-transform: uppercase; }

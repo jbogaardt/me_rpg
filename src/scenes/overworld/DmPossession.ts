@@ -6,6 +6,8 @@ import type { ZoneState } from '../ZoneState';
 
 /** How close (px, at a foe's size) a click must land to its body to take it. */
 const GRAB = 28;
+/** A finger is blunter than a pointer: the same reach, this many times over. */
+const FINGER = 1.7;
 
 /**
  * The Dungeon Master possesses a foe: click one and its mind is theirs (move, strike; the party meets a real foe, its
@@ -30,8 +32,8 @@ export class DmPossession {
     return this.mob?.kind.name ?? '';
   }
 
-  /** The DM clicked at `screen` (CSS px): take the foe under it, if there is one. */
-  clickAt(screen: { x: number; y: number }): boolean {
+  /** The DM clicked (or, with `finger`, tapped) at `screen` (CSS px): take the foe under it, if there is one. */
+  clickAt(screen: { x: number; y: number }, finger = false): boolean {
     const { arena } = this;
     if (this.mob || arena.role !== 'host' || !arena.local.dm) return false;
     const zone = arena.view;
@@ -45,7 +47,7 @@ export class DmPossession {
         if (!m.alive) continue;
         const size = m.body.size;
         const d = Math.hypot(wx - m.body.x, wy - (m.body.y - 20 * size));
-        if (d < GRAB * size && d < bestDist) [best, bestDist] = [m, d];
+        if (d < GRAB * (finger ? FINGER : 1) * size && d < bestDist) [best, bestDist] = [m, d];
       }
     });
     if (!best) return false;
