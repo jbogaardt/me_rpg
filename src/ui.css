@@ -330,7 +330,8 @@ body.touch-ui #dm-bar { top: calc(60px + env(safe-area-inset-top)); bottom: auto
 #dm-bar.folded.holding .tools > :not(.row) { display: none; }
 body.touch-ui #dm-bar.folded { right: auto; }
 body.touch-ui #dm-bar .mp-btn { min-height: 40px; padding: 6px 12px; font-size: 15px; }
-body.touch-ui #dm-card { bottom: auto; top: calc(110px + env(safe-area-inset-top)); }
+/* From under the bar down to the pad (140px high, 18px up): a long card (an epic's choices) scrolls instead of covering the pad. */
+body.touch-ui #dm-card { bottom: auto; top: calc(110px + env(safe-area-inset-top)); max-height: calc(100dvh - 290px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; }
 body.touch-ui #dm-card .mp-btn { min-height: 44px; padding: 10px 12px; font-size: 16px; }
 body.touch-ui #dm-card .close { width: 44px; height: 44px; top: 0; right: 0; }
 body.touch-ui #dm-hold { top: auto; bottom: 42%; }
