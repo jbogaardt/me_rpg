@@ -409,6 +409,12 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
       expect(parseMessage(JSON.stringify({ ...dm, say }))).toBeNull();
   });
 
+  it('round-trips stopped time and refuses a hold that is not 1', () => {
+    const held = { ...dm, hold: 1 as const };
+    expect(parseMessage(encodeMessage(held))).toEqual(held);
+    for (const hold of [0, 2, true, 'yes']) expect(parseMessage(JSON.stringify({ ...dm, hold }))).toBeNull();
+  });
+
   it('refuses a dial that is not one, a tally that does not match, or a vote for a choice that is not there', () => {
     const bad = [
       { ...dm, dials: { coop: false } },

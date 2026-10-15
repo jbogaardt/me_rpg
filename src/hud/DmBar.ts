@@ -1,23 +1,30 @@
-// The Dungeon Master's bar: one line to speak to the party, and the two big buttons (Smite, Freeze). Also where the
-// words a DM speaks appear, for everyone. Built once from index.html (`#dm-bar`, `#dm-speech`); textContent only.
+// The Dungeon Master's bar, always in reach like the player's [I] menu: one line to speak to the party, and the few
+// big things a DM does (Stop time [T], Smite, Freeze, Reset zone, the Sky, the Pressure). Also where the words a DM
+// speaks appear, for everyone, and the "time is stopped" notice. Built once from index.html (`#dm-bar`, `#dm-speech`,
+// `#dm-hold`); textContent only.
 
-import { MAX_SAY, SAY_SHOW } from '../systems/dmPowers';
+import { codeLabel, FIXED_KEYS } from '../core/bindings';
+import { MAX_SAY, PRESSURE_LABEL, SAY_SHOW, type Pressure } from '../systems/dmPowers';
 
 export interface DmBarHandlers {
   say(text: string): boolean;
   smite(): boolean;
   freeze(): boolean;
-  /** Seconds each power still has to wait (0: ready). */
-  waits(): { smite: number; freeze: number };
+  stop(): boolean;
+  reset(): boolean;
+  /** Open the card for the sky (weather, time of day) or the pressure now, rather than waiting for the moment. */
+  card(kind: 'story' | 'sky' | 'pressure'): void;
+  /** Is there a live story to steer (the Story button shows only then)? */
+  story(): boolean;
+  waits(): { smite: number; freeze: number; reset: number; stopped: boolean; pressure: Pressure };
 }
 
 export class DmBar {
   private bar = document.getElementById('dm-bar')!;
   private form = this.bar.querySelector('form')!;
   private input = this.bar.querySelector('input')!;
-  private smiteBtn = this.bar.querySelector<HTMLButtonElement>('[data-power="smite"]')!;
-  private freezeBtn = this.bar.querySelector<HTMLButtonElement>('[data-power="freeze"]')!;
   private speech = document.getElementById('dm-speech')!;
+  private hold = document.getElementById('dm-hold')!;
   private handlers: DmBarHandlers | null = null;
   private hideAt = 0;
   private shown = '';
@@ -28,8 +35,14 @@ export class DmBar {
       e.preventDefault();
       if (this.handlers?.say(this.input.value)) this.input.value = '';
     });
-    this.smiteBtn.addEventListener('click', () => this.handlers?.smite());
-    this.freezeBtn.addEventListener('click', () => this.handlers?.freeze());
+    const power = (name: string) => this.bar.querySelector<HTMLButtonElement>(`[data-power="${name}"]`)!;
+    power('smite').addEventListener('click', () => this.handlers?.smite());
+    power('freeze').addEventListener('click', () => this.handlers?.freeze());
+    power('stop').addEventListener('click', () => this.handlers?.stop());
+    power('reset').addEventListener('click', () => this.handlers?.reset());
+    power('story').addEventListener('click', () => this.handlers?.card('story'));
+    power('sky').addEventListener('click', () => this.handlers?.card('sky'));
+    power('pressure').addEventListener('click', () => this.handlers?.card('pressure'));
   }
 
   attach(handlers: DmBarHandlers | null) {
@@ -37,16 +50,33 @@ export class DmBar {
     if (!handlers) this.bar.hidden = true;
   }
 
-  /** Each frame: show the bar to a DM, with each power's wait; fade the speech when its time is up. */
-  update(dm: boolean, now: number) {
+  /** Each frame: the bar for a DM (with each power's wait), the stopped-time notice for all, the speech fading. */
+  update(dm: boolean, now: number, stopped: boolean) {
     this.bar.hidden = !dm || !this.handlers;
+    this.hold.hidden = !stopped;
+    this.hold.textContent = dm
+      ? `Time is stopped. Press ${FIXED_KEYS.stop.map(codeLabel).join(' / ')} to carry on.`
+      : 'The Dungeon Master has stopped time.';
     if (!this.bar.hidden) {
       const w = this.handlers!.waits();
-      const key = `${w.smite} ${w.freeze}`;
+      const story = this.handlers!.story();
+      const key = `${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story}`;
       if (key !== this.shown) {
         this.shown = key;
-        this.label(this.smiteBtn, 'Smite', w.smite);
-        this.label(this.freezeBtn, 'Freeze', w.freeze);
+        const set = (name: string, text: string, wait = 0, lit = false) => {
+          const b = this.bar.querySelector<HTMLButtonElement>(`[data-power="${name}"]`)!;
+          b.disabled = wait > 0;
+          b.textContent = wait > 0 ? `${text} (${wait})` : text;
+          b.classList.toggle('on', lit);
+        };
+        set('smite', 'Smite', w.smite);
+        set('freeze', 'Freeze', w.freeze);
+        set('reset', 'Reset zone', w.reset);
+        set('stop', w.stopped ? 'Resume time' : `Stop time [${codeLabel(FIXED_KEYS.stop[0])}]`, 0, w.stopped);
+        set('story', 'Story');
+        this.bar.querySelector<HTMLElement>('[data-power="story"]')!.hidden = !story;
+        set('sky', 'Sky');
+        set('pressure', `Pressure: ${PRESSURE_LABEL[w.pressure]}`);
       }
     }
     if (!this.speech.hidden && now >= this.hideAt) this.speech.hidden = true;
@@ -57,10 +87,5 @@ export class DmBar {
     this.speech.textContent = text;
     this.speech.hidden = false;
     this.hideAt = now + SAY_SHOW;
-  }
-
-  private label(b: HTMLButtonElement, name: string, wait: number) {
-    b.disabled = wait > 0;
-    b.textContent = wait > 0 ? `${name} (${wait})` : name;
   }
 }

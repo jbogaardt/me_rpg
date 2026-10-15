@@ -38,6 +38,9 @@ export const menuPressed = () => input.wasPressed(...FIXED_KEYS.menu);
 /** The map key (M, or the M button) went down this frame. */
 export const mapPressed = () => input.wasPressed(...FIXED_KEYS.map);
 
+/** The Dungeon Master's stop-time key (T) went down this frame. */
+export const stopPressed = () => input.wasPressed(...FIXED_KEYS.stop);
+
 /**
  * -1 / +1 when the player pressed left / right: the move keys, as they are bound, and the D-pad. In an open menu or shop
  * counter these flip the tabs, so there is one idea of "left" and "right" everywhere.

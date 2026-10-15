@@ -1,24 +1,41 @@
 import type { Mob } from '../../entities/Mob';
-import { Cooldown, FREEZE_COOLDOWN, FREEZE_TIME, smitePlan, SMITE_COOLDOWN, type Bolt } from '../../systems/dmPowers';
+import {
+  Cooldown,
+  FREEZE_COOLDOWN,
+  FREEZE_TIME,
+  RESET_COOLDOWN,
+  smitePlan,
+  SMITE_COOLDOWN,
+  type Bolt,
+  type Pressure,
+} from '../../systems/dmPowers';
 import type { Arena } from './Arena';
 import type { Simulation } from './Simulation';
 import type { ZoneState } from '../ZoneState';
 
-/** What the powers' buttons show (hud/DmBar.ts). */
+/** What the bar's buttons show (hud/DmBar.ts). */
 export interface PowersView {
-  smite: number; // seconds to wait, 0 when ready
+  /** Seconds each power still has to wait (0: ready). */
+  smite: number;
   freeze: number;
+  reset: number;
+  stopped: boolean;
+  pressure: Pressure;
 }
 
 /**
- * The Dungeon Master's two big buttons, on the host: Smite (a storm of lightning that fells every foe in the zone they
- * stand in; no XP or gold, the DM's doing is not the party's kill; the bolts never hurt the party) and Freeze (every
- * foe there held still for `FREEZE_TIME`). Both are ordinary lightning/fx events and mob states, so a friend sees them
- * through the usual snapshots with nothing of their own on the wire.
+ * The Dungeon Master's powers, on the host: Smite (a storm of lightning that fells every foe in the zone they stand
+ * in; no XP or gold, the DM's doing is not the party's kill; the bolts never hurt the party), Freeze (every foe there
+ * held still for `FREEZE_TIME`), Stop time (the world holds still for everyone but the DM, to explain something; the
+ * same key starts it again), Reset zone (every foe there back home at full health) and the Pressure dial. None of them
+ * brings a foe into the world: the DM shapes how hard it pushes, never what is in it. Everything but stopping time is
+ * an ordinary lightning/fx event or mob state, so a friend sees it through the usual snapshots; a stopped clock is one
+ * flag in the `dm` message (`DmDesk`).
  */
 export class DmPowers {
   private smiteCd = new Cooldown(SMITE_COOLDOWN);
   private freezeCd = new Cooldown(FREEZE_COOLDOWN);
+  private resetCd = new Cooldown(RESET_COOLDOWN);
   private storm: { zone: ZoneState; mobs: Mob[]; bolts: Bolt[]; t: number } | null = null;
 
   constructor(
@@ -27,14 +44,25 @@ export class DmPowers {
   ) {}
 
   view(): PowersView {
-    return { smite: this.smiteCd.wait, freeze: this.freezeCd.wait };
+    return {
+      smite: this.smiteCd.wait,
+      freeze: this.freezeCd.wait,
+      reset: this.resetCd.wait,
+      stopped: this.arena.timeStopped,
+      pressure: this.arena.pressure,
+    };
+  }
+
+  /** The live foes of the zone the DM stands in. */
+  private foes(zone: ZoneState): Mob[] {
+    return this.arena.inZone(zone, () => this.arena.mobs.filter((m) => m.alive));
   }
 
   /** Strike down every foe in the zone the DM stands in. False if it is cooling down or there is nobody to strike. */
   smite(): boolean {
     if (this.arena.role !== 'host' || this.storm || !this.smiteCd.ready) return false;
     const zone = this.arena.view;
-    const mobs = this.arena.inZone(zone, () => this.arena.mobs.filter((m) => m.alive));
+    const mobs = this.foes(zone);
     const bolts = smitePlan(
       mobs.map((m) => m.body),
       Math.random,
@@ -48,7 +76,7 @@ export class DmPowers {
   freeze(): boolean {
     if (this.arena.role !== 'host' || !this.freezeCd.ready) return false;
     const zone = this.arena.view;
-    const mobs = this.arena.inZone(zone, () => this.arena.mobs.filter((m) => m.alive));
+    const mobs = this.foes(zone);
     if (!mobs.length || !this.freezeCd.use()) return false;
     this.arena.inZone(zone, () => {
       for (const m of mobs) {
@@ -59,9 +87,36 @@ export class DmPowers {
     return true;
   }
 
+  /** Stop time for everyone but the DM, or start it again. */
+  toggleStop(): boolean {
+    if (this.arena.role !== 'host') return false;
+    this.arena.timeStopped = !this.arena.timeStopped;
+    return true;
+  }
+
+  /** Every foe in the DM's zone (the fallen too) goes back home at full health. Chests and the ground stay as they are. */
+  resetZone(): boolean {
+    if (this.arena.role !== 'host' || !this.resetCd.ready) return false;
+    const zone = this.arena.view;
+    this.resetCd.use();
+    this.storm = null;
+    this.arena.inZone(zone, () => {
+      for (const m of this.arena.mobs) {
+        if (m.alive) this.sim.fx('mobPoof', m.body.x, m.body.y - 12);
+        m.reset();
+      }
+    });
+    return true;
+  }
+
+  setPressure(p: Pressure) {
+    this.arena.pressure = p;
+  }
+
   update(dt: number) {
     this.smiteCd.tick(dt);
     this.freezeCd.tick(dt);
+    this.resetCd.tick(dt);
     const s = this.storm;
     if (!s) return;
     s.t += dt;
@@ -79,10 +134,12 @@ export class DmPowers {
     if (!s.bolts.length) this.storm = null;
   }
 
-  /** Back to solo or a new game. */
+  /** Back to solo or a new game (the pressure stays: it is what the host chose for this game). */
   reset() {
     this.storm = null;
+    this.arena.timeStopped = false;
     this.smiteCd.reset();
     this.freezeCd.reset();
+    this.resetCd.reset();
   }
 }

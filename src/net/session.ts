@@ -15,10 +15,12 @@ import {
   type TradeMsg,
   type TrMsg,
 } from './protocol';
+import { takeHostPlan, type HostPlan } from './hostPlan';
 import { MAX_GUESTS } from './relayApi';
 import { RelayClient, RelayError, type Room } from './relayClient';
 import { RELAY_URL } from './relayConfig';
 import { codeFromHash, normalizeCode } from './roomCode';
+import type { Pressure } from '../systems/dmPowers';
 
 // Multiplayer state shared by the settings menu (which drives the connection) and the game loop (which reads it).
 //
@@ -115,6 +117,10 @@ let contentTag = '';
 export const setContentTag = (tag: string) => {
   contentTag = tag;
 };
+/** The world this page plays (see `setContentTag`). */
+export const getContentTag = () => contentTag;
+/** Seconds a host lets a friend in another world move over to its own before it drops them. */
+const WORLD_GRACE_MS = 6000;
 /** What a hello carries as `build`: the build, then the world, at most 64 characters. */
 const helloBuild = () => (contentTag ? `${__BUILD_ID__}#${contentTag}`.slice(0, 64) : __BUILD_ID__);
 
@@ -128,6 +134,18 @@ export class Session {
   lobbyOpen = false;
   /** A game code found in the page URL (#join=...) at load. The menu opens on Join with it filled in. */
   readonly urlCode: string | null;
+  /** The page was opened to join that code straight away (`#join=code&go=1`: a friend moved to the host's world). */
+  readonly autoJoin: boolean;
+  /** What the host chose in the lobby (hud/Multiplayer.ts): how hard the world pushes at the start of the game. */
+  hostPressure: Pressure = 'steady';
+  /** This page was opened to create a game at once (the host moved to the world they chose; see `net/hostPlan.ts`). */
+  autoCreate = false;
+  /**
+   * A friend is in a different world from the host's (`tag`, from the host's hello): the page should go to that world and
+   * join `code` again. Without it the friend is simply turned away.
+   */
+  worldMismatch: ((tag: string, code: string) => void) | null = null;
+  private joinedCode: string | null = null;
 
   private phase: LinkStatus = 'idle';
   private slotNo = 0;
@@ -160,8 +178,15 @@ export class Session {
     hash = window.location.hash,
     private relay: Relay | null = RELAY_URL ? new RelayClient(RELAY_URL) : null,
     private makeLink: LinkFactory = (role, handlers) => new PeerLink(role, handlers),
+    plan: HostPlan | null = takeHostPlan(),
   ) {
     this.urlCode = codeFromHash(hash);
+    this.autoJoin = this.urlCode !== null && /[&?]go=1(?:&|$)/.test(hash);
+    if (plan && !this.urlCode) {
+      this.mode = 'host'; // moved here by a host's choice of world: create the game at once (the scene does)
+      this.hostPressure = plan.pressure;
+      this.autoCreate = true;
+    }
     if (this.urlCode) {
       this.mode = 'join';
       // The code is good for one game only; don't leave it in the address bar to be reloaded or shared on.
@@ -290,6 +315,7 @@ export class Session {
       return;
     }
     const attempt = this.startAttempt();
+    this.joinedCode = code;
     this.phase = 'gathering';
     this.notify();
     try {
@@ -567,9 +593,18 @@ export class Session {
             'The other player is running a different version of the game. Both of you should reload the page.',
           );
         } else if (message.build !== helloBuild()) {
-          link.close(
-            'The other player is in a different world (another campaign or seed). Join with the host’s join link.',
-          );
+          const theirs = message.build.split('#')[1] ?? '';
+          const turnedAway = 'The other player is in a different world (another campaign or seed).';
+          if (this.mode === 'join' && link === this.guestLink && theirs && this.worldMismatch && this.joinedCode) {
+            // A friend only needs the code: this page moves to the host's world and joins again.
+            link.close('Taking you to the host’s world…');
+            this.worldMismatch(theirs, this.joinedCode);
+          } else if (this.mode === 'join') {
+            link.close(turnedAway);
+          } else {
+            // The host gives the friend a moment to move over to the host's world (their own page does it).
+            setTimeout(() => link.close(turnedAway), WORLD_GRACE_MS);
+          }
         }
         break;
       case 'in':

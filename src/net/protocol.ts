@@ -33,8 +33,9 @@ import { MAX_SAY } from '../systems/dmPowers';
  * host is the Dungeon Master, not a party member (player 0 in a snapshot is drawn as the DM). v30: `world`, a live
  * world's log. v31: `dm` (the Dungeon Master's dials, time of day and vote) and the guest's vote `InputMsg.vt`. v32: the
  * log's `cast` and `npc` entries, and longer entries. v33: `DmMsg.say`, what the Dungeon Master says to the party.
+ * v34: `DmMsg.hold`, time stopped by the Dungeon Master.
  */
-export const PROTOCOL_VERSION = 33;
+export const PROTOCOL_VERSION = 34;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -294,6 +295,8 @@ export interface DmMsg {
   vote: VoteWire | null;
   /** What the DM just said: [a number that changes with each saying, the words]; repeated for a few seconds, then absent. */
   say?: [number, string];
+  /** 1 while the DM has stopped time (everyone but them stands still); absent otherwise. */
+  hold?: 1;
 }
 
 export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg | TrMsg | TradeMsg | WorldMsg | DmMsg;
@@ -799,7 +802,8 @@ export function parseMessage(raw: unknown): Message | null {
           typeof s[1] === 'string' &&
           s[1].length >= 1 &&
           s[1].length <= MAX_SAY);
-      return isCount(m.n) && isNum(m.shift) && Math.abs(m.shift) <= 1 && dialsOk && voteOk && sayOk
+      const holdOk = m.hold === undefined || m.hold === 1;
+      return isCount(m.n) && isNum(m.shift) && Math.abs(m.shift) <= 1 && dialsOk && voteOk && sayOk && holdOk
         ? {
             k: 'dm',
             n: m.n,
@@ -807,6 +811,7 @@ export function parseMessage(raw: unknown): Message | null {
             dials: dials as Record<string, boolean>,
             vote: v === null ? null : (v as VoteWire),
             ...(s === undefined ? {} : { say: s as [number, string] }),
+            ...(m.hold === 1 ? { hold: 1 as const } : {}),
           }
         : null;
     }

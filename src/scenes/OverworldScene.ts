@@ -3,7 +3,15 @@ import { enabled, flag } from '../systems/capabilities';
 import type { Sprites, Zone } from '../assets';
 import type { Aim } from '../core/aim';
 import { COMBO_WINDOW, COMBO_WINDOW_TOUCH, ComboReader } from '../core/combo';
-import { actionDown, actionPressed, actionTouchedOnly, mapPressed, menuPressed, pointerAim } from '../core/controls';
+import {
+  actionDown,
+  actionPressed,
+  actionTouchedOnly,
+  mapPressed,
+  menuPressed,
+  pointerAim,
+  stopPressed,
+} from '../core/controls';
 import { directionToward } from '../core/direction';
 import type { ZoneState } from './ZoneState';
 import type { Scene } from '../core/Scene';
@@ -78,6 +86,8 @@ import { Story } from './overworld/Story';
 import { DmDesk } from './overworld/DmDesk';
 import { DmPowers } from './overworld/DmPowers';
 import { DmBar } from '../hud/DmBar';
+import { DmCard } from '../hud/DmCard';
+import { DmPrompts } from './overworld/DmPrompts';
 import { VotePanel } from '../hud/VotePanel';
 import type { World } from '../content/world';
 import { particleEffect } from '../entities/ParticleEffect';
@@ -143,7 +153,9 @@ export class OverworldScene implements Scene {
   private desk!: DmDesk;
   private votePanel = new VotePanel();
   private dmBar = new DmBar();
+  private dmCard = new DmCard();
   private powers!: DmPowers;
+  private prompts!: DmPrompts;
   private host: HostLink;
   private guest: GuestLink;
   private overlay: MapOverlay;
@@ -220,6 +232,7 @@ export class OverworldScene implements Scene {
     this.desk = new DmDesk(arena, ui.session, content, this.dayClock);
     this.votePanel.onChoose = (i) => this.desk.castVote(i);
     this.powers = new DmPowers(arena, this.sim);
+    this.prompts = new DmPrompts(arena, this.liveStory, this.desk, this.powers, this.dmCard);
     this.desk.onSay = (text) => this.dmBar.speak(text, arena.clock); // the DM's words show on every screen
     this.zones.root.addChildAt(this.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
@@ -281,49 +294,30 @@ export class OverworldScene implements Scene {
     this.ui.menu.inventory.attach({ apply: (op) => this.pack.localOp(op) });
     this.ui.menu.magic.attach({ equip: (wanted) => this.pack.setLoadout(wanted), zone: () => this.arena.zone.name });
     this.ui.menu.party.attach({ rows: () => this.partyRows(), go: (slot) => this.dmGoTo(slot) });
-    this.ui.menu.story.attach({
-      canChoose: () => this.liveStory.canChoose,
-      view: () => this.liveStory.view(),
-      choose: (cue) => {
-        this.liveStory.choose(cue);
-        this.desk.closeVote(); // the DM's choice ends any vote
-      },
-      vote: () => (this.arena.role === 'host' ? this.desk.voteView() : null),
-      openVote: () => this.desk.openVote(this.liveStory.view()?.options ?? []),
-      closeVote: () => this.desk.closeVote(),
-    });
-    this.ui.menu.cast.attach({
-      castable: () => this.liveStory.castable(),
-      cast: (entity) => this.liveStory.castHere(entity),
-      make: (name, look, lines) => this.liveStory.makePerson(name, look, lines),
-      note: () => this.liveStory.lastNote,
-    });
-    this.ui.menu.dials.attach({
-      // Whoever runs the world: the online DM, or a solo player in a live world.
-      available: () => this.arena.local.dm || (this.arena.role === 'solo' && this.liveStory.live),
-      view: () => this.desk.dialsView(),
-      weather: (precip, wind) => this.desk.setWeather(precip, wind),
-      hour: (hour) => this.desk.setHour(hour),
-      dial: (id, on) => this.desk.setDial(id, on),
-    });
     this.dmBar.attach({
       say: (text) => this.desk.say(text),
       smite: () => this.powers.smite(),
       freeze: () => this.powers.freeze(),
+      stop: () => this.powers.toggleStop(),
+      reset: () => this.powers.resetZone(),
+      card: (kind) => this.prompts.open(kind),
+      story: () => this.prompts.hasStory,
       waits: () => this.powers.view(),
     });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
-    if (this.ui.session.urlCode && enabled('coop')) this.ui.menu.toggle(this.hero, 'online');
+    const { session } = this.ui;
+    if ((session.urlCode || session.autoCreate) && enabled('coop')) this.ui.menu.toggle(this.hero, 'online');
+    // Moved here to join a host's world, or to host the world just chosen: carry on without another tap.
+    if (session.autoJoin && session.urlCode && enabled('coop')) void session.joinGame(session.urlCode);
+    else if (session.autoCreate && enabled('coop')) void session.createGame();
   }
 
   exit() {
     this.ui.menu.inventory.attach(null);
     this.ui.menu.magic.attach(null);
     this.ui.menu.party.attach(null);
-    this.ui.menu.story.attach(null);
-    this.ui.menu.dials.attach(null);
-    this.ui.menu.cast.attach(null);
     this.dmBar.attach(null);
+    this.dmCard.hide();
     this.votePanel.sync(null);
     this.overlay.setAvailable(false);
     this.harvestButtons.clear();
@@ -353,7 +347,9 @@ export class OverworldScene implements Scene {
     this.desk.update(dt); // the DM's dials, time of day and vote: the host tells its friends, a friend is told
     this.votePanel.sync(this.desk.openVoteForGuest);
     this.powers.update(dt); // the DM's storm in flight and cooldowns
-    this.dmBar.update(arena.local.dm, arena.clock);
+    if (arena.local.dm && !this.ui.dialog.active && !this.ui.menu.open && stopPressed()) this.powers.toggleStop();
+    this.dmBar.update(arena.local.dm, arena.clock, arena.timeStopped);
+    this.prompts.update(dt, this.ui.dialog.active || this.ui.menu.open || this.zones.transition.busy);
     const online = arena.role !== 'solo';
     // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
     // without the map capability (it is still explored, so nothing changes if one is played later).
@@ -476,38 +472,43 @@ export class OverworldScene implements Scene {
     const commandOf = (p: Player) => (p === arena.local ? cmd : (guests.find((g) => g.p === p)?.cmd ?? NO_COMMAND));
     const here = arena.zone;
 
+    // The Dungeon Master stopped time: only they move; players, foes, plots, weather and the clock on the ground stand still.
+    const stopped = host && arena.timeStopped;
     if (host || !dialog.active) {
       for (const z of arena.occupiedZones()) {
         arena.inZone(z, () => {
           const present = arena.players();
-          for (const p of present) sim.updatePlayer(p, commandOf(p), dt);
-          for (const mob of z.mobs) mob.update(dt, z.mobWorld);
-          for (const crop of z.crops) crop.grow(dt);
-          this.ground.age(dt);
-          sim.weather(dt);
-          for (const p of present) {
-            const combo = commandOf(p).combo;
-            if (combo !== undefined) sim.combo(p, combo);
+          for (const p of present) if (!stopped || p.dm) sim.updatePlayer(p, commandOf(p), dt);
+          if (!stopped) {
+            for (const mob of z.mobs) mob.update(dt, z.mobWorld);
+            for (const crop of z.crops) crop.grow(dt);
+            this.ground.age(dt);
+            sim.weather(dt);
+            for (const p of present) {
+              const combo = commandOf(p).combo;
+              if (combo !== undefined) sim.combo(p, combo);
+            }
           }
           if (z !== here) z.effects.update(dt); // the local zone's effects are updated with the rest of what is drawn
         });
       }
       // The zones drawn beside this one keep their mobs wandering, so nothing looks frozen across the border.
       const occupied = new Set(arena.occupiedZones());
-      for (const z of this.zones.lookouts()) {
-        if (occupied.has(z)) continue;
-        arena.inZone(z, () => {
-          for (const mob of z.mobs) mob.update(dt, z.mobWorld);
-        });
-      }
-      this.training.update(dt);
+      if (!stopped)
+        for (const z of this.zones.lookouts()) {
+          if (occupied.has(z)) continue;
+          arena.inZone(z, () => {
+            for (const mob of z.mobs) mob.update(dt, z.mobWorld);
+          });
+        }
+      if (!stopped) this.training.update(dt);
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
     if (!menu.open && !shop.open && !trade.open && !busy) this.handleAction(cmd.act, () => this.act(arena.local));
-    for (const g of guests) if (g.cmd.act) arena.inZone(arena.zoneOf(g.p), () => this.act(g.p));
+    if (!stopped) for (const g of guests) if (g.cmd.act) arena.inZone(arena.zoneOf(g.p), () => this.act(g.p));
     if (!reading) this.zones.checkDoors(arena.local);
-    for (const g of guests) this.zones.checkDoors(g.p);
+    if (!stopped) for (const g of guests) this.zones.checkDoors(g.p);
     if (host) {
       this.host.broadcast(dt);
       this.pack.send(dt);
@@ -544,7 +545,9 @@ export class OverworldScene implements Scene {
     else if (arena.role === 'client') this.guest.leave();
     arena.role = 'solo'; // so nothing from here on is recorded for friends until the new role is set
     this.desk.reset(); // what a DM set lasts for their game only
+    arena.pressure = role === 'host' ? this.ui.session.hostPressure : 'steady'; // what the host chose in the lobby
     this.powers.reset();
+    this.prompts.reset();
     if (role === 'host') this.host.enter();
     else if (role === 'client') this.guest.enter();
     arena.role = role;

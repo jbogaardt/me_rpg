@@ -1,9 +1,21 @@
 // What the Dungeon Master can do with one tap (Pixi-free, tested; core engine, co-op): speak to the party, smite every
 // foe where they stand with a storm of lightning, or hold them all still. Each has a cooldown so it stays special.
 
-/** Seconds before the DM may smite / freeze again. */
+/** Seconds before the DM may smite / freeze / reset the zone again. */
 export const SMITE_COOLDOWN = 45;
 export const FREEZE_COOLDOWN = 25;
+export const RESET_COOLDOWN = 30;
+
+/**
+ * How hard the world pushes back: the one dial of intensity the Dungeon Master has. A foe's blows land `factor` times
+ * as hard and the party's blows count `1 / factor` times as much, so "fierce" is both tougher and deadlier, and
+ * "gentle" lets a weak party breathe. The host alone applies it (Simulation); friends only see the result.
+ */
+export const PRESSURES = ['gentle', 'steady', 'fierce'] as const;
+export type Pressure = (typeof PRESSURES)[number];
+export const PRESSURE_FACTOR: Record<Pressure, number> = { gentle: 0.7, steady: 1, fierce: 1.5 };
+export const PRESSURE_LABEL: Record<Pressure, string> = { gentle: 'Ease off', steady: 'Steady', fierce: 'Turn it up' };
+export const isPressure = (v: unknown): v is Pressure => (PRESSURES as readonly unknown[]).includes(v);
 /** Seconds the foes stay held. */
 export const FREEZE_TIME = 10;
 /** The longest thing a DM may say, and how long it stays on the players' screens (seconds). */

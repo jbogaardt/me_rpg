@@ -72,7 +72,8 @@ export class Keybinds {
       if (what === 'move') cell.textContent = (['up', 'left', 'down', 'right'] as const).map(first).join(' ');
       else if (what === 'tabs')
         cell.textContent = `${first('left')} / ${first('right')}`; // the move keys: see tabStep()
-      else if (what === 'menu' || what === 'map') cell.textContent = FIXED_KEYS[what].map(codeLabel).join(', ');
+      else if (what === 'menu' || what === 'map' || what === 'stop')
+        cell.textContent = FIXED_KEYS[what].map(codeLabel).join(', ');
       else cell.textContent = names(what as Action);
     }
     for (const action of ACTIONS) {

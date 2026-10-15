@@ -13,6 +13,7 @@ function host() {
   const votes = new Map<number, [number, number]>();
   const arena = {
     role: 'host',
+    timeStopped: false,
     remotes: new Map([
       [1, { dm: false }],
       [2, { dm: false }],
@@ -35,7 +36,7 @@ function host() {
   const clock = new DayClock(() => 0);
   const desk = new DmDesk(arena, session, content, clock);
   const last = (slot: number) => [...sent].reverse().find(([s]) => s === slot)?.[1] as DmMsg | undefined;
-  return { desk, sent, votes, last, clock, content: () => dials };
+  return { desk, sent, votes, last, clock, arena, content: () => dials };
 }
 
 const roads = [
@@ -92,6 +93,16 @@ describe('the Dungeon Master’s desk', () => {
     expect(last(1)!.say).toEqual([2, 'Run']);
   });
 
+  it('tells every friend while time is stopped, and stops saying it when it starts again', () => {
+    const { desk, last, arena } = host();
+    arena.timeStopped = true;
+    desk.update(0);
+    expect(last(1)!.hold).toBe(1);
+    arena.timeStopped = false;
+    desk.update(0.01);
+    expect(last(1)!.hold).toBeUndefined();
+  });
+
   it('asks nothing with fewer than two roads', () => {
     const { desk } = host();
     desk.openVote(roads.slice(0, 1));
@@ -126,6 +137,20 @@ describe('a friend at the Dungeon Master’s table', () => {
     desk.update(0);
     expect(desk.openVoteForGuest).toBeNull();
     expect(desk.voteInput).toBeUndefined();
+  });
+
+  it('knows time is stopped while the host says so', () => {
+    let msg: DmMsg | null = null;
+    const session = { takeDm: () => [msg, (msg = null)][0] } as unknown as Session;
+    const content = { setDials: () => {} } as unknown as ContentManager;
+    const arena = { role: 'client', timeStopped: false } as unknown as Arena;
+    const desk = new DmDesk(arena, session, content, new DayClock(() => 0));
+    msg = { k: 'dm', n: 1, shift: 0, dials: {}, vote: null, hold: 1 };
+    desk.update(0);
+    expect(arena.timeStopped).toBe(true);
+    msg = { k: 'dm', n: 2, shift: 0, dials: {}, vote: null };
+    desk.update(0);
+    expect(arena.timeStopped).toBe(false);
   });
 
   it('shows what the DM said once, however often the host repeats it', () => {

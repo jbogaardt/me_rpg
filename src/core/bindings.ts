@@ -38,13 +38,14 @@ export const TOUCH_CODES: Record<Action, readonly string[]> = {
 
 /**
  * Keys that always do the same thing, whatever the bindings say: open or close the menu (or a shop counter), toggle the
- * co-op map. The on-screen ☰ and M buttons press the first code of each (`data-key` in index.html; a test keeps them in
- * step), and nothing else should hard-code these keys: ask `menuPressed()` / `mapPressed()` in controls.ts.
+ * co-op map, and (the Dungeon Master only) stop or restart time. The on-screen ☰ and M buttons press the first code of
+ * each (`data-key` in index.html; a test keeps them in step), and nothing else should hard-code these keys: ask
+ * `menuPressed()` / `mapPressed()` / `stopPressed()` in controls.ts.
  */
-export const FIXED_KEYS = { menu: ['Escape', 'Tab'], map: ['KeyM'] } as const;
+export const FIXED_KEYS = { menu: ['Escape', 'Tab'], map: ['KeyM'], stop: ['KeyT'] } as const;
 
 /** Codes no action can be bound to: the fixed keys. */
-export const RESERVED_CODES: readonly string[] = [...FIXED_KEYS.menu, ...FIXED_KEYS.map];
+export const RESERVED_CODES: readonly string[] = [...FIXED_KEYS.menu, ...FIXED_KEYS.map, ...FIXED_KEYS.stop];
 
 const STORAGE_KEY = 'me_rpg.controls';
 
@@ -106,7 +107,8 @@ export class Bindings {
   /** Bind `code` to a slot. The code is taken from whichever other slot held it. Returns an error message, or null. */
   set(action: Action, slot: number, code: string): string | null {
     if (slot < 0 || slot >= SLOTS) return 'No such slot.';
-    if (RESERVED_CODES.includes(code)) return `${codeLabel(code)} is reserved for the menu and map.`;
+    if (RESERVED_CODES.includes(code))
+      return `${codeLabel(code)} is reserved (menu, map and the Dungeon Master’s stop-time key).`;
     for (const other of ACTIONS) {
       const s = this.map.get(other)!;
       for (let i = 0; i < SLOTS; i++) if (s[i] === code) s[i] = '';

@@ -1,5 +1,6 @@
 import { DIR_VEC, dirIndex, directionToward } from '../../core/direction';
 import { enabled, setting } from '../../systems/capabilities';
+import { PRESSURE_FACTOR } from '../../systems/dmPowers';
 import type { Character } from '../../entities/Character';
 import type { Mob, MobWorld } from '../../entities/Mob';
 import type { Command, Player } from '../../entities/Player';
@@ -427,7 +428,7 @@ export class Simulation {
     if (p.safe) return true; // warded or just arrived: the beam holds but does nothing
     this.harm(
       p,
-      rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero)),
+      this.pressed(rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero))),
       mob.body.x,
       mob.body.y,
       true,
@@ -477,7 +478,8 @@ export class Simulation {
 
   /** Every player takes the kill's XP and gold (in solo, just the one). */
   hitMob(mob: Mob, rawDamage: number, vx: number, vy: number, bolt = false) {
-    const damage = Math.round(rawDamage * this.casting.markFactor(mob)); // a foe marked by Spirit Mark takes more
+    // a foe marked by Spirit Mark takes more; the DM's pressure makes the world harder or gentler to hurt
+    const damage = Math.max(1, Math.round((rawDamage * this.casting.markFactor(mob)) / this.pressure()));
     const killed = mob.hit(damage, vx, vy);
     // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
     if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx));
@@ -511,7 +513,17 @@ export class Simulation {
   private hurtHero(mob: Mob, victim: Character) {
     const p = this.arena.party().find((q) => q.body === victim);
     if (!p || p.safe) return;
-    this.harm(p, rollDamage(mob.kind.attack, defensePower(p.hero)), mob.body.x, mob.body.y);
+    this.harm(p, this.pressed(rollDamage(mob.kind.attack, defensePower(p.hero))), mob.body.x, mob.body.y);
+  }
+
+  /** The DM's pressure as a factor: 0.7 gentle, 1 steady, 1.5 fierce (`systems/dmPowers.ts`). */
+  private pressure(): number {
+    return PRESSURE_FACTOR[this.arena.pressure];
+  }
+
+  /** What a foe's blow does under the DM's pressure (never less than 1). */
+  private pressed(damage: number): number {
+    return Math.max(1, Math.round(damage * this.pressure()));
   }
 
   /** Damage a player and knock them away from (fromX, fromY): the shared tail of a mob's hit and a lightning strike. */

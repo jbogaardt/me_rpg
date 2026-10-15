@@ -299,25 +299,6 @@
 .mp-roster.party .info { flex: 1 1 auto; min-width: 0; line-height: 1.2; }
 .mp-roster.party small { color: var(--ink-soft); font-size: 14px; }
 .mp-roster.party .mp-btn { flex: none; padding: 2px 14px; }
-/* The Story tab (hud/StoryTab.ts): the lands so far, and the roads the story may take next. */
-#menu-story .story-path { font-weight: 600; }
-#menu-story .story-hint, #menu-story .story-note { color: var(--ink-soft); font-size: 15px; }
-#menu-story .story-note { color: #9b2a1c; }
-.story-options { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 6px; }
-.story-options .mp-btn { width: 100%; text-align: left; padding: 6px 10px; }
-.story-options .tally { float: right; color: #ffe9a8; }
-/* The Dials tab (hud/Dials.ts): rows of small buttons, the current one lit. */
-#menu-dials h3 { margin: 10px 0 4px; font: 700 16px var(--title); }
-.dial-row { display: flex; flex-wrap: wrap; gap: 4px; }
-.dial-btn { padding: 3px 10px; font: 600 14px var(--body); color: var(--ink); background: rgba(107, 84, 52, 0.12); border: 1px solid var(--gold-dim); border-radius: 3px; cursor: pointer; }
-.dial-btn.active { background: #6b5434; color: #ffe9a8; }
-.dial-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.dial-list li { display: flex; align-items: center; gap: 4px; }
-.dial-list .dial-name { flex: 1 1 auto; }
-/* The Cast tab (hud/Cast.ts): who may be brought in, and the form for a new person. */
-#menu-cast h3 { margin: 10px 0 4px; font: 700 16px var(--title); }
-.cast-form { display: grid; gap: 6px; margin-top: 6px; }
-.cast-form input, .cast-form select, .cast-form textarea { font: 15px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
 /* A player's view of the DM's vote (hud/VotePanel.ts): a column at the right edge, over the world. */
 #vote { position: fixed; z-index: 3; right: calc(8px + env(safe-area-inset-right)); top: 96px; width: min(260px, 60vw); padding: 6px 8px; }
 #vote[hidden] { display: none; }
@@ -325,17 +306,37 @@
 #vote .opts { display: grid; gap: 4px; }
 #vote .mp-btn { text-align: left; font-size: 14px; padding: 4px 8px; }
 #vote .mp-btn.active { filter: brightness(1.35); outline: 2px solid #ffd34d; }
-/* The Dungeon Master's bar (hud/DmBar.ts) along the bottom, and their words on every screen. */
-#dm-bar { position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); bottom: calc(8px + env(safe-area-inset-bottom)); display: flex; gap: 6px; align-items: center; padding: 6px 8px; width: min(560px, calc(100vw - 16px)); box-sizing: border-box; font-family: var(--body); }
+/* The Dungeon Master's bar (hud/DmBar.ts) along the bottom, their words, the stopped-time notice, and the card of choices. */
+#dm-bar { position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); bottom: calc(8px + env(safe-area-inset-bottom)); display: grid; gap: 6px; padding: 6px 8px; width: min(620px, calc(100vw - 16px)); box-sizing: border-box; font-family: var(--body); }
 #dm-bar[hidden] { display: none; }
-#dm-bar form { display: flex; flex: 1; gap: 6px; min-width: 0; }
-#dm-bar input { flex: 1; min-width: 0; font: 15px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
+#dm-bar form { display: flex; gap: 6px; min-width: 0; }
+#dm-bar input { flex: 1; min-width: 0; font: 16px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
+#dm-bar [hidden] { display: none; }
+#dm-bar .powers { display: flex; flex-wrap: wrap; gap: 6px; }
 #dm-bar .mp-btn { padding: 4px 10px; font-size: 14px; white-space: nowrap; }
 #dm-bar .mp-btn:disabled { opacity: 0.55; cursor: default; }
+#dm-bar .mp-btn.on { filter: brightness(1.35); outline: 2px solid #ffd34d; }
 #dm-bar [data-power="smite"] { color: #ffd34d; }
 #dm-speech { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: 18%; max-width: min(520px, calc(100vw - 32px)); padding: 8px 14px; text-align: center; font: 600 18px/1.3 var(--body); color: var(--ink); pointer-events: none; }
 #dm-speech[hidden] { display: none; }
 #dm-speech::before { content: 'The Dungeon Master speaks'; display: block; font: 700 12px var(--title); color: #7c230f; letter-spacing: 0.06em; text-transform: uppercase; }
+#dm-hold { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: 8px; padding: 4px 14px; font: 700 15px var(--title); color: #9fe8ff; text-shadow: 0 1px 2px #000; pointer-events: none; }
+#dm-hold[hidden] { display: none; }
+#dm-card { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); bottom: calc(112px + env(safe-area-inset-bottom)); width: min(420px, calc(100vw - 32px)); padding: 10px 14px 12px; box-sizing: border-box; font-family: var(--body); }
+#dm-card[hidden] { display: none; }
+#dm-card .close { position: absolute; top: 4px; right: 8px; background: none; border: 0; font: 700 16px var(--body); color: var(--ink-soft); cursor: pointer; }
+#dm-card .title { margin: 0 18px 2px 0; font: 700 17px var(--title); }
+#dm-card .note { margin: 0 0 6px; font-size: 15px; color: var(--ink-soft); }
+#dm-card .opts { display: grid; gap: 6px; margin-top: 6px; }
+#dm-card .mp-btn { width: 100%; text-align: left; padding: 6px 10px; }
+#dm-card .mp-btn.on { filter: brightness(1.35); outline: 2px solid #ffd34d; }
+#dm-card .timer { --frac: 1; height: 3px; margin-top: 8px; background: rgba(107, 84, 52, 0.25); }
+#dm-card .timer::after { content: ''; display: block; height: 100%; width: calc(var(--frac) * 100%); background: #b3632a; }
+#dm-card .timer[hidden] { display: none; }
+/* What the Dungeon Master picks before creating a game (hud/Multiplayer.ts). */
+.mp-options { display: grid; gap: 8px; margin: 6px 0 10px; }
+.mp-options label { display: grid; gap: 2px; font: 600 15px var(--body); }
+.mp-options select { font: 16px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
 #mp-note { min-height: 1.3em; margin: 8px 0 0; font-size: 15px; color: var(--ink-soft); }
 #mp-note.error { color: #9b2a1c; font-weight: 600; }
 /* --- Controls tab: key/mouse editor (src/hud/Keybinds.ts) --- */

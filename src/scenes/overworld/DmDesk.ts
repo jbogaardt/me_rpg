@@ -157,7 +157,8 @@ export class DmDesk {
     if (this.said && (this.said.left -= dt) <= 0) this.said = null;
     const say = this.said ? ([this.said.id, this.said.text] as [number, string]) : undefined;
     const base = { shift: Math.round(this.clock.shift * 1e4) / 1e4, dials: this.content.dialsSet };
-    const sig = JSON.stringify([base, vote?.id, [...(vote?.chosen ?? [])], say?.[0]]);
+    const hold = this.arena.timeStopped;
+    const sig = JSON.stringify([base, vote?.id, [...(vote?.chosen ?? [])], say?.[0], hold]);
     if (sig === this.sentSig && this.timer < DM_RESEND) return;
     this.sentSig = sig;
     this.timer = 0;
@@ -168,6 +169,7 @@ export class DmDesk {
         n: ++this.seq,
         ...base,
         ...(say ? { say } : {}),
+        ...(hold ? { hold: 1 as const } : {}),
         vote: vote
           ? {
               id: vote.id,
@@ -185,6 +187,7 @@ export class DmDesk {
     const msg = this.session.takeDm();
     if (!msg) return;
     this.clock.shift = msg.shift;
+    this.arena.timeStopped = msg.hold === 1;
     const sig = JSON.stringify(msg.dials);
     if (sig !== this.dialSig) {
       this.dialSig = sig;
@@ -227,6 +230,7 @@ export class DmDesk {
     this.sentSig = '';
     this.said = null;
     this.lastSay = 0;
+    this.arena.timeStopped = false;
     this.clock.shift = 0;
     this.content.setDials({});
   }

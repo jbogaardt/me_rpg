@@ -1,5 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { cleanSay, Cooldown, MAX_SAY, smitePlan } from './dmPowers';
+import {
+  cleanSay,
+  Cooldown,
+  isPressure,
+  MAX_SAY,
+  PRESSURES,
+  PRESSURE_FACTOR,
+  PRESSURE_LABEL,
+  smitePlan,
+} from './dmPowers';
+
+describe('pressure', () => {
+  it('has three steps, steady is neutral, and each is harder than the last', () => {
+    expect(PRESSURES).toEqual(['gentle', 'steady', 'fierce']);
+    expect(PRESSURE_FACTOR.steady).toBe(1);
+    expect(PRESSURE_FACTOR.gentle).toBeLessThan(PRESSURE_FACTOR.steady);
+    expect(PRESSURE_FACTOR.fierce).toBeGreaterThan(PRESSURE_FACTOR.steady);
+    for (const p of PRESSURES) expect(PRESSURE_LABEL[p]).toBeTruthy();
+    expect(isPressure('fierce')).toBe(true);
+    expect(isPressure('brutal')).toBe(false);
+  });
+});
 
 const counter = () => {
   let n = 0;

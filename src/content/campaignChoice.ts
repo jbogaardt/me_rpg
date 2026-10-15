@@ -44,3 +44,32 @@ export function chooseCampaign(search: string, fallback: string, newSeed: () => 
   const tag = `${campaign}:${seed}${arc ? `:${arc}` : ''}`;
   return { campaign, seed, search: changed, tag, ...(arc ? { arc } : {}) };
 }
+
+/** What a host may pick as the story in the lobby (hud/Multiplayer.ts); `current` keeps the world the page plays. */
+export const HOST_STORIES = [
+  { id: 'current', label: 'This world' },
+  { id: 'live', label: 'A new story, told as you go' },
+  { id: 'campaign1', label: 'The Vale' },
+  { id: 'campaign2', label: 'Emberfall Isle' },
+] as const;
+
+/** The address query that opens the world a tag names (`live:42`, `campaign2`), or null if it is not a world tag. */
+export function queryForTag(tag: string): string | null {
+  const [campaign, seed, arc, ...rest] = tag.split(':');
+  if (!campaign || rest.length || !/^[\w-]{1,40}$/.test(campaign)) return null;
+  if (campaign === RANDOM || campaign === LIVE) {
+    if (!isSeed(seed ?? null) || (arc !== undefined && !/^[\w-]{1,40}$/.test(arc))) return null;
+    return `?campaign=${campaign}&seed=${seed}${arc ? `&arc=${arc}` : ''}`;
+  }
+  return seed === undefined ? `?campaign=${campaign}` : null;
+}
+
+/**
+ * The world (a tag) a host's story choice needs, or null when the page already plays one that fits: a new story keeps
+ * a live world already open, and a named campaign keeps itself.
+ */
+export function worldFor(story: string, currentTag: string, newSeed: () => number): string | null {
+  if (story === 'current') return null;
+  if (story === LIVE) return currentTag.startsWith(`${LIVE}:`) ? null : `${LIVE}:${newSeed()}`;
+  return currentTag === story ? null : story;
+}
