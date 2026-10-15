@@ -49,11 +49,11 @@ Pixi-free logic (rules, collision, camera maths, map format) is kept separate fr
 - `src/main.ts` boots: creates the PixiJS `Application` (async `app.init`, wrapped in a `void` IIFE — avoid top-level await), registers the manifest, loads the content (`ContentManager.load(staticContent)`, then `install()`), loads assets and the start node's zone behind the loading overlay, creates the shared DOM UI (`Hud`, `Menu`, `Dialog`, touch controls) and starts a `SceneManager` with an `OverworldScene`.
 ## Where the detail lives (progressive disclosure)
 
-Directory-scoped `CLAUDE.md` files load when you work in that directory; `docs/` files are read on demand. **When you change a feature, update the file that owns it in the same change** (this is what the Conventions below mean by "the co-op bullets"):
+These files describe design philosophy, architecture and the traps that bite, not facts a grep finds: constants, field names and formats live in the code and its file headers (**put an explanation there when a header lacks one**). Directory-scoped `CLAUDE.md` files load when you work in that directory. **When a change alters a design rule or invariant, update the file that owns it in the same change:**
 
 - `src/content/CLAUDE.md`: campaigns, packs, random and live worlds, ports, the world log. `src/core/CLAUDE.md`: scenes, camera, input, bindings, touch. `src/map/CLAUDE.md`: map format and streaming. `src/hud/CLAUDE.md`: overlays, map overlay, UI look. `src/entities/CLAUDE.md`: mobs, effects, ambient. `src/sprites/CLAUDE.md`: paper-doll characters. `src/CLAUDE.md`: boot and assets.
-- `src/scenes/CLAUDE.md`: the overworld, arena, simulation, zones and doors. `src/systems/CLAUDE.md`: capabilities, combat, balance, plus an index of `docs/systems/*.md` (quests, survival, magic, economy, props).
-- `src/net/CLAUDE.md`: co-op, protocol and its version history, trading. `relay/CLAUDE.md`: the matchmaking Worker.
+- `src/scenes/CLAUDE.md`: the overworld, arena, simulation, zones and doors. `src/systems/CLAUDE.md`: capabilities, combat, balance, with design notes on quests, magic, survival, economy and props.
+- `src/net/CLAUDE.md`: co-op design, the protocol rules, trading. `relay/CLAUDE.md`: the matchmaking Worker.
 - `tools/map/CLAUDE.md` and `maps/CLAUDE.md`: the map pipeline, catalog, world layout, shop buildings.
 - `docs/dungeon-master.md`: the host as Dungeon Master, the bar, director, DM quests, epics, possession.
 

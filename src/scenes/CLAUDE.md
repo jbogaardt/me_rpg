@@ -7,7 +7,7 @@ in the game, the loaded zones, the zone context), `Zones` (loading, prefetching,
 rules), `Visuals` (everything drawn from an event), `Ground`, `PackSync`, `Trading`, `HostLink`/`GuestLink` (the two sides
 of the network protocol), `Training`, `Casting`, `Story`, `Scenario`. A new rule belongs in `Simulation`, a new thing to
 draw in `Visuals`, a new synced thing in the matching link. The DM's controls are in `docs/dungeon-master.md`, spells in
-`docs/systems/magic.md`.
+`src/systems/CLAUDE.md`.
 
 ## Design
 

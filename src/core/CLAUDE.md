@@ -15,6 +15,6 @@ Scene loop, camera, input, bindings, combos, touch. Headers of each file explain
   `Command.aim`; a guest sends it as `InputMsg.am`. The hero keeps facing the way they walk; only an attack or spell
   turns them toward the aim.
 - **Combos** (`combo.ts`, `ComboReader`) read direction presses with a forgiving window, especially on touch; the
-  finished combo's index into the weapon's combo list rides in `Command.combo` (see `docs/systems/magic.md`).
+  finished combo's index into the weapon's combo list rides in `Command.combo` (see `src/systems/CLAUDE.md`).
 - `direction.ts` (facings, `DIRS`/`dirIndex` for the wire) and `interp.ts` (snapshot smoothing) are the Pixi-free bits
   that sprites, entities and `net/` share.

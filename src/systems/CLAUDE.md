@@ -1,14 +1,55 @@
-# src/systems (Pixi-free rules)
+# src/systems: Pixi-free rules
 
-Rules live here, Pixi-free and unit-tested. Feature detail is in `docs/systems/*.md` and `docs/dungeon-master.md`:
-- `docs/systems/quests.md`: story quests, givers, sites, guidance, journal.
-- `docs/systems/survival.md`: food and water, ponds, crops, weather, day and night.
-- `docs/systems/magic.md`: wands, tomes, combos, skills, trainer.
-- `docs/systems/economy.md`: inventory, gold, shops, chests.
-- `docs/systems/world-props.md`: barrels (the `carrying` capability), signposts, pets, ice.
-- `docs/dungeon-master.md`: the DM, its bar, director, quests and epics.
+Rules live here, Pixi-free and unit-tested; the Pixi side is in `entities/` and the scene drives them. Every rule that
+changes a hero either succeeds completely or changes nothing and says why. Each file's header says what it does; the
+Dungeon Master's systems (`dm*.ts`) are in `docs/dungeon-master.md`. Below: the cross-cutting design.
 
-Keep it up to date in the same change ("above"/"below" in the text mean this file or the root map).
+## Capabilities (what a campaign switches off or tunes)
 
-- **Capabilities (what a campaign switches off or tunes)** — `src/systems/capabilities.ts` (Pixi-free, tested): not every story wants every system. A campaign sets them in `scenarios.json` (`"capabilities": { "map": false, "needs": { "drain": 2 } }`: `false` off, `true` on, an object = on with those **settings**; anything not named is on with its defaults), and a **biome may override its own zone** in `biomes.json` (`capabilities`, only for capabilities whose `scope` is `zone`: no map in this cave, double hunger in this swamp; a zone may also switch on what the campaign switched off). A random campaign takes them from its arc (`ArcDef.capabilities`) and each region (`RegionDef.capabilities`, written into its biome; the Bog Hollow has no map and double hunger, the Barrow is stormier). Each entry of `CAPABILITIES` holds its `scope` (`campaign` or `zone`), what it `requires` (it is off wherever that is off: `trading` needs `coop`), its settings and what switching it off does (`off`; that text lives there, not here). **`checkCapabilities` is the one validator** (unknown names and settings, wrong types, out-of-range numbers, a campaign-wide capability set per zone, one switched on while what it requires is switched off), used by `parseContent` and `checkPacks` alike; `parseContent` also refuses **content asking for what its own switches turn off** (`checkAgainstCapabilities`: a choice needing a skill without `skills`, a quest wanting or paying something that only feeds (`onlyFeeds`) where no zone has `needs`, a crop's produce where none has `farming`). `ContentManager.install` builds a `CapabilityTable` (`capabilityTable(content)`: the campaign's spec and each biome's by map name) and hands it to `setCapabilities`; each feature asks **`enabled(id, zone)`** at its gate (the zone's name for a zone-scoped one), `setting(id, key, zone)`/`flag(...)` for a tuned value, and `enabledAnywhere(id)` where a thing serves every zone (shops). The ids and where each is gated (what each does when off is its `off` text in `capabilities.ts`): `map` (zone; `OverworldScene` → `MapOverlay.setAvailable`; setting `fog`, `Explored.revealAll`), `guide` (zone; `pointTheWay`, `Hud`), `needs` (zone; `Simulation.updatePlayer`, `canDrink`, `stockOf` (shops sell nothing that only feeds unless some zone has needs); setting `drain`), `combos` and `skills` (campaign; both left out of `heroCombos`, the one list the reader, HUD and caster use; `skills` also `trainerTalk` → `NO_TRAINING` and the Magic tab), `farming` (zone; crop plots stay ripe scenery), `weather` (zone; `Simulation.weather` holds the `Weather` still via `Weather.still`; ponds seep back at `STILL_FILL`; setting `calm`), `dayNight` (zone; the night shade), `carrying` (zone; `Barrels.pickUp` refuses), `coop` (campaign; the Online tab and join links) and `trading` (campaign, requires `coop`; the Trade tab and the host's book). `tools/content/capabilities.test.ts` fails a capability that nothing in `src/` asks `enabled()` about or that this file does not list. **Add one**: an entry in `CAPABILITIES` (scope, requires, settings), `enabled('<id>', zone)` at the one place the feature starts (prefer the rule's own choke point, as `heroCombos` is for spells, over many UI checks) and `setting` for what it tunes, a line here. Co-op needs nothing on the wire: both players play the same content (the world check), so both have the same table; the host gates the rules, each side its own screens. Campaigns 1 and 2 switch nothing off.
-- **`src/systems/`** — `combat.ts`: stats, gear, the `MobKind` type and its `MOB_KINDS` registry (filled from `entities.json`, see Content) and the damage/XP/level-up rules (`newHero`, `rollDamage`, `gainXp`). **Balance** (`systems/balance.test.ts` guards it): each `MobKind` is tuned for a band of hero levels (a fresh hero with the starting sword cannot take the deep kinds: one blow takes over 80% of their HP and the kind needs over 60 swings) and the biomes hand them out by band (greenwood 1-3, eastwood and the coast 3-5, barrows and desert 4-6, frostlands 5-8, the Mirewater 6-8, the jungle 7-9, the marsh 8-10; the deeper kinds are `hexer`, `bogGhoul`, `warg`, `tuskGuard`, `frostWarden`). Bows deal about 75% of a same-priced sword's damage per second, a wand's plain bolt about 65% and a tome's about 40%; a combo is a burst for mana (about 1.4-2x a plain bolt per target), not a better sword, and a ward is up under a third of the time it can be recast. Retune a weapon or kind against that test. Biomes spread extra wanderers with `generation.roam` in `biomes.json` (kinds, count, seed, apart, `avoid` circles such as round the spawn), on top of the packs the scenario node places. Levelling is superlinear: `xpToNext(level) = round(20 * level^1.5)` and `levelGains(level)` (stat gains per level-up) steps up every 4 levels; mob XP is fixed per `MobKind`, so a new tougher kind is how higher levels stay meaningful. `particles.ts` (Pixi-free `Emitter` simulation with fixed pools) and `particleEffects.ts` (the effects, pure data; add one with the `add-particle-effect` skill). `collision.ts`: `Collision` (cell collision from the map plus body-vs-body blocking: characters block each other but can always move apart; per-axis `slide`).
+Not every story wants every system. A capability (`capabilities.ts`, `CAPABILITIES`) is an engine system a story can do
+without: a campaign sets it in `scenarios.json` (`false` off, `true` on, or an object of settings), a biome may override
+it for its own zone (`scope: 'zone'`), and a random campaign takes it from its arc and regions. Each entry says what
+switching it off does (`off`), its scope, what it `requires` and its settings. `checkCapabilities` is the one validator
+(used by `parseContent` and `checkPacks`), and content asking for what its own switches turn off is refused
+(`checkAgainstCapabilities`).
+
+**A system a story could do without must be a capability, in the same change that adds it.** Gate it with
+`enabled(id, zone)` at the one choke point where the feature starts (prefer the rule's own choke point, like `heroCombos`
+for spells, over many UI checks), and read tuned values with `setting`. Co-op needs nothing on the wire: both players
+have the same table; the host gates rules, each side its own screens. `tools/content/capabilities.test.ts` fails a
+capability nothing asks `enabled()` about or that is not listed here. The ids: `map`, `guide`, `needs`, `combos`,
+`skills`, `farming`, `weather`, `dayNight`, `carrying`, `coop`, `trading`.
+
+## Balance
+
+Each `MobKind` is tuned for a band of hero levels and biomes hand them out by band; `balance.test.ts` guards it (a fresh
+hero cannot take the deep kinds). Bows deal about 75% of a same-priced sword's damage per second, a wand's plain bolt
+about 65%, a tome's about 40%; a combo is a burst for mana, not a better sword. Levelling is superlinear, so a tougher
+kind is how higher levels stay meaningful. **Retune a weapon or kind against that test.**
+
+## Features (design notes)
+
+- **Quests** (`quests.ts`, `guide.ts`): a chain per campaign told by a cast of givers; objectives kill, gather, bring,
+  meet, visit; chapters and journal lore make it a story. Guidance is local to each player (an arrow for a person or
+  door, a search area for something to be found). Quest text must use the biomes' `name`s (`guide.test.ts`). The host owns
+  every `QuestLog`; a guest sends `do` talk and action presses and reads the log from `pack`. Online only the DM's
+  quests count (`docs/dungeon-master.md`).
+- **Magic** (`spells.ts`, `skills.ts`, `Casting.ts`): wands and tomes are weapons with combos (direction taps) that cast
+  spells for mana; **every wand and tome is unique** (no spell or string on two weapons, none hidden inside another or a
+  skill's: tests check). Innate skills are earned in training-ground trials, two ready at a time. `heroCombos` is the one
+  list the reader, HUD and caster use; a guest detects the combo locally and sends only its index.
+- **Survival** (`needs.ts`, `crops.ts`): food and water drain with time (host/solo only; a guest displays what `pack`
+  tells it). Drinking is steady, from ponds that drain and **only rain refills**; the action key drinks by a pond only
+  while no foe is near. Crops need three waterings, are decided by the host and ride the snapshot as a state code.
+- **Weather and day** (`weather.ts`, `daynight.ts`): cosmetic atmosphere per biome, never touching combat or collision
+  (lightning aside). The host rolls each occupied zone's weather and sends its zone's in the snapshot; the clock reads the
+  wall clock, so everyone sees the same hour with nothing on the wire.
+- **Inventory, economy, chests** (`inventory.ts`, `shops.ts`, `chests.ts`, `trade.ts`): the host owns every hero's gold,
+  pack and gear. A guest applies an inventory op locally at once and sends the oldest unconfirmed one (numbered); the
+  host does each once, in order, and confirms with `pack.ack`. Shops specialise and buy back only their own trade at a
+  fraction of value; chests hold what shops don't sell (rare gear, purses). An item's code is its place in its
+  campaign's list, so `items.json` is append-only.
+- **Props** (`barrels.ts`, `signs.ts`, `pets.ts`, `ice.ts`): barrels are bodies you carry and set down (gated by
+  `carrying`; the host decides, `SnapMsg.barrels` shows them; a map object in a neighbour's margin is not this map's
+  barrel); signposts and pets are local scenery (nothing on the wire, so each player's pets wander independently); ice is
+  a velocity rule for players only.
