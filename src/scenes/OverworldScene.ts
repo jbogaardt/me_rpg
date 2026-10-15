@@ -87,8 +87,8 @@ export interface Ui {
 
 /**
  * The overworld: a world of zones with the hero, NPCs, shopkeepers and mobs. This class is the conductor: it owns the frame
- * loop, the HTML overlays (menu, dialog, shop counter, trade window, map) and what the action key does on the spot (talk,
- * open a chest, pick up, attack). The rest lives in `scenes/overworld/`, one concern per file:
+ * loop and the HTML overlays (menu, dialog, shop counter, trade window, map). The rest lives in `scenes/overworld/`, one
+ * concern per file:
  *  - `Arena`: who is in the game (the local player and the friends), the loaded zones, the role, the clock, the weather,
  *    and the "current zone" the rules work in.
  *  - `Zones`: loading zones, taking players through doors, showing the local player's zone.
@@ -97,6 +97,8 @@ export interface Ui {
  *  - `Ground`: items lying on the ground. `PackSync`: gold, pack and gear, and a guest's requests to the host.
  *    `Trading`: player-to-player trades.
  *  - `HostLink` / `GuestLink`: the two sides of a co-op game (see net/protocol.ts).
+ *  - `Interactions`: what the action key does (talk, open, pick, drink, attack). `LocalInput`: this keyboard's controls as a
+ *    `Command`. `StoryUi`: what the local player is told and shown about their quests. `PartyUi`: the DM's Party tab.
  * It runs in one of three roles (`Session.role`): solo, host (the simulation plus up to three friends' players), or client
  * (no simulation: it sends the local controls to the host and draws the host's snapshots). `arena.local` is the player at
  * this keyboard in every role; `arena.remotes` are the others by player number. Player 0 is the host.
@@ -344,10 +346,35 @@ export class OverworldScene implements Scene {
   }
 
   update(dt: number) {
-    const { menu, shop, dialog, hud, session, trade } = this.ui;
+    const { menu, shop, hud, session, trade } = this.ui;
     const { arena } = this;
     this.syncRole(session.role);
     arena.clock += dt;
+    this.updateDm(dt);
+    const online = arena.role !== 'solo';
+    const mapShown = this.updateMap();
+    menu.setOnline(online, arena.local.dm);
+    if (menu.open && online) menu.dmQuest = arena.task && { view: arena.task, pages: this.storyUi.briefOf(arena.task) };
+    this.trading.sync(dt, online);
+    this.handleKeys(mapShown);
+    if (menu.open || shop.open || trade.open) {
+      if (menu.open) menu.update();
+      else if (shop.open) shop.update();
+      hud.update(this.hero, '', arena.zone.name, arena.local.dm, this.storyUi.taskLine(), arena.role === 'solo'); // gold changes at the counter
+      if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
+    }
+
+    if (arena.role === 'client') this.updateClient(dt);
+    else this.updateSimulation(dt);
+    this.zones.prefetch(dt);
+    this.zones.retire(dt);
+    this.updateView(dt);
+    this.followCamera(dt);
+  }
+
+  /** The Dungeon Master's side of the frame: the live story, dials, powers, quests, narration, the bar and its cards. */
+  private updateDm(dt: number) {
+    const { arena } = this;
     this.liveStory.update(dt); // a live world: the host sends its log, a guest grows its own from it
     this.desk.update(dt); // the DM's dials, time of day and vote: the host tells its friends, a friend is told
     this.votePanel.sync(this.desk.openVoteForGuest);
@@ -368,7 +395,11 @@ export class OverworldScene implements Scene {
       dt,
       this.ui.dialog.active || this.ui.menu.open || this.zones.transition.busy || this.possession.active,
     );
-    const online = arena.role !== 'solo';
+  }
+
+  /** The map overlay: available in open-air zones with the capability, filled in as the players in view explore. Returns whether it is shown. */
+  private updateMap(): boolean {
+    const { arena } = this;
     // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
     // without the map capability (it is still explored, so nothing changes if one is played later).
     const outdoors = !arena.zone.data.indoor;
@@ -382,9 +413,12 @@ export class OverworldScene implements Scene {
       for (const p of arena.players()) if (p.body.visible) seen.reveal(p.body.x, p.body.y);
       this.overlay.setZone(arena.zone.data, seen, arena.zone.name);
     }
-    menu.setOnline(online, arena.local.dm);
-    if (menu.open && online) menu.dmQuest = arena.task && { view: arena.task, pages: this.storyUi.briefOf(arena.task) };
-    this.trading.sync(dt, online);
+    return mapShown;
+  }
+
+  /** Keys that act on the screens: the map, Esc (cards, words, held foe, menu), the inventory, and the DM's click on a foe. */
+  private handleKeys(mapShown: boolean) {
+    const { menu, shop, dialog, trade } = this.ui;
     if (mapShown && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
     this.possession.update();
     const click = clickedAt();
@@ -406,19 +440,12 @@ export class OverworldScene implements Scene {
       if (shop.open) shop.close();
       else menu.toggleInventory(this.hero);
     }
-    if (menu.open || shop.open || trade.open) {
-      if (menu.open) menu.update();
-      else if (shop.open) shop.update();
-      hud.update(this.hero, '', arena.zone.name, arena.local.dm, this.storyUi.taskLine(), arena.role === 'solo'); // gold changes at the counter
-      if (!online) return; // solo: the world is paused. Online it keeps running behind the menu (the other player can't be paused).
-    }
+  }
 
-    if (arena.role === 'client') this.updateClient(dt);
-    else this.updateSimulation(dt);
-    this.zones.prefetch(dt);
-    this.zones.retire(dt);
-
-    // What the local player sees: the zone they are in (a door above may just have changed it).
+  /** What the local player sees: the zone they are in (a door above may just have changed it). */
+  private updateView(dt: number) {
+    const { menu, shop, dialog, hud, trade } = this.ui;
+    const { arena } = this;
     const z = arena.zone;
     z.effects.update(dt);
     this.night.update(
@@ -474,6 +501,12 @@ export class OverworldScene implements Scene {
           .map(pin),
       );
     }
+  }
+
+  /** The camera follows the hero, the door transition's punch, and the map and neighbouring zones are built round the view. */
+  private followCamera(dt: number) {
+    const { arena } = this;
+    const z = arena.zone;
     z.follow(arena.screen.width, arena.screen.height, this.player.x, this.player.y, dt);
     // The new zone settles in from a closer shot as the iris opens (each biome has its own weather), about the hero.
     const punch = this.zones.transition.update(dt, arena.screen, this.zones.heroOnScreen());

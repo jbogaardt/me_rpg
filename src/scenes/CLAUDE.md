@@ -1,11 +1,12 @@
 # src/scenes: the overworld, zones and doors
 
-`OverworldScene` is only the conductor: the frame loop, the HTML overlays (menu, dialog, shop counter, trade window,
-map) and what the action key does on the spot (talk, open a chest, pick up, otherwise attack). **Put new code in the file
-that owns the concern, not in the scene.** The files in `overworld/` carry headers that say what each owns: `Arena` (who is
+`OverworldScene` is only the conductor: the frame loop (a short `update` of named steps) and the HTML overlays (menu,
+dialog, shop counter, trade window, map). **Put new code in the file that owns the concern, not in the scene**; a lint
+rule caps the file's length. What the action key does is `Interactions`, the controls are `LocalInput`, what the local
+player is told about quests is `StoryUi` (local only, nothing on the wire). The files in `overworld/` carry headers that say what each owns: `Arena` (who is
 in the game, the loaded zones, the zone context), `Zones` (loading, prefetching, travel, transitions), `Simulation` (the
 rules), `Visuals` (everything drawn from an event), `Ground`, `PackSync`, `Trading`, `HostLink`/`GuestLink` (the two sides
-of the network protocol), `Training`, `Casting`, `Story`, `Scenario`. A new rule belongs in `Simulation`, a new thing to
+of the network protocol), `Training`, `Casting`, `Story`, `Scenario`, `Interactions`, `LocalInput`, `StoryUi`, `PartyUi`. A new rule belongs in `Simulation`, a new thing to
 draw in `Visuals`, a new synced thing in the matching link. The DM's controls are in `docs/dungeon-master.md`, spells in
 `src/systems/CLAUDE.md`.
 

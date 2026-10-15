@@ -72,6 +72,11 @@ export default tseslint.config(
       ],
     },
   },
+  // The scene stays the conductor: new concerns get their own file in src/scenes/overworld/ (src/scenes/CLAUDE.md).
+  {
+    files: ['src/scenes/OverworldScene.ts'],
+    rules: { 'max-lines': ['error', { max: 700, skipBlankLines: true, skipComments: true }] },
+  },
   // Config files at the repo root aren't part of a tsconfig project.
   { files: ['*.config.{js,ts}'], ...tseslint.configs.disableTypeChecked },
   prettier,
