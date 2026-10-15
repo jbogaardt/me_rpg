@@ -36,8 +36,6 @@ const RETARGET = 2;
  */
 export class DmTasks {
   private book = new TaskBook();
-  private kills = 0;
-  private touched: number[] = [];
   private finder: Player | null = null;
   private falls = 0;
   private linger = 0;
@@ -54,8 +52,7 @@ export class DmTasks {
     const kill = sim.onKill;
     sim.onKill = (zone, key) => {
       kill(zone, key);
-      const t = this.book.task;
-      if (t?.state === 'active' && t.kind === 'hunt' && zone === t.zone && key === t.what) this.kills++;
+      this.book.kill(key, zone);
     };
     const defeat = sim.onDefeat;
     sim.onDefeat = (p, zone, x, y) => {
@@ -141,8 +138,6 @@ export class DmTasks {
     if (this.arena.role === 'client' || this.active) return false;
     this.book.cancel();
     if (!this.book.call(offer)) return false;
-    this.kills = 0;
-    this.touched = [];
     this.finder = null;
     this.falls = 0;
     this.linger = 0;
@@ -157,13 +152,9 @@ export class DmTasks {
   touchSite(p: Player, kind: string, index: number): boolean {
     const t = this.book.task;
     if (!t || t.state !== 'active' || p.zone !== t.zone) return false;
-    if (kind === RELIC_KIND && t.kind === 'find') {
-      this.finder = p;
-      return true;
-    }
-    if (t.kind !== 'gather' || kind !== t.what || t.bits & (1 << index) || this.touched.includes(index)) return false;
-    this.touched.push(index);
-    return true;
+    const counted = this.book.touch(kind, p.zone, index);
+    if (counted && kind === RELIC_KIND) this.finder = p;
+    return counted;
   }
 
   /** The DM points the way: everyone is shown an arrow as well as the search area. */
@@ -216,15 +207,10 @@ export class DmTasks {
     if (at !== undefined || this.retarget <= 0) this.retarget = RETARGET;
     const result = this.book.tick(dt, {
       party: party.map(this.presence),
-      kills: this.kills,
-      touched: this.touched,
-      found: this.finder !== null,
       ...(at ? { at } : {}),
       health: fracs.length ? Math.min(...fracs) : 1,
       falls: this.falls,
     });
-    this.kills = 0;
-    this.touched = [];
     this.falls = 0;
     this.publish();
     if (result) this.finish(result, party);
@@ -284,8 +270,6 @@ export class DmTasks {
 
   reset() {
     this.book.cancel();
-    this.kills = 0;
-    this.touched = [];
     this.finder = null;
     this.note = '';
     this.epic = null;

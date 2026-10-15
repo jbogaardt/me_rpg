@@ -5,6 +5,10 @@
 // hard it is, how long it runs and how far it goes, so the DM can pick one to fit the evening.
 
 import type { TaskKind } from './dmTasks';
+import type { Objective } from './quests';
+
+/** A task named outright (see `EpicStep.objective`). */
+export type BoundObjective = Extract<Objective, { t: 'kill' | 'gather' | 'visit' }> & { zone: string };
 
 /** What a step may be: one of the DM's quests, or going to meet one of the epic's people. */
 export type StepKind = TaskKind | 'meet';
@@ -12,6 +16,12 @@ export type StepKind = TaskKind | 'meet';
 /** One step of a saga. */
 export interface EpicStep {
   kind: StepKind;
+  /**
+   * The step's task named outright, in the same words as a campaign quest's own (`quests.ts` `Objective`): which foe, site
+   * or place of which land. A step without one is resolved from whatever land it falls in (`kind` and `hop`); a step with
+   * one is bound to that content, so a campaign can write a saga about its own world. Never a `bring` or a `meet`.
+   */
+  objective?: BoundObjective;
   /** How many lands from where the saga starts this step is set (0: here, 1: the next land over...). */
   hop: number;
   /** What the DM tells the party for this step, in a line or two. `{area}` is the land it is set in, `{from}` the last. */
@@ -111,6 +121,7 @@ export function planEpic(epic: EpicTemplate, start: string, graph: ZoneGraph, se
   const rings = layers(graph, start);
   const zones: string[] = [];
   epic.steps.forEach((step, i) => {
+    if (step.objective) return void zones.push(step.objective.zone); // named outright: it is set where it says
     const ring = rings[Math.min(step.hop, rings.length - 1)]!;
     const options = ring.length > 1 ? ring.filter((z) => z !== zones[i - 1]) : ring;
     zones.push(options[hash(`${seed}${epic.id}${i}`) % options.length]!);
@@ -241,17 +252,22 @@ export function parseEpic(raw: unknown): EpicTemplate | string {
   for (const [i, raw] of r.steps.entries()) {
     const at = `${id}.steps[${i}]`;
     const q = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
-    const kind = KINDS.find((k) => k === q.kind);
+    const bound = q.objective === undefined ? undefined : readBound(q.objective);
+    if (bound === null)
+      return `${at}.objective: a kill (kind, count, zone), a gather (site, zone, count) or a visit (place, zone, count)`;
+    // Named outright, the step is its objective's kind and sits where it says; otherwise it says which kind and how far.
+    const kind = bound ? KIND_OF[bound.t] : KINDS.find((k) => k === q.kind);
     const tell = words(q.tell, 230);
-    const hop = q.hop;
+    const hop = bound ? 0 : q.hop;
     if (!kind || !tell || !Number.isInteger(hop) || (hop as number) < 0 || (hop as number) > 5)
       return `${at}: a kind (${KINDS.join(', ')}), a hop 0 to 5 and a tell (short)`;
     if (kind !== 'meet') {
       if (q.who !== undefined || q.says !== undefined || q.gives !== undefined)
         return `${at}: only a meet step has who, says or gives`;
-      steps.push({ kind, hop: hop as number, tell });
+      steps.push({ kind, hop: hop as number, tell, ...(bound ? { objective: bound } : {}) });
       continue;
     }
+    if (bound) return `${at}.objective: a meet step has a person, not a task`;
     const who = typeof q.who === 'string' ? q.who : '';
     const says = list(q.says, 1, MAX_SAYS, MAX_SAY);
     const gives = q.gives === undefined ? undefined : words(q.gives, MAX_ITEM);
@@ -273,6 +289,22 @@ export function parseEpic(raw: unknown): EpicTemplate | string {
     steps,
     ...(Object.keys(people).length ? { people } : {}),
   };
+}
+
+const KIND_OF = { kill: 'hunt', gather: 'gather', visit: 'visit' } as const;
+
+/** A named task as the engine states it, or null when it is not one a saga can set (never a bring, never a meet). */
+function readBound(raw: unknown): BoundObjective | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const o = raw as Record<string, unknown>;
+  const name = (v: unknown): v is string => typeof v === 'string' && /^[\w .'-]{1,48}$/.test(v);
+  const count =
+    Number.isInteger(o.count) && (o.count as number) >= 1 && (o.count as number) <= 50 ? (o.count as number) : 0;
+  if (!name(o.zone) || !count) return null;
+  if (o.t === 'kill' && name(o.kind)) return { t: 'kill', kind: o.kind, count, zone: o.zone };
+  if (o.t === 'gather' && name(o.site)) return { t: 'gather', site: o.site, zone: o.zone, count };
+  if (o.t === 'visit' && name(o.place)) return { t: 'visit', place: o.place, zone: o.zone, count };
+  return null;
 }
 
 /** Parse a file of epics (an array): all of them, or the first problem. */

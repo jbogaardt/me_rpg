@@ -196,23 +196,79 @@ export const VISIT_RADIUS = 7;
 /** The mob kind's key in MOB_KINDS (for counting kills), or undefined for a kind that is not in it. */
 export const mobKey = (kind: MobKind): string | undefined => Object.keys(MOB_KINDS).find((k) => MOB_KINDS[k] === kind);
 
-/** How much of the current task is done (capped at what it needs). */
-export function progressOf(hero: Hero): number {
-  const q = currentQuest(hero.quests);
-  if (!q || !hero.quests.taken) return 0;
+/**
+ * The rules every quest is held to, wherever it is tracked: a hero's own log (the campaign's story, handed out by its
+ * people) or the party's one (the Dungeon Master's epics, `dmTasks.ts`). A rule reads and moves a `QuestLog` for a
+ * `Quest`, so the two cannot disagree about what counts: `taken` is a quest being worked on, `progress` its count (a kill
+ * or visit count; for a gather the sites touched, a bit each).
+ */
+
+/** How much of `q` is done in `log` (capped at what it needs). `held` is how many of a `bring` quest's item are in hand. */
+export function progressIn(log: QuestLog, q: Quest, held = 0): number {
+  if (!log.taken) return 0;
   const { objective: o } = q;
   switch (o.t) {
     case 'kill':
-      return Math.min(o.count, hero.quests.progress);
+      return Math.min(o.count, log.progress);
     case 'gather':
-      return Math.min(o.count, bits(hero.quests.progress));
+      return Math.min(o.count, bits(log.progress));
     case 'bring':
-      return Math.min(o.count, hero.pack.filter((i) => i === itemOf(o.item)).length);
+      return Math.min(o.count, held);
     case 'meet':
       return o.count; // going to find them is all there is to it
     case 'visit':
-      return Math.min(o.count, hero.quests.progress);
+      return Math.min(o.count, log.progress);
   }
+}
+
+/** A kill of the mob kind `key` in `zone`: counts if `q` wants it and is not yet done. */
+export function killIn(log: QuestLog, q: Quest, key: string | undefined, zone: string): boolean {
+  const { objective: o } = q;
+  if (!log.taken || o.t !== 'kill' || key !== o.kind || (o.zone && o.zone !== zone) || log.progress >= o.count)
+    return false;
+  log.progress++;
+  return true;
+}
+
+/**
+ * Someone is at (x, y) pixels in `zone`; `place` is where the named place of `q` is (its cell, or undefined when the zone
+ * has no such place): counts when they come within VISIT_RADIUS of it.
+ */
+export function visitIn(
+  log: QuestLog,
+  q: Quest,
+  zone: string,
+  place: { col: number; row: number } | undefined,
+  x: number,
+  y: number,
+): boolean {
+  const { objective: o } = q;
+  if (!log.taken || o.t !== 'visit' || log.progress >= o.count || o.zone !== zone || !place) return false;
+  if (Math.hypot(x / CELL - (place.col + 0.5), y / CELL - (place.row + 0.5)) > VISIT_RADIUS) return false;
+  log.progress = o.count;
+  return true;
+}
+
+/** Does `q` send them to this site (kind, zone, and which of that kind in the zone), and has it not been touched? */
+export function siteOpenIn(log: QuestLog, q: Quest, kind: string, zone: string, index: number): boolean {
+  const { objective: o } = q;
+  if (!log.taken || o.t !== 'gather' || o.site !== kind || o.zone !== zone || index < 0 || index > 30) return false;
+  return Math.floor(log.progress / 2 ** index) % 2 === 0 && bits(log.progress) < o.count;
+}
+
+/** The site is touched: counts if `q` wants it and it is new. */
+export function siteIn(log: QuestLog, q: Quest, kind: string, zone: string, index: number): boolean {
+  if (!siteOpenIn(log, q, kind, zone, index)) return false;
+  log.progress += 2 ** index;
+  return true;
+}
+
+/** How much of the hero's current task is done (capped at what it needs). */
+export function progressOf(hero: Hero): number {
+  const q = currentQuest(hero.quests);
+  if (!q) return 0;
+  const o = q.objective;
+  return progressIn(hero.quests, q, o.t === 'bring' ? hero.pack.filter((i) => i === itemOf(o.item)).length : 0);
 }
 
 /** How much the current task needs. */
@@ -253,11 +309,7 @@ function report(hero: Hero): Progress {
 /** A kill by this hero (everyone in the zone shares a kill): counts if the current kill quest wants that kind. */
 export function recordKill(hero: Hero, kind: MobKind, zone: string): Progress | null {
   const q = currentQuest(hero.quests);
-  if (!q || !hero.quests.taken || q.objective.t !== 'kill') return null;
-  const { objective: o } = q;
-  if (mobKey(kind) !== o.kind || (o.zone && o.zone !== zone) || hero.quests.progress >= o.count) return null;
-  hero.quests.progress++;
-  return report(hero);
+  return q && killIn(hero.quests, q, mobKey(kind), zone) ? report(hero) : null;
 }
 
 /**
@@ -272,29 +324,30 @@ export function recordVisit(
   y: number,
 ): Progress | null {
   const q = currentQuest(hero.quests);
-  if (!q || !hero.quests.taken || q.objective.t !== 'visit' || hero.quests.progress >= q.objective.count) return null;
-  const { objective: o } = q;
-  if (o.zone !== zone) return null;
-  const place = places.find((p) => p.name === o.place);
-  if (!place || Math.hypot(x / CELL - (place.col + 0.5), y / CELL - (place.row + 0.5)) > VISIT_RADIUS) return null;
-  hero.quests.progress = o.count;
-  return report(hero);
+  if (!q || !hero.quests.taken || q.objective.t !== 'visit') return null;
+  const name = q.objective.place;
+  return visitIn(
+    hero.quests,
+    q,
+    zone,
+    places.find((p) => p.name === name),
+    x,
+    y,
+  )
+    ? report(hero)
+    : null;
 }
 
 /** Does the current quest send the hero to this site (kind, zone, and which of that kind in the zone) and have they not been to it? */
 export function siteOpen(hero: Hero, kind: string, zone: string, index: number): boolean {
   const q = currentQuest(hero.quests);
-  if (!q || !hero.quests.taken || q.objective.t !== 'gather') return false;
-  const { objective: o } = q;
-  if (o.site !== kind || o.zone !== zone || index < 0 || index > 30) return false;
-  return Math.floor(hero.quests.progress / 2 ** index) % 2 === 0 && bits(hero.quests.progress) < o.count;
+  return !!q && siteOpenIn(hero.quests, q, kind, zone, index);
 }
 
 /** The hero touches a site: counts it if the current gather quest wants it and it is new. */
 export function recordSite(hero: Hero, kind: string, zone: string, index: number): Progress | null {
-  if (!siteOpen(hero, kind, zone, index)) return null;
-  hero.quests.progress += 2 ** index;
-  return report(hero);
+  const q = currentQuest(hero.quests);
+  return q && siteIn(hero.quests, q, kind, zone, index) ? report(hero) : null;
 }
 
 /** What the player reads on touching the `index`th site of `kind` in its zone. */

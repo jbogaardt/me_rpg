@@ -26,9 +26,6 @@ const offer = (o: Partial<QuestOffer> = {}): QuestOffer => ({
 });
 const input = (i: Partial<TaskInput> = {}): TaskInput => ({
   party: [],
-  kills: 0,
-  touched: [],
-  found: false,
   health: 1,
   falls: 0,
   ...i,
@@ -38,11 +35,17 @@ describe('hunting', () => {
   it('counts the kills of its foe, never beyond the goal, and ends when the last falls', () => {
     const b = new TaskBook();
     expect(b.call(offer())).toBe(true);
-    expect(b.tick(1, input({ kills: 2 }))).toBeNull();
+    b.kill('goblin', 'fen');
+    expect(b.kill('goblin', 'fen')).toBe(true);
+    expect(b.tick(1, input())).toBeNull();
     expect(b.task!.progress).toBe(2);
-    expect(b.tick(1, input({ kills: 5 }))).toBe('done');
+    expect(b.kill('wolf', 'fen')).toBe(false); // not its foe
+    expect(b.kill('goblin', 'glen')).toBe(false); // not its land
+    for (let i = 0; i < 5; i++) b.kill('goblin', 'fen');
+    expect(b.tick(1, input())).toBe('done');
     expect(b.task!.progress).toBe(3);
-    expect(b.tick(1, input({ kills: 1 }))).toBeNull(); // reported once
+    expect(b.kill('goblin', 'fen')).toBe(false); // done: nothing more counts
+    expect(b.tick(1, input())).toBeNull(); // reported once
   });
 });
 
@@ -50,11 +53,17 @@ describe('gathering', () => {
   it('counts each site once, however often it is touched', () => {
     const b = new TaskBook();
     b.call(offer({ kind: 'gather', goal: 3, what: 'echostone', title: 'Gather 3 Echostones' }));
-    b.tick(1, input({ touched: [0, 0, 2] }));
+    expect([b.touch('echostone', 'fen', 0), b.touch('echostone', 'fen', 0), b.touch('echostone', 'fen', 2)]).toEqual([
+      true,
+      false,
+      true,
+    ]);
+    b.tick(1, input());
     expect(b.task!.progress).toBe(2);
-    b.tick(1, input({ touched: [2] }));
-    expect(b.task!.progress).toBe(2);
-    expect(b.tick(1, input({ touched: [1] }))).toBe('done');
+    expect(b.touch('echostone', 'fen', 2)).toBe(false);
+    expect(b.touch('moss', 'fen', 1)).toBe(false); // not its sites
+    b.touch('echostone', 'fen', 1);
+    expect(b.tick(1, input())).toBe('done');
     expect(b.task!.bits).toBe(0b111);
   });
 });
@@ -64,7 +73,8 @@ describe('finding a relic', () => {
     const b = new TaskBook();
     b.call(offer({ kind: 'find', goal: 1, what: 'charm', title: 'Find the Charm' }));
     expect(b.tick(5, input())).toBeNull();
-    expect(b.tick(1, input({ found: true }))).toBe('done');
+    expect(b.touch('relic', 'fen', 0)).toBe(true);
+    expect(b.tick(1, input())).toBe('done');
   });
 });
 
@@ -87,8 +97,10 @@ describe('how it goes', () => {
     expect([b.task!.x, b.task!.y, b.task!.minHealth, b.task!.falls, b.task!.sinceProgress]).toEqual([
       10, 20, 0.5, 1, 60,
     ]);
-    b.tick(1, input({ kills: 1 }));
-    expect(b.task!.sinceProgress).toBe(0);
+    b.kill('goblin', 'fen');
+    b.tick(1, input());
+    expect(b.task!.sinceProgress).toBe(1); // the kill reset it, then a second passed
+    b.tick(1, input({ at: { x: 0, y: 0 } }));
   });
 
   it('is told once the DM points the way, can be called off, and gives up in the end', () => {
@@ -121,7 +133,7 @@ describe('what the party sees', () => {
   it('round-trips a quest through the wire and refuses nonsense', () => {
     const b = new TaskBook();
     b.call(offer({ kind: 'gather', goal: 3, what: 'echostone', title: 'Gather 3 Echostones', x: 512.4, y: 99.6 }));
-    b.tick(1, input({ touched: [1] }));
+    b.touch('echostone', 'fen', 1);
     b.giveHint();
     const v = viewOf(b.task!);
     expect(v).toMatchObject({ kind: 'gather', progress: 1, goal: 3, x: 512, y: 100, bits: 2, hint: true });

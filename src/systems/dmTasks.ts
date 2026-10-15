@@ -4,15 +4,19 @@
 // map, never an arrow (the DM can hand out a hint when they are lost). One at a time; the host owns it, friends are told.
 // They sit beside the story's quest chain: the chain is the spine of the tale, these are the DM's tool.
 
+import { CELL } from '../map/types';
 import { MAX_NOTE } from './dmBrief';
+import { offerReward, partyLog, questOf } from './dmQuests';
+import type { QuestLog } from './combat';
+import { VISIT_RADIUS, killIn, progressIn, siteIn, visitIn, type Quest } from './quests';
 
 export const TASK_KINDS = ['hunt', 'gather', 'find', 'visit'] as const;
 export type TaskKind = (typeof TASK_KINDS)[number];
 export const TASK_STATES = ['active', 'done', 'failed'] as const;
 export type TaskState = (typeof TASK_STATES)[number];
 
-/** How close (px) someone must come to a named place to have reached it. */
-export const VISIT_REACH = 6 * 32;
+/** How close (px) someone must come to a named place to have reached it (the campaign's own radius: one rule). */
+export const VISIT_REACH = VISIT_RADIUS * CELL;
 /** A quest nobody finishes ends after this many seconds. */
 export const TASK_TIMEOUT = 1500;
 /** How long the result ("Done!") stays up for everyone. */
@@ -42,6 +46,9 @@ export interface QuestOffer {
 }
 
 export interface Task {
+  /** The quest it is, and the log it is tracked in: the same rules as a hero's own quest (`quests.ts`) count it. */
+  quest: Quest;
+  log: QuestLog;
   kind: TaskKind;
   state: TaskState;
   title: string;
@@ -66,12 +73,6 @@ export interface Task {
 export interface TaskInput {
   /** The party (never the DM). */
   party: Presence[];
-  /** Foes of the quest's kind the party killed in its zone since the last tick. */
-  kills: number;
-  /** Gather: indexes of the sites touched since the last tick. */
-  touched: number[];
-  /** Find: the relic was found. */
-  found: boolean;
   /** Where the quest leads now (foes move, the nearest site changes), when it is known. */
   at?: { x: number; y: number };
   /** The party's lowest health now (0..1) and how many fell this tick. */
@@ -105,6 +106,8 @@ export class TaskBook {
     if (this.task?.state === 'active') return false;
     this.result = null;
     this.task = {
+      quest: questOf(offer),
+      log: partyLog(),
       kind: offer.kind,
       state: 'active',
       title: offer.title,
@@ -134,6 +137,30 @@ export class TaskBook {
     if (this.task?.state === 'active') this.task.hint = true;
   }
 
+  /** A foe of kind `key` fell in `zone` (anyone's kill): counts if the quest wants it. */
+  kill(key: string, zone: string): boolean {
+    const t = this.task;
+    if (!t || t.state !== 'active' || !killIn(t.log, t.quest, key, zone)) return false;
+    this.count(t);
+    return true;
+  }
+
+  /** The party touched a site of `kind` (the relic of a find is one) in `zone`: counts if the quest wants it and it is new. */
+  touch(kind: string, zone: string, index: number): boolean {
+    const t = this.task;
+    if (!t || t.state !== 'active' || !siteIn(t.log, t.quest, kind, zone, index)) return false;
+    this.count(t);
+    return true;
+  }
+
+  /** The quest as the log now stands: what the tracker and the wire read. */
+  private count(t: Task) {
+    const before = t.progress;
+    t.progress = progressIn(t.log, t.quest);
+    t.bits = t.kind === 'gather' ? t.log.progress : 0;
+    if (t.progress > before) t.sinceProgress = 0;
+  }
+
   /** Move on `dt` seconds; the state afterwards ('done' and 'failed' are returned once, on the tick they happen). */
   tick(dt: number, input: TaskInput): TaskState | null {
     const t = this.task;
@@ -144,17 +171,12 @@ export class TaskBook {
     t.falls += input.falls;
     if (input.at) [t.x, t.y] = [input.at.x, input.at.y];
     const before = t.progress;
-    if (t.kind === 'hunt') t.progress = Math.min(t.goal, t.progress + input.kills);
-    else if (t.kind === 'gather') {
-      for (const i of input.touched) {
-        if (i < 0 || i > 30 || t.bits & (1 << i)) continue;
-        t.bits |= 1 << i;
-        t.progress = Math.min(t.goal, t.progress + 1);
-      }
-    } else if (t.kind === 'find') {
-      if (input.found) t.progress = t.goal;
-    } else if (input.party.some((p) => p.zone === t.zone && Math.hypot(p.x - t.x, p.y - t.y) <= VISIT_REACH))
-      t.progress = t.goal;
+    const { quest, log } = t;
+    if (quest.objective.t === 'visit') {
+      const place = { col: t.x / CELL - 0.5, row: t.y / CELL - 0.5 };
+      for (const p of input.party) if (visitIn(log, quest, p.zone, place, p.x, p.y)) break;
+    }
+    this.count(t);
     if (t.progress > before) t.sinceProgress = 0;
     if (t.progress >= t.goal) t.state = 'done';
     else if (t.age >= TASK_TIMEOUT) t.state = 'failed';
@@ -180,15 +202,7 @@ export function classify(r: TaskResult): 'smooth' | 'rough' | 'plain' {
 }
 
 /** What a quest pays each player for finishing it (a relic pays its item too: see DmTasks). */
-export function taskReward(kind: TaskKind, goal: number): { xp: number; gold: number } {
-  return kind === 'hunt'
-    ? { xp: 14 * goal, gold: 5 * goal }
-    : kind === 'gather'
-      ? { xp: 12 * goal, gold: 4 * goal }
-      : kind === 'find'
-        ? { xp: 70, gold: 30 }
-        : { xp: 40, gold: 15 };
-}
+export const taskReward = offerReward;
 
 /** A quest as the party sees it (and as it travels). */
 export interface TaskView {

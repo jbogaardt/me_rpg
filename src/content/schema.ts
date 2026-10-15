@@ -806,6 +806,16 @@ function crossCheck(r: Reader, c: Content) {
     if (c.entities[g.look]?.type !== 'npc') r.fail(`givers.${id}.look`, `"${g.look}" is not an npc in entities.json`);
     if (!maps.has(g.zone)) r.fail(`givers.${id}.zone`, `"${g.zone}" is not the map of any biome`);
   }
+  // A saga's step that names its task outright names this campaign's own content: it must exist.
+  for (const epic of c.epics)
+    epic.steps.forEach((step, i) => {
+      const o = step.objective;
+      const p = `epics.${epic.id}.steps[${i}].objective`;
+      if (!o) return;
+      if (!maps.has(o.zone)) r.fail(`${p}.zone`, `"${o.zone}" is not the map of any biome`);
+      if (o.t === 'kill' && !mob(o.kind)) r.fail(`${p}.kind`, `"${o.kind}" is not a mob in entities.json`);
+      if (o.t === 'gather' && !q.sites[o.site]) r.fail(`${p}.site`, `"${o.site}" is not in sites`);
+    });
   const ids = new Set<string>();
   q.quests.forEach((quest) => {
     const p = `quests.${quest.id}`;

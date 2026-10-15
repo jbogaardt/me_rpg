@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allOffers, relicsFor, type Land } from './dmQuests';
+import { allOffers, offerFor, relicsFor, type Land } from './dmQuests';
 
 const land = (l: Partial<Land> = {}): Land => ({
   zone: 'fen',
@@ -51,5 +51,20 @@ describe('quests written from a land', () => {
     };
     expect(relicsFor(items, 3).map((r) => r.id)).toEqual(['blade', 'stick', 'crown']);
     expect(relicsFor(items, 30)[0]!.id).toBe('crown');
+  });
+});
+
+describe('the offer for a task a saga names outright', () => {
+  it('leads to the foe, the sites or the place the land holds, and still offers what it does not hold', () => {
+    const here = land();
+    const foe = offerFor(here, { t: 'kill', kind: here.mobs[0]!.key, count: 4, zone: here.zone });
+    expect(foe).toMatchObject({ kind: 'hunt', goal: 4, what: here.mobs[0]!.key, x: here.mobs[0]!.x });
+    expect(foe.title).toMatch(/^Hunt 4 /);
+    const sites = offerFor(here, { t: 'gather', site: here.sites[0]!.kind, zone: here.zone, count: 2 });
+    expect(sites).toMatchObject({ kind: 'gather', goal: 2 });
+    const place = offerFor(here, { t: 'visit', place: here.places[0]!.name, zone: here.zone, count: 1 });
+    expect(place).toMatchObject({ kind: 'visit', title: `Reach ${here.places[0]!.name}`, x: here.places[0]!.x });
+    const gone = offerFor(here, { t: 'kill', kind: 'dragon', count: 1, zone: here.zone });
+    expect(gone).toMatchObject({ kind: 'hunt', what: 'dragon' });
   });
 });

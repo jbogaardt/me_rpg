@@ -1,4 +1,4 @@
-# Epics: one quest format for a story, a saga, a party and a hero
+# Epics: one quest layer for a story, a saga, a party and a hero
 
 Read this before touching `content/epics.json`, `content/story.ts`, `systems/dmEpics.ts`, `systems/dmPeople.ts`,
 `DmEpics.ts`, `DmTasks.ts`, or a campaign's `quests.json`. How the Dungeon Master fits is in `docs/dungeon-master.md`.
@@ -14,6 +14,15 @@ party. Both are `epics` of one file, so a story is written in one place whether 
 flat file (random and live worlds' generators still write one) passes through. `tools/content/story.test.ts` holds the
 epic form to the old flat file, and `tools/content/migrateStory.ts` moved the sandbox campaigns over.
 
+## One set of rules
+
+Every quest, whoever holds it, is a `Quest` (`quests.ts`) counted by the same rules: `progressIn`, `killIn`, `visitIn`,
+`siteOpenIn`, `siteIn` read and move a `QuestLog` for a `Quest`. A hero's quest is the story's quest in their own log (the
+campaign's people hand it out and take it back: `talk`); the party's quest is a DM step made into a `Quest` (`questOf`, from
+what the land holds) in the party's one log (`TaskBook`, `partyLog`): the **holder** and the **trigger** differ, the rules do
+not, so a fix to what counts as a kill, a site or a visit is made once. A relic is a gather of the one `relic` site.
+The wires are unchanged: a hero's log rides `pack` as `[stage, taken, progress]`; the party's quest rides `dm` as a `TaskView`.
+
 ## DM epics (`scope: party`)
 
 An epic is a saga of steps as **data**, with no land and no content id: a step is a `hop` from where the saga starts, a
@@ -22,7 +31,11 @@ in any biome that has the lands; each carries a gauge (difficulty, length, reach
 `content/epics.json`; a campaign's `quests.json` may hold more, and an AI may write one (`DmBot.epic`): `parseEpic` checks
 all of them as strictly as a world entry (an unknown person, a person met twice or never, too long a line).
 
-A step is a quest kind (hunt, gather, find, visit: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
+A step is either **resolved** from whatever land it falls in (`kind` hunt, gather, find or visit, and a `hop`) or **named
+outright** (`objective`, in the campaign quests' own words: `{"t": "kill", "kind": "goblin", "count": 4, "zone":
+"greenwood"}`; never a bring or a meet), which binds it to that campaign's content and is checked against it, so a campaign
+writes a saga about its own world (`greenwood_reckoning` in campaign 1) and a pack-style one runs anywhere. A resolved step is a
+quest kind (hunt, gather, find, visit: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
 `DmTasks.ts` runs it) or `meet`. For `meet` the DM makes the step's person (an `npc` then a `cast` entry of the live world,
 on open ground in the step's land, wearing the look a word names), the party is sent to find them (a `visit` quest at
 their feet, so the tracker and the map are the usual ones), and on reaching them they speak a line at a time in the DM's
@@ -46,5 +59,5 @@ yet. Online only the DM's quests count: the story chain's givers only pass the t
 ## Not yet
 
 Items in the pack (`gives` is the DM's word), a person who turns on the party, branching, the packs' arcs (a third quest
-format that assembles live worlds) and one runtime for the hero's quest log and the party's epics (two engines read the
-one format today).
+format that assembles live worlds), people placed by the maps (a campaign's givers) and by the log (the DM's) as one
+mechanism, and one *trigger* for both holders (a giver's talk, or the runner) with one telling for what a step says.

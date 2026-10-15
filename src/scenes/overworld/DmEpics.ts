@@ -1,5 +1,5 @@
 import type { ContentManager } from '../../content/ContentManager';
-import { allOffers } from '../../systems/dmQuests';
+import { allOffers, offerFor } from '../../systems/dmQuests';
 import { cleanNote } from '../../systems/dmBrief';
 import { CELL } from '../../map/types';
 import {
@@ -187,7 +187,9 @@ export class DmEpics {
     const offer =
       step.kind === 'meet'
         ? this.person(run, step, zone, z)
-        : this.choose(allOffers(this.tasks.landOf(z)), step.kind, run.step);
+        : step.objective
+          ? offerFor(this.tasks.landOf(z), step.objective) // named outright: this foe, these sites, that place
+          : this.choose(allOffers(this.tasks.landOf(z)), step.kind, run.step);
     if (!offer) return this.end('The lands fall quiet, and the saga with them.');
     run.next = false;
     this.tasks.setEpic({ title: run.plan.epic.title, step: run.step + 1, total: run.plan.epic.steps.length });

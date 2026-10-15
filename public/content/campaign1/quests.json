@@ -624,6 +624,44 @@
           ]
         }
       ]
+    },
+    {
+      "id": "greenwood_reckoning",
+      "scope": "party",
+      "title": "The Greenwood Reckoning",
+      "tagline": "Drive the creatures out of the Greenwood and the woods beyond it, one lair at a time.",
+      "difficulty": 2,
+      "opening": "The woods around Lanternrest have grown bold. Something is driving the creatures out of the dark, and they are coming for the road. Meet them first.",
+      "ending": "The woods are quiet again. The creatures that came out of the dark have gone back to it, or gone for good.",
+      "steps": [
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "goblin",
+            "count": 4,
+            "zone": "greenwood"
+          },
+          "tell": "The goblins in {area} were the first to come out of the trees. Thin them, and the rest will think twice."
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "wolfkin",
+            "count": 4,
+            "zone": "greenwood"
+          },
+          "tell": "The wolfkin follow the goblins like a bad smell. Drive them off before they find the road."
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "zombie",
+            "count": 3,
+            "zone": "eastwood"
+          },
+          "tell": "Whatever woke the dead in {area} is the reason for all of it. Put them to rest, and the woods may settle."
+        }
+      ]
     }
   ],
   "epilogue": [

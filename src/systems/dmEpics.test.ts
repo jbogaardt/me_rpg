@@ -183,3 +183,41 @@ describe('epics as data', () => {
     expect(epicsFrom('a', big, 0, [t], true).some((e) => e.plan.epic.id === 'a_tale')).toBe(true);
   });
 });
+
+describe('steps that name their task outright', () => {
+  const base = () => ({
+    id: 'named',
+    title: 'Named',
+    tagline: 'A saga about this world.',
+    difficulty: 2,
+    opening: 'It begins.',
+    ending: 'It ends.',
+    steps: [
+      { objective: { t: 'kill', kind: 'goblin', count: 5, zone: 'fen' }, tell: 'Drive the goblins out of {area}.' },
+      { kind: 'visit', hop: 1, tell: 'Then see {area}.' },
+    ],
+  });
+  it('takes the campaign’s own words for a task, and sits where it says', () => {
+    const epic = parseEpic(base());
+    expect(epic).toMatchObject({
+      steps: [{ kind: 'hunt', hop: 0, objective: { t: 'kill', kind: 'goblin', zone: 'fen' } }, {}],
+    });
+    const line = { neighbours: (z: string) => (z === 'a' ? ['b'] : ['a']), open: () => true };
+    expect(planEpic(epic as never, 'a', line)!.zones[0]).toBe('fen'); // not a hop from the start: where it says
+    expect(planEpic(epic as never, 'a', line)!.zones[1]).toBe('b');
+  });
+  it('refuses a task a saga cannot set: a bring, a meet, a missing zone, nothing to count', () => {
+    const bad = (objective: unknown) => parseEpic({ ...base(), steps: [{ objective, tell: 'x' }, base().steps[1]] });
+    for (const o of [
+      { t: 'bring', item: 'x', count: 1, zone: 'fen' },
+      { t: 'meet', count: 1, zone: 'fen' },
+      { t: 'kill', kind: 'goblin', count: 5 },
+      { t: 'kill', kind: 'goblin', count: 0, zone: 'fen' },
+      { t: 'gather', zone: 'fen', count: 2 },
+      'kill',
+    ])
+      expect(typeof bad(o), JSON.stringify(o)).toBe('string');
+    const meet = { ...base().steps[0], who: 'x' };
+    expect(typeof parseEpic({ ...base(), steps: [meet, base().steps[1]] })).toBe('string');
+  });
+});

@@ -3,8 +3,10 @@
 // relic could be) and turns it into a few honest asks: "Hunt 5 Goblins", "Gather 3 Echostones", "Reach the Old Mill",
 // "Find the Wayfarer's Charm". The party is left to work out how.
 
+import type { QuestLog } from './combat';
+import type { BoundObjective } from './dmEpics';
+import type { Quest, SiteKind } from './quests';
 import type { QuestOffer } from './dmTasks';
-import type { SiteKind } from './quests';
 
 /** The site kind of a hidden relic: an engine kind with a look of its own, not content. */
 export const RELIC_KIND = 'relic';
@@ -32,6 +34,86 @@ export interface Land {
   /** A spot to hide a relic: far enough from the party to be a search, on open ground. */
   spot: () => { x: number; y: number } | null;
 }
+
+/**
+ * The offer for a task a saga names outright (its step's `objective`): the land says where the foe, the sites or the place
+ * are, and how they are called. A land that has none of it just now (the foe was all killed) still gives the offer, led to
+ * the land's own spot, so a named step never stalls on what the world happens to hold.
+ */
+export function offerFor(land: Land, o: BoundObjective): QuestOffer {
+  const lost = land.spot() ?? { x: 0, y: 0 };
+  if (o.t === 'kill') {
+    const m = land.mobs.find((x) => x.key === o.kind);
+    return {
+      kind: 'hunt',
+      title: `Hunt ${o.count} ${plural(m?.name ?? o.kind)}`,
+      zone: land.zone,
+      goal: o.count,
+      what: o.kind,
+      ...(m ? { x: m.x, y: m.y } : lost),
+    };
+  }
+  if (o.t === 'gather') {
+    const s = land.sites.find((x) => x.kind === o.site);
+    return {
+      kind: 'gather',
+      title: `Gather ${o.count} ${plural(s?.name ?? o.site)}`,
+      zone: land.zone,
+      goal: o.count,
+      what: o.site,
+      ...(s ? { x: s.x, y: s.y } : lost),
+    };
+  }
+  const p = land.places.find((x) => x.name === o.place);
+  return { kind: 'visit', title: `Reach ${o.place}`, zone: land.zone, goal: o.count, what: o.place, ...(p ?? lost) };
+}
+
+/** What a quest pays each player (xp and gold) by its kind and size; a relic pays its item to whoever found it, too. */
+export function offerReward(kind: QuestOffer['kind'], goal: number): { xp: number; gold: number } {
+  return kind === 'hunt'
+    ? { xp: 14 * goal, gold: 5 * goal }
+    : kind === 'gather'
+      ? { xp: 12 * goal, gold: 4 * goal }
+      : kind === 'find'
+        ? { xp: 70, gold: 30 }
+        : { xp: 40, gold: 15 };
+}
+
+/**
+ * An offer as the quest it is, in the same terms as the campaign's own (`quests.ts`), so one set of rules counts both: a
+ * hunt is a `kill`, a gather a `gather`, a find a `gather` of the one relic there is to touch, and reaching a place a `visit`.
+ * Nothing it says is spoken by a giver (the DM tells it), so its words are empty.
+ */
+export function questOf(offer: QuestOffer): Quest {
+  const where = { zones: [offer.zone] };
+  const objective: Quest['objective'] =
+    offer.kind === 'hunt'
+      ? { t: 'kill', kind: offer.what, count: offer.goal, zone: offer.zone }
+      : offer.kind === 'gather'
+        ? { t: 'gather', site: offer.what, zone: offer.zone, count: offer.goal }
+        : offer.kind === 'find'
+          ? { t: 'gather', site: RELIC_KIND, zone: offer.zone, count: 1 }
+          : { t: 'visit', place: offer.what, zone: offer.zone, count: 1 };
+  return {
+    id: `dm_${offer.kind}`,
+    chapter: 0,
+    learned: '',
+    fieldNote: [],
+    title: offer.title,
+    goal: offer.title,
+    hint: '',
+    where,
+    unit: '',
+    objective,
+    reward: { ...offerReward(offer.kind, offer.goal), items: [] },
+    offer: [],
+    remind: [],
+    done: [],
+  };
+}
+
+/** The log a party's quest is tracked in: taken from the start (the DM gave it), with nothing done. */
+export const partyLog = (): QuestLog => ({ stage: 0, taken: true, progress: 0 });
 
 /** A name in the plural for a title ("Goblin" → "Goblins"); a name that already ends in s keeps it. */
 const plural = (name: string): string => (/s$/i.test(name) ? name : `${name}s`);
