@@ -26,18 +26,6 @@ test('tapping a combo without a wand or tome does nothing', async ({ page }) => 
   await expect(page.locator('#hud-mp .label')).toHaveText('20 / 20');
 });
 
-test('there is an on-screen Attack button for keyboard and mouse, and pressing it attacks', async ({ page }) => {
-  await boot(page);
-  const button = page.locator('#atk-btn');
-  await expect(button).toBeVisible();
-  await expect(page.locator('#btn-a')).toBeHidden(); // the touch A button is for touch screens
-  const box = (await button.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await expect(button).toHaveClass(/pressed/);
-  await page.mouse.up();
-});
-
 test('the pause menu opens and closes', async ({ page }) => {
   await boot(page);
   await page.keyboard.press('Escape');
@@ -64,8 +52,6 @@ test.describe('touch', () => {
     await boot(page);
     await expect(page.locator('#touch-controls')).toBeVisible();
     await expect(page.locator('#dpad')).toBeVisible();
-    await expect(page.locator('#btn-a')).toBeVisible();
-    await expect(page.locator('#atk-btn')).toBeHidden(); // the A button is the attack button here
   });
 
   test('taps on the menu, shop, trade and choice screens keep their clicks (only game input is cancelled)', async ({

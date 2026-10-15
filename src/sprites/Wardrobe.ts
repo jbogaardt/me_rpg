@@ -111,7 +111,6 @@ export class Wardrobe {
     const key = outfitKey(outfit);
     const known = this.portraits.get(key);
     if (known) return known;
-    const sheet = this.sheet(outfit);
     const { x, y, w, h } = frameRect('idle', 'down', 0);
     const out = document.createElement('canvas');
     out.width = w * 3;
@@ -119,10 +118,14 @@ export class Wardrobe {
     const ctx = out.getContext('2d');
     if (ctx) {
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(sheet.source.resource as HTMLCanvasElement, x, y, w, h, 0, 0, out.width, out.height);
+      // Drawn from the part layers themselves, not read back from the composed sheet's texture: a texture's canvas is
+      // the GPU's to keep, and some browsers hand back something drawImage refuses.
+      for (const layer of outfitLayers(outfit, this.manifest)) {
+        const img = this.images.get(layer.file);
+        if (img) ctx.drawImage(img, x, y, w, h, 0, 0, out.width, out.height);
+      }
     }
     const url = out.toDataURL();
-    this.release(sheet);
     this.portraits.set(key, url);
     return url;
   }

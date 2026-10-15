@@ -121,7 +121,12 @@ void (async () => {
     };
     ui.menu.portrait = (kind) => {
       const look = MOB_KINDS[kind]?.look ?? NPC_LOOKS[kind]; // a monster's id, or a person's (a quest's meet)
-      return look ? sprites.wardrobe.portrait(look) : null;
+      try {
+        return look ? sprites.wardrobe.portrait(look) : null;
+      } catch (err) {
+        console.warn('quest picture failed', err); // a missing picture must never stop the menu from opening
+        return null;
+      }
     };
     const overworld = new OverworldScene(zone, sprites, ui, loadZone, unloadZone, app.renderer, content, world);
     scenes.change(overworld);

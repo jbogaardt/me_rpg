@@ -363,7 +363,7 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
 
   // The DM speaks and the friend reads it.
   await host.locator('#dm-bar input').fill('Beware the fen.');
-  await host.locator('#dm-bar form button').click();
+  await host.locator('#dm-bar form button[type="submit"]').click();
   await expect(friend.locator('#dm-speech')).toContainText('Beware the fen.', { timeout: 15_000 });
 
   // The DM stops time with the hotkey, so everyone is told, and starts it again.

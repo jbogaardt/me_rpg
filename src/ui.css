@@ -131,16 +131,16 @@
 .bar.xp .fill { background-image: var(--grad-xp); }
 
 /* Square wooden buttons from the kit */
-.wood-btn, #menu-btn, #map-btn, #inv-btn, #req-btn, #atk-btn, #btn-a, #menu .close, #shop .close, #trade .close {
+.wood-btn, #menu-btn, #map-btn, #inv-btn, #req-btn, #btn-a, #menu .close, #shop .close, #trade .close {
   background: url('./ui/button.png') center / 100% 100% no-repeat;
   color: var(--gold); font-family: var(--title); font-weight: 700; text-align: center;
   text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
-#menu-btn, #map-btn, #inv-btn, #req-btn, #atk-btn, #menu .close, #shop .close, #trade .close { background-image: url('./ui/button-small.png'); }
-#menu-btn.pressed, #map-btn.pressed, #req-btn.pressed, #atk-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #menu .close.pressed, #shop .close.pressed, #trade .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
+#menu-btn, #map-btn, #inv-btn, #req-btn, #menu .close, #shop .close, #trade .close { background-image: url('./ui/button-small.png'); }
+#menu-btn.pressed, #map-btn.pressed, #req-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #menu .close.pressed, #shop .close.pressed, #trade .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
 #hud-buttons { display: flex; gap: 6px; flex: none; }
-#menu-btn, #map-btn, #inv-btn, #req-btn, #atk-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
+#menu-btn, #map-btn, #inv-btn, #req-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
 #map-btn[hidden] { display: none; }
 
 /* --- Co-op map (src/hud/MapOverlay.ts): never takes input, so the game stays playable behind it --- */
@@ -343,8 +343,6 @@ body.touch-ui #dm-speech .close { width: 44px; height: 44px; top: 0; right: 0; }
 body.dm-possessing #dm-speech, body.dm-possessing #dm-card, body.dm-possessing #area-banner { display: none; }
 /* The DM has no use for Inventory or Attack on screen: the hot buttons take their place (Attack comes back to strike as a possessed foe). */
 body.dm-ui #inv-btn { display: none; }
-body.dm-ui:not(.dm-possessing) #atk-btn { display: none; }
-body.touch-ui #atk-btn { display: none; } /* a touch screen has the A button */
 body.dm-ui:not(.dm-possessing) #btn-a { display: none; }
 #dm-hot { position: fixed; z-index: 2; right: calc(12px + env(safe-area-inset-right)); top: 40%; transform: translateY(-50%); display: grid; gap: 6px; font-family: var(--body); }
 #dm-hot[hidden] { display: none; }
