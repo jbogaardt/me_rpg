@@ -60,6 +60,10 @@ export class Menu {
     for (const [i, name] of TABS.entries()) {
       this.tabButton(name).addEventListener('click', () => this.select(i));
     }
+    // A click outside the panel (on the dim backdrop) closes the menu: nobody should hunt for the close button.
+    this.root.addEventListener('click', (e) => {
+      if (e.target === this.root) this.close();
+    });
   }
 
   /** Open or close the menu. When opening, `tab` (e.g. 'online') picks the page to show. */

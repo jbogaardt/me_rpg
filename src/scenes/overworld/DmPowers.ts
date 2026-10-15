@@ -109,6 +109,46 @@ export class DmPowers {
     return true;
   }
 
+  /** Where the party is, in the DM's zone (else where the DM stands). */
+  private partyCentre(zone: ZoneState): { x: number; y: number } {
+    const here = this.arena.party().filter((p) => p.zone === zone.name);
+    if (!here.length) return { x: this.arena.local.body.x, y: this.arena.local.body.y };
+    return {
+      x: here.reduce((a, p) => a + p.body.x, 0) / here.length,
+      y: here.reduce((a, p) => a + p.body.y, 0) / here.length,
+    };
+  }
+
+  /** Call every idle foe in the DM's zone towards the party (for a minute); the foes that are already fighting carry on. */
+  closeIn() {
+    const zone = this.arena.view;
+    const at = this.partyCentre(zone);
+    this.arena.inZone(zone, () => {
+      for (const m of this.arena.mobs) if (m.alive) m.beckon(at.x, at.y, 60);
+    });
+  }
+
+  /** Turn up the heat: the world pushes harder (fierce) and the foes close in. */
+  heat() {
+    this.arena.pressure = 'fierce';
+    this.closeIn();
+  }
+
+  /** Ease off: the world pushes gently, and the party catches its breath (a third of their health comes back). */
+  easeOff() {
+    this.arena.pressure = 'gentle';
+    for (const p of this.arena.party()) {
+      const s = p.hero.stats;
+      const back = Math.round(s.maxHp * 0.33);
+      if (s.hp >= s.maxHp || back <= 0) continue;
+      s.hp = Math.min(s.maxHp, s.hp + back);
+      this.arena.inZone(this.arena.zoneOf(p), () => {
+        this.sim.fx('heal', p.body.x, p.body.y - 14);
+        this.sim.text(p.body.x, p.body.y - 54, `+${back}`, 0x7bff9b);
+      });
+    }
+  }
+
   setPressure(p: Pressure) {
     this.arena.pressure = p;
   }

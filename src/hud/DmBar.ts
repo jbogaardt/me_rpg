@@ -34,9 +34,8 @@ export class DmBar {
   private hideAt = 0;
   private shown = '';
   private handle = this.bar.querySelector<HTMLButtonElement>('.handle')!;
-  /** On a phone the tools start folded away (the screen is small, and the D-pad needs room); the handle opens them. */
-  private open = true;
-  private sawTouch = false;
+  /** The tools start folded away (they would cover the action); the handle opens them, a click on the game folds them again. */
+  private open = false;
 
   constructor() {
     this.input.maxLength = MAX_SAY;
@@ -50,6 +49,12 @@ export class DmBar {
     power('stop').addEventListener('click', () => this.handlers?.stop());
     power('reset').addEventListener('click', () => this.handlers?.reset());
     power('release').addEventListener('click', () => this.handlers?.release());
+    window.addEventListener('pointerdown', (e) => {
+      if (e.target instanceof HTMLCanvasElement && this.open) {
+        this.open = false; // the DM went back to the game
+        this.shown = '';
+      }
+    });
     this.handle.addEventListener('click', () => {
       this.open = !this.open;
       this.shown = ''; // draw again
@@ -69,9 +74,7 @@ export class DmBar {
   /** Each frame: the bar for a DM (with each power's wait), the stopped-time notice for all, the speech fading. */
   update(dm: boolean, now: number, stopped: boolean, possessing = '', touch = false) {
     this.bar.hidden = !dm || !this.handlers;
-    if (touch && !this.sawTouch) this.open = false; // first time on a phone: folded away
-    this.sawTouch = touch;
-    const folded = touch && !this.open;
+    const folded = !this.open;
     this.bar.classList.toggle('folded', folded);
     this.bar.classList.toggle('holding', possessing !== ''); // a folded bar still shows the way out while a foe is held
     this.handle.setAttribute('aria-expanded', String(!folded));

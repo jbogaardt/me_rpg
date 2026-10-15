@@ -391,8 +391,10 @@ export class OverworldScene implements Scene {
     const click = clickedAt();
     const free = !menu.open && !shop.open && !trade.open && !dialog.active && !this.zones.transition.busy;
     if (click && free && !this.possession.active) this.possession.clickAt(click, this.ui.touch.active); // the DM clicks or taps a foe to possess it
-    if (this.possession.active && menuPressed())
-      this.possession.release(); // Esc lets go instead of opening the menu
+    if (this.dmCard.open && menuPressed())
+      this.dmCard.dismiss(); // Esc sends a card away first
+    else if (this.possession.active && menuPressed())
+      this.possession.release(); // then lets go of a foe, instead of opening the menu
     else if (!dialog.active && menuPressed()) {
       if (trade.open) this.trading.command({ c: 'cancel' });
       else if (shop.open) shop.close();

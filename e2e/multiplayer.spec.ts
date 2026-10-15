@@ -338,6 +338,17 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   // The DM has a bar that is always there: no menu to dig through.
   await expect(host.locator('#menu')).toBeHidden();
   await expect(host.locator('#dm-bar')).toBeVisible();
+  await expect(host.locator('#dm-bar input')).toBeHidden(); // the tools are folded away: they would cover the action
+
+  // A card appears on its own (something to react to: a fallen friend, or "what now?" once it has been quiet), with a
+  // few buttons, and a click on the game sends it away (nobody hunts for a close button).
+  await expect(host.locator('#dm-card')).toBeVisible({ timeout: 90_000 });
+  expect(await host.locator('#dm-card [data-opt]').count()).toBeGreaterThanOrEqual(2);
+  await host.locator('canvas').click({ position: { x: 20, y: 20 } });
+  await expect(host.locator('#dm-card')).toBeHidden();
+
+  await host.locator('#dm-bar .handle').click();
+  await expect(host.locator('#dm-bar input')).toBeVisible();
 
   // The DM speaks and the friend reads it.
   await host.locator('#dm-bar input').fill('Beware the fen.');

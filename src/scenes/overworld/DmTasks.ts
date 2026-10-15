@@ -47,6 +47,18 @@ export class DmTasks {
     };
   }
 
+  private seq = 0;
+
+  /** Which call this is (changes with each task the DM calls). */
+  get id(): number {
+    return this.seq;
+  }
+
+  /** The task as everyone sees it. */
+  get view() {
+    return this.arena.task;
+  }
+
   get active(): boolean {
     return this.book.task?.state === 'active';
   }
@@ -64,6 +76,7 @@ export class DmTasks {
     if (!this.book.call(kind, at)) return false;
     this.kills = 0;
     this.linger = 0;
+    this.seq++;
     if (kind === 'defend') {
       const zone = this.arena.view;
       this.arena.inZone(zone, () => {

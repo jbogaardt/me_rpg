@@ -1,6 +1,6 @@
 import type { CardOption, DmCard } from '../../hud/DmCard';
 import { PRESSURES, PRESSURE_LABEL, isPressure } from '../../systems/dmPowers';
-import { Prompter, type PromptKind } from '../../systems/dmPrompts';
+import { Director, type Suggestion } from '../../systems/dmDirector';
 import { TASK_KINDS, TASK_LABEL, type TaskKind } from '../../systems/dmTasks';
 import { QUESTS } from '../../systems/quests';
 import { PRECIPS, type Precip } from '../../systems/weather';
@@ -11,10 +11,11 @@ import type { DmRevive } from './DmRevive';
 import type { DmTasks } from './DmTasks';
 import type { Story } from './Story';
 
-/** Seconds a card for the sky or the pressure waits before it goes away on its own. */
-const CARD_TIME = 25;
-/** "Not now" on the story card: ask again after this long. */
-const STORY_SNOOZE = 45;
+/** Seconds a card waits before it goes away on its own (the game carries on); the story and a fallen player wait longer. */
+const CARD_TIME = 20;
+const REVIVE_TIME = 30;
+/** "Not now" on a card: a breather before the director offers another. */
+const SNOOZE = 25;
 
 const HOURS: { id: string; label: string; hour: number }[] = [
   { id: 't:6', label: 'Break of day', hour: 6 },
@@ -24,15 +25,20 @@ const HOURS: { id: string; label: string; hour: number }[] = [
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** What a card can be: everything the director suggests, and what the bar opens on demand. */
+export type CardKind = Suggestion | 'task' | 'sky' | 'pressure';
+
 /**
- * What the Dungeon Master is asked, and when. There is no admin panel: at the right moment (the party has finished what
- * the story told, reached a new land, finished a task) a card offers two or three options, and picking one does it.
- * `systems/dmPrompts.ts` decides when; this builds each card from the game and carries out the pick. The DM can also ask
- * for the sky or the pressure at any time from the bar. It runs for whoever runs the world: the online DM, or a solo
- * player in a live world.
+ * What the Dungeon Master is asked, and when: the DM steers by reacting. `systems/dmDirector.ts` watches the party (their
+ * health, how far the task has got, how long it has been quiet) and says when a card is due; this builds each card from
+ * the game and carries out the pick. A card is two or three buttons: "it is going too easy: turn up the heat / stay the
+ * course", "the party is struggling: ease off / stay the course", "make it interesting: a storm / foes close in", "what
+ * now?: follow me / defend this ground / hunt here". The bar can open any of them on demand. It runs for whoever runs the
+ * world: the online DM, or a solo player in a live world.
  */
 export class DmPrompts {
-  private prompter = new Prompter();
+  private director = new Director();
+  private twists = 0;
 
   constructor(
     private arena: Arena,
@@ -44,9 +50,7 @@ export class DmPrompts {
     private revive: DmRevive,
   ) {
     card.onPick = (kind, id) => this.pick(kind, id);
-    card.onDismiss = (kind) => {
-      if (kind === 'story') this.prompter.snooze(STORY_SNOOZE);
-    };
+    card.onDismiss = () => this.director.snooze(SNOOZE);
   }
 
   get runsWorld(): boolean {
@@ -61,14 +65,16 @@ export class DmPrompts {
     }
     this.card.update(dt);
     if (this.card.kind === 'story') this.card.refresh(this.storyOptions());
-    // A player has fallen: the moment to raise them is now, over a card that can wait.
-    const lowCard = this.card.kind === null || ['sky', 'pressure', 'task'].includes(this.card.kind);
-    if (!busy && lowCard && this.revive.unoffered) this.open('revive');
-    const kind = this.prompter.tick(dt, {
-      storyReady: this.storyReady(),
-      area: this.arena.view.name,
-      questsDone: Math.max(0, ...this.arena.party().map((p) => p.hero.quests.stage)),
+    const party = this.arena.party();
+    const fracs = party.map((p) => p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp));
+    const t = this.tasks.view;
+    const kind = this.director.tick(dt, {
       busy: busy || this.card.open,
+      fallen: this.revive.unoffered !== undefined,
+      storyReady: this.storyReady(),
+      task: t && { id: this.tasks.id, kind: t.kind, active: t.state === 'active', progress: t.progress, goal: t.goal },
+      health: fracs.length ? { avg: fracs.reduce((a, b) => a + b, 0) / fracs.length, min: Math.min(...fracs) } : null,
+      area: this.arena.view.name,
     });
     if (kind) this.open(kind);
   }
@@ -81,58 +87,85 @@ export class DmPrompts {
 
   /** The party has finished every task told so far and there is a road to take. */
   private storyReady(): boolean {
-    const view = this.story.view();
-    if (!view || view.complete || !view.options.length || !this.story.canChoose) return false;
+    if (!this.hasStory) return false;
     const done = Math.max(0, ...this.arena.party().map((p) => p.hero.quests.stage));
     return done >= QUESTS.length;
   }
 
-  /** Put a card up now (the story, the sky or the pressure). */
-  open(kind: PromptKind | 'task' | 'revive', note = '') {
+  /** Put a card up now. */
+  open(kind: CardKind, note = '') {
     if (!this.runsWorld) return;
-    if (kind === 'story') {
-      const view = this.story.view();
-      if (!view || view.complete || !view.options.length) return;
-      this.card.show({
-        kind,
-        title: 'Where does the story go next?',
-        note: note || `${view.title}: ${view.placed.length} of ${view.total} lands`,
-        options: this.storyOptions(),
-        seconds: null,
-      });
-    } else if (kind === 'revive') {
-      const f = this.revive.unoffered ?? this.revive.fallen[0];
-      if (!f) return;
-      f.offered = true;
-      this.card.show({
-        kind,
-        title: `${f.name} has fallen`,
-        note: 'They wake at the start unless you raise them.',
-        options: [
-          { id: `where:${f.slot}`, label: 'Raise them where they fell' },
-          { id: `here:${f.slot}`, label: 'Bring them to me' },
-          { id: `leave:${f.slot}`, label: 'Let them wake at the start' },
-        ],
-        seconds: 30,
-      });
-    } else if (kind === 'task') {
-      if (this.arena.role !== 'host') return; // a task needs a party
-      this.card.show({
-        kind,
-        title: this.tasks.active ? 'A task is running' : 'What does the party do?',
-        note: this.tasks.active ? '' : 'It is anchored where you stand.',
-        options: this.taskOptions(),
-        seconds: CARD_TIME,
-      });
-    } else if (kind === 'sky') {
-      this.card.show({ kind, title: 'How does the sky look?', options: this.skyOptions(), seconds: CARD_TIME });
-    } else {
-      this.card.show({
-        kind,
-        title: 'How hard should the world push?',
-        options: this.pressureOptions(),
-        seconds: CARD_TIME,
-      });
+    const show = (title: string, options: CardOption[], seconds: number | null = CARD_TIME, text = note) =>
+      this.card.show({ kind, title, note: text, options, seconds });
+    switch (kind) {
+      case 'story': {
+        const view = this.story.view();
+        if (!view || view.complete || !view.options.length) return;
+        show(
+          'Where does the story go next?',
+          this.storyOptions(),
+          null,
+          note || `${view.title}: ${view.placed.length} of ${view.total} lands`,
+        );
+        return;
+      }
+      case 'revive': {
+        const f = this.revive.unoffered ?? this.revive.fallen[0];
+        if (!f) return;
+        f.offered = true;
+        show(
+          `${f.name} has fallen`,
+          [
+            { id: `where:${f.slot}`, label: 'Raise them where they fell' },
+            { id: `here:${f.slot}`, label: 'Bring them to me' },
+            { id: `leave:${f.slot}`, label: 'Let them wake at the start' },
+          ],
+          REVIVE_TIME,
+          'They wake at the start unless you raise them.',
+        );
+        return;
+      }
+      case 'easy':
+        show(
+          'It is going too easy',
+          [
+            { id: 'heat', label: 'Turn up the heat' },
+            { id: 'stay', label: 'Stay the course' },
+          ],
+          CARD_TIME,
+          'The party is in fine shape.',
+        );
+        return;
+      case 'struggle':
+        show(
+          'The party is struggling',
+          [
+            { id: 'ease', label: 'Ease off' },
+            { id: 'stay', label: 'Stay the course' },
+          ],
+          CARD_TIME,
+          'They are hurt.',
+        );
+        return;
+      case 'twist':
+        show('Make it interesting', this.twistOptions(), CARD_TIME, 'Halfway there: something should happen.');
+        return;
+      case 'next':
+        if (this.arena.role !== 'host') return; // a task needs a party
+        show('What now?', this.taskOptions(), CARD_TIME, 'Nothing has been asked of them for a while.');
+        return;
+      case 'land':
+        show('A new land', this.skyOptions(true), CARD_TIME, 'How does the sky look?');
+        return;
+      case 'task':
+        if (this.arena.role !== 'host') return;
+        show(this.tasks.active ? 'A task is running' : 'What does the party do?', this.taskOptions(), CARD_TIME, '');
+        return;
+      case 'sky':
+        show('How does the sky look?', this.skyOptions(false));
+        return;
+      case 'pressure':
+        show('How hard should the world push?', this.pressureOptions());
     }
   }
 
@@ -148,18 +181,35 @@ export class DmPrompts {
     return options;
   }
 
-  private skyOptions(): CardOption[] {
-    const v = this.desk.dialsView();
-    return [
-      { id: 'w:', label: 'Clear skies', on: v.precip === null },
-      ...v.precips.slice(0, 3).map((p) => ({ id: `w:${p}`, label: cap(p), on: v.precip === p })),
-      ...HOURS.map((h) => ({ id: h.id, label: h.label })),
-    ];
-  }
-
+  /** The tasks to call, or, with one running, a way to call it off. */
   private taskOptions(): CardOption[] {
     if (this.tasks.active) return [{ id: '@cancel', label: 'Call it off' }];
     return TASK_KINDS.map((k) => ({ id: k, label: TASK_LABEL[k] }));
+  }
+
+  /** The sky: with `short` just clear, the land's own weather and night; else everything the climate allows. */
+  private skyOptions(short: boolean): CardOption[] {
+    const v = this.desk.dialsView();
+    const precips = v.precips.slice(0, short ? 1 : 3);
+    return [
+      { id: 'w:', label: 'Clear skies', on: v.precip === null },
+      ...precips.map((p) => ({ id: `w:${p}`, label: cap(p), on: v.precip === p })),
+      ...(short ? HOURS.filter((h) => h.id === 't:23') : HOURS).map((h) => ({ id: h.id, label: h.label })),
+    ];
+  }
+
+  /** Two twists, rotating through what the land allows: a storm, night, the foes closing in. */
+  private twistOptions(): CardOption[] {
+    const stormy = this.desk.dialsView().precips.find((p) => p === 'storm' || p === 'blizzard');
+    const all: CardOption[] = [
+      ...(stormy
+        ? [{ id: `w:${stormy}`, label: stormy === 'storm' ? 'A storm rolls in' : 'A blizzard sweeps in' }]
+        : []),
+      { id: 't:23', label: 'Night falls' },
+      { id: 'close', label: 'Foes close in' },
+    ];
+    const first = this.twists++ % all.length;
+    return [all[first]!, all[(first + 1) % all.length]!];
   }
 
   private pressureOptions(): CardOption[] {
@@ -167,6 +217,7 @@ export class DmPrompts {
   }
 
   private pick(kind: string, id: string) {
+    this.director.settled();
     if (kind === 'story') {
       if (id === '@ask') this.desk.openVote(this.story.view()?.options ?? []);
       else if (id === '@close') this.desk.closeVote();
@@ -180,44 +231,37 @@ export class DmPrompts {
       }
       return;
     }
-    if (kind === 'sky') {
-      if (id.startsWith('w:')) {
-        const precip = id.slice(2);
-        const valid =
-          precip === '' ? null : (PRECIPS as readonly string[]).includes(precip) ? (precip as Precip) : null;
-        this.desk.setWeather(valid, valid === 'storm' || valid === 'blizzard' ? 1 : valid ? 0.5 : 0);
-      } else {
-        const hour = HOURS.find((h) => h.id === id)?.hour;
-        if (hour !== undefined) this.desk.setHour(hour);
-      }
-      this.prompter.settled('sky');
-      this.card.hide();
-      return;
-    }
+    this.card.hide();
     if (kind === 'revive') {
       const [how, slot] = id.split(':');
       const n = Number(slot);
       if (how === 'where') this.revive.raiseWhere(n);
       else if (how === 'here') this.revive.bringHere(n);
       else this.revive.leave(n);
-      this.card.hide();
-      return;
-    }
-    if (kind === 'task') {
-      if (id === '@cancel') this.tasks.cancel();
-      else if ((TASK_KINDS as readonly string[]).includes(id)) this.tasks.call(id as TaskKind);
-      this.card.hide();
-      return;
-    }
-    if (kind === 'pressure' && isPressure(id)) {
-      this.powers.setPressure(id);
-      this.prompter.settled('pressure');
-      this.card.hide();
-    }
+    } else if (id === 'heat') {
+      this.powers.heat();
+      this.desk.say('Something stirs in the dark…');
+    } else if (id === 'ease') {
+      this.powers.easeOff();
+      this.desk.say('A moment of calm.');
+    } else if (id === 'close') {
+      this.powers.closeIn();
+      this.desk.say('They are coming.');
+    } else if (id === '@cancel') this.tasks.cancel();
+    else if (id.startsWith('w:')) {
+      const precip = id.slice(2);
+      const valid = precip === '' ? null : (PRECIPS as readonly string[]).includes(precip) ? (precip as Precip) : null;
+      this.desk.setWeather(valid, valid === 'storm' || valid === 'blizzard' ? 1 : valid ? 0.5 : 0);
+    } else if (id.startsWith('t:')) {
+      const hour = HOURS.find((h) => h.id === id)?.hour;
+      if (hour !== undefined) this.desk.setHour(hour);
+    } else if (isPressure(id)) this.powers.setPressure(id);
+    else if ((TASK_KINDS as readonly string[]).includes(id)) this.tasks.call(id as TaskKind);
+    // "stay the course" (or anything else) changes nothing
   }
 
   reset() {
-    this.prompter.reset();
+    this.director.reset();
     this.card.hide();
   }
 }

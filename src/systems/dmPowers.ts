@@ -1,10 +1,10 @@
 // What the Dungeon Master can do with one tap (Pixi-free, tested; core engine, co-op): speak to the party, smite every
 // foe where they stand with a storm of lightning, or hold them all still. Each has a cooldown so it stays special.
 
-/** Seconds before the DM may smite / freeze / reset the zone again. */
-export const SMITE_COOLDOWN = 45;
-export const FREEZE_COOLDOWN = 25;
-export const RESET_COOLDOWN = 30;
+/** The DM is never made to wait: their powers have no cooldown (a storm in flight is the only thing a second Smite waits for). */
+export const SMITE_COOLDOWN = 0;
+export const FREEZE_COOLDOWN = 0;
+export const RESET_COOLDOWN = 0;
 
 /**
  * How hard the world pushes back: the one dial of intensity the Dungeon Master has. A foe's blows land `factor` times

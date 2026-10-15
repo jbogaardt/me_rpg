@@ -40,6 +40,10 @@ export class DmCard {
       if (b?.dataset.opt !== undefined && this.spec) this.onPick(this.spec.kind, b.dataset.opt);
     });
     this.root.querySelector('.close')!.addEventListener('click', () => this.dismiss());
+    // A click or tap on the game itself means "not now": a card never has to be hunted for a button to close.
+    window.addEventListener('pointerdown', (e) => {
+      if (this.spec && e.target instanceof HTMLCanvasElement) this.dismiss();
+    });
   }
 
   get kind(): string | null {
@@ -74,7 +78,8 @@ export class DmCard {
     this.root.hidden = true;
   }
 
-  private dismiss() {
+  /** Send the card away unanswered (✕, Esc, its time running out, a click on the game): the director gives the DM a breather. */
+  dismiss() {
     const kind = this.spec?.kind;
     this.hide();
     if (kind) this.onDismiss(kind);
