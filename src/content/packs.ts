@@ -140,6 +140,8 @@ export interface ArcDef {
   chapters: unknown[];
   quests: unknown[];
   epilogue?: string[];
+  /** What the Dungeon Master says as the game starts (`{keeper}` and `{r1}` may be quoted). */
+  welcome?: string[];
 }
 
 /** What a seed made: for the log and the dev handle. */
@@ -248,7 +250,7 @@ export type Catalog = ReturnType<typeof mergePacks>;
 /** What an arc asks of each of its regions: the foe roles it names, and whether it needs a site. Index 0 is r1. */
 export function arcNeeds(arc: ArcDef): { roles: Set<string>; site: boolean }[] {
   const needs = Array.from({ length: arc.regions }, () => ({ roles: new Set<string>(), site: false }));
-  const text = JSON.stringify([arc.chapters, arc.quests, arc.epilogue ?? []]);
+  const text = JSON.stringify([arc.chapters, arc.quests, arc.epilogue ?? [], arc.welcome ?? []]);
   for (const m of text.matchAll(/[@{]r(\d+)\.(\w+)/g)) {
     const need = needs[Number(m[1]) - 1];
     if (!need) throw new AssemblyError(`an arc names r${m[1]}, but runs through ${arc.regions} regions`);
@@ -273,7 +275,7 @@ export function crossingNeeds(arc: ArcDef): { lore: Set<string>; tags: string[] 
       throw new AssemblyError(`an arc's ${where} r${a}~r${b} is not a step of its story`);
     return s;
   };
-  const text = JSON.stringify([arc.chapters, arc.quests, arc.epilogue ?? []]);
+  const text = JSON.stringify([arc.chapters, arc.quests, arc.epilogue ?? [], arc.welcome ?? []]);
   for (const m of text.matchAll(/\{r(\d+)~r(\d+)\.(\w+)\}/g))
     step(Number(m[1]), Number(m[2]), 'text quotes').lore.add(m[3]!);
   for (const [key, c] of Object.entries(arc.crossings ?? {})) {
@@ -674,6 +676,7 @@ export function catalogCampaign(packs: readonly Pack[]): Record<ContentFile, unk
       chapters: [{ title: 'Every region', intro: ['(The tools’ view of the packs: no story.)'] }],
       quests: [],
       epilogue: [],
+      welcome: [],
     },
     items: goodsFile(cat),
   };

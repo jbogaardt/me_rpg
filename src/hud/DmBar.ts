@@ -13,7 +13,9 @@ export interface DmBarHandlers {
   stop(): boolean;
   reset(): boolean;
   /** Open the card for the sky (weather, time of day) or the pressure now, rather than waiting for the moment. */
-  card(kind: 'story' | 'sky' | 'pressure'): void;
+  card(kind: 'story' | 'sky' | 'pressure' | 'task' | 'revive'): void;
+  /** How many fallen players could be raised (the Raise button shows only then). */
+  fallen(): number;
   /** Is there a live story to steer (the Story button shows only then)? */
   story(): boolean;
   waits(): { smite: number; freeze: number; reset: number; stopped: boolean; pressure: Pressure };
@@ -25,6 +27,7 @@ export class DmBar {
   private input = this.bar.querySelector('input')!;
   private speech = document.getElementById('dm-speech')!;
   private hold = document.getElementById('dm-hold')!;
+  private hint = this.bar.querySelector<HTMLElement>('.hint')!;
   private handlers: DmBarHandlers | null = null;
   private hideAt = 0;
   private shown = '';
@@ -40,6 +43,8 @@ export class DmBar {
     power('freeze').addEventListener('click', () => this.handlers?.freeze());
     power('stop').addEventListener('click', () => this.handlers?.stop());
     power('reset').addEventListener('click', () => this.handlers?.reset());
+    power('revive').addEventListener('click', () => this.handlers?.card('revive'));
+    power('task').addEventListener('click', () => this.handlers?.card('task'));
     power('story').addEventListener('click', () => this.handlers?.card('story'));
     power('sky').addEventListener('click', () => this.handlers?.card('sky'));
     power('pressure').addEventListener('click', () => this.handlers?.card('pressure'));
@@ -51,16 +56,22 @@ export class DmBar {
   }
 
   /** Each frame: the bar for a DM (with each power's wait), the stopped-time notice for all, the speech fading. */
-  update(dm: boolean, now: number, stopped: boolean) {
+  update(dm: boolean, now: number, stopped: boolean, possessing = '') {
     this.bar.hidden = !dm || !this.handlers;
     this.hold.hidden = !stopped;
+    this.hint.hidden = !dm || !this.handlers;
+    const possess = possessing
+      ? `You are the ${possessing}. Move and strike as it would. Esc lets go.`
+      : 'Click a foe to possess it.';
+    if (this.hint.textContent !== possess) this.hint.textContent = possess;
     this.hold.textContent = dm
       ? `Time is stopped. Press ${FIXED_KEYS.stop.map(codeLabel).join(' / ')} to carry on.`
       : 'The Dungeon Master has stopped time.';
     if (!this.bar.hidden) {
       const w = this.handlers!.waits();
       const story = this.handlers!.story();
-      const key = `${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story}`;
+      const fallen = this.handlers!.fallen();
+      const key = `${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen}`;
       if (key !== this.shown) {
         this.shown = key;
         const set = (name: string, text: string, wait = 0, lit = false) => {
@@ -74,6 +85,8 @@ export class DmBar {
         set('reset', 'Reset zone', w.reset);
         set('stop', w.stopped ? 'Resume time' : `Stop time [${codeLabel(FIXED_KEYS.stop[0])}]`, 0, w.stopped);
         set('story', 'Story');
+        this.bar.querySelector<HTMLElement>('[data-power="revive"]')!.hidden = fallen === 0;
+        set('revive', fallen > 1 ? `Raise (${fallen})` : 'Raise');
         this.bar.querySelector<HTMLElement>('[data-power="story"]')!.hidden = !story;
         set('sky', 'Sky');
         set('pressure', `Pressure: ${PRESSURE_LABEL[w.pressure]}`);

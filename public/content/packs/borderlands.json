@@ -115,6 +115,10 @@
   "arcs": {
     "long_thaw": {
       "title": "The Long Thaw",
+      "welcome": [
+        "Welcome, travellers.",
+        "Two lands press on each other and something is wrong between them. {keeper} is waiting in {r1}."
+      ],
       "regions": 2,
       "slots": [{}, { "themes": ["frost"], "foes": { "boss": { "tags": ["frost"] } } }],
       "crossings": { "r1~r2": {} },
@@ -147,6 +151,7 @@
         },
         {
           "title": "The Heart of the Cold",
+          "narration": ["The cold deepens. Its heart is near."],
           "intro": ["Whatever drives the cold lives deep in {r2}.", "Take {r1~r2.way}, and find it."]
         }
       ],
@@ -171,6 +176,7 @@
         },
         {
           "id": "stones",
+          "capabilities": { "needs": true },
           "chapter": 0,
           "learned": "The {r2.site.lower} are where the cold of {r2} comes from.",
           "fieldNote": ["Three of them, and each one colder than the last."],

@@ -409,6 +409,16 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
       expect(parseMessage(JSON.stringify({ ...dm, say }))).toBeNull();
   });
 
+  it('round-trips a task the DM called and refuses one that is not a task', () => {
+    const task = {
+      ...dm,
+      task: [1, 0, 12, 60, 'the_fen', 512, 99] as [number, number, number, number, string, number, number],
+    };
+    expect(parseMessage(encodeMessage(task))).toEqual(task);
+    for (const bad of [[9, 0, 0, 1, 'z', 0, 0], [1, 0, 0, 1, '', 0, 0], [1, 0, 0, 1, 'z', 0], 'defend', 7])
+      expect(parseMessage(JSON.stringify({ ...dm, task: bad }))).toBeNull();
+  });
+
   it('round-trips stopped time and refuses a hold that is not 1', () => {
     const held = { ...dm, hold: 1 as const };
     expect(parseMessage(encodeMessage(held))).toEqual(held);

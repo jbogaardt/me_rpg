@@ -322,6 +322,9 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   await friend.keyboard.press('Escape');
   await expect(friend.locator('#dm-bar')).toBeHidden(); // only the DM steers the story and the world
 
+  // The DM opens the game with the story's own welcome, to every screen.
+  await expect(friend.locator('#dm-speech')).toContainText('Welcome', { timeout: 30_000 });
+
   // The DM has a bar that is always there: no menu to dig through.
   await expect(host.locator('#menu')).toBeHidden();
   await expect(host.locator('#dm-bar')).toBeVisible();
@@ -351,6 +354,12 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   await expect(host.locator('#area-banner .title')).not.toHaveText('', { timeout: 15_000 });
   const land = (await host.locator('#area-banner .title').textContent())!;
   await expect(friend.locator('#area-banner .title')).toHaveText(land, { timeout: 30_000 });
+
+  // The DM calls a task for the party; the friend sees it in their tracker.
+  await host.locator('#dm-bar [data-power="task"]').click();
+  await host.locator('#dm-card [data-opt="hunt"]').click();
+  await expect(friend.locator('#quest-tracker')).toContainText('hunt here', { timeout: 15_000 });
+  await expect(host.locator('#hud-dm')).toContainText('hunt here');
 
   // The pressure is one dial on the bar, set from a card.
   await host.locator('#dm-bar [data-power="pressure"]').click();

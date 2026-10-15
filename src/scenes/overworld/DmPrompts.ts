@@ -1,11 +1,14 @@
 import type { CardOption, DmCard } from '../../hud/DmCard';
 import { PRESSURES, PRESSURE_LABEL, isPressure } from '../../systems/dmPowers';
 import { Prompter, type PromptKind } from '../../systems/dmPrompts';
+import { TASK_KINDS, TASK_LABEL, type TaskKind } from '../../systems/dmTasks';
 import { QUESTS } from '../../systems/quests';
 import { PRECIPS, type Precip } from '../../systems/weather';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
 import type { DmPowers } from './DmPowers';
+import type { DmRevive } from './DmRevive';
+import type { DmTasks } from './DmTasks';
 import type { Story } from './Story';
 
 /** Seconds a card for the sky or the pressure waits before it goes away on its own. */
@@ -37,6 +40,8 @@ export class DmPrompts {
     private desk: DmDesk,
     private powers: DmPowers,
     private card: DmCard,
+    private tasks: DmTasks,
+    private revive: DmRevive,
   ) {
     card.onPick = (kind, id) => this.pick(kind, id);
     card.onDismiss = (kind) => {
@@ -56,6 +61,9 @@ export class DmPrompts {
     }
     this.card.update(dt);
     if (this.card.kind === 'story') this.card.refresh(this.storyOptions());
+    // A player has fallen: the moment to raise them is now, over a card that can wait.
+    const lowCard = this.card.kind === null || ['sky', 'pressure', 'task'].includes(this.card.kind);
+    if (!busy && lowCard && this.revive.unoffered) this.open('revive');
     const kind = this.prompter.tick(dt, {
       storyReady: this.storyReady(),
       area: this.arena.view.name,
@@ -80,7 +88,7 @@ export class DmPrompts {
   }
 
   /** Put a card up now (the story, the sky or the pressure). */
-  open(kind: PromptKind, note = '') {
+  open(kind: PromptKind | 'task' | 'revive', note = '') {
     if (!this.runsWorld) return;
     if (kind === 'story') {
       const view = this.story.view();
@@ -91,6 +99,30 @@ export class DmPrompts {
         note: note || `${view.title}: ${view.placed.length} of ${view.total} lands`,
         options: this.storyOptions(),
         seconds: null,
+      });
+    } else if (kind === 'revive') {
+      const f = this.revive.unoffered ?? this.revive.fallen[0];
+      if (!f) return;
+      f.offered = true;
+      this.card.show({
+        kind,
+        title: `${f.name} has fallen`,
+        note: 'They wake at the start unless you raise them.',
+        options: [
+          { id: `where:${f.slot}`, label: 'Raise them where they fell' },
+          { id: `here:${f.slot}`, label: 'Bring them to me' },
+          { id: `leave:${f.slot}`, label: 'Let them wake at the start' },
+        ],
+        seconds: 30,
+      });
+    } else if (kind === 'task') {
+      if (this.arena.role !== 'host') return; // a task needs a party
+      this.card.show({
+        kind,
+        title: this.tasks.active ? 'A task is running' : 'What does the party do?',
+        note: this.tasks.active ? '' : 'It is anchored where you stand.',
+        options: this.taskOptions(),
+        seconds: CARD_TIME,
       });
     } else if (kind === 'sky') {
       this.card.show({ kind, title: 'How does the sky look?', options: this.skyOptions(), seconds: CARD_TIME });
@@ -125,6 +157,11 @@ export class DmPrompts {
     ];
   }
 
+  private taskOptions(): CardOption[] {
+    if (this.tasks.active) return [{ id: '@cancel', label: 'Call it off' }];
+    return TASK_KINDS.map((k) => ({ id: k, label: TASK_LABEL[k] }));
+  }
+
   private pressureOptions(): CardOption[] {
     return PRESSURES.map((p) => ({ id: p, label: PRESSURE_LABEL[p], on: this.arena.pressure === p }));
   }
@@ -154,6 +191,21 @@ export class DmPrompts {
         if (hour !== undefined) this.desk.setHour(hour);
       }
       this.prompter.settled('sky');
+      this.card.hide();
+      return;
+    }
+    if (kind === 'revive') {
+      const [how, slot] = id.split(':');
+      const n = Number(slot);
+      if (how === 'where') this.revive.raiseWhere(n);
+      else if (how === 'here') this.revive.bringHere(n);
+      else this.revive.leave(n);
+      this.card.hide();
+      return;
+    }
+    if (kind === 'task') {
+      if (id === '@cancel') this.tasks.cancel();
+      else if ((TASK_KINDS as readonly string[]).includes(id)) this.tasks.call(id as TaskKind);
       this.card.hide();
       return;
     }

@@ -219,6 +219,10 @@
   "arcs": {
     "ember_trail": {
       "title": "The Ember Trail",
+      "welcome": [
+        "Welcome, travellers, to the ash.",
+        "The ground is hot underfoot. {keeper} holds {r1}: go to the keeper, and stay together."
+      ],
       "regions": 2,
       "capabilities": { "needs": false },
       "chapters": [
@@ -232,6 +236,7 @@
         },
         {
           "title": "The Burning Heart",
+          "narration": ["The heat rises. Something ancient burns below."],
           "intro": [
             "What I feared is true: the guardian of {r2} has woken, and it is calling the fire to itself.",
             "{r1~r2.sign}",
@@ -284,6 +289,7 @@
         },
         {
           "id": "road",
+          "capabilities": { "needs": true },
           "chapter": 0,
           "learned": "The {r1.hunter.lower} hunt in the open now; the woods are too hot for them.",
           "fieldNote": ["The fourth one falls. Its hide is singed down to the skin."],

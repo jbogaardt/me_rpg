@@ -27,15 +27,17 @@ import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 import { DIALS } from '../systems/capabilities';
 import { MAX_SAY } from '../systems/dmPowers';
+import { taskFromWire, type TaskWire } from '../systems/dmTasks';
 
 /**
  * Bump when a message changes shape (or what one means); peers on different versions refuse to play together. v29: the
  * host is the Dungeon Master, not a party member (player 0 in a snapshot is drawn as the DM). v30: `world`, a live
  * world's log. v31: `dm` (the Dungeon Master's dials, time of day and vote) and the guest's vote `InputMsg.vt`. v32: the
  * log's `cast` and `npc` entries, and longer entries. v33: `DmMsg.say`, what the Dungeon Master says to the party.
- * v34: `DmMsg.hold`, time stopped by the Dungeon Master.
+ * v34: `DmMsg.hold`, time stopped by the Dungeon Master. v35: `DmMsg.task`, a task the DM called for the party.
+ * v36: `FLAG.hidden`, the DM out of sight while they possess a foe.
  */
-export const PROTOCOL_VERSION = 34;
+export const PROTOCOL_VERSION = 36;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -55,7 +57,7 @@ export function unpackKeys(keys: number): { dx: number; dy: number } {
 export const MAX_PLAYERS = MAX_GUESTS + 1;
 
 /** PlayerSnap flag bits. */
-export const FLAG = { moving: 1, invuln: 2, swing: 4, ward: 8, edge: 16, guard: 32 } as const;
+export const FLAG = { moving: 1, invuln: 2, swing: 4, ward: 8, edge: 16, guard: 32, hidden: 64 } as const;
 
 /** [player number, x, y, direction index, FLAG bits] */
 export type PlayerSnap = [number, number, number, number, number];
@@ -297,6 +299,8 @@ export interface DmMsg {
   say?: [number, string];
   /** 1 while the DM has stopped time (everyone but them stands still); absent otherwise. */
   hold?: 1;
+  /** The task the DM has called for the party (systems/dmTasks.ts `taskWire`); absent when there is none. */
+  task?: TaskWire;
 }
 
 export type Message = HelloMsg | InputMsg | SnapMsg | DoMsg | PackMsg | LooksMsg | TrMsg | TradeMsg | WorldMsg | DmMsg;
@@ -527,7 +531,7 @@ function parseTradeView(raw: unknown): TradeViewWire | null {
 function parsePlayer(raw: unknown): PlayerSnap | null {
   if (!numbers(raw, 5) || !raw.every((v, i) => (i === 1 || i === 2 ? isCoord(v) : isCount(v)))) return null;
   const [slot, x, y, dir, flags] = raw as PlayerSnap;
-  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 63 ? [slot, x, y, dir, flags] : null;
+  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 127 ? [slot, x, y, dir, flags] : null;
 }
 
 function parseGround(raw: unknown): GroundSnap | null {
@@ -803,7 +807,8 @@ export function parseMessage(raw: unknown): Message | null {
           s[1].length >= 1 &&
           s[1].length <= MAX_SAY);
       const holdOk = m.hold === undefined || m.hold === 1;
-      return isCount(m.n) && isNum(m.shift) && Math.abs(m.shift) <= 1 && dialsOk && voteOk && sayOk && holdOk
+      const taskOk = m.task === undefined || taskFromWire(m.task) !== null;
+      return isCount(m.n) && isNum(m.shift) && Math.abs(m.shift) <= 1 && dialsOk && voteOk && sayOk && holdOk && taskOk
         ? {
             k: 'dm',
             n: m.n,
@@ -812,6 +817,7 @@ export function parseMessage(raw: unknown): Message | null {
             vote: v === null ? null : (v as VoteWire),
             ...(s === undefined ? {} : { say: s as [number, string] }),
             ...(m.hold === 1 ? { hold: 1 as const } : {}),
+            ...(m.task === undefined ? {} : { task: m.task as TaskWire }),
           }
         : null;
     }

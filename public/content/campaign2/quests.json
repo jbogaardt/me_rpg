@@ -1,5 +1,9 @@
 {
   "version": 1,
+  "welcome": [
+    "Welcome to Emberfall Isle.",
+    "A fire under the land is waking. Keep together, and keep your eyes on the ash."
+  ],
   "giver": "keeper",
   "givers": { "keeper": { "name": "Keeper Ysolde", "look": "ysolde", "tag": "Ysolde", "zone": "emberfall_coast" } },
   "sites": {

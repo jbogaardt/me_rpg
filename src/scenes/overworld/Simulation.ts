@@ -86,6 +86,10 @@ export class Simulation {
   private casting: Casting;
   /** Set by the scene: a training ground handles a defeat in a trial itself (returns true when it did). */
   trialDefeat: (p: Player) => boolean = () => false;
+  /** A party member was knocked out (not in a trial) where they stood, before they wake at the start: the DM may raise them. */
+  onDefeat: (p: Player, zone: string, x: number, y: number) => void = () => {};
+  /** A foe fell to the party (the DM's tasks count the kills in their zone). */
+  onKill: (zone: string) => void = () => {};
 
   constructor(
     private arena: Arena,
@@ -485,6 +489,7 @@ export class Simulation {
     if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx));
     this.text(mob.body.x, mob.body.y - 54 * mob.body.size, String(damage), 0xffffff);
     if (!killed) return;
+    this.onKill(this.arena.zone.name);
     this.fx('mobPoof', mob.body.x, mob.body.y - 12);
     this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${mob.kind.xp} XP`, 0xffb13f);
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
@@ -494,6 +499,16 @@ export class Simulation {
       if (gainXp(p.hero.stats, xpFor(p.hero, mob.kind.xp))) this.levelUp(p);
       this.questNote(p, recordKill(p.hero, mob.kind, this.arena.zone.name)); // a quest counts the kill for everyone here
     }
+  }
+
+  /** Pay `p` for something the party did together (a DM's task): XP and gold, with the usual gear bonuses and level-ups. */
+  reward(p: Player, xp: number, gold: number) {
+    this.arena.inZone(this.arena.zoneOf(p), () => {
+      p.hero.gold += goldFor(p.hero, gold);
+      this.text(p.body.x, p.body.y - 66, `+${xp} XP`, 0xffb13f);
+      this.text(p.body.x, p.body.y - 78, `+${gold}g`, 0xffd34d);
+      if (gainXp(p.hero.stats, xpFor(p.hero, xp))) this.levelUp(p);
+    });
   }
 
   /** Float a quest's progress ("3/5 goblins") over the player, and a nudge once it can be handed in. */
@@ -553,6 +568,7 @@ export class Simulation {
   private defeat(p: Player) {
     if (this.trialDefeat(p)) return;
     const { arena } = this;
+    if (!p.dm) this.onDefeat(p, p.zone, p.body.x, p.body.y);
     const { home } = arena;
     const s = p.hero.stats;
     s.hp = s.maxHp;

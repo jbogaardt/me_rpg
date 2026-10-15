@@ -383,6 +383,10 @@
   "arcs": {
     "lost_lanterns": {
       "title": "The Lost Lanterns",
+      "welcome": [
+        "Welcome, travellers.",
+        "The lights are going out across {r1}. Find {keeper}, and keep close to one another."
+      ],
       "regions": 3,
       "capabilities": { "map": false },
       "chapters": [
@@ -394,9 +398,14 @@
             "Help me, and we will find out who is putting them out."
           ]
         },
-        { "title": "Into {r2}", "intro": ["The trail leads on into {r2}, by {r1~r2.way}.", "{r1~r2.sign}"] },
+        {
+          "title": "Into {r2}",
+          "narration": ["The road leads on into {r2}. Stay together."],
+          "intro": ["The trail leads on into {r2}, by {r1~r2.way}.", "{r1~r2.sign}"]
+        },
         {
           "title": "The Mound",
+          "narration": ["Ahead, the mound. Whatever puts the lights out is close."],
           "intro": [
             "It all leads to {r3}.",
             "{r2~r3.sign}",
@@ -455,6 +464,7 @@
         },
         {
           "id": "trace",
+          "capabilities": { "guide": false },
           "chapter": 1,
           "learned": "The {r2.site.lower} lean toward {r3}, like flames in a draught.",
           "fieldNote": ["Three of them, all leaning the same way: toward {r3}."],

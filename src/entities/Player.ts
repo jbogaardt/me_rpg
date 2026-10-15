@@ -18,6 +18,8 @@ export const NO_COMMAND: Command = { dx: 0, dy: 0, act: false };
 /** A player character: its body in the world, its hero (stats and gear), and the timers combat keeps on it. */
 export class Player {
   readonly body: Character;
+  /** The DM is possessing a foe: their body is not drawn (host sets it, a guest reads it from the flags). */
+  hidden = false;
   attackCooldown = 0;
   castCooldown = 0; // seconds before the next combo
   /** Arcane Edge (systems/skills.ts): the next `charges` attacks carry extra magic, for `timer` more seconds. */

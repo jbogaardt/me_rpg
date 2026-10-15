@@ -3,6 +3,7 @@ import { Player } from '../../entities/Player';
 import type { Role } from '../../net/session';
 import { newHero, type Hero } from '../../systems/combat';
 import type { Pressure } from '../../systems/dmPowers';
+import type { TaskView } from '../../systems/dmTasks';
 import {
   DM_COLOR,
   DM_LOOK,
@@ -51,6 +52,8 @@ export class Arena {
   private depth = 0; // how many `inZone` calls are open
   /** The Dungeon Master has stopped time: nobody but them moves and nothing happens (host decides; friends are told). */
   timeStopped = false;
+  /** The task the DM has called for the party, as everyone sees it (the host's DmTasks writes it, a friend is told). */
+  task: TaskView | null = null;
   /** How hard the world pushes back (the DM's one intensity dial); only the host applies it. */
   pressure: Pressure = 'steady';
 

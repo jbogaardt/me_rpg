@@ -52,6 +52,8 @@ export class ContentManager {
   private mobKinds: Record<string, MobKind> = {};
   /** What the Dungeon Master has switched during play (systems/capabilities.ts `DIALS`), over the content's own word. */
   private dials: Partial<Record<Dial, boolean>> = {};
+  /** What the party's quests switch while they are taken (systems/quests.ts `questDials`); the DM's word wins over it. */
+  private quest: Partial<Record<Dial, boolean>> = {};
 
   constructor(public content: Content) {
     this.readMobs();
@@ -123,9 +125,20 @@ export class ContentManager {
     return this.dials;
   }
 
+  /** The party's quests switched capabilities (host and solo): install them under the DM's own dials. */
+  setQuestDials(dials: Partial<Record<Dial, boolean>>) {
+    this.quest = { ...dials };
+    this.installCapabilities();
+  }
+
+  /** What is switched for everyone now, quests and the DM together (what a friend is told). */
+  get effectiveDials(): Partial<Record<Dial, boolean>> {
+    return { ...this.quest, ...this.dials };
+  }
+
   private installCapabilities() {
     const caps = capabilityTable(this.content);
-    const { campaign, zones } = withDials(caps.campaign, caps.zones, this.dials);
+    const { campaign, zones } = withDials(caps.campaign, caps.zones, this.effectiveDials);
     setCapabilities(campaign, zones);
   }
 

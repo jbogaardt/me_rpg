@@ -14,6 +14,8 @@ function host() {
   const arena = {
     role: 'host',
     timeStopped: false,
+    task: null,
+    party: () => [],
     remotes: new Map([
       [1, { dm: false }],
       [2, { dm: false }],
@@ -31,6 +33,10 @@ function host() {
     get dialsSet() {
       return dials;
     },
+    get effectiveDials() {
+      return dials;
+    },
+    setQuestDials: () => {},
     setDials: (d: Partial<Record<Dial, boolean>>) => (dials = { ...d }),
   } as unknown as ContentManager;
   const clock = new DayClock(() => 0);
@@ -91,6 +97,16 @@ describe('the Dungeon Master’s desk', () => {
     desk.say('Run');
     desk.update(0);
     expect(last(1)!.say).toEqual([2, 'Run']);
+  });
+
+  it('tells every friend the task the DM called, and stops saying it when it is over', () => {
+    const { desk, last, arena } = host();
+    arena.task = { kind: 'defend', state: 'active', progress: 3, goal: 60, zone: 'fen', x: 10, y: 20 };
+    desk.update(0);
+    expect(last(2)!.task).toEqual([1, 0, 3, 60, 'fen', 10, 20]);
+    arena.task = null;
+    desk.update(0.01);
+    expect(last(2)!.task).toBeUndefined();
   });
 
   it('tells every friend while time is stopped, and stops saying it when it starts again', () => {
