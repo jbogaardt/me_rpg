@@ -70,17 +70,17 @@ describe('barrels', () => {
   it('lists only the barrels away from home on the wire, and reads them back', () => {
     const home = { x: 50, y: 50 };
     const list = [
-      { x: 50, y: 50, home, carried: false },
-      { x: 80.4, y: 90, home, carried: false },
-      { x: 50, y: 50, home, carried: true },
+      { x: 50, y: 50, home, carried: false, facing: 'down' as const },
+      { x: 80.4, y: 90, home, carried: false, facing: 'down' as const },
+      { x: 50, y: 50, home, carried: true, facing: 'up' as const },
     ];
     const wire = barrelsWire(list);
-    expect(wire).toEqual([1, 80, 90, 0, 2, 50, 50, 1]);
+    expect(wire).toEqual([1, 80, 90, 0, 2, 50, 50, 2]);
     expect(validBarrelsWire(wire)).toBe(true);
-    expect(barrelsFromWire(wire).get(2)).toEqual({ x: 50, y: 50, carried: true });
+    expect(barrelsFromWire(wire).get(2)).toEqual({ x: 50, y: 50, facing: 'up' });
     expect(barrelsWire([list[0]!])).toBeUndefined();
     expect(validBarrelsWire([1, 2, 3])).toBe(false);
     expect(validBarrelsWire([99, 0, 0, 0])).toBe(false);
-    expect(validBarrelsWire([0, 0, 0, 2])).toBe(false);
+    expect(validBarrelsWire([0, 0, 0, 5])).toBe(false);
   });
 });

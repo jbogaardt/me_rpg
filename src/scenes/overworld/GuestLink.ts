@@ -230,9 +230,9 @@ export class GuestLink {
     arena.barrels.forEach((b, i) => {
       const at = moved.get(i);
       if (!at) b.setDown(b.home.x, b.home.y);
-      else if (at.carried) {
+      else if (at.facing) {
         b.carrier = -1; // somebody's: the guest only draws it
-        b.carryAt(at.x, at.y);
+        b.hold(at.x, at.y, at.facing);
       } else b.setDown(at.x, at.y);
     });
     arena.zone.ponds.setLevels(pondsFromWire(snap.ponds)); // drained by someone's drinking, until rain fills them

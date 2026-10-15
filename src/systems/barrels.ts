@@ -2,7 +2,7 @@
 // leaves unblocked (`Prefab.movable`): in play each becomes an entity (`entities/Barrel.ts`) that blocks as a body
 // where it stands, is carried over a player's head while held and is set down in front of them. Core engine: it asks
 // the map's tag, never a content id.
-import { DIR_VEC, type Direction } from '../core/direction';
+import { DIR_VEC, DIRS, type Direction } from '../core/direction';
 import { CELL, type MapData } from '../map/types';
 import { Collision, type Body } from './collision';
 
@@ -12,8 +12,15 @@ export const BARREL_TAG = 'barrel';
 export const BARREL_SIZE = 2;
 /** How near (feet to feet, px) a player must be to pick a barrel up. */
 export const BARREL_REACH = CELL * 1.1;
-/** How high a carried barrel rides above its carrier's feet, px. */
-export const CARRY_LIFT = 46;
+/** How far in front of its carrier's feet a carried barrel is held (px), and how high it is lifted off the ground. */
+export const CARRY_AHEAD = 20;
+export const CARRY_LIFT = 8;
+
+/** Where the feet of a barrel held by someone at (x, y) facing `facing` are: out in front of them. */
+export function heldSpot(x: number, y: number, facing: Direction): { x: number; y: number } {
+  const [ux, uy] = DIR_VEC[facing];
+  return { x: x + ux * CARRY_AHEAD, y: y + uy * CARRY_AHEAD };
+}
 /** How far in front of a player a barrel is set down, nearest choice first (px). */
 export const DROP_DISTANCES: readonly number[] = [26, 34, 18];
 /** At most this many barrels per map (the snapshot lists the ones away from home). */
@@ -77,31 +84,33 @@ export function dropSpot(
   return null;
 }
 
-/** [object-order number, x, y, 1 if carried] of each barrel away from its home, flat, for the snapshot. */
+/** [object-order number, x, y, 0 on the ground or 1 + the way its carrier faces (`DIRS` order)] of each barrel away from home, flat, for the snapshot. */
 export type BarrelWire = number[];
 
 export function barrelsWire(
-  barrels: readonly { x: number; y: number; home: { x: number; y: number }; carried: boolean }[],
+  barrels: readonly { x: number; y: number; home: { x: number; y: number }; carried: boolean; facing: Direction }[],
 ): BarrelWire | undefined {
   const out: number[] = [];
   barrels.forEach((b, i) => {
     const away = b.carried || Math.abs(b.x - b.home.x) > 0.5 || Math.abs(b.y - b.home.y) > 0.5;
-    if (away) out.push(i, Math.round(b.x), Math.round(b.y), b.carried ? 1 : 0);
+    if (away) out.push(i, Math.round(b.x), Math.round(b.y), b.carried ? 1 + DIRS.indexOf(b.facing) : 0);
   });
   return out.length ? out : undefined;
 }
 
-/** What the wire says about each listed barrel (an unlisted one is at home). */
+/** What the wire says about each listed barrel (an unlisted one is at home); `facing` is null on the ground. */
 export function barrelsFromWire(
   wire: readonly number[] | undefined,
-): Map<number, { x: number; y: number; carried: boolean }> {
-  const out = new Map<number, { x: number; y: number; carried: boolean }>();
-  for (let i = 0; i + 3 < (wire?.length ?? 0); i += 4)
-    out.set(wire![i]!, { x: wire![i + 1]!, y: wire![i + 2]!, carried: wire![i + 3] === 1 });
+): Map<number, { x: number; y: number; facing: Direction | null }> {
+  const out = new Map<number, { x: number; y: number; facing: Direction | null }>();
+  for (let i = 0; i + 3 < (wire?.length ?? 0); i += 4) {
+    const held = wire![i + 3]!;
+    out.set(wire![i]!, { x: wire![i + 1]!, y: wire![i + 2]!, facing: held > 0 ? (DIRS[held - 1] ?? 'down') : null });
+  }
   return out;
 }
 
-/** Is this a well-formed `SnapMsg.barrels` (groups of four: a barrel number, x, y, carried 0/1)? */
+/** Is this a well-formed `SnapMsg.barrels` (groups of four: a barrel number, x, y, 0 or 1 + facing)? */
 export function validBarrelsWire(v: unknown): boolean {
   return (
     Array.isArray(v) &&
@@ -111,7 +120,7 @@ export function validBarrelsWire(v: unknown): boolean {
       if (!Number.isInteger(n)) return false;
       const x = n as number;
       if (i % 4 === 0) return x >= 0 && x < MAX_BARRELS;
-      if (i % 4 === 3) return x === 0 || x === 1;
+      if (i % 4 === 3) return x >= 0 && x <= DIRS.length;
       return Math.abs(x) <= 1e6;
     })
   );

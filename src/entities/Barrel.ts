@@ -1,4 +1,5 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
+import type { Direction } from '../core/direction';
 import { BARREL_SIZE, CARRY_LIFT, type BarrelSpot } from '../systems/barrels';
 
 /**
@@ -13,6 +14,8 @@ export class Barrel extends Container {
   readonly object: number;
   /** The player number carrying it (host and solo), or null when it stands on the ground. A guest only draws it. */
   carrier: number | null = null;
+  /** The way its carrier faces while it is carried (sets which side of them it is drawn). */
+  facing: Direction = 'down';
   private sprite: Sprite;
 
   constructor(spot: BarrelSpot, texture: Texture) {
@@ -38,10 +41,14 @@ export class Barrel extends Container {
     this.zIndex = y;
   }
 
-  /** Ride over the head of someone whose feet are at (x, y) (drawn just in front of them). */
-  carryAt(x: number, y: number) {
+  /**
+   * Be held out in front of a carrier facing `facing`, with its feet at (x, y) (`heldSpot`): drawn over the carrier,
+   * or behind them when they face away from the screen.
+   */
+  hold(x: number, y: number, facing: Direction) {
+    this.facing = facing;
     this.position.set(x, y);
     this.sprite.y = -CARRY_LIFT;
-    this.zIndex = y + 1;
+    this.zIndex = facing === 'up' ? y - 24 : y + 1;
   }
 }

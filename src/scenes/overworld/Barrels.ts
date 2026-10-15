@@ -1,5 +1,5 @@
 import type { Player } from '../../entities/Player';
-import { dropSpot, nearestBarrel } from '../../systems/barrels';
+import { dropSpot, heldSpot, nearestBarrel } from '../../systems/barrels';
 import type { Arena } from './Arena';
 import { foeNear, type Simulation } from './Simulation';
 
@@ -36,7 +36,8 @@ export class Barrels {
     );
     if (!loose) return false;
     loose.carrier = p.slot;
-    loose.carryAt(p.body.x, p.body.y);
+    const spot = heldSpot(p.body.x, p.body.y, p.body.facing);
+    loose.hold(spot.x, spot.y, p.body.facing);
     return true;
   }
 
@@ -48,8 +49,10 @@ export class Barrels {
       for (const b of z.barrels) {
         if (b.carrier === null) continue;
         const who = everyone.find((p) => p.slot === b.carrier && p.zone === z.name);
-        if (who) b.carryAt(who.body.x, who.body.y);
-        else b.setDown(b.x, b.y); // they left the zone (or the game): it stays where it was
+        if (who) {
+          const spot = heldSpot(who.body.x, who.body.y, who.body.facing);
+          b.hold(spot.x, spot.y, who.body.facing);
+        } else b.setDown(b.x, b.y); // they left the zone (or the game): it stays where it was
       }
     }
   }

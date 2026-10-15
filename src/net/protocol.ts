@@ -180,7 +180,7 @@ export interface SnapMsg {
    * filling up again after running dry. Absent: every pond full.
    */
   ponds?: number[];
-  /** Barrels of that zone away from home (systems/barrels.ts `barrelsWire`: number, x, y, carried 0/1, flat). Absent: all at home. */
+  /** Barrels of that zone away from home (systems/barrels.ts `barrelsWire`: number, x, y, 0 or 1 + the carrier's facing, flat). Absent: all at home. */
   barrels?: number[];
   w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
