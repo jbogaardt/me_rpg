@@ -64,3 +64,13 @@ different version away), so point it at the site they use. Against a local build
 
 The bot can do what a person at the DM bar can, and no more: it cannot invent places or monsters. New people for a
 live world (the world log's `npc` and `cast` entries, validated and sent to every player) are the next door to open.
+
+## The table read (Jev beyond cards)
+
+`pulse.ts` + `JevReader` (`jev.ts`): every `PULSE_MS` (8 s, in the background) one request asks Jev four independent questions
+over the same small, named state (percentages and seconds, no ids): a `score` of how hard pressed the party is (levels
+are described situations) and `noul`s for stalled / a word would help / needs a quest. Code owns the policy: the DM
+speaks unprompted when `wantsWord` ≥ 0.7 (never twice within 30 s), a quest is offered when `needsQuest` ≥ 0.7 (never
+twice within 20 s), and the pressure sets the tone of the narration. Without a key, or when a read is older than 24 s,
+the old timers (90 s silence, 45 s quiet) decide. Written with the TypeSafe agent skill's guidance (fan-out, atomic
+judgments, state in named fields, thresholds in code); check a change with a few hand-made states against the real API.

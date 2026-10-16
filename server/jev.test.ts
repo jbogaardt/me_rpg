@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { JevRouter, type SystemOne } from './jev';
+import { JevReader, JevRouter, type SystemOne } from './jev';
 import { HINTS, cardQuestion, type Card, type Table } from './router';
 
 const table: Table = { area: 'Greenwood', friends: [], questing: false, story: null };
@@ -34,7 +34,7 @@ describe('JevRouter', () => {
       confidence: 0.85,
       distribution: { ease: 0.85, stay: 0.15 },
     });
-    const asked = sent[0]!.questions.next;
+    const asked = sent[0]!.questions.next!;
     expect(asked.type).toBe('choice');
     expect(asked.criteria).toEqual({
       option_1: `Ease off: ${HINTS['struggle/ease']}`,
@@ -46,5 +46,32 @@ describe('JevRouter', () => {
   it('refuses an answer that is not one of the options', async () => {
     const { client } = fake('option_9', {});
     await expect(new JevRouter(client).choose(cardQuestion(card, table))).rejects.toThrow('not an option');
+  });
+});
+
+describe('JevReader', () => {
+  it('asks four independent questions in one request and scales the pressure to 0..1', async () => {
+    const sent: { questions: Record<string, { type: string }> }[] = [];
+    const client = {
+      systemOne(request: { state: unknown; questions: Record<string, { type: string }> }) {
+        sent.push(request);
+        return Promise.resolve({
+          answers: {
+            pressure: { score: 3 },
+            stalled: { noul: 0.1 },
+            wantsWord: { noul: 0.8 },
+            needsQuest: { noul: 0.9 },
+          },
+        });
+      },
+    };
+    const read = await new JevReader(client).read({
+      area: 'Greenwood',
+      party: { players: 1, averageHealthPercent: 100, lowestHealthPercent: 100, fallen: 0 },
+      progress: { questActive: false, secondsSinceQuestOffered: 60, secondsSinceDmSpoke: 60 },
+    });
+    expect(read).toEqual({ pressure: 0.75, stalled: 0.1, wantsWord: 0.8, needsQuest: 0.9 });
+    expect(Object.keys(sent[0]!.questions)).toEqual(['pressure', 'stalled', 'wantsWord', 'needsQuest']);
+    expect(sent[0]!.questions.pressure!.type).toBe('score');
   });
 });

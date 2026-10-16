@@ -188,6 +188,12 @@ export class ClaudeFallback implements CreativeFallback {
   }
 }
 
+const QUIET_MOOD = {
+  calm: ', and all is calm.',
+  tense: ', and the danger is real.',
+  dire: ', and they are in dire trouble.',
+};
+
 /** Narration, in the DM's voice. */
 export class ClaudeNarrator implements Narrator {
   constructor(
@@ -199,7 +205,7 @@ export class ClaudeNarrator implements Narrator {
       arrive: `The party has just arrived in ${beat.kind === 'arrive' ? beat.area : 'a new place'}.`,
       done: 'The party has just finished a quest.',
       hurt: 'One of the party has been badly hurt in a fight.',
-      quiet: 'The party has gone quiet and nothing has happened for a while.',
+      quiet: `The party has gone quiet and nothing has happened for a while${QUIET_MOOD[(beat.kind === 'quiet' && beat.mood) || 'calm']}`,
     }[beat.kind];
     try {
       const text = cleanLine(

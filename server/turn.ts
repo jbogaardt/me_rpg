@@ -2,6 +2,7 @@
 // join, begin when told (or once enough are in), stay with the party (a DM quest is written from the land the DM stands
 // in), answer the card up, then whatever waits in the inbox, and give the party a quest when nothing is asked of them.
 
+import { QUEST_AT, QUEST_MIN_MS, type Pulse } from './pulse';
 import type { Card, Table } from './router';
 
 /** How things stand on the page (its `DmBotState`). */
@@ -24,6 +25,8 @@ export interface Clock {
   lastQuest: number;
   /** Friends connected for at least `SETTLE_MS`. */
   settled: number;
+  /** The latest table read, when one is fresh (see pulse.ts); without it timers decide. */
+  pulse?: Pulse | null;
 }
 
 export type Step =
@@ -60,7 +63,13 @@ export function nextStep(s: PageState, c: Clock, startAt = 0): Step {
     return { kind: 'follow', slot: first.slot };
   if (s.card) return { kind: 'card' };
   if (s.waiting > 0) return { kind: 'inbox' };
-  if (!s.lobbyOpen && !s.questing && !s.epic && c.now - c.lastQuest >= QUEST_GAP_MS) return { kind: 'quest' };
+  if (!s.lobbyOpen && !s.questing && !s.epic) {
+    // With a table read, the reader says when the party needs a quest; without one, a long wait does.
+    const ready = c.pulse
+      ? c.pulse.needsQuest >= QUEST_AT && c.now - c.lastQuest >= QUEST_MIN_MS
+      : c.now - c.lastQuest >= QUEST_GAP_MS;
+    if (ready) return { kind: 'quest' };
+  }
   return s.lobbyOpen ? idle : stroll(s, c.now);
 }
 

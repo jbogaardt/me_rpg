@@ -112,13 +112,14 @@ describe("how a director's card is asked", () => {
   it("describes each choice by when it is right, and gives the party's health", () => {
     const q = cardQuestion(struggle, table());
     expect(q.options.map((o) => o.hint)).toEqual([HINTS['struggle/ease'], HINTS['struggle/stay']]);
-    expect(q.state.party).toEqual({ average: 1, lowest: 1 });
+    expect(q.state.party).toMatchObject({ average: 1, lowest: 1 });
+    expect(q.state.table).not.toHaveProperty('friends'); // the router is not shown slots or offsets
   });
 
   it('sums the party up', () => {
     const t = { ...table(), friends: [1, 0.5, 0.2].map((hp, slot) => ({ slot, area: 'A', hp, near: true })) };
-    expect(partyHealth(t)).toEqual({ average: 0.57, lowest: 0.2 });
-    expect(partyHealth({ ...t, friends: [] })).toEqual({ average: 1, lowest: 1 });
+    expect(partyHealth(t)).toEqual({ average: 0.57, lowest: 0.2, players: 3 });
+    expect(partyHealth({ ...t, friends: [] })).toEqual({ average: 1, lowest: 1, players: 0 });
   });
 
   it("takes a router pick a little above a coin toss for a card, but not for a player's words", async () => {

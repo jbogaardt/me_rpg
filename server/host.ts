@@ -13,11 +13,12 @@
 
 import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
-import { JevRouter } from './jev';
+import { JevReader, JevRouter } from './jev';
 import { MockFallback, MockRouter } from './mocks';
 import { ClaudeConjurer, ClaudeFallback, ClaudeNarrator, ClaudeEpicWriter } from './claude';
 import { MockConjurer, shouldConjure, type Conjurer } from './conjure';
 import { MockNarrator, beatFor, type Memory, type Narrator } from './narrate';
+import { PULSE_MS, fresh, pulseState, type Pulse, type TableReader } from './pulse';
 import { decideCard, type Card, type Move } from './router';
 import { MockEpicWriter, tellEpic, type StockTale, type EpicWriter } from './epics';
 import { SETTLE_MS, heldCard, nextStep, type Clock, type PageState, type Pressure } from './turn';
@@ -78,6 +79,11 @@ class Dm {
   private made = 0;
   private lastMade = -Infinity;
   private memory: Memory = { prev: null, spoke: 0 };
+  /** The fast model's read of the table, now and then (pulse.ts); null without a key, and the timers decide. */
+  private reader: TableReader | null = process.env.TYPESAFE_API_KEY ? new JevReader() : null;
+  private pulse: Pulse | null = null;
+  private reading = false;
+  private lastRead = -Infinity;
   private services = {
     router: process.env.TYPESAFE_API_KEY ? new JevRouter() : new MockRouter(() => this.latest?.story?.options ?? []),
     fallback: CLAUDE ? new ClaudeFallback() : new MockFallback(),
@@ -111,6 +117,8 @@ class Dm {
     this.latest = s;
     this.clock.now = Date.now();
     this.report(s);
+    this.refresh(s);
+    this.clock.pulse = fresh(this.pulse, this.clock.now);
     if (await this.narrate(s)) return;
     const step = nextStep(s, this.clock, this.startAt);
     switch (step.kind) {
@@ -150,12 +158,33 @@ class Dm {
     }
   }
 
+  /** Read the table in the background (never makes a tick wait); a failed read leaves the timers in charge. */
+  private refresh(s: PageState) {
+    const now = this.clock.now;
+    if (!this.reader || this.reading || !s.dm || !s.friends.length || s.lobbyOpen || now - this.lastRead < PULSE_MS)
+      return;
+    this.reading = true;
+    this.lastRead = now;
+    const state = pulseState(s, this.memory.spoke, this.clock.lastQuest, now);
+    void this.reader
+      .read(state)
+      .then((read) => {
+        this.pulse = { ...read, at: Date.now() };
+        const pct = (n: number) => `${Math.round(n * 100)}%`;
+        log(
+          `table: pressure ${pct(read.pressure)}, stalled ${pct(read.stalled)}, word ${pct(read.wantsWord)}, quest ${pct(read.needsQuest)}`,
+        );
+      })
+      .catch((err: unknown) => console.warn('table read failed', err instanceof Error ? err.message : err))
+      .finally(() => (this.reading = false));
+  }
+
   /** Speak up on a moment worth a word (narrate.ts); true when it did. */
   private async narrate(s: PageState): Promise<boolean> {
     const m = this.memory;
     // The clock starts when the table does, and the game's own welcome counts as the DM's first word.
     if (!m.spoke || s.lobbyOpen) m.spoke = this.clock.now;
-    const beat = beatFor(s, m, this.clock.now);
+    const beat = beatFor(s, m, this.clock.now, this.clock.pulse ?? null);
     m.prev = s;
     if (!beat) return false;
     const line = await this.narrator.line(beat);

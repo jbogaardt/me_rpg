@@ -6,7 +6,8 @@
 // under a plain label (`option_1`...) described by its own words (and, for a director's card, when it is the right
 // choice: `HINTS` in router.ts), and the answer is mapped back.
 
-import { choice, TypeSafeClient } from '@typesafe-ai/sdk';
+import { choice, noul, score, TypeSafeClient } from '@typesafe-ai/sdk';
+import type { Pulse, PulseState, TableReader } from './pulse';
 import type { ChoiceAnswer, ChoiceQuestion, ChoiceRouter } from './router';
 
 /** What `systemOne` takes as state: JSON (QuestionState is plain JSON). */
@@ -16,8 +17,8 @@ type SentState = Parameters<TypeSafeClient['systemOne']>[0]['state'];
 export interface SystemOne {
   systemOne(request: {
     state: SentState;
-    questions: { next: ReturnType<typeof choice> };
-  }): Promise<{ answers: { next: { choice: string; confidence: number; probabilities: Record<string, number> } } }>;
+    questions: Record<string, { type: string; criteria?: unknown }>;
+  }): Promise<{ answers: unknown }>;
 }
 
 /** The label an option is asked under. */
@@ -30,10 +31,13 @@ export class JevRouter implements ChoiceRouter {
     const criteria = Object.fromEntries(
       question.options.map((o, i) => [labelOf(i), o.hint ? `${o.label}: ${o.hint}` : o.label]),
     );
-    const { answers } = await this.client.systemOne({
+    const response = await this.client.systemOne({
       state: question.state as unknown as SentState,
       questions: { next: choice(question.question, criteria) },
     });
+    const answers = response.answers as {
+      next: { choice: string; confidence: number; probabilities: Record<string, number> };
+    };
     const idOf = (label: string) => question.options[Number(label.replace('option_', '')) - 1]?.id;
     const distribution: Record<string, number> = {};
     for (const [label, p] of Object.entries(answers.next.probabilities)) {
@@ -43,5 +47,61 @@ export class JevRouter implements ChoiceRouter {
     const picked = idOf(answers.next.choice);
     if (!picked) throw new Error(`Jev answered "${answers.next.choice}", which is not an option`);
     return { choice: picked, confidence: answers.next.confidence, distribution };
+  }
+}
+
+/** The levels of `pressure`: described as situations (a bare number tells the model nothing). */
+const PRESSURE_LEVELS = [
+  'Everyone is at nearly full health (about 80% or more): the party is cruising.',
+  'The weakest player is between 50% and 80% health: a few scrapes, but in control.',
+  'The weakest player is between 25% and 50% health: clearly hurt, but coping.',
+  'The weakest player is under 25% health, or the average is under 50%: hard-pressed.',
+  'Players have fallen (`party.fallen` above 0), or everyone is close to death: overwhelmed.',
+] as const;
+
+/** The table read as one fan-out request: four independent judgments over the same state. */
+export class JevReader implements TableReader {
+  constructor(private client: SystemOne = new TypeSafeClient()) {}
+
+  async read(state: PulseState): Promise<Omit<Pulse, 'at'>> {
+    const response = await this.client.systemOne({
+      state: state as unknown as SentState,
+      questions: {
+        pressure: score('How hard pressed is the party? Judge by the health figures in `party`.', PRESSURE_LEVELS),
+        stalled: noul(
+          'The players are at a loss or idle. True when no quest is active (`progress.questActive` is false) and it has been over a minute since a quest was offered (`progress.secondsSinceQuestOffered`).',
+          {
+            true: 'No quest is active and over a minute has passed since one was offered.',
+            false: 'A quest is active, or one was offered less than a minute ago.',
+          },
+        ),
+        wantsWord: noul(
+          'A short remark from the Dungeon Master now would help the players. True when the DM has been silent for over a minute (`progress.secondsSinceDmSpoke`) and nobody is badly hurt (`party.lowestHealthPercent` above 40).',
+          {
+            true: 'Over a minute since the DM spoke and no one is badly hurt.',
+            false: 'The DM spoke within the last minute, or someone is badly hurt and chatter would annoy them.',
+          },
+        ),
+        needsQuest: noul(
+          'The party needs a new quest. True when no quest is active (`progress.questActive` is false) and over 40 seconds have passed since one was offered (`progress.secondsSinceQuestOffered`).',
+          {
+            true: 'No quest is active and over 40 seconds have passed since one was offered.',
+            false: 'A quest is active, or one was offered within the last 40 seconds.',
+          },
+        ),
+      },
+    });
+    const a = response.answers as {
+      pressure: { score: number };
+      stalled: { noul: number };
+      wantsWord: { noul: number };
+      needsQuest: { noul: number };
+    };
+    return {
+      pressure: a.pressure.score / (PRESSURE_LEVELS.length - 1),
+      stalled: a.stalled.noul,
+      wantsWord: a.wantsWord.noul,
+      needsQuest: a.needsQuest.noul,
+    };
   }
 }

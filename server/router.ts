@@ -89,10 +89,11 @@ export interface Table {
 export interface QuestionState {
   card: { kind: string; title: string; note: string };
   /** How the party is in health, 0 to 1 (empty party: 1). */
-  party: { average: number; lowest: number };
+  party: { average: number; lowest: number; players: number };
   /** The player's own words or ask, when the card is theirs. */
   playerWords: string | null;
-  table: Table;
+  /** The table as the router needs it: where, how many, the story. No slots, offsets or ids to wade through. */
+  table: { area: string; questActive: boolean; story: Table['story'] };
 }
 
 /** A `choice` question: the state, the question, and the ids it may answer. */
@@ -161,11 +162,15 @@ export function optionsFor(card: Card, table: Table): Option[] {
 }
 
 /** The party's health in two numbers, so the router need not add up `table.friends`. */
-export function partyHealth(table: Table): { average: number; lowest: number } {
+export function partyHealth(table: Table): { average: number; lowest: number; players: number } {
   const hp = table.friends.map((f) => f.hp);
-  if (!hp.length) return { average: 1, lowest: 1 };
+  if (!hp.length) return { average: 1, lowest: 1, players: 0 };
   const round = (n: number) => Math.round(n * 100) / 100;
-  return { average: round(hp.reduce((a, b) => a + b, 0) / hp.length), lowest: round(Math.min(...hp)) };
+  return {
+    average: round(hp.reduce((a, b) => a + b, 0) / hp.length),
+    lowest: round(Math.min(...hp)),
+    players: hp.length,
+  };
 }
 
 export function cardQuestion(card: Card, table: Table): ChoiceQuestion {
@@ -175,7 +180,7 @@ export function cardQuestion(card: Card, table: Table): ChoiceQuestion {
       card: { kind: card.kind, title: card.title, note: card.note },
       party: partyHealth(table),
       playerWords: words,
-      table,
+      table: { area: table.area, questActive: table.questing, story: table.story },
     },
     question: words
       ? 'You are the Dungeon Master of a co-op adventure. A player said `playerWords` (see `card` for how it reached ' +

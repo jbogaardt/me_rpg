@@ -3,13 +3,14 @@
 // (pure, tested); a `Narrator` words it. The mock narrator uses stock lines; a creative model slots in behind the same
 // interface later, so only the wording changes.
 
+import { SPEAK_AT, SPEAK_MIN_MS, moodOf, type Pulse } from './pulse';
 import type { PageState } from './turn';
 
 export type Beat =
   | { kind: 'arrive'; area: string }
   | { kind: 'done'; area: string }
   | { kind: 'hurt'; slot: number; area: string }
-  | { kind: 'quiet'; area: string };
+  | { kind: 'quiet'; area: string; mood?: 'calm' | 'tense' | 'dire' };
 
 export interface Narrator {
   /** One short line, spoken as the Dungeon Master. */
@@ -31,7 +32,7 @@ export const QUIET_MS = 90_000;
 export const HURT_BELOW = 0.25;
 
 /** The moment worth a line now, if any. `m.prev` is the state last tick; the caller then sets `m.spoke` if it speaks. */
-export function beatFor(s: PageState, m: Memory, now: number): Beat | null {
+export function beatFor(s: PageState, m: Memory, now: number, pulse: Pulse | null = null): Beat | null {
   const prev = m.prev;
   if (!prev || !s.dm || !s.friends.length || s.lobbyOpen || s.card) return null;
   if (now - m.spoke < SPOKE_GAP_MS) return null;
@@ -42,7 +43,10 @@ export function beatFor(s: PageState, m: Memory, now: number): Beat | null {
     return f.hp < HURT_BELOW && before !== undefined && before.hp >= HURT_BELOW;
   });
   if (hurt) return { kind: 'hurt', slot: hurt.slot, area: s.area };
-  if (now - m.spoke >= QUIET_MS) return { kind: 'quiet', area: s.area };
+  // With a table read, the reader says when a word would help; without one, a long silence does.
+  const mood = moodOf(pulse);
+  if (pulse ? pulse.wantsWord >= SPEAK_AT && now - m.spoke >= SPEAK_MIN_MS : now - m.spoke >= QUIET_MS)
+    return { kind: 'quiet', area: s.area, ...(mood ? { mood } : {}) };
   return null;
 }
 
