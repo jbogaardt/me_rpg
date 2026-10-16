@@ -233,8 +233,7 @@ export class OverworldScene implements Scene {
     );
     this.epics.onDone = () => this.prompts.suggest('story'); // a saga is done: the story may have a next road
     // The DM's words show on every screen (never over a DM who is busy being a foe).
-    this.desk.onSay = (text) =>
-      !this.possession.active && ui.dialog.tell('The Dungeon Master', text, sayTime(text), arena.clock);
+    this.desk.onSay = (text) => !this.possession.active && ui.dialog.tell(text, sayTime(text), arena.clock);
     this.input = new LocalInput(arena, this.zones, () => ui.touch.active);
     this.partyUi = new PartyUi(arena, this.zones, ui.menu, () => this.possession.release());
     this.storyUi = new StoryUi(arena, ui, this.zones, this.banner, this.overlay, () => this.possession.active);
@@ -447,8 +446,6 @@ export class OverworldScene implements Scene {
     if (this.dmCard.open && menuPressed())
       this.dmCard.dismiss(); // Esc sends a card away first
     else if (this.requests.open && menuPressed()) this.requests.close();
-    else if (dialog.speaking && menuPressed())
-      dialog.dismissAside(); // then the DM's words, which should never block the screen
     else if (this.possession.active && menuPressed())
       this.possession.release(); // then lets go of a foe, instead of opening the menu
     else if (!dialog.active && menuPressed()) {

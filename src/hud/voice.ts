@@ -1,5 +1,5 @@
 // The Dungeon Master's spoken voice: the browser's own speech synthesis, free and on the player's device, so each page
-// says the aside it was told and nothing goes over the wire. A player's choice to mute is remembered in this browser only.
+// says the caption it was told and nothing goes over the wire. A player's choice to mute is remembered in this browser only.
 // HUD (DOM); silent where the browser has no speech.
 
 const KEY = 'voice-muted';

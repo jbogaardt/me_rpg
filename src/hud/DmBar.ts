@@ -2,7 +2,7 @@
 // running quest's instructions), the nudges a DM gives (an Epic quest, Cancel quest, the Story, the Sky, the Pressure), and beside
 // it the hot buttons for the big tools (Smite, Freeze, Stop time [T], Reset zone), which stand in for the Inventory and
 // Attack buttons the DM has no use for. Also the "time is stopped" notice. (The words a DM speaks are said in the one dialog
-// box, `hud/Dialog.ts`, as an aside.) Built once from index.html (`#dm-bar`, `#dm-hot`, `#dm-hold`); textContent only.
+// box, `hud/Dialog.ts`, as a caption.) Built once from index.html (`#dm-bar`, `#dm-hot`, `#dm-hold`); textContent only.
 
 import { codeLabel, FIXED_KEYS } from '../core/bindings';
 import { MAX_SAY, PRESSURE_LABEL, type Pressure } from '../systems/dmPowers';

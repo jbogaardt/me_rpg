@@ -18,9 +18,9 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
   that appear at the right moment with two or three buttons and go away if ignored. **Nothing pops up for the DM**:
   director nudges and player requests wait in an inbox (a count on a button). There are no cooldowns; a DM is never made
   to wait.
-- **Pre-canned words** for the director's moves keep the DM's voice consistent; the DM's own words are short, dismissible
-  (✕, Esc, or a click on the game) and shown to everyone, in the one dialog box (`hud/Dialog.ts`) as an aside that waits
-  its turn behind a conversation rather than over it.
+- **Pre-canned words** for the director's moves keep the DM's voice consistent; the DM's own words are short and shown to everyone
+  as a caption (`hud/Dialog.ts`): plain text on a clear background that takes no input, never stops play, leaves by
+  itself, and is also spoken by the browser's voice (`hud/voice.ts`, mutable).
 
 ## The DM is not one of the party
 

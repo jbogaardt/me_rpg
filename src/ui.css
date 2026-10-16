@@ -179,17 +179,16 @@
   background: url('./ui/arrow-down.png') center / contain no-repeat; animation: bob 0.9s ease-in-out infinite;
 }
 @keyframes bob { 50% { transform: translateY(3px); } }
-/* The DM's words in the same box: the player keeps playing, so only the ✕ takes taps and there is no "more" arrow. */
-#dialog #dialog-who { display: none; font: 700 12px var(--title); color: #7c230f; letter-spacing: 0.06em; text-transform: uppercase; }
-#dialog .close { display: none; position: absolute; top: 2px; right: 4px; width: 32px; height: 32px; background: none; border: 0; font: 700 18px var(--body); color: var(--ink-soft); cursor: pointer; }
-#dialog.aside { pointer-events: none; text-align: center; font-weight: 600; font-size: 18px; min-height: 0; }
-#dialog.aside #dialog-who { display: block; }
-#dialog.aside .close { display: block; pointer-events: auto; }
-#dialog .voice { display: none; position: absolute; top: 2px; left: 4px; width: 32px; height: 32px; background: none; border: 0; font-size: 16px; cursor: pointer; }
-#dialog.aside .voice:not([hidden]) { display: block; pointer-events: auto; }
-#dialog.aside .more { display: none; }
-body.touch-ui #dialog .close { width: 44px; height: 44px; top: 0; right: 0; }
-body.touch-ui #dialog .voice { width: 44px; height: 44px; top: 0; left: 0; }
+/* The DM's words: plain text on a clear background, no input, gone by themselves (the 🔊 is the one thing it takes taps for). */
+#dm-caption {
+  position: fixed; z-index: 2; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%);
+  width: min(640px, calc(100vw - 32px)); text-align: center; pointer-events: none;
+  font: 600 20px/1.3 var(--body); color: #fff; text-shadow: 0 1px 3px #000, 0 0 8px #000, 0 0 2px #000;
+}
+#dm-caption[hidden] { display: none; }
+#dm-caption .voice { pointer-events: auto; background: none; border: 0; font-size: 16px; cursor: pointer; opacity: 0.7; }
+#dm-caption .voice[hidden] { display: none; }
+body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
 
 /* --- Touch controls (shown only on touch devices) --- */
 #touch-controls { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
@@ -347,7 +346,7 @@ body.touch-ui #dm-card .mp-btn { min-height: 44px; padding: 10px 12px; font-size
 body.touch-ui #dm-card .close { width: 44px; height: 44px; top: 0; right: 0; }
 body.touch-ui #dm-hold { top: auto; bottom: 42%; }
 body.touch-ui #hud-dm { max-width: calc(100vw - 170px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-body.dm-possessing #dialog.aside, body.dm-possessing #dm-card, body.dm-possessing #area-banner { display: none; }
+body.dm-possessing #dm-caption, body.dm-possessing #dm-card, body.dm-possessing #area-banner { display: none; }
 /* The DM has no use for Inventory or Attack on screen: the hot buttons take their place (Attack comes back to strike as a possessed foe). */
 body.dm-ui #inv-btn { display: none; }
 body.dm-ui:not(.dm-possessing) #btn-a { display: none; }

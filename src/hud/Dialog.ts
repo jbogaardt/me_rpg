@@ -1,10 +1,6 @@
 import { voice } from './voice';
 
 const DIALOG_MAX_W = 600;
-/** How long (s) a waiting aside stays worth saying once a conversation is over. */
-const ASIDE_STALE_S = 30;
-/** The most asides kept waiting behind a conversation (the oldest is dropped past this). */
-const MAX_WAITING = 3;
 
 /** What kind of thing is being said (see `Dialog`). */
 export interface DialogOptions {
@@ -19,39 +15,29 @@ interface Talk {
   pauses: boolean;
 }
 
-interface Aside {
-  who: string;
-  text: string;
-  /** How long it stays on screen (s). */
-  seconds: number;
-  /** When it was said, then when it leaves (arena clock, s). */
-  at: number;
+interface Caption {
+  /** When it leaves (arena clock, s). */
   until: number;
 }
 
 /**
- * The one dialog box (markup in index.html; tapping it presses the action key, see core/touch.ts). Two kinds of thing
- * are said in it, and they never overlap:
- *
- * - a **conversation** (an NPC, a quest brief, a sign): paged, the player stands still until it is read, and the next
- *   one waits in line behind it. It may `pauses` the world for everyone.
- * - an **aside** (the Dungeon Master's spoken words): one short line the player keeps playing through; it leaves by
- *   itself, or on ✕. A conversation takes the box from it, and it comes back afterwards; asides said meanwhile wait in
- *   order (the oldest of more than three is dropped, and any gone stale), and one at a time is on screen.
+ * The dialog box (markup in index.html; tapping it presses the action key, see core/touch.ts) says *conversations* (an
+ * NPC, a quest brief, a sign): paged, the player stands still until they are read, the next waits in line, and one may
+ * `pauses` the world for everyone. The Dungeon Master's words are not a conversation: `tell` puts them in a **caption**
+ * (`#dm-caption`), plain text on a clear background that takes no input, never stops play and leaves by itself. The
+ * caption is also spoken (`voice.ts`).
  */
 export class Dialog {
   private box = document.getElementById('dialog')!;
   private text = document.getElementById('dialog-text')!;
-  private who = document.getElementById('dialog-who')!;
   private talk: Talk | null = null;
   private queue: Talk[] = [];
-  private aside: Aside | null = null; // on screen, when `talk` is null
-  private waiting: Aside[] = [];
+  private caption = document.getElementById('dm-caption')!;
+  private captionText = document.getElementById('dm-caption-text')!;
+  private shown: Caption | null = null;
 
   constructor() {
-    this.box.querySelector('.close')!.addEventListener('click', () => this.dismissAside());
-    // A click on the game sends the DM's words away too: nobody hunts for a close button.
-    const speaker = this.box.querySelector('.voice');
+    const speaker = this.caption.querySelector('.voice');
     if (speaker instanceof HTMLButtonElement) {
       const show = () => {
         speaker.hidden = !voice.available;
@@ -63,9 +49,6 @@ export class Dialog {
         show();
       });
     }
-    window.addEventListener('pointerdown', (e) => {
-      if (e.target instanceof HTMLCanvasElement) this.dismissAside();
-    });
   }
 
   /** A conversation is open: the player stands still, and the action key reads on. */
@@ -78,11 +61,6 @@ export class Dialog {
     return this.talk?.pauses ?? false;
   }
 
-  /** An aside is on screen. */
-  get speaking(): boolean {
-    return this.aside !== null;
-  }
-
   /** Show `lines` one at a time, after any conversation already open; `onDone` runs once the last one is dismissed (not when closed by force). */
   say(lines: string[], onDone?: () => void, opts: DialogOptions = {}) {
     const talk: Talk = { lines, index: 0, done: onDone ?? null, pauses: opts.pauses ?? false };
@@ -90,23 +68,17 @@ export class Dialog {
     else this.open(talk);
   }
 
-  /** Say `text` as `who` for `seconds` without stopping play; it waits for a conversation to end and is dropped if stale. */
-  tell(who: string, text: string, seconds: number, now: number) {
-    const aside: Aside = { who, text, seconds, at: now, until: now + seconds };
-    if (this.talk)
-      this.wait(aside); // a line said over another replaces it, as the DM moved on
-    else this.showAside(aside, now);
+  /** Say `text` in the caption for `seconds` (arena clock `now`), over any caption still up; play goes on. */
+  tell(text: string, seconds: number, now: number) {
+    this.shown = { until: now + seconds };
+    this.captionText.textContent = text;
+    this.caption.hidden = false;
+    voice.speak(text);
   }
 
-  /** Each frame (`now`: the arena clock, s): an aside leaves when its time is up; a waiting one is said once the way is clear. */
+  /** Each frame (`now`: the arena clock, s): the caption leaves when its time is up. */
   update(now: number) {
-    if (this.aside && now >= this.aside.until) this.clearAside();
-    if (!this.talk && !this.aside) {
-      const fresh = this.waiting.filter((a) => now - a.at < ASIDE_STALE_S);
-      const next = fresh.shift();
-      this.waiting = fresh;
-      if (next) this.showAside(next, now); // said in full, as it was missed
-    }
+    if (this.shown && now >= this.shown.until) this.clearCaption();
   }
 
   /** Show the next line, or close after the last one and open whoever is waiting. */
@@ -125,60 +97,28 @@ export class Dialog {
     talk.done?.();
   }
 
-  /** Send the aside away (its ✕, Esc, a click on the game). */
-  dismissAside() {
-    this.clearAside();
-  }
-
   /** Close everything (leaving the game). */
   close() {
     this.talk = null;
     this.queue = [];
-    this.aside = null;
-    this.waiting = [];
-    voice.stop();
+    this.clearCaption();
     this.hide();
-  }
-
-  private wait(aside: Aside) {
-    this.waiting.push(aside);
-    if (this.waiting.length > MAX_WAITING) this.waiting.shift();
   }
 
   private open(talk: Talk) {
     this.talk = talk;
-    if (this.aside) {
-      // A conversation takes the box: the aside it displaced comes back after it, ahead of any said since.
-      this.waiting.unshift(this.aside);
-      this.waiting.length = Math.min(this.waiting.length, MAX_WAITING);
-      this.aside = null;
-      voice.stop();
-    }
-    this.who.textContent = '';
     this.text.textContent = talk.lines[0] ?? '';
-    this.box.classList.remove('aside');
     this.box.hidden = false;
   }
 
-  private showAside(aside: Aside, now: number) {
-    this.aside = { ...aside, until: now + aside.seconds };
-    this.who.textContent = `${aside.who} speaks`;
-    this.text.textContent = aside.text;
-    voice.speak(aside.text);
-    this.box.classList.add('aside');
-    this.box.hidden = false;
-  }
-
-  private clearAside() {
-    if (!this.aside) return;
-    this.aside = null;
+  private clearCaption() {
+    this.shown = null;
+    this.caption.hidden = true;
     voice.stop();
-    this.hide();
   }
 
   private hide() {
     this.box.hidden = true;
-    this.box.classList.remove('aside');
   }
 
   /**

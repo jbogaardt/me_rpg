@@ -58,10 +58,12 @@ async function watchDialog(page: Page) {
   await page.evaluate(() => {
     const said: string[] = [];
     (window as unknown as { __said: string[] }).__said = said;
-    const text = document.getElementById('dialog-text')!;
-    new MutationObserver(() => {
-      if (text.textContent) said.push(text.textContent);
-    }).observe(text, { childList: true, characterData: true, subtree: true });
+    for (const id of ['dialog-text', 'dm-caption-text']) {
+      const text = document.getElementById(id)!;
+      new MutationObserver(() => {
+        if (text.textContent) said.push(text.textContent);
+      }).observe(text, { childList: true, characterData: true, subtree: true });
+    }
   });
 }
 
@@ -70,7 +72,7 @@ async function asideSays(page: Page, words: string) {
   await expect
     .poll(
       async () => {
-        if ((await page.locator('#dialog:not(.aside):not([hidden])').count()) > 0) await page.keyboard.press('KeyJ');
+        if ((await page.locator('#dialog:not([hidden])').count()) > 0) await page.keyboard.press('KeyJ');
         return page.evaluate(() => (window as unknown as { __said: string[] }).__said.join('\n'));
       },
       { timeout: 45_000, intervals: [200] },
