@@ -182,7 +182,8 @@ export class ClaudeFallback implements CreativeFallback {
   async improvise({ card, table, words, options }: ImproviseRequest): Promise<unknown> {
     const list = options.map((o) => `${o.id}: ${o.label}`).join('\n');
     const prompt =
-      `The party is in ${table.area}. The card: "${card.title}" ${card.note ? `(${card.note})` : ''}\n` +
+      `The party is in ${table.area}.${table.task ? ` Their task now: ${table.task}` : ''} The card: "${card.title}" ${card.note ? `(${card.note})` : ''}\n` +
+      (words ? `If they are lost or ask what is going on, remind them plainly of their task and the story.\n` : '') +
       (words ? `The player said: <player>${words}</player>\n` : '') +
       `Options:\n${list}\n` +
       `Answer with JSON only: {"pick": "<one option id, or omit>", "reply": "<what you say to them, in character, under ${MAX_REPLY} letters, or omit>"}`;
@@ -265,7 +266,7 @@ export function readPerson(raw: unknown, looks: { id: string }[]): Person | null
 /** A new epic for the place, written by Claude in the page's epic format (the page checks it; see epics.ts). */
 export class ClaudeEpicWriter implements EpicWriter {
   constructor(private ask: Ask = askClaude) {}
-  async write({ area, looks, told, stock, refused }: Parameters<EpicWriter['write']>[0]): Promise<unknown> {
+  async write({ area, looks, told, stock, refused, previous }: Parameters<EpicWriter['write']>[0]): Promise<unknown> {
     const example = stock.find((t) => t.people) ?? stock[0];
     const prompt =
       `Write a new epic for the party, who are in ${area}. An epic is a short saga of 3 to 6 steps. A step is one of: ` +
@@ -274,7 +275,7 @@ export class ClaudeEpicWriter implements EpicWriter {
       `with a name, "lines" (what they say before they are met), "after" (once met), "finished" (once the saga is done) and a "look" word from: ${looks.map((l) => l.name).join(', ')}. Every person is met by exactly one "meet" step. "people" is an object whose keys are short ids, each id naming one person, and a step's "who" (only on "meet" steps, never empty) must be one of those ids. ` +
       `"hop" is how many lands from here the step is set (0 to 3). EVERY step, not only some, has a "kind", a whole-number ` +
       `"hop" and a "tell" (what the DM says to send them there, one short sentence under 200 letters). Open with a concrete hook that makes the party want to act: who is in trouble, what is at stake and why it falls to them. Make it a story with a reason, a turn and a payoff, not ` +
-      `a list of chores. Do not reuse these ids: ${told.join(', ') || 'none'}. Reply with the JSON only, in exactly this form:\n` +
+      `a list of chores. Take at least half the steps in other lands ("hop" 1 to 3), so the party travels. ${previous ? `The party has just finished “${previous.title}”, which ended: ${previous.ending} The new saga must build on it: carry over a consequence, a clue, a place or a person from that story, so it feels like the next chapter. ` : ''}Do not reuse these ids: ${told.join(', ') || 'none'}. Reply with the JSON only, in exactly this form:\n` +
       JSON.stringify(example) +
       (refused ? `\nYour last try was refused: ${refused}. Fix exactly that and answer again.` : '');
     return jsonIn(await this.ask(`${PERSONA} ${RULES}`, prompt));

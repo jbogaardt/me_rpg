@@ -113,6 +113,8 @@ const idle: Step = { kind: 'idle' };
 
 /** How long after setting the pressure the opposite card (struggling after turning up the heat, and back) is held. */
 export const PRESSURE_HOLD_MS = 120_000;
+/** The least time between two turns of the heat. */
+export const HEAT_HOLD_MS = 300_000;
 
 /** The pressure the DM last set: the id of the option picked (`heat` or `ease`) and when (ms, the bot's clock). */
 export interface Pressure {
@@ -125,7 +127,10 @@ export interface Pressure {
  * answering each wobble has the DM easing off and turning up the heat within seconds. It is sent away instead.
  */
 export function heldCard(card: Card, last: Pressure | null, now: number): boolean {
-  if (!last || now - last.at >= PRESSURE_HOLD_MS) return false;
+  if (!last) return false;
+  // More foes are a gift sparingly given: no second push within HEAT_HOLD_MS (an adventure, not a gauntlet).
+  if (last.id === 'heat' && now - last.at < HEAT_HOLD_MS && card.options.some((o) => o.id === 'heat')) return true;
+  if (now - last.at >= PRESSURE_HOLD_MS) return false;
   const opposite = last.id === 'heat' ? 'ease' : 'heat';
   return card.options.some((o) => o.id === opposite) && !card.options.some((o) => o.id === last.id);
 }

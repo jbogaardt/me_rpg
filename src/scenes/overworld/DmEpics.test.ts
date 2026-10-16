@@ -102,6 +102,7 @@ describe('epic quests, on the host', () => {
       expect(arena.task!.state).toBe('done');
       tasks.update(TASK_LINGER + 1);
     }
+    for (let i = 0; i < 4; i++) epics.update(5); // the closing scene is told, line by line
     expect(ended).toBe(1);
     expect(epics.active).toBe(false);
     expect(arena.task).toBeNull();
@@ -109,6 +110,7 @@ describe('epic quests, on the host', () => {
     expect(paid.every(([p]) => p === party[0])).toBe(true);
     expect(paid[3]![1]).toBeGreaterThan(paid[0]![1]); // the saga pays more than a step
     expect(said.at(-1)).toContain('village sleeps safely');
+    expect(said.at(-1)).toMatch(/You each earn \d+ XP and \d+ gold/); // the party is told what they got
   });
 
   it('loads a land nobody has been to, and goes there when the step is set in it', () => {
@@ -270,6 +272,7 @@ describe('epics with people, on the host', () => {
     [me.body.x, me.body.y] = [330, 330];
     tasks.update(0.1);
     tasks.update(TASK_LINGER + 1);
+    for (let i = 0; i < 4; i++) epics.update(5); // the closing scene
     expect(epics.active).toBe(false);
     expect(voiced.at(-1)).toEqual(['dm_mira', ['It is over, friends.']]);
   });

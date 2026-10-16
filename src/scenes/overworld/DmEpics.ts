@@ -57,6 +57,8 @@ export class DmEpics {
     next: boolean;
     /** A person the party has reached, speaking: the lines still to say and the seconds until the next. */
     speech: { lines: string[]; wait: number } | null;
+    /** The last step is done and the closing scene is being told (then the saga is complete). */
+    finishing?: boolean;
     /** The id the world gave each person made so far (by their key in the epic). */
     ids: Map<string, string>;
   } | null = null;
@@ -236,12 +238,13 @@ export class DmEpics {
       return;
     }
     run.speech = null;
-    this.advance(run);
+    if (run.finishing) this.complete(run.plan);
+    else this.advance(run);
   }
 
   private advance(run: NonNullable<DmEpics['run']>) {
     run.step++;
-    if (run.step >= run.plan.epic.steps.length) this.complete(run.plan);
+    if (run.step >= run.plan.epic.steps.length) this.close(run);
     else run.next = true;
   }
 
@@ -260,14 +263,26 @@ export class DmEpics {
     if (id && lines) this.story?.voice(id, lines);
   }
 
+  /**
+   * The last step is done: the closing scene. A person of the saga (the last the party met) is glad and says so, the DM
+   * tells how it ended, and the reward is named, so the party knows what they did and what they got. Then it is complete.
+   */
+  private close(run: NonNullable<DmEpics['run']>) {
+    const { epic } = run.plan;
+    const { xp, gold } = epicReward(run.plan);
+    const last = Object.values(epic.people ?? {}).at(-1);
+    const thanks = last?.finished?.[0] ? `${last.name}: “${last.finished[0]}”` : '';
+    const lines = [thanks, `${epic.ending} You each earn ${xp} XP and ${gold} gold.`].filter(Boolean);
+    run.finishing = true;
+    run.speech = { lines, wait: 0 };
+    for (const p of this.arena.partyAll()) this.sim.reward(p, xp, gold);
+  }
+
   private complete(plan: EpicPlan) {
     const run = this.run;
     if (run) for (const [who, person] of Object.entries(plan.epic.people ?? {})) this.say(run, who, person.finished);
     this.run = null;
     this.tasks.setEpic(null);
-    const { xp, gold } = epicReward(plan);
-    for (const p of this.arena.partyAll()) this.sim.reward(p, xp, gold);
-    this.desk.say(cleanSay(plan.epic.ending));
     this.onDone();
   }
 

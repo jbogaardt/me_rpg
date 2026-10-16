@@ -95,3 +95,17 @@ facts, with a reason to care. Invented places are never named unless the game ga
   gone; every telling of a quest (the DM's note or the stock brief) now ends with the tracker's own objective
   ("Defeat 4 Goblins in the Mirewood."), via `objective` in `systems/dmBrief.ts`.
 - Also fixed: my last change had hidden a saga's step text entirely; it shows again (as captions).
+
+### 2026-10-16 (sixth run): no payoff, no sequel, constant fights
+- Said: too many repeats; quests end without a story (no sense of an item, XP, a glad NPC); the next quest does not build
+  on the last and everything stays in one zone; foes respawn far too fast; it should be an adventure where I can go AFK
+  and not be beaten to death; if I need the DM to reorient me I can ask.
+- Log: three "easy work, raise the stakes" cards in three minutes (each adds foes); unprompted remarks over the saga; the
+  next saga written from the area alone.
+- Changed: a saga now ends with a closing scene (the last person met says they are glad, the DM tells how it ended and
+  what each player earned: XP and gold); the next saga is written knowing how the last ended and is asked to travel
+  (half its steps in other lands); foes stay down 60 s (was 6); online, a player with no input for 10 s is left alone by
+  mobs; heat is not turned up twice within 5 minutes; the bot no longer makes unprompted remarks (set
+  `DM_BOT_CHATTER=1` to bring them back) and replies to a player's words know the current task and story.
+- Open: items as rewards (a saga's reward is XP and gold; an item needs a pick from the shops/loot); whether a 60 s
+  respawn leaves enough foes for a hunt quest; the game's own AFK rule is online only.

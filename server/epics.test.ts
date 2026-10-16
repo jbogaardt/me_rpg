@@ -59,4 +59,15 @@ describe('tellEpic', () => {
   it('the mock writer offers the stock in turn', async () => {
     expect(await new MockEpicWriter().write({ area: 'x', looks: [], told: ['one'], stock })).toEqual(stock[1]);
   });
+  it('tells the writer what the last saga was, so the next builds on it', async () => {
+    const seen: unknown[] = [];
+    const writer = {
+      write: (want: { previous?: unknown }) => (
+        seen.push(want.previous),
+        Promise.resolve({ id: 'next', title: 'Next' })
+      ),
+    };
+    await tellEpic(writer, page(accepts), 'Glen', ['x'], { title: 'The Fever', ending: 'Pell is well.' });
+    expect(seen).toEqual([{ title: 'The Fever', ending: 'Pell is well.' }]);
+  });
 });

@@ -9,6 +9,7 @@
 import type { DmCard } from '../../hud/DmCard';
 import { CELL } from '../../map/types';
 import type { Session } from '../../net/session';
+import { taskText } from '../../systems/dmTasks';
 import { openGroundNear } from '../../systems/dmPeople';
 import { zoneName } from '../../systems/places';
 import type { Arena } from './Arena';
@@ -57,6 +58,8 @@ export interface DmBotState {
   waiting: number;
   /** A DM quest is running. */
   questing: boolean;
+  /** What the party is doing now, as their tracker says it (null when nothing is asked of them). */
+  task: string | null;
   /** An epic (a saga of several quests and people) is being told: between its steps `questing` is false. */
   epic: boolean;
   /** The card up now, if any. */
@@ -163,6 +166,7 @@ export function createDmBot({
       area: zoneName(arena.zoneOf(arena.local).name),
       waiting: prompts.waiting.count,
       questing: tasks.active,
+      task: tasks.view && tasks.view.state === 'active' ? taskText(tasks.view) : null,
       epic: epics.active,
       card: cardView(),
       story: story.view(),

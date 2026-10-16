@@ -41,6 +41,9 @@ import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
 import type { Strike } from '../../entities/WeatherLayer';
 import type { ZoneState } from '../ZoneState';
+
+/** Seconds of no input after which mobs leave a player alone, online. */
+const AFK_S = 10;
 import type { Arena } from './Arena';
 import { Casting } from './Casting';
 import {
@@ -104,11 +107,17 @@ export class Simulation {
     this.casting = new Casting(arena, visuals, this, emit);
   }
 
+  /** Players away from the keyboard (see `Player.idle`), whom mobs do not hunt online. */
+  private away = new WeakSet<Character>();
+
   /** What a zone's mobs may ask of the world each tick. */
   mobWorldFor(z: ZoneState): MobWorld {
-    const { arena } = this;
+    const { arena, away } = this;
     return {
-      heroes: z.heroBodies,
+      get heroes() {
+        // Online, a player who has stepped away is left alone (AFK_S): an adventure, not a trap. Solo is as it was.
+        return arena.role === 'solo' ? z.heroBodies : z.heroBodies.filter((b) => !away.has(b));
+      },
       slide: (body, mx, my) =>
         z.collision.slide(
           body,
@@ -216,6 +225,9 @@ export class Simulation {
   updatePlayer(p: Player, cmd: Command, dt: number) {
     if (p.dm) return this.updateDm(p, cmd, dt);
     const s = p.hero.stats;
+    p.idle = cmd.dx || cmd.dy || cmd.act || cmd.combo !== undefined ? 0 : p.idle + dt;
+    if (p.idle >= AFK_S) this.away.add(p.body);
+    else this.away.delete(p.body);
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
     p.ward = Math.max(0, p.ward - dt);

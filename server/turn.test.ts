@@ -73,9 +73,11 @@ describe('nextStep', () => {
       ],
     };
     expect(heldCard(struggle, { id: 'heat', at: 0 }, 1000)).toBe(true);
-    expect(heldCard(easy, { id: 'heat', at: 0 }, 1000)).toBe(false); // the same ask again is answered as before
+    expect(heldCard(easy, { id: 'heat', at: 0 }, 1000)).toBe(true); // heat is not turned up twice in a row
     expect(heldCard(struggle, { id: 'heat', at: 0 }, PRESSURE_HOLD_MS)).toBe(false);
     expect(heldCard(struggle, null, 0)).toBe(false);
+    expect(heldCard(easy, { id: 'heat', at: 0 }, 200_000)).toBe(true); // no second push so soon
+    expect(heldCard(easy, { id: 'heat', at: 0 }, 300_000)).toBe(false);
   });
 
   it('walks to a far party, ambles about a near one, and stands still with nobody in his zone', () => {

@@ -85,6 +85,8 @@ export interface Table {
     toward?: { dx: number; dy: number; cells: number };
   }[];
   questing: boolean;
+  /** The party's current task as their tracker says it, when there is one. */
+  task?: string | null;
   story: { title: string; placed: string[]; total: number; options: Road[]; complete: boolean } | null;
 }
 

@@ -27,6 +27,8 @@ const DEFAULT_URL = 'https://jbogaardt.github.io/me_rpg/?campaign=live';
 const TICK_MS = 1500;
 /** The creative tier through a headless Claude Code session (claude.ts) instead of the mocks. */
 const CLAUDE = Boolean(process.env.DM_BOT_CLAUDE);
+/** Unprompted remarks (the DM talking over the saga) are off unless asked for: a player can ask when they want the story again. */
+const CHATTER = Boolean(process.env.DM_BOT_CHATTER);
 
 /** The page's bot handle (DmBot.ts's DmBotApi), as far as this script calls it. */
 interface PageBot {
@@ -76,6 +78,8 @@ class Dm {
   private writer: EpicWriter = CLAUDE ? new ClaudeEpicWriter() : new MockEpicWriter();
   /** Ids of the epics told so far. */
   private told: string[] = [];
+  /** The saga last told, for the next to build on. */
+  private lastSaga: { title: string; ending: string } | null = null;
   private made = 0;
   private lastMade = -Infinity;
   private memory: Memory = { prev: null, spoke: 0 };
@@ -119,7 +123,7 @@ class Dm {
     this.report(s);
     this.refresh(s);
     this.clock.pulse = fresh(this.pulse, this.clock.now);
-    if (await this.narrate(s)) return;
+    if (CHATTER && (await this.narrate(s))) return; // unprompted remarks are off: the sagas speak, and a player can ask
     const step = nextStep(s, this.clock, this.startAt);
     switch (step.kind) {
       case 'host': {
@@ -203,9 +207,10 @@ class Dm {
       looks: await this.call('looks'),
       stock: await this.call('stockEpics'),
     };
-    const told = await tellEpic(this.writer, page, s.area, this.told);
+    const told = await tellEpic(this.writer, page, s.area, this.told, this.lastSaga ?? undefined);
     if (!told) return false;
     this.told.push(told.id);
+    this.lastSaga = { title: told.title, ending: told.ending };
     this.narrator.setSaga?.(`${told.title}. ${told.opening}`);
     log(`telling “${told.title}”`);
     return true;

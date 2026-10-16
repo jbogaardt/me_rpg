@@ -35,6 +35,7 @@ export class Player {
   pendingShot: { timer: number; bow: Ranged; damage: number } | null = null;
   invuln = 0; // seconds of blinking immunity after a hit
   grace = 0; // seconds of silent immunity on arriving in a zone (no blink: the door transition covers the arrival)
+  idle = 0; // seconds with no walking, attacking or casting (online, mobs leave a player who is away from the keyboard)
   sinceHit = Infinity; // seconds since last hurt (HP regenerates after a pause)
   knock = { x: 0, y: 0 };
   aim = { x: 0, y: 1 }; // unit vector of the last move (diagonals included): where bolts and spells go

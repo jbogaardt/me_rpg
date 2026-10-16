@@ -60,7 +60,7 @@ const POISE = 0.9;
 const COMMITTED = 0.5;
 const SHOVE = 40; // knockback speed (px/s) while it is not staggered; a staggering hit pushes 180
 const KEEP_AWAY = 0.4; // a shooter backs off when the hero is closer than this fraction of its range
-const RESPAWN = 6;
+const RESPAWN = 60; // an adventure, not a grind: a foe that falls stays down for a minute
 const FADE = 0.4;
 const LEASH = 4 * CELL; // wanders no further than this from home
 
