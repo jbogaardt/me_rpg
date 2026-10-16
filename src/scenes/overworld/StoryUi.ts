@@ -152,10 +152,9 @@ export class StoryUi {
     if (sig !== this.taskSig) {
       this.taskSig = sig;
       this.taskNote = note;
-      this.taskBrief = active ? this.briefOf(t) : null;
+      this.taskBrief = active && !note ? this.briefOf(t) : null; // words the DM wrote are already said
     } else if (note !== this.taskNote) {
-      this.taskNote = note;
-      if (note) this.taskBrief = [note];
+      this.taskNote = note; // the DM said these words to everyone already (DmDesk.say): not again as text
     }
     if (!this.taskBrief || dialog.active || menu.open || this.zones.transition.busy) return;
     dialog.note(this.taskBrief); // the DM gave it unasked: passive text

@@ -39,7 +39,8 @@ export function beatFor(s: PageState, m: Memory, now: number, pulse: Pulse | nul
   if (!prev || !s.dm || !s.friends.length || s.lobbyOpen || s.card) return null;
   if (now - m.spoke < SPOKE_GAP_MS) return null;
   if (s.area !== prev.area) return { kind: 'arrive', area: s.area };
-  if (prev.questing && !s.questing) return { kind: 'done', area: s.area };
+  // A saga tells its own story (its opening, each step, each person), so the DM adds nothing over it.
+  if (prev.questing && !s.questing && !s.epic && !prev.epic) return { kind: 'done', area: s.area };
   const hurt = s.friends.find((f) => {
     const before = prev.friends.find((p) => p.slot === f.slot);
     return f.hp < HURT_BELOW && before !== undefined && before.hp >= HURT_BELOW;
@@ -47,6 +48,7 @@ export function beatFor(s: PageState, m: Memory, now: number, pulse: Pulse | nul
   if (hurt) return { kind: 'hurt', slot: hurt.slot, area: s.area };
   // With a table read, the reader says when a word would help; without one, a long silence does.
   const mood = moodOf(pulse);
+  if (s.epic || s.questing) return null;
   if (pulse ? pulse.wantsWord >= SPEAK_AT && now - m.spoke >= SPEAK_MIN_MS : now - m.spoke >= QUIET_MS)
     return { kind: 'quiet', area: s.area, ...(mood ? { mood } : {}) };
   return null;

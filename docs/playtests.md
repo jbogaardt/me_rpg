@@ -74,3 +74,16 @@ facts, with a reason to care. Invented places are never named unless the game ga
 - Changed: online the map's quest givers are gone (only the trainer stays) and are hidden; the world's chapters, field
   notes, title cards and welcome are not told online; the host's welcome is a plain greeting. People who guide a quest
   come from the DM (`Story.bring`, an epic's people).
+
+### 2026-10-16 (fourth run): the neighbour three times, announcements, a freeze
+- Said: the missing-neighbour quote came three times; the DM announcing that mobs eased is unwanted (it should be felt);
+  the game froze.
+- Log: the saga's opening, its step text and the narration beats all retold the same premise; two Claude-written sagas
+  were refused by the page (`people` not an object, an empty `who`) and the stock saga was told; narration invented
+  characters (a child, a fisherman).
+- Changed: no narration beats while a saga runs or between its steps (it tells itself); a DM's own words on a task are not
+  shown a second time as text; easing, heating, closing in and pointing the way are silent; the saga writer is shown an
+  example that has people and told how `people` and `who` work; with a foe within 10 cells the action key only swings
+  (no talk, so no world pause to read) for anyone but the DM.
+- Open: the freeze is not reproduced. Suspect: a pausing conversation opened mid-fight with a DM-brought person (the
+  action key talks to anyone adjacent), now blocked. If it happens again note what was on screen and the time.

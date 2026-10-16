@@ -266,12 +266,12 @@ export function readPerson(raw: unknown, looks: { id: string }[]): Person | null
 export class ClaudeEpicWriter implements EpicWriter {
   constructor(private ask: Ask = askClaude) {}
   async write({ area, looks, told, stock, refused }: Parameters<EpicWriter['write']>[0]): Promise<unknown> {
-    const example = stock[0];
+    const example = stock.find((t) => t.people) ?? stock[0];
     const prompt =
       `Write a new epic for the party, who are in ${area}. An epic is a short saga of 3 to 6 steps. A step is one of: ` +
       `"hunt" (clear foes), "gather" (collect from the land), "find" (search for a hidden thing), "visit" (reach a place), ` +
       `or "meet" (find one of the epic's people, who speaks and may hand over an item to carry on). Give it 2 or 3 people ` +
-      `with a name, "lines" (what they say before they are met), "after" (once met), "finished" (once the saga is done) and a "look" word from: ${looks.map((l) => l.name).join(', ')}. Every person is met by exactly one "meet" step. ` +
+      `with a name, "lines" (what they say before they are met), "after" (once met), "finished" (once the saga is done) and a "look" word from: ${looks.map((l) => l.name).join(', ')}. Every person is met by exactly one "meet" step. "people" is an object whose keys are short ids, each id naming one person, and a step's "who" (only on "meet" steps, never empty) must be one of those ids. ` +
       `"hop" is how many lands from here the step is set (0 to 3). EVERY step, not only some, has a "kind", a whole-number ` +
       `"hop" and a "tell" (what the DM says to send them there, one short sentence under 200 letters). Open with a concrete hook that makes the party want to act: who is in trouble, what is at stake and why it falls to them. Make it a story with a reason, a turn and a payoff, not ` +
       `a list of chores. Do not reuse these ids: ${told.join(', ') || 'none'}. Reply with the JSON only, in exactly this form:\n` +

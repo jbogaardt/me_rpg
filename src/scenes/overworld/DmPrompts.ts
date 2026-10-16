@@ -429,19 +429,15 @@ export class DmPrompts {
       else this.revive.leave(n);
     } else if (id === 'heat') {
       this.powers.heat();
-      this.desk.say('More enemies are coming.');
     } else if (id === 'ease') {
       this.powers.easeOff();
-      this.desk.say('The fighting eases for now.');
     } else if (id === 'close') {
       this.powers.closeIn();
-      this.desk.say('Enemies are closing in.');
     } else if (id === '@cancel') {
       this.tasks.cancel();
       this.desk.say('That task is cancelled. A new one is coming.');
     } else if (id === 'hint') {
       this.tasks.giveHint();
-      this.desk.say('Follow the arrow on your screen.');
     } else if (id.startsWith('w:')) {
       const precip = id.slice(2);
       const valid = precip === '' ? null : (PRECIPS as readonly string[]).includes(precip) ? (precip as Precip) : null;

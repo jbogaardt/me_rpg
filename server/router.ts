@@ -226,14 +226,11 @@ function moveOf(source: Move['source'], id: string | null, reply: string | null,
 }
 
 /** A short acknowledgement for a friend whose ask the router settled. */
-const ACKS: Record<string, string> = {
-  ease: 'I will ease off the fighting.',
-  heat: 'More enemies are coming.',
-  hint: 'Follow the arrow on your screen.',
-  '@quest': 'I will give you a quest.',
-};
-function ack(option: Option | undefined): string {
-  return (option && ACKS[option.id]) || (option ? `${option.label.replace(/^Reply: /, '')}.` : 'Heard.');
+/** What the DM does to the world is felt, not announced: these picks get no spoken answer. */
+const SILENT = new Set(['ease', 'heat', 'hint', 'close']);
+function ack(option: Option | undefined): string | null {
+  if (option && SILENT.has(option.id)) return null;
+  return option ? `${option.label.replace(/^Reply: /, '')}.` : 'Heard.';
 }
 
 /** Decide one card. Never throws: a failing service falls through to the next tier. */

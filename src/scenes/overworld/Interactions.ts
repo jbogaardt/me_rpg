@@ -79,11 +79,13 @@ export class Interactions {
     const site = arena.sites.find((s) => s.visible && near(s, SITE_REACH));
     const pet = arena.pets.find((p) => near(p));
     const folk = arena.zone.folk.find((f) => near(f.body));
-    // Never in a fight (the action key swings then), and the DM stays close, so only when no foe is about.
+    const dm = arena.local.dm ? undefined : [...arena.remotes.values()].find((p) => p.dm && near(p.body));
+    // With a foe about the action key only swings: nobody starts a talk (or freezes the world to read) in a fight.
     const fighting = arena.mobs.some((m) => m.alive && near(m.body, CELL * 10));
-    const dm = arena.local.dm || fighting ? undefined : [...arena.remotes.values()].find((p) => p.dm && near(p.body));
     if (dialog.active) {
       dialog.advance();
+    } else if (fighting && !arena.local.dm) {
+      attack();
     } else if (arena.local.dm && !lectern && !sign) {
       // The Dungeon Master reads the world (signs, the lectern) but takes no part in it: no shops, quests or swings.
     } else if (dm) {

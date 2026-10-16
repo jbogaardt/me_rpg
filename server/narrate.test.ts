@@ -59,3 +59,25 @@ describe('MockNarrator', () => {
     expect(b).not.toBe(a);
   });
 });
+
+describe('a saga speaks for itself', () => {
+  const at = (over: Partial<PageState> = {}): PageState => ({
+    role: 'host',
+    code: null,
+    lobbyOpen: false,
+    dm: true,
+    waiting: 0,
+    card: null,
+    area: 'Glen',
+    friends: [{ slot: 1, area: 'Glen', hp: 1, near: true }],
+    questing: false,
+    epic: false,
+    story: null,
+    ...over,
+  });
+  it('adds no remark while a saga runs or between its steps', () => {
+    const m = { prev: at({ questing: true, epic: true }), spoke: 0 };
+    expect(beatFor(at({ questing: false, epic: true }), m, 500_000)).toBeNull(); // a step ended: the next tells itself
+    expect(beatFor(at({ questing: true, epic: true }), { ...m, prev: at() }, 500_000)).toBeNull(); // long silence mid-quest
+  });
+});
