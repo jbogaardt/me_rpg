@@ -53,6 +53,31 @@ async function joinWithCode(page: Page, code: string, shout = false) {
 /** What the host's roster says about one player: "connected", "waiting"... */
 const seat = (host: Page, slot: number) => host.locator(`#mp-roster li[data-slot="${slot}"]`);
 
+/** Start recording every line the dialog box says on this page (it shows each for only a few seconds). */
+async function watchDialog(page: Page) {
+  await page.evaluate(() => {
+    const said: string[] = [];
+    (window as unknown as { __said: string[] }).__said = said;
+    const text = document.getElementById('dialog-text')!;
+    new MutationObserver(() => {
+      if (text.textContent) said.push(text.textContent);
+    }).observe(text, { childList: true, characterData: true, subtree: true });
+  });
+}
+
+/** The DM's words reached this page: a conversation in the way (a defeat, a brief) is read through first, as a player would. */
+async function asideSays(page: Page, words: string) {
+  await expect
+    .poll(
+      async () => {
+        if ((await page.locator('#dialog:not(.aside):not([hidden])').count()) > 0) await page.keyboard.press('KeyJ');
+        return page.evaluate(() => (window as unknown as { __said: string[] }).__said.join('\n'));
+      },
+      { timeout: 45_000, intervals: [200] },
+    )
+    .toContain(words);
+}
+
 test('two players connect with a game code, play, and disconnect', async ({ browser }) => {
   const host = await open(browser, '/');
   await expect(host.locator('#map-btn')).toBeVisible(); // the map works in solo too (cbd2cf0)
@@ -326,6 +351,7 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   const host = await open(browser, world);
   const code = await createGame(host);
   const friend = await open(browser, world);
+  await watchDialog(friend);
   await joinWithCode(friend, code);
   await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 2', { timeout: 30_000 });
   await host.locator('#mp-start').click();
@@ -333,7 +359,7 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   await expect(friend.locator('#dm-bar')).toBeHidden(); // only the DM steers the story and the world
 
   // The DM opens the game with the story's own welcome, to every screen.
-  await expect(friend.locator('#dialog.aside')).toContainText('Welcome', { timeout: 30_000 });
+  await asideSays(friend, 'Welcome');
 
   // The DM has a bar that is always there: no menu to dig through.
   await expect(host.locator('#menu')).toBeHidden();
@@ -353,7 +379,7 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   expect(await host.locator('#dm-card [data-opt]').count()).toBeGreaterThanOrEqual(2);
   // The DM answers the friend privately, and the card stays up: answering is not deciding.
   await host.locator('#dm-card [data-opt="r:0"]').click();
-  await expect(friend.locator('#dialog.aside')).toContainText('On my way.', { timeout: 15_000 });
+  await asideSays(friend, 'On my way.');
   await expect(host.locator('#dm-card')).toBeVisible();
   await host.locator('canvas').click({ position: { x: 20, y: 20 } });
   await expect(host.locator('#dm-card')).toBeHidden();
@@ -364,7 +390,7 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   // The DM speaks and the friend reads it.
   await host.locator('#dm-bar input').fill('Beware the fen.');
   await host.locator('#dm-bar form button[type="submit"]').click();
-  await expect(friend.locator('#dialog.aside')).toContainText('Beware the fen.', { timeout: 15_000 });
+  await asideSays(friend, 'Beware the fen.');
 
   // The DM stops time with the hotkey, so everyone is told, and starts it again.
   await host.keyboard.press('KeyT');
