@@ -67,3 +67,10 @@ facts, with a reason to care. Invented places are never named unless the game ga
   narration must reveal one new thing each time and is told not to retell the opening.
 - Open: the arc's own quests and the DM's sagas still run side by side in a live world; the welcome should hand over to
   the DM's saga.
+
+### Rule from the third run: the DM is the story teller
+- Said: with a DM there are no story quests but the ones he manages; an NPC who guides a quest is spawned by the DM; a
+  ready-made story loads dynamically and must not fight a map that already has its own.
+- Changed: online the map's quest givers are gone (only the trainer stays) and are hidden; the world's chapters, field
+  notes, title cards and welcome are not told online; the host's welcome is a plain greeting. People who guide a quest
+  come from the DM (`Story.bring`, an epic's people).

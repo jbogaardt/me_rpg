@@ -15,7 +15,7 @@ draw in `Visuals`, a new synced thing in the matching link. The DM's controls ar
 - **Solo and host run the one authoritative simulation; a guest only draws.** Each frame the scene reads
   `Session.role` (`solo`/`host`/`client`). Rules live in `Simulation`/`Casting`/etc.; what a friend should see goes out
   through the simulation's `emit` (events) or the snapshot. Solo, a dialog freezes the world and the menu pauses it;
-  online the world only stands still while someone reads a quest conversation (`ReadingPause`, see `src/net/CLAUDE.md`).
+  online the story is the Dungeon Master's alone (the map's quest givers and chapters are solo only, `docs/dungeon-master.md`), and the world only stands still while someone reads a quest conversation (`ReadingPause`, see `src/net/CLAUDE.md`).
 - **The rules are written once and serve every zone.** `arena.zone` is the zone being worked in; a per-zone loop wraps
   its work in `arena.inZone(z, ...)`, so `arena.mobs`, `.collision`, `.chests`, `.players()` answer for that zone. Only
   zones with a player in them are simulated, so a shop nobody is in costs nothing.

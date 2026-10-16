@@ -1,3 +1,4 @@
+import { TRAINER } from '../../systems/skills';
 import { enabled } from '../../systems/capabilities';
 import { GuideArrow } from '../../entities/GuideArrow';
 import type { Character } from '../../entities/Character';
@@ -74,6 +75,7 @@ export class StoryUi {
     const hero = this.arena.hero;
     const story = this.arena.role === 'solo'; // online the party has only the Dungeon Master's quests
     for (const g of z.givers) {
+      g.body.visible = story || g.giver === TRAINER; // online the DM brings the people who guide a quest
       const mark = story ? giverMark(hero, g.giver) : ''; // "!" or "?" over whoever the current quest is about
       const text = mark ? `${mark} ${GIVERS[g.giver]?.tag ?? ''}` : (GIVERS[g.giver]?.tag ?? '');
       if (this.marked.get(g.body) === text) continue;
@@ -104,6 +106,7 @@ export class StoryUi {
    * waits until no dialog or menu is open, so it never talks over a conversation.
    */
   private tellStory() {
+    if (this.arena.role !== 'solo') return; // online the Dungeon Master tells the story: no chapters, field notes or title cards
     const { dialog, menu } = this.ui;
     const hero = this.arena.hero;
     const log = hero.quests;

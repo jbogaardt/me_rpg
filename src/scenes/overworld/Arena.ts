@@ -1,3 +1,4 @@
+import { TRAINER } from '../../systems/skills';
 import { Character } from '../../entities/Character';
 import type { Barrel } from '../../entities/Barrel';
 import { Player } from '../../entities/Player';
@@ -116,8 +117,12 @@ export class Arena {
   get keepers() {
     return this.zone.keepers;
   }
+  /**
+   * Who gives quests here. Solo, the map's own people; online the Dungeon Master is the story teller, so the map's story
+   * givers are not there (the DM brings in any person who guides a quest) and only the trainer, a teacher, stays.
+   */
   get givers() {
-    return this.zone.givers;
+    return this.role === 'solo' ? this.zone.givers : this.zone.givers.filter((g) => g.giver === TRAINER);
   }
   get sites() {
     return this.zone.sites;

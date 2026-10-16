@@ -25,6 +25,14 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
 A friend can also **walk up to the DM and press the action key**: the DM greets them (a short conversation), then the
 same request list as the 💬 button opens, so a concern goes to the DM's inbox like any other ask (bot or person).
 
+## The DM is the story teller
+
+With a DM at the table, no story belongs to the map. The world's own quest chain (its keeper and other givers, its welcome,
+chapters, field notes and title cards) is a solo thing: online the givers are not there (only the trainer, a teacher, stays),
+nothing of the chain is told, and the host's welcome is a plain greeting. Anyone who guides a quest is a person the DM
+brings in (`Story.bring`, or the people of an epic), and a ready-made story is loaded by the DM as an epic when it is told,
+never half-present in the map beside what the DM is doing.
+
 ## The DM is not one of the party
 
 `Arena.party()` (the zone's players without the DM) is what the rules ask; `players()` stays everyone, for drawing,
