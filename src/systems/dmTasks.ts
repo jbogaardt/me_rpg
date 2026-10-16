@@ -1,7 +1,7 @@
 // The quests the Dungeon Master gives the whole party (Pixi-free, tested; core engine, co-op). They are real quests, written
 // from the land the party stands in and left to the party to work out: hunt five of a foe that lives here, gather the local
-// plants or stones, find a relic hidden somewhere in the land, reach a named place. The party gets a search area on the
-// map, never an arrow (the DM can hand out a hint when they are lost). One at a time; the host owns it, friends are told.
+// plants or stones, find a relic hidden somewhere in the land, reach a named place. The party is told in words, with nothing
+// on the map, until the DM notices they are lost and shows the area, then an arrow (`HINT_AREA`, `HINT_ARROW`). One at a time; the host owns it, friends are told.
 // They sit beside the story's quest chain: the chain is the spine of the tale, these are the DM's tool.
 
 import { CELL } from '../map/types';
@@ -60,8 +60,8 @@ export interface Task {
   what: string;
   /** Gather: which sites of the kind have been touched (a bit per site index). */
   bits: number;
-  /** The DM has pointed the way: an arrow, not only a search area. */
-  hint: boolean;
+  /** How much the DM has shown of the way (`HINT_AREA`, `HINT_ARROW`; 0 nothing but the telling). */
+  hint: number;
   age: number;
   /** Seconds since progress last grew. */
   sinceProgress: number;
@@ -96,6 +96,14 @@ export function parOf(kind: TaskKind, goal: number): number {
   return kind === 'hunt' ? goal * 35 : kind === 'gather' ? goal * 50 : kind === 'find' ? 180 : 120;
 }
 
+/**
+ * How much of the way the party is shown. A quest is told in words only: the map stays clean and the party reads the land.
+ * Only when the DM notices they are lost (the director's card, or a player asking) is the area to search marked on the map
+ * (and the door toward another land), and only a second time an arrow.
+ */
+export const HINT_AREA = 1;
+export const HINT_ARROW = 2;
+
 export class TaskBook {
   task: Task | null = null;
   /** How the last quest to end went. */
@@ -118,7 +126,7 @@ export class TaskBook {
       goal: offer.goal,
       what: offer.what,
       bits: 0,
-      hint: false,
+      hint: 0,
       age: 0,
       sinceProgress: 0,
       minHealth: 1,
@@ -132,9 +140,9 @@ export class TaskBook {
     this.task = null;
   }
 
-  /** The DM points the way: the party is shown an arrow too. */
+  /** The DM shows a little more of the way: first the area to search (and the door toward it), then an arrow. */
   giveHint() {
-    if (this.task?.state === 'active') this.task.hint = true;
+    if (this.task?.state === 'active') this.task.hint = Math.min(HINT_ARROW, this.task.hint + 1);
   }
 
   /** A foe of kind `key` fell in `zone` (anyone's kill): counts if the quest wants it. */
@@ -216,7 +224,7 @@ export interface TaskView {
   y: number;
   what: string;
   bits: number;
-  hint: boolean;
+  hint: number;
   /** The DM's own instructions for it, when they wrote some (they replace the usual telling). */
   note?: string;
   /** The saga it is a step of, when it is one (systems/dmEpics.ts): its name, which step this is (1-based) and how many. */
@@ -265,7 +273,7 @@ export const taskWire = (v: TaskView): TaskWire =>
     v.y,
     v.title,
     v.bits,
-    v.hint ? 1 : 0,
+    v.hint,
     v.what,
     ...(v.note || v.epic ? [v.note ?? ''] : []),
     ...(v.epic ? [`${v.epic.step}/${v.epic.total} ${v.epic.title}`] : []),
@@ -296,7 +304,7 @@ export function taskFromWire(w: unknown): TaskView | null {
   )
     return null;
   if (!text(zone, MAX_ZONE, 1) || !text(title, MAX_TITLE, 1) || !text(what, MAX_WHAT)) return null;
-  if (!whole(bits, 0x7fffffff) || (hint !== 0 && hint !== 1)) return null;
+  if (!whole(bits, 0x7fffffff) || !whole(hint, HINT_ARROW)) return null;
   if (note !== undefined && !text(note, MAX_NOTE)) return null;
   let epic: TaskView['epic'];
   if (saga !== undefined) {
@@ -316,7 +324,7 @@ export function taskFromWire(w: unknown): TaskView | null {
     title,
     what,
     bits,
-    hint: hint === 1,
+    hint,
     ...(note ? { note } : {}),
     ...(epic ? { epic } : {}),
   };

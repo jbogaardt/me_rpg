@@ -22,6 +22,8 @@ export interface EpicWriter {
     refused?: string;
     /** The saga just finished, for the next to follow from. */
     previous?: { title: string; ending: string };
+    /** The evening's tale and which chapter this saga is (arc.ts `arcBrief`). */
+    arc?: string;
   }): Promise<unknown>;
 }
 
@@ -51,6 +53,7 @@ export async function tellEpic(
   area: string,
   told: string[],
   previous?: { title: string; ending: string },
+  arc?: string,
 ): Promise<{ id: string; title: string; opening: string; ending: string } | null> {
   const want: Parameters<EpicWriter['write']>[0] = {
     area,
@@ -58,6 +61,7 @@ export async function tellEpic(
     told,
     stock: page.stock,
     ...(previous ? { previous } : {}),
+    ...(arc ? { arc } : {}),
   };
   let refused = '';
   const tryTale = async (

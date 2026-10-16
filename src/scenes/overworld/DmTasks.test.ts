@@ -53,7 +53,7 @@ describe('the DM’s quest, on the host', () => {
     expect(arena.task).toMatchObject({ kind: 'hunt', title: 'Hunt 2 Goblins', state: 'active', progress: 0, goal: 2 });
     expect(said).toHaveLength(0);
     expect(give()).toBe(false);
-    expect(tasks.pace).toMatchObject({ age: 0, hint: false });
+    expect(tasks.pace).toMatchObject({ age: 0, hint: 0 });
   });
 
   it('carries the DM’s own instructions for the running quest, and drops them when it ends', () => {
@@ -130,7 +130,7 @@ describe('the DM’s quest, on the host', () => {
     const { tasks, arena, give } = game();
     give();
     tasks.giveHint();
-    expect(arena.task!.hint).toBe(true);
+    expect(arena.task!.hint).toBe(1);
     tasks.cancel();
     expect(arena.task).toBeNull();
     const friend = game('client');

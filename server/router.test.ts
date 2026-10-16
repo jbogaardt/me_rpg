@@ -4,7 +4,7 @@ import {
   CONFIDENCE,
   CONFIDENCE_CARD,
   HINTS,
-  HOLD_REPLY,
+  HOLD_REPLIES,
   NONE,
   cardQuestion,
   decideCard,
@@ -83,10 +83,9 @@ describe('decideCard', () => {
   it('survives both services failing', async () => {
     const fail = () => Promise.reject(new Error('down'));
     const services = { router: { choose: fail }, fallback: { improvise: fail } };
-    expect(await decideCard(message('hello'), table(), services)).toMatchObject({
-      source: 'silent',
-      reply: HOLD_REPLY,
-    });
+    const held = await decideCard(message('hello'), table(), services);
+    expect(held.source).toBe('silent');
+    expect(HOLD_REPLIES).toContain(held.reply);
     expect(await decideCard(struggle, table(), services)).toMatchObject({ source: 'silent', pick: null, reply: null });
   });
 

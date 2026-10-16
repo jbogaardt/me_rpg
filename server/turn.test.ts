@@ -4,6 +4,7 @@ import {
   HOST_RETRY_MS,
   PRESSURE_HOLD_MS,
   STROLL_MS,
+  BREATHER_MS,
   QUEST_GAP_MS,
   heldCard,
   nextStep,
@@ -104,5 +105,12 @@ describe('nextStep', () => {
     expect(nextStep(state({ questing: false }), { ...clock(), lastQuest: 100_000 - QUEST_GAP_MS + 1 }).kind).toBe(
       'idle',
     );
+  });
+
+  it('leaves the party to wander for a while after a saga ends, whatever the table read says', () => {
+    const pulse = { pressure: 0.2, stalled: 1, wantsWord: 0, needsQuest: 1, at: 100_000 };
+    const resting = { ...clock(), pulse, lastEnded: 100_000 - BREATHER_MS + 1000 };
+    expect(nextStep(state({ questing: false }), resting).kind).not.toBe('quest');
+    expect(nextStep(state({ questing: false }), { ...resting, lastEnded: 100_000 - BREATHER_MS }).kind).toBe('quest');
   });
 });

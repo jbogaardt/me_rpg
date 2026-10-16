@@ -15,7 +15,7 @@ import {
   rewardText,
 } from '../systems/quests';
 import { esc } from './html';
-import { taskText, type TaskView } from '../systems/dmTasks';
+import { HINT_AREA, taskText, type TaskView } from '../systems/dmTasks';
 
 /**
  * The Quests tab of the pause menu: the task the hero is on, what it pays, and the ones already handed in. Rules and the
@@ -72,5 +72,5 @@ export function dmQuestPage(task: TaskView | null, pages: string[]): string {
   return `<h2>Quests</h2><h3>${esc(task.title)} <small>${state}</small></h3>
     <p class="quest-progress${task.state === 'done' ? ' done' : ''}">${esc(taskText(task))}</p>
     ${pages.map((p) => `<p class="quest-note">${esc(p)}</p>`).join('')}
-    ${task.state === 'active' ? `<p class="quest-note">Open the map (M): the gold <b>?</b> circle marks where to search.</p>` : ''}`;
+    ${task.state === 'active' && task.hint >= HINT_AREA ? `<p class="quest-note">Open the map (M): the gold <b>?</b> circle marks where to search.</p>` : ''}`;
 }

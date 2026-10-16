@@ -15,7 +15,8 @@ import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
 import { JevReader, JevRouter } from './jev';
 import { MockFallback, MockRouter } from './mocks';
-import { ClaudeConjurer, ClaudeFallback, ClaudeNarrator, ClaudeEpicWriter } from './claude';
+import { ClaudeArcWriter, ClaudeConjurer, ClaudeFallback, ClaudeNarrator, ClaudeEpicWriter } from './claude';
+import { MockArcWriter, advance, arcBrief, type ArcPlace, type ArcWriter } from './arc';
 import { MockConjurer, shouldConjure, type Conjurer } from './conjure';
 import { MockNarrator, beatFor, type Memory, type Narrator } from './narrate';
 import { PULSE_MS, fresh, pulseState, type Pulse, type TableReader } from './pulse';
@@ -82,6 +83,9 @@ class Dm {
   private told: string[] = [];
   /** The saga last told, for the next to build on. */
   private lastSaga: { title: string; ending: string } | null = null;
+  /** The evening's tale and the chapter the next saga tells (arc.ts); written when the first saga is. */
+  private arcWriter: ArcWriter = CLAUDE ? new ClaudeArcWriter() : new MockArcWriter();
+  private arc: ArcPlace | null = null;
   private made = 0;
   private lastMade = -Infinity;
   private memory: Memory = { prev: null, spoke: 0 };
@@ -125,6 +129,9 @@ class Dm {
     this.report(s);
     this.refresh(s);
     this.clock.pulse = fresh(this.pulse, this.clock.now);
+    const prev = this.memory.prev;
+    if (prev && (prev.epic || prev.questing) && !s.epic && !s.questing) this.clock.lastEnded = this.clock.now;
+    if (!CHATTER) this.memory.prev = s; // narrate() keeps it otherwise
     if (CHATTER && (await this.narrate(s))) return; // unprompted remarks are off: the sagas speak, and a player can ask
     const step = nextStep(s, this.clock, this.startAt);
     switch (step.kind) {
@@ -215,12 +222,29 @@ class Dm {
       looks: await this.call('looks'),
       stock: await this.call('stockEpics'),
     };
-    const told = await tellEpic(this.writer, page, s.area, this.told, this.lastSaga ?? undefined);
+    if (!this.arc) {
+      const arc = await this.arcWriter.write({
+        area: s.area,
+        ...(this.lastSaga ? { after: this.lastSaga.ending } : {}),
+      });
+      if (arc) {
+        this.arc = { arc, chapter: 0 };
+        log(`the evening's tale: “${arc.title}” (${arc.chapters.length} chapters)`);
+      }
+    }
+    const brief = this.arc ? arcBrief(this.arc) : undefined;
+    const told = await tellEpic(this.writer, page, s.area, this.told, this.lastSaga ?? undefined, brief);
     if (!told) return false;
     this.told.push(told.id);
     this.lastSaga = { title: told.title, ending: told.ending };
-    this.narrator.setSaga?.(`${told.title}. ${told.opening}`);
-    log(`telling “${told.title}”`);
+    this.narrator.setSaga?.(`${brief ? `${brief} ` : ''}The saga now: ${told.title}. ${told.opening}`);
+    log(
+      `telling “${told.title}”${this.arc ? ` (chapter ${this.arc.chapter + 1} of ${this.arc.arc.chapters.length})` : ''}`,
+    );
+    if (this.arc) {
+      const next = advance(this.arc);
+      this.arc = next === 'done' ? null : next; // the tale is told: the next saga begins a new one, grown from this
+    }
     return true;
   }
 

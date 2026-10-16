@@ -43,6 +43,12 @@ different version away), so point it at the site they use. Against a local build
   people (`src/content/epics.json`; the page runs it, `DmBot.epic`). A `EpicWriter` supplies one: the mock tells the
   content's epics in turn, `DM_BOT_CLAUDE=1` has Claude write a new one for the place in the same JSON. The page checks it as
   strictly as the content's own and refuses a bad one; the bot then tells a stock epic, else waits.
+- `arc.ts` is the evening's tale: written once as the first saga is told (a threat, a stake, 3 to 5 chapter lines, the
+  last the reckoning), then each saga is told as its next chapter. The arc lives in the bot, not the model's memory (the
+  Claude session is renewed and a small model forgets), so every saga prompt and the narrator are handed it afresh:
+  that is how Haiku holds a long story. Told out, a new arc grows from its ending. The mock has stock arcs.
+- After a saga ends the party is left to wander for `BREATHER_MS` (town, shops, talk) before another is offered; a
+  written saga has at most one hunt and at least one townsperson to meet, and never mentions the map.
 - `conjure.ts` makes people: on arriving somewhere new (at most 6 a game, 2 minutes apart) a `Conjurer` invents a
   stranger (name, a look from the world's people, up to 4 short lines) and the page's `spawn` sets them near the party.
   The mock conjurer has a few stock characters; the page refuses anything the world's checks refuse.

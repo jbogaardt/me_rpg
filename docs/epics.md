@@ -39,8 +39,9 @@ quest kind (hunt, gather, find, visit: `dmTasks.ts` rules, `dmQuests.ts` writes 
 `DmTasks.ts` runs it) or `meet`. For `meet` the DM makes the step's person (an `npc` then a `cast` entry of the live world,
 on open ground in the step's land, wearing the look a word names), the party is sent to find them (a `visit` quest at
 their feet, so the tracker and the map are the usual ones), and on reaching them they speak a line at a time in the DM's
-voice and may give something to carry (`gives`, named in the telling for a later step to ask for). The party gets a
-**search area, never an arrow**; the DM can point the way. A failed or cancelled step ends the saga. A step is read to
+voice and may give something to carry (`gives`, named in the telling for a later step to ask for). The party is told in
+**words only, nothing on the map**: when the DM notices they are lost (the director's card, or a player asking) the area
+to search is marked on the map, and only a second time an arrow (`HINT_AREA`, `HINT_ARROW`, protocol v44). A failed or cancelled step ends the saga. A step is read to
 every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the whole party while it is taken
 (`Quest.capabilities`). Epics with people need a live world (people are log entries, which friends already receive).
 

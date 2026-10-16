@@ -19,7 +19,7 @@ const task = (over: Partial<TaskView>): TaskView => ({
   y: 0,
   what: 'goblin',
   bits: 0,
-  hint: false,
+  hint: 0,
   ...over,
 });
 

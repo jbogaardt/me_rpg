@@ -11,6 +11,7 @@ import { MockConjurer, type Conjurer, type Person } from './conjure';
 import { MockNarrator, PERSONA, type Beat, type Narrator } from './narrate';
 import { MAX_REPLY, type CreativeFallback, type ImproviseRequest } from './router';
 import type { EpicWriter } from './epics';
+import { MockArcWriter, readArc, type ArcWriter, type SessionArc } from './arc';
 
 /** One headless call: a system prompt and a prompt in, the model's text out. Rejects on any failure. */
 export type Ask = (system: string, prompt: string) => Promise<string>;
@@ -266,18 +267,56 @@ export function readPerson(raw: unknown, looks: { id: string }[]): Person | null
 /** A new epic for the place, written by Claude in the page's epic format (the page checks it; see epics.ts). */
 export class ClaudeEpicWriter implements EpicWriter {
   constructor(private ask: Ask = askClaude) {}
-  async write({ area, looks, told, stock, refused, previous }: Parameters<EpicWriter['write']>[0]): Promise<unknown> {
+  async write({
+    area,
+    looks,
+    told,
+    stock,
+    refused,
+    previous,
+    arc,
+  }: Parameters<EpicWriter['write']>[0]): Promise<unknown> {
     const example = stock.find((t) => t.people) ?? stock[0];
     const prompt =
+      (arc
+        ? `${arc} The saga you write is this chapter: its opening picks up the tale's threat, and its ending sets up the next chapter. `
+        : '') +
       `Write a new epic for the party, who are in ${area}. An epic is a short saga of 3 to 6 steps. A step is one of: ` +
       `"hunt" (clear foes), "gather" (collect from the land), "find" (search for a hidden thing), "visit" (reach a place), ` +
       `or "meet" (find one of the epic's people, who speaks and may hand over an item to carry on). Give it 2 or 3 people ` +
       `with a name, "lines" (what they say before they are met), "after" (once met), "finished" (once the saga is done) and a "look" word from: ${looks.map((l) => l.name).join(', ')}. Every person is met by exactly one "meet" step. "people" is an object whose keys are short ids, each id naming one person, and a step's "who" (only on "meet" steps, never empty) must be one of those ids. ` +
       `"hop" is how many lands from here the step is set (0 to 3). EVERY step, not only some, has a "kind", a whole-number ` +
       `"hop" and a "tell" (what the DM says to send them there, one short sentence under 200 letters). Open with a concrete hook that makes the party want to act: who is in trouble, what is at stake and why it falls to them. Make it a story with a reason, a turn and a payoff, not ` +
-      `a list of chores. Take at least half the steps in other lands ("hop" 1 to 3), so the party travels. ${previous ? `The party has just finished “${previous.title}”, which ended: ${previous.ending} The new saga must build on it: carry over a consequence, a clue, a place or a person from that story, so it feels like the next chapter. ` : ''}Do not reuse these ids: ${told.join(', ') || 'none'}. Reply with the JSON only, in exactly this form:\n` +
+      `a list of chores. It is an adventure, not a battle: at most ONE "hunt" step, and at least one "meet" with a townsperson, ` +
+      `a keeper or a traveller (an innkeeper, a smith, a priest, a merchant) who knows something, so the party talks, ` +
+      `travels and looks about as much as it fights. A "tell" says what and where in words, as a person would; never ` +
+      `mention a map, a marker or an arrow. Take at least half the steps in other lands ("hop" 1 to 3), so the party travels. ${previous ? `The party has just finished “${previous.title}”, which ended: ${previous.ending} The new saga must build on it: carry over a consequence, a clue, a place or a person from that story, so it feels like the next chapter. ` : ''}Do not reuse these ids: ${told.join(', ') || 'none'}. Reply with the JSON only, in exactly this form:\n` +
       JSON.stringify(example) +
       (refused ? `\nYour last try was refused: ${refused}. Fix exactly that and answer again.` : '');
     return jsonIn(await this.ask(`${PERSONA} ${RULES}`, prompt));
+  }
+}
+
+/** The evening's arc, written once as the game begins (arc.ts), in the page's own terms: no place or person by name. */
+export class ClaudeArcWriter implements ArcWriter {
+  constructor(
+    private ask: Ask = askClaude,
+    private fallback: ArcWriter = new MockArcWriter(),
+  ) {}
+  async write({ area, after }: Parameters<ArcWriter['write']>[0]): Promise<SessionArc | null> {
+    const prompt =
+      `Plan the tale of this evening's adventure for a party starting in ${area}: one threat to the lands that every ` +
+      `saga of the evening is a chapter of, like an epic told over one night. ${after ? `The last tale ended: ${after} This one grows out of that ending. ` : ''}` +
+      `Give it 4 chapters, each one line: the first is small and close to home (folk in town in trouble, rumours, ` +
+      `errands that matter), the middle ones travel and reveal who or what is behind it, and the last faces the threat ` +
+      `and ends it. Name no place. JSON only: {"title": "<max 48 letters>", "threat": "<one sentence>", ` +
+      `"stake": "<why it falls to the party, one sentence>", "chapters": ["<4 lines, each under 160 letters>"]}`;
+    try {
+      const arc = readArc(jsonIn(await this.ask(`${PERSONA} ${RULES}`, prompt)));
+      if (arc) return arc;
+    } catch (err) {
+      console.warn('claude arc failed:', err instanceof Error ? err.message : err);
+    }
+    return this.fallback.write({ area, ...(after ? { after } : {}) });
   }
 }

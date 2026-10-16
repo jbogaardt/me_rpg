@@ -440,11 +440,13 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
     const quest = [0, 0, 2, 5, 'the_fen', 512, 99, 'Hunt 5 Goblins', 0, 1, 'goblin'] as Task;
     const task = { ...dm, task: quest };
     expect(parseMessage(encodeMessage(task))).toEqual(task);
+    const arrow = { ...dm, task: [0, 0, 2, 5, 'the_fen', 512, 99, 'Hunt 5 Goblins', 0, 2, 'goblin'] as Task }; // v44: an arrow
+    expect(parseMessage(encodeMessage(arrow))).toEqual(arrow);
     const broken = [
       [9, 0, 0, 1, 'z', 0, 0, 'x', 0, 0, ''],
       [0, 0, 0, 1, '', 0, 0, 'x', 0, 0, ''],
       [0, 0, 0, 1, 'z', 0, 0, '', 0, 0, ''],
-      [0, 0, 0, 1, 'z', 0, 0, 'x', 0, 2, ''],
+      [0, 0, 0, 1, 'z', 0, 0, 'x', 0, 3, ''],
       [0, 0, 0, 1, 'z', 0, 0, 'x', 0, 0],
       'defend',
       7,

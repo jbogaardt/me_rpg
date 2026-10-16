@@ -10,7 +10,7 @@ import type { Menu } from '../../hud/Menu';
 import { CELL } from '../../map/types';
 import { briefing, objective } from '../../systems/dmBrief';
 import { RELIC_KIND } from '../../systems/dmQuests';
-import { taskText, type TaskView } from '../../systems/dmTasks';
+import { HINT_AREA, HINT_ARROW, taskText, type TaskView } from '../../systems/dmTasks';
 import { MOB_KINDS } from '../../systems/combat';
 import { SEARCH_RADIUS, doorToward, guideFor, searchMiddle, type Guide } from '../../systems/guide';
 import { ITEMS } from '../../systems/items';
@@ -202,25 +202,31 @@ export class StoryUi {
     const at = (x: number, y: number) => ({ x: z.world.x + x * camera.zoom, y: z.world.y + y * camera.zoom });
     // A person or a door gets the arrow; something to be found is only an area on the map (M).
     const known = guide && guide.radius === undefined ? guide : null;
-    // The DM's quest: a search area on the map (the party works out the rest), and an arrow only once the DM points the way.
+    // The DM's quest: nothing on the map until the DM shows the way (the party reads the land); then the area, then an arrow.
     const task = this.arena.task;
     const open = !!task && task.state === 'active' && task.zone === z.name;
     const calling =
-      open && task.hint && !this.arena.local.dm && !this.zones.transition.busy
+      open && task.hint >= HINT_ARROW && !this.arena.local.dm && !this.zones.transition.busy
         ? { x: task.x, y: task.y, label: 'The way' }
         : null;
-    // A quest set in another land (a saga's next step): the arrow leads to the door that goes that way.
+    // A quest set in another land (a saga's next step): once the way is shown, the arrow leads to the door that goes that way.
     const toward =
-      task && task.state === 'active' && task.zone !== z.name && !this.arena.local.dm && !this.zones.transition.busy
+      task &&
+      task.state === 'active' &&
+      task.hint >= HINT_AREA &&
+      task.zone !== z.name &&
+      !this.arena.local.dm &&
+      !this.zones.transition.busy
         ? doorToward(z.data.doors, player, z.name, task.zone)
         : null;
     const target = calling ?? toward ?? known;
     this.arrow.update(dt, at(player.x, player.y - 20), target && at(target.x, target.y - 12), target?.label ?? '');
-    const questGuide: Guide | null = open
-      ? task.hint
-        ? { x: task.x, y: task.y, label: task.title }
-        : { ...searchMiddle(task.x, task.y), label: task.title, radius: SEARCH_RADIUS }
-      : null;
+    const questGuide: Guide | null =
+      open && task.hint >= HINT_AREA
+        ? task.hint >= HINT_ARROW
+          ? { x: task.x, y: task.y, label: task.title }
+          : { ...searchMiddle(task.x, task.y), label: task.title, radius: SEARCH_RADIUS }
+        : null;
     this.overlay.setGuide(questGuide ?? guide);
   }
 

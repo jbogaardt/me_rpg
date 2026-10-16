@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HINT_AREA,
+  HINT_ARROW,
   TASK_TIMEOUT,
   TaskBook,
   VISIT_REACH,
@@ -106,9 +108,12 @@ describe('how it goes', () => {
   it('is told once the DM points the way, can be called off, and gives up in the end', () => {
     const b = new TaskBook();
     b.call(offer());
-    expect(b.task!.hint).toBe(false);
+    expect(b.task!.hint).toBe(0); // told in words only: nothing on the map
     b.giveHint();
-    expect(b.task!.hint).toBe(true);
+    expect(b.task!.hint).toBe(HINT_AREA);
+    b.giveHint();
+    b.giveHint();
+    expect(b.task!.hint).toBe(HINT_ARROW); // an arrow is the most there is
     expect(b.call(offer())).toBe(false); // one at a time
     expect(b.tick(TASK_TIMEOUT + 1, input())).toBe('failed');
     expect(b.result).toMatchObject({ state: 'failed' });
@@ -136,7 +141,7 @@ describe('what the party sees', () => {
     b.touch('echostone', 'fen', 1);
     b.giveHint();
     const v = viewOf(b.task!);
-    expect(v).toMatchObject({ kind: 'gather', progress: 1, goal: 3, x: 512, y: 100, bits: 2, hint: true });
+    expect(v).toMatchObject({ kind: 'gather', progress: 1, goal: 3, x: 512, y: 100, bits: 2, hint: 1 });
     expect(taskFromWire(JSON.parse(JSON.stringify(taskWire(v))))).toEqual(v);
     const ok = taskWire(v);
     const broken: unknown[] = [
@@ -148,7 +153,7 @@ describe('what the party sees', () => {
       [ok[0], 9, ...ok.slice(2)],
       [...ok.slice(0, 7), '', ...ok.slice(8)],
       [...ok.slice(0, 7), 'x'.repeat(100), ...ok.slice(8)],
-      [...ok.slice(0, 9), 2, ok[10]],
+      [...ok.slice(0, 9), 3, ok[10]],
       [...ok.slice(0, 5), 0.5, ...ok.slice(6)],
     ];
     for (const bad of broken) expect(taskFromWire(bad)).toBeNull();

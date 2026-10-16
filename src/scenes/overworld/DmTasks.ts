@@ -76,7 +76,7 @@ export class DmTasks {
   }
 
   /** How the quest is going, for the director: how long, how long since progress, and whether the DM has pointed the way. */
-  get pace(): { age: number; sinceProgress: number; hint: boolean } | null {
+  get pace(): { age: number; sinceProgress: number; hint: number } | null {
     const t = this.book.task;
     return t && t.state === 'active' ? { age: t.age, sinceProgress: t.sinceProgress, hint: t.hint } : null;
   }
@@ -157,7 +157,7 @@ export class DmTasks {
     return counted;
   }
 
-  /** The DM points the way: everyone is shown an arrow as well as the search area. */
+  /** The DM shows more of the way: the search area on the map first, an arrow the second time. */
   giveHint() {
     this.book.giveHint();
     this.publish();

@@ -151,7 +151,7 @@ describe('the Dungeon Master’s desk', () => {
       y: 20,
       what: 'echostone',
       bits: 2,
-      hint: false,
+      hint: 0,
     };
     desk.update(0);
     expect(last(2)!.task).toEqual([1, 0, 1, 3, 'fen', 10, 20, 'Gather 3 Echostones', 2, 0, 'echostone']);

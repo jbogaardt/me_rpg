@@ -5,6 +5,8 @@
 // two or three buttons, answered with one tap or left alone (the game carries on). What each card says and does is
 // scenes/overworld/DmPrompts.ts.
 
+import { HINT_ARROW } from './dmTasks';
+
 export type Suggestion =
   | 'revive' // someone fell: raise them?
   | 'story' // the party finished what was told: where next?
@@ -33,8 +35,8 @@ export interface DirectorState {
     /** Seconds since it was given, and since progress last grew. */
     age: number;
     sinceProgress: number;
-    /** The DM has already pointed the way. */
-    hint: boolean;
+    /** How much of the way the DM has shown (`dmTasks.ts` `HINT_ARROW` is all of it). */
+    hint: number;
     /** How it ended, once it has: quick and unhurt, hard-won, or neither. */
     finished: 'smooth' | 'rough' | 'plain' | null;
   } | null;
@@ -45,7 +47,9 @@ export interface DirectorState {
 }
 
 /** Seconds of quiet (no task) before "what now?", and between such nudges. */
-export const IDLE_BEFORE_NEXT = 20;
+export const IDLE_BEFORE_NEXT = 90;
+/** Seconds after a quest ends before the next is suggested: time to wander, shop and talk. */
+const BREATHER = 45;
 /** Seconds between cards that are only colour; the urgent ones (a fallen player, the story) wait much less. */
 export const CARD_GAP = 10;
 const URGENT_GAP = 3;
@@ -88,7 +92,7 @@ export class Director {
       this.lost = -Infinity;
       this.finishedSaid = false;
     }
-    if (this.wasActive && !active) this.idle = IDLE_BEFORE_NEXT - 8; // the quest just ended: the next in a few seconds
+    if (this.wasActive && !active) this.idle = IDLE_BEFORE_NEXT - BREATHER; // the quest just ended: a breather, then the next
     this.wasActive = active;
     if (active) this.idle = 0;
     else this.idle += dt;
@@ -108,7 +112,7 @@ export class Director {
         this.struggled = this.clock;
         return this.fire('struggle');
       }
-      if (!t.hint && t.sinceProgress >= LOST_AFTER && this.clock - this.lost >= LOST_AGAIN) {
+      if (t.hint < HINT_ARROW && t.sinceProgress >= LOST_AFTER && this.clock - this.lost >= LOST_AGAIN) {
         this.lost = this.clock;
         return this.fire('lost');
       }

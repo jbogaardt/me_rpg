@@ -455,5 +455,146 @@
         ]
       }
     ]
+  },
+  {
+    "id": "innkeepers_worry",
+    "title": "The Innkeeper's Worry",
+    "tagline": "A quiet inn, an empty room and a guest who left without paying or saying goodbye.",
+    "difficulty": 1,
+    "opening": "The innkeeper has kept a room for a regular guest for twenty years. This season the guest never came, and the innkeeper cannot sleep for worrying.",
+    "ending": "The old guest is found, well and only lost in grief. The room at the inn is aired, and a lamp burns in its window again.",
+    "people": {
+      "innkeeper": {
+        "name": "Mother Brannagh",
+        "look": "innkeeper",
+        "lines": [
+          "Twenty years, and never once late. Something is wrong, I can feel it.",
+          "Sit, eat. Then go and look for him, if you would."
+        ],
+        "after": ["Any word? I keep his room aired, every morning."],
+        "finished": ["He is coming back for the winter. Your supper is on the house, tonight and every night."]
+      },
+      "pilgrim": {
+        "name": "Old Tobin",
+        "look": "monk",
+        "lines": [
+          "Leave me be. I am only resting.",
+          "My wife walked this road with me every year. This year I walk it alone."
+        ],
+        "after": ["Tell Brannagh I am well. Tell her I will come when I can face the room."],
+        "finished": ["I went back to the inn. It was easier than I feared."]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "innkeeper",
+        "tell": "The innkeeper in {area} has a worry she will tell to anyone who sits a while. Find Mother Brannagh.",
+        "says": [
+          "My oldest guest walks the far road every year, and every year he stays here. Not this year.",
+          "He always stops at the same places on the way. Start where the road leaves us."
+        ]
+      },
+      {
+        "kind": "visit",
+        "hop": 1,
+        "tell": "The old guest always rested in {area} on his way. Walk there and look about for any sign of him."
+      },
+      {
+        "kind": "meet",
+        "hop": 1,
+        "who": "pilgrim",
+        "gives": "a Pressed Flower",
+        "tell": "A grey-bearded traveller sits alone in {area}, and has done for days. Find Old Tobin.",
+        "says": [
+          "She found me, then. Brannagh always does.",
+          "Take this flower to her. She will know what it means, and why I am late."
+        ]
+      },
+      {
+        "kind": "visit",
+        "hop": 0,
+        "tell": "Carry the Pressed Flower back to the inn in {area}, and tell Brannagh what you found."
+      }
+    ]
+  },
+  {
+    "id": "market_day",
+    "title": "Market Day",
+    "tagline": "The big market is in three days, and half the stalls have nothing to sell.",
+    "difficulty": 1,
+    "opening": "Market day is when the whole valley comes to town, and this year the stalls are bare. The merchants say the roads are bad. The townsfolk say the merchants are lazy. Somebody has to find out.",
+    "ending": "Market day came, the stalls were full, and the town sang until dawn. The merchants have not stopped telling people who saved it.",
+    "people": {
+      "merchant": {
+        "name": "Pella Quickcoin",
+        "look": "merchant",
+        "lines": [
+          "Bare stalls, and the market in three days. I will be ruined.",
+          "My goods are stuck somewhere on the road. I would pay well to know where."
+        ],
+        "after": ["Is that my wagon's mark? Then it is out there still."],
+        "finished": ["Best market in ten years. If you ever need anything, it is half price for you."]
+      },
+      "carter": {
+        "name": "Big Ansel",
+        "look": "farmer",
+        "lines": [
+          "A wheel broke, and then the ox wandered off. It has been a week like that.",
+          "I am not going anywhere until somebody helps me."
+        ],
+        "after": ["Off you go. I will have the wagon in town by market day, I promise."],
+        "finished": ["We made it with an hour to spare. I owe you a cart ride, any time."]
+      },
+      "smith": {
+        "name": "Hilde the Smith",
+        "look": "smith",
+        "lines": [
+          "Broken wheel? Bring me the iron and I will mend it before supper.",
+          "Anything worth doing is worth a fair price."
+        ],
+        "after": ["There, a rim that will outlast the wagon. Take it to your carter."],
+        "finished": ["Market day, and my hammer has not stopped. Good for business, you lot."]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "merchant",
+        "tell": "A merchant in {area} is pacing beside an empty stall. Find Pella Quickcoin and hear her out.",
+        "says": [
+          "My wagon left the far farms a week ago. It should have been here by now.",
+          "Follow the road out. If my carter is in a ditch, I want to know."
+        ]
+      },
+      {
+        "kind": "meet",
+        "hop": 1,
+        "who": "carter",
+        "tell": "A big man is sitting beside a lopsided wagon in {area}. Find Big Ansel.",
+        "says": [
+          "The wheel rim cracked clean through. I need a smith, and I cannot leave the goods.",
+          "Take the broken rim to a smith, and quick. Market day will not wait."
+        ]
+      },
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "smith",
+        "gives": "a Mended Wheel Rim",
+        "tell": "Carry the broken rim to the smith in {area}. Find Hilde.",
+        "says": [
+          "Cracked by a stone, by the look of it. Give me a moment at the forge.",
+          "There. Run it back to your carter before the light goes."
+        ]
+      },
+      {
+        "kind": "gather",
+        "hop": 1,
+        "tell": "While the wheel is fitted, Ansel asks for something to pack around the goods in {area}. Gather it, and the wagon can roll."
+      }
+    ]
   }
 ]

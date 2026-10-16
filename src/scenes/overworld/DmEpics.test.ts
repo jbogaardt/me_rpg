@@ -66,9 +66,15 @@ function game(far = false, story: unknown = null) {
   const desk = { say: (t: string) => said.push(t) } as unknown as DmDesk;
   const tasks = new DmTasks(arena, sim, desk);
   const epics = new DmEpics(arena, zones, content, tasks, desk, sim, story as never, () => STOCK_EPICS);
+  /** The saga's place on the page of options it is shown on, turning pages until it is found (-1 if never). */
   const pick = (id: string) => {
-    const { items } = epics.options();
-    return items.findIndex((i) => i.label.startsWith(id));
+    for (let n = 0; n < 10; n++) {
+      const { items, more } = epics.options();
+      const i = items.findIndex((x) => x.label.startsWith(id));
+      if (i >= 0 || !more) return i;
+      epics.turnPage();
+    }
+    return -1;
   };
   return { arena, epics, tasks, paid, said, loaded, pick, party, a, b };
 }
@@ -187,13 +193,8 @@ describe('epics with people, on the host', () => {
   }
 
   it('offers epics with people only where people can be made', () => {
-    expect(
-      live()
-        .epics.options()
-        .items.some((i) => i.label.startsWith('The Lost Courier')),
-    ).toBe(true);
-    const solo = live(false).epics.options().items;
-    expect(solo.some((i) => i.label.startsWith('The Lost Courier'))).toBe(false);
+    expect(live().pick('The Lost Courier')).toBeGreaterThanOrEqual(0);
+    expect(live(false).pick('The Lost Courier')).toBe(-1);
   });
 
   it('makes the person, sends the party to them, lets them speak, and moves on', () => {

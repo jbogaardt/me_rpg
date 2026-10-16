@@ -18,7 +18,8 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
   that appear at the right moment with two or three buttons and go away if ignored. **Nothing pops up for the DM**:
   director nudges and player requests wait in an inbox (a count on a button). There are no cooldowns; a DM is never made
   to wait.
-- **Pre-canned words** for the director's moves keep the DM's voice consistent; the DM's own words are short and shown to everyone
+- **Pre-canned words** for the director's moves keep the DM's voice consistent, each in several wordings
+  (`systems/phrases.ts`: none comes back until the others have been said); the DM's own words are short and shown to everyone
   as a caption (`hud/Dialog.ts`): plain text on a clear background that takes no input, never stops play, leaves by
   itself, and is also spoken by the browser's voice (`hud/voice.ts`, mutable).
 
@@ -45,8 +46,8 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 ## Parts
 
 - **Director** (`dmDirector.ts` says WHEN, `DmPrompts.ts` builds each card and does the pick, `hud/DmCard.ts` draws it):
-  watches party health, task progress and quiet time, and suggests easing off, turning up the heat, a twist, which quest,
-  pointing the way, a breather, a new land's sky, raising a fallen player, or the story's next road (with a vote).
+  watches party health, task progress and quiet time, and suggests easing off, turning up the heat, a twist, which quest
+  (after a breather to wander once one ends), showing the way (the map's area first, then an arrow: none until then), a breather, a new land's sky, raising a fallen player, or the story's next road (with a vote).
   Urgent cards wait less than the rest; a dismissed card is a breather.
 - **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (their own free-form words, from the 💬
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,

@@ -10,6 +10,7 @@
 // Neither may invent a world: an answer is only ever something the page offered, which the page checks again and sends
 // to friends through the usual messages. Both services are interfaces with mocks (mocks.ts) until the real APIs are chosen.
 
+import { Phrasebook } from '../src/systems/phrases';
 /** How sure the router must be for its pick to be taken without asking the fallback, when a player's own words are the question. */
 export const CONFIDENCE = 0.8;
 /**
@@ -23,8 +24,29 @@ export const NONE = '@none';
 export const ROAD = 'road:';
 /** The most letters of a reply (the page trims the DM's words again). */
 export const MAX_REPLY = 120;
-/** What a friend hears when no service could answer them. */
-export const HOLD_REPLY = 'The Dungeon Master ponders your words.';
+/** What a friend hears when no service could answer them (several wordings, so it does not sound like a machine). */
+export const HOLD_REPLIES = [
+  'The Dungeon Master ponders your words.',
+  'Hm. Let me think on that a moment.',
+  'I heard you. Give an old man a moment.',
+  'A fair question. I am turning it over.',
+  'Patience, friend. The answer is coming.',
+];
+/** Other ways of saying the stock replies a card offers, keyed by the reply's own words. */
+const SAID_ALSO: Record<string, string[]> = {
+  'On my way.': ['On my way.', 'Coming, friend.', 'I will be with you shortly.', 'Hold there, I am coming.'],
+  'Give me a moment.': ['Give me a moment.', 'One moment.', 'Bear with me a breath.', 'Soon. Let me finish this.'],
+  'Not right now.': ['Not right now.', 'Not yet, friend.', 'That must wait a while.', 'Later, perhaps. Not now.'],
+  'Good idea. Doing it.': [
+    'Good idea. Doing it.',
+    'Wisely said. So be it.',
+    'Yes, let us do that.',
+    'Done, as you ask.',
+  ],
+};
+const phrases = new Phrasebook();
+/** One of the holding replies, not the one said last. */
+export const holdReply = (): string => phrases.pick('hold', HOLD_REPLIES);
 
 export interface Option {
   id: string;
@@ -165,7 +187,7 @@ export function optionsFor(card: Card, table: Table): Option[] {
   const steer: Option[] = [
     { id: 'ease', label: 'Ease off: fewer or weaker enemies', hint: HINTS['words/ease']! },
     { id: 'heat', label: 'Turn up the danger', hint: HINTS['words/heat']! },
-    { id: 'hint', label: 'Point the way with an arrow', hint: HINTS['words/hint']! },
+    { id: 'hint', label: 'Show them the way (their map, then an arrow)', hint: HINTS['words/hint']! },
   ];
   const have = new Set(own.map((o) => o.id));
   return card.kind === 'message' || wordsOf(card)
@@ -232,7 +254,9 @@ function moveOf(source: Move['source'], id: string | null, reply: string | null,
 const SILENT = new Set(['ease', 'heat', 'hint', 'close']);
 function ack(option: Option | undefined): string | null {
   if (option && SILENT.has(option.id)) return null;
-  return option ? `${option.label.replace(/^Reply: /, '')}.` : 'Heard.';
+  if (!option) return phrases.pick('heard', ['Heard.', 'I hear you.', 'Noted, friend.']);
+  const said = `${option.label.replace(/^Reply: /, '').replace(/\.$/, '')}.`;
+  return phrases.pick(said, SAID_ALSO[said] ?? [said]);
 }
 
 /** Decide one card. Never throws: a failing service falls through to the next tier. */
@@ -260,11 +284,11 @@ export async function decideCard(
     const made = readImprovised(raw, question.options);
     if (made) {
       // Words with no pick and nobody who asked ("Rise, friend" after choosing to do nothing) would say the opposite of what is done.
-      const reply = words ? (made.reply ?? HOLD_REPLY) : null; // a director's card is acted on, not announced
+      const reply = words ? (made.reply ?? holdReply()) : null; // a director's card is acted on, not announced
       return moveOf('fallback', made.pick, reply, confidence);
     }
   } catch (err) {
     console.warn('fallback failed', err);
   }
-  return moveOf('silent', null, words ? HOLD_REPLY : null, confidence);
+  return moveOf('silent', null, words ? holdReply() : null, confidence);
 }

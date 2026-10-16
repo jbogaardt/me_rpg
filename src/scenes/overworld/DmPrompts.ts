@@ -3,9 +3,10 @@ import { PRESSURES, PRESSURE_LABEL, isPressure } from '../../systems/dmPowers';
 import { Director, type Suggestion } from '../../systems/dmDirector';
 import { Inbox, MESSAGE_CODE, REPLIES, REQUESTS, describe, type InboxKind } from '../../systems/dmRequests';
 import { playerName } from '../../systems/looks';
-import { classify } from '../../systems/dmTasks';
+import { HINT_AREA, HINT_ARROW, classify } from '../../systems/dmTasks';
 import { QUESTS } from '../../systems/quests';
 import { PRECIPS, type Precip } from '../../systems/weather';
+import { Phrasebook } from '../../systems/phrases';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
 import type { DmEpics } from './DmEpics';
@@ -39,8 +40,30 @@ export type CardKind = Suggestion | 'sky' | 'pressure' | 'epic' | 'message' | 's
  * now?: follow me / defend this ground / hunt here". The bar can open any of them on demand. It runs for whoever runs the
  * world: the online DM, or a solo player in a live world.
  */
+/** What the DM says on showing the way: the area on the map first, then an arrow (several wordings, `phrases.ts`). */
+const AREA_WORDS = [
+  'You look lost, friends. I have marked where to search on your map.',
+  'Here, let me help. Open your map: the place to look is circled.',
+  'You have walked in circles long enough. Your map now shows where to look.',
+  'The land is not giving it up easily. I have drawn the search on your map.',
+  'No shame in asking the way. Look at your map: I have marked the ground.',
+];
+const ARROW_WORDS = [
+  'Still nothing? Follow the arrow, then. It will not lead you wrong.',
+  'Very well, I will lead you by the hand. Follow the arrow.',
+  'Enough wandering. The arrow points the way now.',
+  'Some places hide well. The arrow will take you straight there.',
+];
+const CANCEL_WORDS = [
+  'Let that one go. Something else is coming.',
+  'We will leave that task for another day.',
+  'Forget that errand. The road has other plans for you.',
+  'That task is called off. Rest a moment before the next.',
+];
+
 export class DmPrompts {
   private director = new Director();
+  private phrases = new Phrasebook();
   private twists = 0;
   /** What is waiting for the DM, behind a button: the director's nudges and the players' requests (no popups). */
   private inbox = new Inbox();
@@ -145,7 +168,8 @@ export class DmPrompts {
     if (min < 0.5) add('struggle', 'The party is hurt: ease off?');
     if (t?.state === 'active') {
       if (avg >= 0.8) add('easy', 'They are in fine shape: turn up the heat?');
-      if (pace && !pace.hint && pace.sinceProgress >= 45) add('lost', 'No progress for a while: point the way?');
+      if (pace && pace.hint < HINT_ARROW && pace.sinceProgress >= 45)
+        add('lost', 'No progress for a while: show the way?');
       add('twist', 'Make it more interesting');
     } else {
       add('epic', 'Begin an epic quest across lands and people');
@@ -277,7 +301,7 @@ export class DmPrompts {
         show(
           'They seem lost',
           [
-            { id: 'hint', label: 'Point the way' },
+            { id: 'hint', label: this.hintLabel() },
             { id: 'stay', label: 'Let them wander' },
           ],
           CARD_TIME,
@@ -350,11 +374,16 @@ export class DmPrompts {
     return options;
   }
 
+  /** What showing the way does next: mark the area to search, then an arrow. */
+  private hintLabel(): string {
+    return (this.tasks.pace?.hint ?? 0) < HINT_AREA ? 'Mark the area on their map' : 'Point the way with an arrow';
+  }
+
   /** With a quest running: a hint, and a way to call it off. */
   private runningOptions(): CardOption[] {
     return this.tasks.active
       ? [
-          { id: 'hint', label: 'Point the way' },
+          ...((this.tasks.pace?.hint ?? 0) < HINT_ARROW ? [{ id: 'hint', label: this.hintLabel() }] : []),
           { id: '@cancel', label: 'Call it off' },
         ]
       : [];
@@ -435,9 +464,11 @@ export class DmPrompts {
       this.powers.closeIn();
     } else if (id === '@cancel') {
       this.tasks.cancel();
-      this.desk.say('That task is cancelled. A new one is coming.');
+      this.desk.say(this.phrases.pick('cancel', CANCEL_WORDS));
     } else if (id === 'hint') {
+      const arrow = (this.tasks.pace?.hint ?? 0) >= HINT_AREA;
       this.tasks.giveHint();
+      this.desk.say(this.phrases.pick(arrow ? 'arrow' : 'area', arrow ? ARROW_WORDS : AREA_WORDS));
     } else if (id.startsWith('w:')) {
       const precip = id.slice(2);
       const valid = precip === '' ? null : (PRECIPS as readonly string[]).includes(precip) ? (precip as Precip) : null;
@@ -452,6 +483,7 @@ export class DmPrompts {
   reset() {
     this.askers = { slots: [], at: -Infinity };
     this.director.reset();
+    this.phrases.reset();
     this.inbox.clear();
     this.seen.clear();
     this.card.hide();
