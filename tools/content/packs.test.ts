@@ -8,6 +8,7 @@ import {
   candidates,
   checkPacks,
   crossingNeeds,
+  eligibleFor,
   MAX_SIDE_REGIONS,
   mergePacks,
   OPPOSITE,
@@ -220,6 +221,17 @@ describe('random campaigns from the packs', () => {
   it('never joins regions no pairing joins', () => {
     const lonely = packs.map((p): Pack => ({ ...p, pairings: {} }));
     expect(checkPacks(mergePacks(lonely))).toContain('regions.mirewood: no pairing joins it to anything');
+  });
+
+  it('keeps a haven a safe harbour: no foes, no hub, never a story region', () => {
+    const armed = packs.map((p): Pack =>
+      p.regions?.hearthmere ? { ...p, regions: { hearthmere: { ...p.regions.hearthmere, foes: { common: {} } } } } : p,
+    );
+    expect(checkPacks(mergePacks(armed))).toContain(
+      'regions.hearthmere: a haven is no hub or dead end, and no foes live in it',
+    );
+    for (const arc of Object.values(cat.arcs))
+      for (const slot of eligibleFor(cat, arc)) expect(slot.has('hearthmere')).toBe(false);
   });
 
   it('reads what an arc needs of each region', () => {

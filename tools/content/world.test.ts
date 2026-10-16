@@ -173,6 +173,25 @@ describe('a world from its log', () => {
     for (const e of bad) expect(() => world.apply(e), JSON.stringify(e)).toThrow(WorldError);
   });
 
+  it('sets a town beside the start in most worlds, where no foe lives and the story can still be told', () => {
+    let towns = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      const world = new World(seed, packs);
+      world.open();
+      for (let n = 0; !world.complete && n < 10; n++) world.apply(world.choose(world.options()[0].cue));
+      expect(world.complete, `seed ${seed}`).toBe(true);
+      const haven = world.regions.find((id) => world.cat.regions[id].haven);
+      if (!haven) continue;
+      towns++;
+      expect(world.storyRegions).not.toContain(haven);
+      expect(world.foesByRegion[haven] ?? {}).toEqual({});
+      expect(() => parseContent(world.files())).not.toThrow();
+    }
+    expect(towns).toBeGreaterThan(20);
+    const random = assemble(5, packs);
+    expect(random.regions.some((id) => id === 'hearthmere')).toBe(true);
+  });
+
   it('refuses a cast or a new person that breaks the rules', () => {
     const world = new World(7, packs);
     world.open();
@@ -192,6 +211,6 @@ describe('a world from its log', () => {
       { t: 'npc', id: 'dm_x', name: 'X', look, lines: ['x'.repeat(200)] },
     ];
     for (const e of bad) expect(() => world.apply(e), JSON.stringify(e)).toThrow(WorldError);
-    expect(world.log).toHaveLength(world.storyRegions.length);
+    expect(world.log).toHaveLength(world.regions.length); // the story's regions and the town beside its start: nothing more
   });
 });

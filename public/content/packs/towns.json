@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "id": "towns",
+  "entities": {
+    "innkeeper": {
+      "type": "npc",
+      "name": "Innkeeper",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.long_red",
+        "torso": "torso.tunic_forest",
+        "legs": "legs.pants_tan",
+        "feet": "feet.boots_brown"
+      },
+      "lines": [
+        "Sit, rest your feet. Nothing with teeth comes past the town gates.",
+        "Travellers bring news, and news is half my trade."
+      ]
+    },
+    "merchant": {
+      "type": "npc",
+      "name": "Merchant",
+      "sprite": {
+        "body": "body.bronze",
+        "head": "head.human_bronze",
+        "hair": "hair.messy_blonde",
+        "torso": "torso.tunic_navy",
+        "legs": "legs.pants_charcoal",
+        "feet": "feet.boots_black"
+      },
+      "lines": [
+        "Roads are bad, prices are worse. Blame the roads.",
+        "If you are heading out, keep your eyes open for my lost cart."
+      ]
+    },
+    "townsmith": {
+      "type": "npc",
+      "name": "Smith",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.messy_gray",
+        "beard": "beard.gray",
+        "torso": "torso.tunic_white",
+        "legs": "legs.pants_charcoal",
+        "feet": "feet.boots_black"
+      },
+      "lines": [
+        "Mind the sparks. A blade is only as good as the arm behind it.",
+        "Bring me good iron one day and I will make you something worth carrying."
+      ]
+    }
+  },
+  "regions": {
+    "hearthmere": {
+      "biome": {
+        "name": "Hearthmere",
+        "tint": "#e6c88a",
+        "map": "haven_town",
+        "climate": "temperate",
+        "music": null,
+        "tilesets": [
+          "ground_tiles.png",
+          "lpc_terrain.png",
+          "trees_green.png",
+          "town.png",
+          "object-layer.png",
+          "interior.png"
+        ]
+      },
+      "level": [1, 5],
+      "themes": ["town"],
+      "haven": true,
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": {},
+      "roam": [],
+      "encounters": [
+        { "entity": "innkeeper", "x": 23, "y": 18 },
+        { "entity": "merchant", "x": 30, "y": 22 },
+        { "entity": "townsmith", "x": 16, "y": 15 }
+      ]
+    }
+  },
+  "pairings": {
+    "hearth_bog": {
+      "regions": ["hearthmere", "mirewood"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the plank road out of the gates of Hearthmere and down into The Mirewood",
+        "sign": {
+          "hearthmere": "Bog mist from The Mirewood creeps up to the town gates at night, and the dogs bark at it.",
+          "mirewood": "On a clear night the lamps of Hearthmere glow above the trees, warm and steady."
+        }
+      }
+    },
+    "hearth_ash": {
+      "regions": ["hearthmere", "cinder_coast"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the coast road from the gates of Hearthmere to The Cinder Coast",
+        "sign": {
+          "hearthmere": "The wind from The Cinder Coast smells of smoke, and the washing comes in grey.",
+          "cinder_coast": "Inland, the bells of Hearthmere ring the hours, faint over the ash."
+        }
+      }
+    }
+  }
+}

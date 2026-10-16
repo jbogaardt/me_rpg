@@ -274,7 +274,10 @@ export class World {
     const near = [...new Set(this.regions.flatMap((id) => partnersOf(this.cat, id)))]
       .filter(
         (id) =>
-          !this.story.grid.at.has(id) && !this.cat.regions[id]!.hub && !!this.cat.regions[id]!.terminal === deadEnd,
+          !this.story.grid.at.has(id) &&
+          !this.cat.regions[id]!.hub &&
+          !this.cat.regions[id]!.haven &&
+          !!this.cat.regions[id]!.terminal === deadEnd,
       )
       .sort();
     const pickFrom = deadEnd ? shuffle(rand, near) : near.length ? [near[Math.floor(rand() * near.length)]!] : [];
@@ -295,6 +298,34 @@ export class World {
         to: w.to,
         foes: this.foesFor(id, -1, rand),
       };
+    }
+    return null;
+  }
+
+  /**
+   * A safe harbour (a `haven` region: a town with no foes) beside the land the story starts in, by a pairing between
+   * them, placed only where the story can still be told around it (or is already told). Null when no haven pairs with
+   * the start, or none fits. Not applied. Live and random worlds both take one, so most games have a town to come home to.
+   */
+  havenEntry(rand: () => number): LogEntry | null {
+    const host = this.story.regions[0];
+    const arc = this.arc;
+    if (!host || !arc || this.regions.some((id) => this.cat.regions[id]!.haven)) return null;
+    const havens = partnersOf(this.cat, host)
+      .filter((id) => this.cat.regions[id]!.haven && !this.story.grid.at.has(id))
+      .sort();
+    for (const id of havens) {
+      const ways = pairingsBetween(this.cat, host, id).flatMap((pairing) =>
+        this.story.grid.ways(host, id, pairing).map((w) => ({ ...w, pairing })),
+      );
+      for (const w of shuffle(rand, ways)) {
+        const grid = this.story.grid.clone();
+        grid.place(id, w.x, w.y);
+        grid.use(host, w.from);
+        grid.use(id, w.to);
+        if (this.complete || storyFor(this.cat, arc, rng(this.seed), { ...this.story, grid }) !== null)
+          return { t: 'side', region: id, host, pairing: w.pairing, from: w.from, to: w.to, foes: {} };
+      }
     }
     return null;
   }
@@ -352,6 +383,8 @@ export class World {
    */
   open(arcId?: string): LogEntry[] {
     this.apply(this.beginning(arcId));
+    const haven = this.havenEntry(rng(this.seed * 17));
+    if (haven) this.apply(haven);
     while (!this.complete && !this.told().length) {
       const first = this.options()[0];
       if (!first) throw new WorldError(`arc "${this.arcId}" cannot be told from here`);
@@ -794,6 +827,8 @@ export function assemble(seed: number, packs: readonly Pack[]): Assembly {
   const keeper = keepers[Math.floor(rand() * keepers.length)]!;
   world.apply({ t: 'begin', arc: arcId, keeper, region: r1, foes: world.foesFor(r1, 0, rand, arc) });
   while (!world.complete) world.apply(world.stepFrom(found, rand));
+  const haven = world.havenEntry(rand); // a town beside the start, where one pairs with it
+  if (haven) world.apply(haven);
   // Side regions: up to `MAX_SIDE_REGIONS` others (neither hubs nor dead ends), each paired with a region already in.
   for (let added = 0, tries = 12; added < MAX_SIDE_REGIONS;) {
     if (rand() < 0.35 || --tries < 0) break;

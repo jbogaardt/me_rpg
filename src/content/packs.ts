@@ -92,6 +92,11 @@ export interface RegionDef {
   themes: string[];
   /** It has a `keeper` spot and can start a story. */
   hub?: boolean;
+  /**
+   * A safe harbour (a town): no foes live in it, it is never a step of a story, and a world sets one beside the land its
+   * story starts in when one pairs with it and the story can still be told (`World.havenEntry`).
+   */
+  haven?: boolean;
   /** A dead end with one port, bolted onto a port nothing else uses (never in a story). */
   terminal?: boolean;
   /** The ports of its map (`z.port` names) and the edge each is on (checked against the map). */
@@ -434,7 +439,7 @@ export function eligibleFor(cat: Catalog, arc: ArcDef): Set<string>[] {
       new Set(
         Object.entries(cat.regions)
           .filter(([id, r]) => {
-            if (r.terminal || (i === 0) !== !!r.hub) return false;
+            if (r.terminal || r.haven || (i === 0) !== !!r.hub) return false;
             if (i === 0 && !keepersFor(cat, arc, id).length) return false;
             return meetsSlot(id, r, arc.slots?.[i]) && fills(cat, r, need, arc.slots?.[i]);
           })
@@ -588,6 +593,8 @@ export function checkPacks(cat: Catalog): string[] {
     const sides = Object.values(r.ports);
     if (new Set(sides).size !== sides.length) out.push(`regions.${id}.ports: two ports on one edge`);
     if (r.terminal && (r.hub || sides.length !== 1)) out.push(`regions.${id}: a dead end has one port and is no hub`);
+    if (r.haven && (r.hub || r.terminal || Object.keys(r.foes).length || r.roam.length))
+      out.push(`regions.${id}: a haven is no hub or dead end, and no foes live in it`);
     out.push(...checkCapabilities(r.capabilities, `regions.${id}.capabilities`, 'zone'));
   }
   for (const [id, arc] of Object.entries(cat.arcs)) {
