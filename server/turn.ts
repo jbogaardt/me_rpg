@@ -59,7 +59,9 @@ export function nextStep(s: PageState, c: Clock, startAt = 0): Step {
   if (!s.dm || !s.friends.length) return idle;
   if (startAt > 0 && s.lobbyOpen && c.settled >= startAt) return { kind: 'start' };
   const first = s.friends[0];
-  if (first && !s.friends.some((f) => f.near) && c.now - c.lastFollow >= FOLLOW_MS)
+  // He walks to a party in his own zone (the stroll below); he goes to one in another zone, or very far off, in a blink.
+  const walkable = s.friends.some((f) => f.toward && f.toward.cells <= WALK_MAX);
+  if (first && !s.friends.some((f) => f.near) && !walkable && c.now - c.lastFollow >= FOLLOW_MS)
     return { kind: 'follow', slot: first.slot };
   if (s.card) return { kind: 'card' };
   if (s.waiting > 0) return { kind: 'inbox' };
@@ -74,6 +76,8 @@ export function nextStep(s: PageState, c: Clock, startAt = 0): Step {
 }
 
 /** Past this many cells from the nearest friend the DM walks to them; nearer, he ambles about them. */
+/** Farther than this many cells away, the DM goes to the party instead of walking. */
+export const WALK_MAX = 40;
 export const STROLL_FAR = 7;
 /** How long (ms) the DM keeps one heading while ambling, and every third heading he stops and looks about. */
 export const STROLL_MS = 3000;

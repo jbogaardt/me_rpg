@@ -128,7 +128,7 @@ export class StoryUi {
 
     if (dialog.active || menu.open || this.zones.transition.busy) return;
     if (this.fieldNote) {
-      dialog.say(this.fieldNote, undefined, { pauses: true });
+      dialog.note(this.fieldNote); // not asked for: passive text
       this.fieldNote = null;
     } else if (this.titleCard) {
       this.banner.show(this.titleCard.title, this.titleCard.sub);
@@ -155,7 +155,7 @@ export class StoryUi {
       if (note) this.taskBrief = [note];
     }
     if (!this.taskBrief || dialog.active || menu.open || this.zones.transition.busy) return;
-    dialog.say(this.taskBrief, undefined, { pauses: true });
+    dialog.note(this.taskBrief); // the DM gave it unasked: passive text
     this.taskBrief = null;
   }
 

@@ -163,7 +163,7 @@ export class OverworldScene implements Scene {
     const arena = (this.arena = new Arena(sprites.wardrobe));
     this.zones = new Zones(arena, sprites, loadZone, unloadZone, ui, renderer, content);
     const visuals = new Visuals(arena);
-    const say = (lines: string[]) => ui.dialog.say(lines);
+    const say = (lines: string[]) => ui.dialog.note(lines); // a defeat or a trial's result: passive text, not a popup
     // The simulation reports what a friend should see through the host link (which only records it while hosting).
     this.sim = new Simulation(arena, visuals, this.zones, (e) => this.host.emit(e), say);
     this.zones.makeMobWorld = (z) => this.sim.mobWorldFor(z);
@@ -233,7 +233,7 @@ export class OverworldScene implements Scene {
     );
     this.epics.onDone = () => this.prompts.suggest('story'); // a saga is done: the story may have a next road
     // The DM's words show on every screen (never over a DM who is busy being a foe).
-    this.desk.onSay = (text) => !this.possession.active && ui.dialog.tell(text, sayTime(text), arena.clock);
+    this.desk.onSay = (text) => !this.possession.active && ui.dialog.tell(text, sayTime(text));
     this.input = new LocalInput(arena, this.zones, () => ui.touch.active);
     this.partyUi = new PartyUi(arena, this.zones, ui.menu, () => this.possession.release());
     this.storyUi = new StoryUi(arena, ui, this.zones, this.banner, this.overlay, () => this.possession.active);
@@ -249,6 +249,7 @@ export class OverworldScene implements Scene {
       this.storyUi,
       () => this.guest.pressAction(),
     );
+    this.interact.onTalkToDm = () => this.requests.show();
     this.zones.root.addChildAt(this.storyUi.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     ui.shop.onGearChange = () => arena.refreshLook();
@@ -408,7 +409,7 @@ export class OverworldScene implements Scene {
     document.body.classList.toggle('dm-possessing', this.possession.active); // no pop-ups while a foe is held
     if (this.possession.active && this.dmCard.open) this.dmCard.hide();
     this.dmBar.update(arena.local.dm, arena.timeStopped, this.possession.name, this.ui.touch.active);
-    this.ui.dialog.update(arena.clock);
+    this.ui.dialog.update();
     this.requests.update(arena.role === 'client', dt);
     this.prompts.update(
       dt,

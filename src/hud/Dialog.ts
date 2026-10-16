@@ -1,3 +1,4 @@
+import { sayTime } from '../systems/dmPowers';
 import { voice } from './voice';
 
 const DIALOG_MAX_W = 600;
@@ -68,17 +69,23 @@ export class Dialog {
     else this.open(talk);
   }
 
-  /** Say `text` in the caption for `seconds` (arena clock `now`), over any caption still up; play goes on. */
-  tell(text: string, seconds: number, now: number) {
-    this.shown = { until: now + seconds };
+  /** Say `text` in the caption for `seconds`, over any caption still up; play goes on. */
+  tell(text: string, seconds: number) {
+    this.shown = { until: performance.now() / 1000 + seconds };
     this.captionText.textContent = text;
     this.caption.hidden = false;
     voice.speak(text);
   }
 
-  /** Each frame (`now`: the arena clock, s): the caption leaves when its time is up. */
-  update(now: number) {
-    if (this.shown && now >= this.shown.until) this.clearCaption();
+  /** Passive text: anything the game tells the player that they did not ask for (a defeat, a quest given, a chapter's note). */
+  note(lines: readonly string[]) {
+    const text = lines.join(' ');
+    this.tell(text, sayTime(text));
+  }
+
+  /** Each frame: the caption leaves when its time is up. */
+  update() {
+    if (this.shown && performance.now() / 1000 >= this.shown.until) this.clearCaption();
   }
 
   /** Show the next line, or close after the last one and open whoever is waiting. */

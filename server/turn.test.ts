@@ -51,6 +51,12 @@ describe('nextStep', () => {
     expect(nextStep(away, { ...clock(), lastFollow: 100_000 - FOLLOW_MS + 1 }).kind).toBe('idle');
   });
 
+  it('walks to a far party in his own zone and teleports only to one elsewhere or very far', () => {
+    const far = (cells: number) => ({ ...friend(2, false), toward: { dx: cells, dy: 0, cells } });
+    expect(nextStep(state({ friends: [far(30)] }), clock()).kind).toBe('stroll');
+    expect(nextStep(state({ friends: [far(60)] }), clock()).kind).toBe('follow');
+  });
+
   it('holds a pressure card that asks for the opposite of what was just set', () => {
     const struggle = {
       ...card,

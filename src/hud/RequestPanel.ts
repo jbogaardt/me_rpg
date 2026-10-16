@@ -57,6 +57,11 @@ export class RequestPanel {
     return !this.root.hidden;
   }
 
+  /** Open the list (the player walked up to the Dungeon Master and spoke). */
+  show() {
+    if (!this.button.hidden) this.root.hidden = false;
+  }
+
   close() {
     this.root.hidden = true;
   }

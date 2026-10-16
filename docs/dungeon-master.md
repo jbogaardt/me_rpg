@@ -22,6 +22,9 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
   as a caption (`hud/Dialog.ts`): plain text on a clear background that takes no input, never stops play, leaves by
   itself, and is also spoken by the browser's voice (`hud/voice.ts`, mutable).
 
+A friend can also **walk up to the DM and press the action key**: the DM greets them (a short conversation), then the
+same request list as the 💬 button opens, so a concern goes to the DM's inbox like any other ask (bot or person).
+
 ## The DM is not one of the party
 
 `Arena.party()` (the zone's players without the DM) is what the rules ask; `players()` stays everyone, for drawing,

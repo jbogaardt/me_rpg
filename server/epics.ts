@@ -63,6 +63,12 @@ export async function tellEpic(
     return { id: String(t.id), title: String(t.title) };
   };
   let raw: unknown = null;
+  // The first saga is the content's own, told at once: a model takes many seconds to write one, and the table is waiting.
+  const first = told.length === 0 ? nextStock(page.stock, told) : null;
+  if (first) {
+    const now = await tryTale(first);
+    if (now) return now;
+  }
   try {
     raw = await writer.write(want);
   } catch (err) {
