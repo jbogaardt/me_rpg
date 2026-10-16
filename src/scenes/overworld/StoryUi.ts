@@ -8,7 +8,7 @@ import type { Dialog } from '../../hud/Dialog';
 import type { MapOverlay } from '../../hud/MapOverlay';
 import type { Menu } from '../../hud/Menu';
 import { CELL } from '../../map/types';
-import { briefing } from '../../systems/dmBrief';
+import { briefing, objective } from '../../systems/dmBrief';
 import { RELIC_KIND } from '../../systems/dmQuests';
 import { taskText, type TaskView } from '../../systems/dmTasks';
 import { MOB_KINDS } from '../../systems/combat';
@@ -152,9 +152,10 @@ export class StoryUi {
     if (sig !== this.taskSig) {
       this.taskSig = sig;
       this.taskNote = note;
-      this.taskBrief = active && !note ? this.briefOf(t) : null; // words the DM wrote are already said
+      this.taskBrief = active ? this.briefOf(t) : null;
     } else if (note !== this.taskNote) {
-      this.taskNote = note; // the DM said these words to everyone already (DmDesk.say): not again as text
+      this.taskNote = note;
+      if (note && t) this.taskBrief = this.briefOf(t);
     }
     if (!this.taskBrief || dialog.active || menu.open || this.zones.transition.busy) return;
     dialog.note(this.taskBrief); // the DM gave it unasked: passive text
@@ -163,13 +164,15 @@ export class StoryUi {
 
   /** The pages that tell a DM quest: the DM's own words when they wrote some, else the usual telling. */
   briefOf(t: TaskView): string[] {
-    if (t.note) return [t.note];
-    return briefing(t, {
-      foe: (key) => MOB_KINDS[key]?.name ?? key,
-      site: (kind) => SITE_KINDS[kind]?.name ?? kind,
-      item: (id) => (ITEMS[id] ? `the ${ITEMS[id].name}` : id),
-      area: (zone) => zoneName(zone),
-    });
+    const names = {
+      foe: (key: string) => MOB_KINDS[key]?.name ?? key,
+      site: (kind: string) => SITE_KINDS[kind]?.name ?? kind,
+      item: (id: string) => (ITEMS[id] ? `the ${ITEMS[id].name}` : id),
+      area: (zone: string) => zoneName(zone),
+    };
+    // The story, then what is actually wanted, in the tracker's own terms: one telling, never vaguer than the task.
+    const story = t.note || (briefing(t, names)[0] ?? '');
+    return [`${story} ${objective(t, names)}`];
   }
 
   /** The task the DM called, as the tracker line ('' when there is none). */

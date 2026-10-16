@@ -87,3 +87,11 @@ facts, with a reason to care. Invented places are never named unless the game ga
   (no talk, so no world pause to read) for anyone but the DM.
 - Open: the freeze is not reproduced. Suspect: a pausing conversation opened mid-fight with a DM-brought person (the
   action key talks to anyone adjacent), now blocked. If it happens again note what was on screen and the time.
+
+### 2026-10-16 (fifth run): free-form chat, same disclosure
+- Said: talking to the DM should be free-form chat, no buttons, the DM still watching whether I am beaten; drop talking by
+  walking up; if the quest says kill 4 goblins the DM must not say something vague like "something is stirring".
+- Changed: the request panel is one text line (💬 or Enter opens, Enter sends); the canned asks and the walk-up talk are
+  gone; every telling of a quest (the DM's note or the stock brief) now ends with the tracker's own objective
+  ("Defeat 4 Goblins in the Mirewood."), via `objective` in `systems/dmBrief.ts`.
+- Also fixed: my last change had hidden a saga's step text entirely; it shows again (as captions).

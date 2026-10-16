@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { briefing, cleanNote, MAX_NOTE, type BriefNames } from './dmBrief';
+import { briefing, objective, cleanNote, MAX_NOTE, type BriefNames } from './dmBrief';
 import type { TaskView } from './dmTasks';
 
 const names: BriefNames = {
@@ -52,5 +52,16 @@ describe('briefing', () => {
   it('keeps a DM’s own instructions to one trimmed line', () => {
     expect(cleanNote('  go\n  north  ')).toBe('go north');
     expect(cleanNote('x'.repeat(MAX_NOTE + 40))).toHaveLength(MAX_NOTE);
+  });
+});
+
+describe('objective', () => {
+  it('says what is wanted as plainly as the tracker', () => {
+    expect(objective(task({ goal: 4 }), names)).toBe('Defeat 4 Goblins in The Greenwood.');
+    expect(objective(task({ goal: 1 }), names)).toBe('Defeat 1 Goblin in The Greenwood.');
+    expect(objective(task({ kind: 'gather', goal: 3, what: 'echostone' }), names)).toBe(
+      'Collect 3 Echostones in The Greenwood.',
+    );
+    expect(objective(task({ kind: 'find', goal: 1 }), names)).toBe('Find the Wayfarer’s Charm in The Greenwood.');
   });
 });

@@ -28,6 +28,29 @@ const hash = (s: string): number => [...s].reduce((a, c) => (a * 31 + c.charCode
 const pick = <T>(list: T[], seed: number): T => list[seed % list.length]!;
 const the = (area: string): string => (/^the\s/i.test(area) ? area : `the ${area}`);
 
+/**
+ * What the quest asks, as plainly as the tracker does ("Defeat 4 Goblins in the Mirewood."). Whatever else the Dungeon
+ * Master says about a quest, this is said with it, so the story and the task never disagree about what is wanted.
+ */
+export function objective(v: TaskView, names: BriefNames): string {
+  const where = ` in ${names.area(v.zone)}`;
+  const n = v.goal;
+  switch (v.kind) {
+    case 'hunt': {
+      const foe = names.foe(v.what);
+      return `Defeat ${n} ${n > 1 ? plural(foe) : foe}${where}.`;
+    }
+    case 'gather': {
+      const site = names.site(v.what);
+      return `Collect ${n} ${n > 1 ? plural(site) : site}${where}.`;
+    }
+    case 'find':
+      return `Find ${names.item(v.what)}${where}.`;
+    default:
+      return `Reach ${v.what}${where}.`;
+  }
+}
+
 /** The pages of a quest's telling, in the DM's voice (three of two or three sentences). */
 export function briefing(v: TaskView, names: BriefNames): string[] {
   const seed = hash(`${v.kind}${v.zone}${v.what}${v.title}`);

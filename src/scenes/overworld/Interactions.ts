@@ -60,9 +60,6 @@ export class Interactions {
     this.harvestButtons.onPick = (key) => this.harvestPressed(key);
   }
 
-  /** A friend spoke to the Dungeon Master in person: open the way to put a concern to them (set by the scene). */
-  onTalkToDm: () => void = () => undefined;
-
   /** The local player's action button: advance the dialog, talk when next to the NPC or a shopkeeper, otherwise `attack`. */
   handleAction(pressed: boolean, attack: () => void) {
     if (!pressed) return;
@@ -79,7 +76,6 @@ export class Interactions {
     const site = arena.sites.find((s) => s.visible && near(s, SITE_REACH));
     const pet = arena.pets.find((p) => near(p));
     const folk = arena.zone.folk.find((f) => near(f.body));
-    const dm = arena.local.dm ? undefined : [...arena.remotes.values()].find((p) => p.dm && near(p.body));
     // With a foe about the action key only swings: nobody starts a talk (or freezes the world to read) in a fight.
     const fighting = arena.mobs.some((m) => m.alive && near(m.body, CELL * 10));
     if (dialog.active) {
@@ -88,10 +84,6 @@ export class Interactions {
       attack();
     } else if (arena.local.dm && !lectern && !sign) {
       // The Dungeon Master reads the world (signs, the lectern) but takes no part in it: no shops, quests or swings.
-    } else if (dm) {
-      // The Dungeon Master is talked to like anyone: a greeting, then the concerns go to their inbox.
-      dm.body.face(directionToward(this.arena.player.x - dm.body.x, this.arena.player.y - dm.body.y));
-      dialog.say(['Speak, traveller. What troubles you?'], () => this.onTalkToDm());
     } else if (lectern) {
       dialog.say(lecternPages());
     } else if (sign) {

@@ -372,7 +372,8 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   // the game sends the card it opens away (nobody hunts for a close button).
   if (await friend.locator('#menu').isVisible()) await friend.keyboard.press('Escape'); // the friend's menu is in the way
   await friend.locator('#req-btn').click();
-  await friend.locator('#request [data-ask="0"]').click();
+  await friend.locator('#request input').fill('we are lost');
+  await friend.locator('#request input').press('Enter');
   const inbox = host.locator('#dm-hot [data-power="inbox"]');
   await expect(inbox).toBeVisible({ timeout: 30_000 });
   await expect(host.locator('#dm-card')).toBeHidden();

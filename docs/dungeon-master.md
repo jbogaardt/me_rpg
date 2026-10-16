@@ -22,8 +22,9 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
   as a caption (`hud/Dialog.ts`): plain text on a clear background that takes no input, never stops play, leaves by
   itself, and is also spoken by the browser's voice (`hud/voice.ts`, mutable).
 
-A friend can also **walk up to the DM and press the action key**: the DM greets them (a short conversation), then the
-same request list as the 💬 button opens, so a concern goes to the DM's inbox like any other ask (bot or person).
+A friend talks to the DM in **free-form words**: the 💬 button (or Enter) opens one line, Enter sends it. No buttons and no
+walking up to the DM. It waits in the DM's inbox like any ask, and the DM (a person or the bot) may answer it privately,
+or act on it (ease off, point the way, begin a quest). The DM also watches the party's health on their own.
 
 ## The DM is the story teller
 
@@ -47,7 +48,7 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   watches party health, task progress and quiet time, and suggests easing off, turning up the heat, a twist, which quest,
   pointing the way, a breather, a new land's sky, raising a fallen player, or the story's next road (with a vote).
   Urgent cards wait less than the rest; a dismissed card is a breather.
-- **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (canned asks plus their own words, from the 💬
+- **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (their own free-form words, from the 💬
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,
   `DmMsg.reply`).
 - **Hot buttons** (`hud/DmBar.ts`): Smite (a lightning storm; foes die with no XP, gold or credit, the party is never

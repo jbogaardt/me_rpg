@@ -72,11 +72,9 @@
       <button type="button" class="mp-btn panel thin wood" data-power="stop" title="Stop time">⏸ Stop time</button>
       <button type="button" class="mp-btn panel thin wood" data-power="reset" title="Foes back home at full health">↺ Reset zone</button>
     </div>
-    <!-- A player's canned requests to the Dungeon Master (src/hud/RequestPanel.ts). -->
-    <div id="request" class="panel thin paper" role="group" aria-label="Ask the Dungeon Master" hidden>
-      <p class="title">Ask the Dungeon Master</p>
-      <div class="opts"></div>
-      <form autocomplete="off"><input type="text" placeholder="Or tell the Dungeon Master something…" aria-label="Tell the Dungeon Master something" enterkeyhint="send" /><button type="submit" class="mp-btn panel thin wood">Send</button></form>
+    <!-- A free-form line to the Dungeon Master: no buttons, just words (src/hud/RequestPanel.ts). -->
+    <div id="request" class="panel thin paper" role="group" aria-label="Talk to the Dungeon Master" hidden>
+      <form autocomplete="off"><input type="text" placeholder="Talk to the Dungeon Master…" aria-label="Talk to the Dungeon Master" enterkeyhint="send" /></form>
     </div>
     <div id="dm-hold" class="panel thin wood" role="status" hidden></div>
     <!-- A choice offered to the Dungeon Master at the right moment (src/hud/DmCard.ts, scenes/overworld/DmPrompts.ts). -->
