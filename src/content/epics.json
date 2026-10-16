@@ -2,265 +2,265 @@
   {
     "id": "quiet_errands",
     "title": "Quiet Errands",
-    "tagline": "A few chores close to home that turn out to matter.",
+    "tagline": "A neighbour is missing, and the trail starts with three small jobs.",
     "difficulty": 1,
-    "opening": "It begins small, the way these things do. A few errands, and a feeling that they are not as idle as they seem.",
-    "ending": "The errands are done, and the land is a little safer for them. Small things, rightly done, add up.",
+    "opening": "Someone from the nearest village vanished three nights ago, and nobody will say why. The only clues are small ones. Follow them before the trail goes cold.",
+    "ending": "You found who was behind it and stopped them. The village sleeps safely tonight, and they know who to thank.",
     "steps": [
       {
         "kind": "gather",
         "hop": 0,
-        "tell": "First, the simple part: {area} holds what we need, and the rest of what follows depends on it. Bring it together."
+        "tell": "The missing neighbour was last seen gathering supplies in {area}. Collect what they left behind. It may show where they went."
       },
       {
         "kind": "visit",
         "hop": 0,
-        "tell": "Next, someone must see for themselves what has become of a place in {area}. Go, look, and carry back the truth."
+        "tell": "Their trail leads to a place in {area}. Go and look. Something happened there that the villagers are afraid to talk about."
       },
       {
         "kind": "hunt",
         "hop": 0,
-        "tell": "What you saw was no accident. Whatever is stirring in {area} must be put down before it spreads."
+        "tell": "Whatever took them is still in {area}, and it will take someone else next. Defeat it now."
       }
     ]
   },
   {
     "id": "long_road",
     "title": "The Long Road",
-    "tagline": "A journey out through the lands, with trouble at every stop.",
+    "tagline": "The only trade road is cut. Reopen it before winter.",
     "difficulty": 2,
-    "opening": "A road runs out of here through the lands, and every stop along it holds a task. Walk it to the end.",
-    "ending": "The road is walked, and those who walked it are not the ones who set out.",
+    "opening": "The trade road has been cut for weeks, and the villages at the far end are running out of food. Someone has to clear it, stop by stop, before winter closes in.",
+    "ending": "The road is open again. Carts are already rolling, and the far villages will eat this winter because of you.",
     "steps": [
       {
         "kind": "visit",
         "hop": 1,
-        "tell": "The road begins in {area}. Go there first and see what waits. Nobody has been that way in some time."
+        "tell": "The first stop is {area}. Nobody has come back from there in weeks. Find out why."
       },
       {
         "kind": "hunt",
         "hop": 1,
-        "tell": "The road is not safe. In {area}, creatures have claimed it. Clear them, and travellers can pass again."
+        "tell": "Raiders took over the road in {area}. Defeat them, or no cart will ever get through."
       },
       {
         "kind": "gather",
         "hop": 2,
-        "tell": "Beyond {from} lies {area}, where what we need grows. Take it, and the road pays for itself."
+        "tell": "The road crews need supplies to rebuild it. Gather them in {area}."
       },
       {
         "kind": "find",
         "hop": 2,
-        "tell": "At the road's end, in {area}, something old lies hidden. Find it, and the journey will have meant something."
+        "tell": "The last blocked stretch is in {area}, where the road crews buried their tools. Find them so the road can be finished."
       }
     ]
   },
   {
     "id": "great_hunt",
     "title": "The Great Hunt",
-    "tagline": "Drive the danger back, land by land, to its source.",
+    "tagline": "Something is driving the beasts mad. Trace it to its source.",
     "difficulty": 3,
-    "opening": "A threat has been spreading from land to land. Follow it back to where it began, and do not stop until it does.",
-    "ending": "The hunt is over. Whatever drove the beasts has gone quiet, and the lands breathe again.",
+    "opening": "Beasts that never used to attack villages are suddenly raiding them, as if something is driving them. If nobody finds the cause, the next raid reaches a town.",
+    "ending": "The source is destroyed and the beasts are calm again. The villages are safe, and the hunters will remember what you did.",
     "steps": [
       {
         "kind": "hunt",
         "hop": 0,
-        "tell": "It starts here, in {area}. Thin their numbers, then follow where they flee."
+        "tell": "The raids start here in {area}. Defeat the beasts and watch which way the survivors run."
       },
       {
         "kind": "hunt",
         "hop": 1,
-        "tell": "They have run to {area}, and they are angrier. Bring them down before they dig in."
+        "tell": "The survivors fled to {area} and are angrier there. Stop them before they reach the villages."
       },
       {
         "kind": "hunt",
         "hop": 2,
-        "tell": "Now {area}. Whatever is leading them is near. Deal with those around it first."
+        "tell": "Whatever is driving them is close, in {area}. Defeat the beasts guarding it."
       },
       {
         "kind": "visit",
         "hop": 3,
-        "tell": "Their trail ends in {area}. Reach the place where it stops, and be ready for what you find."
+        "tell": "Their trail ends in {area}. Go there and end this."
       }
     ]
   },
   {
     "id": "harvest_dark",
     "title": "A Harvest Against the Dark",
-    "tagline": "Gather what the lands hold, while something stalks the gatherers.",
+    "tagline": "The winter food is still in the fields, and something is hunting the gatherers.",
     "difficulty": 2,
-    "opening": "The lands still give, if you know where to look, and something has noticed. Gather fast, and gather together.",
-    "ending": "The harvest is in. It will keep the settlements through the dark, and that is all anyone asked.",
+    "opening": "The villages have no winter food unless the last crops are gathered this week, but something has started hunting the gatherers. Bring the harvest in, and protect it.",
+    "ending": "The harvest is in, and the villages will have enough to last until spring.",
     "steps": [
       {
         "kind": "gather",
         "hop": 0,
-        "tell": "The nearest of it grows here in {area}. Take what you can carry and keep your guard up."
+        "tell": "Start in {area}. The nearest crops are there. Gather as much as you can carry."
       },
       {
         "kind": "hunt",
         "hop": 1,
-        "tell": "Something follows the gatherers. In {area} it has gone from watching to hunting. End it."
+        "tell": "Something is stalking the gatherers in {area}. Defeat it before it kills someone."
       },
       {
         "kind": "gather",
         "hop": 1,
-        "tell": "More grows in {area}, past where the stalker lurked. Take it too."
+        "tell": "There is more food in {area}, past where the stalker hid. Gather it and finish the harvest."
       }
     ]
   },
   {
     "id": "lost_relics",
     "title": "The Lost Relics",
-    "tagline": "Three old things, scattered across the lands, each worth a story.",
+    "tagline": "Three old treasures could pay for a village to rebuild. Find them.",
     "difficulty": 3,
-    "opening": "Three things were hidden long ago in three different lands. Each is worth finding. Together, they are worth more.",
-    "ending": "All three are found. Whatever they were made for, they will not sit in the dark any longer.",
+    "opening": "A village burned down last spring and cannot afford to rebuild. Three old treasures are hidden in three different lands, and together they could pay for everything. Find them before treasure hunters do.",
+    "ending": "All three treasures are found, and the village will be rebuilt.",
     "steps": [
       {
         "kind": "find",
         "hop": 1,
-        "tell": "The first lies somewhere in {area}. The old stories say it glows when someone worthy is near."
+        "tell": "The first treasure is hidden in {area}. Search the area for it."
       },
       {
         "kind": "find",
         "hop": 2,
-        "tell": "The second is in {area}. It has had longer to be forgotten, so it will be harder to see."
+        "tell": "The second treasure is in {area}. It is buried deeper, so search carefully."
       },
       {
         "kind": "find",
         "hop": 3,
-        "tell": "The third lies in {area}, farthest of all. If you have come this far, you will know what to look for."
+        "tell": "The third and last treasure is in {area}. Find it before anyone else does."
       }
     ]
   },
   {
     "id": "far_shrine",
     "title": "Pilgrimage to the Far Shrine",
-    "tagline": "A long walk to a far place, with the lands watching.",
+    "tagline": "A dying elder wants to see the far shrine. Clear the way for the pilgrimage.",
     "difficulty": 3,
-    "opening": "There is a shrine at the far edge of the world, and a long, patient way to get there. Walk it with care.",
-    "ending": "The shrine is reached, and the long walk is over. Rest now. You have earned the quiet.",
+    "opening": "The village elder is dying and has one wish: to see the far shrine once more. The route is long and dangerous. Go ahead of the pilgrims and make it safe for them.",
+    "ending": "The shrine is open and the way is safe. The elder will make the trip, thanks to you.",
     "steps": [
       {
         "kind": "visit",
         "hop": 1,
-        "tell": "The pilgrimage starts in {area}. Go there and begin."
+        "tell": "The pilgrimage starts at {area}. Go there and make sure the way is passable."
       },
       {
         "kind": "visit",
         "hop": 2,
-        "tell": "Then {area}. The way is longer than it looks, and the land does not care that you are tired."
+        "tell": "Next is {area}. It is a longer walk than it looks, so scout it before the pilgrims arrive."
       },
       {
         "kind": "visit",
         "hop": 3,
-        "tell": "On to {area}. Others have turned back here. Do not."
+        "tell": "Then {area}. Other scouts turned back here. Do not."
       },
       {
         "kind": "hunt",
         "hop": 3,
-        "tell": "The shrine is guarded in {area}. Clear the way, and you will be let in."
+        "tell": "Enemies guard the shrine in {area}. Defeat them so the pilgrims can reach it."
       }
     ]
   },
   {
     "id": "frontier_siege",
     "title": "The Siege of the Frontier",
-    "tagline": "Hold the line, then carry the fight out into the wild.",
+    "tagline": "Raiders are besieging the frontier. Break the siege before supplies run out.",
     "difficulty": 4,
-    "opening": "The frontier is under siege and the settlements are calling for help. Break the siege, then take the fight to those behind it.",
-    "ending": "The siege is broken, and those who laid it are scattered. The frontier will hold for now.",
+    "opening": "Raiders have besieged the frontier settlement, and its food will last only days. Break the siege, then find out who is leading the raiders.",
+    "ending": "The siege is broken and the raiders scattered. The settlement is free, and they will not forget who saved them.",
     "steps": [
       {
         "kind": "hunt",
         "hop": 1,
-        "tell": "The first wave has reached {area}. Break it, or there will be nothing left to defend."
+        "tell": "The first raiding party is in {area}. Defeat it before it reaches the settlement."
       },
       {
         "kind": "gather",
         "hop": 2,
-        "tell": "We need supplies to hold out. They grow in {area}. Bring them back, quickly."
+        "tell": "The settlement is running out of food. Gather supplies in {area} and bring them back."
       },
       {
         "kind": "hunt",
         "hop": 2,
-        "tell": "A second wave is gathering in {area}. Strike it while it is still forming."
+        "tell": "A second raiding party is forming in {area}. Strike before it is ready."
       },
       {
         "kind": "hunt",
         "hop": 3,
-        "tell": "The leaders are in {area}. Bring them down and the rest will break."
+        "tell": "The raid leaders are in {area}. Defeat them and the raiders will break."
       },
       {
         "kind": "find",
         "hop": 3,
-        "tell": "In {area} they dropped what they came for. Find it, so they cannot come back for it."
+        "tell": "The leaders dropped something they came here for. Search {area} for it so they cannot come back for it."
       }
     ]
   },
   {
     "id": "beyond_edge",
     "title": "Beyond the Edge of the Map",
-    "tagline": "Into the farthest lands, where nobody has gone and returned.",
+    "tagline": "Map the farthest lands before the cartographers give up on them.",
     "difficulty": 4,
-    "opening": "Past the lands everyone knows are the lands almost nobody does. Go as far as the paths go, and then a little farther.",
-    "ending": "You have gone farther than anyone, and come back. That is worth a story, and you will tell it well.",
+    "opening": "The cartographers say the farthest lands are empty, and will stop paying for expeditions unless someone brings proof. Travel to the edge of the map and bring back evidence.",
+    "ending": "You reached the farthest land and came back with proof. The expedition will be funded again.",
     "steps": [
       {
         "kind": "visit",
         "hop": 2,
-        "tell": "Start in {area}, where the maps begin to thin. Reach the place at its heart."
+        "tell": "Go to {area}, where the known map begins to thin out."
       },
       {
         "kind": "gather",
         "hop": 3,
-        "tell": "In {area}, things grow that grow nowhere else. Gather them: the proof will be needed."
+        "tell": "Gather plants that only grow in {area}. They are the proof the cartographers want."
       },
       {
         "kind": "hunt",
         "hop": 4,
-        "tell": "The farthest land, {area}, is no longer empty. Whatever lives there does not welcome visitors."
+        "tell": "Something lives in {area} and does not welcome visitors. Defeat it."
       },
       {
         "kind": "find",
         "hop": 4,
-        "tell": "At the very edge of {area} there is something left by whoever came here first. Find it."
+        "tell": "Search the edge of {area} for a marker left by the first explorers. It proves they were here."
       }
     ]
   },
   {
     "id": "hollow_crown",
     "title": "The Hollow Crown",
-    "tagline": "A king's lost regalia, a trail of grave-robbers, a long reckoning.",
+    "tagline": "Thieves stole the royal crown. Follow them and bring it back.",
     "difficulty": 5,
-    "opening": "A crown was stolen, and with it, the right to rule. Follow the trail wherever it goes. Nobody who followed it has returned.",
-    "ending": "The crown is found, and the trail is closed. What happens to it next is a story for another day.",
+    "opening": "The royal crown was stolen from the king last week. Without it he cannot rule, and rival lords are already moving. Follow the thieves across the lands and recover it.",
+    "ending": "The crown is recovered and the thieves are finished. The king keeps his throne, and he owes you.",
     "steps": [
       {
         "kind": "find",
         "hop": 1,
-        "tell": "The first piece of the regalia is hidden in {area}. The thieves did not think anyone would look there."
+        "tell": "The thieves hid a piece of the regalia in {area}. They thought nobody would look there. Search for it."
       },
       {
         "kind": "hunt",
         "hop": 2,
-        "tell": "In {area}, the thieves have made a camp and set guards. Break it."
+        "tell": "The thieves have a camp in {area}. Defeat them and take back what they stole."
       },
       {
         "kind": "visit",
         "hop": 3,
-        "tell": "Their trail leads to {area}. Reach the place where it ends, and see who waits."
+        "tell": "Their trail leads to {area}. Go there and see who they work for."
       },
       {
         "kind": "hunt",
         "hop": 3,
-        "tell": "There are too many in {area} to simply walk past. Fight through."
+        "tell": "There are too many guards in {area} to sneak past. Defeat them."
       },
       {
         "kind": "find",
         "hop": 4,
-        "tell": "The crown itself is somewhere in {area}. After all this, you will know it when you see it."
+        "tell": "The crown itself is hidden in {area}. Search for it, and bring it home."
       }
     ]
   },

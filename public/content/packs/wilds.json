@@ -174,9 +174,9 @@
       "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
       "foes": { "common": {}, "hunter": {}, "ranged": {} },
       "roam": [
-        { "role": "common", "count": 5, "seed": 301, "apart": 8, "avoid": [{ "x": 25, "y": 20, "radius": 9 }] },
-        { "role": "hunter", "count": 3, "seed": 302, "apart": 8, "avoid": [{ "x": 25, "y": 20, "radius": 9 }] },
-        { "role": "ranged", "count": 2, "seed": 303, "apart": 8, "avoid": [{ "x": 25, "y": 20, "radius": 9 }] }
+        { "role": "common", "count": 2, "seed": 301, "apart": 14, "avoid": [{ "x": 25, "y": 20, "radius": 16 }] },
+        { "role": "hunter", "count": 3, "seed": 302, "apart": 14, "avoid": [{ "x": 25, "y": 20, "radius": 16 }] },
+        { "role": "ranged", "count": 1, "seed": 303, "apart": 14, "avoid": [{ "x": 25, "y": 20, "radius": 16 }] }
       ],
       "encounters": [
         { "entity": "wanderer", "x": 28, "y": 25 },

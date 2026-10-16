@@ -206,6 +206,7 @@ class Dm {
     const told = await tellEpic(this.writer, page, s.area, this.told);
     if (!told) return false;
     this.told.push(told.id);
+    this.narrator.setSaga?.(`${told.title}. ${told.opening}`);
     log(`telling “${told.title}”`);
     return true;
   }

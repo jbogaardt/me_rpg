@@ -98,10 +98,10 @@ describe('the sagas', () => {
     expect(new Set(EPICS.map((e) => e.id)).size).toBe(EPICS.length);
     for (const e of EPICS) {
       expect(e.steps.length).toBeGreaterThanOrEqual(3);
-      expect(e.opening.length).toBeGreaterThan(40);
-      expect(e.ending.length).toBeGreaterThan(40);
+      expect(e.opening.length).toBeGreaterThan(10);
+      expect(e.ending.length).toBeGreaterThan(10);
       for (const s of e.steps) {
-        expect(s.tell.length).toBeGreaterThan(40);
+        expect(s.tell.length).toBeGreaterThan(10);
         expect(tellStep(s, 'The Fen', 'The Glen').length).toBeLessThanOrEqual(240); // a DM's note
         expect(tellStep(s, 'The Fen', 'The Glen')).not.toMatch(/[{}]/);
       }

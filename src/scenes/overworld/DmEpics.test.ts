@@ -108,7 +108,7 @@ describe('epic quests, on the host', () => {
     expect(paid).toHaveLength(4); // each of the three steps, then the saga itself
     expect(paid.every(([p]) => p === party[0])).toBe(true);
     expect(paid[3]![1]).toBeGreaterThan(paid[0]![1]); // the saga pays more than a step
-    expect(said.at(-1)).toContain('errands are done');
+    expect(said.at(-1)).toContain('village sleeps safely');
   });
 
   it('loads a land nobody has been to, and goes there when the step is set in it', () => {

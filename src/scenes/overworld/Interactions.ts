@@ -79,7 +79,9 @@ export class Interactions {
     const site = arena.sites.find((s) => s.visible && near(s, SITE_REACH));
     const pet = arena.pets.find((p) => near(p));
     const folk = arena.zone.folk.find((f) => near(f.body));
-    const dm = arena.local.dm ? undefined : [...arena.remotes.values()].find((p) => p.dm && near(p.body));
+    // Never in a fight (the action key swings then), and the DM stays close, so only when no foe is about.
+    const fighting = arena.mobs.some((m) => m.alive && near(m.body, CELL * 10));
+    const dm = arena.local.dm || fighting ? undefined : [...arena.remotes.values()].find((p) => p.dm && near(p.body));
     if (dialog.active) {
       dialog.advance();
     } else if (arena.local.dm && !lectern && !sign) {

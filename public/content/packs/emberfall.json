@@ -125,9 +125,9 @@
       "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
       "foes": { "common": {}, "hunter": {}, "ranged": {} },
       "roam": [
-        { "role": "common", "count": 5, "seed": 201, "apart": 10, "avoid": [{ "x": 35, "y": 40, "radius": 12 }] },
-        { "role": "hunter", "count": 3, "seed": 203, "apart": 10, "avoid": [{ "x": 35, "y": 40, "radius": 12 }] },
-        { "role": "ranged", "count": 1, "seed": 205, "apart": 10, "avoid": [{ "x": 35, "y": 40, "radius": 12 }] }
+        { "role": "common", "count": 2, "seed": 201, "apart": 14, "avoid": [{ "x": 35, "y": 40, "radius": 18 }] },
+        { "role": "hunter", "count": 3, "seed": 203, "apart": 14, "avoid": [{ "x": 35, "y": 40, "radius": 18 }] },
+        { "role": "ranged", "count": 1, "seed": 205, "apart": 14, "avoid": [{ "x": 35, "y": 40, "radius": 18 }] }
       ],
       "encounters": [
         { "entity": "castaway", "x": 38, "y": 42 },

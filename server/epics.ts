@@ -48,10 +48,10 @@ export async function tellEpic(
   page: { teller: Teller; looks: { id: string; name: string }[]; stock: StockTale[] },
   area: string,
   told: string[],
-): Promise<{ id: string; title: string } | null> {
+): Promise<{ id: string; title: string; opening: string } | null> {
   const want: Parameters<EpicWriter['write']>[0] = { area, looks: page.looks, told, stock: page.stock };
   let refused = '';
-  const tryTale = async (raw: unknown): Promise<{ id: string; title: string } | null> => {
+  const tryTale = async (raw: unknown): Promise<{ id: string; title: string; opening: string } | null> => {
     if (typeof raw !== 'object' || raw === null) return null;
     const result = await page.teller.epic(raw);
     if (!result.ok) {
@@ -59,8 +59,8 @@ export async function tellEpic(
       refused = result.note;
       return null;
     }
-    const t = raw as { id?: unknown; title?: unknown };
-    return { id: String(t.id), title: String(t.title) };
+    const t = raw as { id?: unknown; title?: unknown; opening?: unknown };
+    return { id: String(t.id), title: String(t.title), opening: typeof t.opening === 'string' ? t.opening : '' };
   };
   let raw: unknown = null;
   // The first saga is the content's own, told at once: a model takes many seconds to write one, and the table is waiting.

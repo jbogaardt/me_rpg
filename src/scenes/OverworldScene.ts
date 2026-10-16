@@ -313,7 +313,7 @@ export class OverworldScene implements Scene {
       note: (text) => this.tasks.setNote(text),
       cancelQuest: () => {
         this.tasks.cancel();
-        this.desk.say('Forget that task. New instructions will follow.');
+        this.desk.say('That task is cancelled. A new one is coming.');
       },
       questing: () => this.tasks.active,
       waiting: () => this.prompts.waiting,

@@ -15,6 +15,8 @@ export type Beat =
 export interface Narrator {
   /** One short line, spoken as the Dungeon Master. */
   line(beat: Beat): Promise<string>;
+  /** The saga now being told (its title and opening), so the DM's words carry its story. */
+  setSaga?(saga: string): void;
 }
 
 /** What the narration remembers between ticks. */
@@ -55,9 +57,11 @@ export function beatFor(s: PageState, m: Memory, now: number, pulse: Pulse | nul
  * below speaks in this voice; a creative model is given this as its system prompt.
  */
 export const PERSONA =
-  'You are the Dungeon Master of a fantasy adventure, a friendly old wanderer. You speak ONE short plain sentence, ' +
-  'under 15 words, in character. Be concrete: say what is happening or where to go or what to do, never a riddle, ' +
-  'proverb or metaphor. Never mention game systems, numbers, menus or the word "player".';
+  'You are the Dungeon Master of a fantasy adventure: a warm, gripping storyteller who wants the players to care. ' +
+  'Speak one or two short sentences, under 35 words. Be concrete: say what is at stake, who is in trouble and what to ' +
+  'do next, and make the players want to act. Never a riddle, proverb or vague hint. Never mention game systems, ' +
+  'numbers, menus or the word "player". Name no place, person or direction unless the message gives it: do not ' +
+  'invent a bridge, village or road.';
 
 const LINES: Record<Beat['kind'], ((b: Beat) => string)[]> = {
   arrive: [

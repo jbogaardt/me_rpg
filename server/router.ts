@@ -39,6 +39,9 @@ export interface Option {
  * id's part before a `:`). A bare label ("Stay the course") says little to a model; this is what lets it decide.
  */
 export const HINTS: Record<string, string> = {
+  'words/ease': 'the player says the fight is too hard, there are too many enemies, or they are being killed',
+  'words/heat': 'the player says it is too easy or boring and wants more danger',
+  'words/hint': 'the player says they are lost, do not know where to go or what to do next',
   'easy/heat': 'the party is healthy and winning easily, so the world should push back harder',
   'easy/stay': 'the party is having a good time or the story needs this calm; leave things as they are',
   'struggle/ease': 'the party is hurt or losing a fight, so the world should give them room to recover',
@@ -156,8 +159,15 @@ export function optionsFor(card: Card, table: Table): Option[] {
   const roads =
     card.kind === 'message' ? (table.story?.options ?? []).map((r) => ({ id: ROAD + r.cue, label: r.label })) : [];
   // A director's card already has its own way to do nothing ("stay the course"), so a third "nothing" would only split the router's vote.
+  // A player's own words may ask for what the DM's bar can do, so those are offered too.
+  const steer: Option[] = [
+    { id: 'ease', label: 'Ease off: fewer or weaker enemies', hint: HINTS['words/ease']! },
+    { id: 'heat', label: 'Turn up the danger', hint: HINTS['words/heat']! },
+    { id: 'hint', label: 'Point the way with an arrow', hint: HINTS['words/hint']! },
+  ];
+  const have = new Set(own.map((o) => o.id));
   return card.kind === 'message' || wordsOf(card)
-    ? [...own, ...roads, { id: NONE, label: 'Nothing: leave it be' }]
+    ? [...own, ...steer.filter((o) => !have.has(o.id)), ...roads, { id: NONE, label: 'Nothing: leave it be' }]
     : own;
 }
 
@@ -216,8 +226,14 @@ function moveOf(source: Move['source'], id: string | null, reply: string | null,
 }
 
 /** A short acknowledgement for a friend whose ask the router settled. */
+const ACKS: Record<string, string> = {
+  ease: 'I will ease off the fighting.',
+  heat: 'More enemies are coming.',
+  hint: 'Follow the arrow on your screen.',
+  '@quest': 'I will give you a quest.',
+};
 function ack(option: Option | undefined): string {
-  return option ? `So be it: ${option.label.replace(/^Reply: /, '').toLowerCase()}.` : 'Heard.';
+  return (option && ACKS[option.id]) || (option ? `${option.label.replace(/^Reply: /, '')}.` : 'Heard.');
 }
 
 /** Decide one card. Never throws: a failing service falls through to the next tier. */

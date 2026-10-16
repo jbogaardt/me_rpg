@@ -100,7 +100,7 @@ describe('decideCard', () => {
 describe('cardQuestion', () => {
   it('offers a message card its options, the roads and none, never the canned replies', () => {
     const ids = cardQuestion(message('hi'), table()).options.map((o) => o.id);
-    expect(ids).toEqual(['@quest', ...roads.map((r) => `road:${r.cue}`), NONE]);
+    expect(ids).toEqual(['@quest', 'ease', 'heat', 'hint', ...roads.map((r) => `road:${r.cue}`), NONE]);
   });
 
   it('offers a director card no roads', () => {
@@ -159,5 +159,12 @@ describe('readImprovised', () => {
   it('refuses what is not a usable answer', () => {
     for (const bad of ['not json', '{}', '{"reply":""}', null, 42, { reply: 7 }, { pick: 'nowhere' }])
       expect(readImprovised(bad, options)).toBeNull();
+  });
+});
+
+describe("a player's words may ask for what the bar can do", () => {
+  it('turns "too many" into easing off, in plain words', () => {
+    const ids = cardQuestion(message('too many mobs'), table()).options.map((o) => o.id);
+    expect(ids).toEqual(expect.arrayContaining(['ease', 'heat', 'hint']));
   });
 });
