@@ -74,7 +74,13 @@ export interface Road {
 /** How things stand (the page's `DmBotState`, as far as the decisions need it). */
 export interface Table {
   area: string;
-  friends: { slot: number; area: string; hp: number; near: boolean }[];
+  friends: {
+    slot: number;
+    area: string;
+    hp: number;
+    near: boolean;
+    toward?: { dx: number; dy: number; cells: number };
+  }[];
   questing: boolean;
   story: { title: string; placed: string[]; total: number; options: Road[]; complete: boolean } | null;
 }

@@ -44,6 +44,7 @@ interface PageBot {
   epic(raw: unknown): { ok: boolean; note: string };
   spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
   goTo(slot: number): void;
+  walk(dx: number, dy: number, seconds: number): void;
 }
 // `page.evaluate` sends only a function's source, so each call below names the handle itself.
 type InPage = { dmBot: PageBot };
@@ -141,6 +142,9 @@ class Dm {
         await this.tell(s); // an epic of people and places; when none can be told here, the party is left to explore
         return;
       }
+      case 'stroll':
+        await this.call('walk', step.dx, step.dy, 2); // held past the next tick, so the walk is unbroken
+        return;
       case 'idle':
         return;
     }

@@ -25,6 +25,7 @@ const COMBO_PRESSES: readonly (readonly [ComboKey, 'up' | 'down' | 'left' | 'rig
 export class LocalInput {
   private combos = new ComboReader();
   private comboSet = ''; // the combos the reader is following (a different set starts it afresh)
+  private stroll: { dx: number; dy: number; until: number } | null = null; // a bot DM's walk, held for a moment
 
   constructor(
     private arena: Arena,
@@ -32,6 +33,11 @@ export class LocalInput {
     /** Is the on-screen pad in use? (Combo taps get a longer window on a thumb.) */
     private touching: () => boolean,
   ) {}
+
+  /** The DM bot walks this way for `seconds` (a bot that stops calling stops walking by itself). */
+  walk(dx: number, dy: number, seconds: number) {
+    this.stroll = { dx: Math.sign(dx), dy: Math.sign(dy), until: this.arena.clock + seconds };
+  }
 
   /** The combo taps typed so far, for the HUD to light. */
   get typed() {
@@ -41,9 +47,12 @@ export class LocalInput {
   /** The local player's controls this frame. While `reading` (a menu, a dialog) nothing typed counts toward a combo. */
   command(dt: number, reading: boolean): Command {
     const combo = this.readCombo(dt, reading);
+    const walking = this.stroll && this.arena.clock < this.stroll.until ? this.stroll : null;
+    const dx = (actionDown('right') ? 1 : 0) - (actionDown('left') ? 1 : 0);
+    const dy = (actionDown('down') ? 1 : 0) - (actionDown('up') ? 1 : 0);
     return {
-      dx: (actionDown('right') ? 1 : 0) - (actionDown('left') ? 1 : 0),
-      dy: (actionDown('down') ? 1 : 0) - (actionDown('up') ? 1 : 0),
+      dx: dx || walking?.dx || 0,
+      dy: dy || walking?.dy || 0,
       act: actionPressed('attack'),
       ...(combo === undefined ? {} : { combo }),
       ...aimOf(pointerAim(this.zones.heroOnScreen())),

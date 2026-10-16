@@ -33,6 +33,7 @@ export type Step =
   | { kind: 'card' }
   | { kind: 'inbox' }
   | { kind: 'quest' }
+  | { kind: 'stroll'; dx: number; dy: number }
   | { kind: 'idle' };
 
 /** Between tries at opening a game (the relay may be down). */
@@ -60,7 +61,39 @@ export function nextStep(s: PageState, c: Clock, startAt = 0): Step {
   if (s.card) return { kind: 'card' };
   if (s.waiting > 0) return { kind: 'inbox' };
   if (!s.lobbyOpen && !s.questing && !s.epic && c.now - c.lastQuest >= QUEST_GAP_MS) return { kind: 'quest' };
-  return idle;
+  return s.lobbyOpen ? idle : stroll(s, c.now);
+}
+
+/** Past this many cells from the nearest friend the DM walks to them; nearer, he ambles about them. */
+export const STROLL_FAR = 7;
+/** How long (ms) the DM keeps one heading while ambling, and every third heading he stops and looks about. */
+export const STROLL_MS = 3000;
+const HEADINGS = [
+  [1, 0],
+  [1, 1],
+  [0, 1],
+  [-1, 1],
+  [-1, 0],
+  [-1, -1],
+  [0, -1],
+  [1, -1],
+] as const;
+
+/** Which way (-1, 0 or 1) to step toward a gap of `cells`, ignoring a gap under a cell. */
+const lean = (cells: number): number => (Math.abs(cells) < 1 ? 0 : Math.sign(cells));
+
+/**
+ * The Dungeon Master is a person in the world, not a statue: he drifts to the party when they are far (in the same
+ * zone; a different one is the Go button's job) and otherwise wanders slowly around them, pausing now and then.
+ */
+function stroll(s: PageState, now: number): Step {
+  const near = s.friends.flatMap((f) => (f.toward ? [f.toward] : [])).sort((a, b) => a.cells - b.cells)[0];
+  if (!near) return idle;
+  if (near.cells > STROLL_FAR) return { kind: 'stroll', dx: lean(near.dx), dy: lean(near.dy) };
+  const beat = Math.floor(now / STROLL_MS);
+  if (beat % 3 === 0) return idle; // a pause
+  const heading = HEADINGS[(beat * 5) % HEADINGS.length];
+  return heading ? { kind: 'stroll', dx: heading[0], dy: heading[1] } : idle;
 }
 
 const idle: Step = { kind: 'idle' };

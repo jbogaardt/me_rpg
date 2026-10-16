@@ -33,6 +33,8 @@ export interface DmBotFriend {
   area: string;
   /** Health from 0 to 1. */
   hp: number;
+  /** Which way (a vector) and how far, both in cells, they are from the DM, when in the same zone: the DM strolls near them. */
+  toward?: { dx: number; dy: number; cells: number };
   /** In the same zone as the DM and within `NEAR_CELLS` of them (the bot goes to the party when nobody is). */
   near: boolean;
 }
@@ -97,6 +99,8 @@ export interface DmBotApi {
   epic(raw: unknown): { ok: boolean; note: string };
   /** Go to a friend (the Party tab's Go). */
   goTo: (slot: number) => void;
+  /** Walk the DM this way (-1, 0 or 1 each) for a few seconds, then stop (through walls only, like their own keys). */
+  walk: (dx: number, dy: number, seconds: number) => void;
 }
 
 export interface DmBotParts {
@@ -110,6 +114,7 @@ export interface DmBotParts {
   epics: DmEpics;
   stock: () => EpicTemplate[];
   goTo: (slot: number) => void;
+  walk: (dx: number, dy: number, seconds: number) => void;
 }
 
 /** Does this address ask for the bot handle? */
@@ -128,18 +133,21 @@ export function createDmBot({
   epics,
   stock,
   goTo,
+  walk,
 }: DmBotParts): DmBotApi {
   const cardView = (): DmBotCard | null => card.view;
   const friends = (): DmBotFriend[] => {
     const here = arena.zoneOf(arena.local);
     return [...arena.remotes.entries()].map(([slot, p]) => {
       const z = arena.zoneOf(p);
+      const gx = p.body.x - arena.local.body.x;
+      const gy = p.body.y - arena.local.body.y;
       return {
         slot,
         area: zoneName(z.name),
         hp: p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp),
-        near:
-          z === here && Math.hypot(p.body.x - arena.local.body.x, p.body.y - arena.local.body.y) <= NEAR_CELLS * CELL,
+        near: z === here && Math.hypot(gx, gy) <= NEAR_CELLS * CELL,
+        ...(z === here ? { toward: { dx: gx / CELL, dy: gy / CELL, cells: Math.hypot(gx, gy) / CELL } } : {}),
       };
     });
   };
@@ -203,5 +211,6 @@ export function createDmBot({
       return typeof epic === 'string' ? { ok: false, note: epic } : epics.beginEpic(epic);
     },
     goTo,
+    walk,
   };
 }

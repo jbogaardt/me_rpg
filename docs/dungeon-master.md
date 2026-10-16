@@ -54,7 +54,7 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 ## A bot as the DM
 
 The DM can be a program (`server/`, the DM bot): `?dmbot` puts a handle on the page (`DmBot.ts`) through which an outside
-script hosts, opens the inbox, answers cards, takes story roads, replies, speaks, follows the party, starts the game and narrates unasked, in a wise old wanderer's voice (new areas, a quest done, a hurt friend, a quiet table), and
+script hosts, opens the inbox, answers cards, takes story roads, replies, speaks, follows the party and strolls about them (`walk`: a held direction for a moment, so a stopped bot stops walking; a far party is walked to, a near one ambled around, the DM is never a statue), starts the game and narrates unasked, in a wise old wanderer's voice (new areas, a quest done, a hurt friend, a quiet table), and
 brings in a stranger on reaching a new area (`spawn`: an `npc` then a `cast` entry on open ground 3-8 cells from the party,
 checked by the world like any entry, so a bad invention is refused).
 Every call is a step the bar already offers, so nothing new is on the wire; without `?dmbot` the handle does not exist.

@@ -3,6 +3,7 @@ import {
   FOLLOW_MS,
   HOST_RETRY_MS,
   PRESSURE_HOLD_MS,
+  STROLL_MS,
   QUEST_GAP_MS,
   heldCard,
   nextStep,
@@ -69,6 +70,18 @@ describe('nextStep', () => {
     expect(heldCard(easy, { id: 'heat', at: 0 }, 1000)).toBe(false); // the same ask again is answered as before
     expect(heldCard(struggle, { id: 'heat', at: 0 }, PRESSURE_HOLD_MS)).toBe(false);
     expect(heldCard(struggle, null, 0)).toBe(false);
+  });
+
+  it('walks to a far party, ambles about a near one, and stands still with nobody in his zone', () => {
+    const at = (cells: number, dx = cells, dy = 0) => ({ ...friend(1), toward: { dx, dy, cells } });
+    const far = state({ friends: [at(12, 12, -8)] });
+    expect(nextStep(far, clock())).toEqual({ kind: 'stroll', dx: 1, dy: -1 });
+    const near = state({ friends: [at(4)] });
+    const moves = [0, 1, 2, 3, 4, 5].map((beat) => nextStep(near, { ...clock(), now: beat * STROLL_MS + 1 }).kind);
+    expect(moves).toContain('stroll');
+    expect(moves).toContain('idle'); // he stops and looks about now and then
+    expect(nextStep(state({ friends: [friend(1, false)] }), { ...clock(), lastFollow: 100_000 }).kind).toBe('idle');
+    expect(nextStep(state({ code: 'a-b', lobbyOpen: true, friends: [at(12)] }), clock()).kind).toBe('idle');
   });
 
   it('answers the card up before opening the inbox', () => {

@@ -679,6 +679,7 @@ export class OverworldScene implements Scene {
       epics: this.epics,
       stock: this.epicsOnOffer,
       goTo: (slot) => this.partyUi.goTo(slot),
+      walk: (dx, dy, seconds) => this.input.walk(dx, dy, seconds),
     });
   }
 
