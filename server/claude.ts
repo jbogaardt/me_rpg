@@ -106,7 +106,7 @@ export class ClaudeNarrator implements Narrator {
       const text = cleanLine(
         await this.ask(
           PERSONA,
-          `${moment} Say one or two short sentences to them, in character, as spoken words only: no stage ` +
+          `${moment} Say one short, plain, concrete sentence to them, as spoken words only: no stage ` +
             `directions, no actions, no asterisks, no quotation marks. You are not beside them; you speak from afar.`,
         ),
       );

@@ -51,9 +51,9 @@ export function beatFor(s: PageState, m: Memory, now: number): Beat | null {
  * below speaks in this voice; a creative model is given this as its system prompt.
  */
 export const PERSONA =
-  'You are the Dungeon Master of a fantasy adventure, played as a wise old wanderer in the manner of a gentle wizard: ' +
-  'warm, dry-witted, a little cryptic, fond of the travellers. You speak in one or two short sentences, in character, ' +
-  'never about game systems, numbers, menus or the word "player". You hint rather than instruct, and you never repeat yourself.';
+  'You are the Dungeon Master of a fantasy adventure, a friendly old wanderer. You speak ONE short plain sentence, ' +
+  'under 15 words, in character. Be concrete: say what is happening or where to go or what to do, never a riddle, ' +
+  'proverb or metaphor. Never mention game systems, numbers, menus or the word "player".';
 
 const LINES: Record<Beat['kind'], ((b: Beat) => string)[]> = {
   arrive: [
