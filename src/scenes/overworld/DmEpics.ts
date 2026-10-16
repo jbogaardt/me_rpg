@@ -252,7 +252,8 @@ export class DmEpics {
   private choose(offers: QuestOffer[], kind: StepKind, n: number): QuestOffer | undefined {
     for (const k of kind === 'meet' ? FALLBACK : [kind, ...FALLBACK]) {
       const of = offers.filter((o) => o.kind === k);
-      if (of.length) return of[(n + this.turn) % of.length];
+      // a hunt takes the foe that best matches the party (offers come best first); the rest vary from step to step
+      if (of.length) return k === 'hunt' ? of[0] : of[(n + this.turn) % of.length];
     }
     return undefined;
   }
@@ -269,7 +270,7 @@ export class DmEpics {
    */
   private close(run: NonNullable<DmEpics['run']>) {
     const { epic } = run.plan;
-    const { xp, gold } = epicReward(run.plan);
+    const { xp, gold } = epicReward(run.plan, this.tasks.level);
     const last = Object.values(epic.people ?? {}).at(-1);
     const thanks = last?.finished?.[0] ? `${last.name}: “${last.finished[0]}”` : '';
     const lines = [thanks, `${epic.ending} You each earn ${xp} XP and ${gold} gold.`].filter(Boolean);

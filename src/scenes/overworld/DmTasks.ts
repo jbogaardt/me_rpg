@@ -5,7 +5,6 @@ import { RELIC_KIND, relicsFor, type Land } from '../../systems/dmQuests';
 import {
   TASK_LINGER,
   TaskBook,
-  taskReward,
   viewOf,
   type Presence,
   type QuestOffer,
@@ -100,11 +99,17 @@ export class DmTasks {
 
   private presence = (p: Player): Presence => ({ zone: p.zone, x: p.body.x, y: p.body.y });
 
+  /** The party's average level: what the DM's quests are sized and paid by. */
+  get level(): number {
+    const party = this.arena.partyAll();
+    return party.length ? party.reduce((a, p) => a + p.hero.stats.level, 0) / party.length : 1;
+  }
+
   /** What a loaded land holds, as the DM's quests (and a saga's steps) need to know it. */
   landOf(zone: ZoneState): Land {
     const { arena } = this;
     const party = arena.partyAll();
-    const level = party.length ? party.reduce((a, p) => a + p.hero.stats.level, 0) / party.length : 1;
+    const level = this.level;
     const here = party.filter((p) => p.zone === zone.name);
     const centre = here.length
       ? {
@@ -256,7 +261,7 @@ export class DmTasks {
   private finish(result: TaskState, party: Player[]) {
     const t = this.book.task!;
     if (result === 'done') {
-      const { xp, gold } = taskReward(t.kind, t.goal);
+      const { xp, gold } = t.quest.reward; // scaled to the party's level when it was given
       for (const p of party) this.sim.reward(p, xp, gold);
       const finder = this.finder;
       const item = t.kind === 'find' ? ITEMS[t.what] : undefined;

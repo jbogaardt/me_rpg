@@ -6,6 +6,7 @@
 
 import type { TaskKind } from './dmTasks';
 import type { Objective } from './quests';
+import { levelScale } from './dmQuests';
 
 /** A task named outright (see `EpicStep.objective`). */
 export type BoundObjective = Extract<Objective, { t: 'kill' | 'gather' | 'visit' }> & { zone: string };
@@ -155,10 +156,11 @@ export function gaugeText(g: Gauge): string {
   return `${stars(g.difficulty)} · ${g.length} · ${g.steps} steps · ${g.lands} ${g.lands === 1 ? 'land' : 'lands'} · ~${g.minutes} min`;
 }
 
-/** What a finished saga pays each player on top of its steps, by its size and difficulty. */
-export function epicReward(plan: EpicPlan): { xp: number; gold: number } {
+/** What a finished saga pays each player on top of its steps, by its size, its difficulty and the party's level. */
+export function epicReward(plan: EpicPlan, level = 1): { xp: number; gold: number } {
   const g = gauge(plan);
-  return { xp: 40 * g.steps * g.difficulty, gold: 15 * g.steps * g.difficulty };
+  const m = levelScale(level);
+  return { xp: Math.round(40 * g.steps * g.difficulty * m), gold: Math.round(15 * g.steps * g.difficulty * m) };
 }
 
 /** A step's line for the party, with the lands named in. */

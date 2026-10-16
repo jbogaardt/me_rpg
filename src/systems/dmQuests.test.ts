@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allOffers, offerFor, relicsFor, type Land } from './dmQuests';
+import { allOffers, huntGoal, levelScale, offerFor, offerReward, relicsFor, type Land } from './dmQuests';
 
 const land = (l: Partial<Land> = {}): Land => ({
   zone: 'fen',
@@ -22,14 +22,29 @@ describe('quests written from a land', () => {
   it('asks for what the land really holds, one hunt per kind of foe, sized by how tough it is', () => {
     const offers = allOffers(land());
     expect(offers.map((o) => o.title)).toEqual([
-      'Hunt 5 Goblins',
+      'Hunt 3 Goblins',
       'Hunt 3 Trolls',
       'Gather 3 Echostones',
       'Reach the Old Mill',
       'Find the Wayfarer’s Charm',
     ]);
-    expect(offers.find((o) => o.kind === 'hunt')).toMatchObject({ what: 'goblin', goal: 5, zone: 'fen', x: 10, y: 20 });
+    expect(offers.find((o) => o.kind === 'hunt')).toMatchObject({ what: 'goblin', goal: 3, zone: 'fen', x: 10, y: 20 });
     expect(offers.find((o) => o.kind === 'find')).toMatchObject({ what: 'charm', goal: 1, x: 900, y: 910 });
+  });
+
+  it('grows with the party: more of a foe they have outgrown, the best match first, and bigger pay', () => {
+    const at = (level: number) => allOffers(land({ level })).filter((o) => o.kind === 'hunt');
+    expect(at(1).map((o) => o.what)).toEqual(['goblin', 'troll']);
+    expect(at(8)[0]).toMatchObject({ what: 'troll', level: 8 }); // the troll is the match now
+    expect(at(8).find((o) => o.what === 'goblin')!.goal).toBeGreaterThan(at(1)[0]!.goal);
+    // a foe they have long outgrown is left out where there is a better one
+    const tiny = { key: 'rat', name: 'Rat', xp: 2, x: 0, y: 0 };
+    expect(allOffers(land({ level: 8, mobs: [tiny, ...land().mobs] })).some((o) => o.what === 'rat')).toBe(false);
+    expect(allOffers(land({ level: 8, mobs: [tiny] })).some((o) => o.what === 'rat')).toBe(true);
+    expect(levelScale(1)).toBe(1);
+    expect(offerReward('hunt', 5, 8).xp).toBeGreaterThan(offerReward('hunt', 5, 1).xp * 5);
+    expect(huntGoal(12, 1)).toBe(3);
+    expect(huntGoal(1, 20)).toBe(8);
   });
 
   it('leaves out what the land cannot give', () => {

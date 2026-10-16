@@ -3,7 +3,7 @@
 // relic could be) and turns it into a few honest asks: "Hunt 5 Goblins", "Gather 3 Echostones", "Reach the Old Mill",
 // "Find the Wayfarer's Charm". The party is left to work out how.
 
-import type { QuestLog } from './combat';
+import { xpToNext, type QuestLog } from './combat';
 import type { BoundObjective } from './dmEpics';
 import type { Quest, SiteKind } from './quests';
 import type { QuestOffer } from './dmTasks';
@@ -45,6 +45,10 @@ export interface Land {
  * the land's own spot, so a named step never stalls on what the world happens to hold.
  */
 export function offerFor(land: Land, o: BoundObjective): QuestOffer {
+  return { ...boundOffer(land, o), level: land.level };
+}
+
+function boundOffer(land: Land, o: BoundObjective): QuestOffer {
   const lost = land.spot() ?? { x: 0, y: 0 };
   if (o.t === 'kill') {
     const m = land.mobs.find((x) => x.key === o.kind);
@@ -72,8 +76,32 @@ export function offerFor(land: Land, o: BoundObjective): QuestOffer {
   return { kind: 'visit', title: `Reach ${o.place}`, zone: land.zone, goal: o.count, what: o.place, ...(p ?? lost) };
 }
 
-/** What a quest pays each player (xp and gold) by its kind and size; a relic pays its item to whoever found it, too. */
-export function offerReward(kind: QuestOffer['kind'], goal: number): { xp: number; gold: number } {
+/**
+ * How much more a quest pays at the party's `level` than at the start: it follows the XP a level needs, so a quest is
+ * worth about as much of a level at level 8 as at level 1 (levelling is superlinear, `xpToNext`).
+ */
+export const levelScale = (level: number): number => Math.max(1, xpToNext(Math.max(1, level)) / xpToNext(2));
+
+/**
+ * How many of a foe worth `xp` a hunt asks of a party at `level`: few of a foe that is a match for them, more of one they
+ * have outgrown (3 to 8), so a hunt is about as long a job whatever the level.
+ */
+export function huntGoal(xp: number, level: number): number {
+  const kills = xpToNext(Math.max(1, level)) / Math.max(1, xp); // kills of it to make a level
+  return Math.max(3, Math.min(8, Math.round(kills / 3)));
+}
+
+/**
+ * What a quest pays each player (xp and gold) by its kind, its size and the party's level (`levelScale`); a relic pays
+ * its item to whoever found it, too.
+ */
+export function offerReward(kind: QuestOffer['kind'], goal: number, level = 1): { xp: number; gold: number } {
+  const base = baseReward(kind, goal);
+  const m = levelScale(level);
+  return { xp: Math.round(base.xp * m), gold: Math.round(base.gold * m) };
+}
+
+function baseReward(kind: QuestOffer['kind'], goal: number): { xp: number; gold: number } {
   return kind === 'hunt'
     ? { xp: 14 * goal, gold: 5 * goal }
     : kind === 'gather'
@@ -117,7 +145,7 @@ export function questOf(offer: QuestOffer): Quest {
     where,
     unit: '',
     objective,
-    reward: { ...offerReward(offer.kind, offer.goal), items: [] },
+    reward: { ...offerReward(offer.kind, offer.goal, offer.level), items: [] },
     offer: [],
     remind: [],
     done: [],
@@ -130,14 +158,25 @@ export const partyLog = (): QuestLog => ({ stage: 0, taken: true, progress: 0 })
 /** A name in the plural for a title ("Goblin" → "Goblins"); a name that already ends in s keeps it. */
 const plural = (name: string): string => (/s$/i.test(name) ? name : `${name}s`);
 
+/**
+ * The foes worth hunting at `level`, best match first: a foe the party has long outgrown (a level's worth would take
+ * more than 40 of them) is left out when the land has a better one.
+ */
+function matched<T extends { xp: number }>(mobs: T[], level: number): T[] {
+  const need = xpToNext(Math.max(1, level));
+  const fit = (xp: number) => Math.abs(Math.log(need / Math.max(1, xp) / 10)); // about 10 kills a level is a match
+  const worthy = mobs.filter((m) => need / Math.max(1, m.xp) <= 40);
+  return [...(worthy.length ? worthy : mobs)].sort((a, b) => fit(a.xp) - fit(b.xp));
+}
+
 /** Every quest the land allows, in a fixed order. */
 export function allOffers(land: Land): QuestOffer[] {
   const out: QuestOffer[] = [];
   const seen = new Set<string>();
-  for (const m of land.mobs) {
+  for (const m of matched(land.mobs, land.level)) {
     if (seen.has(m.key)) continue;
     seen.add(m.key);
-    const goal = m.xp >= 40 ? 3 : 5;
+    const goal = huntGoal(m.xp, land.level);
     out.push({
       kind: 'hunt',
       title: `Hunt ${goal} ${plural(m.name)}`,
@@ -185,7 +224,7 @@ export function allOffers(land: Land): QuestOffer[] {
   const at = relic ? land.spot() : null;
   if (relic && at)
     out.push({ kind: 'find', title: `Find ${relic.name}`, zone: land.zone, goal: 1, what: relic.id, x: at.x, y: at.y });
-  return out;
+  return out.map((o) => ({ ...o, level: land.level }));
 }
 
 /** The gear a relic could be, best fit for `level` first: pieces worth about what a hero of that level would have earned. */

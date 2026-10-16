@@ -44,6 +44,8 @@ export interface QuestOffer {
   /** Where it leads (the area the party is shown): the foes, the nearest site, the relic, the place. */
   x: number;
   y: number;
+  /** The party's level when it was written: what it pays is scaled to it (`dmQuests.ts` `levelScale`). */
+  level?: number;
 }
 
 export interface Task {
