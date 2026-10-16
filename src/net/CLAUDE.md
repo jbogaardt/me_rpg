@@ -23,7 +23,10 @@ and the game loop; headers of `feed.ts`, `PeerLink.ts`, `relayClient.ts` and `ho
   zones nobody is in cost nothing. `protocol.test.ts` checks a busy snapshot.
 - **Both players play the same content**, so item codes, mob order and capabilities agree with nothing on the wire.
   `net/` imports only `core/` and `systems/`; `entities/` never imports `net/`.
-- **Online play never pauses the world** (menus and dialogs are local overlays); kills share XP across the party.
+- **Online play does not pause the world, except while someone reads a quest conversation** (`Dialog` `pauses`: an NPC's
+  words, a quest brief). The host holds foes, crops and weather still (like the DM's Stop time) while it, or any friend
+  whose input says `rd`, has one open (`systems/readingPause.ts`); a friend sitting on the box releases the table after
+  30 s. Menus, shops, signs and the DM's words never pause it. Kills share XP across the party.
 
 ## Changing a message
 

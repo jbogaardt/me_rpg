@@ -63,10 +63,6 @@
         </div>
       </div>
     </div>
-    <div id="dm-speech" class="panel thin paper" role="status" hidden>
-      <button type="button" class="close" aria-label="Dismiss">✕</button>
-      <p class="text"></p>
-    </div>
     <!-- The DM's hot buttons (src/hud/DmBar.ts): the big tools one tap away, where the Inventory and Attack buttons would do nothing. -->
     <div id="dm-hot" role="group" aria-label="Dungeon Master tools" hidden>
       <button type="button" class="mp-btn panel thin wood" data-power="inbox" hidden>💬 Request</button>
@@ -124,7 +120,9 @@
     </div>
 
     <div id="dialog" class="panel paper" role="button" aria-label="Next line" data-key="KeyJ" hidden>
+      <p id="dialog-who"></p>
       <p id="dialog-text"></p>
+      <button type="button" class="close" aria-label="Dismiss">✕</button>
       <span class="more" aria-hidden="true"></span>
     </div>
 

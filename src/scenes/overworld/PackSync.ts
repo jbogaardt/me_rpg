@@ -84,7 +84,7 @@ export class PackSync {
     }
     const told = talk(arena.hero, giver, arena.role === 'solo');
     this.afterTalk(arena.local, told);
-    this.ui.dialog.say(told.lines);
+    this.ui.dialog.say(told.lines, undefined, { pauses: true });
   }
 
   /**
@@ -289,7 +289,7 @@ export class PackSync {
     if (pack.say && pack.say.id > this.lastSay) {
       this.lastSay = pack.say.id;
       const story = pack.say.story ? linesFor(pack.say.story) : null;
-      if (story) this.ui.dialog.say(story);
+      if (story) this.ui.dialog.say(story, undefined, { pauses: true });
       else this.ui.shop.report({ ok: pack.say.ok, text: pack.say.text });
     }
     if (sig === this.lastPackSig) return;

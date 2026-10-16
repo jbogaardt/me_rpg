@@ -1,12 +1,11 @@
 // The Dungeon Master's bar, always in reach like the player's [I] menu: one line to speak to the party (or to write the
 // running quest's instructions), the nudges a DM gives (an Epic quest, Cancel quest, the Story, the Sky, the Pressure), and beside
 // it the hot buttons for the big tools (Smite, Freeze, Stop time [T], Reset zone), which stand in for the Inventory and
-// Attack buttons the DM has no use for. Also where the words a DM speaks appear, for everyone (with a ✕: they never have to
-// block the screen), and the "time is stopped" notice. Built once from index.html (`#dm-bar`, `#dm-hot`, `#dm-speech`,
-// `#dm-hold`); textContent only.
+// Attack buttons the DM has no use for. Also the "time is stopped" notice. (The words a DM speaks are said in the one dialog
+// box, `hud/Dialog.ts`, as an aside.) Built once from index.html (`#dm-bar`, `#dm-hot`, `#dm-hold`); textContent only.
 
 import { codeLabel, FIXED_KEYS } from '../core/bindings';
-import { MAX_SAY, PRESSURE_LABEL, sayTime, type Pressure } from '../systems/dmPowers';
+import { MAX_SAY, PRESSURE_LABEL, type Pressure } from '../systems/dmPowers';
 
 export interface DmBarHandlers {
   say(text: string): boolean;
@@ -43,13 +42,10 @@ export class DmBar {
   private bar = document.getElementById('dm-bar')!;
   private form = this.bar.querySelector('form')!;
   private input = this.bar.querySelector('input')!;
-  private speech = document.getElementById('dm-speech')!;
-  private speechText = this.speech.querySelector<HTMLElement>('.text')!;
   private hot = document.getElementById('dm-hot')!;
   private hold = document.getElementById('dm-hold')!;
   private hint = this.bar.querySelector<HTMLElement>('.hint')!;
   private handlers: DmBarHandlers | null = null;
-  private hideAt = 0;
   private shown = '';
   private handle = this.bar.querySelector<HTMLButtonElement>('.handle')!;
   /** The tools start folded away (they would cover the action); the handle opens them, a click on the game folds them again. */
@@ -70,7 +66,6 @@ export class DmBar {
     power('note').addEventListener('click', () => {
       if (this.handlers?.note(this.input.value)) this.input.value = '';
     });
-    this.speech.querySelector('.close')!.addEventListener('click', () => this.dismissSpeech());
     power('inbox').addEventListener('click', () => this.handlers?.openInbox());
     power('reply').addEventListener('click', () => {
       if (this.handlers?.reply(this.input.value)) this.input.value = '';
@@ -80,7 +75,6 @@ export class DmBar {
     power('release').addEventListener('click', () => this.handlers?.release());
     window.addEventListener('pointerdown', (e) => {
       if (!(e.target instanceof HTMLCanvasElement)) return;
-      this.dismissSpeech(); // a click on the game sends the DM's words away: nobody hunts for a close button
       if (this.open) {
         this.open = false; // the DM went back to the game
         this.shown = '';
@@ -101,8 +95,8 @@ export class DmBar {
     if (!handlers) this.bar.hidden = true;
   }
 
-  /** Each frame: the bar for a DM (with each power's wait), the stopped-time notice for all, the speech fading. */
-  update(dm: boolean, now: number, stopped: boolean, possessing = '', touch = false) {
+  /** Each frame: the bar for a DM (with each power's wait), the stopped-time notice for all. */
+  update(dm: boolean, stopped: boolean, possessing = '', touch = false) {
     this.bar.hidden = !dm || !this.handlers;
     this.hot.hidden = this.bar.hidden;
     const folded = !this.open;
@@ -164,23 +158,5 @@ export class DmBar {
         set('pressure', `Pressure: ${PRESSURE_LABEL[w.pressure]}`);
       }
     }
-    if (!this.speech.hidden && now >= this.hideAt) this.speech.hidden = true;
-  }
-
-  /** Show what the Dungeon Master said (on every player's screen for a few seconds). */
-  speak(text: string, now: number) {
-    this.speechText.textContent = text;
-    this.speech.hidden = false;
-    this.hideAt = now + sayTime(text);
-  }
-
-  /** Is something the DM said still on screen? */
-  get speaking(): boolean {
-    return !this.speech.hidden;
-  }
-
-  /** Send the DM's words away (the ✕, Esc, or a click on the game). */
-  dismissSpeech() {
-    this.speech.hidden = true;
   }
 }

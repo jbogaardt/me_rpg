@@ -333,7 +333,7 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   await expect(friend.locator('#dm-bar')).toBeHidden(); // only the DM steers the story and the world
 
   // The DM opens the game with the story's own welcome, to every screen.
-  await expect(friend.locator('#dm-speech')).toContainText('Welcome', { timeout: 30_000 });
+  await expect(friend.locator('#dialog.aside')).toContainText('Welcome', { timeout: 30_000 });
 
   // The DM has a bar that is always there: no menu to dig through.
   await expect(host.locator('#menu')).toBeHidden();
@@ -353,7 +353,7 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   expect(await host.locator('#dm-card [data-opt]').count()).toBeGreaterThanOrEqual(2);
   // The DM answers the friend privately, and the card stays up: answering is not deciding.
   await host.locator('#dm-card [data-opt="r:0"]').click();
-  await expect(friend.locator('#dm-speech')).toContainText('On my way.', { timeout: 15_000 });
+  await expect(friend.locator('#dialog.aside')).toContainText('On my way.', { timeout: 15_000 });
   await expect(host.locator('#dm-card')).toBeVisible();
   await host.locator('canvas').click({ position: { x: 20, y: 20 } });
   await expect(host.locator('#dm-card')).toBeHidden();
@@ -364,7 +364,7 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   // The DM speaks and the friend reads it.
   await host.locator('#dm-bar input').fill('Beware the fen.');
   await host.locator('#dm-bar form button[type="submit"]').click();
-  await expect(friend.locator('#dm-speech')).toContainText('Beware the fen.', { timeout: 15_000 });
+  await expect(friend.locator('#dialog.aside')).toContainText('Beware the fen.', { timeout: 15_000 });
 
   // The DM stops time with the hotkey, so everyone is told, and starts it again.
   await host.keyboard.press('KeyT');

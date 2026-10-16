@@ -244,6 +244,14 @@ describe('messages', () => {
     }
   });
 
+  it('carries a guest reading a quest conversation, and refuses any other value', () => {
+    const base = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
+    expect(parseMessage(JSON.stringify({ ...base, rd: 1 }))).toEqual({ ...base, rd: 1 });
+    expect(parseMessage(JSON.stringify(base))).toEqual(base);
+    expect(parseMessage(JSON.stringify({ ...base, rd: 2 }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...base, rd: true }))).toBeNull();
+  });
+
   it('carries the mouse aim of an input when there is one', () => {
     const msg = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300, am: 17 };
     expect(parseMessage(JSON.stringify(msg))).toEqual(msg);

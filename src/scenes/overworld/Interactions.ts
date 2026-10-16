@@ -103,10 +103,10 @@ export class Interactions {
       dialog.say([petSound(pet.kind, pet.talks++)]);
     } else if (folk) {
       folk.body.face(directionToward(this.arena.player.x - folk.body.x, this.arena.player.y - folk.body.y));
-      dialog.say(folk.lines);
+      dialog.say(folk.lines, undefined, { pauses: true });
     } else if (npc?.visible && near(npc)) {
       npc.face(directionToward(this.arena.player.x - npc.x, this.arena.player.y - npc.y));
-      dialog.say(NPC_LINES);
+      dialog.say(NPC_LINES, undefined, { pauses: true });
     } else {
       attack();
     }
@@ -118,7 +118,7 @@ export class Interactions {
    */
   private talkToTrainer() {
     const { lines, trial } = trainerTalk(this.arena.hero);
-    this.ui.dialog.say(lines, trial ? () => this.beginTrial(trial) : undefined);
+    this.ui.dialog.say(lines, trial ? () => this.beginTrial(trial) : undefined, { pauses: true });
   }
 
   private beginTrial(skill: Skill) {

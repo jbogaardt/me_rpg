@@ -1,5 +1,7 @@
 import type { Container, Renderer } from 'pixi.js';
 import { enabled, flag } from '../systems/capabilities';
+import { sayTime } from '../systems/dmPowers';
+import { ReadingPause } from '../systems/readingPause';
 import type { Sprites, Zone } from '../assets';
 import type {} from '../core/aim';
 import { actionPressed, clickedAt, mapPressed, menuPressed, stopPressed } from '../core/controls';
@@ -108,6 +110,8 @@ export interface Ui {
  */
 export class OverworldScene implements Scene {
   private arena: Arena;
+  /** Who is reading a quest conversation: while anyone is, foes and the weather stand still (host and solo). */
+  private readers = new ReadingPause();
   private zones: Zones;
   private sim: Simulation;
   private ground: Ground;
@@ -229,7 +233,8 @@ export class OverworldScene implements Scene {
     );
     this.epics.onDone = () => this.prompts.suggest('story'); // a saga is done: the story may have a next road
     // The DM's words show on every screen (never over a DM who is busy being a foe).
-    this.desk.onSay = (text) => !this.possession.active && this.dmBar.speak(text, arena.clock);
+    this.desk.onSay = (text) =>
+      !this.possession.active && ui.dialog.tell('The Dungeon Master', text, sayTime(text), arena.clock);
     this.input = new LocalInput(arena, this.zones, () => ui.touch.active);
     this.partyUi = new PartyUi(arena, this.zones, ui.menu, () => this.possession.release());
     this.storyUi = new StoryUi(arena, ui, this.zones, this.banner, this.overlay, () => this.possession.active);
@@ -403,7 +408,8 @@ export class OverworldScene implements Scene {
     document.body.classList.toggle('dm-ui', arena.local.dm); // the DM's hot buttons take the place of Inventory and Attack
     document.body.classList.toggle('dm-possessing', this.possession.active); // no pop-ups while a foe is held
     if (this.possession.active && this.dmCard.open) this.dmCard.hide();
-    this.dmBar.update(arena.local.dm, arena.clock, arena.timeStopped, this.possession.name, this.ui.touch.active);
+    this.dmBar.update(arena.local.dm, arena.timeStopped, this.possession.name, this.ui.touch.active);
+    this.ui.dialog.update(arena.clock);
     this.requests.update(arena.role === 'client', dt);
     this.prompts.update(
       dt,
@@ -441,8 +447,8 @@ export class OverworldScene implements Scene {
     if (this.dmCard.open && menuPressed())
       this.dmCard.dismiss(); // Esc sends a card away first
     else if (this.requests.open && menuPressed()) this.requests.close();
-    else if (this.dmBar.speaking && menuPressed())
-      this.dmBar.dismissSpeech(); // then the DM's words, which should never block the screen
+    else if (dialog.speaking && menuPressed())
+      dialog.dismissAside(); // then the DM's words, which should never block the screen
     else if (this.possession.active && menuPressed())
       this.possession.release(); // then lets go of a foe, instead of opening the menu
     else if (!dialog.active && menuPressed()) {
@@ -556,12 +562,15 @@ export class OverworldScene implements Scene {
 
     // The Dungeon Master stopped time: the players can still walk (and take doors), but foes, plots, weather, the clock on the ground and what players do besides move stand still.
     const stopped = host && arena.timeStopped;
+    // Someone is reading a quest conversation (the host, or a friend whose input says so): the world stands still for them, as when time is stopped, but the others may still act.
+    const waiting = host && this.readers.update(this.readingSlots(), dt);
+    const frozen = stopped || waiting;
     if (host || !dialog.active) {
       for (const z of arena.occupiedZones()) {
         arena.inZone(z, () => {
           const present = arena.players();
           for (const p of present) sim.updatePlayer(p, commandOf(p), dt); // time stopped or not, the party can walk
-          if (!stopped) {
+          if (!frozen) {
             for (const mob of z.mobs) mob.update(dt, z.mobWorld);
             for (const crop of z.crops) crop.grow(dt);
             this.ground.age(dt);
@@ -577,14 +586,14 @@ export class OverworldScene implements Scene {
       this.barrels.update(); // carried barrels ride with whoever carries them
       // The zones drawn beside this one keep their mobs wandering, so nothing looks frozen across the border.
       const occupied = new Set(arena.occupiedZones());
-      if (!stopped)
+      if (!frozen)
         for (const z of this.zones.lookouts()) {
           if (occupied.has(z)) continue;
           arena.inZone(z, () => {
             for (const mob of z.mobs) mob.update(dt, z.mobWorld);
           });
         }
-      if (!stopped) this.training.update(dt);
+      if (!frozen) this.training.update(dt);
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
@@ -619,7 +628,19 @@ export class OverworldScene implements Scene {
       cmd.aim,
       this.desk.voteInput,
       this.desk.requestInput,
+      dialog.pausing,
     );
+  }
+
+  /** The players reading a quest conversation now: this one if its box pauses, and each friend whose input says they are. */
+  private readingSlots(): number[] {
+    const { arena } = this;
+    const slots = this.ui.dialog.pausing ? [arena.local.slot] : [];
+    for (const slot of arena.remotes.keys()) {
+      const peer = this.ui.session.peerInput(slot);
+      if (peer?.fresh && peer.rd) slots.push(slot);
+    }
+    return slots;
   }
 
   /** Switch to `role` (a friend connected or everyone dropped), setting the world up for it. */
@@ -630,6 +651,7 @@ export class OverworldScene implements Scene {
     else if (arena.role === 'client') this.guest.leave();
     arena.role = 'solo'; // so nothing from here on is recorded for friends until the new role is set
     this.desk.reset(); // what a DM set lasts for their game only
+    this.readers.clear();
     arena.pressure = role === 'host' ? this.ui.session.hostPressure : 'steady'; // what the host chose in the lobby
     this.powers.reset();
     this.tasks.reset();
