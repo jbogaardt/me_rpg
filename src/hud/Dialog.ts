@@ -2,6 +2,9 @@ import { sayTime } from '../systems/dmPowers';
 import { voice } from './voice';
 
 const DIALOG_MAX_W = 600;
+/** The most captions kept waiting behind the one on screen, and how long (s) one stays worth showing. */
+const MAX_LATER = 2;
+const LATER_STALE_S = 25;
 
 /** What kind of thing is being said (see `Dialog`). */
 export interface DialogOptions {
@@ -36,6 +39,7 @@ export class Dialog {
   private caption = document.getElementById('dm-caption')!;
   private captionText = document.getElementById('dm-caption-text')!;
   private shown: Caption | null = null;
+  private later: { text: string; seconds: number; at: number }[] = [];
 
   constructor() {
     const speaker = this.caption.querySelector('.voice');
@@ -69,12 +73,14 @@ export class Dialog {
     else this.open(talk);
   }
 
-  /** Say `text` in the caption for `seconds`, over any caption still up; play goes on. */
+  /** Say `text` in the caption for `seconds`. One at a time: a line said meanwhile waits its turn (a few at most, newest kept). */
   tell(text: string, seconds: number) {
-    this.shown = { until: performance.now() / 1000 + seconds };
-    this.captionText.textContent = text;
-    this.caption.hidden = false;
-    voice.speak(text);
+    if (this.shown) {
+      this.later.push({ text, seconds, at: performance.now() / 1000 });
+      if (this.later.length > MAX_LATER) this.later.shift();
+      return;
+    }
+    this.showCaption(text, seconds);
   }
 
   /** Passive text: anything the game tells the player that they did not ask for (a defeat, a quest given, a chapter's note). */
@@ -83,9 +89,18 @@ export class Dialog {
     this.tell(text, sayTime(text));
   }
 
-  /** Each frame: the caption leaves when its time is up. */
+  /** Each frame: a caption leaves once its time is up and its words have been spoken; then the next one comes. */
   update() {
-    if (this.shown && performance.now() / 1000 >= this.shown.until) this.clearCaption();
+    const now = performance.now() / 1000;
+    if (this.shown && now >= this.shown.until && (!voice.busy || now >= this.shown.until + 20)) {
+      if (voice.busy) voice.stop(); // a voice that never finished
+      this.clearCaption();
+    }
+    if (!this.shown) {
+      const next = this.later.shift();
+      if (next && now - next.at < LATER_STALE_S) this.showCaption(next.text, next.seconds);
+      else if (next) this.later.length = 0; // the rest is older still
+    }
   }
 
   /** Show the next line, or close after the last one and open whoever is waiting. */
@@ -108,7 +123,9 @@ export class Dialog {
   close() {
     this.talk = null;
     this.queue = [];
+    this.later = [];
     this.clearCaption();
+    voice.stop();
     this.hide();
   }
 
@@ -118,10 +135,16 @@ export class Dialog {
     this.box.hidden = false;
   }
 
+  private showCaption(text: string, seconds: number) {
+    this.shown = { until: performance.now() / 1000 + seconds };
+    this.captionText.textContent = text;
+    this.caption.hidden = false;
+    voice.speak(text);
+  }
+
   private clearCaption() {
     this.shown = null;
     this.caption.hidden = true;
-    voice.stop();
   }
 
   private hide() {

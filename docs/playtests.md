@@ -53,3 +53,17 @@ facts, with a reason to care. Invented places are never named unless the game ga
   rewritten as stories with stakes; the two hub regions have fewer wandering foes and a wider calm around the spawn.
 - Open: the fallen-player card repeats (offer a smarter default, e.g. raise them where they fell when the fight is over);
   Claude-written sagas should be checked for the same stakes.
+
+### 2026-10-16 (third run): keeper silent, voice cut off, repeating
+- Said: told to go to the keeper but the keeper says nothing; the audio is cut short; repeating the same stuff feels
+  dumb and should be AI; the voice cuts itself off when it triggers its own voice action.
+- Log: narration returned to the same hand-print in the mud three times (the saga's opening was fed to the model each
+  time); the first saga was the stock one, not written by the model.
+- Cause (keeper): online, `talk(hero, giver, story=false)` gives a quest giver only idle lines (the DM gives the quests),
+  while the live arc's welcome sends players to the keeper. Cause (voice): each new caption cancelled the speech and a
+  caption's timer cut it off before it finished.
+- Changed: online the keeper tells the DM's current quest again; captions queue (a few at most) and wait for the speech
+  to end, a line is spoken sentence by sentence; the first saga is written by the model again (stock only as a fallback);
+  narration must reveal one new thing each time and is told not to retell the opening.
+- Open: the arc's own quests and the DM's sagas still run side by side in a live world; the welcome should hand over to
+  the DM's saga.

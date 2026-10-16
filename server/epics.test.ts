@@ -24,16 +24,12 @@ describe('nextStock', () => {
 describe('tellEpic', () => {
   it('tells what the writer wrote when the page accepts it', async () => {
     const writer = { write: () => Promise.resolve({ id: 'mine', title: 'Mine' }) };
-    expect(await tellEpic(writer, page(accepts), 'Glen', ['x'])).toMatchObject({ id: 'mine', title: 'Mine' });
-  });
-  it('tells the first saga from the stock at once, without waiting for the writer', async () => {
-    const writer = { write: () => Promise.reject(new Error('should not be asked')) };
-    expect(await tellEpic(writer, page(accepts), 'Glen', [])).toMatchObject({ id: 'one', title: 'One' });
+    expect(await tellEpic(writer, page(accepts), 'Glen', [])).toMatchObject({ id: 'mine', title: 'Mine' });
   });
   it('tells a stock epic when the page refuses the writer’s, or the writer fails', async () => {
     const { teller, seen } = refuses();
     const bad = { write: () => Promise.resolve({ id: 'bad', title: 'Bad' }) };
-    expect(await tellEpic(bad, page(teller), 'Glen', ['x'])).toMatchObject({ id: 'one', title: 'One' });
+    expect(await tellEpic(bad, page(teller), 'Glen', [])).toMatchObject({ id: 'one', title: 'One' });
     expect(seen).toHaveLength(3); // the writer's, its second go, then the stock
     const broken = { write: () => Promise.reject(new Error('down')) };
     expect(await tellEpic(broken, page(accepts), 'Glen', ['one'])).toMatchObject({ id: 'two', title: 'Two' });
@@ -50,7 +46,7 @@ describe('tellEpic', () => {
     const teller: Teller = {
       epic: () => Promise.resolve(++calls === 1 ? { ok: false, note: 'steps[2]: a tell' } : { ok: true, note: '' }),
     };
-    expect(await tellEpic(writer, page(teller), 'Glen', ['x'])).toMatchObject({ id: 'try2', title: 'T' });
+    expect(await tellEpic(writer, page(teller), 'Glen', [])).toMatchObject({ id: 'try2', title: 'T' });
     expect(asked).toEqual([undefined, 'steps[2]: a tell']);
   });
   it('tells nothing when there is nothing to tell, so a plain quest is offered', async () => {

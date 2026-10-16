@@ -102,7 +102,10 @@ export class Interactions {
       this.talkToKeeper(keeper);
     } else if (giver) {
       giver.body.face(directionToward(this.arena.player.x - giver.body.x, this.arena.player.y - giver.body.y));
+      const task = this.arena.task;
       if (giver.giver === TRAINER) this.talkToTrainer();
+      else if (this.arena.role !== 'solo' && task?.state === 'active')
+        dialog.say(this.storyUi.briefOf(task), undefined, { pauses: true }); // online the keeper tells the DM's quest again
       else this.pack.talkToGiver(giver.giver);
     } else if (site) {
       // Touching a site the quest wants: read what it says, and let the action count it (the host decides, for a guest).

@@ -217,7 +217,7 @@ export class ClaudeNarrator implements Narrator {
       const text = cleanLine(
         await this.ask(
           PERSONA,
-          `${moment} The party is in ${beat.area}.${this.saga ? ` The story so far: ${this.saga}` : ''} Say one or two short, concrete sentences to them that tie this moment to the story and make them want to act, as spoken words only: no stage ` +
+          `${moment} The party is in ${beat.area}.${this.saga ? ` The saga they are on (they have heard its opening, do not retell it): ${this.saga}` : ''} Say one or two short, concrete sentences that move the story on: reveal ONE new fact, development or consequence you have not mentioned before, never repeat an earlier detail, and make them want to act. Spoken words only: no stage ` +
             `directions, no actions, no asterisks, no quotation marks. You are not beside them; you speak from afar.`,
         ),
       );
@@ -273,7 +273,7 @@ export class ClaudeEpicWriter implements EpicWriter {
       `or "meet" (find one of the epic's people, who speaks and may hand over an item to carry on). Give it 2 or 3 people ` +
       `with a name, "lines" (what they say before they are met), "after" (once met), "finished" (once the saga is done) and a "look" word from: ${looks.map((l) => l.name).join(', ')}. Every person is met by exactly one "meet" step. ` +
       `"hop" is how many lands from here the step is set (0 to 3). EVERY step, not only some, has a "kind", a whole-number ` +
-      `"hop" and a "tell" (what the DM says to send them there, one short sentence under 200 letters). Make it a story with a reason, a turn and a payoff, not ` +
+      `"hop" and a "tell" (what the DM says to send them there, one short sentence under 200 letters). Open with a concrete hook that makes the party want to act: who is in trouble, what is at stake and why it falls to them. Make it a story with a reason, a turn and a payoff, not ` +
       `a list of chores. Do not reuse these ids: ${told.join(', ') || 'none'}. Reply with the JSON only, in exactly this form:\n` +
       JSON.stringify(example) +
       (refused ? `\nYour last try was refused: ${refused}. Fix exactly that and answer again.` : '');
