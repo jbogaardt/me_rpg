@@ -12,6 +12,8 @@ const land = (l: Partial<Land> = {}): Land => ({
   sites: [{ kind: 'echostone', name: 'Echostone', count: 4, x: 300, y: 310 }],
   places: [{ name: 'the Old Mill', x: 700, y: 710 }],
   relics: [{ id: 'charm', name: 'the Wayfarer’s Charm' }],
+  casters: false,
+  barrels: 0,
   spot: () => ({ x: 900, y: 910 }),
   ...l,
 });
@@ -66,5 +68,15 @@ describe('the offer for a task a saga names outright', () => {
     expect(place).toMatchObject({ kind: 'visit', title: `Reach ${here.places[0]!.name}`, x: here.places[0]!.x });
     const gone = offerFor(here, { t: 'kill', kind: 'dragon', count: 1, zone: here.zone });
     expect(gone).toMatchObject({ kind: 'hunt', what: 'dragon' });
+  });
+
+  it('asks for spells only where the party can cast, and barrels only where there are barrels and a place', () => {
+    expect(allOffers(land()).some((o) => o.kind === 'cast' || o.kind === 'haul')).toBe(false);
+    const cast = allOffers(land({ casters: true })).find((o) => o.kind === 'cast');
+    expect(cast).toMatchObject({ title: 'Cast 6 spells', goal: 6, zone: 'fen' });
+    const haul = allOffers(land({ barrels: 5 })).find((o) => o.kind === 'haul');
+    expect(haul).toMatchObject({ title: 'Carry 3 barrels to the Old Mill', goal: 3, what: 'the Old Mill', x: 700 });
+    expect(allOffers(land({ barrels: 5, places: [] })).some((o) => o.kind === 'haul')).toBe(false);
+    expect(allOffers(land({ barrels: 1 })).some((o) => o.kind === 'haul')).toBe(false);
   });
 });

@@ -134,11 +134,11 @@ export function guideFor(hero: Hero, world: GuideWorld, from: { x: number; y: nu
     );
     return site ? area(site) : null;
   }
-  if (o.t === 'visit') {
+  if (o.t === 'visit' || o.t === 'haul') {
     const place = world.places.find((p) => p.name === o.place);
     return place ? area(place) : null;
   }
-  if (o.t === 'meet') return null; // done on taking it: there is nothing to look for
+  if (o.t === 'meet' || o.t === 'cast') return null; // nothing to look for: done on taking it, or wherever they cast
   const mob = nearest(
     world.mobs.filter((m) => m.key === o.kind),
     from,

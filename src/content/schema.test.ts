@@ -155,6 +155,24 @@ describe('parseContent', () => {
     expect(problems(f)).toEqual([]);
   });
 
+  it('reads quests of spells and barrels, and refuses them where combos or carrying is off', () => {
+    const f = files();
+    const s = f.scenarios as { capabilities: unknown };
+    const q = f.quests as { quests: { objective: object }[] };
+    q.quests[0]!.objective = { t: 'cast', count: 5, zone: 'greenwood' };
+    expect(parseContent(f).quests.quests[0]?.objective).toEqual({ t: 'cast', count: 5, zone: 'greenwood' });
+    q.quests[0]!.objective = { t: 'haul', place: 'the Old Mill', zone: 'greenwood', count: 2 };
+    expect(problems(f)).toEqual([]);
+    s.capabilities = { carrying: false };
+    expect(problems(f).join('\n')).toMatch(/quests\.cull\.objective\.t: a "haul" quest needs carrying/);
+    q.quests[0]!.objective = { t: 'cast', count: 5 };
+    s.capabilities = { combos: false };
+    expect(problems(f).join('\n')).toMatch(/a "cast" quest needs combos/);
+    q.quests[0]!.objective = { t: 'haul', place: 'x', zone: 'nowhere', count: 1 };
+    s.capabilities = {};
+    expect(problems(f).join('\n')).toMatch(/"nowhere" is not the map of any biome/);
+  });
+
   it('reads what a quest switches while it is taken, and refuses what is not a dial', () => {
     const f = files();
     const q = f.quests as { quests: { capabilities?: unknown }[] };

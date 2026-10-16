@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { ContentManager } from '../../content/ContentManager';
 import { STOCK_EPICS } from '../../content/epics';
 import { parseEpic } from '../../systems/dmEpics';
+import { newHero } from '../../systems/combat';
 import { TASK_LINGER } from '../../systems/dmTasks';
 import { setPlaces } from '../../systems/places';
 import type { Arena } from './Arena';
@@ -18,6 +19,7 @@ function game(far = false, story: unknown = null) {
     ({
       name,
       sites: [],
+      barrels: [],
       folk: [] as { name: string; body: { x: number; y: number } }[],
       data: { width: 100, height: 100, places, spawn: { col: 3, row: 3 } },
       collision: { fitsMap: () => true, isBlocked: () => false },
@@ -29,7 +31,7 @@ function game(far = false, story: unknown = null) {
       slot: 1,
       zone: 'a',
       body: { x: far ? 5000 : 330, y: far ? 5000 : 330 },
-      hero: { stats: { hp: 50, maxHp: 50, level: 3 } },
+      hero: { ...newHero(), stats: { ...newHero().stats, hp: 50, maxHp: 50, level: 3 } },
     },
   ] as never[];
   const arena = {

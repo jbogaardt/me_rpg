@@ -29,6 +29,10 @@ export interface Land {
   sites: { kind: string; name: string; count: number; x: number; y: number }[];
   /** Its named places. */
   places: { name: string; x: number; y: number }[];
+  /** Can the party cast spells here (the `combos` capability is on and one of them has a spell to cast)? */
+  casters: boolean;
+  /** How many loose barrels the land has to carry (0 when the `carrying` capability is off here). */
+  barrels: number;
   /** Gear a relic could be (item ids and names), the best fits for the party first. */
   relics: { id: string; name: string }[];
   /** A spot to hide a relic: far enough from the party to be a search, on open ground. */
@@ -74,9 +78,13 @@ export function offerReward(kind: QuestOffer['kind'], goal: number): { xp: numbe
     ? { xp: 14 * goal, gold: 5 * goal }
     : kind === 'gather'
       ? { xp: 12 * goal, gold: 4 * goal }
-      : kind === 'find'
-        ? { xp: 70, gold: 30 }
-        : { xp: 40, gold: 15 };
+      : kind === 'cast'
+        ? { xp: 8 * goal, gold: 3 * goal }
+        : kind === 'haul'
+          ? { xp: 15 * goal, gold: 6 * goal }
+          : kind === 'find'
+            ? { xp: 70, gold: 30 }
+            : { xp: 40, gold: 15 };
 }
 
 /**
@@ -93,7 +101,11 @@ export function questOf(offer: QuestOffer): Quest {
         ? { t: 'gather', site: offer.what, zone: offer.zone, count: offer.goal }
         : offer.kind === 'find'
           ? { t: 'gather', site: RELIC_KIND, zone: offer.zone, count: 1 }
-          : { t: 'visit', place: offer.what, zone: offer.zone, count: 1 };
+          : offer.kind === 'cast'
+            ? { t: 'cast', zone: offer.zone, count: offer.goal }
+            : offer.kind === 'haul'
+              ? { t: 'haul', place: offer.what, zone: offer.zone, count: offer.goal }
+              : { t: 'visit', place: offer.what, zone: offer.zone, count: 1 };
   return {
     id: `dm_${offer.kind}`,
     chapter: 0,
@@ -151,6 +163,24 @@ export function allOffers(land: Land): QuestOffer[] {
   }
   for (const p of land.places)
     out.push({ kind: 'visit', title: `Reach ${p.name}`, zone: land.zone, goal: 1, what: p.name, x: p.x, y: p.y });
+  if (land.casters) {
+    const goal = 6;
+    const at = land.spot() ?? { x: 0, y: 0 }; // cast anywhere in the land: the spot is only where its area is shown
+    out.push({ kind: 'cast', title: `Cast ${goal} spells`, zone: land.zone, goal, what: '', ...at });
+  }
+  const place = land.places[0];
+  if (land.barrels >= 2 && place) {
+    const goal = Math.min(3, land.barrels);
+    out.push({
+      kind: 'haul',
+      title: `Carry ${goal} barrels to ${place.name}`,
+      zone: land.zone,
+      goal,
+      what: place.name,
+      x: place.x,
+      y: place.y,
+    });
+  }
   const relic = land.relics[0];
   const at = relic ? land.spot() : null;
   if (relic && at)

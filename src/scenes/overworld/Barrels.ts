@@ -1,6 +1,7 @@
 import type { Player } from '../../entities/Player';
 import { enabled } from '../../systems/capabilities';
 import { dropSpot, heldSpot, nearestBarrel } from '../../systems/barrels';
+import { recordHaul } from '../../systems/quests';
 import type { Arena } from './Arena';
 import { foeNear, type Simulation } from './Simulation';
 
@@ -12,7 +13,7 @@ import { foeNear, type Simulation } from './Simulation';
 export class Barrels {
   constructor(
     private arena: Arena,
-    private sim: Pick<Simulation, 'text'>,
+    private sim: Pick<Simulation, 'text' | 'onSetDown' | 'questNote'>,
   ) {}
 
   /** The action key while `p` carries a barrel (in the zone being worked in): set it down in front of them. True if they carry one. */
@@ -21,8 +22,13 @@ export class Barrels {
     const held = arena.barrels.find((b) => b.carrier === p.slot);
     if (!held) return false;
     const spot = dropSpot(arena.collision, p.body.x, p.body.y, p.body.facing, arena.bodies());
-    if (spot) held.setDown(spot.x, spot.y);
-    else this.sim.text(p.body.x, p.body.y - 40, 'No room here', 0xff8a7a);
+    if (spot) {
+      held.setDown(spot.x, spot.y);
+      const zone = arena.zone.name;
+      const index = arena.barrels.indexOf(held);
+      this.sim.onSetDown(p, zone, index, spot.x, spot.y);
+      this.sim.questNote(p, recordHaul(p.hero, zone, arena.data.places, index, spot.x, spot.y)); // a quest of barrels counts it
+    } else this.sim.text(p.body.x, p.body.y - 40, 'No room here', 0xff8a7a);
     return true;
   }
 

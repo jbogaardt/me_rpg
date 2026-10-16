@@ -30,8 +30,9 @@ kind is how higher levels stay meaningful. **Retune a weapon or kind against tha
 ## Features (design notes)
 
 - **Quests** (`quests.ts`, `guide.ts`): a chain per campaign told by a cast of givers (the campaign's `"scope": "hero"` epic,
-  `content/story.ts`); objectives kill, gather, bring,
-  meet, visit; chapters and journal lore make it a story. Guidance is local to each player (an arrow for a person or
+  `content/story.ts`); objectives kill, gather, bring, meet, visit, and two that use a capability (core engine, refused
+  where it is off): `cast` spells (`combos`) and `haul` barrels to a named place (`carrying`, a bit per barrel index like
+  a gather's sites); chapters and journal lore make it a story. Guidance is local to each player (an arrow for a person or
   door, a search area for something to be found). Quest text must use the biomes' `name`s (`guide.test.ts`). The host owns
   every `QuestLog`; a guest sends `do` talk and action presses and reads the log from `pack`. Online only the DM's
   quests count (`docs/dungeon-master.md`).

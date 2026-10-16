@@ -33,6 +33,40 @@ const input = (i: Partial<TaskInput> = {}): TaskInput => ({
   ...i,
 });
 
+describe('spells and barrels', () => {
+  it('counts spells cast in its land until the goal', () => {
+    const b = new TaskBook();
+    b.call(offer({ kind: 'cast', title: 'Cast 2 spells', goal: 2, what: '' }));
+    expect(b.cast('glen')).toBe(false); // not its land
+    expect(b.cast('fen')).toBe(true);
+    expect(b.kill('goblin', 'fen')).toBe(false); // a kill is not a spell
+    b.cast('fen');
+    expect(b.cast('fen')).toBe(false); // the count is made
+    expect(b.tick(1, input())).toBe('done');
+  });
+
+  it('counts each barrel once, and only when it is set down by the place', () => {
+    const b = new TaskBook();
+    // the place is at (500, 500): cell (15.125, 15.125); a barrel within 4 cells counts
+    b.call(offer({ kind: 'haul', title: 'Carry 2 barrels to the Mill', goal: 2, what: 'the Mill' }));
+    expect(b.haul('fen', 0, 500 + 10 * 32, 500)).toBe(false); // too far
+    expect(b.haul('fen', 0, 520, 510)).toBe(true);
+    expect(b.haul('fen', 0, 500, 500)).toBe(false); // the same barrel again
+    expect(b.haul('glen', 1, 500, 500)).toBe(false); // not its land
+    expect(b.haul('fen', 3, 480, 490)).toBe(true);
+    expect(b.task!.bits).toBe(0b1001);
+    expect(b.tick(1, input())).toBe('done');
+    expect(viewOf(b.task!)).toMatchObject({ kind: 'haul', progress: 2, goal: 2 });
+  });
+
+  it('sends the new kinds over the wire', () => {
+    const b = new TaskBook();
+    b.call(offer({ kind: 'haul', title: 'Carry 2 barrels to the Mill', goal: 2, what: 'the Mill' }));
+    const v = viewOf(b.task!);
+    expect(taskFromWire(JSON.parse(JSON.stringify(taskWire(v))))).toEqual(v);
+  });
+});
+
 describe('hunting', () => {
   it('counts the kills of its foe, never beyond the goal, and ends when the last falls', () => {
     const b = new TaskBook();

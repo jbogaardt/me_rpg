@@ -63,7 +63,11 @@ export type Objective =
   /** Speak to the person who `turnIn` names (done the moment the quest is taken: the task is to go and find them). */
   | { t: 'meet'; count: number }
   /** Walk to a named place (a `MapData.places` entry) of `zone`: done on arriving within `VISIT_RADIUS` of it. */
-  | { t: 'visit'; place: string; zone: string; count: number };
+  | { t: 'visit'; place: string; zone: string; count: number }
+  /** Cast `count` spells (combos: the `combos` capability), anywhere or only in `zone`. */
+  | { t: 'cast'; count: number; zone?: string }
+  /** Carry `count` different barrels (the `carrying` capability) of `zone` and set them down by its named place. */
+  | { t: 'haul'; place: string; zone: string; count: number };
 
 export interface Reward {
   gold: number;
@@ -217,8 +221,43 @@ export function progressIn(log: QuestLog, q: Quest, held = 0): number {
     case 'meet':
       return o.count; // going to find them is all there is to it
     case 'visit':
+    case 'cast':
       return Math.min(o.count, log.progress);
+    case 'haul':
+      return Math.min(o.count, bits(log.progress));
   }
+}
+
+/** A spell cast in `zone`: counts if `q` wants one and is not yet done. */
+export function castIn(log: QuestLog, q: Quest, zone: string): boolean {
+  const { objective: o } = q;
+  if (!log.taken || o.t !== 'cast' || (o.zone && o.zone !== zone) || log.progress >= o.count) return false;
+  log.progress++;
+  return true;
+}
+
+/** How near (cells) to a haul quest's place a barrel must be set down to count. */
+export const HAUL_RADIUS = 4;
+
+/**
+ * Barrel `index` of `zone` was set down at (x, y) pixels; `place` is where the haul quest's named place is: counts when it
+ * is within HAUL_RADIUS and this barrel has not been counted yet (a bit each, like a gather's sites).
+ */
+export function haulIn(
+  log: QuestLog,
+  q: Quest,
+  zone: string,
+  place: { col: number; row: number } | undefined,
+  index: number,
+  x: number,
+  y: number,
+): boolean {
+  const { objective: o } = q;
+  if (!log.taken || o.t !== 'haul' || o.zone !== zone || !place || index < 0 || index > 30) return false;
+  if (Math.floor(log.progress / 2 ** index) % 2 === 1 || bits(log.progress) >= o.count) return false;
+  if (Math.hypot(x / CELL - (place.col + 0.5), y / CELL - (place.row + 0.5)) > HAUL_RADIUS) return false;
+  log.progress += 2 ** index;
+  return true;
 }
 
 /** A kill of the mob kind `key` in `zone`: counts if `q` wants it and is not yet done. */
@@ -310,6 +349,37 @@ function report(hero: Hero): Progress {
 export function recordKill(hero: Hero, kind: MobKind, zone: string): Progress | null {
   const q = currentQuest(hero.quests);
   return q && killIn(hero.quests, q, mobKey(kind), zone) ? report(hero) : null;
+}
+
+/** A spell this hero cast in `zone`: counts if the current quest is a cast quest that wants it. */
+export function recordCast(hero: Hero, zone: string): Progress | null {
+  const q = currentQuest(hero.quests);
+  return q && castIn(hero.quests, q, zone) ? report(hero) : null;
+}
+
+/** Barrel `index` of `zone`, set down by this hero at (x, y): counts for a haul quest whose place it is near. */
+export function recordHaul(
+  hero: Hero,
+  zone: string,
+  places: readonly { name: string; col: number; row: number }[],
+  index: number,
+  x: number,
+  y: number,
+): Progress | null {
+  const q = currentQuest(hero.quests);
+  if (!q || q.objective.t !== 'haul') return null;
+  const name = q.objective.place;
+  return haulIn(
+    hero.quests,
+    q,
+    zone,
+    places.find((p) => p.name === name),
+    index,
+    x,
+    y,
+  )
+    ? report(hero)
+    : null;
 }
 
 /**

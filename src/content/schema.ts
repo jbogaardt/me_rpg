@@ -469,7 +469,14 @@ function readObjective(r: Reader, v: unknown, path: string): Objective {
   if (o.t === 'meet') return { t: 'meet', count: 1 };
   if (o.t === 'visit')
     return { t: 'visit', place: r.string(o.place, `${path}.place`), zone: r.string(o.zone, `${path}.zone`), count: 1 };
-  r.fail(`${path}.t`, 'must be "kill", "gather", "bring", "meet" or "visit"');
+  if (o.t === 'cast') {
+    const cast: Objective = { t: 'cast', count };
+    if (o.zone !== undefined) cast.zone = r.string(o.zone, `${path}.zone`);
+    return cast;
+  }
+  if (o.t === 'haul')
+    return { t: 'haul', place: r.string(o.place, `${path}.place`), zone: r.string(o.zone, `${path}.zone`), count };
+  r.fail(`${path}.t`, 'must be "kill", "gather", "bring", "meet", "visit", "cast" or "haul"');
   return { t: 'kill', kind: '', count };
 }
 
@@ -828,10 +835,11 @@ function crossCheck(r: Reader, c: Content) {
       r.fail(`${p}.where.door`, `"${quest.where.door}" is not the map of any biome`);
     const o = quest.objective;
     if (o.t === 'kill' && !mob(o.kind)) r.fail(`${p}.objective.kind`, `"${o.kind}" is not a mob in entities.json`);
-    if ((o.t === 'kill' || o.t === 'gather') && o.zone !== undefined && !maps.has(o.zone))
+    if ((o.t === 'kill' || o.t === 'gather' || o.t === 'cast') && o.zone !== undefined && !maps.has(o.zone))
       r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
     if (o.t === 'gather' && !q.sites[o.site]) r.fail(`${p}.objective.site`, `"${o.site}" is not in sites`);
-    if (o.t === 'visit' && !maps.has(o.zone)) r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
+    if ((o.t === 'visit' || o.t === 'haul') && !maps.has(o.zone))
+      r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
     for (const key of ['giver', 'turnIn'] as const) {
       const who = quest[key];
       if (who !== undefined && !q.givers[who]) r.fail(`${p}.${key}`, `"${who}" is not in givers`);
@@ -882,6 +890,11 @@ function checkAgainstCapabilities(r: Reader, c: Content) {
     const o = quest.objective;
     const wanted = o.t === 'bring' ? why(o.item) : null;
     if (wanted) r.fail(`${p}.objective.item`, wanted);
+    // a quest of spells or barrels needs the system it is about, where it is set (or anywhere, for spells cast anywhere)
+    const needs = o.t === 'cast' ? 'combos' : o.t === 'haul' ? 'carrying' : null;
+    const zone = o.t === 'cast' || o.t === 'haul' ? o.zone : undefined;
+    if (needs && !(zone ? caps.enabled(needs, zone) : caps.anywhere(needs)))
+      r.fail(`${p}.objective.t`, `a "${o.t}" quest needs ${needs}, and it is off there (capabilities.${needs})`);
     for (const [i, item] of (quest.reward.items ?? []).entries()) {
       const paid = why(item);
       if (paid) r.fail(`${p}.reward.items[${i}]`, paid);

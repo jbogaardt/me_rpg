@@ -46,6 +46,12 @@ export function questArt(q: Quest, portrait: (mobKind: string) => string | null)
   } else if (o.t === 'visit') {
     picture = `<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#ffd34d" opacity=".25"/><path d="M11 28V5h2v2l12 3.5-12 3.5V28z" fill="#ffd34d" stroke="#3a2400" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
     caption = o.place;
+  } else if (o.t === 'cast') {
+    picture = `<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#8fb3ff" opacity=".25"/><path d="M16 3l3 9 9 1-7 6 2 9-7-5-7 5 2-9-7-6 9-1z" fill="#cfe8ff" stroke="#24345a" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+    caption = 'Spells';
+  } else if (o.t === 'haul') {
+    picture = `<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#c8894a" opacity=".25"/><rect x="8" y="5" width="16" height="22" rx="6" fill="#a8693a" stroke="#3a2400" stroke-width="1.4"/><path d="M8 11h16M8 21h16" stroke="#3a2400" stroke-width="1.6"/></svg>`;
+    caption = `Barrels to ${o.place}`;
   } else {
     const item = itemOf(o.item);
     picture = `<span class="item-art tier${item.rare ? 4 : 1}">${iconSvg(iconKind(item))}</span>`;

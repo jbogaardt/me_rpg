@@ -45,6 +45,10 @@ export function objective(v: TaskView, names: BriefNames): string {
     }
     case 'find':
       return `Find ${names.item(v.what)}${where}.`;
+    case 'cast':
+      return `Cast ${n} spells${where}.`;
+    case 'haul':
+      return `Carry ${n} ${n > 1 ? 'barrels' : 'barrel'} to ${v.what}${where}.`;
     default:
       return `Reach ${v.what}${where}.`;
   }
@@ -122,6 +126,39 @@ export function briefing(v: TaskView, names: BriefNames): string[] {
           `It will be somewhere away from the beaten path, where nobody would trip over it by chance. A glowing thing will mark the spot once you are near. Mind what lives between here and there.`,
           `Search the quiet corners, far from where folk usually walk. You will know it by its glow when you are close.`,
           `Do not look where it is easy to look; that has been done. It glows when you are near, and the land around it is never quite still.`,
+        ]),
+      ];
+    case 'cast':
+      return [
+        page(0, [
+          `Magic is a muscle, and yours has gone soft. ${area} is quiet enough to practise in, and the days ahead will want every spell you have.`,
+          `An old teacher of mine used to say a spell untried is a spell forgotten. Prove her wrong in ${where}.`,
+          `Something in ${where} answers to magic: the air hums when it is woken. Wake it, and let us see what stirs.`,
+        ]),
+        page(1, [
+          `Cast ${n} spells, any you know: hold your focus, tap the pattern, and let it go. It counts for the whole party, whoever casts.`,
+          `${n} spells will do. Mind your strength: an empty well casts nothing, so rest between if you must.`,
+          `Work ${n} spells, as many hands as you like. Practise on the air, or on whatever comes at you.`,
+        ]),
+        page(2, [
+          `There is nothing to find and nowhere to be: only the doing of it. When the last spell is cast, the reward is yours, every one of you.`,
+          `Do it anywhere in ${where}. When the count is made, the reward is shared among you.`,
+        ]),
+      ];
+    case 'haul':
+      return [
+        page(0, [
+          `The folk of ${where} are moving their stores before the weather turns, and their backs are not what they were. ${v.what} is where it all must go.`,
+          `Someone left good barrels lying about ${where}, and the keepers at ${v.what} would put them to use. It is honest work, and it is wanted.`,
+          `A wall of barrels by ${v.what} would turn the wind, and the cold, and perhaps something worse. ${area} has the barrels; you have the arms.`,
+        ]),
+        page(1, [
+          `Carry ${n} of them, one at a time: lift it, walk it over, and set it down close by ${v.what}. Each counts once, for all of you.`,
+          `${n} barrels, set down near ${v.what}. Pick one up with the action key, set it down the same way. You cannot fight with one in your arms, so look about first.`,
+        ]),
+        page(2, [
+          `They are scattered where barrels are always scattered: by walls, carts and doors. When the last is in place, the reward is yours, every one of you.`,
+          `Take the easy ones first and the far ones last. When the count is made, the reward is shared among you.`,
         ]),
       ];
     default:

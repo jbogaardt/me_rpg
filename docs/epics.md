@@ -35,7 +35,8 @@ A step is either **resolved** from whatever land it falls in (`kind` hunt, gathe
 outright** (`objective`, in the campaign quests' own words: `{"t": "kill", "kind": "goblin", "count": 4, "zone":
 "greenwood"}`; never a bring or a meet), which binds it to that campaign's content and is checked against it, so a campaign
 writes a saga about its own world (`greenwood_reckoning` in campaign 1) and a pack-style one runs anywhere. A resolved step is a
-quest kind (hunt, gather, find, visit: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
+quest kind (hunt, gather, find, visit, cast spells where the party has magic, haul barrels to a named place; a land
+without one tells another kind: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
 `DmTasks.ts` runs it) or `meet`. For `meet` the DM makes the step's person (an `npc` then a `cast` entry of the live world,
 on open ground in the step's land, wearing the look a word names), the party is sent to find them (a `visit` quest at
 their feet, so the tracker and the map are the usual ones), and on reaching them they speak a line at a time in the DM's

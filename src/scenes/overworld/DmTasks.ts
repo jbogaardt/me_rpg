@@ -13,6 +13,8 @@ import {
   type TaskState,
 } from '../../systems/dmTasks';
 import { ITEMS, itemOf } from '../../systems/items';
+import { enabled } from '../../systems/capabilities';
+import { heroCombos } from '../../systems/skills';
 import { SITE_KINDS, mobKey } from '../../systems/quests';
 import type { Player } from '../../entities/Player';
 import type { Arena } from './Arena';
@@ -53,6 +55,16 @@ export class DmTasks {
     sim.onKill = (zone, key) => {
       kill(zone, key);
       this.book.kill(key, zone);
+    };
+    const cast = sim.onCast;
+    sim.onCast = (p, zone) => {
+      cast(p, zone);
+      this.book.cast(zone);
+    };
+    const setDown = sim.onSetDown;
+    sim.onSetDown = (p, zone, index, x, y) => {
+      setDown(p, zone, index, x, y);
+      this.book.haul(zone, index, x, y);
     };
     const defeat = sim.onDefeat;
     sim.onDefeat = (p, zone, x, y) => {
@@ -120,6 +132,8 @@ export class DmTasks {
       mobs,
       sites: [...kinds.values()].filter((s) => s.kind !== RELIC_KIND),
       places: zone.data.places.map((p) => ({ name: p.name, x: (p.col + 0.5) * CELL, y: (p.row + 0.5) * CELL })),
+      casters: enabled('combos', zone.name) && party.some((p) => heroCombos(p.hero, zone.name).length > 0),
+      barrels: enabled('carrying', zone.name) ? zone.barrels.filter((b) => !b.carried).length : 0,
       relics: relicsFor(ITEMS, level),
       spot: () => {
         for (let i = 0; i < 300; i++) {

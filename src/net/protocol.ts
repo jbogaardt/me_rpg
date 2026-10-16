@@ -46,7 +46,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v41: `SnapMsg.barrels`, the barrels players have moved or are carrying. v42: the world log's `voice` entry (a person the
  * DM made says something else); a page that does not know it cannot follow the host's world. v43: `InputMsg.rd`, the
  * guest is reading a quest conversation (the host holds foes still while anyone is). v44: a `DmMsg.task`'s hint is how
- * much of the way is shown (0 nothing, 1 the area, 2 an arrow), not a yes or no.
+ * much of the way is shown (0 nothing, 1 the area, 2 an arrow), not a yes or no, and its kind may be `cast` or `haul`.
  * Older: v28 made a negative `SnapMsg.ponds` level mean refilling after running dry; v27 made `drink` start (item
  * 1) or stop (item 0) a steady drink and added `SnapMsg.ponds`; v26 added the `drink` op of `do`; v25 added the
  * mob state `channel` (the Mummy's held ray); v24 added the `frost` fx of Stasis; v23 made `SnapMsg.crops` a state

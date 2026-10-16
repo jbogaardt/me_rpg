@@ -8,9 +8,10 @@ import { CELL } from '../map/types';
 import { MAX_NOTE } from './dmBrief';
 import { offerReward, partyLog, questOf } from './dmQuests';
 import type { QuestLog } from './combat';
-import { VISIT_RADIUS, killIn, progressIn, siteIn, visitIn, type Quest } from './quests';
+import { VISIT_RADIUS, castIn, haulIn, killIn, progressIn, siteIn, visitIn, type Quest } from './quests';
 
-export const TASK_KINDS = ['hunt', 'gather', 'find', 'visit'] as const;
+/** A quest's kind; its place in this list is how it travels, so the list is append-only. */
+export const TASK_KINDS = ['hunt', 'gather', 'find', 'visit', 'cast', 'haul'] as const;
 export type TaskKind = (typeof TASK_KINDS)[number];
 export const TASK_STATES = ['active', 'done', 'failed'] as const;
 export type TaskState = (typeof TASK_STATES)[number];
@@ -93,7 +94,17 @@ export interface TaskResult {
 
 /** About how long a quest takes (seconds): the yardstick for "that was quick". */
 export function parOf(kind: TaskKind, goal: number): number {
-  return kind === 'hunt' ? goal * 35 : kind === 'gather' ? goal * 50 : kind === 'find' ? 180 : 120;
+  return kind === 'hunt'
+    ? goal * 35
+    : kind === 'gather'
+      ? goal * 50
+      : kind === 'cast'
+        ? goal * 15
+        : kind === 'haul'
+          ? goal * 45
+          : kind === 'find'
+            ? 180
+            : 120;
 }
 
 /**
@@ -161,11 +172,28 @@ export class TaskBook {
     return true;
   }
 
+  /** Someone cast a spell in `zone`: counts if the quest wants one. */
+  cast(zone: string): boolean {
+    const t = this.task;
+    if (!t || t.state !== 'active' || !castIn(t.log, t.quest, zone)) return false;
+    this.count(t);
+    return true;
+  }
+
+  /** Barrel `index` of `zone` was set down at (x, y): counts if it is a new one by the haul quest's place (t.x, t.y). */
+  haul(zone: string, index: number, x: number, y: number): boolean {
+    const t = this.task;
+    const place = t && { col: t.x / CELL - 0.5, row: t.y / CELL - 0.5 };
+    if (!t || t.state !== 'active' || !haulIn(t.log, t.quest, zone, place ?? undefined, index, x, y)) return false;
+    this.count(t);
+    return true;
+  }
+
   /** The quest as the log now stands: what the tracker and the wire read. */
   private count(t: Task) {
     const before = t.progress;
     t.progress = progressIn(t.log, t.quest);
-    t.bits = t.kind === 'gather' ? t.log.progress : 0;
+    t.bits = t.kind === 'gather' || t.kind === 'haul' ? t.log.progress : 0;
     if (t.progress > before) t.sinceProgress = 0;
   }
 

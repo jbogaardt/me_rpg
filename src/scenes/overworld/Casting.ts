@@ -18,6 +18,7 @@ import {
   type SkillCombo,
 } from '../../systems/skills';
 import { SPELLS, type Combo, type Focus } from '../../systems/spells';
+import { recordCast } from '../../systems/quests';
 import type { Mob } from '../../entities/Mob';
 import type { Arena } from './Arena';
 import {
@@ -96,6 +97,8 @@ export class Casting {
     p.castCooldown = COMBO_COOLDOWN;
     this.sim.fx('castGlow', x, y - 22, undefined, p.slot);
     this.sim.text(x, y - 66, combo.skill ? SKILLS[combo.skill].name : SPELLS[combo.spell].name, 0xcfe8ff);
+    this.sim.onCast(p, p.zone);
+    this.sim.questNote(p, recordCast(p.hero, p.zone)); // a quest of spells counts it
   }
 
   // --- Skills (learned from the trainer; any weapon) ---
