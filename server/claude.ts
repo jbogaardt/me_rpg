@@ -1,10 +1,11 @@
 // The creative tier through a headless Claude Code session (`claude -p`): for a local machine that is already logged in
-// to Claude Code, so no API key is needed (`DM_BOT_CLAUDE=1`). Each call is one short, tool-less, one-shot session on a
-// small model in an empty folder (so no project files or settings leak in). It words things (replies, narration, a new
+// to Claude Code, so no API key is needed (`DM_BOT_CLAUDE=1`). One tool-less session on a
+// small model stays running in an empty folder (`ClaudeSession`: no start-up per call, it remembers what it said, and
+// nothing of the project or this machine's setup leaks in). It words things (replies, narration, a new
 // person) and never decides anything the page does not re-check; any failure, slow answer or bad JSON falls back to the
 // mock, so the game never waits on it for long. The structured parts are read with the same checks the page applies.
 
-import { execFile } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { MockConjurer, type Conjurer, type Person } from './conjure';
 import { MockNarrator, PERSONA, type Beat, type Narrator } from './narrate';
@@ -17,26 +18,124 @@ export type Ask = (system: string, prompt: string) => Promise<string>;
 export const CLAUDE_TIMEOUT_MS = 30_000;
 const MODEL = process.env.DM_BOT_CLAUDE_MODEL || 'haiku';
 
-/** The real thing: `claude -p`, no tools, nothing saved, run from an empty folder. */
-export const askClaude: Ask = (system, prompt) =>
-  new Promise((resolve, reject) => {
-    const args = ['-p', prompt, '--model', MODEL, '--tools', '', '--no-session-persistence', '--output-format', 'json'];
-    execFile(
-      'claude',
-      [...args, '--system-prompt', system],
-      { cwd: tmpdir(), timeout: CLAUDE_TIMEOUT_MS, maxBuffer: 1 << 20 },
-      (err, stdout) => {
-        if (err) return reject(new Error(`claude failed: ${err.message}`));
-        try {
-          const out = JSON.parse(stdout) as { result?: unknown; is_error?: boolean };
-          if (out.is_error || typeof out.result !== 'string') return reject(new Error('claude gave no answer'));
-          resolve(out.result.trim());
-        } catch (e) {
-          reject(e instanceof Error ? e : new Error(String(e)));
-        }
-      },
-    );
-  });
+/** The one standing instruction of the session; each message carries its own task and format. */
+const SESSION_SYSTEM =
+  'You are the voice of a Dungeon Master in a live fantasy game. Every message names one task and the exact form ' +
+  'of the answer (plain words, or JSON only): do exactly that and nothing else. Remember what you have already said ' +
+  'in this game and do not repeat yourself.';
+
+/** Turns before the session starts afresh (its memory grows with every call). */
+export const SESSION_TURNS = 40;
+
+/** What a session needs of a child process (a stand-in replaces it in tests). */
+export interface Child {
+  stdin: { write(text: string): unknown };
+  stdout: { on(event: 'data', cb: (chunk: Buffer | string) => void): unknown };
+  on(event: 'exit' | 'error', cb: () => void): unknown;
+  kill(): unknown;
+}
+export type Spawn = () => Child;
+
+/** `claude -p` kept running: messages go in as JSON lines, and each answer comes back as a `result` line. */
+const spawnClaude: Spawn = () =>
+  spawn(
+    'claude',
+    [
+      '-p',
+      ...['--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose'],
+      ...['--model', MODEL, '--tools', '', '--no-session-persistence'],
+      // Nothing of this machine's own setup (its MCP servers, skills, settings) goes in: about 27,000 tokens a call.
+      ...['--strict-mcp-config', '--disable-slash-commands', '--setting-sources', ''],
+      ...['--system-prompt', SESSION_SYSTEM],
+    ],
+    { cwd: tmpdir(), stdio: ['pipe', 'pipe', 'ignore'] },
+  );
+
+/**
+ * One long-lived headless session, not a cold process per call: no start-up wait, the persona's tokens are cached, and
+ * the model remembers what it has said. Calls are answered one at a time, in order. A call that fails or runs long
+ * ends the process, and the next one starts a fresh session (as does reaching `SESSION_TURNS`).
+ */
+export class ClaudeSession {
+  private child: Child | null = null;
+  private turns = 0;
+  private buffer = '';
+  private pending: { resolve: (text: string) => void; reject: (err: Error) => void } | null = null;
+  private chain: Promise<unknown> = Promise.resolve();
+
+  constructor(
+    private start: Spawn = spawnClaude,
+    private timeoutMs = CLAUDE_TIMEOUT_MS,
+  ) {}
+
+  /** The task's own system prompt rides in the message (the session's is fixed). */
+  ask: Ask = (system, prompt) => {
+    const run = this.chain.then(() => this.send(`${system}\n\n${prompt}`));
+    this.chain = run.catch(() => undefined);
+    return run;
+  };
+
+  close() {
+    this.drop(new Error('session closed'));
+  }
+
+  private send(text: string): Promise<string> {
+    if (this.child && this.turns >= SESSION_TURNS) this.drop(new Error('session renewed'));
+    const child = (this.child ??= this.open());
+    this.turns++;
+    return new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(() => this.drop(new Error('claude was too slow')), this.timeoutMs);
+      this.pending = {
+        resolve: (t) => (clearTimeout(timer), resolve(t)),
+        reject: (e) => (clearTimeout(timer), reject(e)),
+      };
+      child.stdin.write(`${JSON.stringify({ type: 'user', message: { role: 'user', content: text } })}\n`);
+    });
+  }
+
+  private open(): Child {
+    const child = this.start();
+    this.turns = 0;
+    this.buffer = '';
+    child.stdout.on('data', (chunk) => this.read(String(chunk)));
+    child.on('exit', () => this.child === child && this.drop(new Error('claude exited')));
+    child.on('error', () => this.child === child && this.drop(new Error('claude could not start')));
+    return child;
+  }
+
+  private read(chunk: string) {
+    this.buffer += chunk;
+    for (let at = this.buffer.indexOf('\n'); at >= 0; at = this.buffer.indexOf('\n')) {
+      const line = this.buffer.slice(0, at);
+      this.buffer = this.buffer.slice(at + 1);
+      let msg: { type?: string; result?: unknown; is_error?: boolean };
+      try {
+        msg = JSON.parse(line) as typeof msg;
+      } catch {
+        continue;
+      }
+      if (msg.type !== 'result' || !this.pending) continue;
+      const waiting = this.pending;
+      this.pending = null;
+      if (msg.is_error || typeof msg.result !== 'string') waiting.reject(new Error('claude gave no answer'));
+      else waiting.resolve(msg.result.trim());
+    }
+  }
+
+  private drop(why: Error) {
+    const child = this.child;
+    this.child = null;
+    const waiting = this.pending;
+    this.pending = null;
+    child?.kill();
+    waiting?.reject(why);
+  }
+}
+
+/** The real thing, shared by every part of the bot. */
+const session = new ClaudeSession();
+export const askClaude: Ask = session.ask;
+export const closeClaude = () => session.close();
 
 /** The most letters of a narrated line (the page trims the DM's words again). */
 export const MAX_LINE = 240;

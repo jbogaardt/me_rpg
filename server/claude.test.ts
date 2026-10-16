@@ -1,5 +1,14 @@
-import { describe, expect, it } from 'vitest';
-import { ClaudeConjurer, ClaudeFallback, ClaudeNarrator, cleanLine, jsonIn, readPerson, type Ask } from './claude';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  ClaudeConjurer,
+  ClaudeSession,
+  ClaudeFallback,
+  ClaudeNarrator,
+  cleanLine,
+  jsonIn,
+  readPerson,
+  type Ask,
+} from './claude';
 
 const LOOKS = [{ id: 'monk', name: 'Monk' }];
 const says =
@@ -84,5 +93,54 @@ describe('cleanLine', () => {
   it('is empty when only an action was given, or it will not fit', () => {
     expect(cleanLine('*Hold still, friend.*')).toBe('');
     expect(cleanLine(`${'word '.repeat(80)}.`)).toBe('');
+  });
+});
+
+describe('ClaudeSession', () => {
+  const fake = () => {
+    const sent: string[] = [];
+    let onData: (c: string) => void = () => undefined;
+    let onExit: () => void = () => undefined;
+    let killed = 0;
+    const child = {
+      stdin: { write: (t: string) => sent.push(t) },
+      stdout: { on: (_: 'data', cb: (c: string) => void) => (onData = cb) },
+      on: (e: 'exit' | 'error', cb: () => void) => e === 'exit' && (onExit = cb),
+      kill: () => killed++,
+    };
+    return {
+      child,
+      sent,
+      reply: (t: string) => onData(`${JSON.stringify({ type: 'result', result: t })}\n`),
+      exit: () => onExit(),
+      killed: () => killed,
+    };
+  };
+
+  it('keeps one process for many calls, answering in order', async () => {
+    const f = fake();
+    let starts = 0;
+    const session = new ClaudeSession(() => (starts++, f.child));
+    const a = session.ask('sys', 'one');
+    const b = session.ask('sys', 'two');
+    await vi.waitFor(() => expect(f.sent).toHaveLength(1));
+    f.reply(' first ');
+    expect(await a).toBe('first');
+    await vi.waitFor(() => expect(f.sent).toHaveLength(2));
+    f.reply('second');
+    expect(await b).toBe('second');
+    expect(starts).toBe(1);
+  });
+
+  it('starts afresh after a failure', async () => {
+    const f = fake();
+    let starts = 0;
+    const session = new ClaudeSession(() => (starts++, f.child), 150);
+    await expect(session.ask('s', 'slow')).rejects.toThrow('too slow');
+    expect(f.killed()).toBe(1);
+    const next = session.ask('s', 'again');
+    await vi.waitFor(() => expect(starts).toBe(2));
+    f.reply('ok');
+    expect(await next).toBe('ok');
   });
 });
