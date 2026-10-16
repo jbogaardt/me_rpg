@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { MockFallback, MockRouter } from './mocks';
 import {
   CONFIDENCE,
+  CONFIDENCE_CARD,
+  HINTS,
   HOLD_REPLY,
   NONE,
   cardQuestion,
   decideCard,
+  partyHealth,
   readImprovised,
   wordsOf,
   type Card,
@@ -101,7 +104,38 @@ describe('cardQuestion', () => {
   });
 
   it('offers a director card no roads', () => {
-    expect(cardQuestion(struggle, table()).options.map((o) => o.id)).toEqual(['ease', 'stay', NONE]);
+    expect(cardQuestion(struggle, table()).options.map((o) => o.id)).toEqual(['ease', 'stay']); // a card's own "stay" is its way to do nothing
+  });
+});
+
+describe("how a director's card is asked", () => {
+  it("describes each choice by when it is right, and gives the party's health", () => {
+    const q = cardQuestion(struggle, table());
+    expect(q.options.map((o) => o.hint)).toEqual([HINTS['struggle/ease'], HINTS['struggle/stay']]);
+    expect(q.state.party).toEqual({ average: 1, lowest: 1 });
+  });
+
+  it('sums the party up', () => {
+    const t = { ...table(), friends: [1, 0.5, 0.2].map((hp, slot) => ({ slot, area: 'A', hp, near: true })) };
+    expect(partyHealth(t)).toEqual({ average: 0.57, lowest: 0.2 });
+    expect(partyHealth({ ...t, friends: [] })).toEqual({ average: 1, lowest: 1 });
+  });
+
+  it("takes a router pick a little above a coin toss for a card, but not for a player's words", async () => {
+    const sure = (p: number) => ({
+      choose: (q: { options: { id: string }[] }) =>
+        Promise.resolve({ choice: q.options[0]!.id, confidence: p, distribution: {} }),
+    });
+    const fallback = new MockFallback();
+    const card = await decideCard(struggle, table(), { router: sure(CONFIDENCE_CARD + 0.01), fallback });
+    expect(card.source).toBe('router');
+    const asked = await decideCard(message('I juggle three apples'), table(), {
+      router: sure(CONFIDENCE_CARD + 0.01),
+      fallback,
+    });
+    expect(asked.source).toBe('fallback');
+    const unsure = await decideCard(struggle, table(), { router: sure(CONFIDENCE_CARD - 0.1), fallback });
+    expect(unsure.source).toBe('fallback');
   });
 });
 

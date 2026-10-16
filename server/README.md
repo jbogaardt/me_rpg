@@ -53,7 +53,8 @@ different version away), so point it at the site they use. Against a local build
 - The DM's voice (`PERSONA` in `narrate.ts`) is a gentle wizard: warm, dry, cryptic, never an alert. The mock lines speak
   in it; a creative model is given it as its system prompt.
 - `router.ts` answers a card (`decideCard`): a fast router answers one choice question over the card's options (plus
-  the story's roads for a player's words, and "nothing"); at confidence 0.80 or more its pick is taken. Otherwise a
+  the story's roads for a player's words, and "nothing"); at confidence 0.80 or more its pick is taken for a player's words, and at 0.55 for a director's card (whose
+  options are described by `HINTS` and which come with the party's health, so Jev decides most of them and Claude is kept for words). Otherwise a
   creative fallback picks and writes the reply; its JSON is checked before use, so it can only choose what was offered.
 - The router is TypeSafe's Jev (`jev.ts`, the `@typesafe-ai/sdk` client) when `TYPESAFE_API_KEY` is set, and a
   word-matching mock (`mocks.ts`) otherwise; the bot says which at start. `TYPESAFE_DEFAULT_MODEL` pins a model

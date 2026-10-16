@@ -10,8 +10,13 @@
 // Neither may invent a world: an answer is only ever something the page offered, which the page checks again and sends
 // to friends through the usual messages. Both services are interfaces with mocks (mocks.ts) until the real APIs are chosen.
 
-/** How sure the router must be for its pick to be taken without asking the fallback. */
+/** How sure the router must be for its pick to be taken without asking the fallback, when a player's own words are the question. */
 export const CONFIDENCE = 0.8;
+/**
+ * The same for a director's card. These have two or three options that each mean something definite, so the router's
+ * top pick is the answer unless it is close to a coin toss: the creative fallback is kept for what needs words.
+ */
+export const CONFIDENCE_CARD = 0.55;
 /** The option that does nothing (send the card away). */
 export const NONE = '@none';
 /** Options that name a story road start with this (only offered for a friend's own words). */
@@ -25,7 +30,30 @@ export interface Option {
   id: string;
   label: string;
   on?: boolean;
+  /** When this is the right choice, in plain words for the router (see `HINTS`). */
+  hint?: string;
 }
+
+/**
+ * What each choice of a director's card means, for the router: when it is right. Keyed `card kind/option id` (an option
+ * id's part before a `:`). A bare label ("Stay the course") says little to a model; this is what lets it decide.
+ */
+export const HINTS: Record<string, string> = {
+  'easy/heat': 'the party is healthy and winning easily, so the world should push back harder',
+  'easy/stay': 'the party is having a good time or the story needs this calm; leave things as they are',
+  'struggle/ease': 'the party is hurt or losing a fight, so the world should give them room to recover',
+  'struggle/stay': 'the party is hurt but coping, or the danger is the point of the story; do not soften it',
+  'lost/hint': 'the party has made no progress for a long time and does not know where to go',
+  'lost/stay': 'the party is wandering but happy to explore; let them find the way themselves',
+  'done/ease': 'the last task was hard-won, so the party should get a breather',
+  'done/heat': 'the last task was easy, so raise the stakes',
+  'done/stay': 'the pace of the last task was right',
+  'revive/where': 'the party needs the fallen player back now, or the danger has passed: raise them where they fell',
+  'revive/here': 'the fallen player should rejoin without a long walk: bring them to the Dungeon Master',
+  'revive/leave': 'the fight is still dangerous or the defeat was fair: let them wake at the start',
+  'twist/close': 'the story is quiet or halfway through and something should happen: foes close in',
+  'twist/ease': 'the party has had a rough time: give them a breather',
+};
 
 /** A card waiting for the DM (the page's `DmBotCard`). */
 export interface Card {
@@ -54,6 +82,8 @@ export interface Table {
 /** What a question is asked about: the card, the player's words (if theirs) and the table, as named JSON fields. */
 export interface QuestionState {
   card: { kind: string; title: string; note: string };
+  /** How the party is in health, 0 to 1 (empty party: 1). */
+  party: { average: number; lowest: number };
   /** The player's own words or ask, when the card is theirs. */
   playerWords: string | null;
   table: Table;
@@ -110,16 +140,37 @@ export function wordsOf(card: Card): string | null {
 
 /** What may be answered: the card's own options (not its canned replies: the bot writes its own), roads, and none. */
 export function optionsFor(card: Card, table: Table): Option[] {
-  const own = card.options.filter((o) => !o.id.startsWith('r:') && o.id !== NONE);
+  const own = card.options
+    .filter((o) => !o.id.startsWith('r:') && o.id !== NONE)
+    .map((o) => {
+      const hint = HINTS[`${card.kind}/${o.id.split(':')[0]}`];
+      return hint ? { ...o, hint } : o;
+    });
   const roads =
     card.kind === 'message' ? (table.story?.options ?? []).map((r) => ({ id: ROAD + r.cue, label: r.label })) : [];
-  return [...own, ...roads, { id: NONE, label: 'Nothing: leave it be' }];
+  // A director's card already has its own way to do nothing ("stay the course"), so a third "nothing" would only split the router's vote.
+  return card.kind === 'message' || wordsOf(card)
+    ? [...own, ...roads, { id: NONE, label: 'Nothing: leave it be' }]
+    : own;
+}
+
+/** The party's health in two numbers, so the router need not add up `table.friends`. */
+export function partyHealth(table: Table): { average: number; lowest: number } {
+  const hp = table.friends.map((f) => f.hp);
+  if (!hp.length) return { average: 1, lowest: 1 };
+  const round = (n: number) => Math.round(n * 100) / 100;
+  return { average: round(hp.reduce((a, b) => a + b, 0) / hp.length), lowest: round(Math.min(...hp)) };
 }
 
 export function cardQuestion(card: Card, table: Table): ChoiceQuestion {
   const words = wordsOf(card);
   return {
-    state: { card: { kind: card.kind, title: card.title, note: card.note }, playerWords: words, table },
+    state: {
+      card: { kind: card.kind, title: card.title, note: card.note },
+      party: partyHealth(table),
+      playerWords: words,
+      table,
+    },
     question: words
       ? 'You are the Dungeon Master of a co-op adventure. A player said `playerWords` (see `card` for how it reached ' +
         'you and `table` for the party and the story). Which of these is the most fitting response?'
@@ -171,7 +222,7 @@ export async function decideCard(
     const answer = await services.router.choose(question);
     confidence = answer.confidence;
     const option = question.options.find((o) => o.id === answer.choice);
-    if (option && answer.confidence >= CONFIDENCE) {
+    if (option && answer.confidence >= (words ? CONFIDENCE : CONFIDENCE_CARD)) {
       if (option.id !== NONE) return moveOf('router', option.id, words ? ack(option) : null, confidence);
       if (!words) return moveOf('router', null, null, confidence); // nothing to do and nobody to answer
     }

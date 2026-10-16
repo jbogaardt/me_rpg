@@ -3,7 +3,8 @@
 // (`jev-latest`) unless `TYPESAFE_DEFAULT_MODEL` names another. The key stays in the bot's environment.
 //
 // Option ids are the game's (`q:0`, `road:fire|ford`, `@none`), which mean nothing to a model, so each option is asked
-// under a plain label (`option_1`...) described by its own words, and the answer is mapped back.
+// under a plain label (`option_1`...) described by its own words (and, for a director's card, when it is the right
+// choice: `HINTS` in router.ts), and the answer is mapped back.
 
 import { choice, TypeSafeClient } from '@typesafe-ai/sdk';
 import type { ChoiceAnswer, ChoiceQuestion, ChoiceRouter } from './router';
@@ -26,7 +27,9 @@ export class JevRouter implements ChoiceRouter {
   constructor(private client: SystemOne = new TypeSafeClient()) {}
 
   async choose(question: ChoiceQuestion): Promise<ChoiceAnswer> {
-    const criteria = Object.fromEntries(question.options.map((o, i) => [labelOf(i), o.label]));
+    const criteria = Object.fromEntries(
+      question.options.map((o, i) => [labelOf(i), o.hint ? `${o.label}: ${o.hint}` : o.label]),
+    );
     const { answers } = await this.client.systemOne({
       state: question.state as unknown as SentState,
       questions: { next: choice(question.question, criteria) },
