@@ -109,3 +109,5 @@ facts, with a reason to care. Invented places are never named unless the game ga
   `DM_BOT_CHATTER=1` to bring them back) and replies to a player's words know the current task and story.
 - Open: items as rewards (a saga's reward is XP and gold; an item needs a pick from the shops/loot); whether a 60 s
   respawn leaves enough foes for a hunt quest; the game's own AFK rule is online only.
+- Then: before telling a saga the bot opens the story's next road while the world has fewer than 3 lands, so the saga has
+  other lands to send the party to (`MIN_LANDS` in `server/host.ts`). Not yet seen in a real run.

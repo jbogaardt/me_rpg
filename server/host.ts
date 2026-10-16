@@ -26,6 +26,8 @@ import { SETTLE_MS, heldCard, nextStep, type Clock, type PageState, type Pressur
 const DEFAULT_URL = 'https://jbogaardt.github.io/me_rpg/?campaign=live';
 const TICK_MS = 1500;
 /** The creative tier through a headless Claude Code session (claude.ts) instead of the mocks. */
+/** Lands a world should have grown to before a saga is told in it (a saga sets its steps in lands away from the start). */
+const MIN_LANDS = 3;
 const CLAUDE = Boolean(process.env.DM_BOT_CLAUDE);
 /** Unprompted remarks (the DM talking over the saga) are off unless asked for: a player can ask when they want the story again. */
 const CHATTER = Boolean(process.env.DM_BOT_CHATTER);
@@ -202,6 +204,12 @@ class Dm {
 
   /** Begin an epic (epics.ts); false when none could be told here (the caller offers a plain quest). */
   private async tell(s: PageState): Promise<boolean> {
+    // A saga travels, so the world must have somewhere to go: open the next road of the story first while it is small.
+    if (s.story && !s.story.complete && s.story.placed.length < MIN_LANDS && s.story.options.length) {
+      const card = await this.call('open', 'story');
+      if (card) await this.answer(card, s);
+      s = await this.state();
+    }
     const page = {
       teller: { epic: (raw: unknown) => this.call('epic', raw) },
       looks: await this.call('looks'),
