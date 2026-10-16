@@ -60,6 +60,9 @@ export class Interactions {
     this.harvestButtons.onPick = (key) => this.harvestPressed(key);
   }
 
+  /** The kinds of quest site whose note has been shown (once each). */
+  private siteTold = new Set<string>();
+
   /** The local player's action button: advance the dialog, talk when next to the NPC or a shopkeeper, otherwise `attack`. */
   handleAction(pressed: boolean, attack: () => void) {
     if (!pressed) return;
@@ -100,7 +103,10 @@ export class Interactions {
       else this.pack.talkToGiver(giver.giver);
     } else if (site) {
       // Touching a site the quest wants: read what it says, and let the action count it (the host decides, for a guest).
-      dialog.say(siteNote(site.kind, progressOf(this.arena.hero)));
+      if (!this.siteTold.has(site.kind)) {
+        this.siteTold.add(site.kind); // once per kind, as passive text: not a popup for every one picked up
+        dialog.note(siteNote(site.kind, progressOf(this.arena.hero)));
+      }
       attack();
     } else if (pet) {
       pet.attend(this.arena.player.x, this.arena.player.y);
@@ -161,7 +167,8 @@ export class Interactions {
     const site = this.arena.sites.find(
       (s) =>
         Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH &&
-        (siteOpen(p.hero, s.kind, this.arena.zone.name, s.index) || this.storyUi.questWants(this.arena.zone.name, s)),
+        ((this.arena.role === 'solo' && siteOpen(p.hero, s.kind, this.arena.zone.name, s.index)) ||
+          this.storyUi.questWants(this.arena.zone.name, s)),
     );
     if (site) return this.touchSite(p, site);
     if (this.barrels.pickUp(p)) return;

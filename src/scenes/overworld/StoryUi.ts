@@ -147,7 +147,8 @@ export class StoryUi {
     const { dialog, menu } = this.ui;
     const t = this.arena.task;
     const active = !!t && t.state === 'active' && !this.arena.local.dm;
-    const sig = active ? `${t.kind}|${t.zone}|${t.what}|${t.x},${t.y}|${t.title}` : '';
+    // Not where it points (x, y): a search area that moves is the same quest, and is not told again.
+    const sig = active ? `${t.kind}|${t.zone}|${t.what}|${t.title}` : '';
     const note = active ? (t.note ?? '') : '';
     if (sig !== this.taskSig) {
       this.taskSig = sig;

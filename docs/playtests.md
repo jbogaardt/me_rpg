@@ -28,6 +28,8 @@ care. Places are never named unless the game gave them.
   quest is brought in by the DM. Every telling of a quest ends with the tracker's own objective.
 - A saga speaks for itself (no remarks over it), closes with a glad person, how it ended and the reward, and the next
   saga builds on the last and travels (the world is grown to three lands first).
+- Picking things up never pops up: a site's note is passive text, once per kind; a quest's telling is not repeated when
+  its search area moves; a director's card is acted on, never answered aloud.
 - Pacing: foes stay down 60 s; online, mobs leave a player with no input for 10 s; heat is not turned up twice in 5 min.
 - The DM walks to a party in his zone, and only teleports to one elsewhere or very far.
 

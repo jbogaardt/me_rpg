@@ -260,7 +260,7 @@ export async function decideCard(
     const made = readImprovised(raw, question.options);
     if (made) {
       // Words with no pick and nobody who asked ("Rise, friend" after choosing to do nothing) would say the opposite of what is done.
-      const reply = !made.pick && !words ? null : (made.reply ?? (words ? HOLD_REPLY : null));
+      const reply = words ? (made.reply ?? HOLD_REPLY) : null; // a director's card is acted on, not announced
       return moveOf('fallback', made.pick, reply, confidence);
     }
   } catch (err) {
