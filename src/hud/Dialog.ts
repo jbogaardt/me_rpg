@@ -1,3 +1,5 @@
+import { voice } from './voice';
+
 const DIALOG_MAX_W = 600;
 /** How long (s) a waiting aside stays worth saying once a conversation is over. */
 const ASIDE_STALE_S = 30;
@@ -49,6 +51,18 @@ export class Dialog {
   constructor() {
     this.box.querySelector('.close')!.addEventListener('click', () => this.dismissAside());
     // A click on the game sends the DM's words away too: nobody hunts for a close button.
+    const speaker = this.box.querySelector('.voice');
+    if (speaker instanceof HTMLButtonElement) {
+      const show = () => {
+        speaker.hidden = !voice.available;
+        speaker.textContent = voice.muted ? '🔇' : '🔊';
+      };
+      show();
+      speaker.addEventListener('click', () => {
+        voice.setMuted(!voice.muted);
+        show();
+      });
+    }
     window.addEventListener('pointerdown', (e) => {
       if (e.target instanceof HTMLCanvasElement) this.dismissAside();
     });
@@ -122,6 +136,7 @@ export class Dialog {
     this.queue = [];
     this.aside = null;
     this.waiting = [];
+    voice.stop();
     this.hide();
   }
 
@@ -137,6 +152,7 @@ export class Dialog {
       this.waiting.unshift(this.aside);
       this.waiting.length = Math.min(this.waiting.length, MAX_WAITING);
       this.aside = null;
+      voice.stop();
     }
     this.who.textContent = '';
     this.text.textContent = talk.lines[0] ?? '';
@@ -148,6 +164,7 @@ export class Dialog {
     this.aside = { ...aside, until: now + aside.seconds };
     this.who.textContent = `${aside.who} speaks`;
     this.text.textContent = aside.text;
+    voice.speak(aside.text);
     this.box.classList.add('aside');
     this.box.hidden = false;
   }
@@ -155,6 +172,7 @@ export class Dialog {
   private clearAside() {
     if (!this.aside) return;
     this.aside = null;
+    voice.stop();
     this.hide();
   }
 

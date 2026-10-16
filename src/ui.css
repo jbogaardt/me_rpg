@@ -185,8 +185,11 @@
 #dialog.aside { pointer-events: none; text-align: center; font-weight: 600; font-size: 18px; min-height: 0; }
 #dialog.aside #dialog-who { display: block; }
 #dialog.aside .close { display: block; pointer-events: auto; }
+#dialog .voice { display: none; position: absolute; top: 2px; left: 4px; width: 32px; height: 32px; background: none; border: 0; font-size: 16px; cursor: pointer; }
+#dialog.aside .voice:not([hidden]) { display: block; pointer-events: auto; }
 #dialog.aside .more { display: none; }
 body.touch-ui #dialog .close { width: 44px; height: 44px; top: 0; right: 0; }
+body.touch-ui #dialog .voice { width: 44px; height: 44px; top: 0; left: 0; }
 
 /* --- Touch controls (shown only on touch devices) --- */
 #touch-controls { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
