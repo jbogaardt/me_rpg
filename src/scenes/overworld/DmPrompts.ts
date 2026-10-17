@@ -1,5 +1,5 @@
 import type { CardOption, DmCard } from '../../hud/DmCard';
-import { CANCEL_WORDS, COMPASS_STEADY_WORDS, COMPASS_WORDS } from '../../systems/dmVoice';
+import { BREATHER_WORDS, CANCEL_WORDS, COMPASS_STEADY_WORDS, COMPASS_WORDS } from '../../systems/dmVoice';
 import { PRESSURES, PRESSURE_LABEL, isPressure } from '../../systems/dmPowers';
 import { Director, type Suggestion } from '../../systems/dmDirector';
 import { Inbox, MESSAGE_CODE, REPLIES, REQUESTS, describe, type InboxKind } from '../../systems/dmRequests';
@@ -69,6 +69,11 @@ export class DmPrompts {
   ) {
     card.onPick = (kind, id) => this.pick(kind, id);
     card.onDismiss = () => this.director.snooze(SNOOZE);
+  }
+
+  /** A quest ended and the breather began: the DM says so, with a pint in it (only whoever runs the world speaks). */
+  sayBreather() {
+    if (this.runsWorld) this.desk.say(this.phrases.pick('breather', BREATHER_WORDS));
   }
 
   get runsWorld(): boolean {

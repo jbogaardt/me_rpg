@@ -682,6 +682,12 @@
       "choices": []
     },
     {
+      "node_id": "shop_tavern",
+      "biome_type": "shop_tavern",
+      "entities": [],
+      "choices": []
+    },
+    {
       "node_id": "shop_wizard",
       "biome_type": "shop_wizard",
       "entities": [],

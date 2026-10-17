@@ -713,6 +713,19 @@
         "cape": "cape.forest"
       }
     },
+    "innkeeper": {
+      "type": "npc",
+      "name": "Innkeeper",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.plain_white",
+        "beard": "beard.gray",
+        "torso": "torso.tunic_white",
+        "legs": "legs.pants_tan",
+        "feet": "feet.boots_brown"
+      }
+    },
     "apothecary": {
       "type": "npc",
       "name": "Apothecary",

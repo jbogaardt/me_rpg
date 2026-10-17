@@ -50,3 +50,18 @@ care. Places are never named unless the game gave them.
   AFK mercy, no unprompted remarks (`DM_BOT_CHATTER=1` brings them back).
 - Open: items as rewards (saga rewards are XP and gold); whether 60 s respawn leaves enough foes for a hunt; the AFK
   rule is online only; the fallen-player card repeats; check that Claude's sagas really use hops 1 to 3.
+
+## What a player can report (the Report tab)
+
+The pause menu's **Report** tab (`hud/Report.ts`, counters in `systems/engagement.ts`, kept by `scenes/overworld/Pacing.ts`) is
+how a player tells us how a session went without us watching: time (busy and idle), first kill and first quest, kills and
+knockouts (the host counts them; a guest's page says so), quests started, done and lost, the longest stall, breathers, the
+zones and time spent in each, three mood faces, an "I am stuck" button and one free line. **Copy report** puts it as plain
+text on the clipboard; the same counters go to the console as one `[engage]` line at each quest end, breather and mood, so
+the bot's log and the player's words line up. Nothing leaves the device unless the player copies it. They are proxies, not a
+verdict: read them with what the player says, and expect knockouts per zone to show a zone pitched too high.
+
+A **breather** (`systems/breather.ts`) is the pause after a quest, said out loud: a 🍺 badge with a clock over the left of the
+screen (`hud/BreatherBadge.ts`, with the three mood faces) and one line from the DM (`BREATHER_WORDS`), and the director leaves
+the same minute before it offers the next quest. It is local to each page, started by the quest each already sees end (a
+saga's middle step is no lull). Lanternrest's tavern, the Resting Lantern, is where a party spends it.

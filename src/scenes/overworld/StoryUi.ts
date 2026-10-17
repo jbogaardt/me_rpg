@@ -20,6 +20,7 @@ import { recipeNames } from '../../systems/dmForge';
 import { FUSED, ITEMS } from '../../systems/items';
 import { zoneName } from '../../systems/places';
 import { bandNote, zoneLevels } from '../../systems/levels';
+import type { Pacing } from './Pacing';
 import {
   CHAPTERS,
   GIVERS,
@@ -55,6 +56,10 @@ export class StoryUi {
   private taskBrief: string[] | null = null; // the telling of it, waiting for the dialog to be free
   private visited = new Set<string>(); // zones the local player has been in (the banner says "new area" the first time)
   private marked = new WeakMap<Character, string>(); // the tag last put over each quest giver
+  /** Set by the scene: told when a quest begins or ends (the breather and the Report's counters). */
+  pacing?: Pacing;
+  private taskState: TaskView['state'] | null = null; // the DM's quest as last seen, to spot it ending
+  private taken = false; // the story chain's quest as last seen (solo)
 
   constructor(
     private arena: Arena,
@@ -68,6 +73,7 @@ export class StoryUi {
 
   /** Every frame, for the zone the local player is in: markers, the banner, the telling, the arrow and the map's guide. */
   update(z: ZoneState, dt: number) {
+    this.pacing?.update(dt);
     this.updateQuests(z, dt);
     this.announceArea();
     this.tellStory();
@@ -134,6 +140,9 @@ export class StoryUi {
     if (s.stage < QUESTS.length && log.stage === QUESTS.length) {
       this.titleCard = { title: 'To be continued...', sub: 'End of part one' };
     }
+    if (log.stage > s.stage && s.stage !== -1) this.pacing?.questDone(); // a quest of the chain was handed in
+    if (log.taken && !this.taken) this.pacing?.questStarted();
+    this.taken = log.taken;
     s.stage = log.stage;
     s.ready = ready;
 
@@ -158,6 +167,7 @@ export class StoryUi {
     // Not where it points (x, y): a search area that moves is the same quest, and is not told again.
     const sig = active ? `${t.kind}|${t.zone}|${t.what}|${t.title}` : '';
     const note = active ? (t.note ?? '') : '';
+    this.watchTask(t);
     if (sig !== this.taskSig) {
       this.taskSig = sig;
       this.taskNote = note;
@@ -169,6 +179,22 @@ export class StoryUi {
     if (!this.taskBrief || dialog.active || menu.open || this.zones.transition.busy) return;
     dialog.note(this.taskBrief); // the DM gave it unasked: passive text
     this.taskBrief = null;
+  }
+
+  /**
+   * The DM's quest as it begins or ends, for the Report and the breather. A step of a saga is not a lull (the next comes at
+   * once): only a quest on its own, or a saga's last step, starts a breather.
+   */
+  private watchTask(t: TaskView | null) {
+    if (this.arena.local.dm) return;
+    const state = t?.state ?? null;
+    if (state === 'active' && this.taskState !== 'active') this.pacing?.questStarted();
+    if (this.taskState === 'active' && state !== 'active') {
+      const endOfLine = !t?.epic || t.epic.step >= t.epic.total;
+      if (state === 'done') this.pacing?.questDone(endOfLine);
+      else if (endOfLine) this.pacing?.questLost();
+    }
+    this.taskState = state;
   }
 
   /** The pages that tell a DM quest: the DM's own words when they wrote some, else the usual telling. */

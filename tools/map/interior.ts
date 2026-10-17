@@ -121,9 +121,10 @@ const COLORS = {
   b: [74, 130, 200] as RGB,
   l: [64, 170, 92] as RGB,
   p: [140, 90, 200] as RGB, // violet
-  e: [236, 236, 226] as RGB, // glass shine
+  e: [236, 236, 226] as RGB, // glass shine, foam
+  a: [214, 150, 52] as RGB, // ale
 };
-type Shelf = 'smithy' | 'armory' | 'ranger' | 'apothecary' | 'wizard';
+type Shelf = 'smithy' | 'armory' | 'ranger' | 'apothecary' | 'wizard' | 'tavern';
 /** Each shelf holds a row of one kind of ware, 6x8 pixels each, three to a shelf. */
 const WARES: Record<Shelf, string[][]> = {
   smithy: [
@@ -141,6 +142,10 @@ const WARES: Record<Shelf, string[][]> = {
   wizard: [
     ['........', '.pppppp.', '.pgggwp.', '.pppppp.', '.pwwwwp.', '.pppppp.', '........', '........'],
     ['......g.', '.....ggg', '....w.g.', '...w....', '..w.....', '.w......', '........', '........'],
+  ],
+  tavern: [
+    ['.eeee...', 'iaaaai..', 'iaaaaii.', 'iaaaai.i', 'iaaaaii.', '.iiii...', '........', '........'],
+    ['.wwww...', 'wsssssw.', 'wwwwwww.', 'wsssssw.', 'wwwwwww.', '.wwwww..', '........', '........'],
   ],
   apothecary: [
     ['..ee....', '..ii....', '.irri...', 'irrrri..', 'irrrri..', '.iiii...', '........', '........'],
@@ -229,11 +234,13 @@ const pieces: Record<keyof typeof INTERIOR, Canvas> = {
   shelfRanger: shelf('ranger'),
   shelfApothecary: shelf('apothecary'),
   shelfWizard: shelf('wizard'),
+  shelfTavern: shelf('tavern'),
   signSmithy: sign('smithy'),
   signArmory: sign('armory'),
   signRanger: sign('ranger'),
   signApothecary: sign('apothecary'),
   signWizard: sign('wizard'),
+  signTavern: sign('tavern'),
   lectern: lectern(),
 };
 

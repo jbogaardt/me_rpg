@@ -25,6 +25,7 @@ import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
 import { PartnerArrows } from '../hud/PartnerArrows';
 import { AreaBanner } from '../hud/AreaBanner';
+import { Pacing } from './overworld/Pacing';
 import {} from '../systems/places';
 import type { Menu } from '../hud/Menu';
 import type {} from '../hud/Party';
@@ -256,6 +257,8 @@ export class OverworldScene implements Scene {
     this.input = new LocalInput(arena, this.zones, () => ui.touch.active);
     this.partyUi = new PartyUi(arena, this.zones, ui.menu, () => this.possession.release());
     this.storyUi = new StoryUi(arena, ui, this.zones, this.banner, this.overlay, () => this.possession.active);
+    this.storyUi.pacing = new Pacing(arena, this.sim, ui.menu);
+    this.storyUi.pacing.onBreather = () => this.prompts.sayBreather();
     this.interact = new Interactions(
       arena,
       ui,
