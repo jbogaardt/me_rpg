@@ -9,6 +9,17 @@
 import { choice, noul, score, TypeSafeClient } from '@typesafe-ai/sdk';
 import type { Pulse, PulseState, TableReader } from './pulse';
 import type { ChoiceAnswer, ChoiceQuestion, ChoiceRouter } from './router';
+import {
+  REACTIONS,
+  REACTION_STYLE,
+  TENSIONS,
+  TENSION_STYLE,
+  TWISTS,
+  TWIST_FACT,
+  type DramaticRead,
+  type SceneFacts,
+  type SceneJudge,
+} from './scene';
 
 /** What `systemOne` takes as state: JSON (QuestionState is plain JSON). */
 type SentState = Parameters<TypeSafeClient['systemOne']>[0]['state'];
@@ -102,6 +113,59 @@ export class JevReader implements TableReader {
       stalled: a.stalled.noul,
       wantsWord: a.wantsWord.noul,
       needsQuest: a.needsQuest.noul,
+    };
+  }
+}
+
+/** The label an option of a scene question is asked under, and the id it maps back to. */
+function idOf<T extends string>(ids: readonly T[], label: string): T {
+  const id = ids[Number(label.replace('option_', '')) - 1];
+  if (!id) throw new Error(`Jev answered "${label}", which is not an option`);
+  return id;
+}
+
+/** One `choice` over the vocabulary `ids`, each option described by `meaning` (a bare id tells the model little). */
+function sceneChoice<T extends string>(question: string, ids: readonly T[], meaning: Record<T, string>) {
+  return choice(
+    question,
+    Object.fromEntries(ids.map((id, i) => [labelOf(i), `${id.replace(/_/g, ' ')}: ${meaning[id]}`])),
+  );
+}
+
+/**
+ * The drama of a moment (scene.ts) as one fan-out request: three independent `choice` questions over the same named
+ * facts, so they cost one round trip. Jev decides how the moment should feel and what the place and the other side do
+ * about it; the mechanical outcome is in the facts as the game resolved it, and is not Jev's to change.
+ */
+export class JevScene implements SceneJudge {
+  constructor(private client: SystemOne = new TypeSafeClient()) {}
+
+  async judge(facts: SceneFacts): Promise<DramaticRead> {
+    const response = await this.client.systemOne({
+      state: facts as unknown as SentState,
+      questions: {
+        tension: sceneChoice(
+          'What should this moment feel like to the players? Judge from `mechanical.outcome`, the health figures and the `setting`.',
+          TENSIONS,
+          TENSION_STYLE,
+        ),
+        twist: sceneChoice(
+          'Does the place itself change as a result of this action? Choose only a change the `props`, `surface` and `setting` can support; otherwise choose none.',
+          TWISTS,
+          TWIST_FACT,
+        ),
+        reaction: sceneChoice(
+          'How does the other side (the one the action was done to, or the one who did it to a player) carry itself right after?',
+          REACTIONS,
+          REACTION_STYLE,
+        ),
+      },
+    });
+    const a = response.answers as Record<'tension' | 'twist' | 'reaction', { choice: string }>;
+    return {
+      dramatic_tension: idOf(TENSIONS, a.tension.choice),
+      environmental_twist: idOf(TWISTS, a.twist.choice),
+      npc_reaction_state: idOf(REACTIONS, a.reaction.choice),
     };
   }
 }

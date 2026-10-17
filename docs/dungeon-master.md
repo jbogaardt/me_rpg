@@ -13,10 +13,9 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
 - **A human DM steers, never spawns.** They shape how hard the world pushes (pressure) and what happens in it (story,
   sky, quests), never what is in it. The log's `cast`/`npc` entries are the door
   for AI help: the DM bot (below) makes a person and sets them near the party through them.
-- **Steer by reacting, not by digging.** No admin panel: a bar that is always there, big tools as hot buttons, and cards
-  that appear at the right moment with two or three buttons and go away if ignored. **Nothing pops up for the DM**:
-  director nudges and player requests wait in an inbox (a count on a button). There are no cooldowns; a DM is never made
-  to wait.
+- **Steer by reacting, not by digging.** No admin panel: an always-there bar with hot buttons, and cards with two or three
+  buttons that go away if ignored. **Nothing pops up for the DM**: director nudges and player requests wait in an inbox
+  (a count on a button). No cooldowns; a DM is never made to wait.
 - **Pre-canned words** for the director's moves keep the DM's voice consistent, each in several wordings
   (`systems/phrases.ts`: none comes back until the others have been said); the DM's own words are short and shown to everyone
   as a caption (`hud/Dialog.ts`) that takes no input, never stops play, leaves by itself, and is also spoken by the
@@ -52,7 +51,8 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 
 - **Director** (`dmDirector.ts` says WHEN, `DmPrompts.ts` builds each card and does the pick, `hud/DmCard.ts` draws it):
   watches party health, task progress and quiet time, and suggests easing off, turning up the heat, a twist, which quest
-  (after a breather to wander once one ends), offering the compass (never marked on the map: it leans toward the place, then points at it), a breather, a new land's sky, raising a fallen player, or the story's next road (with a vote).
+  (after a breather once one ends), the compass (the map stays the party's own; the compass leans toward the place, then
+  points at it), a breather, a new land's sky, raising a fallen player, or the story's next road (a vote).
   Urgent cards wait less; a dismissed card is a breather.
 - **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (their own free-form words, from the 💬
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,
@@ -74,9 +74,11 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 ## A bot as the DM
 
 The DM can be a program (`server/`, the DM bot): `?dmbot` puts a handle on the page (`DmBot.ts`) through which an outside
-script hosts, opens the inbox, answers cards, takes story roads, replies, speaks, follows the party and strolls about them (`walk`: a held direction for a moment; the DM is never a statue), starts the game and narrates unasked, in the DM's voice (new areas, a quest done, a hurt friend, a quiet table), and
-brings in a stranger on reaching a new area (`spawn`: an `npc` then a `cast` entry on open ground 3-8 cells from the party,
-checked by the world like any entry, so a bad invention is refused). Every call is a step the bar already offers: nothing new on the wire.
+script hosts, opens the inbox, answers cards, takes story roads, replies, speaks, follows and strolls about the party (the
+DM is never a statue), starts the game, narrates unasked (new areas, a quest done, a hurt friend, a quiet table; a hurt
+friend's moment is read by Jev and told with `systems/cues.ts` cues, `server/README.md`) and brings in a stranger on reaching a new area
+(`spawn`: an `npc` then a `cast` entry on open ground 3-8 cells from the party, checked by the world like any entry).
+Every call is a step the bar already offers: nothing new on the wire.
 
 ## Co-op rules
 

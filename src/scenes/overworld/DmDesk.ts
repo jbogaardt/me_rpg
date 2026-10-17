@@ -4,7 +4,8 @@ import type { Session } from '../../net/session';
 import { DIALS, enabled, type Dial } from '../../systems/capabilities';
 import type { DayClock } from '../../systems/daynight';
 import { MESSAGE_CODE, REQUESTS, cleanAsk } from '../../systems/dmRequests';
-import { cleanSay, sayTime } from '../../systems/dmPowers';
+import { cleanCued } from '../../systems/cues';
+import { sayTime } from '../../systems/dmPowers';
 import { taskFromWire, taskWire } from '../../systems/dmTasks';
 import { questDials } from '../../systems/quests';
 import { CLIMATES, isClimate, PRECIPS, type Precip } from '../../systems/weather';
@@ -117,7 +118,7 @@ export class DmDesk {
 
   /** The DM speaks to the party: the words appear on every friend's screen (and the DM's own). False if there were none. */
   say(text: string): boolean {
-    const words = cleanSay(text);
+    const words = cleanCued(text);
     if (!words || this.arena.role === 'client') return false; // solo speaks to itself (its own screen)
     this.said = { id: ++this.saySeq, text: words, left: sayTime(words) };
     this.timer = DM_RESEND; // tell them now
@@ -288,7 +289,7 @@ export class DmDesk {
 
   /** Host: answer friends privately (their seats): the words appear on their screens alone. False if there were none to say. */
   replyTo(slots: number[], text: string): boolean {
-    const words = cleanSay(text);
+    const words = cleanCued(text);
     if (!words || this.arena.role !== 'host' || !slots.length) return false;
     for (const slot of slots) this.replies.set(slot, { id: ++this.replySeq, text: words, left: sayTime(words) });
     this.timer = DM_RESEND; // tell them now

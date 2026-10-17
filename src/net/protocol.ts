@@ -27,7 +27,7 @@ import { MAX_GUESTS } from './relayApi';
 import type { ParticleEffectName } from '../systems/particleEffects';
 import { PRECIPS, type WeatherSnap } from '../systems/weather';
 import { DIALS } from '../systems/capabilities';
-import { MAX_SAY } from '../systems/dmPowers';
+import { MAX_SAY_CUED } from '../systems/cues';
 import { MAX_ASK, REQUESTS as DM_REQUESTS } from '../systems/dmRequests';
 
 const MAX_REQUESTS = DM_REQUESTS.length;
@@ -47,7 +47,9 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * DM made says something else); a page that does not know it cannot follow the host's world. v43: `InputMsg.rd`, the
  * guest is reading a quest conversation (the host holds foes still while anyone is). v44: a `DmMsg.task`'s hint is how
  * much of the way is shown (0 nothing, 1 the area, 2 an arrow), not a yes or no, and its kind may be `cast` or `haul`.
- * v45: a `DmMsg.task`'s kind may be `boss` (the guest builds the giant from the quest's `what`, "kind:health") or `master`.
+ * v45: `DmMsg.say` and `reply` may carry director cues (`<cue:.../>`, systems/cues.ts), so they may be up to `MAX_SAY_CUED`
+ * letters; an old page would show the tags and refuse the longer words.
+ * v46: a `DmMsg.task`'s kind may be `boss` (the guest builds the giant from the quest's `what`, "kind:health") or `master`.
  * Older: v28 made a negative `SnapMsg.ponds` level mean refilling after running dry; v27 made `drink` start (item
  * 1) or stop (item 0) a steady drink and added `SnapMsg.ponds`; v26 added the `drink` op of `do`; v25 added the
  * mob state `channel` (the Mummy's held ray); v24 added the `frost` fx of Stasis; v23 made `SnapMsg.crops` a state
@@ -63,7 +65,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
  * within a size budget.
  */
-export const PROTOCOL_VERSION = 45;
+export const PROTOCOL_VERSION = 46;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -327,7 +329,11 @@ export interface DmMsg {
   shift: number;
   dials: Record<string, boolean>;
   vote: VoteWire | null;
-  /** What the DM just said: [a number that changes with each saying, the words]; repeated for a few seconds, then absent. */
+  /**
+   * What the DM just said: [a number that changes with each saying, the words]; repeated for a few seconds, then absent.
+   * The words may carry director cues (`<cue:.../>`, systems/cues.ts), already checked by the host; each page cuts them out
+   * of what it shows and plays them as the reading reaches them.
+   */
   say?: [number, string];
   /** The DM's private answer to this friend: [a number that changes with each, the words]; repeated for a few seconds. */
   reply?: [number, string];
@@ -859,7 +865,7 @@ export function parseMessage(raw: unknown): Message | null {
           isCount(s[0]) &&
           typeof s[1] === 'string' &&
           s[1].length >= 1 &&
-          s[1].length <= MAX_SAY);
+          s[1].length <= MAX_SAY_CUED);
       const holdOk = m.hold === undefined || m.hold === 1;
       const replyOk =
         m.reply === undefined ||
@@ -868,7 +874,7 @@ export function parseMessage(raw: unknown): Message | null {
           isCount(m.reply[0]) &&
           typeof m.reply[1] === 'string' &&
           m.reply[1].length >= 1 &&
-          m.reply[1].length <= MAX_SAY);
+          m.reply[1].length <= MAX_SAY_CUED);
       const taskOk = m.task === undefined || taskFromWire(m.task) !== null;
       return isCount(m.n) &&
         isNum(m.shift) &&

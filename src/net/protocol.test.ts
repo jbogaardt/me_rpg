@@ -2,6 +2,7 @@ import { CLIMATES, PRECIPS, WIND_LEVELS, Weather } from '../systems/weather';
 import { describe, expect, it } from 'vitest';
 import type { TradeCommand, TradeViewWire } from '../systems/trade';
 import { MAX_GROUND } from '../systems/inventory';
+import { MAX_SAY_CUED } from '../systems/cues';
 import { fitEvents, SNAP_BUDGET } from './feed';
 import {
   pondsFromWire,
@@ -425,14 +426,21 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
   it('round-trips what the DM says and refuses a saying that is empty, too long or not a pair', () => {
     const said = { ...dm, say: [3, 'The fen stirs.'] as [number, string] };
     expect(parseMessage(encodeMessage(said))).toEqual(said);
-    for (const say of [[3, ''], [3, 'x'.repeat(500)], [-1, 'hi'], ['a', 'hi'], [3], 'hi'])
+    for (const say of [[3, ''], [3, 'x'.repeat(MAX_SAY_CUED + 1)], [-1, 'hi'], ['a', 'hi'], [3], 'hi'])
       expect(parseMessage(JSON.stringify({ ...dm, say }))).toBeNull();
+  });
+
+  it('carries the DM’s director cues in what is said and in a private reply (v45)', () => {
+    const tagged =
+      'He lunges <cue:anim actor="p1" action="lunge" dir="right" />and the lantern <cue:sfx name="glass_break" />bursts.';
+    const said = { ...dm, say: [4, tagged] as [number, string], reply: [1, tagged] as [number, string] };
+    expect(parseMessage(encodeMessage(said))).toEqual(said);
   });
 
   it('round-trips the DM’s private reply and refuses one that is empty, too long or not a pair', () => {
     const reply = { ...dm, reply: [2, 'On my way.'] as [number, string] };
     expect(parseMessage(encodeMessage(reply))).toEqual(reply);
-    for (const r of [[2, ''], [2, 'x'.repeat(500)], [-1, 'hi'], ['a', 'hi'], [2], 'hi'])
+    for (const r of [[2, ''], [2, 'x'.repeat(MAX_SAY_CUED + 1)], [-1, 'hi'], ['a', 'hi'], [2], 'hi'])
       expect(parseMessage(JSON.stringify({ ...dm, reply: r }))).toBeNull();
   });
 
