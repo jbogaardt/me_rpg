@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { bandNote, bandText, duel, foeProblem, gateWords, gated, setZoneLevels, standing, zoneLevels } from './levels';
+import {
+  bandNote,
+  bandText,
+  duel,
+  duelWith,
+  foeProblem,
+  gateWords,
+  gated,
+  setZoneLevels,
+  standing,
+  verdictOf,
+  zoneLevels,
+} from './levels';
 
 const goblin = { hp: 22, attack: 8, defense: 0 };
 const zombie = { hp: 68, attack: 16, defense: 1 };
@@ -52,5 +64,21 @@ describe('is a foe a fair fight', () => {
   it('flags a foe that is no fight at the top of the band', () => {
     expect(foeProblem(goblin, [1, 4])?.kind).toBe('trivial');
     expect(foeProblem(goblin, [1, 2])).toBeNull();
+  });
+});
+
+describe('a fight as a real hero has it', () => {
+  it('reads blows and hits off the hero’s own blow, armour and health', () => {
+    expect(duelWith(zombie, { hp: 30, power: 7, defense: 1 })).toEqual({ blows: 12, hits: 2 });
+    expect(duelWith(zombie, { hp: 30, power: 30, defense: 20 })).toEqual({ blows: 3, hits: 30 }); // armour cuts the blow to 1
+  });
+
+  it('calls a fight deadly, a slog, hard, fair, easy or trivial', () => {
+    expect(verdictOf({ blows: 12, hits: 2 })).toBe('deadly');
+    expect(verdictOf({ blows: 20, hits: 8 })).toBe('slog');
+    expect(verdictOf({ blows: 7, hits: 4 })).toBe('hard');
+    expect(verdictOf({ blows: 6, hits: 9 })).toBe('fair');
+    expect(verdictOf({ blows: 3, hits: 20 })).toBe('easy');
+    expect(verdictOf({ blows: 2, hits: 40 })).toBe('trivial');
   });
 });

@@ -27,7 +27,53 @@ const state = (over: Partial<ReportState> = {}): ReportState => ({
   at: [14, 30],
   quest: 'Hunt orcs (1/4)',
   party: { size: 2, avgHp: 0.4, lowest: 0.25 },
-  near: { Orc: 2 },
+  hero: {
+    attack: 6,
+    attackGear: 4,
+    power: 10,
+    defense: 1,
+    defenseGear: 2,
+    armor: 3,
+    magic: 2,
+    mp: 8,
+    maxMp: 12,
+    xp: [10, 40],
+    weapon: 'Bronze Sword',
+    worn: ['Cloth Hood'],
+    potions: 1,
+    food: 80,
+    water: 60,
+    gold: 25,
+    skills: [],
+  },
+  fight: {
+    downs: 1,
+    downsHere: 1,
+    killsHere: 5,
+    kills: 9,
+    taken: 31,
+    hitsTaken: 3,
+    dealt: 44,
+    by: { Orc: 3 },
+    lastHurtBy: { foe: 'Orc', ago: 2 },
+    pressure: 'steady',
+  },
+  place: { band: [4, 5], alive: 7, total: 12 },
+  foes: [
+    {
+      name: 'Orc',
+      count: 3,
+      near: 2,
+      maxHp: 91,
+      attack: 24,
+      defense: 3,
+      xp: 46,
+      blows: 13,
+      hits: 2,
+      verdict: 'deadly',
+      typical: 'fair',
+    },
+  ],
   breather: false,
   stall: 31,
   recent: ['1:00 the party killed goblin x3'],
@@ -64,8 +110,16 @@ describe('the timeline the analyst reads', () => {
   it('shows what was said with the state it was said in and what led up to it', () => {
     const text = timeline(log());
     expect(text).toContain('1:15 P2 said: "this cave is way too hard, email me at [email]"');
-    expect(text).toContain('lv2 hp 9/36, The Sunscar Hollow (14,30), quest: Hunt orcs (1/4)');
-    expect(text).toContain('party 2 avg 40% lowest 25%, near: Orcx2, stalled 31s');
+    expect(text).toContain('hero: lv2 hp 9/36 mp 8/12, blow 10 (6+4 gear), armor 3 (1+2 gear)');
+    expect(text).toContain(
+      'fights: knocked out 1x (1 in this zone), the party killed 5 here (9 in all); last 60s: took 31 damage in 3 hits (Orc x3)',
+    );
+    expect(text).toContain('last hurt by Orc 2s ago; DM pressure steady');
+    expect(text).toContain('The Sunscar Hollow (14,30) levels 4\u20135, 7 of 12 foes alive');
+    expect(text).toContain(
+      'Orc x3 (2 near) hp 91 atk 24 def 3 xp 46: 13 blows to fell it, 2 hits to fell the hero [deadly; a typical hero of this level: fair]',
+    );
+    expect(text).toContain('party 2 avg 40% lowest 25%');
     expect(text).toContain('just before: 1:00 the party killed goblin x3');
     expect(text).not.toContain('bob@example.com');
   });
@@ -93,6 +147,8 @@ describe('the analysis prompt', () => {
     for (const h of ['## Prompt for the next session', '## At a glance', '## Findings', '## What went well'])
       expect(prompt).toContain(h);
     expect(prompt).toContain('THE HOST LOG');
+    expect(prompt).toContain('HOW TO READ THE NUMBERS');
+    expect(prompt).toContain('verdict');
     expect(prompt).toContain('docs/dungeon-master.md');
   });
 });

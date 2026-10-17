@@ -35,7 +35,17 @@ export class Pacing {
     const kill = sim.onKill;
     sim.onKill = (zone, key) => {
       kill(zone, key);
-      this.report.killed(key);
+      this.report.killed(zone, key);
+    };
+    const hurt = sim.onHurt;
+    sim.onHurt = (p, kind, damage) => {
+      hurt(p, kind, damage);
+      this.report.hurt(p, kind, damage);
+    };
+    const dealt = sim.onDealt;
+    sim.onDealt = (kind, damage, killed) => {
+      dealt(kind, damage, killed);
+      this.report.dealt(damage);
     };
     const defeat = sim.onDefeat;
     sim.onDefeat = (p, zone, x, y) => {

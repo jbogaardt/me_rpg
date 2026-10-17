@@ -98,6 +98,10 @@ export class Simulation {
   onDefeat: (p: Player, zone: string, x: number, y: number) => void = () => {};
   /** A foe fell to the party (the DM's tasks count the kills in their zone). */
   onKill: (zone: string, key: string) => void = () => {};
+  /** A foe hurt a hero: `kind` is the foe's content id, `damage` what landed (armour and the DM's pressure counted). The host's report reads it. */
+  onHurt: (p: Player, kind: string, damage: number) => void = () => {};
+  /** The party hurt a foe (`damage` as it landed, `killed` when that finished it). */
+  onDealt: (kind: string, damage: number, killed: boolean) => void = () => {};
   /** Someone cast a spell (a combo, `spell` its id; a skill's own id for an innate skill) in `zone`: the DM's quest may count it. */
   onCast: (p: Player, zone: string, spell: string) => void = () => {};
   /** Someone set barrel `index` of `zone` down at (x, y): the DM's quest may count it. */
@@ -487,13 +491,9 @@ export class Simulation {
       )
         return false;
     if (p.safe) return true; // warded or just arrived: the beam holds but does nothing
-    this.harm(
-      p,
-      this.pressed(rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero))),
-      mob.body.x,
-      mob.body.y,
-      true,
-    );
+    const burn = this.pressed(rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero)));
+    this.onHurt(p, mobKey(mob.kind) ?? '', burn);
+    this.harm(p, burn, mob.body.x, mob.body.y, true);
     return true;
   }
 
@@ -543,6 +543,7 @@ export class Simulation {
     // a foe marked by Spirit Mark takes more; the DM's pressure makes the world harder or gentler to hurt
     const damage = Math.max(1, Math.round((rawDamage * this.casting.markFactor(mob)) / this.pressure()));
     const killed = mob.hit(damage, vx, vy);
+    this.onDealt(mobKey(mob.kind) ?? '', damage, killed);
     // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
     if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx));
     this.text(mob.body.x, mob.body.y - 54 * mob.body.size, String(damage), 0xffffff);
@@ -587,7 +588,9 @@ export class Simulation {
   private hurtHero(mob: Mob, victim: Character) {
     const p = this.arena.party().find((q) => q.body === victim);
     if (!p || p.safe) return;
-    this.harm(p, this.pressed(rollDamage(mob.kind.attack, defensePower(p.hero))), mob.body.x, mob.body.y);
+    const damage = this.pressed(rollDamage(mob.kind.attack, defensePower(p.hero)));
+    this.onHurt(p, mobKey(mob.kind) ?? '', damage);
+    this.harm(p, damage, mob.body.x, mob.body.y);
   }
 
   /** The DM's pressure as a factor: 0.7 gentle, 1 steady, 1.5 fierce (`systems/dmPowers.ts`). */
