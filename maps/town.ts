@@ -20,6 +20,8 @@ export const SHOP_DOORS = {
   ranger: { building: { col: 178, row: ROW }, door: { col: 179, w: 1 }, outside: { col: 179, row: ROW + 1 } },
   // The wizard's house stands off to the east, clear of the north road (which runs straight down the middle to the market).
   wizard: { building: { col: 184, row: ROW }, door: { col: 186, w: 2 }, outside: { col: 186, row: ROW + 1 } },
+  // The tavern stands east of the wizard's house, where a breather is spent (the DM sends a party there after a saga).
+  tavern: { building: { col: 192, row: ROW }, door: { col: 194, w: 2 }, outside: { col: 194, row: ROW + 1 } },
 } as const;
 /** The hanging sign by each shop's door (tools/map/catalog.ts SIGN_PREFABS). */
 const SHOP_HANGING = {
@@ -28,6 +30,7 @@ const SHOP_HANGING = {
   apothecary: 'hangFlask',
   ranger: 'hangSword',
   wizard: 'hangAmulet',
+  tavern: 'hangMug',
 } as const;
 export type ShopId = keyof typeof SHOP_DOORS;
 
@@ -59,7 +62,13 @@ export default defineBiome({
   build(z) {
     z.fill('grass');
     z.paint('dirt', [...STREETS, ...blob(MARKET, 5, 0.25)]);
-    z.keepClear([...STREETS, MARKET, { col: 146, row: 190, w: 36, h: 11 }, { col: 182, row: 191, w: 9, h: 11 }]);
+    z.keepClear([
+      ...STREETS,
+      MARKET,
+      { col: 146, row: 190, w: 36, h: 11 },
+      { col: 182, row: 191, w: 9, h: 11 },
+      { col: 191, row: 190, w: 9, h: 12 },
+    ]);
     const open = awayFrom([...STREETS, MARKET]);
 
     for (const [id, shop] of Object.entries(SHOP_DOORS)) {

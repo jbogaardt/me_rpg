@@ -5,6 +5,7 @@
 // two or three buttons, answered with one tap or left alone (the game carries on). What each card says and does is
 // scenes/overworld/DmPrompts.ts.
 
+import { BREATHER_SECONDS } from './breather';
 import { HINT_ARROW } from './dmTasks';
 
 export type Suggestion =
@@ -49,7 +50,7 @@ export interface DirectorState {
 /** Seconds of quiet (no task) before "what now?", and between such nudges. */
 export const IDLE_BEFORE_NEXT = 90;
 /** Seconds after a quest ends before the next is suggested: time to wander, shop and talk. */
-const BREATHER = 45;
+const BREATHER = BREATHER_SECONDS;
 /** Seconds between cards that are only colour; the urgent ones (a fallen player, the story) wait much less. */
 export const CARD_GAP = 10;
 const URGENT_GAP = 3;

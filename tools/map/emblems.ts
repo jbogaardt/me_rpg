@@ -10,6 +10,7 @@ export const EMBLEMS: Record<string, string[]> = {
   apothecary: ['...##...', '...##...', '..####..', '.#xxxx#.', '.#xxxx#.', '..####..'],
   ranger: ['.##.....', '#..#..#.', '#..#.##.', '#######>', '#..#.##.', '.##...#.'],
   wizard: ['...##...', '..#xx#..', '#xxxxxx#', '.#xxxx#.', '.#x##x#.', '..#..#..'],
+  tavern: ['.####...', '#xxxx##.', '#xxxx#.#', '#xxxx#.#', '#xxxx##.', '.####...'],
 };
 export const INK: RGB = [58, 40, 34];
 export const LIGHT: RGB = [236, 214, 150];
@@ -19,4 +20,5 @@ export const ACCENT: Record<string, RGB> = {
   apothecary: [64, 170, 92],
   ranger: INK,
   wizard: [120, 70, 190],
+  tavern: [214, 150, 52],
 };

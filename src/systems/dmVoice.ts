@@ -14,6 +14,15 @@ export const DONE_WORDS = [
   'Magnificent. I confess I peeked at the ending, and you were better than the ending.',
 ];
 
+/** A quest has ended and the party gets a breather: time to mend, shop and have a pint. */
+export const BREATHER_WORDS = [
+  'Sit a spell, friends. A pint, a bite, a story: the next road will keep until the mugs are empty.',
+  'Breather! Go and have a pint, mend what is broken, and brag a little. I shall pretend not to listen.',
+  'Even heroes get thirsty. Find a tavern, order something foamy, and let the road wait its turn.',
+  'Pause for breath. The first round is the best round, and I hear someone has poured it.',
+  'No rush now. Drink, eat, shop, gossip. When your cups are dry, I will have something for you.',
+];
+
 /** The quest failed. */
 export const FAILED_WORDS = [
   'Ah. That did not go as the story wanted. Do not look so glum: every good tale has a stumble in it.',

@@ -650,3 +650,21 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
 #problem p { margin: 0 0 4px; }
 #problem ul { margin: 0; padding-left: 18px; font-weight: 500; font-size: 12px; word-break: break-word; }
 #problem button { position: absolute; top: 2px; right: 4px; width: 28px; height: 28px; background: none; border: 0; color: #ffe9e9; font: 700 16px var(--body, sans-serif); cursor: pointer; }
+
+/* The breather badge (hud/BreatherBadge.ts) and the Report tab (hud/Report.ts). */
+#breather {
+  position: fixed; z-index: 3; left: calc(8px + env(safe-area-inset-left)); bottom: calc(190px + env(safe-area-inset-bottom));
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; max-width: min(300px, calc(100vw - 16px)); padding: 4px 10px;
+  border-radius: 4px; background: rgba(20, 14, 6, 0.7); color: var(--gold); font: 700 13px var(--title);
+  text-shadow: 0 1px 2px #000; pointer-events: none;
+}
+#breather[hidden], #breather .moods[hidden] { display: none; }
+#breather .mug { font-size: 18px; }
+#breather .time { font-variant-numeric: tabular-nums; }
+#breather .hint { flex: 1 1 100%; font: 600 12px var(--body); color: #e8d9b0; }
+#breather .moods { display: flex; gap: 4px; pointer-events: auto; }
+#breather .moods button { padding: 0 4px; border: 0; border-radius: 3px; background: rgba(255, 255, 255, 0.12); font-size: 18px; cursor: pointer; }
+#menu-report dl { margin: 8px 0; }
+#menu-report textarea { display: block; width: 100%; box-sizing: border-box; margin: 8px 0; font: 15px var(--body); }
+#menu-report .report-moods { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0; }
+#menu-report .report-status { min-height: 1.3em; margin: 6px 0 0; font-size: 15px; color: var(--ink-soft); }

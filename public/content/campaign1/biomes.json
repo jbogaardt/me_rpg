@@ -139,7 +139,8 @@
         "graves.png",
         "trees_frost.png",
         "frost_objects.png",
-        "hanging_signs.png"
+        "hanging_signs.png",
+        "town.png"
       ],
       "generation": {
         "roam": [
@@ -314,6 +315,15 @@
       "generation": {},
       "links": ["town"]
     },
+    "shop_tavern": {
+      "name": "The Resting Lantern",
+      "map": "shop_tavern",
+      "climate": null,
+      "music": null,
+      "tilesets": ["interior.png", "object-layer.png"],
+      "generation": {},
+      "links": ["town"]
+    },
     "town": {
       "name": "Lanternrest",
       "tint": "#ffdc9a",
@@ -342,6 +352,7 @@
         "shop_apothecary",
         "shop_ranger",
         "shop_wizard",
+        "shop_tavern",
         "sewer_lanternrest"
       ]
     },

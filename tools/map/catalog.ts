@@ -494,6 +494,7 @@ export const BUILDINGS = {
   armory: { x: 384, y: 0, w: 96, h: 288 },
   ranger: { x: 480, y: 0, w: 96, h: 288 },
   wizard: { x: 576, y: 0, w: 192, h: 224 },
+  tavern: { x: 768, y: 0, w: 192, h: 224 },
 };
 /** Where each piece of the shop interior sits on interior.png (2x the 16px drawing in tools/map/interior.ts). */
 export const INTERIOR = {
@@ -513,6 +514,8 @@ export const INTERIOR = {
   signApothecary: { x: 384, y: 96, w: 128, h: 64 },
   shelfWizard: { x: 512, y: 32, w: 96, h: 64 },
   signWizard: { x: 512, y: 96, w: 128, h: 64 },
+  shelfTavern: { x: 608, y: 32, w: 96, h: 64 },
+  signTavern: { x: 640, y: 96, w: 128, h: 64 },
   lectern: { x: 0, y: 160, w: 32, h: 48 },
 };
 const furniture = (name: keyof typeof INTERIOR, band: number, about: string): Prefab => {
@@ -813,6 +816,7 @@ export const PREFABS = {
   ),
   apothecary: building('apothecary', 'Apothecary: a 6x7 hall with a green roof and a flask over the door.'),
   wizard: building('wizard', "Wizard's sanctum: a 6x7 hall with a violet roof and a star over the door."),
+  tavern: building('tavern', 'Tavern: a 6x7 hall with a teal roof and a tankard over the door.'),
   armory: building('armory', 'Armorer: a 3x9 tall house with a slate roof and a shield over the door.'),
   counter: furniture(
     'counter',
@@ -834,6 +838,8 @@ export const PREFABS = {
     'A reading stand with an open book, 1x1.5 cells, solid. The wizard room lists the combos on it (systems/lectern.ts).',
   ),
   signWizard: furniture('signWizard', 0, 'Wall sign with a star, 4x2 cells, decoration.'),
+  shelfTavern: furniture('shelfTavern', 64, 'Shelves of tankards and kegs, 3x2 cells, solid.'),
+  signTavern: furniture('signTavern', 0, 'Wall sign with a tankard, 4x2 cells, decoration.'),
   ranger: building('ranger', "Ranger's lodge: a 3x9 tall house with a golden roof and a bow over the door."),
   treeA: lpcTree('green', 0, 'Leafy tree, variant A. Blocks its trunk and lower canopy; the crown is walk-behind.'),
   treeB: lpcTree('green', 1, 'Leafy tree, variant B. Blocks its trunk and lower canopy; the crown is walk-behind.'),

@@ -37,3 +37,4 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
   Online tab back to retry). Guest-only; a host has nothing to join. The relay cannot tell a full game from a closed one.
 - **The map overlay is local**: it fills in as the players in view explore (`map/explored.ts`), nothing is sent. Rooms
   have none, and the `map` capability can turn it off or show the whole zone.
+- **The breather badge and the Report tab** (`BreatherBadge.ts`, `Report.ts`; core engine, local to each page, nothing on the wire): after a quest ends a 🍺 badge with a clock and three mood faces sits at the left edge (never over the fight) and the DM says a line; the menu's Report tab shows the session's counters (`systems/engagement.ts`) with Copy report, an "I am stuck" button and a note. Both are built with DOM nodes and `textContent`; `docs/playtests.md` says what the numbers are for.

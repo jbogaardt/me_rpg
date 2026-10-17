@@ -362,7 +362,10 @@
       "name": "Topaz",
       "value": 80,
       "gem": { "arms": { "xpBonus": 6 }, "worn": { "goldBonus": 6 } }
-    }
+    },
+    "ale": { "name": "Pint of Ale", "value": 6, "use": { "hp": 12, "mp": 12, "water": 15 } },
+    "stew": { "name": "Hearty Stew", "value": 14, "use": { "hp": 15, "food": 65 } },
+    "honeyCake": { "name": "Honey Cake", "value": 8, "use": { "hp": 6, "mp": 15, "food": 25 } }
   },
   "shops": {
     "smithy": {
@@ -445,6 +448,18 @@
       ],
       "stock": ["apprenticeWand", "stormcallerWand", "noviceTome", "arcaneGrimoire"],
       "buys": ["caster"]
+    },
+    "tavern": {
+      "name": "The Resting Lantern",
+      "tag": "Tavern",
+      "keeper": "innkeeper",
+      "greeting": [
+        "Pull up a stool. The first pint after a hard day is the best one.",
+        "Ale for the weary, stew for the hungry. Rest as long as you like: the lamp is lit.",
+        "Take a breather, friend. The road will still be there when you are done."
+      ],
+      "stock": ["ale", "stew", "honeyCake"],
+      "buys": ["supply"]
     }
   },
   "loots": {

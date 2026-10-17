@@ -142,3 +142,13 @@ Carlo Enrico Victoria (Nemisys), Tuomo Untinen (Reemax), ak-blanc and Johann C; 
 CC-BY-SA 3.0 text. The pack's shadowless 32x32 sheets are used **unmodified** (renamed); `tools/map/catalog.ts` cuts the
 markers out as prefabs (cemeteries on the undead, barrow, old shrine and haven town maps) and `src/entities/Landmark.ts`
 draws one headstone as the "grave" quest landmark. As the other CC-BY-SA art here, the sheets stay under CC-BY-SA 3.0 or later.
+
+## Caves, sewers and cave mouths (`public/tilesets/dungeon_cave.png`, `dungeon_sewer.png`, `dunes.png`, source in `art/oga_dungeon/`)
+
+Cave, sewer and desert tilesets by MrBeast, from the OpenGameArt collection
+["16x16 JRPG tilesets enlarged 2x"](https://opengameart.org/content/16x16-jrpg-tilesets-enlarged-2x) (originals:
+[cave](https://opengameart.org/content/cave-tileset-0), [sewer](https://opengameart.org/content/sewer-tileset)), licensed
+[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/). The collection asks that used together they carry a link to
+http://opengameart.org in the credits. The sheets are drawn on a 16px grid; `tools/map/dungeonSheets.ts` doubles them to the
+32px cell (nearest neighbour) and, for the desert sheet, makes the cream sand transparent so a rock sits on the game's own
+sand. Nothing else is changed. The credit is also in the pause menu's Credits tab.
