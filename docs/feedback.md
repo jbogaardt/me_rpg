@@ -50,7 +50,7 @@ host's console as `[report]` lines, and the DM bot collects them (`DmBot.reports
 When a game ends (everyone leaves, or the bot is stopped) the bot has Haiku read the log as a playtest analyst
 (`server/report.ts`) and writes `reports/<date>-<code>.md`: findings ranked, each with the players' words and the state
 they were in, where in the repo to look, and a prompt to start the next session with (rules alone if no model answers, or
-`DM_BOT_REPORT=plain`). Raw entries stay in `reports/raw/` (not committed). **Read a report before committing it**: it
+`DM_BOT_REPORT=plain`). Haiku runs in a read-only worktree of `origin/main` (`server/repo.ts`; tools Read, Grep, Glob only) so it checks a path exists before naming it; offline it falls back to the static `REPO_MAP`. Raw entries stay in `reports/raw/` (not committed). **Read a report before committing it**: it
 quotes what players typed, so players are P1, P2 and links, emails and long numbers are cut. A session starts from the
 newest report: take its findings in order, reproduce, fix, test. Solo play has no bot, so only the console lines exist.
 

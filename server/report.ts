@@ -292,9 +292,9 @@ export const ANALYST_SYSTEM =
 export function analysisPrompt(
   game: GameInfo,
   entries: readonly ReportEntry[],
-  extras: { triage?: Triage; curve?: Curve } = {},
+  extras: { triage?: Triage; curve?: Curve; grounded?: boolean } = {},
 ): { system: string; prompt: string } {
-  const { triage, curve } = extras;
+  const { triage, curve, grounded } = extras;
   // With a triage the analyst gets the small digest: the ranked findings with their evidence and the game in blocks, not every
   // entry. Without one (nothing found, or no triage ran) it gets the whole digest, as before.
   const log =
@@ -315,7 +315,9 @@ export function analysisPrompt(
     '',
     log,
     '',
-    'WHERE THINGS ARE IN THE REPO:',
+    grounded
+      ? 'THE REPO: your working folder is a read-only checkout of the game at origin/main. Use Grep and Read to confirm that every path you name exists and does what you say before you put it in "Where to look"; never name a file you have not seen. Starting points:'
+      : 'WHERE THINGS ARE IN THE REPO:',
     REPO_MAP,
     '',
     'HOW TO READ THE NUMBERS: a player\'s words ("too easy", "too hard", "boring", "lost") are a claim; test it against the state ' +
@@ -423,7 +425,7 @@ export async function writeReport(
   game: GameInfo,
   entries: readonly ReportEntry[],
   ask: Ask | null,
-  extras: { triage?: Triage; curve?: Curve } = {},
+  extras: { triage?: Triage; curve?: Curve; grounded?: boolean } = {},
 ): Promise<{ path: string; how: 'haiku' | 'plain' } | null> {
   if (!entries.length) return null;
   let body = '';
