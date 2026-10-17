@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { allOffers, huntGoal, levelScale, offerFor, offerReward, relicsFor, type Land } from './dmQuests';
+import { newHero, type Item } from './combat';
+import { allOffers, huntGoal, levelScale, offerFor, offerReward, relicsFor, upgradeFor, type Land } from './dmQuests';
 
 const land = (l: Partial<Land> = {}): Land => ({
   zone: 'fen',
@@ -93,5 +94,29 @@ describe('the offer for a task a saga names outright', () => {
     expect(haul).toMatchObject({ title: 'Carry 3 barrels to the Old Mill', goal: 3, what: 'the Old Mill', x: 700 });
     expect(allOffers(land({ barrels: 5, places: [] })).some((o) => o.kind === 'haul')).toBe(false);
     expect(allOffers(land({ barrels: 1 })).some((o) => o.kind === 'haul')).toBe(false);
+  });
+
+  it('hands a hero a step up in gear of the way they fight, never a leap and never a different style', () => {
+    const hero = newHero(); // a plain blade
+    const items: Record<string, Item> = {
+      bronze: { name: 'Bronze Sword', value: 40, slot: 'weapon', attack: 3 },
+      steel: { name: 'Steel Sword', value: 150, slot: 'weapon', attack: 5 },
+      legend: { name: 'Legend Blade', value: 5000, slot: 'weapon', attack: 40 },
+      bow: {
+        name: 'Great Bow',
+        value: 120,
+        slot: 'weapon',
+        attack: 9,
+        ranged: { speed: 300, range: 256, cooldown: 0.5 },
+      },
+      cap: { name: 'Leather Cap', value: 30, slot: 'head', defense: 1 },
+      bread: { name: 'Bread', value: 2, use: { hp: 5 } },
+    };
+    expect(upgradeFor(hero, items, 1)).toBe('bronze'); // steel is past a level 1 hero's means
+    expect(upgradeFor(hero, items, 3)).toBe('steel'); // the biggest step in reach, never the legend, never the bow
+    hero.weapon = items.steel!;
+    expect(upgradeFor(hero, items, 3)).toBe('cap'); // the blade is as good as it gets: armour next
+    hero.head = items.cap;
+    expect(upgradeFor(hero, items, 3)).toBeNull();
   });
 });

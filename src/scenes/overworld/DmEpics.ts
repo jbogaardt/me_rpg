@@ -1,5 +1,7 @@
 import type { ContentManager } from '../../content/ContentManager';
-import { allOffers, offerFor } from '../../systems/dmQuests';
+import { allOffers, offerFor, upgradeFor } from '../../systems/dmQuests';
+import { collect } from '../../systems/chests';
+import { ITEMS, itemOf } from '../../systems/items';
 import { cleanNote } from '../../systems/dmBrief';
 import { CELL } from '../../map/types';
 import {
@@ -273,10 +275,22 @@ export class DmEpics {
     const { xp, gold } = epicReward(run.plan, this.tasks.level);
     const last = Object.values(epic.people ?? {}).at(-1);
     const thanks = last?.finished?.[0] ? `${last.name}: “${last.finished[0]}”` : '';
-    const lines = [thanks, `${epic.ending} You each earn ${xp} XP and ${gold} gold.`].filter(Boolean);
+    const party = this.arena.partyAll();
+    // Each hero is handed a piece of gear better than what they wear, sized to the party's level (in the pack if they cannot wear it now).
+    const gifts = party.flatMap((p) => {
+      const id = upgradeFor(p.hero, ITEMS, this.tasks.level);
+      if (!id) return [];
+      const found = collect(p.hero, { item: itemOf(id) });
+      if (found.refused) return [];
+      this.arena.inZone(this.arena.zoneOf(p), () => this.sim.text(p.body.x, p.body.y - 90, found.text, 0xfff0a0));
+      return [itemOf(id).name];
+    });
+    const given = gifts.length ? ` And for your trouble: ${[...new Set(gifts)].join(', ')}.` : '';
+    // the reward has a line of its own, so a long ending is never cut short by it
+    const lines = [thanks, epic.ending, `You each earn ${xp} XP and ${gold} gold.${given}`].filter(Boolean);
     run.finishing = true;
     run.speech = { lines, wait: 0 };
-    for (const p of this.arena.partyAll()) this.sim.reward(p, xp, gold);
+    for (const p of party) this.sim.reward(p, xp, gold);
   }
 
   private complete(plan: EpicPlan) {

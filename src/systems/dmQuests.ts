@@ -3,7 +3,8 @@
 // relic could be) and turns it into a few honest asks: "Hunt 5 Goblins", "Gather 3 Echostones", "Reach the Old Mill",
 // "Find the Wayfarer's Charm". The party is left to work out how.
 
-import { xpToNext, type QuestLog } from './combat';
+import { xpToNext, type Hero, type Item, type QuestLog } from './combat';
+import { upgrade } from './inventory';
 import type { BoundObjective } from './dmEpics';
 import type { Quest, SiteKind } from './quests';
 import type { QuestOffer } from './dmTasks';
@@ -237,4 +238,30 @@ export function relicsFor(
     .filter(([, it]) => it.slot !== undefined && it.use === undefined && (it.value ?? 0) > 0)
     .sort(([, a], [, b]) => Math.abs((a.value ?? 0) - target) - Math.abs((b.value ?? 0) - target))
     .map(([id, it]) => ({ id, name: `the ${it.name}` }));
+}
+
+/** A weapon's way of fighting: a gift never swaps a blade for a bow or a wand (the player chose how they fight). */
+const style = (i: Item): string => (i.focus ? 'focus' : i.ranged ? 'ranged' : 'melee');
+
+/**
+ * The gear a saga hands a hero at its end, when there is any: something better than what they wear, of the way they
+ * already fight, and worth no more than about twice what a hero of `level` would have earned (so it is a step, not a
+ * leap), a weapon before armour, the biggest step first. Null when nothing is better (their gear is already fine).
+ */
+export function upgradeFor(hero: Hero, items: Record<string, Item>, level: number): string | null {
+  const cap = 2 * (30 + 25 * level);
+  const options = Object.entries(items).filter(
+    ([, it]) =>
+      it.slot !== undefined &&
+      it.use === undefined &&
+      (it.value ?? 0) > 0 &&
+      (it.value ?? 0) <= cap &&
+      upgrade(hero, it) > 0 &&
+      (it.slot !== 'weapon' || style(it) === style(hero.weapon)),
+  );
+  options.sort(
+    ([, a], [, b]) =>
+      Number(b.slot === 'weapon') - Number(a.slot === 'weapon') || upgrade(hero, b) - upgrade(hero, a),
+  );
+  return options[0]?.[0] ?? null;
 }

@@ -117,7 +117,9 @@ describe('epic quests, on the host', () => {
     expect(paid).toHaveLength(4); // each of the three steps, then the saga itself
     expect(paid.every(([p]) => p === party[0])).toBe(true);
     expect(paid[3]![1]).toBeGreaterThan(paid[0]![1]); // the saga pays more than a step
-    expect(said.at(-1)).toContain('village sleeps safely');
+    expect(said.at(-2)).toContain('village sleeps safely');
+    expect(said.at(-1)).toMatch(/for your trouble: \w/); // a gear upgrade for the hero, in the pack or worn
+    expect(party[0]!.hero.weapon.name).not.toBe(newHero().weapon.name);
     expect(said.at(-1)).toMatch(/You each earn \d+ XP and \d+ gold/); // the party is told what they got
   });
 

@@ -60,6 +60,7 @@ yet. Online only the DM's quests count: the story chain's givers only pass the t
 
 ## Not yet
 
-Items in the pack (`gives` is the DM's word), a person who turns on the party, branching, the packs' arcs (a third quest
+A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `upgradeFor`: a step up of
+the way they fight, sized to the party's level), a person who turns on the party, branching, the packs' arcs (a third quest
 format that assembles live worlds), people placed by the maps (a campaign's givers) and by the log (the DM's) as one
 mechanism, and one *trigger* for both holders (a giver's talk, or the runner) with one telling for what a step says.
