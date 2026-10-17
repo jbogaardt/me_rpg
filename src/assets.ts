@@ -120,7 +120,8 @@ export async function loadSprites(onProgress?: Progress, extra: Outfit[] = []): 
   const itemSrc = publicUrl('sprites/items/items.png');
   Assets.add({ alias: 'sprites:items', src: itemSrc });
   installItemSheet(await Assets.load<Texture>('sprites:items'));
-  document.documentElement.style.setProperty('--item-sheet', `url("${itemSrc}")`);
+  // Absolute: a relative url() in a custom property is read against the stylesheet that uses it (assets/), not the page.
+  document.documentElement.style.setProperty('--item-sheet', `url("${new URL(itemSrc, document.baseURI).href}")`);
   return {
     wardrobe,
     chests: await Assets.load<Texture>('sprites:chests'),

@@ -62,12 +62,12 @@ export const FOLLOW_MS = 10_000;
  */
 export const SETTLE_MS = 10_000;
 /** Quiet time before the bot offers the party a quest of its own accord. */
-export const QUEST_GAP_MS = 45_000;
+export const QUEST_GAP_MS = 30_000;
 /**
  * After a saga ends the party is given time to wander, go to town, shop and talk before the next is offered, whatever the
  * table read says (a player who wants one sooner can ask). An adventure breathes; a quest queue does not.
  */
-export const BREATHER_MS = 150_000;
+export const BREATHER_MS = 30_000;
 
 /** `startAt`: begin the game by itself once this many friends are in (0: only when told). */
 export function nextStep(s: PageState, c: Clock, startAt = 0): Step {

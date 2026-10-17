@@ -19,7 +19,7 @@ export const isPressure = (v: unknown): v is Pressure => (PRESSURES as readonly 
 /** Seconds the foes stay held. */
 export const FREEZE_TIME = 10;
 /** The longest thing a DM may say, and how long it stays on the players' screens (seconds). */
-export const MAX_SAY = 240;
+export const MAX_SAY = 360;
 export const SAY_SHOW = 8;
 
 /** Seconds a line of the DM's words stays up: long enough to read it, never less than `SAY_SHOW`. */

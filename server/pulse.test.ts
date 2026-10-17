@@ -64,7 +64,7 @@ describe('the table read', () => {
 
   it('lets the reader say when the party needs a quest', () => {
     const wait = { lastQuest: 100_000 - 25_000 };
-    expect(nextStep(state(), clock(wait)).kind).toBe('idle'); // timers: 45 s not yet
+    expect(nextStep(state(), clock(wait)).kind).toBe('idle'); // timers: 30 s not yet
     expect(nextStep(state(), clock({ ...wait, pulse: pulse({ needsQuest: 0.9 }) })).kind).toBe('quest');
     expect(nextStep(state(), clock({ ...wait, pulse: pulse({ needsQuest: 0.2 }) })).kind).toBe('idle');
     expect(nextStep(state(), clock({ lastQuest: 100_000 - 5_000, pulse: pulse({ needsQuest: 0.9 }) })).kind).toBe(

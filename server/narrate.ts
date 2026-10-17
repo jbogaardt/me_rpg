@@ -9,7 +9,7 @@ import type { SceneVerdict } from './scene';
 import type { PageState } from './turn';
 
 export type Beat =
-  | { kind: 'arrive'; area: string }
+  | { kind: 'arrive'; area: string; slot?: number }
   | { kind: 'done'; area: string }
   | { kind: 'hurt'; slot: number; area: string }
   | { kind: 'quiet'; area: string; mood?: 'calm' | 'tense' | 'dire' };
@@ -43,6 +43,12 @@ export function beatFor(s: PageState, m: Memory, now: number, pulse: Pulse | nul
   const prev = m.prev;
   if (!prev || !s.dm || !s.friends.length || s.lobbyOpen || s.card) return null;
   if (now - m.spoke < SPOKE_GAP_MS) return null;
+  // A friend walked into a new land: it is that friend's moment (and their land's), not the whole table's.
+  const arrived = s.friends.find((f) => {
+    const before = prev.friends.find((p) => p.slot === f.slot);
+    return before !== undefined && before.area !== f.area;
+  });
+  if (arrived) return { kind: 'arrive', area: arrived.area, slot: arrived.slot };
   if (s.area !== prev.area) return { kind: 'arrive', area: s.area };
   // A saga tells its own story (its opening, each step, each person), so the DM adds nothing over it.
   if (prev.questing && !s.questing && !s.epic && !prev.epic) return { kind: 'done', area: s.area };
