@@ -9,6 +9,9 @@ Scene loop, camera, input, bindings, combos, touch. Headers of each file explain
 - **Touch works through the same keys.** `touch.ts` turns the on-screen pad and every `[data-key]` element into
   key presses, so a new button is just a `data-key` element. **It cancels every touch's default action outside an
   allow-list (`keepDefault`), which also stops the browser making the click: a new tappable overlay must be added to it.**
+- **The stick floats by default** (`stick.ts`, Pixi-free): a touch on the bare canvas in the left half plants the pad
+  there and it follows the thumb; `fixed` keeps the corner pad. Deadzone 0.05 to 0.6, saved in localStorage,
+  `?stick=`/`?deadzone=`. Input only, no co-op impact (host and guest read the same keys).
 - **One camera rule everywhere** (`camera.ts`): integer zoom chosen from the window, the player in the middle, the
   camera easing after them and never leaving the map; the iris and zone crossings only `punch`/`adopt` it.
 - **Aim** (`aim.ts`): `move` aims the way you walk, `mouse` aims at the pointer (on touch, the last tap). Aim rides in
