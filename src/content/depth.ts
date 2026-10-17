@@ -12,7 +12,7 @@ import type { Band } from '../systems/levels';
 /** The level of the start region, and the level every region climbs from. */
 const START = 2;
 /** Where the climb would end if it never flattened further (it is capped at `MAX_BAND`); larger is gentler. */
-const REACH = 40;
+const REACH = MAX_BAND - START;
 
 /** The level a region `depth` steps from the start is made for (a whole level, 2 at the start). */
 export function depthLevel(depth: number): number {
