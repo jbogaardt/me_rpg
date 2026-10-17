@@ -82,6 +82,8 @@ const INPUT_STALE_MS = 500; // a guest that stops sending counts as standing sti
 
 export interface PeerInput {
   keys: number;
+  /** The sequence number of that input message (what the host acknowledges in `SnapMsg.ia`). */
+  n: number;
   act: number;
   cb: number;
   ci: number;
@@ -380,6 +382,7 @@ export class Session {
     const { keys, act, cb, ci, ack, vr, am, inv, vt, rq, rd } = last.msg;
     return {
       keys,
+      n: last.msg.n,
       act,
       cb,
       ci,
