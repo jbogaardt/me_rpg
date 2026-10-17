@@ -1,13 +1,14 @@
 import { BitmapText, Container, Graphics } from 'pixi.js';
 import type { Item } from '../systems/combat';
-import { groundFading, groundRemaining, itemTier } from '../systems/inventory';
+import { groundFading, groundRemaining, iconKind, itemTier } from '../systems/inventory';
+import { itemSprite } from './itemArt';
 
 /** Glow colour by tier (matches the pack's slot borders). */
 const TIER_COLORS = [0xb08968, 0xb08968, 0x9fb8a0, 0x6fb3d9, 0xe0c068];
 
 /** An item lying on the ground (dropped from the pack): a small bundle that bobs, with its name shown when close. */
 export class GroundItem extends Container {
-  private bundle = new Graphics();
+  private bundle: Container;
   private nameTag: BitmapText;
   private t = Math.random() * Math.PI * 2;
   /** Seconds it has lain here. */
@@ -25,16 +26,24 @@ export class GroundItem extends Container {
     super();
     this.age = age;
     const color = TIER_COLORS[itemTier(item)] ?? TIER_COLORS[1]!;
+    const art = itemSprite(iconKind(item)); // the pack's picture of it, or the bundle for a kind it has none for
     this.addChild(
       new Graphics().ellipse(0, -1, 8, 3).fill({ color: 0x000000, alpha: 0.3 }),
       new Graphics().circle(0, -8, 9).fill({ color, alpha: 0.28 }),
-      this.bundle
+    );
+    if (art) {
+      art.scale.set(0.75);
+      art.position.set(0, -2);
+      this.bundle = art;
+    } else {
+      this.bundle = new Graphics()
         .roundRect(-5, -12, 10, 9, 3)
         .fill(0x8b6b3e)
         .stroke({ width: 1, color: 0x3b2a14 })
         .rect(-5, -9, 10, 2)
-        .fill(color),
-    );
+        .fill(color);
+    }
+    this.addChild(this.bundle);
     this.nameTag = new BitmapText({
       text: item.name,
       anchor: { x: 0.5, y: 1 },

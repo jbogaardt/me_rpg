@@ -99,3 +99,13 @@ opened.
 - Kokoro-82M by hexgrad (Apache-2.0), https://huggingface.co/hexgrad/Kokoro-82M, in its ONNX form by onnx-community,
   run in the player's browser with `kokoro-js` and Transformers.js (Apache-2.0). Fetched from the Hugging Face hub only if
   a player turns the natural voice on; nothing is stored in this repository.
+
+## Item icons (`public/sprites/items/items.png`)
+
+"[LPC] Items and game effects" (`ItemsAndEffects.zip`) by Reemax (Tuomo Untinen), https://opengameart.org/content/lpc-items-and-game-effects,
+licensed CC-BY-SA 3.0 (also offered under GPL 3.0 and GPL 2.0). The pack gathers art by Tuomo Untinen, Johannes
+Sjölund (Wulax), Gwes, Jetrel, Nila122, Jaidyn Reiman, Daniel Eddeland, Lanea Zimmerman (Sharm) and others, as its
+`credits.txt` lists per item. The 15 sprites used here (sword, dagger, bow, shield, helmet, plate mail, boots, cape,
+pickaxe, sack, satchel, amulet, roast, staff, spell book) were cut from `items1.png` and repacked, unchanged, into one
+strip of 32x32 cells. Shown in the pack screen, quest art, items on the ground and the relics of "find" quests. The
+pack's effects sheet and the rest of its items are not used.

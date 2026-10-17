@@ -6,6 +6,7 @@ import { type PetSheet } from './systems/pets';
 import { MOB_KINDS } from './systems/combat';
 import { outfitParts, type Outfit, type PartManifest } from './sprites/doll';
 import { Wardrobe } from './sprites/Wardrobe';
+import { installItemSheet } from './entities/itemArt';
 import { AssembledSource } from './content/AssembledSource';
 import { LiveSource } from './content/LiveSource';
 import type { ContentSource } from './content/ContentManager';
@@ -109,6 +110,11 @@ export async function loadSprites(onProgress?: Progress, extra: Outfit[] = []): 
     Assets.add({ alias: `sprites:pets:${sheet}`, src: publicUrl(`sprites/pets/${sheet}.png`) });
     pets[sheet] = await Assets.load<Texture>(`sprites:pets:${sheet}`);
   }
+  // The item sheet: a Pixi texture for the ground items and relics, and a CSS variable for the DOM icons (hud/itemIcons.ts).
+  const itemSrc = publicUrl('sprites/items/items.png');
+  Assets.add({ alias: 'sprites:items', src: itemSrc });
+  installItemSheet(await Assets.load<Texture>('sprites:items'));
+  document.documentElement.style.setProperty('--item-sheet', `url("${itemSrc}")`);
   return {
     wardrobe,
     chests: await Assets.load<Texture>('sprites:chests'),
