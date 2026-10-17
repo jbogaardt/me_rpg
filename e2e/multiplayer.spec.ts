@@ -301,11 +301,12 @@ test('up to four players: friends join, leave, and a new friend takes the empty 
   await expect(seat(host, 3)).toHaveAttribute('data-state', 'waiting');
   await expect(host.locator('#mp-code')).toHaveText(code); // still open: one seat left
 
-  await first.keyboard.press('Escape');
-  await second.keyboard.press('Escape');
+  await closeMenu(first);
+  await closeMenu(second);
 
   // The first friend leaves: the game goes on for everyone else, and the seat opens up again.
-  await first.keyboard.press('Escape');
+  if (await first.locator('#menu').isHidden()) await first.keyboard.press('Escape');
+  await first.locator('#menu [data-tab="online"]').click();
   await first.locator('#mp-disconnect').click();
   await expect(first.locator('#mp-status .label')).toHaveText('Disconnected');
   await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 3', { timeout: 30_000 });
@@ -409,13 +410,13 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   await host.keyboard.press('KeyT');
   await expect(friend.locator('#dm-hold')).toBeHidden({ timeout: 15_000 });
 
-  // The Story button offers the roads the story may take next, as cues rather than maps (a vote needs two roads to
-  // choose between: this world's first step has one, so there is nothing to ask the party).
+  // The Story button offers the roads the story may take next, as cues rather than maps (the DM picks one;
+  // "Ask the party" is the way to put it to a vote).
   await host.locator('#dm-bar [data-power="story"]').click();
   await expect(host.locator('#dm-card .title')).toHaveText('Where does the story go next?');
   const road = host.locator('#dm-card [data-opt]').first();
   await expect(road).toContainText(/^Into \w+ lands/);
-  await expect(host.locator('#dm-card [data-opt]')).toHaveCount(1);
+  await expect(host.locator('#dm-card [data-opt]').nth(1)).toBeVisible(); // several roads now, and "Ask the party" last
   await road.click();
   await expect(host.locator('#dm-card')).toBeHidden();
   await expect(friend.locator('#vote')).toBeHidden();
@@ -593,6 +594,7 @@ test('a bad game code is explained, not fatal', async ({ page }) => {
   await expect(page.locator('#mp-status .label')).toHaveText('Idle');
 
   // Two real words, but no such game: the same calm answer, and the player can simply try again.
+  await openOnlineTab(page, 'join'); // Join closes the menu (a banner tells the result), so open it again
   await page.locator('#mp-code-in').fill('able-acorns');
   await page.locator('#mp-join-go').click();
   await expect(page.locator('#mp-note')).toContainText(/isn.t open/);

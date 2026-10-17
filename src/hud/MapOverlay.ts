@@ -194,5 +194,10 @@ export class MapOverlay {
     this.painted = -1; // repainted by the next setZone, with whatever was explored since
     this.placed = ''; // pins are repositioned on the next update
     this.listed = '';
+    if (!on) {
+      // Nothing moves the pins while the map is shut: drop the friends' so a game that has ended leaves none behind.
+      for (const pin of this.friends.values()) pin.remove();
+      this.friends.clear();
+    }
   }
 }
