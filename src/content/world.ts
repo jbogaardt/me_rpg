@@ -385,7 +385,11 @@ export class World {
     return null;
   }
 
-  /** The doors between regions that ended up side by side and could be joined (both have a facing port and a pairing). */
+  /**
+   * The doors between regions that ended up side by side and could be joined (both have a facing port and a pairing).
+   * Only regions a level apart in depth are joined: a long story curls round on the grid, and a door from the start into
+   * its far end would put the deepest band next door to the gentlest.
+   */
   joinEntries(): LogEntry[] {
     const out: LogEntry[] = [];
     const grid = this.story.grid;
@@ -393,6 +397,7 @@ export class World {
     for (const a of this.regions)
       for (const b of this.regions) {
         if (a >= b || this.joints[`${a}~${b}`] || this.joints[`${b}~${a}`]) continue;
+        if (Math.abs(this.depthOf(a) - this.depthOf(b)) > 1) continue;
         const [ax, ay] = grid.at.get(a)!;
         const [bx, by] = grid.at.get(b)!;
         const side = (Object.entries(STEP) as [Side, [number, number]][]).find(
