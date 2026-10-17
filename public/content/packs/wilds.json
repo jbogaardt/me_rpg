@@ -165,7 +165,7 @@
           "lpc_swamp.png",
           "trees_swamp.png",
           "object-layer.png",
-          "interior.png"
+          "signposts.png"
         ]
       },
       "level": [1, 2],
@@ -269,7 +269,7 @@
         "map": "wilds_barrow",
         "climate": "undead",
         "music": null,
-        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"]
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png", "graves.png"]
       },
       "level": [3, 5],
       "themes": ["undead"],
@@ -366,7 +366,7 @@
         "map": "end_old_shrine",
         "climate": "undead",
         "music": null,
-        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"]
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png", "graves.png"]
       },
       "level": [2, 5],
       "themes": ["undead"],

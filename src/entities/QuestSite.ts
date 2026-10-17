@@ -5,6 +5,7 @@ import { iconKind } from '../systems/inventory';
 import { ITEMS } from '../systems/items';
 import { relicShape } from '../systems/landmarks';
 import { SITE_KINDS, type SiteKind } from '../systems/quests';
+import { itemSprite } from './itemArt';
 
 /**
  * A place a gather quest sends the player to: a glowing mushroom, an echo stone or a mound of hourglass sand, drawn with
@@ -64,9 +65,15 @@ export class QuestSite extends Container {
 }
 
 /** The relic of a "find" quest, drawn like the item it stands for (a blade, a staff, a book, a shield, a pouch or a gem). */
-function drawRelic(item: string): Graphics {
+function drawRelic(item: string): Container {
+  const kind = ITEMS[item] ? iconKind(ITEMS[item]) : undefined;
+  const art = kind && itemSprite(kind); // the item's own picture when the pack has one, else a shape for its kind
+  if (art) {
+    art.position.set(0, -2);
+    return art;
+  }
   const g = new Graphics();
-  const shape = relicShape(ITEMS[item] ? iconKind(ITEMS[item]) : undefined);
+  const shape = relicShape(kind);
   const gold = 0xd9b45a;
   const dark = 0x3b2a1a;
   if (shape === 'blade') {

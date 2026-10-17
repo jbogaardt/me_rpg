@@ -79,6 +79,17 @@ served with the game at `sprites/lpc/credits.csv` and linked from the pause menu
 loose frame corners and rails stitched into closed frames (`tools/ui/cut-gui.ts`), and the wood and paper
 backgrounds re-encoded as JPEG. Bar colours are sampled from the kit's gradients.
 
+## Signposts and hanging signs (`public/tilesets/signposts.png`, `hanging_signs.png`, source in `art/oga_signs/`)
+
+- "[LPC] Signposts, graves, line cloths and scare crow" by Reemax (Tuomo Untinen), with daneeklu (Daniel Eddeland) and
+  Nemisys (the signpost base art), https://opengameart.org/content/lpc-signposts-graves-line-cloths-and-scare-crow
+  (CC-BY-SA 3.0 or GPL 3.0; used under CC-BY-SA 3.0). Used unmodified: the signposts and notice boards are drawn from it.
+- "[LPC] Hanging signs" by Reemax (Tuomo Untinen), https://opengameart.org/content/lpc-hanging-signs
+  (CC-BY-SA 3.0 or GPL 3.0; used under CC-BY-SA 3.0; the page asks for the LPC attribution instructions, see above).
+  Used unmodified: the shop signs beside the doors of the town's shops.
+
+Licences and authors read from the two OpenGameArt pages (through a page summary); the licence texts were not opened.
+
 ## Fonts
 
 Cinzel (Natanael Gama) and Crimson Text (Sebastian Kosch), SIL Open Font License 1.1, bundled via Fontsource.
@@ -99,3 +110,25 @@ opened.
 - Kokoro-82M by hexgrad (Apache-2.0), https://huggingface.co/hexgrad/Kokoro-82M, in its ONNX form by onnx-community,
   run in the player's browser with `kokoro-js` and Transformers.js (Apache-2.0). Fetched from the Hugging Face hub only if
   a player turns the natural voice on; nothing is stored in this repository.
+
+## Item icons (`public/sprites/items/items.png`)
+
+"[LPC] Items and game effects" (`ItemsAndEffects.zip`) by Reemax (Tuomo Untinen), https://opengameart.org/content/lpc-items-and-game-effects,
+licensed CC-BY-SA 3.0 (also offered under GPL 3.0 and GPL 2.0). The pack gathers art by Tuomo Untinen, Johannes
+Sjölund (Wulax), Gwes, Jetrel, Nila122, Jaidyn Reiman, Daniel Eddeland, Lanea Zimmerman (Sharm) and others, as its
+`credits.txt` lists per item. The 15 sprites used here (sword, dagger, bow, shield, helmet, plate mail, boots, cape,
+pickaxe, sack, satchel, amulet, roast, staff, spell book) were cut from `items1.png` and repacked, unchanged, into one
+strip of 32x32 cells. Shown in the pack screen, quest art, items on the ground and the relics of "find" quests. The
+pack's effects sheet and the rest of its items are not used.
+
+## Grave markers (`public/tilesets/graves.png`, `graves_large.png`, source in `art/lpc_grave_markers/`)
+
+"LPC Grave Markers Rework" v1.3 (listed on OpenGameArt as "LPC grave markers (remix)") by Jordan Irwin (AntumDeluge),
+https://opengameart.org/content/lpc-grave-markers-rework (submission node 81422), licensed
+[CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) or later, or [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html)
+or later (we use it under CC-BY-SA 3.0). It merges and reworks Liberated Pixel Cup art by Barbara Rivera, Casper Nilsson,
+Carlo Enrico Victoria (Nemisys), Tuomo Untinen (Reemax), ak-blanc and Johann C; the per-source list is in
+[`art/lpc_grave_markers/sources.md`](art/lpc_grave_markers/sources.md), kept with the art along with its readme and the
+CC-BY-SA 3.0 text. The pack's shadowless 32x32 sheets are used **unmodified** (renamed); `tools/map/catalog.ts` cuts the
+markers out as prefabs (cemeteries on the undead, barrow, old shrine and haven town maps) and `src/entities/Landmark.ts`
+draws one headstone as the "grave" quest landmark. As the other CC-BY-SA art here, the sheets stay under CC-BY-SA 3.0 or later.

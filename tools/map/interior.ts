@@ -1,5 +1,5 @@
-// Builds public/tilesets/interior.png: the floor, walls, counter, shelves and signs inside the shops, and the wooden
-// signpost that stands at the forks of the roads outside (systems/signs.ts). There is no such art in the packs the game uses, so this is drawn here in the same palette as the shop buildings (town.ts)
+// Builds public/tilesets/interior.png: the floor, walls, counter, shelves and signs inside the shops (the signposts
+// outside are OpenGameArt art, see SIGN_PREFABS in catalog.ts). There is no such art in the packs the game uses, so this is drawn here in the same palette as the shop buildings (town.ts)
 // and at the same scale: every piece is painted on a 16px grid and doubled to the 32px map grid.
 // Run with `npm run tilesets`; the output is committed. Where each piece sits is `INTERIOR` in catalog.ts.
 
@@ -216,36 +216,6 @@ function lectern(): Canvas {
   return c;
 }
 
-/** One arrow-ended board of the signpost, 6 rows tall from `y`, its flat end at `x0` and its point past `x1`. */
-function arrowBoard(c: Canvas, y: number, x0: number, x1: number, right: boolean) {
-  const TIP = [0, 1, 2, 2, 1, 0];
-  for (let j = 0; j < 6; j++) {
-    const tip = TIP[j] ?? 0;
-    const [a, b] = right ? [x0, x1 + tip] : [x0 - tip, x1];
-    const edge = j === 0 || j === 5;
-    for (let x = a; x <= b; x++) {
-      const end = x === a || x === b;
-      c.set(x, y + j, edge || end ? BEAM_DARK : j < 3 ? PLANK_LIGHT : PLANK);
-    }
-  }
-  // A line of lettering, burnt into the wood.
-  const [l, r] = right ? [x0 + 2, x1 - 1] : [x0 + 1, x1 - 2];
-  for (let x = l; x <= r; x++) if ((x - l) % 4 !== 2) c.set(x, y + 2, INK);
-}
-
-/** A signpost: a post with two arrow boards, one pointing each way, 1 cell wide and 1.5 tall. Its foot blocks. */
-function signpost(): Canvas {
-  const c = new Canvas(16, 24);
-  for (let x = 4; x < 12; x++) c.set(x, 23, [0, 0, 0], x < 5 || x > 10 ? 40 : 70); // a soft shadow
-  c.rect(5, 22, 6, 1, BEAM_DARK); // the foot
-  c.rect(7, 1, 2, 22, PLANK); // the post
-  c.rect(7, 1, 1, 22, PLANK_DARK);
-  c.rect(7, 0, 2, 1, BEAM_DARK);
-  arrowBoard(c, 3, 1, 12, true);
-  arrowBoard(c, 10, 3, 14, false);
-  return c;
-}
-
 // --- Lay the pieces out on the sheet (positions in INTERIOR, catalog.ts) and double them. ---------------------------
 const pieces: Record<keyof typeof INTERIOR, Canvas> = {
   planksA: planks(1),
@@ -265,7 +235,6 @@ const pieces: Record<keyof typeof INTERIOR, Canvas> = {
   signApothecary: sign('apothecary'),
   signWizard: sign('wizard'),
   lectern: lectern(),
-  signpost: signpost(),
 };
 
 const width = Math.max(...Object.values(INTERIOR).map((p) => p.x + p.w));

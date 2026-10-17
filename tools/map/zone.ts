@@ -820,7 +820,7 @@ export class Zone {
    * finds the open cell beside the road nearest it.
    */
   sign(col: number, row: number, ways: SignSpawn['ways']) {
-    this.prop('signpost', col, row);
+    this.prop((col + row) % 2 ? 'signpostB' : 'signpost', col, row);
     this.signList.push({ col, row, ways });
     return this;
   }
@@ -1026,6 +1026,7 @@ export class Zone {
           py: p.py + part.dy,
         };
         if (prefab.tag) o.tag = prefab.tag;
+        if ((prefab as Prefab).wall) o.z = o.py + o.h + CELL + 8; // in front of the wall it hangs on
         objects.push(o);
         // All parts end on the prefab's bottom, so the band is measured from each part's own bottom.
         if (p.autoBlock && prefab.solid && !(prefab as Prefab).movable) autoParts.push({ o, ...prefab.solid });

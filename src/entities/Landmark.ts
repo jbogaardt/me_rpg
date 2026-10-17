@@ -1,21 +1,30 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { LandmarkShape } from '../systems/landmarks';
 
 // A landmark the DM's telling names (a wagon, a well, a camp...), drawn small at its goal so the party finds what it was
 // told of. Scenery only: walkable, nothing to touch (the quest counts reaching the place). Local to each page; the shapes
-// are picked by `systems/landmarks.ts`. Drawn with the feet at the origin, a cell or two wide, like a map object.
+// are picked by `systems/landmarks.ts`. Drawn with the feet at the origin, a cell or two wide, like a map object. The
+// grave is the real headstone art (the LPC grave markers sheet, passed in as `graves`); the rest are small Graphics.
+// The headstone's frame is the one `graveRoundA` of tools/map/catalog.ts cuts.
 
 export class Landmark extends Container {
   constructor(
     readonly shape: LandmarkShape,
     x: number,
     y: number,
+    graves?: Texture,
   ) {
     super();
     this.position.set(x, y);
     this.zIndex = y;
-    this.addChild(draw(shape));
+    this.addChild(shape === 'grave' && graves ? headstone(graves) : draw(shape));
   }
+}
+
+function headstone(sheet: Texture): Sprite {
+  const s = new Sprite(new Texture({ source: sheet.source, frame: new Rectangle(64, 0, 31, 32) }));
+  s.anchor.set(0.5, 1);
+  return s;
 }
 
 function draw(shape: LandmarkShape): Graphics {

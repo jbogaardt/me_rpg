@@ -1,0 +1,14 @@
+Signposts and hanging signs, from OpenGameArt.org. Both are used unmodified (copied to public/tilesets/).
+
+signpost-outsidestuff.png (public/tilesets/signposts.png)
+  "[LPC] Signposts, graves, line cloths and scare crow" by Reemax (Tuomo Untinen); collaborators daneeklu (Daniel
+  Eddeland) and Nemisys (signpost base art, relicensed GPL 3.0 in the page comments); Tuomo Untinen also credited.
+  https://opengameart.org/content/lpc-signposts-graves-line-cloths-and-scare-crow
+  Licences: CC-BY-SA 3.0, GPL 3.0. Used here under CC-BY-SA 3.0.
+
+lpc-hanging-signs.png (public/tilesets/hanging_signs.png)
+  "[LPC] Hanging signs" by Reemax (Tuomo Untinen), posted 3 Dec 2014. "Please use the LPC attribution instructions."
+  https://opengameart.org/content/lpc-hanging-signs
+  Licences: CC-BY-SA 3.0, GPL 3.0. Used here under CC-BY-SA 3.0. (The wooden background is credited on the page to
+  another OpenGameArt entry; the LPC sign art in some signs is from the Liberated Pixel Cup entries, see the LPC
+  credits in CREDITS.md.)

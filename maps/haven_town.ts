@@ -63,6 +63,11 @@ export default defineZone({
     z.prop('apothecary', 36, 13);
     z.prop('armory', 12, 34);
     z.prop('ranger', 38, 34);
+    // Hanging signs (OpenGameArt) on the wall beside each hall's door, showing what it sells.
+    z.prop('hangTools', 14, 13, { dy: -6 });
+    z.prop('hangFlask', 40, 13, { dy: -6 });
+    z.prop('hangHelm', 14, 34, { dy: -6 });
+    z.prop('hangSword', 40, 34, { dy: -6 });
 
     // --- Barrels by the smithy and the market, for the townsfolk's errands -------------------------------------------
     for (const [col, row] of [
@@ -95,6 +100,18 @@ export default defineZone({
       ['flowersPurple', 28, 29],
       ['bush', 33, 9],
       ['bush', 16, 30],
+    ] as const)
+      z.prop(name, col, row);
+
+    // --- A small churchyard in the north, off the road: headstones in two rows, old crosses at the ends ---------
+    for (const [name, col, row] of [
+      ['graveRoundA', 31, 4],
+      ['graveCrossA', 33, 4],
+      ['graveWideA', 35, 4],
+      ['crossWood', 30, 6],
+      ['graveRoundB', 32, 6],
+      ['graveSmall', 34, 6],
+      ['crossMound', 36, 6],
     ] as const)
       z.prop(name, col, row);
 

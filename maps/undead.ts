@@ -1,5 +1,5 @@
 import { defineBiome, worldOf } from '../tools/map/world';
-import { DEAD_TREES } from '../tools/map/catalog';
+import { DEAD_TREES, GRAVES, GRAVE_CROSSES } from '../tools/map/catalog';
 import { awayFrom, blob, pond, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
@@ -41,7 +41,15 @@ export default defineBiome({
     const yard = blob(area(12, 8.1, 2.8, 1.6), 9, 0.25);
     z.paint('soot', yard); // trodden dark ground, soft-edged into the ash
     z.keepClear(area(11.8, 7.9, 3.2, 2));
-    for (let c = 126; c <= 144; c += 3) for (const r of [85, 89, 93]) z.prop('menhir', c, r);
+    // Headstones in rows, older wooden and iron crosses between them, a tomb or two at the back.
+    const stones = [...GRAVES, 'graveTallA', 'graveTallB'] as const;
+    let n = 0;
+    for (let c = 126; c <= 144; c += 3)
+      for (const r of [85, 89, 93]) {
+        const old = (c / 3 + r) % 4 === 0; // every fourth grave is an old cross
+        z.prop(old ? GRAVE_CROSSES[n % GRAVE_CROSSES.length] : stones[n % stones.length], c, r);
+        n++;
+      }
     z.chest('iron', 'legionHelm', ...near(12.4, 9.5));
     z.chest('wood', 'coins', ...near(14.6, 8.3));
     z.keepFree(...near(13.4, 8.8));
