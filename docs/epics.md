@@ -59,6 +59,10 @@ with its drawing; an AI-written epic gets the same for free, as long as it uses 
 entry of the world log (the person's new lines, replacing the old: protocol v42), applied to the person where they stand
 on every page.
 
+**One epic at a time.** `begin` and `beginEpic` refuse a second while one runs (until `cancel` or the saga ends). The bot
+never offers "give them a quest" while one runs, and a player asking about their quest is answered by the writer from the
+running epic (`DmBotState.epicNow`: title and chapter), never by a choose-an-epic card.
+
 ## Who runs it
 
 The host, and a solo player (their own host): `DmEpics`, `DmTasks` and the DM's words work wherever the page is not a
