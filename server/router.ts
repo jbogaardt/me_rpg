@@ -28,7 +28,7 @@ export const NONE = '@none';
 /** Options that name a story road start with this (only offered for a friend's own words). */
 export const ROAD = 'road:';
 /** The most letters of a reply (the page trims the DM's words again). */
-export const MAX_REPLY = 120;
+export const MAX_REPLY = 220;
 /** What a friend hears when no service could answer them (several wordings, so it does not sound like a machine). */
 export const HOLD_REPLIES = [
   'The Dungeon Master ponders your words.',
@@ -98,6 +98,8 @@ export interface Table {
     hp: number;
     near: boolean;
     toward?: { dx: number; dy: number; cells: number };
+    /** Which way the party's goal lies from this friend, in a sentence (the page works it out), when a task is running. */
+    way?: string;
   }[];
   questing: boolean;
   /** The party's current task as their tracker says it, when there is one. */
@@ -291,13 +293,20 @@ function moveOf(source: Move['source'], id: string | null, reply: string | null,
   return { source, pick: road ? null : id, road, reply, confidence };
 }
 
-/** What a player hears when the writer could only guess or repeat itself: the party's task, plainly, else a holding word. */
-function plainReply(table: Table): string {
+/** The friend a card is about ("Player 2 asked: ..."), by seat, when it says. */
+export function askerOf(card: Card, table: Table): Table['friends'][number] | undefined {
+  const n = /Player (\d+)/.exec(`${card.title} ${card.note}`)?.[1];
+  return n ? table.friends.find((f) => f.slot === Number(n) - 1) : undefined;
+}
+
+/** What a player hears when the writer could only guess or repeat itself: the party's task and the way to it from where they stand, plainly, else a holding word. */
+function plainReply(table: Table, card?: Card): string {
+  const way = (card ? askerOf(card, table) : undefined)?.way ?? table.friends.find((f) => f.way)?.way;
   if (table.epicNow) {
     const { title, step, total } = table.epicNow;
-    return `Your saga is “${title}”, chapter ${step} of ${total}.${table.task ? ` ${table.task}` : ''}`;
+    return `Your saga is “${title}”, chapter ${step} of ${total}.${way ? ` ${way}` : table.task ? ` ${table.task}` : ''}`;
   }
-  return table.task ? `Your task now: ${table.task}` : holdReply();
+  return way ? `Here is the way. ${way}` : table.task ? `Your task now: ${table.task}` : holdReply();
 }
 
 /**
@@ -328,7 +337,7 @@ async function answerWords(
   }
   if (!made) return moveOf('silent', null, holdReply(), null);
   const confidence = made.sure ?? null;
-  return moveOf('fallback', made.pick, refused ? plainReply(table) : made.reply, confidence);
+  return moveOf('fallback', made.pick, refused ? plainReply(table, card) : made.reply, confidence);
 }
 
 /**

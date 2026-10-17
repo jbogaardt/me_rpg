@@ -5,7 +5,9 @@ import { Director, type Suggestion } from '../../systems/dmDirector';
 import { Inbox, MESSAGE_CODE, REPLIES, REQUESTS, describe, type InboxKind } from '../../systems/dmRequests';
 import { playerName } from '../../systems/looks';
 import { HINT_AREA, HINT_ARROW, classify } from '../../systems/dmTasks';
+import { doorToward } from '../../systems/guide';
 import { QUESTS } from '../../systems/quests';
+import { wayToGoal } from '../../systems/wayText';
 import { PRECIPS, type Precip } from '../../systems/weather';
 import { Phrasebook } from '../../systems/phrases';
 import type { Arena } from './Arena';
@@ -205,9 +207,22 @@ export class DmPrompts {
     }
   }
 
-  /** Canned answers to whoever asked. */
+  /** Which way the party's goal lies from this friend, in a sentence, or null (no task running, or they are not here). */
+  wayFor(slot: number): string | null {
+    const task = this.tasks.view;
+    const p = this.arena.remotes.get(slot);
+    if (!task || task.state !== 'active' || !p) return null;
+    const z = this.arena.zoneOf(p);
+    const door = doorToward(z.data.doors, p.body, z.name, task.zone);
+    return wayToGoal(p.body, z.name, task, door);
+  }
+
+  /** Canned answers to whoever asked, and (while a task runs) the plain way to its goal from where each of them stands. */
   private replyOptions(): CardOption[] {
-    return REPLIES.slice(0, 3).map((r, i) => ({ id: `r:${i}`, label: `Reply: ${r}` }));
+    const way = this.askers.slots.some((s) => this.wayFor(s) !== null)
+      ? [{ id: 'r:way', label: 'Tell them the way (from where they stand)' }]
+      : [];
+    return [...way, ...REPLIES.slice(0, 3).map((r, i) => ({ id: `r:${i}`, label: `Reply: ${r}` }))];
   }
 
   /** Is there a live story whose next step the DM may choose? */
@@ -439,6 +454,13 @@ export class DmPrompts {
         if (note)
           this.open('story', note); // it did not work: say why and keep the card
         else this.card.hide();
+      }
+      return;
+    }
+    if (id === 'r:way') {
+      for (const slot of this.askers.slots) {
+        const way = this.wayFor(slot);
+        if (way) this.desk.replyTo([slot], way);
       }
       return;
     }

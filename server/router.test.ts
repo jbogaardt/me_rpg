@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MockFallback, MockRouter } from './mocks';
 import {
+  askerOf,
   CONFIDENCE_CARD,
   HINTS,
   HOLD_REPLIES,
@@ -366,5 +367,35 @@ describe('the writer is not allowed to repeat itself or guess (#41)', () => {
     );
     const m = await decideCard(message('point me to P2'), table(), { router: jev(NONE), fallback });
     expect(m.reply).toBe('Which P2 do you mean?');
+  });
+});
+
+describe('answering a friend plainly', () => {
+  it('finds who asked, and gives their way when the writer cannot', () => {
+    const table = {
+      area: 'The Greenwood',
+      friends: [
+        {
+          slot: 1,
+          area: 'The Greenwood',
+          hp: 1,
+          near: true,
+          way: 'Reach the Old Mill: it lies far to the north of you.',
+        },
+        {
+          slot: 2,
+          area: 'The Mirewood',
+          hp: 1,
+          near: false,
+          way: 'Reach the Old Mill: you are in The Mirewood and it is in The Greenwood.',
+        },
+      ],
+      questing: true,
+      task: 'Reach the Old Mill',
+      story: null,
+    };
+    const card = { kind: 'message', title: 'Player 3 asks', note: '“where do I go?”', options: [] };
+    expect(askerOf(card, table)?.slot).toBe(2);
+    expect(askerOf({ ...card, title: 'x', note: 'hm' }, table)).toBeUndefined();
   });
 });

@@ -41,6 +41,8 @@ export interface DmBotFriend {
   zone?: string;
   at?: { col: number; row: number };
   cells?: number | null;
+  /** Which way this friend's goal lies from where they stand, in a sentence (systems/wayText.ts), when the party has a task running. */
+  way?: string;
   /** Within `NEAR_CELLS` of the DM, in the same zone or just across a gap (the zones are one world; the bot goes to the party when nobody is near). */
   near: boolean;
 }
@@ -181,8 +183,8 @@ export function createDmBot({
   const cardView = (): DmBotCard | null => card.view;
   const friends = (): DmBotFriend[] => {
     const here = arena.zoneOf(arena.local);
-    return [...arena.remotes.entries()].map(([slot, p]) =>
-      readFriend(
+    return [...arena.remotes.entries()].map(([slot, p]) => ({
+      ...readFriend(
         { name: here.name, data: here.data, x: arena.local.body.x, y: arena.local.body.y },
         {
           slot,
@@ -192,7 +194,8 @@ export function createDmBot({
           hp: p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp),
         },
       ),
-    );
+      way: prompts.wayFor(slot) ?? undefined,
+    }));
   };
   return {
     host: () => session.createGame(),

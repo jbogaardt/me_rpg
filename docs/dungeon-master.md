@@ -5,7 +5,7 @@ Read before touching the DM bar, director, cards, epics, possession, revive or n
 
 ## Philosophy
 
-- **There is one way to host, and the host is the DM.** Hosting is running the world, not playing in it. From the first
+- **There is one way to host, and the host is the DM.** From the first
   friend's connection player 0 has `dm` set (`Arena.setDm`); a guest knows it with nothing on the wire (`DM_SLOT`).
   Solo has no DM (a solo player in a live world gets only the cards), but a solo player is their own host: the epic
   runner (`DmEpics`, `DmTasks`) and the DM's words work in solo too; a guest never runs one. A solo player begins one
@@ -22,7 +22,7 @@ Read before touching the DM bar, director, cards, epics, possession, revive or n
 
 A friend talks to the DM in **free-form words**: the 💬 button (or Enter) opens one line, Enter sends it. It waits in the
 DM's inbox like any ask, and the DM (a person or the bot) may answer it privately, or act on it (ease off, point the way,
-begin a quest). The DM also watches the party's health on their own.
+begin a quest). They also watch the party's health. **Answers lead like a friend**: each friend's goal bearing from where *they* stand (`systems/wayText.ts`) goes to the bot's writer and into a human DM's 'Tell them the way' reply.
 
 ## The DM has a voice
 
@@ -42,7 +42,7 @@ quest is a person the DM brings in (`Story.bring`, or the people of an epic); a 
 snapshots and the map. So no mob hunts the DM, kills credit only the party, heals pass them by, they block nobody and
 neither trade nor cast. They walk through walls-only collision (`Simulation.updateDm`); their action key only
 reads signs and advances dialogs. Their screens differ: a DM badge instead of bars, no quest arrow or
-harvest buttons, and a Party tab (levels, HP, area, **Go**).
+harvest buttons, a Party tab (levels, HP, area, **Go**).
 
 ## Parts
 
@@ -50,12 +50,12 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   watches party health, task progress and quiet time, and suggests easing off, turning up the heat, a twist, which quest
   (after a breather once one ends), the compass (the map stays the party's own; the compass leans toward the place, then
   points at it), a breather, a new land's sky, raising a fallen player, or the story's next road (a vote).
-  Urgent cards wait less; dismissing one is a breather. The epic card pages ("More epic quests", a way back, never
-  the same list twice). A bot unsure on a card takes its `stay`, else nothing.
+  Urgent cards wait less; dismissing one is a breather. The epic card pages (a way back, never the same list twice).
+  A bot unsure on a card takes its `stay`, else nothing.
 - **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (their own free-form words, from the 💬
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,
   `DmMsg.reply`).
-- **Hot buttons** (`hud/DmBar.ts`): Smite (lightning: foes die with no XP, gold or credit; the party is never hurt), Freeze, Reset zone, Stop time (the party walks and takes doors; all else stands still): ordinary events and mob states.
+- **Hot buttons** (`hud/DmBar.ts`): Smite (lightning: foes die with no XP, gold or credit; the party is never hurt), Freeze, Reset zone, Stop time (only the party moves).
 - **Epic quests** (`docs/epics.md`): the DM's only quests, sagas of steps with people, as data: `content/epics.json` and
   the campaign's own `quests.json`; run by `DmEpics` on the host (and in solo). A step is a quest kind or a meeting with a
   person the DM makes; people's words follow the story. Beside hunts, gathers, finds and
