@@ -13,7 +13,7 @@
         "trees_dry.png",
         "object-layer.png",
         "trees_green.png",
-        "interior.png",
+        "signposts.png",
         "trees_jungle.png",
         "trees_dead.png"
       ],
@@ -71,13 +71,14 @@
         "Cliff_tileset.png",
         "trees_jungle.png",
         "object-layer.png",
-        "interior.png",
+        "signposts.png",
         "trees_dead.png",
         "trees_swamp.png",
         "trees_green.png",
         "trees_frost.png",
         "frost_objects.png",
-        "town.png"
+        "town.png",
+        "hanging_signs.png"
       ],
       "generation": {
         "roam": [
@@ -109,9 +110,10 @@
         "object-layer.png",
         "trees_swamp.png",
         "trees_green.png",
-        "interior.png",
+        "signposts.png",
         "trees_frost.png",
-        "frost_objects.png"
+        "frost_objects.png",
+        "hanging_signs.png"
       ],
       "generation": {
         "roam": [
@@ -141,8 +143,9 @@
         "trees_green.png",
         "trees_jungle.png",
         "trees_dead.png",
-        "interior.png",
-        "town.png"
+        "signposts.png",
+        "town.png",
+        "hanging_signs.png"
       ],
       "generation": {
         "roam": [
@@ -170,7 +173,7 @@
         "Cliff_tileset.png",
         "trees_green.png",
         "object-layer.png",
-        "interior.png",
+        "signposts.png",
         "trees_jungle.png",
         "trees_swamp.png",
         "trees_dead.png",
@@ -205,7 +208,7 @@
         "object-layer.png",
         "trees_swamp.png",
         "trees_green.png",
-        "interior.png",
+        "signposts.png",
         "trees_frost.png",
         "frost_objects.png"
       ],
@@ -278,10 +281,11 @@
         "lpc_terrain.png",
         "trees_green.png",
         "object-layer.png",
-        "interior.png",
+        "signposts.png",
         "trees_frost.png",
         "frost_objects.png",
-        "town.png"
+        "town.png",
+        "hanging_signs.png"
       ],
       "generation": {},
       "links": [
@@ -343,7 +347,7 @@
         "object-layer.png",
         "trees_green.png",
         "trees_jungle.png",
-        "interior.png",
+        "signposts.png",
         "trees_dead.png"
       ],
       "generation": {
@@ -371,7 +375,7 @@
         "lpc_swamp.png",
         "trees_jungle.png",
         "object-layer.png",
-        "interior.png",
+        "signposts.png",
         "trees_swamp.png",
         "trees_green.png",
         "trees_dead.png",

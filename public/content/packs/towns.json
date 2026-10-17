@@ -65,8 +65,9 @@
           "lpc_terrain.png",
           "trees_green.png",
           "town.png",
+          "hanging_signs.png",
           "object-layer.png",
-          "interior.png"
+          "signposts.png"
         ]
       },
       "level": [1, 5],

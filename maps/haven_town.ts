@@ -63,6 +63,11 @@ export default defineZone({
     z.prop('apothecary', 36, 13);
     z.prop('armory', 12, 34);
     z.prop('ranger', 38, 34);
+    // Hanging signs (OpenGameArt) on the wall beside each hall's door, showing what it sells.
+    z.prop('hangTools', 14, 13, { dy: -6 });
+    z.prop('hangFlask', 40, 13, { dy: -6 });
+    z.prop('hangHelm', 14, 34, { dy: -6 });
+    z.prop('hangSword', 40, 34, { dy: -6 });
 
     // --- Barrels by the smithy and the market, for the townsfolk's errands -------------------------------------------
     for (const [col, row] of [
