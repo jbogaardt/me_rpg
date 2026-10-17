@@ -19,10 +19,12 @@ export default defineZone({
       water: 'abyss',
       ice: false,
       props: [
-        ['menhir', 4, 8],
-        ['menhir', 4, 16],
-        ['menhir', 9, 16],
-        ['menhir', 14, 8],
+        ['ruinPillar', 4, 8], // LPC Jungle Ruins pillars and idols round the chest (ruins.png)
+        ['ruinPillar', 4, 16],
+        ['ruinStatue', 9, 16],
+        ['ruinPillarBroken', 14, 8],
+        ['ruinStatueB', 8, 14],
+        ['ruinRubbleA', 11, 15],
         // Old burial markers among the ring.
         ['graveBoulder', 9, 8],
         ['crossBlack', 12, 16],

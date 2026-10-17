@@ -32,6 +32,7 @@ const TRAILS = [
   ...trail([undead, marsh]), // undead lands to the marsh
   ...trail([[south[0], undead[1]], south]), // down to the Eastwood
 ];
+const L = (col: number, row: number): [number, number] => [col + 175, row]; // a cell of the jungle's own map, in world cells
 const KIT = { trees: [...JUNGLE_TREES], fillers: ['jungleBush', 'rockSmall'] } as const;
 
 export default defineBiome({
@@ -62,11 +63,42 @@ export default defineBiome({
     // --- Overgrown ruins with a chest ---------------------------------------------------------------------------
     z.patch('stone', area(25.4, 9.2, 1.2, 0.7)); // old flags, with the tileset's own grassy edge
     z.keepClear(area(25.2, 9, 1.6, 1.1));
-    z.prop('menhir', ...at(25.5, 9.3));
-    z.prop('menhir', ...at(26.4, 9.3));
+    z.prop('ruinPillar', ...at(25.5, 9.3));
+    z.prop('ruinPillar', ...at(26.4, 9.3));
     z.prop('rockB', ...at(25.6, 9.8));
+    z.prop('ruinWallBroken', ...L(81, 91)); // the fallen north wall of the old court, behind the chest
+    z.prop('ruinStatue', ...L(82, 95));
+    z.prop('ruinStatueB', ...L(88, 95));
+    z.prop('ruinRubbleA', ...L(79, 98));
+    z.prop('ruinRubbleC', ...L(91, 96));
+    z.prop('ruinRubbleE', ...L(84, 99));
     z.chest('oak', 'purse', ...near(26, 9.4));
     z.keepFree(...near(26, 9.7));
+
+    // --- The Sunken City (art: LPC Jungle Ruins, ruins.png): a pyramid and a temple on the north plain, facing the
+    // coast road, and an outpost in the strip between the two southern trails ----------------------------------------
+    z.keepClear([
+      { col: 175 + 43, row: 3, w: 19, h: 17 },
+      { col: 175 + 30, row: 4, w: 11, h: 11 },
+    ]); // no scattered trees across the pyramid and the temple
+    z.prop('ruinPyramid', ...L(44, 18));
+    z.prop('ruinTemple', ...L(32, 14));
+    z.prop('ruinRubbleB', ...L(48, 19));
+    z.prop('ruinRubbleF', ...L(57, 19));
+    z.prop('ruinPillarBroken', ...L(41, 19));
+    z.prop('ruinPillar', ...L(30, 15));
+    z.prop('ruinHall', ...L(47, 66));
+    z.prop('ruinHut', ...L(48, 74));
+    z.prop('ruinStatueB', ...L(54, 72));
+    z.prop('ruinRubbleD', ...L(55, 69));
+    z.prop('ruinPillarBroken', ...L(56, 76));
+    z.prop('ruinArch', ...L(41, 36)); // a gate over the trail south
+    z.prop('ruinWall', ...L(74, 49)); // a long wall with carved faces on the plain north of the lagoon
+    z.prop('ruinPillar', ...L(72, 49));
+    z.prop('ruinPillarBroken', ...L(86, 49));
+    z.prop('ruinRubbleA', ...L(77, 50));
+    z.prop('ruinRubbleF', ...L(84, 50));
+    z.prop('ruinHut', ...L(90, 50));
 
     for (const [x, y, w, h] of [
       [20.4, 0.6, 1.2, 1.6],

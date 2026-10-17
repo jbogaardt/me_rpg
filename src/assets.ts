@@ -76,6 +76,8 @@ export interface Sprites {
   crops: Texture;
   /** Grave marker art (public/tilesets/graves.png, the same sheet the maps use): the grave landmark (entities/Landmark.ts). */
   graves: Texture;
+  /** Ruined pillars, idols and walls (public/tilesets/ruins.png): the `ruin` landmark is drawn from it (entities/Landmark.ts). */
+  ruins: Texture;
   /** The dog and cat sheets (public/sprites/pets/), see systems/pets.ts. */
   pets: Record<PetSheet, Texture>;
 }
@@ -108,6 +110,7 @@ export async function loadSprites(onProgress?: Progress, extra: Outfit[] = []): 
   Assets.add({ alias: 'sprites:chests', src: tilesetUrl('chests.png') });
   Assets.add({ alias: 'sprites:crops', src: tilesetUrl('crops.png') });
   Assets.add({ alias: 'sprites:graves', src: tilesetUrl('graves.png') });
+  Assets.add({ alias: 'sprites:ruins', src: tilesetUrl('ruins.png') });
   const pets = {} as Record<PetSheet, Texture>;
   for (const sheet of ['dogs', 'cats', 'rat'] as const) {
     Assets.add({ alias: `sprites:pets:${sheet}`, src: publicUrl(`sprites/pets/${sheet}.png`) });
@@ -123,6 +126,7 @@ export async function loadSprites(onProgress?: Progress, extra: Outfit[] = []): 
     chests: await Assets.load<Texture>('sprites:chests'),
     crops: await Assets.load<Texture>('sprites:crops'),
     graves: await Assets.load<Texture>('sprites:graves'),
+    ruins: await Assets.load<Texture>('sprites:ruins'),
     pets,
   };
 }

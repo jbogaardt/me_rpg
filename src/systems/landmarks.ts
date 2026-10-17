@@ -7,6 +7,16 @@ import type { IconKind } from './inventory';
 
 export type LandmarkShape = 'cart' | 'well' | 'campfire' | 'tent' | 'shrine' | 'grave' | 'ruin' | 'tower' | 'hut';
 
+/**
+ * Where the pieces of the `ruin` landmark sit on public/tilesets/ruins.png (the LPC Jungle Ruins cut, tools/map/ruins.ts):
+ * a snapped pillar, a standing idol and a tumbled block. `tools/map/ruins.test.ts` checks them against the atlas.
+ */
+export const RUIN_FRAMES = {
+  pillar: { x: 224, y: 896, w: 32, h: 96 },
+  idol: { x: 288, y: 896, w: 32, h: 96 },
+  rubble: { x: 470, y: 896, w: 21, h: 39 },
+} as const;
+
 /** What each landmark is called in a telling. The earliest one a text names is the one drawn. */
 const WORDS: [LandmarkShape, RegExp][] = [
   ['cart', /\b(?:carts?|wagons?|caravan)\b/i],

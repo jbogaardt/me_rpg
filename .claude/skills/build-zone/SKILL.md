@@ -80,6 +80,9 @@ filter), `ridge`.
 - Buildings (`town.png`, from the CC0 Town RPG Pack, built by `tools/map/town.ts`): `smithy` and `apothecary` are 6x7-cell halls,
   `armory` and `ranger` are 3x9-cell tall houses. Solid from the ground up (you walk around them, not behind). Leave one cell of
   space between neighbours and a cobbled `stone` patch in front looks right (see the square in `maps/town.ts`).
+- Ruins (`ruins.png`, LPC Jungle Ruins): `ruinPyramid` (17x15), `ruinTemple` (8x10), `ruinHall` (10x6), `ruinHut` (4x3), `ruinWall`
+  (11x3), `ruinWallBroken` (7x3), `ruinArch` (4x3, its right half is a walkable gate: put it across a trail), `ruinPillar`/`ruinPillarBroken`,
+  `ruinStatue`/`ruinStatueB` (1 wide, tall), `ruinRubbleA`..`F` (one cell). Scenery; the big ones need an open plain, so `keepClear` them first.
 - The tilesets have **no** foliage ground/edge tiles; all vegetation is prefabs. There are no
   inner-corner or non-rectangular patch shapes yet.
 

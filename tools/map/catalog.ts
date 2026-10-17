@@ -1,6 +1,7 @@
 // Named map assets for zone specs. Every coordinate here was checked against the sheets in
 // public/tilesets/ (see the map pitfalls in tools/map/CLAUDE.md); add new entries only after looking at the art.
 
+import { RUINS_ATLAS } from './ruinsAtlas';
 import { TREE_ATLAS } from './treeAtlas';
 
 export const GROUND_SHEET = 'ground_tiles.png';
@@ -9,6 +10,7 @@ export const OBJECT_SHEET = 'object-layer.png';
 export const PLUS_SHEET = 'ground_plus.png'; // ground_tiles + a plain water tile matching the lake ring
 export const FROST_SHEET = 'frost_ground.png'; // sand -> snow, water -> ice
 export const FROST_OBJECTS = 'frost_objects.png'; // blue-grey rocks (trees and bushes: trees_<kind>.png, see trees.ts)
+export const RUINS_SHEET = 'ruins.png'; // ruined temples, walls, pillars, statues: tools/map/ruins.ts (LPC Jungle Ruins)
 export const TOWN_SHEET = 'town.png'; // the shop buildings, cut from the CC0 Town RPG Pack by tools/map/town.ts
 export const INTERIOR_SHEET = 'interior.png'; // shop interiors: floor, wall, counter, shelves, signs (tools/map/interior.ts)
 export const TERRAIN_SHEET = 'lpc_terrain.png'; // the LPC terrain atlas (art/lpc_terrain/): autotiled terrains, see terrain.ts
@@ -523,9 +525,48 @@ export const GRAVE_CROSSES = [
 ] as const satisfies (keyof typeof GRAVE_PREFABS)[];
 // === end LPC grave markers ======================================================================================
 
+// --- Ruins (ruins.png, cut from "[LPC] Jungle Ruins" by tools/map/ruins.ts) ---
+const ruin = (name: keyof typeof RUINS_ATLAS, band: number, about: string, tag = 'ruin'): Prefab => {
+  const { x, y, w, h } = RUINS_ATLAS[name];
+  return { sheet: RUINS_SHEET, w, h, parts: [part(x, y, w, h)], solid: { band, min: 0.3 }, tag, about };
+};
+const RUIN_PREFABS = {
+  ruinPyramid: ruin(
+    'pyramid',
+    480,
+    'Stepped pyramid with a grand stair and statues, 17x15 cells. Solid all over: scenery.',
+  ),
+  ruinTemple: ruin('temple', 320, 'Small temple with a dark arched door and four pillars, 8x10 cells. Solid all over.'),
+  ruinHall: ruin('hall', 192, 'Roofed hall with a colonnade and a statue at its door, 10x6 cells. Solid all over.'),
+  ruinHut: ruin('hut', 96, 'Crumbling windowed hut, 4x3 cells. Solid all over.'),
+  ruinWall: ruin('wallFaces', 96, 'Long wall with carved faces and a slab, 11x3 cells. Solid.'),
+  ruinWallBroken: ruin('wallRuin', 96, 'Wall fallen away on its left, with carved faces, 7x3 cells. Solid.'),
+  ruinPillar: ruin('pillar', 128, 'Tall carved pillar, 1x4 cells; it blocks all along its length.'),
+  ruinPillarBroken: ruin('pillarBroken', 96, 'Pillar snapped off, 1x3 cells; it blocks all along its length.'),
+  ruinStatue: ruin('statueBull', 96, 'Seated stone idol with horns, 1x3 cells; it blocks all along its length.'),
+  ruinStatueB: ruin(
+    'statueFace',
+    96,
+    'Seated stone idol with a square face, 1x3 cells; it blocks all along its length.',
+  ),
+  ruinArch: ruin(
+    'arch',
+    32,
+    'Ruined arcade, 4x3 cells: a dark archway on the left blocks, the open one on the right can be walked through.',
+  ),
+  ruinRubbleA: ruin('rubbleA', 33, 'Fallen blocks, one cell.', 'rock'),
+  ruinRubbleB: ruin('rubbleB', 31, 'Fallen blocks, one cell.', 'rock'),
+  ruinRubbleC: ruin('rubbleC', 41, 'A tumbled block, one cell.', 'rock'),
+  ruinRubbleD: ruin('rubbleD', 39, 'A tall tumbled block, one cell.', 'rock'),
+  ruinRubbleE: ruin('rubbleE', 32, 'Fallen blocks, one cell.', 'rock'),
+  ruinRubbleF: ruin('rubbleF', 29, 'A toppled block, one cell.', 'rock'),
+};
+// --- end Ruins ---
+
 export const PREFABS = {
   ...SIGN_PREFABS,
   ...GRAVE_PREFABS,
+  ...RUIN_PREFABS,
   smithy: building(
     'smithy',
     'Blacksmith: a 6x7 hall with terracotta roof and an anvil over the door. Shopkeeper stands one row below.',
