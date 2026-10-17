@@ -23,15 +23,28 @@ log: it reads a digest kept to a character budget however long the game (`digest
 players said and every knockout in order. If that is too long the oldest knockouts lose their detail first, then asks and taps,
 and the players' own words last, with a count of what was left out. The full raw log stays in `reports/raw/`.
 
-**Two Jev workflows share one vocabulary** (`systems/feedback.ts`: bug, too hard, too easy, confusing, pace, request, praise,
-other, with a severity of 0 to 3). *In the game* the bot tags every utterance as it arrives (a canned ask or a tapped face says
-what it is; words go to Jev, or to keyword rules without a key) and keeps the tag on the entry. A vague complaint (a short
-one, a sure tag) is asked back by the DM, privately and once in a while, with a canned line ("which foe, and where?"); the tag
-never changes the world. The bot also keeps the table read it already makes (pressure, stalled) as an *engagement curve*, one
-line per block. *After the game* triage (`server/triage.ts`) tags what the live pass left out or was unsure of, finds hotspots
-in the state itself (knockouts piling up, repeated nudges, long stalls, heroes under a zone's band), clusters them by kind and
-area, tests each "too easy"/"too hard" against the numbers beside it, and ranks the findings in code. The analyst is given
-those findings with their evidence, the small digest, not the log. Entries go to the
+**Two Jev workflows share one vocabulary** (`systems/feedback.ts`). A tag is an **intent** (what the player is doing with their
+words) and a **topic** (what it is about), plus a severity of 0 to 3; the intent decides the **path**:
+
+| Intent | Path | What happens |
+|---|---|---|
+| help | answer | the DM's writer replies now (`server/router.ts`); not a finding, unless help keeps being needed in one place (then a `clarity` finding) |
+| criticism, bug | finding | triaged and ranked (topics: too hard, too easy, pace, clarity, content, controls, performance, access); a vague one is asked back |
+| idea | wishlist | clustered by topic, counted by players, reported apart from the problems |
+| praise | praise | quoted under what went well |
+| control | act | the existing cards and the DM's tools; counted only |
+| in character, social | play | the DM plays along; counted only, never in the report |
+| abuse (or an attempt to instruct the model) | guard | flagged to the operator, counted, never shown to the analyst or quoted |
+| noise | drop | counted |
+
+*In the game* the bot tags every utterance as it arrives (a canned ask or a tapped face says what it is; words go to Jev, or to
+keyword rules without a key) and keeps the tag on the entry. A short, sure complaint or bug is asked back by the DM, privately and
+once in a while, with a canned line ("which foe, and where?"); the tag never changes the world. The bot also keeps the table read
+it already makes (pressure, stalled) as an *engagement curve*, one line per block. *After the game* triage (`server/triage.ts`)
+tags what the live pass left out or was unsure of, sorts everything by path, finds hotspots in the state itself (knockouts piling
+up, repeated nudges, long stalls, heroes under a zone's band), clusters findings by kind and area, tests each "too easy" or "too
+hard" against the numbers beside it, and ranks in code. The analyst is given the findings with their evidence, the wishlist, the
+praise and the counts of what was not feedback: the small digest, not the log. The words are data to it, never instructions. Entries go to the
 host's console as `[report]` lines, and the DM bot collects them (`DmBot.reports`).
 
 When a game ends (everyone leaves, or the bot is stopped) the bot has Haiku read the log as a playtest analyst

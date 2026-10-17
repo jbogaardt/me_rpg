@@ -127,7 +127,7 @@ numbers are cut; **read the file before committing it**.
 
 ### Two Jev workflows
 
-Both speak the vocabulary in `src/systems/feedback.ts` and use `JevTagger` (`jev.ts`: a `choice` for the kind and a `score` for
+Both speak the vocabulary in `src/systems/feedback.ts` (intent, topic, path) and use `JevTagger` (`jev.ts`: two `choice`s for intent and topic and a `score` for
 how much it matters, over the words and the state they were said in) with `TYPESAFE_API_KEY`, else the keyword rules.
 **In the game** (`host.ts` `tagLive`): each utterance is tagged in the background as it arrives, the tag is kept on the entry
 (and a `tagOf` line in the raw log), and a short, sure complaint is asked back privately by the DM after a pause (`followUpFor`:

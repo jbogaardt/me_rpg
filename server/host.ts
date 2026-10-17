@@ -29,7 +29,7 @@ import { ANALYST_SYSTEM, writeReport } from './report';
 import { Curve } from './curve';
 import { RulesTagger, TAGGED, tagEntry, type Tagger } from './tag';
 import { triage as triageGame, type Triage } from './triage';
-import { FOLLOW_UP_WORDS, followUpFor, newFollowUps, recordFollowUp } from '../src/systems/feedback';
+import { FOLLOW_UP_WORDS, followUpFor, newFollowUps, pathOf, recordFollowUp } from '../src/systems/feedback';
 import { Phrasebook } from '../src/systems/phrases';
 import { isReportEntry, reportLine, type ReportEntry } from '../src/systems/reportLog';
 import {
@@ -381,16 +381,21 @@ class Dm {
 
   /**
    * The live Jev workflow: tag what a player said (never holding up the table: Jev, else the rules, in the background), note the
-   * tag with the entry, and, when a complaint was too vague to act on, have the DM ask that player back, privately and once in a
-   * while, after a pause in case they are about to say more. The tag is advice for the report; the question is the only thing
-   * it can ever make the game do, and it is a canned line.
+   * tag with the entry, and send it down its path (feedback.ts `pathOf`). Help, requests for the DM and in-character talk are
+   * already answered by the DM's own writer (router.ts), so the tag only files them; abuse and anything that tries to instruct
+   * the model is flagged for the operator and kept out of the report; a complaint or bug too vague to act on has the DM ask
+   * that player back, privately and once in a while, after a pause in case they are about to say more. The tag is advice for
+   * the report; the question is the only thing it can ever make the game do, and it is a canned line.
    */
   private async tagLive(e: ReportEntry, all: readonly ReportEntry[], raw: string) {
     const tag = await tagEntry(e, TAGGER);
     if (!tag) return;
     e.tag = tag;
+    const flagged = pathOf(tag) === 'guard';
     log(
-      `[tag] ${e.state.who} ${e.kind} ${tag.kind} severity ${tag.severity} (${Math.round(tag.confidence * 100)}%, ${tag.by}): ${e.text}`,
+      flagged
+        ? `[flag] ${e.state.who} said something abusive or instruction-like (left out of the report)`
+        : `[tag] ${e.state.who} ${e.kind} ${tag.intent}/${tag.topic} severity ${tag.severity} (${Math.round(tag.confidence * 100)}%, ${tag.by}): ${e.text}`,
     );
     fs.appendFileSync(raw, `${JSON.stringify({ tagOf: { t: e.t, slot: e.slot }, tag })}\n`);
     const bank = e.slot > 0 ? followUpFor(e, tag, this.followUps) : null;
