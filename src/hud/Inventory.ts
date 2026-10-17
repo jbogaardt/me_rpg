@@ -16,6 +16,8 @@ import { iconSvg } from './itemIcons';
 import { buffTexts, gemText } from './itemText';
 import { combosHtml } from './itemText';
 import { esc } from './html';
+import { hotbar, saveHotbar } from './Hotbar';
+import { HOTBAR_SLOTS } from '../systems/hotbar';
 
 // The Inventory tab of the pause menu: what the hero wears (a slot each, including both hands, a tool and a bag),
 // and the pack of carried items. Tap or click a slot to pick it, then use the buttons under the grids; a double
@@ -153,6 +155,8 @@ export class Inventory {
     } else if (sel.slot !== 'weapon') {
       buttons.push(btn('unequip', 'Take off'));
     }
+    for (let i = 0; i < HOTBAR_SLOTS; i++)
+      buttons.push(btn(`hb:${i}`, hotbar.slotOf(item) === i ? `Quick slot ${i + 1} (clear)` : `Quick slot ${i + 1}`));
     buttons.push(btn('drop', 'Drop'));
     const where = sel.from === 'worn' ? SLOT_LABELS[sel.slot] : 'In pack';
     return `
@@ -213,6 +217,18 @@ export class Inventory {
     if (!this.hero || !sel || !h) return;
     let op: InvOp | null = null;
     const [verb, where, which] = action.split(':');
+    if (verb === 'hb') {
+      // A quick slot is per-player UI state (a name on the bar), so it never reaches the pack or the host.
+      const item = this.itemAt(sel);
+      const slot = Number(where);
+      if (item) {
+        if (hotbar.slotOf(item) === slot) hotbar.clear(slot);
+        else hotbar.assign(slot, item);
+        saveHotbar();
+      }
+      this.render();
+      return;
+    }
     if (verb === 'set' && sel.from === 'pack')
       op =
         where === 'pack'

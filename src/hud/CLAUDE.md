@@ -19,3 +19,8 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
   chapter's note, a trial's result) is *passive text*: `Dialog.note`, the same caption as the DM's words. Never `say` for those.
 - **The map overlay is local**: it fills in as the players in view explore (`map/explored.ts`), nothing is sent. Rooms
   have none, and the `map` capability can turn it off or show the whole zone.
+- **The hotbar** (`Hotbar.ts`, rules in `systems/hotbar.ts`; core engine, per-player UI state): four quick slots in a column on the
+  right edge (clear of the D-pad and A), keys 1-4 (`HOTBAR_KEYS`, reserved) or a tap (`data-key` buttons). A slot stores an
+  item *name* (never a pack index) and a use is an ordinary Inventory op, so co-op needs nothing new: the guest applies it
+  and asks the host like any menu action. Slots are assigned from the Inventory tab, saved in `localStorage` only, never sent.
+  Gamepad mapping: not done (the game has no gamepad input yet).
