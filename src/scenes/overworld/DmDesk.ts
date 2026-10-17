@@ -62,7 +62,7 @@ export class DmDesk {
   private dialSig = '';
   private questSig = '{}';
   /** Host: what the DM last said and how long it still goes out; guest: the newest saying shown. */
-  private said: { id: number; text: string; left: number; zone?: string } | null = null;
+  private said: { id: number; text: string; left: number; zone?: string; slots?: number[] } | null = null;
   private saySeq = 0;
   private lastSay = 0;
   private asked: [number, number] | [number, number, string] | undefined;
@@ -124,12 +124,18 @@ export class DmDesk {
   /**
    * The DM speaks to the party: the words appear on every friend's screen (and the DM's own). False if there were none.
    * With a `zone`, only friends standing in that zone hear it (a word about what one player sees is not for another who is
-   * somewhere else); the DM's own screen always shows it.
+   * somewhere else), and with `slots`, only those friends; the DM's own screen always shows it.
    */
-  say(text: string, zone?: string): boolean {
+  say(text: string, zone?: string, slots?: number[]): boolean {
     const words = cleanCued(text);
     if (!words || this.arena.role === 'client') return false; // solo speaks to itself (its own screen)
-    this.said = { id: ++this.saySeq, text: words, left: sayTime(words), ...(zone ? { zone } : {}) };
+    this.said = {
+      id: ++this.saySeq,
+      text: words,
+      left: sayTime(words),
+      ...(zone ? { zone } : {}),
+      ...(slots ? { slots } : {}),
+    };
     this.timer = DM_RESEND; // tell them now
     this.onSay(words);
     return true;
@@ -203,7 +209,11 @@ export class DmDesk {
         k: 'dm',
         n: ++this.seq,
         ...base,
-        ...(say && (!said?.zone || this.arena.remotes.get(slot)?.zone === said.zone) ? { say } : {}),
+        ...(say &&
+        (!said?.zone || this.arena.remotes.get(slot)?.zone === said.zone) &&
+        (!said?.slots || said.slots.includes(slot))
+          ? { say }
+          : {}),
         ...(this.replies.has(slot)
           ? { reply: [this.replies.get(slot)!.id, this.replies.get(slot)!.text] as [number, string] }
           : {}),

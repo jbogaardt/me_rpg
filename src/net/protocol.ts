@@ -58,7 +58,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v50: `SnapMsg.ia`, the newest input number the host has applied for the recipient (client-side prediction).
  * v51: `SnapMsg.folk`, where the people who stroll about their post (content `roam`) stand.
  * v52: `HelloMsg.id`, a friend's own lasting id, so the host can give a rejoiner their hero back.
- * v53: `InputMsg.px/py`, where the friend's own hero stands: the host moves it there when believable (core/claim.ts).
+ * v54: the DM's words (`DmMsg.say`/`reply`) may be up to 360 letters, not 240. v53: `InputMsg.px/py`, where the friend's own hero stands: the host moves it there when believable (core/claim.ts).
  * Older: v28 made a negative `SnapMsg.ponds` level mean refilling after running dry; v27 made `drink` start (item
  * 1) or stop (item 0) a steady drink and added `SnapMsg.ponds`; v26 added the `drink` op of `do`; v25 added the
  * mob state `channel` (the Mummy's held ray); v24 added the `frost` fx of Stasis; v23 made `SnapMsg.crops` a state
@@ -74,7 +74,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
  * within a size budget.
  */
-export const PROTOCOL_VERSION = 53;
+export const PROTOCOL_VERSION = 54;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
