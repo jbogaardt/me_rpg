@@ -62,6 +62,28 @@ export function duel(foe: Foe, level: number): { blows: number; hits: number } {
   };
 }
 
+/** The same fight for a hero as they really are: their blow (attack and weapon) and defense (stat and armour) and health. */
+export function duelWith(
+  foe: Foe,
+  hero: { hp: number; power: number; defense: number },
+): { blows: number; hits: number } {
+  return {
+    blows: Math.ceil(foe.hp / Math.max(1, hero.power - foe.defense)),
+    hits: Math.ceil(hero.hp / Math.max(1, foe.attack - hero.defense)),
+  };
+}
+
+/** How a fight reads from its numbers: deadly, a slog, hard, fair, easy, or no fight at all. */
+export type Verdict = 'deadly' | 'slog' | 'hard' | 'fair' | 'easy' | 'trivial';
+export function verdictOf({ blows, hits }: { blows: number; hits: number }): Verdict {
+  if (hits <= DEADLY_HITS) return 'deadly';
+  if (blows > SLOG_BLOWS) return 'slog';
+  if (blows <= TRIVIAL_BLOWS && hits >= TRIVIAL_HITS) return 'trivial';
+  if (blows <= 3 && hits >= 15) return 'easy';
+  if (hits <= 4) return 'hard';
+  return 'fair';
+}
+
 /** A hero that falls in this many hits or fewer is outmatched; one that needs more blows than this has a slog. */
 export const DEADLY_HITS = 2;
 export const SLOG_BLOWS = 14;

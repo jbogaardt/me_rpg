@@ -24,7 +24,7 @@ export interface GameInfo {
 }
 
 /** The most entries given to the analyst (the latest ones; a game rarely has more worth reading). */
-export const MAX_ENTRIES = 160;
+export const MAX_ENTRIES = 120;
 
 /** Cut what must not reach a public repo: links, email addresses, long digit runs (a phone number), a name given away. */
 export function redact(text: string): string {
@@ -39,23 +39,40 @@ export const scrub = (text: string): string => redact(text).replace(/\s+/g, ' ')
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
-/** One entry as a line of the timeline the analyst reads (and the file ends with). */
-export function lineOf(e: ReportEntry, withRecent = false): string {
+/** One entry as lines of the timeline the analyst reads (and the file ends with); `full` adds the whole state of the game. */
+export function lineOf(e: ReportEntry, full = false): string {
   const s = e.state;
-  const near =
-    Object.entries(s.near)
-      .map(([k, n]) => `${k}x${n}`)
-      .join(' ') || 'none';
-  const facts =
-    `lv${s.level} hp ${s.hp}/${s.maxHp}, ${s.area} (${s.at[0]},${s.at[1]}), quest: ${s.quest ?? 'none'}, ` +
-    `party ${s.party.size} avg ${pct(s.party.avgHp)} lowest ${pct(s.party.lowest)}, near: ${near}, stalled ${s.stall}s` +
-    (s.breather ? ', in a breather' : '');
   const head = `${stamp(e.t)} ${s.who} ${e.kind}: ${e.kind === 'said' ? `"${scrub(e.text)}"` : scrub(e.text)}`;
-  const recent = withRecent && s.recent.length ? `\n    just before: ${s.recent.map(scrub).join(' | ')}` : '';
-  return `${head}\n    [${facts}]${recent}`;
+  const band = s.place.band ? ` levels ${s.place.band[0]}\u2013${s.place.band[1]}` : '';
+  const where = `${s.area} (${s.at[0]},${s.at[1]})${band}, ${s.place.alive} of ${s.place.total} foes alive`;
+  const quest = `quest: ${s.quest ?? 'none'}`;
+  const party = `party ${s.party.size} avg ${pct(s.party.avgHp)} lowest ${pct(s.party.lowest)}`;
+  if (!full)
+    return `${head}\n    [lv${s.level} hp ${s.hp}/${s.maxHp}, ${where}, ${quest}, ${party}${s.breather ? ', in a breather' : ''}]`;
+  const h = s.hero;
+  const f = s.fight;
+  const by =
+    Object.entries(f.by)
+      .map(([k, n]) => `${k} x${n}`)
+      .join(', ') || 'no one';
+  const foes = s.foes.map(
+    (x) =>
+      `${x.name} x${x.count} (${x.near} near) hp ${x.maxHp} atk ${x.attack} def ${x.defense} xp ${x.xp}: ` +
+      `${x.blows} blows to fell it, ${x.hits} hits to fell the hero [${x.verdict}; a typical hero of this level: ${x.typical}]`,
+  );
+  return [
+    head,
+    `    hero: lv${s.level} hp ${s.hp}/${s.maxHp} mp ${h.mp}/${h.maxMp}, blow ${h.power} (${h.attack}+${h.attackGear} gear), armor ${h.armor} (${h.defense}+${h.defenseGear} gear), magic ${h.magic}, ${h.weapon}${h.worn.length ? ` + ${h.worn.join(', ')}` : ', nothing else worn'}, healing items ${h.potions}, food ${h.food} water ${h.water}, gold ${h.gold}, xp ${h.xp[0]}/${h.xp[1]}${h.skills.length ? `, skills ${h.skills.join(', ')}` : ''}`,
+    `    fights: knocked out ${f.downs}x (${f.downsHere} in this zone), the party killed ${f.killsHere} here (${f.kills} in all); last 60s: took ${f.taken} damage in ${f.hitsTaken} hits (${by}), the party dealt ${f.dealt}${f.lastHurtBy ? `; last hurt by ${f.lastHurtBy.foe} ${f.lastHurtBy.ago}s ago` : ''}; DM pressure ${f.pressure}`,
+    `    where: ${where}; ${quest}; ${party}; stalled ${s.stall}s${s.breather ? '; in a breather' : ''}`,
+    `    foes in the zone: ${foes.join(' | ') || 'none alive'}`,
+    s.recent.length ? `    just before: ${s.recent.map(scrub).join(' | ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
-/** The log as the analyst reads it: the latest `MAX_ENTRIES`, what players said with what led up to it. */
+/** The log as the analyst reads it: the latest `MAX_ENTRIES`, what players said or fell to with the whole state around it. */
 export function timeline(entries: readonly ReportEntry[]): string {
   const kept = entries.slice(-MAX_ENTRIES);
   const talk = new Set(['said', 'ask', 'note', 'down']);
@@ -108,6 +125,13 @@ export function analysisPrompt(game: GameInfo, entries: readonly ReportEntry[]):
     '',
     'WHERE THINGS ARE IN THE REPO:',
     REPO_MAP,
+    '',
+    'HOW TO READ THE NUMBERS: a player\'s words ("too easy", "too hard", "boring", "lost") are a claim; test it against the state ' +
+      'beside it. The foes line says, for this player as they really are, how many blows they need to fell each kind of foe and how ' +
+      'many hits it needs to fell them, with a verdict (deadly, slog, hard, fair, easy, trivial) and the same for a typical hero of ' +
+      "their level: a verdict that differs means their gear or stats are off the curve, not the foe. Weigh the zone's level band, " +
+      'how many foes are alive, knockouts here, damage taken and dealt in the last minute and what the DM pressure was. Say plainly ' +
+      'when the numbers support the claim, when they contradict it (then it is a feel or clarity problem), and when the log cannot tell.',
     '',
     'Write the markdown with exactly these sections, in this order:',
     '## Prompt for the next session',

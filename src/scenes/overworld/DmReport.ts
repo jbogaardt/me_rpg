@@ -1,13 +1,30 @@
 import type { Player } from '../../entities/Player';
 import { CELL } from '../../map/types';
+import {
+  MOB_KINDS,
+  attackPower,
+  defensePower,
+  gearAttack,
+  gearDefense,
+  wornGear,
+  xpToNext,
+} from '../../systems/combat';
+import { heroModel } from '../../systems/dmBoss';
+import { mobKey } from '../../systems/quests';
 import { MESSAGE_CODE, NOTE_CODE, REQUESTS } from '../../systems/dmRequests';
 import { Engagement } from '../../systems/engagement';
+import { duelWith, verdictOf, zoneLevels } from '../../systems/levels';
 import { zoneName } from '../../systems/places';
-import { ReportLog, reportLine, type ReportKind, type ReportState } from '../../systems/reportLog';
+import { ReportLog, reportLine, type FoeFacts, type ReportKind, type ReportState } from '../../systems/reportLog';
 import type { Arena } from './Arena';
 
 /** Foes this close (cells) to a player ride in the state of what they said. */
 const NEAR_CELLS = 10;
+/** The window (s) of "lately" for damage taken and dealt, and the most kinds of foe a state lists. */
+const LATELY = 60;
+const MAX_FOES = 6;
+/** A knockout is blamed on a foe that hurt the player this recently (s). */
+const BLAME = 10;
 /** Kills are written as one event per this many seconds, not one each. */
 const KILL_EVENT_EVERY = 10;
 /** A player by seat, never by name: the report may end up in a public repo. */
@@ -28,6 +45,12 @@ export class DmReport {
   private questState: string | null = null;
   private kills = new Map<string, number>();
   private killsAt = 0;
+  /** Blows that landed on each player, and blows the party dealt, over the last `LATELY` seconds. */
+  private taken = new Map<number, { t: number; dmg: number; foe: string }[]>();
+  private dealtLately: { t: number; dmg: number }[] = [];
+  private downs = new Map<string, number>(); // `${slot}` and `${slot}|${zone}`
+  private killsIn = new Map<string, number>();
+  private killsAll = 0;
 
   constructor(
     private arena: Arena,
@@ -81,14 +104,35 @@ export class DmReport {
     this.add('signal', null, kind);
   }
 
-  /** A hero was knocked out. */
+  /** A hero was knocked out (and by whom, when a foe hurt them just before). */
   down(p: Player, zone: string) {
-    this.add('down', p, `knocked out in ${zoneName(zone)}`);
+    for (const k of [`${p.slot}`, `${p.slot}|${zone}`]) this.downs.set(k, (this.downs.get(k) ?? 0) + 1);
+    const last = this.lastHurt(p.slot);
+    this.add('down', p, `knocked out in ${zoneName(zone)}${last && last.ago <= BLAME ? ` by ${last.foe}` : ''}`);
   }
 
-  killed(key: string) {
+  killed(zone: string, key: string) {
     this.kills.set(key, (this.kills.get(key) ?? 0) + 1);
     this.killsAt ||= this.clock;
+    this.killsIn.set(zone, (this.killsIn.get(zone) ?? 0) + 1);
+    this.killsAll++;
+  }
+
+  /** A foe hurt a hero. */
+  hurt(p: Player, kind: string, damage: number) {
+    const list = this.taken.get(p.slot) ?? [];
+    list.push({ t: this.clock, dmg: damage, foe: MOB_KINDS[kind]?.name ?? kind });
+    this.taken.set(p.slot, list);
+  }
+
+  /** The party hurt a foe. */
+  dealt(damage: number) {
+    this.dealtLately.push({ t: this.clock, dmg: damage });
+  }
+
+  private lastHurt(slot: number): { foe: string; ago: number } | null {
+    const hit = this.taken.get(slot)?.at(-1);
+    return hit ? { foe: hit.foe, ago: Math.round((this.clock - hit.t) * 10) / 10 } : null;
   }
 
   /** The DM said something (what a player answers is read against it). */
@@ -105,6 +149,11 @@ export class DmReport {
     this.counters.clear();
     this.zones.clear();
     this.kills.clear();
+    this.taken.clear();
+    this.dealtLately = [];
+    this.downs.clear();
+    this.killsIn.clear();
+    this.killsAll = 0;
     this.questState = null;
     this.clock = 0;
   }
@@ -135,19 +184,24 @@ export class DmReport {
         null,
       );
     const zone = who?.zone ?? '';
-    const state = this.arena.zones.get(zone);
-    const near: Record<string, number> = {};
-    if (who && state)
-      for (const m of state.mobs)
-        if (m.alive && Math.hypot(m.body.x - who.body.x, m.body.y - who.body.y) <= NEAR_CELLS * CELL)
-          near[m.kind.name] = (near[m.kind.name] ?? 0) + 1;
     const t = this.arena.task;
     const round = (n: number) => Math.round(n * 100) / 100;
+    const hero = who?.hero;
+    const s = hero?.stats;
+    // lately: drop what is older than the window, then add up
+    const cut = this.clock - LATELY;
+    for (const list of this.taken.values()) while (list[0] && list[0].t < cut) list.shift();
+    while (this.dealtLately[0] && this.dealtLately[0].t < cut) this.dealtLately.shift();
+    const mine = (who && this.taken.get(who.slot)) || [];
+    const by: Record<string, number> = {};
+    for (const h of mine) by[h.foe] = (by[h.foe] ?? 0) + 1;
+    const foes = who && hero ? this.foesFor(who) : [];
+    const band = zoneLevels(zone);
     return {
       who: p ? seatName(p.slot) : '-',
-      level: who?.hero.stats.level ?? 0,
-      hp: Math.round(who?.hero.stats.hp ?? 0),
-      maxHp: who?.hero.stats.maxHp ?? 0,
+      level: s?.level ?? 0,
+      hp: Math.round(s?.hp ?? 0),
+      maxHp: s?.maxHp ?? 0,
       zone,
       area: zoneName(zone),
       at: who ? [Math.floor(who.body.x / CELL), Math.floor(who.body.y / CELL)] : [0, 0],
@@ -159,10 +213,83 @@ export class DmReport {
         avgHp: round(fracs.reduce((a, b) => a + b, 0) / Math.max(1, fracs.length)),
         lowest: round(fracs.length ? Math.min(...fracs) : 1),
       },
-      near,
+      hero: {
+        attack: s?.attack ?? 0,
+        attackGear: hero ? gearAttack(hero) : 0,
+        power: hero ? attackPower(hero) : 0,
+        defense: s?.defense ?? 0,
+        defenseGear: hero ? gearDefense(hero) : 0,
+        armor: hero ? defensePower(hero) : 0,
+        magic: s?.magic ?? 0,
+        mp: Math.round(s?.mp ?? 0),
+        maxMp: s?.maxMp ?? 0,
+        xp: [s?.xp ?? 0, s ? xpToNext(s.level) : 0],
+        weapon: hero?.weapon.name ?? '',
+        worn: hero
+          ? wornGear(hero)
+              .filter((i) => i !== hero.weapon)
+              .map((i) => i.name)
+          : [],
+        potions: hero ? hero.pack.filter((i) => i.use && i.use.hp > 0).length : 0,
+        food: Math.round(hero?.needs.food ?? 0),
+        water: Math.round(hero?.needs.water ?? 0),
+        gold: hero?.gold ?? 0,
+        skills: hero ? [...hero.skills] : [],
+      },
+      fight: {
+        downs: who ? (this.downs.get(`${who.slot}`) ?? 0) : 0,
+        downsHere: who ? (this.downs.get(`${who.slot}|${zone}`) ?? 0) : 0,
+        killsHere: this.killsIn.get(zone) ?? 0,
+        kills: this.killsAll,
+        taken: mine.reduce((a, h) => a + h.dmg, 0),
+        hitsTaken: mine.length,
+        dealt: this.dealtLately.reduce((a, h) => a + h.dmg, 0),
+        by,
+        lastHurtBy: who ? this.lastHurt(who.slot) : null,
+        pressure: this.arena.pressure,
+      },
+      place: {
+        band: band ? [band[0], band[1]] : null,
+        alive: this.arena.zones.get(zone)?.mobs.filter((m) => m.alive).length ?? 0,
+        total: this.arena.zones.get(zone)?.mobs.length ?? 0,
+      },
+      foes,
       breather: this.breathing(),
       stall: Math.round((who && this.counters.get(who.slot)?.stalled) || 0),
       recent: this.log.recent,
     };
+  }
+
+  /** The kinds of foe in the player's zone, those nearest first, each as this player (and a typical hero of their level) would fight it. */
+  private foesFor(p: Player): FoeFacts[] {
+    const z = this.arena.zones.get(p.zone);
+    if (!z) return [];
+    const typical = heroModel(p.hero.stats.level);
+    const real = { hp: p.hero.stats.maxHp, power: attackPower(p.hero), defense: defensePower(p.hero) };
+    const byKind = new Map<string, FoeFacts>();
+    for (const m of z.mobs) {
+      if (!m.alive) continue;
+      const key = mobKey(m.kind) ?? m.kind.name;
+      let f = byKind.get(key);
+      if (!f) {
+        const foe = { hp: m.kind.maxHp, attack: m.kind.attack, defense: m.kind.defense };
+        f = {
+          name: m.kind.name,
+          count: 0,
+          near: 0,
+          maxHp: m.kind.maxHp,
+          attack: m.kind.attack,
+          defense: m.kind.defense,
+          xp: m.kind.xp,
+          ...duelWith(foe, real),
+          verdict: verdictOf(duelWith(foe, real)),
+          typical: verdictOf(duelWith(foe, { hp: typical.hp, power: typical.power, defense: typical.defense })),
+        };
+        byKind.set(key, f);
+      }
+      f.count++;
+      if (Math.hypot(m.body.x - p.body.x, m.body.y - p.body.y) <= NEAR_CELLS * CELL) f.near++;
+    }
+    return [...byKind.values()].sort((a, b) => b.near - a.near || b.count - a.count).slice(0, MAX_FOES);
   }
 }

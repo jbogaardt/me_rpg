@@ -56,8 +56,12 @@ care. Places are never named unless the game gave them.
 Nobody fills in a form: a menu for reporting would never be used. The host writes down, on its own, **what each player
 says to the DM** (their own words from the 💬 line, a canned ask such as "This is too hard", a tapped face on the breather
 badge) **and what the game did around it** (the director's nudges, knockouts, quests ending, breathers), each with **the
-state of the game at that moment**: who (P1, P2...), level and health, where, the quest, how the party fares, what stands
-near, how long since anything progressed, and the last few events (`DmReport`, `systems/reportLog.ts`). Entries go to the
+state of the game at that moment**, as much as it takes to judge the complaint: who (P1, P2...), the hero as they really
+are (blow and armour with gear, health, mana, supplies, gold, xp), how fighting has gone (knockouts here and in all, damage
+taken and dealt in the last minute and by whom, who hurt them last, the DM's pressure), the zone (its level band, foes alive),
+and **each kind of foe in it as this player fights it**: blows to fell it, hits for it to fell them, a verdict (deadly to
+trivial) and the same for a typical hero of their level, so "too easy" can be checked against the numbers. Plus where, the
+quest, the party, how long since anything progressed and the last events (`DmReport`, `systems/reportLog.ts`). Entries go to the
 host's console as `[report]` lines, and the DM bot collects them (`DmBot.reports`).
 
 When a game ends (everyone leaves, or the bot is stopped) the bot has Haiku read the log as a playtest analyst
