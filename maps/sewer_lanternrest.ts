@@ -71,9 +71,9 @@ export default defineZone({
     ] as const)
       z.prop(name, col, row);
 
-    z.chest('iron', 'hoard', 13, 10);
+    z.chest('iron', 'purse', 13, 10);
     z.chest('wood', 'elixir', 43, 10);
-    z.chest('iron', 'steelSword', 5, 30);
+    z.chest('iron', 'potion', 5, 30);
     z.chest('iron', 'relic', 43, 30);
     z.place('The Lanternrest Sewers', 24, 18);
   },

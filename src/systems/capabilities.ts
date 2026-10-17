@@ -98,6 +98,20 @@ export const CAPABILITIES = {
     off: 'The people a scenario places (with a `roam` radius) stand at their post instead of strolling about it.',
     scope: 'zone',
   },
+  levelGates: {
+    name: 'Level gates',
+    off: 'Every zone is open to every hero: a biome’s level band is only advice on the area banner, and no door keeps a hero out.',
+    scope: 'zone',
+    settings: {
+      slack: {
+        about:
+          'How many levels under a zone’s lowest level a hero may still walk in (0 shuts the door at the band’s edge).',
+        default: 1,
+        min: 0,
+        max: 10,
+      },
+    },
+  },
   forge: {
     name: 'Setting gems',
     off: 'Gems cannot be set in gear: no Set action in the pack, no shop sells a gem, and the DM gives no quest to forge one.',

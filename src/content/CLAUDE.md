@@ -84,3 +84,7 @@ people need a live world, since the people are `npc`/`cast` entries of its log (
 maps and their doors, a placement or spawn off its own biome's open ground, and quests that cannot be done (too few
 sites, a mob that lives nowhere). It also checks every campaign, the packs' catalog and random campaigns of seeds 1-40;
 `tools/content/packs.test.ts` assembles 150 seeds and holds each to the game's own checks.
+
+## Level bands (`systems/levels.ts`; core engine, content, capability `levelGates`)
+
+A biome may declare `levels: [lowest, highest]`: advice on the area banner, and a check in `npm run map -- check` that each foe its roamers and scenario place is a fair fight for a typical hero (`heroModel`) at the lowest level (error: fells the hero in 2 hits or takes over 14 blows; warning: no fight at the top). With `levelGates` on in a zone, its door turns back a hero more than `slack` (default 1) levels under the lowest (`Zones.turnedAway`, host-side; a guest sees the floating word). Campaign 1 gates only its two underground rooms; the open world's bands are advice, so no quest road is shut.

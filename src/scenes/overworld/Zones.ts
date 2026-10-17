@@ -10,6 +10,8 @@ import { doorArrival, openPort, type PortBinding } from '../../content/ports';
 import { ARRIVE_CELLS, arrivalFacing, cellFeet, doorAt, doorsNear, neighbourLinks, type Link } from '../../map/doors';
 import { CELL, type CellPoint, type DoorSpawn, type MapData } from '../../map/types';
 import { zoneTint } from '../../systems/places';
+import { enabled, setting } from '../../systems/capabilities';
+import { gateWords, gated, zoneLevels } from '../../systems/levels';
 import { GroundItem } from '../../entities/GroundItem';
 import { ZoneState } from '../ZoneState';
 import { TRAINER_ROOM } from '../../systems/skills';
@@ -34,6 +36,10 @@ export type ZoneLoader = (name: string, onProgress?: (fraction: number) => void,
 /** Frees what `ZoneLoader` loaded (assets.ts `unloadZone`). */
 export type ZoneUnloader = (zone: Zone) => Promise<void>;
 
+/** How hard a door shoves back a hero it keeps out (px/s, like a knock), and how long before it says so again (ms). */
+const TURN_BACK = 260;
+const TURN_WORD_EVERY = 2500;
+
 /**
  * The zones of the world: loading them (the ones behind doors are fetched before the player gets there), taking players
  * through doors, and showing the local player's zone on the stage. The map data and what lives in a zone is `ZoneState`;
@@ -48,6 +54,10 @@ export class Zones {
   readonly transition: ZoneTransition;
   /** Set by the scene: the rules a zone's mobs call back into (it is the simulation's). */
   makeMobWorld!: (z: ZoneState) => MobWorld;
+  /** Set by the scene: a word floating over a player (the simulation's `text`, which a guest is shown too). */
+  say?: (p: Player, text: string) => void;
+  /** When each player was last turned away from a door (ms), so the word is not repeated every frame. */
+  private turned = new WeakMap<Player, number>();
   private loading = new Map<string, Promise<void>>(); // zones being loaded, so each is asked for once
   private prefetchTimer = 0;
   private retireTimer = RETIRE_EVERY;
@@ -226,9 +236,29 @@ export class Zones {
     if (p.hidden) return; // a DM riding on a possessed foe goes where the foe goes, never through a door of their own
     const door = doorAt(this.arena.zoneOf(p).data, p.body.x, p.body.y);
     if (!door) return;
+    if (this.turnedAway(p, door)) return;
     const dest = this.arena.zones.get(door.to.zone);
     if (dest) this.travel(p, dest, doorArrival(door, dest.data), door);
     else void this.ensure(door.to.zone); // not loaded yet: the player waits in the doorway and the next frame tries again
+  }
+
+  /**
+   * Keep a hero too far under a zone's level band out (capability `levelGates`, the zone's `levels` in biomes.json): they
+   * are pushed back from the door with a word over their head. True when they were turned away. The host decides, for
+   * itself and for each guest (a guest is shown the floating word); nothing new rides the wire.
+   */
+  private turnedAway(p: Player, door: DoorSpawn): boolean {
+    const band = zoneLevels(door.to.zone);
+    if (!band || !enabled('levelGates', door.to.zone)) return false;
+    if (!gated(p.hero.stats.level, band, setting('levelGates', 'slack', door.to.zone))) return false;
+    const speed = Math.hypot(p.vel.x, p.vel.y);
+    p.knock =
+      speed > 1 ? { x: (-p.vel.x / speed) * TURN_BACK, y: (-p.vel.y / speed) * TURN_BACK } : { x: 0, y: TURN_BACK };
+    p.vel = { x: 0, y: 0 };
+    const now = Date.now();
+    if (now - (this.turned.get(p) ?? 0) > TURN_WORD_EVERY) this.say?.(p, gateWords(band));
+    this.turned.set(p, now);
+    return true;
   }
 
   /**

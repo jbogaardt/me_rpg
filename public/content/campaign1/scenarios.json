@@ -1,6 +1,7 @@
 {
   "version": 1,
   "start": "greenwood",
+  "capabilities": { "levelGates": false },
   "nodes": [
     {
       "node_id": "beach",
@@ -21,18 +22,18 @@
       "node_id": "cave_sunscar",
       "biome_type": "cave_sunscar",
       "entities": [
-        { "entity": "goblin", "x": 35, "y": 8 },
-        { "entity": "goblin", "x": 41, "y": 7 },
-        { "entity": "wolfkin", "x": 37, "y": 10 },
-        { "entity": "wolfkin", "x": 24, "y": 28 },
-        { "entity": "wolfkin", "x": 37, "y": 25 },
-        { "entity": "shade", "x": 20, "y": 26 },
-        { "entity": "goblin", "x": 28, "y": 33 },
+        { "entity": "raider", "x": 35, "y": 8 },
+        { "entity": "skeleton", "x": 41, "y": 7 },
+        { "entity": "mummy", "x": 37, "y": 10 },
+        { "entity": "raider", "x": 24, "y": 28 },
+        { "entity": "skeleton", "x": 37, "y": 25 },
+        { "entity": "mummy", "x": 20, "y": 26 },
+        { "entity": "raider", "x": 28, "y": 33 },
         { "entity": "orc", "x": 36, "y": 33 },
-        { "entity": "goblin", "x": 8, "y": 34 },
-        { "entity": "shade", "x": 11, "y": 38 },
+        { "entity": "skeleton", "x": 8, "y": 34 },
+        { "entity": "warg", "x": 11, "y": 38 },
         { "entity": "orc", "x": 48, "y": 19 },
-        { "entity": "troll", "x": 46, "y": 38 }
+        { "entity": "warg", "x": 46, "y": 38 }
       ],
       "choices": []
     },
@@ -193,16 +194,16 @@
       "node_id": "sewer_lanternrest",
       "biome_type": "sewer_lanternrest",
       "entities": [
-        { "entity": "zombie", "x": 8, "y": 8 },
-        { "entity": "zombie", "x": 40, "y": 8 },
-        { "entity": "zombie", "x": 5, "y": 24 },
-        { "entity": "zombie", "x": 12, "y": 30 },
+        { "entity": "goblin", "x": 8, "y": 8 },
+        { "entity": "goblin", "x": 40, "y": 8 },
+        { "entity": "wolfkin", "x": 5, "y": 24 },
+        { "entity": "shade", "x": 12, "y": 30 },
         { "entity": "goblin", "x": 14, "y": 15 },
         { "entity": "goblin", "x": 34, "y": 15 },
-        { "entity": "skeleton", "x": 20, "y": 21 },
-        { "entity": "skeleton", "x": 28, "y": 21 },
+        { "entity": "wolfkin", "x": 20, "y": 21 },
+        { "entity": "shade", "x": 28, "y": 21 },
         { "entity": "goblin", "x": 24, "y": 7 },
-        { "entity": "troll", "x": 40, "y": 29 }
+        { "entity": "wolfkin", "x": 40, "y": 29 }
       ],
       "choices": []
     },

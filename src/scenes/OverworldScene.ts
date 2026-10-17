@@ -177,6 +177,7 @@ export class OverworldScene implements Scene {
     // The simulation reports what a friend should see through the host link (which only records it while hosting).
     this.sim = new Simulation(arena, visuals, this.zones, (e) => this.host.emit(e), say);
     this.zones.makeMobWorld = (z) => this.sim.mobWorldFor(z);
+    this.zones.say = (p, text) => this.sim.text(p.body.x, p.body.y - 66, text, 0xffd27a); // a door turning a hero away
     this.ground = new Ground(arena, this.sim);
     this.ground.onPicked = (p, name) => {
       if (p !== arena.local) return; // a friend's pickup is theirs to see

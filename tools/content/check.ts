@@ -8,6 +8,7 @@ import * as prettier from 'prettier';
 import { roam } from '../../src/content/populate';
 import { OPPOSITE } from '../../src/content/packs';
 import { onDoor } from '../../src/map/doors';
+import { bandText, foeProblem } from '../../src/systems/levels';
 import type { ContentManager } from '../../src/content/ContentManager';
 import type { MapData } from '../../src/map/types';
 import { campaigns, CONTENT_DIR, loadContentFromDisk, PACKS, readContentFile, readPacks } from './disk';
@@ -60,6 +61,29 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
       if (placed < rule.count)
         warnings.push(`biomes.${type}.generation.roam[${i}] places ${placed} of ${rule.count}: not enough open ground`);
     });
+  }
+  // A zone with a level band holds only foes that are a fair fight at its lowest level (systems/levels.ts): its roamers
+  // and the mobs its scenario places. A foe that is no fight at the top of the band is only a warning.
+  const { entities } = content.content;
+  for (const [type, biome] of Object.entries(biomes)) {
+    if (!biome.levels) continue;
+    const kinds = new Set([
+      ...(biome.generation.roam ?? []).flatMap((rule) => rule.kinds),
+      ...(scenarios.nodes.get(type)?.entities ?? []).map((p) => p.entity),
+    ]);
+    for (const kind of kinds) {
+      const stats = entities[kind]?.type === 'mob' && !entities[kind].boss ? entities[kind].stats : undefined;
+      const problem = stats && foeProblem(stats, biome.levels);
+      if (!problem) continue;
+      const what = `biomes.${type} (${bandText(biome.levels)}): ${kind} ${
+        problem.kind === 'deadly'
+          ? `kills a level-${problem.level} hero in ${problem.hits} hits (${problem.blows} blows to fell it)`
+          : problem.kind === 'slog'
+            ? `takes a level-${problem.level} hero ${problem.blows} blows to fell`
+            : `falls to a level-${problem.level} hero in ${problem.blows} blows and needs ${problem.hits} hits to fell one`
+      }`;
+      (problem.kind === 'trivial' ? warnings : errors).push(what);
+    }
   }
   // The links are the doors: every zone a map has a door to (in this campaign) is linked, and nothing else, except that
   // the training halls are reached by the trainer's magic, so only their way out is a door and nothing links to them.

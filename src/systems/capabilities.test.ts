@@ -26,7 +26,8 @@ afterEach(() => setCapabilities({}));
 
 describe('capabilities', () => {
   it('are all on unless a campaign says otherwise', () => {
-    for (const id of CAPABILITY_IDS) expect(enabled(id)).toBe(true);
+    // (campaign 1, installed by the test setup, turns the level gates off everywhere but its two underground rooms)
+    for (const id of CAPABILITY_IDS) expect(enabled(id)).toBe(id !== 'levelGates');
     setCapabilities({ guide: false, needs: false });
     expect(disabledCapabilities()).toEqual(['guide', 'needs']);
     setCapabilities({ combos: false }); // a new campaign starts from all on again

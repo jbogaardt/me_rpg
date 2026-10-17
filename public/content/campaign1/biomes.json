@@ -3,6 +3,7 @@
   "biomes": {
     "beach": {
       "name": "Hourglass Shore",
+      "levels": [2, 3],
       "tint": "#a4e6ff",
       "map": "beach",
       "climate": "coast",
@@ -34,6 +35,8 @@
     },
     "cave_sunscar": {
       "name": "The Sunscar Hollow",
+      "levels": [4, 5],
+      "capabilities": { "levelGates": true },
       "map": "cave_sunscar",
       "climate": null,
       "music": null,
@@ -43,6 +46,7 @@
     },
     "desert": {
       "name": "The Sunscar Desert",
+      "levels": [4, 6],
       "tint": "#ffc468",
       "map": "desert",
       "climate": "desert",
@@ -76,6 +80,7 @@
     },
     "eastwood": {
       "name": "The Eastwood",
+      "levels": [2, 2],
       "tint": "#a6e07c",
       "map": "eastwood",
       "climate": "temperate",
@@ -113,6 +118,7 @@
     },
     "frostlands": {
       "name": "The Frostlands",
+      "levels": [6, 6],
       "tint": "#d6f2ff",
       "map": "frostlands",
       "climate": "frost",
@@ -150,6 +156,7 @@
     },
     "greenwood": {
       "name": "The Greenwood",
+      "levels": [1, 2],
       "tint": "#c8f28a",
       "map": "greenwood",
       "climate": "temperate",
@@ -184,6 +191,7 @@
     },
     "jungle": {
       "name": "The Tuskwood Jungle",
+      "levels": [5, 7],
       "tint": "#62e08c",
       "map": "jungle",
       "climate": "jungle",
@@ -218,6 +226,7 @@
     },
     "marsh": {
       "name": "Gloamfen Marsh",
+      "levels": [5, 7],
       "tint": "#9dbb6a",
       "map": "marsh",
       "climate": "swamp",
@@ -251,6 +260,8 @@
     },
     "sewer_lanternrest": {
       "name": "The Lanternrest Sewers",
+      "levels": [1, 2],
+      "capabilities": { "levelGates": true },
       "map": "sewer_lanternrest",
       "climate": null,
       "music": null,
@@ -372,6 +383,7 @@
     },
     "undead": {
       "name": "The Barrow Lands",
+      "levels": [2, 4],
       "tint": "#b394d6",
       "map": "undead",
       "climate": "undead",
@@ -404,6 +416,7 @@
     },
     "wetlands": {
       "name": "The Mirewater",
+      "levels": [4, 6],
       "tint": "#8cc48a",
       "map": "wetlands",
       "climate": "swamp",

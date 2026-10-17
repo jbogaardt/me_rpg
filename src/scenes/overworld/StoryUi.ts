@@ -19,6 +19,7 @@ import { doorToward, guideFor, searchMiddle } from '../../systems/guide';
 import { recipeNames } from '../../systems/dmForge';
 import { FUSED, ITEMS } from '../../systems/items';
 import { zoneName } from '../../systems/places';
+import { bandNote, zoneLevels } from '../../systems/levels';
 import {
   CHAPTERS,
   GIVERS,
@@ -101,7 +102,10 @@ export class StoryUi {
     if (this.possessing()) return; // no pop-ups while a foe is held
     const fresh = !this.visited.has(name);
     this.visited.add(name);
-    this.banner.show(zoneName(name), fresh && !this.arena.zone.data.indoor ? 'New area discovered' : '');
+    const band = zoneLevels(name);
+    const note = band ? bandNote(this.arena.local.hero.stats.level, band) : '';
+    const news = fresh && !this.arena.zone.data.indoor ? 'New area discovered' : '';
+    this.banner.show(zoneName(name), [news, note].filter(Boolean).join(' \u00b7 '));
   }
 
   /**

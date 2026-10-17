@@ -6,6 +6,7 @@
 import type { MobKind } from '../systems/combat';
 import { MAX_ROAM_CELLS } from '../systems/roam';
 import { isClimate } from '../systems/weather';
+import type { Band } from '../systems/levels';
 import { SKILL_IDS, SKILLS } from '../systems/skills';
 import { CapabilityTable, checkCapabilities, DIALS, type CapabilitySpec, type Dial } from '../systems/capabilities';
 import { BONUS_KEYS, isGem, type Bonus, type BonusKey } from '../systems/gems';
@@ -106,6 +107,8 @@ export interface BiomeDef {
   generation: { roam?: RoamRule[] };
   /** Its zone's own word on the capabilities whose scope is a zone (no map in this cave, double hunger in this swamp). */
   capabilities?: CapabilitySpec;
+  /** The hero levels it is made for, lowest and highest (systems/levels.ts): advice on the banner, a gate with `levelGates`, and a check on its foes. */
+  levels?: Band;
 }
 
 // --- scenarios.json -------------------------------------------------------------------------------------------------
@@ -404,6 +407,12 @@ export function parseBiomes(json: unknown, r = new Reader()): Record<string, Bio
     };
     if (b.capabilities !== undefined)
       out[type].capabilities = readCapabilities(r, b.capabilities, `${path}.capabilities`, 'zone');
+    if (b.levels !== undefined) {
+      const [lo, hi] = r.array(b.levels, `${path}.levels`).map((n, i) => r.number(n, `${path}.levels[${i}]`, 1));
+      if (lo === undefined || hi === undefined || lo > hi)
+        r.fail(`${path}.levels`, 'is [lowest, highest] level, lowest first');
+      else out[type].levels = [lo, hi];
+    }
   }
   return out;
 }
