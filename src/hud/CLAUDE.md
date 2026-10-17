@@ -17,5 +17,8 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
 - **Popups only when the player starts a conversation** (an NPC, the quest-giver, a sign, a shop, the Dungeon Master in
   person: walk up and press the action key). Everything the game tells a player unasked (a defeat, a quest the DM gave, a
   chapter's note, a trial's result) is *passive text*: `Dialog.note`, the same caption as the DM's words. Never `say` for those.
-- **The map overlay is local**: it fills in as the players in view explore (`map/explored.ts`), nothing is sent. Rooms
-  have none, and the `map` capability can turn it off or show the whole zone.
+- **The map overlay is local and always available**: it fills in as the players in view explore (`map/explored.ts`),
+  nothing is sent. The button and M key never go missing (host, guest, DM, touch, any zone); a room has no overview, so
+  there the map opens on its name and a note (`MapOverlay.setRoom`). Only the aids on it are optional: the `guide`
+  capability (search circle, star, tracker line; its `fog` setting shows the whole zone) and the `compass` capability,
+  each also switchable by the player in the Controls tab (`AidSetting`, `systems/aids.ts`).

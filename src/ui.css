@@ -141,7 +141,6 @@
 #menu-btn.pressed, #map-btn.pressed, #req-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #menu .close.pressed, #shop .close.pressed, #trade .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
 #hud-buttons { display: flex; gap: 6px; flex: none; }
 #menu-btn, #map-btn, #inv-btn, #req-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
-#map-btn[hidden] { display: none; }
 
 /* --- Co-op map (src/hud/MapOverlay.ts): never takes input, so the game stays playable behind it --- */
 #map-overlay {
@@ -166,6 +165,11 @@
 }
 #map-overlay .legend i { width: 9px; height: 9px; border: 1.5px solid #fff; border-radius: 50%; margin-left: 6px; }
 #map-overlay .legend i { background: var(--pin, #ffb13f); }
+/* A room has no overview: the heading and a note instead of the picture and pins. */
+#map-overlay .room-note { display: none; }
+#map-overlay.room { aspect-ratio: auto; width: min(92vw, 420px); padding: 18px 16px 22px; }
+#map-overlay.room img, #map-overlay.room .pin, #map-overlay.room .legend, #map-overlay.room .place, #map-overlay.room .guide { display: none; }
+#map-overlay.room .room-note { display: block; margin: 8px 0 0; text-align: center; font: 600 16px var(--body); color: #fff; text-shadow: 0 1px 2px #000; }
 
 /* --- Dialog box (tap it, or press the action key, to advance) --- */
 #dialog {
@@ -277,12 +281,13 @@ body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
   user-select: all; -webkit-user-select: all; -webkit-touch-callout: default;
 }
 #menu label { display: block; margin-top: 10px; color: var(--ink-soft); font-weight: 600; font-size: 15px; }
+#aid-setting [role='group'] { display: flex; gap: 6px; margin: 10px 0 8px; }
 #mp-mode, #aim-mode, #voice-engine { display: flex; gap: 6px; margin: 10px 0 8px; }
-#mp-mode button, #aim-mode button, #voice-engine button {
+#mp-mode button, #aim-mode button, #voice-engine button, #aid-setting button {
   flex: 1 1 0; padding: 7px 4px; font: 700 14px var(--title); color: var(--ink-soft); cursor: pointer;
   background: rgba(255, 250, 235, 0.5); border: 1px solid var(--gold-dim); border-radius: 3px;
 }
-#mp-mode button[aria-checked='true'], #aim-mode button[aria-checked='true'], #voice-engine button[aria-checked='true'] { color: var(--gold); background: #4a3418; border-color: var(--ink); }
+#mp-mode button[aria-checked='true'], #aim-mode button[aria-checked='true'], #voice-engine button[aria-checked='true'], #aid-setting button[aria-checked='true'] { color: var(--gold); background: #4a3418; border-color: var(--ink); }
 #mp-mode button:disabled, #voice-engine button:disabled { opacity: 0.5; cursor: default; }
 .mp-status { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-weight: 600; }
 .mp-status .dot { width: 10px; height: 10px; border-radius: 50%; background: #8a8478; box-shadow: 0 0 0 1px var(--ink-soft); }

@@ -1,4 +1,5 @@
 import type { Hero } from '../systems/combat';
+import { hintsOn } from '../systems/aids';
 import { enabled } from '../systems/capabilities';
 import { trackerText } from '../systems/guide';
 import { needLevel, needWord } from '../systems/needs';
@@ -64,7 +65,7 @@ export class Hud {
     const s = hero.stats;
     const hp = Math.ceil(s.hp);
     const mp = Math.floor(s.mp);
-    const quest = task || (story && enabled('guide', zone) ? trackerText(hero) : ''); // a campaign (or zone) without the guide has no tracker line
+    const quest = task || (story && hintsOn(zone) ? trackerText(hero) : ''); // a campaign (or zone) without the guide has no tracker line
     const needs = enabled('needs', zone);
     const key = `${needs} ${hp}/${s.maxHp} ${mp}/${s.maxMp} ${hero.gold} ${Math.ceil(hero.needs.food)} ${Math.ceil(hero.needs.water)} ${quest}`;
     if (key === this.shown) return; // only touch the DOM when something changed

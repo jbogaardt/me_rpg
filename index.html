@@ -33,9 +33,9 @@
         <div id="hud-gold" title="Gold"><i></i><span class="label">0</span></div>
       </div>
       <div id="hud-buttons">
-        <!-- The map button shows in open-air zones (src/hud/MapOverlay.ts). -->
+        <!-- The map button is always shown (src/hud/MapOverlay.ts): a room opens a note instead of a map. -->
         <div id="inv-btn" role="button" aria-label="Inventory" data-key="KeyI">I</div>
-        <div id="map-btn" role="button" aria-label="Map" data-key="KeyM" hidden>M</div>
+        <div id="map-btn" role="button" aria-label="Map" data-key="KeyM">M</div>
         <div id="req-btn" role="button" aria-label="Ask the Dungeon Master" title="Ask the Dungeon Master" hidden>💬</div>
         <div id="menu-btn" role="button" aria-label="Menu" data-key="Escape">☰</div>
       </div>
@@ -103,6 +103,7 @@
     <div id="map-overlay" aria-hidden="true" hidden>
       <img alt="" />
       <div class="zone-title"></div>
+      <p class="room-note">This is a room: there is no overview map in here. Step outside to see the land.</p>
       <span class="pin me"></span>
       <div class="legend"></div>
     </div>
@@ -206,6 +207,14 @@
                 <button type="button" role="radio" data-aim="mouse" aria-checked="false">Mouse</button>
               </div>
               <p id="aim-note" class="keybinds-note"></p>
+            </div>
+            <div id="aid-setting">
+              <h3>Map aids <small>help on top of the map</small></h3>
+              <div role="group" aria-label="Map aids">
+                <button type="button" role="switch" data-aid="hints" aria-checked="true">Quest hints</button>
+                <button type="button" role="switch" data-aid="compass" aria-checked="true">Compass</button>
+              </div>
+              <p id="aid-note" class="keybinds-note"></p>
             </div>
             <div id="voice-setting">
               <h3>Voice <small>Dungeon Master</small></h3>

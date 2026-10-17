@@ -14,11 +14,14 @@ switching it off does (`off`), its scope, what it `requires` and its settings. `
 (`checkAgainstCapabilities`).
 
 **A system a story could do without must be a capability, in the same change that adds it.** Gate it with
-`enabled(id, zone)` at the one choke point where the feature starts (prefer the rule's own choke point, like `heroCombos`
-for spells, over many UI checks), and read tuned values with `setting`. Co-op needs nothing on the wire: both players
+`enabled(id, zone)` at the one choke point where the feature starts (prefer the rule's own choke point, like `heroCombos`), and read tuned values with `setting`. Co-op needs nothing on the wire: both players
 have the same table; the host gates rules, each side its own screens. `tools/content/capabilities.test.ts` fails a
-capability nothing asks `enabled()` about or that is not listed here. The ids: `map`, `guide`, `needs`, `combos`,
+capability nothing asks `enabled()` about or that is not listed here. The ids: `guide`, `compass`, `needs`, `combos`,
 `skills`, `farming`, `weather`, `dayNight`, `carrying`, `forge`, `coop`, `trading`.
+
+**The map is not a capability** but core engine, always on (M, the HUD button, every mode and zone; a room opens a note).
+Its aids are: `guide` (map hints, tracker line, `fog`) and `compass` (the arrow), switched by story and, per player, by
+`aids.ts` (local UI state, never sent).
 
 ## Balance
 
@@ -69,8 +72,8 @@ kind is how higher levels stay meaningful. **Retune a weapon or kind against tha
   items in the codes), so an item's code still names it over the wire and in trades and nothing new is sent: both players derive
   the same list from the same content. `InvOp` `fuse` is a numbered op like any other, done by the host (`fuseInto`, the one
   `forge` gate). Gems are sold at the smith (`gem` is a shop kind) and may be chest loot; the DM's `forge` quest names a recipe
-  from what a hero carries or a shop sells and is done when anyone makes that piece. Packs have no shops yet, so no gems there.
-  DM gear rewards (`giftFor`) weigh every slot per hero (a bow user never gets a sword), rotate the slot and cap the value.
+  from what a hero carries or a shop sells and is done when anyone makes that piece.
+  DM gear rewards (`giftFor`) weigh every slot per hero, rotate the slot and cap the value.
 - **Props** (`barrels.ts`, `signs.ts`, `pets.ts`, `ice.ts`): barrels are bodies you carry and set down (gated by
   `carrying`; the host decides, `SnapMsg.barrels` shows them; a map object in a neighbour's margin is not this map's
   barrel); signposts read their ways from the loaded map when read (`signs.ts`; a live DM's `sign` log entry overrides) and pets are local scenery (nothing else on the wire, so each player's pets wander independently); ice is

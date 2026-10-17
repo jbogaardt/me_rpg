@@ -265,13 +265,13 @@ describe('random campaigns from the packs', () => {
       const scenarios = a.files.scenarios as { capabilities: unknown };
       expect(scenarios.capabilities).toEqual(cat.arcs[a.arc].capabilities ?? {});
     }
-    expect(cat.arcs.lost_lanterns.capabilities).toEqual({ map: false });
+    expect(cat.arcs.lost_lanterns.capabilities).toEqual({ guide: false, compass: false });
   });
 
   it('gives a region’s own capabilities to its zone, and refuses a region switching a campaign-wide one', () => {
     const a = SEEDS.map(assembleFromDisk).find((x) => x.regions.includes('bog_hollow'))!;
     const biomes = (a.files.biomes as { biomes: Record<string, { capabilities?: unknown }> }).biomes;
-    expect(biomes.bog_hollow.capabilities).toEqual({ map: false, needs: { drain: 2 } });
+    expect(biomes.bog_hollow.capabilities).toEqual({ guide: false, compass: false, needs: { drain: 2 } });
     const odd: Pack = {
       version: 1,
       id: 'odd',
