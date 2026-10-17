@@ -26,6 +26,7 @@ import {
   analystSession,
 } from './claude';
 import { ANALYST_SYSTEM, writeReport } from './report';
+import { ANALYST_TOOLS, checkoutMain } from './repo';
 import { Curve } from './curve';
 import { RulesTagger, TAGGED, tagEntry, type Tagger } from './tag';
 import { triage as triageGame, type Triage } from './triage';
@@ -418,7 +419,10 @@ class Dm {
     if (!game || this.finishing) return;
     this.finishing = true;
     this.game = null;
-    const analyst = PLAIN_REPORT ? null : analystSession(ANALYST_SYSTEM);
+    const repo = PLAIN_REPORT ? null : await checkoutMain();
+    const analyst = PLAIN_REPORT
+      ? null
+      : analystSession(ANALYST_SYSTEM, repo ? { dir: repo.dir, tools: ANALYST_TOOLS } : undefined);
     try {
       log(`triaging the game (${game.entries.length} notes, ${TAGGER instanceof JevTagger ? 'Jev' : 'rules'})`);
       const tri = await Promise.race<Triage | undefined>([
@@ -444,7 +448,7 @@ class Dm {
         { code: game.code, started: game.started, ended: new Date(), why },
         game.entries,
         analyst ? (system, prompt) => analyst.ask(system, prompt) : null,
-        { ...(tri ? { triage: tri } : {}), curve },
+        { ...(tri ? { triage: tri } : {}), curve, grounded: !!repo },
       );
       if (wrote)
         log(`report written (${wrote.how}): ${path.relative(process.cwd(), wrote.path)} (read it before committing)`);
@@ -452,6 +456,7 @@ class Dm {
       log('could not write the report:', err);
     } finally {
       analyst?.close();
+      await repo?.release();
       this.finishing = false;
     }
   }
