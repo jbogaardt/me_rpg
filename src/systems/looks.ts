@@ -58,6 +58,10 @@ export const PLAYER_BASES: readonly Outfit[] = [
 /** The ring under each player's feet and the tag over their head, by player number. */
 export const PLAYER_COLORS: readonly number[] = [0x4de3ff, 0xffb13f, 0xff6fb5, 0x8fe36a];
 
+/** The colour a player's swings, bolts and arrows carry so friends can tell whose is whose (a player's own ring colour). */
+export const effectColor = (slot?: number): number =>
+  slot === undefined ? PLAYER_COLORS[0]! : (PLAYER_COLORS[slot] ?? PLAYER_COLORS[0]!);
+
 /**
  * The Dungeon Master: in an online game the host (player 0) runs the world and does not play. They are seen in it as
  * this robed figure, tagged "DM", and take no part in the party's rules (see `Player.dm`). Solo there is no DM.
