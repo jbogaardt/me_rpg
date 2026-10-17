@@ -34,6 +34,12 @@ async function openOnlineTab(page: Page, mode: 'host' | 'join') {
   await page.locator(`#mp-mode [data-mode="${mode}"]`).click();
 }
 
+/** Close the menu only if it is open (Join closes it itself, and Escape on a closed menu opens it). */
+async function closeMenu(page: Page) {
+  if (await page.locator('#menu').isVisible()) await page.keyboard.press('Escape');
+  await expect(page.locator('#menu')).toBeHidden();
+}
+
 /** The host creates a game and returns its code. */
 async function createGame(host: Page): Promise<string> {
   await openOnlineTab(host, 'host');
@@ -130,8 +136,7 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await stranger.context().close(); // free the machine for the rest of the test
 
   // The game runs behind the open menu.
-  await join.keyboard.press('Escape'); // close the menu
-  await expect(join.locator('#menu')).toBeHidden();
+  await closeMenu(join);
   await expect(join.locator('#hud-mp .label')).toHaveText('20 / 20');
 
   // The co-op map: toggled with M, semi-transparent, with a pin for the friend once the host's snapshot arrives.
@@ -187,8 +192,7 @@ async function threeAtTheTable(browser: Browser): Promise<[Page, Page, Page]> {
   await host.locator('#mp-start').click();
   await expect(host.locator('#menu')).toBeHidden();
   for (const friend of [first, second]) {
-    await friend.keyboard.press('Escape');
-    await expect(friend.locator('#menu')).toBeHidden();
+    await closeMenu(friend);
   }
   return [host, first, second];
 }
