@@ -1,7 +1,8 @@
 // The natural voice (HUD, local): Kokoro, an open 82M-parameter speech model, run in the player's own browser through
 // Transformers.js (the `kokoro-js` package: ONNX Runtime on WebAssembly, quantised weights). Nothing is sent anywhere
-// but the one download of the weights from the Hugging Face hub, which is why it is **opt-in** (about 90 MB, then cached
-// by the browser) and loaded lazily: a page that never asks for it never fetches the package's chunk either. `voice.ts`
+// but the one download of the weights from the Hugging Face hub, (about 90 MB, then cached
+// by the browser). It is the DM's default voice (`voiceChoice.ts`), loaded lazily: the package's chunk is fetched only
+// when `voice.ts` asks. `voice.ts`
 // owns the choice and falls back to the browser's own voice while this loads, if it fails, or where there is no audio.
 
 import type { KokoroTTS } from 'kokoro-js';

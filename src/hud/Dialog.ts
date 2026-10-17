@@ -47,6 +47,7 @@ export class Dialog {
   onCue: (cue: Cue) => void = () => {};
 
   constructor() {
+    voice.onFallback((note) => this.note([note])); // the natural voice failed: say the browser's speaks instead
     const speaker = this.caption.querySelector('.voice');
     if (speaker instanceof HTMLButtonElement) {
       const show = () => {
