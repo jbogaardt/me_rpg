@@ -956,6 +956,316 @@
           ]
         }
       ]
+    },
+    {
+      "id": "under_lanternrest",
+      "scope": "party",
+      "title": "Under Lanternrest",
+      "tagline": "The lamplighters keep losing lamps. The town was built over something that wants the light.",
+      "difficulty": 3,
+      "opening": "Every dusk the lamplighters of Lanternrest find another lantern gone, oil and all. The market drain has begun to hum at night. The watch says it is the wind. The wind does not hum in tune.",
+      "ending": "The hum stops, and the lamps stay lit. Below the market, the Cistern King's court stands empty, and the town sleeps over a quiet vault. The lamplighters still count their lamps, twice, to be sure.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Lanternrest Sewers",
+            "zone": "sewer_lanternrest",
+            "count": 1
+          },
+          "tell": "Begin where the lamps go: the market drain, and the sewers under it in {area}. Go down, and see what the lamplighters will not.",
+          "aftermath": [
+            "Lantern glass, swept into neat piles along the walkway. Not scattered. Collected. Someone down here is keeping count."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "zombie",
+            "count": 3,
+            "zone": "sewer_lanternrest"
+          },
+          "tell": "The drowned walk the sewers of {area}, each with a lantern-hook in its fist. Put them down, and mind the water.",
+          "aftermath": [
+            "Each hook is bound with fresh oiled twine. The dead did not do this alone. Someone gave them a purpose, and a uniform.",
+            "A stair behind the north-east room, newly unbarred, breathes cold air. The sewers were never the bottom."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Drowned Cistern",
+            "zone": "sewer_undercroft",
+            "count": 1
+          },
+          "tell": "The stair leads to vaults older than the town, in {area}. Walk to the cistern, and see where the oil goes.",
+          "aftermath": [
+            "The cistern is ringed with lanterns, lit and burning, hundreds of them. The water at the centre glows green under them. Something is being kept warm."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "hexer",
+            "count": 3,
+            "zone": "sewer_undercroft"
+          },
+          "tell": "The hexers tending the cistern's lanterns will not leave their charge. Drive them off in {area}.",
+          "aftermath": [
+            "A hexer's ledger lists every lamp by street name, and which streets will go dark next. They were being taken in order, like a harvest."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Forgotten Chapel",
+            "zone": "sewer_undercroft",
+            "count": 1
+          },
+          "tell": "A chapel older than Lanternrest lies at the west end of {area}. The lamps were carried there. Go and see why.",
+          "aftermath": [
+            "The chapel's altar bears a throne of stacked lamp-frames, and a plaque: 'In the dark, a king keeps his court.' The plaque is old. The lamps are not."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "bogGhoul",
+            "count": 3,
+            "zone": "sewer_undercroft"
+          },
+          "tell": "The court's bodyguard, bloated ghouls dressed in lamplighters' coats, hold the way south in {area}. Break them.",
+          "aftermath": [
+            "Under the coats, hooks and keys: every drain in town is on one ring. The king has been opening and closing the town's doors for months."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "cisternKing",
+            "count": 1,
+            "zone": "sewer_undercroft"
+          },
+          "tell": "The Cistern King sits among the stolen lights in {area}, sure of his court. Put out his fire.",
+          "aftermath": [
+            "The King falls and the cistern's glow gutters. Overhead, the lamps of Lanternrest steady one by one, as if someone had stopped blowing on them."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "barrow_deep",
+      "scope": "party",
+      "title": "The Barrow Deep",
+      "tagline": "The watchman who never left his post is still counting. He has reached your name.",
+      "difficulty": 4,
+      "opening": "The Barrow Vigil ended with a light in a chasm and a congregation of dead. This season a tomb at the back of the graveyard stands open, and the watch ledger has a new last line, in an old hand: 'Relief expected.'",
+      "ending": "The Pale Warden lays down his sword, and the Barrow Lands exhale. The tomb stair is sealed from within. The ledger's last line is crossed out, and under it, in steadier ink: 'Relieved.'",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Graveyard",
+            "zone": "undead",
+            "count": 1
+          },
+          "tell": "The tomb at the back of the graveyard in {area} stands open. Start there, and see what the Vigil left behind.",
+          "aftermath": [
+            "Fresh footprints lead down the tomb's stair, and none lead back. Someone walked in, in good boots, with purpose."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "skeleton",
+            "count": 5,
+            "zone": "undead"
+          },
+          "tell": "The dead above the tomb are stirring in {area}, rising in ranks, not heaps. Cut them down before they march.",
+          "aftermath": [
+            "They fall in neat rows, shields still in hand. Drilled. Whoever is below taught them to die in formation."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Foyer of Names",
+            "zone": "crypt_barrow",
+            "count": 1
+          },
+          "tell": "Go down the tomb's stair to {area}. A hundred names are cut into its walls. Find the newest.",
+          "aftermath": [
+            "The newest name is a watchman's, from last year. Under it, a tally, in the same hand: one stroke for every night he has kept the post."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "zombie",
+            "count": 5,
+            "zone": "crypt_barrow"
+          },
+          "tell": "The long hall of {area} is thick with the unburied, each wearing a scrap of watch coat. Walk through them.",
+          "aftermath": [
+            "Every scrap carries the same stitched badge: a tower above a lantern. They are not wandering. They are on patrol."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Ossuary",
+            "zone": "crypt_barrow",
+            "count": 1
+          },
+          "tell": "The south road runs through the ossuary in {area}. Go on, and read what the walls of bone say.",
+          "aftermath": [
+            "The skulls are stacked by rank, captains to cadets. A gap in the wall waits for one more. The mortar around it is fresh."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "skeleton",
+            "count": 5,
+            "zone": "crypt_barrow"
+          },
+          "tell": "The ossuary's guard still holds its post in {area}, and will not stand down for strangers. Break the ranks.",
+          "aftermath": [
+            "A broken captain's helm rolls from the heap. Inside, scratched with a dagger: 'He will not leave until someone relieves him. Someone must.'"
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "wraith",
+            "count": 3,
+            "zone": "crypt_barrow"
+          },
+          "tell": "The watch's casters keep the seat in {area}, and have kept it a long time. Silence them before the Warden hears you.",
+          "aftermath": [
+            "The wraiths fall, and a deep voice from the south chamber says, without anger: 'Are you my relief?' It does not wait for an answer."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "paleWarden",
+            "count": 1,
+            "zone": "crypt_barrow"
+          },
+          "tell": "The Pale Warden stands in his seat in {area}, sword drawn, keeping a post that ended centuries ago. Relieve him.",
+          "aftermath": [
+            "He kneels at the end, sword across his knees. 'Post relieved,' he says. 'Tell them I held it.' The dust that settles on him has a peaceful sound."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sunscar_depths",
+      "scope": "party",
+      "title": "The Sunscar Depths",
+      "tagline": "Under the desert's cave, a furnace has a king, and he has noticed the surface.",
+      "difficulty": 5,
+      "opening": "The desert's cave was always a goblin's den. This year the sand above it is warm, and caravans report an orc banner no clan will own. Something under the hollow is waking, and it is hungry for the sky.",
+      "ending": "The Furnace Hall cools, and the sand above it goes cold for the first time in a season. Ashmaw's throne cracks down its middle, and the desert wind carries the smell of ash for a day, then forgets it. The caravans pass untaxed.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Sunscar Hollow",
+            "zone": "desert",
+            "count": 1
+          },
+          "tell": "Start at the cave mouth in the dunes of {area}, where the sand is warm. Go to the Hollow, and see what the desert is hiding.",
+          "aftermath": [
+            "The cave's walls are warm, and the shaft of daylight at the foyer shows a haze of soot in the air. Something below is burning, and burning well."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "orc",
+            "count": 4,
+            "zone": "cave_sunscar"
+          },
+          "tell": "Orc scouts hold the hollow's deeper tunnel in {area}, bound with the king's red cord. Clear them, and the way down is open.",
+          "aftermath": [
+            "Each scout wears the same red cord, knotted in the same pattern. A uniform of rank. Whatever is below has an army, and it keeps accounts."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Furnace Hall",
+            "zone": "cave_sunscar_deep",
+            "count": 1
+          },
+          "tell": "The tunnel drops into the Sunscar Depths, in {area}. Cross to the Furnace Hall, and look at the lava with your own eyes.",
+          "aftermath": [
+            "A lake of lava, ringed by a path worn smooth by a thousand marching feet. The heat is a wall. Beyond it, a drum beats, slow as a heart."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "mummy",
+            "count": 3,
+            "zone": "cave_sunscar_deep"
+          },
+          "tell": "Mummies, old as the sand, stand guard along the Furnace Hall in {area}. They have been paid in something other than gold. Put them down.",
+          "aftermath": [
+            "Each carries a scroll in a language you cannot read, sealed with the king's red wax. They are not guards. They are witnesses to a contract."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Gallery of Bones",
+            "zone": "cave_sunscar_deep",
+            "count": 1
+          },
+          "tell": "The west road runs through the Gallery of Bones in {area}. Go in, and read what the king keeps on his walls.",
+          "aftermath": [
+            "The walls are carved with a calendar, one date circled in red: the first of next month. Beneath it, carvings of the sky, and a hand reaching up."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "skeleton",
+            "count": 3,
+            "zone": "cave_sunscar_deep"
+          },
+          "tell": "The gallery's dead are still marching in {area}, in step with the drum. Break their ranks before the king calls them to the surface.",
+          "aftermath": [
+            "The last of them drops a banner, torn, red on black. Pinned to it, a map of the caravan road, with watchtowers marked. The king is planning a war."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "troll",
+            "count": 3,
+            "zone": "cave_sunscar_deep"
+          },
+          "tell": "The king's bodyguard, great trolls in iron, hold the seat's doors in {area}. Take them down, and the way to Ashmaw is clear.",
+          "aftermath": [
+            "The last troll drops a key of black iron, hot to the touch. The seat's doors open to it, and the drum stops, as if a held breath had been let go."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "ashmaw",
+            "count": 1,
+            "zone": "cave_sunscar_deep"
+          },
+          "tell": "Ashmaw, the Hollow King, sits on a throne that has been warm for a thousand years, and rises to meet you in {area}. End his reign.",
+          "aftermath": [
+            "The throne splits, and a cold wind comes down the shaft for the first time in an age. The king never wanted a kingdom. He wanted the sky."
+          ]
+        }
+      ]
     }
   ],
   "epilogue": [
