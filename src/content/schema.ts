@@ -61,6 +61,8 @@ export interface EntityDef {
   sprite: Outfit;
   /** Drawn this much bigger than a person (mobs only, default 1); its body, reach and hit area grow with it. */
   scale?: number;
+  /** A named boss (mobs only): placed once in its zone, a `boss` objective's target; see `systems/bosses.ts`. */
+  boss?: boolean;
   stats?: EntityStats; // mobs only (required for them)
   behavior?: EntityBehavior; // mobs only
   /** What an NPC placed by a scenario says when the player talks to it. */
@@ -260,6 +262,10 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
       def.roam = r.number(e.roam, `${path}.roam`, 1);
       if (def.roam > MAX_ROAM_CELLS) r.fail(`${path}.roam`, `must be at most ${MAX_ROAM_CELLS} cells`);
     }
+  }
+  if (e.boss !== undefined) {
+    if (e.boss !== true || e.type === 'npc') r.fail(`${path}.boss`, 'is true on a mob, or left out');
+    else def.boss = true;
   }
   if (def.type === 'npc') {
     if (e.stats !== undefined || e.behavior !== undefined) r.fail(path, 'an npc has no stats or behavior');
@@ -494,6 +500,8 @@ function readObjective(r: Reader, v: unknown, path: string): Objective {
     if (o.zone !== undefined) kill.zone = r.string(o.zone, `${path}.zone`);
     return kill;
   }
+  if (o.t === 'boss')
+    return { t: 'boss', boss: r.string(o.boss, `${path}.boss`), zone: r.string(o.zone, `${path}.zone`), count: 1 };
   if (o.t === 'gather')
     return { t: 'gather', site: r.string(o.site, `${path}.site`), zone: r.string(o.zone, `${path}.zone`), count };
   if (o.t === 'bring') {
@@ -509,7 +517,7 @@ function readObjective(r: Reader, v: unknown, path: string): Objective {
   }
   if (o.t === 'haul')
     return { t: 'haul', place: r.string(o.place, `${path}.place`), zone: r.string(o.zone, `${path}.zone`), count };
-  r.fail(`${path}.t`, 'must be "kill", "gather", "bring", "meet", "visit", "cast" or "haul"');
+  r.fail(`${path}.t`, 'must be "kill", "boss", "gather", "bring", "meet", "visit", "cast" or "haul"');
   return { t: 'kill', kind: '', count };
 }
 
@@ -888,6 +896,9 @@ function crossCheck(r: Reader, c: Content) {
       r.fail(`${p}.where.door`, `"${quest.where.door}" is not the map of any biome`);
     const o = quest.objective;
     if (o.t === 'kill' && !mob(o.kind)) r.fail(`${p}.objective.kind`, `"${o.kind}" is not a mob in entities.json`);
+    if (o.t === 'boss' && !c.entities[o.boss]?.boss)
+      r.fail(`${p}.objective.boss`, `"${o.boss}" is not a mob with "boss": true in entities.json`);
+    if (o.t === 'boss' && !maps.has(o.zone)) r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
     if ((o.t === 'kill' || o.t === 'gather' || o.t === 'cast') && o.zone !== undefined && !maps.has(o.zone))
       r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
     if (o.t === 'gather' && !q.sites[o.site]) r.fail(`${p}.objective.site`, `"${o.site}" is not in sites`);
@@ -1024,6 +1035,7 @@ export function toMobKind(def: EntityDef): MobKind {
     sight: s.sight,
   };
   if (def.scale !== undefined) kind.scale = def.scale;
+  if (def.boss) kind.named = true;
   if (b.windup !== undefined) kind.windup = b.windup;
   if (b.recover !== undefined) kind.recover = b.recover;
   if (b.stagger !== undefined) kind.stagger = b.stagger;

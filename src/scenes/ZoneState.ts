@@ -255,7 +255,8 @@ export class ZoneState {
       const kind = MOB_KINDS[m.kind];
       if (!kind) throw new Error(`Zone "${this.name}" spawns unknown mob kind "${m.kind}"`);
       const mob = new Mob(kind, wardrobe.sheet(kind.look), ...cellFeet(m));
-      mob.respawns = !isTrialZone(this.name);
+      mob.respawns = !isTrialZone(this.name) && !kind.named; // a named boss's fall is the story's: it stays down
+      if (kind.named) mob.body.setTag(kind.name, 0xffb070);
       return mob;
     });
     const folk = population.folk.map((f): Folk => {

@@ -145,6 +145,8 @@ export interface MobKind {
   telegraph?: MobTelegraph;
   /** A boss of the Dungeon Master's quest (systems/dmBoss.ts): made for the quest, not a kind of the content, and it does not respawn. */
   boss?: boolean;
+  /** A named boss of the content (entities.json `boss`, systems/bosses.ts): placed once, never respawns, mends when the party leaves it. */
+  named?: boolean;
 }
 
 /** Per-kind tuning of the windup cue. */

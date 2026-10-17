@@ -140,7 +140,7 @@ export function guideFor(hero: Hero, world: GuideWorld, from: { x: number; y: nu
   }
   if (o.t === 'meet' || o.t === 'cast') return null; // nothing to look for: done on taking it, or wherever they cast
   const mob = nearest(
-    world.mobs.filter((m) => m.key === o.kind),
+    world.mobs.filter((m) => m.key === (o.t === 'boss' ? o.boss : o.kind)),
     from,
   );
   return mob ? area(mob) : null;

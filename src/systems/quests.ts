@@ -57,6 +57,8 @@ export const SITE_KINDS: Record<string, SiteKind> = {};
 export type Objective =
   /** Defeat `count` of a mob kind (a key of MOB_KINDS), anywhere or only in `zone`. */
   | { t: 'kill'; kind: string; count: number; zone?: string }
+  /** Defeat the named boss `boss` (an entity with `boss: true`, systems/bosses.ts) standing in `zone`: one kill, shared by the party. */
+  | { t: 'boss'; boss: string; zone: string; count: 1 }
   /** Touch `count` different sites of a kind (SITE_KINDS) in `zone`. */
   | { t: 'gather'; site: string; zone: string; count: number }
   /** Hand over `count` of an item from the pack. */
@@ -215,6 +217,7 @@ export function progressIn(log: QuestLog, q: Quest, held = 0): number {
   const { objective: o } = q;
   switch (o.t) {
     case 'kill':
+    case 'boss':
       return Math.min(o.count, log.progress);
     case 'gather':
       return Math.min(o.count, bits(log.progress));
@@ -266,8 +269,9 @@ export function haulIn(
 /** A kill of the mob kind `key` in `zone`: counts if `q` wants it and is not yet done. */
 export function killIn(log: QuestLog, q: Quest, key: string | undefined, zone: string): boolean {
   const { objective: o } = q;
-  if (!log.taken || o.t !== 'kill' || key !== o.kind || (o.zone && o.zone !== zone) || log.progress >= o.count)
+  if (!log.taken || (o.t !== 'kill' && o.t !== 'boss') || log.progress >= o.count || (o.zone && o.zone !== zone))
     return false;
+  if (key !== (o.t === 'boss' ? o.boss : o.kind)) return false;
   log.progress++;
   return true;
 }
@@ -441,6 +445,8 @@ export interface Talk {
   levels: number;
   /** A reward was handed over. */
   paid: boolean;
+  /** The hand-in was the climax of the story (`isFinale`): the epilogue follows the reward lines. The hook for a closing scene. */
+  finale: boolean;
 }
 
 const FULL_LINES = ['Your pack is too full to carry my thanks. Make room, and come back.'];
@@ -471,6 +477,12 @@ export function journal(log: QuestLog): { title: string; lines: string[] }[] {
   });
 }
 
+/**
+ * Is `q` the climax of the story: a boss quest that is the last of the chain? Handing it in tells the epilogue at once
+ * (`linesFor`) and flags the `Talk` (`finale`), the one place a closing scene hooks in (docs/epics.md, End bosses).
+ */
+export const isFinale = (q: Quest): boolean => q.objective.t === 'boss' && QUESTS[QUESTS.length - 1] === q;
+
 /** The story lines behind a key ("road.offer", "road.reward", "end"...), or null for one this build does not know. */
 export function linesFor(key: string): string[] | null {
   if (key === 'end') return EPILOGUE;
@@ -486,7 +498,7 @@ export function linesFor(key: string): string[] | null {
     case 'full':
       return FULL_LINES;
     case 'reward':
-      return [...q.done, `Received ${rewardText(q.reward)}.`];
+      return [...q.done, `Received ${rewardText(q.reward)}.`, ...(isFinale(q) ? EPILOGUE : [])];
     default:
       return null;
   }
@@ -528,6 +540,7 @@ export function talk(hero: Hero, giverId: string = QUEST_GIVER, story = true): T
     gear: false,
     levels: 0,
     paid: false,
+    finale: false,
     ...extra,
   });
   const idle = () => said(`${giverId}.idle`, idleLines(giverId));
@@ -549,7 +562,7 @@ export function talk(hero: Hero, giverId: string = QUEST_GIVER, story = true): T
       log.stage++;
       log.taken = false;
       log.progress = 0;
-      return said(`${q.id}.reward`, linesFor(`${q.id}.reward`) ?? [], { ...paid, paid: true });
+      return said(`${q.id}.reward`, linesFor(`${q.id}.reward`) ?? [], { ...paid, paid: true, finale: isFinale(q) });
     }
   }
 }
