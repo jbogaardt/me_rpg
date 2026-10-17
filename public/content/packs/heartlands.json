@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "id": "heartlands",
+  "regions": {
+    "thornwood": {
+      "biome": {
+        "name": "The Thornwood",
+        "tint": "#6fae5a",
+        "map": "heart_thornwood",
+        "climate": "temperate",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_green.png", "object-layer.png", "interior.png"]
+      },
+      "level": [2, 4],
+      "themes": ["beast"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "common": {}, "hunter": {} },
+      "roam": [
+        { "role": "common", "count": 3, "seed": 401, "apart": 12, "avoid": [{ "x": 26, "y": 22, "radius": 7 }] },
+        { "role": "hunter", "count": 3, "seed": 402, "apart": 12, "avoid": [{ "x": 26, "y": 22, "radius": 7 }] }
+      ],
+      "encounters": [
+        { "role": "hunter", "x": 40, "y": 24 },
+        { "role": "common", "x": 14, "y": 30 }
+      ],
+      "sites": {
+        "thornberry": {
+          "name": "Thornberry",
+          "plural": "thornberries",
+          "shape": "mushroom",
+          "color": "#c0405a",
+          "glow": "#ffb0c0",
+          "notes": [
+            ["A thornberry bush, heavy with dark red fruit. The thorns draw a bead of blood as you pick."],
+            ["More thornberries, bitter-sweet. Something has been eating them, and recently."]
+          ]
+        }
+      }
+    },
+    "mistmoor": {
+      "biome": {
+        "name": "The Mistmoor",
+        "tint": "#8a9a7a",
+        "map": "heart_mistmoor",
+        "climate": "swamp",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "lpc_swamp.png", "trees_dead.png", "object-layer.png"]
+      },
+      "level": [2, 4],
+      "themes": ["swamp", "undead"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "common": {}, "ranged": {}, "brute": {} },
+      "roam": [
+        { "role": "common", "count": 2, "seed": 411, "apart": 12, "avoid": [{ "x": 26, "y": 24, "radius": 7 }] },
+        { "role": "ranged", "count": 3, "seed": 412, "apart": 12, "avoid": [{ "x": 26, "y": 24, "radius": 7 }] },
+        { "role": "brute", "count": 1, "seed": 413, "apart": 12, "avoid": [{ "x": 26, "y": 24, "radius": 7 }] }
+      ],
+      "encounters": [
+        { "role": "ranged", "x": 38, "y": 20 },
+        { "role": "brute", "x": 12, "y": 30 }
+      ],
+      "sites": {
+        "mistlantern": {
+          "name": "Mist Lantern",
+          "plural": "mist lanterns",
+          "shape": "stone",
+          "color": "#8aa8a0",
+          "glow": "#d8fff0",
+          "notes": [
+            ["A mist lantern: an old iron lamp on a post, still lit, though nobody tends it."],
+            ["Another mist lantern. The flame bends toward the drowned chapel."]
+          ]
+        }
+      }
+    }
+  },
+  "pairings": {
+    "thorn_bog": {
+      "regions": ["mirewood", "thornwood"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the deer track that climbs out of The Mirewood into the dry green of The Thornwood",
+        "sign": {
+          "mirewood": "Hunters come down from The Thornwood with fresh kills and stranger stories every week.",
+          "thornwood": "Below the wood the ground turns soft: The Mirewood begins where the thorns end."
+        }
+      }
+    },
+    "thorn_town": {
+      "regions": ["hearthmere", "thornwood"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the woodcutters' road from the gates of Hearthmere into The Thornwood",
+        "sign": {
+          "hearthmere": "The woodcutters will not go far into The Thornwood any more: something follows them home.",
+          "thornwood": "Smoke from the chimneys of Hearthmere rises above the trees, a day's walk off."
+        }
+      }
+    },
+    "thorn_frost": {
+      "regions": ["thornwood", "frostfen"],
+      "tags": ["frost-creep"],
+      "lore": {
+        "way": "the cold path where The Thornwood thins into the iced reeds of The Frostfen",
+        "sign": {
+          "thornwood": "Frost from The Frostfen has crept into the north of the wood: the thorns are white at dawn.",
+          "frostfen": "Beasts from The Thornwood come down to the ice to drink, and do not all go back."
+        }
+      }
+    },
+    "thorn_coast": {
+      "regions": ["cinder_coast", "thornwood"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the green road inland from The Cinder Coast to The Thornwood",
+        "sign": {
+          "cinder_coast": "Inland, the green of The Thornwood looks like another world after the ash.",
+          "thornwood": "Ash from The Cinder Coast drifts through the canopy and greys the thorns."
+        }
+      }
+    },
+    "mist_bog": {
+      "regions": ["mirewood", "mistmoor"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the drowned causeway where The Mirewood sinks into The Mistmoor",
+        "sign": {
+          "mirewood": "The fog that rolls in from The Mistmoor smells of old candles and wet stone.",
+          "mistmoor": "Behind you the bog of The Mirewood is almost cheerful by comparison."
+        }
+      }
+    },
+    "mist_barrow": {
+      "regions": ["mistmoor", "barrow"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the funeral road from The Mistmoor up to the mounds of The Barrow",
+        "sign": {
+          "mistmoor": "The dead of the drowned chapel were carried to The Barrow once. Some are walking back.",
+          "barrow": "Mist from The Mistmoor coils round the mounds, and the gravelights flicker in it."
+        }
+      }
+    },
+    "mist_town": {
+      "regions": ["hearthmere", "mistmoor"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the old church road from Hearthmere down into The Mistmoor",
+        "sign": {
+          "hearthmere": "Nobody in Hearthmere takes the church road since the chapel in The Mistmoor drowned.",
+          "mistmoor": "Up the old church road, the lamps of Hearthmere are warm and far away."
+        }
+      }
+    },
+    "mist_thorn": {
+      "regions": ["thornwood", "mistmoor"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the boundary ditch between The Thornwood and The Mistmoor",
+        "sign": {
+          "thornwood": "South of the ditch the wood gives way to The Mistmoor, and the birds stop singing.",
+          "mistmoor": "Across the ditch The Thornwood stands green and thick, and the mist will not cross it."
+        }
+      }
+    }
+  }
+}

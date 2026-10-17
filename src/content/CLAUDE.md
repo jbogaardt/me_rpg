@@ -39,7 +39,9 @@ thousands of regions because it only walks pairing partners.
 A **haven** (`haven: true`, the `towns` pack's Hearthmere) is a safe harbour: no foes, never a story step. Live and
 random worlds set one beside the start (`World.havenEntry`, a `side` entry) wherever a pairing allows and the story can
 still be told around it, so most games have a town to rest in and to send errands from. A region's `rooms` (Hearthmere's
-four shops) come with it: a biome and node each, linked to the region's map by doors, running the packs' `shops`.
+four shops) come with it: a biome and node each, linked to the region's map by doors, running the packs' `shops`. A live world
+also opens with up to `WANDER_LANDS` side lands beside its start and town (`wanderEntry`, the same story check), so it
+has somewhere to roam off the story's road (the `heartlands` pack's Thornwood and Mistmoor are such lands).
 
 A pack never silently overrides another's ids (`checkPacks` and `mergePacks` report the clash). Campaign 1 gets a
 feature first; the packs get it once it no longer assumes campaign 1's world. To add a region: a `defineZone` map with
