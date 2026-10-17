@@ -42,3 +42,8 @@ export class Breather {
     return this.left === 0;
   }
 }
+
+/** How a player says it is going. */
+export const MOODS = ['good', 'ok', 'bad'] as const;
+export type Mood = (typeof MOODS)[number];
+export const MOOD_FACES: Record<Mood, string> = { good: '\u{1F600}', ok: '\u{1F610}', bad: '\u{1F61E}' };

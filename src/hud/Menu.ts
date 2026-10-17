@@ -28,7 +28,6 @@ import { Keybinds } from './Keybinds';
 import { JoinStatus } from './JoinStatus';
 import { Multiplayer } from './Multiplayer';
 import { Party } from './Party';
-import { Report } from './Report';
 import { esc } from './html';
 
 // Pause menu (HTML overlay; markup in index.html). The game is frozen while it is open.
@@ -39,7 +38,7 @@ import { esc } from './html';
 // no hero tabs (Status, Inventory, Magic, Quests, Trade) while they run the world.
 // The Dungeon Master has no other tabs: what they steer comes as cards at the right moment and a bar that is always on
 // screen (hud/DmCard.ts, hud/DmBar.ts), never a panel of settings.
-const TABS = ['status', 'inventory', 'magic', 'quests', 'party', 'controls', 'report', 'online', 'trade', 'credits'];
+const TABS = ['status', 'inventory', 'magic', 'quests', 'party', 'controls', 'online', 'trade', 'credits'];
 
 export class Menu {
   open = false;
@@ -54,9 +53,6 @@ export class Menu {
 
   /** The Dungeon Master's Party tab; the scene attaches its handlers while it runs. */
   readonly party = new Party(document.getElementById('menu-party')!);
-
-  /** The Report tab: how this session is going, to copy for whoever runs the game; the scene attaches its counters. */
-  readonly report = new Report(document.getElementById('menu-report')!);
 
   private keybinds: Keybinds;
   private aim: AimSetting;
@@ -122,7 +118,6 @@ export class Menu {
     if (by) this.step(by);
     this.renderQuests(); // online the world runs behind the menu, so a kill can move the log
     if (TABS[this.tab] === 'party') this.party.render();
-    if (TABS[this.tab] === 'report') this.report.render();
   }
 
   /** The tab `by` places along from the current one, skipping tabs that are hidden. */
@@ -175,7 +170,6 @@ export class Menu {
     if (this.tabButton(TABS[i]!).hidden) i = this.firstShown();
     this.tab = i;
     if (TABS[i] === 'party') this.party.render();
-    if (TABS[i] === 'report') this.report.render();
     if (TABS[i] === 'inventory' && this.hero) this.inventory.show(this.hero);
     if (TABS[i] === 'magic' && this.hero) this.magic.show(this.hero);
     for (const [j, name] of TABS.entries()) {

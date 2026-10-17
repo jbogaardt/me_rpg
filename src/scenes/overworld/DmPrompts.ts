@@ -10,6 +10,7 @@ import { QUESTS } from '../../systems/quests';
 import { wayToGoal } from '../../systems/wayText';
 import { PRECIPS, type Precip } from '../../systems/weather';
 import { Phrasebook } from '../../systems/phrases';
+import { NOTE_CODE } from '../../systems/dmRequests';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
 import type { DmEpics } from './DmEpics';
@@ -71,6 +72,10 @@ export class DmPrompts {
     card.onDismiss = () => this.director.snooze(SNOOZE);
   }
 
+  /** Set by the scene: the host's report hears everything a player asks and every nudge of the director. */
+  onHeard: (slot: number, code: number, text?: string) => void = () => {};
+  onSignal: (kind: string) => void = () => {};
+
   /** A quest ended and the breather began: the DM says so, with a pint in it (only whoever runs the world speaks). */
   sayBreather() {
     if (this.runsWorld) this.desk.say(this.phrases.pick('breather', BREATHER_WORDS));
@@ -115,7 +120,10 @@ export class DmPrompts {
       health: fracs.length ? { avg: fracs.reduce((a, b) => a + b, 0) / fracs.length, min: Math.min(...fracs) } : null,
       area: this.arena.view.name,
     });
-    if (kind) this.inbox.add(kind, this.now); // it waits behind the Requests button: nothing pops up
+    if (kind) {
+      this.inbox.add(kind, this.now); // it waits behind the Requests button: nothing pops up
+      this.onSignal(kind);
+    }
   }
 
   /** Friends' requests that have come in since last looked (each friend's counter grows with each). */
@@ -124,6 +132,8 @@ export class DmPrompts {
     for (const { slot, id, code, text } of this.desk.requestsHeard()) {
       if (this.seen.get(slot) === id) continue;
       this.seen.set(slot, id);
+      this.onHeard(slot, code, text);
+      if (code === NOTE_CODE) continue; // a one-tap note is for the report, never for the DM's inbox
       if (code === MESSAGE_CODE) {
         if (text) this.inbox.add('message', this.now, playerName(slot), slot, text);
       } else {

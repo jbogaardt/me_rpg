@@ -3,7 +3,7 @@ import type { DmMsg, VoteWire } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import { DIALS, enabled, type Dial } from '../../systems/capabilities';
 import type { DayClock } from '../../systems/daynight';
-import { MESSAGE_CODE, REQUESTS, cleanAsk } from '../../systems/dmRequests';
+import { MESSAGE_CODE, NOTE_CODE, REQUESTS, cleanAsk } from '../../systems/dmRequests';
 import { cleanCued } from '../../systems/cues';
 import { sayTime } from '../../systems/dmPowers';
 import { taskFromWire, taskWire } from '../../systems/dmTasks';
@@ -276,12 +276,12 @@ export class DmDesk {
   }
 
   /**
-   * Friend: ask the Dungeon Master for something: an index of `REQUESTS`, or (`MESSAGE_CODE` with `text`) words of their own.
+   * Friend: ask the Dungeon Master for something: an index of `REQUESTS`, or (`MESSAGE_CODE` with `text`) words of their own, or (`NOTE_CODE`) a one-tap note for the host's report.
    * There is no waiting between asks. False for nothing to say.
    */
   ask(code: number, text = ''): boolean {
     if (this.arena.role !== 'client') return false;
-    if (code === MESSAGE_CODE) {
+    if (code === MESSAGE_CODE || code === NOTE_CODE) {
       const words = cleanAsk(text);
       if (!words) return false;
       this.asked = [++this.askSeq, code, words];

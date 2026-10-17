@@ -257,7 +257,7 @@ export class OverworldScene implements Scene {
     this.input = new LocalInput(arena, this.zones, () => ui.touch.active);
     this.partyUi = new PartyUi(arena, this.zones, ui.menu, () => this.possession.release());
     this.storyUi = new StoryUi(arena, ui, this.zones, this.banner, this.overlay, () => this.possession.active);
-    this.storyUi.pacing = new Pacing(arena, this.sim, ui.menu);
+    this.storyUi.pacing = new Pacing(arena, this.sim, this.prompts, this.desk);
     this.storyUi.pacing.onBreather = () => this.prompts.sayBreather();
     this.interact = new Interactions(
       arena,
@@ -713,6 +713,7 @@ export class OverworldScene implements Scene {
     this.possession.reset();
     this.narration.reset();
     this.prompts.reset();
+    this.storyUi.pacing?.reset();
     if (role === 'host') this.host.enter();
     else if (role === 'client') this.guest.enter();
     arena.role = role;
@@ -731,6 +732,7 @@ export class OverworldScene implements Scene {
       tasks: this.tasks,
       epics: this.epics,
       stock: this.epicsOnOffer,
+      reports: () => this.storyUi.pacing?.report.log.drain() ?? [],
       goTo: (slot) => this.partyUi.goTo(slot),
       walk: (dx, dy, seconds) => this.input.walk(dx, dy, seconds),
     });

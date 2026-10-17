@@ -40,19 +40,32 @@ export interface Child {
 export type Spawn = () => Child;
 
 /** `claude -p` kept running: messages go in as JSON lines, and each answer comes back as a `result` line. */
-const spawnClaude: Spawn = () =>
-  spawn(
-    'claude',
-    [
-      '-p',
-      ...['--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose'],
-      ...['--model', MODEL, '--tools', '', '--no-session-persistence'],
-      // Nothing of this machine's own setup (its MCP servers, skills, settings) goes in: about 27,000 tokens a call.
-      ...['--strict-mcp-config', '--disable-slash-commands', '--setting-sources', ''],
-      ...['--system-prompt', SESSION_SYSTEM],
-    ],
-    { cwd: tmpdir(), stdio: ['pipe', 'pipe', 'ignore'] },
-  );
+const spawnWith =
+  (system: string): Spawn =>
+  () =>
+    spawn(
+      'claude',
+      [
+        '-p',
+        ...['--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose'],
+        ...['--model', MODEL, '--tools', '', '--no-session-persistence'],
+        // Nothing of this machine's own setup (its MCP servers, skills, settings) goes in: about 27,000 tokens a call.
+        ...['--strict-mcp-config', '--disable-slash-commands', '--setting-sources', ''],
+        ...['--system-prompt', system],
+      ],
+      { cwd: tmpdir(), stdio: ['pipe', 'pipe', 'ignore'] },
+    );
+const spawnClaude: Spawn = spawnWith(SESSION_SYSTEM);
+
+/** Seconds a game's analysis may take (it reads a whole log and writes a page: far longer than a line of the DM's). */
+export const ANALYSIS_TIMEOUT_MS = 240_000;
+
+/**
+ * A one-off session for the end-of-game analysis (`report.ts`): the same headless Haiku, with its own standing instruction
+ * in place of the DM's voice, and the time to read a whole log. The caller closes it.
+ */
+export const analystSession = (system: string): ClaudeSession =>
+  new ClaudeSession(spawnWith(system), ANALYSIS_TIMEOUT_MS);
 
 /**
  * One long-lived headless session, not a cold process per call: no start-up wait, the persona's tokens are cached, and

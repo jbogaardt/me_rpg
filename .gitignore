@@ -42,3 +42,6 @@ sprites/out/
 
 # Wrangler local state (relay/)
 .wrangler/
+
+# Playtest raw logs (the DM bot writes reports/raw/*.jsonl as a game goes; the analysed reports/*.md are committed)
+reports/raw/

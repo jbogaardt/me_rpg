@@ -51,17 +51,24 @@ care. Places are never named unless the game gave them.
 - Open: items as rewards (saga rewards are XP and gold); whether 60 s respawn leaves enough foes for a hunt; the AFK
   rule is online only; the fallen-player card repeats; check that Claude's sagas really use hops 1 to 3.
 
-## What a player can report (the Report tab)
+## What players report without trying (the host's notebook and `reports/`)
 
-The pause menu's **Report** tab (`hud/Report.ts`, counters in `systems/engagement.ts`, kept by `scenes/overworld/Pacing.ts`) is
-how a player tells us how a session went without us watching: time (busy and idle), first kill and first quest, kills and
-knockouts (the host counts them; a guest's page says so), quests started, done and lost, the longest stall, breathers, the
-zones and time spent in each, three mood faces, an "I am stuck" button and one free line. **Copy report** puts it as plain
-text on the clipboard; the same counters go to the console as one `[engage]` line at each quest end, breather and mood, so
-the bot's log and the player's words line up. Nothing leaves the device unless the player copies it. They are proxies, not a
-verdict: read them with what the player says, and expect knockouts per zone to show a zone pitched too high.
+Nobody fills in a form: a menu for reporting would never be used. The host writes down, on its own, **what each player
+says to the DM** (their own words from the 💬 line, a canned ask such as "This is too hard", a tapped face on the breather
+badge) **and what the game did around it** (the director's nudges, knockouts, quests ending, breathers), each with **the
+state of the game at that moment**: who (P1, P2...), level and health, where, the quest, how the party fares, what stands
+near, how long since anything progressed, and the last few events (`DmReport`, `systems/reportLog.ts`). Entries go to the
+host's console as `[report]` lines, and the DM bot collects them (`DmBot.reports`).
 
-A **breather** (`systems/breather.ts`) is the pause after a quest, said out loud: a 🍺 badge with a clock over the left of the
-screen (`hud/BreatherBadge.ts`, with the three mood faces) and one line from the DM (`BREATHER_WORDS`), and the director leaves
-the same minute before it offers the next quest. It is local to each page, started by the quest each already sees end (a
-saga's middle step is no lull). Lanternrest's tavern, the Resting Lantern, is where a party spends it.
+When a game ends (everyone leaves, or the bot is stopped) the bot has Haiku read the log as a playtest analyst
+(`server/report.ts`) and writes `reports/<date>-<code>.md`: findings ranked, each with the players' words and the state
+they were in, where in the repo to look, and a prompt to start the next session with (rules alone if no model answers, or
+`DM_BOT_REPORT=plain`). Raw entries stay in `reports/raw/` (not committed). **Read a report before committing it**: it
+quotes what players typed, so players are P1, P2 and links, emails and long numbers are cut. A session starts from the
+newest report: take its findings in order, reproduce, fix, test. Solo play has no bot, so only the console lines exist.
+
+A **breather** (`systems/breather.ts`) is the pause after a quest, said out loud: a 🍺 badge with a clock and three faces at
+the left of the screen (`hud/BreatherBadge.ts`) and one line from the DM (`BREATHER_WORDS`); the director leaves the same
+minute before it offers the next quest. It is local to each page, started by the quest each already sees end (a saga's
+middle step is no lull). A tapped face is the lightest report there is: a guest's travels to the host as a note (protocol 55).
+Lanternrest's tavern, the Resting Lantern, is where a party spends it.
