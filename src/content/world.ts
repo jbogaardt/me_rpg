@@ -3,7 +3,8 @@
 //
 // The log is the world. Its first entry (`begin`) names the arc, the keeper who tells it and the hub it starts in; each
 // `step` adds the story's next region, `side` a region beside the story (a side region or a dead end) and `join` a
-// door between two regions that ended up side by side. Every entry is fully resolved (the region, the ports, the
+// door between two regions that ended up side by side; the DM's `cast`, `npc`, `voice` and `sign` entries bring in and
+// speak for people and rewrite signposts (`signOverride`). Every entry is fully resolved (the region, the ports, the
 // pairing crossed and the mob picked for each foe role), so replaying a log needs no random numbers and gives the same
 // world in every browser and in every later version of the solver. `apply` checks an entry against the packs' rules
 // (pairings, ports on opposite edges, a free grid cell whose neighbours all pair with it, the arc's slots) before
@@ -69,7 +70,12 @@ export type LogEntry =
   /** The Dungeon Master made a new person: their name, the look of an npc of the packs they wear, and what they say. */
   | { t: 'npc'; id: string; name: string; look: string; lines: string[] }
   /** The Dungeon Master's person now says something else (the tale moved on): their new lines, replacing the old. */
-  | { t: 'voice'; id: string; lines: string[] };
+  | { t: 'voice'; id: string; lines: string[] }
+  /**
+   * The Dungeon Master rewrote the signpost standing at map cell (col, row) of a region: it now says `lines` (a page
+   * each) instead of what the layout gives. Empty `lines` restore it (the log only grows: the later entry wins).
+   */
+  | { t: 'sign'; region: string; col: number; row: number; lines: string[] };
 
 /** What a Dungeon Master may make: an id of their own kind, a short name, and a few lines to say. */
 export const NPC_ID = /^dm_[a-z0-9_]{1,24}$/;
@@ -133,6 +139,14 @@ export class World {
   private cast = new Map<string, { entity: string; x: number; y: number }[]>();
   /** The people the Dungeon Master made, by id. */
   private people: Record<string, { name: string; look: string; lines: string[] }> = {};
+  /** What the Dungeon Master wrote on signposts, by region then cell: replacing what the layout says. */
+  private signText = new Map<string, Map<string, string[]>>();
+  /**
+   * Which signs stand on a region's map (by the map's name), when this page knows: the game sets it from the zones it has
+   * loaded. `undefined` means unknown, which accepts the entry (the host checked it where the map was loaded, and maps
+   * are the same everywhere), so replaying a log with no maps in hand (tests, tools) still works.
+   */
+  signsOf: (map: string) => readonly { col: number; row: number }[] | undefined = () => undefined;
 
   /** `seed` names the world (its roamers' placings, the solver's picks); `packs` are what it is built from. */
   constructor(
@@ -214,6 +228,7 @@ export class World {
     else if (e.t === 'join') this.applyJoin(e);
     else if (e.t === 'cast') this.applyCast(e);
     else if (e.t === 'npc') this.applyNpc(e);
+    else if (e.t === 'sign') this.applySign(e);
     else this.applyVoice(e);
     this.log.push(e);
   }
@@ -713,6 +728,26 @@ export class World {
     const person = this.people[e.id];
     if (!person) throw new WorldError(`"${e.id}" is not a person the Dungeon Master made`);
     person.lines = this.checkLines(e.lines);
+  }
+
+  private applySign(e: Extract<LogEntry, { t: 'sign' }>) {
+    const map = this.cat.regions[e.region]?.biome.map;
+    if (!map || !this.regions.includes(e.region)) throw new WorldError(`no region "${e.region}" in this world`);
+    const cell = (n: unknown) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= MAX_CELL;
+    if (!cell(e.col) || !cell(e.row)) throw new WorldError('a sign stands on a cell of the map');
+    const there = this.signsOf(map);
+    if (there && !there.some((s) => s.col === e.col && s.row === e.row))
+      throw new WorldError(`no signpost stands at ${e.col},${e.row} of "${e.region}"`);
+    const lines = Array.isArray(e.lines) && e.lines.length === 0 ? [] : this.checkLines(e.lines);
+    const region = this.signText.get(e.region) ?? this.signText.set(e.region, new Map()).get(e.region)!;
+    const key = `${e.col},${e.row}`;
+    if (lines.length) region.set(key, lines);
+    else region.delete(key);
+  }
+
+  /** What the Dungeon Master wrote on the signpost at (col, row) of a region (a page per line), if they did. */
+  signOverride(region: string, col: number, row: number): readonly string[] | undefined {
+    return this.signText.get(region)?.get(`${col},${row}`);
   }
 
   /** What a person of the DM's says: 1 to `MAX_NPC_LINES` lines, each short. */

@@ -52,6 +52,7 @@ different version away), so point it at the site they use. Against a local build
 - `conjure.ts` makes people: on arriving somewhere new (at most 6 a game, 2 minutes apart) a `Conjurer` invents a
   stranger (name, a look from the world's people, up to 4 short lines) and the page's `spawn` sets them near the party.
   The mock conjurer has a few stock characters; the page refuses anything the world's checks refuse.
+- The page's `sign(lines)` writes on the signpost beside the DM (a live world's `sign` log entry); the bot's loop does not use it yet.
 - `claude.ts` is the creative tier through a headless Claude Code session (`DM_BOT_CLAUDE=1`): one standing `claude -p` session (`ClaudeSession`: stream-json in and out, renewed after 40 turns or any failure) on a
   small model, no tools, none of this machine's MCP servers, skills or settings (that was ~27k tokens a call), run from
   an empty folder, so a machine already logged in to Claude Code needs no API key. It

@@ -73,5 +73,5 @@ kind is how higher levels stay meaningful. **Retune a weapon or kind against tha
   DM gear rewards (`giftFor`) weigh every slot per hero (a bow user never gets a sword), rotate the slot and cap the value.
 - **Props** (`barrels.ts`, `signs.ts`, `pets.ts`, `ice.ts`): barrels are bodies you carry and set down (gated by
   `carrying`; the host decides, `SnapMsg.barrels` shows them; a map object in a neighbour's margin is not this map's
-  barrel); signposts and pets are local scenery (nothing on the wire, so each player's pets wander independently); ice is
+  barrel); signposts read their ways from the loaded map when read (`signs.ts`; a live DM's `sign` log entry overrides) and pets are local scenery (nothing else on the wire, so each player's pets wander independently); ice is
   a velocity rule for players only.

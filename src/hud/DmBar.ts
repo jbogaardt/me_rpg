@@ -17,6 +17,10 @@ export interface DmBarHandlers {
   waiting(): { count: number; first: string };
   /** Open the oldest request or suggestion as a card. */
   openInbox(): void;
+  /** Write on the signpost beside the DM (pages separated by `|`; none gives it its layout text back): what happened. */
+  sign(text: string): string;
+  /** Can this world's signs be rewritten (a live world, and this page runs it)? */
+  canSign(): boolean;
   /** Is a quest of the DM's running (the Cancel and instructions buttons show only then)? */
   questing(): boolean;
   smite(): boolean;
@@ -37,6 +41,13 @@ export interface DmBarHandlers {
   story(): boolean;
   waits(): { smite: number; freeze: number; reset: number; stopped: boolean; pressure: Pressure };
 }
+
+const SIGN_TIPS: Record<string, string> = {
+  sign: 'Write these words on the signpost beside you (separate pages with |)',
+  unsign: 'Give the signpost beside you its own words back',
+};
+/** Why the sign buttons are off: only a live world keeps a log to write on. */
+const SIGN_OFF = 'Signs can only be rewritten in a live world (?campaign=live); here they read the road as it is.';
 
 export class DmBar {
   private bar = document.getElementById('dm-bar')!;
@@ -66,6 +77,12 @@ export class DmBar {
     power('note').addEventListener('click', () => {
       if (this.handlers?.note(this.input.value)) this.input.value = '';
     });
+    power('sign').addEventListener('click', () => {
+      const text = this.input.value;
+      if (!text.trim()) return this.flash('Type what the sign should say first.');
+      this.flash(this.handlers?.sign(text) ?? '');
+    });
+    power('unsign').addEventListener('click', () => this.flash(this.handlers?.sign('') ?? ''));
     power('inbox').addEventListener('click', () => this.handlers?.openInbox());
     power('reply').addEventListener('click', () => {
       if (this.handlers?.reply(this.input.value)) this.input.value = '';
@@ -90,6 +107,13 @@ export class DmBar {
     power('pressure').addEventListener('click', () => this.handlers?.card('pressure'));
   }
 
+  /** A few words to the DM in the hint line (what a sign did), until it goes back to its usual text. */
+  private flash(text: string) {
+    this.hint.textContent = text;
+    this.flashed = performance.now() + 4000;
+  }
+  private flashed = 0;
+
   attach(handlers: DmBarHandlers | null) {
     this.handlers = handlers;
     if (!handlers) this.bar.hidden = true;
@@ -113,7 +137,7 @@ export class DmBar {
         ? 'Tap a foe to possess it.'
         : 'Click a foe to possess it.';
     document.querySelector<HTMLElement>('[data-power="release"]')!.hidden = !possessing;
-    if (this.hint.textContent !== possess) this.hint.textContent = possess;
+    if (performance.now() >= this.flashed && this.hint.textContent !== possess) this.hint.textContent = possess;
     this.hold.textContent = dm
       ? touch
         ? 'Time is stopped. Tap Resume time to carry on.'
@@ -125,7 +149,7 @@ export class DmBar {
       const fallen = this.handlers!.fallen();
       const questing = this.handlers!.questing();
       const waiting = this.handlers!.waiting();
-      const key = `${waiting.count}${waiting.first} ${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen} ${touch} ${questing} ${this.handlers!.canReply()}`;
+      const key = `${waiting.count}${waiting.first} ${w.smite} ${w.freeze} ${w.reset} ${w.stopped} ${w.pressure} ${story} ${fallen} ${touch} ${questing} ${this.handlers!.canReply()} ${this.handlers!.canSign()}`;
       if (key !== this.shown) {
         this.shown = key;
         const set = (name: string, text: string, wait = 0, lit = false) => {
@@ -150,6 +174,12 @@ export class DmBar {
         document.querySelector<HTMLElement>('[data-power="reply"]')!.hidden = !this.handlers!.canReply();
         document.querySelector<HTMLElement>('[data-power="cancel"]')!.hidden = !questing;
         document.querySelector<HTMLElement>('[data-power="note"]')!.hidden = !questing;
+        const canSign = this.handlers!.canSign();
+        for (const name of ['sign', 'unsign']) {
+          const b = document.querySelector<HTMLButtonElement>(`[data-power="${name}"]`)!;
+          b.disabled = !canSign;
+          b.title = canSign ? SIGN_TIPS[name]! : SIGN_OFF;
+        }
         set('story', 'Story');
         document.querySelector<HTMLElement>('[data-power="revive"]')!.hidden = fallen === 0;
         set('revive', fallen > 1 ? `Raise (${fallen})` : 'Raise');

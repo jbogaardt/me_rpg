@@ -40,10 +40,10 @@ of the chain is told, and the host's welcome is a plain greeting. Anyone who gui
 
 ## The DM is not one of the party
 
-`Arena.party()` (the zone's players without the DM) is what the rules ask; `players()` stays everyone, for drawing,
-snapshots and the map. So no mob hunts or hurts the DM, kills credit only the party, heals pass them by, they block
-nobody and neither trade nor cast. They walk through walls-only collision (`Simulation.updateDm`); their action key only
-reads signs and advances dialogs. Their screens differ: a "Dungeon Master" badge instead of bars, no quest arrow or
+`Arena.party()` (players without the DM) is what the rules ask; `players()` is everyone, for drawing,
+snapshots and the map. So no mob hunts the DM, kills credit only the party, heals pass them by, they block nobody and
+neither trade nor cast. They walk through walls-only collision (`Simulation.updateDm`); their action key only
+reads signs and advances dialogs. Their screens differ: a DM badge instead of bars, no quest arrow or
 harvest buttons, and a Party tab (levels, HP, area, **Go**).
 
 ## Parts
@@ -64,11 +64,18 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   visits a step may be a **boss** (the land's toughest foe as a named giant for the party's level and size, `dmBoss.ts`;
   friends build the same one from the quest), a **mastery** (cast one named combo N times) or a **forge** (set a gem in a
   piece: `dmForge.ts`). Gear rewards are chosen per hero and rotate by slot (`dmGear.ts`): a saga's finale and a forge quest pay one.
+- **Signposts** read the layout (`systems/signs.ts`): a way names the zone really reached that way, a place of the map
+  stays, a way with nothing beyond is dropped. In a **live** world the DM may rewrite one (stand beside it, type, Write on
+  sign; Restore gives it back): a `sign` log entry sent with the log. Other campaigns have no log, so those buttons are off.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` lets the DM raise or fetch a fallen player.
   **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive
-  it through the usual damage rules. Their own body rides invisibly on it (`Player.hidden`, `FLAG.hidden`) so the camera,
-  zone and friends' view follow, and they can never die. While possessing, pop-ups are hidden and the director waits.
+  it through the usual damage rules. Their body rides invisibly on it (`Player.hidden`, `FLAG.hidden`) so the camera and
+  friends' view follow, and they cannot die. While possessing, pop-ups are hidden and the director waits.
+- **Signposts** read the layout (`systems/signs.ts`): each way names the zone really reached that way, a place of the map
+  stays, a way with nothing beyond it is dropped (all gone: a dry line). In a **live** world the DM may rewrite one: stand
+  beside it, type (pages split by `|`) and tap Write on sign (Restore sign gives it back): a `sign` log entry, sent to
+  friends with the log. Other campaigns have no log: the buttons are off there, the layout text applies.
 
 ## A bot as the DM
 

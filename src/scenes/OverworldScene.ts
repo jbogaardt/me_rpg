@@ -58,7 +58,7 @@ import { StoryUi } from './overworld/StoryUi';
 import { LocalInput } from './overworld/LocalInput';
 import { Interactions } from './overworld/Interactions';
 import { PartyUi } from './overworld/PartyUi';
-import { Story } from './overworld/Story';
+import { Story, signPages } from './overworld/Story';
 import { createDmBot, type DmBotApi } from './overworld/DmBot';
 import { DmDesk } from './overworld/DmDesk';
 import { DmPowers } from './overworld/DmPowers';
@@ -253,6 +253,7 @@ export class OverworldScene implements Scene {
       this.ground,
       this.storyUi,
       () => this.guest.pressAction(),
+      (zone, col, row) => this.liveStory.signOverride(zone, col, row),
     );
     this.interact.onTalk = (entity) => this.epics.talked(entity); // a saga's person has been spoken to
     this.zones.root.addChildAt(this.storyUi.arrow, 1);
@@ -333,6 +334,8 @@ export class OverworldScene implements Scene {
       release: () => this.possession.release(),
       waits: () => this.powers.view(),
       reply: (text) => this.prompts.reply(text),
+      sign: (text) => this.liveStory.writeNear(signPages(text)).note,
+      canSign: () => this.liveStory.canChoose,
       canReply: () => this.prompts.canReply,
     });
     // Opened from a join link (#join=...): show the Online tab with the game code already filled in.
