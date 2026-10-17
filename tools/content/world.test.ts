@@ -192,7 +192,7 @@ describe('a world from its log', () => {
     const wander = [1, 2, 3, 4, 5].map((seed) => {
       const w = new World(seed, packs);
       w.open();
-      return w.regions.filter((id) => !w.storyRegions.includes(id) && !w.cat.regions[id]!.haven).length;
+      return w.regions.filter((id) => !w.storyRegions.includes(id) && !w.cat.regions[id].haven).length;
     });
     expect(wander.some((n) => n > 0)).toBe(true);
     expect(Math.max(...wander)).toBeLessThanOrEqual(WANDER_LANDS);
