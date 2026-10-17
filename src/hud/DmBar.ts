@@ -2,10 +2,11 @@
 // running quest's instructions), the nudges a DM gives (an Epic quest, Cancel quest, the Story, the Sky, the Pressure), and beside
 // it the hot buttons for the big tools (Smite, Freeze, Stop time [T], Reset zone), which stand in for the Inventory and
 // Attack buttons the DM has no use for. Also the "time is stopped" notice. (The words a DM speaks are said in the one dialog
-// box, `hud/Dialog.ts`, as a caption.) Built once from index.html (`#dm-bar`, `#dm-hot`, `#dm-hold`); textContent only.
+// box, `hud/Dialog.ts`, as a caption.) Enter opens the bar and starts the mic (`dictation.ts`); Enter again sends. Built once from index.html (`#dm-bar`, `#dm-hot`, `#dm-hold`); textContent only.
 
 import { codeLabel, FIXED_KEYS } from '../core/bindings';
 import { MAX_SAY, PRESSURE_LABEL, type Pressure } from '../systems/dmPowers';
+import { Dictation } from './dictation';
 
 export interface DmBarHandlers {
   say(text: string): boolean;
@@ -56,6 +57,7 @@ export class DmBar {
   private hot = document.getElementById('dm-hot')!;
   private hold = document.getElementById('dm-hold')!;
   private hint = this.bar.querySelector<HTMLElement>('.hint')!;
+  private dictation = new Dictation(this.input, this.form);
   private handlers: DmBarHandlers | null = null;
   private shown = '';
   private handle = this.bar.querySelector<HTMLButtonElement>('.handle')!;
@@ -67,6 +69,17 @@ export class DmBar {
     this.form.addEventListener('submit', (e) => {
       e.preventDefault();
       if (this.handlers?.say(this.input.value)) this.input.value = '';
+    });
+    // Enter from the game opens the bar and starts the mic; speak, then Enter sends (typing works as ever).
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.target instanceof HTMLButtonElement || this.bar.hidden || !this.handlers) return;
+      e.preventDefault();
+      this.open = true;
+      this.bar.classList.remove('folded'); // the input must be visible to take focus before the next frame's update
+      this.shown = '';
+      this.input.focus();
+      this.dictation.start();
     });
     const power = (name: string) => document.querySelector<HTMLButtonElement>(`[data-power="${name}"]`)!;
     power('smite').addEventListener('click', () => this.handlers?.smite());
