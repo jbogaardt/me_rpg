@@ -14,6 +14,7 @@
 - **Hit-pause** (`systems/hitPause.ts`): a surviving mob freezes and flashes 100-150ms on a blow, then staggers; host/solo
   only, a guest sees it stop because the snapshots stop moving it (nothing on the wire). A player's i-frames
   (`INVULN_TIME`) and blink come from the same module.
+- **Windup cue is data** (`MobKind.telegraph`, `telegraphOf` in `systems/combat.ts`): flash colour and a ground lane for specials. The guest draws it from the existing `windup` state and timer (no protocol field).
 - **On a co-op guest a `Mob` is only a view of the host's state** (`setRemote`): it plays windup and hurt poses and draws
   a beam from the `channel` state itself, but never decides anything. The host alone damages.
 - **Ambient life** (`ambient.ts`: footprints, falling leaves) is passive, driven by body movement and map metadata
