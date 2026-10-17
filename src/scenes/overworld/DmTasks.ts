@@ -1,5 +1,7 @@
 import { CELL } from '../../map/types';
 import { cleanNote } from '../../systems/dmBrief';
+import { DONE_WORDS, FAILED_WORDS } from '../../systems/dmVoice';
+import { Phrasebook } from '../../systems/phrases';
 import { collect } from '../../systems/chests';
 import { RELIC_KIND, relicsFor, type Land } from '../../systems/dmQuests';
 import {
@@ -22,7 +24,6 @@ import type { Simulation } from './Simulation';
 import type { ZoneState } from '../ZoneState';
 
 /** What the DM says as a quest ends: their voice, to every screen (the telling of a new one is each player's own dialog). */
-const END: Record<'done' | 'failed', string> = { done: 'Well done.', failed: 'The chance has passed.' };
 
 /** How often (s) the quest's target (the foes, the nearest site) is looked for again. */
 const RETARGET = 2;
@@ -37,6 +38,7 @@ const RETARGET = 2;
  */
 export class DmTasks {
   private book = new TaskBook();
+  private phrases = new Phrasebook();
   private finder: Player | null = null;
   private falls = 0;
   private linger = 0;
@@ -272,7 +274,7 @@ export class DmTasks {
         );
       }
     }
-    if (!this.epic) this.desk.say(END[result === 'done' ? 'done' : 'failed']); // a saga says its own words
+    if (!this.epic) this.desk.say(this.phrases.pick(result, result === 'done' ? DONE_WORDS : FAILED_WORDS)); // a saga says its own words
     this.linger = TASK_LINGER;
     this.onFinish(result);
   }

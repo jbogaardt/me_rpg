@@ -1,4 +1,5 @@
 import type { CardOption, DmCard } from '../../hud/DmCard';
+import { CANCEL_WORDS, COMPASS_STEADY_WORDS, COMPASS_WORDS } from '../../systems/dmVoice';
 import { PRESSURES, PRESSURE_LABEL, isPressure } from '../../systems/dmPowers';
 import { Director, type Suggestion } from '../../systems/dmDirector';
 import { Inbox, MESSAGE_CODE, REPLIES, REQUESTS, describe, type InboxKind } from '../../systems/dmRequests';
@@ -40,27 +41,6 @@ export type CardKind = Suggestion | 'sky' | 'pressure' | 'epic' | 'message' | 's
  * now?: follow me / defend this ground / hunt here". The bar can open any of them on demand. It runs for whoever runs the
  * world: the online DM, or a solo player in a live world.
  */
-/** What the DM says on offering the compass: it points toward the place first, then straight at it (several wordings, `phrases.ts`). */
-const AREA_WORDS = [
-  'You look lost, friends. Take this compass: it will point you toward the place to look.',
-  'Here, let me help. This compass knows the way, roughly. Keep it in sight.',
-  'You have walked in circles long enough. Take my compass; follow its needle.',
-  'The land is not giving it up easily. My compass will turn you the right way.',
-  'No shame in asking the way. Borrow my compass: it leans toward what you seek.',
-];
-const ARROW_WORDS = [
-  'Still nothing? The compass has steadied. Follow it, it will not lead you wrong.',
-  'Very well, I will lead you by the hand. The compass points true now.',
-  'Enough wandering. The compass has found it: follow the needle.',
-  'Some places hide well. The compass will take you straight there.',
-];
-const CANCEL_WORDS = [
-  'Let that one go. Something else is coming.',
-  'We will leave that task for another day.',
-  'Forget that errand. The road has other plans for you.',
-  'That task is called off. Rest a moment before the next.',
-];
-
 export class DmPrompts {
   private director = new Director();
   private phrases = new Phrasebook();
@@ -468,7 +448,7 @@ export class DmPrompts {
     } else if (id === 'hint') {
       const arrow = (this.tasks.pace?.hint ?? 0) >= HINT_AREA;
       this.tasks.giveHint();
-      this.desk.say(this.phrases.pick(arrow ? 'arrow' : 'area', arrow ? ARROW_WORDS : AREA_WORDS));
+      this.desk.say(this.phrases.pick(arrow ? 'arrow' : 'area', arrow ? COMPASS_STEADY_WORDS : COMPASS_WORDS));
     } else if (id.startsWith('w:')) {
       const precip = id.slice(2);
       const valid = precip === '' ? null : (PRECIPS as readonly string[]).includes(precip) ? (precip as Precip) : null;

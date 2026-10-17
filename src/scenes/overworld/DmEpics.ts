@@ -3,6 +3,8 @@ import { allOffers, offerFor, upgradeFor } from '../../systems/dmQuests';
 import { collect } from '../../systems/chests';
 import { ITEMS, itemOf } from '../../systems/items';
 import { cleanNote } from '../../systems/dmBrief';
+import { MEET_WORDS, SAGA_LOST_WORDS, SAGA_OFF_WORDS, SAGA_QUIET_WORDS } from '../../systems/dmVoice';
+import { Phrasebook } from '../../systems/phrases';
 import { CELL } from '../../map/types';
 import {
   epicReward,
@@ -67,6 +69,7 @@ export class DmEpics {
     /** The id the world gave each person made so far (by their key in the epic). */
     ids: Map<string, string>;
   } | null = null;
+  private phrases = new Phrasebook();
   private offered: EpicPlan[] = [];
   private turn = 0;
   private page = 0;
@@ -97,13 +100,13 @@ export class DmEpics {
     tasks.onFinish = (state) => {
       const run = this.run;
       if (!run) return;
-      if (state !== 'done') return this.end('The thread of the epic is lost. The saga ends here.');
+      if (state !== 'done') return this.end(this.phrases.pick('lost', SAGA_LOST_WORDS));
       const step = run.plan.epic.steps[run.step];
       if (step?.kind === 'meet') return this.meet(run, step); // they speak when talked to, then the epic goes on
       this.advance(run);
     };
     tasks.onCancel = () => {
-      if (this.run) this.end('The saga is called off.');
+      if (this.run) this.end(this.phrases.pick('off', SAGA_OFF_WORDS));
     };
   }
 
@@ -175,7 +178,7 @@ export class DmEpics {
   /** Call it off. */
   cancel() {
     if (!this.run) return;
-    this.end('The saga is called off.');
+    this.end(this.phrases.pick('off', SAGA_OFF_WORDS));
     this.tasks.cancel(false);
   }
 
@@ -205,7 +208,7 @@ export class DmEpics {
         : step.objective
           ? offerFor(this.tasks.landOf(z), step.objective) // named outright: this foe, these sites, that place
           : this.choose(allOffers(this.tasks.landOf(z)), step.kind, run.step);
-    if (!offer) return this.end('The lands fall quiet, and the saga with them.');
+    if (!offer) return this.end(this.phrases.pick('quiet', SAGA_QUIET_WORDS));
     run.next = false;
     this.tasks.setEpic({ title: run.plan.epic.title, step: run.step + 1, total: run.plan.epic.steps.length });
     const from = run.step > 0 ? zoneName(run.plan.zones[run.step - 1]!) : zoneName(zone);
@@ -245,7 +248,14 @@ export class DmEpics {
     if (step.gives) lines.push(`${person?.name ?? 'They'} gives you ${step.gives}. Keep it safe.`);
     this.story?.voice(id, lines);
     run.talk = { id, settle: null };
-    this.desk.say(cleanSay(`${person?.name ?? 'Someone'} is here. Speak to them.`));
+    this.desk.say(
+      cleanSay(
+        this.phrases.pick(
+          'meet',
+          MEET_WORDS.map((w) => w(person?.name ?? 'Someone')),
+        ),
+      ),
+    );
   }
 
   /** A party member talked to the person `entity`: if the saga waits for them, they have had their say, and the saga goes on shortly. */

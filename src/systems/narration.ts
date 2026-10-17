@@ -2,11 +2,10 @@
 // welcome or a chapter's opening comes as a few quiet beats rather than a wall of text. The words are content
 // (`quests.json` `welcome`, a chapter's `narration`); until an AI writes new ones the DM tells the tale as written.
 
-/** What the DM says as the game starts when the story gives no welcome of its own. */
-export const DEFAULT_WELCOME = [
-  'Welcome, travellers. I am your Dungeon Master.',
-  'Stay close, look after one another, and listen: I will call on you when the tale needs you.',
-];
+import { WELCOMES } from './dmVoice';
+
+/** What the DM says as the game starts when the story gives no welcome of its own (one of `WELCOMES`, `dmVoice.ts`). */
+export const DEFAULT_WELCOME = WELCOMES[0]!;
 
 /** Seconds a line is up before the next: time to read it, never longer than the DM's words stay on screen. */
 export const readTime = (line: string): number => Math.max(4, Math.min(8, 2.5 + line.length / 20));

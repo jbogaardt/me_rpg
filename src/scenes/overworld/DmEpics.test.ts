@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { MEET_WORDS, SAGA_LOST_WORDS, SAGA_OFF_WORDS, SAGA_QUIET_WORDS } from '../../systems/dmVoice';
 import type { ContentManager } from '../../content/ContentManager';
 import { STOCK_EPICS } from '../../content/epics';
 import { parseEpic } from '../../systems/dmEpics';
@@ -146,7 +147,7 @@ describe('epic quests, on the host', () => {
     a.epics.update();
     a.tasks.cancel(); // by the DM
     expect(a.epics.active).toBe(false);
-    expect(a.said.at(-1)).toContain('called off');
+    expect(SAGA_OFF_WORDS).toContain(a.said.at(-1));
     expect(a.arena.task).toBeNull();
 
     const b = game(true); // the party is nowhere near the place: it can only time out
@@ -155,7 +156,7 @@ describe('epic quests, on the host', () => {
     b.tasks.update(1600);
     expect(b.arena.task!.state).toBe('failed');
     expect(b.epics.active).toBe(false);
-    expect(b.said.at(-1)).toContain('lost');
+    expect(SAGA_LOST_WORDS).toContain(b.said.at(-1));
   });
 
   it('is told by the host or a solo player, never by a friend', () => {
@@ -225,7 +226,7 @@ describe('epics with people, on the host', () => {
     expect(said.some((s) => s.includes('“'))).toBe(false); // nobody's words come out of the DM's mouth
     expect(voiced.at(-1)?.[0]).toBe('dm_aldis'); // their words are on them, for the talk
     const told = voiced.length;
-    expect(said.at(-1)).toContain('Speak to them');
+    expect(MEET_WORDS.map((w) => w('Aldis the Postmaster'))).toContain(said.at(-1));
     epics.update(10);
     expect(epics.view).toMatchObject({ step: 1 }); // the saga waits for the talk
     epics.talked('dm_somebody'); // someone else: no change
@@ -254,7 +255,7 @@ describe('epics with people, on the host', () => {
     g.epics.begin(g.pick('The Lost Courier'));
     g.epics.update(0);
     expect(g.epics.active).toBe(false);
-    expect(g.said.at(-1)).toContain('fall quiet');
+    expect(SAGA_QUIET_WORDS).toContain(g.said.at(-1));
   });
 
   it('has each person say their last words when the whole epic is done', () => {

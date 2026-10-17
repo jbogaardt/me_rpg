@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DONE_WORDS } from '../../systems/dmVoice';
 import { RELIC_KIND } from '../../systems/dmQuests';
 import { TASK_LINGER, type QuestOffer } from '../../systems/dmTasks';
 import type { Arena } from './Arena';
@@ -90,7 +91,7 @@ describe('the DM’s quest, on the host', () => {
     expect(arena.task!.state).toBe('done');
     expect(paid.map(([p]) => p)).toEqual(party);
     expect(paid[0]![1]).toBeGreaterThan(0);
-    expect(said.at(-1)).toBe('Well done.');
+    expect(DONE_WORDS).toContain(said.at(-1));
     expect(tasks.result).toMatchObject({ kind: 'hunt', state: 'done' });
     tasks.update(TASK_LINGER + 1);
     expect(arena.task).toBeNull();

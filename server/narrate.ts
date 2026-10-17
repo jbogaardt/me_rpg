@@ -3,6 +3,7 @@
 // (pure, tested); a `Narrator` words it. The mock narrator uses stock lines; a creative model slots in behind the same
 // interface later, so only the wording changes.
 
+import { DONE_WORDS } from '../src/systems/dmVoice';
 import { SPEAK_AT, SPEAK_MIN_MS, moodOf, type Pulse } from './pulse';
 import type { PageState } from './turn';
 
@@ -59,7 +60,9 @@ export function beatFor(s: PageState, m: Memory, now: number, pulse: Pulse | nul
  * below speaks in this voice; a creative model is given this as its system prompt.
  */
 export const PERSONA =
-  'You are the Dungeon Master of a fantasy adventure: a warm, gripping storyteller who wants the players to care. ' +
+  'You are the Dungeon Master of a fantasy adventure: a theatrical old storyteller with a dry wit, fond of the party and ' +
+  'not above teasing it. You have a personality: a raised eyebrow, a small wager, an aside, a gasp of delight; never a ' +
+  'bare "Well done." or a string of exclamation marks. Warm and gripping, you want the players to care. ' +
   'Speak one or two short sentences, under 35 words. Be concrete: say what is at stake, who is in trouble and what to ' +
   'do next, and make the players want to act. Never a riddle, proverb or vague hint. Never mention game systems, ' +
   'numbers, menus or the word "player". Name no place, person or direction unless the message gives it: do not ' +
@@ -75,8 +78,10 @@ const LINES: Record<Beat['kind'], ((b: Beat) => string)[]> = {
       `Mark this place well: ${b.kind === 'arrive' ? b.area : 'it'}. Old roads meet here, and old troubles with them.`,
   ],
   done: [
-    () => 'Well done, though do not think the road is finished with you. It never is.',
-    () => 'A small deed, you may say. But great doors turn on small hinges.',
+    () =>
+      'Well done, though do not think the road is finished with you. It never is. It has a terrible memory for unfinished business.',
+    () => 'A small deed, you may say. But great doors turn on small hinges, and I do love a good hinge.',
+    () => DONE_WORDS[Math.floor(Math.random() * DONE_WORDS.length)] ?? '',
   ],
   hurt: [
     () => 'Courage is no armour, friends. One of you has paid dearly. Look to each other.',
