@@ -48,7 +48,9 @@ import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
 import { HostLink } from './overworld/HostLink';
 import { PackSync } from './overworld/PackSync';
-import { Simulation } from './overworld/Simulation';
+import { foeNear, Simulation } from './overworld/Simulation';
+import { PickupToasts } from '../hud/PickupToasts';
+import { playPing } from '../hud/sfx';
 import { Trading } from './overworld/Trading';
 import { Training } from './overworld/Training';
 import { Visuals } from './overworld/Visuals';
@@ -116,6 +118,7 @@ export class OverworldScene implements Scene {
   private zones: Zones;
   private sim: Simulation;
   private ground: Ground;
+  private pickups = new PickupToasts();
   private barrels: Barrels;
   private pack: PackSync;
   private trading: Trading;
@@ -170,6 +173,11 @@ export class OverworldScene implements Scene {
     this.sim = new Simulation(arena, visuals, this.zones, (e) => this.host.emit(e), say);
     this.zones.makeMobWorld = (z) => this.sim.mobWorldFor(z);
     this.ground = new Ground(arena, this.sim);
+    this.ground.onPicked = (p, name) => {
+      if (p !== arena.local) return; // a friend's pickup is theirs to see
+      this.pickups.add(name, foeNear(arena.zone, p));
+      playPing();
+    };
     this.barrels = new Barrels(arena, this.sim);
     this.pack = new PackSync(arena, ui.session, ui, this.ground);
     this.trading = new Trading(arena, ui.session, ui);
@@ -377,6 +385,7 @@ export class OverworldScene implements Scene {
     const { arena } = this;
     this.syncRole(session.role);
     arena.clock += dt;
+    this.pickups.update(dt, foeNear(arena.zone, arena.local));
     this.updateDm(dt);
     const online = arena.role !== 'solo';
     const mapShown = this.updateMap();

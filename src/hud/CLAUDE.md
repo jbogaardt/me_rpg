@@ -17,5 +17,6 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
 - **Popups only when the player starts a conversation** (an NPC, the quest-giver, a sign, a shop, the Dungeon Master in
   person: walk up and press the action key). Everything the game tells a player unasked (a defeat, a quest the DM gave, a
   chapter's note, a trial's result) is *passive text*: `Dialog.note`, the same caption as the DM's words. Never `say` for those.
+- **Item pickups are a toast, never a card** (`PickupToasts`, rules in `toastStack.ts`): a small see-through stack at the left edge, merged repeats, gone in about 2 s (1 s with a foe near), plus a short chime (`playPing`). Local to each player, nothing is sent; core engine.
 - **The map overlay is local**: it fills in as the players in view explore (`map/explored.ts`), nothing is sent. Rooms
   have none, and the `map` capability can turn it off or show the whole zone.
