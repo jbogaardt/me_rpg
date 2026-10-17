@@ -42,6 +42,8 @@ kind is how higher levels stay meaningful. **Retune a weapon or kind against tha
   `StoryUi.syncBoss` makes it on every page from the quest alone (the zone's last foe, so snapshot indexes agree) and the host's compass follows it;
   its quest pays richer than a hunt and a gear drop is left as a hook in `DmTasks.finish`. A mastery asks for N casts of one combo
   a wand or tome of the party teaches (`Land.combos`, the `combos` capability; `castIn` takes the spell id) and is told with the arrows that cast it.
+- **Melee aim assist** (`meleeAssist.ts`): `Simulation.attack` turns a swing toward a near foe its facing would miss (not
+  with mouse aim); host-owned, nothing on the wire.
 - **Magic** (`spells.ts`, `skills.ts`, `Casting.ts`): wands and tomes are weapons with combos (direction taps) that cast
   spells for mana; **every wand and tome is unique** (no spell or string on two weapons, none hidden inside another or a
   skill's: tests check). Innate skills are earned in training-ground trials, two ready at a time. `heroCombos` is the one

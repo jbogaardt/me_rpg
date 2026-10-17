@@ -23,6 +23,7 @@ import {
   type Ranged,
 } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
+import { assistFacing } from '../../systems/meleeAssist';
 import {
   drainNeeds,
   drinkableNear,
@@ -345,6 +346,13 @@ export class Simulation {
       return;
     }
     p.attackCooldown = ATTACK_COOLDOWN;
+    // Aim assist (systems/meleeAssist.ts): turn toward a near foe the facing would miss (not while aiming by mouse/tap).
+    if (!p.mouseAim) {
+      const foes = this.arena.mobs
+        .filter((m) => m.alive)
+        .map((m) => ({ x: m.body.x, y: m.body.y, allowance: (m.body.size - 1) * 14 }));
+      p.body.face(assistFacing(p.body.x, p.body.y, p.body.facing, foes, MELEE_REACH));
+    }
     p.body.play('slash');
     const dir = p.body.facing;
     const [vx, vy] = DIR_VEC[dir];
