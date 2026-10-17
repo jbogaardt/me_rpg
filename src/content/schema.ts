@@ -4,6 +4,7 @@
 // The source of the JSON (static files today, a database later) is ContentManager's business, not this file's.
 
 import type { MobKind } from '../systems/combat';
+import { MAX_BAND } from '../systems/bands';
 import { MAX_ROAM_CELLS } from '../systems/roam';
 import { isClimate } from '../systems/weather';
 import { SKILL_IDS, SKILLS } from '../systems/skills';
@@ -83,6 +84,10 @@ export interface RoamRule {
   seed: number;
   apart: number; // cells between any two of them
   avoid: { x: number; y: number; radius: number }[]; // cells (the map's own) to keep clear of, e.g. the spawn
+  /** Only inside these circles (cells of the map): the deep end of a zone. Absent: anywhere inland. */
+  within?: { x: number; y: number; radius: number }[];
+  /** The hero level this group is made for (`systems/bands.ts` re-bands its foes); absent: the kinds as the entities have them. */
+  level?: number;
 }
 
 export interface BiomeDef {
@@ -127,6 +132,8 @@ export interface Placement {
   entity: string;
   x: number;
   y: number;
+  /** For a mob: the hero level it is made for (`systems/bands.ts`); absent: as its entity has it. */
+  level?: number;
 }
 
 export interface ScenarioNode {
@@ -346,22 +353,37 @@ export function parseEntities(json: unknown, r = new Reader()): Record<string, E
   return out;
 }
 
+function readCircles(r: Reader, v: unknown, path: string): { x: number; y: number; radius: number }[] {
+  return r.array(v, path).flatMap((a, i) => {
+    const p = r.object(a, `${path}[${i}]`);
+    if (!p) return [];
+    const at = `${path}[${i}]`;
+    return [
+      { x: r.number(p.x, `${at}.x`), y: r.number(p.y, `${at}.y`), radius: r.number(p.radius, `${at}.radius`, 0) },
+    ];
+  });
+}
+
+/** An optional band: a whole hero level from 1 to `MAX_BAND`. */
+function readLevel(r: Reader, v: unknown, path: string): number | undefined {
+  if (v === undefined) return undefined;
+  const level = r.number(v, path, 1);
+  if (!Number.isInteger(level) || level > MAX_BAND) r.fail(path, `must be a whole hero level from 1 to ${MAX_BAND}`);
+  return level;
+}
+
 function readRoam(r: Reader, v: unknown, path: string): RoamRule | null {
   const o = r.object(v, path);
   if (!o) return null;
+  const level = readLevel(r, o.level, `${path}.level`);
   return {
     kinds: r.strings(o.kinds, `${path}.kinds`),
     count: r.number(o.count, `${path}.count`, 0),
     seed: r.number(o.seed, `${path}.seed`),
     apart: r.number(o.apart ?? 12, `${path}.apart`, 0),
-    avoid: r.array(o.avoid ?? [], `${path}.avoid`).flatMap((a, i) => {
-      const p = r.object(a, `${path}.avoid[${i}]`);
-      if (!p) return [];
-      const at = `${path}.avoid[${i}]`;
-      return [
-        { x: r.number(p.x, `${at}.x`), y: r.number(p.y, `${at}.y`), radius: r.number(p.radius, `${at}.radius`, 0) },
-      ];
-    }),
+    avoid: readCircles(r, o.avoid ?? [], `${path}.avoid`),
+    ...(o.within !== undefined ? { within: readCircles(r, o.within, `${path}.within`) } : {}),
+    ...(level !== undefined ? { level } : {}),
   };
 }
 
@@ -440,8 +462,14 @@ function placements(r: Reader, v: unknown, path: string): Placement[] {
     const p = r.object(e, `${path}[${j}]`);
     if (!p) return [];
     const at = `${path}[${j}]`;
+    const level = readLevel(r, p.level, `${at}.level`);
     return [
-      { entity: r.string(p.entity, `${at}.entity`), x: r.number(p.x, `${at}.x`, 0), y: r.number(p.y, `${at}.y`, 0) },
+      {
+        entity: r.string(p.entity, `${at}.entity`),
+        x: r.number(p.x, `${at}.x`, 0),
+        y: r.number(p.y, `${at}.y`, 0),
+        ...(level !== undefined ? { level } : {}),
+      },
     ];
   });
 }

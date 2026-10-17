@@ -67,7 +67,8 @@ function inland(map: Ground): Uint8Array {
 
 /**
  * Spread a roam rule's enemies over the map's open ground: on cells whose whole 3x3 block is open, inland, at least
- * `apart` cells from each other (and from `taken`, roamers placed by an earlier rule) and outside every `avoid` circle.
+ * `apart` cells from each other (and from `taken`, roamers placed by an earlier rule), outside every `avoid` circle and, when
+ * the rule has `within`, inside one of those. A rule's `level` bands every foe it places (`systems/bands.ts`).
  * Fewer than `count` if there is not the room.
  */
 export function roam(map: Ground, rule: RoamRule, taken: [number, number][] = []): MobSpawn[] {
@@ -95,7 +96,13 @@ export function roam(map: Ground, rule: RoamRule, taken: [number, number][] = []
     if (out.length >= rule.count || rule.kinds.length === 0) break;
     if (taken.some(([c, r]) => Math.hypot(c - col, r - row) < rule.apart)) continue;
     if (rule.avoid.some((a) => Math.hypot(a.x - col, a.y - row) < a.radius)) continue;
-    out.push({ kind: rule.kinds[out.length % rule.kinds.length]!, col, row });
+    if (rule.within && !rule.within.some((a) => Math.hypot(a.x - col, a.y - row) < a.radius)) continue;
+    out.push({
+      kind: rule.kinds[out.length % rule.kinds.length]!,
+      col,
+      row,
+      ...(rule.level ? { level: rule.level } : {}),
+    });
     taken.push([col, row]);
   }
   return out;
@@ -117,7 +124,7 @@ export function populate(
     const def = entities[p.entity];
     if (!def) throw new Error(`Scenario "${node?.node_id}" places unknown entity "${p.entity}"`);
     const at = { col: Math.round(p.x), row: Math.round(p.y) };
-    if (def.type === 'mob') mobs.push({ kind: p.entity, ...at });
+    if (def.type === 'mob') mobs.push({ kind: p.entity, ...at, ...(p.level ? { level: p.level } : {}) });
     else folk.push({ entity: p.entity, def, ...at });
   };
   (node?.entities ?? []).forEach(place);

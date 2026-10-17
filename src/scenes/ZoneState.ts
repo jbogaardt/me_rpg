@@ -20,7 +20,8 @@ import { mapBox } from '../map/bounds';
 import { MapView } from '../map/MapView';
 import { CELL, type MapData, type SiteSpawn } from '../map/types';
 import { cellFeet } from '../map/doors';
-import { MOB_KINDS, type Item, type MobKind } from '../systems/combat';
+import { bandedKind } from '../systems/bands';
+import type { Item, MobKind } from '../systems/combat';
 import type { Population } from '../content/populate';
 import { CHEST_LOOTS } from '../systems/chests';
 import { CROP_KINDS, CROP_STAGES } from '../systems/crops';
@@ -276,7 +277,7 @@ export class ZoneState {
   admit(population: Population) {
     const { wardrobe } = this.sprites;
     const mobs = population.mobs.map((m) => {
-      const kind = MOB_KINDS[m.kind];
+      const kind = bandedKind(m.kind, m.level); // a zone may make its foes for a hero level (systems/bands.ts)
       if (!kind) throw new Error(`Zone "${this.name}" spawns unknown mob kind "${m.kind}"`);
       const mob = new Mob(kind, wardrobe.sheet(kind.look), ...cellFeet(m));
       mob.respawns = !isTrialZone(this.name) && !kind.named; // a named boss's fall is the story's: it stays down

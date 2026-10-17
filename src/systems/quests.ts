@@ -12,7 +12,7 @@
 // there. Sites (`MapData.sites`, placed with `z.site`) are where gather quests send the player; their kinds are SITE_KINDS.
 
 import { CELL } from '../map/types';
-import { MOB_KINDS, gainXp, type Hero, type MobKind, type QuestLog } from './combat';
+import { BAND_MARK, MOB_KINDS, gainXp, type Hero, type MobKind, type QuestLog } from './combat';
 import type { Dial } from './capabilities';
 import { collect } from './chests';
 import { BOSS_KEY } from './dmBoss';
@@ -200,9 +200,16 @@ export const completerOf = (q: Quest): string => q.turnIn ?? offererOf(q);
 /** How close (in cells) the hero must come to a place for a `visit` quest to count it. */
 export const VISIT_RADIUS = 7;
 
-/** The mob kind's key in MOB_KINDS (for counting kills), or undefined for a kind that is not in it. */
+/**
+ * The mob kind's key in MOB_KINDS (for counting kills), or undefined for a kind that is not in it. A kind re-banded for a
+ * zone (`bands.ts`, registered as "orc@14") counts as its own kind: a quest for orcs counts every orc.
+ */
 export const mobKey = (kind: MobKind): string | undefined =>
-  kind.boss ? BOSS_KEY : Object.keys(MOB_KINDS).find((k) => MOB_KINDS[k] === kind);
+  kind.boss
+    ? BOSS_KEY
+    : Object.keys(MOB_KINDS)
+        .find((k) => MOB_KINDS[k] === kind)
+        ?.split(BAND_MARK)[0];
 
 /**
  * The rules every quest is held to, wherever it is tracked: a hero's own log (the campaign's story, handed out by its

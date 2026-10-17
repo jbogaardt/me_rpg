@@ -44,6 +44,17 @@ describe('roam', () => {
     }
   });
 
+  it('keeps to the within circles (the deep end of a zone) and bands what it places', () => {
+    const map = field(80);
+    const out = roam(map, rule({ count: 6, apart: 3, within: [{ x: 60, y: 60, radius: 14 }], level: 12 }));
+    expect(out.length).toBeGreaterThan(0);
+    for (const m of out) {
+      expect(Math.hypot(m.col - 60, m.row - 60)).toBeLessThan(14);
+      expect(m.level).toBe(12);
+    }
+    expect(roam(map, rule()).every((m) => m.level === undefined)).toBe(true); // no level: the kind as the content has it
+  });
+
   it('places fewer when there is no room', () => {
     expect(roam(field(12), rule({ count: 3 }))).toEqual([]);
   });

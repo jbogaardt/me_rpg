@@ -27,6 +27,7 @@ Invariants that bite:
 - **Who stands in a zone is the content's, never the map's** (scenario node placements, then the biome's `roam`). A placed person
   may stroll about their post: `EntityDef.roam`, a radius in cells (npc only, at most 8), capability `roaming`; campaign 1's
   market has two. Map-placed givers and keepers never roam. Packs carry no roamers yet.
+- **Level bands** (`systems/bands.ts`, core engine): a roam group or placement may carry `level` (and a group `within` circles, the deep end of a zone): its foes are re-banded to be a fair fight for that hero level, same look and role, pay following the level. Campaign 1's far reaches are banded 6 to 30 (each biome's deepest ground by walking distance from its doors), so the world stays dangerous past the first levels. Packs carry none yet.
 - **Scenarios are solo only**: online, every zone shows its biome's own node. When the host dictates nodes, it must send
   a `node_id` per zone.
 - **Capabilities** (`src/systems/CLAUDE.md`): content asking for what its own switches turn off is refused at load.

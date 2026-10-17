@@ -14,7 +14,7 @@ A capability (`capabilities.ts`, `CAPABILITIES`) is an engine system a story can
 (`checkAgainstCapabilities`).
 
 **A system a story could do without must be a capability, in the same change that adds it.** Gate it with
-`enabled(id, zone)` at the one choke point where the feature starts and read tuned values with `setting`. Co-op needs nothing on the wire: the host gates rules. `tools/content/capabilities.test.ts` fails a
+`enabled(id, zone)` at the one choke point where the feature starts and read tuned values with `setting`. `tools/content/capabilities.test.ts` fails a
 capability nothing asks `enabled()` about or that is not listed here. The ids: `guide`, `compass`, `needs`, `combos`,
 `skills`, `farming`, `weather`, `dayNight`, `carrying`, `roaming`, `forge`, `coop`, `trading`.
 
@@ -23,7 +23,7 @@ capability nothing asks `enabled()` about or that is not listed here. The ids: `
 
 ## Balance
 
-Each `MobKind` is tuned for a band of hero levels and biomes hand them out by band; `balance.test.ts` guards it. Bows deal about 75% of a same-priced sword's damage per second, a wand's plain bolt 65%, a tome's 40%; a combo is a burst, not a better sword. **Retune against that test.**
+Each `MobKind` is tuned for a band of hero levels and biomes hand them out by band; `balance.test.ts` guards it. Bows deal about 75% of a same-priced sword's damage per second, a wand's plain bolt 65%, a tome's 40%; a combo is a burst, not a better sword. **Retune against that test.** Past the kinds' own bands a zone makes foes for a level (`bands.ts`, `src/content/CLAUDE.md`).
 
 ## Features (design notes)
 
@@ -42,7 +42,7 @@ Each `MobKind` is tuned for a band of hero levels and biomes hand them out by ba
 - **Magic** (`spells.ts`, `skills.ts`, `Casting.ts`): wands and tomes are weapons with combos (direction taps) that cast
   spells for mana; **every wand and tome is unique** (no spell or string on two weapons or inside another or a
   skill's: tests check). Innate skills are earned in training-ground trials. `heroCombos` is the one
-  list the reader, HUD and caster use; a guest detects the combo and sends only its index.
+  list the reader, HUD and caster use.
 - **Survival** (`needs.ts`, `crops.ts`): food and water drain with time (host/solo only; a guest shows what `pack` says). Drinking is steady, from ponds that **only rain refills**, while no foe is near. Crops need three
   waterings, are decided by the host and ride the snapshot as a state code.
 - **Weather and day** (`weather.ts`, `daynight.ts`): cosmetic atmosphere per biome (lightning aside, not combat or collision). The host rolls each zone's weather and sends it in the snapshot.
@@ -54,8 +54,7 @@ Each `MobKind` is tuned for a band of hero levels and biomes hand them out by ba
 - **Director cues** (`cues.ts`, core engine, co-op): the DM's words may carry inline `<cue:anim|sfx|camera .../>` stage
   directions (closed vocabulary; its header is the design). The host checks the tagged text (`cleanCued`), all that goes
   on the wire; every page cuts the tags out of the caption and plays each when the reading reaches it
-  (`Dialog`, `Cues.ts`, `sfx.ts`, `Camera.shake`). Cosmetic, local, no state. A new cue is vocabulary in
-  `cues.ts` first, then a line in the bot's `DIRECTOR_RULES`.
+  (`Dialog`, `Cues.ts`, `sfx.ts`, `Camera.shake`). Cosmetic, local, no state. A new cue is vocabulary in `cues.ts`, then a line in `DIRECTOR_RULES`.
 - **Gems and the forge** (`gems.ts`, `dmForge.ts`, `dmGear.ts`; core engine, capability `forge`): a gem is an item with
   a `gem` property (what it adds to a weapon, `arms`, and to other gear, `worn`); the Set action on the Inventory tab spends
   one to make "Emerald-encrusted Steel Sword" (base plus gem, dearer, same look), in place. The pieces are
