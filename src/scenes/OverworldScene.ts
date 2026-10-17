@@ -494,7 +494,7 @@ export class OverworldScene implements Scene {
 
     z.pondBeds.show(z.ponds.levels()); // the ponds drained by drinking, until rain fills them
     z.npc?.animate(dt * 1000, false);
-    for (const f of z.folk) f.body.animate(dt * 1000, false);
+    for (const f of z.folk) f.body.animate(dt * 1000, f.moving);
     this.scenario.update(menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy);
     this.storyUi.update(z, dt);
     for (const k of z.keepers) k.body.animate(dt * 1000, false);
@@ -580,6 +580,7 @@ export class OverworldScene implements Scene {
           for (const p of present) sim.updatePlayer(p, commandOf(p), dt); // time stopped or not, the party can walk
           if (!frozen) {
             for (const mob of z.mobs) mob.update(dt, z.mobWorld);
+            if (enabled('roaming', z.name)) z.updateFolk(dt, arena.bodies()); // people stroll about their posts
             for (const crop of z.crops) crop.grow(dt);
             this.ground.age(dt);
             sim.weather(dt);

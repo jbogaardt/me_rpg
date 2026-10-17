@@ -117,7 +117,7 @@ export class Interactions {
       pet.attend(this.arena.player.x, this.arena.player.y);
       dialog.say([petSound(pet.kind, pet.talks++)]);
     } else if (folk) {
-      folk.body.face(directionToward(this.arena.player.x - folk.body.x, this.arena.player.y - folk.body.y));
+      arena.zone.attend(folk, this.arena.player.x, this.arena.player.y); // stops, faces the hero, later goes home
       dialog.say(folk.lines, undefined, { pauses: true });
       // The host settles it for a friend: their press reaches `act`, which counts the talk as it does for the host's own.
       if (arena.role === 'client') this.guestPress();
@@ -182,7 +182,10 @@ export class Interactions {
     if (this.barrels.pickUp(p)) return;
     if (this.sim.pondAction(p)) return; // A by a pond drinks (or stops drinking) instead of swinging
     const folk = this.arena.zone.folk.find((f) => Math.hypot(p.body.x - f.body.x, p.body.y - f.body.y) < CELL * 1.5);
-    if (folk) return this.onTalk(folk.entity); // a friend talking to a person: no swing
+    if (folk) {
+      this.arena.zone.attend(folk, p.body.x, p.body.y);
+      return this.onTalk(folk.entity);
+    } // a friend talking to a person: no swing
     const loose = this.ground.nearest(p);
     if (loose) this.ground.pickUp(p, loose);
     else this.sim.attack(p);

@@ -24,7 +24,9 @@ Invariants that bite:
   item id cannot hold `+`. Packs carry no gems yet (random worlds have no shops to sell one), so only campaign 1's chests hold them (`ruby`, `emerald`, `topaz`, `sapphire` loots); a gem shows the `gem` icon, a set piece its base's.
 - **Populations are deterministic** (`populate.ts`): a guest builds the same mobs in the same order as the host, and
   snapshots refer to mobs by index. Anything that changes who stands in a zone must keep that order.
-- **Who stands in a zone is the content's, never the map's** (scenario node placements, then the biome's `roam`).
+- **Who stands in a zone is the content's, never the map's** (scenario node placements, then the biome's `roam`). A placed person
+  may stroll about their post: `EntityDef.roam`, a radius in cells (npc only, at most 8), capability `roaming`; campaign 1's
+  market has two. Map-placed givers and keepers never roam. Packs carry no roamers yet.
 - **Scenarios are solo only**: online, every zone shows its biome's own node. When the host dictates nodes, it must send
   a `node_id` per zone.
 - **Capabilities** (`src/systems/CLAUDE.md`): content asking for what its own switches turn off is refused at load.

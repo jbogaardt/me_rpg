@@ -13,6 +13,7 @@
 // Everything from the peer is untrusted input: parseMessage() validates the shape and ranges, never throws.
 
 import { validBarrelsWire } from '../systems/barrels';
+import { validFolkWire } from '../systems/roam';
 import { AIM_STEPS } from '../core/aim';
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
@@ -53,6 +54,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v47: the `fuse` Inventory action (kind 5: set the gem at a pack index in a pack index or, negative, a worn slot), a
  * `DmMsg.task`'s kind may be `forge` (index 8), and the item codes run on past the authored list through the pieces gems make.
  * v48: the world log's `sign` entry (the DM rewrote a signpost); an older page cannot follow the host's world.
+ * v49: `SnapMsg.folk`, where the people who stroll about their post (content `roam`) stand.
  * Older: v28 made a negative `SnapMsg.ponds` level mean refilling after running dry; v27 made `drink` start (item
  * 1) or stop (item 0) a steady drink and added `SnapMsg.ponds`; v26 added the `drink` op of `do`; v25 added the
  * mob state `channel` (the Mummy's held ray); v24 added the `frost` fx of Stasis; v23 made `SnapMsg.crops` a state
@@ -68,7 +70,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
  * within a size budget.
  */
-export const PROTOCOL_VERSION = 48;
+export const PROTOCOL_VERSION = 49;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -207,6 +209,8 @@ export interface SnapMsg {
   ponds?: number[];
   /** Barrels of that zone away from home (systems/barrels.ts `barrelsWire`: number, x, y, 0 or 1 + the carrier's facing, flat). Absent: all at home. */
   barrels?: number[];
+  /** The roaming people of that zone (systems/roam.ts `folkWire`: x, y, facing index, flat, in the zone's folk order). Absent: nobody roams there. */
+  folk?: number[];
   w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
   ground?: GroundSnap[];
@@ -753,7 +757,8 @@ export function parseMessage(raw: unknown): Message | null {
         m.crops.length > MAX_CROPS ||
         !m.crops.every((c: unknown) => cropFromCode(c) !== null) ||
         (m.ponds !== undefined && !isPonds(m.ponds)) ||
-        (m.barrels !== undefined && !validBarrelsWire(m.barrels))
+        (m.barrels !== undefined && !validBarrelsWire(m.barrels)) ||
+        (m.folk !== undefined && !validFolkWire(m.folk))
       ) {
         return null;
       }
@@ -769,6 +774,7 @@ export function parseMessage(raw: unknown): Message | null {
         crops: m.crops as number[],
         ...(m.ponds === undefined ? {} : { ponds: m.ponds as number[] }),
         ...(m.barrels === undefined ? {} : { barrels: m.barrels as number[] }),
+        ...(m.folk === undefined ? {} : { folk: m.folk as number[] }),
         w: m.w,
         ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
         events: events as EventWire[],
