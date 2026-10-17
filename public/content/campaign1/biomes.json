@@ -27,7 +27,13 @@
             "count": 6,
             "seed": 104,
             "apart": 12,
-            "avoid": [{ "x": 55, "y": 26, "radius": 14 }]
+            "avoid": [
+              {
+                "x": 55,
+                "y": 26,
+                "radius": 14
+              }
+            ]
           },
           {
             "kinds": ["raider", "wolfkin", "shade"],
@@ -35,7 +41,13 @@
             "seed": 912,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 31, "y": 49, "radius": 22 }],
+            "within": [
+              {
+                "x": 31,
+                "y": 49,
+                "radius": 22
+              }
+            ],
             "level": 8
           }
         ]
@@ -45,7 +57,9 @@
     "cave_sunscar": {
       "name": "The Sunscar Hollow",
       "levels": [4, 5],
-      "capabilities": { "levelGates": true },
+      "capabilities": {
+        "levelGates": true
+      },
       "map": "cave_sunscar",
       "climate": null,
       "music": null,
@@ -81,7 +95,13 @@
             "count": 14,
             "seed": 103,
             "apart": 12,
-            "avoid": [{ "x": 14, "y": 98, "radius": 20 }]
+            "avoid": [
+              {
+                "x": 14,
+                "y": 98,
+                "radius": 20
+              }
+            ]
           },
           {
             "kinds": ["mummy", "orc", "raider", "skeleton"],
@@ -89,7 +109,13 @@
             "seed": 913,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 76, "y": 61, "radius": 43 }],
+            "within": [
+              {
+                "x": 76,
+                "y": 61,
+                "radius": 43
+              }
+            ],
             "level": 12
           },
           {
@@ -98,7 +124,13 @@
             "seed": 924,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 38, "y": 9, "radius": 43 }],
+            "within": [
+              {
+                "x": 38,
+                "y": 9,
+                "radius": 43
+              }
+            ],
             "level": 20
           }
         ]
@@ -137,7 +169,13 @@
             "count": 7,
             "seed": 102,
             "apart": 12,
-            "avoid": [{ "x": 46, "y": 56, "radius": 16 }]
+            "avoid": [
+              {
+                "x": 46,
+                "y": 56,
+                "radius": 16
+              }
+            ]
           },
           {
             "kinds": ["zombie", "skeleton", "wolfkin"],
@@ -145,7 +183,13 @@
             "seed": 915,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 37, "y": 112, "radius": 31 }],
+            "within": [
+              {
+                "x": 37,
+                "y": 112,
+                "radius": 31
+              }
+            ],
             "level": 8
           }
         ]
@@ -186,7 +230,13 @@
             "count": 10,
             "seed": 109,
             "apart": 12,
-            "avoid": [{ "x": 118, "y": 64, "radius": 16 }]
+            "avoid": [
+              {
+                "x": 118,
+                "y": 64,
+                "radius": 16
+              }
+            ]
           },
           {
             "kinds": ["frostbound", "hexer", "skeleton", "warg"],
@@ -194,7 +244,13 @@
             "seed": 917,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 144, "y": 43, "radius": 42 }],
+            "within": [
+              {
+                "x": 144,
+                "y": 43,
+                "radius": 42
+              }
+            ],
             "level": 16
           },
           {
@@ -203,7 +259,13 @@
             "seed": 928,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 67, "y": 100, "radius": 42 }],
+            "within": [
+              {
+                "x": 67,
+                "y": 100,
+                "radius": 42
+              }
+            ],
             "level": 24
           },
           {
@@ -212,7 +274,13 @@
             "seed": 939,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 144, "y": 146, "radius": 39 }],
+            "within": [
+              {
+                "x": 144,
+                "y": 146,
+                "radius": 39
+              }
+            ],
             "level": 30
           }
         ]
@@ -248,7 +316,13 @@
             "count": 14,
             "seed": 101,
             "apart": 12,
-            "avoid": [{ "x": 138, "y": 108, "radius": 34 }]
+            "avoid": [
+              {
+                "x": 138,
+                "y": 108,
+                "radius": 34
+              }
+            ]
           },
           {
             "kinds": ["wolfkin", "goblin", "shade"],
@@ -256,7 +330,13 @@
             "seed": 916,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 81, "y": 38, "radius": 50 }],
+            "within": [
+              {
+                "x": 81,
+                "y": 38,
+                "radius": 50
+              }
+            ],
             "level": 6
           }
         ]
@@ -292,7 +372,13 @@
             "count": 9,
             "seed": 106,
             "apart": 12,
-            "avoid": [{ "x": 63, "y": 70, "radius": 16 }]
+            "avoid": [
+              {
+                "x": 63,
+                "y": 70,
+                "radius": 16
+              }
+            ]
           },
           {
             "kinds": ["orc", "tuskGuard", "warg"],
@@ -300,7 +386,13 @@
             "seed": 913,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 50, "y": 49, "radius": 23 }],
+            "within": [
+              {
+                "x": 50,
+                "y": 49,
+                "radius": 23
+              }
+            ],
             "level": 14
           },
           {
@@ -309,7 +401,13 @@
             "seed": 924,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 88, "y": 46, "radius": 20 }],
+            "within": [
+              {
+                "x": 88,
+                "y": 46,
+                "radius": 20
+              }
+            ],
             "level": 22
           }
         ]
@@ -345,7 +443,13 @@
             "count": 3,
             "seed": 108,
             "apart": 12,
-            "avoid": [{ "x": 43, "y": 35, "radius": 14 }]
+            "avoid": [
+              {
+                "x": 43,
+                "y": 35,
+                "radius": 14
+              }
+            ]
           },
           {
             "kinds": ["bogGhoul", "hexer", "troll"],
@@ -353,7 +457,13 @@
             "seed": 912,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 62, "y": 35, "radius": 19 }],
+            "within": [
+              {
+                "x": 62,
+                "y": 35,
+                "radius": 19
+              }
+            ],
             "level": 18
           }
         ]
@@ -363,7 +473,9 @@
     "sewer_lanternrest": {
       "name": "The Lanternrest Sewers",
       "levels": [1, 2],
-      "capabilities": { "levelGates": true },
+      "capabilities": {
+        "levelGates": true
+      },
       "map": "sewer_lanternrest",
       "climate": null,
       "music": null,
@@ -520,7 +632,13 @@
             "count": 10,
             "seed": 105,
             "apart": 12,
-            "avoid": [{ "x": 74, "y": 66, "radius": 16 }]
+            "avoid": [
+              {
+                "x": 74,
+                "y": 66,
+                "radius": 16
+              }
+            ]
           },
           {
             "kinds": ["skeleton", "zombie", "shade"],
@@ -528,7 +646,13 @@
             "seed": 913,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 35, "y": 44, "radius": 31 }],
+            "within": [
+              {
+                "x": 35,
+                "y": 44,
+                "radius": 31
+              }
+            ],
             "level": 10
           }
         ]
@@ -563,7 +687,13 @@
             "count": 8,
             "seed": 107,
             "apart": 12,
-            "avoid": [{ "x": 70, "y": 30, "radius": 16 }]
+            "avoid": [
+              {
+                "x": 70,
+                "y": 30,
+                "radius": 16
+              }
+            ]
           },
           {
             "kinds": ["bogGhoul", "hexer", "warg", "zombie"],
@@ -571,7 +701,13 @@
             "seed": 915,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 113, "y": 91, "radius": 31 }],
+            "within": [
+              {
+                "x": 113,
+                "y": 91,
+                "radius": 31
+              }
+            ],
             "level": 14
           },
           {
@@ -580,7 +716,13 @@
             "seed": 926,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 113, "y": 7, "radius": 27 }],
+            "within": [
+              {
+                "x": 113,
+                "y": 7,
+                "radius": 27
+              }
+            ],
             "level": 18
           }
         ]
@@ -635,7 +777,8 @@
         "trees_dead.png",
         "signposts.png",
         "ruins.png",
-        "graves.png"
+        "graves.png",
+        "trees_dry.png"
       ],
       "generation": {
         "roam": [
@@ -645,7 +788,13 @@
             "seed": 910,
             "apart": 10,
             "avoid": [],
-            "within": [{ "x": 38, "y": 92, "radius": 45 }],
+            "within": [
+              {
+                "x": 38,
+                "y": 92,
+                "radius": 45
+              }
+            ],
             "level": 22
           },
           {
@@ -654,7 +803,13 @@
             "seed": 921,
             "apart": 10,
             "avoid": [],
-            "within": [{ "x": 70, "y": 7, "radius": 45 }],
+            "within": [
+              {
+                "x": 70,
+                "y": 7,
+                "radius": 45
+              }
+            ],
             "level": 26
           },
           {
@@ -663,12 +818,18 @@
             "seed": 932,
             "apart": 10,
             "avoid": [],
-            "within": [{ "x": 158, "y": 7, "radius": 43 }],
+            "within": [
+              {
+                "x": 158,
+                "y": 7,
+                "radius": 43
+              }
+            ],
             "level": 30
           }
         ]
       },
-      "links": ["wetlands", "rimeheart"],
+      "links": ["wetlands", "rimeheart", "glasswastes"],
       "levels": [22, 30]
     },
     "rimeheart": {
@@ -690,7 +851,8 @@
         "graves.png",
         "trees_dead.png",
         "ruins.png",
-        "signposts.png"
+        "signposts.png",
+        "trees_dry.png"
       ],
       "generation": {
         "roam": [
@@ -700,7 +862,13 @@
             "seed": 909,
             "apart": 10,
             "avoid": [],
-            "within": [{ "x": 158, "y": 61, "radius": 45 }],
+            "within": [
+              {
+                "x": 158,
+                "y": 61,
+                "radius": 45
+              }
+            ],
             "level": 28
           },
           {
@@ -709,7 +877,13 @@
             "seed": 920,
             "apart": 10,
             "avoid": [],
-            "within": [{ "x": 65, "y": 151, "radius": 45 }],
+            "within": [
+              {
+                "x": 65,
+                "y": 151,
+                "radius": 45
+              }
+            ],
             "level": 32
           },
           {
@@ -718,13 +892,162 @@
             "seed": 931,
             "apart": 10,
             "avoid": [],
-            "within": [{ "x": 158, "y": 151, "radius": 45 }],
+            "within": [
+              {
+                "x": 158,
+                "y": 151,
+                "radius": 45
+              }
+            ],
             "level": 36
           }
         ]
       },
-      "links": ["frostlands", "emberwaste"],
+      "links": ["frostlands", "emberwaste", "drownedmoor"],
       "levels": [28, 36]
+    },
+    "glasswastes": {
+      "name": "The Glasswastes",
+      "tint": "#f2e6c8",
+      "map": "glasswastes",
+      "climate": "desert",
+      "music": null,
+      "tilesets": [
+        "ground_tiles.png",
+        "lpc_terrain.png",
+        "lpc_swamp.png",
+        "trees_dead.png",
+        "graves.png",
+        "frost_objects.png",
+        "trees_frost.png",
+        "trees_dry.png",
+        "object-layer.png",
+        "signposts.png",
+        "ruins.png",
+        "trees_swamp.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["raider", "mummy", "orc", "skeleton"],
+            "count": 8,
+            "seed": 911,
+            "apart": 10,
+            "avoid": [],
+            "within": [
+              {
+                "x": 34,
+                "y": 90,
+                "radius": 45
+              }
+            ],
+            "level": 34
+          },
+          {
+            "kinds": ["mummy", "troll", "wraith", "cultist"],
+            "count": 8,
+            "seed": 922,
+            "apart": 10,
+            "avoid": [],
+            "within": [
+              {
+                "x": 73,
+                "y": 7,
+                "radius": 45
+              }
+            ],
+            "level": 38
+          },
+          {
+            "kinds": ["warlord", "troll", "wraith"],
+            "count": 6,
+            "seed": 933,
+            "apart": 10,
+            "avoid": [],
+            "within": [
+              {
+                "x": 160,
+                "y": 7,
+                "radius": 42
+              }
+            ],
+            "level": 42
+          }
+        ]
+      },
+      "links": ["emberwaste", "drownedmoor"],
+      "levels": [34, 42]
+    },
+    "drownedmoor": {
+      "name": "The Drowned Moor",
+      "tint": "#7fa89a",
+      "map": "drownedmoor",
+      "climate": "swamp",
+      "music": null,
+      "tilesets": [
+        "lpc_terrain.png",
+        "ground_tiles.png",
+        "lpc_swamp.png",
+        "trees_dead.png",
+        "trees_frost.png",
+        "frost_objects.png",
+        "trees_dry.png",
+        "object-layer.png",
+        "ruins.png",
+        "trees_swamp.png",
+        "signposts.png"
+      ],
+      "generation": {
+        "roam": [
+          {
+            "kinds": ["bogGhoul", "hexer", "zombie", "warg"],
+            "count": 8,
+            "seed": 911,
+            "apart": 10,
+            "avoid": [],
+            "within": [
+              {
+                "x": 155,
+                "y": 61,
+                "radius": 45
+              }
+            ],
+            "level": 40
+          },
+          {
+            "kinds": ["bogGhoul", "troll", "wraith", "hexer"],
+            "count": 8,
+            "seed": 922,
+            "apart": 10,
+            "avoid": [],
+            "within": [
+              {
+                "x": 64,
+                "y": 151,
+                "radius": 45
+              }
+            ],
+            "level": 44
+          },
+          {
+            "kinds": ["troll", "warlord", "bogGhoul"],
+            "count": 6,
+            "seed": 933,
+            "apart": 10,
+            "avoid": [],
+            "within": [
+              {
+                "x": 154,
+                "y": 151,
+                "radius": 45
+              }
+            ],
+            "level": 48
+          }
+        ]
+      },
+      "links": ["rimeheart", "glasswastes"],
+      "levels": [40, 48]
     }
   }
 }

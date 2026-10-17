@@ -1480,6 +1480,220 @@
           ]
         }
       ]
+    },
+    {
+      "id": "salt_and_glass",
+      "scope": "party",
+      "title": "Salt and Glass",
+      "tagline": "Past the Emberwaste the sand has turned to glass, and the glass has begun to remember.",
+      "difficulty": 5,
+      "opening": "East of the Emberwaste the desert is not sand but glass, fused in one night by a fire nobody saw. Caravans that cross it come back with their water bright as mirrors and their drivers silent. Something there keeps a court.",
+      "ending": "The Glass Sovereign shatters, and the whole waste rings once, like a struck bell, and is quiet. The dunes will drift back over the glass in a century. Until then, the caravans cross with their eyes open, and their drivers talk.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Ember Gate",
+            "zone": "glasswastes",
+            "count": 1
+          },
+          "tell": "Cross out of the Emberwaste to the pale edge of {area}. Go to the gate, and see where the ash gives way to glass.",
+          "aftermath": [
+            "The ash stops at a line as straight as a ruler. Beyond it, the ground is white and smooth, and every footprint stays, bright as a coin."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "raider",
+            "count": 5,
+            "zone": "glasswastes"
+          },
+          "tell": "Raiders in glass-bright armour ride the Salt Flats of {area}, taxing whoever crosses. Ride them down.",
+          "aftermath": [
+            "Their armour is glass, grown on them, and it rings when struck. They did not buy it. They were given it, by someone who wants them seen."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Salt Flats",
+            "zone": "glasswastes",
+            "count": 1
+          },
+          "tell": "The flats of {area} are where the caravans vanish. Walk out to the middle, and look at the ground.",
+          "aftermath": [
+            "Under the glass, inches down, the shapes of wagons, oxen and drivers, fused mid-stride. The flats are a collection."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "mummy",
+            "count": 4,
+            "zone": "glasswastes"
+          },
+          "tell": "Sand-wrapped sentries pace the glass of {area}, and cast no shadows. Put them down.",
+          "aftermath": [
+            "Their wrappings are woven of the caravans' own canvas. Someone is dressing the dead in the lost, and standing them in rows."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Buried Caravan",
+            "zone": "glasswastes",
+            "count": 1
+          },
+          "tell": "The biggest caravan of all lies in {area}. Go to the ring of broken pillars, and see what the king keeps there.",
+          "aftermath": [
+            "Pillars ring a wagon of black glass. Inside, a throne of caravan chests, and carved on a pillar, a name from the Barrow ledgers."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "troll",
+            "count": 3,
+            "zone": "glasswastes"
+          },
+          "tell": "Glass-skinned trolls haul the king's treasure through {area}. Strike them down, and take the road.",
+          "aftermath": [
+            "They shatter, and under the glass are plain trolls, weeping. The glass was grown on them alive. They have asked to be let out ever since."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Glass Citadel",
+            "zone": "glasswastes",
+            "count": 1
+          },
+          "tell": "The road ends at the citadel in {area}. Climb to its gate, and meet the court.",
+          "aftermath": [
+            "The citadel's floor is a lake of white fire gone still. On the throne, a figure in a crown of the same glass is rising."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "glassSovereign",
+            "count": 1,
+            "zone": "glasswastes"
+          },
+          "tell": "The Glass Sovereign rises from his glass throne in {area}, crowned in what the fire made of his kingdom. End his reign.",
+          "aftermath": [
+            "The crown cracks first, then the sky seems to, and he sighs, a sound like wind in a bottle. 'At last,' he says. 'Something that breaks.'"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "the_sunken_crown",
+      "scope": "party",
+      "title": "The Sunken Crown",
+      "tagline": "A kingdom drowned a thousand years ago, and its king never agreed to it.",
+      "difficulty": 5,
+      "opening": "East of Rimeheart the land goes under: black pools, standing towers, a throne hall up to its knees in water. The drowned kingdom's king has been seen at the surface, wearing a crown and wading toward the road.",
+      "ending": "The Drowned King sinks, crown last, and the moor goes still for the first time in a thousand years. The towers still stand, but they look like towers now, not a court. Somewhere under the pools, a kingdom agrees to be over.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Rimeheart Gate",
+            "zone": "drownedmoor",
+            "count": 1
+          },
+          "tell": "Cross out of the white to the first black water of {area}. Go to the gate, and read the line where frost meets flood.",
+          "aftermath": [
+            "The snow stops, and the water begins, with no mud between. A signpost stands in the pool, and its arm points down."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "bogGhoul",
+            "count": 5,
+            "zone": "drownedmoor"
+          },
+          "tell": "Drowned footmen in rotted livery wade the shallows of {area}. Send them back under.",
+          "aftermath": [
+            "Each wears the same livery, a gold crown on blue, bleached to grey. They are still on duty. They have been on duty for a thousand years."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Black Pools",
+            "zone": "drownedmoor",
+            "count": 1
+          },
+          "tell": "The pools of {area} are all one water. Walk their bank, and see what lies at the bottom.",
+          "aftermath": [
+            "The pools are clear as ink and deep as wells. Down at the bottom, a road, paved, and on the road, lamp-posts, lit, in a row going the same way as you."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "hexer",
+            "count": 4,
+            "zone": "drownedmoor"
+          },
+          "tell": "The King's witches keep the pools in {area}, singing the water high. Silence them.",
+          "aftermath": [
+            "A hymn is carved on a post: 'Rise, rise, the king's drowned court.' They are not drowning the land. They are raising a kingdom."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Sunken Spire",
+            "zone": "drownedmoor",
+            "count": 1
+          },
+          "tell": "The tallest tower stands alone in {area}. Wade to it, and see what the court keeps in its cellar.",
+          "aftermath": [
+            "The tower's door is under the water, and its top is a bell chamber. The bell is alive with a sound you cannot hear, only feel in the teeth: a summons."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "troll",
+            "count": 3,
+            "zone": "drownedmoor"
+          },
+          "tell": "The King's guard, great trolls in green iron, stand in the shallows of {area}. Take them down.",
+          "aftermath": [
+            "The last guard drops a key of drowned gold. His breastplate reads: Captain of the Gate. He guarded it from the day it went under."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Drowned Throne",
+            "zone": "drownedmoor",
+            "count": 1
+          },
+          "tell": "The throne hall rises from the water in {area}. Wade in, and hear the court assemble.",
+          "aftermath": [
+            "The hall is full: the drowned, waist-deep, in ranks, every face turned to the throne. A voice from the water says: 'The audience is granted.'"
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "drownedKing",
+            "count": 1,
+            "zone": "drownedmoor"
+          },
+          "tell": "The Drowned King rises from the water of {area}, crowned in weeds, and holds his court for the last time. End it.",
+          "aftermath": [
+            "He sinks, crown last, and says only: 'Dismissed.' The drowned lower their heads together and go under, like a tide finally told it may."
+          ]
+        }
+      ]
     }
   ],
   "epilogue": [

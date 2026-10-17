@@ -12,7 +12,7 @@ import { heroModel } from './dmBoss';
 import { goldScale } from './dmQuests';
 
 /** The highest level a zone may be banded to (the heroes' own curve is not tested beyond it). */
-export const MAX_BAND = 40;
+export const MAX_BAND = 50;
 
 /** How much a blow of a kind takes of a typical hero's health, kept within what feels fair (a real threat, never a one-hit end). */
 const BLOW = { min: 0.08, max: 0.3 };

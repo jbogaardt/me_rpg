@@ -1448,6 +1448,30 @@
         }
       ],
       "choices": []
+    },
+    {
+      "node_id": "glasswastes",
+      "biome_type": "glasswastes",
+      "entities": [
+        {
+          "entity": "glassSovereign",
+          "x": 91,
+          "y": 41
+        }
+      ],
+      "choices": []
+    },
+    {
+      "node_id": "drownedmoor",
+      "biome_type": "drownedmoor",
+      "entities": [
+        {
+          "entity": "drownedKing",
+          "x": 86,
+          "y": 89
+        }
+      ],
+      "choices": []
     }
   ]
 }

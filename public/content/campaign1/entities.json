@@ -1080,6 +1080,58 @@
         "recover": 1.0,
         "stagger": 0.03
       }
+    },
+    "glassSovereign": {
+      "type": "mob",
+      "boss": true,
+      "name": "The Glass Sovereign",
+      "notes": "The Glasswastes' boss (saga 'salt_and_glass'): a king of the sand-fused dead, still wearing his crown of fused glass. Made for a level 40 hero.",
+      "scale": 1.8,
+      "sprite": {
+        "body": "body.mummy"
+      },
+      "stats": {
+        "hp": 3137,
+        "attack": 370,
+        "defense": 54,
+        "speed": 58,
+        "sight": 224,
+        "xp": 1012,
+        "gold": 210
+      },
+      "behavior": {
+        "windup": 0.65,
+        "recover": 0.95,
+        "stagger": 0.03
+      }
+    },
+    "drownedKing": {
+      "type": "mob",
+      "boss": true,
+      "name": "The Drowned King",
+      "notes": "The Drowned Moor's boss (saga 'the_sunken_crown'): a troll-king who took the sinking kingdom's throne and its water with it. Made for a level 46 hero.",
+      "scale": 1.9,
+      "sprite": {
+        "body": "body.green",
+        "head": "head.troll",
+        "legs": "legs.pants_brown",
+        "feet": "feet.plate_iron",
+        "cape": "cape.navy"
+      },
+      "stats": {
+        "hp": 3973,
+        "attack": 461,
+        "defense": 68,
+        "speed": 50,
+        "sight": 216,
+        "xp": 1248,
+        "gold": 240
+      },
+      "behavior": {
+        "windup": 0.7,
+        "recover": 1.0,
+        "stagger": 0.03
+      }
     }
   }
 }

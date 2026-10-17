@@ -1083,6 +1083,142 @@
       "look": {
         "weapon": "weapon.bow_great"
       }
+    },
+    "eclipseSword": {
+      "name": "Eclipse Sword",
+      "value": 6600,
+      "slot": "weapon",
+      "attack": 29,
+      "look": {
+        "weapon": "weapon.arming_silver"
+      }
+    },
+    "eclipseShield": {
+      "name": "Eclipse Shield",
+      "value": 3500,
+      "slot": "offhand",
+      "defense": 15,
+      "look": {
+        "shield": "shield.round_silver"
+      }
+    },
+    "eclipseHelm": {
+      "name": "Eclipse Helm",
+      "value": 3700,
+      "slot": "head",
+      "defense": 14,
+      "look": {
+        "headwear": "headwear.greathelm"
+      }
+    },
+    "eclipsePlate": {
+      "name": "Eclipse Plate",
+      "value": 5800,
+      "slot": "chest",
+      "defense": 21,
+      "look": {
+        "torso": "torso.plate_gold"
+      }
+    },
+    "eclipseGreaves": {
+      "name": "Eclipse Greaves",
+      "value": 2900,
+      "slot": "legs",
+      "defense": 13,
+      "look": {
+        "legs": "legs.plate_steel"
+      }
+    },
+    "eclipseBoots": {
+      "name": "Eclipse Boots",
+      "value": 2600,
+      "slot": "feet",
+      "defense": 13,
+      "look": {
+        "feet": "feet.plate_steel"
+      }
+    },
+    "eclipseBow": {
+      "name": "Eclipse Bow",
+      "value": 6200,
+      "slot": "weapon",
+      "attack": 30,
+      "ranged": {
+        "speed": 380,
+        "range": 320,
+        "cooldown": 0.5
+      },
+      "look": {
+        "weapon": "weapon.bow_great"
+      }
+    },
+    "worldforgedSword": {
+      "name": "Worldforged Sword",
+      "value": 9000,
+      "slot": "weapon",
+      "attack": 34,
+      "look": {
+        "weapon": "weapon.arming_silver"
+      }
+    },
+    "worldforgedShield": {
+      "name": "Worldforged Shield",
+      "value": 4800,
+      "slot": "offhand",
+      "defense": 18,
+      "look": {
+        "shield": "shield.kite_gray"
+      }
+    },
+    "worldforgedHelm": {
+      "name": "Worldforged Helm",
+      "value": 5200,
+      "slot": "head",
+      "defense": 17,
+      "look": {
+        "headwear": "headwear.greathelm"
+      }
+    },
+    "worldforgedPlate": {
+      "name": "Worldforged Plate",
+      "value": 8000,
+      "slot": "chest",
+      "defense": 25,
+      "look": {
+        "torso": "torso.plate_gold"
+      }
+    },
+    "worldforgedGreaves": {
+      "name": "Worldforged Greaves",
+      "value": 4000,
+      "slot": "legs",
+      "defense": 15,
+      "look": {
+        "legs": "legs.plate_steel"
+      }
+    },
+    "worldforgedBoots": {
+      "name": "Worldforged Boots",
+      "value": 3600,
+      "slot": "feet",
+      "defense": 15,
+      "look": {
+        "feet": "feet.plate_steel"
+      }
+    },
+    "worldforgedBow": {
+      "name": "Worldforged Bow",
+      "value": 8500,
+      "slot": "weapon",
+      "attack": 35,
+      "ranged": {
+        "speed": 380,
+        "range": 320,
+        "cooldown": 0.5
+      },
+      "look": {
+        "weapon": "weapon.bow_great"
+      }
     }
   },
   "shops": {
@@ -1115,7 +1251,11 @@
         "dreadSword",
         "dreadShield",
         "starforgedSword",
-        "starforgedShield"
+        "starforgedShield",
+        "eclipseSword",
+        "eclipseShield",
+        "worldforgedSword",
+        "worldforgedShield"
       ],
       "buys": ["blade", "offhand", "gem"]
     },
@@ -1148,7 +1288,13 @@
         "dreadGreaves",
         "starforgedHelm",
         "starforgedPlate",
-        "starforgedGreaves"
+        "starforgedGreaves",
+        "eclipseHelm",
+        "eclipsePlate",
+        "eclipseGreaves",
+        "worldforgedHelm",
+        "worldforgedPlate",
+        "worldforgedGreaves"
       ],
       "buys": ["head", "chest", "legs"]
     },
@@ -1175,7 +1321,11 @@
         "dreadBoots",
         "dreadBow",
         "starforgedBoots",
-        "starforgedBow"
+        "starforgedBow",
+        "eclipseBoots",
+        "eclipseBow",
+        "worldforgedBoots",
+        "worldforgedBow"
       ],
       "buys": ["bow", "feet", "cape"]
     },
@@ -1462,6 +1612,48 @@
     },
     "starforgedBow": {
       "item": "starforgedBow"
+    },
+    "eclipseSword": {
+      "item": "eclipseSword"
+    },
+    "eclipseShield": {
+      "item": "eclipseShield"
+    },
+    "eclipseHelm": {
+      "item": "eclipseHelm"
+    },
+    "eclipsePlate": {
+      "item": "eclipsePlate"
+    },
+    "eclipseGreaves": {
+      "item": "eclipseGreaves"
+    },
+    "eclipseBoots": {
+      "item": "eclipseBoots"
+    },
+    "eclipseBow": {
+      "item": "eclipseBow"
+    },
+    "worldforgedSword": {
+      "item": "worldforgedSword"
+    },
+    "worldforgedShield": {
+      "item": "worldforgedShield"
+    },
+    "worldforgedHelm": {
+      "item": "worldforgedHelm"
+    },
+    "worldforgedPlate": {
+      "item": "worldforgedPlate"
+    },
+    "worldforgedGreaves": {
+      "item": "worldforgedGreaves"
+    },
+    "worldforgedBoots": {
+      "item": "worldforgedBoots"
+    },
+    "worldforgedBow": {
+      "item": "worldforgedBow"
     }
   }
 }
