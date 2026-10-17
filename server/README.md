@@ -65,10 +65,14 @@ different version away), so point it at the site they use. Against a local build
   any failure or timeout (30 s) falls back to the mock. Player words go in as quoted data, never as instructions.
 - The DM's voice (`PERSONA` in `narrate.ts`) is a gentle wizard: warm, dry, cryptic, never an alert. The mock lines speak
   in it; a creative model is given it as its system prompt.
-- `router.ts` answers a card (`decideCard`): a fast router answers one choice question over the card's options (plus
-  the story's roads for a player's words, and "nothing"); at confidence 0.80 or more its pick is taken for a player's words, and at 0.55 for a director's card (whose
-  options are described by `HINTS` and which come with the party's health, so Jev decides most of them and Claude is kept for words). Otherwise a
-  creative fallback picks and writes the reply; its JSON is checked before use, so it can only choose what was offered.
+- `router.ts` answers a card (`decideCard`). **A player's typed words always go to the creative writer (Haiku) and its reply
+  is always sent; Jev never votes "nothing" on them.** The writer is shown the party's task, the running epic, the DM's
+  recent replies and the card's options (a pick it makes is checked against them). A reply that repeats a recent one
+  (`isRepeat`), says "follow the way", is empty or is a guess (`sure` under 0.5) is asked for once more with the reason,
+  then replaced by a plain answer (the saga and task). Jev does the passive work: one choice question over a
+  director's card's options (taken at confidence 0.55, `HINTS` and the party's health describe them), and events with no
+  player words. A card with no options skips Jev (nothing to choose). While an epic or quest runs "give them a quest" is
+  not offered. The writer's JSON is checked before use, so it can only choose what was offered.
 - The router is TypeSafe's Jev (`jev.ts`, the `@typesafe-ai/sdk` client) when `TYPESAFE_API_KEY` is set, and a
   word-matching mock (`mocks.ts`) otherwise; the bot says which at start. `TYPESAFE_DEFAULT_MODEL` pins a model
   (`jev-latest` by default). The creative fallback is still the mock until a model is chosen for it.

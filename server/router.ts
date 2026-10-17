@@ -7,6 +7,11 @@
 // 2. Otherwise a creative fallback (planned: Claude Haiku) improvises: an option and words for whoever asked. Its JSON is
 //    checked here first (`readImprovised`), so a bad answer can only lose its pick, never reach the game.
 //
+// A player's typed words are different: they ALWAYS go to the creative writer and its reply is always sent, so a player
+// is never left unanswered (Jev only does the passive work: a card's options, and events with no player words). A reply
+// that repeats a recent one, uses the banned phrasing or is a low-confidence guess is asked for again once, then replaced
+// by a plain answer (the party's task) rather than sent.
+//
 // Neither may invent a world: an answer is only ever something the page offered, which the page checks again and sends
 // to friends through the usual messages. Both services are interfaces with mocks (mocks.ts) until the real APIs are chosen.
 
@@ -32,18 +37,6 @@ export const HOLD_REPLIES = [
   'A fair question. I am turning it over.',
   'Patience, friend. The answer is coming.',
 ];
-/** Other ways of saying the stock replies a card offers, keyed by the reply's own words. */
-const SAID_ALSO: Record<string, string[]> = {
-  'On my way.': ['On my way.', 'Coming, friend.', 'I will be with you shortly.', 'Hold there, I am coming.'],
-  'Give me a moment.': ['Give me a moment.', 'One moment.', 'Bear with me a breath.', 'Soon. Let me finish this.'],
-  'Not right now.': ['Not right now.', 'Not yet, friend.', 'That must wait a while.', 'Later, perhaps. Not now.'],
-  'Good idea. Doing it.': [
-    'Good idea. Doing it.',
-    'Wisely said. So be it.',
-    'Yes, let us do that.',
-    'Done, as you ask.',
-  ],
-};
 const phrases = new Phrasebook();
 /** One of the holding replies, not the one said last. */
 export const holdReply = (): string => phrases.pick('hold', HOLD_REPLIES);
@@ -110,6 +103,8 @@ export interface Table {
   /** The party's current task as their tracker says it, when there is one. */
   task?: string | null;
   story: { title: string; placed: string[]; total: number; options: Road[]; complete: boolean } | null;
+  /** The epic being told, as the page says it (title, current chapter of total), when one is running. */
+  epicNow?: { title: string; step: number; total: number } | null;
 }
 
 /** What a question is asked about: the card, the player's words (if theirs) and the table, as named JSON fields. */
@@ -120,7 +115,7 @@ export interface QuestionState {
   /** The player's own words or ask, when the card is theirs. */
   playerWords: string | null;
   /** The table as the router needs it: where, how many, the story. No slots, offsets or ids to wade through. */
-  table: { area: string; questActive: boolean; story: Table['story'] };
+  table: { area: string; questActive: boolean; story: Table['story']; epic?: Table['epicNow'] };
 }
 
 /** A `choice` question: the state, the question, and the ids it may answer. */
@@ -148,6 +143,10 @@ export interface ImproviseRequest {
   /** A friend's words or ask, when the card is theirs. */
   words: string | null;
   options: Option[];
+  /** The last things the DM said, so the writer does not say them again. */
+  recent?: string[];
+  /** Why the last try was refused (a repeat, banned phrasing, a guess), when this is a second go. */
+  refused?: string;
 }
 
 export interface CreativeFallback {
@@ -174,8 +173,10 @@ export function wordsOf(card: Card): string | null {
 
 /** What may be answered: the card's own options (not its canned replies: the bot writes its own), roads, and none. */
 export function optionsFor(card: Card, table: Table): Option[] {
+  // One epic at a time: while one runs, "give them a quest" is not offered (the page refuses a second one as well).
+  const running = !!table.epicNow || table.questing;
   const own = card.options
-    .filter((o) => !o.id.startsWith('r:') && o.id !== NONE)
+    .filter((o) => !o.id.startsWith('r:') && o.id !== NONE && !(running && o.id === '@quest'))
     .map((o) => {
       const hint = HINTS[`${card.kind}/${o.id.split(':')[0]}`];
       return hint ? { ...o, hint } : o;
@@ -214,7 +215,12 @@ export function cardQuestion(card: Card, table: Table): ChoiceQuestion {
       card: { kind: card.kind, title: card.title, note: card.note },
       party: partyHealth(table),
       playerWords: words,
-      table: { area: table.area, questActive: table.questing, story: table.story },
+      table: {
+        area: table.area,
+        questActive: table.questing,
+        story: table.story,
+        ...(table.epicNow ? { epic: table.epicNow } : {}),
+      },
     },
     question: words
       ? 'You are the Dungeon Master of a co-op adventure. A player said `playerWords` (see `card` for how it reached ' +
@@ -226,7 +232,10 @@ export function cardQuestion(card: Card, table: Table): ChoiceQuestion {
 }
 
 /** The fallback's answer, if usable: a pick only when it is an option offered, a reply only when it is words. */
-export function readImprovised(raw: unknown, options: Option[]): { pick: string | null; reply: string | null } | null {
+export function readImprovised(
+  raw: unknown,
+  options: Option[],
+): { pick: string | null; reply: string | null; sure?: number } | null {
   let value = raw;
   if (typeof value === 'string') {
     try {
@@ -236,11 +245,43 @@ export function readImprovised(raw: unknown, options: Option[]): { pick: string 
     }
   }
   if (!value || typeof value !== 'object') return null;
-  const { pick, reply } = value as { pick?: unknown; reply?: unknown };
+  const { pick, reply, sure } = value as { pick?: unknown; reply?: unknown; sure?: unknown };
   const known = typeof pick === 'string' && pick !== NONE && options.some((o) => o.id === pick) ? pick : null;
   const words = typeof reply === 'string' && reply.trim() ? reply.trim().slice(0, MAX_REPLY) : null;
   if (!known && !words && pick !== NONE) return null;
-  return { pick: known, reply: words };
+  return { pick: known, reply: words, ...(typeof sure === 'number' && sure >= 0 && sure <= 1 ? { sure } : {}) };
+}
+
+/** Phrasing the team does not want from the DM ("Follow the way"). */
+export const BANNED = /\bfollow (the|this) (way|path|road)\b/i;
+/** Below this the writer's own confidence makes its reply a guess, not an answer. */
+export const SURE_ENOUGH = 0.5;
+/** How alike two replies may be (shared words over the shorter one) before the newer is a repeat. */
+export const REPEAT_AT = 0.6;
+const wordsIn = (text: string): Set<string> => new Set(text.toLowerCase().match(/[a-z']{3,}/g) ?? []);
+
+/** Is this reply (nearly) one the DM has already said lately? */
+export function isRepeat(reply: string, recent: string[]): boolean {
+  const mine = wordsIn(reply);
+  if (!mine.size) return false;
+  return recent.some((old) => {
+    const theirs = wordsIn(old);
+    if (!theirs.size) return false;
+    let shared = 0;
+    for (const w of mine) if (theirs.has(w)) shared++;
+    return shared / Math.min(mine.size, theirs.size) >= REPEAT_AT;
+  });
+}
+
+/** Why a writer's answer may not be sent as it is, or null when it can be. */
+export function refusal(made: { reply: string | null; sure?: number }, recent: string[]): string | null {
+  if (!made.reply) return 'you said nothing: answer the player in words';
+  if (BANNED.test(made.reply)) return 'never say "follow the way" or "follow the path": name the place and what to do';
+  if (isRepeat(made.reply, recent))
+    return 'that repeats something you already said: say something new, or answer more plainly';
+  if (made.sure !== undefined && made.sure < SURE_ENOUGH)
+    return 'you were unsure: answer plainly only what you know, or say what you need to know';
+  return null;
 }
 
 /** A pick split into a card option or a road. */
@@ -249,46 +290,76 @@ function moveOf(source: Move['source'], id: string | null, reply: string | null,
   return { source, pick: road ? null : id, road, reply, confidence };
 }
 
-/** A short acknowledgement for a friend whose ask the router settled. */
-/** What the DM does to the world is felt, not announced: these picks get no spoken answer. */
-const SILENT = new Set(['ease', 'heat', 'hint', 'close']);
-function ack(option: Option | undefined): string | null {
-  if (option && SILENT.has(option.id)) return null;
-  if (!option) return phrases.pick('heard', ['Heard.', 'I hear you.', 'Noted, friend.']);
-  const said = `${option.label.replace(/^Reply: /, '').replace(/\.$/, '')}.`;
-  return phrases.pick(said, SAID_ALSO[said] ?? [said]);
+/** What a player hears when the writer could only guess or repeat itself: the party's task, plainly, else a holding word. */
+function plainReply(table: Table): string {
+  if (table.epicNow) {
+    const { title, step, total } = table.epicNow;
+    return `Your saga is “${title}”, chapter ${step} of ${total}.${table.task ? ` ${table.task}` : ''}`;
+  }
+  return table.task ? `Your task now: ${table.task}` : holdReply();
 }
 
-/** Decide one card. Never throws: a failing service falls through to the next tier. */
+/**
+ * A player's typed words: always the writer, always a reply. Jev does not vote on these. The writer's answer is asked for
+ * again once if it repeats, guesses or uses banned phrasing, then a plain reply is sent instead.
+ */
+async function answerWords(
+  card: Card,
+  table: Table,
+  words: string,
+  options: Option[],
+  fallback: CreativeFallback,
+  recent: string[],
+): Promise<Move> {
+  let refused: string | undefined;
+  let made: ReturnType<typeof readImprovised> = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const raw = await fallback.improvise({ card, table, words, options, recent, ...(refused ? { refused } : {}) });
+      made = readImprovised(raw, options);
+    } catch (err) {
+      console.warn('fallback failed', err);
+      made = null;
+      break;
+    }
+    refused = made ? (refusal(made, recent) ?? undefined) : 'answer in the JSON form asked for';
+    if (!refused) break;
+  }
+  if (!made) return moveOf('silent', null, holdReply(), null);
+  const confidence = made.sure ?? null;
+  return moveOf('fallback', made.pick, refused ? plainReply(table) : made.reply, confidence);
+}
+
+/**
+ * Decide one card. Never throws: a failing service falls through to the next tier. A player's typed words always go to the
+ * writer and always get a reply (`answerWords`); a card with no options skips the router (it has nothing to choose).
+ */
 export async function decideCard(
   card: Card,
   table: Table,
   services: { router: ChoiceRouter; fallback: CreativeFallback },
+  recent: string[] = [],
 ): Promise<Move> {
   const question = cardQuestion(card, table);
   const words = wordsOf(card);
+  if (words) return answerWords(card, table, words, question.options, services.fallback, recent);
+  if (!question.options.length) return moveOf('silent', null, null, null); // nothing to choose and nobody to answer
   let confidence: number | null = null;
   try {
     const answer = await services.router.choose(question);
     confidence = answer.confidence;
     const option = question.options.find((o) => o.id === answer.choice);
-    if (option && answer.confidence >= (words ? CONFIDENCE : CONFIDENCE_CARD)) {
-      if (option.id !== NONE) return moveOf('router', option.id, words ? ack(option) : null, confidence);
-      if (!words) return moveOf('router', null, null, confidence); // nothing to do and nobody to answer
-    }
+    if (option && answer.confidence >= CONFIDENCE_CARD)
+      return moveOf('router', option.id === NONE ? null : option.id, null, confidence);
   } catch (err) {
     console.warn('router failed, improvising', err);
   }
   try {
-    const raw = await services.fallback.improvise({ card, table, words, options: question.options });
+    const raw = await services.fallback.improvise({ card, table, words, options: question.options, recent });
     const made = readImprovised(raw, question.options);
-    if (made) {
-      // Words with no pick and nobody who asked ("Rise, friend" after choosing to do nothing) would say the opposite of what is done.
-      const reply = words ? (made.reply ?? holdReply()) : null; // a director's card is acted on, not announced
-      return moveOf('fallback', made.pick, reply, confidence);
-    }
+    if (made) return moveOf('fallback', made.pick, null, confidence); // a director's card is acted on, not announced
   } catch (err) {
     console.warn('fallback failed', err);
   }
-  return moveOf('silent', null, words ? holdReply() : null, confidence);
+  return moveOf('silent', null, null, confidence);
 }

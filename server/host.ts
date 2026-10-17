@@ -84,6 +84,8 @@ class Dm {
   private lastCode: string | null = null;
   /** The card last answered: met again unchanged, the answer did nothing, so it is sent away. */
   private answered = '';
+  /** The DM's last words to players (replies and narration), so the writer does not repeat itself. */
+  private said: string[] = [];
   private latest: PageState | null = null;
   /** The last pressure the DM set (turn up the heat / ease off), so the opposite card is not answered straight away. */
   private pressure: Pressure | null = null;
@@ -233,6 +235,7 @@ class Dm {
     if (!line) return false;
     m.spoke = this.clock.now;
     log(`narrating (${beat.kind}):`, line);
+    this.said = [...this.said, line].slice(-RECENT);
     await this.say(line);
     if (shouldConjure(beat, this.made, this.clock.now - this.lastMade)) await this.conjure(s);
     return true;
@@ -304,9 +307,12 @@ class Dm {
       await this.call('dismiss');
       return;
     }
-    const move = await decideCard(card, s, this.services);
+    const move = await decideCard(card, s, this.services, this.said);
     log(`card “${card.title}”${card.note ? ` (${card.note})` : ''} →`, describe(move, card));
-    if (move.reply) await this.call('reply', move.reply);
+    if (move.reply) {
+      this.said = [...this.said, move.reply].slice(-RECENT);
+      await this.call('reply', move.reply);
+    }
     if (move.road) {
       const chosen = await this.call('choose', move.road);
       if (!chosen.ok) log('the page refused the road:', chosen.note);
@@ -339,6 +345,9 @@ class Dm {
     this.clock.settled = [...this.friends.values()].filter((f) => f.in).length;
   }
 }
+
+/** How many of the DM's last words the writer is shown (and refused to repeat). */
+const RECENT = 8;
 
 function describe(move: Move, card: Card): string {
   const label = card.options.find((o) => o.id === move.pick)?.label;

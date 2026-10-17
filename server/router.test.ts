@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { MockFallback, MockRouter } from './mocks';
 import {
-  CONFIDENCE,
   CONFIDENCE_CARD,
   HINTS,
   HOLD_REPLIES,
   NONE,
+  isRepeat,
   cardQuestion,
   decideCard,
   partyHealth,
@@ -49,10 +49,9 @@ const struggle: Card = {
 const mocks = () => ({ router: new MockRouter(() => roads), fallback: new MockFallback() });
 
 describe('decideCard', () => {
-  it('takes the road a friend asks for when the router is sure', async () => {
-    const m = await decideCard(message('I want to see the snow'), table(), mocks());
-    expect(m).toMatchObject({ source: 'router', road: 'frost/thaw', pick: null });
-    expect(m.confidence).toBeGreaterThanOrEqual(CONFIDENCE);
+  it('takes the road the writer picks for a friend', async () => {
+    const m = await decideCard(message('lets move on to the snow'), table(), mocks());
+    expect(m).toMatchObject({ source: 'fallback', road: 'frost/thaw', pick: null });
     expect(m.reply).toContain('frost');
   });
 
@@ -121,7 +120,7 @@ describe("how a director's card is asked", () => {
     expect(partyHealth({ ...t, friends: [] })).toEqual({ average: 1, lowest: 1, players: 0 });
   });
 
-  it("takes a router pick a little above a coin toss for a card, but not for a player's words", async () => {
+  it("takes a router pick a little above a coin toss for a card; a player's words skip it", async () => {
     const sure = (p: number) => ({
       choose: (q: { options: { id: string }[] }) =>
         Promise.resolve({ choice: q.options[0]!.id, confidence: p, distribution: {} }),
@@ -133,7 +132,7 @@ describe("how a director's card is asked", () => {
       router: sure(CONFIDENCE_CARD + 0.01),
       fallback,
     });
-    expect(asked.source).toBe('fallback');
+    expect(asked.source).toBe('fallback'); // typed words never go to the router
     const unsure = await decideCard(struggle, table(), { router: sure(CONFIDENCE_CARD - 0.1), fallback });
     expect(unsure.source).toBe('fallback');
   });
@@ -165,5 +164,135 @@ describe("a player's words may ask for what the bar can do", () => {
   it('turns "too many" into easing off, in plain words', () => {
     const ids = cardQuestion(message('too many mobs'), table()).options.map((o) => o.id);
     expect(ids).toEqual(expect.arrayContaining(['ease', 'heat', 'hint']));
+  });
+});
+
+/** A router that always picks `choice` with full confidence, and counts its calls. */
+const jev = (choice: string) => {
+  const calls: number[] = [];
+  return {
+    calls,
+    choose: () => (calls.push(1), Promise.resolve({ choice, confidence: 0.99, distribution: {} })),
+  };
+};
+/** A writer that answers with each of `answers` in turn (the last repeats), and records what it was asked. */
+const writer = (...answers: unknown[]) => {
+  const asked: { recent?: string[]; refused?: string }[] = [];
+  return {
+    asked,
+    improvise: (req: { recent?: string[]; refused?: string }) => {
+      asked.push(req);
+      return Promise.resolve(answers[Math.min(asked.length - 1, answers.length - 1)]);
+    },
+  };
+};
+
+describe('a typed request always reaches the writer (#36)', () => {
+  it('sends the words to the writer and the reply on, whatever Jev would have said', async () => {
+    for (const choice of [NONE, 'ease', 'road:frost/thaw']) {
+      const router = jev(choice);
+      const fallback = writer({ reply: 'The Pinefold lies north, past the mill.' });
+      const m = await decideCard(message('WHERE IS THE PINEFOLD'), table(), { router, fallback });
+      expect(fallback.asked).toHaveLength(1);
+      expect(router.calls).toHaveLength(0);
+      expect(m).toMatchObject({ source: 'fallback', reply: 'The Pinefold lies north, past the mill.', pick: null });
+    }
+  });
+
+  it('never leaves a player unanswered, even when the writer gives only a pick or fails', async () => {
+    const picked = await decideCard(message('im stuck'), table(), {
+      router: jev(NONE),
+      fallback: writer({ pick: 'hint' }),
+    });
+    expect(picked.reply).toBeTruthy();
+    const failed = await decideCard(message('im stuck'), table(), {
+      router: jev(NONE),
+      fallback: { improvise: () => Promise.reject(new Error('down')) },
+    });
+    expect(HOLD_REPLIES).toContain(failed.reply);
+  });
+
+  it('still lets Jev handle a card with no player words', async () => {
+    const router = jev('ease');
+    const m = await decideCard(struggle, table(), { router, fallback: writer({}) });
+    expect(router.calls).toHaveLength(1);
+    expect(m).toMatchObject({ source: 'router', pick: 'ease', reply: null });
+  });
+});
+
+describe('a card with no options skips Jev (#38)', () => {
+  it('does not ask the router a choice with no criteria', async () => {
+    const router = jev('x');
+    const empty: Card = { kind: 'epic', title: 'An epic quest is running', note: '', options: [] };
+    const m = await decideCard(empty, table(), { router, fallback: writer({ pick: 'x' }) });
+    expect(router.calls).toHaveLength(0);
+    expect(m).toMatchObject({ source: 'silent', pick: null, reply: null });
+  });
+});
+
+describe('a running epic is answered from, never replaced (#40)', () => {
+  const running = { ...table(), questing: true, epicNow: { title: 'The Drowned Lamp', step: 2, total: 4 } };
+  it('does not offer "give them a quest" while an epic runs', () => {
+    expect(cardQuestion(message('what is my quest'), table()).options.map((o) => o.id)).toContain('@quest');
+    expect(cardQuestion(message('what is my quest'), running).options.map((o) => o.id)).not.toContain('@quest');
+  });
+
+  it('hands the writer the running epic, and answers from it when the writer only guesses', async () => {
+    const fallback = writer({ reply: 'Something about quests.', pick: '@quest', sure: 0.2 });
+    const m = await decideCard(
+      message('what is my quest DM'),
+      { ...running, task: 'Find the lamp' },
+      { router: jev(NONE), fallback },
+    );
+    expect(cardQuestion(message('x'), running).state.table.epic).toEqual(running.epicNow);
+    expect(m.reply).toContain('The Drowned Lamp');
+    expect(m.reply).toContain('chapter 2 of 4');
+  });
+});
+
+describe('the writer is not allowed to repeat itself or guess (#41)', () => {
+  it('spots near-duplicate replies', () => {
+    const old = ['The drowned priest left grey ash on the altar steps.'];
+    expect(isRepeat('The drowned priest left grey ash upon the altar steps!', old)).toBe(true);
+    expect(isRepeat('Take the east road to the mill.', old)).toBe(false);
+    expect(isRepeat('', old)).toBe(false);
+    expect(isRepeat('anything at all', [])).toBe(false);
+  });
+
+  it('asks again once with the recent lines and the reason, and sends the better answer', async () => {
+    const recent = ['The drowned priest left grey ash on the altar steps.'];
+    const fallback = writer(
+      { reply: 'The drowned priest left grey ash on the altar.' },
+      { reply: 'Cross the bridge, the shrine is past the mill.' },
+    );
+    const m = await decideCard(message('where do I go'), table(), { router: jev(NONE), fallback }, recent);
+    expect(fallback.asked.map((a) => a.recent)).toEqual([recent, recent]);
+    expect(fallback.asked[1]?.refused).toContain('repeats');
+    expect(m.reply).toBe('Cross the bridge, the shrine is past the mill.');
+  });
+
+  it('falls back to a plain answer when it repeats twice, and never sends "Follow the way"', async () => {
+    const recent = ['Grey ash lies on the altar steps.'];
+    const stuck = writer({ reply: 'Grey ash lies on the altar steps.' });
+    const again = await decideCard(
+      message('hm'),
+      { ...table(), task: 'Clear the mill' },
+      { router: jev(NONE), fallback: stuck },
+      recent,
+    );
+    expect(again.reply).toBe('Your task now: Clear the mill');
+    const banned = writer({ reply: 'Follow the way, friend.' });
+    const m = await decideCard(message('hm'), table(), { router: jev(NONE), fallback: banned });
+    expect(banned.asked).toHaveLength(2);
+    expect(m.reply).not.toMatch(/follow the way/i);
+  });
+
+  it('does not send a low-confidence guess as an answer', async () => {
+    const fallback = writer(
+      { reply: 'You want the Kettle Hat.', sure: 0.33 },
+      { reply: 'Which P2 do you mean?', sure: 0.9 },
+    );
+    const m = await decideCard(message('point me to P2'), table(), { router: jev(NONE), fallback });
+    expect(m.reply).toBe('Which P2 do you mean?');
   });
 });

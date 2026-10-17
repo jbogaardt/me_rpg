@@ -281,6 +281,7 @@ describe('epics with people, on the host', () => {
     });
     if (typeof epic === 'string') throw new Error(epic);
     expect(epics.beginEpic(epic)).toEqual({ ok: true, note: '' });
+    expect(epics.beginEpic(epic)).toMatchObject({ ok: false }); // a second one is refused while one runs
     epics.update(0);
     const me = party[0] as unknown as { body: { x: number; y: number } };
     const t = arena.task as unknown as { x: number; y: number };
