@@ -1,0 +1,125 @@
+// Builds public/tilesets/ruins.png and tools/map/ruinsAtlas.ts: the ruined temples, walls, pillars and statues, cut from
+// "[LPC] Jungle Ruins" by bluecarrot16 (OGA-BY 3.0+ / CC-BY 3.0+; see CREDITS.md). The 9 MB pack is NOT in the repo:
+// download https://opengameart.org/sites/default/files/lpc-jungle-ruins.zip, unzip it anywhere and run
+//   RUINS_DIR=<dir with jungle-ruins.png and jungle-ruins.tmx> npm run ruins
+// The output is committed. Two sources are cut from: the pack's tile sheet (S: statues, pillars, arches, rubble) and the
+// buildings of the pack's own example map (M: its tile layers redrawn without the grass, so the temples, halls and walls
+// the author composed come out whole and transparent). Pieces are on the pack's own 32 px grid, so no scaling.
+// To change what is cut, edit PIECES, rerun, and use the new name in catalog.ts (RUINS).
+
+import fs from 'node:fs';
+import path from 'node:path';
+import zlib from 'node:zlib';
+import { readPng, ROOT, writePng, type Image } from './image';
+
+const DIR = process.env.RUINS_DIR;
+const OUT = path.join(ROOT, 'public/tilesets/ruins.png');
+const ATLAS = path.join(ROOT, 'tools/map/ruinsAtlas.ts');
+
+interface Piece {
+  name: string;
+  from: 'S' | 'M';
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+const S = (name: string, x: number, y: number, w: number, h: number): Piece => ({ name, from: 'S', x, y, w, h });
+const M = (name: string, x: number, y: number, w: number, h: number): Piece => ({ name, from: 'M', x, y, w, h });
+
+export const PIECES: Piece[] = [
+  M('pyramid', 448, 32, 544, 480),
+  M('temple', 640, 608, 256, 320),
+  M('hall', 288, 544, 320, 192),
+  M('hut', 96, 608, 128, 96),
+  M('wallFaces', 32, 96, 352, 96),
+  M('wallRuin', 160, 384, 224, 96),
+  M('pillarBroken', 544, 416, 32, 96),
+  S('pillar', 704, 416, 32, 128),
+  S('statueBull', 0, 928, 32, 96),
+  S('statueFace', 32, 928, 32, 96),
+  S('arch', 864, 448, 128, 96),
+  S('rubbleA', 289, 952, 30, 33),
+  S('rubbleB', 321, 951, 29, 31),
+  S('rubbleC', 361, 940, 22, 41),
+  S('rubbleD', 384, 943, 21, 39),
+  S('rubbleE', 321, 992, 31, 32),
+  S('rubbleF', 354, 992, 30, 29),
+];
+
+const WIDTH = 640;
+
+function sources(dir: string): { S: Image; M: Image } {
+  const sheet = readPng(path.join(dir, 'jungle-ruins.png'));
+  const tmx = fs.readFileSync(path.join(dir, 'jungle-ruins.tmx'), 'utf8');
+  const layers = [...tmx.matchAll(/<data encoding="base64" compression="zlib">\s*([^<]+?)\s*<\/data>/g)].map((m) => {
+    const raw = zlib.inflateSync(Buffer.from(m[1] ?? '', 'base64'));
+    return Array.from({ length: raw.length / 4 }, (_, i) => raw.readUInt32LE(i * 4) & 0x0fffffff);
+  });
+  const FIRST = 15745; // the pack's tileset in the example map (the grass terrain is a lower gid)
+  const map = { width: 1024, height: 1024, data: Buffer.alloc(1024 * 1024 * 4) };
+  // Layer 1 is the pavement; only the pyramid's body (a block of it) is wanted. Layers 2-4 are the buildings.
+  layers.forEach((ids, li) => {
+    if (li === 0) return;
+    ids.forEach((g, i) => {
+      if (g < FIRST || g >= FIRST + 1024) return;
+      const cx = (i % 32) * 32;
+      const cy = Math.floor(i / 32) * 32;
+      if (li === 1 && !(cx >= 512 && cx < 928 && cy >= 128 && cy < 480)) return;
+      const t = g - FIRST;
+      for (let y = 0; y < 32; y++) {
+        for (let x = 0; x < 32; x++) {
+          const si = ((Math.floor(t / 32) * 32 + y) * sheet.width + (t % 32) * 32 + x) * 4;
+          if (sheet.data[si + 3] === 0) continue;
+          const di = ((cy + y) * 1024 + cx + x) * 4;
+          sheet.data.copy(map.data, di, si, si + 4);
+        }
+      }
+    });
+  });
+  return { S: sheet, M: map };
+}
+
+function main() {
+  if (!DIR) throw new Error('set RUINS_DIR to the unzipped "[LPC] Jungle Ruins" folder (see the header of this file)');
+  const src = sources(DIR);
+  // Shelf packing, tallest first, so the sheet stays compact.
+  const order = [...PIECES].sort((a, b) => b.h - a.h);
+  const placed = new Map<string, { x: number; y: number }>();
+  let x = 0;
+  let y = 0;
+  let rowH = 0;
+  for (const p of order) {
+    if (x + p.w > WIDTH) {
+      x = 0;
+      y += rowH;
+      rowH = 0;
+    }
+    placed.set(p.name, { x, y });
+    x += p.w;
+    rowH = Math.max(rowH, p.h);
+  }
+  const height = Math.ceil((y + rowH) / 32) * 32;
+  const out: Image = { width: WIDTH, height, data: Buffer.alloc(WIDTH * height * 4) };
+  for (const p of PIECES) {
+    const at = placed.get(p.name);
+    if (!at) continue;
+    const from = src[p.from];
+    for (let yy = 0; yy < p.h; yy++) {
+      const si = ((p.y + yy) * from.width + p.x) * 4;
+      from.data.copy(out.data, ((at.y + yy) * WIDTH + at.x) * 4, si, si + p.w * 4);
+    }
+  }
+  writePng(OUT, out);
+  const rows = PIECES.map((p) => {
+    const at = placed.get(p.name);
+    return `  ${p.name}: { x: ${at?.x}, y: ${at?.y}, w: ${p.w}, h: ${p.h} },`;
+  });
+  fs.writeFileSync(
+    ATLAS,
+    `// Generated by tools/map/ruins.ts (\`npm run ruins\`): where each ruin piece sits on public/tilesets/ruins.png.\n// Do not edit by hand.\n\nexport const RUINS_ATLAS = {\n${rows.join('\n')}\n};\n`,
+  );
+  console.log(`ruins: ${PIECES.length} pieces on a ${WIDTH}x${height} sheet`);
+}
+
+main();

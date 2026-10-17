@@ -72,6 +72,11 @@ export default defineZone({
       ] as const
     ).entries())
       z.prop(GRAVE_CROSSES[i % GRAVE_CROSSES.length], col, row);
+    // A fallen gatehouse and two idols at the mound's foot (LPC Jungle Ruins, ruins.png).
+    z.prop('ruinWallBroken', 9, 6);
+    z.prop('ruinStatue', 6, 20);
+    z.prop('ruinStatueB', 17, 20);
+    z.prop('ruinRubbleC', 12, 20);
     pond(z, { col: 36, row: 22, w: 6, h: 5 }, { water: 'abyss' });
     pond(z, { col: 8, row: 25, w: 4, h: 2 }, { water: 'lava', shore: 'mud' });
 
