@@ -123,19 +123,19 @@ describe('parseContent', () => {
 
   it('reads the capabilities a campaign switches off, and refuses ones that are not', () => {
     const f = files();
-    (f.scenarios as { capabilities: unknown }).capabilities = { map: false, needs: false };
-    expect(parseContent(f).scenarios.capabilities).toEqual({ map: false, needs: false });
-    (f.scenarios as { capabilities: unknown }).capabilities = { jetpack: false, map: 'no' };
+    (f.scenarios as { capabilities: unknown }).capabilities = { guide: false, needs: false };
+    expect(parseContent(f).scenarios.capabilities).toEqual({ guide: false, needs: false });
+    (f.scenarios as { capabilities: unknown }).capabilities = { jetpack: false, guide: 'no' };
     const p = problems(f).join('\n');
     expect(p).toMatch(/scenarios\.json\.capabilities\.jetpack: is not a capability/);
-    expect(p).toMatch(/scenarios\.json\.capabilities\.map: must be true, false or an object of settings/);
+    expect(p).toMatch(/scenarios\.json\.capabilities\.guide: must be true, false or an object of settings/);
   });
 
   it('reads a biome’s own capabilities for its zone, but not campaign-wide ones', () => {
     const f = files();
     const biome = (f.biomes as { biomes: Record<string, { capabilities?: unknown }> }).biomes.forest!;
-    biome.capabilities = { map: false, needs: { drain: 2 } };
-    expect(parseContent(f).biomes.forest?.capabilities).toEqual({ map: false, needs: { drain: 2 } });
+    biome.capabilities = { guide: false, needs: { drain: 2 } };
+    expect(parseContent(f).biomes.forest?.capabilities).toEqual({ guide: false, needs: { drain: 2 } });
     biome.capabilities = { coop: false, needs: { drain: 99, thirst: 1 } };
     const p = problems(f).join('\n');
     expect(p).toMatch(/biomes\.forest\.capabilities\.coop: is set for the whole campaign, not per zone/);
@@ -202,12 +202,12 @@ describe('parseContent', () => {
   it('reads what a quest switches while it is taken, and refuses what is not a dial', () => {
     const f = files();
     const q = f.quests as { quests: { capabilities?: unknown }[] };
-    q.quests[0]!.capabilities = { map: false, needs: true };
-    expect(parseContent(f).quests.quests[0]?.capabilities).toEqual({ map: false, needs: true });
-    q.quests[0]!.capabilities = { coop: false, map: 'off', farming: true };
+    q.quests[0]!.capabilities = { guide: false, needs: true };
+    expect(parseContent(f).quests.quests[0]?.capabilities).toEqual({ guide: false, needs: true });
+    q.quests[0]!.capabilities = { coop: false, guide: 'off', farming: true };
     const p = problems(f).join('\n');
     expect(p).toMatch(/quests\.cull\.capabilities\.coop: must be one of/);
-    expect(p).toMatch(/quests\.cull\.capabilities\.map: must be true or false/);
+    expect(p).toMatch(/quests\.cull\.capabilities\.guide: must be true or false/);
   });
 
   it('lets a quest that switches food and water on ask for food', () => {

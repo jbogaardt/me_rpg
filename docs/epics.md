@@ -1,7 +1,7 @@
 # Epics: one quest layer for a story, a saga, a party and a hero
 
 Read this before touching `content/epics.json`, `content/story.ts`, `systems/dmEpics.ts`, `systems/dmPeople.ts`,
-`DmEpics.ts`, `DmTasks.ts`, or a campaign's `quests.json`. How the Dungeon Master fits is in `docs/dungeon-master.md`.
+`DmEpics.ts`, `DmTasks.ts`, or a campaign's `quests.json`. The DM's side is in `docs/dungeon-master.md`.
 
 ## One format
 
@@ -10,31 +10,31 @@ A campaign's story and the DM's sagas are written in one file shape (`content/st
 quest log: chapters of steps, told by the people with offer, remind and done words, objectives bound to the campaign's
 own zones, mobs and items. An epic with `"scope": "party"` (the default) is a saga the Dungeon Master tells the whole
 party. Both are `epics` of one file, so a story is written in one place whether it is played alone, online or both.
-`splitStory` turns the file into the flat form `parseQuests` has always read, so no check or engine reader changed; a
+`splitStory` turns the file into the flat form `parseQuests` has always read, so no check or reader changed; a
 flat file (random and live worlds' generators still write one) passes through. `tools/content/story.test.ts` holds the
-epic form to the old flat file, and `tools/content/migrateStory.ts` moved the sandbox campaigns over.
+epic form to the old flat file; `migrateStory.ts` moved the sandbox campaigns over.
 
 ## One set of rules
 
-Every quest, whoever holds it, is a `Quest` (`quests.ts`) counted by the same rules: `progressIn`, `killIn`, `visitIn`,
-`siteOpenIn`, `siteIn` read and move a `QuestLog` for a `Quest`. A hero's quest is the story's quest in their own log (the
+Every quest, whoever holds it, is a `Quest` (`quests.ts`) counted by the same rules (`progressIn`, `killIn`, `visitIn`,
+`siteOpenIn`, `siteIn`) on a `QuestLog`. A hero's quest is the story's quest in their own log (the
 campaign's people hand it out and take it back: `talk`); the party's quest is a DM step made into a `Quest` (`questOf`, from
 what the land holds) in the party's one log (`TaskBook`, `partyLog`): the **holder** and the **trigger** differ, the rules do
-not, so a fix to what counts as a kill, a site or a visit is made once. A relic is a gather of the one `relic` site.
-The wires are unchanged: a hero's log rides `pack` as `[stage, taken, progress]`; the party's quest rides `dm` as a `TaskView`.
+not, so a fix to what counts is made once. A relic is a gather of one `relic` site.
+The wires are unchanged: a hero's log rides `pack`; the party's quest rides `dm` as a `TaskView`.
 
 ## DM epics (`scope: party`)
 
 An epic is a saga of steps as **data**, with no land and no content id: a step is a `hop` from where the saga starts, a
 person has a name and a look word. It is planned onto whatever world is played by walking its zone links, so one epic runs
-in any biome that has the lands; each carries a gauge (difficulty, length, reach). The built-in sagas are
+in any biome with the lands; each has a gauge (difficulty, length, reach). The built-in sagas are
 `content/epics.json`; a campaign's `quests.json` may hold more, and an AI may write one (`DmBot.epic`): `parseEpic` checks
-all of them as strictly as a world entry (an unknown person, a person met twice or never, too long a line).
+all of them as strictly as a world entry (unknown person, a person met twice or never, too long a line).
 
-A step is either **resolved** from whatever land it falls in (`kind` hunt, gather, find, visit or forge, and a `hop`) or **named
+A step is **resolved** from whatever land it falls in (`kind` hunt, gather, find, visit or forge, and a `hop`) or **named
 outright** (`objective`, in the campaign quests' own words: `{"t": "kill", "kind": "goblin", "count": 4, "zone":
 "greenwood"}`; never a bring or a meet), which binds it to that campaign's content and is checked against it, so a campaign
-writes a saga about its own world (`greenwood_reckoning` in campaign 1) and a pack-style one runs anywhere. A resolved step is a
+writes a saga about its own world (`greenwood_reckoning`) and a pack-style one runs anywhere. A resolved step is a
 quest kind (hunt, gather, find, visit, cast spells where the party has magic, haul barrels to a named place, slay a boss, master a spell, forge a gem into gear the party has or can buy; a land
 without one tells another kind: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
 `DmTasks.ts` runs it) or `meet`. For `meet` the DM makes the step's person (an `npc` then a `cast` entry of the live world,
@@ -42,35 +42,33 @@ on open ground in the step's land, wearing the look a word names), the party is 
 their feet), and on reaching them the DM only says they are there: **the person speaks through their own dialog when talked
 to** (`DmEpics.meet` puts the step's lines on them, `talked` hears the action press that talks to them, solo, host or a
 friend's, and the saga goes on a few seconds later), never in the DM's voice, and may give something to carry (`gives`, named in the telling for a later step to ask for). The party is told in
-**words only, nothing on the map** (the map is the party's own): when the DM notices they are lost (the director's card, or
-a player asking) the DM offers a **compass** that leans toward the place to search, and only a second time points straight at it (`HINT_AREA`, `HINT_ARROW`, protocol v44). A failed or cancelled step ends the saga. A step is read to
-every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the whole party while it is taken
-(`Quest.capabilities`). Epics with people need a live world (people are log entries, which friends already receive).
+**words only, nothing on the map**: when the DM notices they are lost (the director's card, or
+a player asking) the DM offers a **compass** that leans toward the place to search, and only a second time points straight at it (`HINT_AREA`, `HINT_ARROW`, v44). A failed or cancelled step ends the saga. A step is read to
+every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the party while taken (`Quest.capabilities`). Epics with people need a live world (people are log entries).
 
-A step's `tell` is asked to give a compass bearing from a named place (`server/claude.ts`; `systems/bearing.ts` words them), not "by the shore".
+A step's `tell` is asked for a compass bearing from a named place (`server/claude.ts`, `systems/bearing.ts`), not "by the shore".
 
-**What a telling names is there to be found** (`systems/landmarks.ts`, `entities/Landmark.ts`, drawn by `StoryUi.syncLandmark`, local
+**What a telling names is there to be found** (`systems/landmarks.ts`, `entities/Landmark.ts`, `StoryUi.syncLandmark`, local
 to every page from the synced task alone): a visit or meeting whose words (the place, the DM's note, the title) name a
 wagon, well, camp, tent, shrine, grave, ruin, tower or hut gets one drawn beside its goal, so no quest sends the party
-to something that is not there (a carter "beside a lopsided wagon" has the wagon). A quest to *find* an item draws the
+to something not there (a carter "beside a lopsided wagon" has the wagon). A quest to *find* an item draws the
 relic as something shaped like it (blade, staff, book, shield, pouch, gem). A new word or shape goes in `landmarks.ts`
-with its drawing; an AI-written epic gets the same for free, as long as it uses those words.
+with its drawing; an AI-written epic gets it free if it uses those words.
 
 **People's words follow the epic**: a person has `lines` (before the party is sent to them), `after` (once met) and
 `finished` (once the whole epic is done), like a campaign giver's offer, remind and done lines; each change is a `voice`
 entry of the world log (the person's new lines, replacing the old: protocol v42), applied to the person where they stand
 on every page.
 
-**One epic at a time.** `begin` and `beginEpic` refuse a second while one runs (until `cancel` or the saga ends). The bot
+**One epic at a time.** `begin` and `beginEpic` refuse a second while one runs (until `cancel` or it ends). The bot
 never offers "give them a quest" while one runs, and a player asking about their quest is answered by the writer from the
 running epic (`DmBotState.epicNow`: title and chapter), never by a choose-an-epic card.
 
 ## Who runs it
 
 The host, and a solo player (their own host): `DmEpics`, `DmTasks` and the DM's words work wherever the page is not a
-friend, so an epic is told alone as it is to a party. A friend only draws it (the `dm` message and the world log). A solo
-player in a live world is offered an epic by the director's card; the sandbox campaign has no way to begin one by hand
-yet. Online only the DM's quests count: the story chain's givers only pass the time of day.
+friend, so an epic is told alone as to a party. A friend only draws it (`dm` message, world log). A solo
+player in a live world is offered an epic by the director's card; the sandbox has no way to begin one by hand yet. Online only the DM's quests count: the story chain's givers only pass the time of day.
 
 ## End bosses: the climax of an epic (`systems/bosses.ts`; core engine, content, co-op)
 
@@ -78,14 +76,12 @@ Two bosses, never mixed: the DM's (`dmBoss.ts`, `MobKind.boss`) and the **author
 (`MobKind.named`). **Placement**: an `entities.json` mob with `"boss": true` (tougher stats, long `windup` as its telegraph),
 placed once by a scenario node of its zone, never a roamer (`map -- check`). **Objective**: `{"t": "boss", "boss": "<entity>",
 "zone": "<map>", "count": 1}`, one kill. **Co-op**: the host owns the fight and
-every hero in the zone shares the kill with nothing new on the wire (no protocol change); online the DM's own `boss` step is the climax. **Wipe**: a knocked-out hero wakes at the start as always; the
-boss never respawns once fallen but **mends fully when a knockout leaves no hero in its zone** (`bossMends`).. **Reward and beat**: the quest's `reward`; when it is the **last quest of
-the chain** (`isFinale`) the epilogue follows the reward lines and `Talk.finale` is set, the one small hook for a closing
-scene. **DM trigger**: a saga ends in a `boss` step (`dmQuests`); it cannot yet name an authored one.
+every hero in the zone shares the kill (nothing new on the wire); online the DM's own `boss` step is the climax. **Wipe**: a knocked-out hero wakes at the start as always; the
+boss never respawns once fallen but **mends fully when a knockout leaves no hero in its zone** (`bossMends`). **Reward and beat**: the quest's `reward`; when it is the **last quest of the chain** (`isFinale`) the
+epilogue follows the reward lines and `Talk.finale` is set, the one hook for a closing scene. **DM trigger**: a saga ends in a `boss` step (`dmQuests`); it cannot yet name an authored one.
 
 ## Not yet
 
-An authored boss in the packs, in a DM epic's `objective`, phases and adds, a respawn for a hero who takes the quest after it fell. A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `dmGear.ts`: one piece, a step up
-of the way they fight and sized to the party's level, varied by slot), a person who turns on the party, branching, the packs' arcs (a third quest
-format that assembles live worlds), people placed by the maps (a campaign's givers) and by the log (the DM's) as one
-mechanism, and one *trigger* for both holders (a giver's talk, or the runner) with one telling for what a step says.
+An authored boss in the packs or a DM epic's `objective`, phases and adds, a respawn for a hero who takes the quest after it fell. A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `dmGear.ts`), a person who turns on the party, branching, the packs' arcs (a third quest
+format for live worlds), people placed by the maps (a campaign's givers) and by the log (the DM's) as one
+mechanism, and one *trigger* for both holders (a giver's talk, or the runner) with one telling of a step.
