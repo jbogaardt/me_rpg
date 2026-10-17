@@ -20,3 +20,7 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
 - **Item pickups are a toast, never a card** (`PickupToasts`, rules in `toastStack.ts`): a small see-through stack at the left edge, merged repeats, gone in about 2 s (1 s with a foe near), plus a short chime (`playPing`). Local to each player, nothing is sent; core engine.
 - **The map overlay is local**: it fills in as the players in view explore (`map/explored.ts`), nothing is sent. Rooms
   have none, and the `map` capability can turn it off or show the whole zone.
+- **Partner arrows** (`PartnerArrows.ts`, maths in `edgeArrow.ts`; core engine, online only): an edge-of-screen arrow in the
+  partner's colour with the distance in tiles for a partner in this zone but out of view, and a chip for one in another zone.
+  Nothing is sent: a guest already gets every in-zone player in `snap.players` and the rest in `away`, so it can say "in another
+  zone" but only the host knows which zone (the chip names it when the player's `zone` is known).
