@@ -79,7 +79,13 @@ export class Multiplayer {
       }),
     );
     this.create.addEventListener('click', () => this.createGame());
-    this.joinGo.addEventListener('click', () => void this.session.joinGame(this.codeIn.value));
+    this.joinGo.addEventListener('click', () => {
+      // The menu gets out of the way at once; the join banner (JoinStatus.ts) carries the progress from here.
+      const joining = this.session.joinGame(this.codeIn.value);
+      this.codeIn.blur();
+      this.onStarted();
+      void joining;
+    });
     this.disconnect.addEventListener('click', () => session.disconnect());
     this.start.addEventListener('click', () => {
       session.startGame();

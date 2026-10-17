@@ -36,7 +36,7 @@ export class Effects {
 const ANGLE: Record<Direction, number> = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
 
 /** A sword arc sweeping across the facing direction, centred at (x, y). */
-export function slashEffect(x: number, y: number, dir: Direction): Effect {
+export function slashEffect(x: number, y: number, dir: Direction, accent = 0x4de3ff): Effect {
   const g = new Graphics({ position: { x, y }, rotation: ANGLE[dir], zIndex: 1e9 });
   const duration = 0.16;
   let t = 0;
@@ -51,7 +51,7 @@ export function slashEffect(x: number, y: number, dir: Direction): Effect {
         .arc(0, 0, 22, a0, a1)
         .stroke({ width: 4, color: 0xffffff, alpha: 1 - p * 0.7 })
         .arc(0, 0, 16, a0, a1)
-        .stroke({ width: 2, color: 0x4de3ff, alpha: 0.9 * (1 - p) });
+        .stroke({ width: 2, color: accent, alpha: 0.9 * (1 - p) });
       return t < duration;
     },
   };
@@ -108,6 +108,7 @@ export function arrowEffect(
   range: number,
   step: (x: number, y: number) => boolean,
   onEnd?: (x: number, y: number, hit: boolean) => void,
+  accent = 0xf4efe4,
 ): Effect {
   const g = new Graphics({ position: { x, y }, rotation: Math.atan2(vy, vx) })
     .moveTo(-9, 0)
@@ -116,7 +117,7 @@ export function arrowEffect(
     .poly([3, -2, 7, 0, 3, 2])
     .fill(0xe8edf2) // head
     .poly([-9, 0, -12, -2.5, -7, 0, -12, 2.5])
-    .fill(0xf4efe4); // fletching
+    .fill(accent); // fletching (the owner's colour in co-op)
   let travelled = 0;
   return {
     view: g,

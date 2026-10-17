@@ -134,6 +134,15 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
       const zones = o.zone ? [o.zone] : [...mapOf.keys()];
       if (!zones.some((z) => livesIn(z).has(o.kind)))
         errors.push(`${at}: no "${o.kind}" lives in ${o.zone ?? 'any zone'} to defeat`);
+    } else if (o.t === 'boss') {
+      // a named boss stands exactly once, placed by a scenario node of its zone (never a roamer: it would not be one)
+      const placed = [...scenarios.nodes.values()]
+        .filter((n) => biomes[n.biome_type]?.map === o.zone)
+        .flatMap((n) => n.entities.filter((p) => p.entity === o.boss));
+      if (placed.length !== 1)
+        errors.push(`${at}: "${o.boss}" must be placed once in ${o.zone}, found ${placed.length}`);
+      if (mapOf.get(o.zone)?.generation.roam?.some((r) => r.kinds.includes(o.boss)))
+        errors.push(`${at}: "${o.boss}" is a boss and cannot roam ${o.zone}`);
     } else if (o.t === 'visit') {
       if (!maps.get(o.zone)?.places.some((p) => p.name === o.place))
         errors.push(`${at}: ${o.zone} has no place called "${o.place}" (z.place)`);

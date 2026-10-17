@@ -2,6 +2,7 @@ import { encodeAim, type Aim } from '../../core/aim';
 import { barrelsFromWire } from '../../systems/barrels';
 import { DIRS, DIR_VEC } from '../../core/direction';
 import { glide } from '../../core/interp';
+import { Reconciler } from '../../core/prediction';
 import { floatText } from '../../entities/effects';
 import type { Player } from '../../entities/Player';
 import type { Menu } from '../../hud/Menu';
@@ -11,17 +12,19 @@ import {
   decodeEvent,
   FLAG,
   MAX_VIEW,
+  unpackKeys,
   pondsFromWire,
   type InputMsg,
   type PlayerSnap,
   type SnapMsg,
 } from '../../net/protocol';
 import type { Session } from '../../net/session';
-import { newHero, type Hero } from '../../systems/combat';
+import { newHero, speedFactor, type Hero } from '../../systems/combat';
+import { isIce, stepVelocity } from '../../systems/ice';
 import { encodeOp, type InvOpWire } from '../../systems/inventory';
 import { heroOutfit, playerName } from '../../systems/looks';
 import type { Arena } from './Arena';
-import { auraTint, DEFEAT_LINES } from './constants';
+import { auraTint, DEFEAT_LINES, SPEED } from './constants';
 import type { Ground } from './Ground';
 import type { PackSync } from './PackSync';
 import type { Trading } from './Trading';
@@ -46,6 +49,11 @@ export class GuestLink {
   private comboCount = 0; // combos cast so far (a counter too), and which one the last was
   private comboIndex = 0;
   private sent = { keys: -1, act: -1, cb: -1, ack: -1, vr: -1, inv: 0, vt: '', rq: '', rd: false };
+  /** Prediction (core/prediction.ts): this player's own hero walks from its keys at once; the host's `ia` reconciles it. */
+  private rec = new Reconciler();
+  private predicted = false; // the host acknowledges inputs, so the local hero is predicted rather than glided
+  private predMoving = false;
+  private debugEl: HTMLElement | null = null; // `?netdebug`: round trip and correction size
   private solo: Hero | null = null; // the solo hero (stats, gold, pack, gear), put back on disconnect
 
   constructor(
@@ -81,6 +89,9 @@ export class GuestLink {
     this.actCount = this.comboCount = this.comboIndex = this.inputSeq = 0;
     this.sent = { keys: -1, act: -1, cb: -1, ack: -1, vr: -1, inv: 0, vt: '', rq: '', rd: false };
     this.inputTimer = 0;
+    this.rec.reset();
+    this.predicted = false;
+    this.predMoving = false;
     arena.applyTags();
   }
 
@@ -89,6 +100,9 @@ export class GuestLink {
     const { arena } = this;
     const { local } = arena;
     for (const slot of [...arena.remotes.keys()]) arena.removeRemote(slot, () => {});
+    this.rec.reset();
+    this.debugEl?.remove();
+    this.debugEl = null;
     local.body.setTag(null);
     this.trading.reset();
     if (this.solo) local.hero = this.solo;
@@ -144,6 +158,61 @@ export class GuestLink {
 
   /** Send the controls: when they change, and otherwise at INPUT_HZ so a lost packet is soon corrected. */
   sendInput(dt: number, keys: number, aim?: Aim, vote?: [number, number], request?: InputMsg['rq'], reading = false) {
+    this.transmit(dt, keys, aim, vote, request, reading);
+    this.predict(dt, keys);
+  }
+
+  /**
+   * Walk this player's own hero from its keys, the way the host will (the same speed, ice and walls), then ease in what
+   * the host's last snapshot corrected. The position at each send is remembered (`transmit`) for reconciling.
+   */
+  private predict(dt: number, keys: number) {
+    const { arena } = this;
+    const { local } = arena;
+    if (!this.predicted || !local.target || (local.flags & FLAG.hidden) !== 0) return;
+    const { dx, dy } = unpackKeys(keys);
+    const len = Math.hypot(dx, dy);
+    const wish = len ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
+    if (len) local.body.face(dx ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up');
+    local.vel = stepVelocity(
+      local.vel,
+      wish,
+      SPEED * speedFactor(local.hero),
+      dt,
+      isIce(arena.data, local.body.x, local.body.y - 1),
+    );
+    if (local.vel.x || local.vel.y) {
+      const [x, y] = [local.body.x, local.body.y];
+      arena.collision.slide(local.body, local.vel.x * dt, local.vel.y * dt, arena.bodies());
+      if (local.body.x === x) local.vel.x = 0;
+      if (local.body.y === y) local.vel.y = 0;
+    }
+    const fix = this.rec.step(dt);
+    local.body.position.set(local.body.x + fix.x, local.body.y + fix.y);
+    this.predMoving = len > 0;
+    this.showDebug();
+  }
+
+  /** `?netdebug` in the address: a small readout of the round trip and of how far the host last corrected this hero. */
+  private showDebug() {
+    if (!location.search.includes('netdebug')) return;
+    if (!this.debugEl) {
+      this.debugEl = document.createElement('div');
+      this.debugEl.style.cssText =
+        'position:fixed;left:4px;bottom:4px;z-index:50;font:11px monospace;color:#fff;background:#0008;padding:2px 4px;pointer-events:none';
+      document.body.append(this.debugEl);
+    }
+    this.debugEl.textContent = `rtt ${Math.round(this.rec.rtt)} ms, correction ${this.rec.lastError.toFixed(1)} px`;
+  }
+
+  private transmit(
+    dt: number,
+    keys: number,
+    aim?: Aim,
+    vote?: [number, number],
+    request?: InputMsg['rq'],
+    reading = false,
+  ) {
     const { arena } = this;
     this.inputTimer += dt;
     const ack = Math.max(0, this.lastEvent);
@@ -178,6 +247,7 @@ export class GuestLink {
       ...(reading ? { rd: 1 as const } : {}), // a quest conversation is open: the host holds foes still
     } as const;
     if (this.session.send(msg)) {
+      this.rec.record(msg.n, arena.local.body.x, arena.local.body.y, performance.now());
       this.sent = {
         keys,
         act: this.actCount,
@@ -203,6 +273,7 @@ export class GuestLink {
         return; // nothing to draw it into yet: the next snapshot will find the zone loaded
       }
       zones.follow(dest);
+      this.rec.reset(); // a new map: the old positions mean nothing
     }
 
     // Everyone the host lists is in the game: here (listed) or in another zone (`away`); anyone else has left.
@@ -210,8 +281,14 @@ export class GuestLink {
     for (const state of snap.players) {
       const slot = state[0];
       present.add(slot);
-      if (slot === arena.local.slot) this.setPlayerState(arena.local, state);
-      else {
+      if (slot === arena.local.slot) {
+        this.setPlayerState(arena.local, state, this.predicted);
+        if (snap.ia !== undefined) {
+          this.predicted = true;
+          const jump = this.rec.reconcile(snap.ia, state[1], state[2], performance.now());
+          if (jump) arena.local.body.position.set(jump.x, jump.y);
+        }
+      } else {
         const remote = arena.remotes.get(slot) ?? this.addHiddenRemote(slot);
         zones.place(remote, arena.zone);
         this.setPlayerState(remote, state);
@@ -238,6 +315,7 @@ export class GuestLink {
         b.hold(at.x, at.y, at.facing);
       } else b.setDown(at.x, at.y);
     });
+    arena.zone.setFolkRemote(snap.folk); // the people strolling about their posts
     arena.zone.ponds.setLevels(pondsFromWire(snap.ponds)); // drained by someone's drinking, until rain fills them
     if (snap.ground) this.ground.sync(snap.ground); // absent: the same items as before
     for (const [index, ...state] of snap.mobs)
@@ -271,8 +349,8 @@ export class GuestLink {
     return remote;
   }
 
-  private setPlayerState(p: Player, [, x, y, dir, flags]: PlayerSnap) {
-    p.body.face(DIRS[dir] ?? 'down');
+  private setPlayerState(p: Player, [, x, y, dir, flags]: PlayerSnap, predicted = false) {
+    if (!predicted) p.body.face(DIRS[dir] ?? 'down'); // a predicted hero turns from its own keys
     p.flags = flags;
     if (!p.target) p.body.position.set(x, y); // first word from the host: appear there
     p.body.visible = (flags & FLAG.hidden) === 0; // the DM is out of sight while they possess a foe
@@ -281,7 +359,8 @@ export class GuestLink {
 
   /** Draw a player from what the host last said (position glides; the rest comes from the flags). */
   private drawPlayer(p: Player, dt: number) {
-    if (p.target) glide(p.body, p.target.x, p.target.y, dt);
+    const own = this.predicted && p === this.arena.local; // walked by `predict`, corrected by the host's acknowledgements
+    if (p.target && !own) glide(p.body, p.target.x, p.target.y, dt);
     const [fx, fy] = DIR_VEC[p.body.facing];
     const swinging = (p.flags & FLAG.swing) !== 0;
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
@@ -293,6 +372,6 @@ export class GuestLink {
       }),
     );
     p.body.alpha = p.flags & FLAG.invuln && Math.floor(this.arena.clock * 16) % 2 === 0 ? 0.35 : 1;
-    p.body.animate(dt * 1000, (p.flags & FLAG.moving) !== 0);
+    p.body.animate(dt * 1000, own ? this.predMoving : (p.flags & FLAG.moving) !== 0);
   }
 }

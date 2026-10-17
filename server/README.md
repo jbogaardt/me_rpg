@@ -47,6 +47,11 @@ different version away), so point it at the site they use. Against a local build
   last the reckoning), then each saga is told as its next chapter. The arc lives in the bot, not the model's memory (the
   Claude session is renewed and a small model forgets), so every saga prompt and the narrator are handed it afresh:
   that is how Haiku holds a long story. Told out, a new arc grows from its ending. The mock has stock arcs.
+  **Ending beat**: when the last chapter's saga is completed (`epicsDone`, the page's count, goes up) the DM speaks an
+  epilogue (`arcEpilogue`: the title and the reckoning line); a lost or called-off final saga says nothing. A saga's own
+  closing scene and reward are `DmEpics.close`. The end-boss quests (#34) can hook epic completion instead of `epicsDone`.
+  The log line "the game code is gone" means the relay forgot the room (its code ran out, or the poll failed for good); the
+  cause of a mid-game loss in issue #44 is not traced (no log), friends already in are unaffected.
 - After a saga ends the party is left to wander for `BREATHER_MS` (town, shops, talk) before another is offered; a
   written saga has at most one hunt and at least one townsperson to meet, and never mentions the map.
 - `conjure.ts` makes people: on arriving somewhere new (at most 6 a game, 2 minutes apart) a `Conjurer` invents a
@@ -60,10 +65,14 @@ different version away), so point it at the site they use. Against a local build
   any failure or timeout (30 s) falls back to the mock. Player words go in as quoted data, never as instructions.
 - The DM's voice (`PERSONA` in `narrate.ts`) is a gentle wizard: warm, dry, cryptic, never an alert. The mock lines speak
   in it; a creative model is given it as its system prompt.
-- `router.ts` answers a card (`decideCard`): a fast router answers one choice question over the card's options (plus
-  the story's roads for a player's words, and "nothing"); at confidence 0.80 or more its pick is taken for a player's words, and at 0.55 for a director's card (whose
-  options are described by `HINTS` and which come with the party's health, so Jev decides most of them and Claude is kept for words). Otherwise a
-  creative fallback picks and writes the reply; its JSON is checked before use, so it can only choose what was offered.
+- `router.ts` answers a card (`decideCard`). **A player's typed words always go to the creative writer (Haiku) and its reply
+  is always sent; Jev never votes "nothing" on them.** The writer is shown the party's task, the running epic, the DM's
+  recent replies and the card's options (a pick it makes is checked against them). A reply that repeats a recent one
+  (`isRepeat`), says "follow the way", is empty or is a guess (`sure` under 0.5) is asked for once more with the reason,
+  then replaced by a plain answer (the saga and task). Jev does the passive work: one choice question over a
+  director's card's options (taken at confidence 0.55, `HINTS` and the party's health describe them), and events with no
+  player words. A card with no options skips Jev (nothing to choose). While an epic or quest runs "give them a quest" is
+  not offered. The writer's JSON is checked before use, so it can only choose what was offered.
 - The router is TypeSafe's Jev (`jev.ts`, the `@typesafe-ai/sdk` client) when `TYPESAFE_API_KEY` is set, and a
   word-matching mock (`mocks.ts`) otherwise; the bot says which at start. `TYPESAFE_DEFAULT_MODEL` pins a model
   (`jev-latest` by default). The creative fallback is still the mock until a model is chosen for it.
@@ -73,6 +82,9 @@ The bot can do what a person at the DM bar can, and no more: it cannot invent pl
 live world (the world log's `npc` and `cast` entries, validated and sent to every player) are the next door to open.
 
 ## The table read (Jev beyond cards)
+
+A failed read (e.g. "fetch failed") is retried by `RetryingReader` (3 attempts, doubling waits from 500 ms); after the
+last the host logs the step that failed and the timers decide until the next read.
 
 `pulse.ts` + `JevReader` (`jev.ts`): every `PULSE_MS` (8 s, in the background) one request asks Jev four independent questions
 over the same small, named state (percentages and seconds, no ids): a `score` of how hard pressed the party is (levels

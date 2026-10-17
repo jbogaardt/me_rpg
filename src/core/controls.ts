@@ -1,5 +1,5 @@
 import { aimToward, loadAimMode, saveAimMode, type Aim, type AimMode } from './aim';
-import { FIXED_KEYS, TOUCH_CODES, loadBindings, saveBindings, type Action } from './bindings';
+import { FIXED_KEYS, HOTBAR_KEYS, TOUCH_CODES, loadBindings, saveBindings, type Action } from './bindings';
 import { input } from './input';
 
 // The player's bindings (saved in localStorage) joined to the input state. Game code asks about actions, never keys.
@@ -41,6 +41,9 @@ export const mapPressed = () => input.wasPressed(...FIXED_KEYS.map);
 /** Where the game was clicked or tapped (CSS px) this frame, or null: the DM clicks or taps a foe to possess it. */
 export const clickedAt = (): { x: number; y: number } | null =>
   input.wasHit('Mouse0') ? input.pointer() : input.tap();
+
+/** The hotbar slot (0-based) whose number key, or on-screen button, went down this frame, or -1. */
+export const hotbarPressed = (): number => HOTBAR_KEYS.findIndex((code) => input.wasPressed(code));
 
 /** The Dungeon Master's stop-time key (T) went down this frame. */
 export const stopPressed = () => input.wasPressed(...FIXED_KEYS.stop);

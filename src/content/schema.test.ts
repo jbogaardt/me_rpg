@@ -102,6 +102,15 @@ const problems = (f: Record<ContentFile, unknown>) => {
 };
 
 describe('parseContent', () => {
+  it('reads a choice hint, and refuses one with no requirement', () => {
+    const f = files();
+    const choice = (f.scenarios as { nodes: { choices: Record<string, unknown>[] }[] }).nodes[0]!.choices[0]!;
+    choice.hint = 'Too strong for you yet.';
+    expect(parseContent(f).scenarios.nodes.get('woods')?.choices[0]?.hint).toBe('Too strong for you yet.');
+    delete choice.requires;
+    expect(problems(f).join('\n')).toMatch(/choices\[0\]\.hint: explains a requirement/);
+  });
+
   it('reads valid content', () => {
     const c = parseContent(files());
     expect(c.entities.goblin?.stats?.hp).toBe(20);
@@ -114,19 +123,19 @@ describe('parseContent', () => {
 
   it('reads the capabilities a campaign switches off, and refuses ones that are not', () => {
     const f = files();
-    (f.scenarios as { capabilities: unknown }).capabilities = { map: false, needs: false };
-    expect(parseContent(f).scenarios.capabilities).toEqual({ map: false, needs: false });
-    (f.scenarios as { capabilities: unknown }).capabilities = { jetpack: false, map: 'no' };
+    (f.scenarios as { capabilities: unknown }).capabilities = { guide: false, needs: false };
+    expect(parseContent(f).scenarios.capabilities).toEqual({ guide: false, needs: false });
+    (f.scenarios as { capabilities: unknown }).capabilities = { jetpack: false, guide: 'no' };
     const p = problems(f).join('\n');
     expect(p).toMatch(/scenarios\.json\.capabilities\.jetpack: is not a capability/);
-    expect(p).toMatch(/scenarios\.json\.capabilities\.map: must be true, false or an object of settings/);
+    expect(p).toMatch(/scenarios\.json\.capabilities\.guide: must be true, false or an object of settings/);
   });
 
   it('reads a biome’s own capabilities for its zone, but not campaign-wide ones', () => {
     const f = files();
     const biome = (f.biomes as { biomes: Record<string, { capabilities?: unknown }> }).biomes.forest!;
-    biome.capabilities = { map: false, needs: { drain: 2 } };
-    expect(parseContent(f).biomes.forest?.capabilities).toEqual({ map: false, needs: { drain: 2 } });
+    biome.capabilities = { guide: false, needs: { drain: 2 } };
+    expect(parseContent(f).biomes.forest?.capabilities).toEqual({ guide: false, needs: { drain: 2 } });
     biome.capabilities = { coop: false, needs: { drain: 99, thirst: 1 } };
     const p = problems(f).join('\n');
     expect(p).toMatch(/biomes\.forest\.capabilities\.coop: is set for the whole campaign, not per zone/);
@@ -155,6 +164,23 @@ describe('parseContent', () => {
     expect(problems(f)).toEqual([]);
   });
 
+  it('reads a person’s roam radius, refuses a bad one, and refuses it where roaming is off', () => {
+    const f = files();
+    const e = (f.entities as { entities: Record<string, Record<string, unknown>> }).entities;
+    e.elder!.roam = 4;
+    expect(parseContent(f).entities.elder?.roam).toBe(4);
+    e.elder!.roam = 0;
+    expect(problems(f).join('\n')).toMatch(/entities\.elder\.roam: must be a number of at least 1/);
+    e.elder!.roam = 99;
+    expect(problems(f).join('\n')).toMatch(/entities\.elder\.roam: must be at most 8 cells/);
+    e.elder!.roam = 3;
+    e.goblin!.roam = 3;
+    expect(problems(f).join('\n')).toMatch(/entities\.goblin\.roam: only an npc roams/);
+    delete e.goblin!.roam;
+    (f.scenarios as { capabilities?: unknown }).capabilities = { roaming: false };
+    expect(problems(f).join('\n')).toMatch(/entities\.elder\.roam: people stand still in this campaign/);
+  });
+
   it('reads quests of spells and barrels, and refuses them where combos or carrying is off', () => {
     const f = files();
     const s = f.scenarios as { capabilities: unknown };
@@ -176,12 +202,12 @@ describe('parseContent', () => {
   it('reads what a quest switches while it is taken, and refuses what is not a dial', () => {
     const f = files();
     const q = f.quests as { quests: { capabilities?: unknown }[] };
-    q.quests[0]!.capabilities = { map: false, needs: true };
-    expect(parseContent(f).quests.quests[0]?.capabilities).toEqual({ map: false, needs: true });
-    q.quests[0]!.capabilities = { coop: false, map: 'off', farming: true };
+    q.quests[0]!.capabilities = { guide: false, needs: true };
+    expect(parseContent(f).quests.quests[0]?.capabilities).toEqual({ guide: false, needs: true });
+    q.quests[0]!.capabilities = { coop: false, guide: 'off', farming: true };
     const p = problems(f).join('\n');
     expect(p).toMatch(/quests\.cull\.capabilities\.coop: must be one of/);
-    expect(p).toMatch(/quests\.cull\.capabilities\.map: must be true or false/);
+    expect(p).toMatch(/quests\.cull\.capabilities\.guide: must be true or false/);
   });
 
   it('lets a quest that switches food and water on ask for food', () => {
@@ -408,6 +434,43 @@ describe('toMobKind', () => {
     expect(kind).toMatchObject({ name: 'Goblin', maxHp: 20, speed: 70, sight: 160, windup: 0.4 });
     expect(kind.shot).toEqual({ range: 100, speed: 90, color: 0xff8800 });
     expect(kind.recover).toBeUndefined();
+  });
+
+  it('reads a telegraph tuning, colour as a number', () => {
+    const f = files();
+    (f.entities as { entities: { goblin: { behavior: object } } }).entities.goblin.behavior = {
+      telegraph: { color: '#ff0000', ground: true },
+    };
+    expect(toMobKind(parseContent(f).entities.goblin!).telegraph).toEqual({ color: 0xff0000, ground: true });
+  });
+});
+
+describe('named bosses', () => {
+  const withBoss = () => {
+    const f = files();
+    const entities = (f.entities as { entities: Record<string, Record<string, unknown>> }).entities;
+    entities.goblin!.boss = true;
+    const quest = (f.quests as { quests: { objective: unknown }[] }).quests[0]!;
+    quest.objective = { t: 'boss', boss: 'goblin', zone: 'greenwood', count: 1 };
+    return { f, entities, quest };
+  };
+
+  it('are a mob flag and a boss objective that names one', () => {
+    const { f } = withBoss();
+    const c = parseContent(f);
+    expect(toMobKind(c.entities.goblin!).named).toBe(true);
+    expect(c.quests.quests[0]?.objective).toEqual({ t: 'boss', boss: 'goblin', zone: 'greenwood', count: 1 });
+  });
+
+  it('are refused when the objective names a mob that is no boss, or an npc is flagged', () => {
+    const { f, entities, quest } = withBoss();
+    delete entities.goblin!.boss;
+    expect(problems(f).join('\n')).toMatch(/quests\.cull\.objective\.boss: "goblin" is not a mob with "boss": true/);
+    entities.elder!.boss = true;
+    quest.objective = { t: 'boss', boss: 'goblin', zone: 'nowhere', count: 1 };
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/entities\.elder\.boss: is true on a mob/);
+    expect(p).toMatch(/quests\.cull\.objective\.zone: "nowhere" is not the map of any biome/);
   });
 });
 

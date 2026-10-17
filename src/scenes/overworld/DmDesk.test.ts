@@ -57,11 +57,11 @@ describe('the Dungeon Master’s desk', () => {
     const { desk, last, clock } = host();
     desk.update(0);
     expect(last(1)).toMatchObject({ k: 'dm', shift: 0, dials: {}, vote: null });
-    desk.setDial('map', false);
+    desk.setDial('guide', false);
     desk.setHour(12);
     desk.update(0.01);
-    expect(last(2)).toMatchObject({ dials: { map: false }, shift: clock.shift });
-    desk.setDial('map', null);
+    expect(last(2)).toMatchObject({ dials: { guide: false }, shift: clock.shift });
+    desk.setDial('guide', null);
     desk.update(0.01);
     expect(last(1)!.dials).toEqual({});
   });

@@ -62,6 +62,10 @@ export interface DmBotState {
   task: string | null;
   /** An epic (a saga of several quests and people) is being told: between its steps `questing` is false. */
   epic: boolean;
+  /** Sagas completed so far (a lost or called-off one is not counted). */
+  epicsDone: number;
+  /** The running epic's title and chapter (the DM answers "what is my quest" from it), null when none runs. */
+  epicNow: { title: string; step: number; total: number } | null;
   /** The card up now, if any. */
   card: DmBotCard | null;
   /** The live story and its next roads (null when the world is not a live one). */
@@ -170,6 +174,8 @@ export function createDmBot({
       questing: tasks.active,
       task: tasks.view && tasks.view.state === 'active' ? taskText(tasks.view) : null,
       epic: epics.active,
+      epicsDone: epics.completed,
+      epicNow: epics.view,
       card: cardView(),
       story: story.view(),
     }),

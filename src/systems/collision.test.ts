@@ -79,4 +79,14 @@ describe('Collision', () => {
     lake.setBed([]);
     expect(lake.fitsMap(5.5 * CELL, 3.9 * CELL)).toBe(false);
   });
+
+  it('sees across open ground but not through a wall', () => {
+    const [ax, ay] = centre(1, 3);
+    const [bx, by] = centre(3, 6);
+    const [cx, cy] = centre(8, 3);
+    expect(c.hasLineOfSight(ax, ay, bx, by)).toBe(true);
+    expect(c.hasLineOfSight(ax, ay, cx, cy)).toBe(false);
+    expect(c.hasLineOfSight(cx, cy, ax, ay)).toBe(false);
+    expect(c.hasLineOfSight(ax, ay, ax, ay)).toBe(true);
+  });
 });

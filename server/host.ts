@@ -16,11 +16,20 @@ import { chromium, type Page } from '@playwright/test';
 import { JevReader, JevRouter, JevScene } from './jev';
 import { MockFallback, MockRouter } from './mocks';
 import { ClaudeArcWriter, ClaudeConjurer, ClaudeFallback, ClaudeNarrator, ClaudeEpicWriter } from './claude';
-import { MockArcWriter, advance, arcBrief, type ArcPlace, type ArcWriter } from './arc';
+import {
+  MockArcWriter,
+  advance,
+  arcBrief,
+  stepFinale,
+  watchFinale,
+  type ArcPlace,
+  type ArcWriter,
+  type Finale,
+} from './arc';
 import { MockConjurer, shouldConjure, type Conjurer } from './conjure';
 import { MockNarrator, beatFor, type Memory, type Narrator } from './narrate';
 import { RuleJudge, factsFor, resolveScene, type SceneJudge } from './scene';
-import { PULSE_MS, fresh, pulseState, type Pulse, type TableReader } from './pulse';
+import { PULSE_MS, RetryingReader, fresh, pulseState, type Pulse, type TableReader } from './pulse';
 import { decideCard, type Card, type Move } from './router';
 import { MockEpicWriter, tellEpic, type StockTale, type EpicWriter } from './epics';
 import { SETTLE_MS, heldCard, nextStep, type Clock, type PageState, type Pressure } from './turn';
@@ -75,6 +84,8 @@ class Dm {
   private lastCode: string | null = null;
   /** The card last answered: met again unchanged, the answer did nothing, so it is sent away. */
   private answered = '';
+  /** The DM's last words to players (replies and narration), so the writer does not repeat itself. */
+  private said: string[] = [];
   private latest: PageState | null = null;
   /** The last pressure the DM set (turn up the heat / ease off), so the opposite card is not answered straight away. */
   private pressure: Pressure | null = null;
@@ -89,11 +100,13 @@ class Dm {
   /** The evening's tale and the chapter the next saga tells (arc.ts); written when the first saga is. */
   private arcWriter: ArcWriter = CLAUDE ? new ClaudeArcWriter() : new MockArcWriter();
   private arc: ArcPlace | null = null;
+  /** The last chapter's saga being watched, so the tale gets its closing words when it is won (arc.ts). */
+  private finale: Finale | null = null;
   private made = 0;
   private lastMade = -Infinity;
   private memory: Memory = { prev: null, spoke: 0 };
   /** The fast model's read of the table, now and then (pulse.ts); null without a key, and the timers decide. */
-  private reader: TableReader | null = process.env.TYPESAFE_API_KEY ? new JevReader() : null;
+  private reader: TableReader | null = process.env.TYPESAFE_API_KEY ? new RetryingReader(new JevReader()) : null;
   private pulse: Pulse | null = null;
   private reading = false;
   /** Jev's read of a moment's drama (scene.ts) with a key; the rules' own without one. */
@@ -134,6 +147,14 @@ class Dm {
     this.report(s);
     this.refresh(s);
     this.clock.pulse = fresh(this.pulse, this.clock.now);
+    if (this.finale) {
+      const end = stepFinale(this.finale, { epic: s.epic, epicsDone: s.epicsDone ?? 0 });
+      this.finale = end.next;
+      if (end.say) {
+        log('the tale ends:', end.say);
+        await this.say(end.say);
+      }
+    }
     const prev = this.memory.prev;
     if (prev && (prev.epic || prev.questing) && !s.epic && !s.questing) this.clock.lastEnded = this.clock.now;
     if (!CHATTER) this.memory.prev = s; // narrate() keeps it otherwise
@@ -214,6 +235,7 @@ class Dm {
     if (!line) return false;
     m.spoke = this.clock.now;
     log(`narrating (${beat.kind}):`, line);
+    this.said = [...this.said, line].slice(-RECENT);
     await this.say(line);
     if (shouldConjure(beat, this.made, this.clock.now - this.lastMade)) await this.conjure(s);
     return true;
@@ -253,7 +275,9 @@ class Dm {
     );
     if (this.arc) {
       const next = advance(this.arc);
-      this.arc = next === 'done' ? null : next; // the tale is told: the next saga begins a new one, grown from this
+      // the tale is told: the next saga begins a new one, grown from this; the DM closes this one when the saga is won
+      if (next === 'done' && this.arc) this.finale = watchFinale(this.arc.arc, s.epicsDone ?? 0);
+      this.arc = next === 'done' ? null : next;
     }
     return true;
   }
@@ -283,9 +307,12 @@ class Dm {
       await this.call('dismiss');
       return;
     }
-    const move = await decideCard(card, s, this.services);
+    const move = await decideCard(card, s, this.services, this.said);
     log(`card “${card.title}”${card.note ? ` (${card.note})` : ''} →`, describe(move, card));
-    if (move.reply) await this.call('reply', move.reply);
+    if (move.reply) {
+      this.said = [...this.said, move.reply].slice(-RECENT);
+      await this.call('reply', move.reply);
+    }
     if (move.road) {
       const chosen = await this.call('choose', move.road);
       if (!chosen.ok) log('the page refused the road:', chosen.note);
@@ -300,7 +327,8 @@ class Dm {
   private report(s: PageState) {
     if (s.code !== this.lastCode) {
       if (s.code) log(`GAME CODE: ${s.code}   (players: Menu > Online > Join, and type it)`);
-      else if (this.lastCode) log('the code is closed');
+      else if (this.lastCode)
+        log('the game code is gone (the relay forgot it); friends already in carry on, no one new can join with it');
       this.lastCode = s.code;
     }
     const here = new Set(s.friends.map((f) => f.slot));
@@ -317,6 +345,9 @@ class Dm {
     this.clock.settled = [...this.friends.values()].filter((f) => f.in).length;
   }
 }
+
+/** How many of the DM's last words the writer is shown (and refused to repeat). */
+const RECENT = 8;
 
 function describe(move: Move, card: Card): string {
   const label = card.options.find((o) => o.id === move.pick)?.label;

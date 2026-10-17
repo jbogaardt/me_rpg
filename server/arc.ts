@@ -60,6 +60,34 @@ export function advance(place: ArcPlace): ArcPlace | 'done' {
   return place.chapter + 1 >= place.arc.chapters.length ? 'done' : { ...place, chapter: place.chapter + 1 };
 }
 
+/** The DM's closing words for a tale whose last chapter has been won: its title, then the reckoning chapter's line. */
+export function arcEpilogue(arc: SessionArc): string {
+  return `And so “${arc.title}” is told. ${arc.chapters[arc.chapters.length - 1]}`;
+}
+
+/**
+ * Watching the last chapter's saga to its end (the ending beat; the saga has its own closing scene and reward, this
+ * closes the whole tale). `epicsDone` is the page's count of sagas completed. The saga is seen running, then it stops:
+ * completed (the count went up) the DM speaks the epilogue; lost or called off, nothing is said and the watch ends.
+ */
+export interface Finale {
+  arc: SessionArc;
+  /** Sagas completed when the last chapter was told. */
+  done: number;
+  /** The saga has been seen running. */
+  seen: boolean;
+}
+
+export function watchFinale(arc: SessionArc, done: number): Finale {
+  return { arc, done, seen: false };
+}
+
+export function stepFinale(f: Finale, s: { epic: boolean; epicsDone: number }): { next: Finale | null; say?: string } {
+  if (s.epic) return { next: { ...f, seen: true } };
+  if (!f.seen) return { next: f };
+  return s.epicsDone > f.done ? { next: null, say: arcEpilogue(f.arc) } : { next: null };
+}
+
 export interface ArcWriter {
   /** A new arc for a world whose party is in `area`; `after` is how the last arc ended, for the new one to grow from. */
   write(want: { area: string; after?: string }): Promise<SessionArc | null>;

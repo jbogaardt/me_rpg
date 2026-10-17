@@ -24,7 +24,9 @@ Invariants that bite:
   item id cannot hold `+`. Packs carry no gems yet (random worlds have no shops to sell one), so only campaign 1's chests hold them (`ruby`, `emerald`, `topaz`, `sapphire` loots); a gem shows the `gem` icon, a set piece its base's.
 - **Populations are deterministic** (`populate.ts`): a guest builds the same mobs in the same order as the host, and
   snapshots refer to mobs by index. Anything that changes who stands in a zone must keep that order.
-- **Who stands in a zone is the content's, never the map's** (scenario node placements, then the biome's `roam`).
+- **Who stands in a zone is the content's, never the map's** (scenario node placements, then the biome's `roam`). A placed person
+  may stroll about their post: `EntityDef.roam`, a radius in cells (npc only, at most 8), capability `roaming`; campaign 1's
+  market has two. Map-placed givers and keepers never roam. Packs carry no roamers yet.
 - **Scenarios are solo only**: online, every zone shows its biome's own node. When the host dictates nodes, it must send
   a `node_id` per zone.
 - **Capabilities** (`src/systems/CLAUDE.md`): content asking for what its own switches turn off is refused at load.
@@ -61,7 +63,7 @@ a port without a seal or bound to a port that is not on the opposite edge.
 ## Worlds from a log
 
 A world is a seed, the packs and an append-only **log** of fully resolved entries (`begin`, `step`, `side`, `join`, and the DM's `cast`, `npc`, `voice` and `sign`: a person made, put somewhere, given new words; a signpost rewritten, or restored by empty lines).
-`World.apply` validates each entry against the packs' rules and refuses a bad one without changing anything;
+`World.apply` validates each entry against the packs' rules and refuses a bad one without changing anything; a person (`npc`) whose id **or name** (ignoring case and spacing, the packs' people included) is already in the world is refused with a message that says to cast or `voice` them instead, so the DM never makes the same person twice (`npcId` only avoids id clashes; the name check is the rule, and every campaign's people must have distinct names, `campaigns.test.ts`);
 `replay(log)` rebuilds a world with no random numbers, so every co-op player and every later solver agrees. `assemble`
 is an automatic Dungeon Master that writes a whole log at once; a **live world** (`?campaign=live`) is written during
 play: the DM chooses story cues (a kind of land and crossing, never a map) and the solver picks regions that still let

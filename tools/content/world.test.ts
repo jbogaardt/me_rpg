@@ -159,6 +159,28 @@ describe('a world from its log', () => {
     expect(people.length).toBeGreaterThan(0);
   });
 
+  it('refuses a person who already lives in the world, by id or by name', () => {
+    const world = new World(7, packs);
+    world.open();
+    const region = world.storyRegions[0];
+    const look = world.lookOptions()[0];
+    const wren = { t: 'npc' as const, id: 'dm_old_wren', name: 'Old Wren', look: look.id, lines: ['hi'] };
+    world.apply(wren);
+    world.apply({ t: 'cast', region, entity: wren.id, x: 5, y: 5 });
+    const before = world.log.length;
+    // The same name under a fresh id (what npcId used to hand out as dm_old_wren_2), however it is spelled or spaced.
+    for (const name of ['Old Wren', 'old  WREN', ' Old Wren ']) {
+      const again = { ...wren, id: world.npcId(name), name };
+      expect(() => world.apply(again), name).toThrow(/already lives in this world/);
+    }
+    // The same id under another name.
+    expect(() => world.apply({ ...wren, name: 'Someone Else' })).toThrow(WorldError);
+    // A pack's person is taken too.
+    expect(() => world.apply({ ...wren, id: 'dm_copy', name: look.name })).toThrow(/already lives/);
+    expect(world.log).toHaveLength(before);
+    expect(world.castable(region).people.filter((p) => p.name === 'Old Wren')).toHaveLength(1);
+  });
+
   it('refuses a new voice for nobody the DM made, or with lines that do not fit', () => {
     const world = new World(7, packs);
     world.open();

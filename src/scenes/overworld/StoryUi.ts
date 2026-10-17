@@ -1,5 +1,5 @@
 import { TRAINER } from '../../systems/skills';
-import { enabled } from '../../systems/capabilities';
+import { compassOn, hintsOn } from '../../systems/aids';
 import { GuideArrow } from '../../entities/GuideArrow';
 import type { Character } from '../../entities/Character';
 import type { QuestSite } from '../../entities/QuestSite';
@@ -14,6 +14,7 @@ import { RELIC_KIND, parseRelicWhat } from '../../systems/dmQuests';
 import { landmarkIn, landmarkText } from '../../systems/landmarks';
 import { HINT_AREA, HINT_ARROW, taskText, type TaskView } from '../../systems/dmTasks';
 import { MOB_KINDS } from '../../systems/combat';
+import { direction } from '../../systems/bearing';
 import { doorToward, guideFor, searchMiddle } from '../../systems/guide';
 import { recipeNames } from '../../systems/dmForge';
 import { FUSED, ITEMS } from '../../systems/items';
@@ -191,7 +192,7 @@ export class StoryUi {
   /** The quest arrow: points from the hero at where the quest leads (a thing in this zone, or the door towards it). */
   private pointTheWay(z: ZoneState, dt: number) {
     const { player } = this.arena;
-    const hide = this.zones.transition.busy || !player.visible || !enabled('guide', z.name) || this.arena.local.dm; // the DM has no quest
+    const hide = this.zones.transition.busy || !player.visible || this.arena.local.dm; // the DM has no quest
     const world = {
       zone: z.name,
       doors: z.data.doors,
@@ -204,7 +205,8 @@ export class StoryUi {
       places: z.data.places.map((p) => ({ name: p.name, x: (p.col + 0.5) * CELL, y: (p.row + 0.5) * CELL })),
     };
     // The story's quest arrow is solo only: online the Dungeon Master's quest is the only one the party has.
-    const guide = hide || this.arena.role !== 'solo' ? null : guideFor(this.arena.hero, world, player);
+    const guide =
+      hide || !hintsOn(z.name) || this.arena.role !== 'solo' ? null : guideFor(this.arena.hero, world, player);
     const { camera } = z;
     const at = (x: number, y: number) => ({ x: z.world.x + x * camera.zoom, y: z.world.y + y * camera.zoom });
     // A person or a door gets the arrow; something to be found is only an area on the map (M).
@@ -229,8 +231,13 @@ export class StoryUi {
       !this.zones.transition.busy
         ? doorToward(z.data.doors, player, z.name, task.zone)
         : null;
-    const target = calling ?? toward ?? known;
-    this.arrow.update(dt, at(player.x, player.y - 20), target && at(target.x, target.y - 12), target?.label ?? '');
+    const target = compassOn(z.name) ? (calling ?? toward ?? known) : null; // the compass may be off for the story or the player
+    this.arrow.update(
+      dt,
+      at(player.x, player.y - 20),
+      target && at(target.x, target.y - 12),
+      target?.label ? `${target.label}, ${direction(player, target).replace(/^close by, /, '')}` : '',
+    );
     this.overlay.setGuide(guide);
   }
 

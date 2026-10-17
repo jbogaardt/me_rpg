@@ -4,7 +4,7 @@ import { sayTime } from '../systems/dmPowers';
 import { ReadingPause } from '../systems/readingPause';
 import type { Sprites, Zone } from '../assets';
 import type {} from '../core/aim';
-import { actionPressed, clickedAt, mapPressed, menuPressed, stopPressed } from '../core/controls';
+import { actionPressed, clickedAt, hotbarPressed, mapPressed, menuPressed, stopPressed } from '../core/controls';
 import {} from '../core/direction';
 import type {} from './ZoneState';
 import type { Scene } from '../core/Scene';
@@ -23,6 +23,7 @@ import type { EpicTemplate } from '../systems/dmEpics';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
+import { PartnerArrows } from '../hud/PartnerArrows';
 import { AreaBanner } from '../hud/AreaBanner';
 import {} from '../systems/places';
 import type { Menu } from '../hud/Menu';
@@ -48,7 +49,9 @@ import { Ground } from './overworld/Ground';
 import { GuestLink } from './overworld/GuestLink';
 import { HostLink } from './overworld/HostLink';
 import { PackSync } from './overworld/PackSync';
-import { Simulation } from './overworld/Simulation';
+import { foeNear, Simulation } from './overworld/Simulation';
+import { PickupToasts } from '../hud/PickupToasts';
+import { playPing } from '../hud/sfx';
 import { Trading } from './overworld/Trading';
 import { Training } from './overworld/Training';
 import { Visuals } from './overworld/Visuals';
@@ -63,6 +66,8 @@ import { createDmBot, type DmBotApi } from './overworld/DmBot';
 import { DmDesk } from './overworld/DmDesk';
 import { DmPowers } from './overworld/DmPowers';
 import { DmBar } from '../hud/DmBar';
+import { hotbar, HotbarView } from '../hud/Hotbar';
+import { slotOp } from '../systems/hotbar';
 import { DmCard } from '../hud/DmCard';
 import { DmPrompts } from './overworld/DmPrompts';
 import { DmTasks } from './overworld/DmTasks';
@@ -116,6 +121,7 @@ export class OverworldScene implements Scene {
   private zones: Zones;
   private sim: Simulation;
   private ground: Ground;
+  private pickups = new PickupToasts();
   private barrels: Barrels;
   private pack: PackSync;
   private trading: Trading;
@@ -128,6 +134,7 @@ export class OverworldScene implements Scene {
   private desk!: DmDesk;
   private votePanel = new VotePanel();
   private dmBar = new DmBar();
+  private hotbarView = new HotbarView();
   private dmCard = new DmCard();
   private requests = new RequestPanel();
   private powers!: DmPowers;
@@ -141,6 +148,7 @@ export class OverworldScene implements Scene {
   private host: HostLink;
   private guest: GuestLink;
   private overlay = new MapOverlay();
+  private partnerArrows = new PartnerArrows();
   private banner = new AreaBanner();
   private storyUi!: StoryUi; // what the local player is told and shown about their quests
   private interact!: Interactions; // what the action key does
@@ -170,6 +178,11 @@ export class OverworldScene implements Scene {
     this.sim = new Simulation(arena, visuals, this.zones, (e) => this.host.emit(e), say);
     this.zones.makeMobWorld = (z) => this.sim.mobWorldFor(z);
     this.ground = new Ground(arena, this.sim);
+    this.ground.onPicked = (p, name) => {
+      if (p !== arena.local) return; // a friend's pickup is theirs to see
+      this.pickups.add(name, foeNear(arena.zone, p));
+      playPing();
+    };
     this.barrels = new Barrels(arena, this.sim);
     this.pack = new PackSync(arena, ui.session, ui, this.ground);
     this.trading = new Trading(arena, ui.session, ui);
@@ -354,7 +367,7 @@ export class OverworldScene implements Scene {
     this.dmBar.attach(null);
     this.dmCard.hide();
     this.votePanel.sync(null);
-    this.overlay.setAvailable(false);
+    this.overlay.close(); // the button stays; only an open map goes
     this.interact.clear();
     this.ui.dialog.close();
     this.ui.shop.close();
@@ -378,13 +391,14 @@ export class OverworldScene implements Scene {
     const { arena } = this;
     this.syncRole(session.role);
     arena.clock += dt;
+    this.pickups.update(dt, foeNear(arena.zone, arena.local));
     this.updateDm(dt);
     const online = arena.role !== 'solo';
-    const mapShown = this.updateMap();
+    this.updateMap();
     menu.setOnline(online, arena.local.dm);
     if (menu.open && online) menu.dmQuest = arena.task && { view: arena.task, pages: this.storyUi.briefOf(arena.task) };
     this.trading.sync(dt, online);
-    this.handleKeys(mapShown);
+    this.handleKeys();
     if (menu.open || shop.open || trade.open) {
       if (menu.open) menu.update();
       else if (shop.open) shop.update();
@@ -428,29 +442,28 @@ export class OverworldScene implements Scene {
     );
   }
 
-  /** The map overlay: available in open-air zones with the capability, filled in as the players in view explore. Returns whether it is shown. */
-  private updateMap(): boolean {
+  /**
+   * The map overlay: core engine, always available (host, guest, DM, touch), filled in as the players in view explore.
+   * A room has no overview, so there it opens on a note saying so instead of the button going missing.
+   */
+  private updateMap() {
     const { arena } = this;
-    // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
-    // without the map capability (it is still explored, so nothing changes if one is played later).
     const outdoors = !arena.zone.data.indoor;
     const here = arena.zone.name;
-    const mapShown = outdoors && enabled('map', here);
-    this.overlay.setAvailable(mapShown);
+    this.overlay.setRoom(outdoors ? null : here);
     if (outdoors) {
       const seen = this.atlas.of(arena.zone.name, arena.zone.data);
-      if (!flag('map', 'fog', here)) seen.revealAll(); // a map without fog shows the whole zone at once
+      if (!flag('guide', 'fog', here)) seen.revealAll(); // a map without fog shows the whole zone at once
       // Everyone in this zone uncovers the map around them (a guest only knows the players in its own zone).
       for (const p of arena.players()) if (p.body.visible) seen.reveal(p.body.x, p.body.y);
       this.overlay.setZone(arena.zone.data, seen, arena.zone.name);
     }
-    return mapShown;
   }
 
   /** Keys that act on the screens: the map, Esc (cards, words, held foe, menu), the inventory, and the DM's click on a foe. */
-  private handleKeys(mapShown: boolean) {
+  private handleKeys() {
     const { menu, shop, dialog, trade } = this.ui;
-    if (mapShown && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
+    if (!menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
     this.possession.update();
     const click = clickedAt();
     const free = !menu.open && !shop.open && !trade.open && !dialog.active && !this.zones.transition.busy;
@@ -468,6 +481,12 @@ export class OverworldScene implements Scene {
     if (!dialog.active && actionPressed('inventory') && !trade.open) {
       if (shop.open) shop.close();
       else menu.toggleInventory(this.hero);
+    }
+    // Quick slots (keys 1-4 or a tap on the bar): the same Inventory action as the menu, so a guest asks the host.
+    const slot = hotbarPressed();
+    if (slot >= 0 && free && !this.arena.local.dm) {
+      const op = slotOp(this.hero, hotbar.get(slot));
+      if (op) this.pack.localOp(op);
     }
   }
 
@@ -496,7 +515,7 @@ export class OverworldScene implements Scene {
     z.syncBeds(); // a guest's own copy of the same rule
     z.pondBeds.show(z.ponds.levels()); // the ponds drained by drinking, until rain fills them
     z.npc?.animate(dt * 1000, false);
-    for (const f of z.folk) f.body.animate(dt * 1000, false);
+    for (const f of z.folk) f.body.animate(dt * 1000, f.moving);
     this.scenario.update(menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy);
     this.storyUi.update(z, dt);
     for (const k of z.keepers) k.body.animate(dt * 1000, false);
@@ -520,6 +539,24 @@ export class OverworldScene implements Scene {
       this.storyUi.taskLine(),
       arena.role === 'solo',
     );
+    // Arrows toward partners out of view, and a chip for one in another zone (online only, not during a door transition).
+    this.partnerArrows.update(
+      arena.role !== 'solo' && !this.zones.transition.busy,
+      z.camera.view(arena.screen.width, arena.screen.height),
+      arena.screen.width,
+      arena.screen.height,
+      arena
+        .players()
+        .filter((p) => p !== arena.local)
+        .map((p) => ({
+          slot: p.slot,
+          x: p.body.x,
+          y: p.body.y,
+          here: p.zone === z.name && p.body.visible,
+          zone: p.zone === z.name ? '' : p.zone,
+        })),
+    );
+    this.hotbarView.update(this.hero, !arena.local.dm);
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.
@@ -582,6 +619,7 @@ export class OverworldScene implements Scene {
           for (const p of present) sim.updatePlayer(p, commandOf(p), dt); // time stopped or not, the party can walk
           if (!frozen) {
             for (const mob of z.mobs) mob.update(dt, z.mobWorld);
+            if (enabled('roaming', z.name)) z.updateFolk(dt, arena.bodies()); // people stroll about their posts
             for (const crop of z.crops) crop.grow(dt);
             this.ground.age(dt);
             sim.weather(dt);

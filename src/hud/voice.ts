@@ -1,12 +1,14 @@
 // The Dungeon Master's spoken voice, on the player's device, so each page says the caption it was told and nothing goes
-// over the wire. Two engines: the browser's own speech synthesis (the default, free, instant) and a natural voice, the
-// Kokoro model run in the page (`naturalVoice.ts`, opt-in because it downloads the model once). A line is said by the
-// natural voice only once that is ready; until then, or if it fails, the browser's says it. The choices to mute and for the
-// natural voice are remembered in this browser only. A line is spoken a sentence at a time and is never cut short by the
+// over the wire. Two engines: a natural voice, the Kokoro model run in the page (`naturalVoice.ts`, the default: it
+// downloads the model once) and the browser's own speech synthesis (free, instant; the fallback and a setting). A line is
+// said by the natural voice only once that is ready; until then, or if it fails, the browser's says it (`onFallback` lets
+// the HUD say so). Only an explicit choice of the browser's voice is stored ('0'); the choices to mute and for the
+// engine are remembered in this browser only. A line is spoken a sentence at a time and is never cut short by the
 // next one: `Dialog` waits for `busy` to end before it shows the next caption. HUD (DOM); silent where there is no speech.
 
 import { natural } from './naturalVoice';
 import { speechParts } from './speechParts';
+import { fallbackNote, usesNaturalNow, wantsNaturalVoice } from './voiceChoice';
 
 const KEY = 'voice-muted';
 const ENGINE_KEY = 'voice-natural';
@@ -20,13 +22,14 @@ try {
   /* storage can be blocked: the voice stays on */
 }
 
-let wantsNatural = false;
+let stored: string | null = null;
 try {
-  wantsNatural = localStorage.getItem(ENGINE_KEY) === '1';
+  stored = localStorage.getItem(ENGINE_KEY);
 } catch {
-  /* storage can be blocked: the browser's voice stays */
+  /* storage can be blocked: the default (natural) stands */
 }
-if (wantsNatural && natural.supported) void natural.load(); // chosen before: load it while the game starts
+let wantsNatural = wantsNaturalVoice(stored, natural.supported);
+if (wantsNatural) void natural.load(); // the default: load it while the game starts
 
 /** Sentences still waiting to be spoken or being spoken (counted by us: `speechSynthesis.speaking` lags behind). */
 let pending = 0;
@@ -48,6 +51,19 @@ export const voice = {
       /* not remembered */
     }
     if (wantsNatural) void natural.load();
+  },
+  /** Why the browser's voice is speaking instead of the natural one, or null. */
+  get fallback(): string | null {
+    return fallbackNote(wantsNatural, natural.supported, natural.state);
+  },
+  /** Call `fn` with the note when the natural voice fails to load (once per failure). Returns the way to stop. */
+  onFallback(fn: (note: string) => void): () => void {
+    let told = false;
+    return natural.onChange(() => {
+      const note = natural.state === 'failed' ? this.fallback : null;
+      if (note && !told) fn(note);
+      told = note !== null;
+    });
   },
   get muted(): boolean {
     return muted;
@@ -71,7 +87,7 @@ export const voice = {
     const done = () => {
       pending = Math.max(0, pending - 1);
     };
-    const useNatural = wantsNatural && natural.state === 'ready';
+    const useNatural = usesNaturalNow(wantsNatural, natural.state);
     for (const sentence of speechParts(text)) {
       pending++;
       if (useNatural) {

@@ -80,6 +80,8 @@ export class DmEpics {
   private offered: EpicPlan[] = [];
   private turn = 0;
   private page = 0;
+  /** How many sagas the party has finished (not lost or called off): the DM bot reads it to tell a won saga from an ended one. */
+  completed = 0;
   /** A saga finished: the party did it all. */
   onDone: () => void = () => {};
 
@@ -377,6 +379,7 @@ export class DmEpics {
     if (run) for (const [who, person] of Object.entries(plan.epic.people ?? {})) this.say(run, who, person.finished);
     this.run = null;
     this.tasks.setEpic(null);
+    this.completed++;
     this.onDone();
   }
 

@@ -68,3 +68,39 @@ export const fresh = (p: Pulse | null, now: number): Pulse | null => (p && now -
 /** The tone for the DM's words, from the pressure. */
 export const moodOf = (p: Pulse | null): 'calm' | 'tense' | 'dire' | null =>
   !p ? null : p.pressure >= 0.7 ? 'dire' : p.pressure >= 0.35 ? 'tense' : 'calm';
+
+/** Attempts at one read, and the wait before the second (doubled for each after). */
+export const READ_ATTEMPTS = 3;
+export const READ_BACKOFF_MS = 500;
+
+/**
+ * A reader that tries again when the request fails (a network "fetch failed" is usually brief): up to `attempts` tries
+ * with doubling waits, then it throws an error naming the step, which the host logs before the timers take over.
+ */
+export class RetryingReader implements TableReader {
+  constructor(
+    private inner: TableReader,
+    private attempts = READ_ATTEMPTS,
+    private backoffMs = READ_BACKOFF_MS,
+    private sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+    private warn: (line: string) => void = (line) => console.warn(line),
+  ) {}
+
+  async read(state: PulseState): Promise<Omit<Pulse, 'at'>> {
+    let last: unknown;
+    for (let i = 1; i <= this.attempts; i++) {
+      try {
+        return await this.inner.read(state);
+      } catch (err) {
+        last = err;
+        if (i < this.attempts) {
+          const why = err instanceof Error ? err.message : String(err);
+          this.warn(`table read (Jev) attempt ${i}/${this.attempts} failed: ${why}; retrying`);
+          await this.sleep(this.backoffMs * 2 ** (i - 1));
+        }
+      }
+    }
+    const why = last instanceof Error ? last.message : String(last);
+    throw new Error(`step "table read (Jev)" failed after ${this.attempts} attempts: ${why}; the timers decide`);
+  }
+}

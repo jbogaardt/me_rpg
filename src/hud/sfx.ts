@@ -51,8 +51,17 @@ let ctx: AudioContext | null = null;
 
 /** Play a cue's sound now. Silent when muted, when the page has no audio, or when the browser has not let it start yet. */
 export function playSfx(name: SfxName) {
+  play(RECIPES[name]);
+}
+
+/** The short chime of an item picked up (not a DM cue, so it is not in the cue vocabulary). */
+const PING: Recipe = { dur: 0.18, gain: 0.2, tones: [{ wave: 'sine', from: 1320, to: 1760, gain: 1 }] };
+export function playPing() {
+  play(PING);
+}
+
+function play(recipe: Recipe) {
   if (voice.muted || typeof AudioContext === 'undefined') return;
-  const recipe = RECIPES[name];
   try {
     ctx ??= new AudioContext();
     if (ctx.state === 'suspended') void ctx.resume();

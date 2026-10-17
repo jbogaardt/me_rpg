@@ -27,6 +27,7 @@ import {
   questStatus,
   questWire,
   recordKill,
+  isFinale,
   recordSite,
   recordVisit,
   rewardText,
@@ -55,7 +56,7 @@ function onQuest(id: string): Hero {
 function finish(hero: Hero) {
   const q = currentQuest(hero.quests)!;
   const o = q.objective;
-  if (o.t === 'kill') hero.quests.progress = o.count;
+  if (o.t === 'kill' || o.t === 'boss') hero.quests.progress = o.count;
   if (o.t === 'gather') hero.quests.progress = 2 ** o.count - 1;
   if (o.t === 'visit') hero.quests.progress = 1;
   if (o.t === 'bring') for (let i = 0; i < o.count; i++) hero.pack.push(itemOf(o.item));
@@ -246,6 +247,28 @@ describe('kill quests', () => {
     expect(questStatus(hero)).toBe('ready');
   });
 
+  it('name an authored boss: one kill of that kind, only in its zone, shared by every hero who holds the quest', () => {
+    const [a, b] = [onQuest('heart'), onQuest('heart')];
+    const boss = MOB_KINDS.stillheart!;
+    expect(boss.named).toBe(true);
+    expect(mobKey(boss)).toBe('stillheart'); // counted under its own key, not the DM's BOSS_KEY
+    expect(recordKill(a, MOB_KINDS.troll!, 'frostlands')).toBeNull();
+    expect(recordKill(a, boss, 'greenwood')).toBeNull();
+    for (const hero of [a, b]) expect(recordKill(hero, boss, 'frostlands')?.ready).toBe(true); // the party shares the kill
+    expect(recordKill(a, boss, 'frostlands')).toBeNull();
+  });
+
+  it('end the story on the boss: handing it in tells the epilogue and flags the finale', () => {
+    const last = QUESTS[QUESTS.length - 1]!;
+    expect(isFinale(last)).toBe(true);
+    expect(QUESTS.filter(isFinale)).toHaveLength(1);
+    const hero = onQuest(last.id);
+    const told = finish(hero);
+    expect(told.finale).toBe(true);
+    expect(told.lines.slice(-EPILOGUE.length)).toEqual(EPILOGUE);
+    expect(talk(newHero(), offererOf(QUESTS[0]!)).finale).toBe(false);
+  });
+
   it('do not count before the task is given', () => {
     const hero = newHero();
     expect(recordKill(hero, MOB_KINDS.goblin!, 'greenwood')).toBeNull();
@@ -352,7 +375,7 @@ describe('story keys', () => {
     for (const q of QUESTS) {
       expect(linesFor(`${q.id}.offer`)).toEqual(offerLines(q));
       expect(linesFor(`${q.id}.remind`)).toEqual(q.remind);
-      expect(linesFor(`${q.id}.reward`)?.length).toBe(q.done.length + 1);
+      expect(linesFor(`${q.id}.reward`)?.length).toBe(q.done.length + 1 + (isFinale(q) ? EPILOGUE.length : 0));
       expect(linesFor(`${q.id}.full`)?.length).toBe(1);
     }
     expect(linesFor('end')).toEqual(EPILOGUE);
@@ -468,8 +491,8 @@ describe('what the party’s quests switch', () => {
   };
 
   it('switches what a taken quest says, and nothing for one not yet taken', () => {
-    switching({ map: false, needs: true }, () => {
-      expect(questDials([on(true)])).toEqual({ map: false, needs: true });
+    switching({ guide: false, needs: true }, () => {
+      expect(questDials([on(true)])).toEqual({ guide: false, needs: true });
       expect(questDials([on(false)])).toEqual({});
     });
   });
@@ -477,8 +500,8 @@ describe('what the party’s quests switch', () => {
   it('lets the first hero to say a thing win, and ignores a hero with no quest left', () => {
     const done = newHero();
     done.quests = { stage: QUESTS.length, taken: true, progress: 0 };
-    switching({ map: false }, () => {
-      expect(questDials([done, on(true)])).toEqual({ map: false });
+    switching({ guide: false }, () => {
+      expect(questDials([done, on(true)])).toEqual({ guide: false });
       expect(questDials([])).toEqual({});
     });
   });

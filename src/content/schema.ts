@@ -4,6 +4,7 @@
 // The source of the JSON (static files today, a database later) is ContentManager's business, not this file's.
 
 import type { MobKind } from '../systems/combat';
+import { MAX_ROAM_CELLS } from '../systems/roam';
 import { isClimate } from '../systems/weather';
 import { SKILL_IDS, SKILLS } from '../systems/skills';
 import { CapabilityTable, checkCapabilities, DIALS, type CapabilitySpec, type Dial } from '../systems/capabilities';
@@ -45,6 +46,7 @@ export interface EntityBehavior {
   windup?: number; // seconds of telegraph before a blow (default 0.45)
   recover?: number; // seconds busy after attacking (default 0.7)
   stagger?: number; // seconds a hit stuns it (default 0.3)
+  telegraph?: { color?: string; ground?: boolean }; // windup cue: flash colour "#rrggbb", ground warning
   shot?: { range: number; speed: number; color: string }; // a ranged attacker (color "#rrggbb")
   ray?: { range: number; color: string; tick: number; power: number; duration: number; rest: number }; // a held beam
 }
@@ -59,10 +61,17 @@ export interface EntityDef {
   sprite: Outfit;
   /** Drawn this much bigger than a person (mobs only, default 1); its body, reach and hit area grow with it. */
   scale?: number;
+  /** A named boss (mobs only): placed once in its zone, a `boss` objective's target; see `systems/bosses.ts`. */
+  boss?: boolean;
   stats?: EntityStats; // mobs only (required for them)
   behavior?: EntityBehavior; // mobs only
   /** What an NPC placed by a scenario says when the player talks to it. */
   lines?: string[];
+  /**
+   * An NPC a scenario places strolls about their post within this many cells (1 to `MAX_ROAM_CELLS`), stopping to face
+   * whoever talks to them; absent: stands still. Needs the `roaming` capability (systems/roam.ts).
+   */
+  roam?: number;
 }
 
 // --- biomes.json ----------------------------------------------------------------------------------------------------
@@ -109,6 +118,8 @@ export interface Choice {
   text: string;
   next: string; // the node it leads to
   requires?: Requirement;
+  /** Why the way is shut while `requires` is unmet (the story's words, shown under the choice and said when it is tried). */
+  hint?: string;
 }
 
 /** An entity placed by a scenario, at a cell (x = column, y = row) of the biome's map. */
@@ -245,6 +256,17 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
   if (e.notes !== undefined) def.notes = r.string(e.notes, `${path}.notes`);
   if (e.scale !== undefined) def.scale = r.number(e.scale, `${path}.scale`, 0.5);
   if (e.lines !== undefined) def.lines = r.strings(e.lines, `${path}.lines`);
+  if (e.roam !== undefined) {
+    if (def.type !== 'npc') r.fail(`${path}.roam`, 'only an npc roams (a mob has its own behavior)');
+    else {
+      def.roam = r.number(e.roam, `${path}.roam`, 1);
+      if (def.roam > MAX_ROAM_CELLS) r.fail(`${path}.roam`, `must be at most ${MAX_ROAM_CELLS} cells`);
+    }
+  }
+  if (e.boss !== undefined) {
+    if (e.boss !== true || e.type === 'npc') r.fail(`${path}.boss`, 'is true on a mob, or left out');
+    else def.boss = true;
+  }
   if (def.type === 'npc') {
     if (e.stats !== undefined || e.behavior !== undefined) r.fail(path, 'an npc has no stats or behavior');
     return def;
@@ -272,6 +294,18 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
     if (windup !== undefined) behavior.windup = windup;
     if (recover !== undefined) behavior.recover = recover;
     if (stagger !== undefined) behavior.stagger = stagger;
+    if (b.telegraph !== undefined) {
+      const tg = r.object(b.telegraph, `${p}.telegraph`);
+      if (tg) {
+        const t: NonNullable<EntityBehavior['telegraph']> = {};
+        if (tg.color !== undefined) t.color = r.color(tg.color, `${p}.telegraph.color`);
+        if (tg.ground !== undefined) {
+          if (typeof tg.ground !== 'boolean') r.fail(`${p}.telegraph.ground`, 'must be true or false');
+          else t.ground = tg.ground;
+        }
+        behavior.telegraph = t;
+      }
+    }
     if (b.shot !== undefined) {
       const shot = r.object(b.shot, `${p}.shot`);
       if (shot)
@@ -439,6 +473,10 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
           const req = readRequirement(r, p.requires, `${at}.requires`);
           if (req) choice.requires = req;
         }
+        if (p.hint !== undefined) {
+          choice.hint = r.string(p.hint, `${at}.hint`);
+          if (p.requires === undefined) r.fail(`${at}.hint`, 'explains a requirement, and this choice has none');
+        }
         return [choice];
       }),
     };
@@ -462,6 +500,8 @@ function readObjective(r: Reader, v: unknown, path: string): Objective {
     if (o.zone !== undefined) kill.zone = r.string(o.zone, `${path}.zone`);
     return kill;
   }
+  if (o.t === 'boss')
+    return { t: 'boss', boss: r.string(o.boss, `${path}.boss`), zone: r.string(o.zone, `${path}.zone`), count: 1 };
   if (o.t === 'gather')
     return { t: 'gather', site: r.string(o.site, `${path}.site`), zone: r.string(o.zone, `${path}.zone`), count };
   if (o.t === 'bring') {
@@ -477,7 +517,7 @@ function readObjective(r: Reader, v: unknown, path: string): Objective {
   }
   if (o.t === 'haul')
     return { t: 'haul', place: r.string(o.place, `${path}.place`), zone: r.string(o.zone, `${path}.zone`), count };
-  r.fail(`${path}.t`, 'must be "kill", "gather", "bring", "meet", "visit", "cast" or "haul"');
+  r.fail(`${path}.t`, 'must be "kill", "boss", "gather", "bring", "meet", "visit", "cast" or "haul"');
   return { t: 'kill', kind: '', count };
 }
 
@@ -856,6 +896,9 @@ function crossCheck(r: Reader, c: Content) {
       r.fail(`${p}.where.door`, `"${quest.where.door}" is not the map of any biome`);
     const o = quest.objective;
     if (o.t === 'kill' && !mob(o.kind)) r.fail(`${p}.objective.kind`, `"${o.kind}" is not a mob in entities.json`);
+    if (o.t === 'boss' && !c.entities[o.boss]?.boss)
+      r.fail(`${p}.objective.boss`, `"${o.boss}" is not a mob with "boss": true in entities.json`);
+    if (o.t === 'boss' && !maps.has(o.zone)) r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
     if ((o.t === 'kill' || o.t === 'gather' || o.t === 'cast') && o.zone !== undefined && !maps.has(o.zone))
       r.fail(`${p}.objective.zone`, `"${o.zone}" is not the map of any biome`);
     if (o.t === 'gather' && !q.sites[o.site]) r.fail(`${p}.objective.site`, `"${o.site}" is not in sites`);
@@ -936,6 +979,10 @@ function checkAgainstCapabilities(r: Reader, c: Content) {
       if (paid) r.fail(`${p}.reward.items[${i}]`, paid);
     }
   }
+  if (!caps.anywhere('roaming'))
+    for (const [id, def] of Object.entries(c.entities))
+      if (def.roam !== undefined)
+        r.fail(`entities.${id}.roam`, 'people stand still in this campaign (capabilities.roaming)');
   if (!caps.enabled('skills'))
     for (const node of c.scenarios.nodes.values())
       node.choices.forEach((choice, i) => {
@@ -988,9 +1035,15 @@ export function toMobKind(def: EntityDef): MobKind {
     sight: s.sight,
   };
   if (def.scale !== undefined) kind.scale = def.scale;
+  if (def.boss) kind.named = true;
   if (b.windup !== undefined) kind.windup = b.windup;
   if (b.recover !== undefined) kind.recover = b.recover;
   if (b.stagger !== undefined) kind.stagger = b.stagger;
+  if (b.telegraph) {
+    kind.telegraph = {};
+    if (b.telegraph.color !== undefined) kind.telegraph.color = colorNumber(b.telegraph.color);
+    if (b.telegraph.ground !== undefined) kind.telegraph.ground = b.telegraph.ground;
+  }
   if (b.shot) kind.shot = { ...b.shot, color: colorNumber(b.shot.color) };
   if (b.ray) kind.ray = { ...b.ray, color: colorNumber(b.ray.color) };
   return kind;

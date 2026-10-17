@@ -27,15 +27,15 @@ afterEach(() => setCapabilities({}));
 describe('capabilities', () => {
   it('are all on unless a campaign says otherwise', () => {
     for (const id of CAPABILITY_IDS) expect(enabled(id)).toBe(true);
-    setCapabilities({ map: false, needs: false });
-    expect(disabledCapabilities()).toEqual(['map', 'needs']);
+    setCapabilities({ guide: false, needs: false });
+    expect(disabledCapabilities()).toEqual(['guide', 'needs']);
     setCapabilities({ combos: false }); // a new campaign starts from all on again
     expect(disabledCapabilities()).toEqual(['combos']);
   });
 
   it('are read from scenarios.json, and a wrong one is reported', () => {
     const file = (capabilities: unknown) => ({ version: 1, start: 'a', capabilities, nodes: [] });
-    expect(parseScenarios(file({ map: false, guide: true })).capabilities).toEqual({ map: false, guide: true });
+    expect(parseScenarios(file({ guide: false, compass: true })).capabilities).toEqual({ guide: false, compass: true });
     expect(parseScenarios({ version: 1, start: 'a', nodes: [] }).capabilities).toEqual({});
     expect(() => parseScenarios(file({ jetpack: false }))).not.toThrow(); // parse only collects; parseContent throws
   });
@@ -80,7 +80,7 @@ describe('what each switch takes away', () => {
 describe('settings, zones and what needs what', () => {
   it('tunes a capability: defaults, the campaign’s word, then the zone’s', () => {
     expect(setting('needs', 'drain')).toBe(1);
-    expect(flag('map', 'fog')).toBe(true);
+    expect(flag('guide', 'fog')).toBe(true);
     setCapabilities(
       { needs: { drain: 2 }, weather: { calm: 0.5 } },
       { swamp: { needs: { drain: 3 } }, cave: { needs: false } },
@@ -94,13 +94,13 @@ describe('settings, zones and what needs what', () => {
   });
 
   it('lets a zone switch on what the campaign switched off, and says so', () => {
-    setCapabilities({ map: false }, { town: { map: { fog: false } } });
-    expect(enabled('map')).toBe(false);
-    expect(enabled('map', 'town')).toBe(true);
-    expect(flag('map', 'fog', 'town')).toBe(false);
-    expect(enabledAnywhere('map')).toBe(true);
-    setCapabilities({ map: false });
-    expect(enabledAnywhere('map')).toBe(false);
+    setCapabilities({ guide: false }, { town: { guide: { fog: false } } });
+    expect(enabled('guide')).toBe(false);
+    expect(enabled('guide', 'town')).toBe(true);
+    expect(flag('guide', 'fog', 'town')).toBe(false);
+    expect(enabledAnywhere('guide')).toBe(true);
+    setCapabilities({ guide: false });
+    expect(enabledAnywhere('guide')).toBe(false);
   });
 
   it('ignores a zone’s word on a campaign-wide capability', () => {
@@ -116,13 +116,14 @@ describe('settings, zones and what needs what', () => {
   });
 
   it('says what is wrong with a spec', () => {
-    expect(checkCapabilities({ map: { fog: false }, needs: { drain: 0.5 } }, 'x')).toEqual([]);
+    expect(checkCapabilities({ guide: { fog: false }, needs: { drain: 0.5 } }, 'x')).toEqual([]);
     expect(checkCapabilities(undefined, 'x')).toEqual([]);
     expect(checkCapabilities([], 'x')).toEqual(['x: must be an object']);
-    expect(checkCapabilities({ map: 1 }, 'x')).toEqual(['x.map: must be true, false or an object of settings']);
-    expect(checkCapabilities({ map: { fog: 'thick' } }, 'x')).toEqual(['x.map.fog: must be true or false']);
-    expect(checkCapabilities({ guide: { arrow: 1 } }, 'x')).toEqual([
-      'x.guide.arrow: is not a setting of guide (it has none)',
+    expect(checkCapabilities({ compass: 1 }, 'x')).toEqual(['x.compass: must be true, false or an object of settings']);
+    expect(checkCapabilities({ map: false }, 'x')).toEqual([expect.stringContaining('the map is always on')]);
+    expect(checkCapabilities({ guide: { fog: 'thick' } }, 'x')).toEqual(['x.guide.fog: must be true or false']);
+    expect(checkCapabilities({ compass: { arrow: 1 } }, 'x')).toEqual([
+      'x.compass.arrow: is not a setting of compass (it has none)',
     ]);
     expect(checkCapabilities({ weather: { calm: 2 } }, 'x')).toEqual(['x.weather.calm: must be a number from 0 to 1']);
     expect(checkCapabilities({ skills: false }, 'x', 'zone')).toEqual([
@@ -146,20 +147,20 @@ describe('settings, zones and what needs what', () => {
 
 describe('the Dungeon Master’s dials', () => {
   it('lays a switch over the campaign and every zone, and keeps a switched-on capability’s settings', () => {
-    const campaign = { needs: { drain: 2 }, map: false } as const;
-    const zones = { swamp: { needs: false, map: true }, cave: { weather: false } };
-    const { campaign: c, zones: z } = withDials(campaign, zones, { needs: true, map: false, weather: true });
-    expect(c).toEqual({ needs: { drain: 2 }, map: false, weather: true });
+    const campaign = { needs: { drain: 2 }, guide: false } as const;
+    const zones = { swamp: { needs: false, guide: true }, cave: { weather: false } };
+    const { campaign: c, zones: z } = withDials(campaign, zones, { needs: true, guide: false, weather: true });
+    expect(c).toEqual({ needs: { drain: 2 }, guide: false, weather: true });
     expect(z).toEqual({ swamp: {}, cave: {} });
     const table = new CapabilityTable(c, z);
     expect(table.enabled('needs', 'swamp')).toBe(true);
-    expect(table.enabled('map', 'swamp')).toBe(false);
+    expect(table.enabled('guide', 'swamp')).toBe(false);
     expect(table.enabled('weather', 'cave')).toBe(true);
   });
 
   it('changes nothing with no dials set', () => {
     const zones = { swamp: { needs: false } };
-    expect(withDials({ map: false }, zones, {})).toEqual({ campaign: { map: false }, zones });
+    expect(withDials({ guide: false }, zones, {})).toEqual({ campaign: { guide: false }, zones });
   });
 
   it('only offers capabilities that change what a zone shows, never what a hero has or who can play', () => {

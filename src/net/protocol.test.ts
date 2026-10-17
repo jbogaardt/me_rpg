@@ -52,7 +52,8 @@ const snap: SnapMsg = {
       [5, { type: 'slash', x: 1, y: 2, dir: 3, p: 2 }],
       [6, { type: 'bolt', x: 1, y: 2, vx: 260, vy: 0, p: 1 }],
       [11, { type: 'draw', x: 1, y: 2, p: 3 }],
-      [12, { type: 'arrow', x: 1, y: 2, vx: 300, vy: 0, range: 256 }],
+      [12, { type: 'arrow', x: 1, y: 2, vx: 300, vy: 0, range: 256, p: 2 }],
+      [15, { type: 'arrow', x: 1, y: 2, vx: 300, vy: 0, range: 256 }],
       [10, { type: 'bolt', x: 5, y: 6, vx: -135, vy: 0, color: 0xb06cff }], // an enemy's shot
       [14, { type: 'lightning', x: 100, y: 200, seed: 123456789 }],
       [7, { type: 'defeat', player: 3 }],
@@ -80,6 +81,11 @@ describe('messages', () => {
     const input: InputMsg = { k: 'in', n: 3, keys: packKeys(1, -1), act: 2, cb: 0, ci: 0, ack: 12, vr: 340 };
     const hello = { k: 'hello', v: PROTOCOL_VERSION, build: 'abc' } as const;
     for (const m of [input, hello, snap]) expect(parseMessage(encodeMessage(m))).toEqual(m);
+  });
+
+  it('carries the acknowledged input number of a snapshot', () => {
+    const withIa: SnapMsg = { ...snap, ia: 42 };
+    expect(parseMessage(encodeMessage(withIa))).toEqual(withIa);
   });
 
   it('keeps a busy four-player snapshot inside one network packet', () => {
@@ -329,6 +335,15 @@ describe('messages', () => {
     expect(parseMessage(JSON.stringify({ ...snap, barrels: [0, 1, 2] }))).toBeNull();
   });
 
+  it('carries the roaming people in a snapshot, and rejects a bad list', () => {
+    const withFolk = parseMessage(JSON.stringify({ ...snap, folk: [120, 340, 2, 50, 60, 0] }));
+    expect(withFolk && withFolk.k === 'snap' ? withFolk.folk : null).toEqual([120, 340, 2, 50, 60, 0]);
+    const none = parseMessage(JSON.stringify(snap));
+    expect(none && none.k === 'snap' ? none.folk : 'x').toBeUndefined();
+    for (const folk of [[1, 2], [1, 2, 7], [1.5, 2, 0], 'x'])
+      expect(parseMessage(JSON.stringify({ ...snap, folk }))).toBeNull();
+  });
+
   it('carries drained ponds, and rejects bad ones', () => {
     const wire = pondsWire([
       [42, 0.5, false],
@@ -381,6 +396,8 @@ describe('messages', () => {
       { ...snap, mobs: [[0, Infinity, 2, 0, 0, 5, 0, 0]] },
       { ...snap, mobs: 'x' },
       { ...snap, me: [1, 2, 3] },
+      { ...snap, ia: -1 },
+      { ...snap, ia: 'x' },
       { ...snap, events: [[1, 4, 0, 0, 'x'.repeat(100), 0]] }, // text too long
       { ...snap, events: [[1, 9, 0, 0]] }, // unknown kind
       { ...snap, events: [{ id: 1, e: { type: 'defeat', player: 0 } }] }, // the old object form
@@ -421,7 +438,7 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
     k: 'dm',
     n: 4,
     shift: -0.25,
-    dials: { map: false, weather: true },
+    dials: { guide: false, weather: true },
     vote: { id: 2, options: ['Into frost lands, over a thaw crossing', 'Into swamp lands'], tally: [2, 1], yours: 0 },
   };
 

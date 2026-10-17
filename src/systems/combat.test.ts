@@ -8,6 +8,7 @@ import {
   levelGains,
   MOB_KINDS,
   mobTimings,
+  telegraphOf,
   newHero,
   rollDamage,
   spellPower,
@@ -177,6 +178,28 @@ describe('MOB_KINDS', () => {
       recover: 0.7,
       stagger: 0,
     });
+  });
+
+  it('telegraphOf defaults and overrides', () => {
+    const plain: MobKind = {
+      name: 'x',
+      look: { body: 'body.light' },
+      maxHp: 1,
+      attack: 1,
+      defense: 0,
+      xp: 1,
+      gold: 1,
+      speed: 1,
+      sight: 1,
+    };
+    expect(telegraphOf(plain, 'melee')).toEqual({ color: 0xffe080, ground: false });
+    const archer = { ...plain, shot: { range: 100, speed: 90, color: 0x112233 } };
+    expect(telegraphOf(archer, 'shot')).toEqual({ color: 0x112233, ground: true });
+    expect(telegraphOf({ ...archer, telegraph: { color: 0xff0000, ground: false } }, 'shot')).toEqual({
+      color: 0xff0000,
+      ground: false,
+    });
+    expect(telegraphOf({ ...plain, telegraph: { ground: true } }, 'melee').ground).toBe(true);
   });
 
   it('the starter hero can always hurt a starter mob', () => {

@@ -25,8 +25,10 @@ import type { Population } from '../content/populate';
 import { CHEST_LOOTS } from '../systems/chests';
 import { CROP_KINDS, CROP_STAGES } from '../systems/crops';
 import { barrelSpots } from '../systems/barrels';
-import { Collision } from '../systems/collision';
+import { Collision, type Body } from '../systems/collision';
+import { directionToward } from '../core/direction';
 import { npcLook, OVERWORLD_NPC } from '../systems/looks';
+import { folkFromWire, folkWire, holdRoamer, newRoamer, stepRoamer, type Roamer } from '../systems/roam';
 import { PET_KINDS } from '../systems/pets';
 import { GIVERS } from '../systems/quests';
 import { SHOPS } from '../systems/shops';
@@ -54,6 +56,10 @@ export interface Folk {
   name: string;
   lines: string[];
   body: Character;
+  /** Set for a person who strolls about their post (content `roam`, systems/roam.ts); null: stands still. */
+  roamer: Roamer | null;
+  /** Walking right now (for the animation): the host's step, or on a guest the host's last move. */
+  moving: boolean;
 }
 
 export interface Keeper {
@@ -273,19 +279,73 @@ export class ZoneState {
       const kind = MOB_KINDS[m.kind];
       if (!kind) throw new Error(`Zone "${this.name}" spawns unknown mob kind "${m.kind}"`);
       const mob = new Mob(kind, wardrobe.sheet(kind.look), ...cellFeet(m));
-      mob.respawns = !isTrialZone(this.name);
+      mob.respawns = !isTrialZone(this.name) && !kind.named; // a named boss's fall is the story's: it stays down
+      if (kind.named) mob.body.setTag(kind.name, 0xffb070);
       return mob;
     });
     const folk = population.folk.map((f): Folk => {
       const body = new Character(wardrobe.sheet(f.def.sprite));
       body.position.set(...cellFeet(f));
       body.setTag(f.def.name, 0xffffff);
-      return { entity: f.entity, name: f.def.name, lines: f.def.lines ?? [`${f.def.name} nods.`], body };
+      const [x, y] = cellFeet(f);
+      const roamer = f.def.roam ? newRoamer(x, y, f.def.roam) : null;
+      return {
+        entity: f.entity,
+        name: f.def.name,
+        lines: f.def.lines ?? [`${f.def.name} nods.`],
+        body,
+        roamer,
+        moving: false,
+      };
     });
     this.mobs.push(...mobs);
     this.folk.push(...folk);
     const bodies = [...mobs.map((m) => m.body), ...folk.map((f) => f.body)];
     if (bodies.length) this.world.layer.addChild(...bodies);
+  }
+
+  /**
+   * Step the roaming people (solo and host; the caller checks the `roaming` capability and that time is running).
+   * `others` are the bodies that block, which a stroll never walks through.
+   */
+  updateFolk(dt: number, others: readonly Body[]) {
+    for (const f of this.folk) {
+      const r = f.roamer;
+      if (!r) continue;
+      f.moving = stepRoamer(r, dt, {
+        rnd: Math.random,
+        canMove: (x, y) => this.collision.canMove(f.body, x, y, others),
+      });
+      f.body.position.set(r.x, r.y);
+      f.body.face(r.facing);
+    }
+  }
+
+  /** Someone spoke to this person: they stop, face the speaker and (a moment later) go back to their post. */
+  attend(f: Folk, towardX: number, towardY: number) {
+    f.moving = false;
+    if (f.roamer) holdRoamer(f.roamer, towardX, towardY);
+    f.body.face(directionToward(towardX - f.body.x, towardY - f.body.y));
+  }
+
+  /** What a guest is told of the roaming people here (`SnapMsg.folk`); undefined when nobody roams. */
+  folkWire(): number[] | undefined {
+    const roaming = this.folk.flatMap((f) => (f.roamer ? [{ x: f.body.x, y: f.body.y, facing: f.body.facing }] : []));
+    return roaming.length ? folkWire(roaming) : undefined;
+  }
+
+  /** A guest: put the roaming people where the host says (their walk animation follows their movement). */
+  setFolkRemote(wire: number[] | undefined) {
+    const at = folkFromWire(wire);
+    let i = 0;
+    for (const f of this.folk) {
+      if (!f.roamer) continue;
+      const to = at[i++];
+      if (!to) continue;
+      f.moving = Math.hypot(to.x - f.body.x, to.y - f.body.y) > 0.5;
+      f.body.position.set(to.x, to.y);
+      f.body.face(to.facing);
+    }
   }
 
   /**

@@ -22,6 +22,9 @@ export class Ground {
     private sim: Pick<Simulation, 'text' | 'fx'>,
   ) {}
 
+  /** Set by the scene: a player took an item (the HUD's pickup toast, for the local player). */
+  onPicked?: (p: Player, name: string) => void;
+
   /** No room for another item on the ground here. */
   get full(): boolean {
     return this.arena.ground.length >= MAX_GROUND;
@@ -55,6 +58,7 @@ export class Ground {
     if (!addToPack(p.hero, g.item)) return this.sim.text(x, y - 22, 'Pack full', 0xff8a7a);
     this.remove(g);
     this.sim.text(x, y - 22, name, 0xffd34d);
+    this.onPicked?.(p, name);
   }
 
   /** Host and solo: let time pass for the items on the ground here; one that has lain too long puffs away. */

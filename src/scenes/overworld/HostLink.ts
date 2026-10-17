@@ -160,6 +160,7 @@ export class HostLink {
       if (!world) {
         const ponds = pondsWire(z.ponds.levels());
         const barrels = barrelsWire(z.barrels);
+        const folk = z.folkWire();
         world = {
           base: {
             k: 'snap',
@@ -171,6 +172,7 @@ export class HostLink {
             crops: z.crops.map((c) => c.code()),
             ...(ponds ? { ponds } : {}),
             ...(barrels ? { barrels } : {}),
+            ...(folk ? { folk } : {}),
             w: z.weather?.snapshot() ?? NO_WEATHER,
           },
           states: z.mobs.map((m) => encodeMob(m.view())),
@@ -210,6 +212,7 @@ export class HostLink {
         events: [],
         ...(listGround ? { ground } : {}),
         me: this.snapStats(remote.hero.stats),
+        ...(peer ? { ia: peer.n } : {}),
       };
       if (unseen.length) snap.events = fitEvents(unseen, SNAP_BUDGET - encodeMessage(snap).length, MAX_EVENTS_SENT);
       this.session.sendTo(slot, snap);

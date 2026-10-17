@@ -21,9 +21,11 @@ import { Inventory } from './Inventory';
 import { Magic } from './Magic';
 import { dmQuestPage, questPage } from './QuestLog';
 import type { TaskView } from '../systems/dmTasks';
+import { AidSetting } from './AidSetting';
 import { AimSetting } from './AimSetting';
 import { VoiceSetting } from './VoiceSetting';
 import { Keybinds } from './Keybinds';
+import { JoinStatus } from './JoinStatus';
 import { Multiplayer } from './Multiplayer';
 import { Party } from './Party';
 import { esc } from './html';
@@ -54,10 +56,15 @@ export class Menu {
 
   private keybinds: Keybinds;
   private aim: AimSetting;
+  private aids = new AidSetting();
   private voiceSetting: VoiceSetting;
 
   constructor(session: Session, touch: TouchControls) {
     new Multiplayer(session, () => this.close()); // owns the Online tab
+    // A join that fails brings the Online tab back so the friend can fix the code and try again.
+    new JoinStatus(session, () => {
+      if (!this.open && this.hero) this.toggle(this.hero, 'online');
+    });
     this.keybinds = new Keybinds(touch); // owns the key editor on the Controls tab
     this.aim = new AimSetting(touch); // owns the aiming choice on the Controls tab
     this.voiceSetting = new VoiceSetting(); // and the voice choice
@@ -223,6 +230,7 @@ export class Menu {
     this.inventory.show(hero);
     this.keybinds.refresh();
     this.aim.refresh();
+    this.aids.refresh();
     this.voiceSetting.refresh();
     this.select(this.tab);
   }

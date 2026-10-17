@@ -23,6 +23,7 @@ import {
   type Ranged,
 } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
+import { assistFacing } from '../../systems/meleeAssist';
 import {
   drainNeeds,
   drinkableNear,
@@ -36,9 +37,11 @@ import {
   starveRate,
   thirsty,
 } from '../../systems/needs';
+import { bossMends } from '../../systems/bosses';
 import { GIVERS, QUEST_GIVER, recordKill, recordVisit, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
+import { blinkAlpha } from '../../systems/hitPause';
 import type { Strike } from '../../entities/WeatherLayer';
 import type { ZoneState } from '../ZoneState';
 
@@ -129,6 +132,7 @@ export class Simulation {
           my,
           arena.inZone(z, () => arena.bodies()),
         ),
+      sees: (x0, y0, x1, y1) => z.collision.hasLineOfSight(x0, y0, x1, y1),
       strike: (mob, target) => arena.inZone(z, () => this.hurtHero(mob, target)),
       shoot: (mob, ux, uy) => arena.inZone(z, () => this.mobShoot(mob, ux, uy)),
       ray: (mob, target) => arena.inZone(z, () => this.mobRay(mob, target)),
@@ -270,7 +274,7 @@ export class Simulation {
     const [fx, fy] = DIR_VEC[p.body.facing];
     const swinging = this.isSwinging(p);
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
-    p.body.alpha = p.invuln > 0 && Math.floor(p.invuln * 16) % 2 === 0 ? 0.35 : 1;
+    p.body.alpha = blinkAlpha(p.invuln);
     p.body.setTint(auraTint({ ward: p.ward > 0, edge: p.edge.charges > 0, guard: p.guard > 0 }));
     p.body.animate(dt * 1000, p.moving);
   }
@@ -344,10 +348,17 @@ export class Simulation {
       return;
     }
     p.attackCooldown = ATTACK_COOLDOWN;
+    // Aim assist (systems/meleeAssist.ts): turn toward a near foe the facing would miss (not while aiming by mouse/tap).
+    if (!p.mouseAim) {
+      const foes = this.arena.mobs
+        .filter((m) => m.alive)
+        .map((m) => ({ x: m.body.x, y: m.body.y, allowance: (m.body.size - 1) * 14 }));
+      p.body.face(assistFacing(p.body.x, p.body.y, p.body.facing, foes, MELEE_REACH));
+    }
     p.body.play('slash');
     const dir = p.body.facing;
     const [vx, vy] = DIR_VEC[dir];
-    this.visuals.swing(p.body.x, p.body.y, dir);
+    this.visuals.swing(p.body.x, p.body.y, dir, p.slot);
     this.emit({ type: 'slash', x: round1(p.body.x), y: round1(p.body.y), dir: dirIndex(dir), p: p.slot });
     const cx = p.body.x + vx * 16;
     const cy = p.body.y + vy * 16;
@@ -389,11 +400,27 @@ export class Simulation {
     const y = p.body.y - BOLT_HEIGHT + uy * 8;
     const [vx, vy] = [ux * shot.bow.speed, uy * shot.bow.speed];
     const edge = this.takeEdge(p); // Arcane Edge: this arrow carries extra magic
-    this.visuals.arrow(x, y, vx, vy, shot.bow.range, (mob) => {
-      this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy);
-      if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
+    this.visuals.arrow(
+      x,
+      y,
+      vx,
+      vy,
+      shot.bow.range,
+      (mob) => {
+        this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy);
+        if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
+      },
+      p.slot,
+    );
+    this.emit({
+      type: 'arrow',
+      x: round1(x),
+      y: round1(y),
+      vx: round1(vx),
+      vy: round1(vy),
+      range: shot.bow.range,
+      p: p.slot,
     });
-    this.emit({ type: 'arrow', x: round1(x), y: round1(y), vx: round1(vx), vy: round1(vy), range: shot.bow.range });
   }
 
   /** The player tapped out combo `index` of their wand or tome: cast its spell if there is the mana for it. */
@@ -582,6 +609,17 @@ export class Simulation {
     if (s.hp <= 0) this.defeat(p);
   }
 
+  /** A wipe starts a named boss's fight again (`bosses.ts`): one in a zone no hero is in any more is back at full health. */
+  private mendBosses() {
+    const { arena } = this;
+    const party = arena.party();
+    for (const z of arena.zones.values()) {
+      const here = party.filter((q) => arena.zoneOf(q) === z).length;
+      for (const m of z.mobs)
+        if (bossMends({ named: !!m.kind.named, alive: m.alive, hp: m.hp, maxHp: m.kind.maxHp }, here)) m.reset();
+    }
+  }
+
   /** Out of HP: back to the spawn point, fully restored (XP and levels are kept). */
   private defeat(p: Player) {
     if (this.trialDefeat(p)) return;
@@ -605,7 +643,9 @@ export class Simulation {
     p.ward = 0;
     p.edge = { charges: 0, timer: 0 };
     p.guard = 0;
-    if (arena.role === 'solo') for (const z of arena.zones.values()) z.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them
+    if (arena.role === 'solo')
+      for (const z of arena.zones.values()) z.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them
+    else this.mendBosses();
     if (p === arena.local) this.announce(DEFEAT_LINES);
     else this.emit({ type: 'defeat', player: p.slot });
   }

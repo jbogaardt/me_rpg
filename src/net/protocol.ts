@@ -13,6 +13,7 @@
 // Everything from the peer is untrusted input: parseMessage() validates the shape and ranges, never throws.
 
 import { validBarrelsWire } from '../systems/barrels';
+import { validFolkWire } from '../systems/roam';
 import { AIM_STEPS } from '../core/aim';
 import { DIRS } from '../core/direction';
 import { GEAR_SLOTS, MOB_STATES } from '../systems/combat';
@@ -53,6 +54,9 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v47: the `fuse` Inventory action (kind 5: set the gem at a pack index in a pack index or, negative, a worn slot), a
  * `DmMsg.task`'s kind may be `forge` (index 8), and the item codes run on past the authored list through the pieces gems make.
  * v48: the world log's `sign` entry (the DM rewrote a signpost); an older page cannot follow the host's world.
+ * v49: an `arrow` event may carry `p`, the player who shot it, so a guest tints it like the swings and bolts.
+ * v50: `SnapMsg.ia`, the newest input number the host has applied for the recipient (client-side prediction).
+ * v51: `SnapMsg.folk`, where the people who stroll about their post (content `roam`) stand.
  * Older: v28 made a negative `SnapMsg.ponds` level mean refilling after running dry; v27 made `drink` start (item
  * 1) or stop (item 0) a steady drink and added `SnapMsg.ponds`; v26 added the `drink` op of `do`; v25 added the
  * mob state `channel` (the Mummy's held ray); v24 added the `frost` fx of Stasis; v23 made `SnapMsg.crops` a state
@@ -68,7 +72,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
  * within a size budget.
  */
-export const PROTOCOL_VERSION = 48;
+export const PROTOCOL_VERSION = 51;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -121,7 +125,7 @@ export type FxName = (typeof FX_NAMES)[number];
  *   slash  [id, 0, x, y, dir, p]
  *   bolt   [id, 1, x, y, vx, vy, p (-1: none), color?]
  *   draw   [id, 2, x, y, p]
- *   arrow  [id, 3, x, y, vx, vy, range]
+ *   arrow  [id, 3, x, y, vx, vy, range, p?]
  *   text   [id, 4, x, y, text, color]
  *   fx     [id, 5, FX_NAMES index, x, y, dir (null: none)?, p?]
  *   defeat [id, 6, player]
@@ -145,7 +149,7 @@ export type WorldEvent =
   | { type: 'slash'; x: number; y: number; dir: number; p: number } // `p`: the player (number) who swung
   | { type: 'bolt'; x: number; y: number; vx: number; vy: number; p?: number; color?: number } // `p`: the player who cast it; `color` set instead: an enemy's shot (the guest only draws it)
   | { type: 'draw'; x: number; y: number; p: number } // player `p` begins drawing a bow (the arrow comes later, as `arrow`)
-  | { type: 'arrow'; x: number; y: number; vx: number; vy: number; range: number } // a player's arrow (the guest only draws it)
+  | { type: 'arrow'; x: number; y: number; vx: number; vy: number; range: number; p?: number } // a player's arrow (the guest only draws it); `p`: who shot it
   | { type: 'text'; x: number; y: number; text: string; color: number }
   | { type: 'fx'; name: FxName; x: number; y: number; dir?: number; p?: number } // `p`: the player it happened to (heroHurt)
   | { type: 'lightning'; x: number; y: number; seed: number } // a bolt lands here (the seed shapes it the same everywhere)
@@ -198,6 +202,8 @@ export interface SnapMsg {
   players: PlayerSnap[];
   mobs: MobSnap[]; // only the mobs near the recipient, and a still one only now and then
   me: StatsSnap;
+  /** The newest `InputMsg.n` the host has received from the recipient, so it can reconcile its predicted hero (core/prediction.ts). Absent: none yet. */
+  ia?: number;
   chests: number; // bit i set: chest i of the map is open
   crops: number[]; // the state of each crop plot of the map (systems/crops.ts `cropCode`)
   /**
@@ -207,6 +213,8 @@ export interface SnapMsg {
   ponds?: number[];
   /** Barrels of that zone away from home (systems/barrels.ts `barrelsWire`: number, x, y, 0 or 1 + the carrier's facing, flat). Absent: all at home. */
   barrels?: number[];
+  /** The roaming people of that zone (systems/roam.ts `folkWire`: x, y, facing index, flat, in the zone's folk order). Absent: nobody roams there. */
+  folk?: number[];
   w: WeatherSnap; // the host's weather, so everyone sees the same sky
   /** Items lying on the ground in that zone. Left out when unchanged since the last snapshot that listed them (the host lists them again at least once a second, in case one was lost). */
   ground?: GroundSnap[];
@@ -414,7 +422,7 @@ export function encodeEvent(id: number, e: WorldEvent): EventWire {
     case 'draw':
       return [id, 2, r(e.x), r(e.y), e.p];
     case 'arrow':
-      return [id, 3, r(e.x), r(e.y), r(e.vx), r(e.vy), r(e.range)];
+      return [id, 3, r(e.x), r(e.y), r(e.vx), r(e.vy), r(e.range), ...(e.p === undefined ? [] : [e.p])];
     case 'text':
       return [id, 4, r(e.x), r(e.y), e.text, e.color];
     case 'fx': {
@@ -476,8 +484,24 @@ export function decodeEvent(raw: unknown): { id: number; e: WorldEvent } | null 
       if (len(5) && xy() && player(at(4))) e = { type: 'draw', x: n(2), y: n(3), p: n(4) };
       break;
     case 3:
-      if (len(7) && xy() && isCoord(at(4)) && isCoord(at(5)) && isCoord(at(6)) && n(6) >= 0)
-        e = { type: 'arrow', x: n(2), y: n(3), vx: n(4), vy: n(5), range: n(6) };
+      if (
+        len(7, 8) &&
+        xy() &&
+        isCoord(at(4)) &&
+        isCoord(at(5)) &&
+        isCoord(at(6)) &&
+        n(6) >= 0 &&
+        (at(7) === undefined || player(at(7)))
+      )
+        e = {
+          type: 'arrow',
+          x: n(2),
+          y: n(3),
+          vx: n(4),
+          vy: n(5),
+          range: n(6),
+          ...(at(7) === undefined ? {} : { p: n(7) }),
+        };
       break;
     case 4: {
       const text = at(4);
@@ -746,6 +770,7 @@ export function parseMessage(raw: unknown): Message | null {
         !ground ||
         ground.includes(null) ||
         !numbers(m.me, 9) ||
+        (m.ia !== undefined && !isCount(m.ia)) ||
         !isWeather(m.w) ||
         !isCount(m.chests) ||
         m.chests > MAX_CHEST_MASK ||
@@ -753,7 +778,8 @@ export function parseMessage(raw: unknown): Message | null {
         m.crops.length > MAX_CROPS ||
         !m.crops.every((c: unknown) => cropFromCode(c) !== null) ||
         (m.ponds !== undefined && !isPonds(m.ponds)) ||
-        (m.barrels !== undefined && !validBarrelsWire(m.barrels))
+        (m.barrels !== undefined && !validBarrelsWire(m.barrels)) ||
+        (m.folk !== undefined && !validFolkWire(m.folk))
       ) {
         return null;
       }
@@ -765,10 +791,12 @@ export function parseMessage(raw: unknown): Message | null {
         players: players as PlayerSnap[],
         mobs: mobs as MobSnap[],
         me: m.me as StatsSnap,
+        ...(m.ia === undefined ? {} : { ia: m.ia }),
         chests: m.chests,
         crops: m.crops as number[],
         ...(m.ponds === undefined ? {} : { ponds: m.ponds as number[] }),
         ...(m.barrels === undefined ? {} : { barrels: m.barrels as number[] }),
+        ...(m.folk === undefined ? {} : { folk: m.folk as number[] }),
         w: m.w,
         ...(m.ground === undefined ? {} : { ground: ground as GroundSnap[] }),
         events: events as EventWire[],

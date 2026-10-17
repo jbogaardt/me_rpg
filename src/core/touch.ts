@@ -1,5 +1,15 @@
 import { TOUCH_CODES } from './bindings';
 import { input } from './input';
+import {
+  clampAnchor,
+  followAnchor,
+  loadStick,
+  parseStick,
+  saveStick,
+  stickDirs,
+  type StickDir,
+  type StickSettings,
+} from './stick';
 
 // On-screen controls: a D-pad (drag your thumb for 8-way movement) plus buttons. Any element with a
 // `data-key` attribute (the A/B buttons, the HUD menu button, the menu's close button) acts as that
@@ -7,20 +17,21 @@ import { input } from './input';
 // follow the input actually in use: shown on phones/tablets or after a touch, hidden again as soon as
 // a physical key is pressed (keyboard play works either way).
 
-const DEADZONE = 0.25; // fraction of the pad radius where the thumb does nothing
-const DIAGONAL = Math.sin(Math.PI / 8); // axis share needed to count, giving 8 equal 45° sectors
 const PAD_KEYS = {
   right: TOUCH_CODES.right[0]!,
   left: TOUCH_CODES.left[0]!,
   down: TOUCH_CODES.down[0]!,
   up: TOUCH_CODES.up[0]!,
 };
-type PadDir = keyof typeof PAD_KEYS;
+type PadDir = StickDir;
 
 export interface TouchControls {
   readonly active: boolean;
   /** Screen rects (CSS px) of the D-pad and the button cluster, so the HUD can stay clear. Empty when hidden. */
   rects(): DOMRect[];
+  /** The stick's mode (fixed corner pad or floating under the thumb) and deadzone; changes are saved. */
+  readonly stick: StickSettings;
+  setStick(patch: Partial<StickSettings>): void;
 }
 
 /** Make every `[data-key]` element press its key while a pointer (finger or mouse) holds it. */
@@ -59,7 +70,7 @@ function blockPageZoom() {
   const keepDefault = (target: EventTarget | null) =>
     target instanceof Element &&
     !!target.closest(
-      '#menu, #shop, #trade, #trade-request, #choices, #dm-bar, #dm-card, #dm-hot, #dm-caption .voice, #request, #req-btn, #problem, #vote, input, textarea, select, a',
+      '#menu, #shop, #trade, #trade-request, #choices, #dm-bar, #dm-card, #dm-hot, #dm-caption .voice, #request, #req-btn, #problem, #join-status, #vote, input, textarea, select, a',
     );
   for (const type of ['touchstart', 'touchmove'] as const) {
     document.addEventListener(type, (e) => !keepDefault(e.target) && e.preventDefault(), { passive: false });
@@ -87,7 +98,9 @@ export function createTouchControls(onChange: () => void): TouchControls {
   const pad = document.getElementById('dpad');
   const knob = document.getElementById('dpad-knob');
   const buttons = document.getElementById('buttons');
-  if (!root || !pad || !knob || !buttons) return { active: false, rects: () => [] };
+  if (!root || !pad || !knob || !buttons) {
+    return { active: false, rects: () => [], stick: loadStick(), setStick: () => {} };
+  }
 
   // Start shown only when the primary pointer is a finger (phones, tablets). A touchscreen laptop or
   // desktop starts hidden; touching the screen shows the controls and typing a key hides them again.
@@ -112,50 +125,93 @@ export function createTouchControls(onChange: () => void): TouchControls {
       pad.classList.toggle(dir, on.has(dir));
     }
   };
+  // Floating mode: the pad is centred on `anchor` (screen px) and follows the thumb past its rim.
+  let anchor: { x: number; y: number } | null = null;
+  const stick = loadStick(location.search);
+  const applyMode = () => {
+    pad.classList.toggle('floating', stick.mode === 'floating');
+    pad.classList.remove('touched');
+    pad.style.left = pad.style.top = pad.style.bottom = '';
+  };
   const steer = (e: PointerEvent) => {
+    const radius = pad.offsetWidth / 2;
+    if (anchor) {
+      anchor = followAnchor(anchor.x, anchor.y, e.clientX, e.clientY, radius);
+      const c = clampAnchor(anchor.x, anchor.y, radius, innerWidth, innerHeight);
+      pad.style.left = `${c.x - radius}px`;
+      pad.style.top = `${c.y - radius}px`;
+    }
     const r = pad.getBoundingClientRect();
-    const radius = r.width / 2;
     const dx = e.clientX - (r.left + radius);
     const dy = e.clientY - (r.top + radius);
     const dist = Math.hypot(dx, dy);
-    const on = new Set<PadDir>();
-    if (dist > radius * DEADZONE) {
-      if (dx > dist * DIAGONAL) on.add('right');
-      if (dx < -dist * DIAGONAL) on.add('left');
-      if (dy > dist * DIAGONAL) on.add('down');
-      if (dy < -dist * DIAGONAL) on.add('up');
-    }
-    setDirs(on);
+    setDirs(stickDirs(dx, dy, radius, stick.deadzone));
     const k = Math.min(1, (radius * 0.55) / (dist || 1)); // keep the knob inside the pad
     knob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
   };
-  const releasePad = (e: PointerEvent) => {
-    if (e.pointerId !== padPointer) return;
-    padPointer = null;
-    setDirs(new Set());
-    knob.style.transform = '';
-  };
   const releaseAll = () => {
     padPointer = null;
+    anchor = null;
+    pad.classList.remove('touched');
     setDirs(new Set());
     knob.style.transform = '';
   };
+  const releasePad = (e: PointerEvent) => {
+    if (e.pointerId === padPointer) releaseAll();
+  };
+  // Floating: a finger landing on the bare game screen (the canvas) in its left half plants the pad there. Other
+  // fingers (the attack buttons) are untouched, so move and attack work together.
+  window.addEventListener('pointerdown', (e) => {
+    if (stick.mode !== 'floating' || !active || padPointer !== null || e.pointerType !== 'touch') return;
+    if (!(e.target instanceof HTMLCanvasElement) || e.clientX > innerWidth / 2) return;
+    padPointer = e.pointerId;
+    const radius = pad.offsetWidth / 2;
+    anchor = clampAnchor(e.clientX, e.clientY, radius, innerWidth, innerHeight);
+    pad.style.left = `${anchor.x - radius}px`;
+    pad.style.top = `${anchor.y - radius}px`;
+    pad.style.bottom = 'auto';
+    pad.classList.add('touched');
+    steer(e);
+  });
+  window.addEventListener('pointermove', (e) => stick.mode === 'floating' && e.pointerId === padPointer && steer(e));
+  for (const type of ['pointerup', 'pointercancel'] as const) {
+    window.addEventListener(type, (e) => stick.mode === 'floating' && releasePad(e));
+  }
   pad.addEventListener('pointerdown', (e) => {
+    if (stick.mode === 'floating') return; // the floating pad is only a picture; the canvas takes the touch
     e.preventDefault();
     padPointer = e.pointerId;
     pad.setPointerCapture(e.pointerId);
     steer(e);
   });
-  pad.addEventListener('pointermove', (e) => e.pointerId === padPointer && steer(e));
+  pad.addEventListener('pointermove', (e) => stick.mode === 'fixed' && e.pointerId === padPointer && steer(e));
   pad.addEventListener('pointerup', releasePad);
   pad.addEventListener('pointercancel', releasePad);
   pad.addEventListener('lostpointercapture', releasePad);
+  applyMode();
   setActive(matchMedia('(pointer: coarse)').matches, false);
 
   return {
     get active() {
       return active;
     },
-    rects: () => (active ? [pad.getBoundingClientRect(), buttons.getBoundingClientRect()] : []),
+    // A floating pad is only on screen under a thumb, so the HUD need not keep clear of it.
+    rects: () =>
+      !active
+        ? []
+        : stick.mode === 'floating'
+          ? [buttons.getBoundingClientRect()]
+          : [pad.getBoundingClientRect(), buttons.getBoundingClientRect()],
+    stick,
+    setStick(patch) {
+      const was = stick.mode;
+      Object.assign(stick, parseStick({ ...stick, ...patch }));
+      saveStick(stick);
+      releaseAll();
+      if (was !== stick.mode) {
+        applyMode();
+        onChange();
+      }
+    },
   };
 }

@@ -2,7 +2,8 @@ import { Graphics, type Texture } from 'pixi.js';
 import { CELL } from '../map/types';
 import { DIR_VEC, directionToward, type Direction } from '../core/direction';
 import { glide } from '../core/interp';
-import { mobTimings, type MobKind, type MobState, type MobView } from '../systems/combat';
+import { mobTimings, telegraphOf, type MobKind, type MobState, type MobView } from '../systems/combat';
+import { hitPauseFor, tickPause } from '../systems/hitPause';
 import { Character } from './Character';
 
 /** What a mob needs from the game each tick. */
@@ -12,6 +13,8 @@ export interface MobWorld {
   heroes: readonly Character[];
   /** Move a body by (mx, my) with collision, one axis at a time. Returns true if it moved at all. */
   slide(body: Character, mx: number, my: number): boolean;
+  /** Whether nothing solid lies between two points (a wall breaks sight). Absent: always true. */
+  sees?(x0: number, y0: number, x1: number, y1: number): boolean;
   /** The mob's melee attack connected with `target`. */
   strike(mob: Mob, target: Character): void;
   /** A ranged mob fires along the unit vector (ux, uy); the scene flies the projectile and decides what it hits. */
@@ -62,6 +65,8 @@ const SHOVE = 40; // knockback speed (px/s) while it is not staggered; a stagger
 const KEEP_AWAY = 0.4; // a shooter backs off when the hero is closer than this fraction of its range
 const RESPAWN = 60; // an adventure, not a grind: a foe that falls stays down for a minute
 const FADE = 0.4;
+const HEARING = 0.35; // share of its sight a mob notices a hero through a wall (noise, footsteps)
+const MEMORY = 2; // seconds a chasing mob keeps hunting a hero it cannot see before it gives up
 const LEASH = 4 * CELL; // wanders no further than this from home
 
 const sideToward = (dx: number): Direction => (dx < 0 ? 'left' : 'right');
@@ -96,9 +101,11 @@ export class Mob {
   hp: number;
   private state: State = 'idle';
   private timer = 0;
+  private unseen = 0; // seconds a chasing mob has had no line of sight to its target
   private dir = { x: 0, y: 0 };
   private knock = { x: 0, y: 0 };
   private flash = 0;
+  private hitstop = 0; // hit-pause: frozen mid-blow for this many seconds (systems/hitPause.ts)
   private poise = 0; // seconds left in which a hit cannot stagger it again
   private moving = false;
   private attack: MobAttack = 'melee'; // what the current windup leads to
@@ -176,6 +183,7 @@ export class Mob {
   hit(damage: number, vx: number, vy: number): boolean {
     this.hp = Math.max(0, this.hp - damage);
     this.flash = 0.15;
+    if (this.hp > 0 && !this.remote) this.hitstop = hitPauseFor(damage, this.kind.maxHp);
     this.drawBar();
     if (this.hp <= 0) {
       this.lunging = 0;
@@ -266,6 +274,12 @@ export class Mob {
   }
 
   update(dt: number, world: MobWorld) {
+    if (this.state !== 'dead' && this.hitstop > 0) {
+      this.hitstop = tickPause(this.hitstop, dt); // hit-pause: frozen and flashing (the flash waits out the pause)
+      this.moving = false;
+      this.present(0, false);
+      return;
+    }
     if (this.state !== 'dead' && this.frozen > 0) {
       this.frozen = Math.max(0, this.frozen - dt);
       this.flash = Math.max(0, this.flash - dt);
@@ -302,8 +316,13 @@ export class Mob {
     switch (this.state) {
       case 'idle':
       case 'wander':
-        if (dist < this.kind.sight) {
+        if (
+          target &&
+          (dist < this.kind.sight * HEARING ||
+            (dist < this.kind.sight && (world.sees?.(this.body.x, this.body.y, target.x, target.y) ?? true)))
+        ) {
           this.state = 'chase';
+          this.unseen = 0;
           break;
         }
         if (this.hp < this.kind.maxHp) {
@@ -331,7 +350,9 @@ export class Mob {
         }
         const { shot } = this.kind;
         const attack = mobAttack(this.kind, dist, this.rayRest <= 0);
-        if (dist > this.kind.sight * 1.5) {
+        const seen = !target || (world.sees?.(this.body.x, this.body.y, target.x, target.y) ?? true);
+        this.unseen = seen ? 0 : this.unseen + dt;
+        if (dist > this.kind.sight * 1.5 || (this.unseen > MEMORY && dist > this.kind.sight * HEARING)) {
           this.state = 'idle';
           this.timer = 1;
         } else if (attack) {
@@ -471,9 +492,32 @@ export class Mob {
       this.body.setOffset(-fx * 3, -fy * 3); // draws back before the lunge
     else this.body.setOffset(0, 0);
     const blink = this.state === 'windup' && Math.floor(this.timer * 16) % 2 === 0;
+    const cue = telegraphOf(this.kind, this.attack);
     this.drawBeam();
-    this.body.setTint(this.flash > 0 ? 0xff6060 : this.frozen > 0 ? 0xa8d8ff : blink ? 0xffe080 : 0xffffff);
+    if (this.state === 'windup' && cue.ground) this.drawWarning(cue.color);
+    this.body.setTint(this.flash > 0 ? 0xff6060 : this.frozen > 0 ? 0xa8d8ff : blink ? cue.color : 0xffffff);
     this.body.animate(dt * 1000, moving);
+  }
+
+  /** Ground warning of a windup: a lane toward where the blow, shot or beam will go, filling in as the windup runs out. */
+  private drawWarning(color: number) {
+    const len = this.windupLen > 0 ? this.windupLen : this.t.windup;
+    const progress = Math.min(1, Math.max(0, 1 - this.timer / len));
+    let [dx, dy] = [this.aim.x, this.aim.y];
+    if (this.remote) {
+      const near = nearest(this.body, this.heroes); // a guest does not know the host's aim: it points at the nearest hero
+      if (near) [dx, dy] = [near.x - this.body.x, near.y - this.body.y];
+    }
+    const norm = Math.hypot(dx, dy) || 1;
+    const reach = this.attack === 'shot' ? this.kind.shot?.range : this.attack === 'ray' ? this.kind.ray?.range : REACH;
+    const [ex, ey] = [(dx / norm) * (reach ?? REACH), (dy / norm) * (reach ?? REACH)];
+    this.beam
+      .moveTo(0, 0)
+      .lineTo(ex, ey)
+      .stroke({ width: 10, color, alpha: 0.12 + 0.2 * progress, cap: 'round' })
+      .moveTo(0, 0)
+      .lineTo(ex * progress, ey * progress)
+      .stroke({ width: 4, color, alpha: 0.6, cap: 'round' });
   }
 
   /** The held ray: a pink beam from the sceptre to the hero's chest, on every client (a guest picks the nearest hero). */
