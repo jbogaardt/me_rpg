@@ -10,6 +10,7 @@ import type { Menu } from '../../hud/Menu';
 import { CELL } from '../../map/types';
 import { briefing, objective } from '../../systems/dmBrief';
 import { RELIC_KIND } from '../../systems/dmQuests';
+import { landmarkIn, landmarkText } from '../../systems/landmarks';
 import { HINT_AREA, HINT_ARROW, taskText, type TaskView } from '../../systems/dmTasks';
 import { MOB_KINDS } from '../../systems/combat';
 import { doorToward, guideFor, searchMiddle } from '../../systems/guide';
@@ -235,6 +236,20 @@ export class StoryUi {
     return t.kind === 'gather' && site.kind === t.what && !(t.bits & (1 << site.index));
   }
 
+  /**
+   * What the telling names stands at the goal (a wagon, a well, a camp...): a place to reach, or a person to find, is not an
+   * empty patch of ground. Drawn on every page from the task alone, and gone with it. The goal's own person stands at the
+   * spot, so the thing is set a little to the side.
+   */
+  syncLandmark() {
+    const t = this.arena.task;
+    const shape = t && t.state === 'active' && t.kind === 'visit' ? landmarkIn(landmarkText(t)) : undefined;
+    for (const z of this.arena.zones.values()) {
+      if (shape && t && z.name === t.zone) z.setLandmark(shape, t.x + CELL, t.y);
+      else if (z.landmark) z.clearLandmark();
+    }
+  }
+
   /** The relic of a "find" quest is a site that appears where the DM hid it (on every page) and goes when it is found. */
   syncRelic() {
     const t = this.arena.task;
@@ -242,7 +257,12 @@ export class StoryUi {
     for (const z of this.arena.zones.values()) {
       const have = z.sites.find((x) => x.kind === RELIC_KIND);
       if (want && z.name === want.zone && !have)
-        z.addSite({ kind: RELIC_KIND, col: Math.floor(want.x / CELL), row: Math.floor(want.y / CELL) });
+        z.addSite({
+          kind: RELIC_KIND,
+          col: Math.floor(want.x / CELL),
+          row: Math.floor(want.y / CELL),
+          item: want.what,
+        });
       else if (have && !(want && z.name === want.zone)) z.removeSite(have);
     }
   }

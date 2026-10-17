@@ -47,6 +47,13 @@ a player asking) the DM offers a **compass** that leans toward the place to sear
 every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the whole party while it is taken
 (`Quest.capabilities`). Epics with people need a live world (people are log entries, which friends already receive).
 
+**What a telling names is there to be found** (`systems/landmarks.ts`, `entities/Landmark.ts`, drawn by `StoryUi.syncLandmark`, local
+to every page from the synced task alone): a visit or meeting whose words (the place, the DM's note, the title) name a
+wagon, well, camp, tent, shrine, grave, ruin, tower or hut gets one drawn beside its goal, so no quest sends the party
+to something that is not there (a carter "beside a lopsided wagon" has the wagon). A quest to *find* an item draws the
+relic as something shaped like it (blade, staff, book, shield, pouch, gem). A new word or shape goes in `landmarks.ts`
+with its drawing; an AI-written epic gets the same for free, as long as it uses those words.
+
 **People's words follow the epic**: a person has `lines` (before the party is sent to them), `after` (once met) and
 `finished` (once the whole epic is done), like a campaign giver's offer, remind and done lines; each change is a `voice`
 entry of the world log (the person's new lines, replacing the old: protocol v42), applied to the person where they stand

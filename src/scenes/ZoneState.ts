@@ -10,6 +10,8 @@ import { Effects } from '../entities/effects';
 import type { GroundItem } from '../entities/GroundItem';
 import { Pet } from '../entities/Pet';
 import { QuestSite } from '../entities/QuestSite';
+import { Landmark } from '../entities/Landmark';
+import type { LandmarkShape } from '../systems/landmarks';
 import { Mob, type MobWorld } from '../entities/Mob';
 import { WeatherLayer } from '../entities/WeatherLayer';
 import { CLIMATES, DEFAULT_CLIMATE, isClimate, Weather } from '../systems/weather';
@@ -83,6 +85,8 @@ export class ZoneState {
   /** Who hands out the story quests here, and the places gather quests send players (shown per player). */
   readonly givers: QuestGiver[];
   readonly sites: QuestSite[];
+  /** What the DM's telling named at the quest's goal, drawn while it runs (`StoryUi.syncLandmark`). */
+  landmark: Landmark | null = null;
   /** Dogs and cats lying about: scenery you can talk to (local only, not synced). */
   readonly pets: Pet[];
   /** The enemies, from the content (`populate`): the scenario node's placements and the biome's roamers. */
@@ -110,6 +114,19 @@ export class ZoneState {
     this.sites.push(site);
     this.world.layer.addChild(site);
     return site;
+  }
+
+  /** Draw what a quest's telling names at `x`,`y` (one at a time); the same one again changes nothing. */
+  setLandmark(shape: LandmarkShape, x: number, y: number) {
+    if (this.landmark?.shape === shape && this.landmark.x === x && this.landmark.y === y) return;
+    this.clearLandmark();
+    this.landmark = new Landmark(shape, x, y);
+    this.world.layer.addChild(this.landmark);
+  }
+
+  clearLandmark() {
+    this.landmark?.destroy({ children: true });
+    this.landmark = null;
   }
 
   removeSite(site: QuestSite) {
