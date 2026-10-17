@@ -8,8 +8,8 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
 - **There is one way to host, and the host is the DM.** Hosting is running the world, not playing in it. From the first
   friend's connection player 0 has `dm` set (`Arena.setDm`); a guest knows that with nothing on the wire (`DM_SLOT`).
   Solo has no DM (a solo player in a live world gets only the cards), but a solo player is their own host: the epic
-  runner (`DmEpics`, `DmTasks`) and the DM's words work in solo too; only a friend (a guest) never runs one. A solo
-  player begins one from the card the director offers in a live world; the sandbox has no way to begin one by hand yet.
+  runner (`DmEpics`, `DmTasks`) and the DM's words work in solo too; a friend (a guest) never runs one. A solo player
+  begins one from the director's card in a live world; the sandbox has no way to begin one by hand yet.
 - **A human DM steers, never spawns.** They shape how hard the world pushes (pressure) and what happens in it (story,
   sky, quests), never what is in it. The log's `cast`/`npc` entries are the door
   for AI help: the DM bot (below) makes a person and sets them near the party through them.
@@ -27,16 +27,15 @@ begin a quest). The DM also watches the party's health on their own.
 
 ## The DM has a voice
 
-A theatrical old storyteller with a dry wit, fond of the party and not above teasing it: a raised eyebrow, a small wager,
-an aside, never a bare "Well done." The canned words (`systems/dmVoice.ts`) hold several wordings of each moment the game spots
-(a quest done, failed or called off, the compass, a reply, the welcome, a saga's end), picked by a `Phrasebook`; the bot's model gets the same character (`server/narrate.ts` `PERSONA`). **A new spoken moment is a bank there, several wordings and a test, never one stock line.**
+A theatrical old storyteller with a dry wit, fond of the party and not above teasing it, never a bare "Well done."
+`systems/dmVoice.ts` holds several wordings of each moment the game spots, picked by a `Phrasebook`; the bot's model gets
+the same character (`server/narrate.ts` `PERSONA`). **A new spoken moment is a bank there, with a test, never one stock line.**
 
 ## The DM is the story teller
 
-With a DM at the table, no story belongs to the map. The world's own quest chain (its keeper and other givers, its welcome,
-chapters, field notes and title cards) is a solo thing: online the givers are not there (only the trainer stays), nothing
-of the chain is told, and the host's welcome is a plain greeting. Anyone who guides a quest is a person the DM brings in
-(`Story.bring`, or the people of an epic), and a ready-made story is loaded by the DM as an epic when it is told.
+With a DM at the table, no story belongs to the map. The world's own quest chain (givers, welcome, chapters, title
+cards) is a solo thing: online only the trainer stays and the host's welcome is a plain greeting. Anyone who guides a
+quest is a person the DM brings in (`Story.bring`, or the people of an epic); a ready-made story is loaded as an epic.
 
 ## The DM is not one of the party
 
@@ -64,9 +63,6 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   visits a step may be a **boss** (the land's toughest foe as a named giant for the party's level and size, `dmBoss.ts`;
   friends build the same one from the quest), a **mastery** (cast one named combo N times) or a **forge** (set a gem in a
   piece: `dmForge.ts`). Gear rewards are chosen per hero and rotate by slot (`dmGear.ts`): a saga's finale and a forge quest pay one.
-- **Signposts** read the layout (`systems/signs.ts`): a way names the zone really reached that way, a place of the map
-  stays, a way with nothing beyond is dropped. In a **live** world the DM may rewrite one (stand beside it, type, Write on
-  sign; Restore gives it back): a `sign` log entry sent with the log. Other campaigns have no log, so those buttons are off.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` lets the DM raise or fetch a fallen player.
   **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive
