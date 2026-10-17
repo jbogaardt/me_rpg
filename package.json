@@ -16,7 +16,7 @@
     "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run map -- check && npm run sprites -- check",
     "map": "tsx tools/map/cli.ts",
     "ruins": "tsx tools/map/ruins.ts && prettier --write tools/map/ruinsAtlas.ts",
-    "tilesets": "tsx tools/map/recolor.ts && tsx tools/map/trees.ts && prettier --write tools/map/treeAtlas.ts && tsx tools/map/town.ts && tsx tools/map/interior.ts && tsx tools/map/crops.ts",
+    "tilesets": "tsx tools/map/recolor.ts && tsx tools/map/trees.ts && prettier --write tools/map/treeAtlas.ts && tsx tools/map/town.ts && tsx tools/map/interior.ts && tsx tools/map/crops.ts && tsx tools/map/dungeonSheets.ts",
     "sprites": "tsx tools/sprites/cli.ts",
     "relay": "tsx tools/relay/dev-server.ts",
     "dm-bot": "tsx server/host.ts"

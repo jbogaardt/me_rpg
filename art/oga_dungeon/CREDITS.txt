@@ -1,0 +1,9 @@
+Cave, sewer and desert tilesets, from OpenGameArt.org. Drawn on a 16px tile grid; tools/map/dungeonSheets.ts doubles
+them (nearest neighbour, nothing else changed) to the game's 32px cell, into public/tilesets/ (dungeon_cave.png,
+dungeon_sewer.png, dunes.png).
+
+cave.png, sewer_1.png, desert_1.png: by MrBeast, from the collection "16x16 JRPG tilesets enlarged 2x"
+  https://opengameart.org/content/16x16-jrpg-tilesets-enlarged-2x
+  License: CC-BY 3.0 (https://creativecommons.org/licenses/by/3.0/). Credit: MrBeast. Used together, the collection
+  asks for a link to http://opengameart.org in the credits.
+  Originals: https://opengameart.org/content/cave-tileset-0, https://opengameart.org/content/sewer-tileset
