@@ -83,6 +83,11 @@ describe('messages', () => {
     for (const m of [input, hello, snap]) expect(parseMessage(encodeMessage(m))).toEqual(m);
   });
 
+  it('carries the acknowledged input number of a snapshot', () => {
+    const withIa: SnapMsg = { ...snap, ia: 42 };
+    expect(parseMessage(encodeMessage(withIa))).toEqual(withIa);
+  });
+
   it('keeps a busy four-player snapshot inside one network packet', () => {
     // Four players, the eight mobs near this friend, a full ground list and a fight's worth of events not yet
     // acknowledged, trimmed to the room the rest leaves (as the host does). A message over about 1.2 KB is split in
@@ -382,6 +387,8 @@ describe('messages', () => {
       { ...snap, mobs: [[0, Infinity, 2, 0, 0, 5, 0, 0]] },
       { ...snap, mobs: 'x' },
       { ...snap, me: [1, 2, 3] },
+      { ...snap, ia: -1 },
+      { ...snap, ia: 'x' },
       { ...snap, events: [[1, 4, 0, 0, 'x'.repeat(100), 0]] }, // text too long
       { ...snap, events: [[1, 9, 0, 0]] }, // unknown kind
       { ...snap, events: [{ id: 1, e: { type: 'defeat', player: 0 } }] }, // the old object form

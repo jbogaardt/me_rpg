@@ -8,7 +8,15 @@ and the game loop; headers of `feed.ts`, `PeerLink.ts`, `relayClient.ts` and `ho
 
 - **Authority**: the host runs the one simulation and owns every hero, mob, chest, pond and quest. A guest runs no
   simulation: it sends held keys and wishes (`do`, `tr`, inventory ops) and renders what it is told (`snap`, `pack`,
-  `looks`, `trade`). No prediction. A friend's solo hero is restored when they leave; the host leaving ends the game.
+  `looks`, `trade`). The one thing a guest predicts is its own hero's walking (below). A friend's solo hero is restored when they leave; the host leaving ends the game.
+- **A guest predicts only its own walking** (`core/prediction.ts`, driven by `GuestLink.predict`). The hero moves at once
+  from the held keys with the host's own rules (speed, ice, walls), so a quick turn never waits for a round trip. Each
+  snapshot carries `ia`, the newest input number the host had applied for that friend; the guest compares the host's
+  position with where its hero stood when it sent that input. The difference is eased away over ~100 ms (and the
+  remembered positions shift with it, so an error is never counted twice); above `HARD_SNAP` (a door, respawn, big shove)
+  it jumps. Everything else, and every other player, is still only what the host says: other heroes and mobs glide
+  toward the latest snapshot (`core/interp.ts`). Stats, hits, pickups and doors stay the host's. Add `?netdebug` to the
+  address for a round-trip and correction readout.
 - **Star topology, gameplay peer to peer.** Each friend has one data channel to the host (`ordered: false,
   maxRetransmits: 0`, public STUN only, so two strict NATs can't connect). Only the connection setup goes through the
   matchmaking relay (`relay/`): the host prepares one offer per seat, a friend types the two-word code and is given the

@@ -210,6 +210,7 @@ export class HostLink {
         events: [],
         ...(listGround ? { ground } : {}),
         me: this.snapStats(remote.hero.stats),
+        ...(peer ? { ia: peer.n } : {}),
       };
       if (unseen.length) snap.events = fitEvents(unseen, SNAP_BUDGET - encodeMessage(snap).length, MAX_EVENTS_SENT);
       this.session.sendTo(slot, snap);
