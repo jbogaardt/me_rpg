@@ -14,6 +14,14 @@ and the game loop; headers of `feed.ts`, `PeerLink.ts`, `relayClient.ts` and `ho
   matchmaking relay (`relay/`): the host prepares one offer per seat, a friend types the two-word code and is given the
   next free seat. The lobby needs no addresses: a friend whose page plays another world moves its page to the host's by
   itself (the hello carries the world tag, `setContentTag`).
+- **A live game stays joinable.** Start Game (or all three seats filling) only ends the lobby (`lobbyOpen`); the relay
+  room and the code stay open. A seat whose friend left, was dropped or lost the connection is offered again (a fresh
+  offer through `reopenSeat`, in the lobby and in a live game), so they type the same code and take a free seat. The
+  capacity limit is the three seats: a seat is free only once its link has ended (silence is noticed within 6 s), and
+  the relay hands each seat out once. The host keeps the room alive by polling `answers`, and the last friend leaving
+  does not end the game (the host just plays solo, `role` `'solo'`, until someone rejoins); only the relay forgetting
+  the game, or the host disconnecting, does. A rejoiner arrives as a **new hero at the start**: the host drops a
+  leaver's hero (`HostLink.reconcile`), so giving back the same one is not done yet.
 - **The channel is lossy, so inputs are state, not events.** Held keys plus running counters for presses; one-shot visuals
   ride in snapshots with ids and are acknowledged (`ack`) so each shows once; anything a guest must see eventually is
   state the host repeats (repeated chunks of the world log, `pack` once a second). Never design a message whose loss

@@ -106,7 +106,7 @@ export interface PeerInput {
 /** The parts of the relay client the session uses (a stand-in can replace it in tests). */
 export type Relay = Pick<
   RelayClient,
-  'createRoom' | 'join' | 'sendAnswer' | 'waitForAnswers' | 'reopenSeat' | 'closeRoom' | 'cancel'
+  'createRoom' | 'join' | 'sendAnswer' | 'waitForAnswers' | 'reopenSeat' | 'cancel'
 >;
 
 interface Seat {
@@ -138,9 +138,10 @@ export class Session {
   mode: Mode = 'off';
   /** Why the last attempt failed or the last connection ended (or what was wrong with a typed code). */
   detail = '';
-  /** The host's game code, from when the relay issues it until the host starts the game or it runs out. */
+  /** The host's game code, from when the relay issues it until the game ends or the relay forgets it. It keeps working
+   * after the game starts, so a friend who left or was dropped can rejoin. */
   code: string | null = null;
-  /** Host: the code is still joinable, so more friends can come. */
+  /** Host: the game has not started yet (Start Game not tapped, seats not all taken). The code works either way. */
   lobbyOpen = false;
   /** A game code found in the page URL (#join=...) at load. The menu opens on Join with it filled in. */
   readonly urlCode: string | null;
@@ -246,8 +247,7 @@ export class Session {
       const entries: RosterEntry[] = [{ slot: 0, state: 'you' }];
       for (let slot = 1; slot <= MAX_GUESTS; slot++) {
         const seat = this.seats.get(slot);
-        if (seat && (seat.phase !== 'waiting' || (this.lobbyOpen && seat.ready)))
-          entries.push({ slot, state: seat.phase });
+        if (seat && (seat.phase !== 'waiting' || seat.ready)) entries.push({ slot, state: seat.phase });
       }
       return entries;
     }
@@ -309,9 +309,12 @@ export class Session {
     }
   }
 
-  /** Host: the code stops working and the game begins with whoever is connected. */
+  /**
+   * Host: the game begins with whoever is connected. The code keeps working (the relay room stays open, and a seat
+   * whose friend leaves is offered again), so a friend who was dropped can rejoin the live game.
+   */
   startGame() {
-    if (this.lobbyOpen) this.closeLobby();
+    if (this.lobbyOpen) this.beginPlay();
   }
 
   /** Friend: join the game with this code (however it was typed). */
@@ -471,12 +474,12 @@ export class Session {
     const { seat, offer } = this.openSeat(slot, attempt);
     try {
       const fresh = await offer;
-      if (!this.isCurrent(attempt) || !this.lobbyOpen || this.seats.get(slot) !== seat) throw new LinkClosed();
+      if (!this.isCurrent(attempt) || this.room !== room || this.seats.get(slot) !== seat) throw new LinkClosed();
       await this.relay.reopenSeat(room, slot, fresh, attempt.abort.signal);
       seat.ready = true;
       this.notify();
     } catch {
-      // The game filled up, started, or ran out in the meantime: this seat just isn't offered again.
+      // The game ended or the relay forgot it in the meantime: this seat just isn't offered again.
       if (this.seats.get(slot) === seat) this.seats.delete(slot);
       seat.link.close();
       if (this.isCurrent(attempt)) this.notify();
@@ -522,7 +525,7 @@ export class Session {
       this.tradeSteps.delete(slot);
       this.nextTradeStep.delete(slot);
       this.beginHandshake(link);
-      if (this.lobbyOpen && this.connectedSlots().length >= MAX_GUESTS) this.closeLobby(); // full: nobody else can come
+      if (this.lobbyOpen && this.connectedSlots().length >= MAX_GUESTS) this.beginPlay(); // full: nothing to wait for
     } else if (status === 'failed' || status === 'disconnected' || status === 'idle') {
       this.seats.delete(slot);
       this.endHandshake(link);
@@ -533,9 +536,11 @@ export class Session {
       this.tradeSteps.delete(slot);
       this.nextTradeStep.delete(slot);
       link.close();
-      if (this.lobbyOpen && this.room) {
+      // The seat is offered again, in the lobby and in a live game: that is how a dropped friend gets back in. If the
+      // relay has forgotten the game there is nothing to rejoin, so the last friend leaving ends it.
+      if (this.room) {
         void this.refillSeat(attempt, slot);
-      } else if (this.everConnected && !this.lobbyOpen && this.connectedSlots().length === 0) {
+      } else if (this.everConnected && this.connectedSlots().length === 0) {
         this.finishGame('Everyone left the game.');
         return;
       }
@@ -543,10 +548,9 @@ export class Session {
     this.notify();
   }
 
-  private closeLobby() {
+  /** The game has begun: no more waiting for friends. The relay room (and its code) stays open for rejoining. */
+  private beginPlay() {
     this.lobbyOpen = false;
-    this.code = null;
-    if (this.room) this.relay?.closeRoom(this.room);
     this.notify();
   }
 

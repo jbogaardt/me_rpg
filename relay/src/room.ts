@@ -199,6 +199,7 @@ export class RoomHandler {
   private async collect(req: Request, after: number, wait: number): Promise<Response> {
     let record = await this.asHost(req);
     if (record instanceof Response) return record;
+    await this.keepAlive(record);
     const from = Number.isInteger(after) && after > 0 ? after : 0;
 
     const seconds = Number.isFinite(wait) ? Math.min(Math.max(wait, 0), MAX_WAIT_S) : 0;
@@ -218,6 +219,20 @@ export class RoomHandler {
 
     const body: AnswersResponse = { answers: record.answers.slice(from), next: record.answers.length };
     return json(200, body);
+  }
+
+  /**
+   * A game that someone has joined stays for as long as its host keeps asking for answers (the host does, for the whole
+   * game), so a friend who was dropped can rejoin with the same code. A code nobody has answered still runs out at
+   * ROOM_TTL_MS, so a stranger's window to guess one is no longer than before. Renewed at most every half-life.
+   */
+  private async keepAlive(record: RoomRecord) {
+    if (record.closed || record.answers.length === 0) return;
+    const until = this.deps.now() + ROOM_TTL_MS;
+    if (until - record.expiresAt < ROOM_TTL_MS / 2) return;
+    record.expiresAt = until;
+    await this.store.save(record);
+    await this.store.scheduleExpiry(until);
   }
 
   /** Host: put a fresh offer in a seat (its friend left or never connected), so the seat can be taken again. */
