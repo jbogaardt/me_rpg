@@ -83,6 +83,23 @@ export const natural = {
       .finally(changed);
     return loading;
   },
+  /**
+   * Call from a tap, click or key (the first one): a phone starts audio only from a gesture, and a context made later, while
+   * the DM is speaking, stays suspended, so the voice would be made and never heard.
+   */
+  unlock() {
+    if (!this.supported) return;
+    try {
+      ctx ??= new AudioContext();
+      void ctx.resume().catch(() => undefined);
+      const source = ctx.createBufferSource();
+      source.buffer = ctx.createBuffer(1, 1, 22050); // a silent blip: it is what really unlocks it on iOS
+      source.connect(ctx.destination);
+      source.start();
+    } catch {
+      /* no audio here: the browser's voice speaks */
+    }
+  },
   /** The model broke outside a call that could catch it (a browser it does not run in): give up on it, so the browser's voice takes over. */
   fail() {
     if (state === 'failed') return;
@@ -128,7 +145,8 @@ export const natural = {
 /** Play mono samples, resolving when they have been heard (or `stop` cut them short). */
 async function play(samples: Float32Array, rate: number): Promise<void> {
   ctx ??= new AudioContext();
-  if (ctx.state === 'suspended') await ctx.resume().catch(() => undefined);
+  if (ctx.state !== 'running') await ctx.resume().catch(() => undefined);
+  if (ctx.state !== 'running') return; // still locked (no tap yet): drop the line rather than hold every later one up
   const buffer = ctx.createBuffer(1, samples.length, rate);
   buffer.copyToChannel(new Float32Array(samples), 0);
   const source = ctx.createBufferSource();
@@ -136,7 +154,12 @@ async function play(samples: Float32Array, rate: number): Promise<void> {
   source.connect(ctx.destination);
   playing = source;
   await new Promise<void>((resolve) => {
-    source.onended = () => resolve();
+    // `onended` is not always fired on a phone (a tab put to sleep): the line's own length, and a moment, is the longest it waits
+    const guard = setTimeout(resolve, (samples.length / rate) * 1000 + 1500);
+    source.onended = () => {
+      clearTimeout(guard);
+      resolve();
+    };
     source.start();
   });
   if (playing === source) playing = null;

@@ -31,6 +31,21 @@ try {
 let wantsNatural = wantsNaturalVoice(stored, natural.supported);
 if (wantsNatural) void natural.load(); // the default: load it while the game starts
 
+// A phone lets a page make sound only after a tap, click or key, and speech synthesis likewise: the first one wakes both
+// engines (a silent blip, an empty utterance), or the DM would be "speaking" to a locked speaker for the whole game.
+const WAKERS = ['touchend', 'click', 'keydown'] as const;
+function wake() {
+  for (const type of WAKERS) window.removeEventListener(type, wake, true);
+  natural.unlock();
+  const s = synth();
+  if (s && typeof SpeechSynthesisUtterance !== 'undefined') {
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    s.speak(u);
+  }
+}
+if (typeof window !== 'undefined') for (const type of WAKERS) window.addEventListener(type, wake, true);
+
 /** Sentences still waiting to be spoken or being spoken (counted by us: `speechSynthesis.speaking` lags behind). */
 let pending = 0;
 
