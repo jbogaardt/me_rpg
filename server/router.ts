@@ -155,7 +155,8 @@ export interface CreativeFallback {
 
 /** What the bot does with a card: tap an option (or take a road), say something to whoever asked, or nothing. */
 export interface Move {
-  source: 'router' | 'fallback' | 'silent';
+  /** `safe`: Jev was unsure on a card that changes the world, so the card's do-nothing option (or nothing) was taken. */
+  source: 'router' | 'fallback' | 'silent' | 'safe';
   /** A card option's id (never `NONE`). */
   pick: string | null;
   /** A story road's cue. */
@@ -331,6 +332,27 @@ async function answerWords(
 }
 
 /**
+ * What to do when Jev is unsure (or down) on a director's card: a guess must not change the world. Cards whose options
+ * change difficulty, raise someone, start a quest or spawn things take their own do-nothing option (`stay`, or for a
+ * revive the default `leave`, a wake at the start), and a card with none (twist, pressure, epic, suggest) takes nothing:
+ * the bot dismisses it, a breather. Only the cards below may still ask the writer to improvise: the story's next road
+ * and the sky are choices the story needs made, and neither changes the danger.
+ */
+export const IMPROVISED_WHEN_UNSURE = new Set(['story', 'sky', 'land']);
+const SAFE_OPTION: Record<string, string> = {
+  easy: 'stay',
+  struggle: 'stay',
+  lost: 'stay',
+  done: 'stay',
+  revive: 'leave',
+};
+/** The card's own do-nothing option id, or null when it has none. */
+function safePick(card: Card): string | null {
+  const want = SAFE_OPTION[card.kind];
+  return card.options.find((o) => want !== undefined && o.id.split(':')[0] === want)?.id ?? null;
+}
+
+/**
  * Decide one card. Never throws: a failing service falls through to the next tier. A player's typed words always go to the
  * writer and always get a reply (`answerWords`); a card with no options skips the router (it has nothing to choose).
  */
@@ -354,10 +376,11 @@ export async function decideCard(
   } catch (err) {
     console.warn('router failed, improvising', err);
   }
+  if (!IMPROVISED_WHEN_UNSURE.has(card.kind)) return moveOf('safe', safePick(card), null, confidence);
   try {
     const raw = await services.fallback.improvise({ card, table, words, options: question.options, recent });
     const made = readImprovised(raw, question.options);
-    if (made) return moveOf('fallback', made.pick, null, confidence); // a director's card is acted on, not announced
+    if (made) return moveOf('fallback', made.pick, null, confidence); // the story and sky are acted on, not announced
   } catch (err) {
     console.warn('fallback failed', err);
   }

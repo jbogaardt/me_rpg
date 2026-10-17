@@ -137,15 +137,22 @@ export class DmEpics {
     );
   }
 
-  /** The sagas this land can start (a page of them; `more` says there are others to turn to). */
-  options(): { items: EpicOffer[]; more: boolean } {
+  /**
+   * The sagas this land can start, a page of them: `more` says a later page exists, `back` that this is not the first.
+   * Pages never wrap and never overlap, so no list is shown twice in a row (the DM's card names the page it is on).
+   */
+  options(): { items: EpicOffer[]; more: boolean; back: boolean; page: number; pages: number } {
     const all = epicsFrom(this.arena.view.name, this.graph, this.turn, this.stock(), this.canMake);
-    const start = (this.page * PAGE) % Math.max(1, all.length);
-    const shown = all.slice(start, start + PAGE);
+    const pages = Math.max(1, Math.ceil(all.length / PAGE));
+    this.page = Math.min(Math.max(0, this.page), pages - 1);
+    const shown = all.slice(this.page * PAGE, (this.page + 1) * PAGE);
     this.offered = shown.map((s) => s.plan);
     return {
       items: shown.map((s, i) => ({ id: `e:${i}`, label: `${s.plan.epic.title}\n${gaugeText(s.gauge)}` })),
-      more: all.length > PAGE,
+      more: this.page < pages - 1,
+      back: this.page > 0,
+      page: this.page,
+      pages,
     };
   }
 
@@ -154,9 +161,14 @@ export class DmEpics {
     return !!this.story?.canChoose;
   }
 
-  /** Show the next page of sagas. */
-  turnPage() {
-    this.page++;
+  /** Turn to the next page of sagas (`by` -1: the one before; `options` keeps it in range). */
+  turnPage(by = 1) {
+    this.page += by;
+  }
+
+  /** Start browsing again from the first page (a card opened afresh). */
+  firstPage() {
+    this.page = 0;
   }
 
   /** The DM begins the saga at `index` of the last options. False if one is running or there is no game to tell it in. */

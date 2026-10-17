@@ -324,22 +324,46 @@ export class DmPrompts {
           show('An epic quest is running', this.runningOptions(), null, 'Point the way, or call the whole saga off.');
           return;
         }
-        const { items, more } = this.epics.options();
-        if (!items.length) {
-          show('No epic quest here', [], CARD_TIME, 'Stand in open country, away from a shop, to begin one.');
-          return;
-        }
-        show(
-          'Choose an epic quest',
-          [...items, ...(more ? [{ id: '@more', label: 'Other epic quests…' }] : [])],
-          null,
-          'Each is a chain of quests across several lands. Stars: how hard. Then how long, how many steps and lands.',
-        );
+        this.epics.firstPage(); // opened afresh (not by 'More'): the first page
+        this.showEpics(kind);
         return;
       }
       case 'pressure':
         show('How hard should the world push?', this.pressureOptions());
     }
+  }
+
+  /**
+   * The page of epic quests the epics are on. A later page says so in its title, shows different quests than the first and
+   * has a way back, so browsing never reads as the same card twice.
+   */
+  private showEpics(kind: CardKind = 'epic') {
+    const { items, more, back, page, pages } = this.epics.options();
+    if (!items.length) {
+      this.card.show({
+        kind,
+        title: 'No epic quest here',
+        note: 'Stand in open country, away from a shop, to begin one.',
+        options: [],
+        seconds: CARD_TIME,
+      });
+      return;
+    }
+    this.card.show({
+      kind,
+      title: page ? 'More epic quests' : 'Choose an epic quest',
+      note: page
+        ? `Page ${page + 1} of ${pages}. Stars: how hard. Then how long, how many steps and lands.`
+        : 'Each is a chain of quests across several lands. Stars: how hard. Then how long, how many steps and lands.',
+      options: [
+        ...items,
+        ...(more ? [{ id: '@more', label: 'More epic quests…' }] : []),
+        ...(back
+          ? [{ id: '@back', label: page > 1 ? 'Back to the previous quests' : 'Back to the first quests' }]
+          : []),
+      ],
+      seconds: null,
+    });
   }
 
   private storyOptions(): CardOption[] {
@@ -422,9 +446,9 @@ export class DmPrompts {
       this.open(id.slice(2) as CardKind);
       return;
     }
-    if (id === '@more') {
-      this.epics.turnPage();
-      this.open('epic');
+    if (id === '@more' || id === '@back') {
+      this.epics.turnPage(id === '@more' ? 1 : -1);
+      this.showEpics(kind as CardKind);
       return;
     }
     this.card.hide();
