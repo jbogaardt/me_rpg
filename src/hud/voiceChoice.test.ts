@@ -6,6 +6,14 @@ describe('voice choice', () => {
     expect(wantsNaturalVoice(null, true)).toBe(true);
     expect(wantsNaturalVoice('1', true)).toBe(true);
   });
+  it('is not the default on a phone, but an explicit choice of it stands', () => {
+    expect(wantsNaturalVoice(null, true, true)).toBe(false);
+    expect(wantsNaturalVoice('1', true, true)).toBe(true);
+    expect(wantsNaturalVoice('0', true, true)).toBe(false);
+  });
+  it('says why the natural voice failed when it is known', () => {
+    expect(fallbackNote(true, true, 'failed', 'Failed to fetch')).toMatch(/\(Failed to fetch\)/);
+  });
   it('keeps an explicit choice of the browser voice', () => {
     expect(wantsNaturalVoice('0', true)).toBe(false);
   });

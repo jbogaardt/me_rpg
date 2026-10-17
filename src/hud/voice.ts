@@ -28,7 +28,8 @@ try {
 } catch {
   /* storage can be blocked: the default (natural) stands */
 }
-let wantsNatural = wantsNaturalVoice(stored, natural.supported);
+const phone = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+let wantsNatural = wantsNaturalVoice(stored, natural.supported, phone);
 if (wantsNatural) void natural.load(); // the default: load it while the game starts
 
 // A phone lets a page make sound only after a tap, click or key, and speech synthesis likewise: the first one wakes both
@@ -69,7 +70,7 @@ export const voice = {
   },
   /** Why the browser's voice is speaking instead of the natural one, or null. */
   get fallback(): string | null {
-    return fallbackNote(wantsNatural, natural.supported, natural.state);
+    return fallbackNote(wantsNatural, natural.supported, natural.state, natural.error);
   },
   /** Call `fn` with the note when the natural voice fails to load (once per failure). Returns the way to stop. */
   onFallback(fn: (note: string) => void): () => void {

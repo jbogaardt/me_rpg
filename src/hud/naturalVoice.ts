@@ -16,6 +16,8 @@ export type NaturalState = 'idle' | 'loading' | 'ready' | 'failed';
 
 let tts: KokoroTTS | null = null;
 let state: NaturalState = 'idle';
+/** Why the model could not be loaded (the error's own words, short), for the player to read and to tell us. */
+let reason = '';
 let loading: Promise<void> | null = null;
 let ctx: AudioContext | null = null;
 let playing: AudioBufferSourceNode | null = null;
@@ -43,6 +45,9 @@ function fraction(): number {
 export const natural = {
   get state(): NaturalState {
     return state;
+  },
+  get error(): string {
+    return reason;
   },
   get progress(): number {
     return fraction();
@@ -76,7 +81,8 @@ export const natural = {
       });
       state = 'ready';
     })()
-      .catch(() => {
+      .catch((err: unknown) => {
+        reason = (err instanceof Error ? err.message : String(err)).replace(/\s+/g, ' ').slice(0, 80);
         state = 'failed';
         loading = null; // asking again tries again
       })
@@ -103,6 +109,7 @@ export const natural = {
   /** The model broke outside a call that could catch it (a browser it does not run in): give up on it, so the browser's voice takes over. */
   fail() {
     if (state === 'failed') return;
+    reason = 'it stopped working in this browser';
     state = 'failed';
     loading = null;
     tts = null;
