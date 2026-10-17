@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseContent } from '../../src/content/schema';
 import { rng } from '../../src/content/packs';
-import { assemble, World, WorldError, type LogEntry } from '../../src/content/world';
+import { assemble, WANDER_LANDS, World, WorldError, type LogEntry } from '../../src/content/world';
 import { readPacks } from './disk';
 
 const packs = readPacks();
@@ -188,6 +188,23 @@ describe('a world from its log', () => {
       expect(() => parseContent(world.files())).not.toThrow();
     }
     expect(towns).toBeGreaterThan(20);
+    // and a land or two to wander beside the start and the town, off the story
+    const wander = [1, 2, 3, 4, 5].map((seed) => {
+      const w = new World(seed, packs);
+      w.open();
+      return w.regions.filter((id) => !w.storyRegions.includes(id) && !w.cat.regions[id].haven).length;
+    });
+    expect(wander.some((n) => n > 0)).toBe(true);
+    expect(Math.max(...wander)).toBeLessThanOrEqual(WANDER_LANDS);
+    // the town's shops come with it: each room a biome linked to the town, each shop with its keeper
+    const world = new World(1, packs);
+    world.open();
+    if (world.regions.includes('hearthmere')) {
+      const content = parseContent(world.files());
+      expect(content.biomes.hearthmere.links).toEqual(expect.arrayContaining(['haven_forge', 'haven_goods']));
+      expect(content.biomes.haven_forge).toMatchObject({ map: 'haven_forge', links: ['haven_town'], climate: null });
+      expect(Object.keys(content.items.shops)).toEqual(expect.arrayContaining(['hearth_forge', 'hearth_lodge']));
+    }
     const random = assemble(5, packs);
     expect(random.regions.some((id) => id === 'hearthmere')).toBe(true);
   });

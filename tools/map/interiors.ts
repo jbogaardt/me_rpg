@@ -13,17 +13,23 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * Fill `z` (11x9 cells) with a shop: wall and shelves along the back, the keeper behind a counter, a doormat at the
- * front. `out` is where the door leads back to in the overworld.
+ * front. `out` is where the door leads back to in the overworld; `look` is whose sign and shelves it has (smithy,
+ * armory, ranger or apothecary), the shop's own id by default.
  */
-export function shopInterior(z: ZoneApi, id: string, out: { zone: string; col: number; row: number }) {
+export function shopInterior(
+  z: ZoneApi,
+  id: string,
+  out: { zone: string; col: number; row: number },
+  look: string = id,
+) {
   z.indoor();
   z.fill('planks');
   z.fill('wall', { col: 0, row: 0, w: SHOP_ROOM.width, h: 2 });
   z.block({ col: 0, row: 0, w: SHOP_ROOM.width, h: 2 }, 'back wall');
 
-  z.prop(`sign${cap(id)}` as PrefabName, 3, 1);
-  z.prop(`shelf${cap(id)}` as PrefabName, 1, 3);
-  z.prop(`shelf${cap(id)}` as PrefabName, 7, 3);
+  z.prop(`sign${cap(look)}` as PrefabName, 3, 1);
+  z.prop(`shelf${cap(look)}` as PrefabName, 1, 3);
+  z.prop(`shelf${cap(look)}` as PrefabName, 7, 3);
   z.prop('counter', 3, 5);
   z.prop('barrel', 1, 7);
   z.prop('barrel', 9, 7);

@@ -50,6 +50,32 @@
         "Mind the sparks. A blade is only as good as the arm behind it.",
         "Bring me good iron one day and I will make you something worth carrying."
       ]
+    },
+    "townarmorer": {
+      "type": "npc",
+      "name": "Armorer",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.plain_dark_brown",
+        "torso": "torso.tunic_charcoal",
+        "legs": "legs.pants_charcoal",
+        "feet": "feet.boots_black"
+      },
+      "lines": ["Dents mean it worked. Bring it back with fewer."]
+    },
+    "townranger": {
+      "type": "npc",
+      "name": "Ranger",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.long_black",
+        "torso": "torso.tunic_brown",
+        "legs": "legs.pants_charcoal",
+        "feet": "feet.boots_black"
+      },
+      "lines": ["A bow keeps trouble at a distance. Boots get you away from it."]
     }
   },
   "regions": {
@@ -74,14 +100,43 @@
       "level": [1, 5],
       "themes": ["town"],
       "haven": true,
-      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "ports": {
+        "north": "north",
+        "south": "south",
+        "east": "east",
+        "west": "west"
+      },
       "foes": {},
       "roam": [],
       "encounters": [
-        { "entity": "innkeeper", "x": 23, "y": 18 },
-        { "entity": "merchant", "x": 30, "y": 22 },
-        { "entity": "townsmith", "x": 16, "y": 15 }
-      ]
+        {
+          "entity": "innkeeper",
+          "x": 23,
+          "y": 18
+        }
+      ],
+      "rooms": {
+        "haven_forge": {
+          "name": "The Hearth Forge",
+          "map": "haven_forge",
+          "tilesets": ["interior.png", "object-layer.png"]
+        },
+        "haven_goods": {
+          "name": "Hearthmere Goods",
+          "map": "haven_goods",
+          "tilesets": ["interior.png", "object-layer.png"]
+        },
+        "haven_armory": {
+          "name": "The Hearthmere Armory",
+          "map": "haven_armory",
+          "tilesets": ["interior.png", "object-layer.png"]
+        },
+        "haven_lodge": {
+          "name": "The Gatehouse Lodge",
+          "map": "haven_lodge",
+          "tilesets": ["interior.png", "object-layer.png"]
+        }
+      }
     }
   },
   "pairings": {
@@ -106,6 +161,73 @@
           "cinder_coast": "Inland, the bells of Hearthmere ring the hours, faint over the ash."
         }
       }
+    }
+  },
+  "shops": {
+    "hearth_forge": {
+      "name": "The Hearth Forge",
+      "tag": "Blacksmith",
+      "keeper": "townsmith",
+      "greeting": [
+        "Steel for the road, and shields for the trouble at the end of it.",
+        "Show me what you carry now, and I will show you better."
+      ],
+      "stock": [
+        "bronzeSword",
+        "steelSword",
+        "silverSword",
+        "woodenShield",
+        "ironShield",
+        "kiteShield",
+        "parryingDagger"
+      ],
+      "buys": ["blade", "offhand"]
+    },
+    "hearth_goods": {
+      "name": "Hearthmere Goods",
+      "tag": "Merchant",
+      "keeper": "merchant",
+      "greeting": [
+        "Potions, bread, water: what keeps a traveller on their feet.",
+        "Use them from the Inventory tab of your menu."
+      ],
+      "stock": ["potion", "elixir", "bandageKit", "bread", "roastMeat", "apple", "waterskin", "sack", "backpack"],
+      "buys": ["supply"]
+    },
+    "hearth_armory": {
+      "name": "The Hearthmere Armory",
+      "tag": "Armorer",
+      "keeper": "townarmorer",
+      "greeting": ["Helms, mail and greaves. Everything here has turned a blow."],
+      "stock": [
+        "clothHood",
+        "nasalHelm",
+        "kettleHat",
+        "leatherArmor",
+        "legionArmor",
+        "plateArmor",
+        "paddedLeggings",
+        "ironGreaves",
+        "steelGreaves"
+      ],
+      "buys": ["head", "chest", "legs"]
+    },
+    "hearth_lodge": {
+      "name": "The Gatehouse Lodge",
+      "tag": "Ranger",
+      "keeper": "townranger",
+      "greeting": ["Bows, boots and cloaks for the road out of town."],
+      "stock": [
+        "shortBow",
+        "recurveBow",
+        "greatBow",
+        "leatherBoots",
+        "foldedBoots",
+        "ironBoots",
+        "steelBoots",
+        "travelerCloak"
+      ],
+      "buys": ["bow", "feet", "cape"]
     }
   }
 }

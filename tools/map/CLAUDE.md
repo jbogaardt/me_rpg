@@ -36,8 +36,8 @@ must skip `beyond` cells), and the margin is how two maps line up.
   its rim is drawn with.
 - **Doors and crossings** (`checkDoors`, `checkCrossings`): every door has a way back and an open arrival, and a real
   collision box can walk through every crossing and on, so no crossing drops a player into a pocket.
-- **Content tie-ins**: placements, chests' loots, crops, sites and signs are checked against the campaign that draws the
-  map (`src/content/CLAUDE.md`).
+- **Content tie-ins**: placements, chests' loots, crops, sites, signs and a shopkeeper's shop are checked against the
+  campaign that draws the map (`src/content/CLAUDE.md`), so a pack's rooms run the packs' shops.
 
 ## Signs
 

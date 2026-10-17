@@ -49,6 +49,10 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
     if (!sameList(biome.tilesets, map.sheets))
       errors.push(`biomes.${type}.tilesets differ from the map's; run \`npm run map -- build\` to write them`);
     if (map.indoor && biome.climate !== null) errors.push(`biomes.${type}.climate: a room has none (null)`);
+    // a shopkeeper runs one of this campaign's shops (a pack's rooms run the packs' shops, campaign 1's its own)
+    for (const sh of map.shops)
+      if (!content.content.items.shops[sh.shop])
+        errors.push(`biomes.${type}: ${biome.map}'s shopkeeper runs "${sh.shop}", which is no shop in items.json`);
     if (!map.indoor && biome.climate !== map.climate)
       errors.push(`biomes.${type}.climate is "${biome.climate}", the map's spec says "${map.climate}"`);
     biome.generation.roam?.forEach((rule, i) => {
@@ -199,6 +203,14 @@ export async function syncPackTilesets(maps: Map<string, MapData>): Promise<stri
       changed.push(`${pack.id}.${id}`);
       dirty = true;
     }
+    for (const [id, region] of Object.entries(pack.regions ?? {}))
+      for (const [roomId, room] of Object.entries(region.rooms ?? {})) {
+        const map = maps.get(room.map);
+        if (!map || sameList(room.tilesets, map.sheets)) continue;
+        room.tilesets = [...map.sheets];
+        changed.push(`${pack.id}.${id}.rooms.${roomId}`);
+        dirty = true;
+      }
     if (!dirty) continue;
     const target = path.join(CONTENT_DIR, PACKS, `${pack.id}.json`);
     const options = (await prettier.resolveConfig(target)) ?? {};

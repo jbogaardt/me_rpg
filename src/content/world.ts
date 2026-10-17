@@ -33,10 +33,13 @@ import {
   pairingsBetween,
   partnersOf,
   rng,
+  roomMaps,
+  roomsOf,
   STEP,
   storyFor,
   type ArcDef,
   type Catalog,
+  type RegionDef,
   type Assembly,
   MAX_SIDE_REGIONS,
   type Pack,
@@ -93,6 +96,9 @@ export interface StoryOption {
 }
 
 /** A log that cannot be applied: what is wrong with it. */
+/** How many side lands a live world opens with beside its start and its town (`World.wanderEntry`). */
+export const WANDER_LANDS = 2;
+
 export class WorldError extends Error {
   constructor(message: string) {
     super(message);
@@ -309,22 +315,47 @@ export class World {
    */
   havenEntry(rand: () => number): LogEntry | null {
     const host = this.story.regions[0];
+    if (!host || this.regions.some((id) => this.cat.regions[id]!.haven)) return null;
+    return this.besideEntry(rand, [host], (r) => !!r.haven);
+  }
+
+  /**
+   * A land beside the world for a live world to wander in, off the story (a side region: neither hub, haven nor dead
+   * end), next to the start or the town, placed only where the story can still be told around it. Not applied.
+   */
+  wanderEntry(rand: () => number): LogEntry | null {
+    const hosts = this.regions.filter((id) => id === this.story.regions[0] || this.cat.regions[id]!.haven);
+    return this.besideEntry(rand, hosts, (r) => !r.hub && !r.haven && !r.terminal);
+  }
+
+  /** A region `fits` beside one of `hosts` by a pairing, where the story can still be told around it. */
+  private besideEntry(rand: () => number, hosts: string[], fits: (r: RegionDef) => boolean): LogEntry | null {
     const arc = this.arc;
-    if (!host || !arc || this.regions.some((id) => this.cat.regions[id]!.haven)) return null;
-    const havens = partnersOf(this.cat, host)
-      .filter((id) => this.cat.regions[id]!.haven && !this.story.grid.at.has(id))
-      .sort();
-    for (const id of havens) {
-      const ways = pairingsBetween(this.cat, host, id).flatMap((pairing) =>
-        this.story.grid.ways(host, id, pairing).map((w) => ({ ...w, pairing })),
-      );
-      for (const w of shuffle(rand, ways)) {
-        const grid = this.story.grid.clone();
-        grid.place(id, w.x, w.y);
-        grid.use(host, w.from);
-        grid.use(id, w.to);
-        if (this.complete || storyFor(this.cat, arc, rng(this.seed), { ...this.story, grid }) !== null)
-          return { t: 'side', region: id, host, pairing: w.pairing, from: w.from, to: w.to, foes: {} };
+    if (!arc) return null;
+    for (const host of hosts) {
+      const near = partnersOf(this.cat, host)
+        .filter((id) => fits(this.cat.regions[id]!) && !this.story.grid.at.has(id))
+        .sort();
+      for (const id of shuffle(rand, near)) {
+        const ways = pairingsBetween(this.cat, host, id).flatMap((pairing) =>
+          this.story.grid.ways(host, id, pairing).map((w) => ({ ...w, pairing })),
+        );
+        for (const w of shuffle(rand, ways)) {
+          const grid = this.story.grid.clone();
+          grid.place(id, w.x, w.y);
+          grid.use(host, w.from);
+          grid.use(id, w.to);
+          if (this.complete || storyFor(this.cat, arc, rng(this.seed), { ...this.story, grid }) !== null)
+            return {
+              t: 'side',
+              region: id,
+              host,
+              pairing: w.pairing,
+              from: w.from,
+              to: w.to,
+              foes: this.foesFor(id, -1, rand),
+            };
+        }
       }
     }
     return null;
@@ -383,8 +414,14 @@ export class World {
    */
   open(arcId?: string): LogEntry[] {
     this.apply(this.beginning(arcId));
-    const haven = this.havenEntry(rng(this.seed * 17));
+    const rand = rng(this.seed * 17);
+    const haven = this.havenEntry(rand);
     if (haven) this.apply(haven);
+    // A land or two to wander beside the start and the town, off the story, so the world is more than its road.
+    for (let i = 0; i < WANDER_LANDS; i++) {
+      const land = this.wanderEntry(rand);
+      if (land) this.apply(land);
+    }
     while (!this.complete && !this.told().length) {
       const first = this.options()[0];
       if (!first) throw new WorldError(`arc "${this.arcId}" cannot be told from here`);
@@ -431,7 +468,7 @@ export class World {
       biomes[id] = {
         ...r.biome,
         ...(r.capabilities ? { capabilities: r.capabilities } : {}),
-        links: Object.values(ports).map((b) => b.map),
+        links: [...Object.values(ports).map((b) => b.map), ...roomMaps(r)],
         ports,
         generation: {
           roam: r.roam.map((rule) => ({
@@ -452,6 +489,9 @@ export class World {
         choices: [],
         ...(this.cast.get(id)?.length ? { cast: this.cast.get(id)!.map((c) => ({ ...c })) } : {}),
       });
+      const rooms = roomsOf(r); // its shops and inns: a biome and node each, with nobody in them but the keeper
+      Object.assign(biomes, rooms.biomes);
+      nodes.push(...rooms.nodes);
       for (const [site, def] of Object.entries(r.sites ?? {})) {
         const { plural: _p, ...rest } = def;
         sites[site] = rest;
