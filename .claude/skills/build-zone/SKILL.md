@@ -76,6 +76,7 @@ filter), `ridge`.
   `bush`/`frostBush`/`dryBush`/`jungleBush`/`deadBush`/`swampBush` (2x2), LPC `sandBoulder(B)`/`darkBoulder(B)` (2 wide),
   `sandSpire`/`darkSpire`/`menhir` (1 wide), `lilyPads`/`lilyFlower`/`lilyFlowerB`/`lilyRed` (on water), `reedBed`/`reedStalks` (3 and 1 cells wide, 3 tall: on the bank beside water), rocks `rock` (pale), `rockSmall`, `rockB`, `rockC` (+ `frostRock*`), `barrel`, and
   decorations `flowerRed`/`flowersPurple` (no collision). Mix variants to avoid repetition.
+- Graves (LPC grave markers, `graves.png`): `GRAVES` (headstones, 1 cell), `GRAVE_CROSSES` (crosses on mounds), `tombA`/`tombB` (2x3), `slab`, `graveTallA/B`, `graveBoulder`, `crossBlack`; a headstone blocks only its foot. Rows of them in a cleared yard (see `maps/undead.ts`).
 - Buildings (`town.png`, from the CC0 Town RPG Pack, built by `tools/map/town.ts`): `smithy` and `apothecary` are 6x7-cell halls,
   `armory` and `ranger` are 3x9-cell tall houses. Solid from the ground up (you walk around them, not behind). Leave one cell of
   space between neighbours and a cobbled `stone` patch in front looks right (see the square in `maps/town.ts`).

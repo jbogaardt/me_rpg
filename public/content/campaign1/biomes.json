@@ -43,7 +43,8 @@
         "trees_dry.png",
         "object-layer.png",
         "trees_green.png",
-        "trees_dead.png"
+        "trees_dead.png",
+        "graves.png"
       ],
       "generation": {
         "roam": [
@@ -142,6 +143,7 @@
         "trees_jungle.png",
         "trees_dead.png",
         "interior.png",
+        "graves.png",
         "town.png"
       ],
       "generation": {
@@ -344,7 +346,8 @@
         "trees_green.png",
         "trees_jungle.png",
         "interior.png",
-        "trees_dead.png"
+        "trees_dead.png",
+        "graves.png"
       ],
       "generation": {
         "roam": [

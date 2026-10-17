@@ -99,3 +99,15 @@ opened.
 - Kokoro-82M by hexgrad (Apache-2.0), https://huggingface.co/hexgrad/Kokoro-82M, in its ONNX form by onnx-community,
   run in the player's browser with `kokoro-js` and Transformers.js (Apache-2.0). Fetched from the Hugging Face hub only if
   a player turns the natural voice on; nothing is stored in this repository.
+
+## Grave markers (`public/tilesets/graves.png`, `graves_large.png`, source in `art/lpc_grave_markers/`)
+
+"LPC Grave Markers Rework" v1.3 (listed on OpenGameArt as "LPC grave markers (remix)") by Jordan Irwin (AntumDeluge),
+https://opengameart.org/content/lpc-grave-markers-rework (submission node 81422), licensed
+[CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) or later, or [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html)
+or later (we use it under CC-BY-SA 3.0). It merges and reworks Liberated Pixel Cup art by Barbara Rivera, Casper Nilsson,
+Carlo Enrico Victoria (Nemisys), Tuomo Untinen (Reemax), ak-blanc and Johann C; the per-source list is in
+[`art/lpc_grave_markers/sources.md`](art/lpc_grave_markers/sources.md), kept with the art along with its readme and the
+CC-BY-SA 3.0 text. The pack's shadowless 32x32 sheets are used **unmodified** (renamed); `tools/map/catalog.ts` cuts the
+markers out as prefabs (cemeteries on the undead, barrow, old shrine and haven town maps) and `src/entities/Landmark.ts`
+draws one headstone as the "grave" quest landmark. As the other CC-BY-SA art here, the sheets stay under CC-BY-SA 3.0 or later.

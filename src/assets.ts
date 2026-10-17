@@ -73,6 +73,8 @@ export interface Sprites {
   chests: Texture;
   /** Crop plot art (public/tilesets/crops.png): a column per growth stage by one 32x64 row per crop (systems/crops.ts). */
   crops: Texture;
+  /** Grave marker art (public/tilesets/graves.png, the same sheet the maps use): the grave landmark (entities/Landmark.ts). */
+  graves: Texture;
   /** The dog and cat sheets (public/sprites/pets/), see systems/pets.ts. */
   pets: Record<PetSheet, Texture>;
 }
@@ -104,6 +106,7 @@ export async function loadSprites(onProgress?: Progress, extra: Outfit[] = []): 
   await wardrobe.load(requiredParts(extra), onProgress);
   Assets.add({ alias: 'sprites:chests', src: tilesetUrl('chests.png') });
   Assets.add({ alias: 'sprites:crops', src: tilesetUrl('crops.png') });
+  Assets.add({ alias: 'sprites:graves', src: tilesetUrl('graves.png') });
   const pets = {} as Record<PetSheet, Texture>;
   for (const sheet of ['dogs', 'cats', 'rat'] as const) {
     Assets.add({ alias: `sprites:pets:${sheet}`, src: publicUrl(`sprites/pets/${sheet}.png`) });
@@ -113,6 +116,7 @@ export async function loadSprites(onProgress?: Progress, extra: Outfit[] = []): 
     wardrobe,
     chests: await Assets.load<Texture>('sprites:chests'),
     crops: await Assets.load<Texture>('sprites:crops'),
+    graves: await Assets.load<Texture>('sprites:graves'),
     pets,
   };
 }

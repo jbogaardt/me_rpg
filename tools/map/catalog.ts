@@ -387,7 +387,67 @@ const building = (name: keyof typeof BUILDINGS, about: string): Prefab => {
   return { sheet: TOWN_SHEET, w, h, parts: [part(x, y, w, h)], solid: { band: h, min: 0.3 }, tag: 'building', about };
 };
 
+// === LPC grave markers (graves.png, graves_large.png; art/lpc_grave_markers/) ====================================
+// A headstone blocks only its foot (the face is walk-behind); tombs and boulders block their whole body.
+export const GRAVE_SHEET = 'graves.png';
+export const GRAVE_LARGE_SHEET = 'graves_large.png';
+const grave = (sheet: string, x: number, y: number, w: number, h: number, band: number, about: string): Prefab => ({
+  sheet,
+  w,
+  h,
+  parts: [part(x, y, w, h)],
+  solid: { band, min: 0.15 },
+  tag: 'grave',
+  about,
+});
+const GRAVE_PREFABS = {
+  tombA: grave(GRAVE_SHEET, 2, 1, 60, 94, 66, 'Stone tomb with a cross and open earth (2 cells wide, 3 tall).'),
+  tombB: grave(GRAVE_SHEET, 2, 97, 60, 94, 66, 'Stone tomb with a rounded cross and open earth (2 wide, 3 tall).'),
+  slab: grave(GRAVE_LARGE_SHEET, 2, 14, 92, 81, 40, 'Big flat tomb slab (3 cells wide, 2.5 tall).'),
+  graveRoundA: grave(GRAVE_SHEET, 64, 0, 31, 32, 12, 'Small round-topped headstone with a cross (1 cell).'),
+  graveRoundB: grave(GRAVE_SHEET, 64, 32, 31, 32, 12, 'Small round-topped headstone with an ankh (1 cell).'),
+  graveRip: grave(GRAVE_SHEET, 98, 2, 28, 27, 12, 'Dark headstone marked RIP (1 cell).'),
+  graveDark: grave(GRAVE_SHEET, 98, 34, 28, 27, 12, 'Dark headstone with a pedestal sign (1 cell).'),
+  graveCrossA: grave(GRAVE_SHEET, 132, 0, 24, 32, 12, 'Stone cross, 1 cell.'),
+  graveCrossB: grave(GRAVE_SHEET, 132, 32, 24, 32, 12, 'Stone headstone with a mushroom top, 1 cell.'),
+  graveTallA: grave(GRAVE_SHEET, 128, 64, 31, 64, 14, 'Tall headstone topped by a cross (1 cell, 2 tall).'),
+  graveTallB: grave(GRAVE_SHEET, 128, 128, 31, 64, 14, 'Tall headstone on a plinth (1 cell, 2 tall).'),
+  graveSmall: grave(GRAVE_SHEET, 128, 192, 32, 32, 12, 'Low headstone on a plinth (1 cell).'),
+  graveWideA: grave(GRAVE_SHEET, 74, 84, 45, 44, 14, 'Broad ornate headstone with a cross (1.5 cells wide).'),
+  graveWideB: grave(GRAVE_SHEET, 74, 148, 45, 44, 14, 'Broad ornate headstone with a cross (1.5 cells wide).'),
+  crossWood: grave(GRAVE_SHEET, 166, 2, 18, 29, 10, 'Plain wooden cross (1 cell).'),
+  crossMound: grave(GRAVE_SHEET, 165, 32, 22, 32, 10, 'Wooden cross on a mound of earth (1 cell).'),
+  crossGold: grave(GRAVE_SHEET, 194, 6, 28, 45, 12, 'Tall gilded cross on a mound (1 cell, 1.5 tall).'),
+  crossIronA: grave(GRAVE_SHEET, 165, 64, 22, 32, 10, 'Iron-grey cross on a mound (1 cell).'),
+  crossIronB: grave(GRAVE_SHEET, 165, 96, 22, 32, 10, 'Iron-grey rope-bound cross on a mound (1 cell).'),
+  crossIronTall: grave(GRAVE_SHEET, 194, 70, 28, 45, 12, 'Tall rope-bound cross on a mound (1 cell, 1.5 tall).'),
+  graveBoulder: grave(GRAVE_SHEET, 161, 134, 30, 46, 30, 'Dark cracked burial boulder (1 cell, 1.5 tall).'),
+  crossBlack: grave(GRAVE_SHEET, 193, 134, 30, 45, 30, 'Black stone cross (1 cell, 1.5 tall).'),
+} satisfies Record<string, Prefab>;
+/** Cemetery sets for zone specs. */
+export const GRAVES = [
+  'graveRoundA',
+  'graveRoundB',
+  'graveRip',
+  'graveDark',
+  'graveCrossA',
+  'graveCrossB',
+  'graveSmall',
+  'graveWideA',
+  'graveWideB',
+] as const satisfies (keyof typeof GRAVE_PREFABS)[];
+export const GRAVE_CROSSES = [
+  'crossWood',
+  'crossMound',
+  'crossGold',
+  'crossIronA',
+  'crossIronB',
+  'crossIronTall',
+] as const satisfies (keyof typeof GRAVE_PREFABS)[];
+// === end LPC grave markers ======================================================================================
+
 export const PREFABS = {
+  ...GRAVE_PREFABS,
   smithy: building(
     'smithy',
     'Blacksmith: a 6x7 hall with terracotta roof and an anvil over the door. Shopkeeper stands one row below.',
