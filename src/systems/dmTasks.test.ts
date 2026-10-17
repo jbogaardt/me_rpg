@@ -69,7 +69,7 @@ describe('a boss and a mastery', () => {
       const v = viewOf(b.task!);
       expect(taskFromWire(JSON.parse(JSON.stringify(taskWire(v))))).toEqual(v);
     }
-    expect(taskFromWire([8, 0, 0, 1, 'fen', 0, 0, 'x', 0, 0, ''])).toBeNull();
+    expect(taskFromWire([9, 0, 0, 1, 'fen', 0, 0, 'x', 0, 0, ''])).toBeNull();
   });
 });
 
