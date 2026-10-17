@@ -1,5 +1,5 @@
 import { defineBiome, worldOf } from '../tools/map/world';
-import { DEAD_TREES } from '../tools/map/catalog';
+import { DEAD_TREES, type PrefabName } from '../tools/map/catalog';
 import { awayFrom, blob, pond, trail, units } from '../tools/map/helpers';
 import layout from './world';
 
@@ -77,6 +77,17 @@ export default defineBiome({
     ] as const)
       z.keepFree(...near(x, y));
 
+    // --- A collapsed outpost on the north-east ash (art: LPC Jungle Ruins, ruins.png) ------------------------------------
+    const ruin = (name: PrefabName, col: number, row: number) => z.prop(name, col + 84, row + 24); // a cell of this map
+    ruin('ruinWall', 114, 33);
+    ruin('ruinPillar', 112, 33);
+    ruin('ruinPillarBroken', 126, 33);
+    ruin('ruinStatue', 117, 36);
+    ruin('ruinStatueB', 121, 36);
+    ruin('ruinHut', 118, 42);
+    ruin('ruinRubbleD', 115, 37);
+    ruin('ruinRubbleB', 124, 38);
+
     z.scatter([...DEAD_TREES], { count: 40, where: open, seed: 71 });
     z.scatter(['deadBush'], { count: 14, where: open, seed: 72 });
     z.scatter(['darkBoulder', 'darkBoulderB', 'darkSpire', 'menhir'], { count: 30, where: open, seed: 73 });
@@ -85,5 +96,6 @@ export default defineBiome({
     z.place('The Graveyard', 130, 89);
     z.place('The Ember Pool', 130, 67);
     z.place('The Chasm', 168, 68);
+    z.place('The Collapsed Outpost', 198, 62);
   },
 });

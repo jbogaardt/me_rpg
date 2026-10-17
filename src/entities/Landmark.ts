@@ -1,5 +1,5 @@
-import { Container, Graphics } from 'pixi.js';
-import type { LandmarkShape } from '../systems/landmarks';
+import { Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
+import { RUIN_FRAMES, type LandmarkShape } from '../systems/landmarks';
 
 // A landmark the DM's telling names (a wagon, a well, a camp...), drawn small at its goal so the party finds what it was
 // told of. Scenery only: walkable, nothing to touch (the quest counts reaching the place). Local to each page; the shapes
@@ -10,12 +10,29 @@ export class Landmark extends Container {
     readonly shape: LandmarkShape,
     x: number,
     y: number,
+    /** The ruins sheet (public/tilesets/ruins.png): a `ruin` is drawn from its art, or as a sketch without it. */
+    ruins?: Texture,
   ) {
     super();
     this.position.set(x, y);
     this.zIndex = y;
-    this.addChild(draw(shape));
+    this.addChild(shape === 'ruin' && ruins ? drawRuin(ruins) : draw(shape));
   }
+}
+
+/** A snapped pillar and a standing idol, with a tumbled block between, cut from the LPC Jungle Ruins art. */
+function drawRuin(sheet: Texture): Container {
+  const c = new Container();
+  const piece = (f: { x: number; y: number; w: number; h: number }, at: number) => {
+    const s = new Sprite(new Texture({ source: sheet.source, frame: new Rectangle(f.x, f.y, f.w, f.h) }));
+    s.anchor.set(0.5, 1); // feet at the origin, like every landmark
+    s.x = at;
+    c.addChild(s);
+  };
+  piece(RUIN_FRAMES.pillar, -22);
+  piece(RUIN_FRAMES.idol, 20);
+  piece(RUIN_FRAMES.rubble, 0);
+  return c;
 }
 
 function draw(shape: LandmarkShape): Graphics {

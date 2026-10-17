@@ -43,3 +43,11 @@ must skip `beyond` cells), and the margin is how two maps line up.
 
 `town.png` (`town.ts`, from the CC0 Town RPG Pack in `art/`) holds the shop prefabs (`BUILDINGS` in `catalog.ts`),
 solid from the ground up; each has a door into its interior room (`interiors.ts`).
+
+## Ruins
+
+`ruins.png` (`ruins.ts`, from the OGA-BY/CC-BY "[LPC] Jungle Ruins", not kept in the repo: `RUINS_DIR=<unzipped pack> npm run ruins`)
+holds the `ruin*` prefabs (`RUIN_PREFABS` in `catalog.ts`): a pyramid, temple, hall, hut, walls, an arch, pillars, idols and rubble.
+Buildings and walls are solid from the ground up; pillars and idols block along their whole height; the arch blocks only
+its dark half, so its open half is a gate. They are scenery, not enterable. Used in the jungle, desert, undead lands and
+the Wilds' old shrine and barrow; the quest `ruin` landmark (`entities/Landmark.ts`) is drawn from the same sheet.

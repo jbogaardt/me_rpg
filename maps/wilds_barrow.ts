@@ -56,6 +56,11 @@ export default defineZone({
 
     // Rows of standing stones round the mound.
     for (const col of [6, 10, 14, 18]) for (const row of [8, 18]) z.prop('menhir', col, row);
+    // A fallen gatehouse and two idols at the mound's foot (LPC Jungle Ruins, ruins.png).
+    z.prop('ruinWallBroken', 9, 6);
+    z.prop('ruinStatue', 6, 20);
+    z.prop('ruinStatueB', 17, 20);
+    z.prop('ruinRubbleC', 12, 20);
     pond(z, { col: 36, row: 22, w: 6, h: 5 }, { water: 'abyss' });
     pond(z, { col: 8, row: 25, w: 4, h: 2 }, { water: 'lava', shore: 'mud' });
 

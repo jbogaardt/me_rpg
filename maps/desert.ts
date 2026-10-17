@@ -109,6 +109,18 @@ export default defineBiome({
     ] as const)
       z.site('hoursand', ...near(x, y));
 
+    // --- A half-buried temple, a fallen wall and a gate on the trail (art: LPC Jungle Ruins, ruins.png) ---------------
+    z.keepClear([{ col: 93, row: 29, w: 15, h: 14 }]);
+    z.prop('ruinTemple', 96, 40);
+    z.prop('ruinStatue', 94, 41);
+    z.prop('ruinStatueB', 105, 41);
+    z.prop('ruinRubbleB', 99, 42);
+    z.prop('ruinWallBroken', 54, 38);
+    z.prop('ruinPillarBroken', 53, 39);
+    z.prop('ruinPillar', 62, 39);
+    z.prop('ruinRubbleA', 58, 40);
+    z.prop('ruinArch', 42, 46);
+
     z.giver('zahra', ...z.near(80, 49)); // the sandwalker at the oasis (quests.json `givers`)
 
     z.scatter([...DRY_TREES], { count: 22, where: open, seed: 53 });
@@ -118,6 +130,7 @@ export default defineBiome({
 
     // --- Names for the map: each shows once the player has explored round it ---------------------------------------
     z.place("The Legion's Mesa", 17, 10);
+    z.place('The Sandbound Temple', 100, 36);
     z.place('The Oasis', 78, 46);
     z.place('The Ring of Stones', 35, 50);
     z.place('The Buried Skull', 64, 6);

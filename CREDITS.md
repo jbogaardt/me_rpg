@@ -43,6 +43,16 @@ magic animations and UI elements" (DE) and "Fruit and Veggie Inventory" (JT), bo
 [`art/lpc_crops/CREDITS-crops.txt`](art/lpc_crops/CREDITS-crops.txt), kept with the art. Seven crops are cut out and
 repacked by `tools/map/crops.ts`.
 
+## Ruins (`public/tilesets/ruins.png`, cut by `tools/map/ruins.ts`)
+
+"[LPC] Jungle Ruins" (https://opengameart.org/content/lpc-jungle-ruins) by bluecarrot16, commissioned by Pierre Vigier
+(pvigier); licensed OGA-BY 3.0+, CC-BY 3.0+ or GPL 2.0+ (we use it under CC-BY 3.0 / OGA-BY 3.0: attribution given here).
+The pack's example map uses tiles from the LPC base assets by Lanea Zimmerman (Sharm), CC-BY 3.0 / GPL 3.0
+(https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles); none of those tiles is used.
+Modifications: the pyramid, temple, hall, hut, walls, pillars, idols, arch and rubble are cut out of the pack's tile
+sheet and of its example map (redrawn without the grass), and repacked onto one sheet; no pixel is changed. The 9 MB
+pack itself is not kept in the repository.
+
 ## Characters (`public/sprites/lpc/`, catalog in `sprites/parts.ts`)
 
 Hero, NPC and monster art comes from the [Universal LPC Spritesheet Character Generator](https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator)
