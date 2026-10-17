@@ -5,6 +5,7 @@
 
 import type { TaskView } from './dmTasks';
 import { nameOfBossTitle, parseBossWhat } from './dmBoss';
+import { fitWords } from './dmPowers';
 import { parseMastery, parseRelicWhat } from './dmQuests';
 import { hashOf, seeded } from './phrases';
 import { SPELLS, arrows, directionWords, type SpellId } from './spells';
@@ -27,7 +28,7 @@ export interface BriefNames {
 export const MAX_NOTE = 240;
 
 /** The DM's own instructions as they travel: trimmed, one line, no longer than `MAX_NOTE`. */
-export const cleanNote = (text: string): string => text.replace(/\s+/g, ' ').trim().slice(0, MAX_NOTE).trim();
+export const cleanNote = (text: string): string => fitWords(text.replace(/\s+/g, ' ').trim(), MAX_NOTE).trim();
 
 /** A name with its article ("an Emerald", "a Steel Sword"). */
 export const an = (name: string): string => (/^[aeiou]/i.test(name) ? `an ${name}` : `a ${name}`);

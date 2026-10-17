@@ -15,7 +15,7 @@
 // player in `scenes/overworld/Cues.ts` / `hud/sfx.ts`, which the types force).
 
 import { DIRS, type Direction } from '../core/direction';
-import { MAX_SAY } from './dmPowers';
+import { MAX_SAY, fitWords } from './dmPowers';
 
 /** One-shot poses and stage business an `anim` cue may ask of an actor. `dodge` has no sprite: it floats a word. */
 export const ANIM_ACTIONS = ['slash', 'lunge', 'cast', 'shoot', 'hurt', 'stagger', 'dodge'] as const;
@@ -198,7 +198,7 @@ export function serializeCued({ text, cues }: Cued): string {
  */
 export function cleanCued(raw: string): string {
   const said = parseCued(raw);
-  const text = said.text.slice(0, MAX_SAY).trim();
+  const text = fitWords(said.text, MAX_SAY).trim();
   return serializeCued({ text, cues: said.cues.filter((c) => c.at <= text.length) });
 }
 

@@ -54,7 +54,7 @@ interface PageBot {
   dismiss(): void;
   choose(cue: string): { ok: boolean; note: string };
   reply(text: string): boolean;
-  say(text: string): boolean;
+  say(text: string, near?: boolean): boolean;
   looks(): { id: string; name: string }[];
   stockEpics(): StockTale[];
   epic(raw: unknown): { ok: boolean; note: string };
@@ -138,7 +138,7 @@ class Dm {
 
   state = () => this.call('state');
   start = () => this.call('start');
-  say = (text: string) => this.call('say', text);
+  say = (text: string, near = false) => this.call('say', text, near);
 
   async tick() {
     const s = await this.state();
@@ -236,7 +236,7 @@ class Dm {
     m.spoke = this.clock.now;
     log(`narrating (${beat.kind}):`, line);
     this.said = [...this.said, line].slice(-RECENT);
-    await this.say(line);
+    await this.say(line, true); // what the DM remarks on is about where the party stands, not for friends elsewhere
     if (shouldConjure(beat, this.made, this.clock.now - this.lastMade)) await this.conjure(s);
     return true;
   }
@@ -292,7 +292,7 @@ class Dm {
     if (!result.ok) return log('could not bring in', person.name + ':', result.note);
     this.made++;
     log(`brought in ${person.name} (${looks.find((l) => l.id === person.look)?.name ?? person.look})`);
-    await this.say(`Hm, someone is near. Seek out ${person.name}; I think they have been waiting for you.`);
+    await this.say(`Hm, someone is near. Seek out ${person.name}; I think they have been waiting for you.`, true);
   }
 
   private async answer(card: Card, s: PageState) {

@@ -62,7 +62,7 @@ export class DmDesk {
   private dialSig = '';
   private questSig = '{}';
   /** Host: what the DM last said and how long it still goes out; guest: the newest saying shown. */
-  private said: { id: number; text: string; left: number } | null = null;
+  private said: { id: number; text: string; left: number; zone?: string } | null = null;
   private saySeq = 0;
   private lastSay = 0;
   private asked: [number, number] | [number, number, string] | undefined;
@@ -121,11 +121,15 @@ export class DmDesk {
     };
   }
 
-  /** The DM speaks to the party: the words appear on every friend's screen (and the DM's own). False if there were none. */
-  say(text: string): boolean {
+  /**
+   * The DM speaks to the party: the words appear on every friend's screen (and the DM's own). False if there were none.
+   * With a `zone`, only friends standing in that zone hear it (a word about what one player sees is not for another who is
+   * somewhere else); the DM's own screen always shows it.
+   */
+  say(text: string, zone?: string): boolean {
     const words = cleanCued(text);
     if (!words || this.arena.role === 'client') return false; // solo speaks to itself (its own screen)
-    this.said = { id: ++this.saySeq, text: words, left: sayTime(words) };
+    this.said = { id: ++this.saySeq, text: words, left: sayTime(words), ...(zone ? { zone } : {}) };
     this.timer = DM_RESEND; // tell them now
     this.onSay(words);
     return true;
@@ -182,7 +186,8 @@ export class DmDesk {
     }
     this.timer += dt;
     if (this.said && (this.said.left -= dt) <= 0) this.said = null;
-    const say = this.said ? ([this.said.id, this.said.text] as [number, string]) : undefined;
+    const said = this.said;
+    const say = said ? ([said.id, said.text] as [number, string]) : undefined;
     const base = { shift: Math.round(this.clock.shift * 1e4) / 1e4, dials: this.content.effectiveDials };
     const hold = this.arena.timeStopped;
     const task = this.arena.task;
@@ -198,7 +203,7 @@ export class DmDesk {
         k: 'dm',
         n: ++this.seq,
         ...base,
-        ...(say ? { say } : {}),
+        ...(say && (!said?.zone || this.arena.remotes.get(slot)?.zone === said.zone) ? { say } : {}),
         ...(this.replies.has(slot)
           ? { reply: [this.replies.get(slot)!.id, this.replies.get(slot)!.text] as [number, string] }
           : {}),

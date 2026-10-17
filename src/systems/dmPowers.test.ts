@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   cleanSay,
+  fitWords,
   Cooldown,
   isPressure,
   MAX_SAY,
@@ -74,5 +75,27 @@ describe('Cooldown', () => {
     expect(c.wait).toBe(1);
     c.tick(1);
     expect(c.use()).toBe(true);
+  });
+});
+
+describe('fitWords', () => {
+  const long =
+    'The first sentence is here. The second sentence goes on for quite a while longer than the room allows for it.';
+  it('leaves what fits alone', () => {
+    expect(fitWords('Short and sweet.', 50)).toBe('Short and sweet.');
+  });
+  it('cuts after the last whole sentence that fits', () => {
+    expect(fitWords(long, 60)).toBe('The first sentence is here.');
+  });
+  it('cuts at a word with an ellipsis when no sentence fits, never mid-word', () => {
+    const out = fitWords('A very long single sentence with no full stop anywhere in sight at all', 30);
+    expect(out.endsWith('…')).toBe(true);
+    expect(out.length).toBeLessThanOrEqual(30);
+    expect(
+      out
+        .slice(0, -1)
+        .split(' ')
+        .every((w) => 'A very long single sentence with'.includes(w)),
+    ).toBe(true);
   });
 });

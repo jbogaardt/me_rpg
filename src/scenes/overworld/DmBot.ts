@@ -128,8 +128,8 @@ export interface DmBotApi {
   choose(cue: string): { ok: boolean; note: string };
   /** Answer whoever asked for the card up now, privately. */
   reply(text: string): boolean;
-  /** Speak to everyone. */
-  say(text: string): boolean;
+  /** Speak to everyone, or (`near`) only to those in the zone the DM stands in. */
+  say(text: string, near?: boolean): boolean;
   /** The looks a new person may wear (empty when the world is not a live one). */
   looks(): { id: string; name: string }[];
   /** Make a person and put them near the party, on open ground in the area the DM stands in. */
@@ -237,7 +237,7 @@ export function createDmBot({
       return { ok: !note, note };
     },
     reply: (text) => prompts.reply(text),
-    say: (text) => desk.say(text),
+    say: (text, near) => desk.say(text, near ? arena.zoneOf(arena.local).name : undefined),
     looks: () => story.world?.lookOptions() ?? [],
     spawn(person) {
       const world = story.world;

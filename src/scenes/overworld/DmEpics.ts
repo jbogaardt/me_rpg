@@ -247,7 +247,11 @@ export class DmEpics {
         (spot
           ? { col: Math.floor(spot.x / CELL), row: Math.floor(spot.y / CELL) }
           : openGroundNear(z.collision, [spawn]));
-      const look = story.world ? pickLook(story.world.lookOptions(), person.look, run.step) : null;
+      // Not a look already standing in this land (a town has its innkeeper: a second one cannot be told from the first).
+      const standing = new Set(z.folk.map((f) => f.name.toLowerCase()));
+      const all = story.world?.lookOptions() ?? [];
+      const free = all.filter((l) => !standing.has(l.name.toLowerCase()));
+      const look = story.world ? pickLook(free.length ? free : all, person.look, run.step) : null;
       if (!cell || !look) return undefined;
       const id = story.bring({ name: person.name, look, lines: person.lines }, region, cell.col, cell.row);
       if (!id || story.lastNote) return undefined;

@@ -25,9 +25,23 @@ export const SAY_SHOW = 8;
 /** Seconds a line of the DM's words stays up: long enough to read it, never less than `SAY_SHOW`. */
 export const sayTime = (text: string): number => Math.min(30, Math.max(SAY_SHOW, 4 + text.length / 14));
 
-/** The DM's words as they will be sent: trimmed, one line, no longer than `MAX_SAY` ('' when there is nothing to say). */
+/**
+ * `text` (one line) cut to at most `max` letters where a reader will not notice: after the last whole sentence that fits
+ * (if that keeps at least a third of it), else at the last word with an ellipsis. Never mid-word or mid-sentence.
+ */
+export function fitWords(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const head = text.slice(0, max);
+  const stop = Math.max(head.lastIndexOf('. '), head.lastIndexOf('! '), head.lastIndexOf('? '));
+  const ends = /[.!?]["')\]]?$/.test(head) ? head.length : stop + 1; // the cut may fall just after a full stop
+  if (ends >= max / 3) return head.slice(0, ends).trim();
+  const space = head.lastIndexOf(' ', max - 1);
+  return `${head.slice(0, space > 0 ? space : max - 1).replace(/[\s,;:—-]+$/, '')}…`.slice(0, max);
+}
+
+/** The DM's words as they will be sent: trimmed, one line, cut to a whole sentence if over `MAX_SAY` ('' when there is nothing to say). */
 export function cleanSay(text: string): string {
-  return text.replace(/\s+/g, ' ').trim().slice(0, MAX_SAY).trim();
+  return fitWords(text.replace(/\s+/g, ' ').trim(), MAX_SAY).trim();
 }
 
 /** One bolt of a smite: when it lands (seconds from the tap), where, its shape seed, and the foe it kills (an index). */
