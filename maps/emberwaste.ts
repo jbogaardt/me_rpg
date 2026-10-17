@@ -1,6 +1,7 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { DEAD_TREES, type PrefabName } from '../tools/map/catalog';
 import { awayFrom, blob, pond, trail, units } from '../tools/map/helpers';
+import { camp as wayfarersCamp } from '../tools/map/camp';
 import layout from './world';
 
 // The Emberwaste: a burnt country east of the Mirewater, the first land past the old map. Ash and soot, red dirt tracks,
@@ -40,6 +41,9 @@ export default defineBiome({
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...z.near(west[0] + 8, west[1]));
+
+    // --- A wayfarers' camp by the western gate: tents, a fire and a quartermaster -------------------------------
+    wayfarersCamp(z, ...near(35.8, 1.5), 'campEmber', 'The Cinder Camp');
 
     // --- Lakes of lava, shored with mud ----------------------------------------------------------------------
     for (const [x, y, w, h] of [

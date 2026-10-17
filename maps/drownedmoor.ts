@@ -1,6 +1,7 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { SWAMP_TREES, type PrefabName } from '../tools/map/catalog';
 import { awayFrom, blob, pond, reedsAt, trail, units } from '../tools/map/helpers';
+import { camp } from '../tools/map/camp';
 import layout from './world';
 
 // The Drowned Moor: a flooded country east of Rimeheart where a kingdom sank and left its towers standing in the water.
@@ -32,6 +33,9 @@ export default defineBiome({
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...z.near(west[0] + 8, west[1]));
+
+    // --- A wayfarers' camp by the western gate -------------------------------------------------------------------
+    camp(z, ...near(49.6, 11.4), 'campMoor', 'The Moor Camp');
 
     // --- Black pools, with reeds on their banks ---------------------------------------------------------------------
     for (const [i, [x, y, w, h]] of (

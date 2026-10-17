@@ -221,7 +221,8 @@
         "frost_objects.png",
         "hanging_signs.png",
         "town.png",
-        "trees_dead.png"
+        "trees_dead.png",
+        "landmarks.png"
       ],
       "generation": {
         "roam": [
@@ -678,7 +679,8 @@
         "trees_green.png",
         "trees_dead.png",
         "trees_frost.png",
-        "frost_objects.png"
+        "frost_objects.png",
+        "landmarks.png"
       ],
       "generation": {
         "roam": [
@@ -776,6 +778,7 @@
         "frost_objects.png",
         "trees_dead.png",
         "signposts.png",
+        "landmarks.png",
         "ruins.png",
         "graves.png",
         "trees_dry.png"
@@ -787,7 +790,13 @@
             "count": 8,
             "seed": 910,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 64,
+                "y": 30,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 38,
@@ -802,7 +811,13 @@
             "count": 8,
             "seed": 921,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 64,
+                "y": 30,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 70,
@@ -817,7 +832,13 @@
             "count": 6,
             "seed": 932,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 64,
+                "y": 30,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 158,
@@ -852,6 +873,7 @@
         "trees_dead.png",
         "ruins.png",
         "signposts.png",
+        "landmarks.png",
         "trees_dry.png"
       ],
       "generation": {
@@ -861,7 +883,13 @@
             "count": 8,
             "seed": 909,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 42,
+                "y": 47,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 158,
@@ -876,7 +904,13 @@
             "count": 8,
             "seed": 920,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 42,
+                "y": 47,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 65,
@@ -891,7 +925,13 @@
             "count": 6,
             "seed": 931,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 42,
+                "y": 47,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 158,
@@ -923,6 +963,7 @@
         "trees_dry.png",
         "object-layer.png",
         "signposts.png",
+        "landmarks.png",
         "ruins.png",
         "trees_swamp.png"
       ],
@@ -933,7 +974,13 @@
             "count": 8,
             "seed": 911,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 46,
+                "y": 28,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 34,
@@ -948,7 +995,13 @@
             "count": 8,
             "seed": 922,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 46,
+                "y": 28,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 73,
@@ -963,7 +1016,13 @@
             "count": 6,
             "seed": 933,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 46,
+                "y": 28,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 160,
@@ -995,7 +1054,8 @@
         "object-layer.png",
         "ruins.png",
         "trees_swamp.png",
-        "signposts.png"
+        "signposts.png",
+        "landmarks.png"
       ],
       "generation": {
         "roam": [
@@ -1004,7 +1064,13 @@
             "count": 8,
             "seed": 911,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 39,
+                "y": 47,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 155,
@@ -1019,7 +1085,13 @@
             "count": 8,
             "seed": 922,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 39,
+                "y": 47,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 64,
@@ -1034,7 +1106,13 @@
             "count": 6,
             "seed": 933,
             "apart": 10,
-            "avoid": [],
+            "avoid": [
+              {
+                "x": 39,
+                "y": 47,
+                "radius": 26
+              }
+            ],
             "within": [
               {
                 "x": 154,

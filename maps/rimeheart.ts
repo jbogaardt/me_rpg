@@ -1,6 +1,7 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { FROST_TREES, type PrefabName } from '../tools/map/catalog';
 import { awayFrom, blob, trail, units } from '../tools/map/helpers';
+import { camp } from '../tools/map/camp';
 import layout from './world';
 
 // Rimeheart: the deep frost beyond the Frostlands, where the snow never thaws. Frozen lakes, groves of frosted pines, a
@@ -31,6 +32,9 @@ export default defineBiome({
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...z.near(west[0] + 8, west[1]));
+
+    // --- A wayfarers' camp by the western gate -------------------------------------------------------------------
+    camp(z, ...near(35.6, 11.4), 'campRime', 'The Rime Camp');
 
     // --- Frozen lakes, slippery -----------------------------------------------------------------------------------
     for (const [x, y, w, h] of [

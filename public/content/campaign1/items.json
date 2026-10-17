@@ -1219,6 +1219,105 @@
       "look": {
         "weapon": "weapon.bow_great"
       }
+    },
+    "emberJerky": {
+      "name": "Ember Jerky",
+      "value": 30,
+      "use": {
+        "hp": 30,
+        "food": 70
+      }
+    },
+    "cinderTonic": {
+      "name": "Cinder Tonic",
+      "value": 110,
+      "use": {
+        "hp": 90,
+        "mp": 30
+      }
+    },
+    "ashwater": {
+      "name": "Ashwater Flask",
+      "value": 12,
+      "use": {
+        "hp": 0,
+        "water": 70
+      }
+    },
+    "rimeberryTea": {
+      "name": "Rimeberry Tea",
+      "value": 24,
+      "use": {
+        "hp": 40,
+        "water": 45,
+        "food": 15
+      }
+    },
+    "smokedElk": {
+      "name": "Smoked Elk",
+      "value": 34,
+      "use": {
+        "hp": 25,
+        "food": 80
+      }
+    },
+    "frostwardSalve": {
+      "name": "Frostward Salve",
+      "value": 120,
+      "use": {
+        "hp": 100,
+        "mp": 40
+      }
+    },
+    "dateLoaf": {
+      "name": "Date Loaf",
+      "value": 28,
+      "use": {
+        "hp": 20,
+        "food": 75,
+        "water": 15
+      }
+    },
+    "mirageTonic": {
+      "name": "Mirage Tonic",
+      "value": 130,
+      "use": {
+        "hp": 110,
+        "mp": 50
+      }
+    },
+    "saltFlask": {
+      "name": "Brackish Flask",
+      "value": 14,
+      "use": {
+        "hp": 0,
+        "water": 75
+      }
+    },
+    "reedBroth": {
+      "name": "Reed Broth",
+      "value": 26,
+      "use": {
+        "hp": 35,
+        "food": 50,
+        "water": 30
+      }
+    },
+    "eelPie": {
+      "name": "Eel Pie",
+      "value": 36,
+      "use": {
+        "hp": 30,
+        "food": 85
+      }
+    },
+    "bogmossPoultice": {
+      "name": "Bogmoss Poultice",
+      "value": 125,
+      "use": {
+        "hp": 105,
+        "mp": 45
+      }
     }
   },
   "shops": {
@@ -1362,6 +1461,50 @@
         "Take a breather, friend. The road will still be there when you are done."
       ],
       "stock": ["ale", "stew", "honeyCake"],
+      "buys": ["supply"]
+    },
+    "campEmber": {
+      "name": "The Cinder Camp",
+      "tag": "Camp",
+      "keeper": "campEmberKeeper",
+      "greeting": [
+        "Water, bread and a bandage, and no questions about where you got burnt.",
+        "The ash gets into everything. The stew keeps it out of you."
+      ],
+      "stock": ["emberJerky", "cinderTonic", "ashwater"],
+      "buys": ["supply"]
+    },
+    "campRime": {
+      "name": "The Rime Camp",
+      "tag": "Camp",
+      "keeper": "campRimeKeeper",
+      "greeting": [
+        "Warm food for cold hands. Stand by the fire as long as you like.",
+        "The white keeps what it takes. Take what you need from me and keep moving."
+      ],
+      "stock": ["rimeberryTea", "smokedElk", "frostwardSalve"],
+      "buys": ["supply"]
+    },
+    "campGlass": {
+      "name": "The Glass Camp",
+      "tag": "Camp",
+      "keeper": "campGlassKeeper",
+      "greeting": [
+        "Water first, friend. Everything else second.",
+        "The flats are kind to nobody. I am kind for a fair price."
+      ],
+      "stock": ["dateLoaf", "mirageTonic", "saltFlask"],
+      "buys": ["supply"]
+    },
+    "campMoor": {
+      "name": "The Moor Camp",
+      "tag": "Camp",
+      "keeper": "campMoorKeeper",
+      "greeting": [
+        "Dry bread and drier stories, and a fire the water has not found.",
+        "The moor takes boots and keeps them. Spare pairs behind the cart."
+      ],
+      "stock": ["reedBroth", "eelPie", "bogmossPoultice"],
       "buys": ["supply"]
     }
   },

@@ -1132,6 +1132,58 @@
         "recover": 1.0,
         "stagger": 0.03
       }
+    },
+    "campEmberKeeper": {
+      "type": "npc",
+      "name": "Quartermaster Rusk",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.messy_red",
+        "beard": "beard.gray",
+        "torso": "torso.leather",
+        "legs": "legs.pants_tan",
+        "feet": "feet.boots_black"
+      }
+    },
+    "campRimeKeeper": {
+      "type": "npc",
+      "name": "Furrier Hild",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.plain_white",
+        "torso": "torso.tunic_forest",
+        "legs": "legs.pants_forest",
+        "feet": "feet.boots_brown",
+        "headwear": "headwear.hood_brown",
+        "cape": "cape.forest"
+      }
+    },
+    "campGlassKeeper": {
+      "type": "npc",
+      "name": "Caravaneer Dune",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.plain_white",
+        "torso": "torso.tunic_white",
+        "legs": "legs.pants_tan",
+        "feet": "feet.boots_brown",
+        "headwear": "headwear.bandana_tan"
+      }
+    },
+    "campMoorKeeper": {
+      "type": "npc",
+      "name": "Ferrywife Mab",
+      "sprite": {
+        "body": "body.light",
+        "head": "head.human_light",
+        "hair": "hair.messy_red",
+        "torso": "torso.tunic_forest",
+        "legs": "legs.pants_forest",
+        "feet": "feet.boots_brown"
+      }
     }
   }
 }

@@ -1,6 +1,7 @@
 // Named map assets for zone specs. Every coordinate here was checked against the sheets in
 // public/tilesets/ (see the map pitfalls in tools/map/CLAUDE.md); add new entries only after looking at the art.
 
+import { LANDMARK_ATLAS } from '../../src/systems/landmarkAtlas';
 import { RUINS_ATLAS } from './ruinsAtlas';
 import { TREE_ATLAS } from './treeAtlas';
 
@@ -710,6 +711,31 @@ const RUIN_PREFABS = {
 };
 // --- end Ruins ---
 
+// --- Camp pieces: the quest landmarks' stored pixel art (landmarks.png, tools/map/landmarks.ts), placed in maps ---
+const campArt = (frame: keyof typeof LANDMARK_ATLAS, solid: Prefab['solid'], tag: string, about: string): Prefab => {
+  const f = LANDMARK_ATLAS[frame];
+  return { sheet: 'landmarks.png', w: f.w, h: f.h, parts: [part(f.x, f.y, f.w, f.h)], solid, tag, about };
+};
+const CAMP_PREFABS = {
+  campTent: campArt(
+    'tent',
+    { band: 40, min: 0.3 },
+    'tent',
+    'A big canvas tent, 6x4 cells; walk in under its flap (the opening blocks nothing).',
+  ),
+  campHut: campArt('hut', { band: 30, min: 0.3 }, 'hut', 'A small wooden hut, 2x2 cells. Solid.'),
+  campCart: campArt('cart', { band: 24, min: 0.3 }, 'cart', 'A hand cart with its shaft up, 3x2 cells. Solid.'),
+  campWell: campArt('well', { band: 40, min: 0.3 }, 'well', 'A wooden-framed stone well, 2x3 cells. Solid.'),
+  campFire: campArt('fire0', { band: 12, min: 0.4 }, 'fire', 'A campfire (1 cell). Solid.'),
+  campShrine: campArt(
+    'shrine',
+    { band: 14, min: 0.4 },
+    'statue',
+    'A hooded stone statue on a plinth (1x2 cells). Solid.',
+  ),
+};
+// --- end Camp pieces ---
+
 // --- Caves, sewers and their doorways (MrBeast's tilesets, see dungeonSheets.ts): pieces named by source tile ---
 const delveArt = (
   sheet: string,
@@ -808,6 +834,7 @@ const DELVE_PREFABS = {
 export const PREFABS = {
   ...SIGN_PREFABS,
   ...DELVE_PREFABS,
+  ...CAMP_PREFABS,
   ...GRAVE_PREFABS,
   ...RUIN_PREFABS,
   smithy: building(

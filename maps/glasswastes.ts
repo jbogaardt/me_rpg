@@ -1,6 +1,7 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { DRY_TREES, type PrefabName } from '../tools/map/catalog';
 import { awayFrom, blob, trail, units } from '../tools/map/helpers';
+import { camp } from '../tools/map/camp';
 import layout from './world';
 
 // The Glasswastes: a salt-white desert east of the Emberwaste where old fire fused the sand to glass. Pale dunes, craters
@@ -37,6 +38,9 @@ export default defineBiome({
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...z.near(west[0] + 8, west[1]));
+
+    // --- A wayfarers' camp by the western gate -------------------------------------------------------------------
+    camp(z, ...near(49.8, 1.5), 'campGlass', 'The Glass Camp');
 
     // --- Craters, dunes and bleached skulls, where the fire fell -------------------------------------------------
     for (const [name, x, y] of [
