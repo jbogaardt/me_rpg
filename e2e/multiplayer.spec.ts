@@ -121,10 +121,12 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await expect(host.locator('#menu-party li[data-slot="1"]')).toContainText('Player 2', { timeout: 15_000 });
   await host.locator('#menu [data-tab="online"]').click();
 
-  // A third player with the same code finds the game closed.
+  // A third player with the same code takes a free seat: a live game stays joinable (so a dropped friend can rejoin).
   const stranger = await open(browser, '/');
   await joinWithCode(stranger, code);
-  await expect(stranger.locator('#mp-note')).toContainText(/isn.t open/);
+  await expect(stranger.locator('#mp-active .mp-connected')).toHaveText('Connected to the Dungeon Master (host)', {
+    timeout: 60_000,
+  });
   await stranger.context().close(); // free the machine for the rest of the test
 
   // The game runs behind the open menu.
@@ -317,7 +319,7 @@ test('up to four players: friends join, leave, and a new friend takes the empty 
   await expect(seat(newcomer, 1)).toHaveAttribute('data-state', 'you');
   await newcomer.keyboard.press('Escape');
 
-  // Fill the last seat: the code closes by itself.
+  // Fill the last seat (the code stays up, for whoever drops out and comes back).
   const last = await open(browser, '/');
   await joinWithCode(last, code);
   await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 2, Player 3 and Player 4', {
@@ -328,7 +330,8 @@ test('up to four players: friends join, leave, and a new friend takes the empty 
   await expect(seat(last, 3)).toHaveAttribute('data-state', 'you');
 
   // The co-op map shows a pin for every other player, each in their own colour, and a legend naming them.
-  await last.keyboard.press('Escape'); // close the menu
+  if (await last.locator('#menu').isVisible()) await last.keyboard.press('Escape'); // close the menu (Esc would open it)
+  await expect(last.locator('#menu')).toBeHidden();
   // The M button only shows once this page is really in the game; pressing M earlier (a slow machine) does nothing.
   await expect(last.locator('#map-btn')).toBeVisible({ timeout: 30_000 });
   await last.keyboard.press('KeyM');
@@ -382,7 +385,7 @@ test('in a live world the Dungeon Master chooses where the story goes, and the f
   expect(await host.locator('#dm-card [data-opt]').count()).toBeGreaterThanOrEqual(2);
   // The DM answers the friend privately, and the card stays up: answering is not deciding.
   await host.locator('#dm-card [data-opt="r:0"]').click();
-  await asideSays(friend, 'On my way.');
+  await asideSays(friend, 'On my way!');
   await expect(host.locator('#dm-card')).toBeVisible();
   await host.locator('canvas').click({ position: { x: 20, y: 20 } });
   await expect(host.locator('#dm-card')).toBeHidden();
