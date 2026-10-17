@@ -24,3 +24,8 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
   partner's colour with the distance in tiles for a partner in this zone but out of view, and a chip for one in another zone.
   Nothing is sent: a guest already gets every in-zone player in `snap.players` and the rest in `away`, so it can say "in another
   zone" but only the host knows which zone (the chip names it when the player's `zone` is known).
+- **The hotbar** (`Hotbar.ts`, rules in `systems/hotbar.ts`; core engine, per-player UI state): four quick slots in a column on the
+  right edge (clear of the D-pad and A), keys 1-4 (`HOTBAR_KEYS`, reserved) or a tap (`data-key` buttons). A slot stores an
+  item *name* (never a pack index) and a use is an ordinary Inventory op, so co-op needs nothing new: the guest applies it
+  and asks the host like any menu action. Slots are assigned from the Inventory tab, saved in `localStorage` only, never sent.
+  Gamepad mapping: not done (the game has no gamepad input yet).

@@ -44,8 +44,16 @@ export const TOUCH_CODES: Record<Action, readonly string[]> = {
  */
 export const FIXED_KEYS = { menu: ['Escape', 'Tab'], map: ['KeyM'], stop: ['KeyT'] } as const;
 
-/** Codes no action can be bound to: the fixed keys. */
-export const RESERVED_CODES: readonly string[] = [...FIXED_KEYS.menu, ...FIXED_KEYS.map, ...FIXED_KEYS.stop];
+/** The number keys 1-4 use the hotbar's quick slots (hud/Hotbar.ts); the on-screen slot buttons press the same codes. */
+export const HOTBAR_KEYS: readonly string[] = ['Digit1', 'Digit2', 'Digit3', 'Digit4'];
+
+/** Codes no action can be bound to: the fixed keys and the hotbar's number keys. */
+export const RESERVED_CODES: readonly string[] = [
+  ...FIXED_KEYS.menu,
+  ...FIXED_KEYS.map,
+  ...FIXED_KEYS.stop,
+  ...HOTBAR_KEYS,
+];
 
 const STORAGE_KEY = 'me_rpg.controls';
 

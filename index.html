@@ -97,6 +97,14 @@
     <!-- What the current quest asks, under the bars (src/hud/Hud.ts). -->
     <div id="quest-tracker" hidden></div>
 
+    <!-- Quick slots at the right edge (src/hud/Hotbar.ts): keys 1-4 or a tap use the item named in the slot. -->
+    <div id="hotbar" aria-label="Hotbar">
+      <div class="hb" role="button" aria-label="Quick slot 1" data-key="Digit1"></div>
+      <div class="hb" role="button" aria-label="Quick slot 2" data-key="Digit2"></div>
+      <div class="hb" role="button" aria-label="Quick slot 3" data-key="Digit3"></div>
+      <div class="hb" role="button" aria-label="Quick slot 4" data-key="Digit4"></div>
+    </div>
+
     <ul id="combo-hud" aria-label="Spell combos" hidden></ul>
 
     <!-- Co-op map: the whole zone, semi-transparent, with a pin per player (each in that player's colour). -->
