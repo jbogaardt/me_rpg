@@ -311,7 +311,7 @@ export class Simulation {
       p.aim = wish;
     }
     const top = SPEED * speedFactor(p.hero);
-    p.claim.tick(dt, top);
+    p.claim.tick(performance.now(), top);
     if (at && !p.knock.x && !p.knock.y) {
       // A friend walks its own hero (it moves smoothly on its own screen) and says where it stands: believe it when it
       // can be (core/claim.ts), so the friend is never tugged back; otherwise the host's walking below stands.

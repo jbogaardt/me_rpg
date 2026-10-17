@@ -18,18 +18,31 @@ describe('PositionClaim', () => {
     expect(c.judge(2, 100 + CLAIM_BURST * 3, 100, at, true)).toBe('reject');
   });
 
+  it('counts real time, so a slow host still believes an honest walker', () => {
+    const c = new PositionClaim();
+    c.tick(0, 120);
+    let x = 100;
+    // 3 frames a second on the host: 40 px of honest walking between claims, for ten seconds
+    for (let n = 1; n <= 30; n++) {
+      c.tick(n * 333, 120);
+      expect(c.judge(n, x + 40, 100, { x, y: 100 }, true)).toBe('adopt');
+      x += 40;
+    }
+  });
+
   it('spends allowance on what is walked and earns it back with time', () => {
     const c = new PositionClaim();
     let n = 0;
     let x = 100;
     // walk in 20 px strides with no time passing: the burst runs out
-    const verdicts = Array.from({ length: 6 }, () => {
+    const verdicts = Array.from({ length: 10 }, () => {
       const v = c.judge(++n, x + 20, 100, { x, y: 100 }, true);
       if (v === 'adopt') x += 20;
       return v;
     });
     expect(verdicts).toContain('reject');
-    c.tick(1, 120); // a second of walking passes
+    c.tick(0, 120);
+    c.tick(1000, 120); // a second of walking passes
     expect(c.judge(++n, x + 20, 100, { x, y: 100 }, true)).toBe('adopt');
   });
 

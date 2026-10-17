@@ -7,8 +7,8 @@
 
 /** px: how much farther than the allowance a claim may be (rounding, a hero nudged a step by something the guest cannot see). */
 export const CLAIM_SLACK = 10;
-/** px: the most walking credit a hero can have saved up (a burst after a stall of the connection, about half a second). */
-export const CLAIM_BURST = 60;
+/** px: the most walking credit a hero can have saved up (a burst after a stall of the connection, about a second). */
+export const CLAIM_BURST = 120;
 /** How much faster than its top speed a hero may be seen to travel (frame times and packets do not arrive evenly). */
 export const CLAIM_SPEED = 1.5;
 
@@ -16,12 +16,18 @@ export type Verdict = 'adopt' | 'hold' | 'reject';
 
 export class PositionClaim {
   private allowance = CLAIM_BURST;
+  private at = -1; // ms of the last `tick`
   private lastN = -1;
   private last: Verdict = 'reject';
 
-  /** Time passes `dt` seconds for a hero whose top speed is `speed` px/s: more walking is allowed. */
-  tick(dt: number, speed: number) {
-    this.allowance = Math.min(CLAIM_BURST, this.allowance + dt * speed * CLAIM_SPEED);
+  /**
+   * More walking is allowed as real time passes (`now`, ms, from the clock: not the game's frame time, which is capped, so a
+   * host that runs slowly would starve its friends' honest claims) for a hero whose top speed is `speed` px/s.
+   */
+  tick(now: number, speed: number) {
+    if (this.at >= 0)
+      this.allowance = Math.min(CLAIM_BURST, this.allowance + ((now - this.at) / 1000) * speed * CLAIM_SPEED);
+    this.at = now;
   }
 
   /**
@@ -41,6 +47,7 @@ export class PositionClaim {
   /** Forget the claim in hand and start with a full allowance (the hero was moved by the host: a door, a respawn). */
   reset() {
     this.allowance = CLAIM_BURST;
+    this.at = -1;
     this.lastN = -1;
     this.last = 'reject';
   }
