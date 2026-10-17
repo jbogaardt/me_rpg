@@ -164,6 +164,23 @@ describe('parseContent', () => {
     expect(problems(f)).toEqual([]);
   });
 
+  it('reads a person’s roam radius, refuses a bad one, and refuses it where roaming is off', () => {
+    const f = files();
+    const e = (f.entities as { entities: Record<string, Record<string, unknown>> }).entities;
+    e.elder!.roam = 4;
+    expect(parseContent(f).entities.elder?.roam).toBe(4);
+    e.elder!.roam = 0;
+    expect(problems(f).join('\n')).toMatch(/entities\.elder\.roam: must be a number of at least 1/);
+    e.elder!.roam = 99;
+    expect(problems(f).join('\n')).toMatch(/entities\.elder\.roam: must be at most 8 cells/);
+    e.elder!.roam = 3;
+    e.goblin!.roam = 3;
+    expect(problems(f).join('\n')).toMatch(/entities\.goblin\.roam: only an npc roams/);
+    delete e.goblin!.roam;
+    (f.scenarios as { capabilities?: unknown }).capabilities = { roaming: false };
+    expect(problems(f).join('\n')).toMatch(/entities\.elder\.roam: people stand still in this campaign/);
+  });
+
   it('reads quests of spells and barrels, and refuses them where combos or carrying is off', () => {
     const f = files();
     const s = f.scenarios as { capabilities: unknown };

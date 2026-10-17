@@ -4,6 +4,7 @@
 // The source of the JSON (static files today, a database later) is ContentManager's business, not this file's.
 
 import type { MobKind } from '../systems/combat';
+import { MAX_ROAM_CELLS } from '../systems/roam';
 import { isClimate } from '../systems/weather';
 import { SKILL_IDS, SKILLS } from '../systems/skills';
 import { CapabilityTable, checkCapabilities, DIALS, type CapabilitySpec, type Dial } from '../systems/capabilities';
@@ -64,6 +65,11 @@ export interface EntityDef {
   behavior?: EntityBehavior; // mobs only
   /** What an NPC placed by a scenario says when the player talks to it. */
   lines?: string[];
+  /**
+   * An NPC a scenario places strolls about their post within this many cells (1 to `MAX_ROAM_CELLS`), stopping to face
+   * whoever talks to them; absent: stands still. Needs the `roaming` capability (systems/roam.ts).
+   */
+  roam?: number;
 }
 
 // --- biomes.json ----------------------------------------------------------------------------------------------------
@@ -248,6 +254,13 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
   if (e.notes !== undefined) def.notes = r.string(e.notes, `${path}.notes`);
   if (e.scale !== undefined) def.scale = r.number(e.scale, `${path}.scale`, 0.5);
   if (e.lines !== undefined) def.lines = r.strings(e.lines, `${path}.lines`);
+  if (e.roam !== undefined) {
+    if (def.type !== 'npc') r.fail(`${path}.roam`, 'only an npc roams (a mob has its own behavior)');
+    else {
+      def.roam = r.number(e.roam, `${path}.roam`, 1);
+      if (def.roam > MAX_ROAM_CELLS) r.fail(`${path}.roam`, `must be at most ${MAX_ROAM_CELLS} cells`);
+    }
+  }
   if (def.type === 'npc') {
     if (e.stats !== undefined || e.behavior !== undefined) r.fail(path, 'an npc has no stats or behavior');
     return def;
@@ -955,6 +968,10 @@ function checkAgainstCapabilities(r: Reader, c: Content) {
       if (paid) r.fail(`${p}.reward.items[${i}]`, paid);
     }
   }
+  if (!caps.anywhere('roaming'))
+    for (const [id, def] of Object.entries(c.entities))
+      if (def.roam !== undefined)
+        r.fail(`entities.${id}.roam`, 'people stand still in this campaign (capabilities.roaming)');
   if (!caps.enabled('skills'))
     for (const node of c.scenarios.nodes.values())
       node.choices.forEach((choice, i) => {

@@ -36,7 +36,8 @@ and the game loop; headers of `feed.ts`, `PeerLink.ts`, `relayClient.ts` and `ho
   desyncs a friend for good.
 - **Keep snapshots small**: a message over about 1.2 KB is split in transit and losing any piece loses all of it. The
   host sends each friend only what is near them (`MobFeed`, events within view, a size budget `SNAP_BUDGET`), and
-  zones nobody is in cost nothing. `protocol.test.ts` checks a busy snapshot.
+  zones nobody is in cost nothing. `protocol.test.ts` checks a busy snapshot. Roaming people (`SnapMsg.folk`, three numbers
+  each, only in zones that have some) are host-simulated; a guest never strolls them itself.
 - **Both players play the same content**, so item codes, mob order and capabilities agree with nothing on the wire.
   `net/` imports only `core/` and `systems/`; `entities/` never imports `net/`.
 - **Online play does not pause the world, except while someone reads a quest conversation** (`Dialog` `pauses`: an NPC's

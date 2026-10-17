@@ -335,6 +335,15 @@ describe('messages', () => {
     expect(parseMessage(JSON.stringify({ ...snap, barrels: [0, 1, 2] }))).toBeNull();
   });
 
+  it('carries the roaming people in a snapshot, and rejects a bad list', () => {
+    const withFolk = parseMessage(JSON.stringify({ ...snap, folk: [120, 340, 2, 50, 60, 0] }));
+    expect(withFolk && withFolk.k === 'snap' ? withFolk.folk : null).toEqual([120, 340, 2, 50, 60, 0]);
+    const none = parseMessage(JSON.stringify(snap));
+    expect(none && none.k === 'snap' ? none.folk : 'x').toBeUndefined();
+    for (const folk of [[1, 2], [1, 2, 7], [1.5, 2, 0], 'x'])
+      expect(parseMessage(JSON.stringify({ ...snap, folk }))).toBeNull();
+  });
+
   it('carries drained ponds, and rejects bad ones', () => {
     const wire = pondsWire([
       [42, 0.5, false],

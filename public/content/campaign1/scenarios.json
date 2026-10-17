@@ -169,7 +169,10 @@
     {
       "node_id": "town",
       "biome_type": "town",
-      "entities": [],
+      "entities": [
+        { "entity": "gossip", "x": 85, "y": 67 },
+        { "entity": "watchman", "x": 105, "y": 67 }
+      ],
       "choices": []
     },
     {

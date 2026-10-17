@@ -93,6 +93,11 @@ export const CAPABILITIES = {
     off: 'Barrels stay where they stand: they still block, but cannot be picked up or moved.',
     scope: 'zone',
   },
+  roaming: {
+    name: 'Roaming people',
+    off: 'The people a scenario places (with a `roam` radius) stand at their post instead of strolling about it.',
+    scope: 'zone',
+  },
   forge: {
     name: 'Setting gems',
     off: 'Gems cannot be set in gear: no Set action in the pack, no shop sells a gem, and the DM gives no quest to forge one.',

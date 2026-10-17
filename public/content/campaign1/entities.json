@@ -595,6 +595,41 @@
         "weapon": "weapon.staff"
       }
     },
+    "gossip": {
+      "type": "npc",
+      "name": "Mirel",
+      "notes": "A townsperson who strolls the market (roam), to show that Lanternrest is lived in.",
+      "roam": 5,
+      "lines": [
+        "Mind the barrels, dear: the carters never leave them where they found them.",
+        "They say the Warden Maren knows every road out of Lanternrest."
+      ],
+      "sprite": {
+        "body": "body.f_brown",
+        "head": "head.human_f_brown",
+        "hair": "hair.long_black",
+        "torso": "torso.f_tunic_teal",
+        "legs": "legs.f_pants_white",
+        "feet": "feet.f_boots_brown"
+      }
+    },
+    "watchman": {
+      "type": "npc",
+      "name": "Watchman",
+      "notes": "Walks a short beat near the east end of the market (roam).",
+      "roam": 3,
+      "lines": ["Quiet day. I like them quiet.", "Captain Hale keeps us on our toes."],
+      "sprite": {
+        "body": "body.olive",
+        "head": "head.human_olive",
+        "torso": "torso.plate_steel",
+        "legs": "legs.plate_steel",
+        "feet": "feet.boots_black",
+        "headwear": "headwear.nasal",
+        "weapon": "weapon.arming_steel",
+        "shield": "shield.round_brown"
+      }
+    },
     "villager": {
       "type": "npc",
       "name": "Villager",

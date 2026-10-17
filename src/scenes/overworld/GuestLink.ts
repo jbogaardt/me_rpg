@@ -315,6 +315,7 @@ export class GuestLink {
         b.hold(at.x, at.y, at.facing);
       } else b.setDown(at.x, at.y);
     });
+    arena.zone.setFolkRemote(snap.folk); // the people strolling about their posts
     arena.zone.ponds.setLevels(pondsFromWire(snap.ponds)); // drained by someone's drinking, until rain fills them
     if (snap.ground) this.ground.sync(snap.ground); // absent: the same items as before
     for (const [index, ...state] of snap.mobs)

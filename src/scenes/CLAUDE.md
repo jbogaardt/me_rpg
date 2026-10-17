@@ -21,6 +21,9 @@ draw in `Visuals`, a new synced thing in the matching link. The DM's controls ar
   zones with a player in them are simulated, so a shop nobody is in costs nothing.
 - **A zone is one `MapData` plus everything alive in it** (`ZoneState`): view, collision, mobs, chests, keepers, crops,
   barrels, ground items, effects. Players belong to no zone object; each `Player` names its zone.
+- **Roaming people** (`ZoneState.folk[].roamer`, `systems/roam.ts`): the host or solo steps them in an occupied zone while time runs
+  (capability `roaming`); talking to one (`ZoneState.attend`) stops it, turns it to the speaker and sends it home after a moment.
+  A guest only sets positions from `SnapMsg.folk`; zones seen from next door keep their people still.
 - **Memory stays bounded.** Zones load on demand, doors prefetch the zone behind them, and a zone nobody is near is
   unloaded after a while (`Zones.retire`). What must outlast it (opened chests, ground items, crops, ponds, moved
   barrels) is kept in `Arena.memory` (`ZoneMemory`); its mobs start afresh. Add to `ZoneMemory` when a new thing must
