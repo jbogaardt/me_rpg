@@ -7,6 +7,14 @@ import type { Card, Table } from './router';
 
 /** How things stand on the page (its `DmBotState`). */
 export interface PageState extends Table {
+  /** Where the DM stands (its zone's own name and feet in cells), and where each friend does: only for the log of a trip. */
+  zone?: string;
+  at?: { col: number; row: number };
+  friends: (Table['friends'][number] & {
+    zone?: string;
+    at?: { col: number; row: number };
+    cells?: number | null;
+  })[];
   role: string;
   code: string | null;
   lobbyOpen: boolean;
@@ -143,4 +151,14 @@ export function heldCard(card: Card, last: Pressure | null, now: number): boolea
   if (now - last.at >= PRESSURE_HOLD_MS) return false;
   const opposite = last.id === 'heat' ? 'ease' : 'heat';
   return card.options.some((o) => o.id === opposite) && !card.options.some((o) => o.id === last.id);
+}
+
+/** One line saying why the bot goes to the party: where he stands, where each friend does and how far the bot reckoned. */
+export function followLine(s: PageState, slot: number, name: (slot: number) => string): string {
+  const at = (p?: { col: number; row: number }) => (p ? `${p.col},${p.row}` : '?');
+  const friends = s.friends.map(
+    (f) =>
+      `${name(f.slot)} ${f.zone ?? f.area} ${at(f.at)} ${f.cells === undefined ? '?' : f.cells === null ? 'other zone' : `${f.cells.toFixed(1)} cells`}${f.near ? ' near' : ''}`,
+  );
+  return `going to ${name(slot)}: DM in ${s.zone ?? s.area} ${at(s.at)}; ${friends.join('; ')}`;
 }

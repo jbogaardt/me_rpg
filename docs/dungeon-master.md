@@ -55,13 +55,12 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 - **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (their own free-form words, from the 💬
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,
   `DmMsg.reply`).
-- **Hot buttons** (`hud/DmBar.ts`): Smite (a lightning storm; foes die with no XP, gold or credit, the party is never
-  hurt), Freeze, Reset zone, Stop time (the party walks and takes doors; all else stands still): ordinary events and mob states.
+- **Hot buttons** (`hud/DmBar.ts`): Smite (lightning: foes die with no XP, gold or credit; the party is never hurt), Freeze, Reset zone, Stop time (the party walks and takes doors; all else stands still): ordinary events and mob states.
 - **Epic quests** (`docs/epics.md`): the DM's only quests, sagas of steps with people, as data: `content/epics.json` and
   the campaign's own `quests.json`; run by `DmEpics` on the host (and in solo). A step is a quest kind or a meeting with a
-  person the DM makes; people's words follow the story. No one-shot quests. Beside hunts, gathers, finds and
+  person the DM makes; people's words follow the story. Beside hunts, gathers, finds and
   visits a step may be a **boss** (the land's toughest foe as a named giant for the party's level and size, `dmBoss.ts`;
-  friends build the same one from the quest), a **mastery** (cast one named combo N times) or a **forge** (set a gem in a
+  a **mastery** (cast one named combo N times) or a **forge** (set a gem in a
   piece: `dmForge.ts`). Gear rewards are chosen per hero and rotate by slot (`dmGear.ts`): a saga's finale and a forge quest pay one.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` raises or fetches a fallen player. **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive
@@ -75,11 +74,10 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 ## A bot as the DM
 
 The DM can be a program (`server/`, the DM bot): `?dmbot` puts a handle on the page (`DmBot.ts`) through which an outside
-script hosts, opens the inbox, answers cards, takes story roads, replies, speaks, follows and strolls about the party (the
-DM is never a statue, but never onto a door), starts the game, narrates unasked (new areas, a quest done, a hurt friend, a quiet table; a hurt
+script hosts, opens the inbox, answers cards, takes story roads, replies, speaks, follows and strolls about the party (never onto a door; a friend across a gap is near, `readFriend`; each trip logs all positions), starts the game, narrates unasked (new areas, a quest done, a hurt friend, a quiet table; a hurt
 friend's moment is read by Jev and told with `systems/cues.ts` cues, `server/README.md`) and brings in a stranger on reaching a new area
-(`spawn`: an `npc` then a `cast` entry on open ground 3-8 cells from the party, checked by the world like any entry).
-Every call is a step the bar already offers.
+(`spawn`, 3-8 cells from the party).
+Every call is a step the bar already offers. A saga that stops short is said outright and logged; no card offers a second while one runs.
 
 ## Co-op rules
 

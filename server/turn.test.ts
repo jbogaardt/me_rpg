@@ -6,6 +6,7 @@ import {
   STROLL_MS,
   BREATHER_MS,
   QUEST_GAP_MS,
+  followLine,
   heldCard,
   nextStep,
   type Clock,
@@ -112,5 +113,17 @@ describe('nextStep', () => {
     const resting = { ...clock(), pulse, lastEnded: 100_000 - BREATHER_MS + 1000 };
     expect(nextStep(state({ questing: false }), resting).kind).not.toBe('quest');
     expect(nextStep(state({ questing: false }), { ...resting, lastEnded: 100_000 - BREATHER_MS }).kind).toBe('quest');
+  });
+});
+
+describe('the line logged with each trip to the party', () => {
+  it('names where the DM and each friend stand and how far the bot reckoned', () => {
+    const s = state({
+      zone: 'meadow',
+      at: { col: 4, row: 5 },
+      friends: [{ ...friend(2, false), zone: 'forest', at: { col: 9, row: 9 }, cells: null }],
+    });
+    const name = (n: number) => `Player ${n + 1}`;
+    expect(followLine(s, 2, name)).toBe('going to Player 3: DM in meadow 4,5; Player 3 forest 9,9 other zone');
   });
 });

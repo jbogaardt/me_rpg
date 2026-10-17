@@ -32,7 +32,7 @@ import { RuleJudge, factsFor, resolveScene, type SceneJudge } from './scene';
 import { PULSE_MS, RetryingReader, fresh, pulseState, type Pulse, type TableReader } from './pulse';
 import { decideCard, type Card, type Move } from './router';
 import { MockEpicWriter, tellEpic, type StockTale, type EpicWriter } from './epics';
-import { SETTLE_MS, heldCard, nextStep, type Clock, type PageState, type Pressure } from './turn';
+import { SETTLE_MS, followLine, heldCard, nextStep, type Clock, type PageState, type Pressure } from './turn';
 
 const DEFAULT_URL = 'https://jbogaardt.github.io/me_rpg/?campaign=live';
 const TICK_MS = 1500;
@@ -173,7 +173,7 @@ class Dm {
         return;
       case 'follow':
         this.clock.lastFollow = this.clock.now;
-        log(`going to ${playerName(step.slot)}`);
+        log(followLine(s, step.slot, playerName));
         await this.call('goTo', step.slot);
         return;
       case 'card':
