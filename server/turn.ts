@@ -14,6 +14,8 @@ export interface PageState extends Table {
   waiting: number;
   /** An epic is being told (between its steps `questing` is false). */
   epic: boolean;
+  /** Sagas completed so far (`DmEpics.completed`); the arc's ending beat reads it. */
+  epicsDone?: number;
   card: Card | null;
 }
 

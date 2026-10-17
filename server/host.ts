@@ -16,7 +16,16 @@ import { chromium, type Page } from '@playwright/test';
 import { JevReader, JevRouter, JevScene } from './jev';
 import { MockFallback, MockRouter } from './mocks';
 import { ClaudeArcWriter, ClaudeConjurer, ClaudeFallback, ClaudeNarrator, ClaudeEpicWriter } from './claude';
-import { MockArcWriter, advance, arcBrief, type ArcPlace, type ArcWriter } from './arc';
+import {
+  MockArcWriter,
+  advance,
+  arcBrief,
+  stepFinale,
+  watchFinale,
+  type ArcPlace,
+  type ArcWriter,
+  type Finale,
+} from './arc';
 import { MockConjurer, shouldConjure, type Conjurer } from './conjure';
 import { MockNarrator, beatFor, type Memory, type Narrator } from './narrate';
 import { RuleJudge, factsFor, resolveScene, type SceneJudge } from './scene';
@@ -89,6 +98,8 @@ class Dm {
   /** The evening's tale and the chapter the next saga tells (arc.ts); written when the first saga is. */
   private arcWriter: ArcWriter = CLAUDE ? new ClaudeArcWriter() : new MockArcWriter();
   private arc: ArcPlace | null = null;
+  /** The last chapter's saga being watched, so the tale gets its closing words when it is won (arc.ts). */
+  private finale: Finale | null = null;
   private made = 0;
   private lastMade = -Infinity;
   private memory: Memory = { prev: null, spoke: 0 };
@@ -134,6 +145,14 @@ class Dm {
     this.report(s);
     this.refresh(s);
     this.clock.pulse = fresh(this.pulse, this.clock.now);
+    if (this.finale) {
+      const end = stepFinale(this.finale, { epic: s.epic, epicsDone: s.epicsDone ?? 0 });
+      this.finale = end.next;
+      if (end.say) {
+        log('the tale ends:', end.say);
+        await this.say(end.say);
+      }
+    }
     const prev = this.memory.prev;
     if (prev && (prev.epic || prev.questing) && !s.epic && !s.questing) this.clock.lastEnded = this.clock.now;
     if (!CHATTER) this.memory.prev = s; // narrate() keeps it otherwise
@@ -253,7 +272,9 @@ class Dm {
     );
     if (this.arc) {
       const next = advance(this.arc);
-      this.arc = next === 'done' ? null : next; // the tale is told: the next saga begins a new one, grown from this
+      // the tale is told: the next saga begins a new one, grown from this; the DM closes this one when the saga is won
+      if (next === 'done' && this.arc) this.finale = watchFinale(this.arc.arc, s.epicsDone ?? 0);
+      this.arc = next === 'done' ? null : next;
     }
     return true;
   }
@@ -300,7 +321,8 @@ class Dm {
   private report(s: PageState) {
     if (s.code !== this.lastCode) {
       if (s.code) log(`GAME CODE: ${s.code}   (players: Menu > Online > Join, and type it)`);
-      else if (this.lastCode) log('the code is closed');
+      else if (this.lastCode)
+        log('the game code is gone (the relay forgot it); friends already in carry on, no one new can join with it');
       this.lastCode = s.code;
     }
     const here = new Set(s.friends.map((f) => f.slot));

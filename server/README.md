@@ -47,6 +47,11 @@ different version away), so point it at the site they use. Against a local build
   last the reckoning), then each saga is told as its next chapter. The arc lives in the bot, not the model's memory (the
   Claude session is renewed and a small model forgets), so every saga prompt and the narrator are handed it afresh:
   that is how Haiku holds a long story. Told out, a new arc grows from its ending. The mock has stock arcs.
+  **Ending beat**: when the last chapter's saga is completed (`epicsDone`, the page's count, goes up) the DM speaks an
+  epilogue (`arcEpilogue`: the title and the reckoning line); a lost or called-off final saga says nothing. A saga's own
+  closing scene and reward are `DmEpics.close`. The end-boss quests (#34) can hook epic completion instead of `epicsDone`.
+  The log line "the game code is gone" means the relay forgot the room (its code ran out, or the poll failed for good); the
+  cause of a mid-game loss in issue #44 is not traced (no log), friends already in are unaffected.
 - After a saga ends the party is left to wander for `BREATHER_MS` (town, shops, talk) before another is offered; a
   written saga has at most one hunt and at least one townsperson to meet, and never mentions the map.
 - `conjure.ts` makes people: on arriving somewhere new (at most 6 a game, 2 minutes apart) a `Conjurer` invents a
