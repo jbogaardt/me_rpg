@@ -171,6 +171,9 @@ export class HostLink {
       dy,
       act,
       ...(combo === undefined ? {} : { combo }),
+      ...(peer.fresh && peer.px !== undefined && peer.py !== undefined
+        ? { at: { n: peer.n, x: peer.px, y: peer.py } }
+        : {}),
       ...(peer.fresh && peer.am ? { aim: decodeAim(peer.am) } : {}),
     };
   }

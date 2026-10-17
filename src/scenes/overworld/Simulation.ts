@@ -296,7 +296,7 @@ export class Simulation {
   }
 
   /** Returns true if the player is trying to move. On ice the velocity lags behind the keys, so they slide. */
-  private move(p: Player, { dx, dy, aim }: Command, dt: number): boolean {
+  private move(p: Player, { dx, dy, aim, at }: Command, dt: number): boolean {
     const { collision, data } = this.arena;
     const len = Math.hypot(dx, dy);
     const wish = len ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
@@ -310,7 +310,19 @@ export class Simulation {
       else p.body.face(dy > 0 ? 'down' : 'up');
       p.aim = wish;
     }
-    p.vel = stepVelocity(p.vel, wish, SPEED * speedFactor(p.hero), dt, isIce(data, p.body.x, p.body.y - 1));
+    const top = SPEED * speedFactor(p.hero);
+    p.claim.tick(dt, top);
+    if (at && !p.knock.x && !p.knock.y) {
+      // A friend walks its own hero (it moves smoothly on its own screen) and says where it stands: believe it when it
+      // can be (core/claim.ts), so the friend is never tugged back; otherwise the host's walking below stands.
+      const verdict = p.claim.judge(at.n, at.x, at.y, p.body, collision.fitsMap(at.x, at.y, p.body.size));
+      if (verdict !== 'reject') {
+        if (verdict === 'adopt') p.body.position.set(at.x, at.y);
+        p.vel = { x: wish.x * top, y: wish.y * top };
+        return len > 0;
+      }
+    }
+    p.vel = stepVelocity(p.vel, wish, top, dt, isIce(data, p.body.x, p.body.y - 1));
     if (p.vel.x || p.vel.y) {
       const [x, y] = [p.body.x, p.body.y];
       collision.slide(p.body, p.vel.x * dt, p.vel.y * dt, this.arena.bodies());

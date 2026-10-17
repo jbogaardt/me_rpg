@@ -237,6 +237,7 @@ export class GuestLink {
       k: 'in',
       n: ++this.inputSeq,
       keys,
+      ...(this.predicted ? { px: Math.round(arena.local.body.x), py: Math.round(arena.local.body.y) } : {}), // where this hero stands: the host believes it
       act: this.actCount,
       cb: this.comboCount,
       ci: this.comboIndex,
@@ -249,7 +250,7 @@ export class GuestLink {
       ...(reading ? { rd: 1 as const } : {}), // a quest conversation is open: the host holds foes still
     } as const;
     if (this.session.send(msg)) {
-      this.rec.record(msg.n, arena.local.body.x, arena.local.body.y, performance.now());
+      this.rec.record(msg.n, msg.px ?? arena.local.body.x, msg.py ?? arena.local.body.y, performance.now());
       this.sent = {
         keys,
         act: this.actCount,

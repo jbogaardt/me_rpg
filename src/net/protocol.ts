@@ -58,6 +58,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v50: `SnapMsg.ia`, the newest input number the host has applied for the recipient (client-side prediction).
  * v51: `SnapMsg.folk`, where the people who stroll about their post (content `roam`) stand.
  * v52: `HelloMsg.id`, a friend's own lasting id, so the host can give a rejoiner their hero back.
+ * v53: `InputMsg.px/py`, where the friend's own hero stands: the host moves it there when believable (core/claim.ts).
  * Older: v28 made a negative `SnapMsg.ponds` level mean refilling after running dry; v27 made `drink` start (item
  * 1) or stop (item 0) a steady drink and added `SnapMsg.ponds`; v26 added the `drink` op of `do`; v25 added the
  * mob state `channel` (the Mummy's held ray); v24 added the `frost` fx of Stasis; v23 made `SnapMsg.crops` a state
@@ -73,7 +74,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
  * within a size budget.
  */
-export const PROTOCOL_VERSION = 52;
+export const PROTOCOL_VERSION = 53;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -176,6 +177,9 @@ export interface InputMsg {
   ci: number; // which of the weapon's combos the latest one was (an index into its `focus.combos`)
   ack: number; // id of the newest world event this guest has shown (0: none yet)
   vr: number; // how far the guest can see, in world px from its player: the host sends it the mobs within this
+  /** Where the guest's own hero stands (whole px) as it sent this input: the host adopts it when believable (`core/claim.ts`). */
+  px?: number;
+  py?: number;
   am?: number; // mouse aiming only: where the guest points, 1..AIM_STEPS (core/aim.ts); absent: aim by walking
   /**
    * The oldest Inventory action the host has not confirmed yet: [number, ...InvOpWire]. Numbered 1, 2, 3...; the host
@@ -698,6 +702,8 @@ export function parseMessage(raw: unknown): Message | null {
         isCount(m.vr) &&
         m.vr <= MAX_VIEW &&
         (m.am === undefined || (isCount(m.am) && m.am >= 1 && m.am <= AIM_STEPS)) &&
+        ((m.px === undefined && m.py === undefined) ||
+          (isCount(m.px) && isCount(m.py) && m.px <= MAX_COORD && m.py <= MAX_COORD)) &&
         (m.rd === undefined || m.rd === 1)
       )) {
         return null;
@@ -727,6 +733,7 @@ export function parseMessage(raw: unknown): Message | null {
         ack: m.ack,
         vr: m.vr,
         ...(m.am === undefined ? {} : { am: m.am }),
+        ...(m.px === undefined ? {} : { px: m.px, py: m.py }),
         ...(m.rd === 1 ? { rd: 1 as const } : {}),
         ...(vt === undefined ? {} : { vt: [vt[0], vt[1]] as [number, number] }),
         ...(rq === undefined

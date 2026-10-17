@@ -1,4 +1,5 @@
 import type { Texture } from 'pixi.js';
+import { PositionClaim } from '../core/claim';
 import type { Hero, Ranged } from '../systems/combat';
 import type { SkillId } from '../systems/skills';
 import { DM_COLOR, PLAYER_COLORS } from '../systems/looks';
@@ -10,6 +11,8 @@ export interface Command {
   dy: number;
   act: boolean; // action button pressed (talk / attack)
   combo?: number; // finished a combo of the wand or tome in hand: its index in the weapon's `focus.combos`
+  /** A guest's word on where its hero stands, with the input's number (`core/claim.ts`); absent for the host and for old pages. */
+  at?: { n: number; x: number; y: number };
   aim?: { x: number; y: number }; // unit vector toward the mouse / last tap (mouse aiming only); absent: aim by walking
 }
 
@@ -20,6 +23,8 @@ export class Player {
   readonly body: Character;
   /** The DM is possessing a foe: their body is not drawn (host sets it, a guest reads it from the flags). */
   hidden = false;
+  /** Judges a guest's claims about where this hero stands (host only). */
+  readonly claim = new PositionClaim();
   attackCooldown = 0;
   castCooldown = 0; // seconds before the next combo
   /** Arcane Edge (systems/skills.ts): the next `charges` attacks carry extra magic, for `timer` more seconds. */

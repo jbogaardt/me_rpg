@@ -717,3 +717,24 @@ describe('trade messages', () => {
     for (const m of bad) expect(parseMessage(JSON.stringify(m)), JSON.stringify(m)).toBeNull();
   });
 });
+
+describe('a guest saying where its hero stands', () => {
+  const input = {
+    k: 'in',
+    n: 5,
+    keys: 1,
+    act: 0,
+    cb: 0,
+    ci: 0,
+    ack: 0,
+    vr: 300,
+  } as const;
+  it('round-trips a position and refuses half of one or nonsense', () => {
+    const at = { ...input, px: 640, py: 480 };
+    expect(parseMessage(encodeMessage(at))).toEqual(at);
+    expect(parseMessage(JSON.stringify({ ...input, px: 640 }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...input, px: -3, py: 4 }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...input, px: 1e9, py: 4 }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...input, px: 'a', py: 4 }))).toBeNull();
+  });
+});

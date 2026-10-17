@@ -97,6 +97,9 @@ export interface PeerInput {
   am?: number;
   /** The Inventory action the friend is waiting on (see InputMsg.inv), if any. */
   inv?: InputMsg['inv'];
+  /** Where the friend says their hero stands (see InputMsg.px), if they say. */
+  px?: number;
+  py?: number;
   /** The friend's vote in the Dungeon Master's open vote (see InputMsg.vt), if any. */
   vt?: [number, number];
   /** The friend's latest request to the Dungeon Master (see InputMsg.rq), if any. */
@@ -412,7 +415,7 @@ export class Session {
   peerInput(slot: number, now = performance.now()): PeerInput | null {
     const last = this.inputs.get(slot);
     if (!last) return null;
-    const { keys, act, cb, ci, ack, vr, am, inv, vt, rq, rd } = last.msg;
+    const { keys, act, cb, ci, ack, vr, am, inv, vt, rq, rd, px, py } = last.msg;
     return {
       keys,
       n: last.msg.n,
@@ -422,6 +425,7 @@ export class Session {
       ack,
       vr,
       ...(am ? { am } : {}),
+      ...(px !== undefined && py !== undefined ? { px, py } : {}),
       ...(inv ? { inv } : {}),
       ...(vt ? { vt } : {}),
       ...(rq ? { rq } : {}),
