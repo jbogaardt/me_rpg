@@ -2,6 +2,7 @@ import type { Player } from '../../entities/Player';
 import type { Dialog } from '../../hud/Dialog';
 import type { Menu } from '../../hud/Menu';
 import type { ShopCounter } from '../../hud/ShopCounter';
+import type { Item } from '../../systems/combat';
 import type { DoMsg, LooksMsg, PackMsg } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import { applyInvOp, decodeOp, gearCodes, itemFromCode, packCodes, setGear, setPack } from '../../systems/inventory';
@@ -51,6 +52,8 @@ export class PackSync {
   startTrial: (p: Player, skill: Skill) => string | null = () => 'Training is not available.';
   /** Set by the scene: celebrate a player's level-up (a reward's XP can give one). */
   levelUp: (p: Player) => void = () => {};
+  /** Set by the scene (host and solo): a player set a gem in a piece, making this one (the DM's forge quest counts it). */
+  onFuse: (p: Player, made: Item) => void = () => {};
   /** Set by the scene (host): a player starts (`on`) or stops drinking from the pond beside them; false when there is none. */
   drink: (p: Player, on: boolean) => boolean = () => false;
 
@@ -123,6 +126,7 @@ export class PackSync {
     const result = applyInvOp(arena.hero, op);
     if (!result.ok) return result;
     arena.refreshLook();
+    if (result.made && arena.role !== 'client') this.onFuse(arena.local, result.made);
     if (arena.role === 'client') {
       this.pendingOps.push({ seq: ++this.invSeq, op });
       this.sendSoon();
@@ -226,6 +230,7 @@ export class PackSync {
     const result = applyInvOp(p.hero, op);
     if (!result.ok) return;
     this.arena.refreshLook(p);
+    if (result.made) this.onFuse(p, result.made);
     if (result.dropped) this.ground.drop(p, result.dropped);
   }
 

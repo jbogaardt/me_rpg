@@ -342,16 +342,51 @@
     "tomato": { "name": "Tomato", "value": 3, "use": { "hp": 0, "food": 10, "water": 16 } },
     "strawberry": { "name": "Strawberry", "value": 3, "use": { "hp": 0, "food": 7, "water": 12 } },
     "pumpkin": { "name": "Pumpkin", "value": 8, "use": { "hp": 0, "food": 40, "water": 5 } },
-    "watermelon": { "name": "Watermelon", "value": 8, "use": { "hp": 0, "food": 14, "water": 40 } }
+    "watermelon": { "name": "Watermelon", "value": 8, "use": { "hp": 0, "food": 14, "water": 40 } },
+    "emerald": {
+      "name": "Emerald",
+      "value": 90,
+      "gem": { "arms": { "regen": 0.3 }, "worn": { "defense": 1 } }
+    },
+    "ruby": {
+      "name": "Ruby",
+      "value": 110,
+      "gem": { "arms": { "attack": 2 }, "worn": { "attack": 1 } }
+    },
+    "sapphire": {
+      "name": "Sapphire",
+      "value": 100,
+      "gem": { "arms": { "magic": 3 }, "worn": { "mpRegen": 0.3 } }
+    },
+    "topaz": {
+      "name": "Topaz",
+      "value": 80,
+      "gem": { "arms": { "xpBonus": 6 }, "worn": { "goldBonus": 6 } }
+    }
   },
   "shops": {
     "smithy": {
       "name": "Brannoch's Forge",
       "tag": "Blacksmith",
       "keeper": "smith",
-      "greeting": ["Steel and iron, fresh from the fire.", "Blades and shields: that is my trade."],
-      "stock": ["bronzeSword", "steelSword", "silverSword", "woodenShield", "ironShield", "kiteShield"],
-      "buys": ["blade", "offhand"]
+      "greeting": [
+        "Steel and iron, fresh from the fire.",
+        "Blades and shields: that is my trade.",
+        "Bring me a gem and a piece of gear: from the Inventory tab you can set the stone in it, and it will be better for it."
+      ],
+      "stock": [
+        "bronzeSword",
+        "steelSword",
+        "silverSword",
+        "woodenShield",
+        "ironShield",
+        "kiteShield",
+        "emerald",
+        "ruby",
+        "sapphire",
+        "topaz"
+      ],
+      "buys": ["blade", "offhand", "gem"]
     },
     "armory": {
       "name": "Halda's Armory",
@@ -448,6 +483,10 @@
     "relic": { "xp": 40 },
     "coins": { "gold": 30 },
     "purse": { "gold": 90 },
-    "hoard": { "gold": 200 }
+    "hoard": { "gold": 200 },
+    "emerald": { "item": "emerald" },
+    "ruby": { "item": "ruby" },
+    "sapphire": { "item": "sapphire" },
+    "topaz": { "item": "topaz" }
   }
 }

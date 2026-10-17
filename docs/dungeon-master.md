@@ -29,8 +29,7 @@ begin a quest). The DM also watches the party's health on their own.
 
 A theatrical old storyteller with a dry wit, fond of the party and not above teasing it: a raised eyebrow, a small wager,
 an aside, never a bare "Well done." The canned words (`systems/dmVoice.ts`) hold several wordings of each moment the game spots
-(a quest done, failed or called off, the compass, a reply, the welcome, a saga's end), picked by a `Phrasebook`; the DM bot's model is given the same character
-(`server/narrate.ts` `PERSONA`). **A new spoken moment is a bank there, several wordings and a test, never one stock line.**
+(a quest done, failed or called off, the compass, a reply, the welcome, a saga's end), picked by a `Phrasebook`; the bot's model gets the same character (`server/narrate.ts` `PERSONA`). **A new spoken moment is a bank there, several wordings and a test, never one stock line.**
 
 ## The DM is the story teller
 
@@ -58,13 +57,13 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,
   `DmMsg.reply`).
 - **Hot buttons** (`hud/DmBar.ts`): Smite (a lightning storm; foes die with no XP, gold or credit, the party is never
-  hurt), Freeze, Reset zone, Stop time (the party walks and takes doors; everything else stands still). All are ordinary
-  events and mob states, so friends see them through the usual snapshots.
+  hurt), Freeze, Reset zone, Stop time (the party walks and takes doors; all else stands still): ordinary events and mob states.
 - **Epic quests** (`docs/epics.md`): the DM's only quests, sagas of steps with people, as data: `content/epics.json` and
   the campaign's own `quests.json`; run by `DmEpics` on the host (and in solo). A step is a quest kind or a meeting with a
   person the DM makes; people's words follow the story. No one-shot quests are handed out. Beside hunts, gathers, finds and
-  visits a step may be a **boss** (the land's toughest foe as a named giant made for the party's level and size,
-  `dmBoss.ts`; the host owns it, friends build the same one from the quest, protocol v45) or a **mastery** (cast one named combo N times).
+  visits a step may be a **boss** (the land's toughest foe as a named giant for the party's level and size, `dmBoss.ts`;
+  friends build the same one from the quest), a **mastery** (cast one named combo N times) or a **forge** (set a gem in a
+  piece: `dmForge.ts`). Gear rewards are chosen per hero and rotate by slot (`dmGear.ts`): a saga's finale and a forge quest pay one.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` lets the DM raise or fetch a fallen player.
   **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive

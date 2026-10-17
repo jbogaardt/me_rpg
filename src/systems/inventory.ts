@@ -3,7 +3,9 @@
 // succeeds completely or changes nothing and says why.
 
 import { gainXp, GEAR_SLOTS, type GearSlot, type Hero, type Item } from './combat';
-import { ITEMS, itemCodeOf, itemIds } from './items';
+import { enabled } from './capabilities';
+import { canSet } from './gems';
+import { fusedOf, itemCodeOf, itemIds, itemOf } from './items';
 import { NEED_MAX, refill } from './needs';
 
 /** Pack slots with no bag. A sack or backpack (slot `bag`, `capacity`) adds to it while worn. */
@@ -130,6 +132,7 @@ export type IconKind =
 
 export function iconKind(item: Item): IconKind {
   if (item.use?.food || item.use?.water) return 'food';
+  if (item.gem) return 'charm'; // a stone on a cord: the nearest picture
   if (item.ranged) return 'bow';
   if (item.focus) return item.focus.kind;
   switch (item.slot) {
@@ -268,7 +271,7 @@ export const itemCode = (item: Item): number => itemCodeOf(item);
 /** The item with this code, or undefined for 0 and unknown codes. */
 export const itemFromCode = (code: number): Item | undefined => {
   const id = itemIds()[code - 1];
-  return id ? ITEMS[id] : undefined;
+  return id ? itemOf(id) : undefined;
 };
 
 /** What the hero wears, one code per slot in GEAR_SLOTS order. */
@@ -298,7 +301,31 @@ export type InvOp =
   | { t: 'unequip'; slot: GearSlot }
   | { t: 'use'; index: number } // drink a supply from the pack
   | { t: 'dropPack'; index: number }
-  | { t: 'dropWorn'; slot: GearSlot };
+  | { t: 'dropWorn'; slot: GearSlot }
+  | { t: 'fuse'; gem: number; into: FuseTarget }; // set the gem at this pack index in a piece (core engine, capability `forge`)
+
+/** The piece a gem is set in: one in the pack (its index) or one worn (its slot). */
+export type FuseTarget = { pack: number } | { slot: GearSlot };
+
+/**
+ * Set the gem at pack index `gem` in `into`: the gem is used up and the piece becomes the one made of both (systems/gems.ts,
+ * made when the items were installed), in the same place. Changes nothing on failure. The one gate of the `forge` capability.
+ */
+export function fuseInto(hero: Hero, gem: number, into: FuseTarget): Result & { made?: Item } {
+  if (!enabled('forge')) return fail('There is no way to set gems in this world.');
+  const stone = hero.pack[gem];
+  if (!stone?.gem) return fail('That is not a gem.');
+  const base = 'pack' in into ? hero.pack[into.pack] : into.slot === 'weapon' ? hero.weapon : hero[into.slot];
+  if (!base || ('pack' in into && into.pack === gem)) return fail('Nothing there to set it in.');
+  if (!canSet(stone, base)) return fail(`${stone.name} does not fit ${base.name}.`);
+  const made = fusedOf(base, stone);
+  if (!made) return fail(`${stone.name} does not fit ${base.name}.`);
+  if ('pack' in into) hero.pack[into.pack] = made;
+  else if (into.slot === 'weapon') hero.weapon = made;
+  else hero[into.slot] = made;
+  hero.pack.splice(gem, 1);
+  return { ok: true, made };
+}
 
 /** Seconds an item lies on the ground before it crumbles away. */
 export const GROUND_LIFETIME = 180;
@@ -315,7 +342,7 @@ export const groundFading = (remaining: number): boolean => remaining < GROUND_W
 export const MAX_GROUND = 16;
 
 /** Do an action. A drop hands the item back as `dropped` (the caller puts it on the ground). Changes nothing on failure. */
-export function applyInvOp(hero: Hero, op: InvOp): Result & { dropped?: Item; text?: string } {
+export function applyInvOp(hero: Hero, op: InvOp): Result & { dropped?: Item; text?: string; made?: Item } {
   switch (op.t) {
     case 'equip':
       return equipFromPack(hero, op.index, op.slot);
@@ -333,6 +360,10 @@ export function applyInvOp(hero: Hero, op: InvOp): Result & { dropped?: Item; te
     case 'dropWorn': {
       const r = dropWorn(hero, op.slot);
       return r.ok ? { ok: true, dropped: r.item } : r;
+    }
+    case 'fuse': {
+      const r = fuseInto(hero, op.gem, op.into);
+      return r.ok ? { ok: true, made: r.made!, text: `${r.made!.name}!` } : r;
     }
   }
 }
@@ -353,6 +384,8 @@ export function encodeOp(op: InvOp): InvOpWire {
       return [3, slot(op.slot), 0];
     case 'use':
       return [4, op.index, 0];
+    case 'fuse':
+      return [5, op.gem, 'pack' in op.into ? op.into.pack : -GEAR_SLOTS.indexOf(op.into.slot) - 1];
   }
 }
 
@@ -373,6 +406,12 @@ export function decodeOp([kind, a, b]: InvOpWire): InvOp | null {
       return slot ? { t: 'dropWorn', slot } : null;
     case 4:
       return index ? { t: 'use', index: a } : null;
+    case 5: {
+      if (!index) return null;
+      if (b >= 0) return Number.isInteger(b) && b < 64 ? { t: 'fuse', gem: a, into: { pack: b } } : null;
+      const into = GEAR_SLOTS[-b - 1];
+      return Number.isInteger(b) && into ? { t: 'fuse', gem: a, into: { slot: into } } : null;
+    }
     default:
       return null;
   }

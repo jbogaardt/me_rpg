@@ -19,6 +19,8 @@ export interface BriefNames {
   item(id: string): string;
   /** A zone's name ("The Greenwood"). */
   area(zone: string): string;
+  /** For a forge quest: what the piece to make (an item id) is made of, in names ("Emerald", "Steel Sword") and what it is called. */
+  recipe?(id: string): { gem: string; base: string; made: string } | null;
 }
 
 /** Most of what a DM may write as their own instructions for a quest. */
@@ -26,6 +28,9 @@ export const MAX_NOTE = 240;
 
 /** The DM's own instructions as they travel: trimmed, one line, no longer than `MAX_NOTE`. */
 export const cleanNote = (text: string): string => text.replace(/\s+/g, ' ').trim().slice(0, MAX_NOTE).trim();
+
+/** A name with its article ("an Emerald", "a Steel Sword"). */
+export const an = (name: string): string => (/^[aeiou]/i.test(name) ? `an ${name}` : `a ${name}`);
 
 const plural = (name: string): string => (/s$/i.test(name) ? name : `${name}s`);
 const the = (area: string): string => (/^the\s/i.test(area) ? area : `the ${area}`);
@@ -57,6 +62,12 @@ export function objective(v: TaskView, names: BriefNames): string {
       return `Find ${names.item(v.what)}${where}.`;
     case 'cast':
       return `Cast ${n} spells${where}.`;
+    case 'forge': {
+      const r = names.recipe?.(v.what);
+      return r
+        ? `Set ${an(r.gem)} in ${an(r.base)}, from the Inventory tab, and the ${r.made} is yours.`
+        : `Make ${names.item(v.what)}, from the Inventory tab.`;
+    }
     case 'haul':
       return `Carry ${n} ${n > 1 ? 'barrels' : 'barrel'} to ${v.what}${where}.`;
     case 'boss':
@@ -161,6 +172,31 @@ export function briefing(v: TaskView, names: BriefNames): string[] {
           `Do it anywhere in ${where}. When the count is made, the reward is shared among you.`,
         ]),
       ];
+    case 'forge': {
+      const r = names.recipe?.(v.what) ?? { gem: 'a gem', base: 'a good piece of gear', made: names.item(v.what) };
+      const gem = r.gem;
+      const base = r.base;
+      return [
+        page(0, [
+          `A stone does nothing but sit pretty until somebody has the sense to set it in something. You are carrying ${an(gem)}, and ${an(base)} that could do with a little more than steel and good intentions.`,
+          `Gems are the most honest bargain in the world: they ask nothing of you but a place to sit. I propose you give ${an(gem)} one, in your ${base}.`,
+          `Every smith worth a hammer will tell you the same thing: a plain blade is a promise, a set stone is a contract. I would see your ${base} and ${an(gem)} brought to terms.`,
+          `There is an old saying in the forge towns: never carry a gem you could wear. ${an(gem)} and ${an(base)} between you are a waste of two perfectly good things.`,
+          `I have watched you walk past good fortune with your hands in your pockets. ${an(gem)}, ${an(base)}, and not an ounce of imagination between the two. We shall mend that.`,
+        ]),
+        page(1, [
+          `Open your pack, choose the ${gem}, and set it in the ${base}: the stone is spent and the piece is made new, and it will not forgive you if you forget which is which.`,
+          `It is simple, and a little irreversible. Pick the ${gem} in your pack, pick the ${base}, and ask for them to be joined. You will hold ${an(r.made)}, and no ${gem} thereafter.`,
+          `The ${gem} goes in the ${base}: from the Inventory tab, with the stone chosen and the piece beside it. One of you doing it is enough, and the stone is gone once it is done.`,
+          `Do it from your pack: select the ${gem}, and say where it goes. What comes out is ${an(r.made)}, worth more than the sum of its parts, which is the only sort of arithmetic I approve of.`,
+        ]),
+        page(2, [
+          `If you do not have the stone yet, a smith will sell you one, and the price is quite fair. Make it once, make it properly, and the reward is yours, every one of you.`,
+          `There is no map for this, no beast to fell, and no one to blame but yourselves. Set the stone and the reward follows: a new piece of gear for each of you, and that will be my way of saying well done.`,
+          `Nothing to hunt, nothing to find, only a choice to make and the nerve to make it. When the piece is made, the reward is shared among you all.`,
+        ]),
+      ];
+    }
     case 'haul':
       return [
         page(0, [

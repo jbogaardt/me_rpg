@@ -43,6 +43,10 @@ Bump `PROTOCOL_VERSION` (its doc comment lists every version), validate in `pars
 host must act on is a numbered, ackable command, not a raw event. Per feature, decide in the same change what the host
 owns and what a guest is sent, and update that feature's doc.
 
+Item codes run through the campaign's authored items and then the pieces gems make (`systems/gems.ts`, derived the same way
+on every page), so a set gem travels as a code like any item; the `fuse` Inventory action is `[5, gem index, pack index or
+-(slot+1)]`, applied by a guest at once and by the host in order.
+
 ## Trading
 
 `systems/trade.ts`: the host's `TradeBook` is the only authority. Players send `TradeCommand`s (ask, yes/no, offer,

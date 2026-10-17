@@ -15,7 +15,8 @@ import { landmarkIn, landmarkText } from '../../systems/landmarks';
 import { HINT_AREA, HINT_ARROW, taskText, type TaskView } from '../../systems/dmTasks';
 import { MOB_KINDS } from '../../systems/combat';
 import { doorToward, guideFor, searchMiddle } from '../../systems/guide';
-import { ITEMS } from '../../systems/items';
+import { recipeNames } from '../../systems/dmForge';
+import { FUSED, ITEMS } from '../../systems/items';
 import { zoneName } from '../../systems/places';
 import {
   CHAPTERS,
@@ -170,7 +171,11 @@ export class StoryUi {
     const names = {
       foe: (key: string) => MOB_KINDS[key]?.name ?? key,
       site: (kind: string) => SITE_KINDS[kind]?.name ?? kind,
-      item: (id: string) => (ITEMS[id] ? `the ${ITEMS[id].name}` : id),
+      item: (id: string) => {
+        const it = ITEMS[id] ?? FUSED[id];
+        return it ? `the ${it.name}` : id;
+      },
+      recipe: recipeNames,
       area: (zone: string) => zoneName(zone),
     };
     // The story, then what is actually wanted, in the tracker's own terms: one telling, never vaguer than the task.

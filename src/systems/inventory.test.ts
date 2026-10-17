@@ -33,7 +33,7 @@ import {
   wearFromPack,
   wearIfBetter,
 } from './inventory';
-import { ITEMS, itemOf } from './items';
+import { FUSED, ITEMS, itemOf } from './items';
 import { playerOutfit } from './looks';
 
 const filled = (n: number) => {
@@ -274,11 +274,12 @@ describe('useFromPack', () => {
 
 describe('item codes', () => {
   it('give every item its own code, and 0 means nothing', () => {
-    const codes = Object.values(ITEMS).map(itemCode);
+    const all = [...Object.values(ITEMS), ...Object.values(FUSED)]; // the pieces gems make follow the authored items
+    const codes = all.map(itemCode);
     expect(new Set(codes).size).toBe(codes.length);
     expect(Math.min(...codes)).toBe(1);
     expect(Math.max(...codes)).toBe(itemCount());
-    for (const item of Object.values(ITEMS)) expect(itemFromCode(itemCode(item))).toBe(item);
+    for (const item of all) expect(itemFromCode(itemCode(item))).toBe(item);
     expect(itemFromCode(0)).toBeUndefined();
     expect(itemFromCode(itemCount() + 1)).toBeUndefined();
   });

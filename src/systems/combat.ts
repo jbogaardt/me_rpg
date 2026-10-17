@@ -6,6 +6,7 @@ import { startGear } from './items';
 import { newNeeds, type Needs } from './needs';
 import type { Focus } from './spells';
 import type { SkillId } from './skills';
+import type { Gem } from './gems';
 
 export interface Stats {
   level: number;
@@ -82,6 +83,10 @@ export interface Item {
   capacity?: number;
   /** Sprite parts this item puts on the hero (see sprites/parts.ts); drawn over the hero's base look. */
   look?: Outfit;
+  /** Set on gems (no slot, kept in the pack): what setting one in a piece of gear adds (systems/gems.ts). */
+  gem?: Gem;
+  /** Set on an item made by setting a gem in another (systems/gems.ts): the ids of the piece and the gem it was made from. */
+  fused?: { base: string; gem: string };
 }
 
 export interface Hero extends Partial<Record<Exclude<GearSlot, 'weapon'>, Item>> {

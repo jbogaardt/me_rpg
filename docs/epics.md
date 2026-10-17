@@ -31,11 +31,11 @@ in any biome that has the lands; each carries a gauge (difficulty, length, reach
 `content/epics.json`; a campaign's `quests.json` may hold more, and an AI may write one (`DmBot.epic`): `parseEpic` checks
 all of them as strictly as a world entry (an unknown person, a person met twice or never, too long a line).
 
-A step is either **resolved** from whatever land it falls in (`kind` hunt, gather, find or visit, and a `hop`) or **named
+A step is either **resolved** from whatever land it falls in (`kind` hunt, gather, find, visit or forge, and a `hop`) or **named
 outright** (`objective`, in the campaign quests' own words: `{"t": "kill", "kind": "goblin", "count": 4, "zone":
 "greenwood"}`; never a bring or a meet), which binds it to that campaign's content and is checked against it, so a campaign
 writes a saga about its own world (`greenwood_reckoning` in campaign 1) and a pack-style one runs anywhere. A resolved step is a
-quest kind (hunt, gather, find, visit, cast spells where the party has magic, haul barrels to a named place, slay a boss, master a spell; a land
+quest kind (hunt, gather, find, visit, cast spells where the party has magic, haul barrels to a named place, slay a boss, master a spell, forge a gem into gear the party has or can buy; a land
 without one tells another kind: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
 `DmTasks.ts` runs it) or `meet`. For `meet` the DM makes the step's person (an `npc` then a `cast` entry of the live world,
 on open ground in the step's land, wearing the look a word names), the party is sent to find them (a `visit` quest at
@@ -68,7 +68,7 @@ yet. Online only the DM's quests count: the story chain's givers only pass the t
 
 ## Not yet
 
-A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `upgradeFor`: a step up of
-the way they fight, sized to the party's level), a person who turns on the party, branching, the packs' arcs (a third quest
+A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `dmGear.ts`: one piece, a step up
+of the way they fight and sized to the party's level, varied by slot), a person who turns on the party, branching, the packs' arcs (a third quest
 format that assembles live worlds), people placed by the maps (a campaign's givers) and by the log (the DM's) as one
 mechanism, and one *trigger* for both holders (a giver's talk, or the runner) with one telling for what a step says.

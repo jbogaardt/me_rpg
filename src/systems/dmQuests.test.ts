@@ -127,8 +127,10 @@ describe('the offer for a task a saga names outright', () => {
       cap: { name: 'Leather Cap', value: 30, slot: 'head', defense: 1 },
       bread: { name: 'Bread', value: 2, use: { hp: 5 } },
     };
-    expect(upgradeFor(hero, items, 1)).toBe('bronze'); // steel is past a level 1 hero's means
-    expect(upgradeFor(hero, items, 3)).toBe('steel'); // the biggest step in reach, never the legend, never the bow
+    expect(['bronze', 'cap']).toContain(upgradeFor(hero, items, 1)); // steel is past a level 1 hero's means
+    expect(upgradeFor(hero, items, 3, [], 0)).toBe('steel'); // the biggest step in reach, never the legend, never the bow
+    expect(upgradeFor(hero, items, 3, [], 1)).toBe('cap'); // another quest, another slot
+    expect(upgradeFor(hero, items, 3, ['weapon'])).toBe('cap'); // the blade was given last time
     hero.weapon = items.steel!;
     expect(upgradeFor(hero, items, 3)).toBe('cap'); // the blade is as good as it gets: armour next
     hero.head = items.cap;

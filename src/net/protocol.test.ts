@@ -276,6 +276,15 @@ describe('messages', () => {
     }
   });
 
+  it('carries the fuse Inventory action (v45): a gem in the pack set in a pack piece or, negative, a worn slot', () => {
+    const base = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
+    for (const inv of [
+      [4, 5, 2, 7],
+      [5, 5, 0, -3],
+    ])
+      expect(parseMessage(JSON.stringify({ ...base, inv }))).toEqual({ ...base, inv });
+  });
+
   it('takes a snapshot that leaves the ground out (unchanged) and keeps one that lists it', () => {
     const { ground: _listed, ...without } = { ...snap, ground: [[100, 1, 2, 25, 179]] satisfies GroundSnap[] };
     const parsed = parseMessage(JSON.stringify(without)) as SnapMsg;
@@ -461,9 +470,13 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
       task: [7, 0, 1, 3, 'the_fen', 512, 99, 'Master Arcane Bolt: cast it 3 times', 0, 0, 'bolt:uurl'] as Task,
     };
     expect(parseMessage(encodeMessage(master))).toEqual(master);
+    const forge = {
+      ...dm,
+      task: [8, 0, 0, 1, 'the_fen', 512, 99, 'Set an Emerald in a Steel Sword', 0, 0, 'steelSword+emerald'] as Task,
+    }; // v47: a forge quest
+    expect(parseMessage(encodeMessage(forge))).toEqual(forge);
     const broken = [
-      [8, 0, 0, 1, 'z', 0, 0, 'x', 0, 0, ''], // a kind this version does not have
-      [9, 0, 0, 1, 'z', 0, 0, 'x', 0, 0, ''],
+      [9, 0, 0, 1, 'z', 0, 0, 'x', 0, 0, ''], // a kind this version does not have
       [0, 0, 0, 1, '', 0, 0, 'x', 0, 0, ''],
       [0, 0, 0, 1, 'z', 0, 0, '', 0, 0, ''],
       [0, 0, 0, 1, 'z', 0, 0, 'x', 0, 3, ''],

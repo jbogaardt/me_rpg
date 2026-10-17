@@ -3,6 +3,7 @@ import { cleanNote } from '../../systems/dmBrief';
 import { DONE_WORDS, FAILED_WORDS } from '../../systems/dmVoice';
 import { Phrasebook } from '../../systems/phrases';
 import { collect } from '../../systems/chests';
+import { GEAR_KINDS, giftFor, remember, type GiftMemory } from '../../systems/dmGear';
 import { RELIC_KIND, relicsFor, type Land } from '../../systems/dmQuests';
 import {
   TASK_LINGER,
@@ -13,7 +14,11 @@ import {
   type TaskResult,
   type TaskState,
 } from '../../systems/dmTasks';
-import { ITEMS, itemOf } from '../../systems/items';
+import { recipesFor } from '../../systems/dmForge';
+import { isGem } from '../../systems/gems';
+import { ITEMS, idOfItem, itemOf } from '../../systems/items';
+import { SHOPS, stockOf } from '../../systems/shops';
+import type { Item } from '../../systems/combat';
 import { enabled } from '../../systems/capabilities';
 import { heroCombos } from '../../systems/skills';
 import { SPELLS } from '../../systems/spells';
@@ -34,6 +39,10 @@ function masteries(party: Player[], zone: string): NonNullable<Land['combos']> {
 }
 
 /** What the DM says as a quest ends: their voice, to every screen (the telling of a new one is each player's own dialog). */
+
+/** The gems a shop sells (their ids): a forge quest may send the party to buy one. */
+const soldGems = (): Set<string> =>
+  new Set(Object.values(SHOPS).flatMap((shop) => stockOf(shop).filter((id) => isGem(itemOf(id)))));
 
 /** How often (s) the quest's target (the foes, the nearest site) is looked for again. */
 const RETARGET = 2;
@@ -56,6 +65,8 @@ export class DmTasks {
   private seq = 0;
   private note = '';
   private epic: { title: string; step: number; total: number } | null = null;
+  /** The slots each hero was last handed gear for (systems/dmGear.ts), so rewards rotate. */
+  private memory: GiftMemory = new WeakMap();
 
   constructor(
     private arena: Arena,
@@ -143,6 +154,7 @@ export class DmTasks {
       if (have) have.count++;
       else kinds.set(s.kind, { kind: s.kind, name: SITE_KINDS[s.kind]?.name ?? s.kind, count: 1, x: s.x, y: s.y });
     }
+    const smith = zone.keepers.find((k) => SHOPS[k.shop]?.stock.some((id) => isGem(itemOf(id))))?.body;
     return {
       zone: zone.name,
       level,
@@ -154,6 +166,17 @@ export class DmTasks {
       relics: relicsFor(ITEMS, level),
       party: party.length,
       combos: masteries(party, zone.name),
+      ...(enabled('forge')
+        ? {
+            forge: {
+              recipes: recipesFor(
+                party.map((p) => p.hero),
+                soldGems(),
+              ),
+              smith,
+            },
+          }
+        : {}),
       spot: () => {
         for (let i = 0; i < 300; i++) {
           const x = (2 + Math.floor(Math.random() * (zone.data.width - 4)) + 0.5) * CELL;
@@ -164,6 +187,23 @@ export class DmTasks {
         return null;
       },
     };
+  }
+
+  /**
+   * Hand `p` a piece of gear that helps them most, of a slot not given lately, in reach of the party's level (systems/dmGear.ts;
+   * worn if it beats what they wear, else in the pack). `seed` varies the pick from one reward to the next. Returns its name, or
+   * null when nothing would help or the pack is full.
+   */
+  gift(p: Player, seed: number): string | null {
+    const gift = giftFor(p.hero, ITEMS, this.level, this.memory.get(p.hero) ?? [], seed);
+    if (!gift) return null;
+    const item = itemOf(gift.id);
+    const found = collect(p.hero, { item });
+    if (found.refused) return null;
+    remember(this.memory, p.hero, gift.slot);
+    this.arena.refreshLook(p);
+    this.arena.inZone(this.arena.zoneOf(p), () => this.sim.text(p.body.x, p.body.y - 90, found.text, 0xfff0a0));
+    return item.name;
   }
 
   /** Give a quest written elsewhere (a saga's step), with the DM's telling of it. False if one is running or there is no game to give it in. */
@@ -179,6 +219,12 @@ export class DmTasks {
     this.note = cleanNote(note);
     this.publish();
     return true;
+  }
+
+  /** Someone set a gem in a piece, making `made`: counts for a forge quest that asks for it. */
+  forged(made: Item) {
+    const id = idOfItem(made);
+    if (id !== undefined && this.book.forge(id)) this.publish();
   }
 
   /** A player touched a quest site of the land: true if it counts for the DM's quest (a gather site, or the relic). */
@@ -281,6 +327,7 @@ export class DmTasks {
     if (result === 'done') {
       const { xp, gold } = t.quest.reward; // scaled to the party's level when it was given
       for (const p of party) this.sim.reward(p, xp, gold);
+      if (GEAR_KINDS.includes(t.kind)) for (const p of party) this.gift(p, this.seq);
       // Hook: a boss quest may also drop gear for the party here (`t.kind === 'boss'`; `upgradeFor`/`relicsFor` pick pieces).
       const finder = this.finder;
       const item = t.kind === 'find' ? ITEMS[t.what] : undefined;

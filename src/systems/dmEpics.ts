@@ -99,6 +99,7 @@ const MINUTES: Record<StepKind, number> = {
   haul: 5,
   boss: 6,
   master: 4,
+  forge: 4,
 };
 const TRAVEL = 1.5;
 
@@ -206,7 +207,7 @@ export const MAX_STEPS = 8;
 export const MAX_SAYS = 3;
 export const MAX_SAY = 150;
 export const MAX_ITEM = 40;
-const KINDS: StepKind[] = ['hunt', 'gather', 'find', 'visit', 'meet', 'cast', 'haul', 'boss', 'master'];
+const KINDS: StepKind[] = ['hunt', 'gather', 'find', 'visit', 'meet', 'cast', 'haul', 'boss', 'master', 'forge'];
 const ID = /^[a-z][a-z0-9_]{1,31}$/;
 const KEY = /^[a-z][a-z0-9_]{0,15}$/;
 

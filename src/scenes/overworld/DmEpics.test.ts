@@ -3,7 +3,7 @@ import { MEET_WORDS, SAGA_LOST_WORDS, SAGA_OFF_WORDS, SAGA_QUIET_WORDS } from '.
 import type { ContentManager } from '../../content/ContentManager';
 import { STOCK_EPICS } from '../../content/epics';
 import { parseEpic } from '../../systems/dmEpics';
-import { newHero } from '../../systems/combat';
+import { GEAR_SLOTS, newHero } from '../../systems/combat';
 import { TASK_LINGER } from '../../systems/dmTasks';
 import { setPlaces } from '../../systems/places';
 import type { Arena } from './Arena';
@@ -20,6 +20,7 @@ function game(far = false, story: unknown = null) {
     ({
       name,
       sites: [],
+      keepers: [],
       barrels: [],
       folk: [] as { name: string; body: { x: number; y: number } }[],
       data: { width: 100, height: 100, places, spawn: { col: 3, row: 3 } },
@@ -46,6 +47,7 @@ function game(far = false, story: unknown = null) {
     zones: new Map([['a', a]]),
     inZone: <T>(_z: unknown, fn: () => T) => fn(),
     zoneOf: () => a,
+    refreshLook: () => {},
   } as unknown as Arena;
   const loaded: string[] = [];
   const zones = {
@@ -120,9 +122,13 @@ describe('epic quests, on the host', () => {
     expect(paid[3]![1]).toBeGreaterThan(paid[0]![1]); // the saga pays more than a step
     expect(said.at(-2)).toContain('village sleeps safely');
     expect(said.at(-1)).toMatch(/for your trouble: \w/); // a gear upgrade for the hero, in the pack or worn
-    expect((party[0] as unknown as { hero: { weapon: { name: string } } }).hero.weapon.name).not.toBe(
-      newHero().weapon.name,
-    );
+    const owned = (h: ReturnType<typeof newHero>) =>
+      [...GEAR_SLOTS.map((slot) => h[slot]), ...h.pack].flatMap((i) => i ?? []);
+    const hero = (party[0] as unknown as { hero: ReturnType<typeof newHero> }).hero;
+    const start = owned(newHero()).map((i) => i.name);
+    const fresh = owned(hero).filter((i) => !start.includes(i.name));
+    expect(fresh).toHaveLength(1); // one new piece, in whatever slot helps most
+    expect(said.at(-1)).toContain(fresh[0]!.name); // the piece the DM named is the one they hold
     expect(said.at(-1)).toMatch(/You each earn \d+ XP and \d+ gold/); // the party is told what they got
   });
 
