@@ -54,6 +54,8 @@ they were in, where in the repo to look, and a prompt to start the next session 
 quotes what players typed, so players are P1, P2 and links, emails and long numbers are cut. A session starts from the
 newest report: take its findings in order, reproduce, fix, test. Solo play has no bot, so only the console lines exist.
 
+**Issues** (`server/issues.ts`): the strongest findings (severity 2+ or two signals, at most 3 a game) are drafted as GitHub issues in `reports/raw/*.issues.json`. The text is built by rules, never by a model; quotes are stripped of links, mentions and markup. Posting is off unless `DM_BOT_ISSUES=post` with `DM_BOT_GITHUB_TOKEN` (issues scope only) and optionally `DM_BOT_ISSUES_REPO`; each carries a hash key, so a repeat finding is skipped, and nothing is filed if the duplicate check fails.
+
 A **breather** (`systems/breather.ts`) is the pause after a quest, said out loud: a 🍺 badge with a clock and three faces at
 the left of the screen (`hud/BreatherBadge.ts`) and one line from the DM (`BREATHER_WORDS`); the director leaves the same
 minute before it offers the next quest. It is local to each page, started by the quest each already sees end (a saga's
