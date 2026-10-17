@@ -42,10 +42,9 @@ Each `MobKind` is tuned for a band of hero levels and biomes hand them out by ba
   spells for mana; **every wand and tome is unique** (no spell or string on two weapons or inside another or a
   skill's: tests check). Innate skills are earned in training-ground trials. `heroCombos` is the one
   list the reader, HUD and caster use; a guest detects the combo and sends only its index.
-- **Survival** (`needs.ts`, `crops.ts`): food and water drain with time (host/solo only; a guest shows what `pack` says). Drinking is steady, from ponds that drain and **only rain refills**, only while no foe is near; a dry pond is walkable (`ZoneState.syncBeds`). Crops need three
+- **Survival** (`needs.ts`, `crops.ts`): food and water drain with time (host/solo only; a guest shows what `pack` says). Drinking is steady, from ponds that drain and **only rain refills**, only while no foe is near; a dry pond is walkable. Crops need three
   waterings, are decided by the host and ride the snapshot as a state code.
-- **Weather and day** (`weather.ts`, `daynight.ts`): cosmetic atmosphere per biome (lightning aside, not combat or collision); a DM's change of hour eases in (`FADE_SECONDS`). The host rolls each occupied zone's weather and sends it in the snapshot; the clock reads the wall
-  clock, so everyone sees the same hour.
+- **Weather and day** (`weather.ts`, `daynight.ts`): cosmetic atmosphere per biome (lightning aside, not combat or collision). The host rolls each occupied zone's weather and sends it in the snapshot; the clock reads the wall clock.
 - **Inventory, economy, chests** (`inventory.ts`, `shops.ts`, `chests.ts`, `trade.ts`): the host owns every hero's gold,
   pack and gear. A guest applies an inventory op at once and sends the oldest unconfirmed one (numbered); the
   host does each once, in order, and confirms with `pack.ack`. Shops specialise and buy back only their own trade at a

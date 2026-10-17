@@ -38,21 +38,18 @@ writes a saga about its own world (`greenwood_reckoning`) and a pack-style one r
 quest kind (hunt, gather, find, visit, cast spells where the party has magic, haul barrels to a named place, slay a boss, master a spell, forge a gem into gear the party has or can buy; a land
 without one tells another kind: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
 `DmTasks.ts` runs it) or `meet`. For `meet` the DM makes the step's person (an `npc` then a `cast` entry of the live world,
-on open ground in the step's land, or with `at: haven` beside a shop door of the nearest town the world has, wearing the look a word names; a later `meet` of the same person sends the party back to where they stand), the party is sent to find them (a `visit` quest at
-their feet), and on reaching them the DM only says they are there (and, if nobody speaks to them for a while, reminds the party, then goes on without a word: a saga is never left hanging): **the person speaks through their own dialog when talked
-to** (`DmEpics.meet` puts the step's lines on them, `talked` hears the action press that talks to them, solo, host or a
-friend's, and the saga goes on a few seconds later), never in the DM's voice, and may give something to carry (`gives`, named in the telling for a later step to ask for). The party is told in
+on open ground in the step's land, or with `at: haven` beside a shop door of the nearest town, wearing the look a word names, and a later `meet` of them goes back to where they stand), the party is sent to find them (a `visit` quest at
+their feet), and on reaching them the DM only says they are there (if nobody speaks to them it reminds the party, then goes on: never left hanging): **the person speaks through their own dialog when talked
+to** (`DmEpics.meet` puts the step's lines on them, `talked` hears the action press, and the saga goes on a few seconds later), never in the DM's voice, and may give something to carry (`gives`). The party is told in
 **words only, nothing on the map**: when the DM notices they are lost (the director's card, or
-a player asking) the DM offers a **compass** that leans toward the place to search, and only a second time points straight at it (`HINT_AREA`, `HINT_ARROW`, v44). A failed or cancelled step ends the saga. A step is read to
-every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the party while taken (`Quest.capabilities`). Epics with people need a live world (people are log entries).
+a player asking) the DM offers a **compass** that leans toward the place to search, and only a second time points straight at it (`HINT_AREA`, `HINT_ARROW`, v44). A failed or cancelled step ends the saga. Every player is read a step like an NPC's (`dmBrief.ts`); a quest can switch capabilities while taken (`Quest.capabilities`). Epics with people need a live world (people are log entries).
 
 A step's `tell` is asked for a compass bearing from a named place (`server/claude.ts`, `systems/bearing.ts`), not "by the shore".
 
 **What a telling names is there to be found** (`systems/landmarks.ts`, `entities/Landmark.ts`, `StoryUi.syncLandmark`, local
 to every page from the synced task alone): a visit or meeting whose words (the place, the DM's note, the title) name a
 wagon, well, camp, tent, shrine, grave, ruin, tower or hut gets one drawn beside its goal, so no quest sends the party
-to something not there (a carter "beside a lopsided wagon" has the wagon). A quest to *find* an item is never a thing lying on the
-ground: a foe of the land carries it (kill it) or a chest the DM left holds it (open it). A new word or shape goes in `landmarks.ts`
+to what is not there (a carter "beside a lopsided wagon" has the wagon). A *find* is never an item on the ground: a foe carries it or a DM chest holds it. A new word or shape goes in `landmarks.ts`
 with its drawing; an AI-written epic gets it free if it uses those words.
 
 **People's words follow the epic**: a person has `lines` (before the party is sent to them), `after` (once met) and
@@ -82,6 +79,6 @@ epilogue follows the reward lines and `Talk.finale` is set, the one hook for a c
 
 ## Not yet
 
-An authored boss in the packs or a DM epic's `objective`, phases and adds, a respawn for a hero who takes the quest after it fell. A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `dmGear.ts`), a person who turns on the party, branching, the packs' arcs (a third quest
+An authored boss in the packs or a DM epic's `objective`, phases and adds, a respawn after it fell. A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `dmGear.ts`), branching, the packs' arcs (a third quest
 format for live worlds), people placed by the maps (a campaign's givers) and by the log (the DM's) as one
-mechanism, and one *trigger* for both holders (a giver's talk, or the runner) with one telling of a step.
+mechanism, and one *trigger* for both holders with one telling of a step.
