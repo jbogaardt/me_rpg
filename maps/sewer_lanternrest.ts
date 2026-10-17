@@ -1,6 +1,6 @@
 import { defineZone } from '../tools/map/zone';
 import { Delve } from '../tools/map/delve';
-import { SEWER_ARRIVAL, sewerExit } from '../tools/map/delves';
+import { SEWER_ARRIVAL, UNDERCROFT_ARRIVAL, UNDERCROFT_DOOR, sewerExit } from '../tools/map/delves';
 
 // The Lanternrest sewers: a drain in the market square leads down to a brick-walled maze under the town. Four rooms
 // off two walkways along a green channel (two bridges cross it), with a cistern in the south-west. Painted by
@@ -42,6 +42,16 @@ export default defineZone({
     z.prop('sewerDoor', 24, 3);
     z.door(24, 3, 1, out.zone, out.col, out.row);
     z.spawn(SEWER_ARRIVAL.col, SEWER_ARRIVAL.row + 2);
+    // A second doorway in the north-east room: the stairs down to the Undercroft (maps/sewer_undercroft.ts).
+    z.prop('sewerDoor', UNDERCROFT_DOOR.col, UNDERCROFT_DOOR.row);
+    z.door(
+      UNDERCROFT_DOOR.col,
+      UNDERCROFT_DOOR.row,
+      1,
+      'sewer_undercroft',
+      UNDERCROFT_ARRIVAL.col,
+      UNDERCROFT_ARRIVAL.row,
+    );
 
     for (const [col, row] of [
       [20, 3],

@@ -60,7 +60,7 @@
       "music": null,
       "tilesets": ["dungeon_cave.png"],
       "generation": {},
-      "links": ["desert"]
+      "links": ["desert", "cave_sunscar_deep"]
     },
     "desert": {
       "name": "The Sunscar Desert",
@@ -463,7 +463,7 @@
       "music": null,
       "tilesets": ["dungeon_sewer.png"],
       "generation": {},
-      "links": ["town"]
+      "links": ["town", "sewer_undercroft"]
     },
     "shop_apothecary": {
       "name": "The Apothecary's Shop",
@@ -628,7 +628,7 @@
           }
         ]
       },
-      "links": ["greenwood", "beach", "jungle"]
+      "links": ["greenwood", "beach", "jungle", "crypt_barrow"]
     },
     "wetlands": {
       "name": "The Mirewater",
@@ -698,6 +698,33 @@
         ]
       },
       "links": ["jungle", "marsh"]
+    },
+    "cave_sunscar_deep": {
+      "name": "The Sunscar Depths",
+      "map": "cave_sunscar_deep",
+      "climate": null,
+      "music": null,
+      "tilesets": ["dungeon_cave.png"],
+      "generation": {},
+      "links": ["cave_sunscar"]
+    },
+    "sewer_undercroft": {
+      "name": "The Lanternrest Undercroft",
+      "map": "sewer_undercroft",
+      "climate": null,
+      "music": null,
+      "tilesets": ["dungeon_sewer.png"],
+      "generation": {},
+      "links": ["sewer_lanternrest"]
+    },
+    "crypt_barrow": {
+      "name": "The Barrow Deep",
+      "map": "crypt_barrow",
+      "climate": null,
+      "music": null,
+      "tilesets": ["dungeon_cave.png"],
+      "generation": {},
+      "links": ["undead"]
     }
   }
 }

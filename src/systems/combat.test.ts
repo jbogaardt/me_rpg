@@ -204,9 +204,10 @@ describe('MOB_KINDS', () => {
     expect(telegraphOf({ ...plain, telegraph: { ground: true } }, 'melee').ground).toBe(true);
   });
 
-  it('the starter hero can always hurt a starter mob', () => {
+  it('the starter hero can always hurt a starter mob (a kind for levels 1 to 5)', () => {
     const hero = newHero();
-    for (const kind of Object.values(MOB_KINDS)) expect(attackPower(hero) - kind.defense).toBeGreaterThan(0);
+    for (const kind of Object.values(MOB_KINDS).filter((k) => mobLevel(k) <= 5))
+      expect(attackPower(hero) - kind.defense).toBeGreaterThan(0); // the deep kinds are for deeper heroes (balance.test.ts)
   });
 });
 

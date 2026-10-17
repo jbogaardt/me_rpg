@@ -5,7 +5,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { WHOLE_BODIES } from '../../sprites/parts';
 import { outfitLayers, type Outfit, type PartManifest } from '../../src/sprites/doll';
-import { attackPower, mobTimings, newHero } from '../../src/systems/combat';
+import { mobLevel, mobTimings } from '../../src/systems/combat';
+import { heroModel } from '../../src/systems/dmBoss';
 import { ROOT } from '../map/image';
 import { campaigns, loadContentFromDisk, PACKS } from './disk';
 
@@ -49,7 +50,7 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
     const { windup, recover, stagger } = mobTimings(kind);
     expect(windup).toBeGreaterThanOrEqual(0.25);
     expect(stagger).toBeLessThan(windup + recover);
-    expect(attackPower(newHero()) - kind.defense).toBeGreaterThan(0);
+    expect(heroModel(mobLevel(kind)).power - kind.defense).toBeGreaterThan(0); // a hero of its own level can always hurt it
     if (kind.shot) {
       expect(kind.shot.range).toBeLessThanOrEqual(kind.sight);
       expect(kind.shot.speed).toBeLessThan(HERO_SPEED * 1.6);

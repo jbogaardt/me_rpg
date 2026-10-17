@@ -1,4 +1,5 @@
 import { defineBiome, worldOf } from '../tools/map/world';
+import { CRYPT_ARRIVAL, CRYPT_TOMB } from '../tools/map/delves';
 import { DEAD_TREES, GRAVES, GRAVE_CROSSES, type PrefabName } from '../tools/map/catalog';
 import { awayFrom, blob, pond, trail, units } from '../tools/map/helpers';
 import layout from './world';
@@ -53,7 +54,9 @@ export default defineBiome({
     // Weathered tombs at the back of the yard, on the ash north of the rows.
     z.prop('tombA', 128, 83);
     z.prop('slab', 134, 83);
-    z.prop('tombB', 141, 83);
+    z.prop('tombB', CRYPT_TOMB.col, CRYPT_TOMB.row); // the way down: its bottom-left cell is a door into the Barrow Deep (maps/crypt_barrow.ts)
+    z.door(CRYPT_TOMB.col, CRYPT_TOMB.row, 1, 'crypt_barrow', CRYPT_ARRIVAL.col, CRYPT_ARRIVAL.row);
+    z.keepFree(CRYPT_TOMB.col, CRYPT_TOMB.row + 1);
     z.chest('iron', 'legionHelm', ...near(12.4, 9.5));
     z.chest('oak', 'ruby', ...near(14.6, 8.3)); // among the tombs
     z.keepFree(...near(13.4, 8.8));

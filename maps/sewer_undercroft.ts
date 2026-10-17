@@ -1,0 +1,98 @@
+import { defineZone } from '../tools/map/zone';
+import { Delve } from '../tools/map/delve';
+import { UNDERCROFT_ARRIVAL, undercroftReturn } from '../tools/map/delves';
+
+// The Lanternrest Undercroft: the vaults the town was built over, older than its sewers. An entry hall under the stairs
+// up, a colonnade down to the Drowned Cistern (a pool ringed with floor), a chapel to the west and a store-vault to the
+// east, and the Cistern King's chamber in the south. Painted by tools/map/delve.ts (art by MrBeast, art/oga_dungeon/).
+// Foes made for heroes of level 9 to 11 live here (public/content/campaign1/scenarios.json).
+const W = 52;
+const H = 40;
+
+/** Where the scenario puts things: a chamber's centre. */
+export const UNDERCROFT = {
+  entry: [26, 7],
+  cistern: [26, 22],
+  chapel: [6, 22],
+  vault: [46, 22],
+  court: [26, 34],
+} as const;
+
+export const undercroft = new Delve(W, H);
+undercroft
+  .rect(22, 4, 9, 6) // the entry hall
+  .tunnel(
+    [
+      [26, 9],
+      [26, 17],
+    ],
+    3,
+  )
+  .rect(14, 17, 25, 11) // the Drowned Cistern
+  .rect(21, 20, 11, 5, '~')
+  .tunnel(
+    [
+      [14, 22],
+      [9, 22],
+    ],
+    3,
+  )
+  .rect(3, 17, 7, 11) // the chapel
+  .tunnel(
+    [
+      [39, 22],
+      [43, 22],
+    ],
+    3,
+  )
+  .rect(42, 17, 8, 11) // the store-vault
+  .tunnel(
+    [
+      [26, 27],
+      [26, 31],
+    ],
+    3,
+  )
+  .rect(16, 31, 21, 6); // the Cistern King's court
+
+export default defineZone({
+  name: 'sewer_undercroft',
+  width: W,
+  height: H,
+  build(z) {
+    undercroft.paint(z, 'sewer');
+    const out = undercroftReturn();
+    z.prop('sewerDoor', 26, 3);
+    z.door(26, 3, 1, out.zone, out.col, out.row);
+    z.spawn(UNDERCROFT_ARRIVAL.col, UNDERCROFT_ARRIVAL.row + 2);
+    for (const [col, row] of [
+      [23, 3],
+      [29, 3],
+      [20, 16],
+      [32, 16],
+      [5, 16],
+      [45, 16],
+      [18, 30],
+      [34, 30],
+    ] as const)
+      z.prop('sewerTorch', col, row);
+    z.prop('sewerGrate', 16, 16);
+    z.prop('sewerGrate', 35, 16);
+    for (const [name, col, row] of [
+      ['sewerCrate', 44, 18],
+      ['sewerCrate', 45, 18],
+      ['sewerBox', 44, 19],
+      ['sewerBox', 48, 18],
+      ['sewerCrate', 4, 25],
+      ['sewerBox', 5, 25],
+    ] as const)
+      z.prop(name, col, row);
+    z.chest('iron', 'deephoard', 48, 26);
+    z.chest('wood', 'elixir', 4, 19);
+    z.chest('iron', 'drainwardenCharm', 18, 35);
+    z.chest('iron', 'deeprelic', 35, 35);
+    z.place('The Drowned Cistern', 26, 22);
+    z.place('The Forgotten Chapel', 6, 22);
+    z.place("The Cistern King's Court", 26, 34);
+  },
+});

@@ -1,6 +1,6 @@
 import { defineZone } from '../tools/map/zone';
 import { Delve } from '../tools/map/delve';
-import { CAVE_ARRIVAL, caveExit } from '../tools/map/delves';
+import { CAVE_ARRIVAL, DEPTHS_ARRIVAL, caveExit } from '../tools/map/delves';
 
 // The Sunscar Hollow: a cave under the desert's rocks, entered by the cave mouth in the dunes (tools/map/delves.ts). A foyer under
 // a shaft of daylight (the way out), a hall to the east, a great cavern with a lake of lava, a pool in the south-west, and
@@ -85,7 +85,8 @@ export default defineZone({
     const out = caveExit();
     z.door(14, top(14) - 1, 1, out.zone, out.col, out.row);
     z.spawn(CAVE_ARRIVAL.col, CAVE_ARRIVAL.row + 1);
-    z.prop('caveHole', 46, top(47, 30) - 1); // a deeper tunnel in the far chamber's wall
+    z.prop('caveHole', 46, top(47, 30) - 1); // a deeper tunnel in the far chamber's wall: the way down to the Sunscar Depths
+    z.door(47, top(47, 30) - 1, 1, 'cave_sunscar_deep', DEPTHS_ARRIVAL.col, DEPTHS_ARRIVAL.row);
     z.chest('iron', 'hoard', ...cave.firstOpen(46, 17, 5, 3));
     z.chest('wood', 'elixir', ...cave.firstOpen(5, 31, 3, 3));
     z.chest('iron', 'relic', ...cave.firstOpen(48, 38, 3, 3));

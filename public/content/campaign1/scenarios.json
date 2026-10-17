@@ -6,14 +6,46 @@
       "node_id": "beach",
       "biome_type": "beach",
       "entities": [
-        { "entity": "raider", "x": 59, "y": 36 },
-        { "entity": "raider", "x": 46, "y": 21 },
-        { "entity": "shade", "x": 77, "y": 44 },
-        { "entity": "wolfkin", "x": 33, "y": 46 },
-        { "entity": "wolfkin", "x": 93, "y": 34 },
-        { "entity": "raider", "x": 65, "y": 54 },
-        { "entity": "raider", "x": 85, "y": 18 },
-        { "entity": "shade", "x": 50, "y": 55 }
+        {
+          "entity": "raider",
+          "x": 59,
+          "y": 36
+        },
+        {
+          "entity": "raider",
+          "x": 46,
+          "y": 21
+        },
+        {
+          "entity": "shade",
+          "x": 77,
+          "y": 44
+        },
+        {
+          "entity": "wolfkin",
+          "x": 33,
+          "y": 46
+        },
+        {
+          "entity": "wolfkin",
+          "x": 93,
+          "y": 34
+        },
+        {
+          "entity": "raider",
+          "x": 65,
+          "y": 54
+        },
+        {
+          "entity": "raider",
+          "x": 85,
+          "y": 18
+        },
+        {
+          "entity": "shade",
+          "x": 50,
+          "y": 55
+        }
       ],
       "choices": []
     },
@@ -21,18 +53,66 @@
       "node_id": "cave_sunscar",
       "biome_type": "cave_sunscar",
       "entities": [
-        { "entity": "goblin", "x": 35, "y": 8 },
-        { "entity": "goblin", "x": 41, "y": 7 },
-        { "entity": "wolfkin", "x": 37, "y": 10 },
-        { "entity": "wolfkin", "x": 24, "y": 28 },
-        { "entity": "wolfkin", "x": 37, "y": 25 },
-        { "entity": "shade", "x": 20, "y": 26 },
-        { "entity": "goblin", "x": 28, "y": 33 },
-        { "entity": "orc", "x": 36, "y": 33 },
-        { "entity": "goblin", "x": 8, "y": 34 },
-        { "entity": "shade", "x": 11, "y": 38 },
-        { "entity": "orc", "x": 48, "y": 19 },
-        { "entity": "troll", "x": 46, "y": 38 }
+        {
+          "entity": "goblin",
+          "x": 35,
+          "y": 8
+        },
+        {
+          "entity": "goblin",
+          "x": 41,
+          "y": 7
+        },
+        {
+          "entity": "wolfkin",
+          "x": 37,
+          "y": 10
+        },
+        {
+          "entity": "wolfkin",
+          "x": 24,
+          "y": 28
+        },
+        {
+          "entity": "wolfkin",
+          "x": 37,
+          "y": 25
+        },
+        {
+          "entity": "shade",
+          "x": 20,
+          "y": 26
+        },
+        {
+          "entity": "goblin",
+          "x": 28,
+          "y": 33
+        },
+        {
+          "entity": "orc",
+          "x": 36,
+          "y": 33
+        },
+        {
+          "entity": "goblin",
+          "x": 8,
+          "y": 34
+        },
+        {
+          "entity": "shade",
+          "x": 11,
+          "y": 38
+        },
+        {
+          "entity": "orc",
+          "x": 48,
+          "y": 19
+        },
+        {
+          "entity": "troll",
+          "x": 46,
+          "y": 38
+        }
       ],
       "choices": []
     },
@@ -40,19 +120,71 @@
       "node_id": "desert",
       "biome_type": "desert",
       "entities": [
-        { "entity": "tuskcaptain", "x": 38, "y": 54 },
-        { "entity": "raider", "x": 17, "y": 10 },
-        { "entity": "raider", "x": 56, "y": 16 },
-        { "entity": "raider", "x": 106, "y": 24 },
-        { "entity": "raider", "x": 26, "y": 66 },
-        { "entity": "raider", "x": 116, "y": 46 },
-        { "entity": "orc", "x": 80, "y": 26 },
-        { "entity": "orc", "x": 26, "y": 38 },
-        { "entity": "mummy", "x": 84, "y": 56 },
-        { "entity": "raider", "x": 10, "y": 88 },
-        { "entity": "orc", "x": 36, "y": 94 },
-        { "entity": "mummy", "x": 126, "y": 12 },
-        { "entity": "orc", "x": 60, "y": 64 }
+        {
+          "entity": "tuskcaptain",
+          "x": 38,
+          "y": 54
+        },
+        {
+          "entity": "raider",
+          "x": 17,
+          "y": 10
+        },
+        {
+          "entity": "raider",
+          "x": 56,
+          "y": 16
+        },
+        {
+          "entity": "raider",
+          "x": 106,
+          "y": 24
+        },
+        {
+          "entity": "raider",
+          "x": 26,
+          "y": 66
+        },
+        {
+          "entity": "raider",
+          "x": 116,
+          "y": 46
+        },
+        {
+          "entity": "orc",
+          "x": 80,
+          "y": 26
+        },
+        {
+          "entity": "orc",
+          "x": 26,
+          "y": 38
+        },
+        {
+          "entity": "mummy",
+          "x": 84,
+          "y": 56
+        },
+        {
+          "entity": "raider",
+          "x": 10,
+          "y": 88
+        },
+        {
+          "entity": "orc",
+          "x": 36,
+          "y": 94
+        },
+        {
+          "entity": "mummy",
+          "x": 126,
+          "y": 12
+        },
+        {
+          "entity": "orc",
+          "x": 60,
+          "y": 64
+        }
       ],
       "choices": []
     },
@@ -60,18 +192,66 @@
       "node_id": "eastwood",
       "biome_type": "eastwood",
       "entities": [
-        { "entity": "skeleton", "x": 70, "y": 38 },
-        { "entity": "wolfkin", "x": 38, "y": 108 },
-        { "entity": "wolfkin", "x": 30, "y": 58 },
-        { "entity": "wolfkin", "x": 80, "y": 66 },
-        { "entity": "skeleton", "x": 52, "y": 38 },
-        { "entity": "zombie", "x": 78, "y": 46 },
-        { "entity": "shade", "x": 32, "y": 90 },
-        { "entity": "skeleton", "x": 55, "y": 73 },
-        { "entity": "shade", "x": 48, "y": 98 },
-        { "entity": "wolfkin", "x": 64, "y": 40 },
-        { "entity": "goblin", "x": 38, "y": 80 },
-        { "entity": "skeleton", "x": 86, "y": 60 }
+        {
+          "entity": "skeleton",
+          "x": 70,
+          "y": 38
+        },
+        {
+          "entity": "wolfkin",
+          "x": 38,
+          "y": 108
+        },
+        {
+          "entity": "wolfkin",
+          "x": 30,
+          "y": 58
+        },
+        {
+          "entity": "wolfkin",
+          "x": 80,
+          "y": 66
+        },
+        {
+          "entity": "skeleton",
+          "x": 52,
+          "y": 38
+        },
+        {
+          "entity": "zombie",
+          "x": 78,
+          "y": 46
+        },
+        {
+          "entity": "shade",
+          "x": 32,
+          "y": 90
+        },
+        {
+          "entity": "skeleton",
+          "x": 55,
+          "y": 73
+        },
+        {
+          "entity": "shade",
+          "x": 48,
+          "y": 98
+        },
+        {
+          "entity": "wolfkin",
+          "x": 64,
+          "y": 40
+        },
+        {
+          "entity": "goblin",
+          "x": 38,
+          "y": 80
+        },
+        {
+          "entity": "skeleton",
+          "x": 86,
+          "y": 60
+        }
       ],
       "choices": []
     },
@@ -79,21 +259,81 @@
       "node_id": "frostlands",
       "biome_type": "frostlands",
       "entities": [
-        { "entity": "stillheart", "x": 80, "y": 100 },
-        { "entity": "frostbound", "x": 131, "y": 126 },
-        { "entity": "frostbound", "x": 106, "y": 54 },
-        { "entity": "frostbound", "x": 78, "y": 96 },
-        { "entity": "frostWarden", "x": 138, "y": 44 },
-        { "entity": "troll", "x": 128, "y": 144 },
-        { "entity": "warg", "x": 36, "y": 148 },
-        { "entity": "frostbound", "x": 142, "y": 94 },
-        { "entity": "hexer", "x": 58, "y": 130 },
-        { "entity": "troll", "x": 92, "y": 118 },
-        { "entity": "frostbound", "x": 115, "y": 31 },
-        { "entity": "warg", "x": 84, "y": 146 },
-        { "entity": "frostWarden", "x": 110, "y": 90 },
-        { "entity": "snowman", "x": 95, "y": 61 },
-        { "entity": "snowman", "x": 125, "y": 127 }
+        {
+          "entity": "stillheart",
+          "x": 80,
+          "y": 100
+        },
+        {
+          "entity": "frostbound",
+          "x": 131,
+          "y": 126
+        },
+        {
+          "entity": "frostbound",
+          "x": 106,
+          "y": 54
+        },
+        {
+          "entity": "frostbound",
+          "x": 78,
+          "y": 96
+        },
+        {
+          "entity": "frostWarden",
+          "x": 138,
+          "y": 44
+        },
+        {
+          "entity": "troll",
+          "x": 128,
+          "y": 144
+        },
+        {
+          "entity": "warg",
+          "x": 36,
+          "y": 148
+        },
+        {
+          "entity": "frostbound",
+          "x": 142,
+          "y": 94
+        },
+        {
+          "entity": "hexer",
+          "x": 58,
+          "y": 130
+        },
+        {
+          "entity": "troll",
+          "x": 92,
+          "y": 118
+        },
+        {
+          "entity": "frostbound",
+          "x": 115,
+          "y": 31
+        },
+        {
+          "entity": "warg",
+          "x": 84,
+          "y": 146
+        },
+        {
+          "entity": "frostWarden",
+          "x": 110,
+          "y": 90
+        },
+        {
+          "entity": "snowman",
+          "x": 95,
+          "y": 61
+        },
+        {
+          "entity": "snowman",
+          "x": 125,
+          "y": 127
+        }
       ],
       "choices": []
     },
@@ -101,27 +341,111 @@
       "node_id": "greenwood",
       "biome_type": "greenwood",
       "entities": [
-        { "entity": "palelurker", "x": 82, "y": 48 },
-        { "entity": "shade", "x": 34, "y": 114 },
-        { "entity": "goblin", "x": 58, "y": 82 },
-        { "entity": "wolfkin", "x": 42, "y": 158 },
-        { "entity": "shade", "x": 76, "y": 50 },
-        { "entity": "goblin", "x": 86, "y": 56 },
-        { "entity": "goblin", "x": 120, "y": 106 },
-        { "entity": "goblin", "x": 160, "y": 84 },
-        { "entity": "goblin", "x": 60, "y": 92 },
-        { "entity": "goblin", "x": 172, "y": 114 },
-        { "entity": "goblin", "x": 36, "y": 96 },
-        { "entity": "goblin", "x": 100, "y": 84 },
-        { "entity": "wolfkin", "x": 196, "y": 82 },
-        { "entity": "wolfkin", "x": 16, "y": 156 },
-        { "entity": "wolfkin", "x": 70, "y": 136 },
-        { "entity": "wolfkin", "x": 126, "y": 122 },
-        { "entity": "wolfkin", "x": 40, "y": 183 },
-        { "entity": "shade", "x": 106, "y": 118 },
-        { "entity": "shade", "x": 45, "y": 77 },
-        { "entity": "shade", "x": 76, "y": 164 },
-        { "entity": "shade", "x": 194, "y": 120 }
+        {
+          "entity": "palelurker",
+          "x": 82,
+          "y": 48
+        },
+        {
+          "entity": "shade",
+          "x": 34,
+          "y": 114
+        },
+        {
+          "entity": "goblin",
+          "x": 58,
+          "y": 82
+        },
+        {
+          "entity": "wolfkin",
+          "x": 42,
+          "y": 158
+        },
+        {
+          "entity": "shade",
+          "x": 76,
+          "y": 50
+        },
+        {
+          "entity": "goblin",
+          "x": 86,
+          "y": 56
+        },
+        {
+          "entity": "goblin",
+          "x": 120,
+          "y": 106
+        },
+        {
+          "entity": "goblin",
+          "x": 160,
+          "y": 84
+        },
+        {
+          "entity": "goblin",
+          "x": 60,
+          "y": 92
+        },
+        {
+          "entity": "goblin",
+          "x": 172,
+          "y": 114
+        },
+        {
+          "entity": "goblin",
+          "x": 36,
+          "y": 96
+        },
+        {
+          "entity": "goblin",
+          "x": 100,
+          "y": 84
+        },
+        {
+          "entity": "wolfkin",
+          "x": 196,
+          "y": 82
+        },
+        {
+          "entity": "wolfkin",
+          "x": 16,
+          "y": 156
+        },
+        {
+          "entity": "wolfkin",
+          "x": 70,
+          "y": 136
+        },
+        {
+          "entity": "wolfkin",
+          "x": 126,
+          "y": 122
+        },
+        {
+          "entity": "wolfkin",
+          "x": 40,
+          "y": 183
+        },
+        {
+          "entity": "shade",
+          "x": 106,
+          "y": 118
+        },
+        {
+          "entity": "shade",
+          "x": 45,
+          "y": 77
+        },
+        {
+          "entity": "shade",
+          "x": 76,
+          "y": 164
+        },
+        {
+          "entity": "shade",
+          "x": 194,
+          "y": 120
+        }
       ],
       "choices": []
     },
@@ -133,11 +457,31 @@
         "y": 110
       },
       "entities": [
-        { "entity": "lostTraveller", "x": 135, "y": 112 },
-        { "entity": "goblin", "x": 145, "y": 108 },
-        { "entity": "goblin", "x": 146, "y": 114 },
-        { "entity": "goblin", "x": 148, "y": 110 },
-        { "entity": "shade", "x": 136, "y": 106 }
+        {
+          "entity": "lostTraveller",
+          "x": 135,
+          "y": 112
+        },
+        {
+          "entity": "goblin",
+          "x": 145,
+          "y": 108
+        },
+        {
+          "entity": "goblin",
+          "x": 146,
+          "y": 114
+        },
+        {
+          "entity": "goblin",
+          "x": 148,
+          "y": 110
+        },
+        {
+          "entity": "shade",
+          "x": 136,
+          "y": 106
+        }
       ],
       "choices": [
         {
@@ -163,17 +507,61 @@
       "node_id": "jungle",
       "biome_type": "jungle",
       "entities": [
-        { "entity": "troll", "x": 85, "y": 97 },
-        { "entity": "orc", "x": 41, "y": 16 },
-        { "entity": "orc", "x": 79, "y": 44 },
-        { "entity": "orc", "x": 95, "y": 94 },
-        { "entity": "warg", "x": 65, "y": 64 },
-        { "entity": "warg", "x": 55, "y": 98 },
-        { "entity": "tuskGuard", "x": 41, "y": 42 },
-        { "entity": "tuskGuard", "x": 32, "y": 23 },
-        { "entity": "troll", "x": 93, "y": 64 },
-        { "entity": "orc", "x": 61, "y": 20 },
-        { "entity": "warg", "x": 81, "y": 82 }
+        {
+          "entity": "troll",
+          "x": 85,
+          "y": 97
+        },
+        {
+          "entity": "orc",
+          "x": 41,
+          "y": 16
+        },
+        {
+          "entity": "orc",
+          "x": 79,
+          "y": 44
+        },
+        {
+          "entity": "orc",
+          "x": 95,
+          "y": 94
+        },
+        {
+          "entity": "warg",
+          "x": 65,
+          "y": 64
+        },
+        {
+          "entity": "warg",
+          "x": 55,
+          "y": 98
+        },
+        {
+          "entity": "tuskGuard",
+          "x": 41,
+          "y": 42
+        },
+        {
+          "entity": "tuskGuard",
+          "x": 32,
+          "y": 23
+        },
+        {
+          "entity": "troll",
+          "x": 93,
+          "y": 64
+        },
+        {
+          "entity": "orc",
+          "x": 61,
+          "y": 20
+        },
+        {
+          "entity": "warg",
+          "x": 81,
+          "y": 82
+        }
       ],
       "choices": []
     },
@@ -181,11 +569,31 @@
       "node_id": "marsh",
       "biome_type": "marsh",
       "entities": [
-        { "entity": "troll", "x": 36, "y": 31 },
-        { "entity": "bogGhoul", "x": 32, "y": 36 },
-        { "entity": "bogGhoul", "x": 52, "y": 26 },
-        { "entity": "zombie", "x": 47, "y": 45 },
-        { "entity": "hexer", "x": 57, "y": 37 }
+        {
+          "entity": "troll",
+          "x": 36,
+          "y": 31
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 32,
+          "y": 36
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 52,
+          "y": 26
+        },
+        {
+          "entity": "zombie",
+          "x": 47,
+          "y": 45
+        },
+        {
+          "entity": "hexer",
+          "x": 57,
+          "y": 37
+        }
       ],
       "choices": []
     },
@@ -193,16 +601,56 @@
       "node_id": "sewer_lanternrest",
       "biome_type": "sewer_lanternrest",
       "entities": [
-        { "entity": "zombie", "x": 8, "y": 8 },
-        { "entity": "zombie", "x": 40, "y": 8 },
-        { "entity": "zombie", "x": 5, "y": 24 },
-        { "entity": "zombie", "x": 12, "y": 30 },
-        { "entity": "goblin", "x": 14, "y": 15 },
-        { "entity": "goblin", "x": 34, "y": 15 },
-        { "entity": "skeleton", "x": 20, "y": 21 },
-        { "entity": "skeleton", "x": 28, "y": 21 },
-        { "entity": "goblin", "x": 24, "y": 7 },
-        { "entity": "troll", "x": 40, "y": 29 }
+        {
+          "entity": "zombie",
+          "x": 8,
+          "y": 8
+        },
+        {
+          "entity": "zombie",
+          "x": 40,
+          "y": 8
+        },
+        {
+          "entity": "zombie",
+          "x": 5,
+          "y": 24
+        },
+        {
+          "entity": "zombie",
+          "x": 12,
+          "y": 30
+        },
+        {
+          "entity": "goblin",
+          "x": 14,
+          "y": 15
+        },
+        {
+          "entity": "goblin",
+          "x": 34,
+          "y": 15
+        },
+        {
+          "entity": "skeleton",
+          "x": 20,
+          "y": 21
+        },
+        {
+          "entity": "skeleton",
+          "x": 28,
+          "y": 21
+        },
+        {
+          "entity": "goblin",
+          "x": 24,
+          "y": 7
+        },
+        {
+          "entity": "troll",
+          "x": 40,
+          "y": 29
+        }
       ],
       "choices": []
     },
@@ -240,8 +688,16 @@
       "node_id": "town",
       "biome_type": "town",
       "entities": [
-        { "entity": "gossip", "x": 85, "y": 67 },
-        { "entity": "watchman", "x": 105, "y": 67 }
+        {
+          "entity": "gossip",
+          "x": 85,
+          "y": 67
+        },
+        {
+          "entity": "watchman",
+          "x": 105,
+          "y": 67
+        }
       ],
       "choices": []
     },
@@ -249,12 +705,36 @@
       "node_id": "training_adept",
       "biome_type": "training_adept",
       "entities": [
-        { "entity": "warlord", "x": 6, "y": 4 },
-        { "entity": "warlord", "x": 13, "y": 3 },
-        { "entity": "warlord", "x": 21, "y": 4 },
-        { "entity": "wraith", "x": 3, "y": 3 },
-        { "entity": "wraith", "x": 24, "y": 3 },
-        { "entity": "wraith", "x": 13, "y": 8 }
+        {
+          "entity": "warlord",
+          "x": 6,
+          "y": 4
+        },
+        {
+          "entity": "warlord",
+          "x": 13,
+          "y": 3
+        },
+        {
+          "entity": "warlord",
+          "x": 21,
+          "y": 4
+        },
+        {
+          "entity": "wraith",
+          "x": 3,
+          "y": 3
+        },
+        {
+          "entity": "wraith",
+          "x": 24,
+          "y": 3
+        },
+        {
+          "entity": "wraith",
+          "x": 13,
+          "y": 8
+        }
       ],
       "choices": []
     },
@@ -262,14 +742,46 @@
       "node_id": "training_apprentice",
       "biome_type": "training_apprentice",
       "entities": [
-        { "entity": "orc", "x": 5, "y": 4 },
-        { "entity": "orc", "x": 11, "y": 3 },
-        { "entity": "orc", "x": 18, "y": 4 },
-        { "entity": "frostbound", "x": 8, "y": 6 },
-        { "entity": "frostbound", "x": 15, "y": 6 },
-        { "entity": "skeleton", "x": 3, "y": 3 },
-        { "entity": "skeleton", "x": 20, "y": 3 },
-        { "entity": "troll", "x": 12, "y": 4 }
+        {
+          "entity": "orc",
+          "x": 5,
+          "y": 4
+        },
+        {
+          "entity": "orc",
+          "x": 11,
+          "y": 3
+        },
+        {
+          "entity": "orc",
+          "x": 18,
+          "y": 4
+        },
+        {
+          "entity": "frostbound",
+          "x": 8,
+          "y": 6
+        },
+        {
+          "entity": "frostbound",
+          "x": 15,
+          "y": 6
+        },
+        {
+          "entity": "skeleton",
+          "x": 3,
+          "y": 3
+        },
+        {
+          "entity": "skeleton",
+          "x": 20,
+          "y": 3
+        },
+        {
+          "entity": "troll",
+          "x": 12,
+          "y": 4
+        }
       ],
       "choices": []
     },
@@ -277,14 +789,46 @@
       "node_id": "training_journeyman",
       "biome_type": "training_journeyman",
       "entities": [
-        { "entity": "chieftain", "x": 6, "y": 4 },
-        { "entity": "chieftain", "x": 12, "y": 3 },
-        { "entity": "chieftain", "x": 19, "y": 4 },
-        { "entity": "cultist", "x": 3, "y": 3 },
-        { "entity": "cultist", "x": 22, "y": 3 },
-        { "entity": "cultist", "x": 14, "y": 8 },
-        { "entity": "troll", "x": 9, "y": 6 },
-        { "entity": "troll", "x": 16, "y": 6 }
+        {
+          "entity": "chieftain",
+          "x": 6,
+          "y": 4
+        },
+        {
+          "entity": "chieftain",
+          "x": 12,
+          "y": 3
+        },
+        {
+          "entity": "chieftain",
+          "x": 19,
+          "y": 4
+        },
+        {
+          "entity": "cultist",
+          "x": 3,
+          "y": 3
+        },
+        {
+          "entity": "cultist",
+          "x": 22,
+          "y": 3
+        },
+        {
+          "entity": "cultist",
+          "x": 14,
+          "y": 8
+        },
+        {
+          "entity": "troll",
+          "x": 9,
+          "y": 6
+        },
+        {
+          "entity": "troll",
+          "x": 16,
+          "y": 6
+        }
       ],
       "choices": []
     },
@@ -292,14 +836,46 @@
       "node_id": "training_novice",
       "biome_type": "training_novice",
       "entities": [
-        { "entity": "goblin", "x": 4, "y": 4 },
-        { "entity": "goblin", "x": 8, "y": 3 },
-        { "entity": "goblin", "x": 14, "y": 3 },
-        { "entity": "goblin", "x": 18, "y": 4 },
-        { "entity": "wolfkin", "x": 6, "y": 6 },
-        { "entity": "wolfkin", "x": 15, "y": 6 },
-        { "entity": "shade", "x": 3, "y": 3 },
-        { "entity": "shade", "x": 19, "y": 3 }
+        {
+          "entity": "goblin",
+          "x": 4,
+          "y": 4
+        },
+        {
+          "entity": "goblin",
+          "x": 8,
+          "y": 3
+        },
+        {
+          "entity": "goblin",
+          "x": 14,
+          "y": 3
+        },
+        {
+          "entity": "goblin",
+          "x": 18,
+          "y": 4
+        },
+        {
+          "entity": "wolfkin",
+          "x": 6,
+          "y": 6
+        },
+        {
+          "entity": "wolfkin",
+          "x": 15,
+          "y": 6
+        },
+        {
+          "entity": "shade",
+          "x": 3,
+          "y": 3
+        },
+        {
+          "entity": "shade",
+          "x": 19,
+          "y": 3
+        }
       ],
       "choices": []
     },
@@ -307,19 +883,71 @@
       "node_id": "undead",
       "biome_type": "undead",
       "entities": [
-        { "entity": "skeleton", "x": 50, "y": 64 },
-        { "entity": "skeleton", "x": 56, "y": 70 },
-        { "entity": "skeleton", "x": 66, "y": 50 },
-        { "entity": "skeleton", "x": 123, "y": 47 },
-        { "entity": "skeleton", "x": 96, "y": 76 },
-        { "entity": "zombie", "x": 32, "y": 52 },
-        { "entity": "zombie", "x": 90, "y": 62 },
-        { "entity": "zombie", "x": 68, "y": 44 },
-        { "entity": "skeleton", "x": 126, "y": 62 },
-        { "entity": "zombie", "x": 102, "y": 40 },
-        { "entity": "zombie", "x": 109, "y": 33 },
-        { "entity": "skeleton", "x": 46, "y": 78 },
-        { "entity": "shade", "x": 82, "y": 78 }
+        {
+          "entity": "skeleton",
+          "x": 50,
+          "y": 64
+        },
+        {
+          "entity": "skeleton",
+          "x": 56,
+          "y": 70
+        },
+        {
+          "entity": "skeleton",
+          "x": 66,
+          "y": 50
+        },
+        {
+          "entity": "skeleton",
+          "x": 123,
+          "y": 47
+        },
+        {
+          "entity": "skeleton",
+          "x": 96,
+          "y": 76
+        },
+        {
+          "entity": "zombie",
+          "x": 32,
+          "y": 52
+        },
+        {
+          "entity": "zombie",
+          "x": 90,
+          "y": 62
+        },
+        {
+          "entity": "zombie",
+          "x": 68,
+          "y": 44
+        },
+        {
+          "entity": "skeleton",
+          "x": 126,
+          "y": 62
+        },
+        {
+          "entity": "zombie",
+          "x": 102,
+          "y": 40
+        },
+        {
+          "entity": "zombie",
+          "x": 109,
+          "y": 33
+        },
+        {
+          "entity": "skeleton",
+          "x": 46,
+          "y": 78
+        },
+        {
+          "entity": "shade",
+          "x": 82,
+          "y": 78
+        }
       ],
       "choices": []
     },
@@ -327,16 +955,464 @@
       "node_id": "wetlands",
       "biome_type": "wetlands",
       "entities": [
-        { "entity": "warg", "x": 111, "y": 81 },
-        { "entity": "bogGhoul", "x": 42, "y": 22 },
-        { "entity": "bogGhoul", "x": 86, "y": 26 },
-        { "entity": "zombie", "x": 108, "y": 14 },
-        { "entity": "warg", "x": 82, "y": 62 },
-        { "entity": "hexer", "x": 29, "y": 25 },
-        { "entity": "hexer", "x": 68, "y": 8 },
-        { "entity": "hexer", "x": 110, "y": 70 },
-        { "entity": "zombie", "x": 56, "y": 40 },
-        { "entity": "warg", "x": 112, "y": 46 }
+        {
+          "entity": "warg",
+          "x": 111,
+          "y": 81
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 42,
+          "y": 22
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 86,
+          "y": 26
+        },
+        {
+          "entity": "zombie",
+          "x": 108,
+          "y": 14
+        },
+        {
+          "entity": "warg",
+          "x": 82,
+          "y": 62
+        },
+        {
+          "entity": "hexer",
+          "x": 29,
+          "y": 25
+        },
+        {
+          "entity": "hexer",
+          "x": 68,
+          "y": 8
+        },
+        {
+          "entity": "hexer",
+          "x": 110,
+          "y": 70
+        },
+        {
+          "entity": "zombie",
+          "x": 56,
+          "y": 40
+        },
+        {
+          "entity": "warg",
+          "x": 112,
+          "y": 46
+        }
+      ],
+      "choices": []
+    },
+    {
+      "node_id": "cave_sunscar_deep",
+      "biome_type": "cave_sunscar_deep",
+      "entities": [
+        {
+          "entity": "orc",
+          "x": 48,
+          "y": 7,
+          "level": 18
+        },
+        {
+          "entity": "orc",
+          "x": 56,
+          "y": 11,
+          "level": 18
+        },
+        {
+          "entity": "orc",
+          "x": 22,
+          "y": 20,
+          "level": 20
+        },
+        {
+          "entity": "orc",
+          "x": 38,
+          "y": 31,
+          "level": 20
+        },
+        {
+          "entity": "mummy",
+          "x": 27,
+          "y": 32,
+          "level": 20
+        },
+        {
+          "entity": "mummy",
+          "x": 24,
+          "y": 32,
+          "level": 20
+        },
+        {
+          "entity": "raider",
+          "x": 32,
+          "y": 20,
+          "level": 20
+        },
+        {
+          "entity": "raider",
+          "x": 27,
+          "y": 20,
+          "level": 20
+        },
+        {
+          "entity": "troll",
+          "x": 20,
+          "y": 30,
+          "level": 20
+        },
+        {
+          "entity": "skeleton",
+          "x": 5,
+          "y": 22,
+          "level": 19
+        },
+        {
+          "entity": "skeleton",
+          "x": 13,
+          "y": 26,
+          "level": 19
+        },
+        {
+          "entity": "skeleton",
+          "x": 7,
+          "y": 25,
+          "level": 19
+        },
+        {
+          "entity": "zombie",
+          "x": 10,
+          "y": 23,
+          "level": 19
+        },
+        {
+          "entity": "zombie",
+          "x": 13,
+          "y": 21,
+          "level": 19
+        },
+        {
+          "entity": "raider",
+          "x": 7,
+          "y": 6,
+          "level": 20
+        },
+        {
+          "entity": "raider",
+          "x": 13,
+          "y": 9,
+          "level": 20
+        },
+        {
+          "entity": "mummy",
+          "x": 10,
+          "y": 11,
+          "level": 20
+        },
+        {
+          "entity": "troll",
+          "x": 53,
+          "y": 28,
+          "level": 21
+        },
+        {
+          "entity": "ashmaw",
+          "x": 33,
+          "y": 44
+        },
+        {
+          "entity": "orc",
+          "x": 37,
+          "y": 46,
+          "level": 22
+        },
+        {
+          "entity": "orc",
+          "x": 33,
+          "y": 47,
+          "level": 22
+        },
+        {
+          "entity": "troll",
+          "x": 30,
+          "y": 47,
+          "level": 22
+        },
+        {
+          "entity": "troll",
+          "x": 37,
+          "y": 41,
+          "level": 22
+        }
+      ],
+      "choices": []
+    },
+    {
+      "node_id": "sewer_undercroft",
+      "biome_type": "sewer_undercroft",
+      "entities": [
+        {
+          "entity": "zombie",
+          "x": 23,
+          "y": 5,
+          "level": 9
+        },
+        {
+          "entity": "zombie",
+          "x": 29,
+          "y": 8,
+          "level": 9
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 20,
+          "y": 18,
+          "level": 10
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 28,
+          "y": 26,
+          "level": 10
+        },
+        {
+          "entity": "hexer",
+          "x": 25,
+          "y": 26,
+          "level": 10
+        },
+        {
+          "entity": "hexer",
+          "x": 22,
+          "y": 26,
+          "level": 10
+        },
+        {
+          "entity": "zombie",
+          "x": 29,
+          "y": 18,
+          "level": 10
+        },
+        {
+          "entity": "skeleton",
+          "x": 4,
+          "y": 18,
+          "level": 10
+        },
+        {
+          "entity": "skeleton",
+          "x": 8,
+          "y": 22,
+          "level": 10
+        },
+        {
+          "entity": "skeleton",
+          "x": 6,
+          "y": 25,
+          "level": 10
+        },
+        {
+          "entity": "hexer",
+          "x": 4,
+          "y": 22,
+          "level": 10
+        },
+        {
+          "entity": "orc",
+          "x": 43,
+          "y": 19,
+          "level": 10
+        },
+        {
+          "entity": "orc",
+          "x": 48,
+          "y": 22,
+          "level": 10
+        },
+        {
+          "entity": "goblin",
+          "x": 46,
+          "y": 25,
+          "level": 9
+        },
+        {
+          "entity": "goblin",
+          "x": 43,
+          "y": 25,
+          "level": 9
+        },
+        {
+          "entity": "goblin",
+          "x": 46,
+          "y": 21,
+          "level": 9
+        },
+        {
+          "entity": "cisternKing",
+          "x": 26,
+          "y": 34
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 29,
+          "y": 35,
+          "level": 11
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 23,
+          "y": 34,
+          "level": 11
+        }
+      ],
+      "choices": []
+    },
+    {
+      "node_id": "crypt_barrow",
+      "biome_type": "crypt_barrow",
+      "entities": [
+        {
+          "entity": "skeleton",
+          "x": 8,
+          "y": 7,
+          "level": 13
+        },
+        {
+          "entity": "skeleton",
+          "x": 16,
+          "y": 11,
+          "level": 13
+        },
+        {
+          "entity": "zombie",
+          "x": 29,
+          "y": 8,
+          "level": 13
+        },
+        {
+          "entity": "zombie",
+          "x": 35,
+          "y": 10,
+          "level": 13
+        },
+        {
+          "entity": "zombie",
+          "x": 31,
+          "y": 11,
+          "level": 13
+        },
+        {
+          "entity": "skeleton",
+          "x": 30,
+          "y": 14,
+          "level": 13
+        },
+        {
+          "entity": "skeleton",
+          "x": 38,
+          "y": 9,
+          "level": 13
+        },
+        {
+          "entity": "wraith",
+          "x": 26,
+          "y": 22,
+          "level": 14
+        },
+        {
+          "entity": "wraith",
+          "x": 34,
+          "y": 26,
+          "level": 14
+        },
+        {
+          "entity": "skeleton",
+          "x": 43,
+          "y": 22,
+          "level": 14
+        },
+        {
+          "entity": "skeleton",
+          "x": 51,
+          "y": 26,
+          "level": 14
+        },
+        {
+          "entity": "skeleton",
+          "x": 47,
+          "y": 27,
+          "level": 14
+        },
+        {
+          "entity": "cultist",
+          "x": 44,
+          "y": 27,
+          "level": 14
+        },
+        {
+          "entity": "zombie",
+          "x": 11,
+          "y": 41,
+          "level": 15
+        },
+        {
+          "entity": "zombie",
+          "x": 17,
+          "y": 42,
+          "level": 15
+        },
+        {
+          "entity": "skeleton",
+          "x": 13,
+          "y": 43,
+          "level": 15
+        },
+        {
+          "entity": "skeleton",
+          "x": 10,
+          "y": 43,
+          "level": 15
+        },
+        {
+          "entity": "skeleton",
+          "x": 16,
+          "y": 38,
+          "level": 15
+        },
+        {
+          "entity": "paleWarden",
+          "x": 46,
+          "y": 40
+        },
+        {
+          "entity": "wraith",
+          "x": 50,
+          "y": 42,
+          "level": 15
+        },
+        {
+          "entity": "wraith",
+          "x": 46,
+          "y": 43,
+          "level": 15
+        },
+        {
+          "entity": "skeleton",
+          "x": 43,
+          "y": 43,
+          "level": 15
+        },
+        {
+          "entity": "skeleton",
+          "x": 50,
+          "y": 37,
+          "level": 15
+        }
       ],
       "choices": []
     }
