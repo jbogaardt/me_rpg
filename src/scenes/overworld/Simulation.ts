@@ -36,6 +36,7 @@ import {
   starveRate,
   thirsty,
 } from '../../systems/needs';
+import { bossMends } from '../../systems/bosses';
 import { GIVERS, QUEST_GIVER, recordKill, recordVisit, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
@@ -581,6 +582,17 @@ export class Simulation {
     if (s.hp <= 0) this.defeat(p);
   }
 
+  /** A wipe starts a named boss's fight again (`bosses.ts`): one in a zone no hero is in any more is back at full health. */
+  private mendBosses() {
+    const { arena } = this;
+    const party = arena.party();
+    for (const z of arena.zones.values()) {
+      const here = party.filter((q) => arena.zoneOf(q) === z).length;
+      for (const m of z.mobs)
+        if (bossMends({ named: !!m.kind.named, alive: m.alive, hp: m.hp, maxHp: m.kind.maxHp }, here)) m.reset();
+    }
+  }
+
   /** Out of HP: back to the spawn point, fully restored (XP and levels are kept). */
   private defeat(p: Player) {
     if (this.trialDefeat(p)) return;
@@ -604,7 +616,9 @@ export class Simulation {
     p.ward = 0;
     p.edge = { charges: 0, timer: 0 };
     p.guard = 0;
-    if (arena.role === 'solo') for (const z of arena.zones.values()) z.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them
+    if (arena.role === 'solo')
+      for (const z of arena.zones.values()) z.mobs.forEach((m) => m.reset()); // in co-op the other player is still fighting them
+    else this.mendBosses();
     if (p === arena.local) this.announce(DEFEAT_LINES);
     else this.emit({ type: 'defeat', player: p.slot });
   }

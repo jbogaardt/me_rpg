@@ -31,10 +31,11 @@ export function questArt(q: Quest, portrait: (mobKind: string) => string | null)
   const o = q.objective;
   let picture: string;
   let caption: string;
-  if (o.t === 'kill') {
-    const src = portrait(o.kind);
+  if (o.t === 'kill' || o.t === 'boss') {
+    const key = o.t === 'boss' ? o.boss : o.kind;
+    const src = portrait(key);
     picture = src ? `<img src="${src}" alt="" />` : '';
-    caption = MOB_KINDS[o.kind]?.name ?? '';
+    caption = MOB_KINDS[key]?.name ?? '';
   } else if (o.t === 'gather') {
     picture = siteSvg(o.site);
     caption = SITE_KINDS[o.site]?.name ?? '';

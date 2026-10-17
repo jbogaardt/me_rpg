@@ -66,9 +66,20 @@ friend, so an epic is told alone as it is to a party. A friend only draws it (th
 player in a live world is offered an epic by the director's card; the sandbox campaign has no way to begin one by hand
 yet. Online only the DM's quests count: the story chain's givers only pass the time of day.
 
+## End bosses: the climax of an epic (`systems/bosses.ts`; core engine, content, co-op)
+
+Two bosses, never mixed: the DM's (`dmBoss.ts`, `MobKind.boss`) and the **authored** one
+(`MobKind.named`). **Placement**: an `entities.json` mob with `"boss": true` (tougher stats, long `windup` as its telegraph),
+placed once by a scenario node of its zone, never a roamer (`map -- check`). **Objective**: `{"t": "boss", "boss": "<entity>",
+"zone": "<map>", "count": 1}`, one kill. **Co-op**: the host owns the fight and
+every hero in the zone shares the kill with nothing new on the wire (no protocol change); online the DM's own `boss` step is the climax. **Wipe**: a knocked-out hero wakes at the start as always; the
+boss never respawns once fallen but **mends fully when a knockout leaves no hero in its zone** (`bossMends`).. **Reward and beat**: the quest's `reward`; when it is the **last quest of
+the chain** (`isFinale`) the epilogue follows the reward lines and `Talk.finale` is set, the one small hook for a closing
+scene. **DM trigger**: a saga ends in a `boss` step (`dmQuests`); it cannot yet name an authored one.
+
 ## Not yet
 
-A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `dmGear.ts`: one piece, a step up
+An authored boss in the packs, in a DM epic's `objective`, phases and adds, a respawn for a hero who takes the quest after it fell. A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `dmGear.ts`: one piece, a step up
 of the way they fight and sized to the party's level, varied by slot), a person who turns on the party, branching, the packs' arcs (a third quest
 format that assembles live worlds), people placed by the maps (a campaign's givers) and by the log (the DM's) as one
 mechanism, and one *trigger* for both holders (a giver's talk, or the runner) with one telling for what a step says.

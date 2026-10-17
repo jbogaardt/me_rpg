@@ -831,6 +831,7 @@
     },
     "stillheart": {
       "type": "mob",
+      "boss": true,
       "name": "The Stillheart",
       "notes": "The last story boss (quest 'heart'): a troll that has swallowed a splinter of the Hourglass and cannot be stunned. Frostlands, levels 8-10.",
       "scale": 1.5,

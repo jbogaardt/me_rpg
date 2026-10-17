@@ -411,6 +411,35 @@ describe('toMobKind', () => {
   });
 });
 
+describe('named bosses', () => {
+  const withBoss = () => {
+    const f = files();
+    const entities = (f.entities as { entities: Record<string, Record<string, unknown>> }).entities;
+    entities.goblin!.boss = true;
+    const quest = (f.quests as { quests: { objective: unknown }[] }).quests[0]!;
+    quest.objective = { t: 'boss', boss: 'goblin', zone: 'greenwood', count: 1 };
+    return { f, entities, quest };
+  };
+
+  it('are a mob flag and a boss objective that names one', () => {
+    const { f } = withBoss();
+    const c = parseContent(f);
+    expect(toMobKind(c.entities.goblin!).named).toBe(true);
+    expect(c.quests.quests[0]?.objective).toEqual({ t: 'boss', boss: 'goblin', zone: 'greenwood', count: 1 });
+  });
+
+  it('are refused when the objective names a mob that is no boss, or an npc is flagged', () => {
+    const { f, entities, quest } = withBoss();
+    delete entities.goblin!.boss;
+    expect(problems(f).join('\n')).toMatch(/quests\.cull\.objective\.boss: "goblin" is not a mob with "boss": true/);
+    entities.elder!.boss = true;
+    quest.objective = { t: 'boss', boss: 'goblin', zone: 'nowhere', count: 1 };
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/entities\.elder\.boss: is true on a mob/);
+    expect(p).toMatch(/quests\.cull\.objective\.zone: "nowhere" is not the map of any biome/);
+  });
+});
+
 describe('requirements', () => {
   const hero = { stats: { level: 4, attack: 6, defense: 2, magic: 9 }, skills: ['ironSkin'] };
   it('check a stat or a skill', () => {

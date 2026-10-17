@@ -69,3 +69,26 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
     expect(new Set(sold).size).toBe(sold.length);
   });
 });
+
+// A named boss (entities.json `boss`, systems/bosses.ts) is a mob that a `boss` objective names, nothing else is.
+describe.each(campaigns())('%s bosses', (campaign) => {
+  const content = loadContentFromDisk(campaign);
+  const { entities, quests } = content.content;
+
+  it('are mobs, and every boss objective names one', () => {
+    for (const [id, e] of Object.entries(entities)) if (e.boss) expect(e.type, id).toBe('mob');
+    for (const q of quests.quests)
+      if (q.objective.t === 'boss') expect(entities[q.objective.boss]?.boss, q.id).toBe(true);
+  });
+
+  it('are installed as named kinds', () => {
+    for (const [id, e] of Object.entries(entities))
+      if (e.type === 'mob') expect(!!content.mobKind(id).named, id).toBe(!!e.boss);
+  });
+});
+
+it('campaign 1 ends its story on a named boss, so the epilogue follows its reward', () => {
+  const { quests, entities } = loadContentFromDisk('campaign1').content;
+  expect(quests.quests[quests.quests.length - 1]?.objective.t).toBe('boss');
+  expect(entities.stillheart?.boss).toBe(true);
+});
