@@ -56,7 +56,7 @@ export const REPLY_WORDS = [
 /** The game starts: the DM's welcome, a pair of lines. */
 export const WELCOMES: string[][] = [
   [
-    'Ah, there you are! Gather round, travellers. I am your Dungeon Master, and I have been looking forward to this.',
+    'Ah, there you are! Welcome, travellers. I am your Dungeon Master, and I have been looking forward to this.',
     'Stay close, mind one another, and do try not to die before the interesting part.',
   ],
   [
@@ -64,7 +64,7 @@ export const WELCOMES: string[][] = [
     'I shall call on you when the tale needs you. Until then: look about, be brave, be kind to the chickens.',
   ],
   [
-    'Well! A fresh party, a fresh world, and not one of you yet knows what a mess you are about to make of it.',
+    'Welcome! A fresh party, a fresh world, and not one of you yet knows what a mess you are about to make of it.',
     'Splendid. Together now, and listen for my voice. It is the one that sounds pleased.',
   ],
 ];
