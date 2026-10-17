@@ -14,7 +14,7 @@ import type { Simulation } from './Simulation';
 import type { Zones } from './Zones';
 
 /** Two open lands, a and b, and a shop off a; a has a place to reach, b has none, and the party stands at the place. */
-function game(far = false, story: unknown = null) {
+function game(far = false, story: unknown = null, stock: typeof STOCK_EPICS = STOCK_EPICS) {
   setPlaces({ a: 'The Glen', b: 'The Fen', shop: 'Shop' }, { a: ['b', 'shop'] }, {});
   const zone = (name: string, places: { name: string; col: number; row: number }[]) =>
     ({
@@ -70,7 +70,7 @@ function game(far = false, story: unknown = null) {
   const said: string[] = [];
   const desk = { say: (t: string) => said.push(t) } as unknown as DmDesk;
   const tasks = new DmTasks(arena, sim, desk);
-  const epics = new DmEpics(arena, zones, content, tasks, desk, sim, story as never, () => STOCK_EPICS);
+  const epics = new DmEpics(arena, zones, content, tasks, desk, sim, story as never, () => stock);
   /** The saga's place on the page of options it is shown on, turning pages until it is found (-1 if never). */
   const pick = (id: string) => {
     for (let n = 0; n < 10; n++) {
@@ -94,6 +94,30 @@ describe('epic quests, on the host', () => {
     expect(items.length).toBeLessThanOrEqual(4);
     for (const i of items)
       expect(i.label).toMatch(/\n★+☆* · (Short|Medium|Long|Grand) · \d steps · \d lands? · ~\d+ min$/);
+  });
+
+  it('browses sagas as pages that never repeat, never wrap, and can go back', () => {
+    const base = STOCK_EPICS.filter((e) => !e.steps.some((st) => st.kind === 'meet'));
+    const many = Array.from({ length: 10 }, (_, i) => ({ ...base[i % base.length]!, title: `Saga ${i}` }));
+    const { epics } = game(false, null, many);
+    const seen: string[][] = [];
+    for (let n = 0; n < 20; n++) {
+      const o = epics.options();
+      expect(o.page).toBe(n);
+      expect(o.back).toBe(n > 0);
+      seen.push(o.items.map((i) => i.label.split('\n')[0]!));
+      if (!o.more) break;
+      epics.turnPage();
+    }
+    expect(seen.length).toBe(Math.ceil(many.length / 4));
+    const flat = seen.flat();
+    expect(new Set(flat).size).toBe(flat.length); // no saga on two pages, so no list is shown twice
+    epics.turnPage(); // past the end stays on the last page
+    expect(epics.options().more).toBe(false);
+    epics.turnPage(-1);
+    expect(epics.options().items.map((i) => i.label.split('\n')[0])).toEqual(seen[seen.length - 2]);
+    epics.firstPage();
+    expect(epics.options()).toMatchObject({ page: 0, back: false, more: true });
   });
 
   it('tells a saga step by step, each a quest of the DM’s with the saga’s own words, and pays the party at the end', () => {

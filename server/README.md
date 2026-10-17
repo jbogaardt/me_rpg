@@ -71,7 +71,9 @@ different version away), so point it at the site they use. Against a local build
   (`isRepeat`), says "follow the way", is empty or is a guess (`sure` under 0.5) is asked for once more with the reason,
   then replaced by a plain answer (the saga and task). Jev does the passive work: one choice question over a
   director's card's options (taken at confidence 0.55, `HINTS` and the party's health describe them), and events with no
-  player words. A card with no options skips Jev (nothing to choose). While an epic or quest runs "give them a quest" is
+  player words. **An unsure Jev (or none) never makes a guess a world change:** easy/struggle/lost/done take the card's
+  own `stay`, revive takes `leave`, and twist, pressure, epic and suggest take nothing (the card is dismissed); only
+  story and sky still ask the writer (`IMPROVISED_WHEN_UNSURE`, move source `safe`). A card with no options skips Jev (nothing to choose). While an epic or quest runs "give them a quest" is
   not offered. The writer's JSON is checked before use, so it can only choose what was offered.
 - The router is TypeSafe's Jev (`jev.ts`, the `@typesafe-ai/sdk` client) when `TYPESAFE_API_KEY` is set, and a
   word-matching mock (`mocks.ts`) otherwise; the bot says which at start. `TYPESAFE_DEFAULT_MODEL` pins a model

@@ -85,13 +85,85 @@ describe('decideCard', () => {
     const held = await decideCard(message('hello'), table(), services);
     expect(held.source).toBe('silent');
     expect(HOLD_REPLIES).toContain(held.reply);
-    expect(await decideCard(struggle, table(), services)).toMatchObject({ source: 'silent', pick: null, reply: null });
+    expect(await decideCard(struggle, table(), services)).toMatchObject({ source: 'safe', pick: 'stay', reply: null });
   });
 
   it('ignores a confident pick that was not offered', async () => {
     const router = { choose: () => Promise.resolve({ choice: 'made/up', confidence: 0.99, distribution: {} }) };
     const m = await decideCard(struggle, table(), { router, fallback: new MockFallback() });
-    expect(m).toMatchObject({ source: 'fallback', pick: 'ease' });
+    expect(m).toMatchObject({ source: 'safe', pick: 'stay' }); // a guess is not acted on: the card's own do-nothing
+  });
+});
+
+describe('an unsure pick on a director card does the safe thing (beta log: 18% "Turn up the heat")', () => {
+  const card = (kind: string, ...ids: string[]): Card => ({
+    kind,
+    title: kind,
+    note: '',
+    options: ids.map((id) => ({ id, label: id })),
+  });
+  const unsure = (confidence: number) => ({
+    choose: (q: { options: { id: string }[] }) =>
+      Promise.resolve({ choice: q.options[0]!.id, confidence, distribution: {} }),
+  });
+  const asks = () => {
+    const fallback = writer({ pick: 'heat' });
+    return { fallback, services: (c: number) => ({ router: unsure(c), fallback }) };
+  };
+
+  it("takes the card's own stay-the-course instead of a low-confidence heat", async () => {
+    for (const c of [0.16, 0.18, 0.22, 0.25, CONFIDENCE_CARD - 0.01]) {
+      const { fallback, services } = asks();
+      const easy = card('easy', 'heat', 'stay');
+      expect(await decideCard(easy, table(), services(c))).toMatchObject({ source: 'safe', pick: 'stay', road: null });
+      expect(fallback.asked).toHaveLength(0); // the writer is not asked to improvise a world change either
+    }
+    for (const [kind, ids] of [
+      ['struggle', ['ease', 'stay']],
+      ['lost', ['hint', 'stay']],
+      ['done', ['heat', 'stay']],
+    ] as const)
+      expect(await decideCard(card(kind, ...ids), table(), asks().services(0.2))).toMatchObject({ pick: 'stay' });
+  });
+
+  it('lets a fallen friend wake at the start rather than guessing a revive', async () => {
+    const revive = card('revive', 'where:1', 'here:1', 'leave:1');
+    expect(await decideCard(revive, table(), asks().services(0.2))).toMatchObject({ source: 'safe', pick: 'leave:1' });
+  });
+
+  it('does nothing on a card with no do-nothing option that changes the world', async () => {
+    for (const c of [
+      card('twist', 'close', 't:23'),
+      card('pressure', 'gentle', 'hard'),
+      card('epic', 'e:0', 'e:1'),
+      card('next', 'e:0'),
+      card('suggest', 's:epic'),
+    ])
+      expect(await decideCard(c, table(), asks().services(0.2))).toMatchObject({
+        source: 'safe',
+        pick: null,
+        road: null,
+      });
+  });
+
+  it('still lets the writer choose where the story goes or how the sky looks', async () => {
+    const fallback = writer({ pick: 'frost/thaw' });
+    const story = card('story', 'frost/thaw', 'desert/ford');
+    expect(await decideCard(story, table(), { router: unsure(0.2), fallback })).toMatchObject({
+      source: 'fallback',
+      pick: 'frost/thaw',
+    });
+  });
+
+  it('treats a down router like an unsure one', async () => {
+    const router = { choose: () => Promise.reject(new Error('down')) };
+    const m = await decideCard(card('easy', 'heat', 'stay'), table(), { router, fallback: writer({ pick: 'heat' }) });
+    expect(m).toMatchObject({ source: 'safe', pick: 'stay' });
+  });
+
+  it('still takes a sure pick', async () => {
+    const m = await decideCard(card('easy', 'heat', 'stay'), table(), asks().services(CONFIDENCE_CARD));
+    expect(m).toMatchObject({ source: 'router', pick: 'heat' });
   });
 });
 
@@ -134,7 +206,7 @@ describe("how a director's card is asked", () => {
     });
     expect(asked.source).toBe('fallback'); // typed words never go to the router
     const unsure = await decideCard(struggle, table(), { router: sure(CONFIDENCE_CARD - 0.1), fallback });
-    expect(unsure.source).toBe('fallback');
+    expect(unsure.source).toBe('safe');
   });
 });
 

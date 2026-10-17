@@ -1,21 +1,20 @@
 # The Dungeon Master (co-op host)
 
-Read this before touching the DM bar, director, cards, epics, possession, revive or narration. Code:
+Read before touching the DM bar, director, cards, epics, possession, revive or narration. Code:
 `src/scenes/overworld/Dm*.ts`, `src/systems/dm*.ts`, `src/hud/Dm*.ts`; each pure file's header says what it does.
 
 ## Philosophy
 
 - **There is one way to host, and the host is the DM.** Hosting is running the world, not playing in it. From the first
-  friend's connection player 0 has `dm` set (`Arena.setDm`); a guest knows that with nothing on the wire (`DM_SLOT`).
+  friend's connection player 0 has `dm` set (`Arena.setDm`); a guest knows it with nothing on the wire (`DM_SLOT`).
   Solo has no DM (a solo player in a live world gets only the cards), but a solo player is their own host: the epic
-  runner (`DmEpics`, `DmTasks`) and the DM's words work in solo too; a friend (a guest) never runs one. A solo player
-  begins one from the director's card in a live world; the sandbox has no way to begin one by hand yet.
+  runner (`DmEpics`, `DmTasks`) and the DM's words work in solo too; a guest never runs one. A solo player begins one
+  from the director's card in a live world.
 - **A human DM steers, never spawns.** They shape how hard the world pushes (pressure) and what happens in it (story,
-  sky, quests), never what is in it. The log's `cast`/`npc` entries are the door
-  for AI help: the DM bot (below) makes a person and sets them near the party through them.
+  sky, quests), never what is in it. The log's `cast`/`npc` entries are the door for AI help (the DM bot makes people).
 - **Steer by reacting, not by digging.** No admin panel: an always-there bar with hot buttons, and cards with two or three
-  buttons that go away if ignored. **Nothing pops up for the DM**: director nudges and player requests wait in an inbox
-  (a count on a button). No cooldowns; a DM is never made to wait.
+  buttons that go away if ignored. **Nothing pops up for the DM**: nudges and player requests wait in an inbox
+  (a count on a button). No cooldowns.
 - **Pre-canned words** for the director's moves keep the DM's voice consistent, each in several wordings
   (`systems/phrases.ts`: none comes back until the others have been said); the DM's own words are short and shown to everyone
   as a caption (`hud/Dialog.ts`) that takes no input, never stops play, leaves by itself, and is also spoken by the
@@ -51,7 +50,8 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   watches party health, task progress and quiet time, and suggests easing off, turning up the heat, a twist, which quest
   (after a breather once one ends), the compass (the map stays the party's own; the compass leans toward the place, then
   points at it), a breather, a new land's sky, raising a fallen player, or the story's next road (a vote).
-  Urgent cards wait less; dismissing one is a breather.
+  Urgent cards wait less; dismissing one is a breather. The epic card pages ("More epic quests", a way back, never
+  the same list twice). A bot unsure on a card takes its `stay`, else nothing.
 - **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (their own free-form words, from the 💬
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,
   `DmMsg.reply`).
