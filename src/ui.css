@@ -509,6 +509,13 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
   width: min(300px, calc(100vw - 16px)); text-align: center; color: var(--ink); font-size: 17px;
 }
 #trade-request[hidden], #trade-toast[hidden] { display: none; }
+#pickup-toasts {
+  position: fixed; z-index: 3; left: calc(8px + env(safe-area-inset-left)); bottom: calc(150px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 3px; pointer-events: none; font-family: var(--body);
+}
+#pickup-toasts div {
+  padding: 2px 8px; border-radius: 3px; background: rgba(20, 14, 6, 0.5); color: var(--gold); font: 700 12px var(--title);
+}
 #trade-request p { margin: 0 0 8px; }
 #trade-request .row { display: flex; justify-content: center; gap: 8px; }
 #trade-request .item-btn { pointer-events: auto; min-width: 84px; padding: 8px 10px; font-size: 14px; }
