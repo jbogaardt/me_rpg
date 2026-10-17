@@ -5,7 +5,6 @@ import { ITEMS } from '../../src/systems/items';
 import { PET_KINDS } from '../../src/systems/pets';
 import { GIVERS, SITE_KINDS } from '../../src/systems/quests';
 import { ZONE_NAMES } from '../../src/systems/places';
-import { SHOPS } from '../../src/systems/shops';
 import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
 import { doorCells as cellsOf, onDoor } from '../../src/map/doors';
@@ -103,7 +102,7 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   if (d.npc) points.push(['npc', d.npc]);
   for (const sh of d.shops) {
     points.push([`shopkeeper ${sh.shop}`, sh]);
-    if (!SHOPS[sh.shop]) errors.push(`shopkeeper at (${sh.col},${sh.row}) runs unknown shop "${sh.shop}" (SHOPS)`);
+    // whether its campaign has that shop is the content check's (tools/content/check.ts): a pack's rooms run the packs'
   }
   for (const p of d.pets) {
     points.push([`pet ${p.kind}`, p]);

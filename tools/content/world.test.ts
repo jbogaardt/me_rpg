@@ -188,6 +188,15 @@ describe('a world from its log', () => {
       expect(() => parseContent(world.files())).not.toThrow();
     }
     expect(towns).toBeGreaterThan(20);
+    // the town's shops come with it: each room a biome linked to the town, each shop with its keeper
+    const world = new World(1, packs);
+    world.open();
+    if (world.regions.includes('hearthmere')) {
+      const content = parseContent(world.files());
+      expect(content.biomes.hearthmere.links).toEqual(expect.arrayContaining(['haven_forge', 'haven_goods']));
+      expect(content.biomes.haven_forge).toMatchObject({ map: 'haven_forge', links: ['haven_town'], climate: null });
+      expect(Object.keys(content.items.shops)).toEqual(expect.arrayContaining(['hearth_forge', 'hearth_lodge']));
+    }
     const random = assemble(5, packs);
     expect(random.regions.some((id) => id === 'hearthmere')).toBe(true);
   });

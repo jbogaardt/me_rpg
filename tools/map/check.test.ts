@@ -215,12 +215,7 @@ describe('checkMap', () => {
     expect(r.errors).toEqual([]);
   });
 
-  it('errors on an unknown shop, and on a shopkeeper standing inside a building', () => {
-    const unknown = field((z) => {
-      z.spawn(2, 2);
-      z.shop('bakery', 4, 4);
-    });
-    expect(unknown.errors.join('\n')).toMatch(/unknown shop "bakery"/);
+  it('errors on a shopkeeper standing inside a building (which shops exist is the content check’s)', () => {
     const inside = field((z) => {
       z.spawn(2, 2);
       z.prop('armory', 6, 10);

@@ -114,9 +114,35 @@ export interface RegionDef {
   encounters?: ({ role: string; x: number; y: number } | { entity: string; x: number; y: number })[];
   /** Its gather sites (as quests.json `sites`; the map places them with `z.site`). */
   sites?: Record<string, { name: string; plural?: string; [key: string]: unknown }>;
+  /**
+   * Rooms inside it (a shop, an inn), by biome id: each its own map (`z.indoor`) whose door leads back into the region's
+   * map, as the region's map has a door into it. A world that holds the region holds its rooms too.
+   */
+  rooms?: Record<string, RoomDef>;
   /** Its zone's own word on the zone-scoped capabilities (no map in this cave), written into its biome. */
   capabilities?: CapabilitySpec;
 }
+
+/** A room of a region (`RegionDef.rooms`): a biome with no ports, joined to its region by a door each way. */
+export interface RoomDef {
+  name: string;
+  map: string;
+  tilesets: string[];
+}
+
+/** The biomes and scenario nodes of `region`'s rooms (`map` is the region's own map, which their doors lead back to). */
+export function roomsOf(region: RegionDef): { biomes: Record<string, unknown>; nodes: unknown[] } {
+  const biomes: Record<string, unknown> = {};
+  const nodes: unknown[] = [];
+  for (const [id, room] of Object.entries(region.rooms ?? {})) {
+    biomes[id] = { ...room, climate: null, music: null, links: [region.biome.map], generation: {} };
+    nodes.push({ node_id: id, biome_type: id, entities: [], choices: [] });
+  }
+  return { biomes, nodes };
+}
+
+/** The maps of `region`'s rooms (what its own map's doors lead to). */
+export const roomMaps = (region: RegionDef): string[] => Object.values(region.rooms ?? {}).map((r) => r.map);
 
 /** What an arc asks of one of its regions. */
 export interface ArcSlot {
@@ -640,8 +666,8 @@ export function catalogCampaign(packs: readonly Pack[]): Record<ContentFile, unk
     },
     biomes: {
       version: CONTENT_VERSION,
-      biomes: Object.fromEntries(
-        ids.map((id) => {
+      biomes: Object.fromEntries<unknown>([
+        ...ids.map((id): [string, unknown] => {
           const r = cat.regions[id]!;
           const roam = r.roam.map((rule) => ({
             kinds: [foeOf(id, rule.role)],
@@ -655,25 +681,29 @@ export function catalogCampaign(packs: readonly Pack[]): Record<ContentFile, unk
             {
               ...r.biome,
               ...(r.capabilities ? { capabilities: r.capabilities } : {}),
-              links: [],
+              links: roomMaps(r),
               ports: {},
               generation: { roam },
             },
           ];
         }),
-      ),
+        ...ids.flatMap((id) => Object.entries(roomsOf(cat.regions[id]!).biomes)),
+      ]),
     },
     scenarios: {
       version: CONTENT_VERSION,
       start: hub,
-      nodes: ids.map((id) => ({
-        node_id: id,
-        biome_type: id,
-        entities: (cat.regions[id]!.encounters ?? []).map((e) =>
-          'entity' in e ? e : { entity: foeOf(id, e.role), x: e.x, y: e.y },
-        ),
-        choices: [],
-      })),
+      nodes: [
+        ...ids.map((id) => ({
+          node_id: id,
+          biome_type: id,
+          entities: (cat.regions[id]!.encounters ?? []).map((e) =>
+            'entity' in e ? e : { entity: foeOf(id, e.role), x: e.x, y: e.y },
+          ),
+          choices: [],
+        })),
+        ...ids.flatMap((id) => roomsOf(cat.regions[id]!).nodes),
+      ],
     },
     quests: {
       version: CONTENT_VERSION,

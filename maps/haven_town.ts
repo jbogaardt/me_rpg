@@ -1,6 +1,7 @@
 import { defineZone } from '../tools/map/zone';
 import { TREES } from '../tools/map/catalog';
 import { blob, pond, reedsAt, trail } from '../tools/map/helpers';
+import { SHOP_ARRIVAL } from '../tools/map/interiors';
 
 // A region for random and live worlds (public/content/packs/towns.json): Hearthmere, a market town round a cobbled
 // square, a safe harbour beside the land a story starts in. No foes live here (the pack gives it none): it is where a
@@ -59,10 +60,15 @@ export default defineZone({
     z.port('south', 24, H - 2, 3, 25, H - 6, 1, [...SEAL]);
 
     // --- The town's halls, round the square (scenery: solid, you walk round them) --------------------------------------
+    // Each hall is a shop: its door leads into a room (maps/haven_*.ts, the region's `rooms` in the towns pack).
     z.prop('smithy', 10, 13);
+    z.door(12, 13, 2, 'haven_forge', SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
     z.prop('apothecary', 36, 13);
+    z.door(38, 13, 2, 'haven_goods', SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
     z.prop('armory', 12, 34);
+    z.door(13, 34, 1, 'haven_armory', SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
     z.prop('ranger', 38, 34);
+    z.door(39, 34, 1, 'haven_lodge', SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
 
     // --- Barrels by the smithy and the market, for the townsfolk's errands -------------------------------------------
     for (const [col, row] of [

@@ -33,6 +33,8 @@ import {
   pairingsBetween,
   partnersOf,
   rng,
+  roomMaps,
+  roomsOf,
   STEP,
   storyFor,
   type ArcDef,
@@ -431,7 +433,7 @@ export class World {
       biomes[id] = {
         ...r.biome,
         ...(r.capabilities ? { capabilities: r.capabilities } : {}),
-        links: Object.values(ports).map((b) => b.map),
+        links: [...Object.values(ports).map((b) => b.map), ...roomMaps(r)],
         ports,
         generation: {
           roam: r.roam.map((rule) => ({
@@ -452,6 +454,9 @@ export class World {
         choices: [],
         ...(this.cast.get(id)?.length ? { cast: this.cast.get(id)!.map((c) => ({ ...c })) } : {}),
       });
+      const rooms = roomsOf(r); // its shops and inns: a biome and node each, with nobody in them but the keeper
+      Object.assign(biomes, rooms.biomes);
+      nodes.push(...rooms.nodes);
       for (const [site, def] of Object.entries(r.sites ?? {})) {
         const { plural: _p, ...rest } = def;
         sites[site] = rest;
