@@ -24,6 +24,16 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
     expect(scenarios.nodes.has(scenarios.start)).toBe(true);
   });
 
+  it('has no two people with the same name (a story would meet them twice)', () => {
+    const seen = new Map<string, string>();
+    for (const [id, e] of Object.entries(entities)) {
+      if (e.type !== 'npc') continue;
+      const key = e.name.trim().replace(/\s+/g, ' ').toLowerCase();
+      expect(seen.get(key), `${id} and ${seen.get(key)} are both "${e.name}"`).toBeUndefined();
+      seen.set(key, id);
+    }
+  });
+
   it.each(Object.entries(entities))('%s is drawn with real parts, each in its own slot', (_id, e) => {
     const outfit: Outfit = e.sprite;
     for (const [slot, part] of Object.entries(outfit)) {
