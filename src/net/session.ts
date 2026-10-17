@@ -8,6 +8,7 @@ import { LinkClosed, PeerLink, type Link, type LinkFactory, type LinkStatus } fr
 import {
   encodeMessage,
   mergeSnapshots,
+  HELLO_ID,
   parseMessage,
   PROTOCOL_VERSION,
   type DoMsg,
@@ -134,6 +135,27 @@ export const setContentTag = (tag: string) => {
 export const getContentTag = () => contentTag;
 /** Seconds a host lets a friend in another world move over to its own before it drops them. */
 const WORLD_GRACE_MS = 6000;
+/** This browser's lasting id, which a host uses to give a rejoining friend their hero back (kept in local storage; made again if it cannot be). */
+let memoryId = '';
+function playerId(): string {
+  try {
+    const kept = localStorage.getItem('me_rpg_player');
+    if (kept && HELLO_ID.test(kept)) return kept;
+  } catch {
+    // storage blocked: the id lasts as long as the page
+  }
+  if (!memoryId) {
+    const bytes = crypto.getRandomValues(new Uint8Array(12));
+    memoryId = [...bytes].map((b) => b.toString(36).padStart(2, '0')).join('');
+  }
+  try {
+    localStorage.setItem('me_rpg_player', memoryId);
+  } catch {
+    // ignore
+  }
+  return memoryId;
+}
+
 /** What a hello carries as `build`: the build, then the world, at most 64 characters. */
 const helloBuild = () => (contentTag ? `${__BUILD_ID__}#${contentTag}`.slice(0, 64) : __BUILD_ID__);
 
@@ -173,6 +195,7 @@ export class Session {
   private listeners = new Set<() => void>();
   private handshakes = new Map<Link, ReturnType<typeof setInterval>>(); // hello resend timers
   private inputs = new Map<number, { msg: InputMsg; at: number }>();
+  private peerIds = new Map<number, { link: Link; id: string }>(); // host: the id each seat's friend said they have
   private newestInput = new Map<number, number>();
   private snapshot: SnapMsg | null = null;
   private newestSnapshot = -1;
@@ -243,6 +266,12 @@ export class Session {
       .filter((seat) => seat.phase === 'connected')
       .map((seat) => seat.slot)
       .sort((a, b) => a - b);
+  }
+
+  /** Host: the lasting id the friend in seat `slot` gave in their hello, once it has arrived. */
+  peerId(slot: number): string | undefined {
+    const known = this.peerIds.get(slot);
+    return known && this.seats.get(slot)?.link === known.link ? known.id : undefined;
   }
 
   /** Who is at the table, for the menu. Empty until a game exists. */
@@ -611,6 +640,7 @@ export class Session {
     switch (message.k) {
       case 'hello':
         this.endHandshake(link); // heard from them: no need to keep repeating ours
+        if (this.mode === 'host' && message.id) this.peerIds.set(slot, { link, id: message.id });
         if (message.v !== PROTOCOL_VERSION || message.build.split('#')[0] !== __BUILD_ID__) {
           link.close(VERSION_MISMATCH_TEXT);
         } else if (message.build !== helloBuild()) {
@@ -701,7 +731,12 @@ export class Session {
   /** Version check: both sides send hello until they hear the other's (the first one can be lost). */
   private beginHandshake(link: Link) {
     this.endHandshake(link);
-    const hello = encodeMessage({ k: 'hello', v: PROTOCOL_VERSION, build: helloBuild() });
+    const hello = encodeMessage({
+      k: 'hello',
+      v: PROTOCOL_VERSION,
+      build: helloBuild(),
+      ...(this.mode === 'join' ? { id: playerId() } : {}),
+    });
     link.send(hello);
     this.handshakes.set(
       link,

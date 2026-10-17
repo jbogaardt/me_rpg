@@ -81,6 +81,11 @@ describe('messages', () => {
     const input: InputMsg = { k: 'in', n: 3, keys: packKeys(1, -1), act: 2, cb: 0, ci: 0, ack: 12, vr: 340 };
     const hello = { k: 'hello', v: PROTOCOL_VERSION, build: 'abc' } as const;
     for (const m of [input, hello, snap]) expect(parseMessage(encodeMessage(m))).toEqual(m);
+    const named = { ...hello, id: 'abc123def456' };
+    expect(parseMessage(encodeMessage(named))).toEqual(named);
+    expect(parseMessage(JSON.stringify({ ...hello, id: 'no spaces allowed' }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...hello, id: 'x' }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...hello, id: 7 }))).toBeNull();
   });
 
   it('carries the acknowledged input number of a snapshot', () => {

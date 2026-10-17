@@ -28,8 +28,8 @@ and the game loop; headers of `feed.ts`, `PeerLink.ts`, `relayClient.ts` and `ho
   capacity limit is the three seats: a seat is free only once its link has ended (silence is noticed within 6 s), and
   the relay hands each seat out once. The host keeps the room alive by polling `answers`, and the last friend leaving
   does not end the game (the host just plays solo, `role` `'solo'`, until someone rejoins); only the relay forgetting
-  the game, or the host disconnecting, does. A rejoiner arrives as a **new hero at the start**: the host drops a
-  leaver's hero (`HostLink.reconcile`), so giving back the same one is not done yet.
+  the game, or the host disconnecting, does. A rejoiner arrives at the start as **the hero they left**: a friend's hello carries a lasting id (`HelloMsg.id`, kept in
+  their local storage); the host keeps a leaver's hero by it (`HostLink.kept`, the last 12) and hands it back.
 - **The channel is lossy, so inputs are state, not events.** Held keys plus running counters for presses; one-shot visuals
   ride in snapshots with ids and are acknowledged (`ack`) so each shows once; anything a guest must see eventually is
   state the host repeats (repeated chunks of the world log, `pack` once a second). Never design a message whose loss
