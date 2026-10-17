@@ -216,6 +216,8 @@ body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
   left: calc(18px + env(safe-area-inset-left)); bottom: calc(18px + env(safe-area-inset-bottom)); width: 140px; height: 140px;
   background: radial-gradient(rgba(20, 15, 8, 0.15), rgba(20, 15, 8, 0.45)); border: 2px solid rgba(180, 138, 74, 0.55);
 }
+#dpad.floating { opacity: 0; pointer-events: none; }
+#dpad.floating.touched { opacity: 1; }
 #dpad-knob {
   position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; pointer-events: none;
   border-radius: 50%; background: rgba(23, 18, 12, 0.55); border: 2px solid rgba(242, 211, 138, 0.6);
