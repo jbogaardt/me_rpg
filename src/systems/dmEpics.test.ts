@@ -140,6 +140,17 @@ describe('epics as data', () => {
     expect(typeof parsed).toBe('object');
     expect(needsPeople(parsed as never)).toBe(true);
   });
+  it('accepts a boss or a mastery as a step, and counts them in the gauge', () => {
+    const t = epic();
+    t.steps.push(
+      { kind: 'boss', hop: 2, tell: 'The beast of {area} waits.' },
+      { kind: 'master', hop: 0, tell: 'Practise.' },
+    );
+    const parsed = parseEpic(t);
+    expect(parsed).toMatchObject({ steps: [{ kind: 'meet' }, { kind: 'hunt' }, { kind: 'boss' }, { kind: 'master' }] });
+    const plain = planEpic(parseEpic(epic()) as never, 'a', big)!;
+    expect(gauge(planEpic(parsed as never, 'a', big)!).minutes).toBeGreaterThan(gauge(plain).minutes);
+  });
   it('accepts the words a person says after and when it is over, and refuses bad ones', () => {
     const withLines = (v: unknown) => {
       const t = epic();

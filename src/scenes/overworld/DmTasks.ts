@@ -16,12 +16,22 @@ import {
 import { ITEMS, itemOf } from '../../systems/items';
 import { enabled } from '../../systems/capabilities';
 import { heroCombos } from '../../systems/skills';
+import { SPELLS } from '../../systems/spells';
 import { SITE_KINDS, mobKey } from '../../systems/quests';
 import type { Player } from '../../entities/Player';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
 import type { Simulation } from './Simulation';
 import type { ZoneState } from '../ZoneState';
+
+/** The spells the party's wands and tomes teach in `zone` (one entry per spell, with the keys that cast it): what a mastery quest may ask for. Empty where `combos` is off. */
+function masteries(party: Player[], zone: string): NonNullable<Land['combos']> {
+  const out = new Map<string, { spell: string; name: string; keys: string }>();
+  for (const p of party)
+    for (const c of heroCombos(p.hero, zone))
+      if (!c.skill && !out.has(c.spell)) out.set(c.spell, { spell: c.spell, name: SPELLS[c.spell].name, keys: c.keys });
+  return [...out.values()];
+}
 
 /** What the DM says as a quest ends: their voice, to every screen (the telling of a new one is each player's own dialog). */
 
@@ -58,9 +68,9 @@ export class DmTasks {
       this.book.kill(key, zone);
     };
     const cast = sim.onCast;
-    sim.onCast = (p, zone) => {
-      cast(p, zone);
-      this.book.cast(zone);
+    sim.onCast = (p, zone, spell) => {
+      cast(p, zone, spell);
+      this.book.cast(zone, spell);
     };
     const setDown = sim.onSetDown;
     sim.onSetDown = (p, zone, index, x, y) => {
@@ -123,7 +133,7 @@ export class DmTasks {
         : { x: (zone.data.spawn.col + 0.5) * CELL, y: (zone.data.spawn.row + 0.5) * CELL }; // nobody there yet: from where one arrives
     const mobs = arena.inZone(zone, () =>
       arena.mobs.flatMap((m) => {
-        const key = m.alive ? mobKey(m.kind) : undefined;
+        const key = m.alive && !m.kind.boss ? mobKey(m.kind) : undefined; // a boss is the quest's own, not the land's
         return key ? [{ key, name: m.kind.name, xp: m.kind.xp, x: m.body.x, y: m.body.y }] : [];
       }),
     );
@@ -142,6 +152,8 @@ export class DmTasks {
       casters: enabled('combos', zone.name) && party.some((p) => heroCombos(p.hero, zone.name).length > 0),
       barrels: enabled('carrying', zone.name) ? zone.barrels.filter((b) => !b.carried).length : 0,
       relics: relicsFor(ITEMS, level),
+      party: party.length,
+      combos: masteries(party, zone.name),
       spot: () => {
         for (let i = 0; i < 300; i++) {
           const x = (2 + Math.floor(Math.random() * (zone.data.width - 4)) + 0.5) * CELL;
@@ -240,9 +252,13 @@ export class DmTasks {
   /** Where the quest leads now: the nearest living foe of the kind to the party, the nearest site not yet touched. */
   private target(party: Player[]): { x: number; y: number } | undefined {
     const t = this.book.task;
-    if (!t || (t.kind !== 'hunt' && t.kind !== 'gather')) return undefined;
+    if (!t || (t.kind !== 'hunt' && t.kind !== 'gather' && t.kind !== 'boss')) return undefined;
     const zone = this.arena.zones.get(t.zone);
     if (!zone) return undefined;
+    if (t.kind === 'boss') {
+      const boss = this.arena.inZone(zone, () => this.arena.mobs.find((m) => m.kind.boss && m.alive)); // the compass follows it
+      return boss && { x: boss.body.x, y: boss.body.y };
+    }
     const here = party.filter((p) => p.zone === t.zone);
     const from = here[0]?.body ?? this.arena.local.body;
     const near = (list: { x: number; y: number }[]) =>
@@ -265,6 +281,7 @@ export class DmTasks {
     if (result === 'done') {
       const { xp, gold } = t.quest.reward; // scaled to the party's level when it was given
       for (const p of party) this.sim.reward(p, xp, gold);
+      // Hook: a boss quest may also drop gear for the party here (`t.kind === 'boss'`; `upgradeFor`/`relicsFor` pick pieces).
       const finder = this.finder;
       const item = t.kind === 'find' ? ITEMS[t.what] : undefined;
       if (finder && item) {

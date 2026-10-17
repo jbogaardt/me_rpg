@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   HINT_AREA,
   HINT_ARROW,
+  TASK_KINDS,
   TASK_TIMEOUT,
   TaskBook,
   VISIT_REACH,
@@ -31,6 +32,45 @@ const input = (i: Partial<TaskInput> = {}): TaskInput => ({
   health: 1,
   falls: 0,
   ...i,
+});
+
+describe('a boss and a mastery', () => {
+  it('counts only the boss’s death, in its land, and a mastery only the spell it names', () => {
+    const b = new TaskBook();
+    b.call(offer({ kind: 'boss', title: 'Slay the Hollow Goblin King', goal: 1, what: 'goblin:480' }));
+    expect(b.kill('goblin', 'fen')).toBe(false); // an ordinary goblin is not the boss
+    expect(b.kill('boss', 'glen')).toBe(false);
+    expect(b.kill('boss', 'fen')).toBe(true);
+    expect(b.tick(1, input())).toBe('done');
+    const m = new TaskBook();
+    m.call(offer({ kind: 'master', title: 'Master Arcane Bolt: cast it 2 times', goal: 2, what: 'bolt:uurl' }));
+    expect(m.cast('fen')).toBe(false); // a spell, but not which
+    expect(m.cast('fen', 'nova')).toBe(false);
+    expect(m.cast('glen', 'bolt')).toBe(false); // not its land
+    expect(m.cast('fen', 'bolt')).toBe(true);
+    expect(m.cast('fen', 'bolt')).toBe(true);
+    expect(m.cast('fen', 'bolt')).toBe(false); // the count is made
+    expect(m.tick(1, input())).toBe('done');
+  });
+
+  it('takes a while to finish a boss, and longer to master a spell than to cast any', () => {
+    expect(parOf('boss', 1)).toBeGreaterThan(parOf('hunt', 3));
+    expect(parOf('master', 3)).toBeGreaterThan(parOf('cast', 3));
+  });
+
+  it('travels as the 7th and 8th kinds and round-trips through the wire', () => {
+    expect(TASK_KINDS.indexOf('boss')).toBe(6);
+    for (const [kind, what] of [
+      ['boss', 'goblin:480'],
+      ['master', 'bolt:uurl'],
+    ] as const) {
+      const b = new TaskBook();
+      b.call(offer({ kind, title: 'T', what }));
+      const v = viewOf(b.task!);
+      expect(taskFromWire(JSON.parse(JSON.stringify(taskWire(v))))).toEqual(v);
+    }
+    expect(taskFromWire([8, 0, 0, 1, 'fen', 0, 0, 'x', 0, 0, ''])).toBeNull();
+  });
 });
 
 describe('spells and barrels', () => {

@@ -38,6 +38,30 @@ describe('briefing', () => {
     }
   });
 
+  it('tells a boss by name and a mastery by its spell and the arrows that cast it, in several wordings', () => {
+    const boss = task({ kind: 'boss', goal: 1, what: 'goblin:480', title: 'Slay the Hollow Goblin King' });
+    const bossPages = briefing(boss, names);
+    expect(bossPages).toHaveLength(3);
+    expect(bossPages.join(' ')).toContain('the Hollow Goblin King');
+    expect(bossPages.join(' ')).toContain('The Greenwood');
+    expect(objective(boss, names)).toBe('Defeat the Hollow Goblin King in The Greenwood.');
+    const master = task({ kind: 'master', goal: 3, what: 'bolt:uurl', title: 'Master Arcane Bolt: cast it 3 times' });
+    const text = briefing(master, names).join(' ');
+    expect(text).toContain('Arcane Bolt');
+    expect(text).toContain('↑↑→←'); // the arrows as the menu shows them
+    expect(text).toContain('up, up, right, left'); // and in words
+    expect(objective(master, names)).toBe('Cast Arcane Bolt 3 times in The Greenwood: ↑↑→←.');
+    // not one stock line: other quests of the kind are told other ways
+    const told = (n: number) =>
+      new Set(
+        Array.from(
+          { length: n },
+          (_, i) => briefing({ ...boss, title: `Slay boss ${i}`, what: `goblin:${480 + i}` }, names)[0],
+        ),
+      );
+    expect(told(12).size).toBeGreaterThan(2);
+  });
+
   it('names the foe, the count and how the reward comes', () => {
     const text = briefing(task({}), names).join(' ');
     expect(text).toContain('Goblins');

@@ -136,6 +136,8 @@ export interface MobKind {
    * as long as it lasts. Any hit on the caster breaks it, and it then only fights in melee for `ray.rest` seconds.
    */
   ray?: MobRay;
+  /** A boss of the Dungeon Master's quest (systems/dmBoss.ts): made for the quest, not a kind of the content, and it does not respawn. */
+  boss?: boolean;
 }
 
 export interface MobRay {
