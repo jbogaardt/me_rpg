@@ -7,6 +7,8 @@ export default defineConfig({
   // Identifies this build for the co-op version handshake (asset URLs use content versions instead, see the plugin).
   define: { __BUILD_ID__: JSON.stringify(Date.now().toString(36)) },
   plugins: [assetVersionsPlugin()],
+  // The speech model's thread (src/hud/kokoroWorker.ts) imports code-split packages, which needs module workers.
+  worker: { format: 'es' },
   test: {
     // Unit tests cover the Pixi-free logic (rules, collision, camera, map format, map checks).
     include: ['src/**/*.test.ts', 'tools/**/*.test.ts', 'server/**/*.test.ts'],

@@ -26,7 +26,7 @@ begin a quest). The DM also watches the party's health on their own.
 
 ## The DM has a voice
 
-A theatrical old storyteller with a dry wit, fond of the party and not above teasing it, never a bare "Well done."
+A theatrical old storyteller, warm and on the party's side, never snarky or mocking, never a bare "Well done."
 `systems/dmVoice.ts` holds several wordings of each moment the game spots, picked by a `Phrasebook`; the bot's model gets
 the same character (`server/narrate.ts` `PERSONA`). **A new spoken moment is a bank there, with a test, never one stock line.**
 

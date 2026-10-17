@@ -1,5 +1,5 @@
-// Who the Dungeon Master is, in words (Pixi-free, tested; core engine): a theatrical old storyteller with a dry wit, fond of
-// the party and not above teasing it. Never a bare "Well done."; always a small flourish, an aside, a wager, a raised
+// Who the Dungeon Master is, in words (Pixi-free, tested; core engine): a theatrical old storyteller, warm and on the
+// party's side, never snarky. Never a bare "Well done."; always a small flourish, an aside, a wager, a raised
 // eyebrow. Each moment has several wordings (`Phrasebook` picks one not said lately), kept short enough to read at a
 // glance. These are the DM's canned words for the moments the game spots itself; the DM bot's own model is given the same
 // character (`server/narrate.ts` PERSONA), and a person at the table words what they like.

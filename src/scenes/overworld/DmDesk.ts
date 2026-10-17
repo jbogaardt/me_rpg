@@ -81,6 +81,11 @@ export class DmDesk {
     private clock: DayClock,
   ) {}
 
+  /** The host's lobby is still open (nobody has tapped Start Game): the game has not begun. */
+  get lobby(): boolean {
+    return this.session.lobbyOpen;
+  }
+
   // --- The DM's side (solo or host) ---
 
   /** The weather where the DM stands: `precip` (null: none) and a wind level (0 still, 0.5 a breeze, 1 a gale). */

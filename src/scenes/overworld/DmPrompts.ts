@@ -92,7 +92,7 @@ export class DmPrompts {
     const pace = this.tasks.pace;
     const result = this.tasks.result;
     const kind = this.director.tick(dt, {
-      busy: busy || this.card.open || this.inbox.size > 0, // one thing waiting at a time: the DM catches up first
+      busy: busy || this.desk.lobby || this.card.open || this.inbox.size > 0, // one thing waiting at a time: the DM catches up first
       fallen: this.revive.unoffered !== undefined,
       storyReady: this.storyReady(),
       task: t && {
@@ -225,7 +225,7 @@ export class DmPrompts {
 
   /** Put a card up now. */
   open(kind: CardKind, note = '') {
-    if (!this.runsWorld) return;
+    if (!this.runsWorld || this.desk.lobby) return; // nothing is offered before the game begins
     if (kind !== 'pressure' && kind !== 'message' && kind !== 'suggest') this.inbox.drop(kind); // asked for by hand: no longer waiting
     const show = (title: string, options: CardOption[], seconds: number | null = CARD_TIME, text = note) =>
       this.card.show({ kind, title, note: text, options, seconds });

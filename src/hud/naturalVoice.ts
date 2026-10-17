@@ -5,16 +5,21 @@
 // when `voice.ts` asks. `voice.ts`
 // owns the choice and falls back to the browser's own voice while this loads, if it fails, or where there is no audio.
 
-import type { KokoroTTS } from 'kokoro-js';
+import type { FromWorker, ToWorker } from './kokoroWorker';
 
 const MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 /** An older British man: the wise old wanderer the DM is. */
 const VOICE = 'bm_george';
 const SPEED = 0.95;
+/** ms: the longest a sentence is waited for from the worker before it is given up (a line left unsaid, the next goes on). */
+const MAKE_LIMIT = 30_000;
 
 export type NaturalState = 'idle' | 'loading' | 'ready' | 'failed';
 
-let tts: KokoroTTS | null = null;
+/** The speech model's thread (kokoroWorker.ts), once loading has begun. */
+let worker: Worker | null = null;
+let nextId = 0;
+const making = new Map<number, (r: { audio: Float32Array; rate: number } | null) => void>();
 let state: NaturalState = 'idle';
 /** Why the model could not be loaded (the error's own words, short), for the player to read and to tell us. */
 let reason = '';
@@ -67,29 +72,37 @@ export const natural = {
     if (loading) return loading;
     state = 'loading';
     changed();
-    loading = (async () => {
-      const [{ KokoroTTS }, { env }] = await Promise.all([import('kokoro-js'), import('@huggingface/transformers')]);
-      // Speech is made in a worker, not in the page: a sentence takes seconds to make, and a frozen page cannot answer the
-      // network (the other players would drop it) or draw the game.
-      if (env.backends.onnx.wasm) env.backends.onnx.wasm.proxy = true;
-      env.allowLocalModels = false; // the weights come from the hub: never ask this site for /models/...
-      tts = await KokoroTTS.from_pretrained(MODEL, {
-        dtype: 'q8',
-        device: 'wasm',
-        progress_callback: (p) => {
-          if (p.status !== 'progress') return;
-          loaded.set(p.file, { loaded: p.loaded, total: p.total });
-          changed();
-        },
-      });
-      state = 'ready';
-    })()
-      .catch((err: unknown) => {
-        reason = (err instanceof Error ? err.message : String(err)).replace(/\s+/g, ' ').slice(0, 80);
+    loading = new Promise<void>((resolve) => {
+      const give = (why: string) => {
+        reason = why.replace(/\s+/g, ' ').slice(0, 80);
         state = 'failed';
         loading = null; // asking again tries again
-      })
-      .finally(changed);
+        stopWorker();
+        changed();
+        resolve();
+      };
+      try {
+        worker = new Worker(new URL('./kokoroWorker.ts', import.meta.url), { type: 'module' });
+      } catch (err) {
+        return give(err instanceof Error ? err.message : String(err));
+      }
+      worker.onerror = (e) => give(e.message || 'the speech thread failed');
+      worker.onmessage = ({ data }: { data: FromWorker }) => {
+        if (data.t === 'progress') {
+          loaded.set(data.file, { loaded: data.loaded, total: data.total });
+          changed();
+        } else if (data.t === 'ready') {
+          state = 'ready';
+          changed();
+          resolve();
+        } else if (data.t === 'error') give(data.message);
+        else {
+          making.get(data.id)?.(data.audio ? { audio: data.audio, rate: data.rate } : null);
+          making.delete(data.id);
+        }
+      };
+      worker.postMessage({ t: 'load', model: MODEL } satisfies ToWorker);
+    });
     return loading;
   },
   /**
@@ -111,32 +124,36 @@ export const natural = {
   },
   /** The model broke outside a call that could catch it (a browser it does not run in): give up on it, so the browser's voice takes over. */
   fail() {
-    if (state === 'failed') return;
+    if (state !== 'loading') return; // a voice that is ready or already given up on is left as it is
     reason = 'it stopped working in this browser';
     state = 'failed';
     loading = null;
-    tts = null;
+    stopWorker();
     this.stop();
     changed();
   },
   /** Say `sentence` after anything still being said, then call `done` (also when it is dropped or cannot be made). */
   say(sentence: string, done: () => void) {
     const mine = epoch;
-    const model = tts;
+    const thread = worker;
     const made = (async () => {
       await genQueue;
-      if (!model || mine !== epoch) return null;
-      try {
-        return await model.generate(sentence, { voice: VOICE, speed: SPEED });
-      } catch {
-        return null; // a line the model cannot say is a line left unsaid
-      }
+      if (!thread || state !== 'ready' || mine !== epoch) return null;
+      return new Promise<{ audio: Float32Array; rate: number } | null>((resolve) => {
+        const id = ++nextId;
+        const timer = setTimeout(() => resolve(null), MAKE_LIMIT);
+        making.set(id, (r) => {
+          clearTimeout(timer);
+          resolve(r);
+        });
+        thread.postMessage({ t: 'say', id, text: sentence, voice: VOICE, speed: SPEED } satisfies ToWorker);
+      });
     })();
     genQueue = made;
     playQueue = playQueue
       .then(async () => {
         const raw = await made;
-        if (raw && mine === epoch) await play(raw.audio, raw.sampling_rate);
+        if (raw && mine === epoch) await play(raw.audio, raw.rate);
       })
       .catch(() => undefined)
       .finally(done);
@@ -151,6 +168,14 @@ export const natural = {
     }
   },
 };
+
+/** End the speech thread (a failure, or giving up on it), and let every sentence waiting on it go unsaid. */
+function stopWorker() {
+  worker?.terminate();
+  worker = null;
+  for (const resolve of making.values()) resolve(null);
+  making.clear();
+}
 
 /** Play mono samples, resolving when they have been heard (or `stop` cut them short). */
 async function play(samples: Float32Array, rate: number): Promise<void> {
