@@ -43,7 +43,7 @@ must skip `beyond` cells), and the margin is how two maps line up.
 
 Signposts (`z.sign`, alternating `signpost`/`signpostB`), notice boards and the hanging shop signs (`hang*`, a prefab with
 `wall: true`, drawn in front of the wall it hangs on: put one a cell up beside a door, nudged `dy: -6`) are OpenGameArt
-sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs/`). Only a signpost's post blocks.
+sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs/`). Only a signpost's post blocks. A signpost's `ways` are authored hints: the game reads the real neighbours (`systems/signs.ts`).
 
 ## Shop buildings
 

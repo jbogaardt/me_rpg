@@ -173,6 +173,38 @@ describe('a world from its log', () => {
     for (const e of bad) expect(() => world.apply(e), JSON.stringify(e)).toThrow(WorldError);
   });
 
+  it('lets the DM rewrite a signpost and restore it, replays the same, and refuses what does not fit', () => {
+    const world = new World(7, packs);
+    world.open();
+    const region = world.storyRegions[0];
+    const map = world.cat.regions[region].biome.map;
+    const stands = [{ col: 12, row: 40 }];
+    world.signsOf = (m) => (m === map ? stands : undefined);
+    const before = JSON.stringify(world.files());
+    const base = world.log.length;
+    const bad: LogEntry[] = [
+      { t: 'sign', region: 'nowhere', col: 12, row: 40, lines: ['hi'] },
+      { t: 'sign', region, col: 13, row: 40, lines: ['hi'] }, // no sign stands there
+      { t: 'sign', region, col: -1, row: 40, lines: ['hi'] },
+      { t: 'sign', region, col: 12.5, row: 40, lines: ['hi'] },
+      { t: 'sign', region, col: 12, row: 40, lines: ['x'.repeat(200)] },
+      { t: 'sign', region, col: 12, row: 40, lines: ['a', 'b', 'c', 'd', 'e'] },
+      { t: 'sign', region, col: 12, row: 40, lines: [' '] },
+    ];
+    for (const e of bad) expect(() => world.apply(e), JSON.stringify(e)).toThrow(WorldError);
+    expect(world.log).toHaveLength(base); // nothing was taken
+    expect(world.signOverride(region, 12, 40)).toBeUndefined();
+    world.apply({ t: 'sign', region, col: 12, row: 40, lines: ['Beware the goat.', 'Seriously.'] });
+    expect(world.signOverride(region, 12, 40)).toEqual(['Beware the goat.', 'Seriously.']);
+    expect(JSON.stringify(world.files())).toBe(before); // a sign is not content: only the log carries it
+    const again = new World(7, packs);
+    again.replay(world.log); // with no maps in hand every cell is accepted, and the replay agrees
+    expect(again.signOverride(region, 12, 40)).toEqual(['Beware the goat.', 'Seriously.']);
+    world.apply({ t: 'sign', region, col: 12, row: 40, lines: [] }); // the log only grows: this gives it back
+    expect(world.signOverride(region, 12, 40)).toBeUndefined();
+    expect(world.log).toHaveLength(base + 2);
+  });
+
   it('sets a town beside the start in most worlds, where no foe lives and the story can still be told', () => {
     let towns = 0;
     for (let seed = 1; seed <= 30; seed++) {

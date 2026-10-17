@@ -89,3 +89,10 @@ export const SAGA_QUIET_WORDS = [
   'The lands fall quiet, with nothing more to give this tale. It ends here, for now.',
   'The world has run out of road for that story. It happens to the best of them.',
 ];
+
+/** A signpost whose every way has gone (the road leads nowhere in this world): what it says instead of a list. */
+export const SIGN_NOWHERE_WORDS = [
+  'The arrows have been painted over, and I cannot say I blame them. This road goes nowhere in particular.',
+  'Every way on this post leads to a polite shrug. Trust your feet; they have better taste than the carpenter.',
+  'A fine signpost, and not one road to name. I would apologise on its behalf, but it has no manners.',
+];

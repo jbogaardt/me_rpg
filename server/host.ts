@@ -49,6 +49,8 @@ interface PageBot {
   stockEpics(): StockTale[];
   epic(raw: unknown): { ok: boolean; note: string };
   spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
+  /** Write on the signpost beside the DM (a page per line; none restores it). Live worlds only. */
+  sign(lines: string[]): { ok: boolean; note: string };
   goTo(slot: number): void;
   walk(dx: number, dy: number, seconds: number): void;
 }

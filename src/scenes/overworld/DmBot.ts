@@ -96,6 +96,8 @@ export interface DmBotApi {
   looks(): { id: string; name: string }[];
   /** Make a person and put them near the party, on open ground in the area the DM stands in. */
   spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
+  /** Write on the signpost beside the DM (a page per line; none gives it its layout text back). Live worlds only. */
+  sign(lines: string[]): { ok: boolean; note: string };
   /** The epics the content ships with (data: `epic` takes one back, or one an AI wrote in the same form). */
   stockEpics(): EpicTemplate[];
   /** Tell an epic from where the DM stands. Checked as strictly as a file of epics; the note says what is wrong. */
@@ -209,6 +211,7 @@ export function createDmBot({
       const note = story.lastNote;
       return { ok: !note, note };
     },
+    sign: (lines) => story.writeNear(lines),
     stockEpics: () => stock(),
     epic(raw) {
       const epic = parseEpic(raw);

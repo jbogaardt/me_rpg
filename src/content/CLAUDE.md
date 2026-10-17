@@ -54,7 +54,7 @@ a port without a seal or bound to a port that is not on the opposite edge.
 
 ## Worlds from a log
 
-A world is a seed, the packs and an append-only **log** of fully resolved entries (`begin`, `step`, `side`, `join`, and the DM's `cast`, `npc` and `voice`: a person made, put somewhere, and given new words).
+A world is a seed, the packs and an append-only **log** of fully resolved entries (`begin`, `step`, `side`, `join`, and the DM's `cast`, `npc`, `voice` and `sign`: a person made, put somewhere, given new words; a signpost rewritten, or restored by empty lines).
 `World.apply` validates each entry against the packs' rules and refuses a bad one without changing anything;
 `replay(log)` rebuilds a world with no random numbers, so every co-op player and every later solver agrees. `assemble`
 is an automatic Dungeon Master that writes a whole log at once; a **live world** (`?campaign=live`) is written during

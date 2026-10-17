@@ -1,11 +1,28 @@
 import type { ContentManager } from '../../content/ContentManager';
-import { WorldError, type LogEntry, type StoryOption, type World } from '../../content/world';
+import {
+  MAX_NPC_LINE,
+  MAX_NPC_LINES,
+  WorldError,
+  type LogEntry,
+  type StoryOption,
+  type World,
+} from '../../content/world';
 import { CELL } from '../../map/types';
 import { WORLD_BUDGET, WORLD_CHUNK, type WorldMsg } from '../../net/protocol';
 import type { Session } from '../../net/session';
+import { cleanSay } from '../../systems/dmPowers';
 import { zoneName } from '../../systems/places';
+import { signNear } from '../../systems/signs';
 import type { Arena } from './Arena';
+import { SIGN_REACH } from './constants';
 import type { Zones } from './Zones';
+
+/** The pages of a sign from what the DM typed: separated by `|`, none left blank. */
+export const signPages = (text: string): string[] =>
+  text
+    .split('|')
+    .map((l) => l.trim())
+    .filter(Boolean);
 
 /** Seconds between the host's sends of a stretch of the log to its friends, when nothing new was added. */
 const WORLD_RESEND = 0.4;
@@ -52,7 +69,10 @@ export class Story {
     private content: ContentManager,
     private session: Session,
     readonly world: World | null,
-  ) {}
+  ) {
+    // A sign is only on the map once its zone is loaded: the DM writes where they stand (`World.signsOf`).
+    if (world) world.signsOf = (map) => this.arena.zones.get(map)?.data.signs;
+  }
 
   get live(): boolean {
     return this.world !== null;
@@ -126,6 +146,56 @@ export class Story {
     } catch (err) {
       this.note = err instanceof Error ? err.message : String(err);
     }
+  }
+
+  /**
+   * The Dungeon Master rewrites the signpost at a cell of the zone `zone` (or, with no lines, gives it back its layout
+   * text). Cleaned like the DM's words; false (and the note says why) when the world refuses it.
+   */
+  writeSign(zone: string, col: number, row: number, lines: string[]): boolean {
+    const region = this.regionOf(zone);
+    if (!this.world || !this.canChoose || !region) return false;
+    try {
+      this.add({
+        t: 'sign',
+        region,
+        col,
+        row,
+        lines: lines
+          .map((l) => cleanSay(l).slice(0, MAX_NPC_LINE).trim())
+          .filter(Boolean)
+          .slice(0, MAX_NPC_LINES),
+      });
+      this.note = '';
+      return true;
+    } catch (err) {
+      this.note = err instanceof Error ? err.message : String(err);
+      return false;
+    }
+  }
+
+  /**
+   * The Dungeon Master writes on the signpost nearest their body (within reach, as for reading one): `lines` empty gives
+   * it its layout text back. Says what happened, in a few words, for the bar to show.
+   */
+  writeNear(lines: string[]): { ok: boolean; note: string } {
+    const { arena } = this;
+    if (!this.canChoose) return { ok: false, note: 'Only a live world’s signs can be rewritten.' };
+    const z = arena.zoneOf(arena.local);
+    const sign = signNear(z.data.signs, arena.player.x, arena.player.y, SIGN_REACH);
+    if (!sign) return { ok: false, note: 'Stand beside a signpost first.' };
+    if (!this.writeSign(z.name, sign.col, sign.row, lines))
+      return { ok: false, note: this.note || 'The sign would not take it.' };
+    return {
+      ok: true,
+      note: lines.length ? 'The signpost now says your words.' : 'The signpost reads the road again.',
+    };
+  }
+
+  /** What the DM wrote on the signpost at a cell of a zone, if they did (read by every page, the DM's too). */
+  signOverride(zone: string, col: number, row: number): readonly string[] | undefined {
+    const region = this.regionOf(zone);
+    return region ? this.world?.signOverride(region, col, row) : undefined;
   }
 
   get lastNote(): string {

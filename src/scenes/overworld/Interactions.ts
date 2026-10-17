@@ -56,6 +56,8 @@ export class Interactions {
     private storyUi: StoryUi,
     /** A guest sends an action press to the host. */
     private guestPress: () => void,
+    /** What the Dungeon Master wrote on the sign at a cell of a zone (a live world's log), if they did. */
+    private signWritten: (zone: string, col: number, row: number) => readonly string[] | undefined = () => undefined,
   ) {
     this.harvestButtons.onPick = (key) => this.harvestPressed(key);
   }
@@ -97,7 +99,7 @@ export class Interactions {
       this.arena.player.face(
         directionToward((sign.col + 0.5) * CELL - this.arena.player.x, (sign.row + 0.5) * CELL - this.arena.player.y),
       );
-      dialog.say(signLines(sign.ways));
+      dialog.say(signLines(sign.ways, arena.zone.data, this.signWritten(arena.zone.name, sign.col, sign.row)));
     } else if (keeper) {
       this.talkToKeeper(keeper);
     } else if (giver) {

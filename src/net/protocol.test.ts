@@ -513,6 +513,12 @@ describe('a live world’s log', () => {
     expect(parseMessage(encodeMessage(m))).toEqual(m);
   });
 
+  it('carries the DM rewriting a signpost (a sign entry), and giving it back (no lines)', () => {
+    const sign = { t: 'sign', region: 'r_ash', col: 12, row: 40, lines: ['Beware the goat.', 'Seriously.'] };
+    const m: WorldMsg = { ...world, entries: [step, sign, { ...sign, lines: [] }] };
+    expect(parseMessage(encodeMessage(m))).toEqual(m);
+  });
+
   it('refuses a stretch that is too long, runs past the log, or holds something that is not an entry', () => {
     const bad = [
       { ...world, entries: [step, step, step, step] },

@@ -13,6 +13,7 @@ const banks: [string, string[]][] = [
   ['lost', voice.SAGA_LOST_WORDS],
   ['off', voice.SAGA_OFF_WORDS],
   ['quiet', voice.SAGA_QUIET_WORDS],
+  ['nowhere', voice.SIGN_NOWHERE_WORDS],
   ['welcome', voice.WELCOMES.flat()],
   ['meet', voice.MEET_WORDS.map((w) => w('Ansel'))],
 ];
