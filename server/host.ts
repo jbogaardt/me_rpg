@@ -54,7 +54,7 @@ interface PageBot {
   dismiss(): void;
   choose(cue: string): { ok: boolean; note: string };
   reply(text: string): boolean;
-  say(text: string, near?: boolean): boolean;
+  say(text: string, near?: boolean, slots?: number[]): boolean;
   looks(): { id: string; name: string }[];
   stockEpics(): StockTale[];
   epic(raw: unknown): { ok: boolean; note: string };
@@ -138,7 +138,7 @@ class Dm {
 
   state = () => this.call('state');
   start = () => this.call('start');
-  say = (text: string, near = false) => this.call('say', text, near);
+  say = (text: string, near = false, slots?: number[]) => this.call('say', text, near, slots);
 
   async tick() {
     const s = await this.state();
@@ -236,7 +236,10 @@ class Dm {
     m.spoke = this.clock.now;
     log(`narrating (${beat.kind}):`, line);
     this.said = [...this.said, line].slice(-RECENT);
-    await this.say(line, true); // what the DM remarks on is about where the party stands, not for friends elsewhere
+    // What the DM remarks on is about where a friend stands: said to that friend and whoever stands in the same land.
+    const who = 'slot' in beat ? s.friends.find((f) => f.slot === beat.slot) : undefined;
+    const slots = who ? s.friends.filter((f) => f.zone === who.zone).map((f) => f.slot) : undefined;
+    await this.say(line, !who, slots);
     if (shouldConjure(beat, this.made, this.clock.now - this.lastMade)) await this.conjure(s);
     return true;
   }
