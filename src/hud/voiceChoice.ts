@@ -25,3 +25,24 @@ export function fallbackNote(wants: boolean, supported: boolean, state: EngineSt
     return `The natural voice could not be loaded${reason ? ` (${reason})` : ' (offline?)'}. The browser’s voice speaks instead.`;
   return null;
 }
+
+/** Voices that are jokes, not speech (macOS novelty voices). */
+const NOVELTY =
+  /albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|superstar|trinoids|whisper|wobble|zarvox/i;
+
+/** Names of the plainer men's voices the major platforms ship: the wise old wanderer the DM is. */
+const MALE = /daniel|george|arthur|oliver|thomas|guy|ryan|alex|david|mark|james|google uk english male|male/i;
+
+/**
+ * The best of the browser's own voices for the DM: English, the neural or "natural" ones the browser may offer first, then
+ * a British man, never a novelty voice. Null when it has no English voice at all (the browser's default then speaks).
+ */
+export function pickVoice<T extends { name: string; lang: string }>(voices: readonly T[]): T | null {
+  const score = (v: T) =>
+    (/natural|neural|online/i.test(v.name) ? 8 : 0) +
+    (MALE.test(v.name) ? 4 : 0) +
+    (/^en[-_]gb/i.test(v.lang) ? 2 : /^en[-_]/i.test(v.lang) ? 1 : 0) +
+    (/google|microsoft|apple|siri/i.test(v.name) ? 1 : 0);
+  const english = voices.filter((v) => /^en([-_]|$)/i.test(v.lang) && !NOVELTY.test(v.name));
+  return english.reduce<T | null>((best, v) => (!best || score(v) > score(best) ? v : best), null);
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fallbackNote, usesNaturalNow, wantsNaturalVoice } from './voiceChoice';
+import { fallbackNote, pickVoice, usesNaturalNow, wantsNaturalVoice } from './voiceChoice';
 
 describe('voice choice', () => {
   it('defaults to the natural voice with nothing stored', () => {
@@ -30,5 +30,22 @@ describe('voice choice', () => {
     expect(fallbackNote(true, false, 'idle')).toMatch(/cannot run/);
     expect(fallbackNote(true, true, 'loading')).toBeNull();
     expect(fallbackNote(false, true, 'failed')).toBeNull();
+  });
+});
+
+describe('pickVoice', () => {
+  const v = (name: string, lang = 'en-US') => ({ name, lang });
+  it('prefers a neural voice, then a British man, and never a novelty voice', () => {
+    const all = [
+      v('Samantha'),
+      v('Daniel', 'en-GB'),
+      v('Zarvox'),
+      v('Microsoft Guy Online (Natural)'),
+      v('Amelie', 'fr-FR'),
+    ];
+    expect(pickVoice(all)?.name).toBe('Microsoft Guy Online (Natural)');
+    expect(pickVoice(all.filter((x) => !/Natural/.test(x.name)))?.name).toBe('Daniel');
+    expect(pickVoice([v('Zarvox'), v('Amelie', 'fr-FR')])).toBeNull();
+    expect(pickVoice([])).toBeNull();
   });
 });

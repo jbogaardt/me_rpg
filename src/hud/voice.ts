@@ -8,7 +8,7 @@
 
 import { natural } from './naturalVoice';
 import { speechParts } from './speechParts';
-import { fallbackNote, usesNaturalNow, wantsNaturalVoice } from './voiceChoice';
+import { fallbackNote, pickVoice, usesNaturalNow, wantsNaturalVoice } from './voiceChoice';
 
 const KEY = 'voice-muted';
 const ENGINE_KEY = 'voice-natural';
@@ -119,6 +119,11 @@ export const voice = {
       u.rate = 0.95;
       u.pitch = 0.85; // an old wanderer
       u.lang = 'en-US';
+      const pick = pickVoice(s.getVoices()); // a phone or browser may list its voices late: ask each time
+      if (pick) {
+        u.voice = pick;
+        u.lang = pick.lang;
+      }
       u.onend = done;
       u.onerror = done;
       s.speak(u);

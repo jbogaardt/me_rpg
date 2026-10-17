@@ -11,6 +11,16 @@ describe('Reconciler', () => {
     expect(r.rtt).toBe(50);
   });
 
+  it('ignores a lead no bigger than the slack, and still corrects drift beyond it', () => {
+    const r = new Reconciler();
+    r.record(1, 100, 100, 0);
+    expect(r.reconcile(1, 105, 100, 40, 6)).toBeNull();
+    expect(r.step(1 / 60)).toEqual({ x: 0, y: 0 });
+    r.record(2, 100, 100, 50);
+    r.reconcile(2, 110, 100, 90, 6);
+    expect(r.step(1 / 60).x).toBeGreaterThan(0);
+  });
+
   it('eases a small error in over several frames and sums to the error', () => {
     const r = new Reconciler();
     r.record(1, 100, 100, 0);

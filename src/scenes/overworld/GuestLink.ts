@@ -33,6 +33,8 @@ import type { Zones } from './Zones';
 import { RIPE_CODE } from '../../systems/crops';
 
 const INPUT_HZ = 30; // guest -> host controls (also sent at once when they change)
+/** Seconds of walking the host is ahead of the remembered position for the input it acknowledges (see `Reconciler.reconcile`). */
+const LEAD_S = 0.05;
 
 /**
  * A co-op guest's side of the game: no simulation. It draws what the host's snapshots say (the zone this player is in, the
@@ -285,7 +287,7 @@ export class GuestLink {
         this.setPlayerState(arena.local, state, this.predicted);
         if (snap.ia !== undefined) {
           this.predicted = true;
-          const jump = this.rec.reconcile(snap.ia, state[1], state[2], performance.now());
+          const jump = this.rec.reconcile(snap.ia, state[1], state[2], performance.now(), SPEED * LEAD_S);
           if (jump) arena.local.body.position.set(jump.x, jump.y);
         }
       } else {

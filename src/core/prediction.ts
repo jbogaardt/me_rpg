@@ -33,9 +33,12 @@ export class Reconciler {
 
   /**
    * A snapshot said the host has applied input `ia` and puts the hero at (hx, hy). Returns a hard correction (the new
-   * position to jump to) or null (a soft one is queued for `step`, or there is nothing to do).
+   * position to jump to) or null (a soft one is queued for `step`, or there is nothing to do). `slack` (px) is a lead the
+   * host always has over the remembered position while keys are held: it applies input `ia` from the moment it arrives,
+   * the guest recorded where it stood as it sent it. An error that small is not drift: correcting it would push the hero
+   * ahead while walking and pull it back, visibly, when it stops.
    */
-  reconcile(ia: number, hx: number, hy: number, now: number): { x: number; y: number } | null {
+  reconcile(ia: number, hx: number, hy: number, now: number, slack = 0): { x: number; y: number } | null {
     const at = this.sent.findIndex((s) => s.n === ia);
     const known = this.sent[at];
     if (!known) return null; // too old, or none sent yet
@@ -49,7 +52,7 @@ export class Reconciler {
       this.reset();
       return { x: hx, y: hy };
     }
-    if (err <= DEADZONE) return null;
+    if (err <= Math.max(DEADZONE, slack)) return null;
     for (const s of this.sent) {
       s.x += ex;
       s.y += ey;
