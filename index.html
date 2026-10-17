@@ -123,6 +123,13 @@
       <button type="button" class="voice" aria-label="Mute the voice" hidden>🔊</button>
     </div>
 
+    <!-- A friend's join progress (src/hud/JoinStatus.ts); stays up after the menu closes. -->
+    <div id="join-status" role="status" hidden>
+      <p class="title"></p>
+      <p class="text"></p>
+      <button type="button" aria-label="Dismiss">✕</button>
+    </div>
+
     <div id="dialog" class="panel paper" role="button" aria-label="Next line" data-key="KeyJ" hidden>
       <p id="dialog-text"></p>
       <span class="more" aria-hidden="true"></span>

@@ -17,5 +17,8 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
 - **Popups only when the player starts a conversation** (an NPC, the quest-giver, a sign, a shop, the Dungeon Master in
   person: walk up and press the action key). Everything the game tells a player unasked (a defeat, a quest the DM gave, a
   chapter's note, a trial's result) is *passive text*: `Dialog.note`, the same caption as the DM's words. Never `say` for those.
+- **Joining closes the menu and reports through `#join-status`** (`JoinStatus.ts`, words from `net/joinStatus.ts`):
+  connecting, waiting for the host, joined (fades), or a failure with its reason (stays until dismissed and brings the
+  Online tab back to retry). Guest-only; a host has nothing to join. The relay cannot tell a full game from a closed one.
 - **The map overlay is local**: it fills in as the players in view explore (`map/explored.ts`), nothing is sent. Rooms
   have none, and the `map` capability can turn it off or show the whole zone.
