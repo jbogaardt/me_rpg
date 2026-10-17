@@ -2,6 +2,7 @@ import type { Aim } from '../../core/aim';
 import { COMBO_WINDOW, COMBO_WINDOW_TOUCH, ComboReader } from '../../core/combo';
 import { actionDown, actionPressed, actionTouchedOnly, pointerAim } from '../../core/controls';
 import type { Command } from '../../entities/Player';
+import { keepOffDoors } from '../../map/doors';
 import { heroCombos } from '../../systems/skills';
 import type { ComboKey } from '../../systems/spells';
 import type { Arena } from './Arena';
@@ -50,9 +51,20 @@ export class LocalInput {
     const walking = this.stroll && this.arena.clock < this.stroll.until ? this.stroll : null;
     const dx = (actionDown('right') ? 1 : 0) - (actionDown('left') ? 1 : 0);
     const dy = (actionDown('down') ? 1 : 0) - (actionDown('up') ? 1 : 0);
+    // The bot's amble never steps onto a door: a stroll beside a doorway took the DM out of the party's zone, and the
+    // follow rule then fetched him back every few seconds (issue #39).
+    const [wx, wy] = walking
+      ? keepOffDoors(
+          this.arena.zoneOf(this.arena.local).data,
+          this.arena.local.body.x,
+          this.arena.local.body.y,
+          walking.dx,
+          walking.dy,
+        )
+      : [0, 0];
     return {
-      dx: dx || walking?.dx || 0,
-      dy: dy || walking?.dy || 0,
+      dx: dx || wx,
+      dy: dy || wy,
       act: actionPressed('attack'),
       ...(combo === undefined ? {} : { combo }),
       ...aimOf(pointerAim(this.zones.heroOnScreen())),

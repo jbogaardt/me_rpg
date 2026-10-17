@@ -102,3 +102,25 @@ export function neighbourLinks(data: Pick<MapData, 'doors' | 'indoor'>): Link[] 
   links.set(data, found);
   return found;
 }
+
+/** How far ahead (px) a walk looks for a door: more than the DM covers in a frame, less than a cell. */
+const DOOR_LOOK = CELL * 0.6;
+
+/**
+ * The heading (-1, 0 or 1 each) a bot-driven walk may take from feet at (x, y): the part of it that would step onto a
+ * door is dropped, so the DM bot's amble about the party never carries him through a doorway into another zone (a person
+ * at the keys walks through doors on purpose; the bot only means to stay near the party).
+ */
+export function keepOffDoors(
+  data: Pick<MapData, 'doors'>,
+  x: number,
+  y: number,
+  dx: number,
+  dy: number,
+): [number, number] {
+  const hits = (ax: number, ay: number) => !!doorAt(data, x + ax * DOOR_LOOK, y + ay * DOOR_LOOK);
+  if (!hits(dx, dy)) return [dx, dy];
+  // Keep whichever axis is clear; a diagonal that is only blocked as a whole loses both.
+  const [kx, ky] = [hits(dx, 0) ? 0 : dx, hits(0, dy) ? 0 : dy];
+  return hits(kx, ky) ? [0, 0] : [kx, ky];
+}

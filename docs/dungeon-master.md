@@ -59,14 +59,14 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   hurt), Freeze, Reset zone, Stop time (the party walks and takes doors; all else stands still): ordinary events and mob states.
 - **Epic quests** (`docs/epics.md`): the DM's only quests, sagas of steps with people, as data: `content/epics.json` and
   the campaign's own `quests.json`; run by `DmEpics` on the host (and in solo). A step is a quest kind or a meeting with a
-  person the DM makes; people's words follow the story. No one-shot quests are handed out. Beside hunts, gathers, finds and
+  person the DM makes; people's words follow the story. No one-shot quests. Beside hunts, gathers, finds and
   visits a step may be a **boss** (the land's toughest foe as a named giant for the party's level and size, `dmBoss.ts`;
   friends build the same one from the quest), a **mastery** (cast one named combo N times) or a **forge** (set a gem in a
   piece: `dmForge.ts`). Gear rewards are chosen per hero and rotate by slot (`dmGear.ts`): a saga's finale and a forge quest pay one.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` raises or fetches a fallen player. **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive
-  it through the usual damage rules. Their body rides invisibly on it (`Player.hidden`) so the camera and
-  friends' view follow, and they cannot die. While possessing, pop-ups are hidden and the director waits.
+  it through the usual damage rules. Their body rides invisibly on it (`Player.hidden`), so the camera and
+  friends' view follow; they cannot die. While possessing, pop-ups are hidden and the director waits.
 - **Signposts** read the layout (`systems/signs.ts`): each way names the zone really reached that way, a place of the map
   stays, a way with nothing beyond it is dropped (all gone: a dry line). In a **live** world the DM may rewrite one: stand
   beside it, type (pages split by `|`) and tap Write on sign (Restore sign gives it back): a `sign` log entry, sent to
@@ -76,7 +76,7 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 
 The DM can be a program (`server/`, the DM bot): `?dmbot` puts a handle on the page (`DmBot.ts`) through which an outside
 script hosts, opens the inbox, answers cards, takes story roads, replies, speaks, follows and strolls about the party (the
-DM is never a statue), starts the game, narrates unasked (new areas, a quest done, a hurt friend, a quiet table; a hurt
+DM is never a statue, but never onto a door), starts the game, narrates unasked (new areas, a quest done, a hurt friend, a quiet table; a hurt
 friend's moment is read by Jev and told with `systems/cues.ts` cues, `server/README.md`) and brings in a stranger on reaching a new area
 (`spawn`: an `npc` then a `cast` entry on open ground 3-8 cells from the party, checked by the world like any entry).
 Every call is a step the bar already offers.

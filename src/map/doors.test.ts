@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrivalFacing, cellFeet, doorAt, doorsNear } from './doors';
+import { arrivalFacing, cellFeet, doorAt, doorsNear, keepOffDoors } from './doors';
 import type { DoorSpawn } from './types';
 
 const door = (col: number, row: number, w: number, zone: string): DoorSpawn => ({
@@ -69,5 +69,25 @@ describe('arrivalFacing', () => {
     expect(arrivalFacing(west, 'greenwood', { col: 2, row: 5 })).toBe('right');
     const east = { doors: [4, 5, 6].map((r) => door(45, r, 1, 'scorched')) };
     expect(arrivalFacing(east, 'scorched', { col: 43, row: 5 })).toBe('left');
+  });
+});
+
+describe('a bot DM that strolls about the party (issue #39)', () => {
+  // The follow rule fired every ten seconds because a stroll next to a doorway took the DM through it, out of the
+  // party's zone; the rule then (rightly) sent him back, and the next stroll took him out again.
+  it('is never walked onto a door by his own stroll', () => {
+    const [x, y] = cellFeet({ col: 16, row: 44 }); // the cell above the smithy's door
+    expect(keepOffDoors(outside, x, y, 0, 1)).toEqual([0, 0]); // straight down would step on it
+    expect(keepOffDoors(outside, x, y, 1, 1)).toEqual([1, 0]); // sliding along the wall is fine
+    expect(keepOffDoors(outside, x, y, 0, -1)).toEqual([0, -1]); // so is walking away
+  });
+  it('leaves a walk in open ground alone', () => {
+    const [x, y] = cellFeet({ col: 40, row: 20 });
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 1],
+      [0, -1],
+    ] as const)
+      expect(keepOffDoors(outside, x, y, dx, dy)).toEqual([dx, dy]);
   });
 });
