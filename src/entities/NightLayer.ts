@@ -1,5 +1,4 @@
 import { Sprite, Texture } from 'pixi.js';
-import { skyColor } from '../systems/daynight';
 
 /**
  * The light of the hour: one screen-sized white sprite tinted with the sky colour and multiplied over the world, so
@@ -14,9 +13,8 @@ export class NightLayer extends Sprite {
     this.visible = false;
   }
 
-  /** Show the light for `time` (0 to 1) over a screen of this size, or nothing at all (`outdoors` false: a room). */
-  update(time: number, outdoors: boolean, width: number, height: number) {
-    const color = skyColor(time);
+  /** Show the light (`DayClock.sky`) over a screen of this size, or nothing at all (`outdoors` false: a room). */
+  update(color: number, outdoors: boolean, width: number, height: number) {
     this.visible = outdoors && color !== 0xffffff;
     if (!this.visible) return;
     this.tint = color;

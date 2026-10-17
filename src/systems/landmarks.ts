@@ -1,9 +1,6 @@
 // What the DM's words put in the world (Pixi-free, tested; core engine, local to each page): when a quest's telling names a
-// thing to be found (a wagon, a well, a camp), or the quest is to find an item, something that looks like it is drawn at
-// the goal, so the party is never sent to look for what is not there. Nothing is sent over the wire: every page reads the
+// thing to be found (a wagon, a well, a camp), it is drawn at the goal, so the party is never sent to look for what is not there. Nothing is sent over the wire: every page reads the
 // same task (its `what` and the DM's note) and draws the same thing (`entities/Landmark.ts` draws the shapes).
-
-import type { IconKind } from './inventory';
 
 export type LandmarkShape = 'cart' | 'well' | 'campfire' | 'tent' | 'shrine' | 'grave' | 'ruin' | 'tower' | 'hut';
 
@@ -38,36 +35,6 @@ export function landmarkIn(text: string): LandmarkShape | undefined {
     if (at >= 0 && (!best || at < best.at)) best = { shape, at };
   }
   return best?.shape;
-}
-
-/** What a quest to find an item shows: a thing shaped like it (a blade, a staff, a book, a shield, a pouch or a gem). */
-export type RelicShape = 'blade' | 'staff' | 'book' | 'shield' | 'pouch' | 'gem';
-
-export function relicShape(icon: IconKind | undefined): RelicShape {
-  switch (icon) {
-    case 'sword':
-    case 'dagger':
-    case 'bow':
-      return 'blade';
-    case 'wand':
-      return 'staff';
-    case 'tome':
-      return 'book';
-    case 'shield':
-    case 'helm':
-    case 'armor':
-    case 'greaves':
-    case 'boot':
-    case 'cape':
-      return 'shield';
-    case 'sack':
-    case 'backpack':
-    case 'tool':
-    case 'food':
-      return 'pouch';
-    default:
-      return 'gem'; // a charm, or something with no picture of its own
-  }
 }
 
 /** A quest's own words for where its goal is: what a landmark is looked for in (the place, then the DM's telling). */

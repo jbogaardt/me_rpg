@@ -40,6 +40,25 @@ export function openGroundNear(
 }
 
 /**
+ * A free cell beside a door, for someone who keeps a shop's step: the nearest roomy cell one to `MOST` cells from the door's
+ * cells (a door `w` cells wide and `h` tall from `col`, `row`), nearest ring first, or null. Open ground only.
+ */
+export function openGroundBeside(
+  collision: { isBlocked(col: number, row: number): boolean },
+  door: { col: number; row: number; w: number; h?: number },
+): { col: number; row: number } | null {
+  const MOST = 6;
+  const h = door.h ?? 1;
+  for (let r = 2; r <= MOST; r++)
+    for (let row = door.row - r; row <= door.row + h - 1 + r; row++)
+      for (let col = door.col - r; col <= door.col + door.w - 1 + r; col++) {
+        const ring = Math.max(door.col - col, col - (door.col + door.w - 1), door.row - row, row - (door.row + h - 1));
+        if (ring === r && roomy(collision, col, row)) return { col, row };
+      }
+  return null;
+}
+
+/**
  * The look a person wears: the first of `looks` whose name contains `hint` (a word like "monk" or "smith", any case),
  * else the `n`th in turn, so strangers do not all look alike. Null when the world offers no look.
  */

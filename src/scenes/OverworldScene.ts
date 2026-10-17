@@ -308,6 +308,7 @@ export class OverworldScene implements Scene {
   /** Jump to an hour of the day, 0 to 24 (playtest scripts; this client only, the clock otherwise follows real time). */
   setHour(hour: number) {
     this.dayClock.setHour(hour);
+    this.dayClock.settle();
   }
 
   enter() {
@@ -477,7 +478,7 @@ export class OverworldScene implements Scene {
     const z = arena.zone;
     z.effects.update(dt);
     this.night.update(
-      this.dayClock.time(),
+      this.dayClock.sky(),
       !z.data.indoor && enabled('dayNight', z.name),
       arena.screen.width,
       arena.screen.height,
@@ -492,6 +493,7 @@ export class OverworldScene implements Scene {
       ]);
     }
 
+    z.syncBeds(); // a guest's own copy of the same rule
     z.pondBeds.show(z.ponds.levels()); // the ponds drained by drinking, until rain fills them
     z.npc?.animate(dt * 1000, false);
     for (const f of z.folk) f.body.animate(dt * 1000, false);

@@ -48,9 +48,9 @@ kind is how higher levels stay meaningful. **Retune a weapon or kind against tha
   list the reader, HUD and caster use; a guest detects the combo locally and sends only its index.
 - **Survival** (`needs.ts`, `crops.ts`): food and water drain with time (host/solo only; a guest displays what `pack`
   tells it). Drinking is steady, from ponds that drain and **only rain refills**; the action key drinks by a pond only
-  while no foe is near. Crops need three waterings, are decided by the host and ride the snapshot as a state code.
+  while no foe is near. A dry pond is walkable (`ZoneState.syncBeds`). Crops need three waterings, are decided by the host and ride the snapshot as a state code.
 - **Weather and day** (`weather.ts`, `daynight.ts`): cosmetic atmosphere per biome, never touching combat or collision
-  (lightning aside). The host rolls each occupied zone's weather and sends its zone's in the snapshot; the clock reads the
+  (lightning aside). A DM's change of hour eases in (`FADE_SECONDS`). The host rolls each occupied zone's weather and sends its zone's in the snapshot; the clock reads the
   wall clock, so everyone sees the same hour with nothing on the wire.
 - **Inventory, economy, chests** (`inventory.ts`, `shops.ts`, `chests.ts`, `trade.ts`): the host owns every hero's gold,
   pack and gear. A guest applies an inventory op locally at once and sends the oldest unconfirmed one (numbered); the

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { MEET_WORDS, SAGA_LOST_WORDS, SAGA_OFF_WORDS, SAGA_QUIET_WORDS } from '../../systems/dmVoice';
+import { MEET_WORDS, SAGA_LOST_WORDS, SAGA_OFF_WORDS, SAGA_QUIET_WORDS, TALK_NUDGE_WORDS } from '../../systems/dmVoice';
 import type { ContentManager } from '../../content/ContentManager';
 import { STOCK_EPICS } from '../../content/epics';
 import { parseEpic } from '../../systems/dmEpics';
@@ -187,6 +187,7 @@ describe('epics with people, on the host', () => {
       canChoose,
       lastNote: '',
       regionOf: () => 'r1',
+      isHaven: () => false,
       world: {
         lookOptions: () => [
           { id: 'keeper_look', name: 'Keeper Ysolde' },
@@ -253,15 +254,35 @@ describe('epics with people, on the host', () => {
     expect(epics.active).toBe(true);
   });
 
-  it('ends the epic when the person cannot be made', () => {
+  it('puts another errand in their place when the person cannot be made, and ends only if the land has none', () => {
     const g = live();
     const ground = (g.a as unknown as { collision: { fitsMap: () => boolean; isBlocked: () => boolean } }).collision;
     ground.fitsMap = () => false;
     ground.isBlocked = () => true;
     g.epics.begin(g.pick('The Lost Courier'));
     g.epics.update(0);
-    expect(g.epics.active).toBe(false);
-    expect(SAGA_QUIET_WORDS).toContain(g.said.at(-1));
+    expect(g.brought).toHaveLength(0);
+    if (g.epics.active) expect(g.arena.task).toMatchObject({ epic: { step: 1 } });
+    else expect(SAGA_QUIET_WORDS).toContain(g.said.at(-1));
+  });
+
+  it('never leaves the party standing by a person: reminds them, then goes on without a word', () => {
+    const { arena, epics, tasks, party, said, pick } = live();
+    epics.begin(pick('The Lost Courier'));
+    epics.update(0);
+    const me = party[0] as unknown as { body: { x: number; y: number } };
+    const t = arena.task as unknown as { x: number; y: number };
+    [me.body.x, me.body.y] = [t.x, t.y];
+    tasks.update(0.1);
+    tasks.update(TASK_LINGER + 1);
+    const heard = said.length;
+    epics.update(25); // a while by the person, and no word spoken
+    expect(said.length).toBe(heard + 1);
+    expect(TALK_NUDGE_WORDS.map((w) => w('Aldis the Postmaster'))).toContain(said.at(-1));
+    for (let i = 0; i < 8; i++) epics.update(25); // still nothing: the saga goes on
+    epics.update(0);
+    epics.update(0);
+    expect(arena.task).toMatchObject({ epic: { step: 2 } });
   });
 
   it('has each person say their last words when the whole epic is done', () => {

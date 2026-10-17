@@ -1,7 +1,7 @@
 import type { ContentManager } from '../../content/ContentManager';
 import { allOffers, offerFor } from '../../systems/dmQuests';
 import { cleanNote } from '../../systems/dmBrief';
-import { MEET_WORDS, SAGA_LOST_WORDS, SAGA_OFF_WORDS, SAGA_QUIET_WORDS } from '../../systems/dmVoice';
+import { MEET_WORDS, SAGA_LOST_WORDS, SAGA_OFF_WORDS, SAGA_QUIET_WORDS, TALK_NUDGE_WORDS } from '../../systems/dmVoice';
 import { Phrasebook } from '../../systems/phrases';
 import { CELL } from '../../map/types';
 import {
@@ -17,7 +17,7 @@ import {
   type StepKind,
   type ZoneGraph,
 } from '../../systems/dmEpics';
-import { openGroundNear, pickLook } from '../../systems/dmPeople';
+import { openGroundBeside, openGroundNear, pickLook } from '../../systems/dmPeople';
 import type { QuestOffer, TaskKind } from '../../systems/dmTasks';
 import { neighbours, zoneName } from '../../systems/places';
 import { cleanSay } from '../../systems/dmPowers';
@@ -44,6 +44,12 @@ const SPEECH = 4;
 /** How long (s) after a person has been spoken to before the saga goes on (time to read what they said). */
 const SETTLE = 5;
 
+/** How long (s) a party may stand by a person without speaking to them before the DM says so, and how long between reminders. */
+const TALK_NUDGE = 20;
+
+/** How long (s) the saga waits for a word with a person before it goes on without one (it is never left hanging). */
+const TALK_GIVE_UP = 150;
+
 /** What a step turns to when its land has none of the kind it wants. */
 const FALLBACK: TaskKind[] = ['hunt', 'visit', 'gather', 'find'];
 
@@ -62,8 +68,11 @@ export class DmEpics {
     next: boolean;
     /** The DM's closing words: the lines still to say and the seconds until the next (then the saga is complete). */
     speech: { lines: string[]; wait: number } | null;
-    /** The party has reached a person and waits to be spoken to: who (their id), and the seconds left once they have been (null before). */
-    talk: { id: string; settle: number | null } | null;
+    /**
+     * The party has reached a person and waits to be spoken to: who (their id and name), the seconds left once they have
+     * been (null before), and how long they have stood unspoken to, and when the DM next reminds them.
+     */
+    talk: { id: string; name: string; settle: number | null; idle: number; nudge: number } | null;
     /** The id the world gave each person made so far (by their key in the epic). */
     ids: Map<string, string>;
   } | null = null;
@@ -94,6 +103,7 @@ export class DmEpics {
         const biome = content.biomeOfMap(z)?.[1];
         return !!biome && biome.climate !== null;
       },
+      haven: (z) => !!this.story?.isHaven(z),
     };
     tasks.onFinish = (state) => {
       const run = this.run;
@@ -184,14 +194,7 @@ export class DmEpics {
   update(dt = 0) {
     const run = this.run;
     if (run?.speech) return this.speak(run, run.speech, dt);
-    if (run?.talk) {
-      const t = run.talk;
-      if (t.settle !== null && (t.settle -= dt) <= 0) {
-        run.talk = null;
-        this.advance(run);
-      }
-      return;
-    }
+    if (run?.talk) return this.waitForWord(run, run.talk, dt);
     if (!run || !run.next || this.tasks.view) return;
     const zone = run.plan.zones[run.step]!;
     const z = this.arena.zones.get(zone);
@@ -202,7 +205,7 @@ export class DmEpics {
     const step = run.plan.epic.steps[run.step]!;
     const offer =
       step.kind === 'meet'
-        ? this.person(run, step, zone, z)
+        ? (this.person(run, step, zone, z) ?? this.choose(allOffers(this.tasks.landOf(z)), 'meet', run.step)) // nowhere to put them: another errand in their stead
         : step.objective
           ? offerFor(this.tasks.landOf(z), step.objective) // named outright: this foe, these sites, that place
           : this.choose(allOffers(this.tasks.landOf(z)), step.kind, run.step);
@@ -219,19 +222,39 @@ export class DmEpics {
     const { story } = this;
     const region = story?.regionOf(zone);
     if (!person || !story || !region) return undefined;
-    const land = this.tasks.landOf(z);
-    const spawn = { body: { x: (z.data.spawn.col + 0.5) * CELL, y: (z.data.spawn.row + 0.5) * CELL } };
-    const cell = land.spot()
-      ? { col: Math.floor(land.spot()!.x / CELL), row: Math.floor(land.spot()!.y / CELL) }
-      : openGroundNear(z.collision, [spawn]);
-    const look = story.world ? pickLook(story.world.lookOptions(), person.look, run.step) : null;
-    if (!cell || !look) return undefined;
-    const id = story.bring({ name: person.name, look, lines: person.lines }, region, cell.col, cell.row);
-    if (!id || story.lastNote) return undefined;
-    if (step.who) run.ids.set(step.who, id);
+    const known = step.who ? run.ids.get(step.who) : undefined;
+    let cell: { col: number; row: number } | null = null;
+    if (!known) {
+      const land = this.tasks.landOf(z);
+      const spawn = { body: { x: (z.data.spawn.col + 0.5) * CELL, y: (z.data.spawn.row + 0.5) * CELL } };
+      const spot = land.spot();
+      cell =
+        (step.at === 'haven' && this.story?.isHaven(zone) ? this.byShop(z, run.step + this.turn) : null) ??
+        (spot
+          ? { col: Math.floor(spot.x / CELL), row: Math.floor(spot.y / CELL) }
+          : openGroundNear(z.collision, [spawn]));
+      const look = story.world ? pickLook(story.world.lookOptions(), person.look, run.step) : null;
+      if (!cell || !look) return undefined;
+      const id = story.bring({ name: person.name, look, lines: person.lines }, region, cell.col, cell.row);
+      if (!id || story.lastNote) return undefined;
+      if (step.who) run.ids.set(step.who, id);
+    }
+    // met before: they are where they were left, and the party is sent back to them
     const folk = z.folk.find((f) => f.name === person.name);
-    const at = folk ? { x: folk.body.x, y: folk.body.y } : { x: (cell.col + 0.5) * CELL, y: (cell.row + 1) * CELL };
+    if (!folk && !cell) return undefined;
+    const at = folk ? { x: folk.body.x, y: folk.body.y } : { x: (cell!.col + 0.5) * CELL, y: (cell!.row + 1) * CELL };
     return { kind: 'visit', title: `Find ${person.name}`, zone, goal: 1, what: person.name, ...at };
+  }
+
+  /** A free cell beside one of a town's shop doors (which one varies from saga to saga), where its shopkeeper-folk stand. */
+  private byShop(z: ZoneState, n: number): { col: number; row: number } | null {
+    const shops = z.data.doors.filter((d) => !d.dir && !this.graph.open(d.to.zone));
+    for (let i = 0; i < shops.length; i++) {
+      const door = shops[(n + i) % shops.length]!;
+      const cell = openGroundBeside(z.collision, door);
+      if (cell) return cell;
+    }
+    return null;
   }
 
   /**
@@ -245,7 +268,7 @@ export class DmEpics {
     const lines = [...(step.says ?? [])];
     if (step.gives) lines.push(`${person?.name ?? 'They'} gives you ${step.gives}. Keep it safe.`);
     this.story?.voice(id, lines);
-    run.talk = { id, settle: null };
+    run.talk = { id, name: person?.name ?? 'them', settle: null, idle: 0, nudge: TALK_NUDGE };
     this.desk.say(
       cleanSay(
         this.phrases.pick(
@@ -264,6 +287,37 @@ export class DmEpics {
     const who = step?.who;
     this.say(run, who, who ? run.plan.epic.people?.[who]?.after : undefined); // from now on they speak of what has happened
     run.talk.settle = SETTLE;
+  }
+
+  /** The party stands by a person: once they have spoken, go on shortly; if nobody does, remind them, and in the end go on anyway. */
+  private waitForWord(
+    run: NonNullable<DmEpics['run']>,
+    t: NonNullable<NonNullable<DmEpics['run']>['talk']>,
+    dt: number,
+  ) {
+    const done = () => {
+      run.talk = null;
+      this.advance(run);
+    };
+    if (t.settle !== null) {
+      if ((t.settle -= dt) <= 0) done();
+      return;
+    }
+    t.idle += dt;
+    const zone = this.arena.zones.get(run.plan.zones[run.step]!);
+    if (t.idle >= TALK_NUDGE && zone && !zone.folk.some((f) => f.name === t.name)) return done(); // nobody there to speak to
+    if (t.idle >= TALK_GIVE_UP) return done();
+    if (t.idle >= t.nudge) {
+      t.nudge += TALK_NUDGE;
+      this.desk.say(
+        cleanSay(
+          this.phrases.pick(
+            'talk',
+            TALK_NUDGE_WORDS.map((w) => w(t.name)),
+          ),
+        ),
+      );
+    }
   }
 
   private speak(run: NonNullable<DmEpics['run']>, speech: { lines: string[]; wait: number }, dt: number) {

@@ -22,6 +22,19 @@ export const RELIC_LOOK: SiteKind = {
   notes: [['Something old and glowing: this is what you were sent to find.']],
 };
 
+/**
+ * A find quest's `what`: the item to be found, and (after an `@`) the kind of foe that carries it. With no carrier the item
+ * lies in a chest the DM left (a site of `RELIC_KIND`, drawn as a chest); with one, the foe drops it when it falls.
+ * Packed in `what` so the quest travels on the wire as it always did.
+ */
+export const relicWhat = (item: string, carrier?: string): string => (carrier ? `${item}@${carrier}` : item);
+
+/** The item and the carrying foe (if any) a find quest's `what` names. */
+export function parseRelicWhat(what: string): { item: string; carrier?: string } {
+  const at = what.indexOf('@');
+  return at < 0 ? { item: what } : { item: what.slice(0, at), carrier: what.slice(at + 1) };
+}
+
 /** What a land holds, as the DM's quests need to know it. */
 export interface Land {
   zone: string;
@@ -131,6 +144,14 @@ function baseReward(kind: QuestOffer['kind'], goal: number): { xp: number; gold:
                   : { xp: 40, gold: 15 };
 }
 
+/** A find is a kill of the carrying foe, or a gather of the chest's one relic. */
+function findObjective(offer: QuestOffer): Quest['objective'] {
+  const { carrier } = parseRelicWhat(offer.what);
+  return carrier
+    ? { t: 'kill', kind: carrier, count: 1, zone: offer.zone }
+    : { t: 'gather', site: RELIC_KIND, zone: offer.zone, count: 1 };
+}
+
 /**
  * An offer as the quest it is, in the same terms as the campaign's own (`quests.ts`), so one set of rules counts both: a
  * hunt is a `kill`, a gather a `gather`, a find a `gather` of the one relic there is to touch, and reaching a place a `visit`.
@@ -144,7 +165,7 @@ export function questOf(offer: QuestOffer): Quest {
       : offer.kind === 'gather'
         ? { t: 'gather', site: offer.what, zone: offer.zone, count: offer.goal }
         : offer.kind === 'find'
-          ? { t: 'gather', site: RELIC_KIND, zone: offer.zone, count: 1 }
+          ? findObjective(offer)
           : offer.kind === 'cast'
             ? { t: 'cast', zone: offer.zone, count: offer.goal }
             : offer.kind === 'haul'
@@ -286,10 +307,32 @@ export function allOffers(land: Land): QuestOffer[] {
     const at = land.forge?.smith ?? land.spot() ?? { x: 0, y: 0 };
     out.push({ kind: 'forge', title, zone: land.zone, goal: 1, what: r.made, ...at });
   }
+  // A find is never an item on the ground: it is in a chest the DM left, or a foe carries it.
   const relic = land.relics[0];
   const at = relic ? land.spot() : null;
-  if (relic && at)
-    out.push({ kind: 'find', title: `Find ${relic.name}`, zone: land.zone, goal: 1, what: relic.id, x: at.x, y: at.y });
+  if (relic && at) {
+    const title = `Open the chest holding ${relic.name}`;
+    out.push({
+      kind: 'find',
+      title: title.length <= 64 ? title : `Find ${relic.name}`,
+      zone: land.zone,
+      goal: 1,
+      what: relic.id,
+      x: at.x,
+      y: at.y,
+    });
+    const carrier = matched(land.mobs, land.level)[0];
+    if (carrier)
+      out.push({
+        kind: 'find',
+        title: `Take ${relic.name} from ${an(carrier.name)}`.slice(0, 64),
+        zone: land.zone,
+        goal: 1,
+        what: relicWhat(relic.id, carrier.key),
+        x: carrier.x,
+        y: carrier.y,
+      });
+  }
   return out.map((o) => ({ ...o, level: land.level }));
 }
 

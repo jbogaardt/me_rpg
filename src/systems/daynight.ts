@@ -18,10 +18,12 @@ const NIGHT = 0x5565a0;
 /** In order, from midnight round to midnight again (the first and last match so the day wraps smoothly). */
 export const SKY: readonly Stop[] = [
   { at: 0, color: NIGHT },
-  { at: 0.22, color: NIGHT },
-  { at: 0.3, color: 0xffffff }, // day comes up
-  { at: 0.7, color: 0xffffff },
-  { at: 0.78, color: NIGHT }, // and goes down
+  { at: 0.2, color: NIGHT },
+  { at: 0.26, color: 0xe8b090 }, // dawn, warm
+  { at: 0.34, color: 0xffffff }, // day comes up
+  { at: 0.66, color: 0xffffff },
+  { at: 0.74, color: 0xe8a07a }, // dusk, warm
+  { at: 0.8, color: NIGHT }, // and goes down
   { at: 1, color: NIGHT },
 ];
 
@@ -68,12 +70,46 @@ export function clockText(time: number): string {
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
-/** The hour as the wall clock gives it; `shift` lets dev tools jump to another hour. */
+/** Real seconds the light takes to ease to a new hour when the DM (or a script) jumps the clock. */
+export const FADE_SECONDS = 8;
+
+/** The hour as the wall clock gives it; `shift` lets the DM and dev tools jump to another hour. */
 export class DayClock {
-  /** Added to the real time of day (a fraction of a day), so a playtest can ask for dusk. */
-  shift = 0;
+  private offset = 0;
+  /** The light as it was when the hour last jumped, easing into the new one (see `sky`). */
+  private fade: { from: number; at: number } | null = null;
 
   constructor(private now: () => number = Date.now) {}
+
+  /** Added to the real time of day (a fraction of a day), so the DM can ask for dusk. A change eases in; it never cuts. */
+  get shift(): number {
+    return this.offset;
+  }
+
+  set shift(value: number) {
+    if (Math.abs(value - this.offset) < 1e-9) return;
+    this.fade = { from: this.time(), at: this.now() };
+    this.offset = value;
+  }
+
+  /** The light to show now: the sky colour of the hour, blended from the old light for a few seconds after a jump. */
+  sky(): number {
+    const target = skyColor(this.time());
+    const f = this.fade;
+    if (!f) return target;
+    const seconds = (this.now() - f.at) / 1000;
+    if (seconds >= FADE_SECONDS || seconds < 0) {
+      this.fade = null;
+      return target;
+    }
+    const k = seconds / FADE_SECONDS;
+    return mix(skyColor(f.from + seconds / DAY_LENGTH), target, k * k * (3 - 2 * k));
+  }
+
+  /** Drop any easing in progress (dev scripts that want the new hour at once). */
+  settle() {
+    this.fade = null;
+  }
 
   /** The time of day, 0 to 1. */
   time(): number {
@@ -83,7 +119,6 @@ export class DayClock {
 
   /** Make it this hour (0 to 24) right now. */
   setHour(hour: number) {
-    this.shift = 0;
-    this.shift = hour / 24 - this.time();
+    this.shift = hour / 24 - ((this.now() / 1000 / DAY_LENGTH) % 1);
   }
 }

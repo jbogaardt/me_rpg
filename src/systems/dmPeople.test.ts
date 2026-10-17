@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CELL } from '../map/types';
-import { openGroundNear } from './dmPeople';
+import { openGroundBeside, openGroundNear } from './dmPeople';
 
 const hero = (col: number, row: number) => ({ body: { x: (col + 0.5) * CELL, y: (row + 0.5) * CELL } });
 const open = { isBlocked: (col: number, row: number) => col < 0 || row < 0 || col > 30 || row > 30 };
@@ -41,5 +41,22 @@ describe('pickLook', () => {
     expect(pickLook(looks, 'dragon', 4)).toBe('b');
     expect(pickLook(looks, undefined, 2)).toBe('c');
     expect(pickLook([], 'monk', 0)).toBeNull();
+  });
+});
+
+describe('openGroundBeside', () => {
+  it('stands someone two or more cells from a door, on open ground, nearest first', () => {
+    const at = openGroundBeside(open, { col: 10, row: 10, w: 2 });
+    expect(at).not.toBeNull();
+    const ring = Math.max(10 - at!.col, at!.col - 11, 10 - at!.row, at!.row - 10);
+    expect(ring).toBe(2);
+  });
+  it('skips walls and gives up when closed in', () => {
+    expect(openGroundBeside({ isBlocked: () => true }, { col: 10, row: 10, w: 2 })).toBeNull();
+    const north = openGroundBeside(
+      { isBlocked: (_c: number, row: number) => row < 10 || row > 30 },
+      { col: 10, row: 10, w: 1 },
+    );
+    expect(north!.row).toBeGreaterThanOrEqual(11);
   });
 });

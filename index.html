@@ -73,9 +73,9 @@
       <button type="button" class="mp-btn panel thin wood" data-power="stop" title="Stop time">⏸ Stop time</button>
       <button type="button" class="mp-btn panel thin wood" data-power="reset" title="Foes back home at full health">↺ Reset zone</button>
     </div>
-    <!-- A free-form line to the Dungeon Master: no buttons, just words (src/hud/RequestPanel.ts). -->
+    <!-- A free-form line to the Dungeon Master: words and a Send button for phones with no Enter key (src/hud/RequestPanel.ts). -->
     <div id="request" class="panel thin paper" role="group" aria-label="Talk to the Dungeon Master" hidden>
-      <form autocomplete="off"><input type="text" placeholder="Talk to the Dungeon Master…" aria-label="Talk to the Dungeon Master" enterkeyhint="send" /></form>
+      <form autocomplete="off"><input type="text" placeholder="Talk to the Dungeon Master…" aria-label="Talk to the Dungeon Master" enterkeyhint="send" /><button type="submit" class="mp-btn panel thin wood">Send</button></form>
     </div>
     <div id="dm-hold" class="panel thin wood" role="status" hidden></div>
     <!-- A choice offered to the Dungeon Master at the right moment (src/hud/DmCard.ts, scenes/overworld/DmPrompts.ts). -->

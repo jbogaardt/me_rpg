@@ -69,4 +69,14 @@ describe('Collision', () => {
     const ghost: Body = { x: a.x + 10, y: a.y, visible: false };
     expect(c.canMove(a, a.x + 2, a.y, [ghost])).toBe(true);
   });
+
+  it('opens a dried-out bed to walkers, and closes it again', () => {
+    const lake = new Collision(10, 10, wall);
+    expect(lake.fitsMap(5.5 * CELL, 3.9 * CELL)).toBe(false);
+    lake.setBed([3 * 10 + 5]);
+    expect(lake.fitsMap(5.5 * CELL, 3.9 * CELL)).toBe(true);
+    expect(lake.cellsUnder(5.5 * CELL, 3.9 * CELL).has(3 * 10 + 5)).toBe(true);
+    lake.setBed([]);
+    expect(lake.fitsMap(5.5 * CELL, 3.9 * CELL)).toBe(false);
+  });
 });

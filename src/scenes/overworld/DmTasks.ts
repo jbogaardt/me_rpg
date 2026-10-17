@@ -4,7 +4,7 @@ import { DONE_WORDS, FAILED_WORDS } from '../../systems/dmVoice';
 import { Phrasebook } from '../../systems/phrases';
 import { collect } from '../../systems/chests';
 import { GEAR_KINDS, giftFor, remember, type GiftMemory } from '../../systems/dmGear';
-import { RELIC_KIND, relicsFor, type Land } from '../../systems/dmQuests';
+import { RELIC_KIND, parseRelicWhat, relicsFor, type Land } from '../../systems/dmQuests';
 import {
   TASK_LINGER,
   TaskBook,
@@ -298,7 +298,8 @@ export class DmTasks {
   /** Where the quest leads now: the nearest living foe of the kind to the party, the nearest site not yet touched. */
   private target(party: Player[]): { x: number; y: number } | undefined {
     const t = this.book.task;
-    if (!t || (t.kind !== 'hunt' && t.kind !== 'gather' && t.kind !== 'boss')) return undefined;
+    const carrier = t?.kind === 'find' ? parseRelicWhat(t.what).carrier : undefined;
+    if (!t || (t.kind !== 'hunt' && t.kind !== 'gather' && t.kind !== 'boss' && !carrier)) return undefined;
     const zone = this.arena.zones.get(t.zone);
     if (!zone) return undefined;
     if (t.kind === 'boss') {
@@ -309,11 +310,11 @@ export class DmTasks {
     const from = here[0]?.body ?? this.arena.local.body;
     const near = (list: { x: number; y: number }[]) =>
       list.sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0];
-    if (t.kind === 'hunt')
+    if (t.kind === 'hunt' || carrier)
       return near(
         this.arena.inZone(zone, () =>
           this.arena.mobs
-            .filter((m) => m.alive && mobKey(m.kind) === t.what)
+            .filter((m) => m.alive && mobKey(m.kind) === (carrier ?? t.what))
             .map((m) => ({ x: m.body.x, y: m.body.y })),
         ),
       );
@@ -330,11 +331,14 @@ export class DmTasks {
       if (GEAR_KINDS.includes(t.kind)) for (const p of party) this.gift(p, this.seq);
       // Hook: a boss quest may also drop gear for the party here (`t.kind === 'boss'`; `upgradeFor`/`relicsFor` pick pieces).
       const finder = this.finder;
-      const item = t.kind === 'find' ? ITEMS[t.what] : undefined;
-      if (finder && item) {
-        const found = collect(finder.hero, { item: itemOf(t.what) });
-        this.arena.inZone(this.arena.zoneOf(finder), () =>
-          this.sim.text(finder.body.x, finder.body.y - 90, found.text, 0xfff0a0),
+      const relic = t.kind === 'find' ? parseRelicWhat(t.what) : undefined;
+      const item = relic && ITEMS[relic.item];
+      // the chest's finder keeps it; the foe's drop goes to whoever of the party is in its land (kills are the party's)
+      const keeper = finder ?? (relic?.carrier ? (party.find((p) => p.zone === t.zone) ?? party[0]) : undefined);
+      if (keeper && relic && item) {
+        const found = collect(keeper.hero, { item: itemOf(relic.item) });
+        this.arena.inZone(this.arena.zoneOf(keeper), () =>
+          this.sim.text(keeper.body.x, keeper.body.y - 90, found.text, 0xfff0a0),
         );
       }
     }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { landmarkIn, landmarkText, relicShape } from './landmarks';
+import { landmarkIn, landmarkText } from './landmarks';
 
 describe('landmarkIn', () => {
   it('finds the thing a telling names', () => {
@@ -22,17 +22,5 @@ describe('landmarkIn', () => {
     expect(landmarkIn(landmarkText({ what: 'Big Ansel', note: 'Find the wagon.', title: 'Find Big Ansel' }))).toBe(
       'cart',
     );
-  });
-});
-
-describe('relicShape', () => {
-  it('looks like what is sought', () => {
-    expect(relicShape('sword')).toBe('blade');
-    expect(relicShape('wand')).toBe('staff');
-    expect(relicShape('tome')).toBe('book');
-    expect(relicShape('helm')).toBe('shield');
-    expect(relicShape('sack')).toBe('pouch');
-    expect(relicShape('charm')).toBe('gem');
-    expect(relicShape(undefined)).toBe('gem');
   });
 });

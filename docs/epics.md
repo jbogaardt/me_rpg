@@ -29,7 +29,7 @@ An epic is a saga of steps as **data**, with no land and no content id: a step i
 person has a name and a look word. It is planned onto whatever world is played by walking its zone links, so one epic runs
 in any biome that has the lands; each carries a gauge (difficulty, length, reach). The built-in sagas are
 `content/epics.json`; a campaign's `quests.json` may hold more, and an AI may write one (`DmBot.epic`): `parseEpic` checks
-all of them as strictly as a world entry (an unknown person, a person met twice or never, too long a line).
+all of them as strictly as a world entry (an unknown person, a person never met, too long a line).
 
 A step is either **resolved** from whatever land it falls in (`kind` hunt, gather, find, visit or forge, and a `hop`) or **named
 outright** (`objective`, in the campaign quests' own words: `{"t": "kill", "kind": "goblin", "count": 4, "zone":
@@ -38,8 +38,8 @@ writes a saga about its own world (`greenwood_reckoning` in campaign 1) and a pa
 quest kind (hunt, gather, find, visit, cast spells where the party has magic, haul barrels to a named place, slay a boss, master a spell, forge a gem into gear the party has or can buy; a land
 without one tells another kind: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
 `DmTasks.ts` runs it) or `meet`. For `meet` the DM makes the step's person (an `npc` then a `cast` entry of the live world,
-on open ground in the step's land, wearing the look a word names), the party is sent to find them (a `visit` quest at
-their feet), and on reaching them the DM only says they are there: **the person speaks through their own dialog when talked
+on open ground in the step's land, or with `at: haven` beside a shop door of the nearest town the world has, wearing the look a word names; a later `meet` of the same person sends the party back to where they stand), the party is sent to find them (a `visit` quest at
+their feet), and on reaching them the DM only says they are there (and, if nobody speaks to them for a while, reminds the party, then goes on without a word: a saga is never left hanging): **the person speaks through their own dialog when talked
 to** (`DmEpics.meet` puts the step's lines on them, `talked` hears the action press that talks to them, solo, host or a
 friend's, and the saga goes on a few seconds later), never in the DM's voice, and may give something to carry (`gives`, named in the telling for a later step to ask for). The party is told in
 **words only, nothing on the map** (the map is the party's own): when the DM notices they are lost (the director's card, or
@@ -50,8 +50,8 @@ every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities f
 **What a telling names is there to be found** (`systems/landmarks.ts`, `entities/Landmark.ts`, drawn by `StoryUi.syncLandmark`, local
 to every page from the synced task alone): a visit or meeting whose words (the place, the DM's note, the title) name a
 wagon, well, camp, tent, shrine, grave, ruin, tower or hut gets one drawn beside its goal, so no quest sends the party
-to something that is not there (a carter "beside a lopsided wagon" has the wagon). A quest to *find* an item draws the
-relic as something shaped like it (blade, staff, book, shield, pouch, gem). A new word or shape goes in `landmarks.ts`
+to something that is not there (a carter "beside a lopsided wagon" has the wagon). A quest to *find* an item is never a thing lying on the
+ground: a foe of the land carries it (kill it) or a chest the DM left holds it (open it). A new word or shape goes in `landmarks.ts`
 with its drawing; an AI-written epic gets the same for free, as long as it uses those words.
 
 **People's words follow the epic**: a person has `lines` (before the party is sent to them), `after` (once met) and

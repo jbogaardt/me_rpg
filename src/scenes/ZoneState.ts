@@ -31,7 +31,7 @@ import { PET_KINDS } from '../systems/pets';
 import { GIVERS } from '../systems/quests';
 import { SHOPS } from '../systems/shops';
 import { isTrialZone } from '../systems/skills';
-import { PondLevels, type PondState } from '../systems/needs';
+import { PondLevels, pondCells, type PondState } from '../systems/needs';
 import { PondBeds } from '../entities/PondBeds';
 
 /** What a zone remembers while it is unloaded (Arena.memory); its mobs simply start afresh. */
@@ -104,8 +104,32 @@ export class ZoneState {
   readonly ponds = new PondLevels();
   /** Draws the drained part of each pond (the shown zone's, each frame: `showPonds`). */
   readonly pondBeds: PondBeds;
+  /** The ponds whose bed is open to walkers now (see `syncBeds`). */
+  private bedPonds = new Set<number>();
   /** Set by the scene, which owns the combat rules mobs call back into. */
   mobWorld!: MobWorld;
+
+  /**
+   * Open the bed of every dried-out pond to walkers (its water cells are solid only while there is water). When rain
+   * brings the water back a bed stays open until nobody stands on it, so no one is ever walled into the pond.
+   */
+  syncBeds() {
+    const dry = new Set(
+      this.ponds
+        .levels()
+        .filter(([, level]) => level >= 1)
+        .map(([id]) => id),
+    );
+    const stood = new Set<number>();
+    const bodies = [...this.heroBodies, ...this.mobs.filter((m) => m.alive).map((m) => m.body)];
+    for (const b of bodies) for (const c of this.collision.cellsUnder(b.x, b.y)) stood.add(c);
+    const next = new Set(dry);
+    for (const id of this.bedPonds)
+      if (!dry.has(id) && pondCells(this.data, id).some((c) => stood.has(c))) next.add(id);
+    if (next.size === this.bedPonds.size && [...next].every((id) => this.bedPonds.has(id))) return;
+    this.bedPonds = next;
+    this.collision.setBed([...next].flatMap((id) => pondCells(this.data, id)));
+  }
 
   /** A quest site that appears during play (the DM's relic): it is drawn with the zone's other objects. */
   addSite(spawn: SiteSpawn): QuestSite {

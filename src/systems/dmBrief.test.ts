@@ -29,6 +29,7 @@ describe('briefing', () => {
       ['hunt', 'goblin'],
       ['gather', 'echostone'],
       ['find', 'charm'],
+      ['find', 'charm@goblin'],
       ['visit', 'the Old Mill'],
     ] as const) {
       const pages = briefing(task({ kind, what }), names);
@@ -86,6 +87,11 @@ describe('objective', () => {
     expect(objective(task({ kind: 'gather', goal: 3, what: 'echostone' }), names)).toBe(
       'Collect 3 Echostones in The Greenwood.',
     );
-    expect(objective(task({ kind: 'find', goal: 1 }), names)).toBe('Find the Wayfarer’s Charm in The Greenwood.');
+    expect(objective(task({ kind: 'find', goal: 1 }), names)).toBe(
+      'Find the chest and open it for the Wayfarer’s Charm in The Greenwood.',
+    );
+    expect(objective(task({ kind: 'find', what: 'charm@goblin', goal: 1 }), names)).toBe(
+      'Defeat a Goblin and take the Wayfarer’s Charm in The Greenwood.',
+    );
   });
 });

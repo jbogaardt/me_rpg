@@ -298,6 +298,7 @@
       {
         "kind": "meet",
         "hop": 0,
+        "at": "haven",
         "who": "postmaster",
         "tell": "The postmaster in {area} is beside himself. Find Aldis, and hear what happened.",
         "says": [
@@ -366,6 +367,7 @@
       {
         "kind": "meet",
         "hop": 0,
+        "at": "haven",
         "who": "ringer",
         "tell": "The bell-ringer in {area} has a sorrow to tell. Find Old Maren.",
         "says": [
@@ -489,6 +491,7 @@
       {
         "kind": "meet",
         "hop": 0,
+        "at": "haven",
         "who": "innkeeper",
         "tell": "The innkeeper in {area} has a worry she will tell to anyone who sits a while. Find Mother Brannagh.",
         "says": [
@@ -513,9 +516,14 @@
         ]
       },
       {
-        "kind": "visit",
+        "kind": "meet",
         "hop": 0,
-        "tell": "Carry the Pressed Flower back to the inn in {area}, and tell Brannagh what you found."
+        "who": "innkeeper",
+        "tell": "Carry the Pressed Flower back to Mother Brannagh at the inn in {area}, and tell her what you found.",
+        "says": [
+          "A pressed flower. He gave me one every spring, the first year we kept this room.",
+          "Then he is well, and only lost in grief. Thank you. Go and rest; your supper is on me."
+        ]
       }
     ]
   },
@@ -562,6 +570,7 @@
       {
         "kind": "meet",
         "hop": 0,
+        "at": "haven",
         "who": "merchant",
         "tell": "A merchant in {area} is pacing beside an empty stall. Find Pella Quickcoin and hear her out.",
         "says": [
@@ -582,6 +591,7 @@
       {
         "kind": "meet",
         "hop": 0,
+        "at": "haven",
         "who": "smith",
         "gives": "a Mended Wheel Rim",
         "tell": "Carry the broken rim to the smith in {area}. Find Hilde.",

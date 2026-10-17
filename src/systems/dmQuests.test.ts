@@ -8,8 +8,10 @@ import {
   offerFor,
   offerReward,
   parseMastery,
+  parseRelicWhat,
   questOf,
   relicsFor,
+  relicWhat,
   upgradeFor,
   type Land,
 } from './dmQuests';
@@ -42,10 +44,21 @@ describe('quests written from a land', () => {
       'Gather 3 Echostones',
       'Reach the Old Mill',
       expect.stringMatching(/^Slay the .*Troll/), // the boss: the toughest foe the land has
-      'Find the Wayfarer’s Charm',
+      'Open the chest holding the Wayfarer’s Charm',
+      'Take the Wayfarer’s Charm from a Goblin',
     ]);
     expect(offers.find((o) => o.kind === 'hunt')).toMatchObject({ what: 'goblin', goal: 3, zone: 'fen', x: 10, y: 20 });
     expect(offers.find((o) => o.kind === 'find')).toMatchObject({ what: 'charm', goal: 1, x: 900, y: 910 });
+  });
+
+  it('never leaves a relic lying about: a chest holds it, or a foe carries it and drops it when it falls', () => {
+    const finds = allOffers(land()).filter((o) => o.kind === 'find');
+    const [chest, carried] = finds.map((o) => questOf(o).objective);
+    expect(chest).toMatchObject({ t: 'gather', site: 'relic' });
+    expect(carried).toMatchObject({ t: 'kill', kind: 'goblin', count: 1 });
+    expect(parseRelicWhat(finds[1]!.what)).toEqual({ item: 'charm', carrier: 'goblin' });
+    expect(parseRelicWhat(relicWhat('charm'))).toEqual({ item: 'charm' });
+    expect(allOffers(land({ mobs: [] })).filter((o) => o.kind === 'find')).toHaveLength(1); // no foe: the chest only
   });
 
   it('grows with the party: more of a foe they have outgrown, the best match first, and bigger pay', () => {

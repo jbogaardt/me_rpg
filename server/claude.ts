@@ -317,10 +317,10 @@ export class ClaudeEpicWriter implements EpicWriter {
         ? `${arc} The saga you write is this chapter: its opening picks up the tale's threat, and its ending sets up the next chapter. `
         : '') +
       `Write a new epic for the party, who are in ${area}. An epic is a short saga of 3 to 6 steps. A step is one of: ` +
-      `"hunt" (clear foes), "gather" (collect from the land), "find" (search for a hidden thing), "visit" (reach a place), ` +
+      `"hunt" (clear foes), "gather" (collect from the land), "find" (a chest the DM left, or a foe carries the item), "visit" (reach a place), ` +
       `"cast" (practise magic: cast spells), "haul" (carry barrels to a place, to build or store something), ` +
       `or "meet" (find one of the epic's people, who speaks and may hand over an item to carry on). Give it 2 or 3 people ` +
-      `with a name, "lines" (what they say before they are met), "after" (once met), "finished" (once the saga is done) and a "look" word from: ${looks.map((l) => l.name).join(', ')}. Every person is met by exactly one "meet" step. "people" is an object whose keys are short ids, each id naming one person, and a step's "who" (only on "meet" steps, never empty) must be one of those ids. ` +
+      `with a name, "lines" (what they say before they are met), "after" (once met), "finished" (once the saga is done) and a "look" word from: ${looks.map((l) => l.name).join(', ')}. Every person is met by at least one "meet" step (a later one may meet them again where they stand; "at": "haven" on a first meeting puts them in a town if the world has one). "people" is an object whose keys are short ids, each id naming one person, and a step's "who" (only on "meet" steps, never empty) must be one of those ids. ` +
       `"hop" is how many lands from here the step is set (0 to 3). EVERY step, not only some, has a "kind", a whole-number ` +
       `"hop" and a "tell" (what the DM says to send them there, one short sentence under 200 letters). Open with a concrete hook that makes the party want to act: who is in trouble, what is at stake and why it falls to them. Make it a story with a reason, a turn and a payoff, not ` +
       `a list of chores. It is an adventure, not a battle: at most ONE "hunt" step, and at least one "meet" with a townsperson, ` +

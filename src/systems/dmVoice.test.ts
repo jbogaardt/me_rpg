@@ -16,6 +16,7 @@ const banks: [string, string[]][] = [
   ['nowhere', voice.SIGN_NOWHERE_WORDS],
   ['welcome', voice.WELCOMES.flat()],
   ['meet', voice.MEET_WORDS.map((w) => w('Ansel'))],
+  ['talk nudge', voice.TALK_NUDGE_WORDS.map((w) => w('Ansel'))],
 ];
 
 describe('the DM’s voice', () => {

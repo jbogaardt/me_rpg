@@ -10,7 +10,7 @@ import type { Menu } from '../../hud/Menu';
 import { CELL } from '../../map/types';
 import { briefing, objective } from '../../systems/dmBrief';
 import { bossKind, bossShell, nameOfBossTitle, parseBossWhat } from '../../systems/dmBoss';
-import { RELIC_KIND } from '../../systems/dmQuests';
+import { RELIC_KIND, parseRelicWhat } from '../../systems/dmQuests';
 import { landmarkIn, landmarkText } from '../../systems/landmarks';
 import { HINT_AREA, HINT_ARROW, taskText, type TaskView } from '../../systems/dmTasks';
 import { MOB_KINDS } from '../../systems/combat';
@@ -238,7 +238,7 @@ export class StoryUi {
   questWants(zone: string, site: QuestSite): boolean {
     const t = this.arena.task;
     if (!t || t.state !== 'active' || t.zone !== zone) return false;
-    if (t.kind === 'find') return site.kind === RELIC_KIND;
+    if (t.kind === 'find') return site.kind === RELIC_KIND && !parseRelicWhat(t.what).carrier;
     return t.kind === 'gather' && site.kind === t.what && !(t.bits & (1 << site.index));
   }
 
@@ -256,10 +256,10 @@ export class StoryUi {
     }
   }
 
-  /** The relic of a "find" quest is a site that appears where the DM hid it (on every page) and goes when it is found. */
+  /** The chest of a "find" quest (one with no foe carrying the relic) is a site that appears where the DM left it (on every page) and goes when it is opened. */
   syncRelic() {
     const t = this.arena.task;
-    const want = t && t.state === 'active' && t.kind === 'find' ? t : null;
+    const want = t && t.state === 'active' && t.kind === 'find' && !parseRelicWhat(t.what).carrier ? t : null;
     for (const z of this.arena.zones.values()) {
       const have = z.sites.find((x) => x.kind === RELIC_KIND);
       if (want && z.name === want.zone && !have)
@@ -267,7 +267,7 @@ export class StoryUi {
           kind: RELIC_KIND,
           col: Math.floor(want.x / CELL),
           row: Math.floor(want.y / CELL),
-          item: want.what,
+          item: parseRelicWhat(want.what).item,
         });
       else if (have && !(want && z.name === want.zone)) z.removeSite(have);
     }

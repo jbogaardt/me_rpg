@@ -49,6 +49,37 @@ describe('planning a saga onto a world', () => {
   });
 });
 
+describe('people placed in a town, and met again', () => {
+  const town = (names: string[], towns: string[]): ZoneGraph => ({ ...line(names), haven: (z) => towns.includes(z) });
+  const tale = parseEpic({
+    id: 'inn_tale',
+    title: 'Inn Tale',
+    tagline: 'Short.',
+    difficulty: 1,
+    opening: 'It begins.',
+    ending: 'It ends.',
+    people: { host: { name: 'Hostess', lines: ['Hello.'] } },
+    steps: [
+      { kind: 'meet', hop: 0, at: 'haven', who: 'host', tell: 'Find her.', says: ['Hi.'] },
+      { kind: 'hunt', hop: 2, tell: 'Clear {area}.' },
+      { kind: 'meet', hop: 0, who: 'host', tell: 'Back to her.', says: ['Thanks.'] },
+    ],
+  });
+
+  it('sets a person in the nearest town, and again where they were first met', () => {
+    expect(typeof tale).toBe('object');
+    const plan = planEpic(tale as never, 'a', town(['a', 'b', 'c', 'd', 'e'], ['c', 'e']))!;
+    expect(plan.zones[0]).toBe('c');
+    expect(plan.zones[2]).toBe('c'); // not back at the start: where they stand
+  });
+
+  it('leaves the person where the hop says when the world has no town', () => {
+    const plan = planEpic(tale as never, 'a', big)!;
+    expect(plan.zones[0]).toBe('a');
+    expect(plan.zones[2]).toBe('a');
+  });
+});
+
 describe('the gauge', () => {
   it('rises with the saga: a few chores close to home are short and easy, the Hollow Crown is a trial', () => {
     const quiet = gauge(
@@ -174,9 +205,8 @@ describe('epics as data', () => {
     expect(bad((t) => (t.steps[0]!.who = 'nobody'))).toContain('not one of the epic');
     expect(bad((t) => (t.steps[0]!.says = []))).toContain('says');
     expect(bad((t) => ((t.steps[1] as { who?: string }).who = 'mira'))).toContain('only a meet step');
-    expect(bad((t) => t.steps.push({ kind: 'meet', hop: 1, who: 'mira', tell: 'x', says: ['y'] } as never))).toContain(
-      'twice',
-    );
+    expect(bad((t) => ((t.steps[0] as { at?: string }).at = 'moon'))).toContain('.at');
+    expect(bad((t) => ((t.steps[1] as { at?: string }).at = 'haven'))).toContain('only a meet step');
     expect(bad((t) => (t.steps[1] = { kind: 'dig', hop: 1, tell: 'x' } as never))).toContain('kind');
     expect(bad((t) => (t.steps[0]!.tell = 'x'.repeat(300)))).toContain('tell');
     expect(bad((t) => ((t.people.mira as { name: string }).name = ''))).toContain('people.mira');

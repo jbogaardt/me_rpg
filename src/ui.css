@@ -362,7 +362,7 @@ body.dm-ui:not(.dm-possessing) #btn-a { display: none; }
 #request .mp-btn { width: 100%; text-align: left; padding: 6px 10px; }
 #request form { display: flex; gap: 6px; margin-top: 8px; min-width: 0; }
 #request input { flex: 1; min-width: 0; font: 16px var(--body); padding: 4px 6px; border: 1px solid var(--gold-dim); border-radius: 3px; background: #fffaf0; color: var(--ink); }
-#request form .mp-btn { width: auto; padding: 4px 10px; }
+#request form .mp-btn { width: auto; padding: 4px 10px; text-align: center; }
 #dm-card .mp-btn { white-space: pre-line; }
 body.touch-ui #request .mp-btn { min-height: 44px; }
 #dm-hot .mp-btn { padding: 6px 10px; font-size: 14px; white-space: nowrap; text-align: left; }

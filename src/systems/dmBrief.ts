@@ -5,7 +5,7 @@
 
 import type { TaskView } from './dmTasks';
 import { nameOfBossTitle, parseBossWhat } from './dmBoss';
-import { parseMastery } from './dmQuests';
+import { parseMastery, parseRelicWhat } from './dmQuests';
 import { hashOf, seeded } from './phrases';
 import { SPELLS, arrows, directionWords, type SpellId } from './spells';
 
@@ -58,8 +58,12 @@ export function objective(v: TaskView, names: BriefNames): string {
       const site = names.site(v.what);
       return `Collect ${n} ${n > 1 ? plural(site) : site}${where}.`;
     }
-    case 'find':
-      return `Find ${names.item(v.what)}${where}.`;
+    case 'find': {
+      const { item, carrier } = parseRelicWhat(v.what);
+      return carrier
+        ? `Defeat ${an(names.foe(carrier))} and take ${names.item(item)}${where}.`
+        : `Find the chest and open it for ${names.item(item)}${where}.`;
+    }
     case 'cast':
       return `Cast ${n} spells${where}.`;
     case 'forge': {
@@ -138,23 +142,45 @@ export function briefing(v: TaskView, names: BriefNames): string[] {
         ]),
       ];
     }
-    case 'find':
+    case 'find': {
+      const { item, carrier } = parseRelicWhat(v.what);
+      if (carrier) {
+        const foe = names.foe(carrier);
+        const a = an(foe);
+        return [
+          page(0, [
+            `${names.item(item)} was taken in ${where} by ${a}, and the beast has been wearing it like a trophy ever since.`,
+            `Something that belongs to better hands is in the claws of ${a} somewhere in ${where}. I would like it back, and so, I think, would you once you see it.`,
+            `A traveller swore that ${a} in ${where} carries ${names.item(item)} and will not part with it. I believe him; the beast has the look of a thief.`,
+          ]),
+          page(1, [
+            `What you want is ${names.item(item)}, and it will not come off by asking. It drops when the ${foe} falls, and falls to whoever of you is nearest, so settle who should carry it.`,
+            `It is ${names.item(item)}. Cut down the ${foe} that has it and it is yours; one of you will carry it out.`,
+          ]),
+          page(2, [
+            `Any ${foe} might be the one, so do not be choosy: fight what you meet in ${where} and the right one will fall in time. Mind your health.`,
+            `The ${foe} is no pushover on its own turf. Go carefully, and watch each other's backs.`,
+            `Hunt the ${foe}s of ${where} with care. The one with the prize will not look any different, only prouder.`,
+          ]),
+        ];
+      }
       return [
         page(0, [
-          `Long ago something was lost in ${where}, and it has waited all this time for someone worth giving it to. Tonight the old stories say it glows, if you are close enough to see it.`,
-          `There is an old thing hidden somewhere in ${where}. I will not say who hid it, nor why, only that it is real and that you are the ones I would trust to find it.`,
-          `A dying peddler once told me of a thing he buried in ${where} and never went back for. I believed him then, and I believe him now.`,
+          `Long ago a chest was lost in ${where}, and it has waited all this time for someone worth giving it to. Tonight the old stories say it glows, if you are close enough to see it.`,
+          `There is an old chest hidden somewhere in ${where}. I will not say who hid it, nor why, only that it is real and that you are the ones I would trust to find it.`,
+          `A dying peddler once told me of a chest he buried in ${where} and never went back for. I believed him then, and I believe him now.`,
         ]),
         page(1, [
-          `What you are looking for is ${names.item(v.what)}. Whoever lays hands on it first keeps it, so decide between you who should carry it before you quarrel over it.`,
-          `It is ${names.item(v.what)}. One of you will carry it out, so settle now who that should be.`,
+          `Inside is ${names.item(item)}. Whoever opens the chest keeps it, so decide between you who should carry it before you quarrel over it.`,
+          `The chest holds ${names.item(item)}. One of you will carry it out, so settle now who that should be.`,
         ]),
         page(2, [
-          `It will be somewhere away from the beaten path, where nobody would trip over it by chance. A glowing thing will mark the spot once you are near. Mind what lives between here and there.`,
-          `Search the quiet corners, far from where folk usually walk. You will know it by its glow when you are close.`,
-          `Do not look where it is easy to look; that has been done. It glows when you are near, and the land around it is never quite still.`,
+          `It will be somewhere away from the beaten path, where nobody would trip over it by chance. A glow will mark the chest once you are near. Mind what lives between here and there.`,
+          `Search the quiet corners, far from where folk usually walk. You will know the chest by its glow when you are close.`,
+          `Do not look where it is easy to look; that has been done. The chest glows when you are near, and the land around it is never quite still.`,
         ]),
       ];
+    }
     case 'cast':
       return [
         page(0, [

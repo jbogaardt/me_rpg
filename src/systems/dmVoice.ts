@@ -76,6 +76,14 @@ export const MEET_WORDS = [
   (who: string) => `You found ${who}! Walk up and have a word. They have been waiting, and are the impatient sort.`,
 ];
 
+/** The party stands by a person of a saga and has not spoken to them: a nudge to walk up and press the action key. */
+export const TALK_NUDGE_WORDS = [
+  (who: string) =>
+    `${who} is still waiting for a word. Walk up close and press the action key; I cannot do it for you.`,
+  (who: string) => `Dawdling, are we? ${who} is right beside you. Step up and use the action key to talk.`,
+  (who: string) => `The tale will not go on until someone speaks to ${who}. Stand close and press the action key.`,
+];
+
 /** A saga ends early. */
 export const SAGA_LOST_WORDS = [
   'The thread has snapped, and the saga with it. A pity: it was shaping up nicely.',

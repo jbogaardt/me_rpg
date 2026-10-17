@@ -472,6 +472,7 @@ export class Simulation {
    */
   weather(dt: number) {
     const { weather, ponds, name } = this.arena.zone;
+    this.arena.zone.syncBeds(); // a dried-out pond is ground to walk on
     if (weather && !enabled('weather', name)) weather.still(); // switched off: clear and still, here and for friends
     if (!weather || !enabled('weather', name)) return ponds.rain(STILL_FILL, dt); // no weather: ponds seep back
     weather.update(dt);

@@ -27,8 +27,13 @@ export interface EpicStep {
   hop: number;
   /** What the DM tells the party for this step, in a line or two. `{area}` is the land it is set in, `{from}` the last. */
   tell: string;
-  /** Meet: the key of the person (in `EpicTemplate.people`) the party is sent to find. Each person is met once. */
+  /** Meet: the key of the person (in `EpicTemplate.people`) the party is sent to find. A person may be met again later: they stand where they were first met. */
   who?: string;
+  /**
+   * Meet: where the person stands. `haven`: in the nearest haven (a town) of the world, beside a shop door, if it has one
+   * (an innkeeper or a smith is not found out in the wilds); otherwise, and by default, in the land `hop` says.
+   */
+  at?: 'haven';
   /** Meet: what they say once the party reaches them, a line at a time (1 to `MAX_SAYS`). */
   says?: string[];
   /** Meet: something the party takes from them and carries on (shown in the DM's words; the epic's later steps may ask for it). */
@@ -69,6 +74,8 @@ export interface ZoneGraph {
   neighbours(zone: string): string[];
   /** Is it open country (not a shop or a room)? Sagas are only set in open country. */
   open(zone: string): boolean;
+  /** Is it a town (a safe haven with shops)? A world with none leaves this out. */
+  haven?(zone: string): boolean;
 }
 
 export interface EpicPlan {
@@ -132,11 +139,22 @@ export function planEpic(epic: EpicTemplate, start: string, graph: ZoneGraph, se
   if (!graph.open(start)) return null;
   const rings = layers(graph, start);
   const zones: string[] = [];
+  const haven = rings.flat().find((z) => graph.haven?.(z)); // nearest first
+  const metAt = new Map<string, string>();
   epic.steps.forEach((step, i) => {
     if (step.objective) return void zones.push(step.objective.zone); // named outright: it is set where it says
+    const where = step.who ? metAt.get(step.who) : undefined;
+    if (where) return void zones.push(where); // met again: where they stand
+    if (step.at === 'haven' && haven) {
+      zones.push(haven);
+      if (step.who) metAt.set(step.who, haven);
+      return;
+    }
     const ring = rings[Math.min(step.hop, rings.length - 1)]!;
     const options = ring.length > 1 ? ring.filter((z) => z !== zones[i - 1]) : ring;
-    zones.push(options[hash(`${seed}${epic.id}${i}`) % options.length]!);
+    const zone = options[hash(`${seed}${epic.id}${i}`) % options.length]!;
+    zones.push(zone);
+    if (step.who) metAt.set(step.who, zone);
   });
   return { epic, zones };
 }
@@ -275,8 +293,8 @@ export function parseEpic(raw: unknown): EpicTemplate | string {
     if (!kind || !tell || !Number.isInteger(hop) || (hop as number) < 0 || (hop as number) > 5)
       return `${at}: a kind (${KINDS.join(', ')}), a hop 0 to 5 and a tell (short)`;
     if (kind !== 'meet') {
-      if (q.who !== undefined || q.says !== undefined || q.gives !== undefined)
-        return `${at}: only a meet step has who, says or gives`;
+      if (q.who !== undefined || q.says !== undefined || q.gives !== undefined || q.at !== undefined)
+        return `${at}: only a meet step has who, says, gives or at`;
       steps.push({ kind, hop: hop as number, tell, ...(bound ? { objective: bound } : {}) });
       continue;
     }
@@ -285,10 +303,18 @@ export function parseEpic(raw: unknown): EpicTemplate | string {
     const says = list(q.says, 1, MAX_SAYS, MAX_SAY);
     const gives = q.gives === undefined ? undefined : words(q.gives, MAX_ITEM);
     if (!people[who]) return `${at}.who: "${who}" is not one of the epic's people`;
-    if (met.has(who)) return `${at}.who: "${who}" is met twice (each person is met once)`;
     if (!says || gives === null) return `${at}: says (1 to ${MAX_SAYS} lines of ${MAX_SAY}) and maybe what they give`;
+    if (q.at !== undefined && q.at !== 'haven') return `${at}.at: only "haven" (or leave it out)`;
     met.add(who);
-    steps.push({ kind, hop: hop as number, tell, who, says, ...(gives ? { gives } : {}) });
+    steps.push({
+      kind,
+      hop: hop as number,
+      tell,
+      who,
+      says,
+      ...(gives ? { gives } : {}),
+      ...(q.at === 'haven' ? { at: 'haven' as const } : {}),
+    });
   }
   const unmet = Object.keys(people).filter((k) => !met.has(k));
   if (unmet.length) return `${id}.people: ${unmet.join(', ')} never met`;

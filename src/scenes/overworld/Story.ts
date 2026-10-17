@@ -122,6 +122,12 @@ export class Story {
     return world?.regions.find((r) => world.cat.regions[r]?.biome.map === zone);
   }
 
+  /** Is this zone a haven (a town) of the live world? Always false where the world is not a live one. */
+  isHaven(zone: string): boolean {
+    const region = this.regionOf(zone);
+    return !!region && !!this.world?.cat.regions[region]?.haven;
+  }
+
   /** The Dungeon Master made someone and put them on a cell of a region's map: a new person, then their casting. */
   bring(person: { name: string; look: string; lines: string[] }, region: string, x: number, y: number): string | null {
     if (!this.world || !this.canChoose) return null;

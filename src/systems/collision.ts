@@ -23,6 +23,8 @@ const BODY_H = 8;
 /** Cell collision plus body-vs-body blocking. Pure data and maths, so it runs (and is tested) without Pixi. */
 export class Collision {
   private blocked: Set<number>;
+  /** Cells that are normally blocked but stand open for now (a dried-out pond's bed). */
+  private bed = new Set<number>();
 
   constructor(
     private width: number,
@@ -37,10 +39,27 @@ export class Collision {
     for (const cell of cells) this.blocked.delete(cell);
   }
 
+  /** Let these cells (by index) be walked for now though the map blocks them; the last call's cells are all that stand open. */
+  setBed(cells: Iterable<number>) {
+    this.bed = new Set(cells);
+  }
+
+  /** The cells (by index) any corner of a body's feet is in at (x, y). */
+  cellsUnder(x: number, y: number, size = 1): Set<number> {
+    const out = new Set<number>();
+    for (const [dx, dy] of FOOT_BOX) {
+      const col = Math.floor((x + dx * size) / CELL);
+      const row = Math.floor((y + dy * (1 + (size - 1) / 2)) / CELL);
+      if (col >= 0 && row >= 0 && col < this.width && row < this.height) out.add(row * this.width + col);
+    }
+    return out;
+  }
+
   /** Cells outside the map count as blocked. */
   isBlocked(col: number, row: number): boolean {
     if (col < 0 || row < 0 || col >= this.width || row >= this.height) return true;
-    return this.blocked.has(row * this.width + col);
+    const cell = row * this.width + col;
+    return this.blocked.has(cell) && !this.bed.has(cell);
   }
 
   /** Whether feet at (x, y) fit the map. */
