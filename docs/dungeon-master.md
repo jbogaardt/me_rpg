@@ -65,7 +65,7 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   piece: `dmForge.ts`). Gear rewards are chosen per hero and rotate by slot (`dmGear.ts`): a saga's finale and a forge quest pay one.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` raises or fetches a fallen player. **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive
-  it through the usual damage rules. Their body rides invisibly on it (`Player.hidden`, `FLAG.hidden`) so the camera and
+  it through the usual damage rules. Their body rides invisibly on it (`Player.hidden`) so the camera and
   friends' view follow, and they cannot die. While possessing, pop-ups are hidden and the director waits.
 - **Signposts** read the layout (`systems/signs.ts`): each way names the zone really reached that way, a place of the map
   stays, a way with nothing beyond it is dropped (all gone: a dry line). In a **live** world the DM may rewrite one: stand
