@@ -114,3 +114,14 @@ Try it: `DM_BOT_CLAUDE=1 TYPESAFE_API_KEY=... npm run dm-bot` and let a friend f
 prints `scene: furious_clash, lighting_changed, taunting`); without keys the stock narrator and the rules do the same.
 Offline: `npx vitest run server/scene.test.ts src/systems/cues.test.ts` plays a lunge, a dodge and a breaking lantern
 from Jev's verdict to the dispatched cues.
+
+## The game's report
+
+The page's host notebook (`src/scenes/overworld/DmReport.ts`) notes what players say to the DM, the director's nudges,
+knockouts and quest ends, each with the state of the game then; `DmBot.reports` hands it over. The bot prints each note as a
+`[report]` line, appends it to `reports/raw/<date>-<code>.jsonl` (ignored by git) and, when the game ends (everyone left, or
+you `quit`), has Haiku read it as a playtest analyst (`report.ts`, `analystSession` in `claude.ts`) and writes
+`reports/<date>-<code>.md`: a prompt file a future Claude session acts on. With no model (not logged in, a failure, 4 minutes
+without an answer) or `DM_BOT_REPORT=plain` the same file is written by rules. Players are P1, P2...; links, emails and long
+numbers are cut; **read the file before committing it**.
+

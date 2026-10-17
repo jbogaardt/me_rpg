@@ -11,11 +11,22 @@
 // and new people with a headless Claude Code session (claude.ts; your own login, no key).
 // Type `help` in the terminal for the operator's commands.
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
 import { JevReader, JevRouter, JevScene } from './jev';
 import { MockFallback, MockRouter } from './mocks';
-import { ClaudeArcWriter, ClaudeConjurer, ClaudeFallback, ClaudeNarrator, ClaudeEpicWriter } from './claude';
+import {
+  ClaudeArcWriter,
+  ClaudeConjurer,
+  ClaudeFallback,
+  ClaudeNarrator,
+  ClaudeEpicWriter,
+  analystSession,
+} from './claude';
+import { ANALYST_SYSTEM, writeReport } from './report';
+import { isReportEntry, reportLine, type ReportEntry } from '../src/systems/reportLog';
 import {
   MockArcWriter,
   advance,
@@ -42,6 +53,9 @@ const MIN_LANDS = 3;
 const CLAUDE = Boolean(process.env.DM_BOT_CLAUDE);
 /** Unprompted remarks (the DM talking over the saga) are off unless asked for: a player can ask when they want the story again. */
 const CHATTER = Boolean(process.env.DM_BOT_CHATTER);
+/** Where a game's report goes (the repo's `reports/`; the raw log beside it is ignored by git), and whether Haiku reads it (`DM_BOT_REPORT=plain`: rules only). */
+const REPORTS_DIR = path.resolve(import.meta.dirname, '../reports');
+const PLAIN_REPORT = process.env.DM_BOT_REPORT === 'plain';
 
 /** The page's bot handle (DmBot.ts's DmBotApi), as far as this script calls it. */
 interface PageBot {
@@ -61,6 +75,8 @@ interface PageBot {
   spawn(person: { name: string; look: string; lines: string[] }): { ok: boolean; note: string };
   /** Write on the signpost beside the DM (a page per line; none restores it). Live worlds only. */
   sign(lines: string[]): { ok: boolean; note: string };
+  /** What the host's report noted since the last call (`src/systems/reportLog.ts`). */
+  reports(): unknown[];
   goTo(slot: number): void;
   walk(dx: number, dy: number, seconds: number): void;
 }
@@ -82,6 +98,10 @@ class Dm {
   /** When each friend at the table connected, and whether they have been announced as in. */
   private friends = new Map<number, { at: number; in: boolean }>();
   private lastCode: string | null = null;
+  /** The game being written down: what the host's report noted so far, and when it began. */
+  private game: { code: string; started: Date; entries: ReportEntry[] } | null = null;
+  private hadFriends = false;
+  private finishing = false;
   /** The card last answered: met again unchanged, the answer did nothing, so it is sent away. */
   private answered = '';
   /** The DM's last words to players (replies and narration), so the writer does not repeat itself. */
@@ -144,6 +164,7 @@ class Dm {
     const s = await this.state();
     this.latest = s;
     this.clock.now = Date.now();
+    await this.collect();
     this.report(s);
     this.refresh(s);
     this.clock.pulse = fresh(this.pulse, this.clock.now);
@@ -326,6 +347,51 @@ class Dm {
     if (move.pick === 'heat' || move.pick === 'ease') this.pressure = { id: move.pick, at: this.clock.now };
   }
 
+  /** Take what the host's report noted since last time: print it with the host log and keep it, raw, as it comes. */
+  private async collect() {
+    const noted: unknown[] = await this.call('reports').catch(() => []);
+    const fresh = noted.filter(isReportEntry);
+    if (!fresh.length) return;
+    const code = this.lastCode ?? 'game';
+    const game = (this.game ??= { code, started: new Date(), entries: [] });
+    fs.mkdirSync(path.join(REPORTS_DIR, 'raw'), { recursive: true });
+    const raw = path.join(REPORTS_DIR, 'raw', `${game.started.toISOString().slice(0, 10)}-${game.code}.jsonl`);
+    for (const e of fresh) {
+      log(reportLine(e));
+      fs.appendFileSync(raw, `${JSON.stringify(e)}\n`);
+    }
+    game.entries.push(...fresh);
+  }
+
+  /**
+   * The game is over (everyone left, or the bot stops): have Haiku read what was noted and write the prompt file for the next
+   * session (`report.ts`; rules alone with `DM_BOT_REPORT=plain` or when no model answers).
+   */
+  async finish(why: string) {
+    await this.collect();
+    const game = this.game;
+    if (!game || this.finishing) return;
+    this.finishing = true;
+    this.game = null;
+    const analyst = PLAIN_REPORT ? null : analystSession(ANALYST_SYSTEM);
+    try {
+      log(`writing the game's report (${game.entries.length} notes${analyst ? ', Haiku reading' : ''})`);
+      const wrote = await writeReport(
+        REPORTS_DIR,
+        { code: game.code, started: game.started, ended: new Date(), why },
+        game.entries,
+        analyst ? (system, prompt) => analyst.ask(system, prompt) : null,
+      );
+      if (wrote)
+        log(`report written (${wrote.how}): ${path.relative(process.cwd(), wrote.path)} (read it before committing)`);
+    } catch (err) {
+      log('could not write the report:', err);
+    } finally {
+      analyst?.close();
+      this.finishing = false;
+    }
+  }
+
   /** Say what changed at the table. */
   private report(s: PageState) {
     if (s.code !== this.lastCode) {
@@ -346,6 +412,12 @@ class Dm {
       }
     }
     this.clock.settled = [...this.friends.values()].filter((f) => f.in).length;
+    // Everyone who was in has gone: that game is over, and its report is written while the bot opens the next.
+    if (this.friends.size) this.hadFriends = true;
+    else if (this.hadFriends) {
+      this.hadFriends = false;
+      void this.finish('everyone left');
+    }
   }
 }
 
@@ -415,7 +487,11 @@ async function main() {
   let stopped = false;
   const stop = () => {
     stopped = true;
-    void browser.close().then(() => process.exit(0));
+    void dm
+      .finish('the operator stopped the bot')
+      .catch(() => undefined)
+      .then(() => browser.close())
+      .then(() => process.exit(0));
   };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);

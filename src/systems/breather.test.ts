@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BREATHER_SECONDS, Breather, clockText } from './breather';
+import { BREATHER_SECONDS, Breather, MOODS, MOOD_FACES, clockText } from './breather';
 
 describe('breather', () => {
   it('runs for its seconds and says so on the frame it ends', () => {
@@ -26,5 +26,9 @@ describe('breather', () => {
     expect(clockText(41.2)).toBe('0:42');
     expect(clockText(65)).toBe('1:05');
     expect(clockText(0)).toBe('0:00');
+  });
+
+  it('has a face for each mood', () => {
+    for (const m of MOODS) expect(MOOD_FACES[m].length).toBeGreaterThan(0);
   });
 });

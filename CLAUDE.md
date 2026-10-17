@@ -57,7 +57,7 @@ These files describe design philosophy, architecture and the traps that bite, no
 - `src/scenes/CLAUDE.md`: the overworld, arena, simulation, zones and doors. `src/systems/CLAUDE.md`: capabilities, combat, balance, with design notes on quests, magic, survival, economy and props.
 - `src/net/CLAUDE.md`: co-op design, the protocol rules, trading. `relay/CLAUDE.md`: the matchmaking Worker.
 - `tools/map/CLAUDE.md` and `maps/CLAUDE.md`: the map pipeline, catalog, world layout, shop buildings.
-- `docs/dungeon-master.md`: the host as Dungeon Master, the bar, director, possession. `docs/epics.md`: quests as epics, one format for a campaign's story and the DM's sagas, their people, who runs them. `server/README.md`: the bot that runs the DM from outside the game. `docs/playtests.md`: how we iterate on it (a run, the log, the fix) and what past runs settled.
+- `docs/dungeon-master.md`: the host as Dungeon Master, the bar, director, possession. `docs/epics.md`: quests as epics, one format for a campaign's story and the DM's sagas, their people, who runs them. `server/README.md`: the bot that runs the DM from outside the game. `docs/playtests.md`: how we iterate on it (a run, the log, the fix) and what past runs settled; `reports/`: the prompt file each played game leaves for the next session (read the newest first).
 
 ## Working procedure (rapid dev mode)
 

@@ -540,6 +540,12 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
     });
     expect(parseMessage(JSON.stringify({ ...input, rq: [2, 7] }))).toBeNull();
     expect(parseMessage(JSON.stringify({ ...input, rq: [2, 3, 'words with a canned code'] }))).toBeNull();
+    // a one-tap note rides the code after the words' (a mood face, "stuck")
+    expect(parseMessage(JSON.stringify({ ...input, rq: [3, 8, '\u{1F61E}'] }))).toMatchObject({
+      rq: [3, 8, '\u{1F61E}'],
+    });
+    expect(parseMessage(JSON.stringify({ ...input, rq: [3, 8] }))).toBeNull();
+    expect(parseMessage(JSON.stringify({ ...input, rq: [3, 9, 'x'] }))).toBeNull();
     expect(parseMessage(JSON.stringify({ ...input, rq: [2, 7, ''] }))).toBeNull();
     expect(parseMessage(JSON.stringify({ ...input, rq: [2, 7, 'x'.repeat(121)] }))).toBeNull();
   });

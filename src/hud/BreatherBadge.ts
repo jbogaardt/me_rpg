@@ -1,5 +1,4 @@
-import { clockText } from '../systems/breather';
-import { MOODS, MOOD_FACES, type Mood } from '../systems/engagement';
+import { MOODS, MOOD_FACES, clockText, type Mood } from '../systems/breather';
 
 /**
  * The breather, said on screen (markup `#breather` in index.html): a mug, "Breather", the clock and a line about what the

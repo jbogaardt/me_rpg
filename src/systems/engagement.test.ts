@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Engagement, IDLE_AFTER, NOTE_MAX, span, type Frame } from './engagement';
+import { Engagement, IDLE_AFTER, span, type Frame } from './engagement';
 
 const frame = (over: Partial<Frame> = {}): Frame => ({
   input: true,
@@ -54,31 +54,13 @@ describe('engagement counters', () => {
     expect(e.knockouts).toBe(1);
   });
 
-  it('keeps a mood tally and a trimmed note', () => {
-    const e = new Engagement();
-    e.mood('good');
-    e.mood('good');
-    e.mood('bad');
-    e.stuckPressed();
-    e.setNote(`  too   hard\nin the cave ${'x'.repeat(NOTE_MAX)}`);
-    expect(e.moods).toEqual({ good: 2, ok: 0, bad: 1 });
-    expect(e.stuck).toBe(1);
-    expect(e.note.startsWith('too hard in the cave')).toBe(true);
-    expect(e.note.length).toBe(NOTE_MAX);
-  });
-
-  it('writes a plain-text report and a one-line JSON', () => {
+  it('writes a one-line JSON for the log and tells how long the player has been stalled', () => {
     const e = new Engagement();
     e.tick(65, frame({ level: 2 }));
     e.killed();
-    e.setNote('fun');
-    const text = e.text({ build: 'abc12345', name: (z) => z.toUpperCase(), visit: 3 });
-    expect(text).toContain('build abc12345 · visit 3');
-    expect(text).toContain('Playing 1:05');
-    expect(text).toContain('Kills 1');
-    expect(text).toContain('GREENWOOD 1:05 (1x)');
-    expect(text).toContain('Note: fun');
-    expect(JSON.parse(e.line())).toMatchObject({ s: 65, kills: 1, lv: 2 });
+    e.tick(7, frame({ level: 2 }));
+    expect(e.stalled).toBe(7);
+    expect(JSON.parse(e.line())).toMatchObject({ s: 72, kills: 1, lv: 2 });
   });
 
   it('formats spans', () => {

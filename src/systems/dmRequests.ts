@@ -22,6 +22,8 @@ export const REQUESTS: { label: string; kind: InboxKind }[] = [
 
 /** The code of "something I typed", after the canned ones. */
 export const MESSAGE_CODE = REQUESTS.length;
+/** The code of a one-tap note (a mood face, "stuck"): the host writes it in its report and never puts it in the DM's inbox. */
+export const NOTE_CODE = REQUESTS.length + 1;
 /** The most letters a player may type to the DM. */
 export const MAX_ASK = 120;
 

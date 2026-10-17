@@ -20,6 +20,7 @@ import type { DmEpics } from './DmEpics';
 import type { CardKind, DmPrompts } from './DmPrompts';
 import type { DmTasks } from './DmTasks';
 import type { Story, StoryView } from './Story';
+import type { ReportEntry } from '../../systems/reportLog';
 
 /** A card waiting for the DM's answer, as the bar shows it. */
 export interface DmBotCard {
@@ -142,6 +143,8 @@ export interface DmBotApi {
   stockEpics(): EpicTemplate[];
   /** Tell an epic from where the DM stands. Checked as strictly as a file of epics; the note says what is wrong. */
   epic(raw: unknown): { ok: boolean; note: string };
+  /** What the host's report has noted since the last call (what players said to the DM, with the state of the game each time). */
+  reports(): ReportEntry[];
   /** Go to a friend (the Party tab's Go). */
   goTo: (slot: number) => void;
   /** Walk the DM this way (-1, 0 or 1 each) for a few seconds, then stop (through walls only, like their own keys). */
@@ -158,6 +161,7 @@ export interface DmBotParts {
   tasks: DmTasks;
   epics: DmEpics;
   stock: () => EpicTemplate[];
+  reports: () => ReportEntry[];
   goTo: (slot: number) => void;
   walk: (dx: number, dy: number, seconds: number) => void;
 }
@@ -177,6 +181,7 @@ export function createDmBot({
   tasks,
   epics,
   stock,
+  reports,
   goTo,
   walk,
 }: DmBotParts): DmBotApi {
@@ -198,6 +203,7 @@ export function createDmBot({
     }));
   };
   return {
+    reports,
     host: () => session.createGame(),
     start: () => session.startGame(),
     state: () => ({
