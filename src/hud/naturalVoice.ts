@@ -69,6 +69,9 @@ export const natural = {
     changed();
     loading = (async () => {
       const [{ KokoroTTS }, { env }] = await Promise.all([import('kokoro-js'), import('@huggingface/transformers')]);
+      // Speech is made in a worker, not in the page: a sentence takes seconds to make, and a frozen page cannot answer the
+      // network (the other players would drop it) or draw the game.
+      if (env.backends.onnx.wasm) env.backends.onnx.wasm.proxy = true;
       env.allowLocalModels = false; // the weights come from the hub: never ask this site for /models/...
       tts = await KokoroTTS.from_pretrained(MODEL, {
         dtype: 'q8',

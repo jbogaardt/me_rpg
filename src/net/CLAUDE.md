@@ -25,7 +25,7 @@ and the game loop; headers of `feed.ts`, `PeerLink.ts`, `relayClient.ts` and `ho
 - **A live game stays joinable.** Start Game (or all three seats filling) only ends the lobby (`lobbyOpen`); the relay
   room and the code stay open. A seat whose friend left, was dropped or lost the connection is offered again (a fresh
   offer through `reopenSeat`, in the lobby and in a live game), so they type the same code and take a free seat. The
-  capacity limit is the three seats: a seat is free only once its link has ended (silence is noticed within 6 s), and
+  capacity limit is the three seats: a seat is free only once its link has ended (silence is noticed within 10 s), and
   the relay hands each seat out once. The host keeps the room alive by polling `answers`, and the last friend leaving
   does not end the game (the host just plays solo, `role` `'solo'`, until someone rejoins); only the relay forgetting
   the game, or the host disconnecting, does. A rejoiner arrives at the start as **the hero they left**: a friend's hello carries a lasting id (`HelloMsg.id`, kept in

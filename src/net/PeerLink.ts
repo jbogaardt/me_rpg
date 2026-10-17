@@ -18,7 +18,7 @@ const CHANNEL_LABEL = 'game';
 const GATHER_TIMEOUT_MS = 10_000; // an unreachable STUN server shouldn't leave the player waiting forever
 const CONNECT_TIMEOUT_MS = 30_000; // from "answer applied" to "channel open"
 const KEEPALIVE_MS = 1_000;
-const SILENCE_MS = 6_000; // nothing received for this long = the peer is gone
+const SILENCE_MS = 10_000; // nothing received for this long = the peer is gone
 const KEEPALIVE = '~'; // swallowed here; it only exists so a quiet-but-alive peer isn't mistaken for a dead one
 const MAX_BUFFERED = 256 * 1024; // don't queue more than this behind a stalled connection
 
@@ -80,6 +80,7 @@ export class PeerLink implements Link {
   private keepalive: ReturnType<typeof setInterval> | null = null;
   private connectTimer: ReturnType<typeof setTimeout> | null = null;
   private lastReceived = 0;
+  private lastTick = 0;
 
   constructor(
     readonly role: LinkRole,
@@ -235,7 +236,12 @@ export class PeerLink implements Link {
   }
 
   private tick() {
-    if (performance.now() - this.lastReceived > SILENCE_MS) {
+    const now = performance.now();
+    // This page itself was frozen (a heavy task, a tab in the background): what the peer sent meanwhile is still queued to
+    // be read, so the silence is ours, not theirs. Give it a fresh start rather than hang up on a friend.
+    if (this.lastTick && now - this.lastTick > 2 * KEEPALIVE_MS) this.lastReceived = now;
+    this.lastTick = now;
+    if (now - this.lastReceived > SILENCE_MS) {
       this.end('disconnected', 'The other player stopped responding.');
     } else {
       this.send(KEEPALIVE);
