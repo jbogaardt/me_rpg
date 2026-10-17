@@ -3,6 +3,7 @@ import { CELL } from '../map/types';
 import { DIR_VEC, directionToward, type Direction } from '../core/direction';
 import { glide } from '../core/interp';
 import { mobTimings, type MobKind, type MobState, type MobView } from '../systems/combat';
+import { hitPauseFor, tickPause } from '../systems/hitPause';
 import { Character } from './Character';
 
 /** What a mob needs from the game each tick. */
@@ -104,6 +105,7 @@ export class Mob {
   private dir = { x: 0, y: 0 };
   private knock = { x: 0, y: 0 };
   private flash = 0;
+  private hitstop = 0; // hit-pause: frozen mid-blow for this many seconds (systems/hitPause.ts)
   private poise = 0; // seconds left in which a hit cannot stagger it again
   private moving = false;
   private attack: MobAttack = 'melee'; // what the current windup leads to
@@ -181,6 +183,7 @@ export class Mob {
   hit(damage: number, vx: number, vy: number): boolean {
     this.hp = Math.max(0, this.hp - damage);
     this.flash = 0.15;
+    if (this.hp > 0 && !this.remote) this.hitstop = hitPauseFor(damage, this.kind.maxHp);
     this.drawBar();
     if (this.hp <= 0) {
       this.lunging = 0;
@@ -271,6 +274,12 @@ export class Mob {
   }
 
   update(dt: number, world: MobWorld) {
+    if (this.state !== 'dead' && this.hitstop > 0) {
+      this.hitstop = tickPause(this.hitstop, dt); // hit-pause: frozen and flashing (the flash waits out the pause)
+      this.moving = false;
+      this.present(0, false);
+      return;
+    }
     if (this.state !== 'dead' && this.frozen > 0) {
       this.frozen = Math.max(0, this.frozen - dt);
       this.flash = Math.max(0, this.flash - dt);

@@ -40,6 +40,7 @@ import {
 import { GIVERS, QUEST_GIVER, recordKill, recordVisit, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
+import { blinkAlpha } from '../../systems/hitPause';
 import type { Strike } from '../../entities/WeatherLayer';
 import type { ZoneState } from '../ZoneState';
 
@@ -272,7 +273,7 @@ export class Simulation {
     const [fx, fy] = DIR_VEC[p.body.facing];
     const swinging = this.isSwinging(p);
     p.body.setOffset(swinging ? fx * 3 : 0, swinging ? fy * 3 : 0);
-    p.body.alpha = p.invuln > 0 && Math.floor(p.invuln * 16) % 2 === 0 ? 0.35 : 1;
+    p.body.alpha = blinkAlpha(p.invuln);
     p.body.setTint(auraTint({ ward: p.ward > 0, edge: p.edge.charges > 0, guard: p.guard > 0 }));
     p.body.animate(dt * 1000, p.moving);
   }
