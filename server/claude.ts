@@ -12,6 +12,8 @@ import { MockNarrator, PERSONA, type Beat, type Narrator } from './narrate';
 import { MAX_REPLY, type CreativeFallback, type ImproviseRequest } from './router';
 import type { EpicWriter } from './epics';
 import { MockArcWriter, readArc, type ArcWriter, type SessionArc } from './arc';
+import { cleanCued, mapCued, parseCued, serializeCued } from '../src/systems/cues';
+import { DIRECTOR_RULES, actorsOf, hasFiller, verdictBrief, type SceneVerdict } from './scene';
 
 /** One headless call: a system prompt and a prompt in, the model's text out. Rejects on any failure. */
 export type Ask = (system: string, prompt: string) => Promise<string>;
@@ -160,6 +162,15 @@ export function cleanLine(raw: string): string {
   return line.trim();
 }
 
+/**
+ * A directed narration as the page will take it: `cleanLine`'s cuts (stage directions, quotes, more than two sentences)
+ * made to the words alone, so each `<cue:.../>` stays beside the word it was written at. Empty when no words are left.
+ */
+export function cleanCuedLine(raw: string): string {
+  const said = mapCued(parseCued(raw), cleanLine);
+  return said.text ? cleanCued(serializeCued(said)) : '';
+}
+
 /** The first JSON object in a model's text (it may wrap it in a fence or a sentence). */
 export function jsonIn(text: string): unknown {
   const start = text.indexOf('{');
@@ -208,13 +219,18 @@ export class ClaudeNarrator implements Narrator {
     private ask: Ask = askClaude,
     private fallback: Narrator = new MockNarrator(),
   ) {}
-  async line(beat: Beat): Promise<string> {
+  async line(beat: Beat, verdict?: SceneVerdict): Promise<string> {
     const moment = {
       arrive: `The party has just arrived in ${beat.kind === 'arrive' ? beat.area : 'a new place'}.`,
       done: 'The party has just finished a quest.',
       hurt: 'One of the party has been badly hurt in a fight.',
       quiet: `The party has gone quiet and nothing has happened for a while${QUIET_MOOD[(beat.kind === 'quiet' && beat.mood) || 'calm']}`,
     }[beat.kind];
+    if (verdict) {
+      const directed = await this.directed(moment, beat, verdict);
+      if (directed) return directed;
+      return this.fallback.line(beat, verdict);
+    }
     try {
       const text = cleanLine(
         await this.ask(
@@ -228,6 +244,25 @@ export class ClaudeNarrator implements Narrator {
       console.warn('claude narration failed:', err instanceof Error ? err.message : err);
     }
     return this.fallback.line(beat);
+  }
+
+  /**
+   * The moment told as a tabletop curator would: Jev's verdict in the prompt, the director's rules as the system prompt,
+   * and the answer read back with the page's cue grammar. A line with filler in it, or none at all, is not used.
+   */
+  private async directed(moment: string, beat: Beat, verdict: SceneVerdict): Promise<string> {
+    const prompt =
+      `${moment} The party is in ${beat.area}.${this.saga ? ` The saga they are on (they have heard its opening, do not retell it): ${this.saga}` : ''}\n` +
+      `${verdictBrief(verdict)}\nActors you may direct: ${actorsOf(verdict.mechanical).join(', ')}.\n` +
+      'Narrate this moment in two short sentences, in the present tense, speaking of the party in the third person ' +
+      '(never "player"). Reveal ONE new concrete fact or consequence. Words and inline cue tags only: no asterisks, no quotation marks.';
+    try {
+      const text = cleanCuedLine(await this.ask(`${PERSONA} ${DIRECTOR_RULES}`, prompt));
+      if (text && !hasFiller(parseCued(text).text)) return text;
+    } catch (err) {
+      console.warn('claude narration failed:', err instanceof Error ? err.message : err);
+    }
+    return '';
   }
 }
 

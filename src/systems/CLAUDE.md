@@ -51,6 +51,11 @@ kind is how higher levels stay meaningful. **Retune a weapon or kind against tha
   host does each once, in order, and confirms with `pack.ack`. Shops specialise and buy back only their own trade at a
   fraction of value; chests hold what shops don't sell (rare gear, purses). An item's code is its place in its
   campaign's list, so `items.json` is append-only.
+- **Director cues** (`cues.ts`, core engine, co-op): the DM's words may carry inline `<cue:anim|sfx|camera .../>` stage
+  directions (closed vocabulary; its header is the design). The host checks the tagged text (`cleanCued`), which is all
+  that goes on the wire; every page cuts the tags out of the caption and plays each when the reading reaches it
+  (`Dialog`, `scenes/overworld/Cues.ts`, `hud/sfx.ts`, `Camera.shake`). Cosmetic and local, never state. A new cue is
+  vocabulary in `cues.ts` first (its player is forced by the types), then a line in the bot's `DIRECTOR_RULES`.
 - **Props** (`barrels.ts`, `signs.ts`, `pets.ts`, `ice.ts`): barrels are bodies you carry and set down (gated by
   `carrying`; the host decides, `SnapMsg.barrels` shows them; a map object in a neighbour's margin is not this map's
   barrel); signposts and pets are local scenery (nothing on the wire, so each player's pets wander independently); ice is

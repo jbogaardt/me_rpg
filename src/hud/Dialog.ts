@@ -1,3 +1,4 @@
+import { CueTimeline, parseCued, type Cue } from '../systems/cues';
 import { sayTime } from '../systems/dmPowers';
 import { voice } from './voice';
 
@@ -39,7 +40,11 @@ export class Dialog {
   private caption = document.getElementById('dm-caption')!;
   private captionText = document.getElementById('dm-caption-text')!;
   private shown: Caption | null = null;
-  private later: { text: string; seconds: number; at: number }[] = [];
+  private later: { text: string; cues: Cue[]; seconds: number; at: number }[] = [];
+  /** The caption's words while a cued saying is being read out: the cues are released as the reading reaches them. */
+  private reading: { timeline: CueTimeline; read: HTMLElement; unread: HTMLElement; at: number } | null = null;
+  /** A cue the Dungeon Master's words carry has been reached (systems/cues.ts): the scene plays it. */
+  onCue: (cue: Cue) => void = () => {};
 
   constructor() {
     const speaker = this.caption.querySelector('.voice');
@@ -73,14 +78,20 @@ export class Dialog {
     else this.open(talk);
   }
 
-  /** Say `text` in the caption for `seconds`. One at a time: a line said meanwhile waits its turn (a few at most, newest kept). */
+  /**
+   * Say `text` in the caption for `seconds`. One at a time: a line said meanwhile waits its turn (a few at most, newest
+   * kept). Director cues in the words (`<cue:.../>`, systems/cues.ts) are cut out of what is shown, whoever sent them; a
+   * line that has cues is typed out at reading pace so each one fires on the word it was written beside.
+   */
   tell(text: string, seconds: number) {
+    const said = parseCued(text);
+    if (!said.text) return;
     if (this.shown) {
-      this.later.push({ text, seconds, at: performance.now() / 1000 });
+      this.later.push({ text: said.text, cues: said.cues, seconds, at: performance.now() / 1000 });
       if (this.later.length > MAX_LATER) this.later.shift();
       return;
     }
-    this.showCaption(text, seconds);
+    this.showCaption(said.text, said.cues, seconds);
   }
 
   /** Passive text: anything the game tells the player that they did not ask for (a defeat, a quest given, a chapter's note). */
@@ -92,13 +103,14 @@ export class Dialog {
   /** Each frame: a caption leaves once its time is up and its words have been spoken; then the next one comes. */
   update() {
     const now = performance.now() / 1000;
+    this.read(now);
     if (this.shown && now >= this.shown.until && (!voice.busy || now >= this.shown.until + 20)) {
       if (voice.busy) voice.stop(); // a voice that never finished
       this.clearCaption();
     }
     if (!this.shown) {
       const next = this.later.shift();
-      if (next && now - next.at < LATER_STALE_S) this.showCaption(next.text, next.seconds);
+      if (next && now - next.at < LATER_STALE_S) this.showCaption(next.text, next.cues, next.seconds);
       else if (next) this.later.length = 0; // the rest is older still
     }
   }
@@ -135,15 +147,39 @@ export class Dialog {
     this.box.hidden = false;
   }
 
-  private showCaption(text: string, seconds: number) {
-    this.shown = { until: performance.now() / 1000 + seconds };
-    this.captionText.textContent = text;
+  private showCaption(text: string, cues: Cue[], seconds: number) {
+    const now = performance.now() / 1000;
+    const timeline = new CueTimeline(text, cues);
+    this.shown = { until: now + Math.max(seconds, timeline.duration + 4) };
+    if (cues.length) {
+      // The unread rest is in the box too, hidden, so the lines do not re-wrap as the words come.
+      const [read, unread] = [document.createElement('span'), document.createElement('span')];
+      unread.style.visibility = 'hidden';
+      this.captionText.replaceChildren(read, unread);
+      this.reading = { timeline, read, unread, at: now };
+    } else {
+      this.reading = null;
+      this.captionText.textContent = text;
+    }
     this.caption.hidden = false;
     voice.speak(text);
   }
 
+  /** A cued saying: show the words read so far and hand over the cues just reached. */
+  private read(now: number) {
+    const r = this.reading;
+    if (!r) return;
+    const { shown, due } = r.timeline.advance(now - r.at);
+    r.at = now;
+    r.read.textContent = r.timeline.text.slice(0, shown);
+    r.unread.textContent = r.timeline.text.slice(shown);
+    for (const cue of due) this.onCue(cue);
+    if (r.timeline.done) this.reading = null;
+  }
+
   private clearCaption() {
     this.shown = null;
+    this.reading = null;
     this.caption.hidden = true;
   }
 

@@ -101,6 +101,18 @@ describe('the Dungeon Master’s desk', () => {
     expect(last(1)!.say).toEqual([2, 'Run']);
   });
 
+  it('sends director cues with the words, checked and in one form, and drops what it does not know', () => {
+    const { desk, last } = host();
+    const heard: string[] = [];
+    desk.onSay = (t) => heard.push(t);
+    desk.say("The blade rings <cue:sfx name='steel_clash'/>  true. <cue:anim actor='dragon' action='slash'/>");
+    const tagged = 'The blade rings <cue:sfx name="steel_clash" />true.';
+    expect(heard).toEqual([tagged]);
+    desk.update(0);
+    expect(last(1)!.say).toEqual([1, tagged]);
+    expect(last(2)!.say).toEqual([1, tagged]);
+  });
+
   it('answers a friend privately: only their screen gets the words, and only for a while', () => {
     const { desk, last } = host();
     expect(desk.replyTo([], 'hello')).toBe(false);

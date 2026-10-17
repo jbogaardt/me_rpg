@@ -13,12 +13,13 @@
 
 import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
-import { JevReader, JevRouter } from './jev';
+import { JevReader, JevRouter, JevScene } from './jev';
 import { MockFallback, MockRouter } from './mocks';
 import { ClaudeArcWriter, ClaudeConjurer, ClaudeFallback, ClaudeNarrator, ClaudeEpicWriter } from './claude';
 import { MockArcWriter, advance, arcBrief, type ArcPlace, type ArcWriter } from './arc';
 import { MockConjurer, shouldConjure, type Conjurer } from './conjure';
 import { MockNarrator, beatFor, type Memory, type Narrator } from './narrate';
+import { RuleJudge, factsFor, resolveScene, type SceneJudge } from './scene';
 import { PULSE_MS, fresh, pulseState, type Pulse, type TableReader } from './pulse';
 import { decideCard, type Card, type Move } from './router';
 import { MockEpicWriter, tellEpic, type StockTale, type EpicWriter } from './epics';
@@ -93,6 +94,8 @@ class Dm {
   private reader: TableReader | null = process.env.TYPESAFE_API_KEY ? new JevReader() : null;
   private pulse: Pulse | null = null;
   private reading = false;
+  /** Jev's read of a moment's drama (scene.ts) with a key; the rules' own without one. */
+  private judge: SceneJudge = process.env.TYPESAFE_API_KEY ? new JevScene() : new RuleJudge();
   private lastRead = -Infinity;
   private services = {
     router: process.env.TYPESAFE_API_KEY ? new JevRouter() : new MockRouter(() => this.latest?.story?.options ?? []),
@@ -200,7 +203,12 @@ class Dm {
     const beat = beatFor(s, m, this.clock.now, this.clock.pulse ?? null);
     m.prev = s;
     if (!beat) return false;
-    const line = await this.narrator.line(beat);
+    const hp = beat.kind === 'hurt' ? s.friends.find((f) => f.slot === beat.slot)?.hp : undefined;
+    const facts = factsFor(beat, hp);
+    const verdict = facts ? await resolveScene(facts, this.judge) : undefined;
+    if (verdict)
+      log(`scene: ${verdict.dramatic_tension}, ${verdict.environmental_twist}, ${verdict.npc_reaction_state}`);
+    const line = await this.narrator.line(beat, verdict);
     if (!line) return false;
     m.spoke = this.clock.now;
     log(`narrating (${beat.kind}):`, line);
