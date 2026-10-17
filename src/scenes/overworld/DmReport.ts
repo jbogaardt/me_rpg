@@ -15,7 +15,14 @@ import { MESSAGE_CODE, NOTE_CODE, REQUESTS } from '../../systems/dmRequests';
 import { Engagement } from '../../systems/engagement';
 import { duelWith, verdictOf, zoneLevels } from '../../systems/levels';
 import { zoneName } from '../../systems/places';
-import { ReportLog, reportLine, type FoeFacts, type ReportKind, type ReportState } from '../../systems/reportLog';
+import {
+  ReportLog,
+  reportLine,
+  type FoeFacts,
+  type ReportKind,
+  type ReportState,
+  type StateDetail,
+} from '../../systems/reportLog';
 import type { Arena } from './Arena';
 
 /** Foes this close (cells) to a player ride in the state of what they said. */
@@ -25,6 +32,8 @@ const LATELY = 60;
 const MAX_FOES = 6;
 /** A knockout is blamed on a foe that hurt the player this recently (s). */
 const BLAME = 10;
+/** A director's nudge of the same kind is noted again only after this many seconds (the repeats in between are counted). */
+const REPEAT_SIGNAL = 120;
 /** Kills are written as one event per this many seconds, not one each. */
 const KILL_EVENT_EVERY = 10;
 /** A player by seat, never by name: the report may end up in a public repo. */
@@ -51,6 +60,8 @@ export class DmReport {
   private downs = new Map<string, number>(); // `${slot}` and `${slot}|${zone}`
   private killsIn = new Map<string, number>();
   private killsAll = 0;
+  private signalAt = new Map<string, number>();
+  private repeats = new Map<string, number>();
 
   constructor(
     private arena: Arena,
@@ -154,6 +165,8 @@ export class DmReport {
     this.downs.clear();
     this.killsIn.clear();
     this.killsAll = 0;
+    this.signalAt.clear();
+    this.repeats.clear();
     this.questState = null;
     this.clock = 0;
   }
@@ -168,13 +181,26 @@ export class DmReport {
   /** Note something, with the state of the game for `p` (or for the table when it is about no one in particular). */
   private add(kind: ReportKind, p: Player | null, text: string) {
     if (!this.keeping) return;
+    if (kind === 'signal') {
+      // The director repeats itself while a thing lasts: note it once a while, and say how many repeats it stands for.
+      const last = this.signalAt.get(text);
+      if (last !== undefined && this.clock - last < REPEAT_SIGNAL) {
+        this.repeats.set(text, (this.repeats.get(text) ?? 0) + 1);
+        return;
+      }
+      this.signalAt.set(text, this.clock);
+      const more = this.repeats.get(text);
+      this.repeats.delete(text);
+      if (more) text = `${text} (+${more} repeats since)`;
+    }
     if (this.kills.size) this.flushKills();
-    const entry = this.log.add(this.clock, kind, p?.slot ?? 0, text, this.snapshot(p));
+    const full = kind === 'said' || kind === 'ask' || kind === 'note' || kind === 'down';
+    const entry = this.log.add(this.clock, kind, p?.slot ?? 0, text, this.snapshot(p, full));
     console.info(reportLine(entry));
   }
 
   /** The state of the game now, for `p`; for the table (no `p`) the player in the worst shape stands for it. */
-  snapshot(p: Player | null): ReportState {
+  snapshot(p: Player | null, full = true): ReportState {
     const party = this.arena.partyAll();
     const fracs = party.map((q) => q.hero.stats.hp / Math.max(1, q.hero.stats.maxHp));
     const who =
@@ -192,11 +218,6 @@ export class DmReport {
     const cut = this.clock - LATELY;
     for (const list of this.taken.values()) while (list[0] && list[0].t < cut) list.shift();
     while (this.dealtLately[0] && this.dealtLately[0].t < cut) this.dealtLately.shift();
-    const mine = (who && this.taken.get(who.slot)) || [];
-    const by: Record<string, number> = {};
-    for (const h of mine) by[h.foe] = (by[h.foe] ?? 0) + 1;
-    const foes = who && hero ? this.foesFor(who) : [];
-    const band = zoneLevels(zone);
     return {
       who: p ? seatName(p.slot) : '-',
       level: s?.level ?? 0,
@@ -213,50 +234,66 @@ export class DmReport {
         avgHp: round(fracs.reduce((a, b) => a + b, 0) / Math.max(1, fracs.length)),
         lowest: round(fracs.length ? Math.min(...fracs) : 1),
       },
+      ...(full && who && hero ? { detail: this.detail(who) } : {}),
+      breather: this.breathing(),
+      stall: Math.round((who && this.counters.get(who.slot)?.stalled) || 0),
+      recent: this.log.recent,
+    };
+  }
+
+  /** The whole fight for `who`: the hero as they are, how fighting has gone, the zone, each kind of foe in it. */
+  private detail(who: Player): StateDetail {
+    const hero = who.hero;
+    const s = hero.stats;
+    // lately: drop what is older than the window, then add up
+    const cut = this.clock - LATELY;
+    for (const list of this.taken.values()) while (list[0] && list[0].t < cut) list.shift();
+    while (this.dealtLately[0] && this.dealtLately[0].t < cut) this.dealtLately.shift();
+    const mine = this.taken.get(who.slot) ?? [];
+    const by: Record<string, number> = {};
+    for (const h of mine) by[h.foe] = (by[h.foe] ?? 0) + 1;
+    const band = zoneLevels(who.zone);
+    const z = this.arena.zones.get(who.zone);
+    return {
       hero: {
-        attack: s?.attack ?? 0,
-        attackGear: hero ? gearAttack(hero) : 0,
-        power: hero ? attackPower(hero) : 0,
-        defense: s?.defense ?? 0,
-        defenseGear: hero ? gearDefense(hero) : 0,
-        armor: hero ? defensePower(hero) : 0,
-        magic: s?.magic ?? 0,
-        mp: Math.round(s?.mp ?? 0),
-        maxMp: s?.maxMp ?? 0,
-        xp: [s?.xp ?? 0, s ? xpToNext(s.level) : 0],
-        weapon: hero?.weapon.name ?? '',
-        worn: hero
-          ? wornGear(hero)
-              .filter((i) => i !== hero.weapon)
-              .map((i) => i.name)
-          : [],
-        potions: hero ? hero.pack.filter((i) => i.use && i.use.hp > 0).length : 0,
-        food: Math.round(hero?.needs.food ?? 0),
-        water: Math.round(hero?.needs.water ?? 0),
-        gold: hero?.gold ?? 0,
-        skills: hero ? [...hero.skills] : [],
+        attack: s.attack,
+        attackGear: gearAttack(hero),
+        power: attackPower(hero),
+        defense: s.defense,
+        defenseGear: gearDefense(hero),
+        armor: defensePower(hero),
+        magic: s.magic,
+        mp: Math.round(s.mp),
+        maxMp: s.maxMp,
+        xp: [s.xp, xpToNext(s.level)],
+        weapon: hero.weapon.name,
+        worn: wornGear(hero)
+          .filter((i) => i !== hero.weapon)
+          .map((i) => i.name),
+        potions: hero.pack.filter((i) => i.use && i.use.hp > 0).length,
+        food: Math.round(hero.needs.food),
+        water: Math.round(hero.needs.water),
+        gold: hero.gold,
+        skills: [...hero.skills],
       },
       fight: {
-        downs: who ? (this.downs.get(`${who.slot}`) ?? 0) : 0,
-        downsHere: who ? (this.downs.get(`${who.slot}|${zone}`) ?? 0) : 0,
-        killsHere: this.killsIn.get(zone) ?? 0,
+        downs: this.downs.get(`${who.slot}`) ?? 0,
+        downsHere: this.downs.get(`${who.slot}|${who.zone}`) ?? 0,
+        killsHere: this.killsIn.get(who.zone) ?? 0,
         kills: this.killsAll,
         taken: mine.reduce((a, h) => a + h.dmg, 0),
         hitsTaken: mine.length,
         dealt: this.dealtLately.reduce((a, h) => a + h.dmg, 0),
         by,
-        lastHurtBy: who ? this.lastHurt(who.slot) : null,
+        lastHurtBy: this.lastHurt(who.slot),
         pressure: this.arena.pressure,
       },
       place: {
         band: band ? [band[0], band[1]] : null,
-        alive: this.arena.zones.get(zone)?.mobs.filter((m) => m.alive).length ?? 0,
-        total: this.arena.zones.get(zone)?.mobs.length ?? 0,
+        alive: z?.mobs.filter((m) => m.alive).length ?? 0,
+        total: z?.mobs.length ?? 0,
       },
-      foes,
-      breather: this.breathing(),
-      stall: Math.round((who && this.counters.get(who.slot)?.stalled) || 0),
-      recent: this.log.recent,
+      foes: this.foesFor(who),
     };
   }
 

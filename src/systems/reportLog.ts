@@ -80,6 +80,15 @@ export interface FoeFacts {
   typical: string;
 }
 
+/** What a full entry adds to the lean state. */
+export interface StateDetail {
+  hero: HeroFacts;
+  fight: FightFacts;
+  place: PlaceFacts;
+  /** The kinds of foe in the zone, the ones nearest this player first. */
+  foes: FoeFacts[];
+}
+
 /** The state of the game when something was noted. */
 export interface ReportState {
   /** The player concerned, by seat ("P1"); "-" for something about the whole table. */
@@ -95,11 +104,12 @@ export interface ReportState {
   /** The quest the party has (its title and how far), or null. */
   quest: string | null;
   party: { size: number; avgHp: number; lowest: number };
-  hero: HeroFacts;
-  fight: FightFacts;
-  place: PlaceFacts;
-  /** The kinds of foe in the zone, the ones nearest this player first. */
-  foes: FoeFacts[];
+  /**
+   * The whole fight (the hero, how fighting has gone, the zone, each kind of foe): kept for what a player said, asked or
+   * tapped and for a knockout, which are rare and need it. What the game did by itself (a nudge, a quest end, a breather) is
+   * noted lean, so a long campaign's log stays small.
+   */
+  detail?: StateDetail;
   breather: boolean;
   /** Seconds this player has gone without progress (a kill, a quest event, a new zone) while at the keyboard. */
   stall: number;
