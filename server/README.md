@@ -120,8 +120,19 @@ from Jev's verdict to the dispatched cues.
 The page's host notebook (`src/scenes/overworld/DmReport.ts`) notes what players say to the DM, the director's nudges,
 knockouts and quest ends, each with the state of the game then; `DmBot.reports` hands it over. The bot prints each note as a
 `[report]` line, appends it to `reports/raw/<date>-<code>.jsonl` (ignored by git) and, when the game ends (everyone left, or
-you `quit`), has Haiku read it as a playtest analyst (`report.ts`, `analystSession` in `claude.ts`) and writes
+you `quit`), triages it (below) and has Haiku read it as a playtest analyst (`report.ts`, `analystSession` in `claude.ts`) and writes
 `reports/<date>-<code>.md`: a prompt file a future Claude session acts on. With no model (not logged in, a failure, 4 minutes
 without an answer) or `DM_BOT_REPORT=plain` the same file is written by rules. Players are P1, P2...; links, emails and long
 numbers are cut; **read the file before committing it**.
+
+### Two Jev workflows
+
+Both speak the vocabulary in `src/systems/feedback.ts` and use `JevTagger` (`jev.ts`: a `choice` for the kind and a `score` for
+how much it matters, over the words and the state they were said in) with `TYPESAFE_API_KEY`, else the keyword rules.
+**In the game** (`host.ts` `tagLive`): each utterance is tagged in the background as it arrives, the tag is kept on the entry
+(and a `tagOf` line in the raw log), and a short, sure complaint is asked back privately by the DM after a pause (`followUpFor`:
+not twice to a player within 3 minutes, at most 3 a game, canned wordings only). The table read is kept as an engagement curve
+(`curve.ts`). **After the game** (`triage.ts`): tag what is missing or unsure, add hotspots found in the state, cluster, check each
+claim against the numbers, rank; the findings go to `reports/raw/<date>-<code>.findings.json` and, as the small digest, to Haiku.
+The log goes to TypeSafe for Jev (already scrubbed of links, emails and long numbers; players are P1, P2...).
 

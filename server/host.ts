@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createInterface } from 'node:readline';
 import { chromium, type Page } from '@playwright/test';
-import { JevReader, JevRouter, JevScene } from './jev';
+import { JevReader, JevRouter, JevScene, JevTagger } from './jev';
 import { MockFallback, MockRouter } from './mocks';
 import {
   ClaudeArcWriter,
@@ -26,6 +26,11 @@ import {
   analystSession,
 } from './claude';
 import { ANALYST_SYSTEM, writeReport } from './report';
+import { Curve } from './curve';
+import { RulesTagger, TAGGED, tagEntry, type Tagger } from './tag';
+import { triage as triageGame, type Triage } from './triage';
+import { FOLLOW_UP_WORDS, followUpFor, newFollowUps, recordFollowUp } from '../src/systems/feedback';
+import { Phrasebook } from '../src/systems/phrases';
 import { isReportEntry, reportLine, type ReportEntry } from '../src/systems/reportLog';
 import {
   MockArcWriter,
@@ -56,6 +61,11 @@ const CHATTER = Boolean(process.env.DM_BOT_CHATTER);
 /** Where a game's report goes (the repo's `reports/`; the raw log beside it is ignored by git), and whether Haiku reads it (`DM_BOT_REPORT=plain`: rules only). */
 const REPORTS_DIR = path.resolve(import.meta.dirname, '../reports');
 const PLAIN_REPORT = process.env.DM_BOT_REPORT === 'plain';
+/** Jev tags what players say (live, and again in triage) with a key; the keyword rules do without. */
+const TAGGER: Tagger = process.env.TYPESAFE_API_KEY ? new JevTagger() : new RulesTagger();
+/** How long the DM waits before asking a vague complainer back (they may be about to say more), and how long triage may take (ms). */
+const FOLLOW_UP_DELAY_MS = 12_000;
+const TRIAGE_TIMEOUT_MS = 90_000;
 
 /** The page's bot handle (DmBot.ts's DmBotApi), as far as this script calls it. */
 interface PageBot {
@@ -99,9 +109,13 @@ class Dm {
   private friends = new Map<number, { at: number; in: boolean }>();
   private lastCode: string | null = null;
   /** The game being written down: what the host's report noted so far, and when it began. */
-  private game: { code: string; started: Date; entries: ReportEntry[] } | null = null;
+  private game: { code: string; started: Date; entries: ReportEntry[]; firstWall: number } | null = null;
   private hadFriends = false;
   private finishing = false;
+  /** Who has been asked back, and with which words (feedback.ts); the table reads of this game, for the engagement curve. */
+  private followUps = newFollowUps();
+  private phrases = new Phrasebook();
+  private reads: { wall: number; pressure: number; stalled: number }[] = [];
   /** The card last answered: met again unchanged, the answer did nothing, so it is sent away. */
   private answered = '';
   /** The DM's last words to players (replies and narration), so the writer does not repeat itself. */
@@ -230,6 +244,7 @@ class Dm {
       .read(state)
       .then((read) => {
         this.pulse = { ...read, at: Date.now() };
+        this.reads.push({ wall: Date.now() / 1000, pressure: read.pressure, stalled: read.stalled });
         const pct = (n: number) => `${Math.round(n * 100)}%`;
         log(
           `table: pressure ${pct(read.pressure)}, stalled ${pct(read.stalled)}, word ${pct(read.wantsWord)}, quest ${pct(read.needsQuest)}`,
@@ -353,7 +368,7 @@ class Dm {
     const fresh = noted.filter(isReportEntry);
     if (!fresh.length) return;
     const code = this.lastCode ?? 'game';
-    const game = (this.game ??= { code, started: new Date(), entries: [] });
+    const game = (this.game ??= { code, started: new Date(), entries: [], firstWall: Date.now() / 1000 });
     fs.mkdirSync(path.join(REPORTS_DIR, 'raw'), { recursive: true });
     const raw = path.join(REPORTS_DIR, 'raw', `${game.started.toISOString().slice(0, 10)}-${game.code}.jsonl`);
     for (const e of fresh) {
@@ -361,6 +376,31 @@ class Dm {
       fs.appendFileSync(raw, `${JSON.stringify(e)}\n`);
     }
     game.entries.push(...fresh);
+    for (const e of fresh) if (TAGGED.has(e.kind)) void this.tagLive(e, game.entries, raw);
+  }
+
+  /**
+   * The live Jev workflow: tag what a player said (never holding up the table: Jev, else the rules, in the background), note the
+   * tag with the entry, and, when a complaint was too vague to act on, have the DM ask that player back, privately and once in a
+   * while, after a pause in case they are about to say more. The tag is advice for the report; the question is the only thing
+   * it can ever make the game do, and it is a canned line.
+   */
+  private async tagLive(e: ReportEntry, all: readonly ReportEntry[], raw: string) {
+    const tag = await tagEntry(e, TAGGER);
+    if (!tag) return;
+    e.tag = tag;
+    log(
+      `[tag] ${e.state.who} ${e.kind} ${tag.kind} severity ${tag.severity} (${Math.round(tag.confidence * 100)}%, ${tag.by}): ${e.text}`,
+    );
+    fs.appendFileSync(raw, `${JSON.stringify({ tagOf: { t: e.t, slot: e.slot }, tag })}\n`);
+    const bank = e.slot > 0 ? followUpFor(e, tag, this.followUps) : null;
+    if (!bank) return;
+    recordFollowUp(this.followUps, e.slot, e.t);
+    await new Promise((r) => setTimeout(r, FOLLOW_UP_DELAY_MS));
+    if (all.some((x) => x.slot === e.slot && x.kind === 'said' && x.t > e.t)) return; // they went on to explain: no need to ask
+    const words = this.phrases.pick(`followup-${bank}`, FOLLOW_UP_WORDS[bank]);
+    log(`asking ${e.state.who} back (${bank}):`, words);
+    await this.say(words, false, [e.slot]);
   }
 
   /**
@@ -375,12 +415,31 @@ class Dm {
     this.game = null;
     const analyst = PLAIN_REPORT ? null : analystSession(ANALYST_SYSTEM);
     try {
+      log(`triaging the game (${game.entries.length} notes, ${TAGGER instanceof JevTagger ? 'Jev' : 'rules'})`);
+      const tri = await Promise.race<Triage | undefined>([
+        triageGame(game.entries, TAGGER),
+        new Promise((resolve) => setTimeout(() => resolve(undefined), TRIAGE_TIMEOUT_MS)),
+      ]).catch(() => undefined);
+      if (tri) {
+        const name = `${game.started.toISOString().slice(0, 10)}-${game.code}.findings.json`;
+        fs.mkdirSync(path.join(REPORTS_DIR, 'raw'), { recursive: true });
+        fs.writeFileSync(path.join(REPORTS_DIR, 'raw', name), JSON.stringify(tri, null, 1));
+        log(
+          `triage: ${tri.findings.length} finding(s)${tri.findings[0] ? `, first: ${tri.findings[0].kind} in ${tri.findings[0].area}` : ''}`,
+        );
+      }
+      const curve = new Curve();
+      const offset = game.firstWall - (game.entries[0]?.t ?? 0); // the bot's clock against the game's
+      for (const r of this.reads) if (r.wall >= game.firstWall - 600) curve.add(r.wall - offset, r);
+      this.reads = [];
+      this.followUps = newFollowUps();
       log(`writing the game's report (${game.entries.length} notes${analyst ? ', Haiku reading' : ''})`);
       const wrote = await writeReport(
         REPORTS_DIR,
         { code: game.code, started: game.started, ended: new Date(), why },
         game.entries,
         analyst ? (system, prompt) => analyst.ask(system, prompt) : null,
+        { ...(tri ? { triage: tri } : {}), curve },
       );
       if (wrote)
         log(`report written (${wrote.how}): ${path.relative(process.cwd(), wrote.path)} (read it before committing)`);

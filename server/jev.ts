@@ -8,6 +8,9 @@
 
 import { choice, noul, score, TypeSafeClient } from '@typesafe-ai/sdk';
 import type { Pulse, PulseState, TableReader } from './pulse';
+import type { Tagger } from './tag';
+import { FEEDBACK_KINDS, KIND_MEANING, SEVERITY_LEVELS, type Tag } from '../src/systems/feedback';
+import type { ReportEntry } from '../src/systems/reportLog';
 import type { ChoiceAnswer, ChoiceQuestion, ChoiceRouter } from './router';
 import {
   REACTIONS,
@@ -166,6 +169,60 @@ export class JevScene implements SceneJudge {
       dramatic_tension: idOf(TENSIONS, a.tension.choice),
       environmental_twist: idOf(TWISTS, a.twist.choice),
       npc_reaction_state: idOf(REACTIONS, a.reaction.choice),
+    };
+  }
+}
+
+/**
+ * What a player's words are about (feedback.ts), judged by Jev in the game and again after it: one request, two independent
+ * questions over the words and the state they were said in (the hero's blow and armour, the foes near them and how each fight
+ * stands, the zone's levels, how fighting has gone): the kind (`choice`) and how much it matters (`score`). The words ride in
+ * the state as data. Jev only tags: nothing it says changes the game.
+ */
+export class JevTagger implements Tagger {
+  constructor(private client: SystemOne = new TypeSafeClient()) {}
+
+  async tag(entry: ReportEntry): Promise<Tag> {
+    const s = entry.state;
+    const d = s.detail;
+    const state = {
+      playerWords: entry.text,
+      how: entry.kind === 'said' ? 'typed to the Dungeon Master' : entry.kind,
+      player: { level: s.level, health: `${s.hp}/${s.maxHp}`, area: s.area, quest: s.quest },
+      ...(d
+        ? {
+            hero: { blow: d.hero.power, armor: d.hero.armor, weapon: d.hero.weapon },
+            zone: { levels: d.place.band, foesAlive: d.place.alive },
+            fights: {
+              knockoutsHere: d.fight.downsHere,
+              damageTakenLastMinute: d.fight.taken,
+              damageDealtLastMinute: d.fight.dealt,
+            },
+            foesNearby: d.foes
+              .filter((f) => f.near > 0)
+              .map((f) => ({ name: f.name, blowsToFellIt: f.blows, hitsToFellHero: f.hits, verdict: f.verdict })),
+          }
+        : {}),
+    };
+    const response = await this.client.systemOne({
+      state: state,
+      questions: {
+        kind: choice(
+          'What is the player telling the game makers? Judge the words in `playerWords`, using the rest of the state for context.',
+          Object.fromEntries(FEEDBACK_KINDS.map((k, i) => [labelOf(i), `${k.replace(/_/g, ' ')}: ${KIND_MEANING[k]}`])),
+        ),
+        severity: score(
+          'How much does what they describe get in the way of the player enjoying the game?',
+          SEVERITY_LEVELS,
+        ),
+      },
+    });
+    const a = response.answers as { kind: { choice: string; confidence: number }; severity: { score: number } };
+    return {
+      kind: idOf(FEEDBACK_KINDS, a.kind.choice),
+      severity: Math.max(0, Math.min(SEVERITY_LEVELS.length - 1, Math.round(a.severity.score))),
+      confidence: Math.max(0, Math.min(1, a.kind.confidence)),
+      by: 'jev',
     };
   }
 }

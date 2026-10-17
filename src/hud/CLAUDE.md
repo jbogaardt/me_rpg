@@ -37,4 +37,4 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
   Online tab back to retry). Guest-only; a host has nothing to join. The relay cannot tell a full game from a closed one.
 - **The map overlay is local**: it fills in as the players in view explore (`map/explored.ts`), nothing is sent. Rooms
   have none, and the `map` capability can turn it off or show the whole zone.
-- **The breather badge** (`BreatherBadge.ts`; core engine, local to each page): after a quest ends a 🍺 badge with a clock and three tappable faces sits at the left edge (never over the fight) and the DM says a line; a tapped face is noted by the host (`docs/playtests.md`). No menu or form reports anything: reporting must cost the player nothing.
+- **The breather badge** (`BreatherBadge.ts`; core engine, local to each page): after a quest ends a 🍺 badge with a clock and three tappable faces sits at the left edge (never over the fight) and the DM says a line; a tapped face is noted by the host (`docs/feedback.md`). No menu or form reports anything: reporting must cost the player nothing.

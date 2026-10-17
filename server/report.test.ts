@@ -3,6 +3,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ReportLog, type ReportEntry, type ReportState } from '../src/systems/reportLog';
+import { Curve } from './curve';
+import { triage } from './triage';
+import { RulesTagger } from './tag';
 import {
   BLOCK,
   BUDGET,
@@ -248,5 +251,45 @@ describe('writing the report', () => {
     expect(looksRight(good)).toBe(true);
     expect(looksRight('## Findings only')).toBe(false);
     expect(plainReport(log())).toContain('Hard moments');
+  });
+});
+
+describe('with a triage and an engagement curve', () => {
+  const dir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'report-'));
+  const curve = () => {
+    const c = new Curve();
+    c.add(30, { pressure: 0.9, stalled: 0.1 });
+    return c;
+  };
+
+  it('puts the engagement curve in the blocks of the evening', () => {
+    expect(blocks(log(), curve())[0]).toContain('table read: pressure avg 90% max 90%, stalled avg 10%');
+  });
+
+  it('gives the analyst the small digest: ranked findings with their evidence, and no list of entries', async () => {
+    const tri = await triage(log(), new RulesTagger());
+    expect(tri.findings.length).toBeGreaterThan(0);
+    const { prompt } = analysisPrompt(game, log(), { triage: tri, curve: curve() });
+    expect(prompt).toContain('TRIAGE:');
+    expect(prompt).toContain('F1. too hard \u00b7 The Sunscar Hollow');
+    expect(prompt).toContain('players said: "this cave is way too hard');
+    expect(prompt).toContain('THE GAME IN 5-MINUTE BLOCKS');
+    expect(prompt).not.toContain('WHAT PLAYERS SAID, ASKED AND TAPPED');
+    expect(prompt).not.toContain('bob@example.com');
+  });
+
+  it('falls back to the whole digest when triage found nothing', () => {
+    const { prompt } = analysisPrompt(game, log(), { triage: { findings: [], praise: [] } });
+    expect(prompt).toContain('THE HOST LOG, as a digest');
+  });
+
+  it('writes the findings even when no model answers, and the findings file keeps the order', async () => {
+    const tri = await triage(log(), new RulesTagger());
+    const wrote = await writeReport(dir(), game, log(), null, { triage: tri, curve: curve() });
+    const text = fs.readFileSync(wrote!.path, 'utf8');
+    expect(wrote?.how).toBe('plain');
+    expect(text).toContain('## Findings (ranked by rules)');
+    expect(text.indexOf('F1.')).toBeGreaterThan(-1);
+    expect(text).toContain('table read: pressure');
   });
 });

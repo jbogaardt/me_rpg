@@ -11,6 +11,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { stamp, type ReportEntry } from '../src/systems/reportLog';
 import type { Ask } from './claude';
+import { curveText, type Curve } from './curve';
+import type { Finding, Triage } from './triage';
 
 /** What a game's report is about. */
 export interface GameInfo {
@@ -86,7 +88,8 @@ export function lineOf(e: ReportEntry, how: 'words' | 'brief' | 'full' = 'full')
  * party was, the levels, what the director offered (counted, not listed), knockouts, quests, breathers, how often players
  * spoke. This is what keeps a three-hour campaign readable: the passive entries live here, as counts.
  */
-export function blocks(entries: readonly ReportEntry[]): string[] {
+export function blocks(entries: readonly ReportEntry[], curve?: Curve): string[] {
+  const read = curve?.blocks(BLOCK);
   const by = new Map<number, ReportEntry[]>();
   for (const e of entries) {
     const k = Math.floor(e.t / BLOCK);
@@ -126,6 +129,7 @@ export function blocks(entries: readonly ReportEntry[]): string[] {
         count((e) => e.kind === 'breather') && `breathers x${count((e) => e.kind === 'breather')}`,
         count((e) => e.kind === 'said' || e.kind === 'ask' || e.kind === 'note') &&
           `players spoke x${count((e) => e.kind === 'said' || e.kind === 'ask' || e.kind === 'note')}`,
+        read?.has(k) && curveText(read.get(k)!),
       ];
       return parts.filter(Boolean).join(' \u00b7 ');
     });
@@ -137,8 +141,8 @@ export function blocks(entries: readonly ReportEntry[]): string[] {
  * lose their detail first, then asks and notes, then (last) the players' own words lose theirs; whatever is cut is counted.
  * `full: false` keeps the state to a bracket (for the file's own appendix).
  */
-export function digest(entries: readonly ReportEntry[], budget = BUDGET, full = true): string {
-  const blockLines = blocks(entries);
+export function digest(entries: readonly ReportEntry[], budget = BUDGET, full = true, curve?: Curve): string {
+  const blockLines = blocks(entries, curve);
   const RANK = { full: 0, brief: 1, words: 2, gone: 3 } as const;
   type Level = keyof typeof RANK;
   const how = new Map<ReportEntry, Level>();
@@ -172,6 +176,48 @@ export function digest(entries: readonly ReportEntry[], budget = BUDGET, full = 
   ]
     .filter((l, i, all) => l !== '' || all[i - 1] !== '')
     .join('\n');
+}
+
+/** Characters of triage the analyst is given: the whole of the "smaller digest" when there is one. */
+export const TRIAGE_BUDGET = 24_000;
+
+/** One finding as the analyst reads it: what, where, how strong, what the numbers say, what players said, and its best evidence. */
+export function findingText(f: Finding, entries: readonly ReportEntry[]): string {
+  const what = `${f.id}. ${f.kind.replace(/_/g, ' ')} \u00b7 ${f.area}${f.foe ? ` \u00b7 ${f.foe}` : ''} \u00b7 severity ${f.severity} of 3 \u00b7 ${f.count} signal${f.count === 1 ? '' : 's'} from ${f.players.join(', ') || 'the table'} (score ${f.score})`;
+  const best = f.evidence
+    .slice(0, 2)
+    .map((i) => entries[i])
+    .filter((e): e is ReportEntry => !!e);
+  return [
+    what,
+    ...f.why.map((w) => `   why: ${w}`),
+    f.quotes.length ? `   players said: ${f.quotes.map((q) => `"${q}"`).join(' | ')}` : '',
+    ...best.map((e, n) => `   evidence ${n + 1}:\n${lineOf(e, n === 0 ? 'full' : 'brief').replace(/^/gm, '   ')}`),
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+/** The triage as text, within `budget` (the lowest-ranked findings are left out first, and counted). */
+export function findingsText(t: Triage, entries: readonly ReportEntry[], budget = TRIAGE_BUDGET): string {
+  const out: string[] = [];
+  let used = 0;
+  let left = 0;
+  for (const f of t.findings) {
+    const text = findingText(f, entries);
+    if (used + text.length > budget) left++;
+    else {
+      out.push(text);
+      used += text.length;
+    }
+  }
+  return [
+    ...out,
+    left ? `(${left} lower-ranked finding${left === 1 ? '' : 's'} left out for length)` : '',
+    t.praise.length ? `\nWhat players liked, in their words: ${t.praise.map((p) => `"${p}"`).join(' | ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 /** The numbers about a game, said plainly (the analyst is given them, and the file opens with them). */
@@ -211,12 +257,30 @@ export const ANALYST_SYSTEM =
   'contact details. Short sentences.';
 
 /** The system prompt and the prompt for the analyst. */
-export function analysisPrompt(game: GameInfo, entries: readonly ReportEntry[]): { system: string; prompt: string } {
+export function analysisPrompt(
+  game: GameInfo,
+  entries: readonly ReportEntry[],
+  extras: { triage?: Triage; curve?: Curve } = {},
+): { system: string; prompt: string } {
+  const { triage, curve } = extras;
+  // With a triage the analyst gets the small digest: the ranked findings with their evidence and the game in blocks, not every
+  // entry. Without one (nothing found, or no triage ran) it gets the whole digest, as before.
+  const log = triage?.findings.length
+    ? [
+        'TRIAGE: the findings of this game, ranked by a classifier and by rules over the host log (counts, severity, and what the numbers say about what players said). Confirm them against their evidence, merge or reword them, and add nothing the evidence does not show:',
+        findingsText(triage, entries),
+        '',
+        "THE GAME IN 5-MINUTE BLOCKS (the director's nudges are counted here, not listed):",
+        ...blocks(entries, curve),
+      ].join('\n')
+    : [
+        'THE HOST LOG, as a digest of the whole game (blocks of the evening, then what players said and who fell, with the state of the game each time):',
+        digest(entries, BUDGET, true, curve),
+      ].join('\n');
   const prompt = [
     `Game ${game.code}${game.build ? `, build ${game.build}` : ''}. Facts: ${facts(game, entries).join('; ')}.`,
     '',
-    'THE HOST LOG, as a digest of the whole game (blocks of the evening, then what players said and who fell, with the state of the game each time):',
-    digest(entries),
+    log,
     '',
     'WHERE THINGS ARE IN THE REPO:',
     REPO_MAP,
@@ -225,8 +289,9 @@ export function analysisPrompt(game: GameInfo, entries: readonly ReportEntry[]):
       'beside it. The foes line says, for this player as they really are, how many blows they need to fell each kind of foe and how ' +
       'many hits it needs to fell them, with a verdict (deadly, slog, hard, fair, easy, trivial) and the same for a typical hero of ' +
       "their level: a verdict that differs means their gear or stats are off the curve, not the foe. Weigh the zone's level band, " +
-      'how many foes are alive, knockouts here, damage taken and dealt in the last minute and what the DM pressure was. Say plainly ' +
-      'when the numbers support the claim, when they contradict it (then it is a feel or clarity problem), and when the log cannot tell.',
+      'how many foes are alive, knockouts here, damage taken and dealt in the last minute and what the DM pressure was. A "table read" ' +
+      "line is the fast model's guess at how hard pressed the party looked and how stalled they were. Say plainly when the numbers " +
+      'support the claim, when they contradict it (then it is a feel or clarity problem), and when the log cannot tell.',
     '',
     'Write the markdown with exactly these sections, in this order:',
     '## Prompt for the next session',
@@ -256,12 +321,25 @@ export function header(game: GameInfo, entries: readonly ReportEntry[], how: str
 }
 
 /** What the file ends with: the log itself, as read. */
-export function appendix(entries: readonly ReportEntry[]): string {
-  return ['', '## Log', '', '```', digest(entries, APPENDIX_BUDGET, false), '```', ''].join('\n');
+export function appendix(entries: readonly ReportEntry[], curve?: Curve): string {
+  return ['', '## Log', '', '```', digest(entries, APPENDIX_BUDGET, false, curve), '```', ''].join('\n');
 }
 
 /** The file by rules alone, for when no model could be asked. */
-export function plainReport(entries: readonly ReportEntry[]): string {
+export function plainReport(entries: readonly ReportEntry[], triage?: Triage): string {
+  if (triage?.findings.length)
+    return [
+      '## Prompt for the next session',
+      '',
+      'Read CLAUDE.md and docs/playtests.md. Take the findings below in order. Each was ranked by a classifier and by rules, with',
+      'its evidence; reproduce it in the game or a test, change as little as possible, add or adjust tests and run npm run verify.',
+      '(No model was available to write these up.)',
+      '',
+      '## Findings (ranked by rules)',
+      '',
+      ...triage.findings.flatMap((f) => [findingText(f, entries).replace(/^ {3}/gm, '    '), '']),
+      ...(triage.praise.length ? ['## What players liked', '', ...triage.praise.map((p) => `- "${p}"`), ''] : []),
+    ].join('\n');
   const said = entries.filter((e) => e.kind === 'said' || e.kind === 'ask' || e.kind === 'note');
   const hard = entries.filter((e) => e.kind === 'down' || (e.kind === 'signal' && /struggle|lost/.test(e.text)));
   return [
@@ -302,12 +380,13 @@ export async function writeReport(
   game: GameInfo,
   entries: readonly ReportEntry[],
   ask: Ask | null,
+  extras: { triage?: Triage; curve?: Curve } = {},
 ): Promise<{ path: string; how: 'haiku' | 'plain' } | null> {
   if (!entries.length) return null;
   let body = '';
   if (ask) {
     try {
-      const { system, prompt } = analysisPrompt(game, entries);
+      const { system, prompt } = analysisPrompt(game, entries, extras);
       const answer = (await ask(system, prompt)).replace(/^```(?:markdown|md)?\n|\n```\s*$/g, '').trim();
       if (looksRight(answer)) body = redact(answer.replace(/[ \t]+$/gm, ''));
     } catch {
@@ -319,7 +398,7 @@ export async function writeReport(
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
     file,
-    `${header(game, entries, how === 'haiku' ? 'analysed by Haiku' : 'by rules; no model answered')}\n${body || plainReport(entries)}\n${appendix(entries)}`,
+    `${header(game, entries, how === 'haiku' ? 'analysed by Haiku' : 'by rules; no model answered')}\n${body || plainReport(entries, extras.triage)}\n${appendix(entries, extras.curve)}`,
   );
   return { path: file, how };
 }
