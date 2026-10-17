@@ -717,6 +717,346 @@
       "regen": 0.3,
       "rare": true,
       "look": {}
+    },
+    "blackironSword": {
+      "name": "Blackiron Sword",
+      "value": 650,
+      "slot": "weapon",
+      "attack": 9,
+      "look": {
+        "weapon": "weapon.arming_iron"
+      }
+    },
+    "blackironShield": {
+      "name": "Blackiron Shield",
+      "value": 380,
+      "slot": "offhand",
+      "defense": 4,
+      "look": {
+        "shield": "shield.round_black"
+      }
+    },
+    "blackironHelm": {
+      "name": "Blackiron Helm",
+      "value": 400,
+      "slot": "head",
+      "defense": 4,
+      "look": {
+        "headwear": "headwear.legion"
+      }
+    },
+    "blackironPlate": {
+      "name": "Blackiron Plate",
+      "value": 650,
+      "slot": "chest",
+      "defense": 6,
+      "look": {
+        "torso": "torso.legion_iron"
+      }
+    },
+    "blackironGreaves": {
+      "name": "Blackiron Greaves",
+      "value": 300,
+      "slot": "legs",
+      "defense": 3,
+      "look": {
+        "legs": "legs.plate_iron"
+      }
+    },
+    "blackironBoots": {
+      "name": "Blackiron Boots",
+      "value": 260,
+      "slot": "feet",
+      "defense": 3,
+      "look": {
+        "feet": "feet.plate_iron"
+      }
+    },
+    "blackironBow": {
+      "name": "Hunter's Warbow",
+      "value": 600,
+      "slot": "weapon",
+      "attack": 10,
+      "ranged": {
+        "speed": 380,
+        "range": 320,
+        "cooldown": 0.5
+      },
+      "look": {
+        "weapon": "weapon.bow_great"
+      }
+    },
+    "highsteelSword": {
+      "name": "Highsteel Sword",
+      "value": 1200,
+      "slot": "weapon",
+      "attack": 13,
+      "look": {
+        "weapon": "weapon.arming_steel"
+      }
+    },
+    "highsteelShield": {
+      "name": "Highsteel Shield",
+      "value": 760,
+      "slot": "offhand",
+      "defense": 6,
+      "look": {
+        "shield": "shield.kite_gray"
+      }
+    },
+    "highsteelHelm": {
+      "name": "Highsteel Helm",
+      "value": 800,
+      "slot": "head",
+      "defense": 6,
+      "look": {
+        "headwear": "headwear.greathelm"
+      }
+    },
+    "highsteelPlate": {
+      "name": "Highsteel Plate",
+      "value": 1300,
+      "slot": "chest",
+      "defense": 9,
+      "look": {
+        "torso": "torso.plate_steel"
+      }
+    },
+    "highsteelGreaves": {
+      "name": "Highsteel Greaves",
+      "value": 650,
+      "slot": "legs",
+      "defense": 5,
+      "look": {
+        "legs": "legs.plate_steel"
+      }
+    },
+    "highsteelBoots": {
+      "name": "Highsteel Boots",
+      "value": 550,
+      "slot": "feet",
+      "defense": 5,
+      "look": {
+        "feet": "feet.plate_steel"
+      }
+    },
+    "highsteelBow": {
+      "name": "Highsteel Longbow",
+      "value": 1100,
+      "slot": "weapon",
+      "attack": 14,
+      "ranged": {
+        "speed": 380,
+        "range": 320,
+        "cooldown": 0.5
+      },
+      "look": {
+        "weapon": "weapon.bow_great"
+      }
+    },
+    "runedSword": {
+      "name": "Runed Sword",
+      "value": 2000,
+      "slot": "weapon",
+      "attack": 17,
+      "look": {
+        "weapon": "weapon.arming_silver"
+      }
+    },
+    "runedShield": {
+      "name": "Runed Shield",
+      "value": 1200,
+      "slot": "offhand",
+      "defense": 8,
+      "look": {
+        "shield": "shield.round_silver"
+      }
+    },
+    "runedHelm": {
+      "name": "Runed Helm",
+      "value": 1300,
+      "slot": "head",
+      "defense": 8,
+      "look": {
+        "headwear": "headwear.greathelm"
+      }
+    },
+    "runedPlate": {
+      "name": "Runed Plate",
+      "value": 2000,
+      "slot": "chest",
+      "defense": 12,
+      "look": {
+        "torso": "torso.plate_steel"
+      }
+    },
+    "runedGreaves": {
+      "name": "Runed Greaves",
+      "value": 1000,
+      "slot": "legs",
+      "defense": 7,
+      "look": {
+        "legs": "legs.plate_steel"
+      }
+    },
+    "runedBoots": {
+      "name": "Runed Boots",
+      "value": 880,
+      "slot": "feet",
+      "defense": 7,
+      "look": {
+        "feet": "feet.plate_steel"
+      }
+    },
+    "runedBow": {
+      "name": "Runed Stormbow",
+      "value": 1900,
+      "slot": "weapon",
+      "attack": 18,
+      "ranged": {
+        "speed": 380,
+        "range": 320,
+        "cooldown": 0.5
+      },
+      "look": {
+        "weapon": "weapon.bow_great"
+      }
+    },
+    "dreadSword": {
+      "name": "Dread Sword",
+      "value": 3200,
+      "slot": "weapon",
+      "attack": 21,
+      "look": {
+        "weapon": "weapon.arming_steel"
+      }
+    },
+    "dreadShield": {
+      "name": "Dread Shield",
+      "value": 1800,
+      "slot": "offhand",
+      "defense": 10,
+      "look": {
+        "shield": "shield.round_black"
+      }
+    },
+    "dreadHelm": {
+      "name": "Dread Helm",
+      "value": 1900,
+      "slot": "head",
+      "defense": 10,
+      "look": {
+        "headwear": "headwear.barbarian"
+      }
+    },
+    "dreadPlate": {
+      "name": "Dread Plate",
+      "value": 3000,
+      "slot": "chest",
+      "defense": 15,
+      "look": {
+        "torso": "torso.plate_gold"
+      }
+    },
+    "dreadGreaves": {
+      "name": "Dread Greaves",
+      "value": 1500,
+      "slot": "legs",
+      "defense": 9,
+      "look": {
+        "legs": "legs.plate_iron"
+      }
+    },
+    "dreadBoots": {
+      "name": "Dread Boots",
+      "value": 1300,
+      "slot": "feet",
+      "defense": 9,
+      "look": {
+        "feet": "feet.plate_iron"
+      }
+    },
+    "dreadBow": {
+      "name": "Dread Bow",
+      "value": 3000,
+      "slot": "weapon",
+      "attack": 22,
+      "ranged": {
+        "speed": 380,
+        "range": 320,
+        "cooldown": 0.5
+      },
+      "look": {
+        "weapon": "weapon.bow_great"
+      }
+    },
+    "starforgedSword": {
+      "name": "Starforged Sword",
+      "value": 4800,
+      "slot": "weapon",
+      "attack": 25,
+      "look": {
+        "weapon": "weapon.arming_silver"
+      }
+    },
+    "starforgedShield": {
+      "name": "Starforged Shield",
+      "value": 2600,
+      "slot": "offhand",
+      "defense": 13,
+      "look": {
+        "shield": "shield.round_silver"
+      }
+    },
+    "starforgedHelm": {
+      "name": "Starforged Helm",
+      "value": 2700,
+      "slot": "head",
+      "defense": 12,
+      "look": {
+        "headwear": "headwear.greathelm"
+      }
+    },
+    "starforgedPlate": {
+      "name": "Starforged Plate",
+      "value": 4300,
+      "slot": "chest",
+      "defense": 18,
+      "look": {
+        "torso": "torso.plate_gold"
+      }
+    },
+    "starforgedGreaves": {
+      "name": "Starforged Greaves",
+      "value": 2100,
+      "slot": "legs",
+      "defense": 11,
+      "look": {
+        "legs": "legs.plate_steel"
+      }
+    },
+    "starforgedBoots": {
+      "name": "Starforged Boots",
+      "value": 1900,
+      "slot": "feet",
+      "defense": 11,
+      "look": {
+        "feet": "feet.plate_steel"
+      }
+    },
+    "starforgedBow": {
+      "name": "Starforged Bow",
+      "value": 4500,
+      "slot": "weapon",
+      "attack": 26,
+      "ranged": {
+        "speed": 380,
+        "range": 320,
+        "cooldown": 0.5
+      },
+      "look": {
+        "weapon": "weapon.bow_great"
+      }
     }
   },
   "shops": {
@@ -739,7 +1079,17 @@
         "emerald",
         "ruby",
         "sapphire",
-        "topaz"
+        "topaz",
+        "blackironSword",
+        "blackironShield",
+        "highsteelSword",
+        "highsteelShield",
+        "runedSword",
+        "runedShield",
+        "dreadSword",
+        "dreadShield",
+        "starforgedSword",
+        "starforgedShield"
       ],
       "buys": ["blade", "offhand", "gem"]
     },
@@ -757,7 +1107,22 @@
         "plateArmor",
         "paddedLeggings",
         "ironGreaves",
-        "steelGreaves"
+        "steelGreaves",
+        "blackironHelm",
+        "blackironPlate",
+        "blackironGreaves",
+        "highsteelHelm",
+        "highsteelPlate",
+        "highsteelGreaves",
+        "runedHelm",
+        "runedPlate",
+        "runedGreaves",
+        "dreadHelm",
+        "dreadPlate",
+        "dreadGreaves",
+        "starforgedHelm",
+        "starforgedPlate",
+        "starforgedGreaves"
       ],
       "buys": ["head", "chest", "legs"]
     },
@@ -774,7 +1139,17 @@
         "foldedBoots",
         "ironBoots",
         "steelBoots",
-        "travelerCloak"
+        "travelerCloak",
+        "blackironBoots",
+        "blackironBow",
+        "highsteelBoots",
+        "highsteelBow",
+        "runedBoots",
+        "runedBow",
+        "dreadBoots",
+        "dreadBow",
+        "starforgedBoots",
+        "starforgedBow"
       ],
       "buys": ["bow", "feet", "cape"]
     },
@@ -944,6 +1319,111 @@
     },
     "deeprelic": {
       "xp": 250
+    },
+    "blackironSword": {
+      "item": "blackironSword"
+    },
+    "blackironShield": {
+      "item": "blackironShield"
+    },
+    "blackironHelm": {
+      "item": "blackironHelm"
+    },
+    "blackironPlate": {
+      "item": "blackironPlate"
+    },
+    "blackironGreaves": {
+      "item": "blackironGreaves"
+    },
+    "blackironBoots": {
+      "item": "blackironBoots"
+    },
+    "blackironBow": {
+      "item": "blackironBow"
+    },
+    "highsteelSword": {
+      "item": "highsteelSword"
+    },
+    "highsteelShield": {
+      "item": "highsteelShield"
+    },
+    "highsteelHelm": {
+      "item": "highsteelHelm"
+    },
+    "highsteelPlate": {
+      "item": "highsteelPlate"
+    },
+    "highsteelGreaves": {
+      "item": "highsteelGreaves"
+    },
+    "highsteelBoots": {
+      "item": "highsteelBoots"
+    },
+    "highsteelBow": {
+      "item": "highsteelBow"
+    },
+    "runedSword": {
+      "item": "runedSword"
+    },
+    "runedShield": {
+      "item": "runedShield"
+    },
+    "runedHelm": {
+      "item": "runedHelm"
+    },
+    "runedPlate": {
+      "item": "runedPlate"
+    },
+    "runedGreaves": {
+      "item": "runedGreaves"
+    },
+    "runedBoots": {
+      "item": "runedBoots"
+    },
+    "runedBow": {
+      "item": "runedBow"
+    },
+    "dreadSword": {
+      "item": "dreadSword"
+    },
+    "dreadShield": {
+      "item": "dreadShield"
+    },
+    "dreadHelm": {
+      "item": "dreadHelm"
+    },
+    "dreadPlate": {
+      "item": "dreadPlate"
+    },
+    "dreadGreaves": {
+      "item": "dreadGreaves"
+    },
+    "dreadBoots": {
+      "item": "dreadBoots"
+    },
+    "dreadBow": {
+      "item": "dreadBow"
+    },
+    "starforgedSword": {
+      "item": "starforgedSword"
+    },
+    "starforgedShield": {
+      "item": "starforgedShield"
+    },
+    "starforgedHelm": {
+      "item": "starforgedHelm"
+    },
+    "starforgedPlate": {
+      "item": "starforgedPlate"
+    },
+    "starforgedGreaves": {
+      "item": "starforgedGreaves"
+    },
+    "starforgedBoots": {
+      "item": "starforgedBoots"
+    },
+    "starforgedBow": {
+      "item": "starforgedBow"
     }
   }
 }
