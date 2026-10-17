@@ -1266,6 +1266,220 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ash_and_ember",
+      "scope": "party",
+      "title": "Ash and Ember",
+      "tagline": "Past the Mirewater the map runs out, and what burns there has been waiting for a visitor.",
+      "difficulty": 5,
+      "opening": "Beyond the Mirewater the old maps show a smudge and a word: 'burnt'. This season the smudge has grown a road, and a banner no one raised. Something in the Emberwaste is drawing the legions of the dead into line.",
+      "ending": "Vharek falls, and the Cinder Ziggurat's fire sinks to embers. The Emberwaste will burn on for a thousand years, but it burns without a will now, and the road east is only a road.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Mirewater Gate",
+            "zone": "emberwaste",
+            "count": 1
+          },
+          "tell": "Cross the Mirewater to the burnt road in {area}. Go to the gate, and see the first land past the old maps.",
+          "aftermath": [
+            "The gate is a pair of blackened trees, and between them a milestone, new: 'Cinder Ziggurat, 40 leagues.' Someone has been laying road."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "orc",
+            "count": 5,
+            "zone": "emberwaste"
+          },
+          "tell": "Orc pickets hold the road in {area}, in the red cord of a king who is not yet named. Break them.",
+          "aftermath": [
+            "Each carries the same crude brand on the shield: a flame inside a ring. Whoever they follow does not mind being worshipped."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Ember Lakes",
+            "zone": "emberwaste",
+            "count": 1
+          },
+          "tell": "The road bends past lakes of lava in {area}. Go to the shore, and see what they feed.",
+          "aftermath": [
+            "The lava lakes are stirred into slow spirals, all turning one way. Under the heat shimmer, something vast breathes in time with them."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "mummy",
+            "count": 4,
+            "zone": "emberwaste"
+          },
+          "tell": "Embalmed sentries stand in the ash round {area}, where no one buried them. Lay them down.",
+          "aftermath": [
+            "The wrappings are new, soaked in oil and sealed with a flame-mark. Someone is making mummies, and sending them to guard the road."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Fallen Legion",
+            "zone": "emberwaste",
+            "count": 1
+          },
+          "tell": "A war camp of the dead lies in {area}. Walk to it, and read the crosses before you fight.",
+          "aftermath": [
+            "Four hundred iron crosses, each with a unit number and a date, the same date. A legion that all died on the same day, and was not allowed to rest."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "troll",
+            "count": 3,
+            "zone": "emberwaste"
+          },
+          "tell": "The legion's war-trolls drag the dead's wagons in {area}. Put them down, and the camp falls quiet.",
+          "aftermath": [
+            "The wagons carry banners folded and numbered, one for each cross in the field. Someone means to march them somewhere, and soon."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Cinder Ziggurat",
+            "zone": "emberwaste",
+            "count": 1
+          },
+          "tell": "The banners all point to the Ziggurat in {area}. Climb to its steps, and meet whatever has been gathering a legion.",
+          "aftermath": [
+            "The Ziggurat's steps are warm as a living thing. At its top, a throne of cooled lava, and the shape of a man, kneeling, burning without burning."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "cinderlord",
+            "count": 1,
+            "zone": "emberwaste"
+          },
+          "tell": "Vharek, the Cinderlord, rises from his throne in {area}, and the legion's drum goes silent to watch. End him.",
+          "aftermath": [
+            "The fire falls out of him like a robe. Underneath, an old soldier, who says only: 'Was it a good war?' He does not wait for an answer either."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "the_long_white",
+      "scope": "party",
+      "title": "The Long White",
+      "tagline": "Beyond the Frostlands the snow has stopped falling and started to stand.",
+      "difficulty": 5,
+      "opening": "The herders always kept to their side of the white, where the snow falls. This winter it stopped falling and started to stand, in pillars, in rows, in the shape of men. Something is raising an army out of the weather.",
+      "ending": "The Hoarfather falls, and the standing snow slumps into plain drifts. The wind, for the first time in a year, blows from somewhere that is not the north. Rimeheart is a land again, and not an army.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Whiteout Gate",
+            "zone": "rimeheart",
+            "count": 1
+          },
+          "tell": "Past the Frostlands the snow does not move. Go to the pillars in {area}, and see where the herders turn back.",
+          "aftermath": [
+            "Two columns of packed snow, taller than a house, each with a face. The faces are not carved. They grew."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "frostbound",
+            "count": 5,
+            "zone": "rimeheart"
+          },
+          "tell": "The standing snow has bones in it, and they walk in {area}. Break the first rank.",
+          "aftermath": [
+            "They fall in sheets of ice, and under each, a coat of the Frostlands' own watch. The army was raised from those who went looking."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Glass Lakes",
+            "zone": "rimeheart",
+            "count": 1
+          },
+          "tell": "The cold is deepest at the lakes in {area}. Walk the shore, and see how far down the ice goes.",
+          "aftermath": [
+            "The ice is clear to the bottom, where rows of figures stand on the lakebed, looking up, waiting for a thaw that will not come."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "snowman",
+            "count": 4,
+            "zone": "rimeheart"
+          },
+          "tell": "Yeti herds the size of barns graze the lake shore in {area}, fattened on something cold. Cull them.",
+          "aftermath": [
+            "Their fur is full of needles of ice, glittering. They were not born. They were poured, into a shape, and told to keep the herd."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Bitter Field",
+            "zone": "rimeheart",
+            "count": 1
+          },
+          "tell": "The snow forms ranks in the field in {area}. Walk to it, and look the army in the face.",
+          "aftermath": [
+            "Ten thousand pillars in lines to the horizon, all facing one way. At the end of the lines, a hill, and on the hill, a throne of ice."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "frostWarden",
+            "count": 4,
+            "zone": "rimeheart"
+          },
+          "tell": "The wardens of the ice throne stand picket at the field in {area}, in the Hoarfather's name. Take their line.",
+          "aftermath": [
+            "The last warden's helm rolls and shatters. Inside, a note in frozen ink: 'He does not want war. He wants to be remembered.'"
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Wyrm's Rest",
+            "zone": "rimeheart",
+            "count": 1
+          },
+          "tell": "The throne stands in the old halls of {area}, among the plateau's pillars. Climb to it, and answer the Hoarfather's summons.",
+          "aftermath": [
+            "The halls are older than the snow, one winter carved on every pillar. The last pillar is blank. He is waiting for the carver."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "hoarfather",
+            "count": 1,
+            "zone": "rimeheart"
+          },
+          "tell": "The Hoarfather stands on the Wyrm's Rest in {area}, tall as the hall, and bows his head to you, as to a challenger. Meet him.",
+          "aftermath": [
+            "He falls slowly, the way a drift settles. The pillars of the field crumble to powder in a long sigh, and the sun, for a moment, is a visitor."
+          ]
+        }
+      ]
     }
   ],
   "epilogue": [

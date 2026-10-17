@@ -19,7 +19,7 @@ catalog and the pitfalls checklist). Never hand-edit `public/maps/*.json`; `npm 
 
 ## The world
 
-`maps/world.ts` lays the open-air world out in squares; each biome (`maps/<name>.ts`, `defineBiome`) builds in world
+`maps/world.ts` lays the open-air world out in squares (extend it east or south only: biome-local cells count from each biome's north-west corner, so growing west or north would move every map); each biome (`maps/<name>.ts`, `defineBiome`) builds in world
 cells. `buildWorld` walls every border, cuts a corridor with a door either side at each gap, composes one world and
 cuts each biome's map from it: **its own cells plus a margin of its neighbours' (surface `beyond`, blocked)**. The game
 does not draw the margin in this zone's view; it lays the neighbour's own map beside it (see `src/scenes/CLAUDE.md`).

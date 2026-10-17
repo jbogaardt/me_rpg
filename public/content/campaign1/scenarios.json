@@ -1415,6 +1415,30 @@
         }
       ],
       "choices": []
+    },
+    {
+      "node_id": "emberwaste",
+      "biome_type": "emberwaste",
+      "entities": [
+        {
+          "entity": "cinderlord",
+          "x": 89,
+          "y": 39
+        }
+      ],
+      "choices": []
+    },
+    {
+      "node_id": "rimeheart",
+      "biome_type": "rimeheart",
+      "entities": [
+        {
+          "entity": "hoarfather",
+          "x": 122,
+          "y": 79
+        }
+      ],
+      "choices": []
     }
   ]
 }

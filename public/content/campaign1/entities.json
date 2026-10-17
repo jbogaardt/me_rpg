@@ -1012,6 +1012,61 @@
         "recover": 0.8,
         "stagger": 0.04
       }
+    },
+    "cinderlord": {
+      "type": "mob",
+      "boss": true,
+      "name": "Vharek, the Cinderlord",
+      "notes": "The Emberwaste's boss (saga 'ash_and_ember'): a warlord who walked into the Cinder Ziggurat's fire and was not burnt. Made for a level 30 hero.",
+      "scale": 1.7,
+      "sprite": {
+        "body": "body.dark_green",
+        "head": "head.orc_dark",
+        "headwear": "headwear.barbarian",
+        "torso": "torso.plate_gold",
+        "legs": "legs.plate_iron",
+        "feet": "feet.plate_steel",
+        "weapon": "weapon.arming_silver",
+        "shield": "shield.round_black"
+      },
+      "stats": {
+        "hp": 1967,
+        "attack": 241,
+        "defense": 34,
+        "speed": 60,
+        "sight": 224,
+        "xp": 657,
+        "gold": 160
+      },
+      "behavior": {
+        "windup": 0.62,
+        "recover": 0.9,
+        "stagger": 0.04
+      }
+    },
+    "hoarfather": {
+      "type": "mob",
+      "boss": true,
+      "name": "The Hoarfather",
+      "notes": "Rimeheart's boss (saga 'the_long_white'): a yeti the size of a barn that the frost itself keeps standing. Made for a level 36 hero.",
+      "scale": 1.9,
+      "sprite": {
+        "body": "body.snowman"
+      },
+      "stats": {
+        "hp": 2649,
+        "attack": 316,
+        "defense": 45,
+        "speed": 52,
+        "sight": 208,
+        "xp": 864,
+        "gold": 190
+      },
+      "behavior": {
+        "windup": 0.7,
+        "recover": 1.0,
+        "stagger": 0.03
+      }
     }
   }
 }

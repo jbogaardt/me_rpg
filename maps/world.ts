@@ -1,6 +1,6 @@
 import type { WorldLayout } from '../tools/map/world';
 
-// The open-air world, after the hand-drawn map: one character per 10x10 cells, 34 x 23 squares = 340 x 230 cells.
+// The open-air world, after the hand-drawn map: one character per 10x10 cells, 48 x 23 squares = 480 x 230 cells.
 // The borders wander off the squares (`wobble`, see tools/map/world.ts) so they look carved, not stepped.
 // Each letter is a biome, its own zone built by maps/<name>.ts in these world cells (see tools/map/world.ts). Biomes
 // own their squares exactly, so neighbouring borders always meet; every border is walled on both sides except at
@@ -11,29 +11,29 @@ import type { WorldLayout } from '../tools/map/world';
 export default {
   square: 10,
   rows: [
-    'DDDDDDDDDDDDDDBBBBBBJJJJWWWWWWWWWW', // 0
-    'DDDDDDDDDDDDDDBBBBBBJJJJWWWWWWWWWW', // 1
-    'DDDDDDDDDDDDDDBBBBBBJJJJWWWWWWWWWW', // 2
-    'DDDDDDDDDDDDDDBBBBBBJJJJWWWWWWWWWW', // 3
-    'DDDDDDDDDDDDBBBBBBBBBJJJJJJWWWWWWW', // 4
-    'DDDDDDDDDDDDBBBBBBUUUUJJJJJJWWWWWW', // 5
-    'DDDDDDDDDDFUUUUUUUUUUUJJJJJJWWWWWW', // 6
-    'DDDDDDDFFFFUUUUUUUUUUUJJJJJJMMMMWW', // 7
-    'DDDDDDFFFFFUUUUUUUUUUUJJJJJJMMMMWW', // 8
-    'DDDDDDFFFFFUUUUUUUUUUUJJJJJJMMMMWW', // 9
-    'DDDDDFFFFFFUUUUUUUUUUUJJJJJJSSSSSS', // 10
-    'DDDFFFFFFFFFFFFFFFFFFEEEEEEESSSSSS', // 11
-    'FFFFFFFFFFFFFFFFFFFFFEEEEEEESSSSSS', // 12
-    'FFFFFFFFFFFFFFFFFFFFFEEEEEEESSSSSS', // 13
-    'FFFFFFFFFFFFFFFFFFFFFEEEEEEESSSSSS', // 14
-    'FFFFFFFFFFFFFFFFFFFFFEEEEEEESSSSSS', // 15
-    'FFFFFFFFFFFFFFFFFFFFFEEEESSSSSSSSS', // 16
-    'FFFFFFFFFFFFFFFTTTTTTEEEESSSSSSSSS', // 17
-    'FFFFFFFFFFFFFFTTTTTTTEEESSSSSSSSSS', // 18
-    'FFFFFFFFFFFTTTTTTTTTTEEESSSSSSSSSS', // 19
-    'FFFFFFFFFFFTTTTTTTTTTEESSSSSSSSSSS', // 20
-    'FFFFFFFFFFTTTTTTTTTTTSSSSSSSSSSSSS', // 21
-    'FFFFFFFFFFTTTTTTTTTTTSSSSSSSSSSSSS', // 22
+    'DDDDDDDDDDDDDDBBBBBBJJJJWWWWWWWWWWVVVVVVVVVVVVVV', // 0
+    'DDDDDDDDDDDDDDBBBBBBJJJJWWWWWWWWWWVVVVVVVVVVVVVV', // 1
+    'DDDDDDDDDDDDDDBBBBBBJJJJWWWWWWWWWWVVVVVVVVVVVVVV', // 2
+    'DDDDDDDDDDDDDDBBBBBBJJJJWWWWWWWWWWVVVVVVVVVVVVVV', // 3
+    'DDDDDDDDDDDDBBBBBBBBBJJJJJJWWWWWWWVVVVVVVVVVVVVV', // 4
+    'DDDDDDDDDDDDBBBBBBUUUUJJJJJJWWWWWWVVVVVVVVVVVVVV', // 5
+    'DDDDDDDDDDFUUUUUUUUUUUJJJJJJWWWWWWVVVVVVVVVVVVVV', // 6
+    'DDDDDDDFFFFUUUUUUUUUUUJJJJJJMMMMWWVVVVVVVVVVVVVV', // 7
+    'DDDDDDFFFFFUUUUUUUUUUUJJJJJJMMMMWWVVVVVVVVVVVVVV', // 8
+    'DDDDDDFFFFFUUUUUUUUUUUJJJJJJMMMMWWVVVVVVVVVVVVVV', // 9
+    'DDDDDFFFFFFUUUUUUUUUUUJJJJJJSSSSSSRRRRRRRRRRRRRR', // 10
+    'DDDFFFFFFFFFFFFFFFFFFEEEEEEESSSSSSRRRRRRRRRRRRRR', // 11
+    'FFFFFFFFFFFFFFFFFFFFFEEEEEEESSSSSSRRRRRRRRRRRRRR', // 12
+    'FFFFFFFFFFFFFFFFFFFFFEEEEEEESSSSSSRRRRRRRRRRRRRR', // 13
+    'FFFFFFFFFFFFFFFFFFFFFEEEEEEESSSSSSRRRRRRRRRRRRRR', // 14
+    'FFFFFFFFFFFFFFFFFFFFFEEEEEEESSSSSSRRRRRRRRRRRRRR', // 15
+    'FFFFFFFFFFFFFFFFFFFFFEEEESSSSSSSSSRRRRRRRRRRRRRR', // 16
+    'FFFFFFFFFFFFFFFTTTTTTEEEESSSSSSSSSRRRRRRRRRRRRRR', // 17
+    'FFFFFFFFFFFFFFTTTTTTTEEESSSSSSSSSSRRRRRRRRRRRRRR', // 18
+    'FFFFFFFFFFFTTTTTTTTTTEEESSSSSSSSSSRRRRRRRRRRRRRR', // 19
+    'FFFFFFFFFFFTTTTTTTTTTEESSSSSSSSSSSRRRRRRRRRRRRRR', // 20
+    'FFFFFFFFFFTTTTTTTTTTTSSSSSSSSSSSSSRRRRRRRRRRRRRR', // 21
+    'FFFFFFFFFFTTTTTTTTTTTSSSSSSSSSSSSSRRRRRRRRRRRRRR', // 22
   ],
   key: {
     D: 'desert',
@@ -46,6 +46,8 @@ export default {
     E: 'eastwood',
     S: 'frostlands',
     T: 'town',
+    V: 'emberwaste',
+    R: 'rimeheart',
   },
   // Each gap: a square and the side of it that opens into the neighbouring biome (a 3-cell corridor, centred unless
   // `offset` moves it along that side). Keep a gap at least WALL cells from a corner of the border, or its corridor
@@ -67,5 +69,8 @@ export default {
     { at: [27, 8], side: 'e' }, // jungle -> marsh
     { at: [30, 6], side: 's' }, // wetlands -> marsh
     { at: [30, 9], side: 's' }, // marsh -> frostlands
+    { at: [33, 3], side: 'e' }, // wetlands -> the Emberwaste
+    { at: [33, 15], side: 'e' }, // frostlands -> Rimeheart
+    { at: [40, 9], side: 's' }, // the Emberwaste -> Rimeheart
   ],
 } satisfies WorldLayout;
