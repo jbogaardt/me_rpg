@@ -1,3 +1,4 @@
+import { REPLY_WORDS } from './dmVoice';
 // Requests, suggestions and replies between the party and the Dungeon Master (Pixi-free, tested; core engine, co-op). The
 // director's own nudges ("it is going too easy") and a player's asks ("we're lost", or a few words of their own) are the
 // same thing to the DM: something waiting in an inbox, shown as a count on a button, never a popup. The DM answers back:
@@ -25,7 +26,7 @@ export const MESSAGE_CODE = REQUESTS.length;
 export const MAX_ASK = 120;
 
 /** The DM's canned replies. */
-export const REPLIES = ['On my way.', 'Give me a moment.', 'Not right now.', 'Good idea. Doing it.'];
+export const REPLIES = REPLY_WORDS;
 
 /** A player's words as they will be sent: trimmed, one line, no longer than `MAX_ASK`. */
 export const cleanAsk = (text: string): string => text.replace(/\s+/g, ' ').trim().slice(0, MAX_ASK).trim();

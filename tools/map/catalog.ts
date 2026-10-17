@@ -275,6 +275,8 @@ export interface Prefab {
    * bottom `band` pixels are blocked. The art above the band is walk-behind. Null = decoration only.
    */
   solid: { band: number; min: number } | null;
+  /** Hung on a building's wall: drawn over the wall even though its foot is above the wall's (z lift, see zone.ts). */
+  wall?: boolean;
   /** What the object is, copied to MapObject.tag so game systems (leaf fall, rustling...) can find it. */
   tag?: string;
   /** Picked up and carried in play (systems/barrels.ts): it blocks as a body there, so the map blocks no cell for it. */
@@ -366,7 +368,6 @@ export const INTERIOR = {
   shelfWizard: { x: 512, y: 32, w: 96, h: 64 },
   signWizard: { x: 512, y: 96, w: 128, h: 64 },
   lectern: { x: 0, y: 160, w: 32, h: 48 },
-  signpost: { x: 32, y: 160, w: 32, h: 48 },
 };
 const furniture = (name: keyof typeof INTERIOR, band: number, about: string): Prefab => {
   const { x, y, w, h } = INTERIOR[name];
@@ -387,7 +388,144 @@ const building = (name: keyof typeof BUILDINGS, about: string): Prefab => {
   return { sheet: TOWN_SHEET, w, h, parts: [part(x, y, w, h)], solid: { band: h, min: 0.3 }, tag: 'building', about };
 };
 
+// --- OpenGameArt signs (art/oga_signs/CREDITS-signs.txt, CREDITS.md): signposts and hanging shop signs, cut on the 32 px grid ---
+export const SIGNPOST_SHEET = 'signposts.png'; // "[LPC] Signposts, graves, line cloths and scare crow" (Reemax et al.), unmodified
+export const HANGING_SHEET = 'hanging_signs.png'; // "[LPC] Hanging signs" (Reemax), unmodified
+const signArt = (
+  sheet: string,
+  cx: number,
+  cy: number,
+  solid: Prefab['solid'],
+  tag: string,
+  about: string,
+): Prefab => ({
+  sheet,
+  w: 32,
+  h: 32,
+  parts: [part(cx * 32, cy * 32, 32, 32)],
+  solid,
+  tag,
+  about,
+});
+/** A hanging shop sign (1x1 cell, decoration): `wall` signs go on a building's face, one cell up, beside its door. */
+const hanging = (cx: number, cy: number, what: string): Prefab => ({
+  ...signArt(
+    HANGING_SHEET,
+    cx,
+    cy,
+    null,
+    'hangingSign',
+    `A hanging wooden sign showing ${what}, 1x1 cell, drawn over a wall.`,
+  ),
+  wall: true,
+});
+export const SIGN_PREFABS = {
+  signpost: signArt(
+    SIGNPOST_SHEET,
+    0,
+    0,
+    { band: 12, min: 0.07 },
+    'sign',
+    'A signpost with an arrow board, 1x1 cell; its post blocks. Place it with `z.sign` (it names the ways), not `z.prop`.',
+  ),
+  signpostB: signArt(
+    SIGNPOST_SHEET,
+    1,
+    0,
+    { band: 12, min: 0.07 },
+    'sign',
+    'A signpost with a broad board (`z.sign` alternates it with signpost).',
+  ),
+  noticeBoard: signArt(
+    SIGNPOST_SHEET,
+    0,
+    1,
+    { band: 10, min: 0.07 },
+    'noticeBoard',
+    'A blank notice board on two legs, 1x1 cell; its legs block.',
+  ),
+  noticeBoardB: signArt(
+    SIGNPOST_SHEET,
+    1,
+    1,
+    { band: 10, min: 0.07 },
+    'noticeBoard',
+    'A notice board with pinned papers, 1x1 cell; its legs block.',
+  ),
+  hangSword: hanging(0, 0, 'a sword (weapons: smithy, ranger)'),
+  hangPot: hanging(1, 0, 'a clay pot (general goods)'),
+  hangHelm: hanging(2, 0, 'a helm (armour: the armory)'),
+  hangFlask: hanging(3, 0, 'a flask (the apothecary)'),
+  hangMug: hanging(0, 1, 'a tankard (a tavern)'),
+  hangInn: hanging(1, 1, 'the word INN'),
+  hangAmulet: hanging(2, 1, 'an amulet (the wizard, jeweller)'),
+  hangTools: hanging(3, 1, 'a hammer and tongs (the smithy)'),
+  hangBlank: hanging(0, 2, 'nothing yet'),
+} satisfies Record<string, Prefab>;
+// --- end OpenGameArt signs -------------------------------------------------------------------------------------------
+
+// === LPC grave markers (graves.png, graves_large.png; art/lpc_grave_markers/) ====================================
+// A headstone blocks only its foot (the face is walk-behind); tombs and boulders block their whole body.
+export const GRAVE_SHEET = 'graves.png';
+export const GRAVE_LARGE_SHEET = 'graves_large.png';
+const grave = (sheet: string, x: number, y: number, w: number, h: number, band: number, about: string): Prefab => ({
+  sheet,
+  w,
+  h,
+  parts: [part(x, y, w, h)],
+  solid: { band, min: 0.15 },
+  tag: 'grave',
+  about,
+});
+const GRAVE_PREFABS = {
+  tombA: grave(GRAVE_SHEET, 2, 1, 60, 94, 66, 'Stone tomb with a cross and open earth (2 cells wide, 3 tall).'),
+  tombB: grave(GRAVE_SHEET, 2, 97, 60, 94, 66, 'Stone tomb with a rounded cross and open earth (2 wide, 3 tall).'),
+  slab: grave(GRAVE_LARGE_SHEET, 2, 14, 92, 81, 40, 'Big flat tomb slab (3 cells wide, 2.5 tall).'),
+  graveRoundA: grave(GRAVE_SHEET, 64, 0, 31, 32, 12, 'Small round-topped headstone with a cross (1 cell).'),
+  graveRoundB: grave(GRAVE_SHEET, 64, 32, 31, 32, 12, 'Small round-topped headstone with an ankh (1 cell).'),
+  graveRip: grave(GRAVE_SHEET, 98, 2, 28, 27, 12, 'Dark headstone marked RIP (1 cell).'),
+  graveDark: grave(GRAVE_SHEET, 98, 34, 28, 27, 12, 'Dark headstone with a pedestal sign (1 cell).'),
+  graveCrossA: grave(GRAVE_SHEET, 132, 0, 24, 32, 12, 'Stone cross, 1 cell.'),
+  graveCrossB: grave(GRAVE_SHEET, 132, 32, 24, 32, 12, 'Stone headstone with a mushroom top, 1 cell.'),
+  graveTallA: grave(GRAVE_SHEET, 128, 64, 31, 64, 14, 'Tall headstone topped by a cross (1 cell, 2 tall).'),
+  graveTallB: grave(GRAVE_SHEET, 128, 128, 31, 64, 14, 'Tall headstone on a plinth (1 cell, 2 tall).'),
+  graveSmall: grave(GRAVE_SHEET, 128, 192, 32, 32, 12, 'Low headstone on a plinth (1 cell).'),
+  graveWideA: grave(GRAVE_SHEET, 74, 84, 45, 44, 14, 'Broad ornate headstone with a cross (1.5 cells wide).'),
+  graveWideB: grave(GRAVE_SHEET, 74, 148, 45, 44, 14, 'Broad ornate headstone with a cross (1.5 cells wide).'),
+  crossWood: grave(GRAVE_SHEET, 166, 2, 18, 29, 10, 'Plain wooden cross (1 cell).'),
+  crossMound: grave(GRAVE_SHEET, 165, 32, 22, 32, 10, 'Wooden cross on a mound of earth (1 cell).'),
+  crossGold: grave(GRAVE_SHEET, 194, 6, 28, 45, 12, 'Tall gilded cross on a mound (1 cell, 1.5 tall).'),
+  crossIronA: grave(GRAVE_SHEET, 165, 64, 22, 32, 10, 'Iron-grey cross on a mound (1 cell).'),
+  crossIronB: grave(GRAVE_SHEET, 165, 96, 22, 32, 10, 'Iron-grey rope-bound cross on a mound (1 cell).'),
+  crossIronTall: grave(GRAVE_SHEET, 194, 70, 28, 45, 12, 'Tall rope-bound cross on a mound (1 cell, 1.5 tall).'),
+  graveBoulder: grave(GRAVE_SHEET, 161, 134, 30, 46, 30, 'Dark cracked burial boulder (1 cell, 1.5 tall).'),
+  crossBlack: grave(GRAVE_SHEET, 193, 134, 30, 45, 30, 'Black stone cross (1 cell, 1.5 tall).'),
+} satisfies Record<string, Prefab>;
+/** Cemetery sets for zone specs. */
+export const GRAVES = [
+  'graveRoundA',
+  'graveRoundB',
+  'graveRip',
+  'graveDark',
+  'graveCrossA',
+  'graveCrossB',
+  'graveSmall',
+  'graveWideA',
+  'graveWideB',
+] as const satisfies (keyof typeof GRAVE_PREFABS)[];
+export const GRAVE_CROSSES = [
+  'crossWood',
+  'crossMound',
+  'crossGold',
+  'crossIronA',
+  'crossIronB',
+  'crossIronTall',
+] as const satisfies (keyof typeof GRAVE_PREFABS)[];
+// === end LPC grave markers ======================================================================================
+
 export const PREFABS = {
+  ...SIGN_PREFABS,
+  ...GRAVE_PREFABS,
   smithy: building(
     'smithy',
     'Blacksmith: a 6x7 hall with terracotta roof and an anvil over the door. Shopkeeper stands one row below.',
@@ -415,14 +553,6 @@ export const PREFABS = {
     'A reading stand with an open book, 1x1.5 cells, solid. The wizard room lists the combos on it (systems/lectern.ts).',
   ),
   signWizard: furniture('signWizard', 0, 'Wall sign with a star, 4x2 cells, decoration.'),
-  signpost: {
-    ...furniture(
-      'signpost',
-      16,
-      'A wooden signpost, 1x1.5 cells; its foot blocks. Place it with `z.sign` (it names the ways), not `z.prop`.',
-    ),
-    tag: 'sign',
-  },
   ranger: building('ranger', "Ranger's lodge: a 3x9 tall house with a golden roof and a bow over the door."),
   treeA: lpcTree('green', 0, 'Leafy tree, variant A. Blocks its trunk and lower canopy; the crown is walk-behind.'),
   treeB: lpcTree('green', 1, 'Leafy tree, variant B. Blocks its trunk and lower canopy; the crown is walk-behind.'),

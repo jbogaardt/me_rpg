@@ -22,6 +22,7 @@ import { Magic } from './Magic';
 import { dmQuestPage, questPage } from './QuestLog';
 import type { TaskView } from '../systems/dmTasks';
 import { AimSetting } from './AimSetting';
+import { VoiceSetting } from './VoiceSetting';
 import { Keybinds } from './Keybinds';
 import { Multiplayer } from './Multiplayer';
 import { Party } from './Party';
@@ -53,11 +54,13 @@ export class Menu {
 
   private keybinds: Keybinds;
   private aim: AimSetting;
+  private voiceSetting: VoiceSetting;
 
   constructor(session: Session, touch: TouchControls) {
     new Multiplayer(session, () => this.close()); // owns the Online tab
     this.keybinds = new Keybinds(touch); // owns the key editor on the Controls tab
     this.aim = new AimSetting(touch); // owns the aiming choice on the Controls tab
+    this.voiceSetting = new VoiceSetting(); // and the voice choice
     for (const [i, name] of TABS.entries()) {
       this.tabButton(name).addEventListener('click', () => this.select(i));
     }
@@ -220,6 +223,7 @@ export class Menu {
     this.inventory.show(hero);
     this.keybinds.refresh();
     this.aim.refresh();
+    this.voiceSetting.refresh();
     this.select(this.tab);
   }
 }

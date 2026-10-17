@@ -10,9 +10,10 @@ import type { Menu } from '../../hud/Menu';
 import { CELL } from '../../map/types';
 import { briefing, objective } from '../../systems/dmBrief';
 import { RELIC_KIND } from '../../systems/dmQuests';
+import { landmarkIn, landmarkText } from '../../systems/landmarks';
 import { HINT_AREA, HINT_ARROW, taskText, type TaskView } from '../../systems/dmTasks';
 import { MOB_KINDS } from '../../systems/combat';
-import { SEARCH_RADIUS, doorToward, guideFor, searchMiddle, type Guide } from '../../systems/guide';
+import { doorToward, guideFor, searchMiddle } from '../../systems/guide';
 import { ITEMS } from '../../systems/items';
 import { zoneName } from '../../systems/places';
 import {
@@ -202,12 +203,15 @@ export class StoryUi {
     const at = (x: number, y: number) => ({ x: z.world.x + x * camera.zoom, y: z.world.y + y * camera.zoom });
     // A person or a door gets the arrow; something to be found is only an area on the map (M).
     const known = guide && guide.radius === undefined ? guide : null;
-    // The DM's quest: nothing on the map until the DM shows the way (the party reads the land); then the area, then an arrow.
+    // The DM's quest: the map is the party's own and is never marked for it. Until the DM offers the compass the party reads
+    // the land; the compass first points toward the search area, then (the second time) straight at the goal.
     const task = this.arena.task;
     const open = !!task && task.state === 'active' && task.zone === z.name;
     const calling =
-      open && task.hint >= HINT_ARROW && !this.arena.local.dm && !this.zones.transition.busy
-        ? { x: task.x, y: task.y, label: 'The way' }
+      open && task.hint >= HINT_AREA && !this.arena.local.dm && !this.zones.transition.busy
+        ? task.hint >= HINT_ARROW
+          ? { x: task.x, y: task.y, label: 'The compass' }
+          : { ...searchMiddle(task.x, task.y), label: 'The compass' }
         : null;
     // A quest set in another land (a saga's next step): once the way is shown, the arrow leads to the door that goes that way.
     const toward =
@@ -221,13 +225,7 @@ export class StoryUi {
         : null;
     const target = calling ?? toward ?? known;
     this.arrow.update(dt, at(player.x, player.y - 20), target && at(target.x, target.y - 12), target?.label ?? '');
-    const questGuide: Guide | null =
-      open && task.hint >= HINT_AREA
-        ? task.hint >= HINT_ARROW
-          ? { x: task.x, y: task.y, label: task.title }
-          : { ...searchMiddle(task.x, task.y), label: task.title, radius: SEARCH_RADIUS }
-        : null;
-    this.overlay.setGuide(questGuide ?? guide);
+    this.overlay.setGuide(guide);
   }
 
   /** Does the DM's quest want this site (a plant or stone to gather that is not yet touched, or the hidden relic)? */
@@ -238,6 +236,20 @@ export class StoryUi {
     return t.kind === 'gather' && site.kind === t.what && !(t.bits & (1 << site.index));
   }
 
+  /**
+   * What the telling names stands at the goal (a wagon, a well, a camp...): a place to reach, or a person to find, is not an
+   * empty patch of ground. Drawn on every page from the task alone, and gone with it. The goal's own person stands at the
+   * spot, so the thing is set a little to the side.
+   */
+  syncLandmark() {
+    const t = this.arena.task;
+    const shape = t && t.state === 'active' && t.kind === 'visit' ? landmarkIn(landmarkText(t)) : undefined;
+    for (const z of this.arena.zones.values()) {
+      if (shape && t && z.name === t.zone) z.setLandmark(shape, t.x + CELL, t.y);
+      else if (z.landmark) z.clearLandmark();
+    }
+  }
+
   /** The relic of a "find" quest is a site that appears where the DM hid it (on every page) and goes when it is found. */
   syncRelic() {
     const t = this.arena.task;
@@ -245,7 +257,12 @@ export class StoryUi {
     for (const z of this.arena.zones.values()) {
       const have = z.sites.find((x) => x.kind === RELIC_KIND);
       if (want && z.name === want.zone && !have)
-        z.addSite({ kind: RELIC_KIND, col: Math.floor(want.x / CELL), row: Math.floor(want.y / CELL) });
+        z.addSite({
+          kind: RELIC_KIND,
+          col: Math.floor(want.x / CELL),
+          row: Math.floor(want.y / CELL),
+          item: want.what,
+        });
       else if (have && !(want && z.name === want.zone)) z.removeSite(have);
     }
   }

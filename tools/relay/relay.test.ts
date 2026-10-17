@@ -374,6 +374,41 @@ describe('expiry', () => {
     expect((await answers(relay, code, hostToken)).status).toBe(404);
   });
 
+  it('keeps a game that has had a friend for as long as its host keeps asking, so a dropped friend can rejoin', async () => {
+    let now = 1_000_000;
+    const relay = createMemoryRelay({ now: () => now });
+    const { code, hostToken } = await open(relay);
+    const seat = await join(relay, code);
+    await send(relay, code, seat.body.guestToken as string, answer(1));
+    for (let i = 0; i < 5; i++) {
+      now += ROOM_TTL_MS * 0.6; // far past the original lifetime, with the host polling in between
+      expect((await answers(relay, code, hostToken, 1)).status).toBe(200);
+    }
+    // The friend leaves; the host reopens their seat, and the same code takes them back in.
+    expect(
+      (await call(relay, 'PUT', `/v2/rooms/${code}/seats/1`, { token: hostToken, body: { offer: offer(9) } })).status,
+    ).toBe(204);
+    const again = await join(relay, code);
+    expect(again.status).toBe(200);
+    expect(again.body.slot).toBe(1);
+    expect(again.body.offer).toBe(offer(9));
+    // Once the host stops asking (page closed), it still runs out.
+    now += ROOM_TTL_MS + 1;
+    expect((await join(relay, code)).status).toBe(404);
+  });
+
+  it('does not keep a code that nobody has joined, however often the host asks', async () => {
+    let now = 1_000_000;
+    const relay = createMemoryRelay({ now: () => now });
+    const { code, hostToken } = await open(relay);
+    for (let i = 0; i < 3; i++) {
+      now += ROOM_TTL_MS * 0.3;
+      expect((await answers(relay, code, hostToken)).status).toBe(200);
+    }
+    now += ROOM_TTL_MS * 0.3;
+    expect((await join(relay, code)).status).toBe(404);
+  });
+
   it('frees the code for a new game once it has expired', async () => {
     let now = 0;
     const relay = createMemoryRelay({ now: () => now });

@@ -80,3 +80,22 @@ speaks unprompted when `wantsWord` ≥ 0.7 (never twice within 30 s), a quest is
 twice within 20 s), and the pressure sets the tone of the narration. Without a key, or when a read is older than 24 s,
 the old timers (90 s silence, 45 s quiet) decide. Written with the TypeSafe agent skill's guidance (fan-out, atomic
 judgments, state in named fields, thresholds in code); check a change with a few hand-made states against the real API.
+
+## The scene verdict and directed narration (Jev → Haiku → the page)
+
+`scene.ts`: for a moment with an actor (today a friend fallen low, `factsFor`), Jev reads the drama as three `choice`
+questions in one request (`JevScene` in `jev.ts`): `dramatic_tension` (`comic_relief`, `mounting_dread`, `furious_clash`,
+`hushed_suspense`), `environmental_twist` (`footing_compromised`, `cover_destroyed`, `lighting_changed`, `none`) and
+`npc_reaction_state` (`flinching`, `taunting`, `desperate`, `calculating`). The game's own `mechanical` resolution rides
+beside them untouched: code decides what happened, Jev how it should read. A failing or off-vocabulary Jev leaves the
+rules (`ruleDrama`, also the keyless default). `verdictBrief` writes the whole verdict into Haiku's prompt, with the
+improv frame for the outcome (`success` Yes, and; `partial` Yes, but; `setback` No, and), and `DIRECTOR_RULES` is its
+system prompt: a tabletop curator who writes `<cue:.../>` tags (`src/systems/cues.ts`) exactly where the action lands,
+anchors every line in light, texture or sound, and uses no stock fantasy filler (`hasFiller` checks it; a line that
+fails, or has no words, is replaced by the stock line, which the mock directs too). The line goes to the page through
+`say` like any other and is checked again there (`cleanCued`).
+
+Try it: `DM_BOT_CLAUDE=1 TYPESAFE_API_KEY=... npm run dm-bot` and let a friend fall below a quarter health (the log
+prints `scene: furious_clash, lighting_changed, taunting`); without keys the stock narrator and the rules do the same.
+Offline: `npx vitest run server/scene.test.ts src/systems/cues.test.ts` plays a lunge, a dodge and a breaking lantern
+from Jev's verdict to the dispatched cues.

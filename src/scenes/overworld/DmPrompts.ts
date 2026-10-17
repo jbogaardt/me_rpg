@@ -1,4 +1,5 @@
 import type { CardOption, DmCard } from '../../hud/DmCard';
+import { CANCEL_WORDS, COMPASS_STEADY_WORDS, COMPASS_WORDS } from '../../systems/dmVoice';
 import { PRESSURES, PRESSURE_LABEL, isPressure } from '../../systems/dmPowers';
 import { Director, type Suggestion } from '../../systems/dmDirector';
 import { Inbox, MESSAGE_CODE, REPLIES, REQUESTS, describe, type InboxKind } from '../../systems/dmRequests';
@@ -40,27 +41,6 @@ export type CardKind = Suggestion | 'sky' | 'pressure' | 'epic' | 'message' | 's
  * now?: follow me / defend this ground / hunt here". The bar can open any of them on demand. It runs for whoever runs the
  * world: the online DM, or a solo player in a live world.
  */
-/** What the DM says on showing the way: the area on the map first, then an arrow (several wordings, `phrases.ts`). */
-const AREA_WORDS = [
-  'You look lost, friends. I have marked where to search on your map.',
-  'Here, let me help. Open your map: the place to look is circled.',
-  'You have walked in circles long enough. Your map now shows where to look.',
-  'The land is not giving it up easily. I have drawn the search on your map.',
-  'No shame in asking the way. Look at your map: I have marked the ground.',
-];
-const ARROW_WORDS = [
-  'Still nothing? Follow the arrow, then. It will not lead you wrong.',
-  'Very well, I will lead you by the hand. Follow the arrow.',
-  'Enough wandering. The arrow points the way now.',
-  'Some places hide well. The arrow will take you straight there.',
-];
-const CANCEL_WORDS = [
-  'Let that one go. Something else is coming.',
-  'We will leave that task for another day.',
-  'Forget that errand. The road has other plans for you.',
-  'That task is called off. Rest a moment before the next.',
-];
-
 export class DmPrompts {
   private director = new Director();
   private phrases = new Phrasebook();
@@ -374,9 +354,9 @@ export class DmPrompts {
     return options;
   }
 
-  /** What showing the way does next: mark the area to search, then an arrow. */
+  /** What showing the way does next: offer the compass (toward the area), then steady it on the goal. */
   private hintLabel(): string {
-    return (this.tasks.pace?.hint ?? 0) < HINT_AREA ? 'Mark the area on their map' : 'Point the way with an arrow';
+    return (this.tasks.pace?.hint ?? 0) < HINT_AREA ? 'Offer them a compass' : 'Steady the compass on the goal';
   }
 
   /** With a quest running: a hint, and a way to call it off. */
@@ -468,7 +448,7 @@ export class DmPrompts {
     } else if (id === 'hint') {
       const arrow = (this.tasks.pace?.hint ?? 0) >= HINT_AREA;
       this.tasks.giveHint();
-      this.desk.say(this.phrases.pick(arrow ? 'arrow' : 'area', arrow ? ARROW_WORDS : AREA_WORDS));
+      this.desk.say(this.phrases.pick(arrow ? 'arrow' : 'area', arrow ? COMPASS_STEADY_WORDS : COMPASS_WORDS));
     } else if (id.startsWith('w:')) {
       const precip = id.slice(2);
       const valid = precip === '' ? null : (PRECIPS as readonly string[]).includes(precip) ? (precip as Precip) : null;

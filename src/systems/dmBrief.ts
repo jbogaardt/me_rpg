@@ -57,8 +57,8 @@ export function objective(v: TaskView, names: BriefNames): string {
 /**
  * The pages of a quest's telling, in the DM's voice (three of two or three sentences). Each page has several wordings,
  * chosen by the quest (so every page shows the same telling) and apart from each other, so two quests alike are not told
- * alike. Nothing is said of the map: the party is told what and where in words, and reads the land; the DM marks the map
- * only once they are lost (`dmTasks.ts` `HINT_AREA`).
+ * alike. Nothing is said of the map (it is the party's own): the party is told what and where in words, and reads the land;
+ * the DM offers a compass only once they are lost (`dmTasks.ts` `HINT_AREA`).
  */
 export function briefing(v: TaskView, names: BriefNames): string[] {
   const key = `${v.kind}${v.zone}${v.what}${v.title}`;

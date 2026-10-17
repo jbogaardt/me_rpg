@@ -3,7 +3,9 @@
 // (pure, tested); a `Narrator` words it. The mock narrator uses stock lines; a creative model slots in behind the same
 // interface later, so only the wording changes.
 
+import { DONE_WORDS } from '../src/systems/dmVoice';
 import { SPEAK_AT, SPEAK_MIN_MS, moodOf, type Pulse } from './pulse';
+import type { SceneVerdict } from './scene';
 import type { PageState } from './turn';
 
 export type Beat =
@@ -13,8 +15,11 @@ export type Beat =
   | { kind: 'quiet'; area: string; mood?: 'calm' | 'tense' | 'dire' };
 
 export interface Narrator {
-  /** One short line, spoken as the Dungeon Master. */
-  line(beat: Beat): Promise<string>;
+  /**
+   * One short line, spoken as the Dungeon Master. With a verdict (scene.ts: Jev's read of the moment) the line is also
+   * directed: it carries inline `<cue:.../>` tags the page plays as the words are read (systems/cues.ts).
+   */
+  line(beat: Beat, verdict?: SceneVerdict): Promise<string>;
   /** The saga now being told (its title and opening), so the DM's words carry its story. */
   setSaga?(saga: string): void;
 }
@@ -59,7 +64,9 @@ export function beatFor(s: PageState, m: Memory, now: number, pulse: Pulse | nul
  * below speaks in this voice; a creative model is given this as its system prompt.
  */
 export const PERSONA =
-  'You are the Dungeon Master of a fantasy adventure: a warm, gripping storyteller who wants the players to care. ' +
+  'You are the Dungeon Master of a fantasy adventure: a theatrical old storyteller with a dry wit, fond of the party and ' +
+  'not above teasing it. You have a personality: a raised eyebrow, a small wager, an aside, a gasp of delight; never a ' +
+  'bare "Well done." or a string of exclamation marks. Warm and gripping, you want the players to care. ' +
   'Speak one or two short sentences, under 35 words. Be concrete: say what is at stake, who is in trouble and what to ' +
   'do next, and make the players want to act. Never a riddle, proverb or vague hint. Never mention game systems, ' +
   'numbers, menus or the word "player". Name no place, person or direction unless the message gives it: do not ' +
@@ -75,8 +82,10 @@ const LINES: Record<Beat['kind'], ((b: Beat) => string)[]> = {
       `Mark this place well: ${b.kind === 'arrive' ? b.area : 'it'}. Old roads meet here, and old troubles with them.`,
   ],
   done: [
-    () => 'Well done, though do not think the road is finished with you. It never is.',
-    () => 'A small deed, you may say. But great doors turn on small hinges.',
+    () =>
+      'Well done, though do not think the road is finished with you. It never is. It has a terrible memory for unfinished business.',
+    () => 'A small deed, you may say. But great doors turn on small hinges, and I do love a good hinge.',
+    () => DONE_WORDS[Math.floor(Math.random() * DONE_WORDS.length)] ?? '',
   ],
   hurt: [
     () => 'Courage is no armour, friends. One of you has paid dearly. Look to each other.',
@@ -89,12 +98,28 @@ const LINES: Record<Beat['kind'], ((b: Beat) => string)[]> = {
   ],
 };
 
+/**
+ * A stock line directed by a verdict: a hurt friend winces on the word that says so, and a grim moment shakes the view as
+ * the line begins. Only `hurt` has an actor to direct; the other beats stay as written.
+ */
+export function stage(line: string, beat: Beat, verdict: SceneVerdict): string {
+  if (beat.kind !== 'hurt') return line;
+  const shake =
+    verdict.dramatic_tension === 'furious_clash' || verdict.dramatic_tension === 'mounting_dread'
+      ? '<cue:camera shake="light" duration="0.3" />'
+      : '';
+  const [first = '', ...rest] = line.split(/(?<=[.!?]) /);
+  const wince = `<cue:anim actor="${verdict.mechanical.actor}" action="hurt" />`;
+  return `${shake}${first}${rest.length ? ` ${wince}${rest.join(' ')}` : ''}`;
+}
+
 /** Stock lines, rotating so the same one does not come twice running. */
 export class MockNarrator implements Narrator {
   private n = 0;
-  line(beat: Beat): Promise<string> {
+  line(beat: Beat, verdict?: SceneVerdict): Promise<string> {
     const lines = LINES[beat.kind];
     const pick = lines[this.n++ % lines.length];
-    return Promise.resolve(pick ? pick(beat) : '');
+    const line = pick ? pick(beat) : '';
+    return Promise.resolve(verdict && line ? stage(line, beat, verdict) : line);
   }
 }

@@ -69,6 +69,7 @@ import { DmTasks } from './overworld/DmTasks';
 import { DmEpics } from './overworld/DmEpics';
 import { DmRevive } from './overworld/DmRevive';
 import { DmPossession } from './overworld/DmPossession';
+import { CueDirector } from './overworld/Cues';
 import { DmNarration } from './overworld/DmNarration';
 import { VotePanel } from '../hud/VotePanel';
 import { RequestPanel } from '../hud/RequestPanel';
@@ -134,6 +135,7 @@ export class OverworldScene implements Scene {
   private tasks!: DmTasks;
   private epics!: DmEpics;
   private narration!: DmNarration;
+  private cues!: CueDirector;
   private revive!: DmRevive;
   private possession!: DmPossession;
   private host: HostLink;
@@ -219,6 +221,7 @@ export class OverworldScene implements Scene {
       this.epicsOnOffer,
     );
     this.narration = new DmNarration(arena, ui.session, this.desk);
+    this.cues = new CueDirector(arena);
     this.revive = new DmRevive(arena, this.sim, this.zones);
     this.possession = new DmPossession(arena, this.sim);
     this.prompts = new DmPrompts(
@@ -234,6 +237,7 @@ export class OverworldScene implements Scene {
     this.epics.onDone = () => this.prompts.suggest('story'); // a saga is done: the story may have a next road
     // The DM's words show on every screen (never over a DM who is busy being a foe).
     this.desk.onSay = (text) => !this.possession.active && ui.dialog.tell(text, sayTime(text));
+    ui.dialog.onCue = (cue) => this.cues.play(cue); // the cues written into those words, as the reading reaches them
     this.input = new LocalInput(arena, this.zones, () => ui.touch.active);
     this.partyUi = new PartyUi(arena, this.zones, ui.menu, () => this.possession.release());
     this.storyUi = new StoryUi(arena, ui, this.zones, this.banner, this.overlay, () => this.possession.active);
@@ -249,6 +253,7 @@ export class OverworldScene implements Scene {
       this.storyUi,
       () => this.guest.pressAction(),
     );
+    this.interact.onTalk = (entity) => this.epics.talked(entity); // a saga's person has been spoken to
     this.zones.root.addChildAt(this.storyUi.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     ui.shop.onGearChange = () => arena.refreshLook();
@@ -400,6 +405,7 @@ export class OverworldScene implements Scene {
     this.tasks.update(dt);
     this.epics.update(dt);
     this.storyUi.syncRelic();
+    this.storyUi.syncLandmark();
     this.revive.update(dt);
     this.narration.update(dt);
     if (arena.local.dm && !this.ui.dialog.active && !this.ui.menu.open && stopPressed()) this.powers.toggleStop();

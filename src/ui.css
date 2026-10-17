@@ -277,13 +277,13 @@ body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
   user-select: all; -webkit-user-select: all; -webkit-touch-callout: default;
 }
 #menu label { display: block; margin-top: 10px; color: var(--ink-soft); font-weight: 600; font-size: 15px; }
-#mp-mode, #aim-mode { display: flex; gap: 6px; margin: 10px 0 8px; }
-#mp-mode button, #aim-mode button {
+#mp-mode, #aim-mode, #voice-engine { display: flex; gap: 6px; margin: 10px 0 8px; }
+#mp-mode button, #aim-mode button, #voice-engine button {
   flex: 1 1 0; padding: 7px 4px; font: 700 14px var(--title); color: var(--ink-soft); cursor: pointer;
   background: rgba(255, 250, 235, 0.5); border: 1px solid var(--gold-dim); border-radius: 3px;
 }
-#mp-mode button[aria-checked='true'], #aim-mode button[aria-checked='true'] { color: var(--gold); background: #4a3418; border-color: var(--ink); }
-#mp-mode button:disabled { opacity: 0.5; cursor: default; }
+#mp-mode button[aria-checked='true'], #aim-mode button[aria-checked='true'], #voice-engine button[aria-checked='true'] { color: var(--gold); background: #4a3418; border-color: var(--ink); }
+#mp-mode button:disabled, #voice-engine button:disabled { opacity: 0.5; cursor: default; }
 .mp-status { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-weight: 600; }
 .mp-status .dot { width: 10px; height: 10px; border-radius: 50%; background: #8a8478; box-shadow: 0 0 0 1px var(--ink-soft); }
 .mp-status[data-state='gathering'] .dot, .mp-status[data-state='connecting'] .dot { background: #e0a030; }
@@ -454,6 +454,8 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
 .inv-grid.worn .slot { height: 54px; }
 .inv-grid.pack .slot { aspect-ratio: 1; }
 .slot svg { width: 70%; height: 70%; }
+.item-pic { display: block; width: 100%; height: 100%; background: var(--item-sheet) no-repeat; background-size: 800% 200%; image-rendering: pixelated; }
+.slot .item-pic { width: 76%; height: 76%; }
 .slot .lbl { position: absolute; left: 0; right: 0; bottom: 1px; font-size: 10px; line-height: 1; text-align: center; opacity: 0.85; pointer-events: none; }
 .slot:not(.empty) .lbl { display: none; }
 .slot.empty { color: var(--ink-soft); }
@@ -570,6 +572,7 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
 .quest-art img, .quest-art svg, .quest-art .item-art { display: block; width: 72px; height: 72px; margin: 0 auto 2px; image-rendering: pixelated; border-radius: 4px; background: rgba(60, 40, 15, 0.12); }
 .quest-art .item-art { padding: 10px; box-sizing: border-box; }
 .quest-art .item-art svg { width: 100%; height: 100%; background: none; }
+.quest-art .item-art .item-pic { width: 100%; height: 100%; }
 
 /* Where the current quest leads, on the map: a dashed search circle for something to find, a star for a person or door */
 #map-overlay .guide { position: absolute; transform: translate(-50%, -50%); text-align: center; font-family: var(--title); font-weight: 700; color: #ffe27a; text-shadow: 0 1px 3px #000, 0 0 4px #000; }

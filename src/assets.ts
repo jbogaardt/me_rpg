@@ -6,6 +6,7 @@ import { type PetSheet } from './systems/pets';
 import { MOB_KINDS } from './systems/combat';
 import { outfitParts, type Outfit, type PartManifest } from './sprites/doll';
 import { Wardrobe } from './sprites/Wardrobe';
+import { installItemSheet } from './entities/itemArt';
 import { AssembledSource } from './content/AssembledSource';
 import { LiveSource } from './content/LiveSource';
 import type { ContentSource } from './content/ContentManager';
@@ -73,6 +74,8 @@ export interface Sprites {
   chests: Texture;
   /** Crop plot art (public/tilesets/crops.png): a column per growth stage by one 32x64 row per crop (systems/crops.ts). */
   crops: Texture;
+  /** Grave marker art (public/tilesets/graves.png, the same sheet the maps use): the grave landmark (entities/Landmark.ts). */
+  graves: Texture;
   /** The dog and cat sheets (public/sprites/pets/), see systems/pets.ts. */
   pets: Record<PetSheet, Texture>;
 }
@@ -104,15 +107,22 @@ export async function loadSprites(onProgress?: Progress, extra: Outfit[] = []): 
   await wardrobe.load(requiredParts(extra), onProgress);
   Assets.add({ alias: 'sprites:chests', src: tilesetUrl('chests.png') });
   Assets.add({ alias: 'sprites:crops', src: tilesetUrl('crops.png') });
+  Assets.add({ alias: 'sprites:graves', src: tilesetUrl('graves.png') });
   const pets = {} as Record<PetSheet, Texture>;
   for (const sheet of ['dogs', 'cats', 'rat'] as const) {
     Assets.add({ alias: `sprites:pets:${sheet}`, src: publicUrl(`sprites/pets/${sheet}.png`) });
     pets[sheet] = await Assets.load<Texture>(`sprites:pets:${sheet}`);
   }
+  // The item sheet: a Pixi texture for the ground items and relics, and a CSS variable for the DOM icons (hud/itemIcons.ts).
+  const itemSrc = publicUrl('sprites/items/items.png');
+  Assets.add({ alias: 'sprites:items', src: itemSrc });
+  installItemSheet(await Assets.load<Texture>('sprites:items'));
+  document.documentElement.style.setProperty('--item-sheet', `url("${itemSrc}")`);
   return {
     wardrobe,
     chests: await Assets.load<Texture>('sprites:chests'),
     crops: await Assets.load<Texture>('sprites:crops'),
+    graves: await Assets.load<Texture>('sprites:graves'),
     pets,
   };
 }

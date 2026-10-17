@@ -72,5 +72,5 @@ export function dmQuestPage(task: TaskView | null, pages: string[]): string {
   return `<h2>Quests</h2><h3>${esc(task.title)} <small>${state}</small></h3>
     <p class="quest-progress${task.state === 'done' ? ' done' : ''}">${esc(taskText(task))}</p>
     ${pages.map((p) => `<p class="quest-note">${esc(p)}</p>`).join('')}
-    ${task.state === 'active' && task.hint >= HINT_AREA ? `<p class="quest-note">Open the map (M): the gold <b>?</b> circle marks where to search.</p>` : ''}`;
+    ${task.state === 'active' && task.hint >= HINT_AREA ? `<p class="quest-note">The Dungeon Master has lent you a compass: follow its needle.</p>` : ''}`;
 }

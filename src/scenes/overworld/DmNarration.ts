@@ -1,4 +1,5 @@
-import { DEFAULT_WELCOME, Narrator } from '../../systems/narration';
+import { WELCOMES } from '../../systems/dmVoice';
+import { Narrator } from '../../systems/narration';
 import type { Session } from '../../net/session';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
@@ -17,6 +18,8 @@ export class DmNarration {
     private arena: Arena,
     private session: Session,
     private desk: DmDesk,
+    /** Which of the welcomes to say (a different one from game to game). */
+    private pick: (welcomes: string[][]) => string[] = (w) => w[Math.floor(Math.random() * w.length)] ?? [],
   ) {}
 
   update(dt: number) {
@@ -25,7 +28,7 @@ export class DmNarration {
       return;
     }
     const open = this.session.lobbyOpen;
-    if (this.wasOpen && !open) this.narrator.tell(DEFAULT_WELCOME);
+    if (this.wasOpen && !open) this.narrator.tell(this.pick(WELCOMES));
     this.wasOpen = open;
     const line = this.narrator.tick(dt);
     if (line) this.desk.say(line);

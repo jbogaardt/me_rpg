@@ -3,6 +3,8 @@ import { allOffers, offerFor, upgradeFor } from '../../systems/dmQuests';
 import { collect } from '../../systems/chests';
 import { ITEMS, itemOf } from '../../systems/items';
 import { cleanNote } from '../../systems/dmBrief';
+import { MEET_WORDS, SAGA_LOST_WORDS, SAGA_OFF_WORDS, SAGA_QUIET_WORDS } from '../../systems/dmVoice';
+import { Phrasebook } from '../../systems/phrases';
 import { CELL } from '../../map/types';
 import {
   epicReward,
@@ -38,10 +40,13 @@ export interface EpicOffer {
 /** How many sagas one card shows. */
 const PAGE = 4;
 
-/** What a step turns to when its land has none of the kind it wants. */
-/** How long (s) each line of a person's speech stays before the next. */
+/** How long (s) each line of the DM's closing words stays before the next. */
 const SPEECH = 4;
 
+/** How long (s) after a person has been spoken to before the saga goes on (time to read what they said). */
+const SETTLE = 5;
+
+/** What a step turns to when its land has none of the kind it wants. */
 const FALLBACK: TaskKind[] = ['hunt', 'visit', 'gather', 'find'];
 
 /**
@@ -57,13 +62,14 @@ export class DmEpics {
     plan: EpicPlan;
     step: number;
     next: boolean;
-    /** A person the party has reached, speaking: the lines still to say and the seconds until the next. */
+    /** The DM's closing words: the lines still to say and the seconds until the next (then the saga is complete). */
     speech: { lines: string[]; wait: number } | null;
-    /** The last step is done and the closing scene is being told (then the saga is complete). */
-    finishing?: boolean;
+    /** The party has reached a person and waits to be spoken to: who (their id), and the seconds left once they have been (null before). */
+    talk: { id: string; settle: number | null } | null;
     /** The id the world gave each person made so far (by their key in the epic). */
     ids: Map<string, string>;
   } | null = null;
+  private phrases = new Phrasebook();
   private offered: EpicPlan[] = [];
   private turn = 0;
   private page = 0;
@@ -94,13 +100,13 @@ export class DmEpics {
     tasks.onFinish = (state) => {
       const run = this.run;
       if (!run) return;
-      if (state !== 'done') return this.end('The thread of the epic is lost. The saga ends here.');
+      if (state !== 'done') return this.end(this.phrases.pick('lost', SAGA_LOST_WORDS));
       const step = run.plan.epic.steps[run.step];
-      if (step?.kind === 'meet') return this.meet(run, step); // they speak first, then the epic goes on
+      if (step?.kind === 'meet') return this.meet(run, step); // they speak when talked to, then the epic goes on
       this.advance(run);
     };
     tasks.onCancel = () => {
-      if (this.run) this.end('The saga is called off.');
+      if (this.run) this.end(this.phrases.pick('off', SAGA_OFF_WORDS));
     };
   }
 
@@ -148,7 +154,7 @@ export class DmEpics {
     const plan = this.offered[index];
     if (!plan || this.run || this.arena.role === 'client' || this.tasks.active) return false;
     this.turn++;
-    this.run = { plan, step: 0, next: true, speech: null, ids: new Map() };
+    this.run = { plan, step: 0, next: true, speech: null, talk: null, ids: new Map() };
     this.desk.say(cleanSay(`${plan.epic.title}. ${plan.epic.opening}`));
     return true;
   }
@@ -164,7 +170,7 @@ export class DmEpics {
     const plan = planEpic(epic, this.arena.view.name, this.graph, this.turn);
     if (!plan) return { ok: false, note: 'an epic is not told in a shop' };
     this.turn++;
-    this.run = { plan, step: 0, next: true, speech: null, ids: new Map() };
+    this.run = { plan, step: 0, next: true, speech: null, talk: null, ids: new Map() };
     this.desk.say(cleanSay(`${epic.title}. ${epic.opening}`));
     return { ok: true, note: '' };
   }
@@ -172,7 +178,7 @@ export class DmEpics {
   /** Call it off. */
   cancel() {
     if (!this.run) return;
-    this.end('The saga is called off.');
+    this.end(this.phrases.pick('off', SAGA_OFF_WORDS));
     this.tasks.cancel(false);
   }
 
@@ -180,6 +186,14 @@ export class DmEpics {
   update(dt = 0) {
     const run = this.run;
     if (run?.speech) return this.speak(run, run.speech, dt);
+    if (run?.talk) {
+      const t = run.talk;
+      if (t.settle !== null && (t.settle -= dt) <= 0) {
+        run.talk = null;
+        this.advance(run);
+      }
+      return;
+    }
     if (!run || !run.next || this.tasks.view) return;
     const zone = run.plan.zones[run.step]!;
     const z = this.arena.zones.get(zone);
@@ -194,7 +208,7 @@ export class DmEpics {
         : step.objective
           ? offerFor(this.tasks.landOf(z), step.objective) // named outright: this foe, these sites, that place
           : this.choose(allOffers(this.tasks.landOf(z)), step.kind, run.step);
-    if (!offer) return this.end('The lands fall quiet, and the saga with them.');
+    if (!offer) return this.end(this.phrases.pick('quiet', SAGA_QUIET_WORDS));
     run.next = false;
     this.tasks.setEpic({ title: run.plan.epic.title, step: run.step + 1, total: run.plan.epic.steps.length });
     const from = run.step > 0 ? zoneName(run.plan.zones[run.step - 1]!) : zoneName(zone);
@@ -222,13 +236,36 @@ export class DmEpics {
     return { kind: 'visit', title: `Find ${person.name}`, zone, goal: 1, what: person.name, ...at };
   }
 
-  /** The party has reached the person: they speak, a line at a time, and then the epic goes on. */
+  /**
+   * The party has reached the person. They say what the step gives them when the party talks to them (their own dialog, not
+   * the DM's voice): the lines are put on them, and the epic goes on once someone has (`talked`).
+   */
   private meet(run: NonNullable<DmEpics['run']>, step: EpicStep) {
     const person = step.who ? run.plan.epic.people?.[step.who] : undefined;
-    const lines = (step.says ?? []).map((l) => `${person?.name ?? 'Someone'}: “${l}”`);
+    const id = step.who ? run.ids.get(step.who) : undefined;
+    if (!id) return this.advance(run);
+    const lines = [...(step.says ?? [])];
     if (step.gives) lines.push(`${person?.name ?? 'They'} gives you ${step.gives}. Keep it safe.`);
-    this.say(run, step.who, person?.after); // from now on they speak of what has happened
-    run.speech = { lines, wait: 0 };
+    this.story?.voice(id, lines);
+    run.talk = { id, settle: null };
+    this.desk.say(
+      cleanSay(
+        this.phrases.pick(
+          'meet',
+          MEET_WORDS.map((w) => w(person?.name ?? 'Someone')),
+        ),
+      ),
+    );
+  }
+
+  /** A party member talked to the person `entity`: if the saga waits for them, they have had their say, and the saga goes on shortly. */
+  talked(entity: string) {
+    const run = this.run;
+    if (!run?.talk || run.talk.settle !== null || run.talk.id !== entity) return;
+    const step = run.plan.epic.steps[run.step];
+    const who = step?.who;
+    this.say(run, who, who ? run.plan.epic.people?.[who]?.after : undefined); // from now on they speak of what has happened
+    run.talk.settle = SETTLE;
   }
 
   private speak(run: NonNullable<DmEpics['run']>, speech: { lines: string[]; wait: number }, dt: number) {
@@ -240,8 +277,7 @@ export class DmEpics {
       return;
     }
     run.speech = null;
-    if (run.finishing) this.complete(run.plan);
-    else this.advance(run);
+    this.complete(run.plan);
   }
 
   private advance(run: NonNullable<DmEpics['run']>) {
@@ -267,14 +303,13 @@ export class DmEpics {
   }
 
   /**
-   * The last step is done: the closing scene. A person of the saga (the last the party met) is glad and says so, the DM
-   * tells how it ended, and the reward is named, so the party knows what they did and what they got. Then it is complete.
+   * The last step is done: the closing scene. The DM tells how it ended and names the reward, so the party knows what they
+   * did and what they got (the people of the saga are glad in their own words, when talked to: `complete` gives them
+   * their `finished` lines). Then it is complete.
    */
   private close(run: NonNullable<DmEpics['run']>) {
     const { epic } = run.plan;
     const { xp, gold } = epicReward(run.plan, this.tasks.level);
-    const last = Object.values(epic.people ?? {}).at(-1);
-    const thanks = last?.finished?.[0] ? `${last.name}: “${last.finished[0]}”` : '';
     const party = this.arena.partyAll();
     // Each hero is handed a piece of gear better than what they wear, sized to the party's level (in the pack if they cannot wear it now).
     const gifts = party.flatMap((p) => {
@@ -287,8 +322,7 @@ export class DmEpics {
     });
     const given = gifts.length ? ` And for your trouble: ${[...new Set(gifts)].join(', ')}.` : '';
     // the reward has a line of its own, so a long ending is never cut short by it
-    const lines = [thanks, epic.ending, `You each earn ${xp} XP and ${gold} gold.${given}`].filter(Boolean);
-    run.finishing = true;
+    const lines = [epic.ending, `You each earn ${xp} XP and ${gold} gold.${given}`].filter(Boolean);
     run.speech = { lines, wait: 0 };
     for (const p of party) this.sim.reward(p, xp, gold);
   }

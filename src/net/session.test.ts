@@ -464,50 +464,88 @@ describe('hosting a game', () => {
 });
 
 describe('starting the game', () => {
-  it('closes the code but keeps everyone connected', async () => {
+  it('stops waiting for friends but keeps the code open and everyone connected', async () => {
     const session = setup();
     await session.createGame();
     await befriend(1);
     session.startGame();
-    expect(relay.closed).toBe(1);
+    expect(relay.closed).toBe(0); // the relay room stays open so a dropped friend can rejoin
     expect(session.lobbyOpen).toBe(false);
-    expect(session.code).toBeNull();
+    expect(session.code).toBe('mighty-apples');
     expect(session.role).toBe('host');
     expect(session.status).toBe('connected');
-    // Empty seats are no longer shown, and nothing refills them.
     expect(session.roster()).toEqual([
       { slot: 0, state: 'you' },
       { slot: 1, state: 'connected' },
+      { slot: 2, state: 'waiting' },
+      { slot: 3, state: 'waiting' },
     ]);
   });
 
-  it('closes by itself once every seat is taken', async () => {
+  it('starts by itself once every seat is taken, and the code stays open', async () => {
     const session = setup();
     await session.createGame();
     await befriend(1);
     await befriend(2);
     expect(session.lobbyOpen).toBe(true);
     await befriend(3);
-    expect(relay.closed).toBe(1);
+    expect(relay.closed).toBe(0);
     expect(session.lobbyOpen).toBe(false);
-    expect(session.code).toBeNull();
+    expect(session.code).toBe('mighty-apples');
     expect(session.connectedSlots()).toEqual([1, 2, 3]);
   });
 
-  it('keeps going while friends remain, and ends the game when the last one leaves', async () => {
+  it('offers a dropped friend’s seat again after the game started, so they can rejoin with the same code', async () => {
     const session = setup();
     await session.createGame();
     const first = await befriend(1);
-    const second = await befriend(2);
+    await befriend(2);
     session.startGame();
 
     first.drop();
     await flush();
-    expect(relay.reopened).toEqual([]); // the code is closed: seats are not refilled
+    expect(relay.reopened).toEqual([{ slot: 1, offer: 'zOFFER4' }]);
     expect(session.role).toBe('host');
     expect(session.connectedSlots()).toEqual([2]);
+    expect(session.code).toBe('mighty-apples');
+    expect(session.roster()).toContainEqual({ slot: 1, state: 'waiting' });
 
-    second.drop();
+    // The same friend answers the fresh offer and is back in the same seat.
+    const back = await befriend(1);
+    expect(back).not.toBe(first);
+    expect(session.connectedSlots()).toEqual([1, 2]);
+    expect(session.lobbyOpen).toBe(false); // it is not a new lobby
+  });
+
+  it('keeps the game open for a rejoin when the last friend drops, instead of ending it', async () => {
+    const session = setup();
+    await session.createGame();
+    const only = await befriend(1);
+    session.startGame();
+
+    only.breakDown();
+    await flush();
+    expect(session.role).toBe('solo'); // the host plays their own hero meanwhile
+    expect(session.mode).toBe('host');
+    expect(session.code).toBe('mighty-apples');
+    expect(relay.cancelled).toBe(0);
+    expect(relay.reopened).toEqual([{ slot: 1, offer: 'zOFFER4' }]);
+
+    await befriend(1);
+    expect(session.role).toBe('host');
+    expect(session.connectedSlots()).toEqual([1]);
+  });
+
+  it('ends the game when the last friend leaves after the relay forgot it', async () => {
+    const session = setup();
+    await session.createGame();
+    const only = await befriend(1);
+    session.startGame();
+    relay.expire();
+    await flush();
+    expect(session.code).toBeNull();
+
+    only.drop();
     await flush();
     expect(session.role).toBe('solo');
     expect(session.status).toBe('disconnected');
@@ -518,12 +556,13 @@ describe('starting the game', () => {
   it('does nothing if the game has not been set up or already started', async () => {
     const session = setup();
     session.startGame();
-    expect(relay.closed).toBe(0);
+    expect(session.lobbyOpen).toBe(false);
     await session.createGame();
     await befriend(1);
     session.startGame();
     session.startGame();
-    expect(relay.closed).toBe(1);
+    expect(session.lobbyOpen).toBe(false);
+    expect(relay.closed).toBe(0);
   });
 });
 

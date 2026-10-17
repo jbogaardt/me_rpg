@@ -62,6 +62,22 @@ function ease(from: number, goal: number, dt: number): number {
   return from + Math.sign(goal - from);
 }
 
+/** The widest a camera shake swings (screen px) at full strength. */
+export const SHAKE_PX = 8;
+
+/**
+ * Where a shake `t` seconds in sits (screen px): a quick wobble that fades to nothing at `duration`. Whole pixels, so the
+ * art stays crisp.
+ */
+export function shakeOffset(t: number, duration: number, amplitude: number): { x: number; y: number } {
+  if (duration <= 0 || t >= duration || amplitude <= 0) return { x: 0, y: 0 };
+  const fade = 1 - t / duration;
+  return {
+    x: Math.round(Math.sin(t * 61) * amplitude * fade),
+    y: Math.round(Math.cos(t * 47 + 1.3) * amplitude * fade),
+  };
+}
+
 /**
  * Zooms and scrolls a world container to follow a point. The player is in the middle of the screen (a little behind
  * while walking, the camera eases after them) and the view never leaves `bounds` (the map). One rule, everywhere.
@@ -72,6 +88,9 @@ export class Camera {
   private baseX = 0;
   private baseY = 0;
   private settled = false;
+  /** A shake in progress (a director's cue, `systems/cues.ts`): seconds in, its length and its swing in screen px. */
+  private rattle: { t: number; duration: number; amplitude: number } | null = null;
+  private shaken = { x: 0, y: 0 };
 
   constructor(private world: Container) {}
 
@@ -80,6 +99,24 @@ export class Camera {
     if (zoom !== this.zoom) this.settled = false; // the next follow() puts the view where it belongs at once
     this.zoom = zoom;
     this.world.scale.set(this.zoom);
+  }
+
+  /** Shake the view for `seconds` at `strength` 0 to 1; a shake already running is only replaced by a stronger one. */
+  shake(strength: number, seconds: number) {
+    const amplitude = Math.max(0, Math.min(1, strength)) * SHAKE_PX;
+    const now = this.rattle;
+    if (amplitude <= 0 || seconds <= 0) return;
+    if (now && now.t < now.duration && now.amplitude * (1 - now.t / now.duration) > amplitude) return;
+    this.rattle = { t: 0, duration: seconds, amplitude };
+  }
+
+  /** Advance the shake `dt` seconds and keep where it puts the view now. */
+  private shakeStep(dt: number) {
+    const r = this.rattle;
+    if (!r) return;
+    r.t += dt;
+    this.shaken = shakeOffset(r.t, r.duration, r.amplitude);
+    if (r.t >= r.duration) this.rattle = null;
   }
 
   /** Where the world sits (screen px) before any `punch`. */
@@ -115,8 +152,9 @@ export class Camera {
       this.baseX = ease(this.baseX, goalX, dt);
       this.baseY = ease(this.baseY, goalY, dt);
     }
+    this.shakeStep(dt);
     this.world.scale.set(this.zoom);
-    this.world.position.set(this.baseX, this.baseY);
+    this.world.position.set(this.baseX + this.shaken.x, this.baseY + this.shaken.y);
   }
 
   /**
@@ -126,6 +164,6 @@ export class Camera {
   punch(scale: number, hx: number, hy: number, dx = 0, dy = 0) {
     const k = this.zoom * (1 - scale);
     this.world.scale.set(this.zoom * scale);
-    this.world.position.set(this.baseX + hx * k + dx, this.baseY + hy * k + dy);
+    this.world.position.set(this.baseX + hx * k + dx + this.shaken.x, this.baseY + hy * k + dy + this.shaken.y);
   }
 }

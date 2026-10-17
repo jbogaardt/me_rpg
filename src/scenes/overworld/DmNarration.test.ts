@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '../../net/session';
-import { DEFAULT_WELCOME } from '../../systems/narration';
+import { WELCOMES } from '../../systems/dmVoice';
 import { CHAPTERS, WELCOME } from '../../systems/quests';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
@@ -21,7 +21,7 @@ describe('the DM’s narration', () => {
     expect(said).toEqual([]);
     session.lobbyOpen = false; // the host tapped Start Game
     for (let i = 0; i < 40; i++) n.update(1);
-    expect(said).toEqual(DEFAULT_WELCOME);
+    expect(WELCOMES).toContainEqual(said);
   });
 
   it('never tells the world’s own story: the DM is the story teller', () => {
@@ -31,7 +31,7 @@ describe('the DM’s narration', () => {
     n.update(0);
     session.lobbyOpen = false;
     for (let i = 0; i < 80; i++) n.update(1);
-    expect(said).toEqual(DEFAULT_WELCOME);
+    expect(WELCOMES).toContainEqual(said);
     WELCOME.splice(0, WELCOME.length);
     CHAPTERS.splice(0, CHAPTERS.length);
   });

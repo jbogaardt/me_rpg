@@ -68,6 +68,8 @@ export interface GiverSpawn extends CellPoint {
 /** A place a gather quest sends the player to; `kind` is a key of SITE_KINDS (src/systems/quests.ts). Walkable: it is touched, not blocked. */
 export interface SiteSpawn extends CellPoint {
   kind: string;
+  /** The DM's relic only: the item being sought, so the site is drawn as something like it (`systems/landmarks.ts`). */
+  item?: string;
 }
 
 /** A named spot (the old ruins, an oasis): its name shows on the map once the player has explored round it. */

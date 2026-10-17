@@ -1,5 +1,7 @@
 import { CELL } from '../../map/types';
 import { cleanNote } from '../../systems/dmBrief';
+import { DONE_WORDS, FAILED_WORDS } from '../../systems/dmVoice';
+import { Phrasebook } from '../../systems/phrases';
 import { collect } from '../../systems/chests';
 import { RELIC_KIND, relicsFor, type Land } from '../../systems/dmQuests';
 import {
@@ -22,7 +24,6 @@ import type { Simulation } from './Simulation';
 import type { ZoneState } from '../ZoneState';
 
 /** What the DM says as a quest ends: their voice, to every screen (the telling of a new one is each player's own dialog). */
-const END: Record<'done' | 'failed', string> = { done: 'Well done.', failed: 'The chance has passed.' };
 
 /** How often (s) the quest's target (the foes, the nearest site) is looked for again. */
 const RETARGET = 2;
@@ -31,12 +32,13 @@ const RETARGET = 2;
  * The quest the Dungeon Master gives the party (systems/dmTasks.ts has the rules, systems/dmQuests.ts writes the offers
  * from a land), on the host: offered from the land the DM stands in, counted each frame (the party's kills of the foe,
  * the sites they touch, the relic found, a place reached), paid to the whole party when done and announced in the DM's
- * voice. Everyone sees it in their tracker and as a search area on the map (`Arena.task`, a friend is told through the
+ * voice. Everyone sees it in their tracker, and once the DM offers the compass as its needle (`Arena.task`, a friend is told through the
  * `dm` message); the DM can point the way if they are lost. How it went (how long, how hurt, who fell) is what the
  * director reads to nudge the DM next.
  */
 export class DmTasks {
   private book = new TaskBook();
+  private phrases = new Phrasebook();
   private finder: Player | null = null;
   private falls = 0;
   private linger = 0;
@@ -176,7 +178,7 @@ export class DmTasks {
     return counted;
   }
 
-  /** The DM shows more of the way: the search area on the map first, an arrow the second time. */
+  /** The DM offers the compass: toward the search area first, straight at the goal the second time. */
   giveHint() {
     this.book.giveHint();
     this.publish();
@@ -272,7 +274,7 @@ export class DmTasks {
         );
       }
     }
-    if (!this.epic) this.desk.say(END[result === 'done' ? 'done' : 'failed']); // a saga says its own words
+    if (!this.epic) this.desk.say(this.phrases.pick(result, result === 'done' ? DONE_WORDS : FAILED_WORDS)); // a saga says its own words
     this.linger = TASK_LINGER;
     this.onFinish(result);
   }

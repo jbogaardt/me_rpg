@@ -117,7 +117,7 @@
         "map": "emberfall_coast",
         "climate": "undead",
         "music": null,
-        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png", "interior.png"]
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png", "signposts.png"]
       },
       "level": [1, 2],
       "themes": ["fire"],
