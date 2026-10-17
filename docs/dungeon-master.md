@@ -64,8 +64,7 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   friends build the same one from the quest), a **mastery** (cast one named combo N times) or a **forge** (set a gem in a
   piece: `dmForge.ts`). Gear rewards are chosen per hero and rotate by slot (`dmGear.ts`): a saga's finale and a forge quest pay one.
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
-  `DmRevive.ts` lets the DM raise or fetch a fallen player.
-  **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive
+  `DmRevive.ts` raises or fetches a fallen player. **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive
   it through the usual damage rules. Their body rides invisibly on it (`Player.hidden`, `FLAG.hidden`) so the camera and
   friends' view follow, and they cannot die. While possessing, pop-ups are hidden and the director waits.
 - **Signposts** read the layout (`systems/signs.ts`): each way names the zone really reached that way, a place of the map
@@ -80,12 +79,12 @@ script hosts, opens the inbox, answers cards, takes story roads, replies, speaks
 DM is never a statue), starts the game, narrates unasked (new areas, a quest done, a hurt friend, a quiet table; a hurt
 friend's moment is read by Jev and told with `systems/cues.ts` cues, `server/README.md`) and brings in a stranger on reaching a new area
 (`spawn`: an `npc` then a `cast` entry on open ground 3-8 cells from the party, checked by the world like any entry).
-Every call is a step the bar already offers: nothing new on the wire.
+Every call is a step the bar already offers.
 
 ## Co-op rules
 
 The host owns everything; friends are told. The host sends each friend a `dm` message when it changes and once a second.
-A friend's vote and requests ride in every input as **state with counters** (lossy channel, never events). Leaving online
+A friend's vote and requests ride in every input as **state with counters** (never events). Leaving online
 play resets all the DM state (`DmDesk`, `DmPowers`, `DmTasks`, `DmNarration`, `DmRevive`, `DmPossession`, `DmPrompts`).
 
 ## Traps
