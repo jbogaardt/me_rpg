@@ -47,6 +47,8 @@ a player asking) the DM offers a **compass** that leans toward the place to sear
 every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the whole party while it is taken
 (`Quest.capabilities`). Epics with people need a live world (people are log entries, which friends already receive).
 
+A step's `tell` is asked to give a compass bearing from a named place (`server/claude.ts`; `systems/bearing.ts` words them), not "by the shore".
+
 **What a telling names is there to be found** (`systems/landmarks.ts`, `entities/Landmark.ts`, drawn by `StoryUi.syncLandmark`, local
 to every page from the synced task alone): a visit or meeting whose words (the place, the DM's note, the title) name a
 wagon, well, camp, tent, shrine, grave, ruin, tower or hut gets one drawn beside its goal, so no quest sends the party
