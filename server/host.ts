@@ -20,7 +20,7 @@ import { MockArcWriter, advance, arcBrief, type ArcPlace, type ArcWriter } from 
 import { MockConjurer, shouldConjure, type Conjurer } from './conjure';
 import { MockNarrator, beatFor, type Memory, type Narrator } from './narrate';
 import { RuleJudge, factsFor, resolveScene, type SceneJudge } from './scene';
-import { PULSE_MS, fresh, pulseState, type Pulse, type TableReader } from './pulse';
+import { PULSE_MS, RetryingReader, fresh, pulseState, type Pulse, type TableReader } from './pulse';
 import { decideCard, type Card, type Move } from './router';
 import { MockEpicWriter, tellEpic, type StockTale, type EpicWriter } from './epics';
 import { SETTLE_MS, heldCard, nextStep, type Clock, type PageState, type Pressure } from './turn';
@@ -93,7 +93,7 @@ class Dm {
   private lastMade = -Infinity;
   private memory: Memory = { prev: null, spoke: 0 };
   /** The fast model's read of the table, now and then (pulse.ts); null without a key, and the timers decide. */
-  private reader: TableReader | null = process.env.TYPESAFE_API_KEY ? new JevReader() : null;
+  private reader: TableReader | null = process.env.TYPESAFE_API_KEY ? new RetryingReader(new JevReader()) : null;
   private pulse: Pulse | null = null;
   private reading = false;
   /** Jev's read of a moment's drama (scene.ts) with a key; the rules' own without one. */
