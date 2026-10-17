@@ -5,7 +5,9 @@ import {
   attackPower,
   defensePower,
   gainXp,
+  killShare,
   levelGains,
+  mobLevel,
   MOB_KINDS,
   mobTimings,
   telegraphOf,
@@ -202,8 +204,24 @@ describe('MOB_KINDS', () => {
     expect(telegraphOf({ ...plain, telegraph: { ground: true } }, 'melee').ground).toBe(true);
   });
 
-  it('the starter hero can always hurt a starter mob', () => {
+  it('the starter hero can always hurt a starter mob (a kind for levels 1 to 5)', () => {
     const hero = newHero();
-    for (const kind of Object.values(MOB_KINDS)) expect(attackPower(hero) - kind.defense).toBeGreaterThan(0);
+    for (const kind of Object.values(MOB_KINDS).filter((k) => mobLevel(k) <= 5))
+      expect(attackPower(hero) - kind.defense).toBeGreaterThan(0); // the deep kinds are for deeper heroes (balance.test.ts)
+  });
+});
+
+describe('outgrown foes', () => {
+  it('reads a foe level from its body and stops paying XP once the hero is well past it', () => {
+    const goblin = { attack: 8, maxHp: 22 };
+    const troll = { attack: 32, maxHp: 176 };
+    expect(mobLevel(goblin)).toBeLessThanOrEqual(2);
+    expect(mobLevel(troll)).toBeGreaterThanOrEqual(7);
+    expect(mobLevel(troll)).toBeLessThanOrEqual(10);
+    expect(killShare(1, goblin)).toBe(1);
+    expect(killShare(5, goblin)).toBe(1); // within three levels: full pay
+    expect(killShare(8, goblin)).toBeCloseTo(0.4, 5);
+    expect(killShare(30, goblin)).toBe(0.1); // never nothing, never a living
+    expect(killShare(30, { ...troll, boss: true })).toBe(1);
   });
 });

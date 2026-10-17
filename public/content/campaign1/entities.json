@@ -855,9 +855,30 @@
       "name": "The Pale Lurker",
       "notes": "A story boss of the Greenwood (quest 'glade'): the Shade that wounded Captain Hale. A tougher, bigger Shade that hangs back and hurls slow bolts. Levels 2-3.",
       "scale": 1.25,
-      "sprite": { "body": "body.shade", "head": "head.shade", "weapon": "weapon.dagger", "cape": "cape.charcoal" },
-      "stats": { "hp": 80, "attack": 11, "defense": 1, "speed": 66, "sight": 224, "xp": 40, "gold": 23 },
-      "behavior": { "windup": 0.6, "recover": 1.1, "shot": { "range": 192, "speed": 140, "color": "#d9b6ff" } }
+      "sprite": {
+        "body": "body.shade",
+        "head": "head.shade",
+        "weapon": "weapon.dagger",
+        "cape": "cape.charcoal"
+      },
+      "stats": {
+        "hp": 80,
+        "attack": 11,
+        "defense": 1,
+        "speed": 66,
+        "sight": 224,
+        "xp": 40,
+        "gold": 23
+      },
+      "behavior": {
+        "windup": 0.6,
+        "recover": 1.1,
+        "shot": {
+          "range": 192,
+          "speed": 140,
+          "color": "#d9b6ff"
+        }
+      }
     },
     "tuskcaptain": {
       "type": "mob",
@@ -874,8 +895,20 @@
         "weapon": "weapon.arming_steel",
         "shield": "shield.round_black"
       },
-      "stats": { "hp": 160, "attack": 24, "defense": 3, "speed": 60, "sight": 192, "xp": 100, "gold": 56 },
-      "behavior": { "windup": 0.45, "recover": 0.6, "stagger": 0.06 }
+      "stats": {
+        "hp": 160,
+        "attack": 24,
+        "defense": 3,
+        "speed": 60,
+        "sight": 192,
+        "xp": 100,
+        "gold": 56
+      },
+      "behavior": {
+        "windup": 0.45,
+        "recover": 0.6,
+        "stagger": 0.06
+      }
     },
     "stillheart": {
       "type": "mob",
@@ -890,8 +923,215 @@
         "feet": "feet.plate_iron",
         "cape": "cape.navy"
       },
-      "stats": { "hp": 240, "attack": 28, "defense": 5, "speed": 48, "sight": 176, "xp": 160, "gold": 80 },
-      "behavior": { "windup": 0.55, "recover": 0.9, "stagger": 0.03 }
+      "stats": {
+        "hp": 240,
+        "attack": 28,
+        "defense": 5,
+        "speed": 48,
+        "sight": 176,
+        "xp": 160,
+        "gold": 80
+      },
+      "behavior": {
+        "windup": 0.55,
+        "recover": 0.9,
+        "stagger": 0.03
+      }
+    },
+    "ashmaw": {
+      "type": "mob",
+      "boss": true,
+      "name": "Ashmaw, the Hollow King",
+      "notes": "The Sunscar Depths' end boss (saga 'sunscar_depths'): an orc king who has sat on a forgotten throne until the fire answered him. Made for a level 20 hero (dmBoss.bossStats(20)).",
+      "scale": 1.6,
+      "sprite": {
+        "body": "body.dark_green",
+        "head": "head.orc_dark",
+        "headwear": "headwear.greathelm",
+        "torso": "torso.plate_gold",
+        "legs": "legs.plate_iron",
+        "feet": "feet.plate_steel",
+        "weapon": "weapon.arming_steel",
+        "shield": "shield.round_black"
+      },
+      "stats": {
+        "hp": 1067,
+        "attack": 137,
+        "defense": 18,
+        "speed": 58,
+        "sight": 200,
+        "xp": 358,
+        "gold": 110
+      },
+      "behavior": {
+        "windup": 0.6,
+        "recover": 0.9,
+        "stagger": 0.04
+      }
+    },
+    "cisternKing": {
+      "type": "mob",
+      "boss": true,
+      "name": "The Cistern King",
+      "notes": "The Lanternrest Undercroft's boss (saga 'under_lanternrest'): a troll that took the old cistern for a throne. Made for a level 10 hero.",
+      "scale": 1.5,
+      "sprite": {
+        "body": "body.green",
+        "head": "head.troll",
+        "legs": "legs.pants_brown",
+        "feet": "feet.plate_iron",
+        "cape": "cape.navy"
+      },
+      "stats": {
+        "hp": 424,
+        "attack": 58,
+        "defense": 7,
+        "speed": 46,
+        "sight": 176,
+        "xp": 126,
+        "gold": 70
+      },
+      "behavior": {
+        "windup": 0.55,
+        "recover": 0.9,
+        "stagger": 0.04
+      }
+    },
+    "paleWarden": {
+      "type": "mob",
+      "boss": true,
+      "name": "The Pale Warden",
+      "notes": "The Barrow Deep's boss (saga 'barrow_deep'): the first watchman of the Barrow Lands, still keeping his post. Made for a level 14 hero.",
+      "scale": 1.5,
+      "sprite": {
+        "body": "body.skeleton",
+        "head": "head.skeleton",
+        "headwear": "headwear.greathelm",
+        "torso": "torso.plate_steel",
+        "weapon": "weapon.arming_silver",
+        "shield": "shield.kite_gray"
+      },
+      "stats": {
+        "hp": 656,
+        "attack": 86,
+        "defense": 11,
+        "speed": 56,
+        "sight": 208,
+        "xp": 210,
+        "gold": 95
+      },
+      "behavior": {
+        "windup": 0.55,
+        "recover": 0.8,
+        "stagger": 0.04
+      }
+    },
+    "cinderlord": {
+      "type": "mob",
+      "boss": true,
+      "name": "Vharek, the Cinderlord",
+      "notes": "The Emberwaste's boss (saga 'ash_and_ember'): a warlord who walked into the Cinder Ziggurat's fire and was not burnt. Made for a level 30 hero.",
+      "scale": 1.7,
+      "sprite": {
+        "body": "body.dark_green",
+        "head": "head.orc_dark",
+        "headwear": "headwear.barbarian",
+        "torso": "torso.plate_gold",
+        "legs": "legs.plate_iron",
+        "feet": "feet.plate_steel",
+        "weapon": "weapon.arming_silver",
+        "shield": "shield.round_black"
+      },
+      "stats": {
+        "hp": 1967,
+        "attack": 241,
+        "defense": 34,
+        "speed": 60,
+        "sight": 224,
+        "xp": 657,
+        "gold": 160
+      },
+      "behavior": {
+        "windup": 0.62,
+        "recover": 0.9,
+        "stagger": 0.04
+      }
+    },
+    "hoarfather": {
+      "type": "mob",
+      "boss": true,
+      "name": "The Hoarfather",
+      "notes": "Rimeheart's boss (saga 'the_long_white'): a yeti the size of a barn that the frost itself keeps standing. Made for a level 36 hero.",
+      "scale": 1.9,
+      "sprite": {
+        "body": "body.snowman"
+      },
+      "stats": {
+        "hp": 2649,
+        "attack": 316,
+        "defense": 45,
+        "speed": 52,
+        "sight": 208,
+        "xp": 864,
+        "gold": 190
+      },
+      "behavior": {
+        "windup": 0.7,
+        "recover": 1.0,
+        "stagger": 0.03
+      }
+    },
+    "glassSovereign": {
+      "type": "mob",
+      "boss": true,
+      "name": "The Glass Sovereign",
+      "notes": "The Glasswastes' boss (saga 'salt_and_glass'): a king of the sand-fused dead, still wearing his crown of fused glass. Made for a level 40 hero.",
+      "scale": 1.8,
+      "sprite": {
+        "body": "body.mummy"
+      },
+      "stats": {
+        "hp": 3137,
+        "attack": 370,
+        "defense": 54,
+        "speed": 58,
+        "sight": 224,
+        "xp": 1012,
+        "gold": 210
+      },
+      "behavior": {
+        "windup": 0.65,
+        "recover": 0.95,
+        "stagger": 0.03
+      }
+    },
+    "drownedKing": {
+      "type": "mob",
+      "boss": true,
+      "name": "The Drowned King",
+      "notes": "The Drowned Moor's boss (saga 'the_sunken_crown'): a troll-king who took the sinking kingdom's throne and its water with it. Made for a level 46 hero.",
+      "scale": 1.9,
+      "sprite": {
+        "body": "body.green",
+        "head": "head.troll",
+        "legs": "legs.pants_brown",
+        "feet": "feet.plate_iron",
+        "cape": "cape.navy"
+      },
+      "stats": {
+        "hp": 3973,
+        "attack": 461,
+        "defense": 68,
+        "speed": 50,
+        "sight": 216,
+        "xp": 1248,
+        "gold": 240
+      },
+      "behavior": {
+        "windup": 0.7,
+        "recover": 1.0,
+        "stagger": 0.03
+      }
     }
   }
 }

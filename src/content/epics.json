@@ -10,17 +10,26 @@
       {
         "kind": "gather",
         "hop": 0,
-        "tell": "The missing neighbour was last seen gathering supplies in {area}. Collect what they left behind. It may show where they went."
+        "tell": "The missing neighbour was last seen gathering supplies in {area}. Collect what they left behind. It may show where they went.",
+        "aftermath": [
+          "A half-eaten loaf, a lantern still warm, a boot print that is not theirs. Someone was here, and they were not alone."
+        ]
       },
       {
         "kind": "visit",
         "hop": 0,
-        "tell": "Their trail leads to a place in {area}. Go and look. Something happened there that the villagers are afraid to talk about."
+        "tell": "Their trail leads to a place in {area}. Go and look. Something happened there that the villagers are afraid to talk about.",
+        "aftermath": [
+          "The villagers were right to be afraid. The ground is scorched in a ring, and the ring is not natural. Something is hunting."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 0,
-        "tell": "Whatever took them is still in {area}, and it will take someone else next. Defeat it now."
+        "tell": "Whatever took them is still in {area}, and it will take someone else next. Defeat it now.",
+        "aftermath": [
+          "Behind it lies a torn sleeve in the neighbour's own stitching. They walked away from here alive. The village should hear it."
+        ]
       }
     ]
   },
@@ -35,22 +44,34 @@
       {
         "kind": "visit",
         "hop": 1,
-        "tell": "The first stop is {area}. Nobody has come back from there in weeks. Find out why."
+        "tell": "The first stop is {area}. Nobody has come back from there in weeks. Find out why.",
+        "aftermath": [
+          "The milestones are smashed and the ruts are fresh. This was no accident of weather. Someone wants this road dead."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 1,
-        "tell": "Raiders took over the road in {area}. Defeat them, or no cart will ever get through."
+        "tell": "Raiders took over the road in {area}. Defeat them, or no cart will ever get through.",
+        "aftermath": [
+          "Among the raiders' things, a ledger of every cart that dared to pass. They were paid by the cart. Someone far off kept count."
+        ]
       },
       {
         "kind": "gather",
         "hop": 2,
-        "tell": "The road crews need supplies to rebuild it. Gather them in {area}."
+        "tell": "The road crews need supplies to rebuild it. Gather them in {area}.",
+        "aftermath": [
+          "The crews' hammers ring for the first time in weeks. A road is only a promise that someone will keep it open."
+        ]
       },
       {
         "kind": "find",
         "hop": 2,
-        "tell": "The last blocked stretch is in {area}, where the road crews buried their tools. Find them so the road can be finished."
+        "tell": "The last blocked stretch is in {area}, where the road crews buried their tools. Find them so the road can be finished.",
+        "aftermath": [
+          "The tools lie oiled and wrapped under the dirt. The crews hid them well. They always meant to come back."
+        ]
       }
     ]
   },
@@ -65,17 +86,26 @@
       {
         "kind": "hunt",
         "hop": 0,
-        "tell": "The raids start here in {area}. Defeat the beasts and watch which way the survivors run."
+        "tell": "The raids start here in {area}. Defeat the beasts and watch which way the survivors run.",
+        "aftermath": [
+          "The survivors do not scatter. They run in a line, all one way, like beads on a string. Something is pulling the string."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 1,
-        "tell": "The survivors fled to {area} and are angrier there. Stop them before they reach the villages."
+        "tell": "The survivors fled to {area} and are angrier there. Stop them before they reach the villages.",
+        "aftermath": [
+          "These beasts are thin, and their eyes are wrong. They are not hunting. They are fleeing, and what they flee is behind you now."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 2,
-        "tell": "Whatever is driving them is close, in {area}. Defeat the beasts guarding it."
+        "tell": "Whatever is driving them is close, in {area}. Defeat the beasts guarding it.",
+        "aftermath": [
+          "The guards fall, and the air changes. Quiet, then a sound like a slow heartbeat from further on. Whatever it is, it is awake."
+        ]
       },
       {
         "kind": "visit",
@@ -95,12 +125,18 @@
       {
         "kind": "gather",
         "hop": 0,
-        "tell": "Start in {area}. The nearest crops are there. Gather as much as you can carry."
+        "tell": "Start in {area}. The nearest crops are there. Gather as much as you can carry.",
+        "aftermath": [
+          "Baskets full, hands raw. Along the fence, deep claw marks, and the crows have gone quiet. Something is watching the field."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 1,
-        "tell": "Something is stalking the gatherers in {area}. Defeat it before it kills someone."
+        "tell": "Something is stalking the gatherers in {area}. Defeat it before it kills someone.",
+        "aftermath": [
+          "It was thin, and starved. The last rows behind it are untouched. It could have fed on them, and did not. Odd, for a monster."
+        ]
       },
       {
         "kind": "gather",
@@ -120,12 +156,18 @@
       {
         "kind": "find",
         "hop": 1,
-        "tell": "The first treasure is hidden in {area}. Search the area for it."
+        "tell": "The first treasure is hidden in {area}. Search the area for it.",
+        "aftermath": [
+          "Wrapped in oilcloth and a child's blanket. Whoever hid it loved it, and meant to come back. Two treasures remain."
+        ]
       },
       {
         "kind": "find",
         "hop": 2,
-        "tell": "The second treasure is in {area}. It is buried deeper, so search carefully."
+        "tell": "The second treasure is in {area}. It is buried deeper, so search carefully.",
+        "aftermath": [
+          "It lay under a cairn built with care, the stones still warm from the day. You are not the first to look, only the first to dig."
+        ]
       },
       {
         "kind": "find",
@@ -145,17 +187,26 @@
       {
         "kind": "visit",
         "hop": 1,
-        "tell": "The pilgrimage starts at {area}. Go there and make sure the way is passable."
+        "tell": "The pilgrimage starts at {area}. Go there and make sure the way is passable.",
+        "aftermath": [
+          "The road is passable, if the pilgrims keep a patient pace. Somewhere ahead, a bell tolls for no reason anyone can name."
+        ]
       },
       {
         "kind": "visit",
         "hop": 2,
-        "tell": "Next is {area}. It is a longer walk than it looks, so scout it before the pilgrims arrive."
+        "tell": "Next is {area}. It is a longer walk than it looks, so scout it before the pilgrims arrive.",
+        "aftermath": [
+          "Cold ashes, and prayer ribbons tied to a dead branch. Other pilgrims passed this way, and did not stay."
+        ]
       },
       {
         "kind": "visit",
         "hop": 3,
-        "tell": "Then {area}. Other scouts turned back here. Do not."
+        "tell": "Then {area}. Other scouts turned back here. Do not.",
+        "aftermath": [
+          "A scout's pack lies here with his journal. The last line: 'Turned back at the third marker. I wish I had not looked up.'"
+        ]
       },
       {
         "kind": "hunt",
@@ -175,22 +226,34 @@
       {
         "kind": "hunt",
         "hop": 1,
-        "tell": "The first raiding party is in {area}. Defeat it before it reaches the settlement."
+        "tell": "The first raiding party is in {area}. Defeat it before it reaches the settlement.",
+        "aftermath": [
+          "The raiders carried oil, rope and a map with the settlement circled in red. This was no mob. It was a plan."
+        ]
       },
       {
         "kind": "gather",
         "hop": 2,
-        "tell": "The settlement is running out of food. Gather supplies in {area} and bring them back."
+        "tell": "The settlement is running out of food. Gather supplies in {area} and bring them back.",
+        "aftermath": [
+          "The gate opens for you, then shuts. Children watch from the rooftops. The siege has been counting days, and so have they."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 2,
-        "tell": "A second raiding party is forming in {area}. Strike before it is ready."
+        "tell": "A second raiding party is forming in {area}. Strike before it is ready.",
+        "aftermath": [
+          "The raiders scatter, and their torch smoke drifts toward one point on the horizon: where their leaders wait."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 3,
-        "tell": "The raid leaders are in {area}. Defeat them and the raiders will break."
+        "tell": "The raid leaders are in {area}. Defeat them and the raiders will break.",
+        "aftermath": [
+          "The leaders fall. One wears a cloak with a crest nobody here recognises, and everyone here fears."
+        ]
       },
       {
         "kind": "find",
@@ -210,17 +273,26 @@
       {
         "kind": "visit",
         "hop": 2,
-        "tell": "Go to {area}, where the known map begins to thin out."
+        "tell": "Go to {area}, where the known map begins to thin out.",
+        "aftermath": [
+          "The road ends in waist-high grass, and the map ends with it. Past this, the compass needle trembles like a nervous hand."
+        ]
       },
       {
         "kind": "gather",
         "hop": 3,
-        "tell": "Gather plants that only grow in {area}. They are the proof the cartographers want."
+        "tell": "Gather plants that only grow in {area}. They are the proof the cartographers want.",
+        "aftermath": [
+          "The plants smell of rain and iron and nothing you know. The cartographers will pay well, and will not quite believe you."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 4,
-        "tell": "Something lives in {area} and does not welcome visitors. Defeat it."
+        "tell": "Something lives in {area} and does not welcome visitors. Defeat it.",
+        "aftermath": [
+          "It lies still, a sliver of carved bone in its claws. Someone made that mark. Someone lived out here once."
+        ]
       },
       {
         "kind": "find",
@@ -240,22 +312,34 @@
       {
         "kind": "find",
         "hop": 1,
-        "tell": "The thieves hid a piece of the regalia in {area}. They thought nobody would look there. Search for it."
+        "tell": "The thieves hid a piece of the regalia in {area}. They thought nobody would look there. Search for it.",
+        "aftermath": [
+          "A gem-studded circlet, snapped in two. They are selling the crown in pieces. Time is shorter than the king believes."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 2,
-        "tell": "The thieves have a camp in {area}. Defeat them and take back what they stole."
+        "tell": "The thieves have a camp in {area}. Defeat them and take back what they stole.",
+        "aftermath": [
+          "In the camp's ashes, a letter under a noble's seal. The thieves did not steal this for gold. They were hired."
+        ]
       },
       {
         "kind": "visit",
         "hop": 3,
-        "tell": "Their trail leads to {area}. Go there and see who they work for."
+        "tell": "Their trail leads to {area}. Go there and see who they work for.",
+        "aftermath": [
+          "The trail ends at a gate with a banner you have seen before, on the king's own hall wall. Someone near the throne wanted it empty."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 3,
-        "tell": "There are too many guards in {area} to sneak past. Defeat them."
+        "tell": "There are too many guards in {area} to sneak past. Defeat them.",
+        "aftermath": [
+          "The guards fall, and one wears the king's livery under his stolen cloak. There is a traitor at court."
+        ]
       },
       {
         "kind": "find",
@@ -309,7 +393,10 @@
       {
         "kind": "hunt",
         "hop": 1,
-        "tell": "Whatever stopped the courier is still out there in {area}. Clear the road before you follow it."
+        "tell": "Whatever stopped the courier is still out there in {area}. Clear the road before you follow it.",
+        "aftermath": [
+          "The road is clear. In the mud, small hurried footprints leave it and run. Someone fled this place, and fled well."
+        ]
       },
       {
         "kind": "meet",
@@ -378,12 +465,18 @@
       {
         "kind": "find",
         "hop": 1,
-        "tell": "The tracks end in {area}. The clapper is hidden somewhere near. Search the land until you have it."
+        "tell": "The tracks end in {area}. The clapper is hidden somewhere near. Search the land until you have it.",
+        "aftermath": [
+          "Cold iron wrapped in sacking: the clapper, scored with teeth. Something chewed the bell's own voice before it ran."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 1,
-        "tell": "Whatever carried it off has made its den in {area}, and it will not give the clapper up without a fight."
+        "tell": "Whatever carried it off has made its den in {area}, and it will not give the clapper up without a fight.",
+        "aftermath": [
+          "It gives up the clapper with its last breath. Perhaps it only wanted to hear the sound it made. Bells are loud, and the dark is lonely."
+        ]
       },
       {
         "kind": "meet",
@@ -444,7 +537,10 @@
       {
         "kind": "gather",
         "hop": 1,
-        "tell": "On the road to the creditor, {area} offers what a gift ought to have beside it. Gather it as you pass."
+        "tell": "On the road to the creditor, {area} offers what a gift ought to have beside it. Gather it as you pass.",
+        "aftermath": [
+          "The gifts are light, but the road to the creditor feels heavy. Some debts are paid in more than coin."
+        ]
       },
       {
         "kind": "meet",
@@ -502,7 +598,10 @@
       {
         "kind": "visit",
         "hop": 1,
-        "tell": "The old guest always rested in {area} on his way. Walk there and look about for any sign of him."
+        "tell": "The old guest always rested in {area} on his way. Walk there and look about for any sign of him.",
+        "aftermath": [
+          "The old guest's chair stands empty and his cup is full of rainwater. He has not left this place in some time."
+        ]
       },
       {
         "kind": "meet",
@@ -603,7 +702,10 @@
       {
         "kind": "gather",
         "hop": 1,
-        "tell": "While the wheel is fitted, Ansel asks for something to pack around the goods in {area}. Gather it, and the wagon can roll."
+        "tell": "While the wheel is fitted, Ansel asks for something to pack around the goods in {area}. Gather it, and the wagon can roll.",
+        "aftermath": [
+          "The wagon creaks, then rolls. The stalls will be full by noon, and nobody will remember who made it so, except you."
+        ]
       }
     ]
   },
@@ -618,17 +720,343 @@
       {
         "kind": "forge",
         "hop": 0,
-        "tell": "Set a gem in a good piece of gear, from the Inventory tab, and see what a little patience makes of it. {area} is as fine a place to do it as any."
+        "tell": "Set a gem in a good piece of gear, from the Inventory tab, and see what a little patience makes of it. {area} is as fine a place to do it as any.",
+        "aftermath": [
+          "The gem sits in its setting as if it were always meant to. A little patience, and a plain thing turns fine."
+        ]
       },
       {
         "kind": "hunt",
         "hop": 0,
-        "tell": "A new piece wants trying. Take it into {area} and let something with opinions see what it can do."
+        "tell": "A new piece wants trying. Take it into {area} and let something with opinions see what it can do.",
+        "aftermath": ["It cuts true, and gleams when it should not. The smith would be pleased, and a little smug."]
       },
       {
         "kind": "visit",
         "hop": 1,
         "tell": "Word of fine work travels faster than the worker. Show yours in {area}, where someone has already been asking after it."
+      }
+    ]
+  },
+  {
+    "id": "drowned_choir",
+    "title": "The Drowned Choir",
+    "tagline": "At night the dead of the old well sing. Someone is teaching them new songs.",
+    "difficulty": 3,
+    "opening": "Every night the dead of the old well sing, and every night they sing a little more words. The choir mistress says the new words are a name. Hers.",
+    "ending": "The well is quiet. For the first time in a month, the village slept through, and the choir mistress sang the old hymn on her own.",
+    "people": {
+      "mistress": {
+        "name": "Isolde the Choir Mistress",
+        "look": "keeper",
+        "lines": [
+          "I know every voice in this valley. The ones from the well are learning from me.",
+          "Find who is leading them, before they finish my name."
+        ],
+        "after": ["A bell-ringer's apprentice, you say? Then he never stopped rehearsing."],
+        "finished": ["The well is quiet. I sang the old hymn alone tonight, and it was enough."]
+      },
+      "ferryman": {
+        "name": "Tam Ferryman",
+        "look": "sage",
+        "lines": [
+          "I carry the living across and the dead stay put. That was the bargain, until lately.",
+          "The one who breaks bargains has a lantern. Look for the light."
+        ],
+        "after": ["Take the lantern to the well and set it down. Then run."],
+        "finished": ["Quiet water again. Funny. I almost miss the singing."]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "at": "haven",
+        "who": "mistress",
+        "tell": "The choir mistress in {area} has not slept in a week. Find Isolde, and hear what the well has been singing.",
+        "says": [
+          "They sing at midnight, a little more every night. Last night they sang 'Isolde'.",
+          "Somebody taught them. Find the ferryman at the crossing. He knows who walks there."
+        ],
+        "aftermath": ["A name sung by the dead is a name spoken twice. The ferryman will know who started it."]
+      },
+      {
+        "kind": "meet",
+        "hop": 1,
+        "who": "ferryman",
+        "tell": "The ferryman at the crossing in {area} knows who walks by night. Find Tam, and ask him plainly.",
+        "says": [
+          "A young man with a lantern, three nights a week. He pays in old coins and never speaks.",
+          "He dug where the village buried its bad harvests. Find what he left there."
+        ],
+        "aftermath": [
+          "Old coins, an unspoken name and a lantern at midnight. The ferryman's story is a very tidy one, and tidy stories are usually stitched."
+        ]
+      },
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "Whatever answers the lantern gathers in {area}. Put down the ones that came to the call, before the call grows louder.",
+        "aftermath": [
+          "Where they fell, a ring of pale candle stubs, all burned to the same height. Whoever made this had patience, and a plan."
+        ]
+      },
+      {
+        "kind": "find",
+        "hop": 2,
+        "tell": "The lantern's keeper left his notes in {area}, buried with the candles. Dig until you have them.",
+        "aftermath": [
+          "His notes name a crown of reeds, a ledger of drownings, and one line underlined twice: 'She will lead them better than I ever could.'"
+        ]
+      },
+      {
+        "kind": "boss",
+        "hop": 2,
+        "tell": "He is waiting in {area}, where the choir is loudest, and he knows you are coming. Stop the singing at its source.",
+        "aftermath": [
+          "The last note fades. A lantern falls and goes out, and across the valley a well finally holds its tongue."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cartographers_map",
+    "title": "The Cartographer's Last Map",
+    "tagline": "A dying mapmaker left one chart unfinished. Whatever it shows, it is not on any other map.",
+    "difficulty": 4,
+    "opening": "A cartographer died last winter with one map unfinished, three marks inked and the fourth only pencilled. His apprentice swears the marks are real. Nobody else believes it.",
+    "ending": "The fourth mark is drawn at last, in your hand, in ink. The apprentice cried, and then drew the map's name in the corner: yours.",
+    "people": {
+      "apprentice": {
+        "name": "Fenn the Apprentice",
+        "look": "sage",
+        "lines": [
+          "Master Corvin left four marks and no key. I have the first three nights of his notes.",
+          "Each mark is a place that should not be where he drew it."
+        ],
+        "after": ["The marks match his notes. He was not mad. He was early."],
+        "finished": ["I finished the map. The fourth mark is yours, and so is its name."]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "at": "haven",
+        "who": "apprentice",
+        "tell": "Corvin's apprentice keeps the unfinished map in {area}. Find Fenn, and see the marks for yourself.",
+        "says": [
+          "The first mark is near. The second, past the second land. The third and the fourth, I have not dared guess.",
+          "Visit the first. If the land matches the ink, we are not fools."
+        ],
+        "aftermath": [
+          "The first mark is a small black cross over a place you know well. Nobody ever drew it there. Somebody should have."
+        ]
+      },
+      {
+        "kind": "visit",
+        "hop": 1,
+        "tell": "The first mark is set in {area}. Go there, and see whether the land matches the ink.",
+        "aftermath": [
+          "The land matches to the stone. A dead map-maker knew a place better than the people who live beside it. Uncomfortable, that."
+        ]
+      },
+      {
+        "kind": "gather",
+        "hop": 2,
+        "tell": "Master Corvin's notes say the second mark hides plants that make ink dry blue. Gather them in {area} for the apprentice.",
+        "aftermath": [
+          "Blue ink, fresh from the stalk. On parchment it shows a faint line that was invisible before: a road, leading on."
+        ]
+      },
+      {
+        "kind": "hunt",
+        "hop": 3,
+        "tell": "The third mark sits in {area}, and something has made its home on it. Clear it out, so the map can be read.",
+        "aftermath": [
+          "On the third mark, a cairn, and under it Corvin's own compass, still pointing the way. He came here once. He was not alone."
+        ]
+      },
+      {
+        "kind": "find",
+        "hop": 3,
+        "tell": "His journal's last pages are buried somewhere in {area}. Search until the apprentice has the whole story.",
+        "aftermath": [
+          "The last page reads: 'The fourth mark is where I turned back. Whoever finishes this, forgive me, and forgive what waits there.'"
+        ]
+      },
+      {
+        "kind": "boss",
+        "hop": 4,
+        "tell": "The fourth mark is in {area}, and what waits there is the reason a mapmaker stopped. Go and finish his map.",
+        "aftermath": ["It falls, and the silence after is the kind that only comes at the very end of a map."]
+      }
+    ]
+  },
+  {
+    "id": "wolf_under_hill",
+    "title": "The Wolf Under the Hill",
+    "tagline": "The shepherds say a wolf is taking sheep. The sheep say otherwise.",
+    "difficulty": 3,
+    "opening": "Three shepherds swear a monster takes their sheep. The sheep come home fat and calm. Someone is lying, and the one with the sharpest teeth has the best excuse.",
+    "ending": "The wolf is still under the hill, and the sheep still come home fat. The shepherds pay the real thieves now, and the wolf asks nothing.",
+    "people": {
+      "shepherd": {
+        "name": "Old Bram the Shepherd",
+        "look": "keeper",
+        "lines": [
+          "Three sheep this week. A wolf, plain as day, and a big one.",
+          "Hunt it down, and I will pay you in wool and thanks."
+        ],
+        "after": ["Not a wolf? Then who is dressing in its skin? I'll have a word with them."],
+        "finished": ["I owe that wolf an apology, and a good lamb. I will bring it both."]
+      },
+      "girl": {
+        "name": "Little Wynn",
+        "look": "sage",
+        "lines": [
+          "He is not a bad wolf. He minds the sheep when Da is drunk.",
+          "The ones who take them wear boots. I have seen the boots."
+        ],
+        "after": ["Tell Da. He will not hear it from me. He never does."],
+        "finished": ["The wolf waved at me today. I know wolves do not wave. He did."]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "shepherd",
+        "tell": "Bram's flock grazes in {area}. Find the shepherd, and hear about the wolf.",
+        "says": [
+          "A big grey wolf, lair under the hill. Takes a sheep a night, and cheeky with it.",
+          "Kill it, and the valley sleeps. Go and find where it hides."
+        ],
+        "aftermath": ["The shepherd is certain, which in your experience is when to start looking at the evidence."]
+      },
+      {
+        "kind": "hunt",
+        "hop": 0,
+        "tell": "Beasts have gathered about the lair in {area}. Thin them out until you can reach the wolf's den.",
+        "aftermath": [
+          "No sheep bones, no blood. A hunting beast would leave both. Whatever lives here does not eat what it guards."
+        ]
+      },
+      {
+        "kind": "meet",
+        "hop": 0,
+        "who": "girl",
+        "tell": "A child watches from the hillside in {area}. Find Wynn, who has something to say about the wolf.",
+        "says": [
+          "He is not a bad wolf. He guards the sheep when Da is asleep.",
+          "The thieves wear boots. They come by night, from the old quarry."
+        ],
+        "aftermath": ["Boots and a quarry. The wolf is not the thief. He is the only witness who cannot testify."]
+      },
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "The real thieves operate from {area}. Strike before the next night, and the sheep keep their guardian.",
+        "aftermath": [
+          "Among their things, a half-finished ledger: so many sheep to a trade, so many wolf-pelts for the wolf's reputation."
+        ]
+      },
+      {
+        "kind": "visit",
+        "hop": 0,
+        "tell": "Return to {area}, and stand at the wolf's hill so the valley sees you did not raise a blade against him.",
+        "aftermath": [
+          "The wolf watches you from the ridge, and lowers its head. Some thanks do not need words, or a lamb."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "tithe_of_bones",
+    "title": "The Tithe of Bones",
+    "tagline": "A plague doctor offers a cure. The tithe is the village's dead.",
+    "difficulty": 5,
+    "opening": "A plague doctor came to the dying village with a cure, and a price: one bone from every grave. The village paid. The sickness stayed, and the graves are empty.",
+    "ending": "The doctor's mask lies cracked on the road, and the bones are home again. The village buried them once more, with better prayers, and names carved properly this time.",
+    "people": {
+      "priest": {
+        "name": "Brother Alder",
+        "look": "monk",
+        "lines": [
+          "I blessed every grave myself. Now I do not know what I blessed.",
+          "The doctor sells hope and takes bones. Find where he takes them."
+        ],
+        "after": ["Then it is as I feared. He is not a doctor. He is a collector."],
+        "finished": ["Every bone is home. I said the names, and I did not need the book."]
+      },
+      "gravedigger": {
+        "name": "Hobb Gravedigger",
+        "look": "keeper",
+        "lines": [
+          "Forty years I put them in. Never once did I take one out. Until this week.",
+          "Somebody dug from below, I tell you. From below."
+        ],
+        "after": ["Under the old crypt, you say? Then someone has been tunnelling for months."],
+        "finished": ["I put every one back myself. Slowly. They deserved the care."]
+      }
+    },
+    "steps": [
+      {
+        "kind": "meet",
+        "hop": 0,
+        "at": "haven",
+        "who": "priest",
+        "tell": "The village priest in {area} no longer trusts his own graveyard. Find Brother Alder, and hear what the doctor took.",
+        "says": [
+          "He came with a cure and a tithe: one bone per grave. We paid. The fever stayed.",
+          "Ask the gravedigger what he found. He has not spoken in days."
+        ],
+        "aftermath": [
+          "A tithe of bones for a cure that does not cure. The doctor's bargain was never medicine. It was inventory."
+        ]
+      },
+      {
+        "kind": "meet",
+        "hop": 1,
+        "who": "gravedigger",
+        "tell": "The gravedigger keeps to {area}, beside his tools. Find Hobb, and hear it from the ground up.",
+        "says": [
+          "The graves were opened from below, not above. Tunnels, neat as a mine.",
+          "Follow them. Where they end, the bones are being counted."
+        ],
+        "aftermath": [
+          "Tunnels under a churchyard, dug from below, neat as a mine. Whoever is counting bones has done this before."
+        ]
+      },
+      {
+        "kind": "hunt",
+        "hop": 1,
+        "tell": "The tunnels surface in {area}, and what guards them is not alive. Put the guards down.",
+        "aftermath": [
+          "The guards were the village's own dead, wearing the doctor's mark. Whatever he is, he is building something out of the people he failed."
+        ]
+      },
+      {
+        "kind": "find",
+        "hop": 2,
+        "tell": "The doctor's ledger of bones, village by village, is hidden in {area}. Find it, and learn how many places he has done this.",
+        "aftermath": ["The ledger lists forty villages. Thirty-nine have a line through them. This one does not. Yet."]
+      },
+      {
+        "kind": "gather",
+        "hop": 2,
+        "tell": "His workroom in {area} is full of reagents that keep the dead from resting. Gather them so nobody can use them again.",
+        "aftermath": [
+          "The bottles smell of old graves and sweet decay. Burned, they make a smoke that hangs in the air like a prayer, and it is a good one."
+        ]
+      },
+      {
+        "kind": "boss",
+        "hop": 3,
+        "tell": "The doctor waits in {area}, among everything he collected. End the tithe before the last grave is opened.",
+        "aftermath": [
+          "His mask falls, and there is nothing under it but a sheet of vellum with a name on it. It is a very old name."
+        ]
       }
     ]
   }

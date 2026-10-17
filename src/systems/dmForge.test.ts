@@ -99,8 +99,8 @@ describe('the forge quest', () => {
   });
 
   it('pays xp and gold scaled to the level, and counts as a quest of one', () => {
-    expect(offerReward('forge', 1, 1)).toEqual({ xp: 50, gold: 10 });
-    expect(offerReward('forge', 1, 5).xp).toBeGreaterThan(50);
+    expect(offerReward('forge', 1, 1)).toEqual({ xp: 3, gold: 10 });
+    expect(offerReward('forge', 1, 5).xp).toBeGreaterThan(3);
     const offer = allOffers(land({ recipes: [recipe] }))[0]!;
     expect(questOf(offer).objective).toEqual({ t: 'cast', count: 1 }); // counted, not walked to
     expect(parOf('forge', 1)).toBe(150);

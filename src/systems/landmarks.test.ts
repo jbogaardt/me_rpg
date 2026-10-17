@@ -9,6 +9,15 @@ describe('landmarkIn', () => {
     expect(landmarkIn('the old ruins')).toBe('ruin');
   });
 
+  it('names churches and bell towers before towers', () => {
+    expect(landmarkIn('The bell tower in the village has gone silent.')).toBe('belltower');
+    expect(landmarkIn('Ring the belfry once.')).toBe('belltower');
+    expect(landmarkIn('Meet the priest at the old church.')).toBe('church');
+    expect(landmarkIn('The watchtower on the hill')).toBe('tower');
+    expect(landmarkIn('Dig in the churchyard')).toBeUndefined(); // a yard of graves, not a church (the grave word needs its own)
+    expect(landmarkIn('a small hut by the shore')).toBe('hut');
+  });
+
   it('takes the first one it names', () => {
     expect(landmarkIn('Past the tower, by the cart, there is a camp.')).toBe('tower');
   });

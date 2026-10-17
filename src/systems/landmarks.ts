@@ -1,8 +1,9 @@
 // What the DM's words put in the world (Pixi-free, tested; core engine, local to each page): when a quest's telling names a
 // thing to be found (a wagon, a well, a camp), it is drawn at the goal, so the party is never sent to look for what is not there. Nothing is sent over the wire: every page reads the
-// same task (its `what` and the DM's note) and draws the same thing (`entities/Landmark.ts` draws the shapes).
+// same task (its `what` and the DM's note) and draws the same thing (`entities/Landmark.ts` draws each shape from stored pixel art).
 
-export type LandmarkShape = 'cart' | 'well' | 'campfire' | 'tent' | 'shrine' | 'grave' | 'ruin' | 'tower' | 'hut';
+export type LandmarkShape =
+  'cart' | 'well' | 'campfire' | 'tent' | 'shrine' | 'grave' | 'ruin' | 'tower' | 'belltower' | 'church' | 'hut';
 
 /**
  * Where the pieces of the `ruin` landmark sit on public/tilesets/ruins.png (the LPC Jungle Ruins cut, tools/map/ruins.ts):
@@ -23,6 +24,8 @@ const WORDS: [LandmarkShape, RegExp][] = [
   ['shrine', /\b(?:shrines?|altars?|statues?|idol|standing stones?)\b/i],
   ['grave', /\b(?:graves?|graveyard|tombs?|crypt|barrow|burial)\b/i],
   ['ruin', /\b(?:ruins?|broken (?:wall|arch|column)s?|pillars?)\b/i],
+  ['belltower', /\b(?:bell[- ]?towers?|belfry|steeple)\b/i],
+  ['church', /\b(?:church(?:es)?|chapel|cathedral|abbey|monastery)\b/i],
   ['tower', /\b(?:watchtower|towers?|lighthouse|beacon)\b/i],
   ['hut', /\b(?:huts?|cabin|cottage|shack|farmstead)\b/i],
 ];

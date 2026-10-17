@@ -19,7 +19,7 @@ catalog and the pitfalls checklist). Never hand-edit `public/maps/*.json`; `npm 
 
 ## The world
 
-`maps/world.ts` lays the open-air world out in squares; each biome (`maps/<name>.ts`, `defineBiome`) builds in world
+`maps/world.ts` lays the open-air world out in squares (extend it east or south only: biome-local cells count from each biome's north-west corner, so growing west or north would move every map); each biome (`maps/<name>.ts`, `defineBiome`) builds in world
 cells. `buildWorld` walls every border, cuts a corridor with a door either side at each gap, composes one world and
 cuts each biome's map from it: **its own cells plus a margin of its neighbours' (surface `beyond`, blocked)**. The game
 does not draw the margin in this zone's view; it lays the neighbour's own map beside it (see `src/scenes/CLAUDE.md`).
@@ -60,6 +60,10 @@ Buildings and walls are solid from the ground up; pillars and idols block along 
 its dark half, so its open half is a gate. They are scenery, not enterable. Used in the jungle, desert, undead lands and
 the Wilds' old shrine and barrow; the quest `ruin` landmark (`entities/Landmark.ts`) is drawn from the same sheet.
 
+## Landmarks
+
+`landmarks.png` (`landmarks.ts`, `npm run landmarks`; two CC-BY-SA LPC packs, not kept in the repo, see CREDITS.md) holds the pixel art of the quest landmarks: well, wagon, campfire flames, tent, hut, statue, and the church, bell tower and watchtower composed from the City pack's walls, spires and doors. `src/systems/landmarkAtlas.ts` is generated; `Landmark.ts` draws only from sheets.
+
 ## Caves and sewers
 
-Underground rooms are indoor zones (`z.indoor()`, so no seam check) painted from a grid by `delve.ts`: a spec makes a `Delve`, carves chambers, tunnels and pools into solid rock, and `paint` shows each rock cell by its distance to the open floor south of it (wall face, second face row, rim, then plain dark roof; the view is from the south, so only that side of a wall is seen). A wall needs two rows of rock to show its whole face, so carve rooms at least that far apart. Themes `cave` and `sewer` name the grounds (`dungeonGrounds` in `catalog.ts`); the art is MrBeast's CC-BY 3.0 tilesets (`art/oga_dungeon/`, doubled from 16px to the 32px cell by `dungeonSheets.ts`, tiles named by source index). Caves and sewers are core engine (just a map and doors); who lives there is content (a scenario node per zone, one biome entry linking back). Where a doorway meets the open-air world is in `delves.ts` (both ends read it, so neither imports the other); the overworld end is a prop (`caveMouth`, `sewerHatch`) with a door on it. Their ground names sit last in `SURFACES` (`zone.ts`) so the open-air maps' surface indices never move.
+Underground rooms are indoor zones (`z.indoor()`, so no seam check) painted from a grid by `delve.ts`: a spec makes a `Delve`, carves chambers, tunnels and pools into solid rock, and `paint` shows each rock cell by its distance to the open floor south of it (wall face, second face row, rim, then plain dark roof; the view is from the south, so only that side of a wall is seen). A wall needs two rows of rock to show its whole face, so carve rooms at least that far apart. Themes `cave` and `sewer` name the grounds (`dungeonGrounds` in `catalog.ts`); the art is MrBeast's CC-BY 3.0 tilesets (`art/oga_dungeon/`, doubled from 16px to the 32px cell by `dungeonSheets.ts`, tiles named by source index). Campaign 1 stacks them: the Hollow's tunnel leads to the Sunscar Depths, a sewer door to the Undercroft, the graveyard's tomb to the Barrow Deep (foes banded 9 to 22, an authored boss and rare gear each). Caves and sewers are core engine (just a map and doors); who lives there is content (a scenario node per zone, one biome entry linking back). Where a doorway meets the open-air world is in `delves.ts` (both ends read it, so neither imports the other); the overworld end is a prop (`caveMouth`, `sewerHatch`) with a door on it. Their ground names sit last in `SURFACES` (`zone.ts`) so the open-air maps' surface indices never move.

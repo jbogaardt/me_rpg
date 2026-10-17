@@ -53,6 +53,17 @@ Modifications: the pyramid, temple, hall, hut, walls, pillars, idols, arch and r
 sheet and of its example map (redrawn without the grass), and repacked onto one sheet; no pixel is changed. The 9 MB
 pack itself is not kept in the repository.
 
+## Landmarks (`public/tilesets/landmarks.png`, cut and composed by `tools/map/landmarks.ts`)
+
+The things a quest's telling puts in the world. The well, wagon, campfire, tent, hut come from "[LPC] Medieval Village
+Decorations" (https://opengameart.org/content/lpc-medieval-village-decorations), CC-BY-SA 3.0 / GPL 3.0, a collection by
+Reemax, Xenodora, Sharm, Casper Nilsson, Johann C and others (full list in the pack's `CREDITS-decorations-medieval.txt`).
+The statue, stone walls, spire roofs, windows and doors, composed into the church, the bell tower and the watchtower (with
+a bell and a cross added pixel by pixel), come from "[LPC] City outside"
+(https://opengameart.org/content/lpc-city-outside), CC-BY-SA 3.0 / GPL 3.0, by Reemax (Tuomo Untinen), Xenodora, Sharm,
+Johann C and Johannes Sjölund. Pieces are cut and composed on the packs' own pixels, never scaled or recoloured. The
+packs are not kept in the repository.
+
 ## Characters (`public/sprites/lpc/`, catalog in `sprites/parts.ts`)
 
 Hero, NPC and monster art comes from the [Universal LPC Spritesheet Character Generator](https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator)

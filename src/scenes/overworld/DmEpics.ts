@@ -68,6 +68,8 @@ export class DmEpics {
     next: boolean;
     /** The DM's closing words: the lines still to say and the seconds until the next (then the saga is complete). */
     speech: { lines: string[]; wait: number } | null;
+    /** A step's aftermath being told (`EpicStep.aftermath`): the lines still to say; the next step begins when they are out. */
+    beat: { lines: string[]; wait: number } | null;
     /**
      * The party has reached a person and waits to be spoken to: who (their id and name), the seconds left once they have
      * been (null before), and how long they have stood unspoken to, and when the DM next reminds them.
@@ -113,7 +115,7 @@ export class DmEpics {
       if (state !== 'done') return this.end(this.phrases.pick('lost', SAGA_LOST_WORDS), 'a step was lost');
       const step = run.plan.epic.steps[run.step];
       if (step?.kind === 'meet') return this.meet(run, step); // they speak when talked to, then the epic goes on
-      this.advance(run);
+      this.finishStep(run);
     };
     tasks.onCancel = () => {
       if (this.run) this.end(this.phrases.pick('off', SAGA_OFF_WORDS), 'called off');
@@ -176,7 +178,7 @@ export class DmEpics {
     const plan = this.offered[index];
     if (!plan || this.run || this.arena.role === 'client' || this.tasks.active) return false;
     this.turn++;
-    this.run = { plan, step: 0, next: true, speech: null, talk: null, ids: new Map() };
+    this.run = { plan, step: 0, next: true, speech: null, beat: null, talk: null, ids: new Map() };
     this.desk.say(cleanSay(`${plan.epic.title}. ${plan.epic.opening}`));
     return true;
   }
@@ -192,7 +194,7 @@ export class DmEpics {
     const plan = planEpic(epic, this.arena.view.name, this.graph, this.turn);
     if (!plan) return { ok: false, note: 'an epic is not told in a shop' };
     this.turn++;
-    this.run = { plan, step: 0, next: true, speech: null, talk: null, ids: new Map() };
+    this.run = { plan, step: 0, next: true, speech: null, beat: null, talk: null, ids: new Map() };
     this.desk.say(cleanSay(`${epic.title}. ${epic.opening}`));
     return { ok: true, note: '' };
   }
@@ -208,6 +210,7 @@ export class DmEpics {
   update(dt = 0) {
     const run = this.run;
     if (run?.speech) return this.speak(run, run.speech, dt);
+    if (run?.beat) return this.beating(run, run.beat, dt);
     if (run?.talk) return this.waitForWord(run, run.talk, dt);
     if (!run || !run.next || this.tasks.view) return;
     const zone = run.plan.zones[run.step]!;
@@ -315,7 +318,7 @@ export class DmEpics {
   ) {
     const done = () => {
       run.talk = null;
-      this.advance(run);
+      this.finishStep(run);
     };
     if (t.settle !== null) {
       if ((t.settle -= dt) <= 0) done();
@@ -348,6 +351,25 @@ export class DmEpics {
     }
     run.speech = null;
     this.complete(run.plan);
+  }
+
+  /** A step is done: the DM tells its aftermath if it has one (a turn of the tale), then the saga goes on. */
+  private finishStep(run: NonNullable<DmEpics['run']>) {
+    const after = run.plan.epic.steps[run.step]?.aftermath;
+    if (after?.length) run.beat = { lines: [...after], wait: 0 };
+    else this.advance(run);
+  }
+
+  private beating(run: NonNullable<DmEpics['run']>, beat: { lines: string[]; wait: number }, dt: number) {
+    if ((beat.wait -= dt) > 0) return;
+    const line = beat.lines.shift();
+    if (line !== undefined) {
+      this.desk.say(cleanSay(line));
+      beat.wait = SPEECH;
+      return;
+    }
+    run.beat = null;
+    this.advance(run);
   }
 
   private advance(run: NonNullable<DmEpics['run']>) {

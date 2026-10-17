@@ -662,6 +662,1038 @@
           "tell": "Whatever woke the dead in {area} is the reason for all of it. Put them to rest, and the woods may settle."
         }
       ]
+    },
+    {
+      "id": "barrow_vigil",
+      "scope": "party",
+      "title": "The Barrow Vigil",
+      "tagline": "The watch outpost in the Barrow Lands stopped sending word. The dead have not.",
+      "difficulty": 3,
+      "opening": "Lanternrest's watch posts a rider to the Barrow Lands every week. Last week the rider came back with a bone in his saddlebag, and no memory of finding it.",
+      "ending": "The outpost's lamp is lit again, and the barrows are quiet. The watchman wrote your names on the lintel, below the names of those who did not come home.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Graveyard",
+            "zone": "undead",
+            "count": 1
+          },
+          "tell": "The rider's trail starts at the graveyard in {area}. Walk it, and see what he stopped to look at.",
+          "aftermath": [
+            "Fresh earth on old graves, and a single iron nail in each. Someone is marking the dead, and not for respect."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "skeleton",
+            "count": 5,
+            "zone": "undead"
+          },
+          "tell": "The marked dead are rising in {area}. Lay them back down, and mind the arrows.",
+          "aftermath": [
+            "The bones are warm to the touch. They were not raised long ago. Whatever woke them is still close."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Collapsed Outpost",
+            "zone": "undead",
+            "count": 1
+          },
+          "tell": "The watch outpost lies in {area}. The roof is down, but the lamp might not be. Go and look.",
+          "aftermath": [
+            "The last page of the watch ledger reads, in a steady hand: 'They are not attacking. They are waiting.'"
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "zombie",
+            "count": 4,
+            "zone": "undead"
+          },
+          "tell": "The waiting ones shamble at the edge of {area}. They have been standing there all week. Put them to rest.",
+          "aftermath": [
+            "One wears a watchman's coat, buttoned wrong, the lamp-oil flask still on its belt. Somebody should write his family."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Chasm",
+            "zone": "undead",
+            "count": 1
+          },
+          "tell": "The marks all point to the chasm in {area}. Go to its edge, and see what the dead have been waiting for.",
+          "aftermath": [
+            "Far below, a light, patient and blue. It does not flicker. The dead face it like a congregation at prayer."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sunscar_legion",
+      "scope": "party",
+      "title": "The Sunscar Legion",
+      "tagline": "A legion that was never disbanded still holds the mesa, and still takes tolls.",
+      "difficulty": 4,
+      "opening": "The caravans cross the Sunscar by the Watch Post road. This season, someone is collecting tolls there in an orc legion's name. The legion fell a hundred years ago.",
+      "ending": "The tollkeepers lay down their arms, and the mesa's banner comes down. Whatever the legion was guarding, it is the desert's again, and the caravans pay nothing.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Watch Post",
+            "zone": "desert",
+            "count": 1
+          },
+          "tell": "The caravan masters meet at the post in {area}. Go there, and hear what the toll costs them.",
+          "aftermath": [
+            "The ledger shows tolls in silver, receipts stamped with a legion seal nobody has cut since the old king's day."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "raider",
+            "count": 6,
+            "zone": "desert"
+          },
+          "tell": "The toll collectors ride out from {area}. They wear the legion's colours badly. Break them.",
+          "aftermath": [
+            "They carry good steel and bad manners. Someone armed them, and someone fed them. A legion needs a quartermaster."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Legion's Mesa",
+            "zone": "desert",
+            "count": 1
+          },
+          "tell": "The orders come from the mesa in {area}. Climb it, and see who is giving them.",
+          "aftermath": [
+            "On the mesa, the barracks are swept. Beds made, boots in rows. Whoever lives here is keeping a promise."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "orc",
+            "count": 5,
+            "zone": "desert"
+          },
+          "tell": "The mesa's guard is a warband of true orcs in {area}. Break them, and the toll road is yours.",
+          "aftermath": [
+            "A captain dies clutching a locket. Inside: 'Hold until relieved.' Relieved by whom, after a hundred years?"
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Sandbound Temple",
+            "zone": "desert",
+            "count": 1
+          },
+          "tell": "The old orders came from the temple in {area}. Go in, and tell whatever waits there that the war is over.",
+          "aftermath": [
+            "Inside, a mummy's hand rests on a bronze horn. It has waited a century for someone to blow the retreat."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "drowned_road",
+      "scope": "party",
+      "title": "The Drowned Road",
+      "tagline": "The causeway through the Gloamfen Marsh is sinking, and something is sinking it.",
+      "difficulty": 4,
+      "opening": "The only dry road between the jungle and the frost runs through Gloamfen Marsh. It has dropped a foot a week since midsummer. The road crews say the marsh is breathing in.",
+      "ending": "The causeway rises, stone by stone, and holds. The marsh has not forgiven you, but it has agreed to leave the road alone.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "Mirewater Pools",
+            "zone": "wetlands",
+            "count": 1
+          },
+          "tell": "The marsh begins in the Mirewater, in {area}. Go to the pools, and see what the crews saw.",
+          "aftermath": [
+            "The pools are clear as glass, and the water is rising against the slope. Whatever pulls the marsh down feeds it up here."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "hexer",
+            "count": 3,
+            "zone": "wetlands"
+          },
+          "tell": "The hexers in {area} have been dragging stones into the water. Stop them before they finish whatever they are building.",
+          "aftermath": [
+            "A hexer's satchel holds a map of the causeway, every post crossed out in red. This was not mischief. It was a survey."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Drowned Causeway",
+            "zone": "marsh",
+            "count": 1
+          },
+          "tell": "The first sunken stretch is in {area}. Walk it, and mark what the marsh has already taken.",
+          "aftermath": [
+            "The stones are pulled down in a line, as if by a rope. There is a drag mark in the mud, wide as a wagon."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "bogGhoul",
+            "count": 4,
+            "zone": "marsh"
+          },
+          "tell": "Something rises from the water around {area} to guard the drag. Put the bog ghouls down.",
+          "aftermath": [
+            "They wore charms of bone and reed, stitched with the hexers' red thread. They were a workforce, and the marsh the employer."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Troll's Isle",
+            "zone": "marsh",
+            "count": 1
+          },
+          "tell": "The drag leads to the island in {area}. Go there, and meet whatever wants the road under the water.",
+          "aftermath": [
+            "A troll the size of a barn sleeps beside a heap of causeway stones, each one numbered. It has been building something, post by post."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frost_that_stays",
+      "scope": "party",
+      "title": "The Frost That Stays",
+      "tagline": "The deep Frostlands have stopped thawing, and the thaw was the only promise the north ever made.",
+      "difficulty": 5,
+      "opening": "Every spring the Frostlands thaw a little further south. This spring they did not. The herders say the cold has a will now, and a captain.",
+      "ending": "The ice on the ledge cracks, and water runs downhill for the first time in a year. The frost is only patient again. Spring will come late, and herders will name children after you.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Cross Field",
+            "zone": "frostlands",
+            "count": 1
+          },
+          "tell": "The herders gather at the cross field in {area}. Go there, and hear what they have seen walking the ice.",
+          "aftermath": ["The herders whisper of a figure in a great helm who stands at the lake and does not breathe."]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "frostbound",
+            "count": 5,
+            "zone": "frostlands"
+          },
+          "tell": "The frostbound patrol the road in {area}, as if the road were theirs. Take it back from them.",
+          "aftermath": [
+            "Each has a fresh rime of frost on its ribs, and a blue light in its eye socket. It is spreading from somewhere north."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "Mirrorfrost Lake",
+            "zone": "frostlands",
+            "count": 1
+          },
+          "tell": "The cold seeps from the lake in {area}. Go to its shore and see what the ice reflects.",
+          "aftermath": [
+            "The lake reflects a night of stars in the middle of the afternoon. The cold is looking at you."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "snowman",
+            "count": 3,
+            "zone": "frostlands"
+          },
+          "tell": "The great brutes at the lake's edge in {area} have been fed on something. Strike them down before they find the road.",
+          "aftermath": [
+            "The creatures are heavier than they should be, their fur dense as fleece. Something has been feeding them cold."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "frostWarden",
+            "count": 3,
+            "zone": "frostlands"
+          },
+          "tell": "The wardens of the frozen ledge march in {area}, in the captain's name. Break the guard.",
+          "aftermath": [
+            "The captain's great helm lies in the snow, empty. The cold has a will, and the will has moved on."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Frozen Ledge",
+            "zone": "frostlands",
+            "count": 1
+          },
+          "tell": "The cold's last stand is on the ledge in {area}. Climb it, and end the winter that will not end.",
+          "aftermath": [
+            "The ledge cracks. The sky clears. Somewhere south, a herder looks at a dripping icicle and forgets what she was afraid of."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "under_lanternrest",
+      "scope": "party",
+      "title": "Under Lanternrest",
+      "tagline": "The lamplighters keep losing lamps. The town was built over something that wants the light.",
+      "difficulty": 3,
+      "opening": "Every dusk the lamplighters of Lanternrest find another lantern gone, oil and all. The market drain has begun to hum at night. The watch says it is the wind. The wind does not hum in tune.",
+      "ending": "The hum stops, and the lamps stay lit. Below the market, the Cistern King's court stands empty, and the town sleeps over a quiet vault. The lamplighters still count their lamps, twice, to be sure.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Lanternrest Sewers",
+            "zone": "sewer_lanternrest",
+            "count": 1
+          },
+          "tell": "Begin where the lamps go: the market drain, and the sewers under it in {area}. Go down, and see what the lamplighters will not.",
+          "aftermath": [
+            "Lantern glass, swept into neat piles along the walkway. Not scattered. Collected. Someone down here is keeping count."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "zombie",
+            "count": 3,
+            "zone": "sewer_lanternrest"
+          },
+          "tell": "The drowned walk the sewers of {area}, each with a lantern-hook in its fist. Put them down, and mind the water.",
+          "aftermath": [
+            "Each hook is bound with fresh oiled twine. The dead did not do this alone. Someone gave them a purpose, and a uniform.",
+            "A stair behind the north-east room, newly unbarred, breathes cold air. The sewers were never the bottom."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Drowned Cistern",
+            "zone": "sewer_undercroft",
+            "count": 1
+          },
+          "tell": "The stair leads to vaults older than the town, in {area}. Walk to the cistern, and see where the oil goes.",
+          "aftermath": [
+            "The cistern is ringed with lanterns, lit and burning, hundreds of them. The water at the centre glows green under them. Something is being kept warm."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "hexer",
+            "count": 3,
+            "zone": "sewer_undercroft"
+          },
+          "tell": "The hexers tending the cistern's lanterns will not leave their charge. Drive them off in {area}.",
+          "aftermath": [
+            "A hexer's ledger lists every lamp by street name, and which streets will go dark next. They were being taken in order, like a harvest."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Forgotten Chapel",
+            "zone": "sewer_undercroft",
+            "count": 1
+          },
+          "tell": "A chapel older than Lanternrest lies at the west end of {area}. The lamps were carried there. Go and see why.",
+          "aftermath": [
+            "The chapel's altar bears a throne of stacked lamp-frames, and a plaque: 'In the dark, a king keeps his court.' The plaque is old. The lamps are not."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "bogGhoul",
+            "count": 3,
+            "zone": "sewer_undercroft"
+          },
+          "tell": "The court's bodyguard, bloated ghouls dressed in lamplighters' coats, hold the way south in {area}. Break them.",
+          "aftermath": [
+            "Under the coats, hooks and keys: every drain in town is on one ring. The king has been opening and closing the town's doors for months."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "cisternKing",
+            "count": 1,
+            "zone": "sewer_undercroft"
+          },
+          "tell": "The Cistern King sits among the stolen lights in {area}, sure of his court. Put out his fire.",
+          "aftermath": [
+            "The King falls and the cistern's glow gutters. Overhead, the lamps of Lanternrest steady one by one, as if someone had stopped blowing on them."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "barrow_deep",
+      "scope": "party",
+      "title": "The Barrow Deep",
+      "tagline": "The watchman who never left his post is still counting. He has reached your name.",
+      "difficulty": 4,
+      "opening": "The Barrow Vigil ended with a light in a chasm and a congregation of dead. This season a tomb at the back of the graveyard stands open, and the watch ledger has a new last line, in an old hand: 'Relief expected.'",
+      "ending": "The Pale Warden lays down his sword, and the Barrow Lands exhale. The tomb stair is sealed from within. The ledger's last line is crossed out, and under it, in steadier ink: 'Relieved.'",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Graveyard",
+            "zone": "undead",
+            "count": 1
+          },
+          "tell": "The tomb at the back of the graveyard in {area} stands open. Start there, and see what the Vigil left behind.",
+          "aftermath": [
+            "Fresh footprints lead down the tomb's stair, and none lead back. Someone walked in, in good boots, with purpose."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "skeleton",
+            "count": 5,
+            "zone": "undead"
+          },
+          "tell": "The dead above the tomb are stirring in {area}, rising in ranks, not heaps. Cut them down before they march.",
+          "aftermath": [
+            "They fall in neat rows, shields still in hand. Drilled. Whoever is below taught them to die in formation."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Foyer of Names",
+            "zone": "crypt_barrow",
+            "count": 1
+          },
+          "tell": "Go down the tomb's stair to {area}. A hundred names are cut into its walls. Find the newest.",
+          "aftermath": [
+            "The newest name is a watchman's, from last year. Under it, a tally, in the same hand: one stroke for every night he has kept the post."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "zombie",
+            "count": 5,
+            "zone": "crypt_barrow"
+          },
+          "tell": "The long hall of {area} is thick with the unburied, each wearing a scrap of watch coat. Walk through them.",
+          "aftermath": [
+            "Every scrap carries the same stitched badge: a tower above a lantern. They are not wandering. They are on patrol."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Ossuary",
+            "zone": "crypt_barrow",
+            "count": 1
+          },
+          "tell": "The south road runs through the ossuary in {area}. Go on, and read what the walls of bone say.",
+          "aftermath": [
+            "The skulls are stacked by rank, captains to cadets. A gap in the wall waits for one more. The mortar around it is fresh."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "skeleton",
+            "count": 5,
+            "zone": "crypt_barrow"
+          },
+          "tell": "The ossuary's guard still holds its post in {area}, and will not stand down for strangers. Break the ranks.",
+          "aftermath": [
+            "A broken captain's helm rolls from the heap. Inside, scratched with a dagger: 'He will not leave until someone relieves him. Someone must.'"
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "wraith",
+            "count": 3,
+            "zone": "crypt_barrow"
+          },
+          "tell": "The watch's casters keep the seat in {area}, and have kept it a long time. Silence them before the Warden hears you.",
+          "aftermath": [
+            "The wraiths fall, and a deep voice from the south chamber says, without anger: 'Are you my relief?' It does not wait for an answer."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "paleWarden",
+            "count": 1,
+            "zone": "crypt_barrow"
+          },
+          "tell": "The Pale Warden stands in his seat in {area}, sword drawn, keeping a post that ended centuries ago. Relieve him.",
+          "aftermath": [
+            "He kneels at the end, sword across his knees. 'Post relieved,' he says. 'Tell them I held it.' The dust that settles on him has a peaceful sound."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sunscar_depths",
+      "scope": "party",
+      "title": "The Sunscar Depths",
+      "tagline": "Under the desert's cave, a furnace has a king, and he has noticed the surface.",
+      "difficulty": 5,
+      "opening": "The desert's cave was always a goblin's den. This year the sand above it is warm, and caravans report an orc banner no clan will own. Something under the hollow is waking, and it is hungry for the sky.",
+      "ending": "The Furnace Hall cools, and the sand above it goes cold for the first time in a season. Ashmaw's throne cracks down its middle, and the desert wind carries the smell of ash for a day, then forgets it. The caravans pass untaxed.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Sunscar Hollow",
+            "zone": "desert",
+            "count": 1
+          },
+          "tell": "Start at the cave mouth in the dunes of {area}, where the sand is warm. Go to the Hollow, and see what the desert is hiding.",
+          "aftermath": [
+            "The cave's walls are warm, and the shaft of daylight at the foyer shows a haze of soot in the air. Something below is burning, and burning well."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "orc",
+            "count": 4,
+            "zone": "cave_sunscar"
+          },
+          "tell": "Orc scouts hold the hollow's deeper tunnel in {area}, bound with the king's red cord. Clear them, and the way down is open.",
+          "aftermath": [
+            "Each scout wears the same red cord, knotted in the same pattern. A uniform of rank. Whatever is below has an army, and it keeps accounts."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Furnace Hall",
+            "zone": "cave_sunscar_deep",
+            "count": 1
+          },
+          "tell": "The tunnel drops into the Sunscar Depths, in {area}. Cross to the Furnace Hall, and look at the lava with your own eyes.",
+          "aftermath": [
+            "A lake of lava, ringed by a path worn smooth by a thousand marching feet. The heat is a wall. Beyond it, a drum beats, slow as a heart."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "mummy",
+            "count": 3,
+            "zone": "cave_sunscar_deep"
+          },
+          "tell": "Mummies, old as the sand, stand guard along the Furnace Hall in {area}. They have been paid in something other than gold. Put them down.",
+          "aftermath": [
+            "Each carries a scroll in a language you cannot read, sealed with the king's red wax. They are not guards. They are witnesses to a contract."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Gallery of Bones",
+            "zone": "cave_sunscar_deep",
+            "count": 1
+          },
+          "tell": "The west road runs through the Gallery of Bones in {area}. Go in, and read what the king keeps on his walls.",
+          "aftermath": [
+            "The walls are carved with a calendar, one date circled in red: the first of next month. Beneath it, carvings of the sky, and a hand reaching up."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "skeleton",
+            "count": 3,
+            "zone": "cave_sunscar_deep"
+          },
+          "tell": "The gallery's dead are still marching in {area}, in step with the drum. Break their ranks before the king calls them to the surface.",
+          "aftermath": [
+            "The last of them drops a banner, torn, red on black. Pinned to it, a map of the caravan road, with watchtowers marked. The king is planning a war."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "troll",
+            "count": 3,
+            "zone": "cave_sunscar_deep"
+          },
+          "tell": "The king's bodyguard, great trolls in iron, hold the seat's doors in {area}. Take them down, and the way to Ashmaw is clear.",
+          "aftermath": [
+            "The last troll drops a key of black iron, hot to the touch. The seat's doors open to it, and the drum stops, as if a held breath had been let go."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "ashmaw",
+            "count": 1,
+            "zone": "cave_sunscar_deep"
+          },
+          "tell": "Ashmaw, the Hollow King, sits on a throne that has been warm for a thousand years, and rises to meet you in {area}. End his reign.",
+          "aftermath": [
+            "The throne splits, and a cold wind comes down the shaft for the first time in an age. The king never wanted a kingdom. He wanted the sky."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ash_and_ember",
+      "scope": "party",
+      "title": "Ash and Ember",
+      "tagline": "Past the Mirewater the map runs out, and what burns there has been waiting for a visitor.",
+      "difficulty": 5,
+      "opening": "Beyond the Mirewater the old maps show a smudge and a word: 'burnt'. This season the smudge has grown a road, and a banner no one raised. Something in the Emberwaste is drawing the legions of the dead into line.",
+      "ending": "Vharek falls, and the Cinder Ziggurat's fire sinks to embers. The Emberwaste will burn on for a thousand years, but it burns without a will now, and the road east is only a road.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Mirewater Gate",
+            "zone": "emberwaste",
+            "count": 1
+          },
+          "tell": "Cross the Mirewater to the burnt road in {area}. Go to the gate, and see the first land past the old maps.",
+          "aftermath": [
+            "The gate is a pair of blackened trees, and between them a milestone, new: 'Cinder Ziggurat, 40 leagues.' Someone has been laying road."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "orc",
+            "count": 5,
+            "zone": "emberwaste"
+          },
+          "tell": "Orc pickets hold the road in {area}, in the red cord of a king who is not yet named. Break them.",
+          "aftermath": [
+            "Each carries the same crude brand on the shield: a flame inside a ring. Whoever they follow does not mind being worshipped."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Ember Lakes",
+            "zone": "emberwaste",
+            "count": 1
+          },
+          "tell": "The road bends past lakes of lava in {area}. Go to the shore, and see what they feed.",
+          "aftermath": [
+            "The lava lakes are stirred into slow spirals, all turning one way. Under the heat shimmer, something vast breathes in time with them."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "mummy",
+            "count": 4,
+            "zone": "emberwaste"
+          },
+          "tell": "Embalmed sentries stand in the ash round {area}, where no one buried them. Lay them down.",
+          "aftermath": [
+            "The wrappings are new, soaked in oil and sealed with a flame-mark. Someone is making mummies, and sending them to guard the road."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Fallen Legion",
+            "zone": "emberwaste",
+            "count": 1
+          },
+          "tell": "A war camp of the dead lies in {area}. Walk to it, and read the crosses before you fight.",
+          "aftermath": [
+            "Four hundred iron crosses, each with a unit number and a date, the same date. A legion that all died on the same day, and was not allowed to rest."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "troll",
+            "count": 3,
+            "zone": "emberwaste"
+          },
+          "tell": "The legion's war-trolls drag the dead's wagons in {area}. Put them down, and the camp falls quiet.",
+          "aftermath": [
+            "The wagons carry banners folded and numbered, one for each cross in the field. Someone means to march them somewhere, and soon."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Cinder Ziggurat",
+            "zone": "emberwaste",
+            "count": 1
+          },
+          "tell": "The banners all point to the Ziggurat in {area}. Climb to its steps, and meet whatever has been gathering a legion.",
+          "aftermath": [
+            "The Ziggurat's steps are warm as a living thing. At its top, a throne of cooled lava, and the shape of a man, kneeling, burning without burning."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "cinderlord",
+            "count": 1,
+            "zone": "emberwaste"
+          },
+          "tell": "Vharek, the Cinderlord, rises from his throne in {area}, and the legion's drum goes silent to watch. End him.",
+          "aftermath": [
+            "The fire falls out of him like a robe. Underneath, an old soldier, who says only: 'Was it a good war?' He does not wait for an answer either."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "the_long_white",
+      "scope": "party",
+      "title": "The Long White",
+      "tagline": "Beyond the Frostlands the snow has stopped falling and started to stand.",
+      "difficulty": 5,
+      "opening": "The herders always kept to their side of the white, where the snow falls. This winter it stopped falling and started to stand, in pillars, in rows, in the shape of men. Something is raising an army out of the weather.",
+      "ending": "The Hoarfather falls, and the standing snow slumps into plain drifts. The wind, for the first time in a year, blows from somewhere that is not the north. Rimeheart is a land again, and not an army.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Whiteout Gate",
+            "zone": "rimeheart",
+            "count": 1
+          },
+          "tell": "Past the Frostlands the snow does not move. Go to the pillars in {area}, and see where the herders turn back.",
+          "aftermath": [
+            "Two columns of packed snow, taller than a house, each with a face. The faces are not carved. They grew."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "frostbound",
+            "count": 5,
+            "zone": "rimeheart"
+          },
+          "tell": "The standing snow has bones in it, and they walk in {area}. Break the first rank.",
+          "aftermath": [
+            "They fall in sheets of ice, and under each, a coat of the Frostlands' own watch. The army was raised from those who went looking."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Glass Lakes",
+            "zone": "rimeheart",
+            "count": 1
+          },
+          "tell": "The cold is deepest at the lakes in {area}. Walk the shore, and see how far down the ice goes.",
+          "aftermath": [
+            "The ice is clear to the bottom, where rows of figures stand on the lakebed, looking up, waiting for a thaw that will not come."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "snowman",
+            "count": 4,
+            "zone": "rimeheart"
+          },
+          "tell": "Yeti herds the size of barns graze the lake shore in {area}, fattened on something cold. Cull them.",
+          "aftermath": [
+            "Their fur is full of needles of ice, glittering. They were not born. They were poured, into a shape, and told to keep the herd."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Bitter Field",
+            "zone": "rimeheart",
+            "count": 1
+          },
+          "tell": "The snow forms ranks in the field in {area}. Walk to it, and look the army in the face.",
+          "aftermath": [
+            "Ten thousand pillars in lines to the horizon, all facing one way. At the end of the lines, a hill, and on the hill, a throne of ice."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "frostWarden",
+            "count": 4,
+            "zone": "rimeheart"
+          },
+          "tell": "The wardens of the ice throne stand picket at the field in {area}, in the Hoarfather's name. Take their line.",
+          "aftermath": [
+            "The last warden's helm rolls and shatters. Inside, a note in frozen ink: 'He does not want war. He wants to be remembered.'"
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Wyrm's Rest",
+            "zone": "rimeheart",
+            "count": 1
+          },
+          "tell": "The throne stands in the old halls of {area}, among the plateau's pillars. Climb to it, and answer the Hoarfather's summons.",
+          "aftermath": [
+            "The halls are older than the snow, one winter carved on every pillar. The last pillar is blank. He is waiting for the carver."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "hoarfather",
+            "count": 1,
+            "zone": "rimeheart"
+          },
+          "tell": "The Hoarfather stands on the Wyrm's Rest in {area}, tall as the hall, and bows his head to you, as to a challenger. Meet him.",
+          "aftermath": [
+            "He falls slowly, the way a drift settles. The pillars of the field crumble to powder in a long sigh, and the sun, for a moment, is a visitor."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "salt_and_glass",
+      "scope": "party",
+      "title": "Salt and Glass",
+      "tagline": "Past the Emberwaste the sand has turned to glass, and the glass has begun to remember.",
+      "difficulty": 5,
+      "opening": "East of the Emberwaste the desert is not sand but glass, fused in one night by a fire nobody saw. Caravans that cross it come back with their water bright as mirrors and their drivers silent. Something there keeps a court.",
+      "ending": "The Glass Sovereign shatters, and the whole waste rings once, like a struck bell, and is quiet. The dunes will drift back over the glass in a century. Until then, the caravans cross with their eyes open, and their drivers talk.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Ember Gate",
+            "zone": "glasswastes",
+            "count": 1
+          },
+          "tell": "Cross out of the Emberwaste to the pale edge of {area}. Go to the gate, and see where the ash gives way to glass.",
+          "aftermath": [
+            "The ash stops at a line as straight as a ruler. Beyond it, the ground is white and smooth, and every footprint stays, bright as a coin."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "raider",
+            "count": 5,
+            "zone": "glasswastes"
+          },
+          "tell": "Raiders in glass-bright armour ride the Salt Flats of {area}, taxing whoever crosses. Ride them down.",
+          "aftermath": [
+            "Their armour is glass, grown on them, and it rings when struck. They did not buy it. They were given it, by someone who wants them seen."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Salt Flats",
+            "zone": "glasswastes",
+            "count": 1
+          },
+          "tell": "The flats of {area} are where the caravans vanish. Walk out to the middle, and look at the ground.",
+          "aftermath": [
+            "Under the glass, inches down, the shapes of wagons, oxen and drivers, fused mid-stride. The flats are a collection."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "mummy",
+            "count": 4,
+            "zone": "glasswastes"
+          },
+          "tell": "Sand-wrapped sentries pace the glass of {area}, and cast no shadows. Put them down.",
+          "aftermath": [
+            "Their wrappings are woven of the caravans' own canvas. Someone is dressing the dead in the lost, and standing them in rows."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Buried Caravan",
+            "zone": "glasswastes",
+            "count": 1
+          },
+          "tell": "The biggest caravan of all lies in {area}. Go to the ring of broken pillars, and see what the king keeps there.",
+          "aftermath": [
+            "Pillars ring a wagon of black glass. Inside, a throne of caravan chests, and carved on a pillar, a name from the Barrow ledgers."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "troll",
+            "count": 3,
+            "zone": "glasswastes"
+          },
+          "tell": "Glass-skinned trolls haul the king's treasure through {area}. Strike them down, and take the road.",
+          "aftermath": [
+            "They shatter, and under the glass are plain trolls, weeping. The glass was grown on them alive. They have asked to be let out ever since."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Glass Citadel",
+            "zone": "glasswastes",
+            "count": 1
+          },
+          "tell": "The road ends at the citadel in {area}. Climb to its gate, and meet the court.",
+          "aftermath": [
+            "The citadel's floor is a lake of white fire gone still. On the throne, a figure in a crown of the same glass is rising."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "glassSovereign",
+            "count": 1,
+            "zone": "glasswastes"
+          },
+          "tell": "The Glass Sovereign rises from his glass throne in {area}, crowned in what the fire made of his kingdom. End his reign.",
+          "aftermath": [
+            "The crown cracks first, then the sky seems to, and he sighs, a sound like wind in a bottle. 'At last,' he says. 'Something that breaks.'"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "the_sunken_crown",
+      "scope": "party",
+      "title": "The Sunken Crown",
+      "tagline": "A kingdom drowned a thousand years ago, and its king never agreed to it.",
+      "difficulty": 5,
+      "opening": "East of Rimeheart the land goes under: black pools, standing towers, a throne hall up to its knees in water. The drowned kingdom's king has been seen at the surface, wearing a crown and wading toward the road.",
+      "ending": "The Drowned King sinks, crown last, and the moor goes still for the first time in a thousand years. The towers still stand, but they look like towers now, not a court. Somewhere under the pools, a kingdom agrees to be over.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Rimeheart Gate",
+            "zone": "drownedmoor",
+            "count": 1
+          },
+          "tell": "Cross out of the white to the first black water of {area}. Go to the gate, and read the line where frost meets flood.",
+          "aftermath": [
+            "The snow stops, and the water begins, with no mud between. A signpost stands in the pool, and its arm points down."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "bogGhoul",
+            "count": 5,
+            "zone": "drownedmoor"
+          },
+          "tell": "Drowned footmen in rotted livery wade the shallows of {area}. Send them back under.",
+          "aftermath": [
+            "Each wears the same livery, a gold crown on blue, bleached to grey. They are still on duty. They have been on duty for a thousand years."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Black Pools",
+            "zone": "drownedmoor",
+            "count": 1
+          },
+          "tell": "The pools of {area} are all one water. Walk their bank, and see what lies at the bottom.",
+          "aftermath": [
+            "The pools are clear as ink and deep as wells. Down at the bottom, a road, paved, and on the road, lamp-posts, lit, in a row going the same way as you."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "hexer",
+            "count": 4,
+            "zone": "drownedmoor"
+          },
+          "tell": "The King's witches keep the pools in {area}, singing the water high. Silence them.",
+          "aftermath": [
+            "A hymn is carved on a post: 'Rise, rise, the king's drowned court.' They are not drowning the land. They are raising a kingdom."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Sunken Spire",
+            "zone": "drownedmoor",
+            "count": 1
+          },
+          "tell": "The tallest tower stands alone in {area}. Wade to it, and see what the court keeps in its cellar.",
+          "aftermath": [
+            "The tower's door is under the water, and its top is a bell chamber. The bell is alive with a sound you cannot hear, only feel in the teeth: a summons."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "troll",
+            "count": 3,
+            "zone": "drownedmoor"
+          },
+          "tell": "The King's guard, great trolls in green iron, stand in the shallows of {area}. Take them down.",
+          "aftermath": [
+            "The last guard drops a key of drowned gold. His breastplate reads: Captain of the Gate. He guarded it from the day it went under."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Drowned Throne",
+            "zone": "drownedmoor",
+            "count": 1
+          },
+          "tell": "The throne hall rises from the water in {area}. Wade in, and hear the court assemble.",
+          "aftermath": [
+            "The hall is full: the drowned, waist-deep, in ranks, every face turned to the throne. A voice from the water says: 'The audience is granted.'"
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "drownedKing",
+            "count": 1,
+            "zone": "drownedmoor"
+          },
+          "tell": "The Drowned King rises from the water of {area}, crowned in weeds, and holds his court for the last time. End it.",
+          "aftermath": [
+            "He sinks, crown last, and says only: 'Dismissed.' The drowned lower their heads together and go under, like a tide finally told it may."
+          ]
+        }
+      ]
     }
   ],
   "epilogue": [

@@ -136,7 +136,9 @@ describe('epic quests, on the host', () => {
       tasks.update(0.1); // the party stands at the place: reached
       expect(arena.task!.state).toBe('done');
       tasks.update(TASK_LINGER + 1);
+      for (let i = 0; i < 3; i++) epics.update(5); // the step's aftermath is told, then the next begins
     }
+    expect(said.some((w) => w.includes('boot print that is not theirs'))).toBe(true); // a turn of the tale between steps
     for (let i = 0; i < 4; i++) epics.update(5); // the closing scene is told, line by line
     expect(ended).toBe(1);
     expect(epics.active).toBe(false);

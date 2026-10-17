@@ -49,7 +49,7 @@ export function bossStats(
     attack: h.defense + Math.round(BLOW * h.hp),
     defense,
     xp: Math.round(xpToNext(lv) * 0.2),
-    gold: 8 + 6 * lv,
+    gold: 10 + 3 * lv,
   };
 }
 

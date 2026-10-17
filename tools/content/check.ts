@@ -8,6 +8,7 @@ import * as prettier from 'prettier';
 import { roam } from '../../src/content/populate';
 import { OPPOSITE } from '../../src/content/packs';
 import { onDoor } from '../../src/map/doors';
+import { bandKind } from '../../src/systems/bands';
 import { bandText, foeProblem } from '../../src/systems/levels';
 import type { ContentManager } from '../../src/content/ContentManager';
 import type { MapData } from '../../src/map/types';
@@ -63,19 +64,24 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
     });
   }
   // A zone with a level band holds only foes that are a fair fight at its lowest level (systems/levels.ts): its roamers
-  // and the mobs its scenario places. A foe that is no fight at the top of the band is only a warning.
+  // and the mobs its scenario places (a group banded to its own level, systems/bands.ts, is judged at that level). A foe that is no fight at the top of the band is only a warning.
   const { entities } = content.content;
   for (const [type, biome] of Object.entries(biomes)) {
     if (!biome.levels) continue;
-    const kinds = new Set([
-      ...(biome.generation.roam ?? []).flatMap((rule) => rule.kinds),
-      ...(scenarios.nodes.get(type)?.entities ?? []).map((p) => p.entity),
-    ]);
-    for (const kind of kinds) {
-      const stats = entities[kind]?.type === 'mob' && !entities[kind].boss ? entities[kind].stats : undefined;
-      const problem = stats && foeProblem(stats, biome.levels);
+    // each foe with the level it is banded to (systems/bands.ts), if any: a banded foe is judged by its made body
+    const foes = new Map<string, { kind: string; level?: number }>();
+    for (const rule of biome.generation.roam ?? [])
+      for (const kind of rule.kinds) foes.set(`${kind}@${rule.level ?? ''}`, { kind, level: rule.level });
+    for (const p of scenarios.nodes.get(type)?.entities ?? [])
+      foes.set(`${p.entity}@${p.level ?? ''}`, { kind: p.entity, level: p.level });
+    for (const { kind, level } of foes.values()) {
+      const def = entities[kind];
+      if (def?.type !== 'mob' || def.boss) continue;
+      const banded = level === undefined ? undefined : bandKind(content.mobKind(kind), level);
+      const stats = banded ? { hp: banded.maxHp, attack: banded.attack, defense: banded.defense } : def.stats;
+      const problem = stats && foeProblem(stats, level === undefined ? biome.levels : [level, level]); // a banded group is judged at its own level: it is the deep end of the zone
       if (!problem) continue;
-      const what = `biomes.${type} (${bandText(biome.levels)}): ${kind} ${
+      const what = `biomes.${type} (${bandText(biome.levels)}): ${kind}${level === undefined ? '' : ` banded ${level}`} ${
         problem.kind === 'deadly'
           ? `kills a level-${problem.level} hero in ${problem.hits} hits (${problem.blows} blows to fell it)`
           : problem.kind === 'slog'

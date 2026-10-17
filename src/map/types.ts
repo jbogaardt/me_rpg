@@ -37,6 +37,8 @@ export interface CellPoint {
 /** An enemy to spawn; `kind` is a key of MOB_KINDS (src/systems/combat.ts). Placed by the content (content/populate.ts), not the map. */
 export interface MobSpawn extends CellPoint {
   kind: string;
+  /** The hero level it is made for (`systems/bands.ts`); absent: the kind as the content has it. */
+  level?: number;
 }
 
 /** A treasure chest; `kind` picks its art (CHEST_KINDS) and `loot` is a key of the campaign's items.json `loots`. */

@@ -143,6 +143,8 @@ export interface MobKind {
   ray?: MobRay;
   /** How the windup reads (colour of the flash, ground warning); see `telegraphOf`. All optional. */
   telegraph?: MobTelegraph;
+  /** The hero level this foe was made for when a zone re-bands it (`bands.ts`); absent: read from its body (`mobLevel`). */
+  level?: number;
   /** A boss of the Dungeon Master's quest (systems/dmBoss.ts): made for the quest, not a kind of the content, and it does not respawn. */
   boss?: boolean;
   /** A named boss of the content (entities.json `boss`, systems/bosses.ts): placed once, never respawns, mends when the party leaves it. */
@@ -231,6 +233,9 @@ export interface MobView {
  */
 export const MOB_KINDS: Record<string, MobKind> = {};
 
+/** The mark in the key of a kind re-banded for a zone's level ("orc@14", `bands.ts`); what is before it is the content's own key. */
+export const BAND_MARK = '@';
+
 /** Replace the mob kinds (the content's). The record keeps its identity, so modules holding it see the new kinds. */
 export function setMobKinds(kinds: Record<string, MobKind>) {
   for (const key of Object.keys(MOB_KINDS)) delete MOB_KINDS[key];
@@ -261,6 +266,24 @@ export const defensePower = (h: Hero) => h.stats.defense + gearDefense(h);
 export const spellPower = (h: Hero) => h.stats.magic + (h.weapon.focus?.power ?? 0) + gearMagic(h);
 /** XP to go from `level` to the next. Grows faster than linearly: 20 at level 1, 224 at 5, 632 at 10. */
 export const xpToNext = (level: number) => Math.round(20 * level ** 1.5);
+
+/**
+ * The hero level a foe is a match for, read from its own body (attack and health, so no content has to say): a goblin is 1,
+ * an orc about 5, a troll about 8, a warlord about 11. The content's notes name the same bands.
+ */
+export const mobLevel = (kind: Pick<MobKind, 'attack' | 'maxHp' | 'level'>): number =>
+  kind.level ?? Math.max(1, Math.round((kind.attack / 4 + kind.maxHp / 20) / 2));
+
+/**
+ * The share of a kill's XP a hero of `level` still gets from `kind`: all of it while the foe is within three levels of
+ * them, then 20% less for each level beyond, never below a tenth. Killing what you have outgrown is not how you level
+ * (and a hero of level 30 who walks the old lands does not get richer by it). Bosses always pay in full.
+ */
+export function killShare(level: number, kind: Pick<MobKind, 'attack' | 'maxHp' | 'level' | 'boss'>): number {
+  if (kind.boss) return 1;
+  const gap = level - mobLevel(kind) - 3;
+  return gap <= 0 ? 1 : Math.max(0.1, 1 - 0.2 * gap);
+}
 
 /** Stat gains for reaching `level`. They step up every four levels so power keeps pace with the XP curve. */
 export function levelGains(level: number) {
