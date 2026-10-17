@@ -102,6 +102,15 @@ const problems = (f: Record<ContentFile, unknown>) => {
 };
 
 describe('parseContent', () => {
+  it('reads a choice hint, and refuses one with no requirement', () => {
+    const f = files();
+    const choice = (f.scenarios as { nodes: { choices: Record<string, unknown>[] }[] }).nodes[0]!.choices[0]!;
+    choice.hint = 'Too strong for you yet.';
+    expect(parseContent(f).scenarios.nodes.get('woods')?.choices[0]?.hint).toBe('Too strong for you yet.');
+    delete choice.requires;
+    expect(problems(f).join('\n')).toMatch(/choices\[0\]\.hint: explains a requirement/);
+  });
+
   it('reads valid content', () => {
     const c = parseContent(files());
     expect(c.entities.goblin?.stats?.hp).toBe(20);

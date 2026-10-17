@@ -56,7 +56,11 @@ export class Scenario {
 
   private async pick(choice: Choice) {
     if (this.busy || this.arena.role !== 'solo') return;
-    if (!meets(this.arena.hero, choice.requires)) return;
+    if (!meets(this.arena.hero, choice.requires)) {
+      const o = this.offer(choice);
+      this.say([choice.hint ?? 'The way is shut.', `Needs ${o.needs}.`]);
+      return;
+    }
     try {
       await this.load(choice.next);
     } catch (err) {
@@ -88,6 +92,7 @@ export class Scenario {
     return {
       choice,
       needs: req ? requirementText(req, (id) => (SKILLS as Record<string, Skill | undefined>)[id]?.name ?? id) : null,
+      hint: choice.hint,
       allowed: meets(this.arena.hero, req),
     };
   }

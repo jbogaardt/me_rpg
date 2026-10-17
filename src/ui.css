@@ -623,6 +623,7 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
 #choices[hidden] { display: none; }
 #choices .title { margin: 0 0 4px; font: 700 15px var(--title); text-align: center; }
 #choices .mp-btn { width: 100%; text-align: left; }
+#choices .hint { display: block; font: italic 11px var(--body); color: #c9b98f; }
 #choices .needs { display: block; font: 600 11px var(--body); color: #e8dcc0; }
 
 /* A report on screen when the game throws (src/hud/ProblemBanner.ts). */

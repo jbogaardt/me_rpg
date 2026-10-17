@@ -36,6 +36,7 @@ kind is how higher levels stay meaningful. **Retune a weapon or kind against tha
   door, a search area for something to be found). Quest text must use the biomes' `name`s (`guide.test.ts`). The host owns
   every `QuestLog`; a guest sends `do` talk and action presses and reads the log from `pack`. Online only the DM's
   quests count (`docs/dungeon-master.md`).
+  A scenario choice's optional `hint` (content, solo) says why it is shut, under "Needs ..."; door/zone gating is not done.
 - **The DM's quest kinds** (`dmTasks.ts`, `dmQuests.ts`; core engine, all counted by the host, friends told in the `dm` message, append-only kinds): beside hunt, gather, find, visit, cast and haul there are
   **boss** and **master**. A boss (`dmBoss.ts`) is the land's toughest foe drawn as a named giant (`MobKind.boss`, counted under `BOSS_KEY`), whose health,
   blow and defense come from a typical hero of the party's level and size (`heroModel`, so no content id and a fair fight at any level; `balance.test.ts` keeps its odds between 1.15 and 2.5).

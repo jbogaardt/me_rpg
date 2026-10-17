@@ -283,7 +283,8 @@
         {
           "text": "Push on to the Barrow Lands",
           "next": "undead",
-          "requires": { "stat": "level", "min": 4 }
+          "requires": { "stat": "level", "min": 4 },
+          "hint": "The Barrow Lands crush the unseasoned. Grow stronger before you cross."
         },
         { "text": "Stand and fight again", "next": "greenwood_ambush" }
       ]
