@@ -241,8 +241,8 @@ export class Arena {
   }
 
   /** Put another player in the world. Their stats are theirs alone: they start as a fresh hero. */
-  addRemote(slot: number, where: ZoneState = this.zone): Player {
-    const hero = newHero();
+  addRemote(slot: number, where: ZoneState = this.zone, kept?: Hero): Player {
+    const hero = kept ?? newHero();
     const dm = slot === DM_SLOT; // online, player 0 is the host, and the host is the Dungeon Master
     hero.name = dm ? DM_NAME : playerName(slot);
     const remote = new Player(this.wardrobe.sheet(dm ? DM_LOOK : playerOutfit(slot, hero)), hero, slot);

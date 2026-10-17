@@ -21,7 +21,7 @@ import {
   pondsWire,
 } from '../../net/protocol';
 import type { Session } from '../../net/session';
-import type { Stats } from '../../systems/combat';
+import type { Hero, Stats } from '../../systems/combat';
 import { itemCode } from '../../systems/inventory';
 import { PLAYER_COLORS, playerName } from '../../systems/looks';
 import { NO_WEATHER } from '../../systems/weather';
@@ -36,6 +36,12 @@ const SNAPSHOT_HZ = 25; // host -> guest world state
 const EVENT_KEEP = 0.6; // seconds a one-shot world event keeps riding in snapshots, to survive packet loss
 const MAX_EVENTS_SENT = 48;
 const GROUND_RESEND = 1; // seconds between full lists of the items on the ground, when nothing changed
+
+/** How long (ms) a newly connected friend is awaited for their hello before they join as a stranger. */
+const HELLO_WAIT_MS = 3000;
+
+/** How many departed friends' heroes the host keeps. */
+const KEPT_MAX = 12;
 
 /**
  * The host's side of a co-op game: keeps the friends' players in step with the session's seats, reads their controls,
@@ -94,13 +100,33 @@ export class HostLink {
     });
   }
 
-  /** Players follow the session's connected seats. A friend who connected appears at the spawn; one who left goes. */
+  /** The heroes of friends who left, by their lasting id (`HelloMsg.id`): a friend who comes back is given theirs again. */
+  private kept = new Map<string, Hero>();
+  /** The id of the friend in each seat now, and when each seat was first seen without one (ms): a hello is awaited briefly. */
+  private ids = new Map<number, string>();
+  private waiting = new Map<number, number>();
+
+  /**
+   * Players follow the session's connected seats. A friend who connected appears at the spawn (as the hero they left, if
+   * they have played here before); one who left goes, their hero kept for their return.
+   */
   reconcile() {
     const { arena } = this;
     const connected = this.session.connectedSlots();
     for (const slot of connected) {
       if (arena.remotes.has(slot)) continue;
-      const remote = arena.addRemote(slot, arena.home); // newcomers arrive at the start of the world
+      const id = this.session.peerId(slot);
+      const since = this.waiting.get(slot) ?? performance.now();
+      this.waiting.set(slot, since);
+      if (!id && performance.now() - since < HELLO_WAIT_MS) continue; // their hello (with who they are) is on its way
+      this.waiting.delete(slot);
+      const back = id ? this.kept.get(id) : undefined;
+      if (id) {
+        this.ids.set(slot, id);
+        this.kept.delete(id);
+      }
+      if (back) back.stats.hp = Math.max(1, back.stats.hp);
+      const remote = arena.addRemote(slot, arena.home, back); // newcomers arrive at the start of the world
       // Spread newcomers along the spawn cell so they don't stand exactly on top of each other.
       const [x, y] = cellFeet(arena.home.data.spawn);
       remote.body.position.set(x + (slot - 2) * 8, y);
@@ -112,10 +138,19 @@ export class HostLink {
       if (connected.includes(slot)) continue;
       this.remove(slot, (p) => this.sim.text(p.body.x, p.body.y - 54, `${playerName(slot)} left`, 0xffffff));
     }
+    for (const slot of [...this.waiting.keys()]) if (!connected.includes(slot)) this.waiting.delete(slot);
   }
 
   /** Take a friend out of the game and forget what was kept about them. */
   private remove(slot: number, notice: (p: Player) => void) {
+    const id = this.ids.get(slot);
+    const hero = this.arena.remotes.get(slot)?.hero;
+    if (id && hero) {
+      this.kept.delete(id); // newest last, so the oldest is the one to forget
+      this.kept.set(id, hero);
+      if (this.kept.size > KEPT_MAX) this.kept.delete(this.kept.keys().next().value!);
+    }
+    this.ids.delete(slot);
     this.arena.removeRemote(slot, notice);
     this.feeds.delete(slot);
     this.pack.forget(slot);
