@@ -662,6 +662,300 @@
           "tell": "Whatever woke the dead in {area} is the reason for all of it. Put them to rest, and the woods may settle."
         }
       ]
+    },
+    {
+      "id": "barrow_vigil",
+      "scope": "party",
+      "title": "The Barrow Vigil",
+      "tagline": "The watch outpost in the Barrow Lands stopped sending word. The dead have not.",
+      "difficulty": 3,
+      "opening": "Lanternrest's watch posts a rider to the Barrow Lands every week. Last week the rider came back with a bone in his saddlebag, and no memory of finding it.",
+      "ending": "The outpost's lamp is lit again, and the barrows are quiet. The watchman wrote your names on the lintel, below the names of those who did not come home.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Graveyard",
+            "zone": "undead",
+            "count": 1
+          },
+          "tell": "The rider's trail starts at the graveyard in {area}. Walk it, and see what he stopped to look at.",
+          "aftermath": [
+            "Fresh earth on old graves, and a single iron nail in each. Someone is marking the dead, and not for respect."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "skeleton",
+            "count": 5,
+            "zone": "undead"
+          },
+          "tell": "The marked dead are rising in {area}. Lay them back down, and mind the arrows.",
+          "aftermath": [
+            "The bones are warm to the touch. They were not raised long ago. Whatever woke them is still close."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Collapsed Outpost",
+            "zone": "undead",
+            "count": 1
+          },
+          "tell": "The watch outpost lies in {area}. The roof is down, but the lamp might not be. Go and look.",
+          "aftermath": [
+            "The last page of the watch ledger reads, in a steady hand: 'They are not attacking. They are waiting.'"
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "zombie",
+            "count": 4,
+            "zone": "undead"
+          },
+          "tell": "The waiting ones shamble at the edge of {area}. They have been standing there all week. Put them to rest.",
+          "aftermath": [
+            "One wears a watchman's coat, buttoned wrong, the lamp-oil flask still on its belt. Somebody should write his family."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Chasm",
+            "zone": "undead",
+            "count": 1
+          },
+          "tell": "The marks all point to the chasm in {area}. Go to its edge, and see what the dead have been waiting for.",
+          "aftermath": [
+            "Far below, a light, patient and blue. It does not flicker. The dead face it like a congregation at prayer."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sunscar_legion",
+      "scope": "party",
+      "title": "The Sunscar Legion",
+      "tagline": "A legion that was never disbanded still holds the mesa, and still takes tolls.",
+      "difficulty": 4,
+      "opening": "The caravans cross the Sunscar by the Watch Post road. This season, someone is collecting tolls there in an orc legion's name. The legion fell a hundred years ago.",
+      "ending": "The tollkeepers lay down their arms, and the mesa's banner comes down. Whatever the legion was guarding, it is the desert's again, and the caravans pay nothing.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Watch Post",
+            "zone": "desert",
+            "count": 1
+          },
+          "tell": "The caravan masters meet at the post in {area}. Go there, and hear what the toll costs them.",
+          "aftermath": [
+            "The ledger shows tolls in silver, receipts stamped with a legion seal nobody has cut since the old king's day."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "raider",
+            "count": 6,
+            "zone": "desert"
+          },
+          "tell": "The toll collectors ride out from {area}. They wear the legion's colours badly. Break them.",
+          "aftermath": [
+            "They carry good steel and bad manners. Someone armed them, and someone fed them. A legion needs a quartermaster."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Legion's Mesa",
+            "zone": "desert",
+            "count": 1
+          },
+          "tell": "The orders come from the mesa in {area}. Climb it, and see who is giving them.",
+          "aftermath": [
+            "On the mesa, the barracks are swept. Beds made, boots in rows. Whoever lives here is keeping a promise."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "orc",
+            "count": 5,
+            "zone": "desert"
+          },
+          "tell": "The mesa's guard is a warband of true orcs in {area}. Break them, and the toll road is yours.",
+          "aftermath": [
+            "A captain dies clutching a locket. Inside: 'Hold until relieved.' Relieved by whom, after a hundred years?"
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Sandbound Temple",
+            "zone": "desert",
+            "count": 1
+          },
+          "tell": "The old orders came from the temple in {area}. Go in, and tell whatever waits there that the war is over.",
+          "aftermath": [
+            "Inside, a mummy's hand rests on a bronze horn. It has waited a century for someone to blow the retreat."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "drowned_road",
+      "scope": "party",
+      "title": "The Drowned Road",
+      "tagline": "The causeway through the Gloamfen Marsh is sinking, and something is sinking it.",
+      "difficulty": 4,
+      "opening": "The only dry road between the jungle and the frost runs through Gloamfen Marsh. It has dropped a foot a week since midsummer. The road crews say the marsh is breathing in.",
+      "ending": "The causeway rises, stone by stone, and holds. The marsh has not forgiven you, but it has agreed to leave the road alone.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "Mirewater Pools",
+            "zone": "wetlands",
+            "count": 1
+          },
+          "tell": "The marsh begins in the Mirewater, in {area}. Go to the pools, and see what the crews saw.",
+          "aftermath": [
+            "The pools are clear as glass, and the water is rising against the slope. Whatever pulls the marsh down feeds it up here."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "hexer",
+            "count": 3,
+            "zone": "wetlands"
+          },
+          "tell": "The hexers in {area} have been dragging stones into the water. Stop them before they finish whatever they are building.",
+          "aftermath": [
+            "A hexer's satchel holds a map of the causeway, every post crossed out in red. This was not mischief. It was a survey."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Drowned Causeway",
+            "zone": "marsh",
+            "count": 1
+          },
+          "tell": "The first sunken stretch is in {area}. Walk it, and mark what the marsh has already taken.",
+          "aftermath": [
+            "The stones are pulled down in a line, as if by a rope. There is a drag mark in the mud, wide as a wagon."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "bogGhoul",
+            "count": 4,
+            "zone": "marsh"
+          },
+          "tell": "Something rises from the water around {area} to guard the drag. Put the bog ghouls down.",
+          "aftermath": [
+            "They wore charms of bone and reed, stitched with the hexers' red thread. They were a workforce, and the marsh the employer."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Troll's Isle",
+            "zone": "marsh",
+            "count": 1
+          },
+          "tell": "The drag leads to the island in {area}. Go there, and meet whatever wants the road under the water.",
+          "aftermath": [
+            "A troll the size of a barn sleeps beside a heap of causeway stones, each one numbered. It has been building something, post by post."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frost_that_stays",
+      "scope": "party",
+      "title": "The Frost That Stays",
+      "tagline": "The deep Frostlands have stopped thawing, and the thaw was the only promise the north ever made.",
+      "difficulty": 5,
+      "opening": "Every spring the Frostlands thaw a little further south. This spring they did not. The herders say the cold has a will now, and a captain.",
+      "ending": "The ice on the ledge cracks, and water runs downhill for the first time in a year. The frost is only patient again. Spring will come late, and herders will name children after you.",
+      "steps": [
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Cross Field",
+            "zone": "frostlands",
+            "count": 1
+          },
+          "tell": "The herders gather at the cross field in {area}. Go there, and hear what they have seen walking the ice.",
+          "aftermath": ["The herders whisper of a figure in a great helm who stands at the lake and does not breathe."]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "frostbound",
+            "count": 5,
+            "zone": "frostlands"
+          },
+          "tell": "The frostbound patrol the road in {area}, as if the road were theirs. Take it back from them.",
+          "aftermath": [
+            "Each has a fresh rime of frost on its ribs, and a blue light in its eye socket. It is spreading from somewhere north."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "Mirrorfrost Lake",
+            "zone": "frostlands",
+            "count": 1
+          },
+          "tell": "The cold seeps from the lake in {area}. Go to its shore and see what the ice reflects.",
+          "aftermath": [
+            "The lake reflects a night of stars in the middle of the afternoon. The cold is looking at you."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "snowman",
+            "count": 3,
+            "zone": "frostlands"
+          },
+          "tell": "The great brutes at the lake's edge in {area} have been fed on something. Strike them down before they find the road.",
+          "aftermath": [
+            "The creatures are heavier than they should be, their fur dense as fleece. Something has been feeding them cold."
+          ]
+        },
+        {
+          "objective": {
+            "t": "kill",
+            "kind": "frostWarden",
+            "count": 3,
+            "zone": "frostlands"
+          },
+          "tell": "The wardens of the frozen ledge march in {area}, in the captain's name. Break the guard.",
+          "aftermath": [
+            "The captain's great helm lies in the snow, empty. The cold has a will, and the will has moved on."
+          ]
+        },
+        {
+          "objective": {
+            "t": "visit",
+            "place": "The Frozen Ledge",
+            "zone": "frostlands",
+            "count": 1
+          },
+          "tell": "The cold's last stand is on the ledge in {area}. Climb it, and end the winter that will not end.",
+          "aftermath": [
+            "The ledge cracks. The sky clears. Somewhere south, a herder looks at a dripping icicle and forgets what she was afraid of."
+          ]
+        }
+      ]
     }
   ],
   "epilogue": [
