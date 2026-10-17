@@ -1,0 +1,2942 @@
+{
+  "version": 1,
+  "id": "marches",
+  "regions": {
+    "ashen_downs": {
+      "biome": {
+        "name": "The Ashen Downs",
+        "tint": "#a89a8c",
+        "map": "marches_ashen_downs",
+        "climate": "undead",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"]
+      },
+      "level": [2, 4],
+      "themes": ["fire", "beast"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "common": {}, "hunter": {}, "ranged": {}, "brute": {} },
+      "roam": [
+        { "role": "common", "count": 3, "seed": 501, "apart": 10, "avoid": [{ "x": 25, "y": 18, "radius": 9 }] },
+        { "role": "hunter", "count": 3, "seed": 502, "apart": 10, "avoid": [{ "x": 25, "y": 18, "radius": 9 }] },
+        { "role": "ranged", "count": 2, "seed": 503, "apart": 10, "avoid": [{ "x": 25, "y": 18, "radius": 9 }] }
+      ],
+      "encounters": [
+        { "role": "hunter", "x": 30, "y": 17 },
+        { "role": "ranged", "x": 24, "y": 22 },
+        { "role": "brute", "x": 36, "y": 28 }
+      ],
+      "sites": {
+        "warmstone": {
+          "name": "Warm Stone",
+          "plural": "warm stones",
+          "shape": "stone",
+          "color": "#d08a5a",
+          "glow": "#ffd9a8",
+          "notes": [
+            ["A warm stone, grey on top and red underneath. It ticks as it cools in your hand."],
+            ["Another warm stone. Something under the downs is breathing out through it."]
+          ]
+        }
+      }
+    },
+    "rimewood": {
+      "biome": {
+        "name": "The Rimewood",
+        "tint": "#b8d8ec",
+        "map": "marches_rimewood",
+        "climate": "frost",
+        "music": null,
+        "tilesets": ["frost_ground.png", "lpc_terrain.png", "trees_frost.png", "frost_objects.png"]
+      },
+      "level": [2, 4],
+      "themes": ["frost", "beast"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "common": {}, "hunter": {}, "ranged": {}, "brute": {} },
+      "roam": [
+        { "role": "common", "count": 3, "seed": 511, "apart": 10, "avoid": [{ "x": 26, "y": 21, "radius": 9 }] },
+        { "role": "hunter", "count": 3, "seed": 512, "apart": 10, "avoid": [{ "x": 26, "y": 21, "radius": 9 }] },
+        { "role": "ranged", "count": 2, "seed": 513, "apart": 10, "avoid": [{ "x": 26, "y": 21, "radius": 9 }] }
+      ],
+      "encounters": [
+        { "role": "hunter", "x": 30, "y": 16 },
+        { "role": "ranged", "x": 20, "y": 24 },
+        { "role": "brute", "x": 40, "y": 12 }
+      ],
+      "sites": {
+        "rimeberry": {
+          "name": "Rimeberry",
+          "plural": "rimeberries",
+          "shape": "mushroom",
+          "color": "#8fb8ff",
+          "glow": "#e8f4ff",
+          "notes": [
+            ["A rimeberry bush, every berry sealed in clear ice. They keep all winter, if the wolves leave them."],
+            ["More rimeberries. The snow round them is trodden flat by something that comes to eat."]
+          ]
+        }
+      }
+    },
+    "reedmere": {
+      "biome": {
+        "name": "The Reedmere",
+        "tint": "#9ab070",
+        "map": "marches_reedmere",
+        "climate": "swamp",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "lpc_swamp.png", "trees_swamp.png", "object-layer.png"]
+      },
+      "level": [2, 4],
+      "themes": ["swamp", "beast"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "common": {}, "hunter": {}, "ranged": {}, "brute": {} },
+      "roam": [
+        { "role": "common", "count": 3, "seed": 521, "apart": 10, "avoid": [{ "x": 27, "y": 16, "radius": 9 }] },
+        { "role": "hunter", "count": 3, "seed": 522, "apart": 10, "avoid": [{ "x": 27, "y": 16, "radius": 9 }] },
+        { "role": "ranged", "count": 2, "seed": 523, "apart": 10, "avoid": [{ "x": 27, "y": 16, "radius": 9 }] }
+      ],
+      "encounters": [
+        { "role": "hunter", "x": 26, "y": 20 },
+        { "role": "ranged", "x": 34, "y": 10 },
+        { "role": "brute", "x": 40, "y": 28 }
+      ],
+      "sites": {
+        "marshlamp": {
+          "name": "Marsh Lamp",
+          "plural": "marsh lamps",
+          "shape": "mushroom",
+          "color": "#c8d86a",
+          "glow": "#f8ffc0",
+          "notes": [
+            ["A marsh lamp: a hollow reed with a cold yellow flame in it. It leans away from the wind."],
+            ["Another marsh lamp, lit by nobody. The reeds round it have been bent flat, as if by a path."]
+          ]
+        }
+      }
+    },
+    "hoarfrost": {
+      "biome": {
+        "name": "The Hoarfrost Cairns",
+        "tint": "#c8e4f4",
+        "map": "marches_hoarfrost",
+        "climate": "frost",
+        "music": null,
+        "tilesets": ["frost_ground.png", "lpc_terrain.png", "trees_frost.png", "frost_objects.png", "graves.png"]
+      },
+      "level": [3, 5],
+      "themes": ["frost", "undead"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "ranged": {}, "brute": {}, "boss": {} },
+      "roam": [
+        { "role": "ranged", "count": 3, "seed": 531, "apart": 8, "avoid": [{ "x": 21, "y": 19, "radius": 8 }] },
+        { "role": "brute", "count": 2, "seed": 532, "apart": 8, "avoid": [{ "x": 21, "y": 19, "radius": 8 }] }
+      ],
+      "encounters": [
+        { "role": "boss", "x": 37, "y": 12 },
+        { "role": "brute", "x": 20, "y": 22 },
+        { "role": "ranged", "x": 30, "y": 10 }
+      ],
+      "sites": {
+        "cairnlight": {
+          "name": "Cairn Light",
+          "plural": "cairn lights",
+          "shape": "stone",
+          "color": "#9ad0ff",
+          "glow": "#ffffff",
+          "notes": [
+            ["A cairn light: a pale flame on a heap of stones, burning with no fuel and giving no heat."],
+            ["Another cairn light. Its flame points at the biggest mound, like a finger."]
+          ]
+        }
+      }
+    },
+    "witchmire": {
+      "biome": {
+        "name": "The Witchmire",
+        "tint": "#7a8a5a",
+        "map": "marches_witchmire",
+        "climate": "swamp",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "lpc_swamp.png", "trees_dead.png"]
+      },
+      "level": [3, 5],
+      "themes": ["swamp", "undead"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "ranged": {}, "brute": {}, "boss": {} },
+      "roam": [
+        { "role": "ranged", "count": 3, "seed": 541, "apart": 8, "avoid": [{ "x": 25, "y": 23, "radius": 8 }] },
+        { "role": "brute", "count": 2, "seed": 542, "apart": 8, "avoid": [{ "x": 25, "y": 23, "radius": 8 }] }
+      ],
+      "encounters": [
+        { "role": "boss", "x": 30, "y": 33 },
+        { "role": "brute", "x": 24, "y": 16 },
+        { "role": "ranged", "x": 36, "y": 22 }
+      ],
+      "sites": {
+        "witchfire": {
+          "name": "Witch Fire",
+          "plural": "witch fires",
+          "shape": "mushroom",
+          "color": "#a0e070",
+          "glow": "#e8ffc8",
+          "notes": [
+            ["A witch fire: green flame on a rotten stump, flickering in no wind. It hisses when you step near."],
+            ["Another witch fire. The water round it is perfectly still, and shows a different sky."]
+          ]
+        }
+      }
+    },
+    "slagfields": {
+      "biome": {
+        "name": "The Slagfields",
+        "tint": "#c0603c",
+        "map": "marches_slagfields",
+        "climate": "undead",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png"]
+      },
+      "level": [4, 6],
+      "themes": ["fire"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "ranged": {}, "brute": {}, "boss": {} },
+      "roam": [
+        { "role": "ranged", "count": 3, "seed": 551, "apart": 8, "avoid": [{ "x": 27, "y": 15, "radius": 8 }] },
+        { "role": "brute", "count": 3, "seed": 552, "apart": 8, "avoid": [{ "x": 27, "y": 15, "radius": 8 }] }
+      ],
+      "encounters": [
+        { "role": "boss", "x": 20, "y": 26 },
+        { "role": "brute", "x": 36, "y": 22 },
+        { "role": "ranged", "x": 30, "y": 14 }
+      ],
+      "sites": {
+        "slagglass": {
+          "name": "Slag Glass",
+          "plural": "slag glass shards",
+          "shape": "stone",
+          "color": "#ff8a4a",
+          "glow": "#ffe0b0",
+          "notes": [
+            ["A shard of slag glass, black outside and glowing orange when you hold it to the light."],
+            ["More slag glass, still warm. The smiths who made it must have left in a hurry."]
+          ]
+        }
+      }
+    },
+    "ironcrown": {
+      "biome": {
+        "name": "The Ironcrown",
+        "tint": "#8c8a9c",
+        "map": "marches_ironcrown",
+        "climate": "undead",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_dead.png", "ruins.png", "graves.png"]
+      },
+      "level": [4, 6],
+      "themes": ["undead"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "ranged": {}, "brute": {}, "boss": {} },
+      "roam": [
+        { "role": "ranged", "count": 3, "seed": 561, "apart": 8, "avoid": [{ "x": 25, "y": 20, "radius": 8 }] },
+        { "role": "brute", "count": 3, "seed": 562, "apart": 8, "avoid": [{ "x": 25, "y": 20, "radius": 8 }] }
+      ],
+      "encounters": [
+        { "role": "boss", "x": 38, "y": 24 },
+        { "role": "brute", "x": 16, "y": 20 },
+        { "role": "ranged", "x": 22, "y": 10 }
+      ],
+      "sites": {
+        "crownshard": {
+          "name": "Crown Shard",
+          "plural": "crown shards",
+          "shape": "stone",
+          "color": "#c8c8e8",
+          "glow": "#ffffff",
+          "notes": [
+            ["A shard of an iron crown, black with age. It is far heavier than it should be."],
+            ["Another crown shard. Held next to the first, the two pull at each other."]
+          ]
+        }
+      }
+    }
+  },
+  "pairings": {
+    "ashen_cinder": {
+      "regions": ["cinder_coast", "ashen_downs"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the red track that climbs inland from The Cinder Coast onto the grey scrub of The Ashen Downs",
+        "sign": {
+          "cinder_coast": "Hounds from The Ashen Downs follow the traders down to the shore and sleep on the warm sand.",
+          "ashen_downs": "The wind from The Cinder Coast smells of smoke and salt, and the hounds lift their heads to it."
+        }
+      }
+    },
+    "ashen_thorn": {
+      "regions": ["ashen_downs", "thornwood"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the drovers' way from the green edge of The Thornwood up onto the ash of The Ashen Downs",
+        "sign": {
+          "ashen_downs": "Beasts from The Thornwood come up to the downs at night, and come back singed.",
+          "thornwood": "Ash blows down off The Ashen Downs and greys the thorn leaves by morning."
+        }
+      }
+    },
+    "ashen_caldera": {
+      "regions": ["ashen_downs", "ember_caldera"],
+      "tags": ["fire", "ascent"],
+      "lore": {
+        "way": "the scorched ramp that climbs from The Ashen Downs to the rim of The Ember Caldera",
+        "sign": {
+          "ashen_downs": "The ground of The Ashen Downs grows warmer every step toward The Ember Caldera, and the hounds will not follow.",
+          "ember_caldera": "Hot ash pours off The Ember Caldera and has buried the old road to The Ashen Downs a hand deep."
+        }
+      }
+    },
+    "ashen_slag": {
+      "regions": ["ashen_downs", "slagfields"],
+      "tags": ["fire"],
+      "lore": {
+        "way": "the black-glass road from the vents of The Ashen Downs to the smelters of The Slagfields",
+        "sign": {
+          "ashen_downs": "The vents of The Ashen Downs glow brighter each night, and the glow points toward The Slagfields.",
+          "slagfields": "Smoke from the smelters of The Slagfields rolls down over The Ashen Downs and stays."
+        }
+      }
+    },
+    "ashen_rime": {
+      "regions": ["ashen_downs", "rimewood"],
+      "tags": ["thaw"],
+      "lore": {
+        "way": "the steaming gully where the ash of The Ashen Downs runs into the snow of The Rimewood",
+        "sign": {
+          "ashen_downs": "Meltwater runs out of The Rimewood across the downs, and the ash drinks it and turns to paste.",
+          "rimewood": "The pines at the edge of The Rimewood are dripping, and wolves come to the warm side to sleep."
+        }
+      }
+    },
+    "ashen_reed": {
+      "regions": ["ashen_downs", "reedmere"],
+      "tags": ["fire"],
+      "lore": {
+        "way": "the cracked mud flats between The Ashen Downs and the dying reeds of The Reedmere",
+        "sign": {
+          "ashen_downs": "The pools at the edge of The Reedmere are drying up, and things come up out of them toward the downs.",
+          "reedmere": "Fumes from The Ashen Downs have yellowed the reeds, and the frogs have gone quiet."
+        }
+      }
+    },
+    "ashen_frostfen": {
+      "regions": ["ashen_downs", "frostfen"],
+      "tags": ["thaw"],
+      "lore": {
+        "way": "the long causeway where the hot red earth of The Ashen Downs gives way to the ice of The Frostfen",
+        "sign": {
+          "ashen_downs": "The meres of The Frostfen are thawing from the south, and the ash is running into them.",
+          "frostfen": "Mist rises where The Ashen Downs meets the ice, and the hounds there have thick winter coats in summer."
+        }
+      }
+    },
+    "rime_frostfen": {
+      "regions": ["rimewood", "frostfen"],
+      "tags": ["cold"],
+      "lore": {
+        "way": "the iced trail from the pines of The Rimewood out onto the meres of The Frostfen",
+        "sign": {
+          "rimewood": "Frost from The Frostfen lies on the pine roots here, and it is the wrong kind of cold.",
+          "frostfen": "The wolves of The Rimewood cross the ice at dusk and the yetis watch them go."
+        }
+      }
+    },
+    "rime_thorn": {
+      "regions": ["rimewood", "thornwood"],
+      "tags": ["frost-creep"],
+      "lore": {
+        "way": "the snowed-under logging road from The Thornwood up into the white pines of The Rimewood",
+        "sign": {
+          "rimewood": "Snow is lying in the north of The Thornwood in high summer, and it is creeping south a few paces a week.",
+          "thornwood": "Thorns have started to grow up through the snow at the edge of The Rimewood, which they should not."
+        }
+      }
+    },
+    "rime_mire": {
+      "regions": ["mirewood", "rimewood"],
+      "tags": ["frost-creep"],
+      "lore": {
+        "way": "the frozen bank where the bog of The Mirewood runs up into the pines of The Rimewood",
+        "sign": {
+          "mirewood": "The pools of The Mirewood are skinned with ice before noon, and the cold comes from The Rimewood.",
+          "rimewood": "Fog from The Mirewood freezes on the pine needles, and each tree wears a white cloak."
+        }
+      }
+    },
+    "rime_cinder": {
+      "regions": ["cinder_coast", "rimewood"],
+      "tags": ["thaw"],
+      "lore": {
+        "way": "the long white road inland from the warm shore of The Cinder Coast to The Rimewood",
+        "sign": {
+          "cinder_coast": "Snow from The Rimewood melts on the hot sand of The Cinder Coast, and the hissing carries for miles.",
+          "rimewood": "The edge of The Rimewood is a muddy slush, and every drip is warm."
+        }
+      }
+    },
+    "rime_hoar": {
+      "regions": ["rimewood", "hoarfrost"],
+      "tags": ["cold"],
+      "lore": {
+        "way": "the wolf run that climbs out of the pines of The Rimewood to the burial mounds of The Hoarfrost Cairns",
+        "sign": {
+          "rimewood": "The wolves of The Rimewood will not go near The Hoarfrost Cairns, even when they are starving.",
+          "hoarfrost": "The pines of The Rimewood grow right up to the cairns, and their roots go into the graves."
+        }
+      }
+    },
+    "rime_mist": {
+      "regions": ["rimewood", "mistmoor"],
+      "tags": ["frost-creep"],
+      "lore": {
+        "way": "the iced boardwalk from The Mistmoor through the first pines of The Rimewood",
+        "sign": {
+          "rimewood": "The black pools of The Mistmoor are freezing at their rims, and things are trapped in the ice.",
+          "mistmoor": "Mist from The Mistmoor rolls up through the pines of The Rimewood and freezes on every branch."
+        }
+      }
+    },
+    "reed_mire": {
+      "regions": ["mirewood", "reedmere"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the plank walk that crosses the water from The Mirewood into the tall reeds of The Reedmere",
+        "sign": {
+          "mirewood": "Reed cutters come in from The Reedmere with news of lights that move against the wind.",
+          "reedmere": "The ground goes soft under the reeds of The Reedmere: that is The Mirewood beginning."
+        }
+      }
+    },
+    "reed_mist": {
+      "regions": ["reedmere", "mistmoor"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the black causeway that runs from the fen of The Reedmere to the drowned chapel of The Mistmoor",
+        "sign": {
+          "reedmere": "Something has been walking up from The Mistmoor through the reeds, and the reeds are bent in rows.",
+          "mistmoor": "The water of The Mistmoor is rising, and every bubble that comes up from The Reedmere smells of graves."
+        }
+      }
+    },
+    "reed_witch": {
+      "regions": ["reedmere", "witchmire"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the rotten corduroy road that winds from the open fen of The Reedmere into the black trees of The Witchmire",
+        "sign": {
+          "reedmere": "Marsh lamps lead travellers from The Reedmere off the road, toward The Witchmire, and not all come back.",
+          "witchmire": "The reeds of The Reedmere have started to glow green at the edge of The Witchmire."
+        }
+      }
+    },
+    "reed_thorn": {
+      "regions": ["reedmere", "thornwood"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the drovers' causeway from the dry green of The Thornwood down into the fen of The Reedmere",
+        "sign": {
+          "reedmere": "Every cattle drive out of The Thornwood loses a beast to The Reedmere, and no one can say how.",
+          "thornwood": "Beyond the reeds of The Reedmere, hunters say, the ground rises into the thorns of The Thornwood."
+        }
+      }
+    },
+    "reed_cinder": {
+      "regions": ["cinder_coast", "reedmere"],
+      "tags": ["fire"],
+      "lore": {
+        "way": "the ash-grey salt flats between The Cinder Coast and the steaming fen of The Reedmere",
+        "sign": {
+          "cinder_coast": "The fen of The Reedmere steams in the morning as if the water were being boiled from below.",
+          "reedmere": "The coast wind carries ash into The Reedmere, and the reeds are wearing grey."
+        }
+      }
+    },
+    "reed_barrow": {
+      "regions": ["reedmere", "barrow"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the sunken path that climbs from the black water of The Reedmere to the mound field of The Barrow",
+        "sign": {
+          "reedmere": "The dead of The Barrow have been walking down into the fen, and the fen has been walking them back.",
+          "barrow": "Fen water has soaked into the mounds of The Barrow from The Reedmere, and the old stones lean."
+        }
+      }
+    },
+    "hoar_barrow": {
+      "regions": ["hoarfrost", "barrow"],
+      "tags": ["restless-dead", "cold"],
+      "lore": {
+        "way": "the frozen cairn road that runs from The Hoarfrost Cairns to the standing stones of The Barrow",
+        "sign": {
+          "hoarfrost": "The cairns of The Hoarfrost Cairns and the mounds of The Barrow were raised by the same hands, and are waking together.",
+          "barrow": "Rime has spread from The Hoarfrost Cairns over the oldest stones of The Barrow, and the names on them are gone."
+        }
+      }
+    },
+    "hoar_frostfen": {
+      "regions": ["hoarfrost", "frostfen"],
+      "tags": ["cold"],
+      "lore": {
+        "way": "the rimed causeway between the frozen meres of The Frostfen and the cairns of The Hoarfrost Cairns",
+        "sign": {
+          "hoarfrost": "Bones surface in the meres of The Frostfen after every thaw, and they are all from The Hoarfrost Cairns.",
+          "frostfen": "The ice at the foot of the cairns of The Hoarfrost Cairns is thick as stone and black as slate."
+        }
+      }
+    },
+    "hoar_witch": {
+      "regions": ["hoarfrost", "witchmire"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the half-frozen track that drops from the cairns of The Hoarfrost Cairns into the black pools of The Witchmire",
+        "sign": {
+          "hoarfrost": "Witch fires have been seen on the cairns of The Hoarfrost Cairns, burning green on the ice.",
+          "witchmire": "The pools of The Witchmire freeze at the rim by the cairns, and what is under the ice is not fish."
+        }
+      }
+    },
+    "hoar_iron": {
+      "regions": ["hoarfrost", "ironcrown"],
+      "tags": ["restless-dead", "cold"],
+      "lore": {
+        "way": "the king's road, paved in black stone, from the cairns of The Hoarfrost Cairns to the ruined halls of The Ironcrown",
+        "sign": {
+          "hoarfrost": "The old kings of The Ironcrown are said to have been buried here, in the cold, so that they would keep.",
+          "ironcrown": "The mounds at the edge of The Ironcrown are rimed, and the guards of the dead king are cold to the touch."
+        }
+      }
+    },
+    "hoar_slag": {
+      "regions": ["hoarfrost", "slagfields"],
+      "tags": ["thaw"],
+      "lore": {
+        "way": "the steaming stair where the rime of The Hoarfrost Cairns meets the black glass of The Slagfields",
+        "sign": {
+          "hoarfrost": "The cairns of The Hoarfrost Cairns are dripping on the side that faces The Slagfields, and the dead do not like it.",
+          "slagfields": "Hoarfrost crusts the slag at the edge of The Slagfields, and the smelters hiss and spit."
+        }
+      }
+    },
+    "hoar_caldera": {
+      "regions": ["hoarfrost", "ember_caldera"],
+      "tags": ["thaw"],
+      "lore": {
+        "way": "the cracked ridge between the ice of The Hoarfrost Cairns and the rim of The Ember Caldera",
+        "sign": {
+          "hoarfrost": "Steam climbs from the ridge between The Hoarfrost Cairns and The Ember Caldera, and the snow there is grey.",
+          "ember_caldera": "The cairns of The Hoarfrost Cairns look down on The Ember Caldera, and the lava glows on their ice."
+        }
+      }
+    },
+    "witch_mist": {
+      "regions": ["witchmire", "mistmoor"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the flooded lane that leads from the standing stones of The Witchmire to the drowned chapel of The Mistmoor",
+        "sign": {
+          "witchmire": "The mist of The Mistmoor thickens near the ring of stones, and the stones are humming.",
+          "mistmoor": "The bells of the drowned chapel in The Mistmoor ring at night, and are answered from The Witchmire."
+        }
+      }
+    },
+    "witch_barrow": {
+      "regions": ["witchmire", "barrow"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the tangled track that climbs from the black pools of The Witchmire to the mounds of The Barrow",
+        "sign": {
+          "witchmire": "What the ring in The Witchmire calls up, it sends up the track to The Barrow.",
+          "barrow": "Black water seeps out of the mounds of The Barrow toward The Witchmire, and the dead follow it down."
+        }
+      }
+    },
+    "witch_iron": {
+      "regions": ["witchmire", "ironcrown"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the sunken causeway from the stones of The Witchmire to the broken gates of The Ironcrown",
+        "sign": {
+          "witchmire": "The witches of The Witchmire swore a bargain with the iron king once, and the stones remember it.",
+          "ironcrown": "Green fire burns in the windows of the ruins of The Ironcrown, and it is the same green as The Witchmire's."
+        }
+      }
+    },
+    "witch_caldera": {
+      "regions": ["witchmire", "ember_caldera"],
+      "tags": ["fire"],
+      "lore": {
+        "way": "the singed trail from the dead trees of The Witchmire up to the black rim of The Ember Caldera",
+        "sign": {
+          "witchmire": "The pools of The Witchmire are shrinking, and the mud at their edges is baked hard as brick.",
+          "ember_caldera": "The wind off The Witchmire is wet and cold, and it hisses where it meets the heat of The Ember Caldera."
+        }
+      }
+    },
+    "slag_caldera": {
+      "regions": ["slagfields", "ember_caldera"],
+      "tags": ["fire", "ascent"],
+      "lore": {
+        "way": "the smelters' ramp from The Slagfields up to the molten heart of The Ember Caldera",
+        "sign": {
+          "slagfields": "All the lava of The Slagfields flows down from The Ember Caldera, and tonight it flows faster.",
+          "ember_caldera": "The Warden's smiths of The Slagfields drew their fire from the lake of The Ember Caldera, and the lake remembers."
+        }
+      }
+    },
+    "slag_iron": {
+      "regions": ["slagfields", "ironcrown"],
+      "tags": ["fire", "restless-dead"],
+      "lore": {
+        "way": "the black glass road from the furnaces of The Slagfields to the broken gates of The Ironcrown",
+        "sign": {
+          "slagfields": "The smiths of The Slagfields forged the iron crown for the king of The Ironcrown, and are said to have been buried with it.",
+          "ironcrown": "The ruins of The Ironcrown glow orange at their foundations, as if something were still being forged under them."
+        }
+      }
+    },
+    "slag_barrow": {
+      "regions": ["slagfields", "barrow"],
+      "tags": ["fire", "restless-dead"],
+      "lore": {
+        "way": "the glass-paved road from The Slagfields to the standing stones of The Barrow",
+        "sign": {
+          "slagfields": "Slag has run into the foot of the mounds of The Barrow, and the dead there walk about in half-melted armour.",
+          "barrow": "The standing stones of The Barrow glow cherry red on the side that faces The Slagfields."
+        }
+      }
+    },
+    "iron_barrow": {
+      "regions": ["ironcrown", "barrow"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the old processional way from the ruined halls of The Ironcrown to the mounds of The Barrow",
+        "sign": {
+          "ironcrown": "The dead lord of The Barrow was the king's champion, and he is walking toward The Ironcrown to guard it again.",
+          "barrow": "The mounds of The Barrow have been opened from the inside, and the road to The Ironcrown is trodden bare."
+        }
+      }
+    },
+    "iron_mist": {
+      "regions": ["ironcrown", "mistmoor"],
+      "tags": ["restless-dead"],
+      "lore": {
+        "way": "the flooded king's road from The Mistmoor up to the ruined gate of The Ironcrown",
+        "sign": {
+          "ironcrown": "The drowned chapel of The Mistmoor was the king's own, and its bell rings toward The Ironcrown.",
+          "mistmoor": "Black water has crept up the king's road to the gate of The Ironcrown, and the guards stand in it."
+        }
+      }
+    },
+    "cove_slag": {
+      "regions": ["slagfields", "ember_cove"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a narrow slag gully off The Slagfields" }
+    },
+    "grotto_rime": {
+      "regions": ["rimewood", "frost_grotto"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a snow-choked cleft off The Rimewood" }
+    },
+    "grotto_hoar": {
+      "regions": ["hoarfrost", "frost_grotto"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a rimed burial passage off The Hoarfrost Cairns" }
+    },
+    "hollow_reed": {
+      "regions": ["reedmere", "bog_hollow"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a boggy side channel off The Reedmere" }
+    },
+    "hollow_witch": {
+      "regions": ["witchmire", "bog_hollow"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a half-drowned lane off The Witchmire" }
+    },
+    "shrine_iron": {
+      "regions": ["ironcrown", "old_shrine"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a crumbling stair off The Ironcrown" }
+    },
+    "shrine_witch": {
+      "regions": ["witchmire", "old_shrine"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a moss-hung path off The Witchmire" }
+    },
+    "cove_ashen": {
+      "regions": ["ashen_downs", "ember_cove"],
+      "tags": ["dead-end"],
+      "lore": { "way": "a steaming ravine off The Ashen Downs" }
+    }
+  },
+  "arcs": {
+    "pilgrims_bell": {
+      "title": "The Pilgrims' Bell",
+      "welcome": [
+        "Welcome, travellers.",
+        "A bell has been tolling in the night over {r1}, thinner every week. {keeper} is waiting to tell you what it means."
+      ],
+      "regions": 7,
+      "slots": [{}, {}, {}, {}, {}, {}, { "themes": ["undead"], "foes": { "boss": { "tags": ["undead"] } } }],
+      "chapters": [
+        {
+          "title": "The Thin Bell",
+          "intro": [
+            "You heard it too? The bell. Half a year ago a band of pilgrims left this camp carrying it, to ring the restless dead to sleep along the old road.",
+            "I am {keeper}. They have not come back, and the bell grows fainter. Help me hold {r1}, and then we will follow it."
+          ],
+          "variants": [
+            {
+              "when": { "keeper": "ysolde" },
+              "intro": [
+                "You heard the bell, then. Good: most people have learned not to listen.",
+                "I am {keeper}. Half a year ago pilgrims took it out along the old road to ring the dead to sleep, and it has been getting fainter ever since. Help me hold {r1}, and then we go after it."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The First Mile",
+          "narration": ["The road leads out of camp into {r2}. The bell is a little louder here."],
+          "intro": ["The pilgrims left by {r1~r2.way}.", "{r1~r2.sign}", "Look for where they rested."],
+          "variants": [
+            {
+              "when": { "r1~r2": "restless-dead" },
+              "intro": [
+                "The pilgrims left by {r1~r2.way}.",
+                "The dead stand thick along this stretch. The bell woke them as it passed, and nobody rang them down again.",
+                "{r1~r2.sign}",
+                "Look for where they rested."
+              ]
+            },
+            {
+              "when": { "r1~r2": "thaw" },
+              "intro": [
+                "The pilgrims left by {r1~r2.way}.",
+                "Here the road runs between slush and steam, and the pilgrims' footprints have melted into puddles.",
+                "{r1~r2.sign}",
+                "Look for where they rested."
+              ]
+            },
+            {
+              "when": { "r1~r2": "frost-creep" },
+              "intro": [
+                "The pilgrims left by {r1~r2.way}.",
+                "Frost has crept over the road, and the pilgrims' bootprints are fixed in it, pointing onward.",
+                "{r1~r2.sign}",
+                "Look for where they rested."
+              ]
+            },
+            {
+              "when": { "r1~r2": "fire" },
+              "intro": [
+                "The pilgrims left by {r1~r2.way}.",
+                "The road is scorched, and the bell was heard through the smoke here, tolling out of step.",
+                "{r1~r2.sign}",
+                "Look for where they rested."
+              ]
+            },
+            {
+              "when": { "r1~r2": "cold" },
+              "intro": [
+                "The pilgrims left by {r1~r2.way}.",
+                "The cold has teeth here. Candle stubs lie in the snow, each burnt to the wick.",
+                "{r1~r2.sign}",
+                "Look for where they rested."
+              ]
+            },
+            {
+              "when": { "r1~r2": "road" },
+              "intro": [
+                "The pilgrims left by {r1~r2.way}.",
+                "This stretch is an honest road, with ruts and a milestone, which is somehow more uneasy than the rest.",
+                "{r1~r2.sign}",
+                "Look for where they rested."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Footprints in {r3}",
+          "narration": ["The trail goes on. Fresh prints, in old dust."],
+          "intro": [
+            "The road crosses into {r3} by {r2~r3.way}.",
+            "{r2~r3.sign}",
+            "Something here is watching the road."
+          ],
+          "variants": [
+            {
+              "when": { "r2~r3": "restless-dead" },
+              "intro": [
+                "The road crosses into {r3} by {r2~r3.way}.",
+                "The dead stand thick along this stretch. The bell woke them as it passed, and nobody rang them down again.",
+                "{r2~r3.sign}",
+                "Something here is watching the road."
+              ]
+            },
+            {
+              "when": { "r2~r3": "thaw" },
+              "intro": [
+                "The road crosses into {r3} by {r2~r3.way}.",
+                "Here the road runs between slush and steam, and the pilgrims' footprints have melted into puddles.",
+                "{r2~r3.sign}",
+                "Something here is watching the road."
+              ]
+            },
+            {
+              "when": { "r2~r3": "frost-creep" },
+              "intro": [
+                "The road crosses into {r3} by {r2~r3.way}.",
+                "Frost has crept over the road, and the pilgrims' bootprints are fixed in it, pointing onward.",
+                "{r2~r3.sign}",
+                "Something here is watching the road."
+              ]
+            },
+            {
+              "when": { "r2~r3": "fire" },
+              "intro": [
+                "The road crosses into {r3} by {r2~r3.way}.",
+                "The road is scorched, and the bell was heard through the smoke here, tolling out of step.",
+                "{r2~r3.sign}",
+                "Something here is watching the road."
+              ]
+            },
+            {
+              "when": { "r2~r3": "cold" },
+              "intro": [
+                "The road crosses into {r3} by {r2~r3.way}.",
+                "The cold has teeth here. Candle stubs lie in the snow, each burnt to the wick.",
+                "{r2~r3.sign}",
+                "Something here is watching the road."
+              ]
+            },
+            {
+              "when": { "r2~r3": "road" },
+              "intro": [
+                "The road crosses into {r3} by {r2~r3.way}.",
+                "This stretch is an honest road, with ruts and a milestone, which is somehow more uneasy than the rest.",
+                "{r2~r3.sign}",
+                "Something here is watching the road."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "A Dropped Candle",
+          "narration": ["A candle stub on the ground, still warm."],
+          "intro": [
+            "On, into {r4}, by {r3~r4.way}.",
+            "{r3~r4.sign}",
+            "The pilgrims marked every turning. Follow the marks."
+          ],
+          "variants": [
+            {
+              "when": { "r3~r4": "restless-dead" },
+              "intro": [
+                "On, into {r4}, by {r3~r4.way}.",
+                "The dead stand thick along this stretch. The bell woke them as it passed, and nobody rang them down again.",
+                "{r3~r4.sign}",
+                "The pilgrims marked every turning. Follow the marks."
+              ]
+            },
+            {
+              "when": { "r3~r4": "thaw" },
+              "intro": [
+                "On, into {r4}, by {r3~r4.way}.",
+                "Here the road runs between slush and steam, and the pilgrims' footprints have melted into puddles.",
+                "{r3~r4.sign}",
+                "The pilgrims marked every turning. Follow the marks."
+              ]
+            },
+            {
+              "when": { "r3~r4": "frost-creep" },
+              "intro": [
+                "On, into {r4}, by {r3~r4.way}.",
+                "Frost has crept over the road, and the pilgrims' bootprints are fixed in it, pointing onward.",
+                "{r3~r4.sign}",
+                "The pilgrims marked every turning. Follow the marks."
+              ]
+            },
+            {
+              "when": { "r3~r4": "fire" },
+              "intro": [
+                "On, into {r4}, by {r3~r4.way}.",
+                "The road is scorched, and the bell was heard through the smoke here, tolling out of step.",
+                "{r3~r4.sign}",
+                "The pilgrims marked every turning. Follow the marks."
+              ]
+            },
+            {
+              "when": { "r3~r4": "cold" },
+              "intro": [
+                "On, into {r4}, by {r3~r4.way}.",
+                "The cold has teeth here. Candle stubs lie in the snow, each burnt to the wick.",
+                "{r3~r4.sign}",
+                "The pilgrims marked every turning. Follow the marks."
+              ]
+            },
+            {
+              "when": { "r3~r4": "road" },
+              "intro": [
+                "On, into {r4}, by {r3~r4.way}.",
+                "This stretch is an honest road, with ruts and a milestone, which is somehow more uneasy than the rest.",
+                "{r3~r4.sign}",
+                "The pilgrims marked every turning. Follow the marks."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Torn Banners",
+          "narration": ["Torn banners on the brambles. They fought here."],
+          "intro": [
+            "The banners begin where {r4~r5.way} leads into {r5}.",
+            "{r4~r5.sign}",
+            "They did not give up easily. Find out what stopped them."
+          ],
+          "variants": [
+            {
+              "when": { "r4~r5": "restless-dead" },
+              "intro": [
+                "The banners begin where {r4~r5.way} leads into {r5}.",
+                "The dead stand thick along this stretch. The bell woke them as it passed, and nobody rang them down again.",
+                "{r4~r5.sign}",
+                "They did not give up easily. Find out what stopped them."
+              ]
+            },
+            {
+              "when": { "r4~r5": "thaw" },
+              "intro": [
+                "The banners begin where {r4~r5.way} leads into {r5}.",
+                "Here the road runs between slush and steam, and the pilgrims' footprints have melted into puddles.",
+                "{r4~r5.sign}",
+                "They did not give up easily. Find out what stopped them."
+              ]
+            },
+            {
+              "when": { "r4~r5": "frost-creep" },
+              "intro": [
+                "The banners begin where {r4~r5.way} leads into {r5}.",
+                "Frost has crept over the road, and the pilgrims' bootprints are fixed in it, pointing onward.",
+                "{r4~r5.sign}",
+                "They did not give up easily. Find out what stopped them."
+              ]
+            },
+            {
+              "when": { "r4~r5": "fire" },
+              "intro": [
+                "The banners begin where {r4~r5.way} leads into {r5}.",
+                "The road is scorched, and the bell was heard through the smoke here, tolling out of step.",
+                "{r4~r5.sign}",
+                "They did not give up easily. Find out what stopped them."
+              ]
+            },
+            {
+              "when": { "r4~r5": "cold" },
+              "intro": [
+                "The banners begin where {r4~r5.way} leads into {r5}.",
+                "The cold has teeth here. Candle stubs lie in the snow, each burnt to the wick.",
+                "{r4~r5.sign}",
+                "They did not give up easily. Find out what stopped them."
+              ]
+            },
+            {
+              "when": { "r4~r5": "road" },
+              "intro": [
+                "The banners begin where {r4~r5.way} leads into {r5}.",
+                "This stretch is an honest road, with ruts and a milestone, which is somehow more uneasy than the rest.",
+                "{r4~r5.sign}",
+                "They did not give up easily. Find out what stopped them."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Last Stretch",
+          "narration": ["The bell is almost clear now. Almost."],
+          "intro": [
+            "By {r5~r6.way} you come to {r6}, where the road is only a memory.",
+            "{r5~r6.sign}",
+            "The hymn the pilgrims sang is still in the stones. Listen to it."
+          ],
+          "variants": [
+            {
+              "when": { "r5~r6": "restless-dead" },
+              "intro": [
+                "By {r5~r6.way} you come to {r6}, where the road is only a memory.",
+                "The dead stand thick along this stretch. The bell woke them as it passed, and nobody rang them down again.",
+                "{r5~r6.sign}",
+                "The hymn the pilgrims sang is still in the stones. Listen to it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "thaw" },
+              "intro": [
+                "By {r5~r6.way} you come to {r6}, where the road is only a memory.",
+                "Here the road runs between slush and steam, and the pilgrims' footprints have melted into puddles.",
+                "{r5~r6.sign}",
+                "The hymn the pilgrims sang is still in the stones. Listen to it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "frost-creep" },
+              "intro": [
+                "By {r5~r6.way} you come to {r6}, where the road is only a memory.",
+                "Frost has crept over the road, and the pilgrims' bootprints are fixed in it, pointing onward.",
+                "{r5~r6.sign}",
+                "The hymn the pilgrims sang is still in the stones. Listen to it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "fire" },
+              "intro": [
+                "By {r5~r6.way} you come to {r6}, where the road is only a memory.",
+                "The road is scorched, and the bell was heard through the smoke here, tolling out of step.",
+                "{r5~r6.sign}",
+                "The hymn the pilgrims sang is still in the stones. Listen to it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "cold" },
+              "intro": [
+                "By {r5~r6.way} you come to {r6}, where the road is only a memory.",
+                "The cold has teeth here. Candle stubs lie in the snow, each burnt to the wick.",
+                "{r5~r6.sign}",
+                "The hymn the pilgrims sang is still in the stones. Listen to it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "road" },
+              "intro": [
+                "By {r5~r6.way} you come to {r6}, where the road is only a memory.",
+                "This stretch is an honest road, with ruts and a milestone, which is somehow more uneasy than the rest.",
+                "{r5~r6.sign}",
+                "The hymn the pilgrims sang is still in the stones. Listen to it."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Where the Bell Fell",
+          "narration": ["Ahead, a silence so deep it hurts."],
+          "intro": [
+            "Take {r6~r7.way}: it is the last of the road.",
+            "{r6~r7.sign}",
+            "The pilgrims' bell is in {r7}. So is whatever took it."
+          ],
+          "variants": [
+            {
+              "when": { "r6~r7": "restless-dead" },
+              "intro": [
+                "Take {r6~r7.way}: it is the last of the road.",
+                "The dead stand thick along this stretch. The bell woke them as it passed, and nobody rang them down again.",
+                "{r6~r7.sign}",
+                "The pilgrims' bell is in {r7}. So is whatever took it."
+              ]
+            },
+            {
+              "when": { "r6~r7": "thaw" },
+              "intro": [
+                "Take {r6~r7.way}: it is the last of the road.",
+                "Here the road runs between slush and steam, and the pilgrims' footprints have melted into puddles.",
+                "{r6~r7.sign}",
+                "The pilgrims' bell is in {r7}. So is whatever took it."
+              ]
+            },
+            {
+              "when": { "r6~r7": "frost-creep" },
+              "intro": [
+                "Take {r6~r7.way}: it is the last of the road.",
+                "Frost has crept over the road, and the pilgrims' bootprints are fixed in it, pointing onward.",
+                "{r6~r7.sign}",
+                "The pilgrims' bell is in {r7}. So is whatever took it."
+              ]
+            },
+            {
+              "when": { "r6~r7": "fire" },
+              "intro": [
+                "Take {r6~r7.way}: it is the last of the road.",
+                "The road is scorched, and the bell was heard through the smoke here, tolling out of step.",
+                "{r6~r7.sign}",
+                "The pilgrims' bell is in {r7}. So is whatever took it."
+              ]
+            },
+            {
+              "when": { "r6~r7": "cold" },
+              "intro": [
+                "Take {r6~r7.way}: it is the last of the road.",
+                "The cold has teeth here. Candle stubs lie in the snow, each burnt to the wick.",
+                "{r6~r7.sign}",
+                "The pilgrims' bell is in {r7}. So is whatever took it."
+              ]
+            },
+            {
+              "when": { "r6~r7": "road" },
+              "intro": [
+                "Take {r6~r7.way}: it is the last of the road.",
+                "This stretch is an honest road, with ruts and a milestone, which is somehow more uneasy than the rest.",
+                "{r6~r7.sign}",
+                "The pilgrims' bell is in {r7}. So is whatever took it."
+              ]
+            }
+          ]
+        }
+      ],
+      "quests": [
+        {
+          "id": "pb_camp",
+          "chapter": 0,
+          "learned": "The {r1.common.lower} come close because the bell no longer keeps them away.",
+          "fieldNote": ["The last one slinks off, ears flat, as if it had heard something far away."],
+          "title": "Keep the Camp",
+          "goal": "Drive off 5 {r1.common.lower}",
+          "hint": "{r1.common.plural} are all over {r1}.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.common.lower}",
+          "objective": { "t": "kill", "kind": "@r1.common", "count": 5 },
+          "reward": { "gold": 28, "xp": 14 },
+          "offer": ["With the bell fading, the {r1.common.lower} come right up to the fires. Drive off five of them."],
+          "remind": ["Five {r1.common.lower}, in {r1}."],
+          "done": ["Quieter. But the quiet has a hole in it, where the bell used to be."]
+        },
+        {
+          "id": "pb_beacons",
+          "chapter": 0,
+          "learned": "The pilgrims set {r1.site.plural} along the road as beacons, and they are guttering one by one.",
+          "fieldNote": [
+            "Three of them, burning low, and every flame leans the same way: out along the pilgrims' road."
+          ],
+          "title": "Count the Beacons",
+          "goal": "Touch 3 {r1.site.lower}",
+          "hint": "{r1.site.plural} lie about {r1}: look beside the trails and the water.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.site.lower}",
+          "objective": { "t": "gather", "site": "@r1.site", "zone": "@r1", "count": 3 },
+          "reward": { "gold": 13, "xp": 7, "items": ["potion"] },
+          "offer": ["The pilgrims left {r1.site.plural} to mark their way. Touch three and see how they burn."],
+          "remind": ["Three {r1.site.lower}, in {r1}."],
+          "done": [
+            "Low, all of them, and leaning outward. The road they took is the only road there is.",
+            "Take this draught; the first mile is the worst."
+          ]
+        },
+        {
+          "id": "pb_rest",
+          "chapter": 1,
+          "learned": "The pilgrims rested in {r2} and left {r2.site.plural} to mark the spot.",
+          "fieldNote": [
+            "Three of them, set in a ring with the ashes of a fire in the middle. They stopped here, and left in a hurry."
+          ],
+          "title": "Where They Rested",
+          "goal": "Touch 3 {r2.site.lower}",
+          "hint": "{r2.site.plural} lie about {r2}: look beside the trails and the water.",
+          "where": { "zones": ["@r2"] },
+          "unit": "{r2.site.lower}",
+          "objective": { "t": "gather", "site": "@r2.site", "zone": "@r2", "count": 3 },
+          "reward": { "gold": 15, "xp": 12 },
+          "offer": [
+            "Pilgrims leave signs where they rest. Touch three {r2.site.lower} in {r2} and tell me which way they went."
+          ],
+          "remind": ["Three {r2.site.lower}, in {r2}."],
+          "done": ["They left in a hurry, and the tracks go on past the edge of {r2}.", "Rest a moment. Then onward."],
+          "variants": [
+            {
+              "when": { "r1~r2": "restless-dead" },
+              "fieldNote": ["Each one has the ground round it trodden by feet that did not walk away."]
+            },
+            {
+              "when": { "r1~r2": "thaw" },
+              "fieldNote": [
+                "Each one stands ringed in meltwater: whoever set them stood in snow, and the ground is waking."
+              ]
+            },
+            {
+              "when": { "r1~r2": "frost-creep" },
+              "fieldNote": ["Each one wears frost creeping over its base like a slow hand."]
+            },
+            {
+              "when": { "r1~r2": "fire" },
+              "fieldNote": ["Each one is scorched black on one side, as if a great heat passed over."]
+            },
+            {
+              "when": { "r1~r2": "cold" },
+              "fieldNote": ["Each one burns blue with cold, which gives no light to read by."]
+            },
+            {
+              "when": { "r1~r2": "road" },
+              "fieldNote": ["Each one is set tidy as a milestone, by hands that expected to come back."]
+            }
+          ]
+        },
+        {
+          "id": "pb_hush",
+          "chapter": 2,
+          "learned": "The {r3.ranged.lower} were set to watch the road: something wants the pilgrims' trail left unwalked.",
+          "fieldNote": ["The last one falls and the bell, very faint, tolls once from somewhere ahead."],
+          "title": "Break the Watch",
+          "goal": "Defeat 4 {r3.ranged.lower}",
+          "hint": "{r3.ranged.plural} are all over {r3}.",
+          "where": { "zones": ["@r3"] },
+          "unit": "{r3.ranged.lower}",
+          "objective": { "t": "kill", "kind": "@r3.ranged", "count": 4, "zone": "@r3" },
+          "reward": { "gold": 27, "xp": 32 },
+          "offer": [
+            "The {r3.ranged.lower} of {r3} strike from afar at anyone on the pilgrims' road. Break four of them."
+          ],
+          "remind": ["Four {r3.ranged.lower}, in {r3}."],
+          "done": ["Then the way is open. Whatever rang that bell is further on."]
+        },
+        {
+          "id": "pb_candles",
+          "chapter": 3,
+          "learned": "The pilgrims set {r4.site.plural} here to show the way in the dark, and then something snuffed half of them.",
+          "fieldNote": ["Three in a row, set by hand. Whoever put them here wanted to be found."],
+          "title": "Count the Candles",
+          "goal": "Touch 3 {r4.site.lower}",
+          "hint": "{r4.site.plural} lie about {r4}: look beside the trails and the water.",
+          "where": { "zones": ["@r4"] },
+          "unit": "{r4.site.lower}",
+          "objective": { "t": "gather", "site": "@r4.site", "zone": "@r4", "count": 3 },
+          "reward": { "gold": 18, "xp": 27, "items": ["bandageKit"] },
+          "offer": [
+            "Pilgrims mark the road with {r4.site.plural}. Touch three in {r4} and learn what happened to them."
+          ],
+          "remind": ["Three {r4.site.lower}, in {r4}."],
+          "done": ["Half of them snuffed out, and the rest bent toward the road. They were taken along it."],
+          "variants": [
+            {
+              "when": { "r3~r4": "restless-dead" },
+              "fieldNote": ["Each one has the ground round it trodden by feet that did not walk away."]
+            },
+            {
+              "when": { "r3~r4": "thaw" },
+              "fieldNote": [
+                "Each one stands ringed in meltwater: whoever set them stood in snow, and the ground is waking."
+              ]
+            },
+            {
+              "when": { "r3~r4": "frost-creep" },
+              "fieldNote": ["Each one wears frost creeping over its base like a slow hand."]
+            },
+            {
+              "when": { "r3~r4": "fire" },
+              "fieldNote": ["Each one is scorched black on one side, as if a great heat passed over."]
+            },
+            {
+              "when": { "r3~r4": "cold" },
+              "fieldNote": ["Each one burns blue with cold, which gives no light to read by."]
+            },
+            {
+              "when": { "r3~r4": "road" },
+              "fieldNote": ["Each one is set tidy as a milestone, by hands that expected to come back."]
+            }
+          ]
+        },
+        {
+          "id": "pb_wardens",
+          "chapter": 4,
+          "learned": "The {r5.brute.lower} are no wild things: they stand where the pilgrims were last seen, and do not move for food.",
+          "fieldNote": [
+            "The third one falls, and its fellows stop and stare at the road, as if they had been waiting for you to finish."
+          ],
+          "title": "Break the Wardens",
+          "goal": "Defeat 3 {r5.brute.lower}",
+          "hint": "{r5.brute.plural} are all over {r5}.",
+          "where": { "zones": ["@r5"] },
+          "unit": "{r5.brute.lower}",
+          "objective": { "t": "kill", "kind": "@r5.brute", "count": 3, "zone": "@r5" },
+          "reward": { "gold": 24, "xp": 44 },
+          "offer": [
+            "Three {r5.brute.lower} are blocking the road through {r5}. Break them, and see what they were guarding."
+          ],
+          "remind": ["Three {r5.brute.lower}, in {r5}."],
+          "done": ["They were guarding something. The tracks run on, deeper."]
+        },
+        {
+          "id": "pb_litany",
+          "chapter": 5,
+          "learned": "The pilgrims chanted at the {r6.site.lower}, and they hold the words, faintly, for anyone who touches one.",
+          "fieldNote": ["Four of them, each humming one line of a hymn. Together they spell out the bell's name."],
+          "title": "Read the Litany",
+          "goal": "Touch 4 {r6.site.lower}",
+          "hint": "{r6.site.plural} lie about {r6}: look beside the trails and the water.",
+          "where": { "zones": ["@r6"] },
+          "unit": "{r6.site.lower}",
+          "objective": { "t": "gather", "site": "@r6.site", "zone": "@r6", "count": 4 },
+          "reward": { "gold": 28, "xp": 59, "items": ["elixir"] },
+          "offer": [
+            "The {r6.site.plural} here still hold the pilgrims' hymn. Touch four of them in {r6}, and we may learn where they were headed."
+          ],
+          "remind": ["Four {r6.site.lower}, in {r6}."],
+          "done": [
+            "It is a hymn for the dead. They were not walking to a shrine: they were walking to a grave.",
+            "Go carefully."
+          ],
+          "variants": [
+            {
+              "when": { "r5~r6": "restless-dead" },
+              "fieldNote": ["Each one has the ground round it trodden by feet that did not walk away."]
+            },
+            {
+              "when": { "r5~r6": "thaw" },
+              "fieldNote": [
+                "Each one stands ringed in meltwater: whoever set them stood in snow, and the ground is waking."
+              ]
+            },
+            {
+              "when": { "r5~r6": "frost-creep" },
+              "fieldNote": ["Each one wears frost creeping over its base like a slow hand."]
+            },
+            {
+              "when": { "r5~r6": "fire" },
+              "fieldNote": ["Each one is scorched black on one side, as if a great heat passed over."]
+            },
+            {
+              "when": { "r5~r6": "cold" },
+              "fieldNote": ["Each one burns blue with cold, which gives no light to read by."]
+            },
+            {
+              "when": { "r5~r6": "road" },
+              "fieldNote": ["Each one is set tidy as a milestone, by hands that expected to come back."]
+            }
+          ]
+        },
+        {
+          "id": "pb_guard",
+          "chapter": 6,
+          "learned": "The {r7.brute.lower} guarded the bell from the pilgrims, and now they guard it from everyone.",
+          "fieldNote": ["The last guard falls. The air is utterly still, as if the whole land were listening."],
+          "title": "The Last Guards",
+          "goal": "Defeat 3 {r7.brute.lower}",
+          "hint": "{r7.brute.plural} are all over {r7}.",
+          "where": { "zones": ["@r7"] },
+          "unit": "{r7.brute.lower}",
+          "objective": { "t": "kill", "kind": "@r7.brute", "count": 3, "zone": "@r7" },
+          "reward": { "gold": 28, "xp": 68 },
+          "offer": ["Whatever has the bell is not alone. Break three of the {r7.brute.lower} that stand about {r7}."],
+          "remind": ["Three {r7.brute.lower}, in {r7}."],
+          "done": ["Now only the one that took it is left."]
+        },
+        {
+          "id": "pb_bell",
+          "chapter": 6,
+          "learned": "The {r7.boss} took the bell to ring the dead awake, not asleep. It will ring no more.",
+          "fieldNote": [
+            "The {r7.boss} falls, and the bell rolls from its grip and tolls once, clear and loud, across the whole country."
+          ],
+          "title": "Ring Them Down",
+          "goal": "Defeat the {r7.boss}",
+          "hint": "The {r7.boss} waits in {r7}.",
+          "where": { "zones": ["@r7"] },
+          "unit": "foes",
+          "objective": { "t": "kill", "kind": "@r7.boss", "count": 1, "zone": "@r7" },
+          "reward": { "gold": 74, "xp": 226, "items": ["silverSword"] },
+          "offer": ["The {r7.boss} has the pilgrims' bell. End it, and let the bell ring true again."],
+          "remind": ["The {r7.boss}, in {r7}."],
+          "done": [
+            "It rings! I can hear it from here. The dead are lying down.",
+            "Take this. It was a pilgrim's, once."
+          ]
+        }
+      ],
+      "epilogue": [
+        "The bell is silent. In the quiet, you can hear how far you have come.",
+        "Rest, if you can. The road remembers every one of you."
+      ]
+    },
+    "long_winter": {
+      "title": "The Long Winter",
+      "welcome": [
+        "Welcome, travellers.",
+        "It froze in {r1} last night, a month before it should. {keeper} says this winter is not a season but a visitor."
+      ],
+      "regions": 9,
+      "slots": [{}, {}, {}, {}, {}, {}, {}, {}, { "themes": ["frost", "fire", "undead"] }],
+      "chapters": [
+        {
+          "title": "First Frost",
+          "intro": [
+            "You saw the frost on the water this morning? It is a month early, and it came from nowhere.",
+            "I am {keeper}. Winter is walking, and it leaves tracks. Help me keep {r1} through the night, and then we follow them to wherever it came from."
+          ]
+        },
+        {
+          "title": "The Tracks Begin",
+          "narration": ["Prints in the frost, bare and long. Something walked here without shoes."],
+          "intro": ["The tracks leave {r1} by {r1~r2.way}.", "{r1~r2.sign}", "Find the first place it stopped."],
+          "variants": [
+            {
+              "when": { "r1~r2": "restless-dead" },
+              "intro": [
+                "The tracks leave {r1} by {r1~r2.way}.",
+                "The dead are up and walking in the snow, and the snow keeps their prints like a ledger.",
+                "{r1~r2.sign}",
+                "Find the first place it stopped."
+              ]
+            },
+            {
+              "when": { "r1~r2": "thaw" },
+              "intro": [
+                "The tracks leave {r1} by {r1~r2.way}.",
+                "Here the winter meets heat and does not melt: it only steams, and goes sullen.",
+                "{r1~r2.sign}",
+                "Find the first place it stopped."
+              ]
+            },
+            {
+              "when": { "r1~r2": "frost-creep" },
+              "intro": [
+                "The tracks leave {r1} by {r1~r2.way}.",
+                "The frost reached this land ahead of the winter. It is the winter's scouts.",
+                "{r1~r2.sign}",
+                "Find the first place it stopped."
+              ]
+            },
+            {
+              "when": { "r1~r2": "fire" },
+              "intro": [
+                "The tracks leave {r1} by {r1~r2.way}.",
+                "Fire has met winter here and neither has won. The air is the colour of an old bruise.",
+                "{r1~r2.sign}",
+                "Find the first place it stopped."
+              ]
+            },
+            {
+              "when": { "r1~r2": "cold" },
+              "intro": [
+                "The tracks leave {r1} by {r1~r2.way}.",
+                "This is the winter's own cold, and it knows your name.",
+                "{r1~r2.sign}",
+                "Find the first place it stopped."
+              ]
+            },
+            {
+              "when": { "r1~r2": "road" },
+              "intro": [
+                "The tracks leave {r1} by {r1~r2.way}.",
+                "The winter walked this road like any traveller, and the ruts are full of ice.",
+                "{r1~r2.sign}",
+                "Find the first place it stopped."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Against the Wind",
+          "narration": ["The wind is at your face. Whatever is ahead sends it."],
+          "intro": ["You press on into {r3} by {r2~r3.way}.", "{r2~r3.sign}", "The wind has hunters in it."],
+          "variants": [
+            {
+              "when": { "r2~r3": "restless-dead" },
+              "intro": [
+                "You press on into {r3} by {r2~r3.way}.",
+                "The dead are up and walking in the snow, and the snow keeps their prints like a ledger.",
+                "{r2~r3.sign}",
+                "The wind has hunters in it."
+              ]
+            },
+            {
+              "when": { "r2~r3": "thaw" },
+              "intro": [
+                "You press on into {r3} by {r2~r3.way}.",
+                "Here the winter meets heat and does not melt: it only steams, and goes sullen.",
+                "{r2~r3.sign}",
+                "The wind has hunters in it."
+              ]
+            },
+            {
+              "when": { "r2~r3": "frost-creep" },
+              "intro": [
+                "You press on into {r3} by {r2~r3.way}.",
+                "The frost reached this land ahead of the winter. It is the winter's scouts.",
+                "{r2~r3.sign}",
+                "The wind has hunters in it."
+              ]
+            },
+            {
+              "when": { "r2~r3": "fire" },
+              "intro": [
+                "You press on into {r3} by {r2~r3.way}.",
+                "Fire has met winter here and neither has won. The air is the colour of an old bruise.",
+                "{r2~r3.sign}",
+                "The wind has hunters in it."
+              ]
+            },
+            {
+              "when": { "r2~r3": "cold" },
+              "intro": [
+                "You press on into {r3} by {r2~r3.way}.",
+                "This is the winter's own cold, and it knows your name.",
+                "{r2~r3.sign}",
+                "The wind has hunters in it."
+              ]
+            },
+            {
+              "when": { "r2~r3": "road" },
+              "intro": [
+                "You press on into {r3} by {r2~r3.way}.",
+                "The winter walked this road like any traveller, and the ruts are full of ice.",
+                "{r2~r3.sign}",
+                "The wind has hunters in it."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "A Warmer Place",
+          "narration": ["A fire once burned here. It has been put out, thoroughly."],
+          "intro": [
+            "The tracks go into {r4} by {r3~r4.way}.",
+            "{r3~r4.sign}",
+            "Winter stopped here to put out every fire it could find."
+          ],
+          "variants": [
+            {
+              "when": { "r3~r4": "restless-dead" },
+              "intro": [
+                "The tracks go into {r4} by {r3~r4.way}.",
+                "The dead are up and walking in the snow, and the snow keeps their prints like a ledger.",
+                "{r3~r4.sign}",
+                "Winter stopped here to put out every fire it could find."
+              ]
+            },
+            {
+              "when": { "r3~r4": "thaw" },
+              "intro": [
+                "The tracks go into {r4} by {r3~r4.way}.",
+                "Here the winter meets heat and does not melt: it only steams, and goes sullen.",
+                "{r3~r4.sign}",
+                "Winter stopped here to put out every fire it could find."
+              ]
+            },
+            {
+              "when": { "r3~r4": "frost-creep" },
+              "intro": [
+                "The tracks go into {r4} by {r3~r4.way}.",
+                "The frost reached this land ahead of the winter. It is the winter's scouts.",
+                "{r3~r4.sign}",
+                "Winter stopped here to put out every fire it could find."
+              ]
+            },
+            {
+              "when": { "r3~r4": "fire" },
+              "intro": [
+                "The tracks go into {r4} by {r3~r4.way}.",
+                "Fire has met winter here and neither has won. The air is the colour of an old bruise.",
+                "{r3~r4.sign}",
+                "Winter stopped here to put out every fire it could find."
+              ]
+            },
+            {
+              "when": { "r3~r4": "cold" },
+              "intro": [
+                "The tracks go into {r4} by {r3~r4.way}.",
+                "This is the winter's own cold, and it knows your name.",
+                "{r3~r4.sign}",
+                "Winter stopped here to put out every fire it could find."
+              ]
+            },
+            {
+              "when": { "r3~r4": "road" },
+              "intro": [
+                "The tracks go into {r4} by {r3~r4.way}.",
+                "The winter walked this road like any traveller, and the ruts are full of ice.",
+                "{r3~r4.sign}",
+                "Winter stopped here to put out every fire it could find."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Long Night",
+          "narration": ["The days are shorter, and nobody can say why."],
+          "intro": [
+            "In {r5} the tracks run together, as though the winter had stopped to look back.",
+            "{r4~r5.sign}",
+            "You came by {r4~r5.way}. Whatever is in the way, break it."
+          ],
+          "variants": [
+            {
+              "when": { "r4~r5": "restless-dead" },
+              "intro": [
+                "In {r5} the tracks run together, as though the winter had stopped to look back.",
+                "The dead are up and walking in the snow, and the snow keeps their prints like a ledger.",
+                "{r4~r5.sign}",
+                "You came by {r4~r5.way}. Whatever is in the way, break it."
+              ]
+            },
+            {
+              "when": { "r4~r5": "thaw" },
+              "intro": [
+                "In {r5} the tracks run together, as though the winter had stopped to look back.",
+                "Here the winter meets heat and does not melt: it only steams, and goes sullen.",
+                "{r4~r5.sign}",
+                "You came by {r4~r5.way}. Whatever is in the way, break it."
+              ]
+            },
+            {
+              "when": { "r4~r5": "frost-creep" },
+              "intro": [
+                "In {r5} the tracks run together, as though the winter had stopped to look back.",
+                "The frost reached this land ahead of the winter. It is the winter's scouts.",
+                "{r4~r5.sign}",
+                "You came by {r4~r5.way}. Whatever is in the way, break it."
+              ]
+            },
+            {
+              "when": { "r4~r5": "fire" },
+              "intro": [
+                "In {r5} the tracks run together, as though the winter had stopped to look back.",
+                "Fire has met winter here and neither has won. The air is the colour of an old bruise.",
+                "{r4~r5.sign}",
+                "You came by {r4~r5.way}. Whatever is in the way, break it."
+              ]
+            },
+            {
+              "when": { "r4~r5": "cold" },
+              "intro": [
+                "In {r5} the tracks run together, as though the winter had stopped to look back.",
+                "This is the winter's own cold, and it knows your name.",
+                "{r4~r5.sign}",
+                "You came by {r4~r5.way}. Whatever is in the way, break it."
+              ]
+            },
+            {
+              "when": { "r4~r5": "road" },
+              "intro": [
+                "In {r5} the tracks run together, as though the winter had stopped to look back.",
+                "The winter walked this road like any traveller, and the ruts are full of ice.",
+                "{r4~r5.sign}",
+                "You came by {r4~r5.way}. Whatever is in the way, break it."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Hollow Hearths",
+          "narration": ["Houses without smoke. Doors left open."],
+          "intro": [
+            "Take {r5~r6.way} into {r6}, where the hearths are cold and empty.",
+            "{r5~r6.sign}",
+            "The people are not dead: they are walking after it."
+          ],
+          "variants": [
+            {
+              "when": { "r5~r6": "restless-dead" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, where the hearths are cold and empty.",
+                "The dead are up and walking in the snow, and the snow keeps their prints like a ledger.",
+                "{r5~r6.sign}",
+                "The people are not dead: they are walking after it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "thaw" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, where the hearths are cold and empty.",
+                "Here the winter meets heat and does not melt: it only steams, and goes sullen.",
+                "{r5~r6.sign}",
+                "The people are not dead: they are walking after it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "frost-creep" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, where the hearths are cold and empty.",
+                "The frost reached this land ahead of the winter. It is the winter's scouts.",
+                "{r5~r6.sign}",
+                "The people are not dead: they are walking after it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "fire" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, where the hearths are cold and empty.",
+                "Fire has met winter here and neither has won. The air is the colour of an old bruise.",
+                "{r5~r6.sign}",
+                "The people are not dead: they are walking after it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "cold" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, where the hearths are cold and empty.",
+                "This is the winter's own cold, and it knows your name.",
+                "{r5~r6.sign}",
+                "The people are not dead: they are walking after it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "road" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, where the hearths are cold and empty.",
+                "The winter walked this road like any traveller, and the ruts are full of ice.",
+                "{r5~r6.sign}",
+                "The people are not dead: they are walking after it."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Watchers",
+          "narration": ["The tracks are fresher. It is not far ahead now."],
+          "intro": [
+            "By {r6~r7.way} you reach {r7}, and everything in it stands very still.",
+            "{r6~r7.sign}",
+            "The winter has set watchers along its back trail."
+          ],
+          "variants": [
+            {
+              "when": { "r6~r7": "restless-dead" },
+              "intro": [
+                "By {r6~r7.way} you reach {r7}, and everything in it stands very still.",
+                "The dead are up and walking in the snow, and the snow keeps their prints like a ledger.",
+                "{r6~r7.sign}",
+                "The winter has set watchers along its back trail."
+              ]
+            },
+            {
+              "when": { "r6~r7": "thaw" },
+              "intro": [
+                "By {r6~r7.way} you reach {r7}, and everything in it stands very still.",
+                "Here the winter meets heat and does not melt: it only steams, and goes sullen.",
+                "{r6~r7.sign}",
+                "The winter has set watchers along its back trail."
+              ]
+            },
+            {
+              "when": { "r6~r7": "frost-creep" },
+              "intro": [
+                "By {r6~r7.way} you reach {r7}, and everything in it stands very still.",
+                "The frost reached this land ahead of the winter. It is the winter's scouts.",
+                "{r6~r7.sign}",
+                "The winter has set watchers along its back trail."
+              ]
+            },
+            {
+              "when": { "r6~r7": "fire" },
+              "intro": [
+                "By {r6~r7.way} you reach {r7}, and everything in it stands very still.",
+                "Fire has met winter here and neither has won. The air is the colour of an old bruise.",
+                "{r6~r7.sign}",
+                "The winter has set watchers along its back trail."
+              ]
+            },
+            {
+              "when": { "r6~r7": "cold" },
+              "intro": [
+                "By {r6~r7.way} you reach {r7}, and everything in it stands very still.",
+                "This is the winter's own cold, and it knows your name.",
+                "{r6~r7.sign}",
+                "The winter has set watchers along its back trail."
+              ]
+            },
+            {
+              "when": { "r6~r7": "road" },
+              "intro": [
+                "By {r6~r7.way} you reach {r7}, and everything in it stands very still.",
+                "The winter walked this road like any traveller, and the ruts are full of ice.",
+                "{r6~r7.sign}",
+                "The winter has set watchers along its back trail."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Last Tracks",
+          "narration": ["One set of prints, and a drift taller than a house."],
+          "intro": [
+            "Take {r7~r8.way} into {r8}. The winter is close enough that your breath hangs.",
+            "{r7~r8.sign}",
+            "Gather what warmth the land has left, for the end is near."
+          ],
+          "variants": [
+            {
+              "when": { "r7~r8": "restless-dead" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}. The winter is close enough that your breath hangs.",
+                "The dead are up and walking in the snow, and the snow keeps their prints like a ledger.",
+                "{r7~r8.sign}",
+                "Gather what warmth the land has left, for the end is near."
+              ]
+            },
+            {
+              "when": { "r7~r8": "thaw" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}. The winter is close enough that your breath hangs.",
+                "Here the winter meets heat and does not melt: it only steams, and goes sullen.",
+                "{r7~r8.sign}",
+                "Gather what warmth the land has left, for the end is near."
+              ]
+            },
+            {
+              "when": { "r7~r8": "frost-creep" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}. The winter is close enough that your breath hangs.",
+                "The frost reached this land ahead of the winter. It is the winter's scouts.",
+                "{r7~r8.sign}",
+                "Gather what warmth the land has left, for the end is near."
+              ]
+            },
+            {
+              "when": { "r7~r8": "fire" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}. The winter is close enough that your breath hangs.",
+                "Fire has met winter here and neither has won. The air is the colour of an old bruise.",
+                "{r7~r8.sign}",
+                "Gather what warmth the land has left, for the end is near."
+              ]
+            },
+            {
+              "when": { "r7~r8": "cold" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}. The winter is close enough that your breath hangs.",
+                "This is the winter's own cold, and it knows your name.",
+                "{r7~r8.sign}",
+                "Gather what warmth the land has left, for the end is near."
+              ]
+            },
+            {
+              "when": { "r7~r8": "road" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}. The winter is close enough that your breath hangs.",
+                "The winter walked this road like any traveller, and the ruts are full of ice.",
+                "{r7~r8.sign}",
+                "Gather what warmth the land has left, for the end is near."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Heart of Winter",
+          "narration": ["No wind now. No sound at all."],
+          "intro": [
+            "The last of the tracks run through {r8~r9.way} into {r9}.",
+            "{r8~r9.sign}",
+            "This is where the winter lives. Put an end to it."
+          ],
+          "variants": [
+            {
+              "when": { "r8~r9": "restless-dead" },
+              "intro": [
+                "The last of the tracks run through {r8~r9.way} into {r9}.",
+                "The dead are up and walking in the snow, and the snow keeps their prints like a ledger.",
+                "{r8~r9.sign}",
+                "This is where the winter lives. Put an end to it."
+              ]
+            },
+            {
+              "when": { "r8~r9": "thaw" },
+              "intro": [
+                "The last of the tracks run through {r8~r9.way} into {r9}.",
+                "Here the winter meets heat and does not melt: it only steams, and goes sullen.",
+                "{r8~r9.sign}",
+                "This is where the winter lives. Put an end to it."
+              ]
+            },
+            {
+              "when": { "r8~r9": "frost-creep" },
+              "intro": [
+                "The last of the tracks run through {r8~r9.way} into {r9}.",
+                "The frost reached this land ahead of the winter. It is the winter's scouts.",
+                "{r8~r9.sign}",
+                "This is where the winter lives. Put an end to it."
+              ]
+            },
+            {
+              "when": { "r8~r9": "fire" },
+              "intro": [
+                "The last of the tracks run through {r8~r9.way} into {r9}.",
+                "Fire has met winter here and neither has won. The air is the colour of an old bruise.",
+                "{r8~r9.sign}",
+                "This is where the winter lives. Put an end to it."
+              ]
+            },
+            {
+              "when": { "r8~r9": "cold" },
+              "intro": [
+                "The last of the tracks run through {r8~r9.way} into {r9}.",
+                "This is the winter's own cold, and it knows your name.",
+                "{r8~r9.sign}",
+                "This is where the winter lives. Put an end to it."
+              ]
+            },
+            {
+              "when": { "r8~r9": "road" },
+              "intro": [
+                "The last of the tracks run through {r8~r9.way} into {r9}.",
+                "The winter walked this road like any traveller, and the ruts are full of ice.",
+                "{r8~r9.sign}",
+                "This is where the winter lives. Put an end to it."
+              ]
+            }
+          ]
+        }
+      ],
+      "quests": [
+        {
+          "id": "lw_hearths",
+          "chapter": 0,
+          "learned": "The {r1.common.lower} crowd the fires: the cold is driving everything toward warmth.",
+          "fieldNote": ["The last one backs off, steaming, and stands shivering at the edge of the light."],
+          "title": "Hold the Hearths",
+          "goal": "Drive off 5 {r1.common.lower}",
+          "hint": "{r1.common.plural} are all over {r1}.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.common.lower}",
+          "objective": { "t": "kill", "kind": "@r1.common", "count": 5 },
+          "reward": { "gold": 28, "xp": 14 },
+          "offer": [
+            "The {r1.common.lower} crowd the fires, wanting warmth. Drive off five before they spoil the stores."
+          ],
+          "remind": ["Five {r1.common.lower}, in {r1}."],
+          "done": ["They will come back when it gets colder. We should not be here when it does."]
+        },
+        {
+          "id": "lw_measure",
+          "chapter": 0,
+          "learned": "The frost lies thickest on the {r1.site.plural}, as though they were the first thing it touched.",
+          "fieldNote": ["Three of them, each rimed in a spiral that points the same way."],
+          "title": "Measure the Frost",
+          "goal": "Touch 3 {r1.site.lower}",
+          "hint": "{r1.site.plural} lie about {r1}: look beside the trails and the water.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.site.lower}",
+          "objective": { "t": "gather", "site": "@r1.site", "zone": "@r1", "count": 3 },
+          "reward": { "gold": 13, "xp": 7, "items": ["potion"] },
+          "offer": ["The frost came first to the {r1.site.plural}. Touch three of them and tell me how thick it lies."],
+          "remind": ["Three {r1.site.lower}, in {r1}."],
+          "done": [
+            "Thick as a thumb, and all of it pointing out of the camp.",
+            "Take this: it is warmer than it looks."
+          ]
+        },
+        {
+          "id": "lw_prints",
+          "chapter": 1,
+          "learned": "The winter walked past the {r2.site.plural} and left each one white.",
+          "fieldNote": [
+            "Three of them, white and ringing, and between them a line of bare prints, none of them ever stepping twice in one place."
+          ],
+          "title": "Mark the Prints",
+          "goal": "Touch 3 {r2.site.lower}",
+          "hint": "{r2.site.plural} lie about {r2}: look beside the trails and the water.",
+          "where": { "zones": ["@r2"] },
+          "unit": "{r2.site.lower}",
+          "objective": { "t": "gather", "site": "@r2.site", "zone": "@r2", "count": 3 },
+          "reward": { "gold": 15, "xp": 12 },
+          "offer": [
+            "The tracks pass the {r2.site.plural} of {r2}. Touch three of them, and learn how long ago it passed."
+          ],
+          "remind": ["Three {r2.site.lower}, in {r2}."],
+          "done": ["Not long. It is a day ahead of us, no more."],
+          "variants": [
+            {
+              "when": { "r1~r2": "restless-dead" },
+              "fieldNote": [
+                "Each one stands over a shallow grave, frozen shut, with a bare print leading away from it."
+              ]
+            },
+            {
+              "when": { "r1~r2": "thaw" },
+              "fieldNote": ["Each one drips, and the drips freeze again before they reach the ground."]
+            },
+            {
+              "when": { "r1~r2": "frost-creep" },
+              "fieldNote": ["Each one is furred white, from the side the frost came."]
+            },
+            {
+              "when": { "r1~r2": "fire" },
+              "fieldNote": ["Each one is cracked from heat on one side and from cold on the other."]
+            },
+            {
+              "when": { "r1~r2": "cold" },
+              "fieldNote": ["Each one is ringed with ice thick as a wrist, glittering, utterly still."]
+            },
+            { "when": { "r1~r2": "road" }, "fieldNote": ["Each one is rimed over, like the milestones along it."] }
+          ]
+        },
+        {
+          "id": "lw_wind",
+          "chapter": 2,
+          "learned": "The {r3.ranged.lower} are the winter's outriders: they loose the cold as arrows, from far off.",
+          "fieldNote": ["The last one falls, and the wind drops, for a heartbeat, before it comes back."],
+          "title": "Break the Wind",
+          "goal": "Defeat 4 {r3.ranged.lower}",
+          "hint": "{r3.ranged.plural} are all over {r3}.",
+          "where": { "zones": ["@r3"] },
+          "unit": "{r3.ranged.lower}",
+          "objective": { "t": "kill", "kind": "@r3.ranged", "count": 4, "zone": "@r3" },
+          "reward": { "gold": 27, "xp": 32 },
+          "offer": ["The {r3.ranged.lower} of {r3} harry travellers from the white. Break four of them."],
+          "remind": ["Four {r3.ranged.lower}, in {r3}."],
+          "done": ["The wind is a little gentler. Not by much."]
+        },
+        {
+          "id": "lw_embers",
+          "chapter": 3,
+          "learned": "The winter put out every fire in {r4} but the ones in the {r4.site.plural}.",
+          "fieldNote": ["Three of them, and a faint warmth in each, like a sleeper's breath."],
+          "title": "Find the Embers",
+          "goal": "Touch 3 {r4.site.lower}",
+          "hint": "{r4.site.plural} lie about {r4}: look beside the trails and the water.",
+          "where": { "zones": ["@r4"] },
+          "unit": "{r4.site.lower}",
+          "objective": { "t": "gather", "site": "@r4.site", "zone": "@r4", "count": 3 },
+          "reward": { "gold": 18, "xp": 27, "items": ["bandageKit"] },
+          "offer": [
+            "A little warmth is left in the {r4.site.plural} of {r4}. Touch three of them and take it with you."
+          ],
+          "remind": ["Three {r4.site.lower}, in {r4}."],
+          "done": ["Warm. A little, but warm. It will have to carry us."],
+          "variants": [
+            {
+              "when": { "r3~r4": "restless-dead" },
+              "fieldNote": [
+                "Each one stands over a shallow grave, frozen shut, with a bare print leading away from it."
+              ]
+            },
+            {
+              "when": { "r3~r4": "thaw" },
+              "fieldNote": ["Each one drips, and the drips freeze again before they reach the ground."]
+            },
+            {
+              "when": { "r3~r4": "frost-creep" },
+              "fieldNote": ["Each one is furred white, from the side the frost came."]
+            },
+            {
+              "when": { "r3~r4": "fire" },
+              "fieldNote": ["Each one is cracked from heat on one side and from cold on the other."]
+            },
+            {
+              "when": { "r3~r4": "cold" },
+              "fieldNote": ["Each one is ringed with ice thick as a wrist, glittering, utterly still."]
+            },
+            { "when": { "r3~r4": "road" }, "fieldNote": ["Each one is rimed over, like the milestones along it."] }
+          ]
+        },
+        {
+          "id": "lw_drifts",
+          "chapter": 4,
+          "learned": "The {r5.brute.lower} stand where the road is narrowest, as if the winter had sent them to hold the pass.",
+          "fieldNote": ["The third one falls, and snow slides off the pass in sheets."],
+          "title": "Break the Drifts",
+          "goal": "Defeat 3 {r5.brute.lower}",
+          "hint": "{r5.brute.plural} are all over {r5}.",
+          "where": { "zones": ["@r5"] },
+          "unit": "{r5.brute.lower}",
+          "objective": { "t": "kill", "kind": "@r5.brute", "count": 3, "zone": "@r5" },
+          "reward": { "gold": 24, "xp": 44 },
+          "offer": ["The road through {r5} is blocked by {r5.brute.lower}. Break three of them to clear the pass."],
+          "remind": ["Three {r5.brute.lower}, in {r5}."],
+          "done": ["The pass is open. Quick, before it drifts shut again."]
+        },
+        {
+          "id": "lw_hearth",
+          "chapter": 5,
+          "learned": "The {r6.site.plural} are the only fires left in {r6}, and they are guttering.",
+          "fieldNote": [
+            "Three of them, guttering, and a ring of footprints around each: the people of {r6} stood here, and left together."
+          ],
+          "title": "Light a Hearth",
+          "goal": "Touch 3 {r6.site.lower}",
+          "hint": "{r6.site.plural} lie about {r6}: look beside the trails and the water.",
+          "where": { "zones": ["@r6"] },
+          "unit": "{r6.site.lower}",
+          "objective": { "t": "gather", "site": "@r6.site", "zone": "@r6", "count": 3 },
+          "reward": { "gold": 21, "xp": 44, "items": ["elixir"] },
+          "offer": [
+            "The people of {r6} left their {r6.site.plural} burning. Touch three of them, and see which way the people went."
+          ],
+          "remind": ["Three {r6.site.lower}, in {r6}."],
+          "done": ["After it. All of them, in one line, as if they were called."],
+          "variants": [
+            {
+              "when": { "r5~r6": "restless-dead" },
+              "fieldNote": [
+                "Each one stands over a shallow grave, frozen shut, with a bare print leading away from it."
+              ]
+            },
+            {
+              "when": { "r5~r6": "thaw" },
+              "fieldNote": ["Each one drips, and the drips freeze again before they reach the ground."]
+            },
+            {
+              "when": { "r5~r6": "frost-creep" },
+              "fieldNote": ["Each one is furred white, from the side the frost came."]
+            },
+            {
+              "when": { "r5~r6": "fire" },
+              "fieldNote": ["Each one is cracked from heat on one side and from cold on the other."]
+            },
+            {
+              "when": { "r5~r6": "cold" },
+              "fieldNote": ["Each one is ringed with ice thick as a wrist, glittering, utterly still."]
+            },
+            { "when": { "r5~r6": "road" }, "fieldNote": ["Each one is rimed over, like the milestones along it."] }
+          ]
+        },
+        {
+          "id": "lw_watch",
+          "chapter": 6,
+          "learned": "The {r7.ranged.lower} here are the winter's eyes, set along its back trail to see who follows.",
+          "fieldNote": ["The last one falls, and with it, the feeling of being watched."],
+          "title": "Put Out the Watchers",
+          "goal": "Defeat 4 {r7.ranged.lower}",
+          "hint": "{r7.ranged.plural} are all over {r7}.",
+          "where": { "zones": ["@r7"] },
+          "unit": "{r7.ranged.lower}",
+          "objective": { "t": "kill", "kind": "@r7.ranged", "count": 4, "zone": "@r7" },
+          "reward": { "gold": 37, "xp": 91 },
+          "offer": ["The winter has {r7.ranged.lower} watching its back trail through {r7}. Put out four of them."],
+          "remind": ["Four {r7.ranged.lower}, in {r7}."],
+          "done": ["Now it does not know how close we are. Let us keep it that way."]
+        },
+        {
+          "id": "lw_last",
+          "chapter": 7,
+          "learned": "The last of the winter's tracks run past the {r8.site.plural}, and they are the coldest things in {r8}.",
+          "fieldNote": [
+            "Three of them, so cold they burn the skin. Past the third, one set of prints, and a drift taller than a house."
+          ],
+          "title": "Follow the Last Tracks",
+          "goal": "Touch 3 {r8.site.lower}",
+          "hint": "{r8.site.plural} lie about {r8}: look beside the trails and the water.",
+          "where": { "zones": ["@r8"] },
+          "unit": "{r8.site.lower}",
+          "objective": { "t": "gather", "site": "@r8.site", "zone": "@r8", "count": 3 },
+          "reward": { "gold": 24, "xp": 65 },
+          "offer": [
+            "The last tracks pass the {r8.site.plural} of {r8}. Touch three of them, and then the way will be plain."
+          ],
+          "remind": ["Three {r8.site.lower}, in {r8}."],
+          "done": ["It is just ahead. Whatever it is, it is tired, and cornered."],
+          "variants": [
+            {
+              "when": { "r7~r8": "restless-dead" },
+              "fieldNote": [
+                "Each one stands over a shallow grave, frozen shut, with a bare print leading away from it."
+              ]
+            },
+            {
+              "when": { "r7~r8": "thaw" },
+              "fieldNote": ["Each one drips, and the drips freeze again before they reach the ground."]
+            },
+            {
+              "when": { "r7~r8": "frost-creep" },
+              "fieldNote": ["Each one is furred white, from the side the frost came."]
+            },
+            {
+              "when": { "r7~r8": "fire" },
+              "fieldNote": ["Each one is cracked from heat on one side and from cold on the other."]
+            },
+            {
+              "when": { "r7~r8": "cold" },
+              "fieldNote": ["Each one is ringed with ice thick as a wrist, glittering, utterly still."]
+            },
+            { "when": { "r7~r8": "road" }, "fieldNote": ["Each one is rimed over, like the milestones along it."] }
+          ]
+        },
+        {
+          "id": "lw_court",
+          "chapter": 8,
+          "learned": "The {r9.brute.lower} are the winter's court: it keeps them near, as a king keeps guards.",
+          "fieldNote": ["The last one falls, and the silence is complete."],
+          "title": "Thin the Court",
+          "goal": "Defeat 3 {r9.brute.lower}",
+          "hint": "{r9.brute.plural} are all over {r9}.",
+          "where": { "zones": ["@r9"] },
+          "unit": "{r9.brute.lower}",
+          "objective": { "t": "kill", "kind": "@r9.brute", "count": 3, "zone": "@r9" },
+          "reward": { "gold": 29, "xp": 81 },
+          "offer": [
+            "The winter keeps a court of {r9.brute.lower} about it in {r9}. Thin them, or we will never reach it."
+          ],
+          "remind": ["Three {r9.brute.lower}, in {r9}."],
+          "done": ["Now there is only the heart of it."]
+        },
+        {
+          "id": "lw_heart",
+          "chapter": 8,
+          "learned": "The {r9.boss} was the winter's heart, and it walked because it was too cold to stand still.",
+          "fieldNote": [
+            "The {r9.boss} falls, and the cold goes out of the air like a breath let go. Somewhere, a bird starts to sing."
+          ],
+          "title": "End the Winter",
+          "goal": "Defeat the {r9.boss}",
+          "hint": "The {r9.boss} waits in {r9}.",
+          "where": { "zones": ["@r9"] },
+          "unit": "foes",
+          "objective": { "t": "kill", "kind": "@r9.boss", "count": 1, "zone": "@r9" },
+          "reward": { "gold": 78, "xp": 270, "items": ["plateArmor"] },
+          "offer": ["The {r9.boss} is the winter itself, in a shape you can strike. End it."],
+          "remind": ["The {r9.boss}, in {r9}."],
+          "done": [
+            "Warm! Can you feel it? The snow is already running.",
+            "Take this, from my own chest. You have more use for it than I."
+          ],
+          "variants": [
+            {
+              "when": { "r9": "theme:frost" },
+              "done": ["The ice lets go of the land, and the whole country drips.", "Take this, from my own chest."]
+            },
+            {
+              "when": { "r9": "theme:fire" },
+              "done": [
+                "It was a fire that burned so long it came round to cold. It is only warm now.",
+                "Take this, from my own chest."
+              ]
+            },
+            {
+              "when": { "r9": "theme:undead" },
+              "done": [
+                "The dead who kept the winter are lying down, and the snow is only snow.",
+                "Take this, from my own chest."
+              ]
+            }
+          ]
+        }
+      ],
+      "epilogue": [
+        "The snow is running in the roads, and the first green is already showing.",
+        "Winter will come again, in its season, and be only winter. Rest. You walked a long way."
+      ]
+    },
+    "crown_road": {
+      "title": "The Crown Road",
+      "welcome": [
+        "Welcome, travellers.",
+        "A crown of iron was broken into pieces, and pieces are turning up all over the country. {keeper} is waiting in {r1} to tell you who wants them."
+      ],
+      "regions": 8,
+      "slots": [{}, {}, {}, {}, {}, {}, {}, { "themes": ["fire", "undead"] }],
+      "chapters": [
+        {
+          "title": "A Broken Crown",
+          "intro": [
+            "You are here about the crown? Everyone is, now.",
+            "I am {keeper}. An iron crown was broken a hundred years ago and its shards scattered. Someone is gathering them, and they will wear it again. Help me hold {r1}, and then we go after them, shard by shard."
+          ]
+        },
+        {
+          "title": "The Hirelings",
+          "narration": ["A rider passes, going the other way, and will not meet your eye."],
+          "intro": [
+            "The Heir's hirelings have gone out by {r1~r2.way}, to buy up shards.",
+            "{r1~r2.sign}",
+            "Break their hold on the road."
+          ],
+          "variants": [
+            {
+              "when": { "r1~r2": "restless-dead" },
+              "intro": [
+                "The Heir's hirelings have gone out by {r1~r2.way}, to buy up shards.",
+                "The shard's pull is strongest among the dead here: they turn their heads toward it, all together.",
+                "{r1~r2.sign}",
+                "Break their hold on the road."
+              ]
+            },
+            {
+              "when": { "r1~r2": "thaw" },
+              "intro": [
+                "The Heir's hirelings have gone out by {r1~r2.way}, to buy up shards.",
+                "Frost and heat fight over the road here, and the Heir's hirelings left their cloaks drying on the stones.",
+                "{r1~r2.sign}",
+                "Break their hold on the road."
+              ]
+            },
+            {
+              "when": { "r1~r2": "frost-creep" },
+              "intro": [
+                "The Heir's hirelings have gone out by {r1~r2.way}, to buy up shards.",
+                "Frost has gripped the road, and the Heir's boot-marks are the only dark things in the snow.",
+                "{r1~r2.sign}",
+                "Break their hold on the road."
+              ]
+            },
+            {
+              "when": { "r1~r2": "fire" },
+              "intro": [
+                "The Heir's hirelings have gone out by {r1~r2.way}, to buy up shards.",
+                "The road is hot underfoot, and the Heir's hirelings have burned their own waystations behind them.",
+                "{r1~r2.sign}",
+                "Break their hold on the road."
+              ]
+            },
+            {
+              "when": { "r1~r2": "cold" },
+              "intro": [
+                "The Heir's hirelings have gone out by {r1~r2.way}, to buy up shards.",
+                "The cold here is old, and the Heir's men are slow in it. You may be gaining.",
+                "{r1~r2.sign}",
+                "Break their hold on the road."
+              ]
+            },
+            {
+              "when": { "r1~r2": "road" },
+              "intro": [
+                "The Heir's hirelings have gone out by {r1~r2.way}, to buy up shards.",
+                "A plain road, kept up by plain people, who are in the Heir's pay and do not know it.",
+                "{r1~r2.sign}",
+                "Break their hold on the road."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Second Shard",
+          "narration": ["The first shard is in your pack, and heavier than it looks."],
+          "intro": [
+            "Into {r3} you go, by {r2~r3.way}.",
+            "{r2~r3.sign}",
+            "There is a shard in {r3}, and the Heir does not have it yet."
+          ],
+          "variants": [
+            {
+              "when": { "r2~r3": "restless-dead" },
+              "intro": [
+                "Into {r3} you go, by {r2~r3.way}.",
+                "The shard's pull is strongest among the dead here: they turn their heads toward it, all together.",
+                "{r2~r3.sign}",
+                "There is a shard in {r3}, and the Heir does not have it yet."
+              ]
+            },
+            {
+              "when": { "r2~r3": "thaw" },
+              "intro": [
+                "Into {r3} you go, by {r2~r3.way}.",
+                "Frost and heat fight over the road here, and the Heir's hirelings left their cloaks drying on the stones.",
+                "{r2~r3.sign}",
+                "There is a shard in {r3}, and the Heir does not have it yet."
+              ]
+            },
+            {
+              "when": { "r2~r3": "frost-creep" },
+              "intro": [
+                "Into {r3} you go, by {r2~r3.way}.",
+                "Frost has gripped the road, and the Heir's boot-marks are the only dark things in the snow.",
+                "{r2~r3.sign}",
+                "There is a shard in {r3}, and the Heir does not have it yet."
+              ]
+            },
+            {
+              "when": { "r2~r3": "fire" },
+              "intro": [
+                "Into {r3} you go, by {r2~r3.way}.",
+                "The road is hot underfoot, and the Heir's hirelings have burned their own waystations behind them.",
+                "{r2~r3.sign}",
+                "There is a shard in {r3}, and the Heir does not have it yet."
+              ]
+            },
+            {
+              "when": { "r2~r3": "cold" },
+              "intro": [
+                "Into {r3} you go, by {r2~r3.way}.",
+                "The cold here is old, and the Heir's men are slow in it. You may be gaining.",
+                "{r2~r3.sign}",
+                "There is a shard in {r3}, and the Heir does not have it yet."
+              ]
+            },
+            {
+              "when": { "r2~r3": "road" },
+              "intro": [
+                "Into {r3} you go, by {r2~r3.way}.",
+                "A plain road, kept up by plain people, who are in the Heir's pay and do not know it.",
+                "{r2~r3.sign}",
+                "There is a shard in {r3}, and the Heir does not have it yet."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Bought Swords",
+          "narration": ["The Heir has been here before you, and left coin and swords."],
+          "intro": [
+            "Take {r3~r4.way} to {r4}, where the Heir's gold has bought a great many swords.",
+            "{r3~r4.sign}",
+            "Cut through them."
+          ],
+          "variants": [
+            {
+              "when": { "r3~r4": "restless-dead" },
+              "intro": [
+                "Take {r3~r4.way} to {r4}, where the Heir's gold has bought a great many swords.",
+                "The shard's pull is strongest among the dead here: they turn their heads toward it, all together.",
+                "{r3~r4.sign}",
+                "Cut through them."
+              ]
+            },
+            {
+              "when": { "r3~r4": "thaw" },
+              "intro": [
+                "Take {r3~r4.way} to {r4}, where the Heir's gold has bought a great many swords.",
+                "Frost and heat fight over the road here, and the Heir's hirelings left their cloaks drying on the stones.",
+                "{r3~r4.sign}",
+                "Cut through them."
+              ]
+            },
+            {
+              "when": { "r3~r4": "frost-creep" },
+              "intro": [
+                "Take {r3~r4.way} to {r4}, where the Heir's gold has bought a great many swords.",
+                "Frost has gripped the road, and the Heir's boot-marks are the only dark things in the snow.",
+                "{r3~r4.sign}",
+                "Cut through them."
+              ]
+            },
+            {
+              "when": { "r3~r4": "fire" },
+              "intro": [
+                "Take {r3~r4.way} to {r4}, where the Heir's gold has bought a great many swords.",
+                "The road is hot underfoot, and the Heir's hirelings have burned their own waystations behind them.",
+                "{r3~r4.sign}",
+                "Cut through them."
+              ]
+            },
+            {
+              "when": { "r3~r4": "cold" },
+              "intro": [
+                "Take {r3~r4.way} to {r4}, where the Heir's gold has bought a great many swords.",
+                "The cold here is old, and the Heir's men are slow in it. You may be gaining.",
+                "{r3~r4.sign}",
+                "Cut through them."
+              ]
+            },
+            {
+              "when": { "r3~r4": "road" },
+              "intro": [
+                "Take {r3~r4.way} to {r4}, where the Heir's gold has bought a great many swords.",
+                "A plain road, kept up by plain people, who are in the Heir's pay and do not know it.",
+                "{r3~r4.sign}",
+                "Cut through them."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Third Shard",
+          "narration": ["The shards pull toward each other when you walk. It is like a tide."],
+          "intro": ["By {r4~r5.way} you enter {r5}.", "{r4~r5.sign}", "The third shard is here. Find it first."],
+          "variants": [
+            {
+              "when": { "r4~r5": "restless-dead" },
+              "intro": [
+                "By {r4~r5.way} you enter {r5}.",
+                "The shard's pull is strongest among the dead here: they turn their heads toward it, all together.",
+                "{r4~r5.sign}",
+                "The third shard is here. Find it first."
+              ]
+            },
+            {
+              "when": { "r4~r5": "thaw" },
+              "intro": [
+                "By {r4~r5.way} you enter {r5}.",
+                "Frost and heat fight over the road here, and the Heir's hirelings left their cloaks drying on the stones.",
+                "{r4~r5.sign}",
+                "The third shard is here. Find it first."
+              ]
+            },
+            {
+              "when": { "r4~r5": "frost-creep" },
+              "intro": [
+                "By {r4~r5.way} you enter {r5}.",
+                "Frost has gripped the road, and the Heir's boot-marks are the only dark things in the snow.",
+                "{r4~r5.sign}",
+                "The third shard is here. Find it first."
+              ]
+            },
+            {
+              "when": { "r4~r5": "fire" },
+              "intro": [
+                "By {r4~r5.way} you enter {r5}.",
+                "The road is hot underfoot, and the Heir's hirelings have burned their own waystations behind them.",
+                "{r4~r5.sign}",
+                "The third shard is here. Find it first."
+              ]
+            },
+            {
+              "when": { "r4~r5": "cold" },
+              "intro": [
+                "By {r4~r5.way} you enter {r5}.",
+                "The cold here is old, and the Heir's men are slow in it. You may be gaining.",
+                "{r4~r5.sign}",
+                "The third shard is here. Find it first."
+              ]
+            },
+            {
+              "when": { "r4~r5": "road" },
+              "intro": [
+                "By {r4~r5.way} you enter {r5}.",
+                "A plain road, kept up by plain people, who are in the Heir's pay and do not know it.",
+                "{r4~r5.sign}",
+                "The third shard is here. Find it first."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Heir's Road",
+          "narration": ["The Heir's men are everywhere. They are afraid, and fear makes them dangerous."],
+          "intro": [
+            "Take {r5~r6.way} into {r6}, which the Heir has made a road of conquest.",
+            "{r5~r6.sign}",
+            "Their strongest are here. Break them."
+          ],
+          "variants": [
+            {
+              "when": { "r5~r6": "restless-dead" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, which the Heir has made a road of conquest.",
+                "The shard's pull is strongest among the dead here: they turn their heads toward it, all together.",
+                "{r5~r6.sign}",
+                "Their strongest are here. Break them."
+              ]
+            },
+            {
+              "when": { "r5~r6": "thaw" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, which the Heir has made a road of conquest.",
+                "Frost and heat fight over the road here, and the Heir's hirelings left their cloaks drying on the stones.",
+                "{r5~r6.sign}",
+                "Their strongest are here. Break them."
+              ]
+            },
+            {
+              "when": { "r5~r6": "frost-creep" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, which the Heir has made a road of conquest.",
+                "Frost has gripped the road, and the Heir's boot-marks are the only dark things in the snow.",
+                "{r5~r6.sign}",
+                "Their strongest are here. Break them."
+              ]
+            },
+            {
+              "when": { "r5~r6": "fire" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, which the Heir has made a road of conquest.",
+                "The road is hot underfoot, and the Heir's hirelings have burned their own waystations behind them.",
+                "{r5~r6.sign}",
+                "Their strongest are here. Break them."
+              ]
+            },
+            {
+              "when": { "r5~r6": "cold" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, which the Heir has made a road of conquest.",
+                "The cold here is old, and the Heir's men are slow in it. You may be gaining.",
+                "{r5~r6.sign}",
+                "Their strongest are here. Break them."
+              ]
+            },
+            {
+              "when": { "r5~r6": "road" },
+              "intro": [
+                "Take {r5~r6.way} into {r6}, which the Heir has made a road of conquest.",
+                "A plain road, kept up by plain people, who are in the Heir's pay and do not know it.",
+                "{r5~r6.sign}",
+                "Their strongest are here. Break them."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Fourth Shard",
+          "narration": ["The crown is nearly whole in your mind: one shard more and you could see its shape."],
+          "intro": [
+            "In {r7}, by {r6~r7.way}, the last of the free shards lies.",
+            "{r6~r7.sign}",
+            "Take it before the Heir can."
+          ],
+          "variants": [
+            {
+              "when": { "r6~r7": "restless-dead" },
+              "intro": [
+                "In {r7}, by {r6~r7.way}, the last of the free shards lies.",
+                "The shard's pull is strongest among the dead here: they turn their heads toward it, all together.",
+                "{r6~r7.sign}",
+                "Take it before the Heir can."
+              ]
+            },
+            {
+              "when": { "r6~r7": "thaw" },
+              "intro": [
+                "In {r7}, by {r6~r7.way}, the last of the free shards lies.",
+                "Frost and heat fight over the road here, and the Heir's hirelings left their cloaks drying on the stones.",
+                "{r6~r7.sign}",
+                "Take it before the Heir can."
+              ]
+            },
+            {
+              "when": { "r6~r7": "frost-creep" },
+              "intro": [
+                "In {r7}, by {r6~r7.way}, the last of the free shards lies.",
+                "Frost has gripped the road, and the Heir's boot-marks are the only dark things in the snow.",
+                "{r6~r7.sign}",
+                "Take it before the Heir can."
+              ]
+            },
+            {
+              "when": { "r6~r7": "fire" },
+              "intro": [
+                "In {r7}, by {r6~r7.way}, the last of the free shards lies.",
+                "The road is hot underfoot, and the Heir's hirelings have burned their own waystations behind them.",
+                "{r6~r7.sign}",
+                "Take it before the Heir can."
+              ]
+            },
+            {
+              "when": { "r6~r7": "cold" },
+              "intro": [
+                "In {r7}, by {r6~r7.way}, the last of the free shards lies.",
+                "The cold here is old, and the Heir's men are slow in it. You may be gaining.",
+                "{r6~r7.sign}",
+                "Take it before the Heir can."
+              ]
+            },
+            {
+              "when": { "r6~r7": "road" },
+              "intro": [
+                "In {r7}, by {r6~r7.way}, the last of the free shards lies.",
+                "A plain road, kept up by plain people, who are in the Heir's pay and do not know it.",
+                "{r6~r7.sign}",
+                "Take it before the Heir can."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Last Shard",
+          "narration": ["The Heir has the rest. There is nothing left but to take them back."],
+          "intro": [
+            "Take {r7~r8.way} into {r8}, where the Heir is waiting with every shard but yours.",
+            "{r7~r8.sign}",
+            "End this. Break the crown for good."
+          ],
+          "variants": [
+            {
+              "when": { "r7~r8": "restless-dead" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}, where the Heir is waiting with every shard but yours.",
+                "The shard's pull is strongest among the dead here: they turn their heads toward it, all together.",
+                "{r7~r8.sign}",
+                "End this. Break the crown for good."
+              ]
+            },
+            {
+              "when": { "r7~r8": "thaw" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}, where the Heir is waiting with every shard but yours.",
+                "Frost and heat fight over the road here, and the Heir's hirelings left their cloaks drying on the stones.",
+                "{r7~r8.sign}",
+                "End this. Break the crown for good."
+              ]
+            },
+            {
+              "when": { "r7~r8": "frost-creep" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}, where the Heir is waiting with every shard but yours.",
+                "Frost has gripped the road, and the Heir's boot-marks are the only dark things in the snow.",
+                "{r7~r8.sign}",
+                "End this. Break the crown for good."
+              ]
+            },
+            {
+              "when": { "r7~r8": "fire" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}, where the Heir is waiting with every shard but yours.",
+                "The road is hot underfoot, and the Heir's hirelings have burned their own waystations behind them.",
+                "{r7~r8.sign}",
+                "End this. Break the crown for good."
+              ]
+            },
+            {
+              "when": { "r7~r8": "cold" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}, where the Heir is waiting with every shard but yours.",
+                "The cold here is old, and the Heir's men are slow in it. You may be gaining.",
+                "{r7~r8.sign}",
+                "End this. Break the crown for good."
+              ]
+            },
+            {
+              "when": { "r7~r8": "road" },
+              "intro": [
+                "Take {r7~r8.way} into {r8}, where the Heir is waiting with every shard but yours.",
+                "A plain road, kept up by plain people, who are in the Heir's pay and do not know it.",
+                "{r7~r8.sign}",
+                "End this. Break the crown for good."
+              ]
+            }
+          ]
+        }
+      ],
+      "quests": [
+        {
+          "id": "cr_gate",
+          "chapter": 0,
+          "learned": "The {r1.common.lower} are not the Heir's, but they follow the Heir's men for scraps.",
+          "fieldNote": ["The last one slinks off after a rider who was never there."],
+          "title": "Hold the Gate",
+          "goal": "Drive off 5 {r1.common.lower}",
+          "hint": "{r1.common.plural} are all over {r1}.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.common.lower}",
+          "objective": { "t": "kill", "kind": "@r1.common", "count": 5 },
+          "reward": { "gold": 28, "xp": 14 },
+          "offer": [
+            "Strangers have been through, and the {r1.common.lower} follow them in. Drive off five before they settle."
+          ],
+          "remind": ["Five {r1.common.lower}, in {r1}."],
+          "done": ["The riders are gone, but the road they took leads out of {r1}. We follow."]
+        },
+        {
+          "id": "cr_search",
+          "chapter": 0,
+          "learned": "The first shard was hidden among the {r1.site.plural}: the Heir's men dug up half of them looking.",
+          "fieldNote": ["Three of them, each dug up and replanted in the wrong place."],
+          "title": "Search the Camp",
+          "goal": "Touch 3 {r1.site.lower}",
+          "hint": "{r1.site.plural} lie about {r1}: look beside the trails and the water.",
+          "where": { "zones": ["@r1"] },
+          "unit": "{r1.site.lower}",
+          "objective": { "t": "gather", "site": "@r1.site", "zone": "@r1", "count": 3 },
+          "reward": { "gold": 13, "xp": 7, "items": ["potion"] },
+          "offer": [
+            "The Heir's men searched the camp for a shard. Touch three {r1.site.lower} and see what they missed."
+          ],
+          "remind": ["Three {r1.site.lower}, in {r1}."],
+          "done": [
+            "The shard was in the third, under a stone. They missed it, and we did not.",
+            "Take this draught. You will need it where we are going."
+          ]
+        },
+        {
+          "id": "cr_hirelings",
+          "chapter": 1,
+          "learned": "The {r2.common.lower} here have taken the Heir's coin: fierce things, but cheap.",
+          "fieldNote": ["The fifth one falls, a purse of Heir's coin spilling from its harness."],
+          "title": "Break the Hirelings",
+          "goal": "Drive off 5 {r2.common.lower}",
+          "hint": "{r2.common.plural} are all over {r2}.",
+          "where": { "zones": ["@r2"] },
+          "unit": "{r2.common.lower}",
+          "objective": { "t": "kill", "kind": "@r2.common", "count": 5, "zone": "@r2" },
+          "reward": { "gold": 31, "xp": 26 },
+          "offer": ["The Heir has paid the {r2.common.lower} of {r2} to guard the road. Drive off five of them."],
+          "remind": ["Five {r2.common.lower}, in {r2}."],
+          "done": ["The road is open. The coin is the Heir's, and the Heir is richer than any of us."]
+        },
+        {
+          "id": "cr_second",
+          "chapter": 2,
+          "learned": "The second shard is hidden in {r3}, among the {r3.site.plural}, where only a lover of that place would look.",
+          "fieldNote": ["Three of them, and under the third a shard of black iron, humming."],
+          "title": "Find the Second Shard",
+          "goal": "Touch 3 {r3.site.lower}",
+          "hint": "{r3.site.plural} lie about {r3}: look beside the trails and the water.",
+          "where": { "zones": ["@r3"] },
+          "unit": "{r3.site.lower}",
+          "objective": { "t": "gather", "site": "@r3.site", "zone": "@r3", "count": 3 },
+          "reward": { "gold": 16, "xp": 19, "items": ["bandageKit"] },
+          "offer": [
+            "A shard is hidden in {r3}, among the {r3.site.plural}. Touch three of them, and you will find it."
+          ],
+          "remind": ["Three {r3.site.lower}, in {r3}."],
+          "done": ["Two shards now. They hum when they are close, like struck glass."],
+          "variants": [
+            {
+              "when": { "r2~r3": "restless-dead" },
+              "fieldNote": ["Something has dug at the foot of each one, and given up."]
+            },
+            {
+              "when": { "r2~r3": "thaw" },
+              "fieldNote": ["Each one has a hoof-print in the mud beside it, and the mud is already freezing."]
+            },
+            {
+              "when": { "r2~r3": "frost-creep" },
+              "fieldNote": ["Each one wears a collar of frost, like a ring drawn round a thing that must not be moved."]
+            },
+            {
+              "when": { "r2~r3": "fire" },
+              "fieldNote": ["Each one is warm, as if the shard had lain on it and cooked."]
+            },
+            { "when": { "r2~r3": "cold" }, "fieldNote": ["Each one is ringed with the prints of cold hands."] },
+            { "when": { "r2~r3": "road" }, "fieldNote": ["Each one is trodden flat round the base, by many boots."] }
+          ]
+        },
+        {
+          "id": "cr_swords",
+          "chapter": 3,
+          "learned": "The {r4.ranged.lower} of {r4} are hired, and fight like it: from afar, and ready to run.",
+          "fieldNote": ["The last one throws down its bow and runs, shouting that it was not paid enough."],
+          "title": "Cut the Bought Swords",
+          "goal": "Defeat 4 {r4.ranged.lower}",
+          "hint": "{r4.ranged.plural} are all over {r4}.",
+          "where": { "zones": ["@r4"] },
+          "unit": "{r4.ranged.lower}",
+          "objective": { "t": "kill", "kind": "@r4.ranged", "count": 4, "zone": "@r4" },
+          "reward": { "gold": 30, "xp": 45 },
+          "offer": [
+            "The Heir has paid the {r4.ranged.lower} of {r4} to shoot at anyone who looks like a shard-hunter. Break four of them."
+          ],
+          "remind": ["Four {r4.ranged.lower}, in {r4}."],
+          "done": ["They will tell no one. We have a day, perhaps, before the Heir learns."]
+        },
+        {
+          "id": "cr_third",
+          "chapter": 4,
+          "learned": "The third shard lies where the {r5.site.plural} grow thickest in {r5}.",
+          "fieldNote": [
+            "Three of them, and under the last a shard that is warm, as though someone had held it a moment ago."
+          ],
+          "title": "Find the Third Shard",
+          "goal": "Touch 3 {r5.site.lower}",
+          "hint": "{r5.site.plural} lie about {r5}: look beside the trails and the water.",
+          "where": { "zones": ["@r5"] },
+          "unit": "{r5.site.lower}",
+          "objective": { "t": "gather", "site": "@r5.site", "zone": "@r5", "count": 3 },
+          "reward": { "gold": 19, "xp": 35 },
+          "offer": ["The third shard is among the {r5.site.plural} of {r5}. Touch three, and look under the last."],
+          "remind": ["Three {r5.site.lower}, in {r5}."],
+          "done": ["Three shards, and the hum is a chord now.", "The Heir is close. I can feel them looking."],
+          "variants": [
+            {
+              "when": { "r4~r5": "restless-dead" },
+              "fieldNote": ["Something has dug at the foot of each one, and given up."]
+            },
+            {
+              "when": { "r4~r5": "thaw" },
+              "fieldNote": ["Each one has a hoof-print in the mud beside it, and the mud is already freezing."]
+            },
+            {
+              "when": { "r4~r5": "frost-creep" },
+              "fieldNote": ["Each one wears a collar of frost, like a ring drawn round a thing that must not be moved."]
+            },
+            {
+              "when": { "r4~r5": "fire" },
+              "fieldNote": ["Each one is warm, as if the shard had lain on it and cooked."]
+            },
+            { "when": { "r4~r5": "cold" }, "fieldNote": ["Each one is ringed with the prints of cold hands."] },
+            { "when": { "r4~r5": "road" }, "fieldNote": ["Each one is trodden flat round the base, by many boots."] }
+          ]
+        },
+        {
+          "id": "cr_champions",
+          "chapter": 5,
+          "learned": "The {r6.brute.lower} are the Heir's best: the ones paid to be fearless, who have learned to be.",
+          "fieldNote": ["The third one falls, and the Heir's banner on the ridge goes down with it."],
+          "title": "Break the Heir's Champions",
+          "goal": "Defeat 3 {r6.brute.lower}",
+          "hint": "{r6.brute.plural} are all over {r6}.",
+          "where": { "zones": ["@r6"] },
+          "unit": "{r6.brute.lower}",
+          "objective": { "t": "kill", "kind": "@r6.brute", "count": 3, "zone": "@r6" },
+          "reward": { "gold": 26, "xp": 56 },
+          "offer": ["The Heir's strongest, the {r6.brute.lower}, hold {r6}. Break three of them."],
+          "remind": ["Three {r6.brute.lower}, in {r6}."],
+          "done": ["The road is ours. Their champions are down, and there will be no more."]
+        },
+        {
+          "id": "cr_fourth",
+          "chapter": 6,
+          "learned": "The last free shard is in {r7}, hidden in plain sight among the {r7.site.plural}.",
+          "fieldNote": ["Three of them, and under the last a shard that flares as you lift it, bright as a signal."],
+          "title": "Find the Fourth Shard",
+          "goal": "Touch 3 {r7.site.lower}",
+          "hint": "{r7.site.plural} lie about {r7}: look beside the trails and the water.",
+          "where": { "zones": ["@r7"] },
+          "unit": "{r7.site.lower}",
+          "objective": { "t": "gather", "site": "@r7.site", "zone": "@r7", "count": 3 },
+          "reward": { "gold": 22, "xp": 54, "items": ["elixir"] },
+          "offer": [
+            "The last free shard lies among the {r7.site.plural} of {r7}. Touch three of them and take it before the Heir does."
+          ],
+          "remind": ["Three {r7.site.lower}, in {r7}."],
+          "done": ["Four shards. The Heir has the rest, and knows where we are: that flare was seen for miles."],
+          "variants": [
+            {
+              "when": { "r6~r7": "restless-dead" },
+              "fieldNote": ["Something has dug at the foot of each one, and given up."]
+            },
+            {
+              "when": { "r6~r7": "thaw" },
+              "fieldNote": ["Each one has a hoof-print in the mud beside it, and the mud is already freezing."]
+            },
+            {
+              "when": { "r6~r7": "frost-creep" },
+              "fieldNote": ["Each one wears a collar of frost, like a ring drawn round a thing that must not be moved."]
+            },
+            {
+              "when": { "r6~r7": "fire" },
+              "fieldNote": ["Each one is warm, as if the shard had lain on it and cooked."]
+            },
+            { "when": { "r6~r7": "cold" }, "fieldNote": ["Each one is ringed with the prints of cold hands."] },
+            { "when": { "r6~r7": "road" }, "fieldNote": ["Each one is trodden flat round the base, by many boots."] }
+          ]
+        },
+        {
+          "id": "cr_guard",
+          "chapter": 7,
+          "learned": "The {r8.brute.lower} of {r8} are the Heir's last guard, and they know the Heir has everything to lose.",
+          "fieldNote": ["The last of them falls, and the Heir stands alone, with the crown half-made in their hands."],
+          "title": "The Heir's Guard",
+          "goal": "Defeat 3 {r8.brute.lower}",
+          "hint": "{r8.brute.plural} are all over {r8}.",
+          "where": { "zones": ["@r8"] },
+          "unit": "{r8.brute.lower}",
+          "objective": { "t": "kill", "kind": "@r8.brute", "count": 3, "zone": "@r8" },
+          "reward": { "gold": 29, "xp": 81 },
+          "offer": ["The {r8.brute.lower} stand between you and the Heir in {r8}. Break three of them."],
+          "remind": ["Three {r8.brute.lower}, in {r8}."],
+          "done": ["Now only the Heir."]
+        },
+        {
+          "id": "cr_heir",
+          "chapter": 7,
+          "learned": "The {r8.boss} wore the iron crown, and the crown wore it. Both are done.",
+          "fieldNote": [
+            "The {r8.boss} falls, and the iron crown breaks again in the dust, and this time it stays broken."
+          ],
+          "title": "Unmake the Crown",
+          "goal": "Defeat the {r8.boss}",
+          "hint": "The {r8.boss} waits in {r8}.",
+          "where": { "zones": ["@r8"] },
+          "unit": "foes",
+          "objective": { "t": "kill", "kind": "@r8.boss", "count": 1, "zone": "@r8" },
+          "reward": { "gold": 78, "xp": 270, "items": ["greatHelm"] },
+          "offer": ["The {r8.boss} has put the crown together and wears it. Take it off."],
+          "remind": ["The {r8.boss}, in {r8}."],
+          "done": [
+            "The shards are scattered again, and I will see that no one finds them.",
+            "Take this: it is what the crown was made to buy."
+          ],
+          "variants": [
+            {
+              "when": { "r8": "theme:fire" },
+              "done": [
+                "The shards went to slag in the fire, which is best.",
+                "Take this: it is what the crown was made to buy."
+              ]
+            },
+            {
+              "when": { "r8": "theme:undead" },
+              "done": [
+                "The dead king has his crown back, in pieces, and the dead will keep it now.",
+                "Take this: it is what the crown was made to buy."
+              ]
+            }
+          ]
+        }
+      ],
+      "epilogue": [
+        "The shards are scattered again, and the road is only a road.",
+        "Someone will start collecting them in a hundred years. Not your problem. Rest."
+      ]
+    }
+  }
+}

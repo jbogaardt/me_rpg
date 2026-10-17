@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { JevReader, JevRouter, type SystemOne } from './jev';
+import { JevReader, JevRouter, JevTagger, type SystemOne } from './jev';
 import { HINTS, cardQuestion, type Card, type Table } from './router';
 
 const table: Table = { area: 'Greenwood', friends: [], questing: false, story: null };
@@ -73,5 +73,65 @@ describe('JevReader', () => {
     expect(read).toEqual({ pressure: 0.75, stalled: 0.1, wantsWord: 0.8, needsQuest: 0.9 });
     expect(Object.keys(sent[0]!.questions)).toEqual(['pressure', 'stalled', 'wantsWord', 'needsQuest']);
     expect(sent[0]!.questions.pressure!.type).toBe('score');
+  });
+});
+
+describe('JevTagger', () => {
+  const entry = {
+    t: 60,
+    kind: 'said' as const,
+    slot: 1,
+    text: 'goblins are too easy now',
+    state: {
+      who: 'P2',
+      level: 5,
+      hp: 50,
+      maxHp: 58,
+      zone: 'greenwood',
+      area: 'The Greenwood',
+      at: [10, 10] as [number, number],
+      quest: null,
+      party: { size: 1, avgHp: 0.9, lowest: 0.9 },
+      breather: false,
+      stall: 0,
+      recent: [],
+    },
+  };
+
+  it('asks the intent, the topic and the severity in one request, with the words and the state as data', async () => {
+    const sent: { state: unknown; questions: Record<string, { type: string; criteria?: unknown }> }[] = [];
+    const client = {
+      systemOne(request: (typeof sent)[number]) {
+        sent.push(request);
+        return Promise.resolve({
+          answers: {
+            intent: { choice: 'option_2', confidence: 0.82 },
+            topic: { choice: 'option_2' },
+            severity: { score: 1.2 },
+          },
+        });
+      },
+    } as unknown as SystemOne;
+    const tag = await new JevTagger(client).tag(entry);
+    expect(tag).toEqual({ intent: 'criticism', topic: 'too_easy', severity: 1, confidence: 0.82, by: 'jev' });
+    expect(Object.keys(sent[0]!.questions)).toEqual(['intent', 'topic', 'severity']);
+    expect(sent[0]!.questions.intent!.type).toBe('choice');
+    expect(sent[0]!.questions.severity!.type).toBe('score');
+    expect(JSON.stringify(sent[0]!.questions.intent!.criteria)).toContain('abuse');
+    expect(sent[0]!.state).toMatchObject({ playerWords: 'goblins are too easy now', player: { level: 5 } });
+  });
+
+  it('refuses an answer that is not an option', async () => {
+    const client = {
+      systemOne: () =>
+        Promise.resolve({
+          answers: {
+            intent: { choice: 'option_99', confidence: 1 },
+            topic: { choice: 'option_1' },
+            severity: { score: 0 },
+          },
+        }),
+    } as unknown as SystemOne;
+    await expect(new JevTagger(client).tag(entry)).rejects.toThrow('not an option');
   });
 });
