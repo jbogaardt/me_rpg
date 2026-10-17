@@ -19,6 +19,7 @@
 
 import { CONTENT_VERSION, type ContentFile } from './schema';
 import type { PortBinding } from './ports';
+import { depthBand } from './depth';
 import {
   AssemblyError,
   arcNeeds,
@@ -133,6 +134,8 @@ export class World {
   /** Regions beside the story, in the order they came. */
   private sides: string[] = [];
   private foes: Record<string, Record<string, string>> = {};
+  /** How far each region lies from the start along the chain (the start 0, a side land one deeper than its host). */
+  private depths = new Map<string, number>();
   private bindings = new Map<string, Record<string, PortBinding>>();
   /** The pairing at each joint: `r1~r2` along the story, `<a>~<b>` elsewhere. */
   private joints: Record<string, string> = {};
@@ -194,6 +197,10 @@ export class World {
   }
   get foesByRegion(): Record<string, Record<string, string>> {
     return this.foes;
+  }
+  /** How many regions lie between the start and `region` along the chain (0 for the start and for regions not in the world). */
+  depthOf(region: string): number {
+    return this.depths.get(region) ?? 0;
   }
 
   /** The arcs that can be told from the packs (their whole story fits somewhere), sorted. */
@@ -482,8 +489,11 @@ export class World {
       const r = cat.regions[id]!;
       const foes = this.foes[id] ?? {};
       const ports = { ...(this.bindings.get(id) ?? {}) }; // a copy: later steps bind more of them
+      const foeless = r.haven || (!r.roam.length && !(r.encounters ?? []).some((e) => 'role' in e));
+      const depth = foeless ? undefined : depthBand(this.depthOf(id)); // the land's danger follows its distance from the start
       biomes[id] = {
         ...r.biome,
+        ...(depth ? { levels: depth.levels } : {}),
         ...(r.capabilities ? { capabilities: r.capabilities } : {}),
         links: [...Object.values(ports).map((b) => b.map), ...roomMaps(r)],
         ports,
@@ -494,6 +504,7 @@ export class World {
             seed: rule.seed + this.seed,
             apart: rule.apart ?? 8,
             avoid: rule.avoid ?? [],
+            ...(depth ? { level: depth.level } : {}),
           })),
         },
       };
@@ -501,7 +512,14 @@ export class World {
         node_id: id,
         biome_type: id,
         entities: (r.encounters ?? []).map((e) =>
-          'entity' in e ? e : { entity: foes[e.role] ?? e.role, x: e.x, y: e.y },
+          'entity' in e
+            ? e
+            : {
+                entity: foes[e.role] ?? e.role,
+                x: e.x,
+                y: e.y,
+                ...(depth ? { level: e.role === 'boss' ? depth.top : depth.level } : {}),
+              },
         ),
         choices: [],
         ...(this.cast.get(id)?.length ? { cast: this.cast.get(id)!.map((c) => ({ ...c })) } : {}),
@@ -606,6 +624,7 @@ export class World {
     this.story.regions.push(e.region);
     this.bindings.set(e.region, {});
     this.foes[e.region] = { ...e.foes };
+    this.depths.set(e.region, 0);
   }
 
   private applyStep(e: Extract<LogEntry, { t: 'step' }>) {
@@ -629,6 +648,7 @@ export class World {
     this.bind(prev, e.region, e.from, e.to);
     this.joints[`r${i}~r${i + 1}`] = e.pairing;
     this.foes[e.region] = { ...e.foes };
+    this.depths.set(e.region, i);
   }
 
   private applySide(e: Extract<LogEntry, { t: 'side' }>) {
@@ -650,6 +670,7 @@ export class World {
     this.bind(e.host, e.region, e.from, e.to);
     this.joints[`${e.host}~${e.region}`] = e.pairing;
     this.foes[e.region] = { ...e.foes };
+    this.depths.set(e.region, this.depthOf(e.host) + 1);
   }
 
   private applyJoin(e: Extract<LogEntry, { t: 'join' }>) {
