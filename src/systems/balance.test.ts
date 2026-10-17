@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { attackPower, gainXp, MOB_KINDS, newHero, spellPower, xpToNext, type Hero, type Item } from './combat';
 import { itemOf } from './items';
 import { lungeOf, REACH } from '../entities/Mob';
+import { bossKind, fightOdds, heroModel } from './dmBoss';
 
 // Keeps the weapon classes and the biomes' enemies in step: a bow or a wand is not a better sword, and the deeper
 // a kind is meant to be fought, the harder it hits. The numbers are damage per second of plain attacks.
@@ -137,5 +138,45 @@ describe('enemy balance', () => {
     for (const kind of melee) expect(lungeOf(kind) + 32, kind.name).toBeGreaterThan(38 + 6);
     expect(lungeOf(MOB_KINDS.warg!)).toBeGreaterThan(lungeOf(MOB_KINDS.zombie!));
     expect(REACH).toBeGreaterThan(30);
+  });
+});
+
+describe('boss balance', () => {
+  // A boss (dmBoss.ts) is made for the party's level and size, whatever kind it is drawn from: a real fight, not a walk-over.
+  const base = () => MOB_KINDS.goblin!;
+  const levels = Array.from({ length: 14 }, (_, i) => i + 1);
+
+  it('is beatable by a party of its level and size, and not trivial: they last 1.15 to 2.5 times as long as it takes to kill it', () => {
+    for (const level of levels)
+      for (const size of [1, 2, 3, 4]) {
+        const odds = fightOdds(level, size, bossKind(base(), level, size, 'the Boss'));
+        const ratio = odds.last / odds.kill;
+        expect(ratio, `level ${level}, party of ${size}`).toBeGreaterThan(1.15);
+        expect(ratio, `level ${level}, party of ${size}`).toBeLessThan(2.5);
+      }
+  });
+
+  it('takes a real while to kill, and a blow of it is felt (a fifth to a third of a hero) at every level', () => {
+    for (const level of levels) {
+      const kind = bossKind(base(), level, 1, 'the Boss');
+      const hero = heroModel(level);
+      expect(kind.maxHp / (hero.power - kind.defense), `blows at level ${level}`).toBeGreaterThan(8);
+      const blow = (kind.attack - hero.defense) / hero.hp;
+      expect(blow, `a blow at level ${level}`).toBeGreaterThan(0.18);
+      expect(blow, `a blow at level ${level}`).toBeLessThan(0.4);
+    }
+  });
+
+  it('is out of reach of a party that is far under its level, and an easy kill for one far over it', () => {
+    const boss = bossKind(base(), 8, 2, 'the Boss');
+    const under = fightOdds(3, 2, boss);
+    expect(under.last / under.kill).toBeLessThan(1);
+    const over = fightOdds(14, 2, boss);
+    expect(over.last / over.kill).toBeGreaterThan(2.5);
+  });
+
+  it('pays a fifth of a level for its kill (the quest pays the rest, richer than a hunt)', () => {
+    for (const level of [1, 5, 10])
+      expect(bossKind(base(), level, 2, 'the Boss').xp).toBe(Math.round(xpToNext(level) * 0.2));
   });
 });

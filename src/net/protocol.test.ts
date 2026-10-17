@@ -450,7 +450,19 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
     expect(parseMessage(encodeMessage(task))).toEqual(task);
     const arrow = { ...dm, task: [0, 0, 2, 5, 'the_fen', 512, 99, 'Hunt 5 Goblins', 0, 2, 'goblin'] as Task }; // v44: an arrow
     expect(parseMessage(encodeMessage(arrow))).toEqual(arrow);
+    // v45: a boss (what is "kind:health") and a mastery (what is "spell:keys"), the 7th and 8th kinds
+    const boss = {
+      ...dm,
+      task: [6, 0, 0, 1, 'the_fen', 512, 99, 'Slay the Hollow Goblin King', 0, 1, 'goblin:480'] as Task,
+    };
+    expect(parseMessage(encodeMessage(boss))).toEqual(boss);
+    const master = {
+      ...dm,
+      task: [7, 0, 1, 3, 'the_fen', 512, 99, 'Master Arcane Bolt: cast it 3 times', 0, 0, 'bolt:uurl'] as Task,
+    };
+    expect(parseMessage(encodeMessage(master))).toEqual(master);
     const broken = [
+      [8, 0, 0, 1, 'z', 0, 0, 'x', 0, 0, ''], // a kind this version does not have
       [9, 0, 0, 1, 'z', 0, 0, 'x', 0, 0, ''],
       [0, 0, 0, 1, '', 0, 0, 'x', 0, 0, ''],
       [0, 0, 0, 1, 'z', 0, 0, '', 0, 0, ''],

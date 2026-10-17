@@ -49,6 +49,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * much of the way is shown (0 nothing, 1 the area, 2 an arrow), not a yes or no, and its kind may be `cast` or `haul`.
  * v45: `DmMsg.say` and `reply` may carry director cues (`<cue:.../>`, systems/cues.ts), so they may be up to `MAX_SAY_CUED`
  * letters; an old page would show the tags and refuse the longer words.
+ * v46: a `DmMsg.task`'s kind may be `boss` (the guest builds the giant from the quest's `what`, "kind:health") or `master`.
  * Older: v28 made a negative `SnapMsg.ponds` level mean refilling after running dry; v27 made `drink` start (item
  * 1) or stop (item 0) a steady drink and added `SnapMsg.ponds`; v26 added the `drink` op of `do`; v25 added the
  * mob state `channel` (the Mummy's held ray); v24 added the `frost` fx of Stasis; v23 made `SnapMsg.crops` a state
@@ -64,7 +65,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
  * within a size budget.
  */
-export const PROTOCOL_VERSION = 45;
+export const PROTOCOL_VERSION = 46;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;

@@ -15,6 +15,7 @@ import { CELL } from '../map/types';
 import { MOB_KINDS, gainXp, type Hero, type MobKind, type QuestLog } from './combat';
 import type { Dial } from './capabilities';
 import { collect } from './chests';
+import { BOSS_KEY } from './dmBoss';
 import { packFree, takeFromPack } from './inventory';
 import { itemOf, type ItemId } from './items';
 
@@ -65,7 +66,7 @@ export type Objective =
   /** Walk to a named place (a `MapData.places` entry) of `zone`: done on arriving within `VISIT_RADIUS` of it. */
   | { t: 'visit'; place: string; zone: string; count: number }
   /** Cast `count` spells (combos: the `combos` capability), anywhere or only in `zone`. */
-  | { t: 'cast'; count: number; zone?: string }
+  | { t: 'cast'; count: number; zone?: string; spell?: string }
   /** Carry `count` different barrels (the `carrying` capability) of `zone` and set them down by its named place. */
   | { t: 'haul'; place: string; zone: string; count: number };
 
@@ -198,7 +199,8 @@ export const completerOf = (q: Quest): string => q.turnIn ?? offererOf(q);
 export const VISIT_RADIUS = 7;
 
 /** The mob kind's key in MOB_KINDS (for counting kills), or undefined for a kind that is not in it. */
-export const mobKey = (kind: MobKind): string | undefined => Object.keys(MOB_KINDS).find((k) => MOB_KINDS[k] === kind);
+export const mobKey = (kind: MobKind): string | undefined =>
+  kind.boss ? BOSS_KEY : Object.keys(MOB_KINDS).find((k) => MOB_KINDS[k] === kind);
 
 /**
  * The rules every quest is held to, wherever it is tracked: a hero's own log (the campaign's story, handed out by its
@@ -228,10 +230,11 @@ export function progressIn(log: QuestLog, q: Quest, held = 0): number {
   }
 }
 
-/** A spell cast in `zone`: counts if `q` wants one and is not yet done. */
-export function castIn(log: QuestLog, q: Quest, zone: string): boolean {
+/** A spell (`spell`, a spell's id) cast in `zone`: counts if `q` wants one (any, or that one) and is not yet done. */
+export function castIn(log: QuestLog, q: Quest, zone: string, spell?: string): boolean {
   const { objective: o } = q;
   if (!log.taken || o.t !== 'cast' || (o.zone && o.zone !== zone) || log.progress >= o.count) return false;
+  if (o.spell && o.spell !== spell) return false;
   log.progress++;
   return true;
 }

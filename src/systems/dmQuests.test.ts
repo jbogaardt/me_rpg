@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { newHero, type Item } from './combat';
-import { allOffers, huntGoal, levelScale, offerFor, offerReward, relicsFor, upgradeFor, type Land } from './dmQuests';
+import {
+  allOffers,
+  huntGoal,
+  levelScale,
+  masteryWhat,
+  offerFor,
+  offerReward,
+  parseMastery,
+  questOf,
+  relicsFor,
+  upgradeFor,
+  type Land,
+} from './dmQuests';
+import { BOSS_KEY, bossStats, parseBossWhat } from './dmBoss';
+import { castIn, killIn } from './quests';
 
 const land = (l: Partial<Land> = {}): Land => ({
   zone: 'fen',
@@ -27,6 +41,7 @@ describe('quests written from a land', () => {
       'Hunt 3 Trolls',
       'Gather 3 Echostones',
       'Reach the Old Mill',
+      expect.stringMatching(/^Slay the .*Troll/), // the boss: the toughest foe the land has
       'Find the Wayfarer’s Charm',
     ]);
     expect(offers.find((o) => o.kind === 'hunt')).toMatchObject({ what: 'goblin', goal: 3, zone: 'fen', x: 10, y: 20 });
@@ -118,5 +133,62 @@ describe('the offer for a task a saga names outright', () => {
     expect(upgradeFor(hero, items, 3)).toBe('cap'); // the blade is as good as it gets: armour next
     hero.head = items.cap;
     expect(upgradeFor(hero, items, 3)).toBeNull();
+  });
+});
+
+describe('a boss quest', () => {
+  const boss = (l: Partial<Land> = {}) => allOffers(land(l)).find((o) => o.kind === 'boss');
+
+  it('is the toughest foe the land has, made for the party, and waits at the land’s own spot', () => {
+    const o = boss({ level: 5, party: 3 })!;
+    expect(o).toMatchObject({ zone: 'fen', goal: 1, x: 900, y: 910, level: 5 });
+    expect(parseBossWhat(o.what)).toEqual({ key: 'troll', maxHp: bossStats(5, 3).maxHp });
+    expect(o.title).toMatch(/^Slay the .*Troll/);
+    expect(boss({ level: 5, party: 3 })!.title).toBe(o.title); // the same name each time it is offered
+    expect(parseBossWhat(boss({ level: 5, party: 1 })!.what)!.maxHp).toBeLessThan(parseBossWhat(o.what)!.maxHp);
+  });
+
+  it('is only offered where there is a foe to make it of and a spot to put it', () => {
+    expect(boss({ mobs: [] })).toBeUndefined();
+    expect(boss({ spot: () => null })).toBeUndefined();
+  });
+
+  it('pays more than a hunt, scaled by level, and is counted as the one kill of the boss', () => {
+    expect(offerReward('boss', 1, 1).xp).toBeGreaterThan(offerReward('hunt', 5, 1).xp);
+    expect(offerReward('boss', 1, 1).gold).toBeGreaterThan(offerReward('hunt', 5, 1).gold);
+    expect(offerReward('boss', 1, 8).xp).toBeGreaterThan(offerReward('boss', 1, 1).xp * 5);
+    const q = questOf(boss()!);
+    expect(q.objective).toEqual({ t: 'kill', kind: BOSS_KEY, count: 1, zone: 'fen' });
+    const log = { stage: 0, taken: true, progress: 0 };
+    expect(killIn(log, q, 'troll', 'fen')).toBe(false); // an ordinary troll is not it
+    expect(killIn(log, q, BOSS_KEY, 'fen')).toBe(true);
+  });
+});
+
+describe('a mastery quest', () => {
+  const combos = [
+    { spell: 'bolt', name: 'Arcane Bolt', keys: 'uurl' },
+    { spell: 'nova', name: 'Nova', keys: 'dlurd' },
+  ];
+
+  it('is offered once for each spell the party’s wands and tomes teach, and not where there are none', () => {
+    const offers = allOffers(land({ combos })).filter((o) => o.kind === 'master');
+    expect(offers.map((o) => o.title)).toEqual(['Master Arcane Bolt: cast it 3 times', 'Master Nova: cast it 3 times']);
+    expect(offers[0]).toMatchObject({ goal: 3, what: 'bolt:uurl', zone: 'fen' });
+    expect(allOffers(land()).some((o) => o.kind === 'master')).toBe(false);
+    expect(allOffers(land({ combos: [] })).some((o) => o.kind === 'master')).toBe(false);
+  });
+
+  it('counts only casts of the spell it names, and pays more than casting anything', () => {
+    expect(parseMastery(masteryWhat('bolt', 'uurl'))).toEqual({ spell: 'bolt', keys: 'uurl' });
+    expect(parseMastery('bolt')).toBeNull();
+    expect(parseMastery('bolt:xyz')).toBeNull();
+    const q = questOf(allOffers(land({ combos })).find((o) => o.kind === 'master')!);
+    expect(q.objective).toEqual({ t: 'cast', zone: 'fen', count: 3, spell: 'bolt' });
+    const log = { stage: 0, taken: true, progress: 0 };
+    expect(castIn(log, q, 'fen', 'nova')).toBe(false);
+    expect(castIn(log, q, 'fen')).toBe(false);
+    expect(castIn(log, q, 'fen', 'bolt')).toBe(true);
+    expect(offerReward('master', 3, 1).xp).toBeGreaterThan(offerReward('cast', 3, 1).xp);
   });
 });

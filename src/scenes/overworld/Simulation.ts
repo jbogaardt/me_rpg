@@ -94,8 +94,8 @@ export class Simulation {
   onDefeat: (p: Player, zone: string, x: number, y: number) => void = () => {};
   /** A foe fell to the party (the DM's tasks count the kills in their zone). */
   onKill: (zone: string, key: string) => void = () => {};
-  /** Someone cast a spell (a combo) in `zone`: the DM's quest may count it. */
-  onCast: (p: Player, zone: string) => void = () => {};
+  /** Someone cast a spell (a combo, `spell` its id; a skill's own id for an innate skill) in `zone`: the DM's quest may count it. */
+  onCast: (p: Player, zone: string, spell: string) => void = () => {};
   /** Someone set barrel `index` of `zone` down at (x, y): the DM's quest may count it. */
   onSetDown: (p: Player, zone: string, index: number, x: number, y: number) => void = () => {};
 

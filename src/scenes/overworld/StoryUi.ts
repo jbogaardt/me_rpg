@@ -9,6 +9,7 @@ import type { MapOverlay } from '../../hud/MapOverlay';
 import type { Menu } from '../../hud/Menu';
 import { CELL } from '../../map/types';
 import { briefing, objective } from '../../systems/dmBrief';
+import { bossKind, bossShell, nameOfBossTitle, parseBossWhat } from '../../systems/dmBoss';
 import { RELIC_KIND } from '../../systems/dmQuests';
 import { landmarkIn, landmarkText } from '../../systems/landmarks';
 import { HINT_AREA, HINT_ARROW, taskText, type TaskView } from '../../systems/dmTasks';
@@ -264,6 +265,33 @@ export class StoryUi {
           item: want.what,
         });
       else if (have && !(want && z.name === want.zone)) z.removeSite(have);
+    }
+  }
+
+  /**
+   * The boss of a boss quest stands in its land on every page, made from the quest alone (the kind and health in its `what`,
+   * its name in the title), and goes with the quest. The host's is a real foe with a body made for the party; a friend's is
+   * the same giant, driven by the snapshots. It is the zone's last foe on both sides, so the snapshots' indexes agree. It is
+   * only made while the quest runs, so a land loaded after the boss fell does not give it back.
+   */
+  syncBoss() {
+    const t = this.arena.task;
+    const live = t && t.kind === 'boss' && (t.state === 'active' || t.state === 'done') ? t : null;
+    const want = live ? parseBossWhat(live.what) : null;
+    const base = want ? MOB_KINDS[want.key] : undefined;
+    for (const z of this.arena.zones.values()) {
+      const have = z.mobs.find((m) => m.kind.boss);
+      if (live && want && base && z.name === live.zone) {
+        if (have || live.state !== 'active') continue;
+        const name = nameOfBossTitle(live.title);
+        const party = this.arena.partyAll();
+        const level = party.reduce((a, p) => a + p.hero.stats.level, 0) / Math.max(1, party.length);
+        const kind =
+          this.arena.role === 'client'
+            ? bossShell(base, want.maxHp, name)
+            : { ...bossKind(base, level, party.length, name), maxHp: want.maxHp };
+        z.admitBoss(kind, live.x, live.y);
+      } else if (have) z.removeMob(have);
     }
   }
 }
