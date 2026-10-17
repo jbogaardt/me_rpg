@@ -2,6 +2,7 @@ import { defineBiome, worldOf } from '../tools/map/world';
 import { TREES } from '../tools/map/catalog';
 import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
 import { SHOP_ARRIVAL } from '../tools/map/interiors';
+import { SEWER_ARRIVAL, SEWER_HATCH } from '../tools/map/delves';
 import layout from './world';
 
 const W = worldOf(layout);
@@ -68,6 +69,10 @@ export default defineBiome({
       z.prop(SHOP_HANGING[id as ShopId], shop.door.col + shop.door.w, shop.building.row, { dy: -6 });
     }
     z.spawn(...z.near(168, 205));
+    // The drain in the market square: the way down into the sewers (maps/sewer_lanternrest.ts).
+    z.keepFree(SEWER_HATCH.col, SEWER_HATCH.row + 1);
+    z.prop('sewerHatch', SEWER_HATCH.col, SEWER_HATCH.row);
+    z.door(SEWER_HATCH.col, SEWER_HATCH.row, 1, 'sewer_lanternrest', SEWER_ARRIVAL.col, SEWER_ARRIVAL.row);
     z.sign(north[0] + 6, ROW - 9, { up: 'greenwood', left: 'greenwood', right: 'frostlands' }); // by the north road (systems/signs.ts)
 
     // --- Life in the market ----------------------------------------------------------------------------------

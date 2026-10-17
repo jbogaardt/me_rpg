@@ -53,6 +53,15 @@
       },
       "links": ["desert", "undead", "jungle"]
     },
+    "cave_sunscar": {
+      "name": "The Sunscar Hollow",
+      "map": "cave_sunscar",
+      "climate": null,
+      "music": null,
+      "tilesets": ["dungeon_cave.png"],
+      "generation": {},
+      "links": ["desert"]
+    },
     "desert": {
       "name": "The Sunscar Desert",
       "tint": "#ffc468",
@@ -66,6 +75,7 @@
         "trees_dry.png",
         "object-layer.png",
         "signposts.png",
+        "dunes.png",
         "ruins.png",
         "trees_green.png",
         "trees_dead.png",
@@ -119,7 +129,7 @@
           }
         ]
       },
-      "links": ["greenwood", "beach"]
+      "links": ["greenwood", "beach", "cave_sunscar"]
     },
     "eastwood": {
       "name": "The Eastwood",
@@ -446,6 +456,15 @@
       },
       "links": ["jungle", "wetlands", "frostlands"]
     },
+    "sewer_lanternrest": {
+      "name": "The Lanternrest Sewers",
+      "map": "sewer_lanternrest",
+      "climate": null,
+      "music": null,
+      "tilesets": ["dungeon_sewer.png"],
+      "generation": {},
+      "links": ["town"]
+    },
     "shop_apothecary": {
       "name": "The Apothecary's Shop",
       "map": "shop_apothecary",
@@ -507,7 +526,8 @@
         "trees_frost.png",
         "frost_objects.png",
         "town.png",
-        "hanging_signs.png"
+        "hanging_signs.png",
+        "dungeon_sewer.png"
       ],
       "generation": {},
       "links": [
@@ -517,7 +537,8 @@
         "shop_armory",
         "shop_apothecary",
         "shop_ranger",
-        "shop_wizard"
+        "shop_wizard",
+        "sewer_lanternrest"
       ]
     },
     "training_adept": {

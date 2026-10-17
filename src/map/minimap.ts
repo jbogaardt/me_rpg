@@ -24,6 +24,12 @@ const SURFACE_COLORS: Record<string, Rgb> = {
   bog: [52, 58, 30],
   lava: [226, 92, 30],
   pit: [40, 30, 26],
+  caveFloor: [128, 98, 74], // caves and sewers (tools/map/delve.ts); a roof or wall reads dark, as an obstacle
+  caveRubble: [120, 92, 70],
+  caveWater: [34, 52, 58],
+  caveLava: [226, 92, 30],
+  sewerFloor: [120, 124, 134],
+  sewerWater: [38, 64, 52],
   beyond: [26, 26, 46], // a neighbouring biome: seen from here but not part of this zone
 };
 const UNKNOWN: Rgb = [120, 120, 120];

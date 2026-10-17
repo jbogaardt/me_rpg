@@ -18,12 +18,153 @@ export const CLIFF_SHEET = 'Cliff_tileset.png'; // Avalon cliffs: a plateau blob
 export const FROST_CLIFFS = 'frost_cliffs.png'; // cliffs with snow tops and blue-grey rock (recolor.ts)
 export const DRY_CLIFFS = 'dry_cliffs.png'; // cliffs with sandy tops and ochre rock (recolor.ts)
 
+// MrBeast's cave, sewer and desert tilesets (art/oga_dungeon/, CC-BY 3.0), doubled to the 32px cell by dungeonSheets.ts.
+export const CAVE_SHEET = 'dungeon_cave.png';
+export const SEWER_SHEET = 'dungeon_sewer.png';
+export const DUNES_SHEET = 'dunes.png'; // the desert sheet's cliffs, sand keyed out
+
 export { SHADOW_RGB, SHADOW_FROST, SHADOWS } from './shadows';
 
 /** A repeating ground fill: `tiles[row % rows][col % cols]` gives the source [x, y] of each map cell. */
 export interface GroundFill {
   sheet: string;
   tiles: [number, number][][];
+}
+
+/** Source tile indices (tx, ty) of a 16px-grid sheet, as pixel positions on its doubled copy (see dungeonSheets.ts). */
+const tiles = (sheet: string, rows: [number, number][][]): GroundFill => ({
+  sheet,
+  tiles: rows.map((row) => row.map(([tx, ty]) => [tx * 32, ty * 32] as [number, number])),
+});
+
+/**
+ * The grounds of the caves and sewers (maps are painted by tools/map/delve.ts): a floor, a roof (the dark top of the rock),
+ * and the wall that shows where a roof meets a floor to its south: `faceL` (the row against the floor), `faceU` above it
+ * and a rim or two of roof (`edge`, `cap`) before the plain roof. Alternating tiles are two columns wide so they repeat.
+ */
+function dungeonGrounds() {
+  const C = CAVE_SHEET;
+  const S = SEWER_SHEET;
+  return {
+    caveFloor: tiles(C, [
+      [
+        [0, 10],
+        [1, 10],
+        [0, 9],
+      ],
+      [
+        [1, 9],
+        [0, 10],
+        [1, 10],
+      ],
+      [
+        [0, 9],
+        [1, 9],
+        [0, 10],
+      ],
+    ]),
+    caveRubble: tiles(C, [
+      [
+        [0, 7],
+        [1, 7],
+      ],
+      [
+        [0, 8],
+        [1, 8],
+      ],
+    ]),
+    caveRoof: tiles(C, [[[7, 0]]]),
+    caveEdge: tiles(C, [
+      [
+        [13, 4],
+        [14, 4],
+      ],
+    ]),
+    caveFaceU: tiles(C, [
+      [
+        [13, 5],
+        [14, 5],
+      ],
+    ]),
+    caveFaceL: tiles(C, [
+      [
+        [13, 6],
+        [14, 6],
+      ],
+    ]),
+    caveFaceLWater: tiles(C, [
+      [
+        [13, 9],
+        [14, 9],
+      ],
+    ]),
+    caveWater: tiles(C, [
+      [
+        [11, 13],
+        [6, 13],
+        [11, 13],
+      ],
+      [
+        [11, 13],
+        [11, 13],
+        [8, 13],
+      ],
+    ]),
+    caveLava: tiles(C, [
+      [
+        [0, 19],
+        [1, 19],
+      ],
+      [
+        [1, 20],
+        [0, 20],
+      ],
+    ]),
+    sewerFloor: tiles(S, [
+      [
+        [3, 0],
+        [4, 1],
+      ],
+      [
+        [4, 2],
+        [3, 1],
+      ],
+    ]),
+    sewerRoof: tiles(S, [[[11, 1]]]),
+    sewerCapTop: tiles(S, [[[1, 1]]]),
+    sewerCap: tiles(S, [[[1, 2]]]),
+    sewerFaceU: tiles(S, [
+      [
+        [0, 3],
+        [1, 3],
+        [2, 3],
+      ],
+    ]),
+    sewerFaceL: tiles(S, [
+      [
+        [0, 4],
+        [1, 4],
+        [2, 4],
+      ],
+    ]),
+    sewerWater: tiles(S, [
+      [
+        [9, 8],
+        [9, 8],
+        [11, 7],
+      ],
+      [
+        [10, 8],
+        [13, 7],
+        [9, 8],
+      ],
+      [
+        [9, 8],
+        [12, 8],
+        [10, 8],
+      ],
+    ]),
+  } satisfies Record<string, GroundFill>;
 }
 
 export const GROUND = {
@@ -150,9 +291,12 @@ export const GROUND = {
       ],
     ],
   },
+  ...dungeonGrounds(),
 } satisfies Record<string, GroundFill>;
 
 export type GroundName = keyof typeof GROUND;
+/** The cave and sewer grounds (see `dungeonGrounds`): kept apart from the open-air ones in `SURFACES` (zone.ts). */
+export const DUNGEON_GROUNDS: string[] = Object.keys(dungeonGrounds());
 
 /** Edge and outer-corner tiles that blend a patch into grass (the patch's outermost cells become these). */
 export interface Ring {
@@ -563,8 +707,104 @@ const RUIN_PREFABS = {
 };
 // --- end Ruins ---
 
+// --- Caves, sewers and their doorways (MrBeast's tilesets, see dungeonSheets.ts): pieces named by source tile ---
+const delveArt = (
+  sheet: string,
+  tx: number,
+  ty: number,
+  tw: number,
+  th: number,
+  solid: Prefab['solid'],
+  tag: string,
+  about: string,
+): Prefab => ({
+  sheet,
+  w: tw * 32,
+  h: th * 32,
+  parts: [part(tx * 32, ty * 32, tw * 32, th * 32)],
+  solid,
+  tag,
+  about,
+});
+const DELVE_PREFABS = {
+  caveMouth: delveArt(
+    DUNES_SHEET,
+    10,
+    19,
+    2,
+    2,
+    { band: 64, min: 0.3 },
+    'rock',
+    'A cave mouth in a rock outcrop on the sand (2x2, solid): put a door on its bottom row, at the dark opening (right cell).',
+  ),
+  caveExit: delveArt(
+    CAVE_SHEET,
+    3,
+    4,
+    3,
+    2,
+    null,
+    'cave',
+    'The way out of a cave: a rock face with daylight pouring in (3x2). Draw it over the wall rows north of the floor.',
+  ),
+  caveHole: delveArt(CAVE_SHEET, 3, 1, 3, 2, null, 'cave', 'A dark tunnel mouth in a cave wall (3x2), decoration.'),
+  sewerHatch: delveArt(
+    SEWER_SHEET,
+    1,
+    5,
+    1,
+    1,
+    null,
+    'hatch',
+    'A round drain with a stone rim, set in the ground (1 cell): the way down into a sewer.',
+  ),
+  sewerDoor: delveArt(SEWER_SHEET, 7, 0, 1, 2, null, 'sewer', 'A dark arched doorway in a sewer wall (1x2).'),
+  sewerGate: delveArt(
+    SEWER_SHEET,
+    8,
+    0,
+    1,
+    2,
+    null,
+    'sewer',
+    'A barred arched gate in a sewer wall (1x2), decoration.',
+  ),
+  sewerGrate: delveArt(
+    SEWER_SHEET,
+    11,
+    5,
+    3,
+    2,
+    null,
+    'sewer',
+    'An outflow grate in a brick wall over a pool of water (3x2): draw it over the wall rows, decoration.',
+  ),
+  sewerTorch: delveArt(SEWER_SHEET, 5, 4, 1, 1, null, 'torch', 'A torch in a bracket (1 cell), over a brick wall.'),
+  sewerCrate: delveArt(
+    SEWER_SHEET,
+    15,
+    5,
+    1,
+    1,
+    { band: 32, min: 0.3 },
+    'furniture',
+    'A wooden crate (1 cell), solid.',
+  ),
+  sewerBox: delveArt(
+    SEWER_SHEET,
+    14,
+    5,
+    1,
+    1,
+    { band: 32, min: 0.3 },
+    'furniture',
+    'A metal-bound box (1 cell), solid.',
+  ),
+};
+
 export const PREFABS = {
   ...SIGN_PREFABS,
+  ...DELVE_PREFABS,
   ...GRAVE_PREFABS,
   ...RUIN_PREFABS,
   smithy: building(

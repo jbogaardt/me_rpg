@@ -18,6 +18,25 @@
       "choices": []
     },
     {
+      "node_id": "cave_sunscar",
+      "biome_type": "cave_sunscar",
+      "entities": [
+        { "entity": "goblin", "x": 35, "y": 8 },
+        { "entity": "goblin", "x": 41, "y": 7 },
+        { "entity": "wolfkin", "x": 37, "y": 10 },
+        { "entity": "wolfkin", "x": 24, "y": 28 },
+        { "entity": "wolfkin", "x": 37, "y": 25 },
+        { "entity": "shade", "x": 20, "y": 26 },
+        { "entity": "goblin", "x": 28, "y": 33 },
+        { "entity": "orc", "x": 36, "y": 33 },
+        { "entity": "goblin", "x": 8, "y": 34 },
+        { "entity": "shade", "x": 11, "y": 38 },
+        { "entity": "orc", "x": 48, "y": 19 },
+        { "entity": "troll", "x": 46, "y": 38 }
+      ],
+      "choices": []
+    },
+    {
       "node_id": "desert",
       "biome_type": "desert",
       "entities": [
@@ -107,6 +126,40 @@
       "choices": []
     },
     {
+      "node_id": "greenwood_ambush",
+      "biome_type": "greenwood",
+      "spawn": {
+        "x": 140,
+        "y": 110
+      },
+      "entities": [
+        { "entity": "lostTraveller", "x": 135, "y": 112 },
+        { "entity": "goblin", "x": 145, "y": 108 },
+        { "entity": "goblin", "x": 146, "y": 114 },
+        { "entity": "goblin", "x": 148, "y": 110 },
+        { "entity": "shade", "x": 136, "y": 106 }
+      ],
+      "choices": [
+        {
+          "text": "Run for Lanternrest",
+          "next": "town"
+        },
+        {
+          "text": "Push on to the Barrow Lands",
+          "next": "undead",
+          "requires": {
+            "stat": "level",
+            "min": 4
+          },
+          "hint": "The Barrow Lands crush the unseasoned. Grow stronger before you cross."
+        },
+        {
+          "text": "Stand and fight again",
+          "next": "greenwood_ambush"
+        }
+      ]
+    },
+    {
       "node_id": "jungle",
       "biome_type": "jungle",
       "entities": [
@@ -133,6 +186,23 @@
         { "entity": "bogGhoul", "x": 52, "y": 26 },
         { "entity": "zombie", "x": 47, "y": 45 },
         { "entity": "hexer", "x": 57, "y": 37 }
+      ],
+      "choices": []
+    },
+    {
+      "node_id": "sewer_lanternrest",
+      "biome_type": "sewer_lanternrest",
+      "entities": [
+        { "entity": "zombie", "x": 8, "y": 8 },
+        { "entity": "zombie", "x": 40, "y": 8 },
+        { "entity": "zombie", "x": 5, "y": 24 },
+        { "entity": "zombie", "x": 12, "y": 30 },
+        { "entity": "goblin", "x": 14, "y": 15 },
+        { "entity": "goblin", "x": 34, "y": 15 },
+        { "entity": "skeleton", "x": 20, "y": 21 },
+        { "entity": "skeleton", "x": 28, "y": 21 },
+        { "entity": "goblin", "x": 24, "y": 7 },
+        { "entity": "troll", "x": 40, "y": 29 }
       ],
       "choices": []
     },
@@ -269,28 +339,6 @@
         { "entity": "warg", "x": 112, "y": 46 }
       ],
       "choices": []
-    },
-    {
-      "node_id": "greenwood_ambush",
-      "biome_type": "greenwood",
-      "spawn": { "x": 140, "y": 110 },
-      "entities": [
-        { "entity": "lostTraveller", "x": 135, "y": 112 },
-        { "entity": "goblin", "x": 145, "y": 108 },
-        { "entity": "goblin", "x": 146, "y": 114 },
-        { "entity": "goblin", "x": 148, "y": 110 },
-        { "entity": "shade", "x": 136, "y": 106 }
-      ],
-      "choices": [
-        { "text": "Run for Lanternrest", "next": "town" },
-        {
-          "text": "Push on to the Barrow Lands",
-          "next": "undead",
-          "requires": { "stat": "level", "min": 4 },
-          "hint": "The Barrow Lands crush the unseasoned. Grow stronger before you cross."
-        },
-        { "text": "Stand and fight again", "next": "greenwood_ambush" }
-      ]
     }
   ]
 }

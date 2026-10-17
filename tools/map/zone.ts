@@ -19,6 +19,7 @@ import {
 } from '../../src/map/types';
 import {
   CLIFF,
+  DUNGEON_GROUNDS,
   GROUND,
   PREFABS,
   RINGS,
@@ -279,7 +280,12 @@ export function rng(seed: number) {
  * terrains are made of, and `beyond` (a cell of the neighbouring biome, seen but never walked; see world.ts).
  */
 export const SURFACES: string[] = [
-  ...new Set([...Object.keys(GROUND), ...Object.values(TERRAINS).map((t) => t.surface), 'beyond']),
+  ...new Set([
+    ...Object.keys(GROUND).filter((n) => !DUNGEON_GROUNDS.includes(n)),
+    ...Object.values(TERRAINS).map((t) => t.surface),
+    'beyond',
+    ...DUNGEON_GROUNDS, // last, so the surface indices of the open-air maps never move when a ground is added here
+  ]),
 ];
 
 /** A hand-placed object that isn't a catalog prefab (cliff pieces cut from a sheet). */

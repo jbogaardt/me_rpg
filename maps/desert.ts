@@ -1,6 +1,7 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { DRY_TREES } from '../tools/map/catalog';
 import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
+import { CAVE_ARRIVAL, CAVE_MOUTH } from '../tools/map/delves';
 import layout from './world';
 
 // The desert: the whole north-west, stepping down to the Greenwood. Dunes, a buried skull, red badlands, an oasis, a
@@ -54,6 +55,17 @@ export default defineBiome({
     z.prop('lilyFlower', pick(water, 3).col + 3, pick(water, 3).row);
     z.prop('lilyPads', pick(water, 5).col + 10, pick(water, 5).row);
     z.chest('wood', 'potion', ...near(9.3, 4.4));
+
+    // --- A cave mouth in an outcrop of rock: the way down into the Sunscar Hollow (maps/cave_sunscar.ts) ---------------------
+    z.keepClear([{ col: CAVE_MOUTH.col - 5, row: CAVE_MOUTH.row - 5, w: 12, h: 10 }]);
+    z.prop('caveMouth', CAVE_MOUTH.col, CAVE_MOUTH.row);
+    z.door(CAVE_MOUTH.col + 1, CAVE_MOUTH.row, 1, 'cave_sunscar', CAVE_ARRIVAL.col, CAVE_ARRIVAL.row);
+    z.prop('sandBoulder', CAVE_MOUTH.col - 3, CAVE_MOUTH.row);
+    z.prop('sandBoulderB', CAVE_MOUTH.col + 2, CAVE_MOUTH.row);
+    z.prop('sandSpire', CAVE_MOUTH.col - 1, CAVE_MOUTH.row - 2);
+    z.prop('sandSpire', CAVE_MOUTH.col + 4, CAVE_MOUTH.row - 1);
+    z.keepFree(CAVE_MOUTH.col + 1, CAVE_MOUTH.row + 1);
+    z.place('The Sunscar Hollow', CAVE_MOUTH.col + 1, CAVE_MOUTH.row + 3);
 
     // --- A ring of standing rocks ----------------------------------------------------------------------------
     for (let i = 0; i < 9; i++) {
