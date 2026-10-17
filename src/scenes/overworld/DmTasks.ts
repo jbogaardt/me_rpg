@@ -342,7 +342,12 @@ export class DmTasks {
         );
       }
     }
-    if (!this.epic) this.desk.say(this.phrases.pick(result, result === 'done' ? DONE_WORDS : FAILED_WORDS)); // a saga says its own words
+    if (!this.epic) this.desk.say(this.phrases.pick(result, result === 'done' ? DONE_WORDS : FAILED_WORDS));
+    else if (result === 'done' && this.epic.step < this.epic.total) {
+      // a saga says its own words, but a won step still tells what it paid (the last step's reward is in the closing scene)
+      const { xp, gold } = t.quest.reward;
+      this.desk.say(`Step ${this.epic.step} of ${this.epic.total} done. You each earn ${xp} XP and ${gold} gold.`);
+    }
     this.linger = TASK_LINGER;
     this.onFinish(result);
   }

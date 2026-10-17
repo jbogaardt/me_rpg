@@ -110,13 +110,13 @@ export class DmEpics {
     tasks.onFinish = (state) => {
       const run = this.run;
       if (!run) return;
-      if (state !== 'done') return this.end(this.phrases.pick('lost', SAGA_LOST_WORDS));
+      if (state !== 'done') return this.end(this.phrases.pick('lost', SAGA_LOST_WORDS), 'a step was lost');
       const step = run.plan.epic.steps[run.step];
       if (step?.kind === 'meet') return this.meet(run, step); // they speak when talked to, then the epic goes on
       this.advance(run);
     };
     tasks.onCancel = () => {
-      if (this.run) this.end(this.phrases.pick('off', SAGA_OFF_WORDS));
+      if (this.run) this.end(this.phrases.pick('off', SAGA_OFF_WORDS), 'called off');
     };
   }
 
@@ -200,7 +200,7 @@ export class DmEpics {
   /** Call it off. */
   cancel() {
     if (!this.run) return;
-    this.end(this.phrases.pick('off', SAGA_OFF_WORDS));
+    this.end(this.phrases.pick('off', SAGA_OFF_WORDS), 'called off');
     this.tasks.cancel(false);
   }
 
@@ -223,7 +223,7 @@ export class DmEpics {
         : step.objective
           ? offerFor(this.tasks.landOf(z), step.objective) // named outright: this foe, these sites, that place
           : this.choose(allOffers(this.tasks.landOf(z)), step.kind, run.step);
-    if (!offer) return this.end(this.phrases.pick('quiet', SAGA_QUIET_WORDS));
+    if (!offer) return this.end(this.phrases.pick('quiet', SAGA_QUIET_WORDS), 'the land had nothing more to ask');
     run.next = false;
     this.tasks.setEpic({ title: run.plan.epic.title, step: run.step + 1, total: run.plan.epic.steps.length });
     const from = run.step > 0 ? zoneName(run.plan.zones[run.step - 1]!) : zoneName(zone);
@@ -395,10 +395,23 @@ export class DmEpics {
     this.onDone();
   }
 
-  private end(words: string) {
+  /**
+   * The saga stops short (a step lost, the DM calling it off, a land with nothing left to ask): the DM says so plainly, with
+   * how far it got and that it paid nothing, and the page logs it. A saga never just vanishes (a beta run lost one at
+   * chapter 2 with no word of it). Callers must not `say` anything after this: the newest words replace these.
+   */
+  private end(words: string, why: string) {
+    const run = this.run;
     this.run = null;
     this.tasks.setEpic(null);
-    this.desk.say(words);
+    if (!run) {
+      this.desk.say(words);
+      return;
+    }
+    const { title, steps } = run.plan.epic;
+    const at = Math.min(run.step + 1, steps.length);
+    console.info(`[dm] saga “${title}” ended at step ${at} of ${steps.length} (${why})`);
+    this.desk.say(`“${title}” ends at step ${at} of ${steps.length}, unfinished: no saga reward. ${words}`); // outcome first: a long line is cut at its end
   }
 
   reset() {

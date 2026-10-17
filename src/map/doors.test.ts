@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrivalFacing, cellFeet, doorAt, doorsNear, keepOffDoors } from './doors';
+import { arrivalFacing, cellFeet, doorAt, doorsNear, keepOffDoors, pointFromNeighbour } from './doors';
 import type { DoorSpawn } from './types';
 
 const door = (col: number, row: number, w: number, zone: string): DoorSpawn => ({
@@ -89,5 +89,20 @@ describe('a bot DM that strolls about the party (issue #39)', () => {
       [0, -1],
     ] as const)
       expect(keepOffDoors(outside, x, y, dx, dy)).toEqual([dx, dy]);
+  });
+});
+
+describe('a friend just across a gap (the DM bot kept going to a player who stood beside him)', () => {
+  // A gap on the east edge: the next zone's map is laid beside this one, so its x is smaller by the width gone past.
+  const east: DoorSpawn = { col: 99, row: 50, w: 1, dir: 'right', to: { zone: 'meadow_east', col: 0, row: 50 } };
+  const here = { doors: [east], indoor: false };
+  it("puts a point of the next zone in this zone's pixels, so its distance can be told", () => {
+    const p = pointFromNeighbour(here, 'meadow_east', 3 * 32, 50 * 32);
+    expect(p).not.toBeNull();
+    expect(p!.x).toBeGreaterThan(95 * 32); // a few cells into the next zone is just past this one's east edge
+  });
+  it('knows no offset for a zone that is not next door, or from a room', () => {
+    expect(pointFromNeighbour(here, 'far_away', 0, 0)).toBeNull();
+    expect(pointFromNeighbour({ doors: [east], indoor: true }, 'meadow_east', 0, 0)).toBeNull();
   });
 });

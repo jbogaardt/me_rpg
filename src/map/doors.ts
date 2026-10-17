@@ -103,6 +103,21 @@ export function neighbourLinks(data: Pick<MapData, 'doors' | 'indoor'>): Link[] 
   return found;
 }
 
+/**
+ * Where a point of the zone `there` lies in `here`'s pixels, when the two are one world joined by a gap (null otherwise:
+ * a room, or an open-air zone that is not next door). Crossing a gap only changes which map a player is in, so a friend a
+ * few steps past it is in another zone while standing right beside the DM; reading "same zone" alone calls them far off.
+ */
+export function pointFromNeighbour(
+  here: Pick<MapData, 'doors' | 'indoor'>,
+  there: string,
+  x: number,
+  y: number,
+): { x: number; y: number } | null {
+  const link = neighbourLinks(here).find((l) => l.zone === there);
+  return link ? { x: x - link.dx, y: y - link.dy } : null;
+}
+
 /** How far ahead (px) a walk looks for a door: more than the DM covers in a frame, less than a cell. */
 const DOOR_LOOK = CELL * 0.6;
 

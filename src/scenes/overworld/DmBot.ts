@@ -7,7 +7,8 @@
 // off unless asked for.
 
 import type { DmCard } from '../../hud/DmCard';
-import { CELL } from '../../map/types';
+import { pointFromNeighbour } from '../../map/doors';
+import { CELL, type MapData } from '../../map/types';
 import type { Session } from '../../net/session';
 import { taskText } from '../../systems/dmTasks';
 import { openGroundNear } from '../../systems/dmPeople';
@@ -36,12 +37,42 @@ export interface DmBotFriend {
   hp: number;
   /** Which way (a vector) and how far, both in cells, they are from the DM, when in the same zone: the DM strolls near them. */
   toward?: { dx: number; dy: number; cells: number };
-  /** In the same zone as the DM and within `NEAR_CELLS` of them (the bot goes to the party when nobody is). */
+  /** The friend's zone (its own name) and feet (cells), and the distance in cells the bot used (null: a zone not next door), for the log of a trip to them. */
+  zone?: string;
+  at?: { col: number; row: number };
+  cells?: number | null;
+  /** Within `NEAR_CELLS` of the DM, in the same zone or just across a gap (the zones are one world; the bot goes to the party when nobody is near). */
   near: boolean;
 }
 
 /** How close a friend counts as near the DM, in cells: far enough to stay put while they fight, near enough to be at hand. */
 export const NEAR_CELLS = 14;
+
+/**
+ * One friend as the bot reads them from the DM's place. In the DM's zone: how far and which way. In a zone joined to it by a
+ * gap (open country is laid as one map): near if close in the one world, though `toward` is left out (the stroll must not
+ * lean on a gap, which it keeps off). Anywhere else: no distance (the bot goes to them in a blink).
+ */
+export function readFriend(
+  dm: { name: string; data: Pick<MapData, 'doors' | 'indoor'>; x: number; y: number },
+  f: { slot: number; zone: string; x: number; y: number; hp: number },
+): DmBotFriend {
+  const same = f.zone === dm.name;
+  const across = same ? null : pointFromNeighbour(dm.data, f.zone, f.x, f.y);
+  const gx = (across ? across.x : f.x) - dm.x;
+  const gy = (across ? across.y : f.y) - dm.y;
+  const cells = same || across ? Math.hypot(gx, gy) / CELL : null;
+  return {
+    slot: f.slot,
+    area: zoneName(f.zone),
+    hp: f.hp,
+    zone: f.zone,
+    at: { col: Math.floor(f.x / CELL), row: Math.floor(f.y / CELL) },
+    cells,
+    near: cells !== null && cells <= NEAR_CELLS,
+    ...(same ? { toward: { dx: gx / CELL, dy: gy / CELL, cells: cells ?? 0 } } : {}),
+  };
+}
 
 /** How things stand, for the bot's decisions. */
 export interface DmBotState {
@@ -54,6 +85,9 @@ export interface DmBotState {
   friends: DmBotFriend[];
   /** The area the DM stands in. */
   area: string;
+  /** The DM's zone (its own name) and feet (cells), for the log of a trip to the party. */
+  zone: string;
+  at: { col: number; row: number };
   /** Things waiting in the DM's inbox. */
   waiting: number;
   /** A DM quest is running. */
@@ -147,18 +181,18 @@ export function createDmBot({
   const cardView = (): DmBotCard | null => card.view;
   const friends = (): DmBotFriend[] => {
     const here = arena.zoneOf(arena.local);
-    return [...arena.remotes.entries()].map(([slot, p]) => {
-      const z = arena.zoneOf(p);
-      const gx = p.body.x - arena.local.body.x;
-      const gy = p.body.y - arena.local.body.y;
-      return {
-        slot,
-        area: zoneName(z.name),
-        hp: p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp),
-        near: z === here && Math.hypot(gx, gy) <= NEAR_CELLS * CELL,
-        ...(z === here ? { toward: { dx: gx / CELL, dy: gy / CELL, cells: Math.hypot(gx, gy) / CELL } } : {}),
-      };
-    });
+    return [...arena.remotes.entries()].map(([slot, p]) =>
+      readFriend(
+        { name: here.name, data: here.data, x: arena.local.body.x, y: arena.local.body.y },
+        {
+          slot,
+          zone: arena.zoneOf(p).name,
+          x: p.body.x,
+          y: p.body.y,
+          hp: p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp),
+        },
+      ),
+    );
   };
   return {
     host: () => session.createGame(),
@@ -170,6 +204,8 @@ export function createDmBot({
       dm: arena.local.dm,
       friends: friends(),
       area: zoneName(arena.zoneOf(arena.local).name),
+      zone: arena.zoneOf(arena.local).name,
+      at: { col: Math.floor(arena.local.body.x / CELL), row: Math.floor(arena.local.body.y / CELL) },
       waiting: prompts.waiting.count,
       questing: tasks.active,
       task: tasks.view && tasks.view.state === 'active' ? taskText(tasks.view) : null,

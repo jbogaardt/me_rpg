@@ -332,8 +332,9 @@ export class OverworldScene implements Scene {
       say: (text) => this.desk.say(text),
       note: (text) => this.tasks.setNote(text),
       cancelQuest: () => {
+        const saga = this.epics.active; // a saga says its own ending
         this.tasks.cancel();
-        this.desk.say('That task is cancelled. A new one is coming.');
+        if (!saga) this.desk.say('That task is cancelled. A new one is coming.');
       },
       questing: () => this.tasks.active,
       waiting: () => this.prompts.waiting,

@@ -177,7 +177,8 @@ describe('epic quests, on the host', () => {
     a.epics.update();
     a.tasks.cancel(); // by the DM
     expect(a.epics.active).toBe(false);
-    expect(SAGA_OFF_WORDS).toContain(a.said.at(-1));
+    expect(SAGA_OFF_WORDS.some((w) => a.said.at(-1)!.endsWith(w))).toBe(true);
+    expect(a.said.at(-1)).toMatch(/^“Quiet Errands” ends at step 1 of 3, unfinished: no saga reward\./); // said outright
     expect(a.arena.task).toBeNull();
 
     const b = game(true); // the party is nowhere near the place: it can only time out
@@ -186,7 +187,20 @@ describe('epic quests, on the host', () => {
     b.tasks.update(1600);
     expect(b.arena.task!.state).toBe('failed');
     expect(b.epics.active).toBe(false);
-    expect(SAGA_LOST_WORDS).toContain(b.said.at(-1));
+    expect(SAGA_LOST_WORDS.some((w) => b.said.at(-1)!.endsWith(w))).toBe(true);
+    expect(b.said.at(-1)).toContain('ends at step 1 of 3');
+  });
+
+  it('tells what a won step paid, and never offers a second saga while one runs', () => {
+    const { epics, tasks, said, pick } = game();
+    epics.begin(pick('Quiet Errands'));
+    epics.update();
+    tasks.update(0.1);
+    expect(said.at(-1)).toMatch(/^Step 1 of 3 done\. You each earn \d+ XP and \d+ gold\.$/);
+    tasks.update(TASK_LINGER + 1); // between steps: no quest up, the saga still runs
+    expect(epics.active).toBe(true);
+    expect(epics.beginEpic(STOCK_EPICS[0]!).ok).toBe(false);
+    expect(epics.begin(0)).toBe(false);
   });
 
   it('is told by the host or a solo player, never by a friend', () => {
@@ -287,7 +301,10 @@ describe('epics with people, on the host', () => {
     g.epics.update(0);
     expect(g.brought).toHaveLength(0);
     if (g.epics.active) expect(g.arena.task).toMatchObject({ epic: { step: 1 } });
-    else expect(SAGA_QUIET_WORDS).toContain(g.said.at(-1));
+    else {
+      expect(SAGA_QUIET_WORDS.some((w) => g.said.at(-1)!.endsWith(w))).toBe(true);
+      expect(g.said.at(-1)).toContain('ends at step 1 of');
+    }
   });
 
   it('never leaves the party standing by a person: reminds them, then goes on without a word', () => {

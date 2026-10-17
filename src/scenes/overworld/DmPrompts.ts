@@ -41,6 +41,9 @@ export type CardKind = Suggestion | 'sky' | 'pressure' | 'epic' | 'message' | 's
  * now?: follow me / defend this ground / hunt here". The bar can open any of them on demand. It runs for whoever runs the
  * world: the online DM, or a solo player in a live world.
  */
+/** The title of the card that offers sagas (never up while one runs). */
+const CHOOSE_EPIC = 'Choose an epic quest';
+
 export class DmPrompts {
   private director = new Director();
   private phrases = new Phrasebook();
@@ -80,6 +83,8 @@ export class DmPrompts {
     this.hear();
     this.inbox.expire(this.now);
     this.card.update(dt);
+    // a chooser left up from before a saga began would offer a second one (the page refuses it, but it should not be shown)
+    if (this.epics.active && this.card.view?.title === CHOOSE_EPIC) this.card.hide();
     if (this.card.kind === 'story') this.card.refresh(this.storyOptions());
     const party = this.arena.partyAll();
     const fracs = party.map((p) => p.hero.stats.hp / Math.max(1, p.hero.stats.maxHp));
@@ -151,7 +156,7 @@ export class DmPrompts {
       if (pace && pace.hint < HINT_ARROW && pace.sinceProgress >= 45)
         add('lost', 'No progress for a while: show the way?');
       add('twist', 'Make it more interesting');
-    } else {
+    } else if (!this.epics.active) {
       add('epic', 'Begin an epic quest across lands and people');
     }
     add('sky', 'Change the sky');
@@ -467,8 +472,9 @@ export class DmPrompts {
     } else if (id === 'close') {
       this.powers.closeIn();
     } else if (id === '@cancel') {
+      const saga = this.epics.active; // a saga says its own ending: a second line here would replace it
       this.tasks.cancel();
-      this.desk.say(this.phrases.pick('cancel', CANCEL_WORDS));
+      if (!saga) this.desk.say(this.phrases.pick('cancel', CANCEL_WORDS));
     } else if (id === 'hint') {
       const arrow = (this.tasks.pace?.hint ?? 0) >= HINT_AREA;
       this.tasks.giveHint();
