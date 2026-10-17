@@ -4,6 +4,8 @@ import type { Choice } from '../content/schema';
 export interface ChoiceOffer {
   choice: Choice;
   needs: string | null;
+  /** The story's reason the way is shut (shown while it is). */
+  hint?: string;
   allowed: boolean;
 }
 
@@ -21,7 +23,7 @@ export class Choices {
   /** Show these offers (null or none hides the panel). Cheap to call every frame. */
   show(offers: ChoiceOffer[] | null) {
     const key = offers?.length
-      ? JSON.stringify(offers.map((o) => [o.choice.text, o.choice.next, o.needs, o.allowed]))
+      ? JSON.stringify(offers.map((o) => [o.choice.text, o.choice.next, o.needs, o.hint, o.allowed]))
       : '';
     if (key === this.shown) return;
     this.shown = key;
@@ -37,6 +39,12 @@ export class Choices {
           needs.className = 'needs';
           needs.textContent = `Needs ${o.needs}`;
           button.append(needs);
+        }
+        if (o.hint && !o.allowed) {
+          const why = document.createElement('span');
+          why.className = 'hint';
+          why.textContent = o.hint;
+          button.append(why);
         }
         button.disabled = !o.allowed;
         // Never keep focus: Space is the attack key, and on a focused button it would pick the choice again.

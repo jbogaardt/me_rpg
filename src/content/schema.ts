@@ -109,6 +109,8 @@ export interface Choice {
   text: string;
   next: string; // the node it leads to
   requires?: Requirement;
+  /** Why the way is shut while `requires` is unmet (the story's words, shown under the choice and said when it is tried). */
+  hint?: string;
 }
 
 /** An entity placed by a scenario, at a cell (x = column, y = row) of the biome's map. */
@@ -438,6 +440,10 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
         if (p.requires !== undefined) {
           const req = readRequirement(r, p.requires, `${at}.requires`);
           if (req) choice.requires = req;
+        }
+        if (p.hint !== undefined) {
+          choice.hint = r.string(p.hint, `${at}.hint`);
+          if (p.requires === undefined) r.fail(`${at}.hint`, 'explains a requirement, and this choice has none');
         }
         return [choice];
       }),
