@@ -80,6 +80,8 @@ export type LogEntry =
 /** What a Dungeon Master may make: an id of their own kind, a short name, and a few lines to say. */
 export const NPC_ID = /^dm_[a-z0-9_]{1,24}$/;
 export const MAX_NPC_NAME = 32;
+/** What makes two names the same person: case and spacing do not. */
+export const personKey = (name: string): string => name.trim().replace(/\s+/g, ' ').toLowerCase();
 export const MAX_NPC_LINES = 4;
 export const MAX_NPC_LINE = 140;
 /** The largest map cell a cast may stand on. */
@@ -690,6 +692,18 @@ export class World {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  /** The id of the person (the DM's or a pack's) who already bears this name, ignoring case and spacing. */
+  personNamed(name: string): string | undefined {
+    const key = personKey(name);
+    const all = [
+      ...Object.entries(this.people).map(([id, p]) => [id, p.name] as const),
+      ...Object.entries(this.cat.entities)
+        .filter(([, e]) => e.type === 'npc')
+        .map(([id, e]) => [id, e.name] as const),
+    ];
+    return all.find(([, n]) => personKey(n) === key)?.[0];
+  }
+
   /** A fresh id for a person the Dungeon Master is making, from their name. */
   npcId(name: string): string {
     const base = `dm_${
@@ -721,6 +735,11 @@ export class World {
     if (!name || name.length > MAX_NPC_NAME) throw new WorldError(`a person's name is 1 to ${MAX_NPC_NAME} letters`);
     if (this.cat.entities[e.look]?.type !== 'npc')
       throw new WorldError(`"${e.look}" is not a person whose look to wear`);
+    const same = this.personNamed(name);
+    if (same)
+      throw new WorldError(
+        `"${name}" already lives in this world (${same}): do not make them again, bring them in with a cast or change their words with a voice`,
+      );
     this.people[e.id] = { name, look: e.look, lines: this.checkLines(e.lines) };
   }
 
