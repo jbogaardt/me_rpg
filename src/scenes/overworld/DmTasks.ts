@@ -31,7 +31,7 @@ const RETARGET = 2;
  * The quest the Dungeon Master gives the party (systems/dmTasks.ts has the rules, systems/dmQuests.ts writes the offers
  * from a land), on the host: offered from the land the DM stands in, counted each frame (the party's kills of the foe,
  * the sites they touch, the relic found, a place reached), paid to the whole party when done and announced in the DM's
- * voice. Everyone sees it in their tracker and as a search area on the map (`Arena.task`, a friend is told through the
+ * voice. Everyone sees it in their tracker, and once the DM offers the compass as its needle (`Arena.task`, a friend is told through the
  * `dm` message); the DM can point the way if they are lost. How it went (how long, how hurt, who fell) is what the
  * director reads to nudge the DM next.
  */
@@ -176,7 +176,7 @@ export class DmTasks {
     return counted;
   }
 
-  /** The DM shows more of the way: the search area on the map first, an arrow the second time. */
+  /** The DM offers the compass: toward the search area first, straight at the goal the second time. */
   giveHint() {
     this.book.giveHint();
     this.publish();

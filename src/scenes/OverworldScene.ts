@@ -249,6 +249,7 @@ export class OverworldScene implements Scene {
       this.storyUi,
       () => this.guest.pressAction(),
     );
+    this.interact.onTalk = (entity) => this.epics.talked(entity); // a saga's person has been spoken to
     this.zones.root.addChildAt(this.storyUi.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     ui.shop.onGearChange = () => arena.refreshLook();

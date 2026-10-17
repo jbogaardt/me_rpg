@@ -93,3 +93,9 @@ Cinzel (Natanael Gama) and Crimson Text (Sebastian Kosch), SIL Open Font License
 Both are multi-licensed: this game uses them under CC-BY 3.0 (credit the author, name the work, link the page), which
 the lines above do. Checked against the pages' listings through search results; the licence texts themselves were not
 opened.
+
+## Natural voice (optional, not shipped in the repo)
+
+- Kokoro-82M by hexgrad (Apache-2.0), https://huggingface.co/hexgrad/Kokoro-82M, in its ONNX form by onnx-community,
+  run in the player's browser with `kokoro-js` and Transformers.js (Apache-2.0). Fetched from the Hugging Face hub only if
+  a player turns the natural voice on; nothing is stored in this repository.

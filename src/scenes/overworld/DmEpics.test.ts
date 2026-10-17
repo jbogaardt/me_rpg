@@ -203,7 +203,7 @@ describe('epics with people, on the host', () => {
     expect(live(false).pick('The Lost Courier')).toBe(-1);
   });
 
-  it('makes the person, sends the party to them, lets them speak, and moves on', () => {
+  it('makes the person, sends the party to them, lets them speak when talked to, and moves on', () => {
     const { arena, epics, tasks, party, said, brought, voiced, pick } = live();
     const i = pick('The Lost Courier');
     expect(i).toBeGreaterThanOrEqual(0);
@@ -215,23 +215,32 @@ describe('epics with people, on the host', () => {
       title: 'Find Aldis the Postmaster',
       epic: { step: 1, total: 4 },
     });
-    // the party walks to them: the quest is done and they speak, a line at a time
+    // the party walks to them: the quest is done, and they have something to tell when talked to (not through the DM)
     const t = arena.task as unknown as { x: number; y: number };
     const me = party[0] as unknown as { body: { x: number; y: number } };
     me.body.x = t.x;
     me.body.y = t.y;
     tasks.update(0.1);
     tasks.update(TASK_LINGER + 1);
-    expect(said.some((s) => s.startsWith('Aldis the Postmaster: “A courier left'))).toBe(false); // not yet: next update
-    epics.update(0);
-    expect(said.at(-1)).toContain('Aldis the Postmaster: “A courier left');
+    expect(said.some((s) => s.includes('“'))).toBe(false); // nobody's words come out of the DM's mouth
+    expect(voiced.at(-1)?.[0]).toBe('dm_aldis'); // their words are on them, for the talk
+    const told = voiced.length;
+    expect(said.at(-1)).toContain('Speak to them');
+    epics.update(10);
+    expect(epics.view).toMatchObject({ step: 1 }); // the saga waits for the talk
+    epics.talked('dm_somebody'); // someone else: no change
+    epics.update(10);
+    expect(voiced).toHaveLength(told);
+    epics.talked('dm_aldis');
+    expect(voiced).toHaveLength(told + 1); // from now on they speak of what has happened
+    expect(voiced.at(-1)).toEqual([
+      'dm_aldis',
+      expect.arrayContaining([expect.stringContaining('You found the courier')]),
+    ]);
     epics.update(1);
-    expect(said.at(-1)).toContain('A courier left'); // still the first: each line stays a few seconds
+    expect(epics.view).toMatchObject({ step: 1 }); // a moment to read first
     epics.update(5);
-    expect(said.at(-1)).toContain('Find her, if you can');
-    epics.update(5); // the speech is over: the next step begins (its land is loaded first)
-    expect(voiced).toEqual([['dm_aldis', expect.arrayContaining([expect.stringContaining('You found the courier')])]]);
-    epics.update(0);
+    epics.update(0); // the next step begins (its land is loaded first)
     epics.update(0);
     expect(arena.task).toMatchObject({ epic: { step: 2, total: 4 } });
     expect(epics.active).toBe(true);
@@ -272,9 +281,10 @@ describe('epics with people, on the host', () => {
     tasks.update(0.1);
     tasks.update(TASK_LINGER + 1);
     epics.update(0);
+    expect(voiced).toEqual([['dm_mira', ['Well met.']]]);
+    epics.talked('dm_mira');
     epics.update(5);
-    epics.update(5);
-    expect(voiced).toEqual([['dm_mira', ['Thank you.']]]);
+    expect(voiced.at(-1)).toEqual(['dm_mira', ['Thank you.']]);
     epics.update(0); // the second step: the party goes to the mill
     [me.body.x, me.body.y] = [330, 330];
     tasks.update(0.1);

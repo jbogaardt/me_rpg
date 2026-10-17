@@ -60,6 +60,9 @@ export class Interactions {
     this.harvestButtons.onPick = (key) => this.harvestPressed(key);
   }
 
+  /** A party member talked to a person of the world (their entity id): the DM's saga may be waiting for it. */
+  onTalk: (entity: string) => void = () => {};
+
   /** The kinds of quest site whose note has been shown (once each). */
   private siteTold = new Set<string>();
 
@@ -114,6 +117,9 @@ export class Interactions {
     } else if (folk) {
       folk.body.face(directionToward(this.arena.player.x - folk.body.x, this.arena.player.y - folk.body.y));
       dialog.say(folk.lines, undefined, { pauses: true });
+      // The host settles it for a friend: their press reaches `act`, which counts the talk as it does for the host's own.
+      if (arena.role === 'client') this.guestPress();
+      else this.onTalk(folk.entity);
     } else if (npc?.visible && near(npc)) {
       npc.face(directionToward(this.arena.player.x - npc.x, this.arena.player.y - npc.y));
       dialog.say(NPC_LINES, undefined, { pauses: true });
@@ -173,6 +179,8 @@ export class Interactions {
     if (site) return this.touchSite(p, site);
     if (this.barrels.pickUp(p)) return;
     if (this.sim.pondAction(p)) return; // A by a pond drinks (or stops drinking) instead of swinging
+    const folk = this.arena.zone.folk.find((f) => Math.hypot(p.body.x - f.body.x, p.body.y - f.body.y) < CELL * 1.5);
+    if (folk) return this.onTalk(folk.entity); // a friend talking to a person: no swing
     const loose = this.ground.nearest(p);
     if (loose) this.ground.pickUp(p, loose);
     else this.sim.attack(p);

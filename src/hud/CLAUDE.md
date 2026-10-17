@@ -11,7 +11,7 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
 - **Dialog box vs. DM caption** (`Dialog`): the box says *conversations* (NPC, quest brief, sign: paged, the player stands
   still, the next waits in line, `pauses` holds the world for everyone). The Dungeon Master's words are never a dialog: they
   are a *caption* (`#dm-caption`), plain text on a clear background that takes **no input** (a key or click never touches it),
-  never stops play and leaves by itself; each page also speaks it with the browser's own speech synthesis (`voice.ts`, local,
+  never stops play and leaves by itself; each page also speaks it, with the browser's own speech synthesis or, if the player opts in (Controls tab), the Kokoro model run in the page (`voice.ts`, `naturalVoice.ts`: a lazy ~90 MB one-time download from the Hugging Face hub, the browser's voice speaks until it is ready or if it fails; local,
   mutable with its 🔊, nothing sent). Say new DM words through `tell`; do not add another overlay.
 - **Popups only when the player starts a conversation** (an NPC, the quest-giver, a sign, a shop, the Dungeon Master in
   person: walk up and press the action key). Everything the game tells a player unasked (a defeat, a quest the DM gave, a

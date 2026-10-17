@@ -39,10 +39,11 @@ quest kind (hunt, gather, find, visit, cast spells where the party has magic, ha
 without one tells another kind: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
 `DmTasks.ts` runs it) or `meet`. For `meet` the DM makes the step's person (an `npc` then a `cast` entry of the live world,
 on open ground in the step's land, wearing the look a word names), the party is sent to find them (a `visit` quest at
-their feet, so the tracker and the map are the usual ones), and on reaching them they speak a line at a time in the DM's
-voice and may give something to carry (`gives`, named in the telling for a later step to ask for). The party is told in
-**words only, nothing on the map**: when the DM notices they are lost (the director's card, or a player asking) the area
-to search is marked on the map, and only a second time an arrow (`HINT_AREA`, `HINT_ARROW`, protocol v44). A failed or cancelled step ends the saga. A step is read to
+their feet), and on reaching them the DM only says they are there: **the person speaks through their own dialog when talked
+to** (`DmEpics.meet` puts the step's lines on them, `talked` hears the action press that talks to them, solo, host or a
+friend's, and the saga goes on a few seconds later), never in the DM's voice, and may give something to carry (`gives`, named in the telling for a later step to ask for). The party is told in
+**words only, nothing on the map** (the map is the party's own): when the DM notices they are lost (the director's card, or
+a player asking) the DM offers a **compass** that leans toward the place to search, and only a second time points straight at it (`HINT_AREA`, `HINT_ARROW`, protocol v44). A failed or cancelled step ends the saga. A step is read to
 every player like an NPC's (`dmBrief.ts`), and a quest can switch capabilities for the whole party while it is taken
 (`Quest.capabilities`). Epics with people need a live world (people are log entries, which friends already receive).
 

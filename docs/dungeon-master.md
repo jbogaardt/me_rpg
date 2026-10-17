@@ -21,7 +21,8 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
 - **Pre-canned words** for the director's moves keep the DM's voice consistent, each in several wordings
   (`systems/phrases.ts`: none comes back until the others have been said); the DM's own words are short and shown to everyone
   as a caption (`hud/Dialog.ts`): plain text on a clear background that takes no input, never stops play, leaves by
-  itself, and is also spoken by the browser's voice (`hud/voice.ts`, mutable).
+  itself, and is also spoken by the browser's voice or the opt-in natural one (`hud/voice.ts`, mutable). A person speaks only
+  through their own dialog, when talked to, never in the DM's voice.
 
 A friend talks to the DM in **free-form words**: the 💬 button (or Enter) opens one line, Enter sends it. No buttons and no
 walking up to the DM. It waits in the DM's inbox like any ask, and the DM (a person or the bot) may answer it privately,
@@ -47,7 +48,7 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 
 - **Director** (`dmDirector.ts` says WHEN, `DmPrompts.ts` builds each card and does the pick, `hud/DmCard.ts` draws it):
   watches party health, task progress and quiet time, and suggests easing off, turning up the heat, a twist, which quest
-  (after a breather to wander once one ends), showing the way (the map's area first, then an arrow: none until then), a breather, a new land's sky, raising a fallen player, or the story's next road (with a vote).
+  (after a breather to wander once one ends), offering the compass (the map is the party's own and is never marked for a quest; the compass first leans toward the place, then points at it: none until offered), a breather, a new land's sky, raising a fallen player, or the story's next road (with a vote).
   Urgent cards wait less than the rest; a dismissed card is a breather.
 - **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (their own free-form words, from the 💬
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,

@@ -1,7 +1,7 @@
 // The quests the Dungeon Master gives the whole party (Pixi-free, tested; core engine, co-op). They are real quests, written
 // from the land the party stands in and left to the party to work out: hunt five of a foe that lives here, gather the local
 // plants or stones, find a relic hidden somewhere in the land, reach a named place. The party is told in words, with nothing
-// on the map, until the DM notices they are lost and shows the area, then an arrow (`HINT_AREA`, `HINT_ARROW`). One at a time; the host owns it, friends are told.
+// on the map, until the DM notices they are lost and offers a compass, which points toward the place and then at it (`HINT_AREA`, `HINT_ARROW`). One at a time; the host owns it, friends are told.
 // They sit beside the story's quest chain: the chain is the spine of the tale, these are the DM's tool.
 
 import { CELL } from '../map/types';
@@ -63,7 +63,7 @@ export interface Task {
   what: string;
   /** Gather: which sites of the kind have been touched (a bit per site index). */
   bits: number;
-  /** How much the DM has shown of the way (`HINT_AREA`, `HINT_ARROW`; 0 nothing but the telling). */
+  /** How much of the compass the DM has offered (`HINT_AREA`, `HINT_ARROW`; 0 nothing but the telling). */
   hint: number;
   age: number;
   /** Seconds since progress last grew. */
@@ -110,9 +110,10 @@ export function parOf(kind: TaskKind, goal: number): number {
 }
 
 /**
- * How much of the way the party is shown. A quest is told in words only: the map stays clean and the party reads the land.
- * Only when the DM notices they are lost (the director's card, or a player asking) is the area to search marked on the map
- * (and the door toward another land), and only a second time an arrow.
+ * How much of the way the party is shown. A quest is told in words only: the map is the party's own (explored ground, never
+ * marked for a quest) and they read the land. Only when the DM notices they are lost (the director's card, or a player
+ * asking) is a compass offered: first its needle leans toward the place to search (and the door toward another land), and
+ * the second time it points straight at the goal.
  */
 export const HINT_AREA = 1;
 export const HINT_ARROW = 2;
@@ -153,7 +154,7 @@ export class TaskBook {
     this.task = null;
   }
 
-  /** The DM shows a little more of the way: first the area to search (and the door toward it), then an arrow. */
+  /** The DM gives a little more of the compass: first toward the area to search (and the door toward it), then at the goal. */
   giveHint() {
     if (this.task?.state === 'active') this.task.hint = Math.min(HINT_ARROW, this.task.hint + 1);
   }
