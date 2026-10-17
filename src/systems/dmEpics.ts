@@ -6,7 +6,8 @@
 
 import type { TaskKind } from './dmTasks';
 import type { Objective } from './quests';
-import { levelScale } from './dmQuests';
+import { xpToNext } from './combat';
+import { goldScale } from './dmQuests';
 
 /** A task named outright (see `EpicStep.objective`). */
 export type BoundObjective = Extract<Objective, { t: 'kill' | 'gather' | 'visit' }> & { zone: string };
@@ -36,6 +37,11 @@ export interface EpicStep {
   at?: 'haven';
   /** Meet: what they say once the party reaches them, a line at a time (1 to `MAX_SAYS`). */
   says?: string[];
+  /**
+   * What the DM says when the step is done, before the next one is told (1 to `MAX_AFTERMATH` lines): what the party found
+   * or learned, a twist, a turn of the story. A saga told only by its errands reads as a list; this is what makes it a tale.
+   */
+  aftermath?: string[];
   /** Meet: something the party takes from them and carries on (shown in the DM's words; the epic's later steps may ask for it). */
   gives?: string;
 }
@@ -188,8 +194,11 @@ export function gaugeText(g: Gauge): string {
 /** What a finished saga pays each player on top of its steps, by its size, its difficulty and the party's level. */
 export function epicReward(plan: EpicPlan, level = 1): { xp: number; gold: number } {
   const g = gauge(plan);
-  const m = levelScale(level);
-  return { xp: Math.round(40 * g.steps * g.difficulty * m), gold: Math.round(15 * g.steps * g.difficulty * m) };
+  const need = xpToNext(Math.max(1, Math.round(level)));
+  return {
+    xp: Math.max(1, Math.round(need * 0.06 * g.steps * g.difficulty)), // a share of the level, like every quest's pay
+    gold: Math.round(10 * g.steps * g.difficulty * goldScale(level)),
+  };
 }
 
 /** A step's line for the party, with the lands named in. */
@@ -223,6 +232,7 @@ export const needsPeople = (e: EpicTemplate): boolean => e.steps.some((s) => s.k
 
 export const MAX_STEPS = 8;
 export const MAX_SAYS = 3;
+export const MAX_AFTERMATH = 3;
 export const MAX_SAY = 150;
 export const MAX_ITEM = 40;
 const KINDS: StepKind[] = ['hunt', 'gather', 'find', 'visit', 'meet', 'cast', 'haul', 'boss', 'master', 'forge'];
@@ -292,10 +302,13 @@ export function parseEpic(raw: unknown): EpicTemplate | string {
     const hop = bound ? 0 : q.hop;
     if (!kind || !tell || !Number.isInteger(hop) || (hop as number) < 0 || (hop as number) > 5)
       return `${at}: a kind (${KINDS.join(', ')}), a hop 0 to 5 and a tell (short)`;
+    const aftermath = q.aftermath === undefined ? undefined : list(q.aftermath, 1, MAX_AFTERMATH, MAX_SAY);
+    if (aftermath === null) return `${at}.aftermath: 1 to ${MAX_AFTERMATH} lines of ${MAX_SAY}`;
+    const then = aftermath ? { aftermath } : {};
     if (kind !== 'meet') {
       if (q.who !== undefined || q.says !== undefined || q.gives !== undefined || q.at !== undefined)
         return `${at}: only a meet step has who, says, gives or at`;
-      steps.push({ kind, hop: hop as number, tell, ...(bound ? { objective: bound } : {}) });
+      steps.push({ kind, hop: hop as number, tell, ...then, ...(bound ? { objective: bound } : {}) });
       continue;
     }
     if (bound) return `${at}.objective: a meet step has a person, not a task`;
@@ -312,6 +325,7 @@ export function parseEpic(raw: unknown): EpicTemplate | string {
       tell,
       who,
       says,
+      ...then,
       ...(gives ? { gives } : {}),
       ...(q.at === 'haven' ? { at: 'haven' as const } : {}),
     });

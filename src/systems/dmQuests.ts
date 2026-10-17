@@ -100,10 +100,11 @@ function boundOffer(land: Land, o: BoundObjective): QuestOffer {
 }
 
 /**
- * How much more a quest pays at the party's `level` than at the start: it follows the XP a level needs, so a quest is
- * worth about as much of a level at level 8 as at level 1 (levelling is superlinear, `xpToNext`).
+ * How much more gold a quest pays at the party's `level` than at the start: a gentle climb (12% of the first level's pay
+ * per level), because what gold buys (the shops' prices, tens to a few hundred) does not grow with the level. XP is the
+ * opposite: it is a share of the level's own need (`offerReward`), never a multiplier of a fixed base.
  */
-export const levelScale = (level: number): number => Math.max(1, xpToNext(Math.max(1, level)) / xpToNext(2));
+export const goldScale = (level: number): number => 1 + 0.12 * (Math.max(1, Math.round(level)) - 1);
 
 /**
  * How many of a foe worth `xp` a hunt asks of a party at `level`: few of a foe that is a match for them, more of one they
@@ -115,33 +116,36 @@ export function huntGoal(xp: number, level: number): number {
 }
 
 /**
- * What a quest pays each player (xp and gold) by its kind, its size and the party's level (`levelScale`); a relic pays
- * its item to whoever found it, too.
+ * What a quest pays each player (xp and gold) by its kind, its size and the party's level; a relic pays its item to
+ * whoever found it, too. **XP is a share of the level** (a hunt of five is a quarter of one, a boss half of one, whatever
+ * the level), so a saga is worth about a level at any stage and the kills themselves still make most of the climb. Gold
+ * follows the shops' prices (`goldScale`), not the XP curve.
  */
 export function offerReward(kind: QuestOffer['kind'], goal: number, level = 1): { xp: number; gold: number } {
   const base = baseReward(kind, goal);
-  const m = levelScale(level);
-  return { xp: Math.round(base.xp * m), gold: Math.round(base.gold * m) };
+  const need = xpToNext(Math.max(1, Math.round(level)));
+  return { xp: Math.max(1, Math.round(need * base.share)), gold: Math.round(base.gold * goldScale(level)) };
 }
 
-function baseReward(kind: QuestOffer['kind'], goal: number): { xp: number; gold: number } {
+/** A quest's pay at the first level: the share of a level it earns, and its gold. */
+function baseReward(kind: QuestOffer['kind'], goal: number): { share: number; gold: number } {
   return kind === 'hunt'
-    ? { xp: 14 * goal, gold: 5 * goal }
+    ? { share: 0.05 * goal, gold: 5 * goal }
     : kind === 'gather'
-      ? { xp: 12 * goal, gold: 4 * goal }
+      ? { share: 0.04 * goal, gold: 4 * goal }
       : kind === 'cast'
-        ? { xp: 8 * goal, gold: 3 * goal }
+        ? { share: 0.02 * goal, gold: 3 * goal }
         : kind === 'haul'
-          ? { xp: 15 * goal, gold: 6 * goal }
+          ? { share: 0.05 * goal, gold: 6 * goal }
           : kind === 'find'
-            ? { xp: 70, gold: 30 }
+            ? { share: 0.2, gold: 30 }
             : kind === 'boss'
-              ? { xp: 120, gold: 50 } // richer than a hunt; the boss's own kill pays on top, and a gear drop is a hook (see `DmTasks.finish`)
+              ? { share: 0.5, gold: 40 } // richer than a hunt; the boss's own kill pays on top, and a gear drop is a hook (see `DmTasks.finish`)
               : kind === 'master'
-                ? { xp: 20 * goal, gold: 8 * goal }
+                ? { share: 0.03 * goal, gold: 6 * goal }
                 : kind === 'forge'
-                  ? { xp: 50, gold: 10 }
-                  : { xp: 40, gold: 15 };
+                  ? { share: 0.15, gold: 10 }
+                  : { share: 0.1, gold: 15 };
 }
 
 /** A find is a kill of the carrying foe, or a gather of the chest's one relic. */

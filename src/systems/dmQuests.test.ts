@@ -1,9 +1,10 @@
+import { xpToNext } from './combat';
 import { describe, expect, it } from 'vitest';
 import { newHero, type Item } from './combat';
 import {
   allOffers,
   huntGoal,
-  levelScale,
+  goldScale,
   masteryWhat,
   offerFor,
   offerReward,
@@ -70,8 +71,8 @@ describe('quests written from a land', () => {
     const tiny = { key: 'rat', name: 'Rat', xp: 2, x: 0, y: 0 };
     expect(allOffers(land({ level: 8, mobs: [tiny, ...land().mobs] })).some((o) => o.what === 'rat')).toBe(false);
     expect(allOffers(land({ level: 8, mobs: [tiny] })).some((o) => o.what === 'rat')).toBe(true);
-    expect(levelScale(1)).toBe(1);
-    expect(offerReward('hunt', 5, 8).xp).toBeGreaterThan(offerReward('hunt', 5, 1).xp * 5);
+    expect(goldScale(1)).toBe(1);
+    expect(offerReward('hunt', 5, 8).xp).toBeGreaterThan(offerReward('hunt', 5, 1).xp * 5); // a share of a bigger level
     expect(huntGoal(12, 1)).toBe(3);
     expect(huntGoal(1, 20)).toBe(8);
   });
@@ -205,5 +206,19 @@ describe('a mastery quest', () => {
     expect(castIn(log, q, 'fen')).toBe(false);
     expect(castIn(log, q, 'fen', 'bolt')).toBe(true);
     expect(offerReward('master', 3, 1).xp).toBeGreaterThan(offerReward('cast', 3, 1).xp);
+  });
+
+  it('pays a share of the level and gold the shops can spend, at every level (never thousands)', () => {
+    for (const level of [1, 5, 10, 20, 30, 50]) {
+      const need = xpToNext(level);
+      for (const kind of ['hunt', 'gather', 'find', 'visit', 'cast', 'haul', 'master', 'forge'] as const) {
+        const r = offerReward(kind, 5, level);
+        expect(r.xp, `${kind} xp at ${level}`).toBeLessThan(need * 0.5);
+        expect(r.gold, `${kind} gold at ${level}`).toBeLessThan(250);
+      }
+      expect(offerReward('boss', 1, level).xp, `boss at ${level}`).toBeLessThanOrEqual(Math.max(1, need * 0.5) + 1);
+      expect(offerReward('boss', 1, level).gold, `boss gold at ${level}`).toBeLessThan(400);
+    }
+    expect(offerReward('hunt', 5, 30).gold).toBeLessThan(150); // a level 30 hunt buys a good piece, not a shop
   });
 });

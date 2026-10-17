@@ -29,7 +29,7 @@ An epic is a saga of steps as **data**, with no land and no content id: a step i
 person has a name and a look word. It is planned onto whatever world is played by walking its zone links, so one epic runs
 in any biome with the lands; each has a gauge (difficulty, length, reach). The built-in sagas are
 `content/epics.json`; a campaign's `quests.json` may hold more, and an AI may write one (`DmBot.epic`): `parseEpic` checks
-all of them as strictly as a world entry (unknown person, a person never met, too long a line).
+all of them as strictly as a world entry.
 
 A step is **resolved** from whatever land it falls in (`kind` hunt, gather, find, visit or forge, and a `hop`) or **named
 outright** (`objective`, in the campaign quests' own words: `{"t": "kill", "kind": "goblin", "count": 4, "zone":
@@ -42,15 +42,15 @@ on open ground in the step's land, or with `at: haven` beside a shop door of the
 their feet), and on reaching them the DM only says they are there (if nobody speaks to them it reminds the party, then goes on: never left hanging): **the person speaks through their own dialog when talked
 to** (`DmEpics.meet` puts the step's lines on them, `talked` hears the action press, and the saga goes on a few seconds later), never in the DM's voice, and may give something to carry (`gives`). The party is told in
 **words only, nothing on the map**: when the DM notices they are lost (the director's card, or
-a player asking) the DM offers a **compass** that leans toward the place to search, and only a second time points straight at it (`HINT_AREA`, `HINT_ARROW`, v44). A failed or cancelled step ends the saga. Every player is read a step like an NPC's (`dmBrief.ts`); a quest can switch capabilities while taken (`Quest.capabilities`). Epics with people need a live world (people are log entries).
-
-A step's `tell` is asked for a compass bearing from a named place (`server/claude.ts`, `systems/bearing.ts`), not "by the shore".
+a player asking) the DM offers a **compass** that leans toward the place to search, and only a second time points straight at it (`HINT_AREA`, `HINT_ARROW`, v44). A failed or cancelled step ends the saga. Every player is read a step like an NPC's (`dmBrief.ts`); a quest can switch capabilities while taken (`Quest.capabilities`). Epics with people need a live world.
 
 **What a telling names is there to be found** (`systems/landmarks.ts`, `entities/Landmark.ts`, `StoryUi.syncLandmark`, local
 to every page from the synced task alone): a visit or meeting whose words (the place, the DM's note, the title) name a
 wagon, well, camp, tent, shrine, grave, ruin, tower or hut gets one drawn beside its goal, so no quest sends the party
 to what is not there (a carter "beside a lopsided wagon" has the wagon). A *find* is never an item on the ground: a foe carries it or a DM chest holds it. A new word or shape goes in `landmarks.ts`
 with its drawing; an AI-written epic gets it free if it uses those words.
+
+**Told, not listed**: any step may carry an `aftermath` (1 to 3 lines the DM says when it is done, before the next: a find, a twist; `DmEpics.finishStep`). `content/epics.test.ts` asks half of every saga's steps for one or a meeting.
 
 **People's words follow the epic**: a person has `lines` (before the party is sent to them), `after` (once met) and
 `finished` (once the whole epic is done), like a campaign giver's offer, remind and done lines; each change is a `voice`
@@ -79,6 +79,6 @@ epilogue follows the reward lines and `Talk.finale` is set, the one hook for a c
 
 ## Not yet
 
-An authored boss in the packs or a DM epic's `objective`, phases and adds, a respawn after it fell. A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `dmGear.ts`), branching, the packs' arcs (a third quest
+An authored boss in the packs or a DM epic's `objective`, phases and adds. A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `dmGear.ts`), branching, the packs' arcs (a third quest
 format for live worlds), people placed by the maps (a campaign's givers) and by the log (the DM's) as one
 mechanism, and one *trigger* for both holders with one telling of a step.

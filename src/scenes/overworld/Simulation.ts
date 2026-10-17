@@ -15,6 +15,7 @@ import {
   gearMpRegen,
   gearRegen,
   goldFor,
+  killShare,
   rollDamage,
   rollGold,
   spellPower,
@@ -548,12 +549,13 @@ export class Simulation {
     if (!killed) return;
     this.onKill(this.arena.zone.name, mobKey(mob.kind) ?? '');
     this.fx('mobPoof', mob.body.x, mob.body.y - 12);
-    this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${mob.kind.xp} XP`, 0xffb13f);
+    const earned = (p: Player) => Math.round(mob.kind.xp * killShare(p.hero.stats.level, mob.kind));
+    this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${earned(this.arena.local)} XP`, 0xffb13f); // this page's own hero
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
     this.text(mob.body.x, mob.body.y - 78 * mob.body.size, `+${gold}g`, 0xffd34d);
     for (const p of this.arena.party()) {
       p.hero.gold += goldFor(p.hero, gold); // gear can add to the purse and the XP, so each player gets their own share
-      if (gainXp(p.hero.stats, xpFor(p.hero, mob.kind.xp))) this.levelUp(p);
+      if (gainXp(p.hero.stats, xpFor(p.hero, earned(p)))) this.levelUp(p);
       this.questNote(p, recordKill(p.hero, mob.kind, this.arena.zone.name)); // a quest counts the kill for everyone here
     }
   }

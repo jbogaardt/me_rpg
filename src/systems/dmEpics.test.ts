@@ -261,4 +261,15 @@ describe('steps that name their task outright', () => {
     const meet = { ...base().steps[0], who: 'x' };
     expect(typeof parseEpic({ ...base(), steps: [meet, base().steps[1]] })).toBe('string');
   });
+
+  it('reads a step aftermath (the DM turn of the tale) and refuses a bad one', () => {
+    const step = (aftermath: unknown) => ({ ...base().steps[1], aftermath });
+    const ok = parseEpic({ ...base(), steps: [base().steps[0], step(['They ran, and left a lantern.'])] });
+    expect(typeof ok).toBe('object');
+    expect((ok as { steps: { aftermath?: string[] }[] }).steps[1]!.aftermath).toEqual([
+      'They ran, and left a lantern.',
+    ]);
+    for (const bad of [[], ['x'.repeat(151)], 'a line', ['a', 'b', 'c', 'd'], [3]])
+      expect(typeof parseEpic({ ...base(), steps: [base().steps[0], step(bad)] }), JSON.stringify(bad)).toBe('string');
+  });
 });
