@@ -1,8 +1,8 @@
 // The Dungeon Master's spoken voice, on the player's device, so each page says the caption it was told and nothing goes
-// over the wire. Two engines: a natural voice, the Kokoro model run in the page (`naturalVoice.ts`, the default: it
-// downloads the model once) and the browser's own speech synthesis (free, instant; the fallback and a setting). A line is
+// over the wire. Two engines: a natural voice, the Kokoro model run in the page (`naturalVoice.ts`, opt-in: it
+// downloads the model once and takes seconds a sentence) and the browser's own speech synthesis (free, instant; the default). A line is
 // said by the natural voice only once that is ready; until then, or if it fails, the browser's says it (`onFallback` lets
-// the HUD say so). Only an explicit choice of the browser's voice is stored ('0'); the choices to mute and for the
+// the HUD say so). Only an explicit choice of the engine is stored; the choices to mute and for the
 // engine are remembered in this browser only. A line is spoken a sentence at a time and is never cut short by the
 // next one: `Dialog` waits for `busy` to end before it shows the next caption. HUD (DOM); silent where there is no speech.
 
@@ -28,9 +28,8 @@ try {
 } catch {
   /* storage can be blocked: the default (natural) stands */
 }
-const phone = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
-let wantsNatural = wantsNaturalVoice(stored, natural.supported, phone);
-if (wantsNatural) void natural.load(); // the default: load it while the game starts
+let wantsNatural = wantsNaturalVoice(stored, natural.supported);
+if (wantsNatural) void natural.load(); // only when the player chose it: load it while the game starts
 
 // A phone lets a page make sound only after a tap, click or key, and speech synthesis likewise: the first one wakes both
 // engines (a silent blip, an empty utterance), or the DM would be "speaking" to a locked speaker for the whole game.

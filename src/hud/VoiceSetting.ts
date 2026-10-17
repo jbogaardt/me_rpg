@@ -31,7 +31,7 @@ export class VoiceSetting {
     if (fallback) this.note.textContent = fallback;
     else if (!on)
       this.note.textContent =
-        'The browser’s own voice reads the Dungeon Master. Natural voice is a one-time download of about 90 MB.';
+        'The browser’s own voice reads the Dungeon Master. Natural voice is a one-time download of about 90 MB, takes seconds to make each sentence and keeps a core busy: best on a fast computer.';
     else if (natural.state === 'ready') this.note.textContent = 'The natural voice is ready. It runs on this device.';
     else
       this.note.textContent = `Downloading the natural voice… ${Math.round(natural.progress * 100)}%. The browser’s voice speaks until then.`;

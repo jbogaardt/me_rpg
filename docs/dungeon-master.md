@@ -18,7 +18,7 @@ Read before touching the DM bar, director, cards, epics, possession, revive or n
 - **Pre-canned words** for the director's moves keep the DM's voice consistent, each in several wordings
   (`systems/phrases.ts`: none comes back until the others have been said); the DM's own words are short and shown to everyone
   as a caption (`hud/Dialog.ts`) that takes no input, never stops play, leaves by itself, and is also spoken by the
-  natural voice (default; browser's as fallback, `hud/voice.ts`, mutable). A person speaks only through their own dialog.
+  browser voice (the natural Kokoro one is an opt-in, `hud/voice.ts`, mutable). A person speaks only through their own dialog.
 
 A friend talks to the DM in **free-form words**: the 💬 button (or Enter) opens one line, Enter sends it. It waits in the
 DM's inbox like any ask, and the DM (a person or the bot) may answer it privately, or act on it (ease off, point the way,

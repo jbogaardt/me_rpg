@@ -4,13 +4,13 @@
 export type EngineState = 'idle' | 'loading' | 'ready' | 'failed';
 
 /**
- * Does this player want the natural voice? `stored` is what `localStorage` held: an explicit '0' (the player chose the
- * browser's voice in the Controls tab) turns it off, so a fresh profile, a cleared one or blocked storage hears the natural
- * voice. On a `phone` it is not the default (a 90 MB model in a phone's browser often cannot load): only an explicit '1'
- * asks for it. Where it cannot run at all the answer is no.
+ * Does this player want the natural voice? Only an explicit choice of it in the Controls tab (`stored` is '1') does: the
+ * browser's own voice speaks at once and costs nothing, while the model is a 90 MB download that takes seconds to make each
+ * sentence and keeps a core busy, which a game that must stay smooth (and a host and friends sharing one machine) cannot
+ * spare by default. Where it cannot run at all the answer is no.
  */
-export function wantsNaturalVoice(stored: string | null, supported: boolean, phone = false): boolean {
-  return supported && (stored === '1' || (stored !== '0' && !phone));
+export function wantsNaturalVoice(stored: string | null, supported: boolean): boolean {
+  return supported && stored === '1';
 }
 
 /** The browser's voice stands in while the natural one is not ready: it is not chosen, still loading, or failed. */
