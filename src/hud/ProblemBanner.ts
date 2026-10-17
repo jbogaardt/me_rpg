@@ -1,10 +1,15 @@
 // If the game throws, say so on the screen (with which build this is) instead of leaving a page that looks alive and does
 // nothing: a dead game and a cached old page look the same to the player, and the build number tells them apart. It lists
 // the first few different errors (the first is not always the one that matters), each with where it happened, and has a ✕.
-// textContent only. Browser noise that is not the game's (a resize observer note) is ignored.
+// textContent only. Browser noise that is not the game's (a resize observer note) is ignored, and so is a fault inside the
+// natural voice's own code (the speech model's chunk): that only drops the DM to the browser's voice (`natural.fail`).
+
+import { natural } from './naturalVoice';
 
 const IGNORE = /ResizeObserver loop/i;
 const MAX_LINES = 3;
+/** Where the speech model's code lives (its lazily loaded chunks, and the runtimes it brings). */
+const VOICE_CODE = /kokoro|transformers|onnx|ort-wasm/i;
 
 /** "message [top two stack frames, without the long file paths]". */
 function describe(what: unknown): string {
@@ -30,6 +35,7 @@ export function installProblemBanner() {
   let list: HTMLUListElement | null = null;
   const show = (what: unknown) => {
     const line = describe(what);
+    if (VOICE_CODE.test(line) || (what instanceof Error && VOICE_CODE.test(what.stack ?? ''))) return natural.fail();
     if (IGNORE.test(line) || seen.has(line) || seen.size >= MAX_LINES) return;
     seen.add(line);
     if (!list) {

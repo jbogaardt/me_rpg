@@ -83,6 +83,15 @@ export const natural = {
       .finally(changed);
     return loading;
   },
+  /** The model broke outside a call that could catch it (a browser it does not run in): give up on it, so the browser's voice takes over. */
+  fail() {
+    if (state === 'failed') return;
+    state = 'failed';
+    loading = null;
+    tts = null;
+    this.stop();
+    changed();
+  },
   /** Say `sentence` after anything still being said, then call `done` (also when it is dropped or cannot be made). */
   say(sentence: string, done: () => void) {
     const mine = epoch;
