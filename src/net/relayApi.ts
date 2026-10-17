@@ -13,14 +13,15 @@
 //   DELETE /v2/rooms/{code}             Bearer host                 -> 204
 //
 // The relay never looks inside an offer or answer: they're the opaque strings from signal.ts. It holds a room for
-// ROOM_TTL_MS and forgets it sooner once the host closes it. Gameplay never touches it.
+// ROOM_TTL_MS (renewed for as long as the host keeps polling `answers`, once a friend has joined, so a dropped friend
+// can rejoin a live game) and forgets it sooner once the host closes it. Gameplay never touches it.
 
 export const API_VERSION = 'v2';
 
 /** Friends who can join one game (the host makes four players). */
 export const MAX_GUESTS = 3;
 
-/** How long a game code stays joinable if the host never starts or cancels. */
+/** How long a game code stays joinable if nobody joins, and how long a game's code outlives its host's last poll. */
 export const ROOM_TTL_MS = 10 * 60_000;
 
 /** A friend who has taken a seat must answer within this, or the seat is offered to someone else. */

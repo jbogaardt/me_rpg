@@ -211,7 +211,7 @@ export class Multiplayer {
       if (this.session.role === 'client') return 'The game is live. Close this menu to play.';
       return lobbyOpen
         ? 'More friends can still join with the code. Tap Start Game when everyone is here.'
-        : 'The game is live. Close this menu to play.';
+        : 'The game is live. A friend who got dropped can rejoin with the same code. Close this menu to play.';
     }
     if (mode === 'off')
       return 'Playing solo. Choose Host to run a game as its Dungeon Master, or Join to play in a friend’s.';

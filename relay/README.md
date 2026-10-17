@@ -21,8 +21,11 @@ prepares one offer per seat.
    back. A friend who takes a seat but never answers loses it after 60 s.
 4. The host collects each answer and connects to that friend. Meanwhile more friends can come. If a friend leaves
    or fails to connect, the host puts a fresh offer in their seat so someone else can take it.
-5. When the host taps **Start Game** (or all three seats are taken), the relay stops giving out seats and forgets
-   the game a minute later. The phones are already talking directly by then.
+5. When the host taps **Start Game** (or all three seats are taken) the game begins, but the code keeps working: a
+   seat whose friend left is reopened, so a dropped friend can rejoin with the same code. The relay keeps a game
+   that has had a friend for as long as the host's phone keeps asking for answers, and forgets it 10 minutes after
+   the host goes away. (Older pages closed the game on Start; the relay still supports that: it stops giving out
+   seats and forgets the game a minute later.)
 
 The wire format is documented at the top of `src/net/relayApi.ts` and shared with the game's client
 (`src/net/relayClient.ts`), so the two can't drift apart.
