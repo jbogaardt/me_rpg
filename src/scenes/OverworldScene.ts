@@ -366,7 +366,7 @@ export class OverworldScene implements Scene {
     this.dmBar.attach(null);
     this.dmCard.hide();
     this.votePanel.sync(null);
-    this.overlay.setAvailable(false);
+    this.overlay.close(); // the button stays; only an open map goes
     this.interact.clear();
     this.ui.dialog.close();
     this.ui.shop.close();
@@ -393,11 +393,11 @@ export class OverworldScene implements Scene {
     this.pickups.update(dt, foeNear(arena.zone, arena.local));
     this.updateDm(dt);
     const online = arena.role !== 'solo';
-    const mapShown = this.updateMap();
+    this.updateMap();
     menu.setOnline(online, arena.local.dm);
     if (menu.open && online) menu.dmQuest = arena.task && { view: arena.task, pages: this.storyUi.briefOf(arena.task) };
     this.trading.sync(dt, online);
-    this.handleKeys(mapShown);
+    this.handleKeys();
     if (menu.open || shop.open || trade.open) {
       if (menu.open) menu.update();
       else if (shop.open) shop.update();
@@ -441,29 +441,28 @@ export class OverworldScene implements Scene {
     );
   }
 
-  /** The map overlay: available in open-air zones with the capability, filled in as the players in view explore. Returns whether it is shown. */
-  private updateMap(): boolean {
+  /**
+   * The map overlay: core engine, always available (host, guest, DM, touch), filled in as the players in view explore.
+   * A room has no overview, so there it opens on a note saying so instead of the button going missing.
+   */
+  private updateMap() {
     const { arena } = this;
-    // The map shows the open-air zone you are in, as far as it has been explored; rooms have none, nor does a campaign
-    // without the map capability (it is still explored, so nothing changes if one is played later).
     const outdoors = !arena.zone.data.indoor;
     const here = arena.zone.name;
-    const mapShown = outdoors && enabled('map', here);
-    this.overlay.setAvailable(mapShown);
+    this.overlay.setRoom(outdoors ? null : here);
     if (outdoors) {
       const seen = this.atlas.of(arena.zone.name, arena.zone.data);
-      if (!flag('map', 'fog', here)) seen.revealAll(); // a map without fog shows the whole zone at once
+      if (!flag('guide', 'fog', here)) seen.revealAll(); // a map without fog shows the whole zone at once
       // Everyone in this zone uncovers the map around them (a guest only knows the players in its own zone).
       for (const p of arena.players()) if (p.body.visible) seen.reveal(p.body.x, p.body.y);
       this.overlay.setZone(arena.zone.data, seen, arena.zone.name);
     }
-    return mapShown;
   }
 
   /** Keys that act on the screens: the map, Esc (cards, words, held foe, menu), the inventory, and the DM's click on a foe. */
-  private handleKeys(mapShown: boolean) {
+  private handleKeys() {
     const { menu, shop, dialog, trade } = this.ui;
-    if (mapShown && !menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
+    if (!menu.open && !dialog.active && mapPressed()) this.overlay.toggle();
     this.possession.update();
     const click = clickedAt();
     const free = !menu.open && !shop.open && !trade.open && !dialog.active && !this.zones.transition.busy;

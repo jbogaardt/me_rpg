@@ -1,11 +1,11 @@
 // Capabilities: the engine's features a campaign can switch off or tune (Pixi-free, tested). Not every story wants
 // every system: a dungeon crawl may have no overview map, a heroic tale no hunger and thirst, a low-magic world no
-// combo spells, a cursed swamp double hunger and no map.
+// combo spells, a cursed swamp double hunger and no hints on the map. (The map itself is core engine, never a capability: only its aids are.)
 //
 // A campaign sets them in its scenarios.json (`capabilities`), and a biome may override its zone's in biomes.json
 // (`capabilities`, for the capabilities whose `scope` is `zone`); a random campaign takes them from its arc and its
 // regions (packs). Each entry is `false` (off), `true` (on, default settings) or an object of settings (on, those
-// settings): `{ "map": false, "needs": { "drain": 2 } }`. `ContentManager.install` hands them here, and the code of
+// settings): `{ "guide": false, "needs": { "drain": 2 } }`. `ContentManager.install` hands them here, and the code of
 // each feature asks `enabled(id, zone)` at its one gate, and `setting(id, key, zone)` for a tuned value.
 //
 // Every capability is listed in `CAPABILITIES`: what switching it off does, whether a zone may override it, what it
@@ -34,17 +34,17 @@ export interface CapabilityInfo {
 }
 
 export const CAPABILITIES = {
-  map: {
-    name: 'Area map',
-    off: 'No M key or map button: the zone map that fills in as you explore is not there.',
+  guide: {
+    name: 'Map hints',
+    off: 'No search circle or star on the map and no tracker line: the quest log’s words are all the help. The map itself stays.',
     scope: 'zone',
     settings: {
       fog: { about: 'The map fills in as you explore; false shows the whole zone at once.', default: true },
     },
   },
-  guide: {
-    name: 'Quest guide',
-    off: 'No quest arrow, no search circle on the map and no tracker line: the quest log’s words are all the help.',
+  compass: {
+    name: 'Compass',
+    off: 'No arrow round the hero pointing at where the quest leads (the DM’s offered compass included).',
     scope: 'zone',
   },
   needs: {
@@ -143,6 +143,10 @@ export function checkCapabilities(spec: unknown, path: string, scope: 'campaign'
   const entries = Object.entries(spec as Record<string, unknown>);
   for (const [id, value] of entries) {
     const at = `${path}.${id}`;
+    if (id === 'map') {
+      out.push(`${at}: the map is always on; switch its aids with "guide" (hints) and "compass" instead`);
+      continue;
+    }
     if (!isCapability(id)) {
       out.push(`${at}: is not a capability (${CAPABILITY_IDS.join(', ')})`);
       continue;
@@ -231,8 +235,8 @@ let current = new CapabilityTable();
  * change what a zone shows or asks, never what a hero has earned or whom they can play with.
  */
 export const DIALS = [
-  'map',
   'guide',
+  'compass',
   'needs',
   'weather',
   'dayNight',

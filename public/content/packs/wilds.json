@@ -339,7 +339,7 @@
       ]
     },
     "bog_hollow": {
-      "capabilities": { "map": false, "needs": { "drain": 2 } },
+      "capabilities": { "guide": false, "compass": false, "needs": { "drain": 2 } },
       "biome": {
         "name": "The Bog Hollow",
         "tint": "#7fa85a",
@@ -388,7 +388,7 @@
         "The lights are going out across {r1}. Find {keeper}, and keep close to one another."
       ],
       "regions": 3,
-      "capabilities": { "map": false },
+      "capabilities": { "guide": false, "compass": false },
       "chapters": [
         {
           "title": "The Dimming",

@@ -7,8 +7,9 @@ import { DM_COLOR, DM_NAME, DM_SLOT, PLAYER_COLORS, playerName } from '../system
 
 // A semi-transparent map of the zone you are in that fills in as you explore it (only the cells seen are drawn, see
 // map/explored.ts), with a pin for you and, in co-op, one for each friend (every player in their own colour, like their
-// tag in the game), so players can find each other. The scene makes it `available` in any open-air zone and the M key
-// (or the HUD map button on touch) toggles it. HTML rather than canvas, like the rest of the UI; markup in index.html,
+// tag in the game), so players can find each other. The map is core engine and always there: the M key (or the HUD map
+// button, never hidden) toggles it for everyone (solo, host, guest, DM) in every zone. A room has no overview, so there it
+// shows the room's name and a note instead (`setRoom`). Its aids (search circle, star) come from systems/aids.ts. HTML rather than canvas, like the rest of the UI; markup in index.html,
 // styles in src/ui.css. It never takes pointer input, so the game keeps running (and stays playable) behind it.
 
 /** A player's position on the map: `slot` is their player number (it picks the colour). */
@@ -30,7 +31,7 @@ const otherName = (slot: number) => (slot === DM_SLOT ? DM_NAME : playerName(slo
 export class MapOverlay {
   open = false;
   private root = document.getElementById('map-overlay')!;
-  private button = document.getElementById('map-btn')!;
+  private roomKey = ''; // the room shown instead of a map ('' outdoors)
   private me = this.root.querySelector<HTMLElement>('.pin.me')!;
   private legend = this.root.querySelector<HTMLElement>('.legend')!;
   private friends = new Map<number, HTMLElement>(); // one pin per other player, by player number
@@ -117,11 +118,22 @@ export class MapOverlay {
     this.root.querySelector('img')!.src = canvas.toDataURL();
   }
 
-  /** Show the map button while the player is in an open-air zone; a room closes the map. */
-  setAvailable(on: boolean) {
-    if (this.button.hidden !== on) return; // called every frame: only touch the DOM on a change
-    this.button.hidden = !on;
-    if (!on) this.show(false);
+  /**
+   * The map is always there: the button is never hidden and M always opens it. A room (`room` is its name) has no
+   * overview to draw, so the open map says so under the room's name instead. Called every frame; touches the DOM on a change only.
+   */
+  setRoom(room: string | null) {
+    const key = room ?? '';
+    if (key === this.roomKey) return;
+    this.roomKey = key;
+    this.root.classList.toggle('room', room !== null);
+    this.labelled = ''; // the heading is rewritten for the zone shown next
+    if (room !== null) this.title.textContent = zoneName(room);
+  }
+
+  /** Close the map if it is open (the scene leaving). */
+  close() {
+    this.show(false);
   }
 
   toggle() {

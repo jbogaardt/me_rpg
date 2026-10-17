@@ -491,8 +491,8 @@ describe('what the party’s quests switch', () => {
   };
 
   it('switches what a taken quest says, and nothing for one not yet taken', () => {
-    switching({ map: false, needs: true }, () => {
-      expect(questDials([on(true)])).toEqual({ map: false, needs: true });
+    switching({ guide: false, needs: true }, () => {
+      expect(questDials([on(true)])).toEqual({ guide: false, needs: true });
       expect(questDials([on(false)])).toEqual({});
     });
   });
@@ -500,8 +500,8 @@ describe('what the party’s quests switch', () => {
   it('lets the first hero to say a thing win, and ignores a hero with no quest left', () => {
     const done = newHero();
     done.quests = { stage: QUESTS.length, taken: true, progress: 0 };
-    switching({ map: false }, () => {
-      expect(questDials([done, on(true)])).toEqual({ map: false });
+    switching({ guide: false }, () => {
+      expect(questDials([done, on(true)])).toEqual({ guide: false });
       expect(questDials([])).toEqual({});
     });
   });

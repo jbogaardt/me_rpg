@@ -18,8 +18,11 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
   person: walk up and press the action key). Everything the game tells a player unasked (a defeat, a quest the DM gave, a
   chapter's note, a trial's result) is *passive text*: `Dialog.note`, the same caption as the DM's words. Never `say` for those.
 - **Item pickups are a toast, never a card** (`PickupToasts`, rules in `toastStack.ts`): a small see-through stack at the left edge, merged repeats, gone in about 2 s (1 s with a foe near), plus a short chime (`playPing`). Local to each player, nothing is sent; core engine.
-- **The map overlay is local**: it fills in as the players in view explore (`map/explored.ts`), nothing is sent. Rooms
-  have none, and the `map` capability can turn it off or show the whole zone.
+- **The map overlay is local and always available**: it fills in as the players in view explore (`map/explored.ts`),
+  nothing is sent. The button and M key never go missing (host, guest, DM, touch, any zone); a room has no overview, so
+  there the map opens on its name and a note (`MapOverlay.setRoom`). Only the aids on it are optional: the `guide`
+  capability (search circle, star, tracker line; its `fog` setting shows the whole zone) and the `compass` capability,
+  each also switchable by the player in the Controls tab (`AidSetting`, `systems/aids.ts`).
 - **Partner arrows** (`PartnerArrows.ts`, maths in `edgeArrow.ts`; core engine, online only): an edge-of-screen arrow in the
   partner's colour with the distance in tiles for a partner in this zone but out of view, and a chip for one in another zone.
   Nothing is sent: a guest already gets every in-zone player in `snap.players` and the rest in `away`, so it can say "in another

@@ -21,6 +21,7 @@ import { Inventory } from './Inventory';
 import { Magic } from './Magic';
 import { dmQuestPage, questPage } from './QuestLog';
 import type { TaskView } from '../systems/dmTasks';
+import { AidSetting } from './AidSetting';
 import { AimSetting } from './AimSetting';
 import { VoiceSetting } from './VoiceSetting';
 import { Keybinds } from './Keybinds';
@@ -54,6 +55,7 @@ export class Menu {
 
   private keybinds: Keybinds;
   private aim: AimSetting;
+  private aids = new AidSetting();
   private voiceSetting: VoiceSetting;
 
   constructor(session: Session, touch: TouchControls) {
@@ -223,6 +225,7 @@ export class Menu {
     this.inventory.show(hero);
     this.keybinds.refresh();
     this.aim.refresh();
+    this.aids.refresh();
     this.voiceSetting.refresh();
     this.select(this.tab);
   }

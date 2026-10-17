@@ -438,7 +438,7 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
     k: 'dm',
     n: 4,
     shift: -0.25,
-    dials: { map: false, weather: true },
+    dials: { guide: false, weather: true },
     vote: { id: 2, options: ['Into frost lands, over a thaw crossing', 'Into swamp lands'], tally: [2, 1], yours: 0 },
   };
 

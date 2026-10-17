@@ -164,7 +164,7 @@ export interface ArcDef {
   crossings?: Record<string, { tags?: string[] }>;
   /** The keepers who may tell it (default: any). */
   keepers?: string[];
-  /** The engine's features this story switches off or on (systems/capabilities.ts), e.g. `{ "map": false }` for a tale told without a map. */
+  /** The engine's features this story switches off or on (systems/capabilities.ts), e.g. `{ "guide": false }` for a tale told without hints on the map. */
   capabilities?: CapabilitySpec;
   /** The gear a hero starts this story in (default the packs' `start`): a wizard's tale may start with a wand. */
   start?: StartGear;
