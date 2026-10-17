@@ -32,3 +32,8 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
   item *name* (never a pack index) and a use is an ordinary Inventory op, so co-op needs nothing new: the guest applies it
   and asks the host like any menu action. Slots are assigned from the Inventory tab, saved in `localStorage` only, never sent.
   Gamepad mapping: not done (the game has no gamepad input yet).
+- **Joining closes the menu and reports through `#join-status`** (`JoinStatus.ts`, words from `net/joinStatus.ts`):
+  connecting, waiting for the host, joined (fades), or a failure with its reason (stays until dismissed and brings the
+  Online tab back to retry). Guest-only; a host has nothing to join. The relay cannot tell a full game from a closed one.
+- **The map overlay is local**: it fills in as the players in view explore (`map/explored.ts`), nothing is sent. Rooms
+  have none, and the `map` capability can turn it off or show the whole zone.

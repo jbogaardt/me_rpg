@@ -23,6 +23,7 @@ import {
 } from './protocol';
 import { takeHostPlan, type HostPlan } from './hostPlan';
 import { MAX_GUESTS } from './relayApi';
+import { failureFromRelay, VERSION_MISMATCH_TEXT, type JoinFailure } from './joinStatus';
 import { RelayClient, RelayError, type Room } from './relayClient';
 import { RELAY_URL } from './relayConfig';
 import { codeFromHash, normalizeCode } from './roomCode';
@@ -161,6 +162,8 @@ export class Session {
   private joinedCode: string | null = null;
 
   private phase: LinkStatus = 'idle';
+  /** Why the last attempt failed, when the cause is known (see joinStatus.ts). */
+  failure: JoinFailure | null = null;
   private slotNo = 0;
   private seats = new Map<number, Seat>(); // host: one per friend who can join
   private guestLink: Link | null = null; // guest: the connection to the host
@@ -326,6 +329,7 @@ export class Session {
     const code = normalizeCode(typed);
     if (!code) {
       this.detail = 'That doesn’t look like a game code. It’s two words, like “mighty-apples”.';
+      this.failure = 'bad_code';
       this.notify();
       return;
     }
@@ -608,9 +612,7 @@ export class Session {
       case 'hello':
         this.endHandshake(link); // heard from them: no need to keep repeating ours
         if (message.v !== PROTOCOL_VERSION || message.build.split('#')[0] !== __BUILD_ID__) {
-          link.close(
-            'The other player is running a different version of the game. Both of you should reload the page.',
-          );
+          link.close(VERSION_MISMATCH_TEXT);
         } else if (message.build !== helloBuild()) {
           const theirs = message.build.split('#')[1] ?? '';
           const turnedAway = 'The other player is in a different world (another campaign or seed).';
@@ -749,6 +751,7 @@ export class Session {
     this.reset();
     this.phase = status;
     this.detail = message;
+    this.failure = err instanceof RelayError ? failureFromRelay(err.kind) : 'other';
     this.notify();
   }
 
@@ -771,6 +774,7 @@ export class Session {
     for (const link of links) link.close();
     this.phase = 'idle';
     this.detail = '';
+    this.failure = null;
     this.slotNo = 0;
     this.inputs.clear();
     this.newestInput.clear();

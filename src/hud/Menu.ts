@@ -25,6 +25,7 @@ import { AidSetting } from './AidSetting';
 import { AimSetting } from './AimSetting';
 import { VoiceSetting } from './VoiceSetting';
 import { Keybinds } from './Keybinds';
+import { JoinStatus } from './JoinStatus';
 import { Multiplayer } from './Multiplayer';
 import { Party } from './Party';
 import { esc } from './html';
@@ -60,6 +61,10 @@ export class Menu {
 
   constructor(session: Session, touch: TouchControls) {
     new Multiplayer(session, () => this.close()); // owns the Online tab
+    // A join that fails brings the Online tab back so the friend can fix the code and try again.
+    new JoinStatus(session, () => {
+      if (!this.open && this.hero) this.toggle(this.hero, 'online');
+    });
     this.keybinds = new Keybinds(touch); // owns the key editor on the Controls tab
     this.aim = new AimSetting(touch); // owns the aiming choice on the Controls tab
     this.voiceSetting = new VoiceSetting(); // and the voice choice
