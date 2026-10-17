@@ -139,7 +139,8 @@
 }
 #menu-btn, #map-btn, #inv-btn, #req-btn, #menu .close, #shop .close, #trade .close { background-image: url('./ui/button-small.png'); }
 #menu-btn.pressed, #map-btn.pressed, #req-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #menu .close.pressed, #shop .close.pressed, #trade .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
-#hud-buttons { display: flex; gap: 6px; flex: none; }
+/* 12px between the tappable HUD buttons (beta playtest: mis-taps); each is 46px, above the 44px touch target. */
+#hud-buttons { display: flex; gap: 12px; flex: none; }
 #menu-btn, #map-btn, #inv-btn, #req-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
 #map-btn[hidden] { display: none; }
 
@@ -213,7 +214,7 @@ body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
 /* A (attack/talk), bottom-right. Combos are tapped on the D-pad, so there is no second button. */
 #buttons {
   position: absolute; width: 100px; height: 130px;
-  right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
+  right: calc(24px + env(safe-area-inset-right)); bottom: calc(28px + env(safe-area-inset-bottom));
 }
 #btn-a { position: absolute; pointer-events: auto; touch-action: none; }
 #btn-a { right: 0; bottom: 20px; width: 84px; height: 84px; font-size: 34px; line-height: 84px; }
