@@ -23,6 +23,7 @@ import type { EpicTemplate } from '../systems/dmEpics';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
+import { PartnerArrows } from '../hud/PartnerArrows';
 import { AreaBanner } from '../hud/AreaBanner';
 import {} from '../systems/places';
 import type { Menu } from '../hud/Menu';
@@ -141,6 +142,7 @@ export class OverworldScene implements Scene {
   private host: HostLink;
   private guest: GuestLink;
   private overlay = new MapOverlay();
+  private partnerArrows = new PartnerArrows();
   private banner = new AreaBanner();
   private storyUi!: StoryUi; // what the local player is told and shown about their quests
   private interact!: Interactions; // what the action key does
@@ -517,6 +519,23 @@ export class OverworldScene implements Scene {
       this.arena.local.dm,
       this.storyUi.taskLine(),
       arena.role === 'solo',
+    );
+    // Arrows toward partners out of view, and a chip for one in another zone (online only, not during a door transition).
+    this.partnerArrows.update(
+      arena.role !== 'solo' && !this.zones.transition.busy,
+      z.camera.view(arena.screen.width, arena.screen.height),
+      arena.screen.width,
+      arena.screen.height,
+      arena
+        .players()
+        .filter((p) => p !== arena.local)
+        .map((p) => ({
+          slot: p.slot,
+          x: p.body.x,
+          y: p.body.y,
+          here: p.zone === z.name && p.body.visible,
+          zone: p.zone === z.name ? '' : p.zone,
+        })),
     );
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });

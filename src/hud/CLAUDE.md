@@ -19,3 +19,7 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
   chapter's note, a trial's result) is *passive text*: `Dialog.note`, the same caption as the DM's words. Never `say` for those.
 - **The map overlay is local**: it fills in as the players in view explore (`map/explored.ts`), nothing is sent. Rooms
   have none, and the `map` capability can turn it off or show the whole zone.
+- **Partner arrows** (`PartnerArrows.ts`, maths in `edgeArrow.ts`; core engine, online only): an edge-of-screen arrow in the
+  partner's colour with the distance in tiles for a partner in this zone but out of view, and a chip for one in another zone.
+  Nothing is sent: a guest already gets every in-zone player in `snap.players` and the rest in `away`, so it can say "in another
+  zone" but only the host knows which zone (the chip names it when the player's `zone` is known).
