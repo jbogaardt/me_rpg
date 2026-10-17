@@ -89,7 +89,17 @@ export interface Gauge {
 }
 
 /** Rough minutes for one quest of each kind, and for walking between two lands. */
-const MINUTES: Record<StepKind, number> = { hunt: 4, gather: 5, find: 6, visit: 3, meet: 2, cast: 3, haul: 5 };
+const MINUTES: Record<StepKind, number> = {
+  hunt: 4,
+  gather: 5,
+  find: 6,
+  visit: 3,
+  meet: 2,
+  cast: 3,
+  haul: 5,
+  boss: 6,
+  master: 4,
+};
 const TRAVEL = 1.5;
 
 const hash = (s: string): number => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 11);
@@ -196,7 +206,7 @@ export const MAX_STEPS = 8;
 export const MAX_SAYS = 3;
 export const MAX_SAY = 150;
 export const MAX_ITEM = 40;
-const KINDS: StepKind[] = ['hunt', 'gather', 'find', 'visit', 'meet', 'cast', 'haul'];
+const KINDS: StepKind[] = ['hunt', 'gather', 'find', 'visit', 'meet', 'cast', 'haul', 'boss', 'master'];
 const ID = /^[a-z][a-z0-9_]{1,31}$/;
 const KEY = /^[a-z][a-z0-9_]{0,15}$/;
 

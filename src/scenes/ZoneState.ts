@@ -20,7 +20,7 @@ import { mapBox } from '../map/bounds';
 import { MapView } from '../map/MapView';
 import { CELL, type MapData, type SiteSpawn } from '../map/types';
 import { cellFeet } from '../map/doors';
-import { MOB_KINDS, type Item } from '../systems/combat';
+import { MOB_KINDS, type Item, type MobKind } from '../systems/combat';
 import type { Population } from '../content/populate';
 import { CHEST_LOOTS } from '../systems/chests';
 import { CROP_KINDS, CROP_STAGES } from '../systems/crops';
@@ -262,6 +262,26 @@ export class ZoneState {
     this.folk.push(...folk);
     const bodies = [...mobs.map((m) => m.body), ...folk.map((f) => f.body)];
     if (bodies.length) this.world.layer.addChild(...bodies);
+  }
+
+  /**
+   * Put a boss of the Dungeon Master's quest in, at (x, y) pixels: after every other foe (so a friend, who builds the same
+   * one on its own page, agrees on its index) and never to come back once it falls. `removeMob` takes it out.
+   */
+  admitBoss(kind: MobKind, x: number, y: number): Mob {
+    const mob = new Mob(kind, this.sprites.wardrobe.sheet(kind.look), x, y);
+    mob.respawns = false;
+    mob.body.setTag(kind.name, 0xffb070);
+    this.mobs.push(mob);
+    this.world.layer.addChild(mob.body);
+    return mob;
+  }
+
+  /** Take a foe out of the zone for good (a boss whose quest is over). */
+  removeMob(mob: Mob) {
+    const i = this.mobs.indexOf(mob);
+    if (i >= 0) this.mobs.splice(i, 1);
+    mob.body.destroy({ children: true });
   }
 
   /** Follow (x, y) with the camera, inside the map (`dt` eases after the player; `snap` puts the view there at once). */

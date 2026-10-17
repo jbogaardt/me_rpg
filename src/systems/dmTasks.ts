@@ -11,7 +11,7 @@ import type { QuestLog } from './combat';
 import { VISIT_RADIUS, castIn, haulIn, killIn, progressIn, siteIn, visitIn, type Quest } from './quests';
 
 /** A quest's kind; its place in this list is how it travels, so the list is append-only. */
-export const TASK_KINDS = ['hunt', 'gather', 'find', 'visit', 'cast', 'haul'] as const;
+export const TASK_KINDS = ['hunt', 'gather', 'find', 'visit', 'cast', 'haul', 'boss', 'master'] as const;
 export type TaskKind = (typeof TASK_KINDS)[number];
 export const TASK_STATES = ['active', 'done', 'failed'] as const;
 export type TaskState = (typeof TASK_STATES)[number];
@@ -39,7 +39,10 @@ export interface QuestOffer {
   title: string;
   zone: string;
   goal: number;
-  /** Hunt: the foe's kind key; gather: the site kind; find: the item id; visit: the place's name. */
+  /**
+   * Hunt: the foe's kind key; gather: the site kind; find: the item id; visit: the place's name; boss: the foe's kind key and
+   * the boss's health ("goblin:480", `dmBoss.ts`); master: the spell's id and the keys that cast it ("bolt:uurl").
+   */
   what: string;
   /** Where it leads (the area the party is shown): the foes, the nearest site, the relic, the place. */
   x: number;
@@ -106,7 +109,11 @@ export function parOf(kind: TaskKind, goal: number): number {
           ? goal * 45
           : kind === 'find'
             ? 180
-            : 120;
+            : kind === 'boss'
+              ? 150
+              : kind === 'master'
+                ? goal * 25
+                : 120;
 }
 
 /**
@@ -175,10 +182,10 @@ export class TaskBook {
     return true;
   }
 
-  /** Someone cast a spell in `zone`: counts if the quest wants one. */
-  cast(zone: string): boolean {
+  /** Someone cast the spell `spell` in `zone`: counts if the quest wants one (a mastery wants that one). */
+  cast(zone: string, spell?: string): boolean {
     const t = this.task;
-    if (!t || t.state !== 'active' || !castIn(t.log, t.quest, zone)) return false;
+    if (!t || t.state !== 'active' || !castIn(t.log, t.quest, zone, spell)) return false;
     this.count(t);
     return true;
   }

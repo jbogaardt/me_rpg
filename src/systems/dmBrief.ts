@@ -4,7 +4,10 @@
 // It is as long as an NPC's offer: why it matters, what to do, and how to go about it.
 
 import type { TaskView } from './dmTasks';
+import { nameOfBossTitle, parseBossWhat } from './dmBoss';
+import { parseMastery } from './dmQuests';
 import { hashOf, seeded } from './phrases';
+import { SPELLS, arrows, directionWords, type SpellId } from './spells';
 
 /** The names a briefing needs, looked up by whoever tells it. */
 export interface BriefNames {
@@ -26,6 +29,13 @@ export const cleanNote = (text: string): string => text.replace(/\s+/g, ' ').tri
 
 const plural = (name: string): string => (/s$/i.test(name) ? name : `${name}s`);
 const the = (area: string): string => (/^the\s/i.test(area) ? area : `the ${area}`);
+
+/** A mastery quest's spell: its name, and the arrows (and words) that cast it. */
+function masteryOf(v: TaskView): { name: string; arrows: string; words: string } {
+  const m = parseMastery(v.what);
+  const name = m ? (SPELLS[m.spell as SpellId]?.name ?? m.spell) : 'the spell';
+  return { name, arrows: m ? arrows(m.keys) : '', words: m ? directionWords(m.keys) : '' };
+}
 
 /**
  * What the quest asks, as plainly as the tracker does ("Defeat 4 Goblins in the Mirewood."). Whatever else the Dungeon
@@ -49,6 +59,12 @@ export function objective(v: TaskView, names: BriefNames): string {
       return `Cast ${n} spells${where}.`;
     case 'haul':
       return `Carry ${n} ${n > 1 ? 'barrels' : 'barrel'} to ${v.what}${where}.`;
+    case 'boss':
+      return `Defeat ${nameOfBossTitle(v.title)}${where}.`;
+    case 'master': {
+      const m = masteryOf(v);
+      return `Cast ${m.name} ${n} ${n > 1 ? 'times' : 'time'}${where}: ${m.arrows}.`;
+    }
     default:
       return `Reach ${v.what}${where}.`;
   }
@@ -161,6 +177,48 @@ export function briefing(v: TaskView, names: BriefNames): string[] {
           `Take the easy ones first and the far ones last. When the count is made, the reward is shared among you.`,
         ]),
       ];
+    case 'boss': {
+      const boss = nameOfBossTitle(v.title);
+      const kind = parseBossWhat(v.what)?.key;
+      const foe = kind ? names.foe(kind) : 'beast';
+      return [
+        page(0, [
+          `Gather close, and lower your voices. Something has grown fat in ${where}: ${boss}, a ${foe} the size of a cottage, who has eaten every rumour that dared go near it.`,
+          `I have a tale for you, and it has teeth. In ${where} there is ${boss}. Once it was only a ${foe}. Then it kept winning.`,
+          `Every land has one creature the others are afraid of. In ${where} it is ${boss}. I have it on good authority, which is to say a very frightened shepherd.`,
+          `The folk of ${where} no longer say its name aloud, so I shall: ${boss}. A ${foe}, they swear, grown past all reason. I swore back that you would see to it.`,
+        ]),
+        page(1, [
+          `This will not be a skirmish. It is ${foe}-sized in nothing but its ancestry; the rest of it is a nightmare with a title. Fight it together, watch for the slow wind-up before every blow, and step aside rather than step back.`,
+          `Do not trade blows with it for pride. Its swing is slow and it is a hammer: when it lifts, move. Keep one another on your feet, and if the fight turns, there is no shame in running to breathe.`,
+          `It will hit like a falling wall, so see to your health before you go and spread out: it can only be in one place at a time, and I intend that place to be somewhere else for each of you in turn.`,
+        ]),
+        page(2, [
+          `It keeps to its own ground, a good walk from here. Look for what flees from it. Fell it, and the reward is yours, every one of you, richer than any hunt, and I will tell the story ever after.`,
+          `Follow the quiet, and the tracks the size of dinner plates. When it falls, and it will, the reward is shared among you all, with my compliments and a ballad.`,
+          `You will know it by the size of it, and by how little else is left alive near it. Bring it down and the reward is yours: coin, experience, and the right to be insufferable at dinner.`,
+        ]),
+      ];
+    }
+    case 'master': {
+      const m = masteryOf(v);
+      return [
+        page(0, [
+          `A tome unread is a candle in a drawer. Yours knows ${m.name}, and I would see it done properly, not merely owned. Mastery is only repetition with ambition.`,
+          `I have watched you wave your wands about, and I will say this kindly: ${m.name} deserves better. Let us make a habit of it, before it makes a fool of you.`,
+          `Every spell has a rhythm, and ${m.name} has been waiting for yours. Learn it in the fingers, not the head. The head forgets.`,
+        ]),
+        page(1, [
+          `Cast ${m.name} ${n} times in ${where}. Hold the wand or tome that teaches it and tap the arrows in order, ${m.arrows} (${m.words}), with the move keys or a flick of the D-pad. Other spells do not count, only this one, so mind your mana.`,
+          `${n} casts of ${m.name}, and only that: it is ${m.arrows}, which is to say ${m.words}. Use the move keys or the D-pad, in order, quickly. A cast that fizzles for want of mana does not count, so rest between.`,
+          `Enter ${m.arrows} (${m.words}) to cast ${m.name}, and do it ${n} times. It counts for the whole party, whoever casts it, but only the one spell.`,
+        ]),
+        page(2, [
+          `There is nothing to find and nowhere to be. Practise in ${where}, on the air or on whatever comes at you. When the last cast is made, the reward is yours, every one of you.`,
+          `A quiet corner of ${where} will do, or the thick of a fight, if you are showing off. The count is kept for me; the reward is shared when it is done.`,
+        ]),
+      ];
+    }
     default:
       return [
         page(0, [

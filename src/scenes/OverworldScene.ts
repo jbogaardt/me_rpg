@@ -401,6 +401,7 @@ export class OverworldScene implements Scene {
     this.tasks.update(dt);
     this.epics.update(dt);
     this.storyUi.syncRelic();
+    this.storyUi.syncBoss();
     this.storyUi.syncLandmark();
     this.revive.update(dt);
     this.narration.update(dt);

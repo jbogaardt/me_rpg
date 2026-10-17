@@ -97,7 +97,7 @@ export class Casting {
     p.castCooldown = COMBO_COOLDOWN;
     this.sim.fx('castGlow', x, y - 22, undefined, p.slot);
     this.sim.text(x, y - 66, combo.skill ? SKILLS[combo.skill].name : SPELLS[combo.spell].name, 0xcfe8ff);
-    this.sim.onCast(p, p.zone);
+    this.sim.onCast(p, p.zone, combo.skill ?? combo.spell);
     this.sim.questNote(p, recordCast(p.hero, p.zone)); // a quest of spells counts it
   }
 

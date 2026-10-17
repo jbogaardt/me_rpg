@@ -8,6 +8,7 @@ import { upgrade } from './inventory';
 import type { BoundObjective } from './dmEpics';
 import type { Quest, SiteKind } from './quests';
 import type { QuestOffer } from './dmTasks';
+import { BOSS_KEY, bossBase, bossName, bossStats, bossTitle, bossWhat } from './dmBoss';
 
 /** The site kind of a hidden relic: an engine kind with a look of its own, not content. */
 export const RELIC_KIND = 'relic';
@@ -36,6 +37,10 @@ export interface Land {
   barrels: number;
   /** Gear a relic could be (item ids and names), the best fits for the party first. */
   relics: { id: string; name: string }[];
+  /** How many heroes are in the party (a boss is made for it; 1 when not said). */
+  party?: number;
+  /** The spells a wand or tome of the party teaches (a mastery quest asks for one): the spell's id and name, and the keys that cast it. Empty where `combos` is off. */
+  combos?: { spell: string; name: string; keys: string }[];
   /** A spot to hide a relic: far enough from the party to be a search, on open ground. */
   spot: () => { x: number; y: number } | null;
 }
@@ -113,7 +118,11 @@ function baseReward(kind: QuestOffer['kind'], goal: number): { xp: number; gold:
           ? { xp: 15 * goal, gold: 6 * goal }
           : kind === 'find'
             ? { xp: 70, gold: 30 }
-            : { xp: 40, gold: 15 };
+            : kind === 'boss'
+              ? { xp: 120, gold: 50 } // richer than a hunt; the boss's own kill pays on top, and a gear drop is a hook (see `DmTasks.finish`)
+              : kind === 'master'
+                ? { xp: 20 * goal, gold: 8 * goal }
+                : { xp: 40, gold: 15 };
 }
 
 /**
@@ -134,7 +143,11 @@ export function questOf(offer: QuestOffer): Quest {
             ? { t: 'cast', zone: offer.zone, count: offer.goal }
             : offer.kind === 'haul'
               ? { t: 'haul', place: offer.what, zone: offer.zone, count: offer.goal }
-              : { t: 'visit', place: offer.what, zone: offer.zone, count: 1 };
+              : offer.kind === 'boss'
+                ? { t: 'kill', kind: BOSS_KEY, count: 1, zone: offer.zone }
+                : offer.kind === 'master'
+                  ? { t: 'cast', zone: offer.zone, count: offer.goal, spell: parseMastery(offer.what)?.spell ?? '' }
+                  : { t: 'visit', place: offer.what, zone: offer.zone, count: 1 };
   return {
     id: `dm_${offer.kind}`,
     chapter: 0,
@@ -151,6 +164,15 @@ export function questOf(offer: QuestOffer): Quest {
     remind: [],
     done: [],
   };
+}
+
+/** A mastery quest's `what`: the spell's id and the keys that cast it ("bolt:uurl"). */
+export const masteryWhat = (spell: string, keys: string): string => `${spell}:${keys}`;
+
+/** The spell and keys of a mastery quest's `what`, or null if it is not one. */
+export function parseMastery(what: string): { spell: string; keys: string } | null {
+  const m = /^([a-z]+):([udlr]{1,12})$/.exec(what);
+  return m ? { spell: m[1]!, keys: m[2]! } : null;
 }
 
 /** The log a party's quest is tracked in: taken from the start (the DM gave it), with nothing done. */
@@ -219,6 +241,34 @@ export function allOffers(land: Land): QuestOffer[] {
       what: place.name,
       x: place.x,
       y: place.y,
+    });
+  }
+  // A boss: the toughest foe the land has, made a giant for this party (the spot is where it waits).
+  const foe = bossBase(land.mobs);
+  const lair = foe ? land.spot() : null;
+  if (foe && lair) {
+    const name = bossName(foe.name, land.zone);
+    const { maxHp } = bossStats(land.level, land.party ?? 1);
+    out.push({
+      kind: 'boss',
+      title: bossTitle(name),
+      zone: land.zone,
+      goal: 1,
+      what: bossWhat(foe.key, maxHp),
+      ...lair,
+    });
+  }
+  // Mastery: cast one spell a tome or wand of the party teaches, a few times.
+  for (const c of land.combos ?? []) {
+    const goal = 3;
+    const at = land.spot() ?? { x: 0, y: 0 }; // cast anywhere in the land, like a cast quest
+    out.push({
+      kind: 'master',
+      title: `Master ${c.name}: cast it ${goal} times`,
+      zone: land.zone,
+      goal,
+      what: masteryWhat(c.spell, c.keys),
+      ...at,
     });
   }
   const relic = land.relics[0];

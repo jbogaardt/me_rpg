@@ -8,11 +8,10 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
 - **There is one way to host, and the host is the DM.** Hosting is running the world, not playing in it. From the first
   friend's connection player 0 has `dm` set (`Arena.setDm`); a guest knows that with nothing on the wire (`DM_SLOT`).
   Solo has no DM (a solo player in a live world gets only the cards), but a solo player is their own host: the epic
-  runner (`DmEpics`, `DmTasks`) and the DM's words work in solo too, so an epic is told alone as it is to a party; only a
-  friend (a guest) never runs one. A solo player begins one from the card the director offers in a live world; the
-  sandbox campaign has no way to begin one by hand yet.
+  runner (`DmEpics`, `DmTasks`) and the DM's words work in solo too; only a friend (a guest) never runs one. A solo
+  player begins one from the card the director offers in a live world; the sandbox has no way to begin one by hand yet.
 - **A human DM steers, never spawns.** They shape how hard the world pushes (pressure) and what happens in it (story,
-  sky, quests), never what is in it. The old person form and Cast tab are gone; the log's `cast`/`npc` entries are the door
+  sky, quests), never what is in it. The log's `cast`/`npc` entries are the door
   for AI help: the DM bot (below) makes a person and sets them near the party through them.
 - **Steer by reacting, not by digging.** No admin panel: a bar that is always there, big tools as hot buttons, and cards
   that appear at the right moment with two or three buttons and go away if ignored. **Nothing pops up for the DM**:
@@ -20,13 +19,12 @@ Read this before touching the DM bar, director, cards, epics, possession, revive
   to wait.
 - **Pre-canned words** for the director's moves keep the DM's voice consistent, each in several wordings
   (`systems/phrases.ts`: none comes back until the others have been said); the DM's own words are short and shown to everyone
-  as a caption (`hud/Dialog.ts`): plain text on a clear background that takes no input, never stops play, leaves by
-  itself, and is also spoken by the browser's voice or the opt-in natural one (`hud/voice.ts`, mutable). A person speaks only
-  through their own dialog, when talked to, never in the DM's voice.
+  as a caption (`hud/Dialog.ts`) that takes no input, never stops play, leaves by itself, and is also spoken by the
+  browser's voice or the opt-in natural one (`hud/voice.ts`, mutable). A person speaks only through their own dialog.
 
-A friend talks to the DM in **free-form words**: the 💬 button (or Enter) opens one line, Enter sends it. No buttons and no
-walking up to the DM. It waits in the DM's inbox like any ask, and the DM (a person or the bot) may answer it privately,
-or act on it (ease off, point the way, begin a quest). The DM also watches the party's health on their own.
+A friend talks to the DM in **free-form words**: the 💬 button (or Enter) opens one line, Enter sends it. It waits in the
+DM's inbox like any ask, and the DM (a person or the bot) may answer it privately, or act on it (ease off, point the way,
+begin a quest). The DM also watches the party's health on their own.
 
 ## The DM has a voice
 
@@ -38,10 +36,9 @@ an aside, never a bare "Well done." The canned words (`systems/dmVoice.ts`) hold
 ## The DM is the story teller
 
 With a DM at the table, no story belongs to the map. The world's own quest chain (its keeper and other givers, its welcome,
-chapters, field notes and title cards) is a solo thing: online the givers are not there (only the trainer, a teacher, stays),
-nothing of the chain is told, and the host's welcome is a plain greeting. Anyone who guides a quest is a person the DM
-brings in (`Story.bring`, or the people of an epic), and a ready-made story is loaded by the DM as an epic when it is told,
-never half-present in the map beside what the DM is doing.
+chapters, field notes and title cards) is a solo thing: online the givers are not there (only the trainer stays), nothing
+of the chain is told, and the host's welcome is a plain greeting. Anyone who guides a quest is a person the DM brings in
+(`Story.bring`, or the people of an epic), and a ready-made story is loaded by the DM as an epic when it is told.
 
 ## The DM is not one of the party
 
@@ -55,7 +52,7 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
 
 - **Director** (`dmDirector.ts` says WHEN, `DmPrompts.ts` builds each card and does the pick, `hud/DmCard.ts` draws it):
   watches party health, task progress and quiet time, and suggests easing off, turning up the heat, a twist, which quest
-  (after a breather to wander once one ends), offering the compass (the map is the party's own, never marked for a quest; the compass leans toward the place, then points at it), a breather, a new land's sky, raising a fallen player, or the story's next road (with a vote).
+  (after a breather to wander once one ends), offering the compass (never marked on the map: it leans toward the place, then points at it), a breather, a new land's sky, raising a fallen player, or the story's next road (with a vote).
   Urgent cards wait less; a dismissed card is a breather.
 - **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (their own free-form words, from the 💬
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,
@@ -65,7 +62,9 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   events and mob states, so friends see them through the usual snapshots.
 - **Epic quests** (`docs/epics.md`): the DM's only quests, sagas of steps with people, as data: `content/epics.json` and
   the campaign's own `quests.json`; run by `DmEpics` on the host (and in solo). A step is a quest kind or a meeting with a
-  person the DM makes; people's words follow the story. No one-shot quests are handed out.
+  person the DM makes; people's words follow the story. No one-shot quests are handed out. Beside hunts, gathers, finds and
+  visits a step may be a **boss** (the land's toughest foe as a named giant made for the party's level and size,
+  `dmBoss.ts`; the host owns it, friends build the same one from the quest, protocol v45) or a **mastery** (cast one named combo N times).
 - **Narration, revive, possession.** `DmNarration.ts` says the welcome and chapter openings in the DM's voice.
   `DmRevive.ts` lets the DM raise or fetch a fallen player.
   **Possession** (`DmPossession.ts`, host only): click or tap a living foe and it is theirs; their keys and attack drive

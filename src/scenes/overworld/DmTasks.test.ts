@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DONE_WORDS } from '../../systems/dmVoice';
 import { RELIC_KIND } from '../../systems/dmQuests';
-import { TASK_LINGER, type QuestOffer } from '../../systems/dmTasks';
+import { TASK_LINGER, taskReward, type QuestOffer } from '../../systems/dmTasks';
 import type { Arena } from './Arena';
 import type { DmDesk } from './DmDesk';
 import { DmTasks } from './DmTasks';
@@ -24,6 +24,7 @@ function game(role: 'host' | 'solo' | 'client' = 'host') {
   const paid: [unknown, number, number][] = [];
   const sim = {
     onKill: (_z: string, _k: string) => {},
+    onCast: (_p: unknown, _z: string, _s: string) => {},
     onDefeat: () => {},
     reward: (p: unknown, xp: number, gold: number) => paid.push([p, xp, gold]),
     text: () => {},
@@ -95,6 +96,42 @@ describe('the DM’s quest, on the host', () => {
     expect(tasks.result).toMatchObject({ kind: 'hunt', state: 'done' });
     tasks.update(TASK_LINGER + 1);
     expect(arena.task).toBeNull();
+  });
+
+  it('counts a boss quest by the boss’s death alone, keeps the compass on it, and pays richly', () => {
+    const { tasks, arena, sim, party, paid, give } = game();
+    const boss = { alive: true, kind: { boss: true }, body: { x: 700, y: 800 } };
+    const goblin = { alive: true, kind: { boss: false }, body: { x: 10, y: 10 } };
+    arena.zones.set('fen', { name: 'fen' } as never);
+    (arena as unknown as { mobs: unknown[] }).mobs = [goblin, boss];
+    give({ kind: 'boss', title: 'Slay the Hollow Goblin King', goal: 1, what: 'goblin:480', level: 3 });
+    tasks.update(0.1);
+    expect(arena.task).toMatchObject({ kind: 'boss', x: 700, y: 800 }); // the compass points at it, not at a goblin
+    boss.body.x = 650;
+    tasks.update(2.5);
+    expect(arena.task).toMatchObject({ x: 650, y: 800 }); // and follows it
+    sim.onKill('fen', 'goblin'); // the ordinary goblin falls: not the boss
+    tasks.update(0.1);
+    expect(arena.task!.progress).toBe(0);
+    boss.alive = false;
+    sim.onKill('fen', 'boss');
+    tasks.update(0.1);
+    expect(arena.task!.state).toBe('done');
+    expect(paid.map(([p]) => p)).toEqual(party);
+    expect(paid[0]![1]).toBeGreaterThan(taskReward('hunt', 5, 3).xp); // richer than a hunt of five
+  });
+
+  it('counts a mastery only for the spell it names, whoever casts it', () => {
+    const { tasks, arena, sim, party, give } = game();
+    give({ kind: 'master', title: 'Master Arcane Bolt: cast it 2 times', goal: 2, what: 'bolt:uurl' });
+    sim.onCast(party[0]!, 'fen', 'nova');
+    sim.onCast(party[0]!, 'fen', 'bolt');
+    sim.onCast(party[1]!, 'glen', 'bolt'); // another land
+    tasks.update(0.1);
+    expect(arena.task).toMatchObject({ kind: 'master', progress: 1 });
+    sim.onCast(party[1]!, 'fen', 'bolt');
+    tasks.update(0.1);
+    expect(arena.task!.state).toBe('done');
   });
 
   it('counts a gathered site once, for the party, and a relic found ends a find quest', () => {

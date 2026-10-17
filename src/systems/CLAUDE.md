@@ -36,6 +36,12 @@ kind is how higher levels stay meaningful. **Retune a weapon or kind against tha
   door, a search area for something to be found). Quest text must use the biomes' `name`s (`guide.test.ts`). The host owns
   every `QuestLog`; a guest sends `do` talk and action presses and reads the log from `pack`. Online only the DM's
   quests count (`docs/dungeon-master.md`).
+- **The DM's quest kinds** (`dmTasks.ts`, `dmQuests.ts`; core engine, all counted by the host, friends told in the `dm` message, append-only kinds): beside hunt, gather, find, visit, cast and haul there are
+  **boss** and **master**. A boss (`dmBoss.ts`) is the land's toughest foe drawn as a named giant (`MobKind.boss`, counted under `BOSS_KEY`), whose health,
+  blow and defense come from a typical hero of the party's level and size (`heroModel`, so no content id and a fair fight at any level; `balance.test.ts` keeps its odds between 1.15 and 2.5).
+  `StoryUi.syncBoss` makes it on every page from the quest alone (the zone's last foe, so snapshot indexes agree) and the host's compass follows it;
+  its quest pays richer than a hunt and a gear drop is left as a hook in `DmTasks.finish`. A mastery asks for N casts of one combo
+  a wand or tome of the party teaches (`Land.combos`, the `combos` capability; `castIn` takes the spell id) and is told with the arrows that cast it.
 - **Magic** (`spells.ts`, `skills.ts`, `Casting.ts`): wands and tomes are weapons with combos (direction taps) that cast
   spells for mana; **every wand and tome is unique** (no spell or string on two weapons, none hidden inside another or a
   skill's: tests check). Innate skills are earned in training-ground trials, two ready at a time. `heroCombos` is the one
