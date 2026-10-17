@@ -260,8 +260,7 @@ export function upgradeFor(hero: Hero, items: Record<string, Item>, level: numbe
       (it.slot !== 'weapon' || style(it) === style(hero.weapon)),
   );
   options.sort(
-    ([, a], [, b]) =>
-      Number(b.slot === 'weapon') - Number(a.slot === 'weapon') || upgrade(hero, b) - upgrade(hero, a),
+    ([, a], [, b]) => Number(b.slot === 'weapon') - Number(a.slot === 'weapon') || upgrade(hero, b) - upgrade(hero, a),
   );
   return options[0]?.[0] ?? null;
 }
