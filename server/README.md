@@ -83,6 +83,9 @@ live world (the world log's `npc` and `cast` entries, validated and sent to ever
 
 ## The table read (Jev beyond cards)
 
+A failed read (e.g. "fetch failed") is retried by `RetryingReader` (3 attempts, doubling waits from 500 ms); after the
+last the host logs the step that failed and the timers decide until the next read.
+
 `pulse.ts` + `JevReader` (`jev.ts`): every `PULSE_MS` (8 s, in the background) one request asks Jev four independent questions
 over the same small, named state (percentages and seconds, no ids): a `score` of how hard pressed the party is (levels
 are described situations) and `noul`s for stalled / a word would help / needs a quest. Code owns the policy: the DM
