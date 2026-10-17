@@ -27,6 +27,7 @@ import {
 } from './claude';
 import { ANALYST_SYSTEM, writeReport } from './report';
 import { ANALYST_TOOLS, checkoutMain } from './repo';
+import { draftIssues, postIssues } from './issues';
 import { Curve } from './curve';
 import { RulesTagger, TAGGED, tagEntry, type Tagger } from './tag';
 import { triage as triageGame, type Triage } from './triage';
@@ -437,6 +438,7 @@ class Dm {
           `triage: ${tri.findings.length} finding(s)${tri.findings[0] ? `, first: ${tri.findings[0].kind} in ${tri.findings[0].area}` : ''}`,
         );
       }
+      if (tri) await this.issues(game, tri);
       const curve = new Curve();
       const offset = game.firstWall - (game.entries[0]?.t ?? 0); // the bot's clock against the game's
       for (const r of this.reads) if (r.wall >= game.firstWall - 600) curve.add(r.wall - offset, r);
@@ -459,6 +461,23 @@ class Dm {
       await repo?.release();
       this.finishing = false;
     }
+  }
+
+  /**
+   * Draft the issues a game's triage would file (beside the raw log, never committed); with `DM_BOT_ISSUES=post`, a repo
+   * (`DM_BOT_ISSUES_REPO`, default this one) and a token that can write issues (`DM_BOT_GITHUB_TOKEN`), post them too.
+   */
+  private async issues(game: { code: string; started: Date; build?: string }, tri: Triage) {
+    const drafts = draftIssues(tri, game.build);
+    if (!drafts.length) return;
+    const name = `${game.started.toISOString().slice(0, 10)}-${game.code}.issues.json`;
+    fs.mkdirSync(path.join(REPORTS_DIR, 'raw'), { recursive: true });
+    fs.writeFileSync(path.join(REPORTS_DIR, 'raw', name), JSON.stringify(drafts, null, 1));
+    log(`drafted ${drafts.length} issue(s): reports/raw/${name}`);
+    const token = process.env.DM_BOT_GITHUB_TOKEN;
+    if (process.env.DM_BOT_ISSUES !== 'post' || !token) return;
+    const results = await postIssues(drafts, process.env.DM_BOT_ISSUES_REPO || 'jbogaardt/me_rpg', token);
+    for (const r of results) log(`issue ${r.key}: ${r.state}${r.url ? ` ${r.url}` : ''}`);
   }
 
   /** Say what changed at the table. */
