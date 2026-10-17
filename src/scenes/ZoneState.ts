@@ -151,7 +151,7 @@ export class ZoneState {
   setLandmark(shape: LandmarkShape, x: number, y: number) {
     if (this.landmark?.shape === shape && this.landmark.x === x && this.landmark.y === y) return;
     this.clearLandmark();
-    this.landmark = new Landmark(shape, x, y, this.sprites.graves, this.sprites.ruins);
+    this.landmark = new Landmark(shape, x, y, this.sprites);
     this.world.layer.addChild(this.landmark);
   }
 

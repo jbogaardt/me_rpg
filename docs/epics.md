@@ -46,9 +46,9 @@ a player asking) the DM offers a **compass** that leans toward the place to sear
 
 **What a telling names is there to be found** (`systems/landmarks.ts`, `entities/Landmark.ts`, `StoryUi.syncLandmark`, local
 to every page from the synced task alone): a visit or meeting whose words (the place, the DM's note, the title) name a
-wagon, well, camp, tent, shrine, grave, ruin, tower or hut gets one drawn beside its goal, so no quest sends the party
-to what is not there (a carter "beside a lopsided wagon" has the wagon). A *find* is never an item on the ground: a foe carries it or a DM chest holds it. A new word or shape goes in `landmarks.ts`
-with its drawing; an AI-written epic gets it free if it uses those words.
+wagon, well, camp, tent, shrine, grave, ruin, tower, bell tower, church or hut gets one drawn beside its goal, so no quest sends the party
+to what is not there. A *find* is never an item on the ground: a foe or a DM chest holds it. A new word or shape goes in `landmarks.ts`
+with its **stored pixel art** (a piece in `tools/map/landmarks.ts`, never code-drawn); an AI epic gets it free.
 
 **Told, not listed**: any step may carry an `aftermath` (1 to 3 lines the DM says when it is done, before the next: a find, a twist; `DmEpics.finishStep`). `content/epics.test.ts` asks half of every saga's steps for one or a meeting.
 

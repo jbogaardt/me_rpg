@@ -57,3 +57,7 @@ holds the `ruin*` prefabs (`RUIN_PREFABS` in `catalog.ts`): a pyramid, temple, h
 Buildings and walls are solid from the ground up; pillars and idols block along their whole height; the arch blocks only
 its dark half, so its open half is a gate. They are scenery, not enterable. Used in the jungle, desert, undead lands and
 the Wilds' old shrine and barrow; the quest `ruin` landmark (`entities/Landmark.ts`) is drawn from the same sheet.
+
+## Landmarks
+
+`landmarks.png` (`landmarks.ts`, `npm run landmarks`; two CC-BY-SA LPC packs, not kept in the repo, see CREDITS.md) holds the pixel art of the quest landmarks: well, wagon, campfire flames, tent, hut, statue, and the church, bell tower and watchtower composed from the City pack's walls, spires and doors. `src/systems/landmarkAtlas.ts` is generated; `Landmark.ts` draws only from sheets.
