@@ -275,6 +275,8 @@ export interface Prefab {
    * bottom `band` pixels are blocked. The art above the band is walk-behind. Null = decoration only.
    */
   solid: { band: number; min: number } | null;
+  /** Hung on a building's wall: drawn over the wall even though its foot is above the wall's (z lift, see zone.ts). */
+  wall?: boolean;
   /** What the object is, copied to MapObject.tag so game systems (leaf fall, rustling...) can find it. */
   tag?: string;
   /** Picked up and carried in play (systems/barrels.ts): it blocks as a body there, so the map blocks no cell for it. */
@@ -366,7 +368,6 @@ export const INTERIOR = {
   shelfWizard: { x: 512, y: 32, w: 96, h: 64 },
   signWizard: { x: 512, y: 96, w: 128, h: 64 },
   lectern: { x: 0, y: 160, w: 32, h: 48 },
-  signpost: { x: 32, y: 160, w: 32, h: 48 },
 };
 const furniture = (name: keyof typeof INTERIOR, band: number, about: string): Prefab => {
   const { x, y, w, h } = INTERIOR[name];
@@ -387,7 +388,84 @@ const building = (name: keyof typeof BUILDINGS, about: string): Prefab => {
   return { sheet: TOWN_SHEET, w, h, parts: [part(x, y, w, h)], solid: { band: h, min: 0.3 }, tag: 'building', about };
 };
 
+// --- OpenGameArt signs (art/oga_signs/CREDITS-signs.txt, CREDITS.md): signposts and hanging shop signs, cut on the 32 px grid ---
+export const SIGNPOST_SHEET = 'signposts.png'; // "[LPC] Signposts, graves, line cloths and scare crow" (Reemax et al.), unmodified
+export const HANGING_SHEET = 'hanging_signs.png'; // "[LPC] Hanging signs" (Reemax), unmodified
+const signArt = (
+  sheet: string,
+  cx: number,
+  cy: number,
+  solid: Prefab['solid'],
+  tag: string,
+  about: string,
+): Prefab => ({
+  sheet,
+  w: 32,
+  h: 32,
+  parts: [part(cx * 32, cy * 32, 32, 32)],
+  solid,
+  tag,
+  about,
+});
+/** A hanging shop sign (1x1 cell, decoration): `wall` signs go on a building's face, one cell up, beside its door. */
+const hanging = (cx: number, cy: number, what: string): Prefab => ({
+  ...signArt(
+    HANGING_SHEET,
+    cx,
+    cy,
+    null,
+    'hangingSign',
+    `A hanging wooden sign showing ${what}, 1x1 cell, drawn over a wall.`,
+  ),
+  wall: true,
+});
+export const SIGN_PREFABS = {
+  signpost: signArt(
+    SIGNPOST_SHEET,
+    0,
+    0,
+    { band: 12, min: 0.07 },
+    'sign',
+    'A signpost with an arrow board, 1x1 cell; its post blocks. Place it with `z.sign` (it names the ways), not `z.prop`.',
+  ),
+  signpostB: signArt(
+    SIGNPOST_SHEET,
+    1,
+    0,
+    { band: 12, min: 0.07 },
+    'sign',
+    'A signpost with a broad board (`z.sign` alternates it with signpost).',
+  ),
+  noticeBoard: signArt(
+    SIGNPOST_SHEET,
+    0,
+    1,
+    { band: 10, min: 0.07 },
+    'noticeBoard',
+    'A blank notice board on two legs, 1x1 cell; its legs block.',
+  ),
+  noticeBoardB: signArt(
+    SIGNPOST_SHEET,
+    1,
+    1,
+    { band: 10, min: 0.07 },
+    'noticeBoard',
+    'A notice board with pinned papers, 1x1 cell; its legs block.',
+  ),
+  hangSword: hanging(0, 0, 'a sword (weapons: smithy, ranger)'),
+  hangPot: hanging(1, 0, 'a clay pot (general goods)'),
+  hangHelm: hanging(2, 0, 'a helm (armour: the armory)'),
+  hangFlask: hanging(3, 0, 'a flask (the apothecary)'),
+  hangMug: hanging(0, 1, 'a tankard (a tavern)'),
+  hangInn: hanging(1, 1, 'the word INN'),
+  hangAmulet: hanging(2, 1, 'an amulet (the wizard, jeweller)'),
+  hangTools: hanging(3, 1, 'a hammer and tongs (the smithy)'),
+  hangBlank: hanging(0, 2, 'nothing yet'),
+} satisfies Record<string, Prefab>;
+// --- end OpenGameArt signs -------------------------------------------------------------------------------------------
+
 export const PREFABS = {
+  ...SIGN_PREFABS,
   smithy: building(
     'smithy',
     'Blacksmith: a 6x7 hall with terracotta roof and an anvil over the door. Shopkeeper stands one row below.',
@@ -415,14 +493,6 @@ export const PREFABS = {
     'A reading stand with an open book, 1x1.5 cells, solid. The wizard room lists the combos on it (systems/lectern.ts).',
   ),
   signWizard: furniture('signWizard', 0, 'Wall sign with a star, 4x2 cells, decoration.'),
-  signpost: {
-    ...furniture(
-      'signpost',
-      16,
-      'A wooden signpost, 1x1.5 cells; its foot blocks. Place it with `z.sign` (it names the ways), not `z.prop`.',
-    ),
-    tag: 'sign',
-  },
   ranger: building('ranger', "Ranger's lodge: a 3x9 tall house with a golden roof and a bow over the door."),
   treeA: lpcTree('green', 0, 'Leafy tree, variant A. Blocks its trunk and lower canopy; the crown is walk-behind.'),
   treeB: lpcTree('green', 1, 'Leafy tree, variant B. Blocks its trunk and lower canopy; the crown is walk-behind.'),

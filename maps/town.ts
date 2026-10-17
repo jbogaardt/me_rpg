@@ -20,6 +20,14 @@ export const SHOP_DOORS = {
   // The wizard's house stands off to the east, clear of the north road (which runs straight down the middle to the market).
   wizard: { building: { col: 184, row: ROW }, door: { col: 186, w: 2 }, outside: { col: 186, row: ROW + 1 } },
 } as const;
+/** The hanging sign by each shop's door (tools/map/catalog.ts SIGN_PREFABS). */
+const SHOP_HANGING = {
+  smithy: 'hangTools',
+  armory: 'hangHelm',
+  apothecary: 'hangFlask',
+  ranger: 'hangSword',
+  wizard: 'hangAmulet',
+} as const;
 export type ShopId = keyof typeof SHOP_DOORS;
 
 /** Where the door out of shop `id` leads: the cell below its building's door, in the town's own cells. */
@@ -56,6 +64,8 @@ export default defineBiome({
     for (const [id, shop] of Object.entries(SHOP_DOORS)) {
       z.prop(id as ShopId, shop.building.col, shop.building.row);
       z.door(shop.door.col, shop.building.row, shop.door.w, `shop_${id}`, SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
+      // The hanging sign (OpenGameArt) on the wall beside the door, showing what the shop sells.
+      z.prop(SHOP_HANGING[id as ShopId], shop.door.col + shop.door.w, shop.building.row, { dy: -6 });
     }
     z.spawn(...z.near(168, 205));
 
@@ -68,6 +78,8 @@ export default defineBiome({
       [16.0, 21.0],
     ] as const)
       z.prop('barrel', ...z.near(...at(x, y)));
+
+    z.prop('noticeBoardB', ...z.near(...at(16.2, 19.7))); // the town's notice board (OpenGameArt)
 
     // --- Warden Maren: keeper of the town lamp, and the one who hands out the story quests (systems/quests.ts) -------------
     z.giver('maren', ...z.near(...at(16.9, 20.3)));

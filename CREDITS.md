@@ -79,6 +79,17 @@ served with the game at `sprites/lpc/credits.csv` and linked from the pause menu
 loose frame corners and rails stitched into closed frames (`tools/ui/cut-gui.ts`), and the wood and paper
 backgrounds re-encoded as JPEG. Bar colours are sampled from the kit's gradients.
 
+## Signposts and hanging signs (`public/tilesets/signposts.png`, `hanging_signs.png`, source in `art/oga_signs/`)
+
+- "[LPC] Signposts, graves, line cloths and scare crow" by Reemax (Tuomo Untinen), with daneeklu (Daniel Eddeland) and
+  Nemisys (the signpost base art), https://opengameart.org/content/lpc-signposts-graves-line-cloths-and-scare-crow
+  (CC-BY-SA 3.0 or GPL 3.0; used under CC-BY-SA 3.0). Used unmodified: the signposts and notice boards are drawn from it.
+- "[LPC] Hanging signs" by Reemax (Tuomo Untinen), https://opengameart.org/content/lpc-hanging-signs
+  (CC-BY-SA 3.0 or GPL 3.0; used under CC-BY-SA 3.0; the page asks for the LPC attribution instructions, see above).
+  Used unmodified: the shop signs beside the doors of the town's shops.
+
+Licences and authors read from the two OpenGameArt pages (through a page summary); the licence texts were not opened.
+
 ## Fonts
 
 Cinzel (Natanael Gama) and Crimson Text (Sebastian Kosch), SIL Open Font License 1.1, bundled via Fontsource.

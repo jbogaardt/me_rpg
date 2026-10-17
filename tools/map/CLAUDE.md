@@ -39,6 +39,12 @@ must skip `beyond` cells), and the margin is how two maps line up.
 - **Content tie-ins**: placements, chests' loots, crops, sites and signs are checked against the campaign that draws the
   map (`src/content/CLAUDE.md`).
 
+## Signs
+
+Signposts (`z.sign`, alternating `signpost`/`signpostB`), notice boards and the hanging shop signs (`hang*`, a prefab with
+`wall: true`, drawn in front of the wall it hangs on: put one a cell up beside a door, nudged `dy: -6`) are OpenGameArt
+sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs/`). Only a signpost's post blocks.
+
 ## Shop buildings
 
 `town.png` (`town.ts`, from the CC0 Town RPG Pack in `art/`) holds the shop prefabs (`BUILDINGS` in `catalog.ts`),
