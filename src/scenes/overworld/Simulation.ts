@@ -129,6 +129,7 @@ export class Simulation {
           my,
           arena.inZone(z, () => arena.bodies()),
         ),
+      sees: (x0, y0, x1, y1) => z.collision.hasLineOfSight(x0, y0, x1, y1),
       strike: (mob, target) => arena.inZone(z, () => this.hurtHero(mob, target)),
       shoot: (mob, ux, uy) => arena.inZone(z, () => this.mobShoot(mob, ux, uy)),
       ray: (mob, target) => arena.inZone(z, () => this.mobRay(mob, target)),

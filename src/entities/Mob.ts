@@ -12,6 +12,8 @@ export interface MobWorld {
   heroes: readonly Character[];
   /** Move a body by (mx, my) with collision, one axis at a time. Returns true if it moved at all. */
   slide(body: Character, mx: number, my: number): boolean;
+  /** Whether nothing solid lies between two points (a wall breaks sight). Absent: always true. */
+  sees?(x0: number, y0: number, x1: number, y1: number): boolean;
   /** The mob's melee attack connected with `target`. */
   strike(mob: Mob, target: Character): void;
   /** A ranged mob fires along the unit vector (ux, uy); the scene flies the projectile and decides what it hits. */
@@ -62,6 +64,8 @@ const SHOVE = 40; // knockback speed (px/s) while it is not staggered; a stagger
 const KEEP_AWAY = 0.4; // a shooter backs off when the hero is closer than this fraction of its range
 const RESPAWN = 60; // an adventure, not a grind: a foe that falls stays down for a minute
 const FADE = 0.4;
+const HEARING = 0.35; // share of its sight a mob notices a hero through a wall (noise, footsteps)
+const MEMORY = 2; // seconds a chasing mob keeps hunting a hero it cannot see before it gives up
 const LEASH = 4 * CELL; // wanders no further than this from home
 
 const sideToward = (dx: number): Direction => (dx < 0 ? 'left' : 'right');
@@ -96,6 +100,7 @@ export class Mob {
   hp: number;
   private state: State = 'idle';
   private timer = 0;
+  private unseen = 0; // seconds a chasing mob has had no line of sight to its target
   private dir = { x: 0, y: 0 };
   private knock = { x: 0, y: 0 };
   private flash = 0;
@@ -302,8 +307,13 @@ export class Mob {
     switch (this.state) {
       case 'idle':
       case 'wander':
-        if (dist < this.kind.sight) {
+        if (
+          target &&
+          (dist < this.kind.sight * HEARING ||
+            (dist < this.kind.sight && (world.sees?.(this.body.x, this.body.y, target.x, target.y) ?? true)))
+        ) {
           this.state = 'chase';
+          this.unseen = 0;
           break;
         }
         if (this.hp < this.kind.maxHp) {
@@ -331,7 +341,9 @@ export class Mob {
         }
         const { shot } = this.kind;
         const attack = mobAttack(this.kind, dist, this.rayRest <= 0);
-        if (dist > this.kind.sight * 1.5) {
+        const seen = !target || (world.sees?.(this.body.x, this.body.y, target.x, target.y) ?? true);
+        this.unseen = seen ? 0 : this.unseen + dt;
+        if (dist > this.kind.sight * 1.5 || (this.unseen > MEMORY && dist > this.kind.sight * HEARING)) {
           this.state = 'idle';
           this.timer = 1;
         } else if (attack) {

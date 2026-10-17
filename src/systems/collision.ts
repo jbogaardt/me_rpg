@@ -43,6 +43,17 @@ export class Collision {
     return this.blocked.has(row * this.width + col);
   }
 
+  /** Whether nothing blocks the straight line between two points (sampled every half cell); used for sight. */
+  hasLineOfSight(x0: number, y0: number, x1: number, y1: number): boolean {
+    const steps = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (CELL / 2));
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      if (this.isBlocked(Math.floor((x0 + (x1 - x0) * t) / CELL), Math.floor((y0 + (y1 - y0) * t) / CELL)))
+        return false;
+    }
+    return true;
+  }
+
   /** Whether feet at (x, y) fit the map. */
   fitsMap(x: number, y: number, size = 1): boolean {
     return FOOT_BOX.every(

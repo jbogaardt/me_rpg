@@ -69,4 +69,14 @@ describe('Collision', () => {
     const ghost: Body = { x: a.x + 10, y: a.y, visible: false };
     expect(c.canMove(a, a.x + 2, a.y, [ghost])).toBe(true);
   });
+
+  it('sees across open ground but not through a wall', () => {
+    const [ax, ay] = centre(1, 3);
+    const [bx, by] = centre(3, 6);
+    const [cx, cy] = centre(8, 3);
+    expect(c.hasLineOfSight(ax, ay, bx, by)).toBe(true);
+    expect(c.hasLineOfSight(ax, ay, cx, cy)).toBe(false);
+    expect(c.hasLineOfSight(cx, cy, ax, ay)).toBe(false);
+    expect(c.hasLineOfSight(ax, ay, ax, ay)).toBe(true);
+  });
 });

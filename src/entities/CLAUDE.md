@@ -8,6 +8,8 @@
   blow cannot be dodged by stepping back and forth (it starts from a reach longer than the sword's, windup length varies,
   aim locks once committed, and the blow is a real lunge); a mob that loses the hero mends so chipping and healing
   doesn't work; a kind with a `ray` (the Mummy) is a caster with a melee fallback whose beam any hit interrupts.
+  **Aggro needs line of sight** (`MobWorld.sees`, `Collision.hasLineOfSight`): walls do not pull rooms; a mob also hears a
+  hero at `HEARING` of its sight, and a chaser keeps `MEMORY` seconds after losing sight. Host-only, so no co-op change.
   **Giants** (`MobKind.scale`) draw bigger and the rules follow: collision box, reach, hit circle, bars.
 - **On a co-op guest a `Mob` is only a view of the host's state** (`setRemote`): it plays windup and hurt poses and draws
   a beam from the `channel` state itself, but never decides anything. The host alone damages.
