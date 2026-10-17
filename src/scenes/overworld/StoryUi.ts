@@ -14,6 +14,7 @@ import { RELIC_KIND } from '../../systems/dmQuests';
 import { landmarkIn, landmarkText } from '../../systems/landmarks';
 import { HINT_AREA, HINT_ARROW, taskText, type TaskView } from '../../systems/dmTasks';
 import { MOB_KINDS } from '../../systems/combat';
+import { direction } from '../../systems/bearing';
 import { doorToward, guideFor, searchMiddle } from '../../systems/guide';
 import { recipeNames } from '../../systems/dmForge';
 import { FUSED, ITEMS } from '../../systems/items';
@@ -230,7 +231,12 @@ export class StoryUi {
         ? doorToward(z.data.doors, player, z.name, task.zone)
         : null;
     const target = calling ?? toward ?? known;
-    this.arrow.update(dt, at(player.x, player.y - 20), target && at(target.x, target.y - 12), target?.label ?? '');
+    this.arrow.update(
+      dt,
+      at(player.x, player.y - 20),
+      target && at(target.x, target.y - 12),
+      target?.label ? `${target.label}, ${direction(player, target).replace(/^close by, /, '')}` : '',
+    );
     this.overlay.setGuide(guide);
   }
 
