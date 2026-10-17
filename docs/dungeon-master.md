@@ -51,7 +51,7 @@ harvest buttons, and a Party tab (levels, HP, area, **Go**).
   watches party health, task progress and quiet time, and suggests easing off, turning up the heat, a twist, which quest
   (after a breather once one ends), the compass (the map stays the party's own; the compass leans toward the place, then
   points at it), a breather, a new land's sky, raising a fallen player, or the story's next road (a vote).
-  Urgent cards wait less; a dismissed card is a breather.
+  Urgent cards wait less; dismissing one is a breather.
 - **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (their own free-form words, from the 💬
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,
   `DmMsg.reply`).
