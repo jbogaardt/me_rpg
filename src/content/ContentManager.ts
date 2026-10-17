@@ -7,6 +7,7 @@ import { setMobKinds, type MobKind } from '../systems/combat';
 import { setNpcLooks } from '../systems/looks';
 import { setCapabilities, withDials, type Dial } from '../systems/capabilities';
 import { setPlaces } from '../systems/places';
+import { setZoneLevels, type Band } from '../systems/levels';
 import { setQuestContent } from '../systems/quests';
 import { itemOf, setItems } from '../systems/items';
 import { setShops } from '../systems/shops';
@@ -97,12 +98,15 @@ export class ContentManager {
     const names: Record<string, string> = {};
     const tints: Record<string, number> = {};
     const links: Record<string, string[]> = {};
+    const bands: Record<string, Band> = {};
     for (const b of Object.values(this.content.biomes)) {
       names[b.map] = b.name;
+      if (b.levels) bands[b.map] = b.levels;
       if (b.tint) tints[b.map] = parseInt(b.tint.slice(1), 16);
       links[b.map] = b.links;
     }
     setPlaces(names, links, tints);
+    setZoneLevels(bands);
     if (goods) {
       const { items, start, shops, loots: chests } = this.content.items;
       setItems(items, start);

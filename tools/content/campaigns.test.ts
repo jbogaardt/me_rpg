@@ -8,6 +8,8 @@ import { outfitLayers, type Outfit, type PartManifest } from '../../src/sprites/
 import { mobLevel, mobTimings } from '../../src/systems/combat';
 import { heroModel } from '../../src/systems/dmBoss';
 import { ROOT } from '../map/image';
+import { capabilityTable } from '../../src/content/schema';
+import { gated } from '../../src/systems/levels';
 import { campaigns, loadContentFromDisk, PACKS } from './disk';
 
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/sprites/lpc/parts.json'), 'utf8')) as PartManifest;
@@ -102,4 +104,26 @@ it('campaign 1 ends its story on a named boss, so the epilogue follows its rewar
   const { quests, entities } = loadContentFromDisk('campaign1').content;
   expect(quests.quests[quests.quests.length - 1]?.objective.t).toBe('boss');
   expect(entities.stillheart?.boss).toBe(true);
+});
+
+describe('campaign 1 level bands', () => {
+  const content = loadContentFromDisk('campaign1');
+  const { biomes } = content.content;
+  const table = capabilityTable(content.content);
+
+  it('gives a band only to zones with foes, and gates the two underground rooms alone', () => {
+    const gated = Object.values(biomes)
+      .filter((b) => b.levels && table.enabled('levelGates', b.map))
+      .map((b) => b.map)
+      .sort();
+    expect(gated).toEqual(['cave_sunscar', 'sewer_lanternrest']);
+  });
+
+  it('keeps the first town’s sewer open to a new hero and the cave shut to a level-1 one', () => {
+    const [cave, sewer] = [biomes.cave_sunscar, biomes.sewer_lanternrest];
+    const slack = (zone: string) => table.setting('levelGates', 'slack', zone) as number;
+    expect(gated(1, sewer.levels!, slack(sewer.map))).toBe(false);
+    expect(gated(1, cave.levels!, slack(cave.map))).toBe(true);
+    expect(gated(3, cave.levels!, slack(cave.map))).toBe(false);
+  });
 });

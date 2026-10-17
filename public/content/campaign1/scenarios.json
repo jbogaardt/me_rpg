@@ -1,6 +1,9 @@
 {
   "version": 1,
   "start": "greenwood",
+  "capabilities": {
+    "levelGates": false
+  },
   "nodes": [
     {
       "node_id": "beach",
@@ -54,37 +57,37 @@
       "biome_type": "cave_sunscar",
       "entities": [
         {
-          "entity": "goblin",
+          "entity": "raider",
           "x": 35,
           "y": 8
         },
         {
-          "entity": "goblin",
+          "entity": "skeleton",
           "x": 41,
           "y": 7
         },
         {
-          "entity": "wolfkin",
+          "entity": "mummy",
           "x": 37,
           "y": 10
         },
         {
-          "entity": "wolfkin",
+          "entity": "raider",
           "x": 24,
           "y": 28
         },
         {
-          "entity": "wolfkin",
+          "entity": "skeleton",
           "x": 37,
           "y": 25
         },
         {
-          "entity": "shade",
+          "entity": "mummy",
           "x": 20,
           "y": 26
         },
         {
-          "entity": "goblin",
+          "entity": "raider",
           "x": 28,
           "y": 33
         },
@@ -94,12 +97,12 @@
           "y": 33
         },
         {
-          "entity": "goblin",
+          "entity": "skeleton",
           "x": 8,
           "y": 34
         },
         {
-          "entity": "shade",
+          "entity": "warg",
           "x": 11,
           "y": 38
         },
@@ -109,7 +112,7 @@
           "y": 19
         },
         {
-          "entity": "troll",
+          "entity": "warg",
           "x": 46,
           "y": 38
         }
@@ -602,22 +605,22 @@
       "biome_type": "sewer_lanternrest",
       "entities": [
         {
-          "entity": "zombie",
+          "entity": "goblin",
           "x": 8,
           "y": 8
         },
         {
-          "entity": "zombie",
+          "entity": "goblin",
           "x": 40,
           "y": 8
         },
         {
-          "entity": "zombie",
+          "entity": "wolfkin",
           "x": 5,
           "y": 24
         },
         {
-          "entity": "zombie",
+          "entity": "shade",
           "x": 12,
           "y": 30
         },
@@ -632,12 +635,12 @@
           "y": 15
         },
         {
-          "entity": "skeleton",
+          "entity": "wolfkin",
           "x": 20,
           "y": 21
         },
         {
-          "entity": "skeleton",
+          "entity": "shade",
           "x": 28,
           "y": 21
         },
@@ -647,7 +650,7 @@
           "y": 7
         },
         {
-          "entity": "troll",
+          "entity": "wolfkin",
           "x": 40,
           "y": 29
         }

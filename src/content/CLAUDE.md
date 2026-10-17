@@ -21,13 +21,12 @@ Invariants that bite:
   (co-op peers agree because they play the same content).
 - **The pieces gems make follow the authored items in the codes** (`systems/gems.ts`): an item with a `gem` property (what it
   adds to a weapon and to other gear) makes one piece per gear item, derived at install, never written in `items.json`. An
-  item id cannot hold `+`. Packs carry no gems yet (random worlds have no shops to sell one), so only campaign 1's chests hold them (`ruby`, `emerald`, `topaz`, `sapphire` loots); a gem shows the `gem` icon, a set piece its base's.
+  item id cannot hold `+`. Packs carry no gems yet, so only campaign 1's chests hold them (`ruby`, `emerald`, `topaz`, `sapphire` loots).
 - **Populations are deterministic** (`populate.ts`): a guest builds the same mobs in the same order as the host, and
   snapshots refer to mobs by index. Anything that changes who stands in a zone must keep that order.
 - **Who stands in a zone is the content's, never the map's** (scenario node placements, then the biome's `roam`). A placed person
-  may stroll about their post: `EntityDef.roam`, a radius in cells (npc only, at most 8), capability `roaming`; campaign 1's
-  market has two. Map-placed givers and keepers never roam. Packs carry no roamers yet.
-- **Level bands** (`systems/bands.ts`, core engine): a roam group or placement may carry `level` (and a group `within` circles, the deep end of a zone): its foes are re-banded to be a fair fight for that hero level, same look and role, pay following the level. Campaign 1's far reaches are banded 6 to 30 (each biome's deepest ground by walking distance from its doors), and its two eastern lands, the Emberwaste (22 to 30) and Rimeheart (28 to 36), are banded wholly, so the world stays dangerous past the first levels. Packs carry none yet.
+  may stroll about their post: `EntityDef.roam` (npc only, at most 8 cells), capability `roaming`. Givers and keepers never roam.
+- **Foe bands** (`systems/bands.ts`, core engine): a roam group or placement may carry `level` (a group also `within` circles, the deep end of a zone): its foes are re-made as a fair fight for that hero level, same look and role, pay following the level. Campaign 1 bands each biome's deepest ground and wholly its eastern lands (Emberwaste, Rimeheart); the band check judges a banded group at its own level.
 - **Scenarios are solo only**: online, every zone shows its biome's own node. When the host dictates nodes, it must send
   a `node_id` per zone.
 - **Capabilities** (`src/systems/CLAUDE.md`): content asking for what its own switches turn off is refused at load.
@@ -69,8 +68,7 @@ A world is a seed, the packs and an append-only **log** of fully resolved entrie
 is an automatic Dungeon Master that writes a whole log at once; a **live world** (`?campaign=live`) is written during
 play: the DM chooses story cues (a kind of land and crossing, never a map) and the solver picks regions that still let
 the arc be told (`Story.ts` grows it; the new ports open in loaded zones with `Zones.rewire`). The host sends friends
-the log in rotating chunks (`WorldMsg`) and a friend applies the entries that follow its own. Today's packs offer one
-road per step; branching grows with the packs' regions per theme and pairings.
+the log in rotating chunks (`WorldMsg`); a friend applies the entries that follow its own.
 
 ## Epics
 
@@ -85,3 +83,7 @@ people need a live world, since the people are `npc`/`cast` entries of its log (
 maps and their doors, a placement or spawn off its own biome's open ground, and quests that cannot be done (too few
 sites, a mob that lives nowhere). It also checks every campaign, the packs' catalog and random campaigns of seeds 1-40;
 `tools/content/packs.test.ts` assembles 150 seeds and holds each to the game's own checks.
+
+## Level bands (`systems/levels.ts`; core engine, content, capability `levelGates`)
+
+A biome may declare `levels: [lowest, highest]`: advice on the area banner, and a check in `npm run map -- check` that each foe its roamers and scenario place is a fair fight for a typical hero (`heroModel`) at the lowest level (error: fells the hero in 2 hits or takes over 14 blows; warning: no fight at the top). With `levelGates` on in a zone, its door turns back a hero more than `slack` (default 1) levels under the lowest (`Zones.turnedAway`, host-side). Campaign 1 gates only its two first underground rooms; other bands are advice.
