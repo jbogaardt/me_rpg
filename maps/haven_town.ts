@@ -72,8 +72,11 @@ export default defineZone({
     // Hanging signs (OpenGameArt) on the wall beside each hall's door, showing what it sells.
     z.prop('hangTools', 14, 13, { dy: -6 });
     z.prop('hangFlask', 40, 13, { dy: -6 });
+    z.prop('hangPot', 37, 13, { dy: -6 }); // the goods hall sells a little of everything
     z.prop('hangHelm', 14, 34, { dy: -6 });
-    z.prop('hangSword', 40, 34, { dy: -6 });
+    z.prop('hangInn', 40, 34, { dy: -6 }); // the Gatehouse Lodge is the town's inn
+    z.prop('hangMug', 38, 34, { dy: -6 });
+    z.prop('noticeBoardB', 22, 17); // the town's notice board, on the square (a quest giver's wall)
 
     // --- Barrels by the smithy and the market, for the townsfolk's errands -------------------------------------------
     for (const [col, row] of [

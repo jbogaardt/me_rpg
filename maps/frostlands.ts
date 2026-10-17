@@ -31,7 +31,8 @@ export default defineBiome({
     z.paint('snow', z.bounds);
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
-    z.sign(307, 134, { up: 'marsh', left: 'eastwood', down: 'town' }); // the fork (systems/signs.ts)
+    z.sign(307, 134, { up: 'marsh', left: 'eastwood' }); // the fork (systems/signs.ts)
+    z.sign(SPINE - 4, town[1] - 3, { up: 'marsh', left: 'town' }); // where the town road comes in
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(30.8, 14.2));
@@ -55,6 +56,27 @@ export default defineBiome({
     z.chest('silver', 'vikingHelm', 321, 203);
     z.chest('silver', 'backpack', 322, 203);
     z.keepFree(319, 202);
+
+    // --- A battlefield of iron crosses on the eastern snow, where the sergeant's company fell ----------------------------
+    z.keepClear({ col: 312, row: 166, w: 17, h: 9 });
+    for (const [name, col, row] of [
+      ['crossIronA', 315, 169],
+      ['crossIronB', 317, 169],
+      ['crossIronA', 319, 169],
+      ['crossIronB', 321, 169],
+      ['crossIronA', 323, 169],
+      ['crossIronB', 325, 169],
+      ['crossIronB', 314, 172],
+      ['crossIronTall', 316, 172],
+      ['crossBlack', 318, 172],
+      ['crossIronA', 320, 172],
+      ['crossIronTall', 324, 172],
+      ['crossIronB', 326, 172],
+    ] as const)
+      z.prop(name, col, row);
+    z.chest('silver', 'sapphire', 322, 172);
+    z.keepFree(322, 173);
+    z.place('The Cross Field', 320, 170);
 
     for (const [x, y, w, h] of [
       [28.4, 10.6, 1.4, 1.4],

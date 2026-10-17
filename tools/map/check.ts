@@ -167,8 +167,11 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
   if (d.crops.length && !Object.values(ITEMS).some((i) => i.waters))
     errors.push("crop plots, but nothing in this campaign's items.json `waters` them");
   if (d.crops.length > MAX_CROPS) errors.push(`a map holds at most ${MAX_CROPS} crop plots`);
-  // A signpost names at least two ways (a fork), each a zone or a place on this map, and is read from beside it.
+  // A signpost names at least two ways (a fork), each a zone or a place on this map, and is read from beside it. On a
+  // map with gap doors (a biome of the open world) a way naming a zone must match a door on that side: the sign reads
+  // the real doors (systems/signs.ts), so an authored way that disagrees would say something else in play.
   const placeNames = new Set(d.places.map((p) => p.name));
+  const gapDoors = d.doors.filter((x) => x.dir);
   for (const sg of d.signs) {
     const ways = Object.entries(sg.ways);
     if (ways.length < 2) errors.push(`signpost at (${sg.col},${sg.row}) names fewer than two ways`);
@@ -177,6 +180,8 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
         errors.push(
           `signpost at (${sg.col},${sg.row}): "${dir}" leads to "${to}", not a zone (ZONE_NAMES) or a place here`,
         );
+      else if (gapDoors.length && !placeNames.has(to) && !gapDoors.some((x) => x.dir === dir && x.to.zone === to))
+        errors.push(`signpost at (${sg.col},${sg.row}): "${dir}" names ${to}, but no door on that side leads there`);
     chestPoints.push(['signpost', sg]);
   }
   for (const [name, p] of points) {

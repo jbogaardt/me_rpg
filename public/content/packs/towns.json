@@ -92,29 +92,18 @@
           "trees_green.png",
           "town.png",
           "hanging_signs.png",
+          "signposts.png",
           "object-layer.png",
-          "graves.png",
-          "signposts.png"
+          "graves.png"
         ]
       },
       "level": [1, 5],
       "themes": ["town"],
       "haven": true,
-      "ports": {
-        "north": "north",
-        "south": "south",
-        "east": "east",
-        "west": "west"
-      },
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
       "foes": {},
       "roam": [],
-      "encounters": [
-        {
-          "entity": "innkeeper",
-          "x": 23,
-          "y": 18
-        }
-      ],
+      "encounters": [{ "entity": "innkeeper", "x": 23, "y": 18 }],
       "rooms": {
         "haven_forge": {
           "name": "The Hearth Forge",

@@ -26,6 +26,7 @@ export default defineBiome({
     z.fill('grass');
     z.paint('mud', TRAILS);
     z.keepClear(TRAILS);
+    z.sign(south[0] + 3, west[1] + 3, { left: 'jungle', down: 'marsh' }); // where the coast road turns south (systems/signs.ts)
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(29, 3.2));
@@ -57,6 +58,13 @@ export default defineBiome({
     z.chest('oak', 'purse', ...near(32.8, 9.2));
     z.keepFree(...near(32.8, 8.2));
     z.chest('wood', 'potion', ...near(28.6, 1.6));
+
+    // --- A sunken wall at the edge of the pools (art: LPC Jungle Ruins, ruins.png) ------------------------------------------
+    z.keepClear({ col: 281, row: 29, w: 14, h: 7 });
+    z.prop('ruinWallBroken', 282, 33);
+    z.prop('ruinPillarBroken', 291, 34);
+    z.prop('ruinRubbleA', 289, 35);
+    z.prop('ruinRubbleE', 281, 35);
 
     for (const [x, y, w, h] of [
       [26.2, 1.8, 1, 0.8],

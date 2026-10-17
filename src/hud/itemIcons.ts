@@ -24,6 +24,7 @@ const ICONS: Record<IconKind, string> = {
   sack: '<path d="M9 2.5h6l-1.2 3.2c3.8 1.8 6 5.4 6 9.3 0 3.4-3.2 6-7.8 6S4.2 18.4 4.2 15c0-3.9 2.2-7.5 6-9.3z"/><path d="M9.5 6.2h5" fill="none" stroke="#e8dcc0" stroke-width="1.4"/>',
   backpack:
     '<path d="M8 6a4 4 0 018 0h.5A3.5 3.5 0 0120 9.5v10a2 2 0 01-2 2H6a2 2 0 01-2-2v-10A3.5 3.5 0 017.5 6z"/><rect x="7.5" y="13.5" width="9" height="5.5" rx="1.2" fill="#2b1d0e" stroke="none" opacity=".45"/>',
+  gem: '<path d="M7 3.5h10l4.5 5.5L12 21.5 2.5 9z"/><path d="M2.5 9h19M7 3.5L9.5 9 12 21.5 14.5 9 17 3.5M9.5 9L12 3.5 14.5 9" fill="none" stroke="#e8dcc0" stroke-width=".9" stroke-linejoin="round"/>',
   food: '<path d="M12 7.5C9 5.5 4 7.5 4 13.5c0 4 3 8 6 8 1 0 1.4-.6 2-.6s1 .6 2 .6c3 0 6-4 6-8 0-6-5-8-8-6z"/><path d="M12 7.5c0-2.4 1.1-4.4 3.2-5.5" fill="none" stroke-width="1.6" stroke-linecap="round"/><path d="M13.5 4.5c1.5-1.5 3.5-1.5 5 0-1.5 1.5-3.5 1.5-5 0z" fill="#8fd36a"/>',
   charm:
     '<path d="M6 2.5c0 7 3.2 8.5 6 8.5s6-1.5 6-8.5" fill="none" stroke-width="1.4" stroke="#e8dcc0"/><path d="M12 9.5l4.6 5.1L12 21.5l-4.6-6.9z"/><path d="M12 12.5l1.6 2-1.6 2.5-1.6-2.5z" fill="#2b1d0e" stroke="none" opacity=".45"/>',

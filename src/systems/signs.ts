@@ -5,7 +5,8 @@
 // neighbours in a random, live or other campaign, so its authored `ways` are only a hint. A way naming a place of this
 // map is kept; any other is a zone, and the sign names the zone actually reached by leaving the map that way (the gap
 // doors of the loaded, port-wired map: `Zones.rewire` has already opened the ports the content binds and left the rest
-// sealed), or loses the line when nothing lies that way. A live world's Dungeon Master may rewrite a sign outright
+// sealed; when one side has several doors the authored zone stands if one of them reaches it), or loses the line when
+// nothing lies that way. A live world's Dungeon Master may rewrite a sign outright
 // (`World` log entry `sign`); that override wins over the computed text. Local to each page: nothing on the wire but the log.
 
 import type { Direction } from '../core/direction';
@@ -34,6 +35,10 @@ export function exitsOf(data: Pick<MapData, 'doors' | 'indoor'>): SignWays {
   return exits;
 }
 
+/** Whether a gap door on this side leads to `zone` (a side can have several: the authored zone then stands). */
+const reaches = (data: Pick<MapData, 'doors' | 'indoor'>, d: Direction, zone: string) =>
+  !data.indoor && data.doors.some((x) => x.dir === d && x.to.zone === zone);
+
 /** The ways a sign can honestly name on this map: its places kept, its zones the ones really there (see the header). */
 export function liveWays(ways: SignWays, data: SignMap): SignWays {
   const exits = exitsOf(data);
@@ -41,7 +46,7 @@ export function liveWays(ways: SignWays, data: SignMap): SignWays {
   const out: SignWays = {};
   for (const d of SIGN_ORDER) {
     const to = ways[d];
-    const via = !to ? undefined : here.has(to) ? to : exits[d];
+    const via = !to ? undefined : here.has(to) || reaches(data, d, to) ? to : exits[d];
     if (via) out[d] = via;
   }
   return out;

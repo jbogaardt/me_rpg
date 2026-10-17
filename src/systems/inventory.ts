@@ -128,11 +128,12 @@ export type IconKind =
   | 'sack'
   | 'backpack'
   | 'charm'
+  | 'gem'
   | 'food';
 
 export function iconKind(item: Item): IconKind {
   if (item.use?.food || item.use?.water) return 'food';
-  if (item.gem) return 'charm'; // a stone on a cord: the nearest picture
+  if (item.gem) return 'gem'; // a cut stone (a set piece keeps its base's picture: `fused` is not `gem`)
   if (item.ranged) return 'bow';
   if (item.focus) return item.focus.kind;
   switch (item.slot) {

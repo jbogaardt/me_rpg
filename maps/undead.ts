@@ -31,7 +31,7 @@ export default defineBiome({
     z.paint('soot', [...blob(area(11.4, 6.2, 2.6, 1.6)), ...blob(area(18, 8.8, 2.6, 1.4))]);
     z.paint('mud', TRAILS);
     z.keepClear(TRAILS);
-    z.sign(194, 87, { up: 'beach', left: 'greenwood', right: 'jungle' }); // the fork (systems/signs.ts)
+    z.sign(194, 87, { up: 'beach', right: 'jungle', down: 'greenwood' }); // the fork (systems/signs.ts)
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(16, 9.2));
@@ -50,8 +50,12 @@ export default defineBiome({
         z.prop(old ? GRAVE_CROSSES[n % GRAVE_CROSSES.length] : stones[n % stones.length], c, r);
         n++;
       }
+    // Weathered tombs at the back of the yard, on the ash north of the rows.
+    z.prop('tombA', 128, 83);
+    z.prop('slab', 134, 83);
+    z.prop('tombB', 141, 83);
     z.chest('iron', 'legionHelm', ...near(12.4, 9.5));
-    z.chest('wood', 'coins', ...near(14.6, 8.3));
+    z.chest('oak', 'ruby', ...near(14.6, 8.3)); // among the tombs
     z.keepFree(...near(13.4, 8.8));
     z.keepFree(...near(14, 9.4));
 

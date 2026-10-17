@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newHero, type Item } from './combat';
 import { SOCKET_SLOTS, bonusFor, bonusTexts, canSet, fuse, fusedId, fusions, isArms } from './gems';
-import { applyInvOp, decodeOp, encodeOp, fuseInto, itemCode, itemFromCode } from './inventory';
+import { applyInvOp, decodeOp, encodeOp, fuseInto, iconKind, itemCode, itemFromCode } from './inventory';
 import { FUSED, ITEMS, fusedOf, itemIds, itemOf } from './items';
 
 const emerald: Item = { name: 'Emerald', value: 90, gem: { arms: { regen: 0.3 }, worn: { defense: 1 } } };
@@ -34,6 +34,12 @@ describe('setting a gem in a piece', () => {
     expect(made.ranged).toBe(bow.ranged);
     expect(made.look).toBe(bow.look);
     expect(bow.attack).toBe(3);
+  });
+
+  it('shows a gem as a gem, and a set piece with its base’s picture', () => {
+    expect(iconKind(ruby)).toBe('gem');
+    expect(iconKind(fuse(sword, 'steel', ruby, 'ruby'))).toBe(iconKind(sword));
+    expect(iconKind(fuse(helm, 'nasal', ruby, 'ruby'))).toBe('helm');
   });
 
   it('fits only gear: not supplies, bags, tools, gems, or a piece already set', () => {

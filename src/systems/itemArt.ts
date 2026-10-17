@@ -25,6 +25,7 @@ const ORDER: IconKind[] = [
   'food',
   'wand',
   'tome',
+  'gem',
 ];
 
 /** The sheet cell of a kind (column, row), if the pack has a picture for it. */

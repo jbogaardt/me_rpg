@@ -43,7 +43,7 @@ must skip `beyond` cells), and the margin is how two maps line up.
 
 Signposts (`z.sign`, alternating `signpost`/`signpostB`), notice boards and the hanging shop signs (`hang*`, a prefab with
 `wall: true`, drawn in front of the wall it hangs on: put one a cell up beside a door, nudged `dy: -6`) are OpenGameArt
-sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs/`). Only a signpost's post blocks. A signpost's `ways` are authored hints: the game reads the real neighbours (`systems/signs.ts`).
+sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs/`). Only a signpost's post blocks. A signpost's `ways` are authored hints: the game reads the real neighbours (`systems/signs.ts`), and on a biome the check fails a way naming a zone that no gap door on that side reaches (a side may have several doors; the authored zone stands if one matches). Give a town or haven a notice board in its square and a hanging sign by each shop, hall or inn door; graves and ruins go in clearings off the roads (keepClear them).
 
 ## Shop buildings
 

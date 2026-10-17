@@ -21,7 +21,7 @@ Invariants that bite:
   (co-op peers agree because they play the same content).
 - **The pieces gems make follow the authored items in the codes** (`systems/gems.ts`): an item with a `gem` property (what it
   adds to a weapon and to other gear) makes one piece per gear item, derived at install, never written in `items.json`. An
-  item id cannot hold `+`. Packs carry no gems yet (random worlds have no shops to sell one).
+  item id cannot hold `+`. Packs carry no gems yet (random worlds have no shops to sell one), so only campaign 1's chests hold them (`ruby`, `emerald`, `topaz`, `sapphire` loots); a gem shows the `gem` icon, a set piece its base's.
 - **Populations are deterministic** (`populate.ts`): a guest builds the same mobs in the same order as the host, and
   snapshots refer to mobs by index. Anything that changes who stands in a zone must keep that order.
 - **Who stands in a zone is the content's, never the map's** (scenario node placements, then the biome's `roam`).

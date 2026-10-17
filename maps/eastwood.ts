@@ -58,6 +58,22 @@ export default defineBiome({
     z.chest('iron', 'relic', ...near(21.6, 20));
     z.keepFree(...near(22.4, 19));
 
+    // --- A boneyard in the north-west meadow: a few weathered stones and wooden crosses, long forgotten ------------------
+    z.keepClear({ col: 226, row: 139, w: 11, h: 7 });
+    for (const [name, col, row] of [
+      ['graveRoundA', 228, 141],
+      ['crossWood', 230, 141],
+      ['graveSmall', 232, 141],
+      ['crossMound', 234, 141],
+      ['crossMound', 227, 143],
+      ['graveRoundB', 229, 143],
+      ['crossWood', 231, 143],
+      ['graveRip', 233, 143],
+      ['crossWood', 235, 143],
+    ] as const)
+      z.prop(name, col, row);
+    z.place('The Boneyard', 231, 142);
+
     for (const [x, y, w, h] of [
       [21.4, 11.6, 1.4, 1.2],
       [23.4, 14.4, 1.4, 1.2],

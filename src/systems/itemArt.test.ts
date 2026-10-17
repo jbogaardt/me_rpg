@@ -18,6 +18,7 @@ const KINDS: IconKind[] = [
   'sack',
   'backpack',
   'charm',
+  'gem',
   'food',
 ];
 

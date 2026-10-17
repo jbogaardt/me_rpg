@@ -42,6 +42,12 @@ describe('signposts', () => {
     expect(liveWays({ right: 'eastwood' }, data)).toEqual({ right: 'town' });
   });
 
+  it('keeps the authored zone when one of several doors on that side reaches it', () => {
+    const data = map([door('up', 'undead'), door('up', 'town'), door('left', 'eastwood')]);
+    expect(liveWays({ up: 'town', left: 'eastwood', right: 'town' }, data)).toEqual({ up: 'town', left: 'eastwood' });
+    expect(liveWays({ up: 'eastwood' }, data)).toEqual({ up: 'undead' });
+  });
+
   it('keeps a place of this map, and drops a way with nothing beyond it', () => {
     const data = map([door('up', 'undead')], ['The Crossroads']);
     expect(liveWays({ up: 'town', left: 'The Crossroads', down: 'town', right: 'eastwood' }, data)).toEqual({

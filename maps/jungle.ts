@@ -46,7 +46,7 @@ export default defineBiome({
 
     // --- Signposts at the forks (systems/signs.ts) ------------------------------------------------------------------
     z.sign(217, 20, { left: 'beach', right: 'wetlands', down: 'eastwood' });
-    z.sign(235, 87, { up: 'beach', left: 'undead', right: 'marsh' });
+    z.sign(235, 87, { left: 'undead', right: 'marsh' });
     z.sign(244, 80, { left: 'undead', right: 'marsh', down: 'eastwood' });
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
@@ -72,7 +72,7 @@ export default defineBiome({
     z.prop('ruinRubbleA', ...L(79, 98));
     z.prop('ruinRubbleC', ...L(91, 96));
     z.prop('ruinRubbleE', ...L(84, 99));
-    z.chest('oak', 'purse', ...near(26, 9.4));
+    z.chest('oak', 'emerald', ...near(26, 9.4)); // in the old court
     z.keepFree(...near(26, 9.7));
 
     // --- The Sunken City (art: LPC Jungle Ruins, ruins.png): a pyramid and a temple on the north plain, facing the

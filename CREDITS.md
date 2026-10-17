@@ -126,8 +126,8 @@ opened.
 "[LPC] Items and game effects" (`ItemsAndEffects.zip`) by Reemax (Tuomo Untinen), https://opengameart.org/content/lpc-items-and-game-effects,
 licensed CC-BY-SA 3.0 (also offered under GPL 3.0 and GPL 2.0). The pack gathers art by Tuomo Untinen, Johannes
 Sjölund (Wulax), Gwes, Jetrel, Nila122, Jaidyn Reiman, Daniel Eddeland, Lanea Zimmerman (Sharm) and others, as its
-`credits.txt` lists per item. The 15 sprites used here (sword, dagger, bow, shield, helmet, plate mail, boots, cape,
-pickaxe, sack, satchel, amulet, roast, staff, spell book) were cut from `items1.png` and repacked, unchanged, into one
+`credits.txt` lists per item. The 16 sprites used here (sword, dagger, bow, shield, helmet, plate mail, boots, cape,
+pickaxe, sack, satchel, amulet, roast, staff, spell book, a cut gem) were cut from `items1.png` and repacked, unchanged, into one
 strip of 32x32 cells. Shown in the pack screen, quest art, items on the ground and the relics of "find" quests. The
 pack's effects sheet and the rest of its items are not used.
 

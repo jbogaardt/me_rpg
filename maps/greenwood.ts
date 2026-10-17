@@ -41,7 +41,7 @@ export default defineBiome({
     z.keepClear(TRAILS);
 
     // --- Signposts at the forks of the trail (systems/signs.ts): the action key, facing one, reads where each way goes
-    z.sign(81, 138, { left: 'desert', right: 'The Crossroads', down: 'town' }); // the west gate's branch
+    z.sign(81, 138, { up: 'desert', right: 'The Crossroads', down: 'town' }); // the west gate's branch
     z.sign(154, 144, { up: 'undead', left: 'The Crossroads', right: 'town' });
     z.sign(174, 138, { left: 'The Crossroads', right: 'eastwood', down: 'town' }); // the north road's branch
     const open = awayFrom(TRAILS);
@@ -88,6 +88,22 @@ export default defineBiome({
       z.prop('menhir', ...at(x, y));
     z.chest('wood', 'whetstone', ...near(5.9, 12.4));
     z.keepFree(...near(5.8, 12.2));
+
+    // --- An old churchyard in the western meadow, off the road: headstones in two rows, wooden crosses between ----------
+    z.keepClear({ col: 69, row: 94, w: 11, h: 8 });
+    for (const [name, col, row] of [
+      ['graveRoundA', 70, 97],
+      ['crossWood', 72, 97],
+      ['graveCrossA', 74, 97],
+      ['crossMound', 76, 97],
+      ['graveSmall', 78, 97],
+      ['crossMound', 71, 99],
+      ['graveRoundB', 73, 99],
+      ['graveWideA', 75, 99],
+      ['crossWood', 77, 99],
+    ] as const)
+      z.prop(name, col, row);
+    z.place('The Old Churchyard', 74, 98);
 
     // --- The old lake in the south-west, and a pond further down ----------------------------------------------
     const lake = pond(z, area(1.6, 17.6, 3, 1.8), { shore: 'sand' });

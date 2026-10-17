@@ -68,6 +68,7 @@ export default defineBiome({
       z.prop(SHOP_HANGING[id as ShopId], shop.door.col + shop.door.w, shop.building.row, { dy: -6 });
     }
     z.spawn(...z.near(168, 205));
+    z.sign(north[0] + 6, ROW - 9, { up: 'greenwood', left: 'greenwood', right: 'frostlands' }); // by the north road (systems/signs.ts)
 
     // --- Life in the market ----------------------------------------------------------------------------------
     for (const [x, y] of [

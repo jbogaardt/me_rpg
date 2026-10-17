@@ -115,6 +115,9 @@ export default defineBiome({
 
     z.chest('oak', 'elixir', ...near(28.9, 7.6));
     z.keepFree(...near(29.1, 7.8));
+    // Two snapped pillars on the isle, all that is left of whatever stood there (art: LPC Jungle Ruins).
+    z.prop('ruinPillarBroken', ...z.near(285, 76));
+    z.prop('ruinRubbleD', ...z.near(287, 77));
     for (const [x, y] of [
       [28.6, 8.4],
       [30.4, 7.4],

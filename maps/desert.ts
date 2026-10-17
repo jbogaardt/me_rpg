@@ -31,6 +31,7 @@ export default defineBiome({
     ]);
     z.paint('dirt', TRAILS);
     z.keepClear(TRAILS);
+    z.sign(45, 65, { down: 'greenwood', right: 'beach' }); // where the trail turns from south to east (systems/signs.ts)
     const open = awayFrom(TRAILS);
     const near = (x: number, y: number) => z.near(...at(x, y));
     z.spawn(...near(1.6, 10));
@@ -120,6 +121,16 @@ export default defineBiome({
     z.prop('ruinPillar', 62, 39);
     z.prop('ruinRubbleA', 58, 40);
     z.prop('ruinArch', 42, 46);
+
+    z.chest('iron', 'topaz', ...z.near(100, 44)); // behind the temple, in the sand
+    // A ruined watch post on the western plain: a fallen wall, a snapped pillar and a hut with its roof gone.
+    z.keepClear([{ col: 14, row: 50, w: 24, h: 10 }]);
+    z.prop('ruinWallBroken', 18, 57);
+    z.prop('ruinPillarBroken', 17, 58);
+    z.prop('ruinHut', 27, 58);
+    z.prop('ruinRubbleC', 25, 58);
+    z.prop('ruinRubbleF', 32, 57);
+    z.place('The Watch Post', 24, 55);
 
     z.giver('zahra', ...z.near(80, 49)); // the sandwalker at the oasis (quests.json `givers`)
 
