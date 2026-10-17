@@ -1,5 +1,5 @@
 import { defineZone } from '../tools/map/zone';
-import { DEAD_TREES } from '../tools/map/catalog';
+import { DEAD_TREES, GRAVES, GRAVE_CROSSES } from '../tools/map/catalog';
 import { blob, pond, trail } from '../tools/map/helpers';
 
 // A region for random campaigns (public/content/packs/): the Barrow, a field of ash and standing stones round an old
@@ -54,8 +54,24 @@ export default defineZone({
     z.port('west', 0, 21, 1, 3, 22, 3, [...SEAL]);
     z.port('east', W - 1, 14, 1, W - 4, 15, 3, [...SEAL]);
 
-    // Rows of standing stones round the mound.
-    for (const col of [6, 10, 14, 18]) for (const row of [8, 18]) z.prop('menhir', col, row);
+    // The old lord's burial ground: headstones in rows round the mound, two tombs flanking it, crosses over the poor.
+    z.prop('tombA', 7, 12);
+    z.prop('tombB', 16, 12);
+    for (const [i, col] of [6, 10, 14, 18].entries())
+      for (const [j, row] of [8, 18].entries()) z.prop(GRAVES[(i * 3 + j * 4) % GRAVES.length], col, row);
+    for (const [i, [col, row]] of (
+      [
+        [8, 9],
+        [12, 9],
+        [16, 9],
+        [8, 17],
+        [12, 17],
+        [16, 17],
+        [5, 13],
+        [19, 13],
+      ] as const
+    ).entries())
+      z.prop(GRAVE_CROSSES[i % GRAVE_CROSSES.length], col, row);
     pond(z, { col: 36, row: 22, w: 6, h: 5 }, { water: 'abyss' });
     pond(z, { col: 8, row: 25, w: 4, h: 2 }, { water: 'lava', shore: 'mud' });
 

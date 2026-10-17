@@ -23,6 +23,11 @@ export default defineZone({
         ['menhir', 4, 16],
         ['menhir', 9, 16],
         ['menhir', 14, 8],
+        // Old burial markers among the ring.
+        ['graveBoulder', 9, 8],
+        ['crossBlack', 12, 16],
+        ['crossIronTall', 7, 16],
+        ['crossIronB', 2, 12],
       ],
       chest: ['iron', 'relic'],
       place: 'The Old Shrine',

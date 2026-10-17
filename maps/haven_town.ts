@@ -103,6 +103,18 @@ export default defineZone({
     ] as const)
       z.prop(name, col, row);
 
+    // --- A small churchyard in the north, off the road: headstones in two rows, old crosses at the ends ---------
+    for (const [name, col, row] of [
+      ['graveRoundA', 31, 4],
+      ['graveCrossA', 33, 4],
+      ['graveWideA', 35, 4],
+      ['crossWood', 30, 6],
+      ['graveRoundB', 32, 6],
+      ['graveSmall', 34, 6],
+      ['crossMound', 36, 6],
+    ] as const)
+      z.prop(name, col, row);
+
     // --- Life in town ---------------------------------------------------------------------------------------------
     z.spawn(26, 21);
     z.sign(28, 17, { up: 'The North Gate', left: 'The West Gate', down: 'The South Gate', right: 'The East Gate' });
