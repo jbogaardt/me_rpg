@@ -138,7 +138,8 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await expect(join.locator('#map-btn')).toBeVisible();
   await join.keyboard.press('KeyM');
   await expect(join.locator('#map-overlay')).toBeVisible();
-  await expect(join.locator('#map-overlay .pin.friend')).toBeVisible();
+  // (the stranger who just left may still be pinned for a few seconds, until the host notices they are gone)
+  await expect(join.locator('#map-overlay .pin.friend').first()).toBeVisible();
   await join.keyboard.press('KeyM');
   await expect(join.locator('#map-overlay')).toBeHidden();
   await join.keyboard.press('KeyM'); // open again: leaving the game must close it
