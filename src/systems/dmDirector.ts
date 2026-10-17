@@ -64,6 +64,8 @@ export const EASY_AT = 0.8;
 export const STRUGGLE_AT = 0.35;
 /** Seconds before the DM is told again that the party is struggling during one task. */
 const STRUGGLE_AGAIN = 45;
+/** Seconds between "a new land" cards, however fast the party reaches new areas. */
+export const LAND_GAP = 60;
 
 export class Director {
   private since = CARD_GAP; // the first card may come at once
@@ -75,6 +77,8 @@ export class Director {
   private lost = -Infinity;
   private clock = 0;
   private newLand = false;
+  private visited = new Set<string>();
+  private landed = -Infinity;
   private wasActive = false;
   private finishedSaid = false;
 
@@ -82,8 +86,11 @@ export class Director {
   tick(dt: number, s: DirectorState): Suggestion | null {
     this.since += dt;
     this.clock += dt;
-    if (this.area !== null && s.area !== this.area) this.newLand = true;
+    // `area` is the local player's zone, and open-air zones are laid out as one map, so walking along a seam flips it
+    // back and forth: only an area never visited before is a new land.
+    if (this.area !== null && s.area !== this.area && !this.visited.has(s.area)) this.newLand = true;
     this.area = s.area;
+    this.visited.add(s.area);
     const active = s.task?.active === true;
     if (s.task && s.task.id !== this.taskId) {
       this.taskId = s.task.id;
@@ -122,8 +129,9 @@ export class Director {
         return this.fire(s.health.avg >= EASY_AT ? 'easy' : s.health.avg <= 0.5 ? 'struggle' : 'twist');
       }
     }
-    if (!active && this.newLand) {
+    if (!active && this.newLand && this.clock - this.landed >= LAND_GAP) {
       this.newLand = false;
+      this.landed = this.clock;
       return this.fire('land');
     }
     if (!active && this.idle >= IDLE_BEFORE_NEXT) {
@@ -158,6 +166,8 @@ export class Director {
     this.struggled = -Infinity;
     this.lost = -Infinity;
     this.newLand = false;
+    this.visited.clear();
+    this.landed = -Infinity;
     this.wasActive = false;
     this.finishedSaid = false;
   }

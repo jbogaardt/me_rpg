@@ -124,6 +124,27 @@ describe('the director', () => {
     expect(waitFor(e, 20, state())).toBe('next');
   });
 
+  it('asks about the sky once per newly visited area, however often the party crosses back and forth', () => {
+    const d = new Director();
+    waitFor(d, CARD_GAP, state()); // starts in greenwood
+    expect(d.tick(1, state({ area: 'eastwood' }))).toBe('land');
+    let lands = 0;
+    for (let i = 0; i < 20; i++) {
+      // walking along the seam: the camera's zone flips every few seconds
+      const area = i % 2 === 0 ? 'greenwood' : 'eastwood';
+      for (let t = 0; t < 15; t++) if (d.tick(1, state({ area })) === 'land') lands++;
+    }
+    expect(lands).toBe(0);
+  });
+
+  it('spaces the sky card out when several new areas are reached in a row', () => {
+    const d = new Director();
+    waitFor(d, CARD_GAP, state());
+    expect(d.tick(1, state({ area: 'eastwood' }))).toBe('land');
+    expect(waitFor(d, 30, state({ area: 'northwood' }))).toBeNull(); // too soon after the last
+    expect(waitFor(d, 60, state({ area: 'northwood' }))).toBe('land'); // still new, after the cooldown
+  });
+
   it('can be settled, snoozed and reset', () => {
     const d = new Director();
     d.snooze(30);
