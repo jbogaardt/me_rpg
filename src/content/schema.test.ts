@@ -409,6 +409,14 @@ describe('toMobKind', () => {
     expect(kind.shot).toEqual({ range: 100, speed: 90, color: 0xff8800 });
     expect(kind.recover).toBeUndefined();
   });
+
+  it('reads a telegraph tuning, colour as a number', () => {
+    const f = files();
+    (f.entities as { entities: { goblin: { behavior: object } } }).entities.goblin.behavior = {
+      telegraph: { color: '#ff0000', ground: true },
+    };
+    expect(toMobKind(parseContent(f).entities.goblin!).telegraph).toEqual({ color: 0xff0000, ground: true });
+  });
 });
 
 describe('requirements', () => {

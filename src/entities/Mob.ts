@@ -2,7 +2,7 @@ import { Graphics, type Texture } from 'pixi.js';
 import { CELL } from '../map/types';
 import { DIR_VEC, directionToward, type Direction } from '../core/direction';
 import { glide } from '../core/interp';
-import { mobTimings, type MobKind, type MobState, type MobView } from '../systems/combat';
+import { mobTimings, telegraphOf, type MobKind, type MobState, type MobView } from '../systems/combat';
 import { Character } from './Character';
 
 /** What a mob needs from the game each tick. */
@@ -471,9 +471,32 @@ export class Mob {
       this.body.setOffset(-fx * 3, -fy * 3); // draws back before the lunge
     else this.body.setOffset(0, 0);
     const blink = this.state === 'windup' && Math.floor(this.timer * 16) % 2 === 0;
+    const cue = telegraphOf(this.kind, this.attack);
     this.drawBeam();
-    this.body.setTint(this.flash > 0 ? 0xff6060 : this.frozen > 0 ? 0xa8d8ff : blink ? 0xffe080 : 0xffffff);
+    if (this.state === 'windup' && cue.ground) this.drawWarning(cue.color);
+    this.body.setTint(this.flash > 0 ? 0xff6060 : this.frozen > 0 ? 0xa8d8ff : blink ? cue.color : 0xffffff);
     this.body.animate(dt * 1000, moving);
+  }
+
+  /** Ground warning of a windup: a lane toward where the blow, shot or beam will go, filling in as the windup runs out. */
+  private drawWarning(color: number) {
+    const len = this.windupLen > 0 ? this.windupLen : this.t.windup;
+    const progress = Math.min(1, Math.max(0, 1 - this.timer / len));
+    let [dx, dy] = [this.aim.x, this.aim.y];
+    if (this.remote) {
+      const near = nearest(this.body, this.heroes); // a guest does not know the host's aim: it points at the nearest hero
+      if (near) [dx, dy] = [near.x - this.body.x, near.y - this.body.y];
+    }
+    const norm = Math.hypot(dx, dy) || 1;
+    const reach = this.attack === 'shot' ? this.kind.shot?.range : this.attack === 'ray' ? this.kind.ray?.range : REACH;
+    const [ex, ey] = [(dx / norm) * (reach ?? REACH), (dy / norm) * (reach ?? REACH)];
+    this.beam
+      .moveTo(0, 0)
+      .lineTo(ex, ey)
+      .stroke({ width: 10, color, alpha: 0.12 + 0.2 * progress, cap: 'round' })
+      .moveTo(0, 0)
+      .lineTo(ex * progress, ey * progress)
+      .stroke({ width: 4, color, alpha: 0.6, cap: 'round' });
   }
 
   /** The held ray: a pink beam from the sceptre to the hero's chest, on every client (a guest picks the nearest hero). */

@@ -45,6 +45,7 @@ export interface EntityBehavior {
   windup?: number; // seconds of telegraph before a blow (default 0.45)
   recover?: number; // seconds busy after attacking (default 0.7)
   stagger?: number; // seconds a hit stuns it (default 0.3)
+  telegraph?: { color?: string; ground?: boolean }; // windup cue: flash colour "#rrggbb", ground warning
   shot?: { range: number; speed: number; color: string }; // a ranged attacker (color "#rrggbb")
   ray?: { range: number; color: string; tick: number; power: number; duration: number; rest: number }; // a held beam
 }
@@ -272,6 +273,18 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
     if (windup !== undefined) behavior.windup = windup;
     if (recover !== undefined) behavior.recover = recover;
     if (stagger !== undefined) behavior.stagger = stagger;
+    if (b.telegraph !== undefined) {
+      const tg = r.object(b.telegraph, `${p}.telegraph`);
+      if (tg) {
+        const t: NonNullable<EntityBehavior['telegraph']> = {};
+        if (tg.color !== undefined) t.color = r.color(tg.color, `${p}.telegraph.color`);
+        if (tg.ground !== undefined) {
+          if (typeof tg.ground !== 'boolean') r.fail(`${p}.telegraph.ground`, 'must be true or false');
+          else t.ground = tg.ground;
+        }
+        behavior.telegraph = t;
+      }
+    }
     if (b.shot !== undefined) {
       const shot = r.object(b.shot, `${p}.shot`);
       if (shot)
@@ -991,6 +1004,11 @@ export function toMobKind(def: EntityDef): MobKind {
   if (b.windup !== undefined) kind.windup = b.windup;
   if (b.recover !== undefined) kind.recover = b.recover;
   if (b.stagger !== undefined) kind.stagger = b.stagger;
+  if (b.telegraph) {
+    kind.telegraph = {};
+    if (b.telegraph.color !== undefined) kind.telegraph.color = colorNumber(b.telegraph.color);
+    if (b.telegraph.ground !== undefined) kind.telegraph.ground = b.telegraph.ground;
+  }
   if (b.shot) kind.shot = { ...b.shot, color: colorNumber(b.shot.color) };
   if (b.ray) kind.ray = { ...b.ray, color: colorNumber(b.ray.color) };
   return kind;

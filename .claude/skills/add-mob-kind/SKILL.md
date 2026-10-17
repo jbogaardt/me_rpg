@@ -23,7 +23,7 @@ new kind needs no new code unless it needs new behaviour.
    (px; starts chasing inside this). `src/content/schema.ts` (`toMobKind`) turns it into the engine's `MobKind`. Optional
    pacing, under `behavior`: `windup` (telegraph, default 0.45 s), `recover` (rest after an
    attack, 0.7 s) and `stagger` (stun when hit, 0.3 s): fast kinds shorten them, big kinds set `stagger` near 0 so
-   the hero cannot stun-lock them. Optional `behavior.shot: { range, speed, color: "#rrggbb" }` makes it a ranged attacker (it stops
+   the hero cannot stun-lock them. Optional `behavior.telegraph: { color: "#rrggbb", ground: bool }` tunes the windup cue (flash colour, default the special's colour or yellow; a ground lane toward the target that fills as the blow lands, default on for shots and rays). Optional `behavior.shot: { range, speed, color: "#rrggbb" }` makes it a ranged attacker (it stops
    `range` px away, telegraphs with the cast pose, then fires a projectile worth its `attack` damage; keep `range <=
    sight`, `speed` below ~190 so it can be dodged, and `windup >= 0.5`; unit tests check these). The starter hero deals about `5 + 2 = 7` per swing and has 30 HP; fodder for levels 1-3
    should be playable against that (the unit test requires the hero can always hurt a kind: `defense < 7`), while the deep

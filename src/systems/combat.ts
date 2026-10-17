@@ -141,8 +141,16 @@ export interface MobKind {
    * as long as it lasts. Any hit on the caster breaks it, and it then only fights in melee for `ray.rest` seconds.
    */
   ray?: MobRay;
+  /** How the windup reads (colour of the flash, ground warning); see `telegraphOf`. All optional. */
+  telegraph?: MobTelegraph;
   /** A boss of the Dungeon Master's quest (systems/dmBoss.ts): made for the quest, not a kind of the content, and it does not respawn. */
   boss?: boolean;
+}
+
+/** Per-kind tuning of the windup cue. */
+export interface MobTelegraph {
+  color?: number; // 0xRRGGBB the body flashes during the windup (default: the special's colour, else warm yellow)
+  ground?: boolean; // draw a warning on the ground (default: true for a shot or ray, false for a plain blow)
 }
 
 export interface MobRay {
@@ -168,6 +176,17 @@ export function mobTimings(kind: MobKind): { windup: number; recover: number; st
     windup: kind.windup ?? DEFAULT_TIMINGS.windup,
     recover: kind.recover ?? DEFAULT_TIMINGS.recover,
     stagger: kind.stagger ?? DEFAULT_TIMINGS.stagger,
+  };
+}
+
+const MELEE_FLASH = 0xffe080;
+
+/** The windup cue for a kind's attack: flash colour and whether a ground warning is drawn. */
+export function telegraphOf(kind: MobKind, attack: 'melee' | 'shot' | 'ray'): { color: number; ground: boolean } {
+  const special = attack === 'shot' ? kind.shot : attack === 'ray' ? kind.ray : undefined;
+  return {
+    color: kind.telegraph?.color ?? special?.color ?? MELEE_FLASH,
+    ground: kind.telegraph?.ground ?? special !== undefined,
   };
 }
 
