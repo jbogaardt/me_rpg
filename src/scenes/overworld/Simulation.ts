@@ -357,7 +357,7 @@ export class Simulation {
     p.body.play('slash');
     const dir = p.body.facing;
     const [vx, vy] = DIR_VEC[dir];
-    this.visuals.swing(p.body.x, p.body.y, dir);
+    this.visuals.swing(p.body.x, p.body.y, dir, p.slot);
     this.emit({ type: 'slash', x: round1(p.body.x), y: round1(p.body.y), dir: dirIndex(dir), p: p.slot });
     const cx = p.body.x + vx * 16;
     const cy = p.body.y + vy * 16;
@@ -399,11 +399,27 @@ export class Simulation {
     const y = p.body.y - BOLT_HEIGHT + uy * 8;
     const [vx, vy] = [ux * shot.bow.speed, uy * shot.bow.speed];
     const edge = this.takeEdge(p); // Arcane Edge: this arrow carries extra magic
-    this.visuals.arrow(x, y, vx, vy, shot.bow.range, (mob) => {
-      this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy);
-      if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
+    this.visuals.arrow(
+      x,
+      y,
+      vx,
+      vy,
+      shot.bow.range,
+      (mob) => {
+        this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy);
+        if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
+      },
+      p.slot,
+    );
+    this.emit({
+      type: 'arrow',
+      x: round1(x),
+      y: round1(y),
+      vx: round1(vx),
+      vy: round1(vy),
+      range: shot.bow.range,
+      p: p.slot,
     });
-    this.emit({ type: 'arrow', x: round1(x), y: round1(y), vx: round1(vx), vy: round1(vy), range: shot.bow.range });
   }
 
   /** The player tapped out combo `index` of their wand or tome: cast its spell if there is the mana for it. */

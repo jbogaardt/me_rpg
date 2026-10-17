@@ -4,6 +4,7 @@ import type { Mob } from '../../entities/Mob';
 import { particleEffect } from '../../entities/ParticleEffect';
 import { CELL } from '../../map/types';
 import type { WorldEvent } from '../../net/protocol';
+import { effectColor } from '../../systems/looks';
 import type { ParticleEffectName } from '../../systems/particleEffects';
 import type { Arena } from './Arena';
 import { BOLT_HEIGHT, BOLT_RANGE, MELEE_REACH } from './constants';
@@ -30,14 +31,14 @@ export class Visuals {
   }
 
   /** A sword swing by a player standing at (x, y) facing `dir`: the arc, and leaves shaken from any canopy it reaches. */
-  swing(x: number, y: number, dir: Direction) {
+  swing(x: number, y: number, dir: Direction, p?: number) {
     const [vx, vy] = DIR_VEC[dir];
-    this.arena.effects.add(slashEffect(x + vx * 6, y - 12 + vy * 6, dir));
+    this.arena.effects.add(slashEffect(x + vx * 6, y - 12 + vy * 6, dir, effectColor(p)));
     this.arena.zone.ambient?.shake(x + vx * 16, y + vy * 16 - 6, MELEE_REACH);
   }
 
   /** A player's bolt (wand, tome or spell) in flight. `onHit` applies the damage (the host). */
-  bolt(x: number, y: number, vx: number, vy: number, onHit?: (mob: Mob) => void) {
+  bolt(x: number, y: number, vx: number, vy: number, onHit?: (mob: Mob) => void, p?: number) {
     const { effects } = this.arena;
     const trail = particleEffect('boltTrail', x, y);
     effects.add(trail);
@@ -56,13 +57,25 @@ export class Visuals {
           trail.stop();
           if (hit) effects.add(particleEffect('boltImpact', bx, by));
         },
+        effectColor(p),
       ),
     );
   }
 
   /** A player's arrow in flight. `onHit` applies the damage (the host). */
-  arrow(x: number, y: number, vx: number, vy: number, range: number, onHit?: (mob: Mob) => void) {
-    this.arena.effects.add(arrowEffect(x, y, vx, vy, range, (ax, ay) => this.projectileStep(ax, ay, onHit)));
+  arrow(x: number, y: number, vx: number, vy: number, range: number, onHit?: (mob: Mob) => void, p?: number) {
+    this.arena.effects.add(
+      arrowEffect(
+        x,
+        y,
+        vx,
+        vy,
+        range,
+        (ax, ay) => this.projectileStep(ax, ay, onHit),
+        undefined,
+        p === undefined ? undefined : effectColor(p),
+      ),
+    );
   }
 
   /**
@@ -111,18 +124,18 @@ export class Visuals {
         arena.view.weatherLayer?.strike(e);
         break;
       case 'slash':
-        this.swing(e.x, e.y, DIRS[e.dir] ?? 'down');
+        this.swing(e.x, e.y, DIRS[e.dir] ?? 'down', e.p);
         arena.playerNumbered(e.p)?.body.play('slash');
         break;
       case 'draw':
         arena.playerNumbered(e.p)?.body.play('shoot');
         break;
       case 'arrow':
-        this.arrow(e.x, e.y, e.vx, e.vy, e.range);
+        this.arrow(e.x, e.y, e.vx, e.vy, e.range, undefined, e.p);
         break;
       case 'bolt':
         if (e.color === undefined) {
-          this.bolt(e.x, e.y, e.vx, e.vy);
+          this.bolt(e.x, e.y, e.vx, e.vy, undefined, e.p);
           arena.playerNumbered(e.p)?.body.play('cast');
         } else {
           this.foeBolt(e.x, e.y, e.vx, e.vy, e.color); // an enemy's shot: only drawn here, the host decides what it hits

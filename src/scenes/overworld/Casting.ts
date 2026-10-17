@@ -191,7 +191,14 @@ export class Casting {
     const x = p.body.x + ux * 10;
     const y = p.body.y - BOLT_HEIGHT + uy * 8;
     const [vx, vy] = [ux * speed, uy * speed];
-    this.visuals.bolt(x, y, vx, vy, (mob) => this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux, uy, true));
+    this.visuals.bolt(
+      x,
+      y,
+      vx,
+      vy,
+      (mob) => this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux, uy, true),
+      p.slot,
+    );
     this.emit({ type: 'bolt', x: round1(x), y: round1(y), vx: round1(vx), vy: round1(vy), p: p.slot });
     return true;
   }

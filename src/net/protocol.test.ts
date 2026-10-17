@@ -52,7 +52,8 @@ const snap: SnapMsg = {
       [5, { type: 'slash', x: 1, y: 2, dir: 3, p: 2 }],
       [6, { type: 'bolt', x: 1, y: 2, vx: 260, vy: 0, p: 1 }],
       [11, { type: 'draw', x: 1, y: 2, p: 3 }],
-      [12, { type: 'arrow', x: 1, y: 2, vx: 300, vy: 0, range: 256 }],
+      [12, { type: 'arrow', x: 1, y: 2, vx: 300, vy: 0, range: 256, p: 2 }],
+      [15, { type: 'arrow', x: 1, y: 2, vx: 300, vy: 0, range: 256 }],
       [10, { type: 'bolt', x: 5, y: 6, vx: -135, vy: 0, color: 0xb06cff }], // an enemy's shot
       [14, { type: 'lightning', x: 100, y: 200, seed: 123456789 }],
       [7, { type: 'defeat', player: 3 }],

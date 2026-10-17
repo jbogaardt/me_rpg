@@ -4,6 +4,7 @@ import { outfitParts } from '../sprites/doll';
 import { newHero } from './combat';
 import { ITEMS, itemOf } from './items';
 import {
+  effectColor,
   allPlayerOutfits,
   DM_LOOK,
   heroOutfit,
@@ -91,5 +92,13 @@ describe('player looks', () => {
     expect(allPlayerOutfits()).toContainEqual(DM_LOOK);
     const parts = new Set(allPlayerOutfits().flatMap(outfitParts));
     for (const item of gear) for (const id of Object.values(item.look!)) expect(parts).toContain(id);
+  });
+});
+
+describe('effect colours', () => {
+  it('gives each player their own colour and solo play the default', () => {
+    expect(effectColor()).toBe(effectColor(0));
+    expect(new Set([0, 1, 2, 3].map(effectColor)).size).toBe(4);
+    expect(effectColor(99)).toBe(effectColor(0));
   });
 });
