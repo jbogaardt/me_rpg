@@ -6,6 +6,8 @@
 // DM bot to collect (`DmBot.reports`), which at the game's end has Haiku turn it into a prompt file for the next session
 // (server/report.ts). Players are P1, P2... (their seat), never a name; the repo and site are public.
 
+import type { Tag } from './feedback';
+
 /** What was noted. */
 export const REPORT_KINDS = ['said', 'ask', 'note', 'signal', 'down', 'quest', 'breather'] as const;
 export type ReportKind = (typeof REPORT_KINDS)[number];
@@ -125,6 +127,8 @@ export interface ReportEntry {
   /** What was said or what happened. */
   text: string;
   state: ReportState;
+  /** What it is about and how much it matters, set by the DM bot's live tagger (systems/feedback.ts); absent until then. */
+  tag?: Tag;
 }
 
 /** How many recent events ride with each entry, and how many entries are kept before the oldest are dropped. */
