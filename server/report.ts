@@ -23,8 +23,13 @@ export interface GameInfo {
   build?: string;
 }
 
-/** The most entries given to the analyst (the latest ones; a game rarely has more worth reading). */
-export const MAX_ENTRIES = 120;
+/** Characters of log the analyst is given (about 15k tokens), and the repo file's own appendix. */
+export const BUDGET = 60_000;
+export const APPENDIX_BUDGET = 16_000;
+/** What the digest's own headings and its note of what was left out take, in characters. */
+const OVERHEAD = 400;
+/** The length of a block of the game's timeline, in seconds. */
+export const BLOCK = 300;
 
 /** Cut what must not reach a public repo: links, email addresses, long digit runs (a phone number), a name given away. */
 export function redact(text: string): string {
@@ -37,34 +42,38 @@ export function redact(text: string): string {
 /** `redact`, and one line (a player's words, a log entry). */
 export const scrub = (text: string): string => redact(text).replace(/\s+/g, ' ').trim();
 
-const pct = (n: number) => `${Math.round(n * 100)}%`;
+const pctOf = (n: number) => `${Math.round(n * 100)}%`;
+const clip = (e: ReportEntry) =>
+  `${stamp(e.t)} ${e.state.who} ${e.kind}: ${e.kind === 'said' ? `"${scrub(e.text)}"` : scrub(e.text)}`;
 
-/** One entry as lines of the timeline the analyst reads (and the file ends with); `full` adds the whole state of the game. */
-export function lineOf(e: ReportEntry, full = false): string {
+/** The state in one bracket: who and how they were, where, what the party was doing. */
+function brief(e: ReportEntry): string {
   const s = e.state;
-  const head = `${stamp(e.t)} ${s.who} ${e.kind}: ${e.kind === 'said' ? `"${scrub(e.text)}"` : scrub(e.text)}`;
-  const band = s.place.band ? ` levels ${s.place.band[0]}\u2013${s.place.band[1]}` : '';
-  const where = `${s.area} (${s.at[0]},${s.at[1]})${band}, ${s.place.alive} of ${s.place.total} foes alive`;
-  const quest = `quest: ${s.quest ?? 'none'}`;
-  const party = `party ${s.party.size} avg ${pct(s.party.avgHp)} lowest ${pct(s.party.lowest)}`;
-  if (!full)
-    return `${head}\n    [lv${s.level} hp ${s.hp}/${s.maxHp}, ${where}, ${quest}, ${party}${s.breather ? ', in a breather' : ''}]`;
-  const h = s.hero;
-  const f = s.fight;
+  const band = s.detail?.place.band ? ` levels ${s.detail.place.band[0]}\u2013${s.detail.place.band[1]}` : '';
+  return `[lv${s.level} hp ${s.hp}/${s.maxHp}, ${s.area} (${s.at[0]},${s.at[1]})${band}, quest: ${s.quest ?? 'none'}, party ${s.party.size} avg ${pctOf(s.party.avgHp)} lowest ${pctOf(s.party.lowest)}${s.stall ? `, stalled ${s.stall}s` : ''}${s.breather ? ', in a breather' : ''}]`;
+}
+
+/** One entry as lines for the analyst: the words (`how` 'words'), plus a bracket of state ('brief'), or the whole state ('full'). */
+export function lineOf(e: ReportEntry, how: 'words' | 'brief' | 'full' = 'full'): string {
+  if (how === 'words') return clip(e);
+  const d = e.state.detail;
+  if (how === 'brief' || !d) return `${clip(e)}\n    ${brief(e)}`;
+  const s = e.state;
+  const { hero: h, fight: f, place } = d;
   const by =
     Object.entries(f.by)
       .map(([k, n]) => `${k} x${n}`)
       .join(', ') || 'no one';
-  const foes = s.foes.map(
+  const foes = d.foes.map(
     (x) =>
       `${x.name} x${x.count} (${x.near} near) hp ${x.maxHp} atk ${x.attack} def ${x.defense} xp ${x.xp}: ` +
       `${x.blows} blows to fell it, ${x.hits} hits to fell the hero [${x.verdict}; a typical hero of this level: ${x.typical}]`,
   );
   return [
-    head,
+    clip(e),
     `    hero: lv${s.level} hp ${s.hp}/${s.maxHp} mp ${h.mp}/${h.maxMp}, blow ${h.power} (${h.attack}+${h.attackGear} gear), armor ${h.armor} (${h.defense}+${h.defenseGear} gear), magic ${h.magic}, ${h.weapon}${h.worn.length ? ` + ${h.worn.join(', ')}` : ', nothing else worn'}, healing items ${h.potions}, food ${h.food} water ${h.water}, gold ${h.gold}, xp ${h.xp[0]}/${h.xp[1]}${h.skills.length ? `, skills ${h.skills.join(', ')}` : ''}`,
     `    fights: knocked out ${f.downs}x (${f.downsHere} in this zone), the party killed ${f.killsHere} here (${f.kills} in all); last 60s: took ${f.taken} damage in ${f.hitsTaken} hits (${by}), the party dealt ${f.dealt}${f.lastHurtBy ? `; last hurt by ${f.lastHurtBy.foe} ${f.lastHurtBy.ago}s ago` : ''}; DM pressure ${f.pressure}`,
-    `    where: ${where}; ${quest}; ${party}; stalled ${s.stall}s${s.breather ? '; in a breather' : ''}`,
+    `    where: ${s.area} (${s.at[0]},${s.at[1]})${place.band ? ` levels ${place.band[0]}\u2013${place.band[1]}` : ''}, ${place.alive} of ${place.total} foes alive; quest: ${s.quest ?? 'none'}; party ${s.party.size} avg ${pctOf(s.party.avgHp)} lowest ${pctOf(s.party.lowest)}; stalled ${s.stall}s${s.breather ? '; in a breather' : ''}`,
     `    foes in the zone: ${foes.join(' | ') || 'none alive'}`,
     s.recent.length ? `    just before: ${s.recent.map(scrub).join(' | ')}` : '',
   ]
@@ -72,11 +81,97 @@ export function lineOf(e: ReportEntry, full = false): string {
     .join('\n');
 }
 
-/** The log as the analyst reads it: the latest `MAX_ENTRIES`, what players said or fell to with the whole state around it. */
-export function timeline(entries: readonly ReportEntry[]): string {
-  const kept = entries.slice(-MAX_ENTRIES);
-  const talk = new Set(['said', 'ask', 'note', 'down']);
-  return kept.map((e) => lineOf(e, talk.has(e.kind))).join('\n');
+/**
+ * The game in blocks of `BLOCK` seconds, one line each, for the whole length of the game however long it was: where the
+ * party was, the levels, what the director offered (counted, not listed), knockouts, quests, breathers, how often players
+ * spoke. This is what keeps a three-hour campaign readable: the passive entries live here, as counts.
+ */
+export function blocks(entries: readonly ReportEntry[]): string[] {
+  const by = new Map<number, ReportEntry[]>();
+  for (const e of entries) {
+    const k = Math.floor(e.t / BLOCK);
+    by.set(k, [...(by.get(k) ?? []), e]);
+  }
+  return [...by.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([k, list]) => {
+      const count = (f: (e: ReportEntry) => boolean) => list.filter(f).length;
+      const tally = (kind: ReportEntry['kind'], key: (e: ReportEntry) => string) => {
+        const m = new Map<string, number>();
+        for (const e of list.filter((x) => x.kind === kind))
+          m.set(
+            key(e),
+            (m.get(key(e)) ?? 0) +
+              1 +
+              (/\(\+(\d+) repeats/.exec(e.text)?.[1] ? Number(/\(\+(\d+) repeats/.exec(e.text)![1]) : 0),
+          );
+        return [...m].map(([n, c]) => `${n} x${c}`).join(', ');
+      };
+      const areas = [...new Set(list.map((e) => e.state.area))].join(' > ');
+      const levels = `${list[0]!.state.level}\u2192${list.at(-1)!.state.level}`;
+      const parts = [
+        `${stamp(k * BLOCK)}-${stamp((k + 1) * BLOCK)}`,
+        areas,
+        `lv ${levels}`,
+        `party hp ${pctOf(Math.min(...list.map((e) => e.state.party.avgHp)))}-${pctOf(Math.max(...list.map((e) => e.state.party.avgHp)))}`,
+        tally('signal', (e) => e.text.replace(/ \(\+\d+ repeats since\)/, '')) &&
+          `nudges: ${tally('signal', (e) => e.text.replace(/ \(\+\d+ repeats since\)/, ''))}`,
+        count((e) => e.kind === 'down') &&
+          `knocked out x${count((e) => e.kind === 'down')} (${tally('down', (e) => e.state.area)})`,
+        count((e) => e.kind === 'quest') &&
+          `quests: ${list
+            .filter((e) => e.kind === 'quest')
+            .map((e) => scrub(e.text))
+            .join('; ')}`,
+        count((e) => e.kind === 'breather') && `breathers x${count((e) => e.kind === 'breather')}`,
+        count((e) => e.kind === 'said' || e.kind === 'ask' || e.kind === 'note') &&
+          `players spoke x${count((e) => e.kind === 'said' || e.kind === 'ask' || e.kind === 'note')}`,
+      ];
+      return parts.filter(Boolean).join(' \u00b7 ');
+    });
+}
+
+/**
+ * The log as the analyst reads it, kept to `budget` characters however long the game: first the whole game in blocks, then
+ * what players said or asked and every knockout, in order, with the state then. When that is too long the oldest knockouts
+ * lose their detail first, then asks and notes, then (last) the players' own words lose theirs; whatever is cut is counted.
+ * `full: false` keeps the state to a bracket (for the file's own appendix).
+ */
+export function digest(entries: readonly ReportEntry[], budget = BUDGET, full = true): string {
+  const blockLines = blocks(entries);
+  const RANK = { full: 0, brief: 1, words: 2, gone: 3 } as const;
+  type Level = keyof typeof RANK;
+  const how = new Map<ReportEntry, Level>();
+  const picked = entries.filter((e) => e.kind === 'said' || e.kind === 'ask' || e.kind === 'note' || e.kind === 'down');
+  for (const e of picked) how.set(e, full ? 'full' : 'brief');
+  const size = () =>
+    OVERHEAD +
+    blockLines.join('\n').length +
+    [...how].reduce((n, [e, h]) => n + (h === 'gone' ? 0 : lineOf(e, h).length + 1), 0);
+  // Demote the least valuable first, oldest first (a knockout, then an ask or a tap, then the players' own words), one step at
+  // a time across all of them: full -> brief -> words -> gone. What the players said is the last to lose anything.
+  const worth = (e: ReportEntry) => (e.kind === 'down' ? 0 : e.kind === 'said' ? 2 : 1);
+  const order = [...picked].sort((a, b) => worth(a) - worth(b) || a.t - b.t);
+  for (const step of ['brief', 'words', 'gone'] as const)
+    for (const e of order) {
+      if (size() <= budget) break;
+      const now = how.get(e)!;
+      if (RANK[step] > RANK[now]) how.set(e, step);
+    }
+  const gone = [...how.values()].filter((h) => h === 'gone').length;
+  return [
+    "THE GAME IN 5-MINUTE BLOCKS (the director's nudges are counted here, not listed):",
+    ...blockLines,
+    '',
+    'WHAT PLAYERS SAID, ASKED AND TAPPED, AND EVERY KNOCKOUT, IN ORDER (each with the state of the game then):',
+    ...picked.flatMap((e) => {
+      const h = how.get(e)!;
+      return h === 'gone' ? [] : [lineOf(e, h)];
+    }),
+    gone ? `(${gone} older entr${gone === 1 ? 'y' : 'ies'} left out for length)` : '',
+  ]
+    .filter((l, i, all) => l !== '' || all[i - 1] !== '')
+    .join('\n');
 }
 
 /** The numbers about a game, said plainly (the analyst is given them, and the file opens with them). */
@@ -120,8 +215,8 @@ export function analysisPrompt(game: GameInfo, entries: readonly ReportEntry[]):
   const prompt = [
     `Game ${game.code}${game.build ? `, build ${game.build}` : ''}. Facts: ${facts(game, entries).join('; ')}.`,
     '',
-    'THE HOST LOG (each line: when, who, what, then the state of the game at that moment):',
-    timeline(entries),
+    'THE HOST LOG, as a digest of the whole game (blocks of the evening, then what players said and who fell, with the state of the game each time):',
+    digest(entries),
     '',
     'WHERE THINGS ARE IN THE REPO:',
     REPO_MAP,
@@ -162,7 +257,7 @@ export function header(game: GameInfo, entries: readonly ReportEntry[], how: str
 
 /** What the file ends with: the log itself, as read. */
 export function appendix(entries: readonly ReportEntry[]): string {
-  return ['', '## Log', '', '```', timeline(entries), '```', ''].join('\n');
+  return ['', '## Log', '', '```', digest(entries, APPENDIX_BUDGET, false), '```', ''].join('\n');
 }
 
 /** The file by rules alone, for when no model could be asked. */

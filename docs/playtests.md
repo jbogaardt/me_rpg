@@ -61,7 +61,15 @@ are (blow and armour with gear, health, mana, supplies, gold, xp), how fighting 
 taken and dealt in the last minute and by whom, who hurt them last, the DM's pressure), the zone (its level band, foes alive),
 and **each kind of foe in it as this player fights it**: blows to fell it, hits for it to fell them, a verdict (deadly to
 trivial) and the same for a typical hero of their level, so "too easy" can be checked against the numbers. Plus where, the
-quest, the party, how long since anything progressed and the last events (`DmReport`, `systems/reportLog.ts`). Entries go to the
+quest, the party, how long since anything progressed and the last events (`DmReport`, `systems/reportLog.ts`).
+
+**Long campaigns stay small.** Only what a player said, asked or tapped, and each knockout, carry that whole state (about 1 KB
+each, and rare). What the game did by itself (a nudge, a quest end, a breather) is noted lean (about 250 bytes), and a
+nudge of the same kind is noted once every two minutes with a count of the repeats. The analyst is never given the raw
+log: it reads a digest kept to a character budget however long the game (`digest` in `server/report.ts`): the whole game in
+5-minute blocks (where the party was, levels, nudges counted, knockouts, quests, breathers, how often players spoke), then what
+players said and every knockout in order. If that is too long the oldest knockouts lose their detail first, then asks and taps,
+and the players' own words last, with a count of what was left out. The full raw log stays in `reports/raw/`. Entries go to the
 host's console as `[report]` lines, and the DM bot collects them (`DmBot.reports`).
 
 When a game ends (everyone leaves, or the bot is stopped) the bot has Haiku read the log as a playtest analyst
