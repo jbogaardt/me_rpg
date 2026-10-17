@@ -17,7 +17,7 @@ describe('ITEMS', () => {
   });
 
   it('keeps supplies out of the gear slots and gives them something to restore', () => {
-    for (const [id, item] of everything.filter(([, i]) => !('slot' in i))) {
+    for (const [id, item] of everything.filter(([, i]) => !('slot' in i) && !i.gem)) {
       const use = item.use;
       expect((use?.hp ?? 0) + (use?.mp ?? 0) + (use?.food ?? 0) + (use?.water ?? 0) > 0, id).toBe(true);
     }

@@ -7,6 +7,7 @@ import type { MobKind } from '../systems/combat';
 import { isClimate } from '../systems/weather';
 import { SKILL_IDS, SKILLS } from '../systems/skills';
 import { CapabilityTable, checkCapabilities, DIALS, type CapabilitySpec, type Dial } from '../systems/capabilities';
+import { BONUS_KEYS, isGem, type Bonus, type BonusKey } from '../systems/gems';
 import { onlyFeeds } from '../systems/needs';
 import { CROPS } from '../systems/crops';
 import { SLOTS, type Outfit } from '../sprites/doll';
@@ -623,6 +624,7 @@ function readItem(r: Reader, v: unknown, path: string): Item | null {
     'use',
     'capacity',
     'look',
+    'gem',
   ]);
   for (const key of Object.keys(o)) if (!known.has(key)) r.fail(`${path}.${key}`, 'is not a field of an item');
   const item: Item = { name: r.string(o.name, `${path}.name`) };
@@ -685,7 +687,24 @@ function readItem(r: Reader, v: unknown, path: string): Item | null {
   }
   const capacity = r.optionalNumber(o.capacity, `${path}.capacity`, 1);
   if (capacity !== undefined) item.capacity = capacity;
-  if (item.slot === undefined && !item.use) r.fail(path, 'needs a gear `slot` or a `use` (a supply)');
+  if (o.gem !== undefined) {
+    const g = r.object(o.gem, `${path}.gem`) ?? {};
+    const bonus = (v: unknown, at: string): Bonus => {
+      const b = r.object(v, at) ?? {};
+      const out: Bonus = {};
+      for (const [key, n] of Object.entries(b))
+        if (!(BONUS_KEYS as readonly string[]).includes(key))
+          r.fail(`${at}.${key}`, `is not something a gem adds (${BONUS_KEYS.join(', ')})`);
+        else out[key as BonusKey] = r.number(n, `${at}.${key}`, 0.01);
+      return out;
+    };
+    item.gem = { arms: bonus(g.arms, `${path}.gem.arms`), worn: bonus(g.worn, `${path}.gem.worn`) };
+    for (const side of ['arms', 'worn'] as const)
+      if (!Object.keys(item.gem[side]).length) r.fail(`${path}.gem.${side}`, 'must add something');
+    if (item.slot !== undefined || item.use) r.fail(`${path}.gem`, 'a gem is kept in the pack: no `slot` and no `use`');
+  }
+  if (item.slot === undefined && !item.use && !item.gem)
+    r.fail(path, 'needs a gear `slot`, a `use` (a supply) or a `gem`');
   if (item.slot !== undefined && item.use) r.fail(path, 'is worn (`slot`) or used (`use`), not both');
   if (item.slot !== undefined && !item.look) item.look = {};
   if ((item.ranged || item.focus) && item.slot !== 'weapon') r.fail(path, 'a bow, wand or tome is a weapon');
@@ -723,6 +742,8 @@ export function parseItems(json: unknown, r = new Reader()): ItemContent {
   }
   if (!out.start.weapon) r.fail('items.json.start.weapon', 'a hero always starts with a weapon');
   for (const [id, v] of Object.entries(r.object(file.items, 'items.json.items') ?? {})) {
+    if (id.includes('+'))
+      r.fail(`items.${id}`, 'an item id cannot hold "+" (that joins the ids of a piece and its gem)');
     const item = readItem(r, v, `items.${id}`);
     if (item) out.items[id] = item;
   }
@@ -883,8 +904,23 @@ function checkAgainstCapabilities(r: Reader, c: Content) {
       return `"${id}" only feeds, and this campaign has no food and water (capabilities.needs)`;
     if (!caps.anywhere('farming') && !quest('farming') && produce.has(id))
       return `"${id}" only grows on a farm, and this campaign has no farming (capabilities.farming)`;
+    if (!caps.anywhere('forge') && item && isGem(item))
+      return `"${id}" is a gem, and this campaign cannot set gems (capabilities.forge)`;
     return null;
   };
+  const gemWhy = (id: string): string | null => {
+    const item = c.items.items[id];
+    return item && isGem(item) ? why(id) : null;
+  };
+  for (const [id, shop] of Object.entries(c.items.shops))
+    shop.stock.forEach((s, i) => {
+      const bad = gemWhy(s);
+      if (bad) r.fail(`shops.${id}.stock[${i}]`, bad);
+    });
+  for (const [id, loot] of Object.entries(c.items.loots)) {
+    const bad = 'item' in loot ? gemWhy(loot.item) : null;
+    if (bad) r.fail(`loots.${id}.item`, bad);
+  }
   for (const quest of c.quests.quests) {
     const p = `quests.${quest.id}`;
     const o = quest.objective;

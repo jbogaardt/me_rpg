@@ -327,7 +327,7 @@ describe('items.json', () => {
     expect(p).toMatch(/items\.wand\.focus\.combos\[0\]\.spell: must be a spell/);
     expect(p).toMatch(/items\.wand\.focus\.combos\[0\]\.cost: must be a number of at least 1/);
     expect(p).toMatch(/items\.rock\.colour: is not a field of an item/);
-    expect(p).toMatch(/items\.rock: needs a gear `slot` or a `use`/);
+    expect(p).toMatch(/items\.rock: needs a gear `slot`, a `use` \(a supply\) or a `gem`/);
     expect(p).toMatch(/items\.both: is worn \(`slot`\) or used \(`use`\), not both/);
     expect(p).toMatch(/items\.inner\.focus\.combos\[0\]\.keys: is inside "urulr"/);
   });
@@ -355,6 +355,50 @@ describe('items.json', () => {
     const f = files();
     goods(f).items.potion!.rare = true;
     expect(problems(f).join('\n')).toMatch(/shops\.stall\.stock\[0\]: "potion" is rare/);
+  });
+});
+
+describe('gems', () => {
+  const goods = (f: Record<ContentFile, unknown>) =>
+    f.items as {
+      items: Record<string, unknown>;
+      shops: Record<string, { stock: string[] }>;
+      loots: Record<string, unknown>;
+    };
+  const gem = { name: 'Opal', value: 50, gem: { arms: { attack: 1 }, worn: { defense: 1 } } };
+
+  it('reads a gem (no slot, no use) with what it adds to a weapon and to other gear', () => {
+    const f = files();
+    goods(f).items.opal = { ...gem };
+    expect(parseContent(f).items.items.opal).toEqual(gem);
+  });
+
+  it('refuses a gem that adds nothing, adds what a gem cannot, is worn or used, or an id that holds "+"', () => {
+    const f = files();
+    const g = goods(f);
+    g.items.empty = { name: 'Empty', value: 1, gem: { arms: {}, worn: { defense: 1 } } };
+    g.items.odd = { name: 'Odd', value: 1, gem: { arms: { luck: 3 }, worn: { defense: 0 } } };
+    g.items.worn = { ...gem, slot: 'charm', look: {} };
+    g.items['a+b'] = { ...gem };
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/items\.empty\.gem\.arms: must add something/);
+    expect(p).toMatch(/items\.odd\.gem\.arms\.luck: is not something a gem adds/);
+    expect(p).toMatch(/items\.odd\.gem\.worn\.defense: must be a number of at least 0\.01/);
+    expect(p).toMatch(/items\.worn\.gem: a gem is kept in the pack/);
+    expect(p).toMatch(/items\.a\+b: an item id cannot hold "\+"/);
+  });
+
+  it('refuses a shop that sells one, or a chest that holds one, where the campaign cannot set gems', () => {
+    const f = files();
+    const g = goods(f);
+    g.items.opal = { ...gem };
+    g.shops.stall!.stock = ['potion', 'opal'];
+    g.loots.crate = { item: 'opal' };
+    expect(problems(f).join('\n')).not.toMatch(/capabilities\.forge/);
+    (f.scenarios as { capabilities: unknown }).capabilities = { forge: false };
+    const p = problems(f).join('\n');
+    expect(p).toMatch(/shops\.stall\.stock\[1\]: "opal" is a gem, and this campaign cannot set gems/);
+    expect(p).toMatch(/loots\.crate\.item: "opal" is a gem/);
   });
 });
 

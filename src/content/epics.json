@@ -596,5 +596,30 @@
         "tell": "While the wheel is fitted, Ansel asks for something to pack around the goods in {area}. Gather it, and the wagon can roll."
       }
     ]
+  },
+  {
+    "id": "stone_and_steel",
+    "title": "Stone and Steel",
+    "tagline": "A gem in the pack is only a pebble until it is set in something.",
+    "difficulty": 1,
+    "opening": "A stone that stays in a pack is a stone wasted. A smith knows better, and so, soon, will you.",
+    "ending": "You set the stone, tried the edge and found it keen. The smith will tell the story for years, with a few embellishments of their own.",
+    "steps": [
+      {
+        "kind": "forge",
+        "hop": 0,
+        "tell": "Set a gem in a good piece of gear, from the Inventory tab, and see what a little patience makes of it. {area} is as fine a place to do it as any."
+      },
+      {
+        "kind": "hunt",
+        "hop": 0,
+        "tell": "A new piece wants trying. Take it into {area} and let something with opinions see what it can do."
+      },
+      {
+        "kind": "visit",
+        "hop": 1,
+        "tell": "Word of fine work travels faster than the worker. Show yours in {area}, where someone has already been asking after it."
+      }
+    ]
   }
 ]

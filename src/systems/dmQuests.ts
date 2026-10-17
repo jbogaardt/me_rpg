@@ -3,9 +3,11 @@
 // relic could be) and turns it into a few honest asks: "Hunt 5 Goblins", "Gather 3 Echostones", "Reach the Old Mill",
 // "Find the Wayfarer's Charm". The party is left to work out how.
 
-import { xpToNext, type Hero, type Item, type QuestLog } from './combat';
-import { upgrade } from './inventory';
+import { xpToNext, type GearSlot, type Hero, type Item, type QuestLog } from './combat';
+import { giftFor } from './dmGear';
 import type { BoundObjective } from './dmEpics';
+import { an } from './dmBrief';
+import { recipeNames, type Recipe } from './dmForge';
 import type { Quest, SiteKind } from './quests';
 import type { QuestOffer } from './dmTasks';
 
@@ -36,6 +38,8 @@ export interface Land {
   barrels: number;
   /** Gear a relic could be (item ids and names), the best fits for the party first. */
   relics: { id: string; name: string }[];
+  /** The pieces the party could set a gem in now (systems/dmForge.ts), and where a smith stands in the land, if one does; none when `forge` is off. */
+  forge?: { recipes: Recipe[]; smith?: { x: number; y: number } };
   /** A spot to hide a relic: far enough from the party to be a search, on open ground. */
   spot: () => { x: number; y: number } | null;
 }
@@ -113,7 +117,9 @@ function baseReward(kind: QuestOffer['kind'], goal: number): { xp: number; gold:
           ? { xp: 15 * goal, gold: 6 * goal }
           : kind === 'find'
             ? { xp: 70, gold: 30 }
-            : { xp: 40, gold: 15 };
+            : kind === 'forge'
+              ? { xp: 50, gold: 10 }
+              : { xp: 40, gold: 15 };
 }
 
 /**
@@ -134,7 +140,9 @@ export function questOf(offer: QuestOffer): Quest {
             ? { t: 'cast', zone: offer.zone, count: offer.goal }
             : offer.kind === 'haul'
               ? { t: 'haul', place: offer.what, zone: offer.zone, count: offer.goal }
-              : { t: 'visit', place: offer.what, zone: offer.zone, count: 1 };
+              : offer.kind === 'forge'
+                ? { t: 'cast', count: 1 } // only a count of one is kept: `TaskBook.forge` sets it when the piece is made
+                : { t: 'visit', place: offer.what, zone: offer.zone, count: 1 };
   return {
     id: `dm_${offer.kind}`,
     chapter: 0,
@@ -221,6 +229,13 @@ export function allOffers(land: Land): QuestOffer[] {
       y: place.y,
     });
   }
+  for (const r of land.forge?.recipes ?? []) {
+    const n = recipeNames(r.made);
+    const title = n && `Set ${an(n.gem)} in ${an(n.base)}`;
+    if (!title || title.length > 64 || r.made.length > 48) continue;
+    const at = land.forge?.smith ?? land.spot() ?? { x: 0, y: 0 };
+    out.push({ kind: 'forge', title, zone: land.zone, goal: 1, what: r.made, ...at });
+  }
   const relic = land.relics[0];
   const at = relic ? land.spot() : null;
   if (relic && at)
@@ -230,37 +245,25 @@ export function allOffers(land: Land): QuestOffer[] {
 
 /** The gear a relic could be, best fit for `level` first: pieces worth about what a hero of that level would have earned. */
 export function relicsFor(
-  items: Record<string, { name: string; value?: number; slot?: string; use?: unknown }>,
+  items: Record<string, { name: string; value?: number; slot?: string; use?: unknown; fused?: unknown }>,
   level: number,
 ): { id: string; name: string }[] {
   const target = 30 + 25 * level;
   return Object.entries(items)
-    .filter(([, it]) => it.slot !== undefined && it.use === undefined && (it.value ?? 0) > 0)
+    .filter(([, it]) => it.slot !== undefined && it.use === undefined && it.fused === undefined && (it.value ?? 0) > 0)
     .sort(([, a], [, b]) => Math.abs((a.value ?? 0) - target) - Math.abs((b.value ?? 0) - target))
     .map(([id, it]) => ({ id, name: `the ${it.name}` }));
 }
 
-/** A weapon's way of fighting: a gift never swaps a blade for a bow or a wand (the player chose how they fight). */
-const style = (i: Item): string => (i.focus ? 'focus' : i.ranged ? 'ranged' : 'melee');
-
 /**
- * The gear a saga hands a hero at its end, when there is any: something better than what they wear, of the way they
- * already fight, and worth no more than about twice what a hero of `level` would have earned (so it is a step, not a
- * leap), a weapon before armour, the biggest step first. Null when nothing is better (their gear is already fine).
+ * The gear a saga or a quest hands a hero, when there is any: the id of a piece better than what they wear, of the way they
+ * already fight and in reach of their level (the rule is `giftFor`, systems/dmGear.ts: varied by slot, one per hero).
+ * Null when nothing is better (their gear is already fine).
  */
-export function upgradeFor(hero: Hero, items: Record<string, Item>, level: number): string | null {
-  const cap = 2 * (30 + 25 * level);
-  const options = Object.entries(items).filter(
-    ([, it]) =>
-      it.slot !== undefined &&
-      it.use === undefined &&
-      (it.value ?? 0) > 0 &&
-      (it.value ?? 0) <= cap &&
-      upgrade(hero, it) > 0 &&
-      (it.slot !== 'weapon' || style(it) === style(hero.weapon)),
-  );
-  options.sort(
-    ([, a], [, b]) => Number(b.slot === 'weapon') - Number(a.slot === 'weapon') || upgrade(hero, b) - upgrade(hero, a),
-  );
-  return options[0]?.[0] ?? null;
-}
+export const upgradeFor = (
+  hero: Hero,
+  items: Record<string, Item>,
+  level: number,
+  recent: readonly GearSlot[] = [],
+  seed = 0,
+): string | null => giftFor(hero, items, level, recent, seed)?.id ?? null;

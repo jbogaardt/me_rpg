@@ -208,6 +208,7 @@ export class OverworldScene implements Scene {
     this.requests.onAsk = (i, text) => this.desk.ask(i, text);
     this.powers = new DmPowers(arena, this.sim);
     this.tasks = new DmTasks(arena, this.sim, this.desk);
+    this.pack.onFuse = (_p, made) => this.tasks.forged(made);
     this.epics = new DmEpics(
       arena,
       this.zones,

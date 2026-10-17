@@ -9,8 +9,11 @@ import {
   type InvOp,
   type Result,
 } from '../systems/inventory';
+import { enabled } from '../systems/capabilities';
+import { bonusFor, bonusTexts, canSet } from '../systems/gems';
+import { fusedOf } from '../systems/items';
 import { iconSvg } from './itemIcons';
-import { buffTexts } from './itemText';
+import { buffTexts, gemText } from './itemText';
 import { combosHtml } from './itemText';
 import { esc } from './html';
 
@@ -49,6 +52,7 @@ const stats = (item: Item) =>
     item.focus ? item.focus.kind : '',
     item.use?.hp ? `+${item.use.hp} HP` : '',
     item.use?.mp ? `+${item.use.mp} MP` : '',
+    gemText(item),
     item.value ? `worth ${item.value}g` : '',
   ]
     .filter(Boolean)
@@ -145,6 +149,7 @@ export class Inventory {
       const slots = slotsFor(item);
       if (slots[0]) buttons.push(btn('equip', slots[0] === 'weapon' ? 'Equip main hand' : 'Equip'));
       if (slots.includes('offhand') && item.slot === 'weapon') buttons.push(btn('equip-off', 'Equip off-hand'));
+      if (item.gem && enabled('forge')) buttons.push(...this.setButtons(hero, item, sel.index, btn));
     } else if (sel.slot !== 'weapon') {
       buttons.push(btn('unequip', 'Take off'));
     }
@@ -156,6 +161,19 @@ export class Inventory {
         <div><strong>${esc(item.name)}</strong> <small>${where}</small><br /><small>${stats(item) || 'No bonus'}</small> ${versus}${combosHtml(item)}</div>
       </div>
       <div class="inv-actions">${buttons.join('')}</div>${msg}`;
+  }
+
+  /** A button for each piece, worn or carried, the gem can be set in (what it adds is shown): the Set action of the forge. */
+  private setButtons(hero: Hero, gem: Item, index: number, btn: (action: string, text: string) => string): string[] {
+    const out: string[] = [];
+    const add = (action: string, base: Item | undefined, where: string) => {
+      if (!base || !canSet(gem, base) || !fusedOf(base, gem)) return;
+      const adds = bonusTexts(bonusFor(gem, base)).join(', ');
+      out.push(btn(action, `Set in ${esc(base.name)} (${where}${adds ? `: ${adds}` : ''})`));
+    };
+    for (const slot of GEAR_SLOTS) add(`set:slot:${slot}`, hero[slot], SLOT_LABELS[slot]);
+    hero.pack.forEach((base, i) => i !== index && add(`set:pack:${i}`, base, 'pack'));
+    return out;
   }
 
   private select(sel: Selection) {
@@ -194,7 +212,13 @@ export class Inventory {
     const h = this.handlers;
     if (!this.hero || !sel || !h) return;
     let op: InvOp | null = null;
-    if (sel.from === 'pack') {
+    const [verb, where, which] = action.split(':');
+    if (verb === 'set' && sel.from === 'pack')
+      op =
+        where === 'pack'
+          ? { t: 'fuse', gem: sel.index, into: { pack: Number(which) } }
+          : { t: 'fuse', gem: sel.index, into: { slot: which as GearSlot } };
+    else if (sel.from === 'pack') {
       if (action === 'equip') op = { t: 'equip', index: sel.index };
       else if (action === 'equip-off') op = { t: 'equip', index: sel.index, slot: 'offhand' };
       else if (action === 'use') op = { t: 'use', index: sel.index };

@@ -6,6 +6,7 @@
 // enemies (see `MobKind.gold`); chests hold the odd purse and the gear that no shop stocks.
 
 import { enabledAnywhere } from './capabilities';
+import { isGem } from './gems';
 import { onlyFeeds } from './needs';
 import type { Hero, Item } from './combat';
 import { addToPack, hasRoom, isBetter, takeFromPack, wearIfBetter } from './inventory';
@@ -34,8 +35,8 @@ export interface Shop {
   buys: readonly string[];
 }
 
-/** Kinds of goods a shop can buy back, besides a gear slot: plain weapons, bows, wands and tomes, supplies. */
-export const TRADE_KINDS = ['blade', 'bow', 'caster', 'supply'] as const;
+/** Kinds of goods a shop can buy back, besides a gear slot: plain weapons, bows, wands and tomes, supplies, gems. */
+export const TRADE_KINDS = ['blade', 'bow', 'caster', 'supply', 'gem'] as const;
 
 const isBow = (item: Item) => item.ranged !== undefined;
 const isCaster = (item: Item) => item.focus !== undefined;
@@ -44,6 +45,7 @@ const KIND_TEST: Record<(typeof TRADE_KINDS)[number], (item: Item) => boolean> =
   bow: isBow,
   caster: isCaster,
   supply: (item) => item.use !== undefined,
+  gem: isGem,
 };
 
 /** Does a shop buy this item back? A slot in `buys` takes anything worn there (`weapon` every weapon). */
@@ -64,10 +66,11 @@ export function setShops(shops: Record<string, Shop>) {
 
 export type Trade = { ok: true; text: string; worn?: Item } | { ok: false; text: string };
 
-/** What a shop has for sale in this campaign: no bread or waterskins where nobody gets hungry (systems/capabilities.ts). */
+/** What a shop has for sale in this campaign: no bread or waterskins where nobody gets hungry, no gems where none can be set (systems/capabilities.ts). */
 export function stockOf(shop: Pick<Shop, 'stock'>): readonly ItemId[] {
-  if (enabledAnywhere('needs')) return shop.stock;
-  return shop.stock.filter((id) => !onlyFeeds(itemOf(id)));
+  return shop.stock.filter(
+    (id) => (enabledAnywhere('needs') || !onlyFeeds(itemOf(id))) && (enabledAnywhere('forge') || !isGem(itemOf(id))),
+  );
 }
 
 /**

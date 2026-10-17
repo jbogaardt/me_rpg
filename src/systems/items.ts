@@ -10,11 +10,20 @@
 //
 // Item codes (systems/inventory.ts, what travels over the network) are an item's place in the campaign's list, so add
 // new items at the end of a campaign's file; both co-op players play the same content (the world check), so they agree.
+// The pieces a gem makes (`FUSED`) follow the authored list in the codes.
 
 import type { GearSlot, Hero, Item } from './combat';
+import { fusedId, fusions } from './gems';
 
 /** The campaign's items by id, in the content's order (empty until the content is installed). */
 export const ITEMS: Record<string, Item> = {};
+
+/**
+ * The pieces made by setting a gem in another item (systems/gems.ts), by id, derived when the items are installed. They
+ * are not in `ITEMS` (that is the campaign's own list, which its content checks and balance rules read); they come after it in
+ * the item codes, so they travel over the network like any item.
+ */
+export const FUSED: Record<string, Item> = {};
 
 /** What a new hero starts with: an item id per gear slot (the weapon always). */
 export type StartGear = { weapon: string } & Partial<Record<Exclude<GearSlot, 'weapon'>, string>>;
@@ -27,16 +36,25 @@ let codes = new Map<Item, number>();
 export function setItems(items: Record<string, Item>, startGear: StartGear) {
   for (const id of Object.keys(ITEMS)) delete ITEMS[id];
   Object.assign(ITEMS, items);
-  order = Object.keys(items);
-  codes = new Map(order.map((id, i) => [items[id]!, i + 1]));
+  for (const id of Object.keys(FUSED)) delete FUSED[id];
+  Object.assign(FUSED, fusions(items));
+  order = [...Object.keys(items), ...Object.keys(FUSED)];
+  codes = new Map(order.map((id, i) => [(items[id] ?? FUSED[id])!, i + 1]));
   start = startGear;
 }
 
 /** An item by id; throws for one this campaign does not have (content is checked on load, so that is a bug). */
 export function itemOf(id: string): Item {
-  const item = ITEMS[id];
+  const item = ITEMS[id] ?? FUSED[id];
   if (!item) throw new Error(`This campaign has no item "${id}"`);
   return item;
+}
+
+/** The piece made by setting `gem` in `base` (both installed items), or undefined if the gem does not fit. */
+export function fusedOf(base: Item, gem: Item): Item | undefined {
+  const b = idOfItem(base);
+  const g = idOfItem(gem);
+  return b !== undefined && g !== undefined ? FUSED[fusedId(b, g)] : undefined;
 }
 
 /** The id of an installed item (undefined for one that is not). */

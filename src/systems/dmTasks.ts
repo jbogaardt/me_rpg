@@ -11,7 +11,7 @@ import type { QuestLog } from './combat';
 import { VISIT_RADIUS, castIn, haulIn, killIn, progressIn, siteIn, visitIn, type Quest } from './quests';
 
 /** A quest's kind; its place in this list is how it travels, so the list is append-only. */
-export const TASK_KINDS = ['hunt', 'gather', 'find', 'visit', 'cast', 'haul'] as const;
+export const TASK_KINDS = ['hunt', 'gather', 'find', 'visit', 'cast', 'haul', 'forge'] as const;
 export type TaskKind = (typeof TASK_KINDS)[number];
 export const TASK_STATES = ['active', 'done', 'failed'] as const;
 export type TaskState = (typeof TASK_STATES)[number];
@@ -39,7 +39,7 @@ export interface QuestOffer {
   title: string;
   zone: string;
   goal: number;
-  /** Hunt: the foe's kind key; gather: the site kind; find: the item id; visit: the place's name. */
+  /** Hunt: the foe's kind key; gather: the site kind; find: the item id; visit: the place's name; forge: the id of the piece to make. */
   what: string;
   /** Where it leads (the area the party is shown): the foes, the nearest site, the relic, the place. */
   x: number;
@@ -106,7 +106,9 @@ export function parOf(kind: TaskKind, goal: number): number {
           ? goal * 45
           : kind === 'find'
             ? 180
-            : 120;
+            : kind === 'forge'
+              ? 150
+              : 120;
 }
 
 /**
@@ -188,6 +190,15 @@ export class TaskBook {
     const t = this.task;
     const place = t && { col: t.x / CELL - 0.5, row: t.y / CELL - 0.5 };
     if (!t || t.state !== 'active' || !haulIn(t.log, t.quest, zone, place ?? undefined, index, x, y)) return false;
+    this.count(t);
+    return true;
+  }
+
+  /** Someone set a gem in a piece, making `made` (an item id): counts if the forge quest asks for exactly that. */
+  forge(made: string): boolean {
+    const t = this.task;
+    if (!t || t.state !== 'active' || t.kind !== 'forge' || t.what !== made || t.log.progress >= 1) return false;
+    t.log.progress = 1;
     this.count(t);
     return true;
   }

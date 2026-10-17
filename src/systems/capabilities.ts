@@ -93,6 +93,11 @@ export const CAPABILITIES = {
     off: 'Barrels stay where they stand: they still block, but cannot be picked up or moved.',
     scope: 'zone',
   },
+  forge: {
+    name: 'Setting gems',
+    off: 'Gems cannot be set in gear: no Set action in the pack, no shop sells a gem, and the DM gives no quest to forge one.',
+    scope: 'campaign',
+  },
   coop: {
     name: 'Online co-op',
     off: 'The Online tab is hidden: no hosting or joining (a join link is ignored).',

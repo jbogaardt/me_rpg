@@ -275,6 +275,15 @@ describe('messages', () => {
     }
   });
 
+  it('carries the fuse Inventory action (v45): a gem in the pack set in a pack piece or, negative, a worn slot', () => {
+    const base = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
+    for (const inv of [
+      [4, 5, 2, 7],
+      [5, 5, 0, -3],
+    ])
+      expect(parseMessage(JSON.stringify({ ...base, inv }))).toEqual({ ...base, inv });
+  });
+
   it('takes a snapshot that leaves the ground out (unchanged) and keeps one that lists it', () => {
     const { ground: _listed, ...without } = { ...snap, ground: [[100, 1, 2, 25, 179]] satisfies GroundSnap[] };
     const parsed = parseMessage(JSON.stringify(without)) as SnapMsg;
@@ -442,7 +451,13 @@ describe('the Dungeon Master’s word and the party’s votes', () => {
     expect(parseMessage(encodeMessage(task))).toEqual(task);
     const arrow = { ...dm, task: [0, 0, 2, 5, 'the_fen', 512, 99, 'Hunt 5 Goblins', 0, 2, 'goblin'] as Task }; // v44: an arrow
     expect(parseMessage(encodeMessage(arrow))).toEqual(arrow);
+    const forge = {
+      ...dm,
+      task: [6, 0, 0, 1, 'the_fen', 512, 99, 'Set an Emerald in a Steel Sword', 0, 0, 'steelSword+emerald'] as Task,
+    }; // v45: a forge quest
+    expect(parseMessage(encodeMessage(forge))).toEqual(forge);
     const broken = [
+      [99, 0, 0, 1, 'z', 0, 0, 'x', 0, 0, ''],
       [9, 0, 0, 1, 'z', 0, 0, 'x', 0, 0, ''],
       [0, 0, 0, 1, '', 0, 0, 'x', 0, 0, ''],
       [0, 0, 0, 1, 'z', 0, 0, '', 0, 0, ''],
