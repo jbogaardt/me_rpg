@@ -17,6 +17,8 @@ export interface FolkSpawn {
 
 export interface Population {
   mobs: MobSpawn[];
+  /** Authored bosses the node places (`EntityDef.boss`): kept out of `mobs`, made only while a quest asks (`systems/bosses.ts`). */
+  bosses: MobSpawn[];
   folk: FolkSpawn[];
 }
 
@@ -119,17 +121,19 @@ export function populate(
   entities: Record<string, EntityDef>,
 ): Population {
   const mobs: MobSpawn[] = [];
+  const bosses: MobSpawn[] = [];
   const folk: FolkSpawn[] = [];
   const place = (p: Placement) => {
     const def = entities[p.entity];
     if (!def) throw new Error(`Scenario "${node?.node_id}" places unknown entity "${p.entity}"`);
     const at = { col: Math.round(p.x), row: Math.round(p.y) };
-    if (def.type === 'mob') mobs.push({ kind: p.entity, ...at, ...(p.level ? { level: p.level } : {}) });
+    if (def.type === 'mob')
+      (def.boss ? bosses : mobs).push({ kind: p.entity, ...at, ...(p.level ? { level: p.level } : {}) });
     else folk.push({ entity: p.entity, def, ...at });
   };
   (node?.entities ?? []).forEach(place);
   const taken: [number, number][] = [];
   for (const rule of biome?.generation.roam ?? []) mobs.push(...roam(map, rule, taken));
   (node?.cast ?? []).forEach(place); // a Dungeon Master's, after the roamers: see ScenarioNode.cast
-  return { mobs, folk };
+  return { mobs, bosses, folk };
 }

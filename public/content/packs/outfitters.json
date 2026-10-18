@@ -264,7 +264,7 @@
         "power": 5,
         "cooldown": 0.4,
         "combos": [
-          { "keys": "lrlrlr", "spell": "chain", "cost": 17, "power": 1.1, "count": 3 },
+          { "keys": "ludrul", "spell": "chain", "cost": 17, "power": 1.1, "count": 3 },
           { "keys": "ululdr", "spell": "lance", "cost": 15, "power": 1.2 },
           { "keys": "dudrdr", "spell": "smite", "cost": 13, "power": 1.6 },
           { "keys": "rdrdlu", "spell": "gale", "cost": 12, "power": 0.9 }

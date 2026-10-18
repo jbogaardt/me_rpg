@@ -8,6 +8,7 @@ import type { Dialog } from '../../hud/Dialog';
 import type { MapOverlay } from '../../hud/MapOverlay';
 import type { Menu } from '../../hud/Menu';
 import { CELL } from '../../map/types';
+import { bossStands, taskWantsBoss } from '../../systems/bosses';
 import { briefing, objective } from '../../systems/dmBrief';
 import { bossKind, bossShell, nameOfBossTitle, parseBossWhat } from '../../systems/dmBoss';
 import { RELIC_KIND, parseRelicWhat } from '../../systems/dmQuests';
@@ -286,6 +287,24 @@ export class StoryUi {
           item: parseRelicWhat(want.what).item,
         });
       else if (have && !(want && z.name === want.zone)) z.removeSite(have);
+    }
+  }
+
+  /**
+   * An authored boss (`systems/bosses.ts`) stands in its zone only while a quest asks for it and is not done: the hero's
+   * current chain quest (solo only: that story counts for nobody online) or the party's DM task, a saga step that hunts it
+   * (on every page, like the DM's own boss, at the zone's end so indexes agree). A zone built after it fell, or before the quest
+   * was taken, has none to farm. It is never taken out again (a fallen one plays out its death).
+   */
+  syncNamedBoss() {
+    const log = this.arena.role === 'solo' ? this.arena.hero.quests : null;
+    for (const z of this.arena.zones.values()) {
+      for (const spawn of z.bosses) {
+        const wanted =
+          (log && bossStands(log, spawn.kind, z.name)) || taskWantsBoss(this.arena.task, spawn.kind, z.name);
+        if (!wanted || z.mobs.some((m) => m.kind.named && mobKey(m.kind) === spawn.kind)) continue;
+        z.admitNamed(spawn);
+      }
     }
   }
 

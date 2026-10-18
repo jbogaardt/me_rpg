@@ -154,6 +154,31 @@ export interface MobKind {
   death?: MobDeath;
   /** A named boss of the content (entities.json `boss`, systems/bosses.ts): placed once, never respawns, mends when the party leaves it. */
   named?: boolean;
+  /** Blows it shrugs off before one staggers it (`Poise`, systems/mobDefense.ts); absent or 0: every blow staggers. Its windup and lunge are then uninterruptible. */
+  poiseMax?: number;
+  /** Seconds unhurt before its poise is whole again (default `POISE_REGEN`). */
+  poiseRegen?: number;
+  /** A gap-closer for when it is kited: a telegraphed dash at a hero who stays out of range (`Mob.ts`). */
+  charge?: MobCharge;
+  /** A shield: turns frontal arrows and spells aside while it is up (`frontal`, systems/mobDefense.ts). */
+  guard?: MobGuard;
+}
+
+/** A kind's gap-closer, every number in full (the content gives only what it changes, `resolveCharge`). */
+export interface MobCharge {
+  range: number; // px: the hero further than this (and seen) starts the count
+  after: number; // seconds the hero stays out of range in the fight before it charges
+  windup: number; // seconds of telegraph before the dash
+  speed: number; // px/s of the dash
+  duration: number; // seconds the dash lasts at most
+  cooldown: number; // seconds before it may charge again
+  power: number; // multiplier on its blow when the dash lands
+}
+
+/** A kind's shield, every number in full (`resolveGuard`). */
+export interface MobGuard {
+  arc: number; // degrees of its front that are covered
+  chip: number; // 0..1, the share of a blocked blow that still hurts
 }
 
 /** Per-kind tuning of the windup cue. */

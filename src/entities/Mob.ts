@@ -3,7 +3,7 @@ import { playGame } from '../hud/gameSfx';
 import { CELL } from '../map/types';
 import { DIR_VEC, directionToward, type Direction } from '../core/direction';
 import { glide } from '../core/interp';
-import { mobTimings, telegraphOf, type MobKind, type MobState, type MobView } from '../systems/combat';
+import { mobTimings, telegraphOf, type MobGuard, type MobKind, type MobState, type MobView } from '../systems/combat';
 import {
   TELL_COLOR,
   TELL_FLUSH,
@@ -15,9 +15,11 @@ import {
   squashY,
   tremblePx,
 } from '../systems/tellLook';
+import { Poise, frontal, type Blow } from '../systems/mobDefense';
 import {
   hitPauseFor,
   KNOCK_DECAY,
+  KNOCK_NUDGE,
   KNOCK_SHOVE,
   KNOCK_SPEED,
   killPauseFor,
@@ -36,8 +38,8 @@ export interface MobWorld {
   slide(body: Character, mx: number, my: number): boolean;
   /** Whether nothing solid lies between two points (a wall breaks sight). Absent: always true. */
   sees?(x0: number, y0: number, x1: number, y1: number): boolean;
-  /** The mob's melee attack connected with `target`. */
-  strike(mob: Mob, target: Character): void;
+  /** The mob's melee attack connected with `target`; `power` is a multiplier on the blow (a charge lands heavier). */
+  strike(mob: Mob, target: Character, power?: number): void;
   /** A ranged mob fires along the unit vector (ux, uy); the scene flies the projectile and decides what it hits. */
   shoot(mob: Mob, ux: number, uy: number): void;
   /** One burn of a held ray on `target`. Returns false when the beam cannot reach them (a wall): it then ends. */
@@ -45,7 +47,7 @@ export interface MobWorld {
 }
 
 /** What a mob does to a hero `dist` px away: melee when close, otherwise its ray or shot if it has one in range. */
-export type MobAttack = 'melee' | 'shot' | 'ray';
+export type MobAttack = 'melee' | 'shot' | 'ray' | 'charge';
 
 export function mobAttack(kind: MobKind, dist: number, rayReady = true): MobAttack | null {
   if (kind.shot) return dist <= kind.shot.range ? 'shot' : null;
@@ -81,10 +83,11 @@ const CONTACT = 14; // the lunge stops this close to the hero (times its scale)
 const WINDUP_SPREAD = 0.2; // each windup is ±20% of the kind's, so the rhythm cannot be learned by heart
 const WHIFF_RECOVER = 0.4; // a blow that misses leaves it busy only this share of its recover before it presses in
 const MEND = 0.25; // share of its max HP a mob mends per second once it has lost the hero (no chip-and-run)
-// Stagger rules, so a hero cannot juggle a mob forever: after one stagger the mob shrugs off the next hits for POISE
+// Stagger rules, so a hero cannot juggle a mob forever: after one stagger the mob shrugs off the next hits for SHRUG
 // seconds (the damage still lands, it is only pushed a little), and once COMMITTED of its windup has passed the blow
-// cannot be interrupted. It always gets to swing back.
-const POISE = 0.9;
+// cannot be interrupted. It always gets to swing back. A kind with `poiseMax` (systems/mobDefense.ts) goes further: it
+// only staggers when a hit empties its poise, and its whole windup, lunge and charge are uninterruptible.
+const SHRUG = 0.9;
 const COMMITTED = 0.5;
 const KEEP_AWAY = 0.4; // a shooter backs off when the hero is closer than this fraction of its range
 const RESPAWN = 60; // an adventure, not a grind: a foe that falls stays down for a minute
@@ -132,7 +135,13 @@ export class Mob {
   private hitstop = 0; // hit-pause: frozen mid-blow for this many seconds (systems/hitPause.ts); a kill holds too
   /** Runs once when a kill's hold ends (the death effect plays after the foe has held, not at the blow). */
   private deathHold: (() => void) | null = null;
-  private poise = 0; // seconds left in which a hit cannot stagger it again
+  private shrug = 0; // seconds left in which a hit cannot stagger it again
+  private readonly poise: Poise; // blows it takes before a hit staggers it (a kind with none staggers on every hit)
+  private broken = false; // staggered by a poise break: its poise is whole again when it stands up
+  private dashing = 0; // seconds of charge left (the gap-closer, `MobKind.charge`)
+  private farFor = 0; // seconds the hero has stayed out of charge range while this mob chased
+  private chargeCool = 0; // seconds before it may charge again
+  private bang = new Graphics(); // the "!" over its head while a charge winds up
   private moving = false;
   private attack: MobAttack = 'melee'; // what the current windup leads to
   private windupLen = 0; // this windup's length (the kind's, give or take WINDUP_SPREAD)
@@ -156,10 +165,12 @@ export class Mob {
     private homeY: number,
   ) {
     this.t = mobTimings(kind);
+    this.poise = new Poise(kind.poiseMax ?? 0, kind.poiseRegen);
     this.body = new Character(sheet);
     this.body.setScale(kind.scale ?? 1);
     this.body.addChildAt(this.cue.ground, 0);
-    this.body.addChild(this.cue.air, this.bar, this.beam);
+    this.drawBang();
+    this.body.addChild(this.cue.air, this.bar, this.beam, this.bang);
     this.hp = kind.maxHp;
     this.reset();
   }
@@ -205,7 +216,12 @@ export class Mob {
     this.knock = { x: 0, y: 0 };
     this.hitstop = 0;
     this.deathHold = null;
-    this.poise = 0;
+    this.shrug = 0;
+    this.poise.restore();
+    this.broken = false;
+    this.dashing = 0;
+    this.farFor = 0;
+    this.chargeCool = 0;
     this.lunging = 0;
     this.swing = false;
     this.drawBar();
@@ -221,6 +237,8 @@ export class Mob {
     this.state = 'idle';
     this.timer = 1;
     this.flash = 0;
+    this.dashing = 0;
+    this.broken = false;
     this.beam.clear();
     this.cue.hide();
     this.body.release();
@@ -230,19 +248,30 @@ export class Mob {
 
   /**
    * Take a hit pushing along (vx, vy). Returns true if it was fatal. The knock starts on this tick (it slides through the
-   * hit-pause too), and a kill holds the foe a moment before `onDeathHold` (its death effect) runs.
+   * hit-pause too), and a kill holds the foe a moment before `onDeathHold` (its death effect) runs. The blow says what it
+   * costs the foe's poise and how much of its usual stun it lands for (`Blow`). A foe with poise staggers only when the
+   * hit empties it, and never while it winds up or lunges; otherwise it is hurt but goes on (a nudge, no pause).
    */
-  hit(damage: number, vx: number, vy: number, onDeathHold?: () => void): boolean {
+  hit(damage: number, vx: number, vy: number, onDeathHold?: () => void, blow: Blow = {}): boolean {
+    const stun = blow.stun ?? 1;
     this.hp = Math.max(0, this.hp - damage);
-    this.flash = 0.15;
-    if (!this.remote) {
+    const broke = this.poise.take(blow.poise ?? 1);
+    const staggers = broke && !this.armored() && this.shrug <= 0;
+    if (damage > 0) this.flash = 0.15;
+    if (!this.remote && damage > 0) {
       this.hitstop =
-        this.hp > 0 ? hitPauseFor(damage, this.kind.maxHp) : killPauseFor(!!(this.kind.named || this.kind.boss));
+        this.hp > 0
+          ? this.poise.armed && !staggers
+            ? 0 // it powers through: no freeze, so a string of blows cannot hold it back
+            : hitPauseFor(damage, this.kind.maxHp) * stun
+          : killPauseFor(!!(this.kind.named || this.kind.boss));
     }
     this.deathHold = this.hp <= 0 ? (onDeathHold ?? null) : null;
     this.drawBar();
     if (this.hp <= 0) {
       this.lunging = 0;
+      this.dashing = 0;
+      this.broken = false;
       this.beam.clear();
       this.cue.hide();
       this.body.release();
@@ -252,22 +281,39 @@ export class Mob {
       this.timer = RESPAWN;
       return true;
     }
-    if (this.state === 'channel') {
+    if (this.state === 'channel' && damage > 0) {
       this.breakRay(); // any blow breaks the beam, however poised: it is stunned and then only fights up close
     }
-    const committed = this.state === 'windup' && this.timer < this.windupLen * COMMITTED;
-    if (this.poise > 0 || committed) {
-      this.knock = knockVelocity(vx, vy, KNOCK_SHOVE); // hurt, but not stopped
+    if (!staggers) {
+      this.knock = knockVelocity(vx, vy, this.poise.armed ? KNOCK_NUDGE : KNOCK_SHOVE); // hurt, but not stopped
       return false;
     }
-    this.knock = knockVelocity(vx, vy, KNOCK_SPEED);
-    this.body.play('hurt', this.t.stagger * 1000);
+    const stagger = this.t.stagger * stun;
+    this.knock = knockVelocity(vx, vy, KNOCK_SPEED * stun);
+    this.body.play('hurt', stagger * 1000);
     this.state = 'recover';
     this.lunging = 0; // a staggering hit stops a lunge; the blow (if it has not landed) is lost
     this.swing = false;
-    this.timer = this.t.stagger;
-    this.poise = this.t.stagger + POISE;
+    this.broken = this.poise.armed; // it stands up with its poise whole again (see `recover`)
+    this.timer = stagger;
+    this.shrug = stagger + SHRUG;
     return false;
+  }
+
+  /** Hyper-armor: a hit cannot interrupt what it is doing. A plain foe is only safe once its windup is committed; a poised one from the windup to the end of the lunge or charge. */
+  private armored(): boolean {
+    const committed = this.state === 'windup' && this.timer < this.windupLen * COMMITTED;
+    if (!this.poise.armed) return committed;
+    return this.state === 'windup' || this.lunging > 0 || this.dashing > 0;
+  }
+
+  /** Its shield, if it is up against a blow travelling along (vx, vy): raised while it stalks or waits, down while it attacks, recovers or is stunned. */
+  guards(vx: number, vy: number): MobGuard | null {
+    const guard = this.kind.guard;
+    if (!guard || this.frozen > 0) return null;
+    if (this.state !== 'chase' && this.state !== 'idle' && this.state !== 'wander') return null;
+    const [fx, fy] = DIR_VEC[this.body.facing];
+    return frontal(fx, fy, vx, vy, guard.arc) ? guard : null;
   }
 
   /** The held ray ends (it ran out, was broken by a hit, or lost its target): a short rest, then it fights up close. */
@@ -377,8 +423,10 @@ export class Mob {
     }
 
     this.flash = Math.max(0, this.flash - dt);
-    this.poise = Math.max(0, this.poise - dt);
+    this.shrug = Math.max(0, this.shrug - dt);
+    if (!this.broken) this.poise.tick(dt);
     this.rayRest = Math.max(0, this.rayRest - dt);
+    this.chargeCool = Math.max(0, this.chargeCool - dt);
     this.slideKnock(dt, world);
 
     this.heroes = world.heroes;
@@ -399,6 +447,7 @@ export class Mob {
         ) {
           this.state = 'chase';
           this.unseen = 0;
+          this.farFor = 0;
           break;
         }
         if (this.hp < this.kind.maxHp) {
@@ -442,6 +491,7 @@ export class Mob {
             moving = true;
             break;
           }
+          this.farFor = 0;
           this.state = 'windup';
           this.windupLen = this.t.windup * (1 + WINDUP_SPREAD * (Math.random() * 2 - 1));
           this.timer = this.windupLen;
@@ -451,12 +501,24 @@ export class Mob {
           this.body.play(attack === 'shot' ? 'cast' : 'slash', this.windupLen * 1000); // the pose is the telegraph; the blow lands as it ends
           this.tell(world.heroes);
         } else {
+          // Kiting does not pay: a hero who stays out of range for a while is charged (a telegraphed dash).
+          const { charge } = this.kind;
+          this.farFor = charge && seen && dist > charge.range ? this.farFor + dt : 0;
+          if (charge && this.farFor >= charge.after && this.chargeCool <= 0) {
+            this.startCharge(charge.windup, dx, dy, dist, world);
+            break;
+          }
           moving = this.walk(dx / dist, dy / dist, this.kind.speed * dt, world);
         }
         break;
       }
       case 'windup':
-        if (this.attack === 'melee' && target && !this.driver && this.timer > this.windupLen * COMMITTED) {
+        if (
+          (this.attack === 'melee' || this.attack === 'charge') &&
+          target &&
+          !this.driver &&
+          this.timer > this.windupLen * COMMITTED
+        ) {
           this.aim = { x: dx / (dist || 1), y: dy / (dist || 1) }; // still turning to follow; locked once committed
           this.body.face(directionToward(dx, dy));
         }
@@ -468,6 +530,14 @@ export class Mob {
             this.body.hold(RAY_POSE.anim, RAY_POSE.col);
             this.timer = this.kind.ray.duration;
             this.rayTimer = this.kind.ray.tick * 0.5;
+            break;
+          } else if (this.attack === 'charge' && this.kind.charge) {
+            const { charge } = this.kind;
+            this.dashing = charge.duration; // the dash itself is `dash`, run from `recover`
+            this.swing = true;
+            this.chargeCool = charge.cooldown;
+            this.state = 'recover';
+            this.timer = charge.duration + this.t.recover;
             break;
           } else {
             this.lunging = LUNGE;
@@ -493,8 +563,15 @@ export class Mob {
         break;
       }
       case 'recover':
-        if (this.lunging > 0) this.lunge(dt, world, target);
-        if (this.timer <= 0) this.state = 'chase';
+        if (this.dashing > 0) this.dash(dt, world, target);
+        else if (this.lunging > 0) this.lunge(dt, world, target);
+        if (this.timer <= 0) {
+          this.state = 'chase';
+          if (this.broken) {
+            this.broken = false;
+            this.poise.restore(); // it is up again, and whole
+          }
+        }
         break;
     }
 
@@ -523,12 +600,16 @@ export class Mob {
     const respawned = this.state === 'dead' && next !== 'dead';
     if (hp < this.hp) {
       this.flash = 0.15;
-      if (hp > 0 && next !== 'windup') this.body.play('hurt', this.t.stagger * 1000); // a mob mid-windup was not stopped
+      // only a stagger shows (a foe that powers through, or is mid-windup, was not stopped): the host's state went to recover
+      const staggered = next === 'recover' && (this.state !== 'recover' || timer > this.timer + 0.02);
+      if (hp > 0 && staggered) this.body.play('hurt', this.t.stagger * 1000);
     }
     if (next === 'windup' && this.state !== 'windup') {
       const near = nearest(this.body, heroes);
       const dist = near ? Math.hypot(near.x - this.body.x, near.y - this.body.y) : Infinity;
-      this.attack = mobAttack(this.kind, dist) ?? (this.kind.shot ? 'shot' : this.kind.ray ? 'ray' : 'melee');
+      const charging = !!this.kind.charge && dist > this.kind.charge.range * 0.5;
+      this.attack =
+        mobAttack(this.kind, dist) ?? (this.kind.shot ? 'shot' : this.kind.ray ? 'ray' : charging ? 'charge' : 'melee');
       this.windupLen = Math.max(timer, 0.05); // the host's (spread) windup, as it was when we first heard of it
       this.body.play(this.attack === 'shot' ? 'cast' : 'slash', this.windupLen * 1000); // the pose is the telegraph
       this.tell(heroes);
@@ -594,6 +675,7 @@ export class Mob {
    * strongly the body is flushed (0 when not winding up).
    */
   private drawTell({ ground }: { ground: boolean }): number {
+    this.bang.visible = this.state === 'windup' && this.attack === 'charge';
     if (this.state !== 'windup') {
       this.cue.hide();
       this.body.setOffset(0, 0);
@@ -628,7 +710,7 @@ export class Mob {
     q.uy = dy / norm;
     q.reach = melee ? lungeOf(this.kind) + (HIT_AHEAD + HIT_RADIUS) * scale : 0;
     q.scale = scale;
-    q.line = !melee;
+    q.line = !melee; // a shot, a ray or a charge: a long line of marks
     q.marks = ground;
     this.cue.update(q);
     return flush(progress, elapsed, len);
@@ -669,6 +751,59 @@ export class Mob {
   private fade() {
     this.body.alpha = Math.max(0, (this.timer - (RESPAWN - FADE)) / FADE);
     this.body.visible = this.body.alpha > 0;
+  }
+
+  /** The gap-closer's telegraph: the usual windup (coil, flush, ground marks and tone) plus a "!" overhead; the dash follows (`dash`). */
+  private startCharge(windup: number, dx: number, dy: number, dist: number, world: MobWorld) {
+    this.state = 'windup';
+    this.attack = 'charge';
+    this.windupLen = windup * (1 + WINDUP_SPREAD * (Math.random() * 2 - 1));
+    this.timer = this.windupLen;
+    this.farFor = 0;
+    this.aim = { x: dx / (dist || 1), y: dy / (dist || 1) };
+    this.body.face(directionToward(dx, dy));
+    this.body.play('slash', this.windupLen * 1000);
+    this.tell(world.heroes);
+  }
+
+  /** One frame of the charge: sprint along the locked aim and hit the first hero in front of it (heavier than a plain blow); a miss leaves it spent. */
+  private dash(dt: number, world: MobWorld, target: Character | undefined) {
+    const { charge } = this.kind;
+    if (!charge) {
+      this.dashing = 0;
+      return;
+    }
+    const scale = this.kind.scale ?? 1;
+    const step = Math.min(dt, this.dashing);
+    this.dashing -= step;
+    const close = target && Math.hypot(target.x - this.body.x, target.y - this.body.y) < CONTACT * scale;
+    if (!close) world.slide(this.body, this.aim.x * charge.speed * step, this.aim.y * charge.speed * step);
+    if (this.swing) {
+      const cx = this.body.x + this.aim.x * HIT_AHEAD * scale;
+      const cy = this.body.y + this.aim.y * HIT_AHEAD * scale;
+      const hit = world.heroes.find((h) => Math.hypot(h.x - cx, h.y - cy) < HIT_RADIUS * scale);
+      if (hit) {
+        this.swing = false;
+        this.dashing = 0;
+        this.timer = Math.min(this.timer, this.t.recover);
+        world.strike(this, hit, charge.power);
+      }
+    }
+    if (this.dashing <= 0) this.swing = false; // it ran out of road: it rests the whole recover
+  }
+
+  /** The "!" that marks a charge winding up: two blocks of the danger colour in a dark frame, drawn once and shown only then. */
+  private drawBang() {
+    this.bang
+      .rect(-3, -13, 6, 14)
+      .fill(0x000000)
+      .rect(-2, -12, 4, 8)
+      .fill(TELL_COLOR)
+      .rect(-2, -2, 4, 2)
+      .fill(TELL_COLOR);
+    this.bang.position.set(0, -76 * (this.kind.scale ?? 1));
+    this.bang.scale.set(1.25);
+    this.bang.visible = false;
   }
 
   /** One frame of the lunge: dash along the locked aim and strike the first hero in front of it; a miss is punished less. */

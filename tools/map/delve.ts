@@ -5,6 +5,7 @@
 // grid paints a cave or a sewer; a theme names the grounds (GROUND in catalog.ts, art by MrBeast, art/oga_dungeon/).
 
 import type { GroundName } from './catalog';
+import type { TerrainName } from './terrain';
 import type { ZoneApi } from './zone';
 
 export type Cell = '#' | '.' | '~' | '^';
@@ -20,6 +21,13 @@ interface Theme {
   wall: GroundName[];
   /** The wall face against water or lava instead of floor, when the art differs. */
   wallWater?: GroundName;
+  /** The floor in a wall's contact shadow: used for the floor row just south of rock. */
+  shade?: GroundName;
+  /** Now and then in place of the roof, so a thick mass of rock has grain. */
+  roofAlt?: GroundName;
+  /** Autotiled terrains laid over pools and lava (soft banks and shorelines instead of square cell edges). */
+  waterTerrain?: TerrainName;
+  lavaTerrain?: TerrainName;
 }
 
 export const DELVE_THEMES = {
@@ -31,19 +39,26 @@ export const DELVE_THEMES = {
     roof: 'caveRoof',
     wall: ['caveFaceL', 'caveFaceU', 'caveEdge'],
     wallWater: 'caveFaceLWater',
+    waterTerrain: 'murk',
+    lavaTerrain: 'lava',
   },
   rock: {
     floor: 'rockFloor',
     water: 'caveWater',
     lava: 'caveLava',
     roof: 'rockRoof',
-    wall: ['rockFaceL', 'rockFaceU', 'rockEdge'],
+    wall: ['rockFaceL', 'rockFaceU', 'rockFaceM', 'rockEdge'],
+    shade: 'rockFloorShade',
+    roofAlt: 'rockRoofB',
+    waterTerrain: 'murk',
+    lavaTerrain: 'lava',
   },
   sewer: {
     floor: 'sewerFloor',
     water: 'sewerWater',
     roof: 'sewerRoof',
     wall: ['sewerFaceL', 'sewerFaceU', 'sewerCap', 'sewerCapTop'],
+    waterTerrain: 'murk',
   },
 } satisfies Record<string, Theme>;
 export type DelveTheme = keyof typeof DELVE_THEMES;
@@ -124,8 +139,10 @@ export class Delve {
       for (let col = 0; col < this.width; col++) {
         const cell = this.at(col, row);
         let ground: GroundName;
-        if (cell === '.') ground = theme.detail && hash(col, row, 7) < 1 / DETAIL ? theme.detail : theme.floor;
-        else if (cell === '~') ground = theme.water;
+        if (cell === '.') {
+          ground = theme.detail && hash(col, row, 7) < 1 / DETAIL ? theme.detail : theme.floor;
+          if (theme.shade && this.at(col, row - 1) === '#') ground = theme.shade;
+        } else if (cell === '~') ground = theme.water;
         else if (cell === '^') ground = theme.lava ?? theme.water;
         else {
           let depth = 1;
@@ -133,10 +150,29 @@ export class Delve {
           const below = this.at(col, row + depth);
           const open = row + depth < this.height;
           ground = !open || depth > theme.wall.length ? theme.roof : theme.wall[depth - 1];
+          if (ground === theme.roof && theme.roofAlt && hash(col, row, 3) < 0.35) ground = theme.roofAlt;
           if (open && depth === 1 && below !== '.' && theme.wallWater) ground = theme.wallWater;
         }
         z.fill(ground, { col, row, w: 1, h: 1 });
       }
+    }
+    // Pools and lava get a soft bank and a shoreline from the autotiled terrains, drawn over the ground fills above.
+    for (const [cell, terrain] of [
+      ['~', theme.waterTerrain],
+      ['^', theme.lavaTerrain],
+    ] as const) {
+      if (!terrain) continue;
+      const rects = [];
+      for (let row = 0; row < this.height; row++) {
+        for (let col = 0; col < this.width; col++) {
+          if (this.at(col, row) !== cell) continue;
+          let w = 1;
+          while (col + w < this.width && this.at(col + w, row) === cell) w++;
+          rects.push({ col, row, w, h: 1 });
+          col += w - 1;
+        }
+      }
+      if (rects.length) z.paint(terrain, rects);
     }
     for (const [cell, reason] of [
       ['#', 'rock wall'],

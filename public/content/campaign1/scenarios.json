@@ -1294,6 +1294,27 @@
       "choices": []
     },
     {
+      "node_id": "ruin_temple_desert",
+      "biome_type": "ruin_temple_desert",
+      "entities": [
+        { "entity": "mummy", "x": 10, "y": 9, "level": 5 },
+        { "entity": "mummy", "x": 15, "y": 12, "level": 5 },
+        { "entity": "skeleton", "x": 12, "y": 17, "level": 5 },
+        { "entity": "raider", "x": 22, "y": 11, "level": 6 }
+      ],
+      "choices": []
+    },
+    {
+      "node_id": "ruin_hall",
+      "biome_type": "ruin_hall",
+      "entities": [
+        { "entity": "orc", "x": 11, "y": 7, "level": 6 },
+        { "entity": "warg", "x": 13, "y": 11, "level": 6 },
+        { "entity": "tuskGuard", "x": 19, "y": 8, "level": 7 }
+      ],
+      "choices": []
+    },
+    {
       "node_id": "crypt_barrow",
       "biome_type": "crypt_barrow",
       "entities": [
