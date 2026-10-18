@@ -1,6 +1,7 @@
 {
   "version": 1,
   "start": "greenwood",
+  "home": "town",
   "capabilities": {
     "levelGates": false
   },
@@ -115,6 +116,222 @@
           "entity": "bat",
           "x": 46,
           "y": 38
+        },
+        {
+          "entity": "bat",
+          "x": 10,
+          "y": 13
+        },
+        {
+          "entity": "bat",
+          "x": 19,
+          "y": 12
+        },
+        {
+          "entity": "skeleton",
+          "x": 14,
+          "y": 8
+        },
+        {
+          "entity": "raider",
+          "x": 44,
+          "y": 11
+        },
+        {
+          "entity": "skeleton",
+          "x": 40,
+          "y": 5
+        },
+        {
+          "entity": "orc",
+          "x": 62,
+          "y": 13,
+          "level": 6
+        },
+        {
+          "entity": "orc",
+          "x": 74,
+          "y": 21,
+          "level": 6
+        },
+        {
+          "entity": "skeleton",
+          "x": 66,
+          "y": 12,
+          "level": 6
+        },
+        {
+          "entity": "skeleton",
+          "x": 70,
+          "y": 22,
+          "level": 6
+        },
+        {
+          "entity": "mummy",
+          "x": 76,
+          "y": 15,
+          "level": 6
+        },
+        {
+          "entity": "warg",
+          "x": 64,
+          "y": 18,
+          "level": 6
+        },
+        {
+          "entity": "orc",
+          "x": 50,
+          "y": 16,
+          "level": 6
+        },
+        {
+          "entity": "warg",
+          "x": 24,
+          "y": 34,
+          "level": 6
+        },
+        {
+          "entity": "warg",
+          "x": 36,
+          "y": 22,
+          "level": 6
+        },
+        {
+          "entity": "mummy",
+          "x": 22,
+          "y": 31,
+          "level": 6
+        },
+        {
+          "entity": "skeleton",
+          "x": 27,
+          "y": 15,
+          "level": 6
+        },
+        {
+          "entity": "mummy",
+          "x": 6,
+          "y": 38
+        },
+        {
+          "entity": "warg",
+          "x": 9,
+          "y": 48,
+          "level": 6
+        },
+        {
+          "entity": "orc",
+          "x": 72,
+          "y": 27,
+          "level": 6
+        },
+        {
+          "entity": "skeleton",
+          "x": 26,
+          "y": 45,
+          "level": 6
+        },
+        {
+          "entity": "warg",
+          "x": 10,
+          "y": 57,
+          "level": 7
+        },
+        {
+          "entity": "warg",
+          "x": 18,
+          "y": 53,
+          "level": 7
+        },
+        {
+          "entity": "skeleton",
+          "x": 14,
+          "y": 59,
+          "level": 7
+        },
+        {
+          "entity": "mummy",
+          "x": 30,
+          "y": 55,
+          "level": 7
+        },
+        {
+          "entity": "orc",
+          "x": 46,
+          "y": 53,
+          "level": 7
+        },
+        {
+          "entity": "orc",
+          "x": 52,
+          "y": 57,
+          "level": 7
+        },
+        {
+          "entity": "orc",
+          "x": 55,
+          "y": 53,
+          "level": 7
+        },
+        {
+          "entity": "mummy",
+          "x": 50,
+          "y": 58,
+          "level": 7
+        },
+        {
+          "entity": "orc",
+          "x": 45,
+          "y": 36,
+          "level": 7
+        },
+        {
+          "entity": "orc",
+          "x": 49,
+          "y": 39,
+          "level": 7
+        },
+        {
+          "entity": "warg",
+          "x": 47,
+          "y": 46,
+          "level": 7
+        },
+        {
+          "entity": "troll",
+          "x": 66,
+          "y": 49,
+          "level": 8
+        },
+        {
+          "entity": "orc",
+          "x": 61,
+          "y": 47,
+          "level": 8
+        },
+        {
+          "entity": "orc",
+          "x": 71,
+          "y": 47,
+          "level": 8
+        },
+        {
+          "entity": "warg",
+          "x": 62,
+          "y": 53,
+          "level": 8
+        },
+        {
+          "entity": "warg",
+          "x": 70,
+          "y": 53,
+          "level": 8
+        },
+        {
+          "entity": "warg",
+          "x": 66,
+          "y": 44,
+          "level": 8
         }
       ],
       "choices": []
@@ -653,6 +870,183 @@
           "entity": "slime",
           "x": 40,
           "y": 29
+        },
+        {
+          "entity": "goblin",
+          "x": 50,
+          "y": 6
+        },
+        {
+          "entity": "goblin",
+          "x": 55,
+          "y": 9
+        },
+        {
+          "entity": "slime",
+          "x": 53,
+          "y": 5
+        },
+        {
+          "entity": "wolfkin",
+          "x": 50,
+          "y": 25
+        },
+        {
+          "entity": "wolfkin",
+          "x": 55,
+          "y": 29
+        },
+        {
+          "entity": "slime",
+          "x": 53,
+          "y": 27
+        },
+        {
+          "entity": "goblin",
+          "x": 44,
+          "y": 15
+        },
+        {
+          "entity": "goblin",
+          "x": 52,
+          "y": 15
+        },
+        {
+          "entity": "slime",
+          "x": 10,
+          "y": 21
+        },
+        {
+          "entity": "wolfkin",
+          "x": 12,
+          "y": 37,
+          "level": 3
+        },
+        {
+          "entity": "wolfkin",
+          "x": 30,
+          "y": 37,
+          "level": 3
+        },
+        {
+          "entity": "wolfkin",
+          "x": 46,
+          "y": 37,
+          "level": 3
+        },
+        {
+          "entity": "shade",
+          "x": 22,
+          "y": 37,
+          "level": 3
+        },
+        {
+          "entity": "goblin",
+          "x": 6,
+          "y": 45,
+          "level": 3
+        },
+        {
+          "entity": "goblin",
+          "x": 12,
+          "y": 45,
+          "level": 3
+        },
+        {
+          "entity": "goblin",
+          "x": 8,
+          "y": 50,
+          "level": 3
+        },
+        {
+          "entity": "shade",
+          "x": 13,
+          "y": 49,
+          "level": 4
+        },
+        {
+          "entity": "wolfkin",
+          "x": 20,
+          "y": 47,
+          "level": 4
+        },
+        {
+          "entity": "wolfkin",
+          "x": 30,
+          "y": 47,
+          "level": 4
+        },
+        {
+          "entity": "shade",
+          "x": 25,
+          "y": 43,
+          "level": 4
+        },
+        {
+          "entity": "shade",
+          "x": 25,
+          "y": 51,
+          "level": 4
+        },
+        {
+          "entity": "goblin",
+          "x": 37,
+          "y": 44,
+          "level": 4
+        },
+        {
+          "entity": "goblin",
+          "x": 43,
+          "y": 44,
+          "level": 4
+        },
+        {
+          "entity": "goblin",
+          "x": 37,
+          "y": 50,
+          "level": 4
+        },
+        {
+          "entity": "goblin",
+          "x": 41,
+          "y": 50,
+          "level": 4
+        },
+        {
+          "entity": "wolfkin",
+          "x": 40,
+          "y": 47,
+          "level": 5
+        },
+        {
+          "entity": "shade",
+          "x": 40,
+          "y": 51,
+          "level": 5
+        },
+        {
+          "entity": "shade",
+          "x": 51,
+          "y": 44,
+          "level": 5
+        },
+        {
+          "entity": "shade",
+          "x": 55,
+          "y": 44,
+          "level": 5
+        },
+        {
+          "entity": "wolfkin",
+          "x": 53,
+          "y": 50,
+          "level": 5
+        },
+        {
+          "entity": "orc",
+          "x": 53,
+          "y": 47,
+          "level": 5
         }
       ],
       "choices": []
@@ -1025,138 +1419,361 @@
           "entity": "orc",
           "x": 48,
           "y": 7,
-          "level": 18
+          "level": 20
         },
         {
           "entity": "orc",
           "x": 56,
           "y": 11,
-          "level": 18
+          "level": 20
         },
         {
           "entity": "orc",
           "x": 22,
           "y": 20,
-          "level": 20
+          "level": 22
         },
         {
           "entity": "orc",
           "x": 38,
           "y": 31,
-          "level": 20
+          "level": 22
         },
         {
           "entity": "mummy",
           "x": 27,
           "y": 32,
-          "level": 20
+          "level": 22
         },
         {
           "entity": "mummy",
           "x": 24,
           "y": 32,
-          "level": 20
+          "level": 22
         },
         {
           "entity": "raider",
           "x": 32,
           "y": 20,
-          "level": 20
+          "level": 22
         },
         {
           "entity": "raider",
           "x": 27,
           "y": 20,
-          "level": 20
+          "level": 22
         },
         {
           "entity": "troll",
           "x": 20,
           "y": 30,
-          "level": 20
+          "level": 22
         },
         {
           "entity": "skeleton",
           "x": 5,
           "y": 22,
-          "level": 19
+          "level": 21
         },
         {
           "entity": "skeleton",
           "x": 13,
           "y": 26,
-          "level": 19
+          "level": 21
         },
         {
           "entity": "skeleton",
           "x": 7,
           "y": 25,
-          "level": 19
+          "level": 21
         },
         {
           "entity": "zombie",
           "x": 10,
           "y": 23,
-          "level": 19
+          "level": 21
         },
         {
           "entity": "zombie",
           "x": 13,
           "y": 21,
-          "level": 19
+          "level": 21
         },
         {
           "entity": "raider",
           "x": 7,
           "y": 6,
-          "level": 20
+          "level": 22
         },
         {
           "entity": "raider",
           "x": 13,
           "y": 9,
-          "level": 20
+          "level": 22
         },
         {
           "entity": "mummy",
           "x": 10,
           "y": 11,
-          "level": 20
+          "level": 22
         },
         {
           "entity": "troll",
           "x": 53,
           "y": 28,
-          "level": 21
+          "level": 23
         },
         {
           "entity": "ashmaw",
           "x": 33,
-          "y": 44
+          "y": 64,
+          "level": 26
         },
         {
           "entity": "orc",
           "x": 37,
           "y": 46,
-          "level": 22
+          "level": 24
         },
         {
           "entity": "orc",
           "x": 33,
           "y": 47,
-          "level": 22
+          "level": 24
         },
         {
           "entity": "troll",
           "x": 30,
           "y": 47,
-          "level": 22
+          "level": 24
         },
         {
           "entity": "troll",
           "x": 37,
           "y": 41,
+          "level": 24
+        },
+        {
+          "entity": "raider",
+          "x": 28,
+          "y": 8,
+          "level": 21
+        },
+        {
+          "entity": "raider",
+          "x": 38,
+          "y": 8,
+          "level": 21
+        },
+        {
+          "entity": "mummy",
+          "x": 20,
+          "y": 8,
+          "level": 21
+        },
+        {
+          "entity": "orc",
+          "x": 70,
+          "y": 10,
+          "level": 23
+        },
+        {
+          "entity": "orc",
+          "x": 78,
+          "y": 9,
+          "level": 23
+        },
+        {
+          "entity": "raider",
+          "x": 74,
+          "y": 19,
+          "level": 23
+        },
+        {
+          "entity": "troll",
+          "x": 68,
+          "y": 14,
+          "level": 24
+        },
+        {
+          "entity": "mummy",
+          "x": 80,
+          "y": 14,
+          "level": 23
+        },
+        {
+          "entity": "orc",
+          "x": 74,
+          "y": 25,
+          "level": 23
+        },
+        {
+          "entity": "troll",
+          "x": 72,
+          "y": 37,
+          "level": 24
+        },
+        {
+          "entity": "troll",
+          "x": 77,
+          "y": 40,
+          "level": 24
+        },
+        {
+          "entity": "orc",
+          "x": 74,
+          "y": 38,
+          "level": 23
+        },
+        {
+          "entity": "mummy",
+          "x": 74,
+          "y": 50,
+          "level": 24
+        },
+        {
+          "entity": "mummy",
+          "x": 74,
+          "y": 56,
+          "level": 24
+        },
+        {
+          "entity": "troll",
+          "x": 66,
+          "y": 62,
+          "level": 25
+        },
+        {
+          "entity": "troll",
+          "x": 74,
+          "y": 62,
+          "level": 25
+        },
+        {
+          "entity": "orc",
+          "x": 68,
+          "y": 66,
+          "level": 25
+        },
+        {
+          "entity": "orc",
+          "x": 72,
+          "y": 66,
+          "level": 25
+        },
+        {
+          "entity": "orc",
+          "x": 70,
+          "y": 60,
+          "level": 25
+        },
+        {
+          "entity": "raider",
+          "x": 66,
+          "y": 65,
+          "level": 25
+        },
+        {
+          "entity": "skeleton",
+          "x": 6,
+          "y": 54,
+          "level": 23
+        },
+        {
+          "entity": "skeleton",
+          "x": 14,
+          "y": 54,
+          "level": 23
+        },
+        {
+          "entity": "skeleton",
+          "x": 8,
+          "y": 59,
+          "level": 23
+        },
+        {
+          "entity": "skeleton",
+          "x": 13,
+          "y": 59,
+          "level": 23
+        },
+        {
+          "entity": "zombie",
+          "x": 5,
+          "y": 57,
+          "level": 23
+        },
+        {
+          "entity": "zombie",
+          "x": 15,
+          "y": 57,
+          "level": 23
+        },
+        {
+          "entity": "skeleton",
+          "x": 9,
+          "y": 38,
           "level": 22
+        },
+        {
+          "entity": "skeleton",
+          "x": 9,
+          "y": 46,
+          "level": 22
+        },
+        {
+          "entity": "mummy",
+          "x": 14,
+          "y": 44,
+          "level": 23
+        },
+        {
+          "entity": "troll",
+          "x": 27,
+          "y": 61,
+          "level": 26
+        },
+        {
+          "entity": "troll",
+          "x": 39,
+          "y": 61,
+          "level": 26
+        },
+        {
+          "entity": "troll",
+          "x": 27,
+          "y": 68,
+          "level": 26
+        },
+        {
+          "entity": "troll",
+          "x": 39,
+          "y": 68,
+          "level": 26
+        },
+        {
+          "entity": "orc",
+          "x": 33,
+          "y": 69,
+          "level": 26
+        },
+        {
+          "entity": "orc",
+          "x": 30,
+          "y": 60,
+          "level": 26
+        },
+        {
+          "entity": "orc",
+          "x": 36,
+          "y": 60,
+          "level": 26
+        },
+        {
+          "entity": "raider",
+          "x": 33,
+          "y": 60,
+          "level": 26
         }
       ],
       "choices": []
@@ -1169,114 +1786,319 @@
           "entity": "zombie",
           "x": 23,
           "y": 5,
-          "level": 9
+          "level": 11
         },
         {
           "entity": "zombie",
           "x": 29,
           "y": 8,
-          "level": 9
+          "level": 11
         },
         {
           "entity": "bogGhoul",
           "x": 20,
           "y": 18,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "bogGhoul",
           "x": 28,
           "y": 26,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "hexer",
           "x": 25,
           "y": 26,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "hexer",
           "x": 22,
           "y": 26,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "zombie",
           "x": 29,
           "y": 18,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "skeleton",
           "x": 4,
           "y": 18,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "skeleton",
           "x": 8,
           "y": 22,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "skeleton",
           "x": 6,
           "y": 25,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "hexer",
           "x": 4,
           "y": 22,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "orc",
           "x": 43,
           "y": 19,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "orc",
           "x": 48,
           "y": 22,
-          "level": 10
+          "level": 12
         },
         {
           "entity": "goblin",
           "x": 46,
           "y": 25,
-          "level": 9
+          "level": 11
         },
         {
           "entity": "goblin",
           "x": 43,
           "y": 25,
-          "level": 9
+          "level": 11
         },
         {
           "entity": "goblin",
           "x": 46,
           "y": 21,
-          "level": 9
+          "level": 11
         },
         {
           "entity": "cisternKing",
           "x": 26,
-          "y": 34
+          "y": 54,
+          "level": 14
         },
         {
           "entity": "bogGhoul",
           "x": 29,
           "y": 35,
-          "level": 11
+          "level": 13
         },
         {
           "entity": "bogGhoul",
           "x": 23,
           "y": 34,
+          "level": 13
+        },
+        {
+          "entity": "skeleton",
+          "x": 6,
+          "y": 5,
           "level": 11
+        },
+        {
+          "entity": "skeleton",
+          "x": 12,
+          "y": 5,
+          "level": 11
+        },
+        {
+          "entity": "skeleton",
+          "x": 9,
+          "y": 8,
+          "level": 11
+        },
+        {
+          "entity": "hexer",
+          "x": 9,
+          "y": 6,
+          "level": 11
+        },
+        {
+          "entity": "orc",
+          "x": 40,
+          "y": 5,
+          "level": 11
+        },
+        {
+          "entity": "orc",
+          "x": 46,
+          "y": 5,
+          "level": 11
+        },
+        {
+          "entity": "orc",
+          "x": 43,
+          "y": 8,
+          "level": 11
+        },
+        {
+          "entity": "hexer",
+          "x": 45,
+          "y": 7,
+          "level": 11
+        },
+        {
+          "entity": "zombie",
+          "x": 58,
+          "y": 15,
+          "level": 12
+        },
+        {
+          "entity": "zombie",
+          "x": 66,
+          "y": 28,
+          "level": 12
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 57,
+          "y": 24,
+          "level": 12
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 66,
+          "y": 17,
+          "level": 12
+        },
+        {
+          "entity": "hexer",
+          "x": 62,
+          "y": 15,
+          "level": 12
+        },
+        {
+          "entity": "hexer",
+          "x": 62,
+          "y": 28,
+          "level": 12
+        },
+        {
+          "entity": "skeleton",
+          "x": 5,
+          "y": 43,
+          "level": 12
+        },
+        {
+          "entity": "skeleton",
+          "x": 9,
+          "y": 43,
+          "level": 12
+        },
+        {
+          "entity": "skeleton",
+          "x": 7,
+          "y": 49,
+          "level": 12
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 6,
+          "y": 47,
+          "level": 12
+        },
+        {
+          "entity": "orc",
+          "x": 44,
+          "y": 43,
+          "level": 12
+        },
+        {
+          "entity": "orc",
+          "x": 50,
+          "y": 43,
+          "level": 12
+        },
+        {
+          "entity": "orc",
+          "x": 47,
+          "y": 49,
+          "level": 12
+        },
+        {
+          "entity": "hexer",
+          "x": 48,
+          "y": 47,
+          "level": 12
+        },
+        {
+          "entity": "zombie",
+          "x": 15,
+          "y": 34,
+          "level": 13
+        },
+        {
+          "entity": "zombie",
+          "x": 37,
+          "y": 34,
+          "level": 13
+        },
+        {
+          "entity": "zombie",
+          "x": 26,
+          "y": 37,
+          "level": 13
+        },
+        {
+          "entity": "hexer",
+          "x": 18,
+          "y": 33,
+          "level": 13
+        },
+        {
+          "entity": "hexer",
+          "x": 34,
+          "y": 33,
+          "level": 13
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 20,
+          "y": 55,
+          "level": 14
+        },
+        {
+          "entity": "bogGhoul",
+          "x": 32,
+          "y": 55,
+          "level": 14
+        },
+        {
+          "entity": "hexer",
+          "x": 17,
+          "y": 50,
+          "level": 14
+        },
+        {
+          "entity": "hexer",
+          "x": 35,
+          "y": 50,
+          "level": 14
+        },
+        {
+          "entity": "hexer",
+          "x": 26,
+          "y": 45,
+          "level": 14
+        },
+        {
+          "entity": "troll",
+          "x": 23,
+          "y": 55,
+          "level": 14
+        },
+        {
+          "entity": "troll",
+          "x": 29,
+          "y": 55,
+          "level": 14
         }
       ],
       "choices": []
@@ -1285,10 +2107,86 @@
       "node_id": "ruin_temple",
       "biome_type": "ruin_temple",
       "entities": [
-        { "entity": "orc", "x": 10, "y": 9, "level": 6 },
-        { "entity": "orc", "x": 15, "y": 12, "level": 6 },
-        { "entity": "warg", "x": 12, "y": 17, "level": 6 },
-        { "entity": "tuskGuard", "x": 22, "y": 11, "level": 7 }
+        {
+          "entity": "orc",
+          "x": 10,
+          "y": 9,
+          "level": 6
+        },
+        {
+          "entity": "orc",
+          "x": 15,
+          "y": 12,
+          "level": 6
+        },
+        {
+          "entity": "warg",
+          "x": 12,
+          "y": 17,
+          "level": 6
+        },
+        {
+          "entity": "tuskGuard",
+          "x": 22,
+          "y": 11,
+          "level": 7
+        }
+      ],
+      "choices": []
+    },
+    {
+      "node_id": "ruin_temple_desert",
+      "biome_type": "ruin_temple_desert",
+      "entities": [
+        {
+          "entity": "mummy",
+          "x": 10,
+          "y": 9,
+          "level": 5
+        },
+        {
+          "entity": "mummy",
+          "x": 15,
+          "y": 12,
+          "level": 5
+        },
+        {
+          "entity": "skeleton",
+          "x": 12,
+          "y": 17,
+          "level": 5
+        },
+        {
+          "entity": "raider",
+          "x": 22,
+          "y": 11,
+          "level": 6
+        }
+      ],
+      "choices": []
+    },
+    {
+      "node_id": "ruin_hall",
+      "biome_type": "ruin_hall",
+      "entities": [
+        {
+          "entity": "orc",
+          "x": 11,
+          "y": 7,
+          "level": 6
+        },
+        {
+          "entity": "warg",
+          "x": 13,
+          "y": 11,
+          "level": 6
+        },
+        {
+          "entity": "tuskGuard",
+          "x": 19,
+          "y": 8,
+          "level": 7
+        }
       ],
       "choices": []
     },
@@ -1300,138 +2198,391 @@
           "entity": "skeleton",
           "x": 8,
           "y": 7,
-          "level": 13
+          "level": 14
         },
         {
           "entity": "skeleton",
           "x": 16,
           "y": 11,
-          "level": 13
+          "level": 14
         },
         {
           "entity": "zombie",
           "x": 29,
           "y": 8,
-          "level": 13
+          "level": 14
         },
         {
           "entity": "zombie",
           "x": 35,
           "y": 10,
-          "level": 13
+          "level": 14
         },
         {
           "entity": "zombie",
           "x": 31,
           "y": 11,
-          "level": 13
+          "level": 14
         },
         {
           "entity": "skeleton",
           "x": 30,
           "y": 14,
-          "level": 13
+          "level": 14
         },
         {
           "entity": "skeleton",
           "x": 38,
           "y": 9,
-          "level": 13
+          "level": 14
         },
         {
           "entity": "wraith",
           "x": 26,
           "y": 22,
-          "level": 14
+          "level": 15
         },
         {
           "entity": "wraith",
           "x": 34,
           "y": 26,
-          "level": 14
+          "level": 15
         },
         {
           "entity": "skeleton",
           "x": 43,
           "y": 22,
-          "level": 14
+          "level": 15
         },
         {
           "entity": "skeleton",
           "x": 51,
           "y": 26,
-          "level": 14
+          "level": 15
         },
         {
           "entity": "skeleton",
           "x": 47,
           "y": 27,
-          "level": 14
+          "level": 15
         },
         {
           "entity": "cultist",
           "x": 44,
           "y": 27,
-          "level": 14
+          "level": 15
         },
         {
           "entity": "zombie",
           "x": 11,
           "y": 41,
-          "level": 15
+          "level": 16
         },
         {
           "entity": "zombie",
           "x": 17,
           "y": 42,
-          "level": 15
+          "level": 16
         },
         {
           "entity": "skeleton",
           "x": 13,
           "y": 43,
-          "level": 15
+          "level": 16
         },
         {
           "entity": "skeleton",
           "x": 10,
           "y": 43,
-          "level": 15
+          "level": 16
         },
         {
           "entity": "skeleton",
           "x": 16,
           "y": 38,
-          "level": 15
+          "level": 16
         },
         {
           "entity": "paleWarden",
           "x": 46,
-          "y": 40
+          "y": 62,
+          "level": 18
         },
         {
           "entity": "wraith",
           "x": 50,
           "y": 42,
-          "level": 15
+          "level": 16
         },
         {
           "entity": "wraith",
           "x": 46,
           "y": 43,
-          "level": 15
+          "level": 16
         },
         {
           "entity": "skeleton",
           "x": 43,
           "y": 43,
-          "level": 15
+          "level": 16
         },
         {
           "entity": "skeleton",
           "x": 50,
           "y": 37,
+          "level": 16
+        },
+        {
+          "entity": "skeleton",
+          "x": 56,
+          "y": 9,
           "level": 15
+        },
+        {
+          "entity": "skeleton",
+          "x": 62,
+          "y": 9,
+          "level": 15
+        },
+        {
+          "entity": "zombie",
+          "x": 59,
+          "y": 9,
+          "level": 15
+        },
+        {
+          "entity": "wraith",
+          "x": 68,
+          "y": 12,
+          "level": 17
+        },
+        {
+          "entity": "wraith",
+          "x": 76,
+          "y": 16,
+          "level": 17
+        },
+        {
+          "entity": "skeleton",
+          "x": 66,
+          "y": 12,
+          "level": 16
+        },
+        {
+          "entity": "skeleton",
+          "x": 70,
+          "y": 18,
+          "level": 16
+        },
+        {
+          "entity": "skeleton",
+          "x": 74,
+          "y": 10,
+          "level": 16
+        },
+        {
+          "entity": "skeleton",
+          "x": 78,
+          "y": 14,
+          "level": 16
+        },
+        {
+          "entity": "cultist",
+          "x": 72,
+          "y": 14,
+          "level": 17
+        },
+        {
+          "entity": "zombie",
+          "x": 72,
+          "y": 28,
+          "level": 16
+        },
+        {
+          "entity": "zombie",
+          "x": 72,
+          "y": 34,
+          "level": 16
+        },
+        {
+          "entity": "zombie",
+          "x": 72,
+          "y": 46,
+          "level": 16
+        },
+        {
+          "entity": "skeleton",
+          "x": 72,
+          "y": 38,
+          "level": 16
+        },
+        {
+          "entity": "cultist",
+          "x": 63,
+          "y": 31,
+          "level": 16
+        },
+        {
+          "entity": "skeleton",
+          "x": 61,
+          "y": 30,
+          "level": 16
+        },
+        {
+          "entity": "skeleton",
+          "x": 65,
+          "y": 32,
+          "level": 16
+        },
+        {
+          "entity": "wraith",
+          "x": 68,
+          "y": 55,
+          "level": 18
+        },
+        {
+          "entity": "wraith",
+          "x": 76,
+          "y": 57,
+          "level": 18
+        },
+        {
+          "entity": "cultist",
+          "x": 72,
+          "y": 61,
+          "level": 18
+        },
+        {
+          "entity": "skeleton",
+          "x": 70,
+          "y": 55,
+          "level": 17
+        },
+        {
+          "entity": "skeleton",
+          "x": 75,
+          "y": 62,
+          "level": 17
+        },
+        {
+          "entity": "zombie",
+          "x": 10,
+          "y": 60,
+          "level": 16
+        },
+        {
+          "entity": "zombie",
+          "x": 18,
+          "y": 60,
+          "level": 16
+        },
+        {
+          "entity": "zombie",
+          "x": 14,
+          "y": 65,
+          "level": 16
+        },
+        {
+          "entity": "skeleton",
+          "x": 9,
+          "y": 63,
+          "level": 16
+        },
+        {
+          "entity": "skeleton",
+          "x": 19,
+          "y": 63,
+          "level": 16
+        },
+        {
+          "entity": "skeleton",
+          "x": 14,
+          "y": 58,
+          "level": 16
+        },
+        {
+          "entity": "zombie",
+          "x": 13,
+          "y": 50,
+          "level": 15
+        },
+        {
+          "entity": "zombie",
+          "x": 30,
+          "y": 35,
+          "level": 15
+        },
+        {
+          "entity": "skeleton",
+          "x": 17,
+          "y": 24,
+          "level": 14
+        },
+        {
+          "entity": "wraith",
+          "x": 40,
+          "y": 40,
+          "level": 17
+        },
+        {
+          "entity": "wraith",
+          "x": 52,
+          "y": 40,
+          "level": 17
+        },
+        {
+          "entity": "wraith",
+          "x": 38,
+          "y": 59,
+          "level": 18
+        },
+        {
+          "entity": "wraith",
+          "x": 54,
+          "y": 59,
+          "level": 18
+        },
+        {
+          "entity": "wraith",
+          "x": 46,
+          "y": 66,
+          "level": 18
+        },
+        {
+          "entity": "cultist",
+          "x": 40,
+          "y": 65,
+          "level": 18
+        },
+        {
+          "entity": "cultist",
+          "x": 50,
+          "y": 65,
+          "level": 18
+        },
+        {
+          "entity": "skeleton",
+          "x": 36,
+          "y": 65,
+          "level": 17
+        },
+        {
+          "entity": "skeleton",
+          "x": 58,
+          "y": 62,
+          "level": 17
+        },
+        {
+          "entity": "skeleton",
+          "x": 42,
+          "y": 58,
+          "level": 17
+        },
+        {
+          "entity": "skeleton",
+          "x": 50,
+          "y": 58,
+          "level": 17
         }
       ],
       "choices": []

@@ -91,7 +91,7 @@ Cut and arranged by `tools/sprites/itemSheet.ts`, no pixel redrawn: weapons, arm
 ## Rock plateau (`public/tilesets/lpc_mountains.png`, source in `art/lpc_mountains/`)
 
 The mountains sheet of the Liberated Pixel Cup base assets (https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles)
-by Lanea Zimmerman (Sharm), CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0, used unmodified for the plateau (`tools/map/zone.ts`); `tools/map/rockCave.ts` cuts the rock cave's tiles from the same sheet (`public/tilesets/rock_cave.png`; the floor tiles are darkened and browned).
+by Lanea Zimmerman (Sharm), CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0, used unmodified for the plateau (`tools/map/zone.ts`); `tools/map/rockCave.ts` cuts the rock cave's tiles from the same sheet (`public/tilesets/rock_cave.png`; the floor tiles are darkened and browned, plus a shaded floor, a mirrored lit third face row and a grainy roof derived from them). `tools/map/entrances.ts` composes the overworld cave mouth (`public/tilesets/entrances.png`) from the same sheet's cave opening and rock face, widened into a mound with a shadow and sand fringe, and the sewer hatch (the drain below with a shadow ring); derived works under the same terms.
 
 ## Sewers (`public/tilesets/sewer_lpc.png`, source in `art/lpc_sewer/`)
 

@@ -21,7 +21,7 @@ import { CLIMATES, DEFAULT_CLIMATE, isClimate, Weather } from '../systems/weathe
 import { sheetGrid } from '../core/textures';
 import { mapBox } from '../map/bounds';
 import { MapView } from '../map/MapView';
-import { CELL, type MapData, type SiteSpawn } from '../map/types';
+import { CELL, type MapData, type MobSpawn, type SiteSpawn } from '../map/types';
 import { cellFeet } from '../map/doors';
 import { bandedKind } from '../systems/bands';
 import type { Item, MobKind } from '../systems/combat';
@@ -105,6 +105,8 @@ export class ZoneState {
   readonly pets: Pet[];
   /** The enemies, from the content (`populate`): the scenario node's placements and the biome's roamers. */
   readonly mobs: Mob[] = [];
+  /** Where the node's authored bosses would stand: made only while a quest asks (`StoryUi.syncNamedBoss`, `systems/bosses.ts`). */
+  bosses: MobSpawn[] = [];
   /** People the scenario node placed (the map's own NPC is `npc`). */
   readonly folk: Folk[] = [];
   readonly chests: Chest[];
@@ -277,6 +279,7 @@ export class ZoneState {
     for (const f of this.folk) f.body.destroy({ children: true });
     this.mobs.splice(0, this.mobs.length);
     this.folk.splice(0, this.folk.length);
+    this.bosses = population.bosses;
     this.admit(population);
   }
 
@@ -365,6 +368,18 @@ export class ZoneState {
    */
   admitBoss(kind: MobKind, x: number, y: number): Mob {
     const mob = new Mob(kind, this.sprites.wardrobe.sheet(kind.look), x, y);
+    mob.respawns = false;
+    mob.body.setTag(kind.name, 0xffb070);
+    this.mobs.push(mob);
+    this.world.layer.addChild(mob.body);
+    return mob;
+  }
+
+  /** Put an authored boss in at its placement (a quest asks for it): the zone's last foe, never to respawn once it falls. */
+  admitNamed(spawn: MobSpawn): Mob {
+    const kind = bandedKind(spawn.kind, spawn.level);
+    if (!kind) throw new Error(`Zone "${this.name}" places unknown boss "${spawn.kind}"`);
+    const mob = new Mob(kind, this.sprites.wardrobe.sheet(kind.look), ...cellFeet(spawn));
     mob.respawns = false;
     mob.body.setTag(kind.name, 0xffb070);
     this.mobs.push(mob);

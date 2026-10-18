@@ -6,8 +6,8 @@ import { CAVE_ARRIVAL, DEPTHS_ARRIVAL, caveExit } from '../tools/map/delves';
 // a shaft of daylight (the way out), a hall to the east, a great cavern with a lake of lava, a pool in the south-west, and
 // two dead ends with treasure. Painted by tools/map/delve.ts (art by MrBeast, art/oga_dungeon/). Goblins, wolfkin and
 // worse live here (public/content/campaign1/scenarios.json).
-const W = 56;
-const H = 44;
+const W = 80;
+const H = 64;
 
 const cave = new Delve(W, H);
 cave
@@ -64,6 +64,87 @@ cave
     ],
     3,
   )
+  .tunnel(
+    [
+      [48, 10],
+      [62, 10],
+    ],
+    3,
+  ) // a second way east, the hall to the vault
+  .tunnel(
+    [
+      [27, 10],
+      [27, 21],
+    ],
+    3,
+  ) // a shortcut from the hall down to the cavern
+  .tunnel(
+    [
+      [54, 18],
+      [62, 18],
+    ],
+    3,
+  ) // the nook to the vault
+  .ellipse(68, 17, 11, 8, '.', 0.3) // the lava vault
+  .ellipse(68, 17, 7, 3.5, '^') // its lava
+  .rect(60, 16, 17, 3) // the causeway across it
+  .ellipse(72, 26, 4, 3, '.', 0.2) // a side nook south of the vault
+  .tunnel(
+    [
+      [68, 24],
+      [68, 28],
+      [72, 28],
+    ],
+    3,
+  )
+  .tunnel(
+    [
+      [9, 41],
+      [9, 54],
+    ],
+    3,
+  ) // south from the grotto
+  .ellipse(14, 55, 9, 5, '.', 0.3) // the pool grotto
+  .ellipse(14, 55, 4, 2, '~')
+  .tunnel(
+    [
+      [22, 55],
+      [44, 55],
+    ],
+    3,
+  )
+  .ellipse(26, 45, 3, 3, '.', 0.2) // a side pocket off the southern tunnel
+  .tunnel(
+    [
+      [26, 36],
+      [26, 55],
+    ],
+    3,
+  ) // the cavern's south way
+  .ellipse(50, 55, 11, 5, '.', 0.3) // the long southern hall
+  .tunnel(
+    [
+      [47, 41],
+      [47, 50],
+    ],
+    3,
+  ) // the deep chamber's south way
+  .tunnel(
+    [
+      [53, 37],
+      [64, 37],
+      [64, 44],
+    ],
+    3,
+  )
+  .ellipse(66, 49, 10, 7, '.', 0.3) // the Warg-Mother's den
+  .tunnel(
+    [
+      [60, 55],
+      [62, 55],
+    ],
+    3,
+  )
   .ellipse(31, 29, 5, 3, '^') // the lava lake
   .ellipse(9, 36, 3, 2, '~') // the grotto's pool
   .ellipse(38, 12, 2.5, 1.5, '~'); // a pool in the east hall
@@ -93,6 +174,11 @@ export default defineZone({
     // A rock ledge in the great cavern, a level above the floor: a ramp up its south face, a chest on top.
     z.plateau({ col: 19, row: 23, w: 7, h: 4 }, { kind: 'rock', stairs: [22] });
     z.chest('wood', 'potion', 22, 24);
+    z.chest('iron', 'relic', ...cave.firstOpen(73, 14, 3, 4)); // the island
+    z.chest('wood', 'elixir', ...cave.firstOpen(70, 24, 4, 4));
+    z.chest('iron', 'hoard', ...cave.firstOpen(10, 53, 3, 3));
+    z.chest('wood', 'potion', ...cave.firstOpen(25, 43, 3, 3));
+    z.chest('iron', 'deephoard', ...cave.firstOpen(70, 52, 4, 3));
     z.place('The Sunscar Hollow', 30, 22);
   },
 });

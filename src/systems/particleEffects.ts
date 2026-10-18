@@ -603,6 +603,25 @@ export const PARTICLE_EFFECTS = {
     ],
   },
 
+  /** The dodge roll's start and landing: a bigger scuff of ground than a step's (4 to 6 puffs, none after 0.5 s). */
+  rollDust: {
+    emitters: [
+      {
+        shape: 'glow',
+        burst: [4, 6],
+        life: [0.25, 0.45],
+        speed: [14, 34],
+        angle: [-Math.PI * 0.9, -Math.PI * 0.1],
+        radius: [0, 5],
+        size: [7, 11],
+        sizeOverLife: [0.6, 1.7],
+        alphaOverLife: [0.55, 0],
+        colorOverLife: [0xd6c496, 0xa89a78],
+        drag: 4,
+      },
+    ],
+  },
+
   /** Water thrown up round a wader's feet. */
   splash: {
     emitters: [

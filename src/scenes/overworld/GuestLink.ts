@@ -12,6 +12,7 @@ import {
   FLAG,
   MAX_VIEW,
   unpackKeys,
+  KEY,
   pondsFromWire,
   type InputMsg,
   type PlayerSnap,
@@ -48,6 +49,7 @@ export class GuestLink {
   private inputTimer = 0;
   private inputSeq = 0;
   private actCount = 0; // action presses so far, sent as a counter
+  private rollCount = 0; // roll presses so far: only its parity goes out, as `KEY.roll` (a toggle the host compares)
   private comboCount = 0; // combos cast so far (a counter too), and which one the last was
   private comboIndex = 0;
   private sent = { keys: -1, act: -1, cb: -1, ack: -1, vr: -1, inv: 0, vt: '', rq: '', rd: false };
@@ -88,7 +90,7 @@ export class GuestLink {
     arena.refreshLook();
     local.target = null;
     this.lastEvent = -1;
-    this.actCount = this.comboCount = this.comboIndex = this.inputSeq = 0;
+    this.actCount = this.comboCount = this.comboIndex = this.inputSeq = this.rollCount = 0;
     this.sent = { keys: -1, act: -1, cb: -1, ack: -1, vr: -1, inv: 0, vt: '', rq: '', rd: false };
     this.inputTimer = 0;
     this.rec.reset();
@@ -132,6 +134,11 @@ export class GuestLink {
     this.actCount++;
   }
 
+  /** The roll key or button was pressed: the host rolls this hero when it sees the toggle bit flip (nothing is predicted). */
+  pressRoll() {
+    this.rollCount++;
+  }
+
   /** The player finished combo number `index` of their wand or tome (counted, so a lost packet cannot lose it). */
   castCombo(index: number) {
     this.comboIndex = index;
@@ -160,7 +167,7 @@ export class GuestLink {
 
   /** Send the controls: when they change, and otherwise at INPUT_HZ so a lost packet is soon corrected. */
   sendInput(dt: number, keys: number, aim?: Aim, vote?: [number, number], request?: InputMsg['rq'], reading = false) {
-    this.transmit(dt, keys, aim, vote, request, reading);
+    this.transmit(dt, keys | (this.rollCount & 1 ? KEY.roll : 0), aim, vote, request, reading);
     this.predict(dt, keys);
   }
 
@@ -172,6 +179,10 @@ export class GuestLink {
     const { arena } = this;
     const { local } = arena;
     if (!this.predicted || !local.target || (local.flags & (FLAG.hidden | FLAG.down)) !== 0) return;
+    if (local.flags & FLAG.roll) {
+      this.rec.reset(); // the host is rolling this hero: it glides to where the host says, and walking resumes from there
+      return;
+    }
     const { dx, dy } = unpackKeys(keys);
     const len = Math.hypot(dx, dy);
     const wish = len ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
@@ -360,7 +371,7 @@ export class GuestLink {
 
   /** Draw a player from what the host last said (position glides; the rest comes from the flags). */
   private drawPlayer(p: Player, dt: number) {
-    const own = this.predicted && p === this.arena.local; // walked by `predict`, corrected by the host's acknowledgements
+    const own = this.predicted && p === this.arena.local && (p.flags & FLAG.roll) === 0; // walked by `predict`, corrected by the host's acknowledgements
     if (p.target && !own) glide(p.body, p.target.x, p.target.y, dt);
     const [fx, fy] = DIR_VEC[p.body.facing];
     const swinging = (p.flags & FLAG.swing) !== 0;
@@ -382,5 +393,6 @@ export class GuestLink {
       p.body.release();
     }
     p.body.animate(dt * 1000, own ? this.predMoving : (p.flags & FLAG.moving) !== 0);
+    p.rollLook.step(p.body, (p.flags & FLAG.roll) !== 0, p === this.arena.local, dt, this.arena.effects);
   }
 }

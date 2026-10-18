@@ -5,6 +5,7 @@ import {
   clearSave,
   heroToSave,
   loadSave,
+  reloadPlace,
   SAVE_VERSION,
   writeSave,
   type SaveData,
@@ -99,9 +100,8 @@ export class Persistence {
   }
 
   /**
-   * Put the world's save back, if there is one: the hero, the chests opened, the explored map, the scenario node and where the hero
-   * stood. Saving starts after it either way. A save that cannot be put back (a zone the world no longer has) leaves
-   * the hero at the start with what they carried.
+   * Put the world's save back, if there is one: the hero, the chests opened, the explored map, the scenario node. The hero
+   * is placed at the world's home (`arena.wake()`: the content's `home`, else the start node's zone), not where they stood. Saving starts after it either way.
    */
   async restore(): Promise<boolean> {
     const { arena, zones } = this;
@@ -116,18 +116,18 @@ export class Persistence {
         if (z) opened.forEach((i) => z.chests[i]?.setOpen(true));
         else arena.memory.set(name, { opened, crops: [], ground: [] });
       }
+      // Always home, whatever the save says: a reload must not respawn the foes the hero stood beside (the XP-farming
+      // exploit). The progress above is kept; the node is adopted without travelling to its zone.
       try {
-        if (save.node !== this.scenario.current) await this.scenario.load(save.node);
-        if (save.zone !== arena.local.zone) {
-          await zones.ensure(save.zone);
-          const dest = arena.zones.get(save.zone);
-          if (dest) zones.travel(arena.local, dest, dest.data.spawn);
-        }
-        arena.player.position.set(save.x, save.y);
+        if (save.node !== this.scenario.current) await this.scenario.adopt(save.node);
       } catch (err) {
-        console.warn('Could not return to the saved place; starting at the beginning', err);
-        arena.player.position.set(...cellFeet(arena.home.data.spawn));
+        console.warn('Could not return to the saved scenario node; starting at the beginning', err);
       }
+      await zones.loadHome();
+      const home = arena.wake(); // the same place a fall wakes at: the content's home (the town), else the start
+      const at = reloadPlace(save, { zone: home.zone.name, feet: cellFeet(home.spot) });
+      if (arena.local.zone !== at.zone) zones.travel(arena.local, home.zone, home.spot);
+      arena.player.position.set(at.x, at.y);
       return true;
     } finally {
       this.paused = false;

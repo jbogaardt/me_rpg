@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MOB_KINDS, goldFor, newHero, speedFactor, spellPower, xpFor, type Hero } from './combat';
+import { bossStands } from './bosses';
 import { BASE_PACK } from './inventory';
 import { itemOf } from './items';
 import { NPC_LOOKS } from './looks';
@@ -256,6 +257,19 @@ describe('kill quests', () => {
     expect(recordKill(a, boss, 'greenwood')).toBeNull();
     for (const hero of [a, b]) expect(recordKill(hero, boss, 'frostlands')?.ready).toBe(true); // the party shares the kill
     expect(recordKill(a, boss, 'frostlands')).toBeNull();
+  });
+
+  it('stand only while the quest that names them is taken and not done (they cannot be farmed)', () => {
+    const hero = onQuest('heart');
+    const stands = () => bossStands(hero.quests, 'stillheart', 'frostlands');
+    expect(stands()).toBe(true);
+    expect(bossStands(hero.quests, 'stillheart', 'greenwood')).toBe(false); // another zone
+    expect(bossStands(hero.quests, 'ashmaw', 'frostlands')).toBe(false); // another boss
+    hero.quests.taken = false;
+    expect(stands()).toBe(false); // quest not taken
+    hero.quests.taken = true;
+    recordKill(hero, MOB_KINDS.stillheart!, 'frostlands');
+    expect(stands()).toBe(false); // fallen: no zone built from now on has it
   });
 
   it('end the story on the boss: handing it in tells the epilogue and flags the finale', () => {

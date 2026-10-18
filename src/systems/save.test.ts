@@ -7,6 +7,8 @@ import {
   heroToSave,
   loadSave,
   parseSave,
+  RELOAD_HP_FLOOR,
+  reloadPlace,
   SAVE_VERSION,
   writeSave,
   type SaveData,
@@ -113,5 +115,69 @@ describe('explored map in a save', () => {
     const text = JSON.stringify({ ...sample(), explored: { town: '2x2:AQM=', bad: 7 } });
     expect(parseSave(text)!.explored).toEqual({ town: '2x2:AQM=' });
     expect(parseSave(JSON.stringify({ ...sample(), explored: 'junk' }))!.explored).toBeUndefined();
+  });
+});
+
+describe('where a reload puts the hero', () => {
+  const home = { zone: 'hub', feet: [100, 200] as [number, number] };
+
+  it('is always home, whatever zone and spot were saved (no refresh-farming of a foe)', () => {
+    const save = { ...sample(), zone: 'deep_woods', x: 999, y: 888 };
+    expect(reloadPlace(save, home)).toEqual({ zone: 'hub', x: 100, y: 200 });
+  });
+
+  describe('health and mana', () => {
+    const reload = (edit: (stats: Record<string, unknown>) => void) => {
+      const save = sample();
+      const hero = newHero();
+      hero.stats.maxHp = 100;
+      hero.stats.maxMp = 40;
+      const saved = heroToSave(hero);
+      edit(saved.stats as unknown as Record<string, unknown>);
+      const back = parseSave(JSON.stringify({ ...save, hero: saved }))!;
+      const fresh = newHero();
+      applyHeroSave(fresh, back.hero);
+      return fresh.stats;
+    };
+
+    it('comes back as saved', () => {
+      const s = reload((st) => ((st.hp = 60), (st.mp = 7)));
+      expect([s.hp, s.mp]).toEqual([60, 7]);
+    });
+
+    it('is raised to the floor, so a reload never strands a near-dead hero', () => {
+      for (const low of [1, 0, -5]) expect(reload((st) => (st.hp = low)).hp).toBe(Math.ceil(100 * RELOAD_HP_FLOOR));
+      expect(reload((st) => (st.hp = 25)).hp).toBe(25);
+      expect(reload((st) => (st.hp = 24)).hp).toBe(25);
+    });
+
+    it('can be zero mana, and is never above the maximum', () => {
+      expect(reload((st) => (st.mp = 0)).mp).toBe(0);
+      const s = reload((st) => ((st.hp = 900), (st.mp = 900)));
+      expect([s.hp, s.mp]).toEqual([100, 40]);
+    });
+
+    it('loads an older save that has neither as full', () => {
+      const s = reload((st) => (delete st.hp, delete st.mp));
+      expect([s.hp, s.mp]).toEqual([100, 40]);
+    });
+  });
+
+  it('keeps the progress and the explored map in the save', () => {
+    const save = { ...sample(), zone: 'deep_woods', explored: { deep_woods: '2x2:AQM=' } };
+    const back = parseSave(JSON.stringify(save))!;
+    const hero = newHero();
+    applyHeroSave(hero, back.hero);
+    expect(hero.stats.level).toBe(3);
+    expect(hero.gold).toBe(42);
+    expect(hero.pack).toHaveLength(1);
+    expect(back.explored).toEqual({ deep_woods: '2x2:AQM=' });
+    expect(back.opened).toEqual({ town: [0, 2] });
+    expect(back.node).toBe('start');
+  });
+
+  it('still reads a save with no position meaning, and a corrupt one fails safe', () => {
+    expect(parseSave(JSON.stringify(sample()))).not.toBeNull();
+    expect(parseSave('{"v":1,"world":"campaign1","hero":')).toBeNull();
   });
 });

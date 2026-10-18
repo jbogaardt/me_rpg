@@ -1,6 +1,7 @@
 {
   "version": 1,
   "start": "landing",
+  "home": "landing",
   "nodes": [
     {
       "node_id": "landing",

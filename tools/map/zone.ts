@@ -1125,7 +1125,9 @@ export class Zone {
           py: p.py + part.dy,
         };
         if (prefab.tag) o.tag = prefab.tag;
-        if ((prefab as Prefab).wall) o.z = o.py + o.h + CELL + 8; // in front of the wall it hangs on
+        if ((prefab as Prefab).wall)
+          o.z = o.py + o.h + CELL + 8; // in front of the wall it hangs on
+        else if ((prefab as Prefab).foot) o.z = o.py + (prefab as Prefab).foot!; // sorts on the wall's base, not its pillars'
         objects.push(o);
         // All parts end on the prefab's bottom, so the band is measured from each part's own bottom.
         if (p.autoBlock && prefab.solid && !(prefab as Prefab).movable) autoParts.push({ o, ...prefab.solid });
