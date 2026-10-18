@@ -164,6 +164,8 @@ export interface MapData {
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
   /** Underground and unlit (a cave, a sewer, a crypt): the `darkness` capability fogs it round the lights (entities/DarknessLayer.ts). */
   dark: boolean;
+  /** A far backdrop drawn behind the ground (a key of `BACKDROPS`, `backdrop.ts`): cells with no ground show it, scrolled slower than the floor (the `parallax` capability). */
+  backdrop?: string;
   /** The zone's weather (a key of CLIMATES in systems/weather.ts): what falls and blows there. Rooms have none. */
   climate: string;
 }
@@ -242,6 +244,7 @@ function unpacked(json: unknown): MapData {
     }),
     indoor: d.indoor ?? false,
     dark: d.dark ?? false,
+    ...(d.backdrop ? { backdrop: d.backdrop } : {}),
     climate: d.climate ?? 'temperate',
   };
 }

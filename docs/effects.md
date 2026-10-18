@@ -24,6 +24,7 @@ the screen. A new kind of source is an entry in `HEARTH_EFFECTS`, `HEARTH_MARGIN
   additive pool on the stone (5 dithered steps, plus a faint warm pool at each carried lamp). Maths in `systems/darkLook.ts`.
   Nothing hides from the rules: a mob in the dark still sees you. A campaign, arc or biome turns it off with
   `"darkness": false`. The two masks are the textures with linear filtering (the filter reads them smooth).
+- **Cave backdrop** (capability `parallax`): the dark beyond a delve's walls is a two-layer parallax backdrop (`src/map/CLAUDE.md`), under the fog above.
 - **Water, drips and mist underground** (`entities/Atmosphere.ts`, `Hearth.ts`; `systems/waterRuns.ts` finds the water):
   two ripple layers (a normal pale one, an additive glint one) slide over each pool as tiling sprites scrolled in whole
   pixels, and each torch over a channel casts a wobbling warm reflection (6 bars, additive). `Hearth` adds `mist` (a faint

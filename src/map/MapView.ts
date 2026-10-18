@@ -1,6 +1,8 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
 import { makeFrame } from '../core/textures';
 import type { ViewRect } from '../core/camera';
+import { BackdropLayer } from './BackdropLayer';
+import { BACKDROPS, isBackdrop } from './backdrop';
 import { chunkRange, chunksOfObjects, CHUNK } from './chunks';
 import { CELL, sortKey, type MapData, type MapObject } from './types';
 
@@ -12,8 +14,9 @@ interface Chunk {
 }
 
 /**
- * Renders a MapData as two layers inside one render group (so the camera moving or zooming it is a single GPU
- * transform):
+ * Renders a MapData as layers inside one render group (so the camera moving or zooming it is a single GPU transform):
+ *  - `backdrop` (only a map that names one): the far dark under the ground, shown through its cells with no ground and
+ *    slid slower than the camera (`BackdropLayer.ts`, `parallax` capability).
  *  - `ground`: the 32px ground cells (a cell may stack several layers). The margin of a neighbouring biome (surface
  *    `beyond`) is not drawn, nor are objects standing in it: the scene lays that neighbour's own view beside this one.
  *  - `layer`: map objects (trees, rocks...) plus whatever the scene adds (characters, effects). Children are
@@ -25,6 +28,8 @@ interface Chunk {
  * Call `update` every frame, after the camera moved. (tools/map/image.ts draws the same way in Node for previews.)
  */
 export class MapView extends Container {
+  /** The far backdrop under the ground (a map that names one in `data.backdrop`), shown through its empty cells. */
+  readonly backdrop: BackdropLayer | null;
   readonly ground = new Container({ isRenderGroup: true });
   readonly layer = new Container({ sortableChildren: true });
   private frames = new Map<string, Texture | null>();
@@ -42,6 +47,9 @@ export class MapView extends Container {
   ) {
     super({ isRenderGroup: true });
     this.ground.cullableChildren = false; // only chunks near the view exist, so there is nothing far to cull
+    const style = data.backdrop && isBackdrop(data.backdrop) ? BACKDROPS[data.backdrop] : null;
+    this.backdrop = style ? new BackdropLayer(style) : null;
+    if (this.backdrop) this.addChild(this.backdrop);
     this.addChild(this.ground, this.layer);
     this.cols = Math.ceil(data.width / CHUNK);
     this.rows = Math.ceil(data.height / CHUNK);
@@ -56,6 +64,7 @@ export class MapView extends Container {
 
   /** Build the chunks around `view` (world px) and free those well away from it. */
   update(view: ViewRect) {
+    this.backdrop?.update(view);
     const near = chunkRange(view, this.cols, this.rows, 1);
     const keep = chunkRange(view, this.cols, this.rows, 2);
     for (const [i, chunk] of this.live) {

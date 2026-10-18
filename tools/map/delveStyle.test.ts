@@ -109,11 +109,15 @@ describe('the overlay sheet layout', () => {
 function recorder(w: number, h: number) {
   const tile = new Map<string, string>();
   const overlays = new Map<string, string[]>();
+  const voids = new Set<string>();
+  const backdrop = { name: '' };
   const z = {
     width: w,
     height: h,
     indoor() {},
     dark() {},
+    backdrop: (name: string) => void (backdrop.name = name),
+    clearGround: (r: { col: number; row: number }) => void voids.add(`${r.col},${r.row}`),
     fill() {},
     block() {},
     tileAt: (col: number, row: number, _n: string, _s: string, x: number) => tile.set(`${col},${row}`, `${x}`),
@@ -123,20 +127,23 @@ function recorder(w: number, h: number) {
       overlays.set(k, [...(overlays.get(k) ?? []), `${x},${y}`]);
     },
   };
-  return { z: z as unknown as ZoneApi, tile, overlays };
+  return { z: z as unknown as ZoneApi, tile, overlays, voids, backdrop };
 }
 
 describe('Delve.paint dressing', () => {
   const room = () => new Delve(30, 24).rect(3, 4, 24, 16).rect(6, 9, 18, 4, '~');
 
-  it('shades floor under a wall, foams the water edge on the floor side, and roughens the roof', () => {
-    const { z, overlays } = recorder(30, 24);
+  it('shades floor under a wall, foams the water edge on the floor side, and leaves the roof for the backdrop', () => {
+    const { z, overlays, voids, backdrop } = recorder(30, 24);
     room().paint(z, 'sewer');
     expect(overlays.get('10,4')).toContainEqual(`${shadowTile(maskOf(true, false, false, false))[0]},0`);
     expect(overlays.get('10,9')).toContainEqual(`${foamTile(maskOf(true, false, false, false))[0]},${FX_CELL}`);
     expect(overlays.get('10,12')).toContainEqual(`${foamTile(maskOf(false, false, true, false))[0]},${FX_CELL}`);
     expect(overlays.get('10,10')).toBeUndefined(); // the middle of the water has no edge
-    expect(overlays.get('1,1')?.length).toBeGreaterThan(0); // the roof
+    expect(voids.has('1,1')).toBe(true); // the roof shows the backdrop
+    expect(overlays.get('1,1')).toBeUndefined();
+    expect(voids.has('10,10')).toBe(false); // the water does not
+    expect(backdrop.name).toBe('sewer');
   });
 
   it('is the same every time', () => {
