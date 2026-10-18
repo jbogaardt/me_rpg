@@ -6,16 +6,27 @@
 // direction of the walk keys, else the aim, else the facing. Invulnerable only over the middle (frames 2 to 7 of the 13
 // the roll lasts at 60 Hz). The window lives in the roll's own timer and `Player.safe` reads it, so nothing outlives the
 // roll: a roll can never grant more than ROLL_IFRAMES of safety, however it ends (a hit, a door, a fall). A cooldown of
-// ROLL_COOLDOWN runs from the START of the roll, so it can't be chained; the press is buffered (`inputBuffer.ts`'s
+// ROLL_COOLDOWN runs from the START of the roll, so it can't be chained or used to travel (see `rollTravelGain`); the press is buffered (`inputBuffer.ts`'s
 // AttackBuffer, the same 0.16 s) so a press just before it is legal fires the moment it is. No damage is dealt and nothing
 // else is spent. Stun and knock win over a roll: it cannot start in them and a blow that lands outside the window ends it.
 
 /** Seconds a roll lasts (13 frames at 60 Hz). */
 export const ROLL_TIME = 13 / 60;
-/** Pixels travelled, 3 cells. */
-export const ROLL_DISTANCE = 96;
-/** Seconds from the start of one roll to the next being allowed. */
-export const ROLL_COOLDOWN = 0.6;
+/** Pixels travelled, 2.25 cells: a dodge, not a way to cross the map. */
+export const ROLL_DISTANCE = 72;
+/**
+ * Seconds from the start of one roll to the next being allowed. Long enough that rolling again and again is no way to
+ * travel: walking the rest of the time, a hero who rolls every time it is ready gains about a fifth on walking
+ * (`rollTravelGain`, held to `MAX_TRAVEL_GAIN` by the tests).
+ */
+export const ROLL_COOLDOWN = 1.8;
+/** The hero's walking pace (px/s), as `OverworldScene` has it, for `rollTravelGain`. */
+const WALK_SPEED = 120;
+/** The most a roll-spammer may outpace a walker by (a share: 0.25 is a quarter faster). */
+export const MAX_TRAVEL_GAIN = 0.25;
+
+/** How much faster than walking a hero travels who rolls the moment each cooldown ends (0.2: a fifth faster). */
+export const rollTravelGain = (): number => (ROLL_DISTANCE - WALK_SPEED * ROLL_TIME) / (WALK_SPEED * ROLL_COOLDOWN);
 /** The window of invulnerability, in seconds into the roll: frames 2 to 7 at 60 Hz (six ticks, 100 ms). */
 export const ROLL_IFRAMES = { from: 2 / 60, to: 8 / 60 } as const;
 /** Longest step handed to the collision at once (px), so a long frame never tunnels through a wall. */

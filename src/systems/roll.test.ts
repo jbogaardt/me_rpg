@@ -3,6 +3,7 @@ import { CELL } from '../map/types';
 import { Collision, type Body } from './collision';
 import { AttackBuffer } from './inputBuffer';
 import {
+  MAX_TRAVEL_GAIN,
   ROLL_COOLDOWN,
   ROLL_DISTANCE,
   ROLL_IFRAMES,
@@ -17,15 +18,16 @@ import {
   startRoll,
   stepRoll,
   type RollGate,
+  rollTravelGain,
 } from './roll';
 
 const TICK = 1 / 60;
 const free: RollGate = { cooldown: 0, rolling: false, down: false, stunned: false, dm: false };
 
 describe('the roll move', () => {
-  it('lasts 13 frames and covers three cells', () => {
+  it('lasts 13 frames and covers two and a quarter cells', () => {
     expect(ROLL_TIME * 60).toBeCloseTo(13, 6);
-    expect(ROLL_DISTANCE).toBe(3 * CELL);
+    expect(ROLL_DISTANCE).toBe(2.25 * CELL);
   });
 
   it('covers exactly its distance however the ticks fall, and ends when its time is up', () => {
@@ -97,6 +99,11 @@ describe('when a roll may start', () => {
     expect(canRoll({ ...free, down: true })).toBe(false);
     expect(canRoll({ ...free, stunned: true })).toBe(false);
     expect(canRoll({ ...free, dm: true })).toBe(false);
+  });
+
+  it('is no way to travel: rolling on every cooldown beats walking by little', () => {
+    expect(rollTravelGain()).toBeGreaterThan(0);
+    expect(rollTravelGain()).toBeLessThanOrEqual(MAX_TRAVEL_GAIN);
   });
 
   it('cannot be chained: the cooldown runs from the start and outlasts the roll', () => {
