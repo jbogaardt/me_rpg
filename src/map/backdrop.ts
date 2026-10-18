@@ -16,6 +16,9 @@ export interface BackdropStyle {
   /** The foreground over the floor: motes of dust drifting in the air, and the soft shadows of stalactites overhead. */
   dust: number;
   shade: number;
+  /** Lava depths: glowing rivers far below the rock (the glow, and its hot core). Left out, the backdrop is plain dark cavern. */
+  lava?: number;
+  lavaHot?: number;
 }
 
 export const BACKDROPS = {
@@ -29,13 +32,15 @@ export const BACKDROPS = {
     shade: 0x050304,
   },
   rock: {
-    base: 0x1b1315,
-    far: 0x251a1c,
+    base: 0x170f10,
+    far: 0x241817,
     near: 0x30211f,
-    rim: 0x5a3a30,
-    glint: 0xb0562a,
+    rim: 0x7a3a24,
+    glint: 0xe07a30,
     dust: 0xf0b888,
     shade: 0x050304,
+    lava: 0xa8381a,
+    lavaHot: 0xffa23c,
   },
   sewer: {
     base: 0x0f1614,
