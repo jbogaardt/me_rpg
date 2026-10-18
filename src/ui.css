@@ -303,9 +303,6 @@ body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
 #btn-use[data-icon='talk'] .glyph { background-image: var(--glyph-talk); }
 #btn-use[data-icon='hand'] .glyph { background-image: var(--glyph-hand); }
 #btn-use[data-icon='chest'] .glyph { background-image: var(--glyph-chest); }
-/* The in-world glint over what the interact key could use (hud/InteractMarks.ts): a pixel sparkle, positioned and faded per frame. */
-#interact-marks { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
-#interact-marks .glint { position: absolute; left: 0; top: 0; width: 15px; height: 15px; background: var(--glint) center / 100% 100% no-repeat; image-rendering: pixelated; filter: drop-shadow(0 0 3px rgba(242, 211, 138, 0.9)); will-change: transform, opacity; }
 
 /* --- Pause menu --- */
 #menu, #shop, #trade {

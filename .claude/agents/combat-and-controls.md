@@ -33,3 +33,8 @@ You do not approve your own work alone. Before reporting done, run `npm run type
 
 ## Target hardware (owner decision)
 A standard modern web browser on both PC and mobile (touch). Every feature must work with touch controls and hold up on a mid-range phone, not only a desktop. Budget particles, sounds and per-frame work for the phone. Test both a desktop and a mobile viewport.
+
+## Before you start (standing rules from the owner; they outrank anything above)
+- Read CLAUDE.md in full, especially its standing notes (e.g. "Look and feel: not retro": plain health bar, Cinzel/Crimson text, smooth darkness, no pixel hearts/icons/font, no dithered fog, no sparkles or decorative marks over people and chests; ask before touching lava). If a change adds an obviously retro or pixelated flourish, drop it or ask first.
+- Other Claude sessions work on this repo at the same time (balance, combat tuning, dungeons, visuals) and push to main. Before building, read `git log origin/main --no-merges -40` and the code you will touch. Never reverse another session's deliberate tuning or design; if your slice overlaps or conflicts with it, STOP and report the overlap instead of replacing it.
+- The owner's visual taste was rejected twice already (pixel HUD, dithered dungeon fog). When unsure about a visual change, ship the quiet, smooth version or ask.

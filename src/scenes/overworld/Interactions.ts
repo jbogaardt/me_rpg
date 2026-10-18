@@ -8,7 +8,7 @@ import type { QuestSite } from '../../entities/QuestSite';
 import type { Dialog } from '../../hud/Dialog';
 import { DRINK_KEY, HarvestButtons, type HarvestSpot } from '../../hud/HarvestButtons';
 import { InteractMarks } from '../../hud/InteractMarks';
-import { MAX_MARKS, nearestInReach, newThing, pickMarks, type MarkKind, type Thing } from '../../hud/interactThings';
+import { nearestInReach, newThing, type MarkKind, type Thing } from '../../hud/interactThings';
 import type { ShopCounter } from '../../hud/ShopCounter';
 import { CELL } from '../../map/types';
 import { enabled } from '../../systems/capabilities';
@@ -53,9 +53,8 @@ const GUEST_REPEAT_S = 0.05;
  */
 export class Interactions {
   private harvestButtons = new HarvestButtons();
-  private marks = new InteractMarks(); // the glints in the world and the touch button's glyph
+  private marks = new InteractMarks(); // the touch button's glyph
   private things: Thing[] = []; // what the hero could use now (a reused pool: nothing allocated per frame)
-  private picked: Thing[] = Array.from({ length: MAX_MARKS }, newThing);
   private guestDrinking = false; // guest: asked the host to let it drink (see `drinking`)
 
   constructor(
@@ -560,24 +559,20 @@ export class Interactions {
   }
 
   /**
-   * Each frame, from the scene: glint over what the interact key could use and show or hide the touch interact button with
-   * the glyph of the nearest thing in reach. `hidden` (a menu, a dialog, a door, the Dungeon Master's view) clears both. Split
-   * keys only show the button (the contextual key has none).
+   * Each frame, from the scene: show or hide the touch interact button with the glyph of the nearest thing in reach.
+   * `hidden` (a menu, a dialog, a door, the Dungeon Master's view) clears it. Split keys only show the button (the
+   * contextual key has none).
    */
-  updateMarks(hidden: boolean, seconds: number) {
+  updateMarks(hidden: boolean) {
     const { arena } = this;
-    const { world } = arena.view;
-    const out = { x: world.x, y: world.y, scale: world.scale.x };
-    if (hidden || arena.local.dm || arena.local.down !== null)
-      return this.marks.update(this.picked, 0, out, null, seconds);
+    if (hidden || arena.local.dm || arena.local.down !== null) return this.marks.update(null);
     const count = this.collectThings();
-    const shown = pickMarks(this.things, count, this.picked);
-    this.marks.update(this.picked, shown, out, contextKey.on ? null : nearestInReach(this.things, count), seconds);
+    this.marks.update(contextKey.on ? null : nearestInReach(this.things, count));
   }
 
   /** Forget the Harvest and Drink buttons (the scene is being left). */
   clear() {
     this.harvestButtons.clear();
-    this.marks.update(this.picked, 0, { x: 0, y: 0, scale: 1 }, null, 0);
+    this.marks.update(null);
   }
 }
