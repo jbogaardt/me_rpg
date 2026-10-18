@@ -4,7 +4,17 @@
 // The source of the JSON (static files today, a database later) is ContentManager's business, not this file's.
 
 import type { MobKind } from '../systems/combat';
-import { POISE_CAP, resolveCharge, resolveGuard } from '../systems/mobDefense';
+import {
+  POISE_CAP,
+  QUICK_WINDUP,
+  resolveCharge,
+  resolveGuard,
+  resolveHeal,
+  resolveSprint,
+  SPREAD_MAX_ARC,
+  SPREAD_MAX_COUNT,
+  SPRINT_MAX_DURATION,
+} from '../systems/mobDefense';
 import { MAX_BAND } from '../systems/bands';
 import { MAX_ROAM_CELLS } from '../systems/roam';
 import { isClimate } from '../systems/weather';
@@ -16,7 +26,7 @@ import { onlyFeeds } from '../systems/needs';
 import { MOB_DEATHS, type MobDeath } from '../systems/particleEffects';
 import { CROPS } from '../systems/crops';
 import { SLOTS, type Outfit } from '../sprites/doll';
-import { GEAR_SLOTS, type GearSlot, type Item } from '../systems/combat';
+import { GEAR_SLOTS, WINDUP_PACE, type GearSlot, type Item } from '../systems/combat';
 import { iconKind } from '../systems/inventory';
 import { ITEM_VARIANTS } from '../systems/itemArt';
 import type { ItemId, StartGear } from '../systems/items';
@@ -53,15 +63,23 @@ export interface EntityBehavior {
   recover?: number; // seconds busy after attacking (default 0.7)
   stagger?: number; // seconds a hit stuns it (default 0.3)
   telegraph?: { color?: string; ground?: boolean }; // windup cue: `ground` the marks toward the blow; `color` is legacy, accepted and unread
-  shot?: { range: number; speed: number; color: string }; // a ranged attacker (color "#rrggbb")
+  /** A ranged attacker (color "#rrggbb"); `spread` fans `count` bolts over `arc` degrees, each `power` of its attack (systems/mobDefense.ts). */
+  shot?: { range: number; speed: number; color: string; spread?: { count: number; arc: number; power: number } };
   ray?: { range: number; color: string; tick: number; power: number; duration: number; rest: number }; // a held beam
   /** Blows it shrugs off before a hit staggers it (whole number, 0 = every blow staggers; systems/mobDefense.ts). Elites 3-6. */
   poiseMax?: number;
   poiseRegen?: number; // seconds unhurt before its poise is whole again (default 2)
+  immovable?: boolean; // never pushed back by a blow (a brute or giant; every named boss is); it still staggers when its poise breaks
   /** A gap-closer for a hero who stays out of range (not for a shooter or a ray caster); each field falls back to `CHARGE_DEFAULTS`. */
   charge?: Partial<Record<'range' | 'after' | 'windup' | 'speed' | 'duration' | 'cooldown' | 'power', number>>;
   /** A shield that turns frontal arrows and spells aside; `arc` degrees covered, `chip` the share that still hurts (`GUARD_DEFAULTS`). */
   guard?: { arc?: number; chip?: number };
+  /** A burst of speed (not for a shooter or a ray caster); each field falls back to `SPRINT_DEFAULTS`. */
+  sprint?: Partial<Record<'speed' | 'duration' | 'cooldown' | 'range', number>>;
+  /** A healer: mends a wounded ally in sight now and then (`HEAL_DEFAULTS`); each field falls back to them. */
+  heal?: Partial<Record<'range' | 'amount' | 'cooldown' | 'below' | 'rest', number>>;
+  /** A snap attacker: windup down to `QUICK_WINDUP`, a weaker blow, a long recovery. */
+  quick?: boolean;
 }
 
 /** One thing a scenario can place: an enemy (`mob`) or a person to talk to (`npc`). */
@@ -169,6 +187,11 @@ export interface ScenarioNode {
 export interface Scenarios {
   /** The node the game starts in. */
   start: string;
+  /**
+   * The node whose zone and spot a solo hero wakes at after a fall or a reload (the town, by story): its `spawn`, else the
+   * map's. Absent: the start node. Online (host or guest) and live worlds keep waking at the start.
+   */
+  home?: string;
   /** The engine's features this campaign switches off or tunes (systems/capabilities.ts); any not named are on. */
   capabilities: CapabilitySpec;
   nodes: Map<string, ScenarioNode>;
@@ -343,6 +366,17 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
           speed: r.number(shot.speed, `${p}.shot.speed`, 1),
           color: r.color(shot.color, `${p}.shot.color`),
         };
+      if (shot && behavior.shot && shot.spread !== undefined) {
+        const sp = r.object(shot.spread, `${p}.shot.spread`);
+        if (sp) {
+          const count = r.number(sp.count, `${p}.shot.spread.count`, 2);
+          const arc = r.number(sp.arc, `${p}.shot.spread.arc`, 1);
+          if (!Number.isInteger(count) || count > SPREAD_MAX_COUNT)
+            r.fail(`${p}.shot.spread.count`, `must be a whole number from 2 to ${SPREAD_MAX_COUNT}`);
+          else if (arc > SPREAD_MAX_ARC) r.fail(`${p}.shot.spread.arc`, `is at most ${SPREAD_MAX_ARC} degrees`);
+          else behavior.shot.spread = { count, arc, power: r.number(sp.power, `${p}.shot.spread.power`, 0.1) };
+        }
+      }
     }
     if (b.ray !== undefined) {
       const ray = r.object(b.ray, `${p}.ray`);
@@ -361,6 +395,10 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
       if (!Number.isInteger(poiseMax) || poiseMax > POISE_CAP)
         r.fail(`${p}.poiseMax`, `must be a whole number from 0 to ${POISE_CAP}`);
       else behavior.poiseMax = poiseMax;
+    }
+    if (b.immovable !== undefined) {
+      if (typeof b.immovable !== 'boolean') r.fail(`${p}.immovable`, 'must be true or false');
+      else if (b.immovable) behavior.immovable = true;
     }
     const poiseRegen = r.optionalNumber(b.poiseRegen, `${p}.poiseRegen`, 0.1);
     if (poiseRegen !== undefined) behavior.poiseRegen = poiseRegen;
@@ -399,6 +437,53 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
           else guard.chip = chip;
         }
         behavior.guard = guard;
+      }
+    }
+    if (b.sprint !== undefined) {
+      const sp = r.object(b.sprint, `${p}.sprint`);
+      if (sp) {
+        if (behavior.shot || behavior.ray) r.fail(`${p}.sprint`, 'a shooter or ray caster does not sprint');
+        const sprint: NonNullable<EntityBehavior['sprint']> = {};
+        for (const [key, min] of [
+          ['speed', 1],
+          ['duration', 0.1],
+          ['cooldown', 0],
+          ['range', 1],
+        ] as const) {
+          const n = r.optionalNumber(sp[key], `${p}.sprint.${key}`, min);
+          if (n !== undefined) sprint[key] = n;
+        }
+        if (sprint.duration !== undefined && sprint.duration > SPRINT_MAX_DURATION)
+          r.fail(`${p}.sprint.duration`, `is at most ${SPRINT_MAX_DURATION} seconds (a medium burst)`);
+        behavior.sprint = sprint;
+      }
+    }
+    if (b.heal !== undefined) {
+      const h = r.object(b.heal, `${p}.heal`);
+      if (h) {
+        const heal: NonNullable<EntityBehavior['heal']> = {};
+        for (const [key, min] of [
+          ['range', 1],
+          ['amount', 0.05],
+          ['cooldown', 2],
+          ['below', 0.1],
+          ['rest', 0.3],
+        ] as const) {
+          const n = r.optionalNumber(h[key], `${p}.heal.${key}`, min);
+          if (n === undefined) continue;
+          if ((key === 'amount' && n > 0.5) || (key === 'below' && n > 1))
+            r.fail(`${p}.heal.${key}`, key === 'amount' ? "is at most half of an ally's health" : 'is a share up to 1');
+          else heal[key] = n;
+        }
+        behavior.heal = heal;
+      }
+    }
+    if (b.quick !== undefined) {
+      if (typeof b.quick !== 'boolean') r.fail(`${p}.quick`, 'must be true or false');
+      else if (b.quick) {
+        if (behavior.windup !== undefined && behavior.windup * WINDUP_PACE < QUICK_WINDUP)
+          r.fail(`${p}.windup`, `a quick kind winds up for at least ${(QUICK_WINDUP / WINDUP_PACE).toFixed(2)} s`);
+        behavior.quick = true;
       }
     }
     def.behavior = behavior;
@@ -555,6 +640,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
   r.version(file, 'scenarios.json');
   const start = r.string(file.start, 'scenarios.json.start');
   const capabilities = readCapabilities(r, file.capabilities, 'scenarios.json.capabilities', 'campaign');
+  const home = file.home === undefined ? undefined : r.string(file.home, 'scenarios.json.home');
   r.array(file.nodes, 'scenarios.json.nodes').forEach((v, i) => {
     const o = r.object(v, `nodes[${i}]`);
     if (!o) return;
@@ -588,7 +674,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
     }
     nodes.set(id, node);
   });
-  return { start, capabilities, nodes };
+  return { start, ...(home ? { home } : {}), capabilities, nodes };
 }
 
 const SITE_SHAPES = ['mushroom', 'stone', 'sand'] as const;
@@ -1023,6 +1109,8 @@ function crossCheck(r: Reader, c: Content) {
   checkAgainstCapabilities(r, c);
   if (c.scenarios.start && !c.scenarios.nodes.has(c.scenarios.start))
     r.fail('scenarios.json.start', `no node "${c.scenarios.start}"`);
+  if (c.scenarios.home && !c.scenarios.nodes.has(c.scenarios.home))
+    r.fail('scenarios.json.home', `no node "${c.scenarios.home}"`);
   for (const node of c.scenarios.nodes.values()) {
     const path = `nodes.${node.node_id}`;
     if (!c.biomes[node.biome_type]) r.fail(`${path}.biome_type`, `"${node.biome_type}" is not in biomes.json`);
@@ -1145,6 +1233,7 @@ export function toMobKind(def: EntityDef): MobKind {
   };
   if (def.scale !== undefined) kind.scale = def.scale;
   if (def.boss) kind.named = true;
+  if (def.boss || b.immovable) kind.immovable = true;
   if (def.death) kind.death = def.death;
   if (b.windup !== undefined) kind.windup = b.windup;
   if (b.recover !== undefined) kind.recover = b.recover;
@@ -1159,6 +1248,9 @@ export function toMobKind(def: EntityDef): MobKind {
   if (b.poiseRegen !== undefined) kind.poiseRegen = b.poiseRegen;
   if (b.charge) kind.charge = resolveCharge(b.charge);
   if (b.guard) kind.guard = resolveGuard(b.guard);
+  if (b.heal) kind.heal = resolveHeal(b.heal);
+  if (b.sprint) kind.sprint = resolveSprint(b.sprint);
+  if (b.quick) kind.quick = true;
   return kind;
 }
 

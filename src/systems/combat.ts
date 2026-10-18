@@ -158,10 +158,35 @@ export interface MobKind {
   poiseMax?: number;
   /** Seconds unhurt before its poise is whole again (default `POISE_REGEN`). */
   poiseRegen?: number;
+  /** Never pushed back by a blow (a brute, a giant, a named boss): hit, but it holds its ground (`Mob.hit`). */
+  immovable?: boolean;
   /** A gap-closer for when it is kited: a telegraphed dash at a hero who stays out of range (`Mob.ts`). */
   charge?: MobCharge;
   /** A shield: turns frontal arrows and spells aside while it is up (`frontal`, systems/mobDefense.ts). */
   guard?: MobGuard;
+  /** A burst of speed: for a few seconds it runs faster than the hero, then it is back to its walk (`resolveSprint`, systems/mobDefense.ts). */
+  sprint?: MobSprint;
+  /** A healer: now and then it mends a wounded ally in sight instead of attacking (`resolveHeal`, systems/mobDefense.ts). */
+  heal?: MobHeal;
+  /** A snap attacker: its windup may be as short as `QUICK_WINDUP`, and it pays with a weaker blow and a long recovery (`QUICK_POWER`). */
+  quick?: boolean;
+}
+
+/** A kind's mending of its allies, every number in full (the content gives only what it changes, `resolveHeal`). */
+export interface MobHeal {
+  range: number; // px: an ally this close (and in sight) may be mended
+  amount: number; // share of the ally's max HP given back
+  cooldown: number; // seconds before it may mend again
+  below: number; // 0..1: only an ally under this share of its HP is mended
+  rest: number; // seconds it is busy casting (it does not attack, and a blow staggers it as in any recover)
+}
+
+/** A kind's burst of speed, every number in full (the content gives only what it changes, `resolveSprint`). */
+export interface MobSprint {
+  speed: number; // px/s while it runs (the hero walks at 120)
+  duration: number; // seconds the burst lasts at most
+  cooldown: number; // seconds before it may burst again
+  range: number; // px: only a hero further than this (and seen) starts one
 }
 
 /** A kind's gap-closer, every number in full (the content gives only what it changes, `resolveCharge`). */
@@ -199,14 +224,31 @@ export interface MobShot {
   range: number; // pixels: starts a shot from this close (must not exceed `sight`, or it never gets to fire)
   speed: number; // pixels per second; the hero walks at 120, so keep it dodgeable
   color: number; // 0xRRGGBB glow of the projectile, so each kind's shot reads differently
+  /** A fan: `count` bolts spread over `arc` degrees, centred on the aim, each worth `power` of the kind's attack. */
+  spread?: MobSpread;
+}
+
+export interface MobSpread {
+  count: number; // bolts per shot (2-7)
+  arc: number; // degrees from the first bolt to the last (up to 120)
+  power: number; // each bolt's share of the kind's `attack`
 }
 
 const DEFAULT_TIMINGS = { windup: 0.5, recover: 0.7, stagger: 0.3 };
 
+/**
+ * A melee blow's telegraph is this share of the kind's `windup`: with the mouse a hero aims exactly and a half-second
+ * tell is a free dodge, so it is quick (a plain blow 0.33 s, spread to 0.26 s at the quickest). A shot or beam keeps its
+ * authored windup: it is dodged by moving, not by aim.
+ */
+export const WINDUP_PACE = 0.65;
+/** The shortest windup a spread blow may have: a clear tell is still a quarter second. The content check holds every kind to it. */
+export const WINDUP_FLOOR = 0.25;
+
 /** How long a kind telegraphs, rests after an attack, and is stunned by a hit (seconds). */
 export function mobTimings(kind: MobKind): { windup: number; recover: number; stagger: number } {
   return {
-    windup: kind.windup ?? DEFAULT_TIMINGS.windup,
+    windup: (kind.windup ?? DEFAULT_TIMINGS.windup) * (kind.shot || kind.ray ? 1 : WINDUP_PACE),
     recover: kind.recover ?? DEFAULT_TIMINGS.recover,
     stagger: kind.stagger ?? DEFAULT_TIMINGS.stagger,
   };

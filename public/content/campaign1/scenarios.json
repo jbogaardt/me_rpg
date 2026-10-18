@@ -1,6 +1,7 @@
 {
   "version": 1,
   "start": "greenwood",
+  "home": "town",
   "capabilities": {
     "levelGates": false
   },

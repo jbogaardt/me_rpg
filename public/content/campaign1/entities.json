@@ -55,7 +55,12 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.43,
-        "stagger": 0.2
+        "stagger": 0.2,
+        "sprint": {
+          "speed": 140,
+          "duration": 0.9,
+          "cooldown": 5
+        }
       }
     },
     "frostbound": {
@@ -136,7 +141,13 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.3,
-        "stagger": 0.12
+        "stagger": 0.12,
+        "sprint": {
+          "speed": 150,
+          "duration": 1.0,
+          "cooldown": 4,
+          "range": 110
+        }
       }
     },
     "skeleton": {
@@ -160,11 +171,11 @@
         "gold": 14
       },
       "behavior": {
-        "windup": 0.55,
+        "windup": 0.8,
         "recover": 1,
         "shot": {
           "range": 192,
-          "speed": 175,
+          "speed": 270,
           "color": "#e9e2c8"
         }
       }
@@ -276,7 +287,8 @@
         "recover": 0.65,
         "stagger": 0.35,
         "poiseMax": 4,
-        "charge": {}
+        "charge": {},
+        "immovable": true
       }
     },
     "chieftain": {
@@ -335,7 +347,16 @@
         "shot": {
           "range": 192,
           "speed": 145,
-          "color": "#ff9a5a"
+          "color": "#ff9a5a",
+          "spread": {
+            "count": 3,
+            "arc": 28,
+            "power": 0.7
+          }
+        },
+        "heal": {
+          "amount": 0.25,
+          "cooldown": 7
         }
       }
     },
@@ -366,7 +387,8 @@
         "recover": 0.45,
         "stagger": 0.4,
         "poiseMax": 6,
-        "charge": {}
+        "charge": {},
+        "immovable": true
       }
     },
     "wraith": {
@@ -395,7 +417,12 @@
         "shot": {
           "range": 192,
           "speed": 150,
-          "color": "#7aa8ff"
+          "color": "#7aa8ff",
+          "spread": {
+            "count": 5,
+            "arc": 70,
+            "power": 0.55
+          }
         },
         "poiseMax": 3
       }
@@ -427,7 +454,17 @@
         "shot": {
           "range": 192,
           "speed": 150,
-          "color": "#6fd0a0"
+          "color": "#6fd0a0",
+          "spread": {
+            "count": 3,
+            "arc": 36,
+            "power": 0.7
+          }
+        },
+        "heal": {
+          "amount": 0.2,
+          "cooldown": 6,
+          "range": 176
         }
       }
     },
@@ -481,7 +518,13 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.3,
-        "stagger": 0.1
+        "stagger": 0.1,
+        "sprint": {
+          "speed": 170,
+          "duration": 1.2,
+          "cooldown": 5,
+          "range": 120
+        }
       }
     },
     "tuskGuard": {
@@ -513,7 +556,8 @@
         "stagger": 0.35,
         "poiseMax": 4,
         "charge": {},
-        "guard": {}
+        "guard": {},
+        "immovable": true
       }
     },
     "frostWarden": {
@@ -546,7 +590,8 @@
         "stagger": 0.35,
         "poiseMax": 5,
         "charge": {},
-        "guard": {}
+        "guard": {},
+        "immovable": true
       }
     },
     "snowman": {
@@ -571,7 +616,8 @@
         "recover": 0.9,
         "stagger": 0.4,
         "poiseMax": 6,
-        "charge": {}
+        "charge": {},
+        "immovable": true
       }
     },
     "elder": {
@@ -909,7 +955,12 @@
         "shot": {
           "range": 192,
           "speed": 140,
-          "color": "#d9b6ff"
+          "color": "#d9b6ff",
+          "spread": {
+            "count": 2,
+            "arc": 14,
+            "power": 0.8
+          }
         }
       }
     },
@@ -943,7 +994,8 @@
         "stagger": 0.35,
         "poiseMax": 4,
         "charge": {},
-        "guard": {}
+        "guard": {},
+        "immovable": true
       }
     },
     "stillheart": {
@@ -1281,9 +1333,10 @@
         "gold": 2
       },
       "behavior": {
-        "windup": 0.5,
-        "recover": 0.3,
-        "stagger": 0.1
+        "windup": 0.35,
+        "recover": 1.0,
+        "stagger": 0.1,
+        "quick": true
       }
     },
     "bat": {
@@ -1305,7 +1358,13 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.3,
-        "stagger": 0.15
+        "stagger": 0.15,
+        "sprint": {
+          "speed": 160,
+          "duration": 0.8,
+          "cooldown": 3.5,
+          "range": 100
+        }
       }
     },
     "adder": {
@@ -1325,9 +1384,10 @@
         "gold": 6
       },
       "behavior": {
-        "windup": 0.5,
-        "recover": 0.5,
-        "stagger": 0.2
+        "windup": 0.35,
+        "recover": 1.0,
+        "stagger": 0.2,
+        "quick": true
       }
     },
     "haunt": {
@@ -1370,12 +1430,12 @@
         "gold": 14
       },
       "behavior": {
-        "windup": 0.6,
+        "windup": 0.75,
         "recover": 1.0,
         "stagger": 0.2,
         "shot": {
           "range": 170,
-          "speed": 150,
+          "speed": 260,
           "color": "#ff5577"
         }
       }

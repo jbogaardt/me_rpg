@@ -151,6 +151,11 @@ export class ContentManager {
     return this.getScenario(this.content.scenarios.start);
   }
 
+  /** The node a solo hero wakes in after a fall or a reload: the content's `home`, else the start node. */
+  get homeNode(): ScenarioNode {
+    return this.getScenario(this.content.scenarios.home ?? this.content.scenarios.start);
+  }
+
   hasScenario(id: string): boolean {
     return this.content.scenarios.nodes.has(id);
   }

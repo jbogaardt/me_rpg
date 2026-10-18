@@ -15,7 +15,7 @@ import {
   squashY,
   tremblePx,
 } from '../systems/tellLook';
-import { Poise, frontal, type Blow } from '../systems/mobDefense';
+import { Poise, QUICK_POWER, frontal, respawnWait, type Blow } from '../systems/mobDefense';
 import {
   hitPauseFor,
   KNOCK_DECAY,
@@ -42,6 +42,8 @@ export interface MobWorld {
   strike(mob: Mob, target: Character, power?: number): void;
   /** A ranged mob fires along the unit vector (ux, uy); the scene flies the projectile and decides what it hits. */
   shoot(mob: Mob, ux: number, uy: number): void;
+  /** A healer mends the most wounded ally in range and sight (`MobKind.heal`); false when there is none to mend. */
+  heal?(mob: Mob): boolean;
   /** One burn of a held ray on `target`. Returns false when the beam cannot reach them (a wall): it then ends. */
   ray(mob: Mob, target: Character): boolean;
 }
@@ -62,7 +64,7 @@ type State = MobState;
  * A melee mob starts its windup from this close (feet to feet). It is more than the sword's own reach (its hit circle
  * ends about 38 px ahead of the hero), so a hero close enough to land a blow is close enough to be swung at. It is also
  * short enough that the slowest lunge (14 px) plus the blow's circle (32 px) still reaches a hero who stands still, and
- * long enough that a hero who sees the tell (>= 0.4 s, 48 px of walking) can step out of the lane before the blow.
+ * long enough that a hero who sees the tell (about 0.3 s at the quickest) can still step out of the lane before the blow.
  */
 export const REACH = 44;
 /** A windup tells (a rising tone) only to a hero this near: every page plays it from the state, so distance gates it. */
@@ -90,7 +92,6 @@ const MEND = 0.25; // share of its max HP a mob mends per second once it has los
 const SHRUG = 0.9;
 const COMMITTED = 0.5;
 const KEEP_AWAY = 0.4; // a shooter backs off when the hero is closer than this fraction of its range
-const RESPAWN = 60; // an adventure, not a grind: a foe that falls stays down for a minute
 const FADE = 0.4;
 const HEARING = 0.35; // share of its sight a mob notices a hero through a wall (noise, footsteps)
 const MEMORY = 2; // seconds a chasing mob keeps hunting a hero it cannot see before it gives up
@@ -141,6 +142,9 @@ export class Mob {
   private dashing = 0; // seconds of charge left (the gap-closer, `MobKind.charge`)
   private farFor = 0; // seconds the hero has stayed out of charge range while this mob chased
   private chargeCool = 0; // seconds before it may charge again
+  private sprinting = 0; // seconds of burst left (`MobKind.sprint`)
+  private sprintCool = 0; // seconds before it may burst again
+  private healCool = 0; // seconds before it may mend an ally again (`MobKind.heal`)
   private bang = new Graphics(); // the "!" over its head while a charge winds up
   private moving = false;
   private attack: MobAttack = 'melee'; // what the current windup leads to
@@ -177,6 +181,9 @@ export class Mob {
 
   /** Comes back after a while when defeated. A training ground's enemies do not (the trial is over when they are all down). */
   respawns = true;
+  /** Times it has fallen (host/solo only; a zone that is unloaded starts its foes afresh). */
+  private falls = 0;
+  private wait = 0; // how long this fall keeps it down
 
   get alive() {
     return this.state !== 'dead';
@@ -196,6 +203,13 @@ export class Mob {
     out.color = TELL_COLOR; // one danger colour for every kind
     out.progress = Math.min(1, Math.max(0, 1 - this.timer / len));
     return true;
+  }
+
+  /** An ally's mending: some health back, up to full (the host's; a guest reads hp from the snapshot). */
+  mend(amount: number) {
+    if (this.state === 'dead' || amount <= 0) return;
+    this.hp = Math.min(this.kind.maxHp, this.hp + amount);
+    this.drawBar();
   }
 
   /** Back home at full health. */
@@ -222,6 +236,9 @@ export class Mob {
     this.dashing = 0;
     this.farFor = 0;
     this.chargeCool = 0;
+    this.sprinting = 0;
+    this.sprintCool = 0;
+    this.healCool = 0;
     this.lunging = 0;
     this.swing = false;
     this.drawBar();
@@ -238,6 +255,7 @@ export class Mob {
     this.timer = 1;
     this.flash = 0;
     this.dashing = 0;
+    this.sprinting = 0;
     this.broken = false;
     this.beam.clear();
     this.cue.hide();
@@ -278,18 +296,21 @@ export class Mob {
       this.knock = knockVelocity(vx, vy, KNOCK_SPEED);
       this.body.play('hurt', this.t.stagger * 1000);
       this.state = 'dead';
-      this.timer = RESPAWN;
+      this.wait = respawnWait(this.falls++); // an adventure, not a grind: each fall keeps it down longer
+      this.timer = this.wait;
       return true;
     }
     if (this.state === 'channel' && damage > 0) {
       this.breakRay(); // any blow breaks the beam, however poised: it is stunned and then only fights up close
     }
     if (!staggers) {
-      this.knock = knockVelocity(vx, vy, this.poise.armed ? KNOCK_NUDGE : KNOCK_SHOVE); // hurt, but not stopped
+      this.knock = this.kind.immovable
+        ? { x: 0, y: 0 }
+        : knockVelocity(vx, vy, this.poise.armed ? KNOCK_NUDGE : KNOCK_SHOVE); // hurt, but not stopped
       return false;
     }
     const stagger = this.t.stagger * stun;
-    this.knock = knockVelocity(vx, vy, KNOCK_SPEED * stun);
+    this.knock = this.kind.immovable ? { x: 0, y: 0 } : knockVelocity(vx, vy, KNOCK_SPEED * stun);
     this.body.play('hurt', stagger * 1000);
     this.state = 'recover';
     this.lunging = 0; // a staggering hit stops a lunge; the blow (if it has not landed) is lost
@@ -427,6 +448,8 @@ export class Mob {
     if (!this.broken) this.poise.tick(dt);
     this.rayRest = Math.max(0, this.rayRest - dt);
     this.chargeCool = Math.max(0, this.chargeCool - dt);
+    this.sprintCool = Math.max(0, this.sprintCool - dt);
+    this.healCool = Math.max(0, this.healCool - dt);
     this.slideKnock(dt, world);
 
     this.heroes = world.heroes;
@@ -480,6 +503,14 @@ export class Mob {
         if (dist > this.kind.sight || (this.unseen > MEMORY && dist > this.kind.sight * HEARING)) {
           this.state = 'idle';
           this.timer = 1;
+        } else if (this.kind.heal && this.healCool <= 0 && seen && world.heal?.(this)) {
+          // It mended an ally: the cast is a recover, so it is busy (and open to a blow) for a moment, not a windup (guests see the motes).
+          this.healCool = this.kind.heal.cooldown;
+          this.state = 'recover';
+          this.timer = this.kind.heal.rest;
+          this.body.face(directionToward(dx, dy));
+          this.body.play('cast', this.kind.heal.rest * 1000);
+          break;
         } else if (attack) {
           // A shooter first backs away if the hero is on top of it (unless it is cornered, then it just shoots).
           if (
@@ -508,7 +539,19 @@ export class Mob {
             this.startCharge(charge.windup, dx, dy, dist, world);
             break;
           }
-          moving = this.walk(dx / dist, dy / dist, this.kind.speed * dt, world);
+          // A burst of speed for a hero who keeps its distance: it outruns the hero for a medium stretch, then must rest.
+          const { sprint } = this.kind;
+          if (sprint) {
+            if (this.sprinting > 0) {
+              this.sprinting -= dt;
+              if (this.sprinting <= 0 || !seen || dist <= REACH) {
+                this.sprinting = 0; // it has arrived (or lost the hero, or run out of breath): now it rests
+                this.sprintCool = sprint.cooldown;
+              }
+            } else if (seen && this.sprintCool <= 0 && dist > sprint.range) this.sprinting = sprint.duration;
+          }
+          const pace = this.sprinting > 0 && sprint ? sprint.speed : this.kind.speed;
+          moving = this.walk(dx / dist, dy / dist, pace * dt, world);
         }
         break;
       }
@@ -749,7 +792,7 @@ export class Mob {
 
   /** Fade out while dead; it comes back (reset) when the timer runs out. */
   private fade() {
-    this.body.alpha = Math.max(0, (this.timer - (RESPAWN - FADE)) / FADE);
+    this.body.alpha = Math.max(0, (this.timer - (this.wait - FADE)) / FADE);
     this.body.visible = this.body.alpha > 0;
   }
 
@@ -824,7 +867,7 @@ export class Mob {
       const hit = world.heroes.find((h) => Math.hypot(h.x - cx, h.y - cy) < HIT_RADIUS * scale);
       if (hit) {
         this.swing = false;
-        world.strike(this, hit);
+        world.strike(this, hit, this.kind.quick ? QUICK_POWER : undefined);
       }
     }
     if (this.lunging <= 0 && this.swing) {

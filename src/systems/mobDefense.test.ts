@@ -17,8 +17,17 @@ import {
   POISE_REGEN,
   poiseCost,
   resolveCharge,
+  resolveSprint,
+  resolveHeal,
+  HEAL_DEFAULTS,
+  pickPatient,
+  mendAmount,
+  spreadAngles,
+  SPRINT_DEFAULTS,
   resolveGuard,
   stunFactor,
+  respawnWait,
+  RESPAWN_CAP,
 } from './mobDefense';
 
 const kind = (over: Partial<MobKind> = {}): MobKind => ({ ...MOB_KINDS.troll!, ...over });
@@ -144,11 +153,54 @@ describe('charge', () => {
   });
 });
 
+describe('sprint', () => {
+  it('outruns the hero for a medium burst, one field at a time', () => {
+    expect(resolveSprint()).toEqual(SPRINT_DEFAULTS);
+    expect(resolveSprint({ duration: 0.8 })).toEqual({ ...SPRINT_DEFAULTS, duration: 0.8 });
+    expect(SPRINT_DEFAULTS.speed).toBeGreaterThan(120);
+  });
+});
+
+describe('heal', () => {
+  const at = (x: number, hp: number, mendable = true) => ({ x, y: 0, hp, maxHp: 100, mendable });
+  it('goes for the most wounded ally in range, and no one healthy, far off or a boss', () => {
+    expect(resolveHeal({ cooldown: 9 })).toEqual({ ...HEAL_DEFAULTS, cooldown: 9 });
+    expect(pickPatient(0, 0, [at(50, 50), at(60, 20), at(70, 90)], HEAL_DEFAULTS)).toBe(1);
+    expect(pickPatient(0, 0, [at(50, 80)], HEAL_DEFAULTS)).toBe(-1); // not hurt enough
+    expect(pickPatient(0, 0, [at(HEAL_DEFAULTS.range + 1, 10)], HEAL_DEFAULTS)).toBe(-1); // too far
+    expect(pickPatient(0, 0, [at(50, 10, false)], HEAL_DEFAULTS)).toBe(-1); // a boss, or out of sight
+  });
+  it('gives back a share of the ally health, never past full', () => {
+    expect(mendAmount(40, 100, HEAL_DEFAULTS)).toBe(25);
+    expect(mendAmount(90, 100, { ...HEAL_DEFAULTS, below: 1 })).toBe(10);
+  });
+});
+
+describe('spread', () => {
+  it('fans bolts evenly around the aim', () => {
+    expect(spreadAngles(0.5, { count: 1, arc: 40 })).toEqual([0.5]);
+    const a = spreadAngles(0, { count: 3, arc: 60 });
+    expect(a[1]).toBeCloseTo(0);
+    expect(a[2]! - a[1]!).toBeCloseTo(Math.PI / 6);
+    expect(a[0]).toBeCloseTo(-a[2]!);
+    expect(spreadAngles(0, { count: 4, arc: 90 })).toHaveLength(4);
+  });
+});
+
 describe('a Dungeon Master boss', () => {
   it('is poised and made for the party, so the level gap never touches it', () => {
     const boss = bossKind(MOB_KINDS.goblin!, 12, 2, 'the Goblin King');
     expect(boss.poiseMax).toBeGreaterThanOrEqual(BOSS_POISE);
     expect(levelGap(boss, 1)).toBe(0);
     expect(boss.level).toBe(12);
+  });
+});
+
+describe('respawn (farming)', () => {
+  it('keeps a foe down longer each time it falls, to a cap', () => {
+    expect(respawnWait(0)).toBe(60);
+    expect(respawnWait(1)).toBe(90);
+    expect(respawnWait(2)).toBe(135);
+    expect(respawnWait(50)).toBe(RESPAWN_CAP);
   });
 });

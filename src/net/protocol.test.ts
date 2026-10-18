@@ -18,6 +18,9 @@ import {
   PROTOCOL_VERSION,
   round1,
   unpackKeys,
+  KEY,
+  FLAG,
+  rollBit,
   type DoMsg,
   type InputMsg,
   type LooksMsg,
@@ -77,6 +80,26 @@ describe('keys', () => {
 
   it('cancels opposite keys held together', () => {
     expect(unpackKeys(0b1111)).toEqual({ dx: 0, dy: 0 });
+  });
+});
+
+describe('the dodge roll (v58)', () => {
+  it('rides as a toggle bit of the keys, apart from the walking bits', () => {
+    expect(KEY.roll).toBe(16);
+    expect(rollBit(packKeys(1, -1))).toBe(0);
+    expect(rollBit(packKeys(1, -1) | KEY.roll)).toBe(1);
+    expect(unpackKeys(packKeys(-1, 1) | KEY.roll)).toEqual({ dx: -1, dy: 1 });
+    const base = { k: 'in', n: 1, keys: KEY.roll | 15, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
+    expect(parseMessage(JSON.stringify(base))).toMatchObject({ keys: 31 });
+  });
+
+  it('shows a rolling hero in the snapshot flags without disturbing the old bits', () => {
+    expect(FLAG.roll).toBe(256);
+    const all = Object.values(FLAG);
+    expect(new Set(all).size).toBe(all.length);
+    for (const f of all) expect(f & (f - 1)).toBe(0); // each a single bit
+    const rolling = { ...snap, players: [[0, 1, 2, 0, FLAG.roll | FLAG.invuln]] };
+    expect(parseMessage(JSON.stringify(rolling))).toMatchObject({ players: [[0, 1, 2, 0, 258]] });
   });
 });
 
@@ -241,7 +264,7 @@ describe('messages', () => {
     const base = { k: 'in', n: 1, keys: 3, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
     expect(parseMessage(JSON.stringify(base))).not.toBeNull();
     for (const patch of [
-      { keys: 16 },
+      { keys: 32 },
       { keys: -1 },
       { n: 1.5 },
       { act: 'x' },
@@ -396,7 +419,7 @@ describe('messages', () => {
       { ...snap, players: [[-1, 1, 2, 0, 0]] },
       { ...snap, players: [[0, 1, 2, 0]] }, // the old four-number shape
       { ...snap, players: [[0, 1, 2, 9, 0]] }, // direction out of range
-      { ...snap, players: [[0, 1, 2, 0, 300]] }, // unknown flags
+      { ...snap, players: [[0, 1, 2, 0, 512]] }, // unknown flags
       { ...snap, players: [[0, Infinity, 2, 0, 0]] },
       { ...snap, mobs: [[0, 1, 2, 0, 99, 5, 0, 0]] }, // unknown state
       { ...snap, mobs: [[0, 1, 2, 0, 0, 5, 0]] }, // short tuple (no mob number)
@@ -785,7 +808,7 @@ describe('the cue effects (v57)', () => {
       'itemMote',
       'questTick',
     ]);
-    expect(PROTOCOL_VERSION).toBe(57);
+    expect(PROTOCOL_VERSION).toBe(58);
   });
 
   it('round-trip on the wire, each with its player', () => {

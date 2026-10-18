@@ -83,14 +83,17 @@ export function bossShell(base: MobKind, maxHp: number, name: string): MobKind {
 /** The boss, for the host: the kind's look and ways (shots, rays), a level-made body and a slower, plainer telegraph. */
 export function bossKind(base: MobKind, level: number, size: number, name: string): MobKind {
   const s = bossStats(level, size);
+  // A giant is never a snap attacker: it keeps a plain kind's pace (the quick kind's short windup is not its own).
+  const [windup, recover] = base.quick ? [0.5, 0.5] : [base.windup ?? 0.5, base.recover ?? 0.7];
   return {
     ...bossShell(base, s.maxHp, name),
     attack: s.attack,
     defense: s.defense,
     xp: s.xp,
     gold: s.gold,
-    windup: Math.round((base.windup ?? 0.5) * 1.2 * 100) / 100, // a giant's blow is easier to read
-    recover: base.recover ?? 0.7,
+    quick: false,
+    windup: Math.round(windup * 1.2 * 100) / 100, // a giant's blow is easier to read
+    recover,
     level, // made for the party: no level gap (`levelGap` leaves a boss alone), whatever its numbers read as
     stagger: BOSS_STAGGER, // it is not to be juggled: it staggers only when its poise breaks (a short window, then it swings)
     poiseMax: Math.max(base.poiseMax ?? 0, BOSS_POISE),

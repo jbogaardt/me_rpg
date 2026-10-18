@@ -2,6 +2,7 @@ import { TRAINER } from '../../systems/skills';
 import { Character } from '../../entities/Character';
 import type { Barrel } from '../../entities/Barrel';
 import { Player } from '../../entities/Player';
+import type { CellPoint } from '../../map/types';
 import type { Role } from '../../net/session';
 import { newHero, type Hero } from '../../systems/combat';
 import type { Pressure } from '../../systems/dmPowers';
@@ -45,8 +46,10 @@ export class Arena {
   readonly remotes = new Map<number, Player>();
   readonly local: Player;
 
-  /** Where the game starts and where a defeated player wakes (set when the first zone is added). */
+  /** Where the game starts, and where co-op players arrive and wake (set when the first zone is added). */
   home!: ZoneState;
+  /** A solo hero's own waking place when the content names one (`scenarios.home`: the town): its zone and spot (absent spot: the map's). */
+  soloHome: { zone: string; spot?: CellPoint } | null = null;
   /** The zone the code is working in right now. */
   zone!: ZoneState;
   /** The local player's zone: what is drawn, and what `zone` goes back to. */
@@ -147,6 +150,17 @@ export class Arena {
   /** Every player in the game, wherever they are: the local one, then the rest. */
   everyone(): Player[] {
     return [this.local, ...this.remotes.values()];
+  }
+
+  /**
+   * Where the local solo hero wakes after a fall or a reload: the content's home zone if it is loaded, else the start
+   * (`home`). Online it is always the start, so co-op arrivals and wakings are what they were.
+   */
+  wake(): { zone: ZoneState; spot: CellPoint } {
+    const own = this.role === 'solo' ? this.soloHome : null;
+    const zone = own && this.zones.get(own.zone);
+    if (own && zone) return { zone, spot: own.spot ?? zone.data.spawn };
+    return { zone: this.home, spot: this.home.data.spawn };
   }
 
   /** The zone a player is in (the start zone for one that is somewhere unknown). */
