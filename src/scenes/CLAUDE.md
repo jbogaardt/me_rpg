@@ -31,6 +31,14 @@ draw in `Visuals`, a new synced thing in the matching link. The DM's controls ar
   other branches. **Co-op**: no protocol change. A guest's presses already arrive as the numbered `act` count and the HOST
   buffers them per player; a guest holding in a fight sends an extra `act` press every 0.05 s (`Interactions.guestHold`)
   so the host's buffer stays fresh (the guest does not know the cooldown). Cooldowns, damage and balance are untouched.
+- **Phased sword swing** (`systems/swing.ts`; core engine, host-owned): a press starts the body's `slash` at once, sped up so its
+  strike frame (4, blade fully out, measured from the sheet) plays 90 ms in; the blow (damage, arc, sound, spark, hit-stop,
+  Arcane Edge charge) resolves on that CONTACT tick from where hero and foes stand then (`Player.swing`, `Simulation.strike`).
+  Aim assist stays at the press; a mouse-aimed swing keeps its direction through startup; each foe is hit once; a hero hurt,
+  felled, beaten or moved to another zone before contact swings at nothing. Cooldown, DPS and the input buffer are unchanged
+  (bows, wands and tomes do not share the path). **Co-op**: no protocol change. The `slash` event now fires at contact, so a
+  guest sees the arc with the strike and starts its copy of the body at the strike frame (`Character.play`'s `elapsedMs`);
+  the guest's own press has no local prediction, as before.
 - **Roaming people** (`ZoneState.folk[].roamer`, `systems/roam.ts`): the host or solo steps them in an occupied zone while time runs
   (capability `roaming`); talking to one (`ZoneState.attend`) stops it, turns it to the speaker and sends it home after a moment.
   A guest only sets positions from `SnapMsg.folk`; zones seen from next door keep their people still.

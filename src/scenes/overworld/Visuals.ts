@@ -7,6 +7,8 @@ import type { WorldEvent } from '../../net/protocol';
 import { playGame } from '../../hud/gameSfx';
 import { soundForFx, soundForText } from '../../systems/gameSounds';
 import { effectColor } from '../../systems/looks';
+import { ANIMS } from '../../sprites/doll';
+import { SWORD_SWING, swingAnimMs } from '../../systems/swing';
 import { DEATH_FX, FX_KICK, FX_SHAKE } from '../../systems/feel';
 import type { ParticleEffectName } from '../../systems/particleEffects';
 import type { Arena } from './Arena';
@@ -162,7 +164,10 @@ export class Visuals {
         break;
       case 'slash':
         this.swing(e.x, e.y, DIRS[e.dir] ?? 'down', e.p);
-        arena.playerNumbered(e.p)?.body.play('slash');
+        // The event comes at contact, when the host's body is already at the strike frame: start there, not at the windup.
+        arena
+          .playerNumbered(e.p)
+          ?.body.play('slash', swingAnimMs(SWORD_SWING, ANIMS.slash.cycle.length), SWORD_SWING.startup * 1000);
         break;
       case 'draw':
         arena.playerNumbered(e.p)?.body.play('shoot');
