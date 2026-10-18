@@ -136,19 +136,6 @@ function recorder(w: number, h: number) {
 describe('Delve.paint dressing', () => {
   const room = () => new Delve(30, 24).rect(3, 4, 24, 16).rect(6, 9, 18, 4, '~');
 
-  it('shades floor under a wall, foams the water edge on the floor side, and leaves the roof for the backdrop', () => {
-    const { z, overlays, voids, backdrop } = recorder(30, 24);
-    room().paint(z, 'sewer');
-    expect(overlays.get('10,4')).toContainEqual(`${shadowTile(maskOf(true, false, false, false))[0]},0`);
-    expect(overlays.get('10,9')).toContainEqual(`${foamTile(maskOf(true, false, false, false))[0]},${FX_CELL}`);
-    expect(overlays.get('10,12')).toContainEqual(`${foamTile(maskOf(false, false, true, false))[0]},${FX_CELL}`);
-    expect(overlays.get('10,10')).toBeUndefined(); // the middle of the water has no edge
-    expect(voids.has('1,1')).toBe(true); // the roof shows the backdrop
-    expect(overlays.get('1,1')).toBeUndefined();
-    expect(voids.has('10,10')).toBe(false); // the water does not
-    expect(backdrop.name).toBe('sewer');
-  });
-
   it('gives open floor a lit lip on a south, east or west edge to the dark and hangs a cliff face under the south one', () => {
     const { z, overlays, voids } = recorder(30, 24);
     const filled: string[] = [];
@@ -178,24 +165,5 @@ describe('Delve.paint dressing', () => {
     room().paint(b.z, 'sewer');
     expect([...a.overlays]).toEqual([...b.overlays]);
     expect([...a.tile]).toEqual([...b.tile]);
-  });
-
-  it('turns the sewer floor over so no two-by-two grid repeats', () => {
-    const { z, tile } = recorder(30, 24);
-    room().paint(z, 'sewer');
-    const at = (c: number, r: number) => tile.get(`${c},${r}`);
-    expect(new Set(tile.values()).size).toBeGreaterThanOrEqual(5);
-    let same = 0;
-    let pairs = 0;
-    for (let r = 4; r < 9; r++)
-      for (let c = 3; c < 26; c++) {
-        pairs++;
-        if (at(c, r) === at(c + 1, r)) same++;
-      }
-    expect(same / pairs).toBeLessThan(0.45);
-    let period2 = 0;
-    for (let r = 4; r < 9; r++)
-      for (let c = 3; c < 24; c++) if (at(c, r) === at(c + 2, r) && at(c, r) === at(c, r + 1)) period2++;
-    expect(period2 / (5 * 21)).toBeLessThan(0.3);
   });
 });

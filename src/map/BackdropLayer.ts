@@ -3,6 +3,7 @@ import type { ViewRect } from '../core/camera';
 import { DUST_DRIFT, factors, tileOffset, type BackdropStyle, type Factors } from './backdrop';
 
 const FAR = 192; // px: a wrapped tile of distant rock (all art is made at the map's own pixel size, nearest-scaled)
+const BAND = 50; // px: how far down a ridge's rock reaches before the dark shows again
 const NEAR = 160;
 const SHADE = 256; // the foreground's wrapped tiles: stalactite shadows, and dust
 const DUST = 176;
@@ -23,47 +24,87 @@ function canvas(size: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   return [c, ctx];
 }
 
-/** A hard-edged disc (no antialiasing, so it stays pixel art) drawn with wrapped copies, so the tile repeats seamlessly. */
-function disc(ctx: CanvasRenderingContext2D, size: number, cx: number, cy: number, r: number, color: string) {
-  ctx.fillStyle = color;
-  for (let dy = -r; dy <= r; dy++) {
-    const half = Math.floor(Math.sqrt(r * r - dy * dy));
-    for (const ox of [-size, 0, size])
-      for (const oy of [-size, 0, size]) ctx.fillRect(cx - half + ox, cy + dy + oy, half * 2 + 1, 1);
-  }
+/** One column per pixel of a wavy height in 0..1 that repeats at `size` (whole harmonics), so a ridge tiles seamlessly. */
+function ridge(size: number, rnd: () => number, harmonics: number): (x: number) => number {
+  const waves = Array.from({ length: harmonics }, (_, i) => ({
+    k: i * 2 + 1 + Math.floor(rnd() * 3),
+    phase: rnd() * Math.PI * 2,
+    amp: 1 / (i + 1),
+  }));
+  const total = waves.reduce((sum, w) => sum + w.amp, 0);
+  return (x) =>
+    0.5 + waves.reduce((sum, w) => sum + w.amp * Math.sin((x / size) * w.k * Math.PI * 2 + w.phase), 0) / (2 * total);
 }
 
-/** The far layer: the dark, mottled with distant rock and a few faint glints. Opaque, it is the backdrop's floor. */
+/** The far layer: the dark of a deep cavern, rock walls receding in bands (a jagged skyline each, farther is darker) and a few faint glints. Opaque, it is the backdrop's floor. */
 function farTexture(style: BackdropStyle): Texture {
   const [c, ctx] = canvas(FAR);
   const rnd = stream(0x51ed);
   ctx.fillStyle = css(style.base);
   ctx.fillRect(0, 0, FAR, FAR);
-  for (let i = 0; i < 46; i++)
-    disc(ctx, FAR, Math.floor(rnd() * FAR), Math.floor(rnd() * FAR), 5 + Math.floor(rnd() * 14), css(style.far));
-  ctx.globalAlpha = 0.55;
-  for (let i = 0; i < 16; i++) {
-    const x = Math.floor(rnd() * FAR);
-    const y = Math.floor(rnd() * FAR);
+  const bands = 3;
+  for (let b = 0; b < bands; b++) {
+    const top = Math.floor(((b + 0.6) * FAR) / bands);
+    const height = ridge(FAR, rnd, 5);
+    ctx.globalAlpha = 0.35 + (0.65 * (b + 1)) / bands;
+    ctx.fillStyle = css(style.far);
+    for (let x = 0; x < FAR; x++) {
+      const y = top - Math.floor(height(x) * 44);
+      // Jagged: a chipped step every few columns, hard-edged so it stays pixel art.
+      const chip = (x * 7 + b * 13) % 5 === 0 ? 2 : 0;
+      for (const oy of [0, -FAR]) ctx.fillRect(x, y + chip + oy, 1, BAND); // a band, wrapped so the tile repeats
+    }
+    ctx.globalAlpha = 1;
+  }
+  ctx.globalAlpha = 0.5;
+  for (let i = 0; i < 14; i++) {
     ctx.fillStyle = css(style.glint);
-    ctx.fillRect(x, y, 1 + Math.floor(rnd() * 2), 1);
+    ctx.fillRect(Math.floor(rnd() * FAR), Math.floor(rnd() * FAR), 1 + Math.floor(rnd() * 2), 1);
   }
   ctx.globalAlpha = 1;
   return Texture.from(c);
 }
 
-/** The near layer: rock columns standing out of the dark, each with a lit rim on its top-left edge. Transparent between them. */
+/** A hard-edged rock spike (a stalactite when `down`, else a stalagmite), jagged, with a lit rim on its left edge. */
+function spike(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  x: number,
+  w: number,
+  h: number,
+  down: boolean,
+  rnd: () => number,
+  style: BackdropStyle,
+) {
+  for (let i = 0; i < h; i++) {
+    const t = i / h;
+    const half = Math.max(1, Math.round((w / 2) * (1 - t) ** 0.8 + (rnd() < 0.3 ? 1 : 0)));
+    const y = down ? i : size - 1 - i;
+    for (const ox of [-size, 0, size]) {
+      ctx.fillStyle = css(style.near);
+      ctx.fillRect(x - half + ox, y, half * 2, 1);
+      ctx.fillStyle = css(style.rim);
+      ctx.fillRect(x - half + ox, y, 1, 1);
+    }
+  }
+}
+
+/** The near layer: stalactites hanging from the cavern's roof and stalagmites rising from its floor, each with a lit rim. Transparent between them. */
 function nearTexture(style: BackdropStyle): Texture {
   const [c, ctx] = canvas(NEAR);
   const rnd = stream(0xc0ffee);
-  for (let i = 0; i < 9; i++) {
-    const x = Math.floor(rnd() * NEAR);
-    const y = Math.floor(rnd() * NEAR);
-    const r = 9 + Math.floor(rnd() * 12);
-    disc(ctx, NEAR, x, y, r, css(style.rim)); // the rim peeks out above and left of the body
-    disc(ctx, NEAR, x + 2, y + 2, r - 1, css(style.near));
-    disc(ctx, NEAR, x + 3, y + 4, Math.max(2, r - 5), css(style.far)); // a darker core
-  }
+  for (const down of [true, false])
+    for (let i = 0; i < 3; i++)
+      spike(
+        ctx,
+        NEAR,
+        Math.floor((i + 0.15 + rnd() * 0.7) * (NEAR / 3)),
+        6 + Math.floor(rnd() * 8),
+        14 + Math.floor(rnd() * 24),
+        down,
+        rnd,
+        style,
+      );
   return Texture.from(c);
 }
 
@@ -111,21 +152,27 @@ export class BackdropLayer extends Container {
   }
 }
 
-/** The shadows of stalactites hanging overhead: soft dark blobs, stepped in three alphas (hard-edged, so it stays pixel art). */
+/** The shadows of stalactites hanging overhead: soft dark shapes, taller than wide, stepped in three alphas (hard-edged, so it stays pixel art). */
 function shadeTexture(style: BackdropStyle): Texture {
   const [c, ctx] = canvas(SHADE);
   const rnd = stream(0xdeca);
   for (let i = 0; i < 7; i++) {
     const x = Math.floor(rnd() * SHADE);
     const y = Math.floor(rnd() * SHADE);
-    const r = 14 + Math.floor(rnd() * 16);
+    const r = 8 + Math.floor(rnd() * 8);
     for (const [grow, alpha] of [
       [1, 0.07],
       [0.7, 0.07],
       [0.4, 0.09],
     ] as const) {
       ctx.globalAlpha = alpha;
-      disc(ctx, SHADE, x, y, Math.floor(r * grow), css(style.shade));
+      ctx.fillStyle = css(style.shade);
+      const rr = Math.floor(r * grow);
+      for (let dy = 0; dy < rr * 4; dy++) {
+        const half = Math.max(1, Math.floor(rr * (1 - dy / (rr * 4))));
+        for (const ox of [-SHADE, 0, SHADE])
+          for (const oy of [-SHADE, 0, SHADE]) ctx.fillRect(x - half + ox, y + dy + oy, half * 2, 1);
+      }
     }
   }
   ctx.globalAlpha = 1;

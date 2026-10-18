@@ -56,37 +56,15 @@ const ground = [
   gloom(crop(FLOORS, 192, 192, CELL, CELL), FLOOR), // floor C: the mossy one
   murky(crop(WATER, 0, 160, CELL, CELL)), // water A
   murky(crop(WATER, 32, 160, CELL, CELL)), // water B
-  flat(32, 30, 46), // roof: the dark above the walls (delve_fx.png roughens it)
+  flat(22, 20, 30), // roof: the dark above the walls
   gloom(crop(WALLS, 0, 192, CELL, CELL), WALL), // cap top: the crenelled rim over the first bricks
   gloom(crop(WALLS, 52, 208, CELL, CELL), WALL), // cap
   gloom(crop(WALLS, 52, 236, CELL, CELL), WALL), // face, upper row
   gloom(crop(WALLS, 0, 280, CELL, CELL), WALL), // face, lower row: the bricks' foot, a dentil course against the floor
 ];
 
-/** `img` mirrored left-right (`h`) and/or top-bottom (`v`): a floor tile turned over, so the cobbles do not repeat in a grid. */
-function flip(img: Image, h: boolean, v: boolean): Image {
-  const out = blank(img.width, img.height);
-  for (let y = 0; y < img.height; y++)
-    for (let x = 0; x < img.width; x++) {
-      const from = ((v ? img.height - 1 - y : y) * img.width + (h ? img.width - 1 - x : x)) * 4;
-      img.data.copy(out.data, (y * img.width + x) * 4, from, from + 4);
-    }
-  return out;
-}
-
-const sheet = blank(CELL * 10, 128);
+const sheet = blank(CELL * 10, 96);
 ground.forEach((cell, i) => over(sheet, cell, i * CELL, 0));
-// Floor variants (y 96, `SEWER_FLOORS` in delve.ts picks by a hash of the cell): A turned four ways, B and the mossy C two.
-[
-  ground[0],
-  flip(ground[0], true, false),
-  flip(ground[0], false, true),
-  flip(ground[0], true, true),
-  ground[1],
-  flip(ground[1], true, true),
-  ground[2],
-  flip(ground[2], true, false),
-].forEach((cell, i) => over(sheet, cell, i * CELL, 96));
 const put = (img: Image, x: number, y: number) => over(sheet, img, x, y);
 
 // --- Props (y 32): doorway 32x64 at x 0, gate 32x64 at 32, grate 96x64 at 64, torch, barrel, bucket, drain ---
@@ -98,34 +76,13 @@ const rect = (img: Image, x: number, y: number, w: number, h: number, [r, g, b]:
       if (xx >= 0 && yy >= 0 && xx < img.width && yy < img.height)
         img.data.set([r, g, b, 255], (yy * img.width + xx) * 4);
 };
-/** A stone arch opening `w` x `h` with a lighter frame, over two cells of wall. The opening has depth: a lit lip and jamb, a dark vault, and stairs (or a drain's green glint behind bars) going away. */
+/** A stone arch opening `w` x `h` with a lighter frame, over two cells of wall. */
 function archway(w: number, h: number, bars = false): Image {
   const img = blank(w, h);
   for (let y = 0; y < h; y += CELL) for (let x = 0; x < w; x += CELL) over(img, STONE, x, y);
   const [x0, y0, ow, oh] = [4, 8, w - 8, h - 8];
   rect(img, x0 - 2, y0 - 2, ow + 4, oh + 2, [98, 104, 108]); // frame
   rect(img, x0, y0, ow, oh, DARK);
-  // The vault: darkest at the top, a touch of cool light coming up from the floor.
-  const steps: [number, [number, number, number]][] = [
-    [0, [7, 6, 12]],
-    [Math.floor(oh * 0.4), [11, 10, 18]],
-    [Math.floor(oh * 0.65), [16, 17, 27]],
-    [Math.floor(oh * 0.82), [22, 26, 38]],
-  ];
-  for (const [dy, c] of steps) rect(img, x0, y0 + dy, ow, oh - dy, c);
-  rect(img, x0, y0, ow, 2, [3, 3, 8]); // the shadow under the lintel
-  rect(img, x0, y0 + 2, 2, oh - 2, [30, 32, 44]); // the lit jamb on the left
-  rect(img, x0 + ow - 2, y0 + 2, 2, oh - 2, [4, 4, 9]); // the shaded jamb on the right
-  rect(img, x0 + 2, y0 + 2, ow - 4, 1, [58, 62, 78]); // the lip of the vault, catching light
-  if (!bars) {
-    // Steps going down into the dark: each tread a lighter line over a darker riser, narrowing with distance.
-    for (let i = 0; i < 3; i++) {
-      const y = y0 + oh - 5 - i * 4;
-      const inset = 2 + i * 2;
-      rect(img, x0 + inset, y, ow - inset * 2, 1, [70 - i * 18, 76 - i * 18, 98 - i * 20]);
-      rect(img, x0 + inset, y + 1, ow - inset * 2, 3, [26 - i * 6, 28 - i * 6, 40 - i * 8]);
-    }
-  }
   for (const [dx, dy] of [
     [0, 0],
     [ow - 1, 0],
@@ -136,14 +93,8 @@ function archway(w: number, h: number, bars = false): Image {
   ] as const)
     rect(img, x0 + dx, y0 + dy, 1, 1, [98, 104, 108]);
   if (bars) {
-    // Behind the bars the dark thins to a murky glint of water.
-    rect(img, x0 + 2, y0 + oh - 9, ow - 4, 7, [20, 34, 28]);
-    for (let x = x0 + 4; x < x0 + ow - 3; x += 7) rect(img, x, y0 + oh - 7 + ((x >> 2) % 3), 3, 1, [92, 146, 108]);
     const iron: [number, number, number] = [74, 82, 90];
-    for (let x = x0 + 2; x < x0 + ow - 1; x += 5) {
-      rect(img, x, y0 + 2, 2, oh - 2, iron);
-      rect(img, x, y0 + 2, 1, oh - 2, [96, 106, 114]); // each bar lit on its left
-    }
+    for (let x = x0 + 2; x < x0 + ow - 1; x += 5) rect(img, x, y0 + 2, 2, oh - 2, iron);
     rect(img, x0, y0 + 6, ow, 2, iron);
     rect(img, x0, y0 + oh - 10, ow, 2, iron);
   }
