@@ -596,6 +596,17 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
   100% { opacity: 0; }
 }
 
+/* --- Screen feel: the red edge when the hero is low, and the fall to black when they go down (src/hud/ScreenFx.ts) --- */
+#hurt-vignette {
+  position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(184, 32, 36, 0) 45%, rgba(110, 19, 22, 0.85) 100%);
+}
+#downfall { position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; background: #07090d; display: none; align-items: center; justify-content: center; }
+#downfall .card { text-align: center; opacity: 0; text-shadow: 0 2px 3px #000; }
+#downfall .title { font: 700 clamp(36px, 9vw, 72px) var(--title); color: #e8c9c9; letter-spacing: 0.12em; text-transform: uppercase; }
+#downfall .sub { font: 600 clamp(14px, 2.6vw, 19px) var(--body); color: #9aa3b0; letter-spacing: 0.1em; margin-top: 6px; }
+body.dm-possessing #hurt-vignette, body.dm-possessing #downfall { display: none; }
+
 /* --- The splash when the hero gains a level (src/hud/LevelSplash.ts) --- */
 #level-splash {
   position: fixed; z-index: 3; left: 50%; top: 36%; transform: translate(-50%, -50%); width: calc(100vw - 24px); text-align: center;

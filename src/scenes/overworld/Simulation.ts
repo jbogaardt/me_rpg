@@ -1,6 +1,7 @@
 import { DIR_VEC, dirIndex, directionToward } from '../../core/direction';
 import { enabled, setting } from '../../systems/capabilities';
 import { PRESSURE_FACTOR } from '../../systems/dmPowers';
+import { DOWN_TOTAL } from '../../systems/downfall';
 import { mobKey } from '../../systems/quests';
 import type { Character } from '../../entities/Character';
 import type { Mob, MobWorld } from '../../entities/Mob';
@@ -237,6 +238,7 @@ export class Simulation {
   /** One tick for a player: cooldowns and regeneration, knockback, walking (or sliding on ice), and the poses. */
   updatePlayer(p: Player, cmd: Command, dt: number) {
     if (p.dm) return this.updateDm(p, cmd, dt);
+    if (p.down !== null) return this.downTick(p, dt);
     const s = p.hero.stats;
     p.idle = cmd.dx || cmd.dy || cmd.act || cmd.combo !== undefined ? 0 : p.idle + dt;
     if (p.idle >= AFK_S) this.away.add(p.body);
@@ -555,7 +557,9 @@ export class Simulation {
     this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${earned(this.arena.local)} XP`, 0xffb13f); // this page's own hero
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
     this.text(mob.body.x, mob.body.y - 78 * mob.body.size, `+${gold}g`, 0xffd34d);
+    const boss = mob.kind.named || mob.kind.boss;
     for (const p of this.arena.party()) {
+      if (boss) this.cheer(p);
       p.hero.gold += goldFor(p.hero, gold); // gear can add to the purse and the XP, so each player gets their own share
       if (gainXp(p.hero.stats, xpFor(p.hero, earned(p)))) this.levelUp(p);
       this.questNote(p, recordKill(p.hero, mob.kind, this.arena.zone.name)); // a quest counts the kill for everyone here
@@ -569,6 +573,7 @@ export class Simulation {
       this.text(p.body.x, p.body.y - 66, `+${xp} XP`, 0xffb13f);
       this.text(p.body.x, p.body.y - 78, `+${gold}g`, 0xffd34d);
       if (gainXp(p.hero.stats, xpFor(p.hero, xp))) this.levelUp(p);
+      else this.cheer(p);
     });
   }
 
@@ -580,10 +585,17 @@ export class Simulation {
       this.text(p.body.x, p.body.y - 86, `Return to ${GIVERS[QUEST_GIVER]?.tag ?? 'the warden'}`, 0xffd34d);
   }
 
+  /** A victory pose and a shower of confetti for something good (a level, a boss, a finished task). */
+  cheer(p: Player) {
+    if (p.down !== null || p.dm) return;
+    this.fx('cheer', p.body.x, p.body.y - 30, undefined, p.slot);
+  }
+
   /** A player gained a level (from a kill or a quest reward). */
   levelUp(p: Player) {
     this.text(p.body.x, p.body.y - 62, 'LEVEL UP!', 0xffb13f);
     this.fx('levelUp', p.body.x, p.body.y - 14);
+    this.cheer(p);
   }
 
   private hurtHero(mob: Mob, victim: Character) {
@@ -614,7 +626,7 @@ export class Simulation {
     this.fx('heroHurt', p.body.x, p.body.y - 14, undefined, p.slot);
     if (burn) {
       // damage over time: no knockback, no stun, no blinking immunity (the next burn must land), the shot still goes
-      if (s.hp <= 0) this.defeat(p);
+      if (s.hp <= 0) this.fall(p);
       return;
     }
     p.invuln = INVULN_TIME;
@@ -624,7 +636,7 @@ export class Simulation {
     const dy = p.body.y - fromY;
     const len = Math.hypot(dx, dy) || 1;
     p.knock = { x: (dx / len) * 220, y: (dy / len) * 220 };
-    if (s.hp <= 0) this.defeat(p);
+    if (s.hp <= 0) this.fall(p);
   }
 
   /** A wipe starts a named boss's fight again (`bosses.ts`): one in a zone no hero is in any more is back at full health. */
@@ -638,7 +650,42 @@ export class Simulation {
     }
   }
 
-  /** Out of HP: back to the spawn point, fully restored (XP and levels are kept). */
+  /**
+   * Out of HP: the hero collapses first (`systems/downfall.ts`) and wakes at the start of the world a moment later
+   * (`defeat`). A trial's defeat has its own, instant way out. The DM is never harmed, so never falls.
+   */
+  private fall(p: Player) {
+    if (p.down !== null || p.dm) return;
+    if (p.trial !== null) return this.defeat(p);
+    p.down = 0;
+    p.pendingShot = null;
+    p.vel = { x: 0, y: 0 };
+    p.body.play('hurt');
+    this.fx('fall', p.body.x, p.body.y - 18, undefined, p.slot);
+  }
+
+  /** One tick of a hero who is down: lies still and safe (the foes lose interest), and wakes when the time is up. */
+  private downTick(p: Player, dt: number) {
+    p.down = (p.down ?? 0) + dt;
+    p.grace = 1; // nothing can hurt a hero on the ground (and no blink: the pose says it)
+    p.moving = false;
+    p.sinceHit = 0;
+    if (p.knock.x || p.knock.y) {
+      this.arena.collision.slide(p.body, p.knock.x * dt, p.knock.y * dt, this.arena.bodies());
+      const decay = Math.exp(-12 * dt);
+      p.knock = { x: p.knock.x * decay, y: p.knock.y * decay };
+      if (Math.hypot(p.knock.x, p.knock.y) < 5) p.knock = { x: 0, y: 0 };
+    }
+    if (!p.body.acting) p.body.hold('hurt', 5); // the last frame of the fall: flat on the ground
+    p.body.alpha = 1;
+    p.body.animate(dt * 1000, false);
+    if (p.down < DOWN_TOTAL) return;
+    p.down = null;
+    p.body.release();
+    this.defeat(p);
+  }
+
+  /** Out of HP, the fall is over: back to the spawn point, fully restored (XP and levels are kept). */
   private defeat(p: Player) {
     if (this.trialDefeat(p)) return;
     const { arena } = this;

@@ -29,6 +29,8 @@ export class Visuals {
   /** A one-shot particle effect. `dir` is an angle in radians. */
   particles(name: ParticleEffectName, x: number, y: number, dir?: number, p?: number) {
     this.arena.effects.add(particleEffect(name, x, y, { dir }));
+    if (name === 'cheer') this.arena.playerNumbered(p)?.body.celebrate();
+    if (name === 'fall') this.arena.playerNumbered(p)?.body.play('hurt');
     const shake = FX_SHAKE[name];
     if (shake && (!shake.own || p === this.arena.local.slot))
       this.arena.zone.camera.shake(shake.strength, shake.seconds);

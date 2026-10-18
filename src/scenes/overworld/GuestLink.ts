@@ -171,7 +171,7 @@ export class GuestLink {
   private predict(dt: number, keys: number) {
     const { arena } = this;
     const { local } = arena;
-    if (!this.predicted || !local.target || (local.flags & FLAG.hidden) !== 0) return;
+    if (!this.predicted || !local.target || (local.flags & (FLAG.hidden | FLAG.down)) !== 0) return;
     const { dx, dy } = unpackKeys(keys);
     const len = Math.hypot(dx, dy);
     const wish = len ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
@@ -375,6 +375,14 @@ export class GuestLink {
       }),
     );
     p.body.alpha = p.flags & FLAG.invuln && Math.floor(this.arena.clock * 16) % 2 === 0 ? 0.35 : 1;
+    // A hero who has fallen (`FLAG.down`) lies on the ground; this copy of the clock drives the same fade as on the host.
+    if (p.flags & FLAG.down) {
+      p.down = (p.down ?? 0) + dt;
+      if (!p.body.acting) p.body.hold('hurt', 5);
+    } else if (p.down !== null) {
+      p.down = null;
+      p.body.release();
+    }
     p.body.animate(dt * 1000, own ? this.predMoving : (p.flags & FLAG.moving) !== 0);
   }
 }

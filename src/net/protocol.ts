@@ -94,7 +94,7 @@ export function unpackKeys(keys: number): { dx: number; dy: number } {
 export const MAX_PLAYERS = MAX_GUESTS + 1;
 
 /** PlayerSnap flag bits. */
-export const FLAG = { moving: 1, invuln: 2, swing: 4, ward: 8, edge: 16, guard: 32, hidden: 64 } as const;
+export const FLAG = { moving: 1, invuln: 2, swing: 4, ward: 8, edge: 16, guard: 32, hidden: 64, down: 128 } as const;
 
 /** [player number, x, y, direction index, FLAG bits] */
 export type PlayerSnap = [number, number, number, number, number];
@@ -615,7 +615,7 @@ function parseTradeView(raw: unknown): TradeViewWire | null {
 function parsePlayer(raw: unknown): PlayerSnap | null {
   if (!numbers(raw, 5) || !raw.every((v, i) => (i === 1 || i === 2 ? isCoord(v) : isCount(v)))) return null;
   const [slot, x, y, dir, flags] = raw as PlayerSnap;
-  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 127 ? [slot, x, y, dir, flags] : null;
+  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 255 ? [slot, x, y, dir, flags] : null;
 }
 
 function parseGround(raw: unknown): GroundSnap | null {

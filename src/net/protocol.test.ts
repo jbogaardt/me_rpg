@@ -393,7 +393,7 @@ describe('messages', () => {
       { ...snap, players: [[-1, 1, 2, 0, 0]] },
       { ...snap, players: [[0, 1, 2, 0]] }, // the old four-number shape
       { ...snap, players: [[0, 1, 2, 9, 0]] }, // direction out of range
-      { ...snap, players: [[0, 1, 2, 0, 200]] }, // unknown flags
+      { ...snap, players: [[0, 1, 2, 0, 300]] }, // unknown flags
       { ...snap, players: [[0, Infinity, 2, 0, 0]] },
       { ...snap, mobs: [[0, 1, 2, 0, 99, 5, 0, 0]] }, // unknown state
       { ...snap, mobs: [[0, 1, 2, 0, 0, 5, 0]] }, // short tuple (no mob number)

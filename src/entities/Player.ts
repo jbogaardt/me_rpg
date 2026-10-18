@@ -38,6 +38,8 @@ export class Player {
   ward = 0; // seconds of protection left from a Ward spell (immune to damage, tinted)
   /** A bow being drawn: the arrow leaves when `timer` runs out (host and solo; a hit while drawing spoils it). */
   pendingShot: { timer: number; bow: Ranged; damage: number } | null = null;
+  /** Host/solo: seconds since the hero fell (`systems/downfall.ts`), null while on their feet. A guest keeps its own copy from `FLAG.down`. */
+  down: number | null = null;
   invuln = 0; // seconds of blinking immunity after a hit
   grace = 0; // seconds of silent immunity on arriving in a zone (no blink: the door transition covers the arrival)
   idle = 0; // seconds with no walking, attacking or casting (online, mobs leave a player who is away from the keyboard)
