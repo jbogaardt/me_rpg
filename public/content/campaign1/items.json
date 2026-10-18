@@ -7,6 +7,7 @@
   "items": {
     "rustySword": {
       "name": "Rusty Sword",
+      "art": 2,
       "value": 4,
       "slot": "weapon",
       "attack": 2,
@@ -16,6 +17,7 @@
     },
     "bronzeSword": {
       "name": "Bronze Sword",
+      "art": 1,
       "value": 40,
       "slot": "weapon",
       "attack": 3,
@@ -25,6 +27,7 @@
     },
     "steelSword": {
       "name": "Steel Sword",
+      "art": 3,
       "value": 150,
       "slot": "weapon",
       "attack": 5,
@@ -34,6 +37,7 @@
     },
     "silverSword": {
       "name": "Silver Sword",
+      "art": 4,
       "value": 400,
       "slot": "weapon",
       "attack": 7,
@@ -43,6 +47,7 @@
     },
     "shortBow": {
       "name": "Short Bow",
+      "art": 1,
       "value": 35,
       "slot": "weapon",
       "attack": 3,
@@ -57,6 +62,7 @@
     },
     "recurveBow": {
       "name": "Recurve Bow",
+      "art": 2,
       "value": 120,
       "slot": "weapon",
       "attack": 5,
@@ -71,6 +77,7 @@
     },
     "greatBow": {
       "name": "Great Bow",
+      "art": 3,
       "value": 300,
       "slot": "weapon",
       "attack": 8,
@@ -85,6 +92,7 @@
     },
     "woodenShield": {
       "name": "Wooden Shield",
+      "art": 1,
       "value": 25,
       "slot": "offhand",
       "defense": 1,
@@ -94,6 +102,7 @@
     },
     "ironShield": {
       "name": "Iron Shield",
+      "art": 2,
       "value": 90,
       "slot": "offhand",
       "defense": 2,
@@ -103,6 +112,7 @@
     },
     "kiteShield": {
       "name": "Kite Shield",
+      "art": 3,
       "value": 200,
       "slot": "offhand",
       "defense": 3,
@@ -112,6 +122,7 @@
     },
     "parryingDagger": {
       "name": "Parrying Dagger",
+      "art": 2,
       "value": 70,
       "slot": "offhand",
       "attack": 2,
@@ -121,6 +132,7 @@
     },
     "clothHood": {
       "name": "Cloth Hood",
+      "art": 4,
       "value": 15,
       "slot": "head",
       "defense": 1,
@@ -130,6 +142,7 @@
     },
     "nasalHelm": {
       "name": "Nasal Helm",
+      "art": 1,
       "value": 40,
       "slot": "head",
       "defense": 1,
@@ -139,6 +152,7 @@
     },
     "kettleHat": {
       "name": "Kettle Hat",
+      "art": 2,
       "value": 80,
       "slot": "head",
       "defense": 2,
@@ -148,6 +162,7 @@
     },
     "vikingHelm": {
       "name": "Viking Helm",
+      "art": 3,
       "value": 90,
       "slot": "head",
       "defense": 2,
@@ -157,6 +172,7 @@
     },
     "legionHelm": {
       "name": "Legion Helm",
+      "art": 1,
       "value": 100,
       "slot": "head",
       "defense": 2,
@@ -166,6 +182,7 @@
     },
     "greatHelm": {
       "name": "Great Helm",
+      "art": 2,
       "value": 220,
       "slot": "head",
       "defense": 3,
@@ -175,6 +192,7 @@
     },
     "leatherArmor": {
       "name": "Leather Armor",
+      "art": 1,
       "value": 60,
       "slot": "chest",
       "defense": 2,
@@ -184,6 +202,7 @@
     },
     "legionArmor": {
       "name": "Legion Armor",
+      "art": 2,
       "value": 180,
       "slot": "chest",
       "defense": 3,
@@ -193,6 +212,7 @@
     },
     "plateArmor": {
       "name": "Plate Armor",
+      "art": 3,
       "value": 420,
       "slot": "chest",
       "defense": 4,
@@ -202,6 +222,7 @@
     },
     "paddedLeggings": {
       "name": "Padded Leggings",
+      "art": 2,
       "value": 25,
       "slot": "legs",
       "defense": 1,
@@ -211,6 +232,7 @@
     },
     "ironGreaves": {
       "name": "Iron Greaves",
+      "art": 0,
       "value": 80,
       "slot": "legs",
       "defense": 1,
@@ -220,6 +242,7 @@
     },
     "steelGreaves": {
       "name": "Steel Greaves",
+      "art": 0,
       "value": 160,
       "slot": "legs",
       "defense": 2,
@@ -229,6 +252,7 @@
     },
     "leatherBoots": {
       "name": "Leather Boots",
+      "art": 1,
       "value": 20,
       "slot": "feet",
       "defense": 1,
@@ -238,6 +262,7 @@
     },
     "foldedBoots": {
       "name": "Folded Boots",
+      "art": 1,
       "value": 25,
       "slot": "feet",
       "defense": 1,
@@ -247,6 +272,7 @@
     },
     "ironBoots": {
       "name": "Iron Boots",
+      "art": 3,
       "value": 70,
       "slot": "feet",
       "defense": 1,
@@ -256,6 +282,7 @@
     },
     "steelBoots": {
       "name": "Steel Boots",
+      "art": 3,
       "value": 140,
       "slot": "feet",
       "defense": 2,
@@ -274,6 +301,7 @@
     },
     "potion": {
       "name": "Potion",
+      "art": 1,
       "value": 15,
       "use": {
         "hp": 20
@@ -281,6 +309,7 @@
     },
     "elixir": {
       "name": "Elixir",
+      "art": 2,
       "value": 60,
       "use": {
         "hp": 40,
@@ -350,6 +379,7 @@
     },
     "stormcallerWand": {
       "name": "Stormcaller Wand",
+      "art": 1,
       "value": 280,
       "slot": "weapon",
       "attack": 4,
@@ -421,6 +451,7 @@
     },
     "arcaneGrimoire": {
       "name": "Arcane Grimoire",
+      "art": 2,
       "value": 320,
       "slot": "weapon",
       "attack": 5,
@@ -460,6 +491,7 @@
     },
     "wayfarersCharm": {
       "name": "Wayfarer's Charm",
+      "art": 1,
       "value": 200,
       "slot": "charm",
       "speed": 8,
@@ -479,6 +511,7 @@
     },
     "duneglassBoots": {
       "name": "Duneglass Boots",
+      "art": 2,
       "value": 320,
       "slot": "feet",
       "defense": 2,
@@ -490,6 +523,7 @@
     },
     "tuskbreakerHelm": {
       "name": "Tuskbreaker Helm",
+      "art": 3,
       "value": 380,
       "slot": "head",
       "defense": 3,
@@ -501,6 +535,7 @@
     },
     "sunforgedCuirass": {
       "name": "Sunforged Cuirass",
+      "art": 4,
       "value": 520,
       "slot": "chest",
       "defense": 5,
@@ -512,6 +547,7 @@
     },
     "hourglassPendant": {
       "name": "Hourglass Pendant",
+      "art": 2,
       "value": 700,
       "slot": "charm",
       "speed": 12,
@@ -531,6 +567,7 @@
     },
     "roastMeat": {
       "name": "Roast Meat",
+      "art": 6,
       "value": 12,
       "use": {
         "hp": 5,
@@ -539,6 +576,7 @@
     },
     "apple": {
       "name": "Apple",
+      "art": 9,
       "value": 4,
       "use": {
         "hp": 0,
@@ -548,6 +586,7 @@
     },
     "waterskin": {
       "name": "Waterskin",
+      "art": 4,
       "value": 5,
       "use": {
         "hp": 0,
@@ -557,6 +596,7 @@
     },
     "potato": {
       "name": "Potato",
+      "art": 16,
       "value": 3,
       "use": {
         "hp": 0,
@@ -565,6 +605,7 @@
     },
     "carrot": {
       "name": "Carrot",
+      "art": 10,
       "value": 3,
       "use": {
         "hp": 0,
@@ -574,6 +615,7 @@
     },
     "cabbage": {
       "name": "Cabbage",
+      "art": 11,
       "value": 4,
       "use": {
         "hp": 0,
@@ -583,6 +625,7 @@
     },
     "tomato": {
       "name": "Tomato",
+      "art": 12,
       "value": 3,
       "use": {
         "hp": 0,
@@ -592,6 +635,7 @@
     },
     "strawberry": {
       "name": "Strawberry",
+      "art": 13,
       "value": 3,
       "use": {
         "hp": 0,
@@ -601,6 +645,7 @@
     },
     "pumpkin": {
       "name": "Pumpkin",
+      "art": 14,
       "value": 8,
       "use": {
         "hp": 0,
@@ -610,6 +655,7 @@
     },
     "watermelon": {
       "name": "Watermelon",
+      "art": 15,
       "value": 8,
       "use": {
         "hp": 0,
@@ -619,6 +665,7 @@
     },
     "emerald": {
       "name": "Emerald",
+      "art": 3,
       "value": 90,
       "gem": {
         "arms": {
@@ -631,6 +678,7 @@
     },
     "ruby": {
       "name": "Ruby",
+      "art": 1,
       "value": 110,
       "gem": {
         "arms": {
@@ -643,6 +691,7 @@
     },
     "sapphire": {
       "name": "Sapphire",
+      "art": 2,
       "value": 100,
       "gem": {
         "arms": {
@@ -667,6 +716,7 @@
     },
     "ale": {
       "name": "Pint of Ale",
+      "art": 5,
       "value": 6,
       "use": {
         "hp": 12,
@@ -676,6 +726,7 @@
     },
     "stew": {
       "name": "Hearty Stew",
+      "art": 7,
       "value": 14,
       "use": {
         "hp": 15,
@@ -684,6 +735,7 @@
     },
     "honeyCake": {
       "name": "Honey Cake",
+      "art": 17,
       "value": 8,
       "use": {
         "hp": 6,
@@ -693,6 +745,7 @@
     },
     "emberbrand": {
       "name": "Emberbrand",
+      "art": 8,
       "value": 900,
       "slot": "weapon",
       "attack": 12,
@@ -704,6 +757,7 @@
     },
     "ashmawHide": {
       "name": "Ashmaw's Hide",
+      "art": 5,
       "value": 800,
       "slot": "chest",
       "defense": 7,
@@ -715,6 +769,7 @@
     },
     "depthwalkers": {
       "name": "Depthwalkers",
+      "art": 2,
       "value": 560,
       "slot": "feet",
       "defense": 4,
@@ -726,6 +781,7 @@
     },
     "wardenHelm": {
       "name": "Pale Warden's Helm",
+      "art": 1,
       "value": 640,
       "slot": "head",
       "defense": 5,
@@ -737,6 +793,7 @@
     },
     "drainwardenCharm": {
       "name": "Drainwarden's Charm",
+      "art": 3,
       "value": 420,
       "slot": "charm",
       "xpBonus": 8,
@@ -746,6 +803,7 @@
     },
     "blackironSword": {
       "name": "Blackiron Sword",
+      "art": 6,
       "value": 650,
       "slot": "weapon",
       "attack": 9,
@@ -755,6 +813,7 @@
     },
     "blackironShield": {
       "name": "Blackiron Shield",
+      "art": 6,
       "value": 380,
       "slot": "offhand",
       "defense": 4,
@@ -764,6 +823,7 @@
     },
     "blackironHelm": {
       "name": "Blackiron Helm",
+      "art": 2,
       "value": 400,
       "slot": "head",
       "defense": 4,
@@ -773,6 +833,7 @@
     },
     "blackironPlate": {
       "name": "Blackiron Plate",
+      "art": 6,
       "value": 650,
       "slot": "chest",
       "defense": 6,
@@ -782,6 +843,7 @@
     },
     "blackironGreaves": {
       "name": "Blackiron Greaves",
+      "art": 1,
       "value": 300,
       "slot": "legs",
       "defense": 3,
@@ -791,6 +853,7 @@
     },
     "blackironBoots": {
       "name": "Blackiron Boots",
+      "art": 3,
       "value": 260,
       "slot": "feet",
       "defense": 3,
@@ -800,6 +863,7 @@
     },
     "blackironBow": {
       "name": "Hunter's Warbow",
+      "art": 4,
       "value": 600,
       "slot": "weapon",
       "attack": 10,
@@ -814,6 +878,7 @@
     },
     "highsteelSword": {
       "name": "Highsteel Sword",
+      "art": 7,
       "value": 1200,
       "slot": "weapon",
       "attack": 13,
@@ -823,6 +888,7 @@
     },
     "highsteelShield": {
       "name": "Highsteel Shield",
+      "art": 5,
       "value": 760,
       "slot": "offhand",
       "defense": 6,
@@ -832,6 +898,7 @@
     },
     "highsteelHelm": {
       "name": "Highsteel Helm",
+      "art": 1,
       "value": 800,
       "slot": "head",
       "defense": 6,
@@ -841,6 +908,7 @@
     },
     "highsteelPlate": {
       "name": "Highsteel Plate",
+      "art": 7,
       "value": 1300,
       "slot": "chest",
       "defense": 9,
@@ -850,6 +918,7 @@
     },
     "highsteelGreaves": {
       "name": "Highsteel Greaves",
+      "art": 1,
       "value": 650,
       "slot": "legs",
       "defense": 5,
@@ -859,6 +928,7 @@
     },
     "highsteelBoots": {
       "name": "Highsteel Boots",
+      "art": 3,
       "value": 550,
       "slot": "feet",
       "defense": 5,
@@ -868,6 +938,7 @@
     },
     "highsteelBow": {
       "name": "Highsteel Longbow",
+      "art": 3,
       "value": 1100,
       "slot": "weapon",
       "attack": 14,
@@ -882,6 +953,7 @@
     },
     "runedSword": {
       "name": "Runed Sword",
+      "art": 5,
       "value": 2000,
       "slot": "weapon",
       "attack": 17,
@@ -891,6 +963,7 @@
     },
     "runedShield": {
       "name": "Runed Shield",
+      "art": 7,
       "value": 1200,
       "slot": "offhand",
       "defense": 8,
@@ -900,6 +973,7 @@
     },
     "runedHelm": {
       "name": "Runed Helm",
+      "art": 3,
       "value": 1300,
       "slot": "head",
       "defense": 8,
@@ -909,6 +983,7 @@
     },
     "runedPlate": {
       "name": "Runed Plate",
+      "art": 8,
       "value": 2000,
       "slot": "chest",
       "defense": 12,
@@ -918,6 +993,7 @@
     },
     "runedGreaves": {
       "name": "Runed Greaves",
+      "art": 2,
       "value": 1000,
       "slot": "legs",
       "defense": 7,
@@ -927,6 +1003,7 @@
     },
     "runedBoots": {
       "name": "Runed Boots",
+      "art": 2,
       "value": 880,
       "slot": "feet",
       "defense": 7,
@@ -936,6 +1013,7 @@
     },
     "runedBow": {
       "name": "Runed Stormbow",
+      "art": 4,
       "value": 1900,
       "slot": "weapon",
       "attack": 18,
@@ -950,6 +1028,7 @@
     },
     "dreadSword": {
       "name": "Dread Sword",
+      "art": 9,
       "value": 3200,
       "slot": "weapon",
       "attack": 21,
@@ -959,6 +1038,7 @@
     },
     "dreadShield": {
       "name": "Dread Shield",
+      "art": 8,
       "value": 1800,
       "slot": "offhand",
       "defense": 10,
@@ -968,6 +1048,7 @@
     },
     "dreadHelm": {
       "name": "Dread Helm",
+      "art": 2,
       "value": 1900,
       "slot": "head",
       "defense": 10,
@@ -977,6 +1058,7 @@
     },
     "dreadPlate": {
       "name": "Dread Plate",
+      "art": 9,
       "value": 3000,
       "slot": "chest",
       "defense": 15,
@@ -986,6 +1068,7 @@
     },
     "dreadGreaves": {
       "name": "Dread Greaves",
+      "art": 1,
       "value": 1500,
       "slot": "legs",
       "defense": 9,
@@ -995,6 +1078,7 @@
     },
     "dreadBoots": {
       "name": "Dread Boots",
+      "art": 3,
       "value": 1300,
       "slot": "feet",
       "defense": 9,
@@ -1004,6 +1088,7 @@
     },
     "dreadBow": {
       "name": "Dread Bow",
+      "art": 3,
       "value": 3000,
       "slot": "weapon",
       "attack": 22,
@@ -1018,6 +1103,7 @@
     },
     "starforgedSword": {
       "name": "Starforged Sword",
+      "art": 10,
       "value": 4800,
       "slot": "weapon",
       "attack": 25,
@@ -1027,6 +1113,7 @@
     },
     "starforgedShield": {
       "name": "Starforged Shield",
+      "art": 7,
       "value": 2600,
       "slot": "offhand",
       "defense": 13,
@@ -1036,6 +1123,7 @@
     },
     "starforgedHelm": {
       "name": "Starforged Helm",
+      "art": 1,
       "value": 2700,
       "slot": "head",
       "defense": 12,
@@ -1045,6 +1133,7 @@
     },
     "starforgedPlate": {
       "name": "Starforged Plate",
+      "art": 10,
       "value": 4300,
       "slot": "chest",
       "defense": 18,
@@ -1054,6 +1143,7 @@
     },
     "starforgedGreaves": {
       "name": "Starforged Greaves",
+      "art": 2,
       "value": 2100,
       "slot": "legs",
       "defense": 11,
@@ -1063,6 +1153,7 @@
     },
     "starforgedBoots": {
       "name": "Starforged Boots",
+      "art": 2,
       "value": 1900,
       "slot": "feet",
       "defense": 11,
@@ -1072,6 +1163,7 @@
     },
     "starforgedBow": {
       "name": "Starforged Bow",
+      "art": 4,
       "value": 4500,
       "slot": "weapon",
       "attack": 26,
@@ -1086,6 +1178,7 @@
     },
     "eclipseSword": {
       "name": "Eclipse Sword",
+      "art": 5,
       "value": 6600,
       "slot": "weapon",
       "attack": 29,
@@ -1095,6 +1188,7 @@
     },
     "eclipseShield": {
       "name": "Eclipse Shield",
+      "art": 6,
       "value": 3500,
       "slot": "offhand",
       "defense": 15,
@@ -1104,6 +1198,7 @@
     },
     "eclipseHelm": {
       "name": "Eclipse Helm",
+      "art": 3,
       "value": 3700,
       "slot": "head",
       "defense": 14,
@@ -1113,6 +1208,7 @@
     },
     "eclipsePlate": {
       "name": "Eclipse Plate",
+      "art": 11,
       "value": 5800,
       "slot": "chest",
       "defense": 21,
@@ -1122,6 +1218,7 @@
     },
     "eclipseGreaves": {
       "name": "Eclipse Greaves",
+      "art": 1,
       "value": 2900,
       "slot": "legs",
       "defense": 13,
@@ -1131,6 +1228,7 @@
     },
     "eclipseBoots": {
       "name": "Eclipse Boots",
+      "art": 3,
       "value": 2600,
       "slot": "feet",
       "defense": 13,
@@ -1140,6 +1238,7 @@
     },
     "eclipseBow": {
       "name": "Eclipse Bow",
+      "art": 3,
       "value": 6200,
       "slot": "weapon",
       "attack": 30,
@@ -1154,6 +1253,7 @@
     },
     "worldforgedSword": {
       "name": "Worldforged Sword",
+      "art": 10,
       "value": 9000,
       "slot": "weapon",
       "attack": 34,
@@ -1163,6 +1263,7 @@
     },
     "worldforgedShield": {
       "name": "Worldforged Shield",
+      "art": 8,
       "value": 4800,
       "slot": "offhand",
       "defense": 18,
@@ -1172,6 +1273,7 @@
     },
     "worldforgedHelm": {
       "name": "Worldforged Helm",
+      "art": 2,
       "value": 5200,
       "slot": "head",
       "defense": 17,
@@ -1181,6 +1283,7 @@
     },
     "worldforgedPlate": {
       "name": "Worldforged Plate",
+      "art": 4,
       "value": 8000,
       "slot": "chest",
       "defense": 25,
@@ -1190,6 +1293,7 @@
     },
     "worldforgedGreaves": {
       "name": "Worldforged Greaves",
+      "art": 2,
       "value": 4000,
       "slot": "legs",
       "defense": 15,
@@ -1199,6 +1303,7 @@
     },
     "worldforgedBoots": {
       "name": "Worldforged Boots",
+      "art": 2,
       "value": 3600,
       "slot": "feet",
       "defense": 15,
@@ -1208,6 +1313,7 @@
     },
     "worldforgedBow": {
       "name": "Worldforged Bow",
+      "art": 4,
       "value": 8500,
       "slot": "weapon",
       "attack": 35,
@@ -1222,6 +1328,7 @@
     },
     "emberJerky": {
       "name": "Ember Jerky",
+      "art": 18,
       "value": 30,
       "use": {
         "hp": 30,
@@ -1230,6 +1337,7 @@
     },
     "cinderTonic": {
       "name": "Cinder Tonic",
+      "art": 1,
       "value": 110,
       "use": {
         "hp": 90,
@@ -1238,6 +1346,7 @@
     },
     "ashwater": {
       "name": "Ashwater Flask",
+      "art": 2,
       "value": 12,
       "use": {
         "hp": 0,
@@ -1246,6 +1355,7 @@
     },
     "rimeberryTea": {
       "name": "Rimeberry Tea",
+      "art": 19,
       "value": 24,
       "use": {
         "hp": 40,
@@ -1255,6 +1365,7 @@
     },
     "smokedElk": {
       "name": "Smoked Elk",
+      "art": 20,
       "value": 34,
       "use": {
         "hp": 25,
@@ -1263,6 +1374,7 @@
     },
     "frostwardSalve": {
       "name": "Frostward Salve",
+      "art": 23,
       "value": 120,
       "use": {
         "hp": 100,
@@ -1271,6 +1383,7 @@
     },
     "dateLoaf": {
       "name": "Date Loaf",
+      "art": 21,
       "value": 28,
       "use": {
         "hp": 20,
@@ -1280,6 +1393,7 @@
     },
     "mirageTonic": {
       "name": "Mirage Tonic",
+      "art": 3,
       "value": 130,
       "use": {
         "hp": 110,
@@ -1288,6 +1402,7 @@
     },
     "saltFlask": {
       "name": "Brackish Flask",
+      "art": 4,
       "value": 14,
       "use": {
         "hp": 0,
@@ -1296,6 +1411,7 @@
     },
     "reedBroth": {
       "name": "Reed Broth",
+      "art": 7,
       "value": 26,
       "use": {
         "hp": 35,
@@ -1305,6 +1421,7 @@
     },
     "eelPie": {
       "name": "Eel Pie",
+      "art": 22,
       "value": 36,
       "use": {
         "hp": 30,
@@ -1313,6 +1430,7 @@
     },
     "bogmossPoultice": {
       "name": "Bogmoss Poultice",
+      "art": 23,
       "value": 125,
       "use": {
         "hp": 105,

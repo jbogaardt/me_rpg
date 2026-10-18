@@ -55,7 +55,7 @@ export function questArt(q: Quest, portrait: (mobKind: string) => string | null)
     caption = `Barrels to ${o.place}`;
   } else {
     const item = itemOf(o.item);
-    picture = `<span class="item-art tier${item.rare ? 4 : 1}">${iconSvg(iconKind(item))}</span>`;
+    picture = `<span class="item-art tier${item.rare ? 4 : 1}">${iconSvg(iconKind(item), item.art)}</span>`;
     caption = item.name;
   }
   return picture ? `<figure class="quest-art">${picture}<figcaption>${esc(caption)}</figcaption></figure>` : '';

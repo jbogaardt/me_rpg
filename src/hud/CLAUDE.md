@@ -7,7 +7,7 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
 - **Reuse the UI kit classes** (`.panel`, `.wood`, `.paper`, plank tabs, square buttons; Lamoot's RPG GUI kit, CC-BY, see
   CREDITS.md, cut by `tools/ui/cut-gui.ts`) and the fonts (Cinzel titles, Crimson Text body) rather than inventing styles.
 - Build text with `textContent`, never `innerHTML`, for anything that came from a player or content.
-- **Item pictures** are `iconSvg(kind)` (`itemIcons.ts`): the pack's sprite for the kind (`systems/itemArt.ts`, drawn as a CSS background of the `--item-sheet` variable), else the SVG fallback. Ground items and relics use the same cells in Pixi (`entities/itemArt.ts`).
+- **Item pictures** are `iconSvg(kind, art)` (`itemIcons.ts`): picture `art` of the kind in the item sheet (`systems/itemArt.ts`, built by `tools/sprites/itemSheet.ts`, drawn as a CSS background of the `--item-sheet` variable), else the SVG fallback. An item names its picture with `art` in `items.json` (core engine: presentation only, no co-op traffic); anything eaten or drunk is the `food` kind. Ground items and relics use the same cells in Pixi (`entities/itemArt.ts`).
 - A new tappable overlay must be added to the touch allow-list (`src/core/CLAUDE.md`); a new button is a `data-key` element.
 - **Dialog box vs. DM caption** (`Dialog`): the box says *conversations* (NPC, quest brief, sign: paged, the player stands
   still, the next waits in line, `pauses` holds the world for everyone). The Dungeon Master's words are never a dialog: they

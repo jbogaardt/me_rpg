@@ -57,7 +57,7 @@ export class HotbarView {
       cell.classList.toggle('worn', v.worn);
       cell.classList.toggle('gone', !!name && !v.item);
       cell.title = name || `Quick slot ${i + 1}`;
-      cell.innerHTML = `<span class="num">${i + 1}</span>${v.item ? `<span class="item">${iconSvg(iconKind(v.item))}</span>` : ''}${v.count > 1 ? `<span class="qty">${v.count}</span>` : ''}`;
+      cell.innerHTML = `<span class="num">${i + 1}</span>${v.item ? `<span class="item">${iconSvg(iconKind(v.item), v.item.art)}</span>` : ''}${v.count > 1 ? `<span class="qty">${v.count}</span>` : ''}`;
     });
   }
 }

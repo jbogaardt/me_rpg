@@ -132,7 +132,7 @@ export type IconKind =
   | 'food';
 
 export function iconKind(item: Item): IconKind {
-  if (item.use?.food || item.use?.water) return 'food';
+  if (item.use) return 'food'; // anything drunk or eaten from the pack: bread, a flask, a pie (its `art` picks which)
   if (item.gem) return 'gem'; // a cut stone (a set piece keeps its base's picture: `fused` is not `gem`)
   if (item.ranged) return 'bow';
   if (item.focus) return item.focus.kind;

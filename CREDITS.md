@@ -81,6 +81,13 @@ by Charles Sanchez (CharlesGabriel), bagzie and bluecarrot16, from the Liberated
 CC-BY-SA 3.0+ or GPL 3.0+ (see [`art/lpc_monsters/CREDITS-monsters.txt`](art/lpc_monsters/CREDITS-monsters.txt)). Their frames are
 repacked into the game's character layout by `tools/sprites/monsters.ts` (moved, never redrawn; the hurt pose is a white flash).
 
+## Item pictures (`public/sprites/items/items.png`, source in `art/lpc_items/`)
+
+Cut and arranged by `tools/sprites/itemSheet.ts`, no pixel redrawn: weapons, armour, potions, gems and tools from "[LPC] Items and game effects"
+(https://opengameart.org/content/lpc-items-and-game-effects), fruit and vegetables from "[LPC] Fruit and Veggie Inventory" by Joshua Taylor
+(https://opengameart.org/content/fruit-and-veggie-inventory), and prepared food from "[LPC] Food" by bluecarrot16
+(https://opengameart.org/content/lpc-food); all CC-BY-SA 3.0 / GPL 3.0 (authors in [`art/lpc_items/CREDITS-items.txt`](art/lpc_items/CREDITS-items.txt)).
+
 ## Characters (`public/sprites/lpc/`, catalog in `sprites/parts.ts`)
 
 Hero, NPC and monster art comes from the [Universal LPC Spritesheet Character Generator](https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator)

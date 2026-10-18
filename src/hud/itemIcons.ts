@@ -30,13 +30,14 @@ const ICONS: Record<IconKind, string> = {
     '<path d="M6 2.5c0 7 3.2 8.5 6 8.5s6-1.5 6-8.5" fill="none" stroke-width="1.4" stroke="#e8dcc0"/><path d="M12 9.5l4.6 5.1L12 21.5l-4.6-6.9z"/><path d="M12 12.5l1.6 2-1.6 2.5-1.6-2.5z" fill="#2b1d0e" stroke="none" opacity=".45"/>',
 };
 
-/** Markup for an icon: the sheet's sprite, else the SVG (colour that with CSS `color`). Fills its parent's box. */
-export function iconSvg(kind: IconKind): string {
-  const cell = itemArtCell(kind);
+/** Markup for an icon: the sheet's sprite (picture `art` of the kind), else the SVG (colour that with CSS `color`). Fills its parent's box. */
+export function iconSvg(kind: IconKind, art?: number): string {
+  const cell = itemArtCell(kind, art);
   if (cell) {
     const x = (cell.col / (ITEM_COLS - 1)) * 100;
     const y = (cell.row / (ITEM_ROWS - 1)) * 100;
-    return `<span class="item-pic" style="background-position:${x}% ${y}%" aria-hidden="true"></span>`;
+    const size = `${ITEM_COLS * 100}% ${ITEM_ROWS * 100}%`;
+    return `<span class="item-pic" style="background-size:${size};background-position:${x}% ${y}%" aria-hidden="true"></span>`;
   }
   return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="#2b1d0e" stroke-width="1.1" stroke-linejoin="round">${ICONS[kind]}</svg>`;
 }

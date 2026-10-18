@@ -7,24 +7,25 @@ import { ITEM_CELL, itemArtCell } from '../systems/itemArt';
 // the caller draws its own shape.
 
 let sheet: Texture | undefined;
-const frames = new Map<IconKind, Texture>();
+const frames = new Map<string, Texture>();
 
 export function installItemSheet(texture: Texture) {
   sheet = texture;
   frames.clear();
 }
 
-/** A new sprite of the item picture for `kind` (32x32, anchored bottom-centre), if there is one. */
-export function itemSprite(kind: IconKind): Sprite | undefined {
-  const cell = itemArtCell(kind);
+/** A new sprite of picture `art` of `kind` (32x32, anchored bottom-centre), if there is one. */
+export function itemSprite(kind: IconKind, art?: number): Sprite | undefined {
+  const cell = itemArtCell(kind, art);
   if (!sheet || !cell) return undefined;
-  let frame = frames.get(kind);
+  const key = `${cell.col},${cell.row}`;
+  let frame = frames.get(key);
   if (!frame) {
     frame = new Texture({
       source: sheet.source,
       frame: new Rectangle(cell.col * ITEM_CELL, cell.row * ITEM_CELL, ITEM_CELL, ITEM_CELL),
     });
-    frames.set(kind, frame);
+    frames.set(key, frame);
   }
   const sprite = new Sprite(frame);
   sprite.anchor.set(0.5, 1);

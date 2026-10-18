@@ -83,6 +83,8 @@ export interface Item {
   capacity?: number;
   /** Sprite parts this item puts on the hero (see sprites/parts.ts); drawn over the hero's base look. */
   look?: Outfit;
+  /** Which picture of its icon kind it is in the item sheet (systems/itemArt.ts); 0, the kind's plain one, when unset. */
+  art?: number;
   /** Set on gems (no slot, kept in the pack): what setting one in a piece of gear adds (systems/gems.ts). */
   gem?: Gem;
   /** Set on an item made by setting a gem in another (systems/gems.ts): the ids of the piece and the gem it was made from. */

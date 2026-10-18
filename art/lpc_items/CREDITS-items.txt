@@ -1,0 +1,6 @@
+items1.png: "[LPC] Items and game effects" (https://opengameart.org/content/lpc-items-and-game-effects), CC-BY-SA 3.0 / GPL 3.0, a
+collection of Liberated Pixel Cup art by Lanea Zimmerman (Sharm), Jetrel, Daniel Eddeland (daneeklu), Joshua Taylor, Stephen
+Challener (Redshrike), Richard Kettering and others (see the pack page for the full list).
+veg.png: "[LPC] Fruit and Veggie Inventory" by Joshua Taylor, CC-BY-SA 3.0 / GPL 3.0 (https://opengameart.org/content/fruit-and-veggie-inventory).
+food.png: "[LPC] Food" by bluecarrot16 and others, CC-BY-SA 3.0 / GPL 3.0 (https://opengameart.org/content/lpc-food).
+strip.png: the game's earlier item strip, cut from items1.png (kept so every kind's plain picture stays as it was).

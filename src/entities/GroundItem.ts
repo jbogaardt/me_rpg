@@ -26,7 +26,7 @@ export class GroundItem extends Container {
     super();
     this.age = age;
     const color = TIER_COLORS[itemTier(item)] ?? TIER_COLORS[1]!;
-    const art = itemSprite(iconKind(item)); // the pack's picture of it, or the bundle for a kind it has none for
+    const art = itemSprite(iconKind(item), item.art); // the pack's picture of it, or the bundle for a kind it has none for
     this.addChild(
       new Graphics().ellipse(0, -1, 8, 3).fill({ color: 0x000000, alpha: 0.3 }),
       new Graphics().circle(0, -8, 9).fill({ color, alpha: 0.28 }),

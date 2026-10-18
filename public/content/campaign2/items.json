@@ -4,6 +4,7 @@
   "items": {
     "rustySword": {
       "name": "Rusty Sword",
+      "art": 2,
       "value": 4,
       "slot": "weapon",
       "attack": 2,
@@ -11,6 +12,7 @@
     },
     "bronzeSword": {
       "name": "Bronze Sword",
+      "art": 1,
       "value": 40,
       "slot": "weapon",
       "attack": 3,
@@ -18,6 +20,7 @@
     },
     "steelSword": {
       "name": "Steel Sword",
+      "art": 3,
       "value": 150,
       "slot": "weapon",
       "attack": 5,
@@ -25,6 +28,7 @@
     },
     "shortBow": {
       "name": "Short Bow",
+      "art": 1,
       "value": 35,
       "slot": "weapon",
       "attack": 3,
@@ -33,6 +37,7 @@
     },
     "woodenShield": {
       "name": "Wooden Shield",
+      "art": 1,
       "value": 25,
       "slot": "offhand",
       "defense": 1,
@@ -40,6 +45,7 @@
     },
     "clothHood": {
       "name": "Cloth Hood",
+      "art": 4,
       "value": 15,
       "slot": "head",
       "defense": 1,
@@ -47,6 +53,7 @@
     },
     "leatherArmor": {
       "name": "Leather Armor",
+      "art": 1,
       "value": 60,
       "slot": "chest",
       "defense": 2,
@@ -54,6 +61,7 @@
     },
     "leatherBoots": {
       "name": "Leather Boots",
+      "art": 1,
       "value": 20,
       "slot": "feet",
       "defense": 1,

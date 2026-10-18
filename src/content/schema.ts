@@ -15,6 +15,8 @@ import { onlyFeeds } from '../systems/needs';
 import { CROPS } from '../systems/crops';
 import { SLOTS, type Outfit } from '../sprites/doll';
 import { GEAR_SLOTS, type GearSlot, type Item } from '../systems/combat';
+import { iconKind } from '../systems/inventory';
+import { ITEM_VARIANTS } from '../systems/itemArt';
 import type { ItemId, StartGear } from '../systems/items';
 import { TRADE_KINDS, type Shop } from '../systems/shops';
 import { COMBO_KEYS, SPELL_IDS, type Combo, type SpellId } from '../systems/spells';
@@ -700,6 +702,7 @@ function readItem(r: Reader, v: unknown, path: string): Item | null {
     'focus',
     'use',
     'capacity',
+    'art',
     'look',
     'gem',
   ]);
@@ -787,6 +790,13 @@ function readItem(r: Reader, v: unknown, path: string): Item | null {
   if ((item.ranged || item.focus) && item.slot !== 'weapon') r.fail(path, 'a bow, wand or tome is a weapon');
   if (item.ranged && item.focus) r.fail(path, 'is a bow or a wand/tome, not both');
   if (item.capacity !== undefined && item.slot !== 'bag') r.fail(`${path}.capacity`, 'only a bag has capacity');
+  const art = r.optionalNumber(o.art, `${path}.art`, 0);
+  if (art !== undefined) {
+    const kind = iconKind(item);
+    if (!Number.isInteger(art) || art >= ITEM_VARIANTS[kind])
+      r.fail(`${path}.art`, `must be a whole number below ${ITEM_VARIANTS[kind]} (the pictures of a "${kind}" icon)`);
+    else item.art = art;
+  }
   return item;
 }
 
