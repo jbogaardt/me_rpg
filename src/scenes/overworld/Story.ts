@@ -237,8 +237,8 @@ export class Story {
     const at = { col: e.x, row: e.y };
     z.admit(
       def.type === 'mob'
-        ? { mobs: [{ kind: e.entity, ...at }], folk: [] }
-        : { mobs: [], folk: [{ entity: e.entity, def, ...at }] },
+        ? { mobs: [{ kind: e.entity, ...at }], bosses: [], folk: [] }
+        : { mobs: [], bosses: [], folk: [{ entity: e.entity, def, ...at }] },
     );
     this.onCast(map!, (e.x + 0.5) * CELL, (e.y + 1) * CELL, def.name);
   }
