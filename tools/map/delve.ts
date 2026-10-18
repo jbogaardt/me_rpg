@@ -9,12 +9,14 @@ import { SEWER_FLOORS, type GroundName } from './catalog';
 import {
   decalTile,
   DRY_MIX,
+  fadeTile,
   foamTile,
   FX_SHEET,
   hash,
   maskOf,
   pickDecal,
   pickWeighted,
+  rimTile,
   shadowTile,
   WET_MIX,
   type DecalMix,
@@ -155,12 +157,15 @@ export class Delve {
   /**
    * The shading and detail over the painted ground (overlay tiles from `delve_fx.png`, `delveStyle.ts`): a soft contact
    * shadow where floor and water meet a wall, foam where water meets floor, cracks, puddles, moss and pebbles on the floor,
-   * The roof is not dressed: it is left empty for the backdrop (see `paint`). The same for every cave, crypt and sewer, except that a theme with its
+   * The roof is not dressed: it is left empty for the backdrop (see `paint`), but where open floor meets it on its south,
+   * east or west side the floor gets a lit lip (`rimTile`, east/west with a thin dark side face) and a south edge hangs a
+   * fade over its cliff face (`hangCliffs`). The same for every cave, crypt and sewer, except that a theme with its
    * own shaded floor row, grainy roof or autotiled shoreline keeps that instead (no doubling).
    */
-  private dress(z: ZoneApi, theme: Theme, grounds: GroundName[]) {
+  private dress(z: ZoneApi, theme: Theme, grounds: GroundName[], roof: boolean[]) {
     const rock = (c: number, r: number) => this.at(c, r) === '#';
     const dry = (c: number, r: number) => this.at(c, r) === '.';
+    const dark = (c: number, r: number) => roof[r * this.width + c] === true && this.at(c, r) === '#';
     const fx = (col: number, row: number, [x, y]: readonly [number, number]) => z.overlay(col, row, FX_SHEET, x, y);
     for (let row = 0; row < this.height; row++) {
       for (let col = 0; col < this.width; col++) {
@@ -170,6 +175,12 @@ export class Delve {
           const shade = maskOf(rock(col, row - 1) && !theme.shade, rock(col + 1, row), false, rock(col - 1, row));
           if (shade) fx(col, row, shadowTile(shade));
         }
+        if (cell === '.') {
+          const rim = maskOf(false, dark(col + 1, row), dark(col, row + 1), dark(col - 1, row));
+          if (rim) fx(col, row, rimTile(rim));
+        }
+        const hang = this.hang(col, row, roof);
+        if (hang) fx(col, row, fadeTile(hang - 1));
         if (cell === '~') {
           if (theme.waterTerrain) continue; // its own soft shoreline is the edge
           const foam = maskOf(dry(col, row - 1), dry(col + 1, row), dry(col, row + 1), dry(col - 1, row));
@@ -180,6 +191,15 @@ export class Delve {
         }
       }
     }
+  }
+
+  /** 1 or 2 where a roof cell is the first or second row of the cliff face hanging under a floor's south edge, else 0. */
+  private hang(col: number, row: number, roof: boolean[]): number {
+    const w = this.width;
+    const is = (c: number, r: number) => roof[r * w + c] === true && this.at(c, r) === '#';
+    if (!is(col, row)) return 0;
+    if (this.open(col, row - 1)) return 1;
+    return is(col, row - 1) && this.open(col, row - 2) ? 2 : 0;
   }
 
   /** Paint the grid onto `z`: ground for every cell and collision for rock, water and lava. */
@@ -219,6 +239,16 @@ export class Delve {
         }
       }
     }
+    // Rock under a floor's south edge keeps two rows of cliff face (fading to dark, `dress`) instead of the bare backdrop.
+    const roof = grounds.map((g) => g === theme.roof || g === theme.roofAlt);
+    for (let row = 0; row < this.height; row++) {
+      for (let col = 0; col < this.width; col++) {
+        const h = this.hang(col, row, roof);
+        if (!h) continue;
+        grounds[row * this.width + col] = theme.wall[h === 1 ? 1 : 0];
+        z.fill(theme.wall[h === 1 ? 1 : 0], { col, row, w: 1, h: 1 });
+      }
+    }
     // Pools and lava get a soft bank and a shoreline from the autotiled terrains, drawn over the ground fills above.
     for (const [cell, terrain] of [
       ['~', theme.waterTerrain],
@@ -237,7 +267,7 @@ export class Delve {
       }
       if (rects.length) z.paint(terrain, rects);
     }
-    this.dress(z, theme, grounds);
+    this.dress(z, theme, grounds, roof);
     // The roof is not drawn: the backdrop shows through where the rock mass was (collision stays), and slides with depth.
     for (let row = 0; row < this.height; row++) {
       for (let col = 0; col < this.width; col++) {

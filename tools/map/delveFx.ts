@@ -1,6 +1,6 @@
 // Builds public/tilesets/delve_fx.png: the see-through tiles that dress every cave, crypt and sewer (see delveStyle.ts for
 // the layout): soft edge shadows where floor meets wall, pale foam where water meets floor, wet patches, cracks, moss and
-// pebbles for the floor, a speckled rock texture and a light rim for the roof. All drawn here from a few colours of the
+// pebbles for the floor, a speckled rock texture and a light rim and a hanging cliff face for the edges of the floor. All drawn here from a few colours of the
 // sewer's own palette (no outside art, so nothing to credit). Run with `npm run tilesets`; the output is committed.
 
 import path from 'node:path';
@@ -9,6 +9,7 @@ import { blank } from './compose';
 import {
   bayer,
   DECALS,
+  FADE_ROWS,
   E,
   FX_CELL,
   hash,
@@ -19,6 +20,7 @@ import {
   W,
   type DecalKind,
   decalTile,
+  fadeTile,
   foamTile,
   rimTile,
   roofTile,
@@ -29,7 +31,7 @@ type Rgb = readonly [number, number, number];
 const C = FX_CELL;
 
 function sheetImage(): Image {
-  return blank(C * 16, C * 5);
+  return blank(C * 16, C * 6);
 }
 
 /** Paint one pixel (straight alpha, replacing what is there unless `keep`: the larger alpha wins). */
@@ -90,10 +92,38 @@ function drawRim(img: Image, mask: number) {
   const [ox, oy] = rimTile(mask);
   for (let y = 0; y < C; y++)
     for (let x = 0; x < C; x++) {
-      const d = edgeDistance(mask, x, y);
-      if (d < 1) put(img, ox, oy, x, y, WHITE, 0.3);
-      else if (d < 3 && bayer(x, y) < 0.5) put(img, ox, oy, x, y, WHITE, 0.13);
+      // A side edge (east, west): outline, a thin dark face dropping away, then the lit lip on the floor's rim.
+      const side = Math.min(mask & W ? x : Infinity, mask & E ? C - 1 - x : Infinity);
+      if (side < 1) put(img, ox, oy, x, y, BLACK, 0.8);
+      else if (side < 5) put(img, ox, oy, x, y, BLACK, side < 3 ? 0.6 : 0.4);
+      else if (side === 5) put(img, ox, oy, x, y, WHITE, 0.3);
+      else if (side === 6 && bayer(x, y) < 0.5) put(img, ox, oy, x, y, WHITE, 0.2);
+      // A south edge: the lit lip; the hanging cliff face is the cells below (`dress` in delve.ts).
+      const south = mask & S ? C - 1 - y : Infinity;
+      if (south < 1) put(img, ox, oy, x, y, WHITE, 0.36, true);
+      else if (south < 3 && bayer(x, y) < 0.5) put(img, ox, oy, x, y, WHITE, 0.16, true);
+      // A north edge: a thin light line.
+      const north = mask & N ? y : Infinity;
+      if (north < 1) put(img, ox, oy, x, y, WHITE, 0.3, true);
+      else if (north < 3 && bayer(x, y) < 0.5) put(img, ox, oy, x, y, WHITE, 0.13, true);
     }
+}
+
+/** The hanging cliff face under a south edge fades into the dark: row 0 lightly, row 1 to the backdrop's near-black. */
+const VOID_DARK: Rgb = [22, 14, 18];
+function drawFade(img: Image, row: number) {
+  const [ox, oy] = fadeTile(row);
+  const [from, to] = row === 0 ? [0.0, 0.3] : [0.3, 0.92];
+  for (let y = 0; y < C; y++)
+    for (let x = 0; x < C; x++) {
+      const a = from + ((to - from) * y) / (C - 1);
+      // Stepped like the shade bands: a 2x2 dither between quarter steps.
+      const q = Math.floor(a * 8);
+      const up = a * 8 - q > bayer(x, y) ? 1 : 0;
+      put(img, ox, oy, x, y, VOID_DARK, Math.min(1, (q + up) / 8));
+    }
+  // A dark under-lip line at the top of the face, so the lit rim above reads as an edge.
+  if (row === 0) for (let x = 0; x < C; x++) put(img, ox, oy, x, 0, BLACK, 0.5);
 }
 
 function drawRoof(img: Image, variant: number) {
@@ -239,6 +269,7 @@ export function buildDelveFx(): Image {
     drawFoam(img, m);
     drawRim(img, m);
   }
+  for (let v = 0; v < FADE_ROWS; v++) drawFade(img, v);
   for (let v = 0; v < ROOF_VARIANTS; v++) drawRoof(img, v);
   for (const d of DECALS) for (let v = 0; v < d.count; v++) DRAW[d.kind](img, ...decalTile(d.kind, v), v);
   return img;

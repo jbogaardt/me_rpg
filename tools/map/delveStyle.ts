@@ -26,14 +26,18 @@ type XY = readonly [number, number];
 const at = (col: number, row: number): XY => [col * FX_CELL, row * FX_CELL];
 
 /** Rows of the overlay sheet. */
-const ROW = { shadow: 0, foam: 1, decal: 2, roof: 3, rim: 4 } as const;
+const ROW = { shadow: 0, foam: 1, decal: 2, roof: 3, rim: 4, fade: 5 } as const;
 
 /** The soft contact shadow on a cell's edges (a wall's foot, a side wall): one tile per side mask 1..15. */
 export const shadowTile = (mask: number): XY => at(mask, ROW.shadow);
 /** The foam where water meets floor: one tile per side mask 1..15. */
 export const foamTile = (mask: number): XY => at(mask, ROW.foam);
-/** The light edge of rock roof against open ground: one tile per side mask 1..15. */
+/** The lit lip on a floor's rim where it meets the dark (east/west also a thin dark side face): one tile per side mask 1..15. */
 export const rimTile = (mask: number): XY => at(mask, ROW.rim);
+
+/** The dark fade over the hanging cliff face under a south edge: rows 0 (first row under the floor) and 1. */
+export const FADE_ROWS = 2;
+export const fadeTile = (row: number): XY => at(row, ROW.fade);
 
 /** Floor details and how many drawn variants of each (columns of the decal row, in this order). */
 export const DECALS = [
