@@ -392,7 +392,7 @@
         "cooldown": 0.4,
         "combos": [
           {
-            "keys": "lrlrlr",
+            "keys": "ludrul",
             "spell": "chain",
             "cost": 17,
             "power": 1.1,
