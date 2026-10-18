@@ -18,6 +18,7 @@ export const TERRAIN_SHEET = 'lpc_terrain.png'; // the LPC terrain atlas (art/lp
 export const CLIFF_SHEET = 'Cliff_tileset.png'; // Avalon cliffs: a plateau blob, stairs, notches
 export const FROST_CLIFFS = 'frost_cliffs.png'; // cliffs with snow tops and blue-grey rock (recolor.ts)
 export const DRY_CLIFFS = 'dry_cliffs.png'; // cliffs with sandy tops and ochre rock (recolor.ts)
+export const ROCK_CAVE_SHEET = 'rock_cave.png'; // the rock cave's ground tiles, cut from the mountains by tools/map/rockCave.ts
 export const ROCK_SHEET = 'lpc_mountains.png'; // the LPC base assets' mountains: the rock plateau (kind 'rock', see zone.plateau)
 
 // MrBeast's cave, sewer and desert tilesets (art/oga_dungeon/, CC-BY 3.0), doubled to the 32px cell by dungeonSheets.ts.
@@ -47,7 +48,29 @@ const tiles = (sheet: string, rows: [number, number][][]): GroundFill => ({
 function dungeonGrounds() {
   const C = CAVE_SHEET;
   const S = SEWER_SHEET;
+  const R = ROCK_CAVE_SHEET;
   return {
+    rockFloor: tiles(R, [
+      [
+        [0, 0],
+        [1, 0],
+        [2, 0],
+      ],
+      [
+        [2, 0],
+        [0, 0],
+        [1, 0],
+      ],
+      [
+        [1, 0],
+        [2, 0],
+        [0, 0],
+      ],
+    ]),
+    rockRoof: tiles(R, [[[3, 0]]]),
+    rockEdge: tiles(R, [[[4, 0]]]),
+    rockFaceU: tiles(R, [[[5, 0]]]),
+    rockFaceL: tiles(R, [[[6, 0]]]),
     caveFloor: tiles(C, [
       [
         [0, 10],

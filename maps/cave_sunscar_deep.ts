@@ -81,7 +81,7 @@ export default defineZone({
   width: W,
   height: H,
   build(z) {
-    depths.paint(z, 'cave');
+    depths.paint(z, 'rock');
     // The way back up: a dark tunnel mouth in the landing's wall, a door on its middle cell.
     const out = hollowReturn();
     const doorRow = top(DEPTHS_ARRIVAL.col, 0) - 1;

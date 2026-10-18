@@ -32,6 +32,13 @@ export const DELVE_THEMES = {
     wall: ['caveFaceL', 'caveFaceU', 'caveEdge'],
     wallWater: 'caveFaceLWater',
   },
+  rock: {
+    floor: 'rockFloor',
+    water: 'caveWater',
+    lava: 'caveLava',
+    roof: 'rockRoof',
+    wall: ['rockFaceL', 'rockFaceU', 'rockEdge'],
+  },
   sewer: {
     floor: 'sewerFloor',
     water: 'sewerWater',

@@ -79,7 +79,7 @@ export default defineZone({
   width: W,
   height: H,
   build(z) {
-    cave.paint(z, 'cave');
+    cave.paint(z, 'rock');
     // The way out: the daylight over the foyer, a door on its bottom row (the middle cell).
     z.prop('caveExit', 13, top(14) - 1);
     const out = caveExit();
