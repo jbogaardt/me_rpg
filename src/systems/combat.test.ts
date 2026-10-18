@@ -60,7 +60,7 @@ describe('gainXp', () => {
   });
 
   it('needs more XP at higher levels, and the step between levels grows too', () => {
-    expect([1, 2, 5, 10].map(xpToNext)).toEqual([20, 57, 224, 632]);
+    expect([1, 2, 5, 10].map(xpToNext)).toEqual([20, 57, 261, 1265]);
     for (let level = 1; level < 30; level++) {
       const step = xpToNext(level + 1) - xpToNext(level);
       expect(step).toBeGreaterThan(xpToNext(level) - xpToNext(Math.max(1, level - 1)));

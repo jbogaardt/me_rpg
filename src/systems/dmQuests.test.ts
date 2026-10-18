@@ -66,7 +66,7 @@ describe('quests written from a land', () => {
     const at = (level: number) => allOffers(land({ level })).filter((o) => o.kind === 'hunt');
     expect(at(1).map((o) => o.what)).toEqual(['goblin', 'troll']);
     expect(at(8)[0]).toMatchObject({ what: 'troll', level: 8 }); // the troll is the match now
-    expect(at(8).find((o) => o.what === 'goblin')!.goal).toBeGreaterThan(at(1)[0]!.goal);
+    expect(at(5).find((o) => o.what === 'goblin')!.goal).toBeGreaterThan(at(1)[0]!.goal);
     // a foe they have long outgrown is left out where there is a better one
     const tiny = { key: 'rat', name: 'Rat', xp: 2, x: 0, y: 0 };
     expect(allOffers(land({ level: 8, mobs: [tiny, ...land().mobs] })).some((o) => o.what === 'rat')).toBe(false);

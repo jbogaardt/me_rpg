@@ -288,8 +288,11 @@ export const attackPower = (h: Hero) => h.stats.attack + gearAttack(h);
 export const defensePower = (h: Hero) => h.stats.defense + gearDefense(h);
 /** The strength behind a combo's damage and healing: the magic stat, plus what the wand or tome adds and any magic from gear (nothing otherwise). */
 export const spellPower = (h: Hero) => h.stats.magic + (h.weapon.focus?.power ?? 0) + gearMagic(h);
-/** XP to go from `level` to the next. Grows faster than linearly: 20 at level 1, 224 at 5, 632 at 10. */
-export const xpToNext = (level: number) => Math.round(20 * level ** 1.5);
+/**
+ * XP to go from `level` to the next. Grows faster than linearly, and past level 4 steeper still (an extra sixth of a
+ * level's worth per level) so the climb to 30 takes hours, not one: 20 at level 1, 261 at 5, 1265 at 10, 6559 at 20.
+ */
+export const xpToNext = (level: number) => Math.round(20 * level ** 1.5 * (1 + Math.max(0, level - 4) / 6));
 
 /**
  * The hero level a foe is a match for, read from its own body (attack and health, so no content has to say): a goblin is 1,
