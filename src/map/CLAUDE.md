@@ -10,6 +10,7 @@ map objects plus everything the scene adds.
   existing.** A neighbour's margin (surface `beyond`) is not drawn here; the neighbour's own view is.
 - `MapView.setObjectAlpha` fades a map object by index (lily pads on a drained pond, a port's seal, the drawn copy of a
   barrel an entity replaced); the fade is kept while its chunk is freed and rebuilt.
+- `MapData.gates` (`GateSpawn`): ways a quest opens, wired at load by `content/gates.ts`; every seal and reveal object is in the map, faded by `setObjectAlpha`.
 - Pure helpers (`chunks.ts`, `doors.ts`, `explored.ts`, `minimap.ts`, `outline.ts`, `bounds.ts`, `transition.ts`) are
   Pixi-free and unit-tested; keep new map maths there.
 - **Backdrop and parallax** (core engine, cosmetic, capability `parallax`, zone scope, setting `depth`): a map names a `backdrop`

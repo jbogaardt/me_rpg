@@ -15,7 +15,7 @@ A capability (`capabilities.ts`, `CAPABILITIES`) is an engine system a story can
 
 **A system a story could do without must be a capability, in the same change that adds it.** Gate it with
 `enabled(id, zone)` at the one choke point where the feature starts and read tuned values with `setting`. `capabilities.test.ts` fails a capability nothing asks `enabled()` about or that is not listed here. The ids: `guide`, `compass`, `needs`, `combos`,
-`skills`, `farming`, `weather`, `dayNight`, `darkness`, `parallax`, `carrying`, `roaming`, `levelGates`, `ledges`, `forge`, `coop`, `trading`.
+`skills`, `farming`, `weather`, `dayNight`, `darkness`, `parallax`, `carrying`, `roaming`, `levelGates`, `ledges`, `changes`, `forge`, `coop`, `trading`.
 
 **The map is core engine, not a capability**: always on (M, the HUD button; a room opens a note). Its aids,
 `guide` (hints, tracker line, `fog`) and `compass` (the arrow), are switched by story and per player (`aids.ts`, local).
@@ -28,7 +28,7 @@ Each `MobKind` is tuned for a band of hero levels and biomes hand them out by ba
 
 - **Quests** (`quests.ts`, `guide.ts`): a chain per campaign told by givers (the campaign's `"scope": "hero"` epic, `content/story.ts`); objectives kill, boss (an authored end boss, `docs/epics.md`), gather, bring, meet, visit, and two that use a capability (core engine, refused
   where it is off): `cast` spells (`combos`) and `haul` barrels to a named place (`carrying`, a bit per barrel index like
-  a gather's sites); chapters and journal lore make a story. Guidance is local to each player (an arrow for a person or
+  a gather's sites); chapters and journal lore make a story. A step's `opens` names map gates it opens when handed in (`src/content/gates.ts`, capability `changes`). Guidance is local to each player (an arrow for a person or
   door, a search area for something to find). Quest text must use the biomes' `name`s (`guide.test.ts`). Directions carry compass bearings (`bearing.ts`, text only). The host owns every `QuestLog`; a guest sends `do` talk and action presses and reads the log from `pack`. Online only the DM's quests count (`docs/dungeon-master.md`).
   A scenario choice's optional `hint` (solo) says why it is shut.
 - **The DM's quest kinds** (`dmTasks.ts`, `dmQuests.ts`; core engine, counted by the host, friends told in the `dm` message, append-only kinds): beside hunt, gather, find, visit, cast and haul there are **boss** and **master**. A boss (`dmBoss.ts`) is the land's toughest foe drawn as a named giant (`MobKind.boss`, counted under `BOSS_KEY`), whose health,
@@ -61,8 +61,6 @@ Each `MobKind` is tuned for a band of hero levels and biomes hand them out by ba
   items), so an item's code still names it on the wire and in trades: both players derive the same list from the same content. `InvOp` `fuse` is a numbered op, done by the host (`fuseInto`, the one `forge` gate). Gems are sold at the smith and may be chest loot; the DM's `forge` quest names a recipe from what a hero carries or a shop
   sells, done when anyone makes that piece.
   DM gear rewards (`giftFor`) weigh every slot per hero, rotate the slot and cap the value.
-- **Roaming people** (`roam.ts`; core engine, capability `roaming`, content `EntityDef.roam`): a scenario's person strolls about
-  their post within a radius, only where `Collision.canMove` allows; talked to, they stop, face the speaker, then go home. Givers and keepers never roam; a guest draws `SnapMsg.folk`.
 - **Props** (`barrels.ts`, `signs.ts`, `pets.ts`, `ice.ts`): barrels are bodies you carry and set down (gated by
   `carrying`; the host decides, `SnapMsg.barrels` shows them; a map object in a neighbour's margin is not this map's
   barrel); signposts read their ways from the loaded map when read (a live DM's `sign` log entry overrides); pets are local

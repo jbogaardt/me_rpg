@@ -247,10 +247,18 @@ export type PondState = [id: number, level: number, refilling: boolean];
  */
 export class PondLevels {
   private drained = new Map<number, { level: number; refilling: boolean }>();
+  /** Ponds the story has drained for good (`pin`): dry whatever the rain does, kept when the zone's memory is restored. */
+  private pinned = new Set<number>();
 
   /** How far this pond is drained. */
   level(id: number): number {
-    return this.drained.get(id)?.level ?? 0;
+    return this.pinned.has(id) ? 1 : (this.drained.get(id)?.level ?? 0);
+  }
+
+  /** Drain this pond for good (a quest's gate, `systems/gates.ts`): rain never fills it and nobody can drink from it. */
+  pin(id: number) {
+    this.pinned.add(id);
+    this.drained.delete(id);
   }
 
   /** Is this pond filling up again after running dry? */
@@ -260,7 +268,7 @@ export class PondLevels {
 
   /** Drink up to `amount` water from a pond that holds `capacity`: returns what it had to give. */
   drink(id: number, amount: number, capacity: number): number {
-    if (capacity <= 0) return 0;
+    if (capacity <= 0 || this.pinned.has(id)) return 0;
     const level = this.level(id);
     const got = Math.max(0, Math.min(amount, (1 - level) * capacity));
     const now = Math.min(1, level + got / capacity);
@@ -279,13 +287,18 @@ export class PondLevels {
 
   /** Every pond not full: how far it is drained, and whether it is refilling after running dry. */
   levels(): PondState[] {
-    return [...this.drained].map(([id, { level, refilling }]) => [id, level, refilling]);
+    return [
+      ...[...this.drained].map(([id, { level, refilling }]): PondState => [id, level, refilling]),
+      ...[...this.pinned].map((id): PondState => [id, 1, false]),
+    ];
   }
 
   /** Set the states: the host's word to a guest, or a zone's memory when it loads again (any pond not listed is full). */
   setLevels(states: readonly (readonly [number, number, boolean?])[]) {
     this.drained = new Map(
-      states.filter(([, level]) => level > 0).map(([id, level, refilling]) => [id, { level, refilling: !!refilling }]),
+      states
+        .filter(([id, level]) => level > 0 && !this.pinned.has(id))
+        .map(([id, level, refilling]) => [id, { level, refilling: !!refilling }]),
     );
   }
 }

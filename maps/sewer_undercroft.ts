@@ -162,6 +162,11 @@ export default defineZone({
       [34, 30],
     ] as const)
       z.prop('sewerTorch', col, row);
+    // The hexers' barricades, across the three ways into the Drowned Throne: they come down when the story hands in "Lamps Under the Market" (quest cisternhexers).
+    const barricade = ['sewerCrate', 'sewerBox', 'sewerCrate'] as const;
+    z.gate('barricade', 25, 41, 3, 1, { seal: [...barricade] }); // the colonnade from the court
+    z.gate('barricade', 12, 49, 1, 3, { seal: [...barricade] }); // the west storeroom's passage
+    z.gate('barricade', 40, 49, 1, 3, { seal: [...barricade] }); // the east storeroom's passage
     z.prop('sewerGrate', 16, 16);
     z.prop('sewerGrate', 35, 16);
     for (const [name, col, row] of [

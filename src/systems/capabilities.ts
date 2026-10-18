@@ -140,6 +140,11 @@ export const CAPABILITIES = {
     off: 'A plateau’s edge row is plain floor with the rock face blocked: walking south into it never hops the hero down to the ground below.',
     scope: 'zone',
   },
+  changes: {
+    name: 'Land changes',
+    off: 'A hero’s quests change no land: every gate of a map stands open from the start, and no lake is drained for the story.',
+    scope: 'campaign',
+  },
   forge: {
     name: 'Setting gems',
     off: 'Gems cannot be set in gear: no Set action in the pack, no shop sells a gem, and the DM gives no quest to forge one.',

@@ -8,6 +8,7 @@ import { ZONE_NAMES } from '../../src/systems/places';
 import { isClimate } from '../../src/systems/weather';
 import { CELL, type DoorSpawn, type MapData } from '../../src/map/types';
 import { doorCells as cellsOf, onDoor } from '../../src/map/doors';
+import { allDoors } from '../../src/content/gates';
 import { coverage, sheet } from './image';
 import { BARE_WALL } from './zone';
 import { CLASH_DE, groundReport } from './ground';
@@ -128,6 +129,20 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     }
     if (door.w < 1) errors.push(`door at (${door.col},${door.row}) is ${door.w} cells wide`);
     if (!door.to.zone) errors.push(`door at (${door.col},${door.row}) leads nowhere`);
+  }
+  // A gate is blocked only while the story keeps it shut, so the map itself (the open state) must be sound.
+  for (const g of d.gates ?? []) {
+    const at = `gate "${g.name}" at (${g.col},${g.row})`;
+    if (g.w < 1 || g.h < 1) errors.push(`${at} is ${g.w}x${g.h} cells`);
+    for (const [col, row] of cellsOf(g)) if (!inMap(col, row)) errors.push(`${at} reaches outside the map`);
+    if (g.drain) {
+      const i = g.drain.row * W + g.drain.col;
+      if (!inMap(g.drain.col, g.drain.row) || d.surfaces[d.surface[i] ?? -1] !== 'water')
+        errors.push(`${at} drains (${g.drain.col},${g.drain.row}), which is not water`);
+    }
+    const afloat = cellsOf(g).every(([col, row]) => d.surfaces[d.surface[row * W + col] ?? -1] === 'water');
+    if (!g.seal?.length && !afloat)
+      errors.push(`${at} has no seal (the \`seal\` option): shut, it would be an invisible wall`);
   }
   const portNames = new Set<string>();
   for (const port of d.ports) {
@@ -294,7 +309,7 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
 export function checkDoors(maps: Map<string, MapData>): string[] {
   const errors: string[] = [];
   for (const [name, d] of maps) {
-    for (const door of d.doors) {
+    for (const door of allDoors(d)) {
       const where = `${name}: door at (${door.col},${door.row})`;
       const target = maps.get(door.to.zone);
       if (!target) {
@@ -307,12 +322,12 @@ export function checkDoors(maps: Map<string, MapData>): string[] {
         errors.push(`${where} arrives outside "${door.to.zone}" at (${col},${row})`);
       } else if (target.collision.includes(index)) {
         errors.push(`${where} arrives on a blocked cell of "${door.to.zone}" (${col},${row})`);
-      } else if (target.doors.some((t) => onDoor(t, col, row))) {
+      } else if (allDoors(target).some((t) => onDoor(t, col, row))) {
         errors.push(
           `${where} arrives on a door of "${door.to.zone}" (${col},${row}), which would bounce the player back`,
         );
       }
-      if (!target.doors.some((t) => t.to.zone === name) && !isTrialZone(name)) {
+      if (!allDoors(target).some((t) => t.to.zone === name) && !isTrialZone(name)) {
         errors.push(`${where}: "${door.to.zone}" has no door back to "${name}"`);
       }
     }

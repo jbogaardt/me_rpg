@@ -222,7 +222,8 @@
         "trees_dead.png",
         "graves.png",
         "town.png",
-        "hanging_signs.png"
+        "hanging_signs.png",
+        "entrances.png"
       ],
       "generation": {
         "roam": [
@@ -245,7 +246,7 @@
           { "kinds": ["hornet"], "count": 5, "seed": 7101, "apart": 8, "avoid": [], "level": 1 }
         ]
       },
-      "links": ["town", "desert", "undead", "eastwood"]
+      "links": ["town", "desert", "undead", "eastwood", "ruin_lake"]
     },
     "jungle": {
       "name": "The Tuskwood Jungle",
@@ -625,6 +626,16 @@
       "generation": {},
       "links": ["jungle"],
       "levels": [5, 7]
+    },
+    "ruin_lake": {
+      "name": "The Sunken Reliquary",
+      "map": "ruin_lake",
+      "climate": null,
+      "music": null,
+      "tilesets": ["dungeon_cave.png", "delve_fx.png"],
+      "generation": {},
+      "links": ["greenwood"],
+      "levels": [2, 4]
     },
     "crypt_barrow": {
       "name": "The Barrow Deep",

@@ -35,7 +35,10 @@ export class PondBeds extends Graphics {
     private view: MapView,
   ) {
     super();
+    // A gate's own objects (a hatch the drained bed shows) are the story's to fade, not the water's.
+    const gated = new Set(data.gates?.flatMap((g) => [...(g.seal ?? []), ...(g.reveal ?? [])]));
     for (const [i, o] of data.objects.entries()) {
+      if (gated.has(o)) continue;
       const cell = Math.floor((o.py + o.h / 2) / CELL) * data.width + Math.floor((o.px + o.w / 2) / CELL);
       if (data.surfaces[data.surface[cell] ?? -1] !== 'water') continue;
       const id = pondId(data, cell);

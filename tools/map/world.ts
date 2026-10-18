@@ -19,7 +19,7 @@ import { PREFABS, type PrefabName } from './catalog';
 import type { ClimateName } from '../../src/systems/weather';
 import type { TerrainName } from './terrain';
 import { fbm, maskRects, noise, smoothMask } from './noise';
-import { rng, SURFACES, Zone, type Rect, type WoodsOptions, type ZoneApi } from './zone';
+import { rng, SURFACES, Zone, type GateOptions, type Rect, type WoodsOptions, type ZoneApi } from './zone';
 
 /** Cells of trees on each side of a border between two biomes (and along the world's edge). */
 export const WALL = 3;
@@ -735,6 +735,10 @@ class BiomeWindow implements BiomeApi {
     this.z.door(col, row, w, toZone, toCol, toRow);
     this.take({ col: col - 1, row: row - 1, w: w + 2, h: 3 });
   }
+  gate(name: string, col: number, row: number, w: number, h: number, opts?: GateOptions) {
+    this.z.gate(name, col, row, w, h, opts);
+    this.take({ col, row, w, h });
+  }
   port(): never {
     throw new Error('A biome of the open-air world joins its neighbours by gaps (maps/world.ts), not ports');
   }
@@ -970,6 +974,17 @@ function cut(
   }
   collision.sort((a, b) => a - b);
   const local = <T extends { col: number; row: number }>(p: T): T => ({ ...p, col: p.col - r.col, row: p.row - r.row });
+  // A gate's seal and reveal are objects like the map's own: into the biome's pixels and sheet list.
+  const shifted = (list: typeof objects | undefined) =>
+    list?.map((o) => ({ ...o, s: sheetIndex(o.s), px: o.px - x0, py: o.py - y0 }));
+  const gates = (full.gates ?? [])
+    .filter((g) => world.ownerAt(g.col, g.row) === k)
+    .map(({ seal, reveal, drain, ...g }) => ({
+      ...local(g),
+      ...(seal ? { seal: shifted(seal) } : {}),
+      ...(reveal ? { reveal: shifted(reveal) } : {}),
+      ...(drain ? { drain: local(drain) } : {}),
+    }));
   const data: MapData = {
     version: 2,
     width: r.w,
@@ -994,6 +1009,7 @@ function cut(
     signs: e.signs.map(local),
     doors: e.doors.map(local),
     ports: [], // the world's biomes join by gaps, not ports
+    ...(gates.length ? { gates } : {}),
     indoor: false,
     dark: false,
     climate: e.climate,

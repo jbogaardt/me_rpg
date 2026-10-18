@@ -48,8 +48,7 @@ A pack never overrides another's ids (`checkPacks`). To add a region: a `defineZ
 four-port land), an entry in a pack and a pairing (with `way` and `sign` lore) to each region it may sit beside.
 
 **Long worlds** (`marches` pack): a story is a chain of lands rising in level, each paired with the one before, so length
-needs many middle lands with several pairings each and arcs written loosely (themes, never ids). Its arcs of 7, 8 and 9
-alternate a quiet gather leg with a fight, pay a share of the level they are told at, end on a boss, and never name a later region. `tools/content/packsLong.test.ts` holds them to it.
+needs many middle lands with several pairings each and arcs written loosely (themes, never ids). `packsLong.test.ts` holds them to it.
 
 ## Ports
 
@@ -57,6 +56,8 @@ A port is a doorway whose far side the content decides, so the same map serves c
 each port to another map's port; `Zones.add` turns bound ports into ordinary doors (travel, prefetch and co-op see
 nothing new) and **walls up and seals every port nothing binds**, so no open way ever leads nowhere. The map check fails
 a port without a seal or bound to a port that is not on the opposite edge.
+
+**Gates** (`gates.ts`, `systems/gates.ts`, capability `changes`): a map's way that a hero's quest step opens (`opens`): shut it is blocked and sealed; open it clears, shows a door, drains a pond. Solo only: online it is open.
 
 ## Worlds from a log
 
@@ -81,4 +82,4 @@ nowhere). It checks every campaign, the packs' catalog and random campaigns of s
 
 ## Level bands (`systems/levels.ts`; core engine, content, capability `levelGates`)
 
-A biome may declare `levels: [lowest, highest]`: banner advice, and a map-check that each foe it places is a fair fight for a typical hero (`heroModel`) at the lowest level (error: 2 hits fell the hero or over 14 blows; warning: no fight at the top). With `levelGates` on, a door turns back a hero more than `slack` (default 1) levels under the lowest. Campaign 1 gates only its first two underground rooms.
+A biome may declare `levels: [lowest, highest]`: banner advice, and a map-check that each foe it places is a fair fight for a typical hero (`heroModel`) at the lowest level (error: 2 hits fell the hero or over 14 blows; warning: no fight at the top). With `levelGates` on, a door turns back a hero more than `slack` (default 1) levels under the lowest.

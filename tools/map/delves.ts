@@ -57,3 +57,7 @@ export const desertTempleExit = () => ({
 /** The jungle's roofed hall (`ruinHall` at local 47,66): its arch is the 1-cell door at cell 7 of the bottom row. */
 export const HALL_DOOR = { col: 175 + 54, row: 66, w: 1 } as const;
 export const hallExit = () => ({ zone: 'jungle', ...W.toLocal('jungle', HALL_DOOR.col, HALL_DOOR.row + 1) });
+
+/** The hatch the Old Lake's bed shows once the story drains it (a gate of `maps/greenwood.ts`), in world cells; the way in to the Sunken Reliquary. */
+export const LAKE_HATCH = { col: 33, row: 192 } as const;
+export const lakeExit = () => ({ zone: 'greenwood', ...W.toLocal('greenwood', LAKE_HATCH.col, LAKE_HATCH.row + 1) });

@@ -7,6 +7,8 @@ import type { MobWorld } from '../../entities/Mob';
 import { DIR_VEC } from '../../core/direction';
 import { nearBorder } from '../../map/bounds';
 import { doorArrival, openPort, type PortBinding } from '../../content/ports';
+import { gateAlphas, gateDoor, wireGates, type GateLayout } from '../../content/gates';
+import { pondId } from '../../systems/needs';
 import { ARRIVE_CELLS, arrivalFacing, cellFeet, doorAt, doorsNear, neighbourLinks, type Link } from '../../map/doors';
 import { CELL, type CellPoint, type DoorSpawn, type MapData } from '../../map/types';
 import { zoneTint } from '../../systems/places';
@@ -77,6 +79,11 @@ export class Zones {
     { raw: MapData; wired: Record<string, PortBinding>; bound: Record<string, PortBinding> }
   >();
 
+  /** Which gates of a zone the story keeps shut (`systems/gates.ts`): set by the scene; nothing is shut until it is. */
+  shutGate: (zone: string, gate: string) => boolean = () => false;
+  /** Each loaded zone's gates (`content/gates.ts`), shut or open now. */
+  private gates = new Map<string, GateLayout[]>();
+
   constructor(
     private arena: Arena,
     private sprites: Sprites,
@@ -92,7 +99,9 @@ export class Zones {
 
   /** Build the running state of a loaded zone and keep it (with what it remembers from before it was unloaded). */
   add(loaded: Zone): ZoneState {
-    const zone = { ...loaded, data: this.content.wire(loaded.name, loaded.data) }; // ports become doors
+    const gated = wireGates(this.content.wire(loaded.name, loaded.data), (g) => this.shutGate(loaded.name, g));
+    const zone = { ...loaded, data: gated.data }; // ports become doors, a story's gates shut or open
+    this.gates.set(loaded.name, gated.layouts);
     const bound = this.content.biomeOfMap(loaded.name)?.[1].ports;
     this.wiring.set(loaded.name, { raw: loaded.data, wired: { ...bound }, bound: { ...bound } });
     const biome = this.content.biomeOfMap(zone.name)?.[1];
@@ -113,7 +122,43 @@ export class Zones {
       }
       this.arena.memory.delete(zone.name);
     }
+    for (const [i, alpha] of gateAlphas(gated.layouts)) z.world.setObjectAlpha(i, alpha);
+    for (const l of gated.layouts)
+      if (l.open && l.gate.drain) z.ponds.pin(pondId(z.data, l.gate.drain.row * z.data.width + l.gate.drain.col));
     return z;
+  }
+
+  /**
+   * Open the gates of loaded zones that the story no longer keeps shut (a hero handed in the step that opens them): the
+   * cells clear, the seal fades and the reveal shows, the door is made and the pond it drains is drained for good. Nothing
+   * else in the zone changes. Says where each opened, for the scene to mark it (a shimmer, the step's words).
+   */
+  syncGates(): { zone: string; gate: string; x: number; y: number }[] {
+    const opened: { zone: string; gate: string; x: number; y: number }[] = [];
+    for (const [name, layouts] of this.gates) {
+      const z = this.arena.zones.get(name);
+      if (!z) continue;
+      for (const l of layouts) {
+        if (l.open || this.shutGate(name, l.gate.name)) continue;
+        l.open = true;
+        z.collision.unblock(l.cells);
+        const cleared = new Set(l.cells);
+        z.data.collision = z.data.collision.filter((c) => !cleared.has(c));
+        for (const i of l.seal) z.world.setObjectAlpha(i, 0);
+        for (const i of l.reveal) z.world.setObjectAlpha(i, 1);
+        const door = gateDoor(l.gate);
+        if (door) z.data.doors.push(door);
+        const { drain } = l.gate;
+        if (drain) z.ponds.pin(pondId(z.data, drain.row * z.data.width + drain.col));
+        opened.push({
+          zone: name,
+          gate: l.gate.name,
+          x: (l.gate.col + l.gate.w / 2) * CELL,
+          y: (l.gate.row + l.gate.h / 2) * CELL,
+        });
+      }
+    }
+    return opened;
   }
 
   /**

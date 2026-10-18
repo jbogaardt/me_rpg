@@ -1,5 +1,6 @@
 import type { Container, Renderer } from 'pixi.js';
 import { enabled, flag, setting } from '../systems/capabilities';
+import { gateShut } from '../systems/gates';
 import { sayTime } from '../systems/dmPowers';
 import { ReadingPause } from '../systems/readingPause';
 import type { Sprites, Zone } from '../assets';
@@ -198,6 +199,9 @@ export class OverworldScene implements Scene {
     const arena = (this.arena = new Arena(sprites.wardrobe));
     this.bodyCues = new BodyCues(arena);
     this.zones = new Zones(arena, sprites, loadZone, unloadZone, ui, renderer, content);
+    // A hero's story keeps a map's gates shut (solo only: online every gate stands open, `systems/gates.ts`).
+    this.zones.shutGate = (zone, gate) =>
+      arena.role === 'solo' && enabled('changes', zone) && gateShut(arena.hero.quests, zone, gate);
     const visuals = new Visuals(arena);
     const say = (lines: string[]) => ui.dialog.note(lines); // a defeat or a trial's result: passive text, not a popup
     // The simulation reports what a friend should see through the host link (which only records it while hosting).
@@ -467,6 +471,7 @@ export class OverworldScene implements Scene {
     this.storyUi.syncRelic();
     this.storyUi.syncBoss();
     this.storyUi.syncNamedBoss();
+    this.storyUi.syncGates();
     this.storyUi.syncLandmark();
     this.revive.update(dt);
     this.narration.update(dt);

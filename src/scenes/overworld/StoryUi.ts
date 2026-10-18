@@ -8,7 +8,10 @@ import type { Dialog } from '../../hud/Dialog';
 import type { MapOverlay } from '../../hud/MapOverlay';
 import type { Menu } from '../../hud/Menu';
 import { CELL } from '../../map/types';
+import { particleEffect } from '../../entities/ParticleEffect';
+import { playGame } from '../../hud/gameSfx';
 import { bossStands, taskWantsBoss } from '../../systems/bosses';
+import { gateNote } from '../../systems/gates';
 import { briefing, objective } from '../../systems/dmBrief';
 import { bossKind, bossShell, nameOfBossTitle, parseBossWhat } from '../../systems/dmBoss';
 import { RELIC_KIND, parseRelicWhat } from '../../systems/dmQuests';
@@ -287,6 +290,18 @@ export class StoryUi {
           item: parseRelicWhat(want.what).item,
         });
       else if (have && !(want && z.name === want.zone)) z.removeSite(have);
+    }
+  }
+
+  /** A gate the hero's story just opened (`Zones.syncGates`): a shimmer where it did, and the step's own words. */
+  syncGates() {
+    for (const { zone, gate, x, y } of this.zones.syncGates()) {
+      const z = this.arena.zones.get(zone);
+      z?.effects.add(particleEffect('shimmer', x, y - 8));
+      z?.effects.add(particleEffect('levelUp', x, y));
+      playGame('glint');
+      const note = gateNote(zone, gate);
+      if (note) this.banner.show(note, 'The land changes');
     }
   }
 

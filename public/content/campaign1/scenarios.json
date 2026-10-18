@@ -2216,6 +2216,25 @@
       "choices": []
     },
     {
+      "node_id": "ruin_lake",
+      "biome_type": "ruin_lake",
+      "entities": [
+        {
+          "entity": "shade",
+          "x": 11,
+          "y": 9,
+          "level": 3
+        },
+        {
+          "entity": "shade",
+          "x": 19,
+          "y": 8,
+          "level": 3
+        }
+      ],
+      "choices": []
+    },
+    {
       "node_id": "crypt_barrow",
       "biome_type": "crypt_barrow",
       "entities": [

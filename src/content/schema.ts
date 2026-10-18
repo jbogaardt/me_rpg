@@ -782,6 +782,15 @@ export function parseQuests(json: unknown, r = new Reader()): QuestContent {
     if (o.giver !== undefined) q.giver = r.string(o.giver, `${p}.giver`);
     if (o.turnIn !== undefined) q.turnIn = r.string(o.turnIn, `${p}.turnIn`);
     if (o.capabilities !== undefined) q.capabilities = readQuestDials(r, o.capabilities, `${p}.capabilities`);
+    if (o.opens !== undefined)
+      q.opens = r.array(o.opens, `${p}.opens`).map((v2, k) => {
+        const g = r.object(v2, `${p}.opens[${k}]`) ?? {};
+        const open = {
+          zone: r.string(g.zone, `${p}.opens[${k}].zone`),
+          gate: r.string(g.gate, `${p}.opens[${k}].gate`),
+        };
+        return g.note === undefined ? open : { ...open, note: r.string(g.note, `${p}.opens[${k}].note`) };
+      });
     return q;
   });
   out.epilogue = r.strings(file.epilogue ?? [], 'quests.json.epilogue');

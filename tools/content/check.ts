@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as prettier from 'prettier';
+import { allDoors } from '../../src/content/gates';
 import { roam } from '../../src/content/populate';
 import { OPPOSITE } from '../../src/content/packs';
 import { onDoor } from '../../src/map/doors';
@@ -113,7 +114,7 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
     }
     if (!walkable(biome.map)) continue;
     const map = content.wire(biome.map, raw); // the doors as the game has them, ports included
-    const doors = [...new Set(map.doors.map((d) => d.to.zone))].filter((z) => walkable(z) && mine.has(z)).sort();
+    const doors = [...new Set(allDoors(map).map((d) => d.to.zone))].filter((z) => walkable(z) && mine.has(z)).sort();
     const linked = [
       ...new Set([
         ...biome.links,
@@ -126,7 +127,7 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
       errors.push(
         `biomes.${type}.links: linked to [${linked.join(', ')}], but its doors lead to [${doors.join(', ')}]`,
       );
-    for (const d of map.doors)
+    for (const d of allDoors(map))
       if (!mine.has(d.to.zone))
         errors.push(`map "${biome.map}" has a door to "${d.to.zone}", not a map of this campaign`);
   }

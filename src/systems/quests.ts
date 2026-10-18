@@ -124,6 +124,8 @@ export interface Quest {
    * turns farming on, a famine turns food and water on. The host works it out and tells everyone (`questDials`).
    */
   capabilities?: Partial<Record<Dial, boolean>>;
+  /** The gates of a map this step opens once it is handed in (`MapData.gates`, `systems/gates.ts`): the hero's story only. */
+  opens?: { zone: string; gate: string; note?: string }[];
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   type ChestSpawn,
   type CropSpawn,
   type DoorSpawn,
+  type GateSpawn,
   type LedgeSpawn,
   type PortSpawn,
   type ShopSpawn,
@@ -55,6 +56,14 @@ export interface Rect {
 }
 
 /** The builder calls a zone spec uses (a `Zone`, or a `WorldWindow` onto one). */
+/** What `z.gate` can do besides blocking its cells while shut (`GateSpawn`). */
+export interface GateOptions {
+  seal?: PrefabName[];
+  reveal?: PrefabName[];
+  door?: { zone: string; col: number; row: number };
+  drain?: CellPoint;
+}
+
 export interface ZoneApi {
   readonly width: number;
   readonly height: number;
@@ -94,6 +103,7 @@ export interface ZoneApi {
     h?: number,
     seal?: PrefabName[],
   ): unknown;
+  gate(name: string, col: number, row: number, w: number, h: number, opts?: GateOptions): unknown;
   indoor(): unknown;
   dark(): unknown;
   backdrop(name: string): unknown;
@@ -266,6 +276,15 @@ export class WorldWindow implements ZoneApi {
     this.z.port(name, col - this.o.col, row - this.o.row, w, arriveCol - this.o.col, arriveRow - this.o.row, h, seal);
     return this;
   }
+
+  gate(name: string, col: number, row: number, w: number, h: number, opts: GateOptions = {}) {
+    const to = (c: { col: number; row: number }) => ({ col: c.col - this.o.col, row: c.row - this.o.row });
+    this.z.gate(name, col - this.o.col, row - this.o.row, w, h, {
+      ...opts,
+      ...(opts.drain ? { drain: to(opts.drain) } : {}),
+    });
+    return this;
+  }
   indoor() {
     this.z.indoor();
     return this;
@@ -387,6 +406,7 @@ export class Zone {
   private ledgeList: LedgeSpawn[] = [];
   private portList: PortSpawn[] = [];
   private seals = new Map<string, Placed[]>();
+  private gateList: { spawn: Omit<GateSpawn, 'seal' | 'reveal'>; seal: Placed[]; reveal: Placed[] }[] = [];
   private isIndoor = false;
   private isDark = false;
   private backdropName: string | undefined;
@@ -994,6 +1014,37 @@ export class Zone {
     return this;
   }
 
+  /**
+   * A way a quest opens (`GateSpawn`): the `w` x `h` cells from (col, row) are blocked and `seal` (props, one on each cell in
+   * turn) is drawn across them while it is shut; opened, `reveal` is drawn, `door` (the arrival cell in another zone) leads
+   * through and the pond holding `drain` is drained for good. A quest step names it (`opens`); nothing else opens it.
+   */
+  gate(name: string, col: number, row: number, w: number, h: number, opts: GateOptions = {}) {
+    const cellsOf = (names: PrefabName[] | undefined) => {
+      const placed: Placed[] = [];
+      let k = 0;
+      for (let r = 0; r < h; r++)
+        for (let i = 0; i < w; i++) {
+          const prefab = names?.[k++ % Math.max(1, names.length)];
+          if (!prefab) continue;
+          const p = PREFABS[prefab];
+          const span = Math.ceil(p.w / CELL) * CELL;
+          placed.push({
+            prefab,
+            px: (col + i) * CELL + Math.floor((span - p.w) / 2),
+            py: (row + r + 1) * CELL - p.h,
+            autoBlock: false,
+          });
+        }
+      return placed;
+    };
+    const spawn: Omit<GateSpawn, 'seal' | 'reveal'> = { name, col, row, w, h };
+    if (opts.door) spawn.door = opts.door;
+    if (opts.drain) spawn.drain = opts.drain;
+    this.gateList.push({ spawn, seal: cellsOf(opts.seal), reveal: cellsOf(opts.reveal) });
+    return this;
+  }
+
   /** Mark the zone as a room: no weather, and no co-op overview map. */
   indoor() {
     this.isIndoor = true;
@@ -1111,6 +1162,7 @@ export class Zone {
         if (ownsFoot(k, p.px + prefab.w / 2, p.py + prefab.h - 1)) out.placed.push(p);
       }
       for (const e of z.extras) if (ownsFoot(k, e.px + e.w / 2, e.py + e.h / 2)) out.extras.push(e);
+      for (const g of z.gateList) if (owner[g.spawn.row * width + g.spawn.col] === k) out.gateList.push(g);
     });
     out.spawnAt = zones[0]?.spawnAt ?? { col: 0, row: 0 };
     return out;
@@ -1201,6 +1253,29 @@ export class Zone {
       return seal.length ? { ...port, seal } : port;
     });
 
+    const objectsOf = (list: Placed[]) =>
+      list.flatMap((p) =>
+        PREFABS[p.prefab].parts.map((part): MapObject => {
+          const prefab = PREFABS[p.prefab];
+          const o: MapObject = {
+            s: sheetIndex(prefab.sheet),
+            x: part.x,
+            y: part.y,
+            w: part.w,
+            h: part.h,
+            px: p.px + part.dx,
+            py: p.py + part.dy,
+          };
+          if (prefab.tag) o.tag = prefab.tag;
+          return o;
+        }),
+      );
+    const gates = this.gateList.map(({ spawn, seal, reveal }): GateSpawn => {
+      const s = objectsOf(seal);
+      const r = objectsOf(reveal);
+      return { ...spawn, ...(s.length ? { seal: s } : {}), ...(r.length ? { reveal: r } : {}) };
+    });
+
     const blocked = new Set(this.blocked);
     // Props: block cells covered enough by the bottom band of their art. Prefabs differ in band/min,
     // so measure each (band, min) group separately.
@@ -1251,6 +1326,7 @@ export class Zone {
       signs: this.signList,
       doors: this.doorList,
       ...(this.ledgeList.length ? { ledges: this.ledgeList } : {}),
+      ...(gates.length ? { gates } : {}),
       ports,
       indoor: this.isIndoor,
       dark: this.isDark,

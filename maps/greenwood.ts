@@ -1,6 +1,8 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { TREES } from '../tools/map/catalog';
 import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
+import { LAKE_HATCH } from '../tools/map/delves';
+import { RUIN_ARRIVAL } from '../tools/map/ruinRooms';
 import layout from './world';
 
 // The Greenwood: the big forest of the south-west and where the game starts. Meadows and groves round a crossroads,
@@ -112,6 +114,12 @@ export default defineBiome({
     z.prop('lilyPads', pick(lake, 7).col + 9, pick(lake, 7).row);
     z.prop('lilyRed', pick(lake, 9).col + 15, pick(lake, 9).row);
     reedsAt(z, lake, 13, 'w');
+    // Brannoch's echo stones (quest "stones") drain the lake: its bed shows a hatch down to the Sunken Reliquary (maps/ruin_lake.ts).
+    z.gate('oldlake', LAKE_HATCH.col, LAKE_HATCH.row, 1, 1, {
+      reveal: ['sewerHatch'],
+      door: { zone: 'ruin_lake', col: RUIN_ARRIVAL.col, row: RUIN_ARRIVAL.row + 1 },
+      drain: { col: LAKE_HATCH.col, row: LAKE_HATCH.row },
+    });
     const small = pond(z, area(6, 21, 1.4, 0.9), { shore: 'sand' });
     z.keepClear(area(5.7, 20.7, 2, 1.5));
     z.prop('lilyPads', pick(small, 3).col + 3, pick(small, 3).row);

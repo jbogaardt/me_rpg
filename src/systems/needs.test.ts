@@ -122,6 +122,18 @@ describe('eating and drinking', () => {
       expect(pondCapacity(big, pondId(big, 8))).toBeGreaterThan(0);
     });
 
+    it('a pond the story drained stays dry: no drink, no rain, and a restored memory keeps it', () => {
+      const ponds = new PondLevels();
+      ponds.drink(7, 30, 60);
+      ponds.pin(7);
+      expect(ponds.level(7)).toBe(1);
+      expect(ponds.drink(7, 5, 60)).toBe(0);
+      ponds.rain(rainFill(null, 1), 1000);
+      expect(ponds.level(7)).toBe(1);
+      ponds.setLevels([]);
+      expect(ponds.levels()).toEqual([[7, 1, false]]);
+    });
+
     it('drains as it is drunk, gives nothing when dry, and only rain fills it', () => {
       const ponds = new PondLevels();
       expect(ponds.drink(7, 30, 60)).toBe(30);

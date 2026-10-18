@@ -341,6 +341,13 @@
                 "You heard it. The five shards. The child outside the glass. Do you understand what you are, boy?",
                 "The Stillness cannot hold you. It slides off you like rain. If there is a way to mend the Hourglass, it runs through someone like you.",
                 "Go back to Maren and tell her what the stones said. She has been waiting a long time to hear it."
+              ],
+              "opens": [
+                {
+                  "zone": "greenwood",
+                  "gate": "oldlake",
+                  "note": "The Old Lake has drained, and an iron hatch lies on its bed"
+                }
               ]
             },
             {
@@ -663,6 +670,13 @@
               "done": [
                 "Three hexers, and every one with a ledger of streets. They were taking the lamps in order, like a harvest.",
                 "There is a throne of lamp-frames in the chapel beyond the cistern. Whatever sits on it is the one who counts the lamps."
+              ],
+              "opens": [
+                {
+                  "zone": "sewer_undercroft",
+                  "gate": "barricade",
+                  "note": "The hexers' barricades have come down: the way to the Drowned Throne is open"
+                }
               ]
             },
             {

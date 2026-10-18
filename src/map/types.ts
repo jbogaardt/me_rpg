@@ -143,6 +143,22 @@ export function portSide(
 }
 
 /**
+ * A way a quest opens (`z.gate`, `src/content/gates.ts`): the `w` x `h` cells from `col,row` are blocked and the `seal` drawn
+ * across them while the story keeps it shut. Opening it clears them, fades the seal, draws the `reveal` objects, makes the
+ * `door` (to another zone) a way in and drains for good the pond that holds the `drain` cell. Gates of one name open
+ * together. A hero's story shuts one only in solo play (`systems/gates.ts`): everywhere else it stands open from the start.
+ */
+export interface GateSpawn extends CellPoint {
+  name: string;
+  w: number;
+  h: number;
+  seal?: MapObject[];
+  reveal?: MapObject[];
+  door?: { zone: string; col: number; row: number };
+  drain?: CellPoint;
+}
+
+/**
  * The on-disk map format (public/maps/<zone>.json). Generated from a zone spec in maps/ by
  * `npm run map -- build`; don't edit the JSON by hand.
  */
@@ -172,6 +188,7 @@ export interface MapData {
   doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
   ports: PortSpawn[]; // doorways the content binds to other maps' ports (left out of the file when there are none)
   ledges?: LedgeSpawn[]; // one-way drops off plateau edges (left out when a map has none)
+  gates?: GateSpawn[]; // ways a quest opens (left out when a map has none)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
   /** Underground and unlit (a cave, a sewer, a crypt): the `darkness` capability fogs it round the lights (entities/DarknessLayer.ts). */
   dark: boolean;
@@ -254,6 +271,7 @@ function unpacked(json: unknown): MapData {
       return { ...p, h, side: p.side ?? portSide(p.col, p.row, p.w, h, d.width!, d.height!) };
     }),
     ...(d.ledges?.length ? { ledges: d.ledges } : {}),
+    ...(d.gates?.length ? { gates: d.gates } : {}),
     indoor: d.indoor ?? false,
     dark: d.dark ?? false,
     ...(d.backdrop ? { backdrop: d.backdrop } : {}),
