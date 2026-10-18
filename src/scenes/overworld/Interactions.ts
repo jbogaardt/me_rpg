@@ -34,6 +34,11 @@ const NPC_LINES = [
   'Follow the road south to Lanternrest. Warden Maren keeps its lamp lit, and she has been waiting for a stranger like you.',
 ];
 
+/** A foe this close (px) makes the action key a sword: no talk starts, and holding it swings on. */
+const FIGHT_RANGE = CELL * 10;
+/** A guest's held button repeats an `act` press this often, well inside the host's buffer window (inputBuffer.ts). */
+const GUEST_REPEAT_S = 0.05;
+
 /**
  * What the action key does at this keyboard, and the buttons beside it: advance a dialog, read a sign or the lectern,
  * talk (keepers, quest givers, the trainer, pets, folk), open a chest, water or pick a crop, touch a quest site, set down or
@@ -68,6 +73,46 @@ export class Interactions {
   /** The kinds of quest site whose note has been shown (once each). */
   private siteTold = new Set<string>();
 
+  /** Is a foe within `FIGHT_RANGE` of the local hero? Then the action key only attacks (and holding it keeps swinging). */
+  fighting(): boolean {
+    const { player } = this.arena;
+    return this.arena.mobs.some((m) => m.alive && Math.hypot(player.x - m.body.x, player.y - m.body.y) < FIGHT_RANGE);
+  }
+
+  /**
+   * Holding the action button (the host's or solo hero): in a fight it refreshes the sword's input buffer every tick, so
+   * the swings chain at the weapon's own rate (systems/inputBuffer.ts). Away from a foe it does nothing, so a held key
+   * never repeats a talk, an open or a pickup. A dialog or menu forgets what was pending.
+   */
+  holdAttack(held: boolean | undefined, reading: boolean) {
+    const p = this.arena.local;
+    if (reading || p.dm || p.down !== null) return p.attackBuffer.clear();
+    if (held && this.fighting() && !this.ui.dialog.active) p.attackBuffer.press(p.zone);
+  }
+
+  /**
+   * A guest holding the action button in a fight: true each `GUEST_REPEAT_S` (the caller sends an `act` press then, so
+   * the host's buffer stays fresh and its swings chain). The guest does not know the cooldown; the host decides.
+   */
+  guestHold(held: boolean | undefined, dt: number): boolean {
+    if (!held || !this.fighting() || this.ui.dialog.active) {
+      this.holdTimer = 0;
+      return false;
+    }
+    this.holdTimer -= dt;
+    if (this.holdTimer > 0) return false;
+    this.holdTimer = GUEST_REPEAT_S;
+    return true;
+  }
+
+  private holdTimer = 0;
+
+  /** A guest's per-frame upkeep: its own idea of drinking, and a held action button repeating `press` in a fight. */
+  trackGuest(cmd: Command, reading: boolean, dt: number, press: () => void) {
+    this.trackGuestDrink(cmd);
+    if (this.guestHold(cmd.held && !cmd.act && !reading, dt)) press();
+  }
+
   /** The local player's action button: advance the dialog, talk when next to the NPC or a shopkeeper, otherwise `attack`. */
   handleAction(pressed: boolean, attack: () => void) {
     if (!pressed) return;
@@ -85,7 +130,7 @@ export class Interactions {
     const pet = arena.pets.find((p) => near(p));
     const folk = arena.zone.folk.find((f) => near(f.body));
     // With a foe about the action key only swings: nobody starts a talk (or freezes the world to read) in a fight.
-    const fighting = arena.mobs.some((m) => m.alive && near(m.body, CELL * 10));
+    const fighting = this.fighting();
     if (dialog.active) {
       dialog.advance();
     } else if (fighting && !arena.local.dm) {

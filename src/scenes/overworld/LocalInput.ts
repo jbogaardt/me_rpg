@@ -66,6 +66,7 @@ export class LocalInput {
       dx: dx || wx,
       dy: dy || wy,
       act: actionPressed('attack'),
+      held: actionDown('attack'),
       ...(combo === undefined ? {} : { combo }),
       ...aimOf(pointerAim(this.zones.heroOnScreen())),
     };

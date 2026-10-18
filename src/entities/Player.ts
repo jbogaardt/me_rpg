@@ -2,6 +2,7 @@ import type { Texture } from 'pixi.js';
 import { PositionClaim } from '../core/claim';
 import type { Hero, Ranged } from '../systems/combat';
 import type { SkillId } from '../systems/skills';
+import { AttackBuffer } from '../systems/inputBuffer';
 import { DM_COLOR, PLAYER_COLORS } from '../systems/looks';
 import { Character } from './Character';
 
@@ -10,6 +11,8 @@ export interface Command {
   dx: number; // -1, 0, 1
   dy: number;
   act: boolean; // action button pressed (talk / attack)
+  /** The action button is held down (the local hero only; a guest's hold is repeated as `act` presses). */
+  held?: boolean;
   combo?: number; // finished a combo of the wand or tome in hand: its index in the weapon's `focus.combos`
   /** A guest's word on where its hero stands, with the input's number (`core/claim.ts`); absent for the host and for old pages. */
   at?: { n: number; x: number; y: number };
@@ -26,6 +29,8 @@ export class Player {
   /** Judges a guest's claims about where this hero stands (host only). */
   readonly claim = new PositionClaim();
   attackCooldown = 0;
+  /** An attack pressed just before `attackCooldown` ends (systems/inputBuffer.ts; host and solo own it). */
+  readonly attackBuffer = new AttackBuffer();
   castCooldown = 0; // seconds before the next combo
   /** Arcane Edge (systems/skills.ts): the next `charges` attacks carry extra magic, for `timer` more seconds. */
   edge = { charges: 0, timer: 0 };

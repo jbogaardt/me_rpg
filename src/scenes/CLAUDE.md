@@ -21,6 +21,16 @@ draw in `Visuals`, a new synced thing in the matching link. The DM's controls ar
   zones with a player in them are simulated, so a shop nobody is in costs nothing.
 - **A zone is one `MapData` plus everything alive in it** (`ZoneState`): view, collision, mobs, chests, keepers, crops,
   barrels, ground items, effects. Players belong to no zone object; each `Player` names its zone.
+- **Sword input buffer** (`systems/inputBuffer.ts`; core engine, host-owned): `Simulation.attack` called inside the cooldown
+  keeps the press for `ATTACK_BUFFER_S` (0.16 s) and `updatePlayer` fires it on the first tick the cooldown allows (bows,
+  wands and tomes share the same gate and cooldown values). One pending press per `Player.attackBuffer`; a newer press
+  refreshes it; it dies on fire, a dialog or menu (`Interactions.holdAttack`), a fall, or a zone change. Holding the action
+  key (`Command.held`, the on-screen A button too: both are `actionDown('attack')`) refreshes it each tick but only where
+  the key means attack (`Interactions.fighting`: a foe within 10 cells), so holding by an NPC, chest or pond never repeats a
+  talk, open or pickup and a single tap there is unchanged. Only a press that reached `attack` is buffered, never `act`'s
+  other branches. **Co-op**: no protocol change. A guest's presses already arrive as the numbered `act` count and the HOST
+  buffers them per player; a guest holding in a fight sends an extra `act` press every 0.05 s (`Interactions.guestHold`)
+  so the host's buffer stays fresh (the guest does not know the cooldown). Cooldowns, damage and balance are untouched.
 - **Roaming people** (`ZoneState.folk[].roamer`, `systems/roam.ts`): the host or solo steps them in an occupied zone while time runs
   (capability `roaming`); talking to one (`ZoneState.attend`) stops it, turns it to the speaker and sends it home after a moment.
   A guest only sets positions from `SnapMsg.folk`; zones seen from next door keep their people still.
