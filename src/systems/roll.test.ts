@@ -3,6 +3,9 @@ import { CELL } from '../map/types';
 import { Collision, type Body } from './collision';
 import { AttackBuffer } from './inputBuffer';
 import {
+  MAX_TRAVEL_GAIN,
+  BACK_DOT,
+  ROLL_BACK_COOLDOWN,
   ROLL_COOLDOWN,
   ROLL_DISTANCE,
   ROLL_IFRAMES,
@@ -17,15 +20,18 @@ import {
   startRoll,
   stepRoll,
   type RollGate,
+  rollCooldownFor,
+  rollTravelGain,
+  rollWaitFor,
 } from './roll';
 
 const TICK = 1 / 60;
 const free: RollGate = { cooldown: 0, rolling: false, down: false, stunned: false, dm: false };
 
 describe('the roll move', () => {
-  it('lasts 13 frames and covers three cells', () => {
+  it('lasts 13 frames and covers two and a quarter cells', () => {
     expect(ROLL_TIME * 60).toBeCloseTo(13, 6);
-    expect(ROLL_DISTANCE).toBe(3 * CELL);
+    expect(ROLL_DISTANCE).toBe(2.25 * CELL);
   });
 
   it('covers exactly its distance however the ticks fall, and ends when its time is up', () => {
@@ -99,8 +105,57 @@ describe('when a roll may start', () => {
     expect(canRoll({ ...free, dm: true })).toBe(false);
   });
 
+  it('is no way to travel: rolling on every cooldown beats walking by little', () => {
+    expect(rollTravelGain()).toBeGreaterThan(0);
+    expect(rollTravelGain()).toBeLessThanOrEqual(MAX_TRAVEL_GAIN);
+  });
+
+  it('a roll back on the last is quick, any other way waits the long cooldown', () => {
+    const east = { x: 1, y: 0 };
+    expect(ROLL_BACK_COOLDOWN).toBeLessThan(ROLL_COOLDOWN);
+    expect(rollCooldownFor(null, east)).toBe(ROLL_COOLDOWN);
+    expect(rollCooldownFor(east, east)).toBe(ROLL_COOLDOWN);
+    expect(rollCooldownFor(east, { x: 0, y: 1 })).toBe(ROLL_COOLDOWN); // sideways is not back
+    expect(rollCooldownFor(east, { x: -1, y: 0 })).toBe(ROLL_BACK_COOLDOWN);
+    expect(rollCooldownFor(east, { x: Math.cos(Math.acos(BACK_DOT)), y: Math.sin(Math.acos(BACK_DOT)) })).toBe(
+      ROLL_BACK_COOLDOWN,
+    );
+    expect(rollWaitFor(1, east, { x: -1, y: 0 })).toBeCloseTo(ROLL_BACK_COOLDOWN - 1, 6);
+    expect(rollWaitFor(2, east, { x: -1, y: 0 })).toBe(0);
+    expect(rollWaitFor(2, east, east)).toBeCloseTo(ROLL_COOLDOWN - 2, 6);
+  });
+
+  it('no sequence of rolls out-travels a walker by more than the cap', () => {
+    // Greedy over 16 directions: every tick, roll the way that is legal and goes furthest east, else walk east.
+    const dirs = Array.from({ length: 16 }, (_, i) => ({
+      x: Math.cos((i * Math.PI) / 8),
+      y: Math.sin((i * Math.PI) / 8),
+    }));
+    const dt = 0.01;
+    const total = 120;
+    let x = 0;
+    let since = ROLL_COOLDOWN;
+    let prev: { x: number; y: number } | null = null;
+    let rolling = 0;
+    for (let t = 0; t < total; t += dt) {
+      since += dt;
+      if (rolling > 0) {
+        rolling -= dt;
+        continue;
+      }
+      const best = dirs.filter((d) => rollWaitFor(since, prev, d) === 0 && d.x > 0.2).sort((a, b) => b.x - a.x)[0];
+      if (best) {
+        x += best.x * ROLL_DISTANCE;
+        since = 0;
+        prev = best;
+        rolling = ROLL_TIME;
+      } else x += 120 * dt;
+    }
+    expect(x / (120 * total) - 1).toBeLessThanOrEqual(MAX_TRAVEL_GAIN);
+  });
+
   it('cannot be chained: the cooldown runs from the start and outlasts the roll', () => {
-    expect(ROLL_COOLDOWN).toBeGreaterThan(ROLL_TIME * 2);
+    expect(ROLL_BACK_COOLDOWN).toBeGreaterThan(ROLL_TIME * 2);
     expect(cooldownShare(ROLL_COOLDOWN)).toBe(1);
     expect(cooldownShare(0)).toBe(0);
     expect(cooldownShare(ROLL_COOLDOWN / 2)).toBeCloseTo(0.5, 6);
