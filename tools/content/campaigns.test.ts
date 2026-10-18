@@ -6,7 +6,13 @@ import { describe, expect, it } from 'vitest';
 import { WHOLE_BODIES } from '../../sprites/parts';
 import { outfitLayers, type Outfit, type PartManifest } from '../../src/sprites/doll';
 import { mobLevel, mobTimings } from '../../src/systems/combat';
-import { POISE_CAP } from '../../src/systems/mobDefense';
+import {
+  FAST_SHOT_WINDUP,
+  POISE_CAP,
+  QUICK_RECOVER,
+  QUICK_WINDUP,
+  SPRINT_MAX_DURATION,
+} from '../../src/systems/mobDefense';
 import { heroModel } from '../../src/systems/dmBoss';
 import { ROOT } from '../map/image';
 import { capabilityTable } from '../../src/content/schema';
@@ -58,12 +64,19 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
   it.each(mobs)('%s is a fair enemy for a hero who can reach it', (id) => {
     const kind = content.mobKind(id);
     const { windup, recover, stagger } = mobTimings(kind);
-    expect(windup * 0.8).toBeGreaterThanOrEqual(0.4); // even the shortest spread windup (-20%) outlasts a reaction
+    if (kind.quick) {
+      expect(windup, `${id}: a quick kind's windup`).toBeGreaterThanOrEqual(QUICK_WINDUP);
+      expect(recover, `${id}: a quick kind rests long`).toBeGreaterThanOrEqual(QUICK_RECOVER);
+    } else expect(windup * 0.8).toBeGreaterThanOrEqual(0.4); // even the shortest spread windup (-20%) outlasts a reaction
+    if (kind.sprint) expect(kind.sprint.duration).toBeLessThanOrEqual(SPRINT_MAX_DURATION);
     expect(stagger).toBeLessThan(windup + recover);
     expect(heroModel(mobLevel(kind)).power - kind.defense).toBeGreaterThan(0); // a hero of its own level can always hurt it
     if (kind.shot) {
       expect(kind.shot.range).toBeLessThanOrEqual(kind.sight);
-      expect(kind.shot.speed).toBeLessThan(HERO_SPEED * 1.6);
+      if (kind.shot.speed >= HERO_SPEED * 1.6) {
+        expect(kind.shot.speed).toBeLessThanOrEqual(HERO_SPEED * 3);
+        expect(windup, `${id}: a fast shot needs a long telegraph`).toBeGreaterThanOrEqual(FAST_SHOT_WINDUP);
+      }
       expect(windup).toBeGreaterThanOrEqual(0.5);
     }
   });

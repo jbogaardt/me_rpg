@@ -17,6 +17,9 @@ import {
   POISE_REGEN,
   poiseCost,
   resolveCharge,
+  resolveSprint,
+  spreadAngles,
+  SPRINT_DEFAULTS,
   resolveGuard,
   stunFactor,
 } from './mobDefense';
@@ -141,6 +144,25 @@ describe('charge', () => {
     expect(CHARGE_DEFAULTS.range).toBe(96); // three cells
     expect(CHARGE_DEFAULTS.after).toBe(1.5);
     expect(CHARGE_DEFAULTS.speed).toBeGreaterThan(120); // faster than the hero walks, or it is no gap-closer
+  });
+});
+
+describe('sprint', () => {
+  it('outruns the hero for a medium burst, one field at a time', () => {
+    expect(resolveSprint()).toEqual(SPRINT_DEFAULTS);
+    expect(resolveSprint({ duration: 0.8 })).toEqual({ ...SPRINT_DEFAULTS, duration: 0.8 });
+    expect(SPRINT_DEFAULTS.speed).toBeGreaterThan(120);
+  });
+});
+
+describe('spread', () => {
+  it('fans bolts evenly around the aim', () => {
+    expect(spreadAngles(0.5, { count: 1, arc: 40 })).toEqual([0.5]);
+    const a = spreadAngles(0, { count: 3, arc: 60 });
+    expect(a[1]).toBeCloseTo(0);
+    expect(a[2]! - a[1]!).toBeCloseTo(Math.PI / 6);
+    expect(a[0]).toBeCloseTo(-a[2]!);
+    expect(spreadAngles(0, { count: 4, arc: 90 })).toHaveLength(4);
   });
 });
 

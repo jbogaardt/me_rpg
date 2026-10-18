@@ -13,7 +13,7 @@
 //    or break its poise.
 //  - Charge: a gap-closer for the foe that is kited (see `Mob.ts`); its defaults and the check on it are here.
 
-import { mobLevel, type MobCharge, type MobGuard, type MobKind } from './combat';
+import { mobLevel, type MobCharge, type MobGuard, type MobKind, type MobSpread, type MobSprint } from './combat';
 
 // --- Poise ---
 
@@ -139,3 +139,41 @@ export const CHARGE_DEFAULTS: MobCharge = {
 };
 
 export const resolveCharge = (c: Partial<MobCharge> = {}): MobCharge => ({ ...CHARGE_DEFAULTS, ...c });
+
+// --- Sprint (a burst of speed) ---
+
+export const SPRINT_DEFAULTS: MobSprint = {
+  speed: 168, // px/s: well over the hero's 120, so running does not shake it off for the length of a burst
+  duration: 1.1, // seconds: a medium burst, about 185 px, then it is back to its walk
+  cooldown: 4, // seconds before it may burst again
+  range: 90, // px: a hero closer than this is already in its reach
+};
+
+/** The longest a burst may last: past this a hero cannot outwalk it to a wall or a door. */
+export const SPRINT_MAX_DURATION = 1.6;
+
+export const resolveSprint = (s: Partial<MobSprint> = {}): MobSprint => ({ ...SPRINT_DEFAULTS, ...s });
+
+// --- Quick (a snap attacker) ---
+
+/** The shortest windup of a quick kind (its spread may take 20% off): a reaction is about 0.25 s, so it is a test of reflexes, not a trap. */
+export const QUICK_WINDUP = 0.3;
+/** A quick kind's blow is this share of a plain one, and it must rest at least `QUICK_RECOVER` after it. */
+export const QUICK_POWER = 0.75;
+export const QUICK_RECOVER = 1;
+
+// --- Spread (a fan of bolts) ---
+
+export const SPREAD_MAX_COUNT = 7;
+export const SPREAD_MAX_ARC = 120;
+
+/** The bolt angles of a fan around `aim` (radians): `count` of them, `arc` degrees from first to last; one bolt flies straight. */
+export function spreadAngles(aim: number, spread: Pick<MobSpread, 'count' | 'arc'>): number[] {
+  const { count, arc } = spread;
+  if (count <= 1) return [aim];
+  const step = (arc * (Math.PI / 180)) / (count - 1);
+  return Array.from({ length: count }, (_, i) => aim + (i - (count - 1) / 2) * step);
+}
+
+/** How fast a shot may fly: fair at a plain windup up to 1.6x the hero's walk, faster only with a longer telegraph. */
+export const FAST_SHOT_WINDUP = 0.75;

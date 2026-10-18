@@ -1,5 +1,6 @@
 import { mobAttack, REACH } from '../entities/Mob';
 import { itemOf } from './items';
+import { FAST_SHOT_WINDUP, QUICK_RECOVER, QUICK_WINDUP } from './mobDefense';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   attackPower,
@@ -122,7 +123,10 @@ describe('MOB_KINDS', () => {
   it.each(Object.entries(MOB_KINDS))('%s has sane pacing', (_key, kind) => {
     const { windup, recover, stagger } = mobTimings(kind);
     // The telegraph must stay readable: a hero needs about 0.4 s to see it and step away (windups are spread -20%, so the kind's is 0.5+).
-    expect(windup * 0.8).toBeGreaterThanOrEqual(0.4); // even the shortest spread windup (-20%) outlasts a reaction
+    if (kind.quick) {
+      expect(windup).toBeGreaterThanOrEqual(QUICK_WINDUP); // a snap attacker pays with a long rest
+      expect(recover).toBeGreaterThanOrEqual(QUICK_RECOVER);
+    } else expect(windup * 0.8).toBeGreaterThanOrEqual(0.4); // even the shortest spread windup (-20%) outlasts a reaction
     expect(recover).toBeGreaterThan(0);
     expect(stagger).toBeGreaterThanOrEqual(0);
     expect(stagger).toBeLessThan(windup + recover); // a stun never outlasts a whole attack cycle
@@ -156,7 +160,11 @@ describe('MOB_KINDS', () => {
       expect(shot.range).toBeGreaterThan(0);
       expect(shot.range).toBeLessThanOrEqual(kind.sight); // it must be able to start shooting once it sees the hero
       expect(shot.speed).toBeGreaterThan(0);
-      expect(shot.speed).toBeLessThan(HERO_SPEED * 1.6); // a sidestep after release still works
+      if (shot.speed >= HERO_SPEED * 1.6) {
+        // a fast shot cannot be sidestepped after release, so it pays with a long, clear telegraph
+        expect(shot.speed).toBeLessThanOrEqual(HERO_SPEED * 3);
+        expect(kind.windup ?? 0.5).toBeGreaterThanOrEqual(FAST_SHOT_WINDUP);
+      }
       expect(shot.color).toBeLessThanOrEqual(0xffffff);
       expect(kind.windup ?? 0.5).toBeGreaterThanOrEqual(0.5); // ranged attacks telegraph longer than a swing
     },

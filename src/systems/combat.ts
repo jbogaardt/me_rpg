@@ -162,6 +162,18 @@ export interface MobKind {
   charge?: MobCharge;
   /** A shield: turns frontal arrows and spells aside while it is up (`frontal`, systems/mobDefense.ts). */
   guard?: MobGuard;
+  /** A burst of speed: for a few seconds it runs faster than the hero, then it is back to its walk (`resolveSprint`, systems/mobDefense.ts). */
+  sprint?: MobSprint;
+  /** A snap attacker: its windup may be as short as `QUICK_WINDUP`, and it pays with a weaker blow and a long recovery (`QUICK_POWER`). */
+  quick?: boolean;
+}
+
+/** A kind's burst of speed, every number in full (the content gives only what it changes, `resolveSprint`). */
+export interface MobSprint {
+  speed: number; // px/s while it runs (the hero walks at 120)
+  duration: number; // seconds the burst lasts at most
+  cooldown: number; // seconds before it may burst again
+  range: number; // px: only a hero further than this (and seen) starts one
 }
 
 /** A kind's gap-closer, every number in full (the content gives only what it changes, `resolveCharge`). */
@@ -199,6 +211,14 @@ export interface MobShot {
   range: number; // pixels: starts a shot from this close (must not exceed `sight`, or it never gets to fire)
   speed: number; // pixels per second; the hero walks at 120, so keep it dodgeable
   color: number; // 0xRRGGBB glow of the projectile, so each kind's shot reads differently
+  /** A fan: `count` bolts spread over `arc` degrees, centred on the aim, each worth `power` of the kind's attack. */
+  spread?: MobSpread;
+}
+
+export interface MobSpread {
+  count: number; // bolts per shot (2-7)
+  arc: number; // degrees from the first bolt to the last (up to 120)
+  power: number; // each bolt's share of the kind's `attack`
 }
 
 const DEFAULT_TIMINGS = { windup: 0.5, recover: 0.7, stagger: 0.3 };

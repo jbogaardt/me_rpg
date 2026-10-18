@@ -33,6 +33,7 @@ import {
   gapArmor,
   levelGap,
   poiseCost,
+  spreadAngles,
   stunFactor,
 } from '../../systems/mobDefense';
 import {
@@ -488,29 +489,34 @@ export class Simulation {
     this.casting.combo(p, index);
   }
 
-  /** A ranged mob lets go of a shot along (ux, uy), from its hands at chest height. */
+  /** A ranged mob lets go of a shot along (ux, uy), from its hands at chest height: one bolt, or a fan of them (`shot.spread`). */
   private mobShoot(mob: Mob, ux: number, uy: number) {
     const { shot } = mob.kind;
     if (!shot) return;
-    const x = mob.body.x + ux * 10;
-    const y = mob.body.y - BOLT_HEIGHT + uy * 8;
-    this.visuals.foeBolt(x, y, ux * shot.speed, uy * shot.speed, shot.color, (bx, by) => {
-      // Hits the first player it touches (one blinking with invulnerability lets it pass), stops at walls. The players
-      // are looked up each step: someone may have joined or left while it flies.
-      const hit = this.arena
-        .party()
-        .find((p) => !p.safe && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14);
-      if (hit) this.hurtHero(mob, hit.body);
-      return hit !== undefined;
-    });
-    this.emit({
-      type: 'bolt',
-      x: round1(x),
-      y: round1(y),
-      vx: round1(ux * shot.speed),
-      vy: round1(uy * shot.speed),
-      color: shot.color,
-    });
+    const angles = shot.spread ? spreadAngles(Math.atan2(uy, ux), shot.spread) : [Math.atan2(uy, ux)];
+    const power = shot.spread?.power ?? 1;
+    for (const a of angles) {
+      const [vx, vy] = [Math.cos(a), Math.sin(a)];
+      const x = mob.body.x + vx * 10;
+      const y = mob.body.y - BOLT_HEIGHT + vy * 8;
+      this.visuals.foeBolt(x, y, vx * shot.speed, vy * shot.speed, shot.color, (bx, by) => {
+        // Hits the first player it touches (one blinking with invulnerability lets it pass), stops at walls. The players
+        // are looked up each step: someone may have joined or left while it flies.
+        const hit = this.arena
+          .party()
+          .find((p) => !p.safe && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14);
+        if (hit) this.hurtHero(mob, hit.body, power);
+        return hit !== undefined;
+      });
+      this.emit({
+        type: 'bolt',
+        x: round1(x),
+        y: round1(y),
+        vx: round1(vx * shot.speed),
+        vy: round1(vy * shot.speed),
+        color: shot.color,
+      });
+    }
   }
 
   /**

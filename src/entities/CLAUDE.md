@@ -16,6 +16,10 @@
   spells still cost poise, so enough of them break it. A *charge* is the answer to kiting: a hero who stays out of range for 1.5 s
   gets a telegraphed dash (windup pose, "!" overhead, a long mark line; it is the `windup` state with `attack = 'charge'`, so a guest needs no new state).
   Elites also walk at the hero's pace or charge (`campaigns.test.ts`).
+  **Pressure kinds** (core engine, host/solo-owned, nothing on the wire; content opts in per kind, `mobDefense.ts`): `sprint` is a burst of speed past the hero's
+  120 px/s for about a second when the hero keeps its distance (then a cooldown; not for shooters); `quick` allows a 0.3 s windup but the blow is
+  `QUICK_POWER` of a plain one and the rest is 1 s or more; a `shot` may fly fast (over 1.6x the hero's walk) only with a 0.75 s+ windup, and its
+  `spread` fans `count` bolts over `arc` degrees, each a share (`power`) of the attack, as that many ordinary `bolt` events.
   **Aggro needs line of sight** (`MobWorld.sees`, `Collision.hasLineOfSight`): walls do not pull rooms; a mob also hears a
   hero at `HEARING` of its sight, and a chaser keeps `MEMORY` seconds after losing sight, and gives up the moment the hero is past its sight range. Host-only, so no co-op change.
   **Giants** (`MobKind.scale`) draw bigger and the rules follow: collision box, reach, hit circle, bars.

@@ -15,7 +15,7 @@ import {
   squashY,
   tremblePx,
 } from '../systems/tellLook';
-import { Poise, frontal, type Blow } from '../systems/mobDefense';
+import { Poise, QUICK_POWER, frontal, type Blow } from '../systems/mobDefense';
 import {
   hitPauseFor,
   KNOCK_DECAY,
@@ -141,6 +141,8 @@ export class Mob {
   private dashing = 0; // seconds of charge left (the gap-closer, `MobKind.charge`)
   private farFor = 0; // seconds the hero has stayed out of charge range while this mob chased
   private chargeCool = 0; // seconds before it may charge again
+  private sprinting = 0; // seconds of burst left (`MobKind.sprint`)
+  private sprintCool = 0; // seconds before it may burst again
   private bang = new Graphics(); // the "!" over its head while a charge winds up
   private moving = false;
   private attack: MobAttack = 'melee'; // what the current windup leads to
@@ -222,6 +224,8 @@ export class Mob {
     this.dashing = 0;
     this.farFor = 0;
     this.chargeCool = 0;
+    this.sprinting = 0;
+    this.sprintCool = 0;
     this.lunging = 0;
     this.swing = false;
     this.drawBar();
@@ -238,6 +242,7 @@ export class Mob {
     this.timer = 1;
     this.flash = 0;
     this.dashing = 0;
+    this.sprinting = 0;
     this.broken = false;
     this.beam.clear();
     this.cue.hide();
@@ -427,6 +432,7 @@ export class Mob {
     if (!this.broken) this.poise.tick(dt);
     this.rayRest = Math.max(0, this.rayRest - dt);
     this.chargeCool = Math.max(0, this.chargeCool - dt);
+    this.sprintCool = Math.max(0, this.sprintCool - dt);
     this.slideKnock(dt, world);
 
     this.heroes = world.heroes;
@@ -508,7 +514,19 @@ export class Mob {
             this.startCharge(charge.windup, dx, dy, dist, world);
             break;
           }
-          moving = this.walk(dx / dist, dy / dist, this.kind.speed * dt, world);
+          // A burst of speed for a hero who keeps its distance: it outruns the hero for a medium stretch, then must rest.
+          const { sprint } = this.kind;
+          if (sprint) {
+            if (this.sprinting > 0) {
+              this.sprinting -= dt;
+              if (this.sprinting <= 0 || !seen || dist <= REACH) {
+                this.sprinting = 0; // it has arrived (or lost the hero, or run out of breath): now it rests
+                this.sprintCool = sprint.cooldown;
+              }
+            } else if (seen && this.sprintCool <= 0 && dist > sprint.range) this.sprinting = sprint.duration;
+          }
+          const pace = this.sprinting > 0 && sprint ? sprint.speed : this.kind.speed;
+          moving = this.walk(dx / dist, dy / dist, pace * dt, world);
         }
         break;
       }
@@ -824,7 +842,7 @@ export class Mob {
       const hit = world.heroes.find((h) => Math.hypot(h.x - cx, h.y - cy) < HIT_RADIUS * scale);
       if (hit) {
         this.swing = false;
-        world.strike(this, hit);
+        world.strike(this, hit, this.kind.quick ? QUICK_POWER : undefined);
       }
     }
     if (this.lunging <= 0 && this.swing) {
