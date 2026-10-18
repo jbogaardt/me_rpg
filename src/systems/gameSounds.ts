@@ -23,6 +23,7 @@ export const GAME_SOUND_NAMES = [
   'glint', // a soft sparkle
   'levelUp', // the chime
   'pickup', // an item picked up
+  'deny', // the quick-item button refused (nothing to use, or no need): a short dull thud
 ] as const;
 export type GameSoundName = (typeof GAME_SOUND_NAMES)[number];
 

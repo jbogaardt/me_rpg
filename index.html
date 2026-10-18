@@ -100,13 +100,18 @@
     <!-- What the current quest asks, under the bars (src/hud/Hud.ts). -->
     <div id="quest-tracker" hidden></div>
 
-    <!-- Quick slots at the right edge (src/hud/Hotbar.ts): keys 1-4 or a tap use the item named in the slot. -->
-    <div id="hotbar" aria-label="Hotbar">
-      <div class="hb" role="button" aria-label="Quick slot 1" data-key="Digit1"></div>
-      <div class="hb" role="button" aria-label="Quick slot 2" data-key="Digit2"></div>
-      <div class="hb" role="button" aria-label="Quick slot 3" data-key="Digit3"></div>
-      <div class="hb" role="button" aria-label="Quick slot 4" data-key="Digit4"></div>
+    <!-- The quick-item button (src/hud/ItemButton.ts): tap uses the selected consumable, swipe left or right cycles. It reads
+         pointer events itself (no data-key); bottom right on a phone, up-left of A, and a corner spot on desktop. -->
+    <div id="item-btn" role="button" aria-label="Quick item" hidden>
+      <div class="ib-face">
+        <span class="ib-icon"></span>
+        <span class="ib-sweep"></span>
+      </div>
+      <span class="ib-qty" hidden></span>
+      <span class="ib-pips" aria-hidden="true"></span>
     </div>
+    <!-- Floats over the hero for a moment when the item is cycled or used (setting in the Controls tab). -->
+    <div id="item-pop" aria-hidden="true" hidden><span class="ip-icon"></span></div>
 
     <ul id="combo-hud" aria-label="Spell combos" hidden></ul>
 
@@ -234,6 +239,12 @@
                 <button type="button" role="switch" data-aid="compass" aria-checked="true">Compass</button>
               </div>
               <p id="aid-note" class="keybinds-note"></p>
+            </div>
+            <div id="item-setting">
+              <h3>Quick item <small>keys 1-3, Q and E to cycle, F to use</small></h3>
+              <div role="group" aria-label="Quick item">
+                <button type="button" role="switch" data-item="popup" aria-checked="true">Pop-up over the hero</button>
+              </div>
             </div>
             <div id="voice-setting">
               <h3>Voice <small>Dungeon Master</small></h3>

@@ -4,7 +4,7 @@ import { sayTime } from '../systems/dmPowers';
 import { ReadingPause } from '../systems/readingPause';
 import type { Sprites, Zone } from '../assets';
 import type {} from '../core/aim';
-import { actionPressed, clickedAt, hotbarPressed, mapPressed, menuPressed, stopPressed } from '../core/controls';
+import { actionPressed, clickedAt, mapPressed, menuPressed, stopPressed } from '../core/controls';
 import {} from '../core/direction';
 import type {} from './ZoneState';
 import type { Scene } from '../core/Scene';
@@ -73,8 +73,7 @@ import { createDmBot, type DmBotApi } from './overworld/DmBot';
 import { DmDesk } from './overworld/DmDesk';
 import { DmPowers } from './overworld/DmPowers';
 import { DmBar } from '../hud/DmBar';
-import { hotbar, HotbarView } from '../hud/Hotbar';
-import { slotOp } from '../systems/hotbar';
+import { ItemButton } from '../hud/ItemButton';
 import { DmCard } from '../hud/DmCard';
 import { DmPrompts } from './overworld/DmPrompts';
 import { DmTasks } from './overworld/DmTasks';
@@ -141,7 +140,10 @@ export class OverworldScene implements Scene {
   private desk!: DmDesk;
   private votePanel = new VotePanel();
   private dmBar = new DmBar();
-  private hotbarView = new HotbarView();
+  private itemButton = new ItemButton(
+    () => this.hero,
+    (op) => this.pack.localOp(op),
+  );
   private dmCard = new DmCard();
   private requests = new RequestPanel();
   private powers!: DmPowers;
@@ -512,12 +514,8 @@ export class OverworldScene implements Scene {
       if (shop.open) shop.close();
       else menu.toggleInventory(this.hero);
     }
-    // Quick slots (keys 1-4 or a tap on the bar): the same Inventory action as the menu, so a guest asks the host.
-    const slot = hotbarPressed();
-    if (slot >= 0 && free && !this.arena.local.dm) {
-      const op = slotOp(this.hero, hotbar.get(slot));
-      if (op) this.pack.localOp(op);
-    }
+    // The quick-item button's keys (1-3, Q/E, F) and wheel: the same Inventory action as the menu, so a guest asks the host.
+    this.itemButton.poll(free && !this.arena.local.dm);
   }
 
   /** What the local player sees: the zone they are in (a door above may just have changed it). */
@@ -612,7 +610,7 @@ export class OverworldScene implements Scene {
           zone: p.zone === z.name ? '' : p.zone,
         })),
     );
-    this.hotbarView.update(this.hero, !arena.local.dm);
+    this.itemButton.update(!arena.local.dm, dt, arena.local.body, view, z.camera.zoom);
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
       // A player the host has not yet placed (their body is still hidden) has no position to show.

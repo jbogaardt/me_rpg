@@ -9,6 +9,10 @@ Scene loop, camera, input, bindings, combos, touch. Headers of each file explain
 - **Touch works through the same keys.** `touch.ts` turns the on-screen pad and every `[data-key]` element into
   key presses, so a new button is just a `data-key` element. **It cancels every touch's default action outside an
   allow-list (`keepDefault`), which also stops the browser making the click: a new tappable overlay must be added to it.**
+- **The quick-item button is not a `data-key` button**: a held key cannot tell a tap from a swipe, so `hud/ItemButton.ts` reads
+  its own pointer events (per pointer id, so it works beside the stick and A: three fingers at once). Its keys are the bindable
+  actions `itemUse`, `itemPrev`, `itemNext` (F, Q, E; no touch code) plus the reserved 1-3 (`HOTBAR_KEYS`); the gesture
+  thresholds are in `systems/hotbar.ts`. It is local UI: nothing is sent (`src/hud/CLAUDE.md`).
 - **The stick floats by default** (`stick.ts`, Pixi-free): a touch on the bare canvas in the left half plants the pad
   there and it follows the thumb; `fixed` keeps the corner pad. Deadzone 0.05 to 0.6, saved in localStorage,
   `?stick=`/`?deadzone=`. Input only, no co-op impact (host and guest read the same keys).

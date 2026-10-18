@@ -18,7 +18,7 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
   person: walk up and press the action key). Everything the game tells a player unasked (a defeat, a quest the DM gave, a
   chapter's note, a trial's result) is *passive text*: `Dialog.note`, the same caption as the DM's words. Never `say` for those.
 - **Item pickups are a toast, never a card** (`PickupToasts`, rules in `toastStack.ts`): a small see-through stack at the left edge, merged repeats, gone in about 2 s (1 s with a foe near), plus a short chime (`playPing`). Local to each player, nothing is sent; core engine.
-- **Combat sounds** (`gameSfx.ts`, event table in `systems/gameSounds.ts`; core engine, cosmetic, no capability): swing, hit, hurt, death, bolt, chest, level-up and pickup, procedural, hooked in `Visuals` (`particles`, `swing`, `bolt`, `text`), so the host, solo and every co-op guest play from the events they already get (no protocol change; the host's `Simulation.fx` goes through the same call, so one event is one sound). Separate from the DM's cue vocabulary (`sfx.ts`) and from the voice mute: own mute and volume in the Controls tab (`SoundSetting`, `core/soundSettings.ts`). Master gain into a compressor, 6 voices, jittered. A new sound is a name, a recipe and a table line.
+- **Combat sounds** (`gameSfx.ts`, event table in `systems/gameSounds.ts`; core engine, cosmetic, no capability): swing, hit, hurt, death, bolt, chest, level-up, pickup and `deny` (the item button's refusal), procedural, hooked in `Visuals` (`particles`, `swing`, `bolt`, `text`), so the host, solo and every co-op guest play from the events they already get (no protocol change; the host's `Simulation.fx` goes through the same call, so one event is one sound). Separate from the DM's cue vocabulary (`sfx.ts`) and from the voice mute: own mute and volume in the Controls tab (`SoundSetting`, `core/soundSettings.ts`). Master gain into a compressor, 6 voices, jittered. A new sound is a name, a recipe and a table line.
 - **The map overlay is local and always available**: it fills in as the players in view explore (`map/explored.ts`),
   nothing is sent; a solo game saves it with the rest (`Atlas.pack`). The button and M key never go missing (host, guest, DM, touch, any zone); a room has no overview, so
   there the map opens on its name and a note (`MapOverlay.setRoom`). Only the aids on it are optional: the `guide`
@@ -28,11 +28,17 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
   partner's colour with the distance in tiles for a partner in this zone but out of view, and a chip for one in another zone.
   Nothing is sent: a guest already gets every in-zone player in `snap.players` and the rest in `away`, so it can say "in another
   zone" but only the host knows which zone (the chip names it when the player's `zone` is known).
-- **The hotbar** (`Hotbar.ts`, rules in `systems/hotbar.ts`; core engine, per-player UI state): four quick slots in a column on the
-  right edge (clear of the D-pad and A), keys 1-4 (`HOTBAR_KEYS`, reserved) or a tap (`data-key` buttons). A slot stores an
-  item *name* (never a pack index) and a use is an ordinary Inventory op, so co-op needs nothing new: the guest applies it
-  and asks the host like any menu action. Slots are assigned from the Inventory tab, saved in `localStorage` only, never sent.
-  Gamepad mapping: not done (the game has no gamepad input yet).
+- **The quick-item button** (`ItemButton.ts`, storage `Hotbar.ts`, rules and thresholds in `systems/hotbar.ts`; core engine, per-player
+  UI state): one 60 px round button (up-left of A on touch, a corner on desktop, hidden for the DM) replaces the four slots. Tap
+  (< 250 ms, < 16 px, fires on release; squashes at once) uses the selected consumable; a swipe left or right (> 24 px) cycles and
+  never uses, skipping empty slots and items no longer carried; swipe up is reserved. Keys 1-3 use a slot, Q/E cycle, F uses
+  (`itemUse/itemPrev/itemNext`, bindable), the wheel cycles while no menu or dialog is open. Four slots stay stored, three are shown;
+  only items with `use` qualify and a new consumable fills a free slot once. A refusal (empty, or "You do not need that right now."
+  at full health) shakes the button with a `deny` thud and no text. Icon at 2x the 32 px cell, pips, a badge from 2, a cooldown
+  sweep, no words; a 0.8 s pop-up over the hero on cycle or use (`core/itemPopup.ts`, Controls tab, on by default). A slot
+  stores an item *name*; a use is an ordinary Inventory op resolved at tap time through `pack.localOp`. **Co-op**: no protocol
+  change: the guest applies it and asks the host like any menu action; selection, cycling, assignment and the pop-up setting are
+  local and never sent. Assigned from the Inventory tab, saved in `localStorage`.
 - **Joining closes the menu and reports through `#join-status`** (`JoinStatus.ts`, words from `net/joinStatus.ts`):
   connecting, waiting for the host, joined (fades), or a failure with its reason (stays until dismissed and brings the
   Online tab back to retry). Guest-only; a host has nothing to join. The relay cannot tell a full game from a closed one.

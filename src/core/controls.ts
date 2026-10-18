@@ -42,8 +42,15 @@ export const mapPressed = () => input.wasPressed(...FIXED_KEYS.map);
 export const clickedAt = (): { x: number; y: number } | null =>
   input.wasHit('Mouse0') ? input.pointer() : input.tap();
 
-/** The hotbar slot (0-based) whose number key, or on-screen button, went down this frame, or -1. */
+/** The hotbar slot (0-based) whose number key went down this frame, or -1. */
 export const hotbarPressed = (): number => HOTBAR_KEYS.findIndex((code) => input.wasPressed(code));
+
+/** The quick-item keys (bindable: use, previous, next) went down this frame; the wheel is read by hud/ItemButton.ts. */
+export const itemKeys = () => ({
+  use: actionPressed('itemUse'),
+  prev: actionPressed('itemPrev'),
+  next: actionPressed('itemNext'),
+});
 
 /** The Dungeon Master's stop-time key (T) went down this frame. */
 export const stopPressed = () => input.wasPressed(...FIXED_KEYS.stop);
