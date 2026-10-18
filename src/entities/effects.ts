@@ -1,5 +1,14 @@
 import { BitmapText, Container, Graphics } from 'pixi.js';
 import type { Direction } from '../core/direction';
+import {
+  FACING_ANGLE,
+  SLASH_DURATION,
+  SLASH_SEGMENTS,
+  slashPolygon,
+  slashRadius,
+  slashShape,
+  slashStage,
+} from '../systems/slashArc';
 
 /** A short-lived world visual (slash, projectile, damage number). */
 export interface Effect {
@@ -33,26 +42,30 @@ export class Effects {
   }
 }
 
-const ANGLE: Record<Direction, number> = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
-
-/** A sword arc sweeping across the facing direction, centred at (x, y). */
-export function slashEffect(x: number, y: number, dir: Direction, accent = 0x4de3ff): Effect {
-  const g = new Graphics({ position: { x, y }, rotation: ANGLE[dir], zIndex: 1e9 });
-  const duration = 0.16;
+/**
+ * A sword's swept crescent centred at (x, y), facing `dir` (`systems/slashArc.ts`: three stages over ~150 ms, tapered
+ * tail, sized from the weapon's `reach`). One Graphics and two small polygons, redrawn in place: nothing allocated per frame.
+ */
+export function slashEffect(x: number, y: number, dir: Direction, accent = 0x4de3ff, reach = 22): Effect {
+  const g = new Graphics({ position: { x, y }, zIndex: 1e9 });
+  const radius = slashRadius(reach);
+  const facing = FACING_ANGLE[dir];
+  const outerPoly: number[] = new Array<number>(4 * (SLASH_SEGMENTS + 1)).fill(0);
+  const innerPoly: number[] = new Array<number>(4 * (SLASH_SEGMENTS + 1)).fill(0);
   let t = 0;
   return {
     view: g,
     update(dt) {
       t += dt;
-      const p = Math.min(1, t / duration);
-      const a0 = -1.1;
-      const a1 = a0 + 2.2 * Math.min(1, p * 1.6);
+      const p = Math.min(1, t / SLASH_DURATION);
+      const shape = slashShape(p, radius);
+      const strike = slashStage(p) === 1;
       g.clear()
-        .arc(0, 0, 22, a0, a1)
-        .stroke({ width: 4, color: 0xffffff, alpha: 1 - p * 0.7 })
-        .arc(0, 0, 16, a0, a1)
-        .stroke({ width: 2, color: accent, alpha: 0.9 * (1 - p) });
-      return t < duration;
+        .poly(slashPolygon(outerPoly, shape, radius, facing))
+        .fill({ color: accent, alpha: 0.9 * shape.alpha })
+        .poly(slashPolygon(innerPoly, shape, radius, facing, 2))
+        .fill({ color: 0xffffff, alpha: (strike ? 1 : 0.8) * shape.alpha });
+      return t < SLASH_DURATION;
     },
   };
 }

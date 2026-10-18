@@ -43,10 +43,10 @@ export class Visuals {
   }
 
   /** A sword swing by a player standing at (x, y) facing `dir`: the arc, and leaves shaken from any canopy it reaches. */
-  swing(x: number, y: number, dir: Direction, p?: number) {
+  swing(x: number, y: number, dir: Direction, p?: number, reach = MELEE_REACH) {
     const [vx, vy] = DIR_VEC[dir];
     playGame('swing');
-    this.arena.effects.add(slashEffect(x + vx * 6, y - 12 + vy * 6, dir, effectColor(p)));
+    this.arena.effects.add(slashEffect(x + vx * 2, y - 12 + vy * 2, dir, effectColor(p), reach));
     this.arena.zone.ambient?.shake(x + vx * 16, y + vy * 16 - 6, MELEE_REACH);
   }
 

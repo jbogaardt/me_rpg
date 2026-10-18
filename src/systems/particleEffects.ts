@@ -13,11 +13,11 @@ export const PARTICLE_EFFECTS = {
     emitters: [
       {
         shape: 'streak',
-        burst: [5, 7],
-        life: [0.18, 0.32],
-        speed: [90, 200],
-        angle: [-0.9, 0.9],
-        size: [10, 16],
+        burst: [7, 9],
+        life: [0.15, 0.25],
+        speed: [130, 260],
+        angle: [-0.65, 0.65], // a cone along the blow (`dir`), away from the hit
+        size: [10, 18],
         sizeOverLife: [1, 0.3],
         alphaOverLife: [1, 1, 0],
         colorOverLife: [0xffffff, 0xffd34a, 0xe7682f],
@@ -27,11 +27,11 @@ export const PARTICLE_EFFECTS = {
       {
         shape: 'glow',
         burst: 1,
-        life: 0.12,
-        size: 22,
+        life: 0.1,
+        size: 26,
         sizeOverLife: [0.6, 1.2],
-        alphaOverLife: [0.9, 0],
-        colorOverLife: 0xffd98a,
+        alphaOverLife: [1, 0],
+        colorOverLife: [0xffffff, 0xffe9b0], // the impact flash: white first
       },
     ],
   },
