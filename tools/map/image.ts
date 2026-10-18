@@ -189,8 +189,11 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
         const tx = dx + x;
         if (tx < 0 || tx >= W || sx + x >= img.width) continue;
         const si = ((sy + y) * img.width + sx + x) * 4;
-        if (img.data[si + 3] < 128) continue; // the art is 0/255 alpha
-        img.data.copy(out.data, (ty * W + tx) * 4, si, si + 4);
+        const a = img.data[si + 3];
+        if (a === 0) continue;
+        const di = (ty * W + tx) * 4;
+        if (a === 255) img.data.copy(out.data, di, si, si + 4);
+        else for (let c = 0; c < 3; c++) out.data[di + c] = Math.round(out.data[di + c] * (1 - a / 255) + img.data[si + c] * (a / 255)); // see-through overlays (shade, fade)
       }
     }
   };

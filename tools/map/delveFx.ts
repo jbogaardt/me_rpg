@@ -96,11 +96,11 @@ function drawRim(img: Image, mask: number) {
       const side = Math.min(mask & W ? x : Infinity, mask & E ? C - 1 - x : Infinity);
       if (side < 1) put(img, ox, oy, x, y, BLACK, 0.8);
       else if (side < 5) put(img, ox, oy, x, y, BLACK, side < 3 ? 0.6 : 0.4);
-      else if (side === 5) put(img, ox, oy, x, y, WHITE, 0.3);
+      else if (side === 5) put(img, ox, oy, x, y, WHITE, 0.42);
       else if (side === 6 && bayer(x, y) < 0.5) put(img, ox, oy, x, y, WHITE, 0.2);
       // A south edge: the lit lip; the hanging cliff face is the cells below (`dress` in delve.ts).
       const south = mask & S ? C - 1 - y : Infinity;
-      if (south < 1) put(img, ox, oy, x, y, WHITE, 0.36, true);
+      if (south < 1) put(img, ox, oy, x, y, WHITE, 0.45, true);
       else if (south < 3 && bayer(x, y) < 0.5) put(img, ox, oy, x, y, WHITE, 0.16, true);
       // A north edge: a thin light line.
       const north = mask & N ? y : Infinity;
