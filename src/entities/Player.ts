@@ -9,6 +9,8 @@ import type { PendingSwing } from '../systems/swing';
 import { DM_COLOR, PLAYER_COLORS } from '../systems/looks';
 import { Character } from './Character';
 import { RollLook } from './RollLook';
+import { HopLook } from './HopLook';
+import type { HopState } from '../systems/ledgeDrop';
 
 /** What a player wants to do this tick, from the keyboard / touch controls or from the network. */
 export interface Command {
@@ -54,6 +56,11 @@ export class Player {
   readonly rollBuffer = new AttackBuffer();
   /** How a roll looks on this body (every page: from the host's `roll` or a guest's `FLAG.roll`). */
   readonly rollLook = new RollLook();
+  /** A ledge drop in progress (systems/ledgeDrop.ts; host and solo own it), or null; `dropHold` is the push into the face so far. */
+  hop: HopState | null = null;
+  dropHold = 0;
+  /** How a hop looks on this body (every page: from the host's `hop` or a guest's `FLAG.hop`). */
+  readonly hopLook = new HopLook();
   /** Host: the last roll toggle bit honoured from a network player (`KEY.roll`). */
   seenRoll = 0;
   /** Host: the last interact toggle bit honoured from a network player (`KEY.use`). */

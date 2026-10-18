@@ -135,6 +135,11 @@ export const CAPABILITIES = {
       },
     },
   },
+  ledges: {
+    name: 'Ledge drops',
+    off: 'A plateau’s edge row is plain floor with the rock face blocked: walking south into it never hops the hero down to the ground below.',
+    scope: 'zone',
+  },
   forge: {
     name: 'Setting gems',
     off: 'Gems cannot be set in gear: no Set action in the pack, no shop sells a gem, and the DM gives no quest to forge one.',

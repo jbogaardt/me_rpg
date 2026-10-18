@@ -61,6 +61,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v59: the split action key. `KEY.use` (64) in `InputMsg.keys` is a toggle that flips on every INTERACT press (talk, open, pick up; like
  * `KEY.roll`), and `KEY.split` (32) is held while this page plays the split keys (`act` is then attack only; without it `act` is the old
  * contextual key the host resolves itself), so `keys` may be up to 127. An old page rejects the wider `keys`, so pages must reload.
+ * v60: `FLAG.hop` (512), the hero is dropping off a plateau ledge (host-simulated; positions ride the snapshot), so flags may be up to 1023.
  * v58: the dodge roll. `KEY.roll` (16) in `InputMsg.keys` is a toggle that flips on every roll press (state, not an event: a lost packet
  * cannot lose a press, the host rolls when it differs from the last bit it saw), so `keys` may be up to 31; `FLAG.roll` (256) in a player's
  * flags says the hero is rolling, so flags may be up to 511. An old page would drop the new input or snapshot, so pages must reload.
@@ -80,7 +81,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
  * within a size budget.
  */
-export const PROTOCOL_VERSION = 59;
+export const PROTOCOL_VERSION = 60;
 
 /** Held-key bits in InputMsg.keys. */
 /** `roll` is not a held key: it flips with every roll press (v58), see `unpackRoll`. */
@@ -117,6 +118,7 @@ export const FLAG = {
   hidden: 64,
   down: 128,
   roll: 256,
+  hop: 512,
 } as const;
 
 /** [player number, x, y, direction index, FLAG bits] */
@@ -648,7 +650,7 @@ function parseTradeView(raw: unknown): TradeViewWire | null {
 function parsePlayer(raw: unknown): PlayerSnap | null {
   if (!numbers(raw, 5) || !raw.every((v, i) => (i === 1 || i === 2 ? isCoord(v) : isCount(v)))) return null;
   const [slot, x, y, dir, flags] = raw as PlayerSnap;
-  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 511 ? [slot, x, y, dir, flags] : null;
+  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 1023 ? [slot, x, y, dir, flags] : null;
 }
 
 function parseGround(raw: unknown): GroundSnap | null {

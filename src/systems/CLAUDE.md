@@ -14,9 +14,8 @@ A capability (`capabilities.ts`, `CAPABILITIES`) is an engine system a story can
 (`checkAgainstCapabilities`).
 
 **A system a story could do without must be a capability, in the same change that adds it.** Gate it with
-`enabled(id, zone)` at the one choke point where the feature starts and read tuned values with `setting`. `tools/content/capabilities.test.ts` fails a
-capability nothing asks `enabled()` about or that is not listed here. The ids: `guide`, `compass`, `needs`, `combos`,
-`skills`, `farming`, `weather`, `dayNight`, `darkness`, `parallax`, `carrying`, `roaming`, `levelGates`, `forge`, `coop`, `trading`.
+`enabled(id, zone)` at the one choke point where the feature starts and read tuned values with `setting`. `capabilities.test.ts` fails a capability nothing asks `enabled()` about or that is not listed here. The ids: `guide`, `compass`, `needs`, `combos`,
+`skills`, `farming`, `weather`, `dayNight`, `darkness`, `parallax`, `carrying`, `roaming`, `levelGates`, `ledges`, `forge`, `coop`, `trading`.
 
 **The map is core engine, not a capability**: always on (M, the HUD button; a room opens a note). Its aids,
 `guide` (hints, tracker line, `fog`) and `compass` (the arrow), are switched by story and per player (`aids.ts`, local).
