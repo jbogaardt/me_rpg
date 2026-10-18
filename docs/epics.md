@@ -64,7 +64,7 @@ running epic (`DmBotState.epicNow`: title and chapter), never by a choose-an-epi
 
 The host, and a solo player (their own host): `DmEpics`, `DmTasks` and the DM's words work wherever the page is not a
 friend, so an epic is told alone as to a party. A friend only draws it (`dm` message, world log). A solo
-player in a live world is offered an epic by the director's card; the sandbox has no way to begin one by hand yet. Online only the DM's quests count: the story chain's givers only pass the time of day.
+player in a live world is offered an epic by the director's card; the sandbox has no way to begin one by hand yet, so campaign 1's own chain carries three of the dungeon bosses itself (the last chapter, "Beneath the Vale": the Cistern King, the Pale Warden and Ashmaw, each as a `boss` quest, so the finale is Ashmaw's). The four land bosses (Emberwaste to Drowned Moor) are still the DM's. Online only the DM's quests count: the story chain's givers only pass the time of day.
 
 ## End bosses: the climax of an epic (`systems/bosses.ts`; core engine, content, co-op)
 

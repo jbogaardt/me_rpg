@@ -622,6 +622,228 @@
               ]
             }
           ]
+        },
+        {
+          "title": "Beneath the Vale",
+          "narration": ["The Vale has deeps of its own, and each has a king. Go down, and put them out."],
+          "intro": [
+            "The Stillheart is down, but the Stillness has roots under the Vale: the vaults below Lanternrest, the barrows under the graveyard, and the hollow under the dunes.",
+            "Each has someone who sits at the bottom of it. I would see all three put out before the next shard calls."
+          ],
+          "steps": [
+            {
+              "id": "cisternhexers",
+              "giver": "maren",
+              "title": "Lamps Under the Market",
+              "goal": "Drive off 3 hexers in the Drowned Cistern",
+              "unit": "hexers",
+              "hint": "The drain in the market square leads down to the Lanternrest Sewers. A stair in the north-east room goes on to the Lanternrest Undercroft, where hexers tend the lanterns.",
+              "where": {
+                "zones": ["sewer_undercroft"]
+              },
+              "objective": {
+                "t": "kill",
+                "kind": "hexer",
+                "count": 3,
+                "zone": "sewer_undercroft"
+              },
+              "reward": {
+                "gold": 560,
+                "xp": 660
+              },
+              "learned": "The lamps lost from Lanternrest are burning in the vaults beneath the market, tended by hexers. Someone is keeping them warm.",
+              "fieldNote": [],
+              "offer": [
+                "The lamp is steady, but the lamplighters keep losing lamps, oil and all. The drain in the market hums at night, and the hum is in tune.",
+                "Go down through the market drain, and past the sewers to the Undercroft. Hexers tend the lanterns there. Drive off three, and see who they serve."
+              ],
+              "remind": [
+                "Three hexers in the Drowned Cistern, under the market drain. The stair is in the north-east room of the sewers."
+              ],
+              "done": [
+                "Three hexers, and every one with a ledger of streets. They were taking the lamps in order, like a harvest.",
+                "There is a throne of lamp-frames in the chapel beyond the cistern. Whatever sits on it is the one who counts the lamps."
+              ]
+            },
+            {
+              "id": "cisternking",
+              "giver": "maren",
+              "title": "The Cistern King",
+              "goal": "Defeat the Cistern King in the Undercroft",
+              "unit": "troll",
+              "hint": "The Cistern King sits among the stolen lanterns beyond the Forgotten Chapel in the Lanternrest Undercroft. He is huge: keep your distance, bring potions, and strike when his swing is spent.",
+              "where": {
+                "zones": ["sewer_undercroft"]
+              },
+              "objective": {
+                "t": "boss",
+                "boss": "cisternKing",
+                "count": 1,
+                "zone": "sewer_undercroft"
+              },
+              "reward": {
+                "gold": 640,
+                "xp": 760,
+                "items": ["drainwardenCharm"]
+              },
+              "learned": "A troll made a throne of the town's lamp-frames under the market. With him gone the drains are quiet, and the lamps stay lit.",
+              "fieldNote": [
+                "The King falls with a sound like a cistern emptying. Around the chapel, every lantern gutters at once, and then, one by one, burns steady."
+              ],
+              "offer": [
+                "A troll took the old cistern for a court, and he has been opening and closing the town's doors for months. I want him put out like one of his lamps.",
+                "He is big and he is proud. Bring potions, and do not stand where he swings."
+              ],
+              "remind": [
+                "The Cistern King, on his throne of lamp-frames in the Undercroft beneath Lanternrest. Bring potions."
+              ],
+              "done": [
+                "The hum stopped an hour ago. I felt it go, like a held breath let out. The lamplighters are counting their lamps twice over, to be sure.",
+                "This charm was a drainwarden's, long before the town forgot there were drains. Wear it, and carry on. The dead of the Barrow Lands have been restless since the bell."
+              ]
+            },
+            {
+              "id": "barrowwraiths",
+              "giver": "brannoch",
+              "title": "The Watch Below",
+              "goal": "Lay 3 wraiths to rest in the Barrow Deep",
+              "unit": "wraiths",
+              "hint": "A tomb in the Barrow Lands graveyard is a door down into the Barrow Deep. The wraiths walk the Ossuary, past the Foyer of Names.",
+              "where": {
+                "zones": ["crypt_barrow"]
+              },
+              "objective": {
+                "t": "kill",
+                "kind": "wraith",
+                "count": 3,
+                "zone": "crypt_barrow"
+              },
+              "reward": {
+                "gold": 700,
+                "xp": 830
+              },
+              "learned": "The first watchman of the Barrow Lands still keeps his post below the graveyard, and the dead who serve him do not rest.",
+              "fieldNote": [],
+              "offer": [
+                "The bell does not only call the living. Below the graveyard in the Barrow Lands there is a deep where the first watchman still keeps his post, and his watch will not end.",
+                "Go down by the tomb, through the Foyer of Names and the Ossuary. Lay three of his wraiths to rest, and see the watchman for yourself."
+              ],
+              "remind": [
+                "Three wraiths in the Barrow Deep, past the Foyer of Names. The way down is the tomb in the Barrow Lands graveyard."
+              ],
+              "done": [
+                "Three wraiths. Their names were cut over the door, once, and their faces were never cut anywhere. Perhaps now they rest.",
+                "The watchman waits at the deepest gate, still guarding a road that has long since been forgotten. He does not know the watch is over. Someone must tell him."
+              ]
+            },
+            {
+              "id": "palewarden",
+              "giver": "brannoch",
+              "title": "The Pale Warden",
+              "goal": "Defeat the Pale Warden in the Barrow Deep",
+              "unit": "warden",
+              "hint": "The Pale Warden stands at the deepest gate of the Barrow Deep, past the Ossuary. He is tall and he hits hard after a long wind-up: step back from the swing, then strike.",
+              "where": {
+                "zones": ["crypt_barrow"]
+              },
+              "objective": {
+                "t": "boss",
+                "boss": "paleWarden",
+                "count": 1,
+                "zone": "crypt_barrow"
+              },
+              "reward": {
+                "gold": 800,
+                "xp": 960,
+                "items": ["wardenHelm"]
+              },
+              "learned": "The watchman of the Barrow Lands has been relieved at last. The dead below the graveyard keep no more post.",
+              "fieldNote": [],
+              "offer": [
+                "He was the first to stand watch over the barrows, and he stands it still. He will not yield to words, so end his watch gently, and with your blade.",
+                "He swings slow and hard. Watch the wind-up, and step back from it."
+              ],
+              "remind": [
+                "The Pale Warden, at the deepest gate of the Barrow Deep, below the graveyard of the Barrow Lands."
+              ],
+              "done": [
+                "The ground is quiet. For the first time in three winters the barrow wind has dropped, and the old stones are only stones.",
+                "His helm. It kept a watchman's thoughts on the long dark, and it will keep yours. Take it. The sand has troubles of its own: Zahra has been asking after you."
+              ]
+            },
+            {
+              "id": "sunscartrolls",
+              "giver": "zahra",
+              "title": "The Furnace Hall",
+              "goal": "Drive off 3 trolls in the Sunscar Depths",
+              "unit": "trolls",
+              "hint": "A cave mouth in the Sunscar Desert leads down to the Sunscar Hollow, and deeper into the Sunscar Depths: the Furnace Hall and the Gallery of Bones. Trolls hold the lower halls.",
+              "where": {
+                "zones": ["cave_sunscar_deep"]
+              },
+              "objective": {
+                "t": "kill",
+                "kind": "troll",
+                "count": 3,
+                "zone": "cave_sunscar_deep"
+              },
+              "reward": {
+                "gold": 880,
+                "xp": 1080
+              },
+              "learned": "An orc king sits on a forgotten throne beneath the Sunscar, and the trolls of the Furnace Hall serve the fire that answered him.",
+              "fieldNote": [],
+              "offer": [
+                "There is a hollow under the dunes where the orcs go and do not come back. The fire down there has answered something, and the trolls that serve it have grown bold.",
+                "Go down by the cave mouth, past the Hollow, into the Furnace Hall. Drive off three trolls, and mind the heat: drink before you thirst."
+              ],
+              "remind": [
+                "Three trolls in the Sunscar Depths, beyond the Furnace Hall. The way down is the cave mouth in the Sunscar Desert."
+              ],
+              "done": [
+                "Three trolls, and the hall is quieter. Not quiet. There is a throne at the far end that the fire still leans toward.",
+                "An orc king, Ashmaw, sits on it. He has sat there until the fire answered, and it is not fond of strangers. Rest, drink, and be ready."
+              ]
+            },
+            {
+              "id": "ashmaw",
+              "giver": "zahra",
+              "turnIn": "maren",
+              "title": "Ashmaw, the Hollow King",
+              "goal": "Defeat Ashmaw in the Sunscar Depths",
+              "unit": "orc king",
+              "hint": "Ashmaw sits on the throne at the end of the Gallery of Bones in the Sunscar Depths. He is a king in a furnace: bring antidotes for the burn, potions, and room to move.",
+              "where": {
+                "zones": ["cave_sunscar_deep"]
+              },
+              "objective": {
+                "t": "boss",
+                "boss": "ashmaw",
+                "count": 1,
+                "zone": "cave_sunscar_deep"
+              },
+              "reward": {
+                "gold": 1000,
+                "xp": 1250,
+                "items": ["ashmawHide"]
+              },
+              "learned": "The Hollow King has fallen, and the fire under the Sunscar has gone out. The Vale's three deeps are quiet.",
+              "fieldNote": [
+                "The throne cracks. Below it, the furnace dims, and the heat leaves the stone like a sigh. For the first time, the Hollow is cool."
+              ],
+              "offer": [
+                "He has sat there so long that the fire answers to him. That is not a king. That is a wound in the sand, and it needs closing.",
+                "Take everything you have. Then go down, and come back and tell Maren it is done: she has been keeping count."
+              ],
+              "remind": [
+                "Ashmaw, the Hollow King, on his throne at the end of the Sunscar Depths. Then Maren in Lanternrest."
+              ],
+              "done": [
+                "It is done, then. The cistern, the barrow, and the hollow under the sand. Zahra's runner came ahead of you, breathless.",
+                "This is Ashmaw's own hide, and it is yours. You will not want for armour again, nor for work: the Vale is a long road."
+              ]
+            }
+          ]
         }
       ]
     },

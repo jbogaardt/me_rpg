@@ -121,7 +121,8 @@ describe('the quest chain', () => {
       expect(QUESTS[i]!.reward.gold).toBeGreaterThan(QUESTS[i - 1]!.reward.gold);
       expect(QUESTS[i]!.reward.xp).toBeGreaterThan(QUESTS[i - 1]!.reward.xp);
     }
-    for (const q of QUESTS.slice(0, Math.floor(QUESTS.length / 2) - 1)) expect(q.reward.items ?? [], q.id).toEqual([]);
+    // The story's first five quests (a fixed count: later chapters grew the chain) hand out no gear.
+    for (const q of QUESTS.slice(0, 5)) expect(q.reward.items ?? [], q.id).toEqual([]);
     expect(QUESTS.at(-1)!.reward.items?.length).toBeGreaterThan(0);
   });
 
