@@ -23,6 +23,8 @@ import type { EpicTemplate } from '../systems/dmEpics';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { DarknessLayer } from '../entities/DarknessLayer';
+import { LightGlow } from '../entities/LightGlow';
+import { glowStrength } from '../systems/lights';
 import { MapOverlay } from '../hud/MapOverlay';
 import { PartnerArrows } from '../hud/PartnerArrows';
 import { AreaBanner } from '../hud/AreaBanner';
@@ -165,6 +167,7 @@ export class OverworldScene implements Scene {
   private dayClock = new DayClock(); // the hour comes from the wall clock, so co-op players agree with nothing sent
   private night = new NightLayer();
   private dark = new DarknessLayer();
+  private glow = new LightGlow();
   /** The solo game's save in the browser. */
   readonly persistence: Persistence;
   /** The "level up" splash (watches the hero's level). */
@@ -291,6 +294,7 @@ export class OverworldScene implements Scene {
     this.zones.root.addChildAt(this.storyUi.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
     this.zones.root.addChildAt(this.dark, 2); // the underground's fog of war, over the night shade
+    this.zones.root.addChildAt(this.glow, 3); // the warm light of fires, over both
     ui.shop.onGearChange = () => arena.refreshLook();
     ui.shop.trader = () => this.pack.trader();
   }
@@ -526,8 +530,17 @@ export class OverworldScene implements Scene {
     this.night.update(this.dayClock.sky(), dusk, arena.screen.width, arena.screen.height);
     const view = z.camera.view(arena.screen.width, arena.screen.height);
     z.hearth.update(view, dusk && this.dayClock.sky() !== 0xffffff);
+    const underground = z.data.dark && enabled('darkness', z.name);
+    const lights = z.hearth.lights(view, arena.clock);
+    this.glow.update(
+      lights,
+      view,
+      underground ? 1 : dusk ? glowStrength(this.dayClock.sky()) : 0,
+      arena.screen.width,
+      arena.screen.height,
+    );
     this.dark.update(
-      z.data.dark && enabled('darkness', z.name)
+      underground
         ? {
             zone: z.name,
             data: z.data,
@@ -537,7 +550,7 @@ export class OverworldScene implements Scene {
               .filter((p) => !p.dm && p.body.visible)
               .map((p) => p.body),
             radius: setting('darkness', 'radius', z.name),
-            lights: z.hearth.lights(view, arena.clock),
+            lights,
             dim: setting('darkness', 'dim', z.name),
             memory: flag('darkness', 'memory', z.name),
           }

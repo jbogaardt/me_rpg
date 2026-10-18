@@ -1,5 +1,6 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import { CELL, DECAL_Z, type MapData, type MapObject } from '../map/types';
+import type { ParticleEffectName } from '../systems/particleEffects';
 import type { Character } from './Character';
 
 // Passive background life: footprints that fade on sand and snow, and leaves that drop when the hero
@@ -12,6 +13,14 @@ const PRINT_SIDE = 3; // left/right offset from the path
 const LEAF_POOL = 64;
 const WIND_PUSH = 70; // px/s a falling leaf is blown at full wind
 const WIND_REACH = 260; // canopies this close to the hero (px) shed leaves in the wind
+const STEP_FX: Record<string, ParticleEffectName> = {
+  sand: 'dust',
+  dirt: 'dust',
+  clay: 'dust',
+  ash: 'dust',
+  bog: 'splash',
+  puddle: 'splash',
+};
 const TELEPORT = 40; // a one-frame jump bigger than this (respawn) is not walking
 
 /**
@@ -96,6 +105,9 @@ export class Ambient {
   private cooldown = new Map<MapObject, number>(); // per-canopy time until it can drop leaves again
   private clock = 0;
   private gust = 0; // leaves owed to the wind
+  /** The hero's step kicked up dust or a splash on this ground (set by the zone, which owns the effects). */
+  onStep: ((name: ParticleEffectName, x: number, y: number) => void) | null = null;
+  private hero: Character | null = null;
   /** Signed wind, -1 (blowing left) to 1 (blowing right), set each frame by the weather. Canopies shed leaves in it. */
   wind = 0;
   private printTex: Texture;
@@ -148,6 +160,7 @@ export class Ambient {
   /** Advance by dt seconds. `hero` rustles canopies; every body in `walkers` (the hero too) leaves prints. */
   update(dt: number, hero: Character, walkers: Character[]) {
     this.clock += dt;
+    this.hero = hero;
     for (const body of walkers) this.walk(body);
     this.rustle(hero);
     this.fadePrints(dt);
@@ -199,7 +212,10 @@ export class Ambient {
     w.accum += dist;
     if (w.accum < PRINT_STRIDE) return;
     w.accum -= PRINT_STRIDE;
-    const kind = PRINTS[this.surfaceAt(body.x, body.y - 1)];
+    const surface = this.surfaceAt(body.x, body.y - 1);
+    const stepFx = STEP_FX[surface];
+    if (stepFx && body === this.hero) this.onStep?.(stepFx, body.x, body.y - 2);
+    const kind = PRINTS[surface];
     if (!kind) return;
     const nx = dx / dist,
       ny = dy / dist;

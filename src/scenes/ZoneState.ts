@@ -8,6 +8,7 @@ import { Chest } from '../entities/Chest';
 import { Crop, type CropMemory } from '../entities/Crop';
 import { Effects } from '../entities/effects';
 import { Hearth } from '../entities/Hearth';
+import { particleEffect } from '../entities/ParticleEffect';
 import type { GroundItem } from '../entities/GroundItem';
 import { Pet } from '../entities/Pet';
 import { QuestSite } from '../entities/QuestSite';
@@ -191,6 +192,7 @@ export class ZoneState {
     this.pondBeds = new PondBeds(data, this.world);
     this.world.layer.addChild(this.pondBeds);
     this.ambient = data.indoor ? null : new Ambient(this.world.layer, data);
+    if (this.ambient) this.ambient.onStep = (name, x, y) => this.effects.add(particleEffect(name, x, y));
     this.weatherLayer = data.indoor ? null : new WeatherLayer(this.world.layer);
     // No sky in a room. A campaign (or a Dungeon Master) without weather keeps it clear and still (Simulation.weather
     // asks systems/capabilities.ts each tick, so switching it on or off takes effect at once).

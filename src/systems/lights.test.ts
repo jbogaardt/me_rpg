@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { HearthSource } from './hearths';
-import { flicker, LIGHT_RADIUS, visibleLights } from './lights';
+import { flicker, glowStrength, LIGHT_RADIUS, visibleLights } from './lights';
 
 const view = { x: 0, y: 0, w: 400, h: 300 };
 const src = (kind: HearthSource['kind'], x: number, y: number): HearthSource => ({ kind, x, y });
@@ -31,5 +31,12 @@ describe('visibleLights', () => {
     const r = LIGHT_RADIUS.fire!;
     expect(visibleLights([src('fire', 400 + r + 10, 100)], view, 0)).toEqual([]);
     expect(visibleLights([src('fire', 400 + r - 10, 100)], view, 0)).toHaveLength(1);
+  });
+});
+
+describe('glowStrength', () => {
+  it('is nothing at noon and strong at night', () => {
+    expect(glowStrength(0xffffff)).toBe(0);
+    expect(glowStrength(0x2a3a66)).toBeGreaterThan(0.8);
   });
 });

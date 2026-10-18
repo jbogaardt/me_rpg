@@ -638,34 +638,6 @@ export const PARTICLE_EFFECTS = {
     ],
   },
 
-  /** A critical blow: a big white-gold flash and a ring of fast streaks. Spawn at the foe. */
-  crit: {
-    emitters: [
-      {
-        shape: 'glow',
-        blend: 'add',
-        burst: 1,
-        life: 0.18,
-        size: 46,
-        sizeOverLife: [0.4, 1.3],
-        alphaOverLife: [1, 0],
-        colorOverLife: 0xfff3c0,
-      },
-      {
-        shape: 'streak',
-        blend: 'add',
-        burst: [8, 10],
-        life: [0.15, 0.3],
-        speed: [120, 220],
-        size: [6, 9],
-        alphaOverLife: [1, 0],
-        colorOverLife: [0xffffff, 0xffd34a],
-        align: true,
-        drag: 5,
-      },
-    ],
-  },
-
   // --- How a foe goes (an enemy's `death` in entities.json; the plain one is `mobPoof`) ---
 
   /** Bones and old stone crumbling to dust: grey flecks fall and a pale cloud settles. */
@@ -790,66 +762,6 @@ export const PARTICLE_EFFECTS = {
         colorOverLife: [0x9a9484, 0x6e6874],
         gravity: -20,
         drag: 1.5,
-      },
-    ],
-  },
-
-  // --- Conditions on a body (continuous: start one, stop it when the condition ends) ---
-
-  /** Green bubbles rising off the poisoned. */
-  poison: {
-    emitters: [
-      {
-        shape: 'glow',
-        rate: 6,
-        life: [0.6, 1],
-        speed: [8, 22],
-        angle: [-Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5],
-        radius: [2, 10],
-        size: [4, 7],
-        sizeOverLife: [0.6, 1.1],
-        alphaOverLife: [0, 0.8, 0],
-        colorOverLife: [0xbff58a, 0x6fbf3c, 0x3a7a24],
-        gravity: -20,
-      },
-    ],
-  },
-
-  /** Little flames licking up the burning. */
-  burn: {
-    emitters: [
-      {
-        shape: 'glow',
-        blend: 'add',
-        rate: 18,
-        life: [0.3, 0.5],
-        speed: [10, 30],
-        angle: [-Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5],
-        radius: [2, 9],
-        size: [6, 10],
-        sizeOverLife: [1, 0.3],
-        alphaOverLife: [0.8, 0.5, 0],
-        colorOverLife: [0xfff0b0, 0xffb13f, 0xe7682f],
-        gravity: -50,
-      },
-    ],
-  },
-
-  /** Stars wheeling above a stunned head. */
-  stun: {
-    emitters: [
-      {
-        shape: 'dot',
-        blend: 'add',
-        rate: 8,
-        life: [0.5, 0.8],
-        speed: [14, 24],
-        radius: [8, 12],
-        size: [3, 5],
-        alphaOverLife: [0, 1, 0],
-        colorOverLife: [0xfff3c0, 0xffd34a],
-        spin: [-4, 4],
-        drag: 1,
       },
     ],
   },
