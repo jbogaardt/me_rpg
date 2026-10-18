@@ -45,14 +45,16 @@ export function frame(z: ZoneApi, f: Frame) {
   const trees = [...f.trees];
   const seed = f.seed ?? 1;
   const opts = (i: number) => ({ trees, seed: seed * 10 + i });
+  // Each wood stops exactly at its port's edge (a port is 3 cells, centred on the road), so every open cell of the
+  // opening is a door cell: a player at the edge of the road is still taken through.
   z.forest({ col: -3, row: -3, w: f.north + 2, h: 7 }, opts(1));
-  z.forest({ col: f.north + 4, row: -3, w: w - f.north - 1, h: 7 }, opts(2));
+  z.forest({ col: f.north + 2, row: -3, w: w - f.north + 1, h: 7 }, opts(2));
   z.forest({ col: -3, row: h - 4, w: f.south + 2, h: 7 }, opts(3));
-  z.forest({ col: f.south + 4, row: h - 4, w: w - f.south - 1, h: 7 }, opts(4));
-  z.forest({ col: -3, row: 4, w: 6, h: f.west - 6 }, opts(5));
-  z.forest({ col: -3, row: f.west + 3, w: 6, h: h - 4 - (f.west + 3) }, opts(6));
-  z.forest({ col: w - 3, row: 4, w: 6, h: f.east - 6 }, opts(7));
-  z.forest({ col: w - 3, row: f.east + 3, w: 6, h: h - 4 - (f.east + 3) }, opts(8));
+  z.forest({ col: f.south + 2, row: h - 4, w: w - f.south + 1, h: 7 }, opts(4));
+  z.forest({ col: -3, row: 4, w: 6, h: f.west - 5 }, opts(5));
+  z.forest({ col: -3, row: f.west + 2, w: 6, h: h - 4 - (f.west + 2) }, opts(6));
+  z.forest({ col: w - 3, row: 4, w: 6, h: f.east - 5 }, opts(7));
+  z.forest({ col: w - 3, row: f.east + 2, w: 6, h: h - 4 - (f.east + 2) }, opts(8));
   z.port('north', f.north - 1, 1, 3, f.north, 4, 1, [...f.seal]);
   z.port('south', f.south - 1, h - 2, 3, f.south, h - 6, 1, [...f.seal]);
   z.port('west', 0, f.west - 1, 1, 3, f.west, 3, [...f.seal]);
