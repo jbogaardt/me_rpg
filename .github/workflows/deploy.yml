@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false # let a running deploy finish; a newer push waits (only the latest waiting run is kept)
 
 jobs:
   build:

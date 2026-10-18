@@ -145,6 +145,16 @@ export function checkContent(content: ContentManager, maps: Map<string, MapData>
       if (bad) errors.push(`${at}.spawn (${node.spawn.x},${node.spawn.y}) ${bad} of ${biome.map}`);
     }
   }
+  // The home is somewhere a hero can stand: its node's spawn (checked above), else the map's own.
+  const homeNode = scenarios.home ? scenarios.nodes.get(scenarios.home) : undefined;
+  const homeMap = homeNode && biomes[homeNode.biome_type] && maps.get(biomes[homeNode.biome_type].map);
+  if (homeNode && homeMap && !homeNode.spawn) {
+    const bad = standable(homeMap, homeMap.spawn.col, homeMap.spawn.row);
+    if (bad)
+      errors.push(
+        `scenarios.home "${homeNode.node_id}": the map's spawn (${homeMap.spawn.col},${homeMap.spawn.row}) ${bad}`,
+      );
+  }
   // The story can be done: a gather quest's zone has enough of its sites, and a kill quest's mob lives where it says.
   const mapOf = new Map(Object.values(biomes).map((b) => [b.map, b] as const));
   const livesIn = (map: string): Set<string> => {
