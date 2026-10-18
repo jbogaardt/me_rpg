@@ -82,7 +82,6 @@ export const DELVE_THEMES = {
     wall: ['sewerFaceL', 'sewerFaceU', 'sewerCap', 'sewerCapTop'],
     floorTiles: SEWER_FLOORS,
     decals: WET_MIX,
-    waterTerrain: 'murk',
   },
 } satisfies Record<string, Theme>;
 export type DelveTheme = keyof typeof DELVE_THEMES;
@@ -151,9 +150,10 @@ export class Delve {
   }
 
   /**
-   * The shading and detail over the painted ground (a theme with its own shaded floor row or grainy roof keeps those: no doubling) (overlay tiles from `delve_fx.png`, `delveStyle.ts`): a soft contact
+   * The shading and detail over the painted ground (overlay tiles from `delve_fx.png`, `delveStyle.ts`): a soft contact
    * shadow where floor and water meet a wall, foam where water meets floor, cracks, puddles, moss and pebbles on the floor,
-   * and a rock texture with a light rim on the roof. The same for every cave, crypt and sewer.
+   * and a rock texture with a light rim on the roof. The same for every cave, crypt and sewer, except that a theme with its
+   * own shaded floor row, grainy roof or autotiled shoreline keeps that instead (no doubling).
    */
   private dress(z: ZoneApi, theme: Theme, grounds: GroundName[]) {
     const rock = (c: number, r: number) => this.at(c, r) === '#';
@@ -168,6 +168,7 @@ export class Delve {
           if (shade) fx(col, row, shadowTile(shade));
         }
         if (cell === '~') {
+          if (theme.waterTerrain) continue; // its own soft shoreline is the edge
           const foam = maskOf(dry(col, row - 1), dry(col + 1, row), dry(col, row + 1), dry(col - 1, row));
           if (foam) fx(col, row, foamTile(foam));
         } else if (cell === '.' && grounds[row * this.width + col] === theme.floor) {
