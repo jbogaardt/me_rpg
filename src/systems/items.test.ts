@@ -65,7 +65,10 @@ describe('ITEMS', () => {
       const part = dollSlot[item.slot];
       // Wands and tomes have no art on the hero yet, so their look is empty.
       const drawn = 'focus' in item || !part ? [] : [part];
-      expect(Object.keys(item.look), id).toEqual(drawn);
+      expect(
+        Object.keys(item.look).filter((k) => k !== 'arms'),
+        id,
+      ).toEqual(drawn); // chest pieces may add sleeves
     }
   });
 

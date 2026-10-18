@@ -59,9 +59,9 @@ cliffs (`plateauSolid`). Mobs ignore heights for now: keep placements off the fa
 ## Ruins
 
 `ruins.png` (`ruins.ts`, from the OGA-BY/CC-BY "[LPC] Jungle Ruins", not kept in the repo: `RUINS_DIR=<unzipped pack> npm run ruins`)
-holds the `ruin*` prefabs (`RUIN_PREFABS`): a pyramid, temple, hall, hut, walls, an arch, pillars, idols, rubble.
+holds the `ruin*` prefabs: pyramid, temple, hall, hut, walls, arch, pillars, idols, rubble.
 Buildings and walls are solid from the ground up; pillars and idols block along their whole height; the arch blocks only
-its dark half (the open half is a gate). Scenery, except the jungle temple's arch (door into `maps/ruin_temple.ts`). The quest `ruin` landmark (`entities/Landmark.ts`) uses the same sheet.
+its dark half, so its open half is a gate. Scenery, except three arches (jungle temple and hall, desert temple: doors into `maps/ruin_*.ts`, `ruinRooms.ts`); `Prefab.foot` sorts a building on its wall's base, not its pillars'. The quest `ruin` landmark (`entities/Landmark.ts`) uses the same sheet.
 
 ## Landmarks
 

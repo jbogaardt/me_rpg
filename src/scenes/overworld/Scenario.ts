@@ -54,6 +54,19 @@ export class Scenario {
     }
   }
 
+  /**
+   * Take a saved node as the current one without going there (a reload puts the hero at home, not in the node's zone):
+   * its zone, loaded if need be, shows the node's folk and foes from now on. Throws if the world has no such node.
+   */
+  async adopt(nodeId: string): Promise<void> {
+    const { arena, zones } = this;
+    if (arena.role !== 'solo') throw new Error('Scenarios can only be loaded in a solo game for now');
+    const zoneName = this.content.getBiomeInfo(this.content.getScenario(nodeId).biome_type).map;
+    await zones.ensure(zoneName);
+    zones.assign(zoneName, nodeId);
+    this.current = nodeId;
+  }
+
   private async pick(choice: Choice) {
     if (this.busy || this.arena.role !== 'solo') return;
     if (!meets(this.arena.hero, choice.requires)) {

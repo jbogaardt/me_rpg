@@ -1,7 +1,8 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { DRY_TREES } from '../tools/map/catalog';
 import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
-import { CAVE_ARRIVAL, CAVE_MOUTH } from '../tools/map/delves';
+import { CAVE_ARRIVAL, CAVE_MOUTH, DESERT_TEMPLE_DOOR } from '../tools/map/delves';
+import { RUIN_ARRIVAL } from '../tools/map/ruinRooms';
 import layout from './world';
 
 // The desert: the whole north-west, stepping down to the Greenwood. Dunes, a buried skull, red badlands, an oasis, a
@@ -125,6 +126,14 @@ export default defineBiome({
     // --- A half-buried temple, a fallen wall and a gate on the trail (art: LPC Jungle Ruins, ruins.png) ---------------
     z.keepClear([{ col: 93, row: 29, w: 15, h: 14 }]);
     z.prop('ruinTemple', 96, 40);
+    z.door(
+      DESERT_TEMPLE_DOOR.col,
+      DESERT_TEMPLE_DOOR.row,
+      DESERT_TEMPLE_DOOR.w,
+      'ruin_temple_desert',
+      RUIN_ARRIVAL.col,
+      RUIN_ARRIVAL.row + 1,
+    ); // its arch leads in (maps/ruin_temple_desert.ts)
     z.prop('ruinStatue', 94, 41);
     z.prop('ruinStatueB', 105, 41);
     z.prop('ruinRubbleB', 99, 42);

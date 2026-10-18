@@ -47,5 +47,13 @@ export const CRYPT_ARRIVAL = { col: 12, row: 5 } as const;
 export const TEMPLE_DOOR = { col: 175 + 35, row: 14 - 1, w: 2 } as const;
 /** Where a player appears in the jungle when they leave the temple: the grass just below the arch. */
 export const templeExit = () => ({ zone: 'jungle', ...W.toLocal('jungle', TEMPLE_DOOR.col, TEMPLE_DOOR.row + 1) });
-/** Where a player appears inside the temple (just in from the way out). */
-export const TEMPLE_ARRIVAL = { col: 12, row: 3 } as const;
+
+/** The desert's half-buried temple (`ruinTemple` at 96,40): the same arch, a 2-cell door on its bottom row. */
+export const DESERT_TEMPLE_DOOR = { col: 99, row: 39, w: 2 } as const;
+export const desertTempleExit = () => ({
+  zone: 'desert',
+  ...W.toLocal('desert', DESERT_TEMPLE_DOOR.col, DESERT_TEMPLE_DOOR.row + 1),
+});
+/** The jungle's roofed hall (`ruinHall` at local 47,66): its arch is the 1-cell door at cell 7 of the bottom row. */
+export const HALL_DOOR = { col: 175 + 54, row: 66, w: 1 } as const;
+export const hallExit = () => ({ zone: 'jungle', ...W.toLocal('jungle', HALL_DOOR.col, HALL_DOOR.row + 1) });

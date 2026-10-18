@@ -47,11 +47,11 @@ draw in `Visuals`, a new synced thing in the matching link. The DM's controls ar
   barrels) is kept in `Arena.memory` (`ZoneMemory`); its mobs start afresh. Add to `ZoneMemory` when a new thing must
   survive.
 - **Saving** (`overworld/Persistence.ts`, `systems/save.ts`; core engine): a solo game of a fixed or random world autosaves to
-  `localStorage` (every 10 s, on a zone change, when the tab hides) under the world's tag, and `main.ts` puts it back at boot;
+  `localStorage` (every 10 s, on a zone change, when the tab hides) under the world's tag, and `main.ts` puts it back at boot, with the hero at **home** (`arena.home`, where a fall also wakes; `reloadPlace`), never where they stood, so a refresh cannot respawn the foes beside them to farm levels;
   the Status tab's "New game" forgets it. A save is the hero (items by id, so retuned items still load; unknown ones are
-  dropped), the scenario node, where the hero stands, the chests opened and the map explored (`Atlas.pack`: per visited zone, run-length packed, a few KB; a corrupt or wrong-sized pack is ignored, an old save simply has none). Mobs, crops, ground items and scenario choices
+  dropped), the scenario node (adopted, not travelled to), the chests opened and the map explored (`Atlas.pack`: per visited zone, run-length packed). The saved zone and spot stay in the format but are ignored. Mobs, crops, ground items and scenario choices
   made start afresh. **Co-op**: only a solo game saves; the host's world is not saved yet and a guest's hero is the host's.
-  Live worlds are not saved (their story log is not). Add to the save when a new thing must outlast a reload, and bump
+  Live worlds are not saved. Add to the save when a new thing must outlast a reload, and bump
   `SAVE_VERSION` only for a change an old save cannot be read as.
 
 ## Doors and the one world

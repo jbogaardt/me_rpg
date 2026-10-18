@@ -130,6 +130,11 @@ add('torso.leather', 'torso/armour/torso_armour_leather', 'leather');
 add('torso.legion_iron', 'torso/armour/torso_armour_legion', 'iron');
 add('torso.plate_steel', 'torso/armour/torso_armour_plate', 'steel');
 add('torso.plate_gold', 'torso/armour/torso_armour_plate', 'gold');
+// Sleeves for the sleeveless torso armour (the `arms` slot): bracers on leather, legion shoulders, plate arm guards.
+add('arms.bracers_leather', 'arms/wrists/arms_bracers', 'bronze');
+add('arms.legion_iron', 'arms/shoulders/shoulders_legion', 'iron');
+add('arms.plate_steel', 'arms/arms_armour', 'steel');
+add('arms.plate_gold', 'arms/arms_armour', 'gold');
 add('legs.plate_steel', 'legs/legs_armour', 'steel');
 add('legs.plate_iron', 'legs/legs_armour', 'iron');
 add('legs.leggings_charcoal', 'legs/leggings/legs_leggings', 'charcoal');

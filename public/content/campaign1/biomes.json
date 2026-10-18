@@ -104,7 +104,7 @@
           { "kinds": ["adder"], "count": 4, "seed": 7102, "apart": 8, "avoid": [], "level": 5 }
         ]
       },
-      "links": ["greenwood", "beach", "cave_sunscar"]
+      "links": ["greenwood", "beach", "cave_sunscar", "ruin_temple_desert"]
     },
     "eastwood": {
       "name": "The Eastwood",
@@ -318,7 +318,7 @@
           { "kinds": ["adder", "hornet"], "count": 4, "seed": 7103, "apart": 8, "avoid": [], "level": 6 }
         ]
       },
-      "links": ["eastwood", "beach", "undead", "wetlands", "marsh", "ruin_temple"]
+      "links": ["eastwood", "beach", "undead", "wetlands", "marsh", "ruin_temple", "ruin_hall"]
     },
     "marsh": {
       "name": "Gloamfen Marsh",
@@ -618,6 +618,26 @@
     "ruin_temple": {
       "name": "The Old Temple",
       "map": "ruin_temple",
+      "climate": null,
+      "music": null,
+      "tilesets": ["dungeon_cave.png"],
+      "generation": {},
+      "links": ["jungle"],
+      "levels": [5, 7]
+    },
+    "ruin_temple_desert": {
+      "name": "The Buried Temple",
+      "map": "ruin_temple_desert",
+      "climate": null,
+      "music": null,
+      "tilesets": ["dungeon_cave.png"],
+      "generation": {},
+      "links": ["desert"],
+      "levels": [4, 6]
+    },
+    "ruin_hall": {
+      "name": "The Roofed Hall",
+      "map": "ruin_hall",
       "climate": null,
       "music": null,
       "tilesets": ["dungeon_cave.png"],

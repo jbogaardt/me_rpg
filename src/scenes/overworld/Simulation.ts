@@ -27,6 +27,15 @@ import {
 import { isIce, stepVelocity } from '../../systems/ice';
 import { assistFacing } from '../../systems/meleeAssist';
 import {
+  afterArmor,
+  blockedDamage,
+  furyFactor,
+  gapArmor,
+  levelGap,
+  poiseCost,
+  stunFactor,
+} from '../../systems/mobDefense';
+import {
   drainNeeds,
   drinkableNear,
   needsRegen,
@@ -141,7 +150,7 @@ export class Simulation {
           arena.inZone(z, () => arena.bodies()),
         ),
       sees: (x0, y0, x1, y1) => z.collision.hasLineOfSight(x0, y0, x1, y1),
-      strike: (mob, target) => arena.inZone(z, () => this.hurtHero(mob, target)),
+      strike: (mob, target, power) => arena.inZone(z, () => this.hurtHero(mob, target, power)),
       shoot: (mob, ux, uy) => arena.inZone(z, () => this.mobShoot(mob, ux, uy)),
       ray: (mob, target) => arena.inZone(z, () => this.mobRay(mob, target)),
     };
@@ -457,7 +466,7 @@ export class Simulation {
       vy,
       shot.bow.range,
       (mob) => {
-        this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy, false, p);
+        this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy, false, p, { arrow: true });
         if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
       },
       p.slot,
@@ -524,7 +533,9 @@ export class Simulation {
       )
         return false;
     if (p.safe) return true; // warded or just arrived: the beam holds but does nothing
-    const burn = this.pressed(rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero)));
+    const burn = this.pressed(
+      this.furious(mob, p, rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero))),
+    );
     this.onHurt(p, mobKey(mob.kind) ?? '', burn);
     this.harm(p, burn, mob.body.x, mob.body.y, true);
     return true;
@@ -573,23 +584,48 @@ export class Simulation {
 
   /**
    * Every player takes the kill's XP and gold (in solo, just the one). `by` is the striker of a sword blow or an arrow: it
-   * holds a beat with the blow (hit-pause), and its screen alone gets the kick (the effects carry it as `p`).
+   * holds a beat with the blow (hit-pause), and its screen alone gets the kick (the effects carry it as `p`). `opts.from`
+   * names the caster of a spell (who has no `by`), `opts.arrow` marks an arrow (a projectile, like a spell, that a shield turns).
+   *
+   * What a foe does with the blow is its kind's (systems/mobDefense.ts): a hero well under it does less (flat armor
+   * on top of its defense) and stuns it for less; a shield turns a frontal arrow or spell aside (it still costs the foe poise,
+   * so enough of them break its guard); a foe with poise is only staggered once the blows empty it.
    */
-  hitMob(mob: Mob, rawDamage: number, vx: number, vy: number, bolt = false, by?: Player) {
+  hitMob(
+    mob: Mob,
+    rawDamage: number,
+    vx: number,
+    vy: number,
+    bolt = false,
+    by?: Player,
+    opts: { from?: Player; arrow?: boolean } = {},
+  ) {
+    const attacker = by ?? opts.from;
+    const gap = attacker ? levelGap(mob.kind, attacker.hero.stats.level) : 0;
     // a foe marked by Spirit Mark takes more; the DM's pressure makes the world harder or gentler to hurt
-    const damage = Math.max(1, Math.round((rawDamage * this.casting.markFactor(mob)) / this.pressure()));
+    const armored = afterArmor(rawDamage, gapArmor(gap));
+    let damage = Math.max(1, Math.round((armored * this.casting.markFactor(mob)) / this.pressure()));
+    const guard = bolt || opts.arrow ? mob.guards(vx, vy) : null;
+    if (guard) damage = blockedDamage(damage, guard);
     const boss = !!(mob.kind.named || mob.kind.boss);
     // A kill's death effect waits out the foe's hold (it plays from the mob's own update, in its zone).
-    const killed = mob.hit(damage, vx, vy, () => {
-      this.fx(mob.kind.death ?? 'mobPoof', mob.body.x, mob.body.y - 12, undefined, by?.slot);
-      if (boss) this.fx('bossFinale', mob.body.x, mob.body.y - 14 * mob.body.size);
-    });
-    if (by && !bolt) by.hitstop = Math.max(by.hitstop, heroPauseFor(damage, mob.kind.maxHp, killed, boss));
+    const killed = mob.hit(
+      damage,
+      vx,
+      vy,
+      () => {
+        this.fx(mob.kind.death ?? 'mobPoof', mob.body.x, mob.body.y - 12, undefined, by?.slot);
+        if (boss) this.fx('bossFinale', mob.body.x, mob.body.y - 14 * mob.body.size);
+      },
+      { poise: poiseCost(bolt), stun: stunFactor(gap) },
+    );
+    if (by && !bolt && !guard) by.hitstop = Math.max(by.hitstop, heroPauseFor(damage, mob.kind.maxHp, killed, boss));
     this.onDealt(mobKey(mob.kind) ?? '', damage, killed);
-    // Sparks fly on from the blow (the bolt has its own impact burst), at chest height; how big and what colour says how hard.
+    // Sparks fly on from the blow (the bolt has its own impact burst), at chest height; how big and what colour says how
+    // hard. A blow the shield turned aside does nothing, so it reads as the faintest spark (a graze), spell or not.
     const tier = HIT_FX[hitTier(damage, mob.kind.maxHp, killed)];
-    if (!bolt) this.fx(tier, mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx), by?.slot);
-    this.number(mob.body.x, mob.body.y - 54 * mob.body.size, damage, 0xffffff);
+    if (!bolt || guard) this.fx(tier, mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx), by?.slot);
+    this.number(mob.body.x, mob.body.y - 54 * mob.body.size, damage, guard ? 0x9fb4c8 : 0xffffff);
     if (!killed) return;
     this.onKill(this.arena.zone.name, mobKey(mob.kind) ?? '');
     const earned = (p: Player) => Math.round(mob.kind.xp * killShare(p.hero.stats.level, mob.kind));
@@ -636,12 +672,17 @@ export class Simulation {
     this.cheer(p);
   }
 
-  private hurtHero(mob: Mob, victim: Character) {
+  private hurtHero(mob: Mob, victim: Character, power = 1) {
     const p = this.arena.party().find((q) => q.body === victim);
     if (!p || p.safe) return;
-    const damage = this.pressed(rollDamage(mob.kind.attack, defensePower(p.hero)));
+    const damage = this.pressed(this.furious(mob, p, rollDamage(mob.kind.attack * power, defensePower(p.hero))));
     this.onHurt(p, mobKey(mob.kind) ?? '', damage);
     this.harm(p, damage, mob.body.x, mob.body.y);
+  }
+
+  /** A foe well over the hero's level hits harder (`furyFactor`, systems/mobDefense.ts): a mistake in its reach is punished. */
+  private furious(mob: Mob, p: Player, damage: number): number {
+    return Math.round(damage * furyFactor(levelGap(mob.kind, p.hero.stats.level)));
   }
 
   /** The DM's pressure as a factor: 0.7 gentle, 1 steady, 1.5 fierce (`systems/dmPowers.ts`). */
