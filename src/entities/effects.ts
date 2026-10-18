@@ -1,4 +1,4 @@
-import { BitmapText, Container, Graphics } from 'pixi.js';
+import { BitmapText, Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { Direction } from '../core/direction';
 import {
   FACING_ANGLE,
@@ -26,6 +26,12 @@ export class Effects {
   add(effect: Effect) {
     this.list.push(effect);
     this.layer.addChild(effect.view);
+  }
+
+  /** Drop everything in flight (a zone nobody is in no longer updates, so its shots would hang there frozen). */
+  clear() {
+    for (const e of this.list) e.view.destroy({ children: true, context: true });
+    this.list = [];
   }
 
   update(dt: number) {
@@ -162,6 +168,87 @@ export function floatText(x: number, y: number, text: string, color: number): Ef
       label.y = y - 18 * (t / duration);
       label.alpha = Math.min(1, (duration - t) / 0.3);
       return t < duration;
+    },
+  };
+}
+
+/** The colours of the motes a kill pays: coins, then the XP sparks. */
+export const GAIN_MOTE_COLORS = [0xffd34a, 0xffe9a8, 0xffb13f, 0xffffff, 0xffd34a, 0xffb13f];
+export const MOTE_FLIGHT = 0.42;
+export const MOTE_STAGGER = 0.05;
+
+/**
+ * Coins and sparks that arc from where something paid out (a foe, a task) to the hero that earned it: `target` is asked
+ * for the hero's chest each frame (null once the hero is gone: the motes just end). One Graphics redrawn in place, at most
+ * a handful of 3 px squares, each flying a quadratic curve that bows upward, so the pay reads as flying to the hero.
+ */
+export function moteArc(
+  x: number,
+  y: number,
+  target: () => { x: number; y: number } | null,
+  colors: readonly number[] = GAIN_MOTE_COLORS,
+): Effect {
+  const g = new Graphics({ zIndex: 1e9 });
+  const bow = colors.map((_, i) => -26 - ((i * 7) % 14)); // how high each one lifts before it comes in
+  const side = colors.map((_, i) => ((i % 3) - 1) * 14); // and how far it swings out
+  let t = 0;
+  return {
+    view: g,
+    update(dt) {
+      t += dt;
+      const end = target();
+      g.clear();
+      if (!end) return false;
+      let flying = false;
+      for (let i = 0; i < colors.length; i++) {
+        const k = (t - i * MOTE_STAGGER) / MOTE_FLIGHT;
+        if (k >= 1) continue;
+        flying = true;
+        if (k < 0) continue;
+        const e = k * k * (3 - 2 * k); // ease in and out
+        const mx = (x + end.x) / 2 + (side[i] ?? 0);
+        const my = Math.min(y, end.y) + (bow[i] ?? -30);
+        const u = 1 - e;
+        const px = u * u * x + 2 * u * e * mx + e * e * end.x;
+        const py = u * u * y + 2 * u * e * my + e * e * end.y;
+        g.rect(Math.round(px) - 1, Math.round(py) - 1, 3, 3).fill({
+          color: colors[i] ?? 0xffd34a,
+          alpha: k > 0.85 ? (1 - k) / 0.15 : 1,
+        });
+      }
+      return flying;
+    },
+  };
+}
+
+const GHOST_LIFE = 0.28;
+
+/**
+ * A fading copy of a body's frame left a few pixels behind it (a dodge): pale blue, half see-through, it slides on in the
+ * way the body went and is gone in `GHOST_LIFE`. One Sprite, no allocation per frame.
+ */
+export function afterimage(
+  frame: { texture: Texture; anchorY: number; scale: number },
+  x: number,
+  y: number,
+  dx: number,
+  dy: number,
+): Effect {
+  const sprite = new Sprite({ texture: frame.texture, tint: 0xbfe3ff, alpha: 0.55 });
+  sprite.anchor.set(0.5, frame.anchorY);
+  sprite.scale.set(frame.scale);
+  sprite.position.set(x, y);
+  sprite.zIndex = y - 0.5; // just behind the body that left it
+  let t = 0;
+  return {
+    view: sprite,
+    update(dt) {
+      t += dt;
+      const k = Math.min(1, t / GHOST_LIFE);
+      sprite.x = x + dx * k * 8;
+      sprite.y = y + dy * k * 8;
+      sprite.alpha = 0.55 * (1 - k);
+      return k < 1;
     },
   };
 }

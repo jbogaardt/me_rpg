@@ -144,7 +144,6 @@ export class DmPowers {
       s.hp = Math.min(s.maxHp, s.hp + back);
       this.arena.inZone(this.arena.zoneOf(p), () => {
         this.sim.fx('heal', p.body.x, p.body.y - 14);
-        this.sim.text(p.body.x, p.body.y - 54, `+${back}`, 0x7bff9b);
       });
     }
   }

@@ -318,7 +318,7 @@
           { "kinds": ["adder", "hornet"], "count": 4, "seed": 7103, "apart": 8, "avoid": [], "level": 6 }
         ]
       },
-      "links": ["eastwood", "beach", "undead", "wetlands", "marsh"]
+      "links": ["eastwood", "beach", "undead", "wetlands", "marsh", "ruin_temple"]
     },
     "marsh": {
       "name": "Gloamfen Marsh",
@@ -614,6 +614,16 @@
       "generation": {},
       "links": ["sewer_lanternrest"],
       "levels": [9, 11]
+    },
+    "ruin_temple": {
+      "name": "The Old Temple",
+      "map": "ruin_temple",
+      "climate": null,
+      "music": null,
+      "tilesets": ["dungeon_cave.png"],
+      "generation": {},
+      "links": ["jungle"],
+      "levels": [5, 7]
     },
     "crypt_barrow": {
       "name": "The Barrow Deep",

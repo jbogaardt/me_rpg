@@ -315,12 +315,13 @@ export class Interactions {
     const got = harvest(p.hero, crop.kind);
     const [x, y] = [crop.x, crop.y - CELL];
     if (!got.ok) {
-      sim.text(x, y - 14, got.text, 0xff8a7a);
+      sim.refuse(p, x, y + 6, 'packFull');
       return;
     }
     crop.pick();
     sim.fx('levelUp', x, y + 6);
-    sim.text(x, y - 14, got.text, 0xa8e868);
+    sim.fx('itemMote', x, y + 6, undefined, p.slot); // the produce's light flies to the hero; the toast names it
+    this.ground.onPicked?.(p, got.text);
   }
 
   /** A player waters a dry plot with a Waterskin from their pack. */
@@ -329,12 +330,11 @@ export class Interactions {
     const [x, y] = [crop.x, crop.y - CELL];
     const result = waterWith(p.hero);
     if (!result.ok) {
-      sim.text(x, y - 14, result.text, 0xff8a7a);
+      sim.refuse(p, x, y + 6, 'nothingToDo', result.text); // what is missing is not on screen: one passive line
       return;
     }
     crop.water();
     sim.fx('levelUp', x, y + 6);
-    sim.text(x, y - 14, result.text, 0x8fc8ff);
   }
 
   private openChest(p: Player, chest: Chest) {
@@ -344,17 +344,21 @@ export class Interactions {
     const found = collect(p.hero, loot);
     const [x, y] = [chest.x, chest.y - CELL];
     if (found.refused) {
-      sim.text(x, y - 14, found.text, 0xff8a7a);
+      sim.refuse(p, x, y + 6, 'packFull');
       return;
     }
     chest.setOpen(true);
     sim.fx('sparkle', x, y + 6);
     sim.fx('coinPop', x, y + 10);
     if (found.gear) sim.fx('lootBeam', x, y + 14); // a piece of gear: a column of light as it comes out
-    sim.text(x, y - 14, found.text, 0xffd34d);
+    if ('item' in loot)
+      this.ground.onPicked?.(p, loot.item.name); // gear and goods: the pickup toast names it
+    else if ('hp' in loot)
+      sim.fx('heal', p.body.x, p.body.y - 10); // a restoring chest: the hero's own glow
+    else sim.fx('gainMotes', x, y + 10, undefined, p.slot); // gold or XP flies to the hero
     if (found.gear) arena.refreshLook(p);
     if (found.levels) {
-      sim.text(p.body.x, p.body.y - 62, 'LEVEL UP!', 0xffb13f);
+      sim.fx('levelRing', p.body.x, p.body.y - 4, undefined, p.slot);
       sim.fx('levelUp', p.body.x, p.body.y - 14);
     }
   }

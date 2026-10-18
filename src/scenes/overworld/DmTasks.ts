@@ -202,7 +202,7 @@ export class DmTasks {
     if (found.refused) return null;
     remember(this.memory, p.hero, gift.slot);
     this.arena.refreshLook(p);
-    this.arena.inZone(this.arena.zoneOf(p), () => this.sim.text(p.body.x, p.body.y - 90, found.text, 0xfff0a0));
+    this.arena.inZone(this.arena.zoneOf(p), () => this.sim.fx('itemMote', p.body.x, p.body.y - 40, undefined, p.slot)); // the gift's light
     return item.name;
   }
 
@@ -336,9 +336,9 @@ export class DmTasks {
       // the chest's finder keeps it; the foe's drop goes to whoever of the party is in its land (kills are the party's)
       const keeper = finder ?? (relic?.carrier ? (party.find((p) => p.zone === t.zone) ?? party[0]) : undefined);
       if (keeper && relic && item) {
-        const found = collect(keeper.hero, { item: itemOf(relic.item) });
+        collect(keeper.hero, { item: itemOf(relic.item) });
         this.arena.inZone(this.arena.zoneOf(keeper), () =>
-          this.sim.text(keeper.body.x, keeper.body.y - 90, found.text, 0xfff0a0),
+          this.sim.fx('itemMote', keeper.body.x, keeper.body.y - 40, undefined, keeper.slot),
         );
       }
     }

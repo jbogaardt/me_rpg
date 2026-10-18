@@ -1,7 +1,7 @@
 // The game's own sounds (Pixi-free, cosmetic, core engine; no capability): which sound an event makes, and the small
 // rules the player (`hud/gameSfx.ts`) plays by. This is NOT the Dungeon Master's cue vocabulary (`cues.ts` SFX_NAMES stays
 // closed, so the DM's prompts and checks do not change). Every page plays from events it already gets (an `fx`, a `slash`,
-// a `bolt`, a floating text), so a co-op guest hears what the host hears and nothing is sent for it. The host's own
+// a `bolt`), so a co-op guest hears what the host hears and nothing is sent for it. The host's own
 // simulation goes through the same `Visuals` calls, so one event makes one sound.
 
 import type { ParticleEffectName } from './particleEffects';
@@ -31,7 +31,10 @@ export type GameSoundName = (typeof GAME_SOUND_NAMES)[number];
 /** Which sound a particle effect makes. Effects not listed are silent (smoke, drips, embers...). */
 export const FX_SOUNDS: Partial<Record<ParticleEffectName, GameSoundName>> = {
   hitSpark: 'hit',
+  hitGraze: 'hit',
+  hitHeavy: 'hit',
   heroHurt: 'hurt',
+  heroHurtHeavy: 'hurt',
   fall: 'hurt',
   mobPoof: 'death',
   mobDust: 'deathDust',
@@ -46,16 +49,16 @@ export const FX_SOUNDS: Partial<Record<ParticleEffectName, GameSoundName>> = {
   heal: 'cast',
   ward: 'cast',
   blink: 'cast',
-  levelUp: 'glint', // also made when watering a crop, so only a whisper; the chime is the 'LEVEL UP!' text
+  levelUp: 'glint', // also made when watering a crop, so only a whisper; the chime is `levelRing`'s
+  levelRing: 'levelUp',
+  deny: 'deny',
+  gainMotes: 'pickup',
+  shimmer: 'glint',
+  questTick: 'glint',
   coinPop: 'chest', // a chest's coins (nothing else pops coins)
 };
 
-/** The one floating word that has a sound of its own (the chime of a gained level). */
-export const LEVEL_UP_TEXT = 'LEVEL UP!';
-
 export const soundForFx = (name: ParticleEffectName): GameSoundName | undefined => FX_SOUNDS[name];
-export const soundForText = (text: string): GameSoundName | undefined =>
-  text === LEVEL_UP_TEXT ? 'levelUp' : undefined;
 
 /** At most this many game sounds sound at once (a phone's budget); a new one beyond it displaces the oldest. */
 export const MAX_VOICES = 6;

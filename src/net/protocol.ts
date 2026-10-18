@@ -58,7 +58,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v50: `SnapMsg.ia`, the newest input number the host has applied for the recipient (client-side prediction).
  * v51: `SnapMsg.folk`, where the people who stroll about their post (content `roam`) stand.
  * v52: `HelloMsg.id`, a friend's own lasting id, so the host can give a rejoiner their hero back.
- * v56: nine more `fx` names (foe deaths, a boss finale, sparkle, coins, a loot beam, a cheer, a fall; appended, so old indices hold). v55: `rq` may be a one-tap note (a mood face, "stuck"), written in the host's report and never put in the DM's inbox. v54: the DM's words (`DmMsg.say`/`reply`) may be up to 360 letters, not 240. v53: `InputMsg.px/py`, where the friend's own hero stands: the host moves it there when believable (core/claim.ts).
+ * v57: nine more `fx` names, the cues that replace floating numbers and words (blow tiers, a heavy hit on the hero, a refusal, a door shimmer, a level ring, kill motes, an item glint, a quest tick; appended); the `text` event is no longer sent (still decoded, a guest draws nothing for it). v56: nine more `fx` names (foe deaths, a boss finale, sparkle, coins, a loot beam, a cheer, a fall; appended, so old indices hold). v55: `rq` may be a one-tap note (a mood face, "stuck"), written in the host's report and never put in the DM's inbox. v54: the DM's words (`DmMsg.say`/`reply`) may be up to 360 letters, not 240. v53: `InputMsg.px/py`, where the friend's own hero stands: the host moves it there when believable (core/claim.ts).
  * Older: v28 made a negative `SnapMsg.ponds` level mean refilling after running dry; v27 made `drink` start (item
  * 1) or stop (item 0) a steady drink and added `SnapMsg.ponds`; v26 added the `drink` op of `do`; v25 added the
  * mob state `channel` (the Mummy's held ray); v24 added the `frost` fx of Stasis; v23 made `SnapMsg.crops` a state
@@ -74,7 +74,7 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
  * within a size budget.
  */
-export const PROTOCOL_VERSION = 56;
+export const PROTOCOL_VERSION = 57;
 
 /** Held-key bits in InputMsg.keys. */
 export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
@@ -128,6 +128,15 @@ export const FX_NAMES = [
   'cheer',
   'fall',
   'lootBeam',
+  'hitGraze',
+  'hitHeavy',
+  'heroHurtHeavy',
+  'deny',
+  'shimmer',
+  'levelRing',
+  'gainMotes',
+  'itemMote',
+  'questTick',
 ] as const satisfies readonly ParticleEffectName[];
 export type FxName = (typeof FX_NAMES)[number];
 
@@ -161,7 +170,7 @@ export type WorldEvent =
   | { type: 'bolt'; x: number; y: number; vx: number; vy: number; p?: number; color?: number } // `p`: the player who cast it; `color` set instead: an enemy's shot (the guest only draws it)
   | { type: 'draw'; x: number; y: number; p: number } // player `p` begins drawing a bow (the arrow comes later, as `arrow`)
   | { type: 'arrow'; x: number; y: number; vx: number; vy: number; range: number; p?: number } // a player's arrow (the guest only draws it); `p`: who shot it
-  | { type: 'text'; x: number; y: number; text: string; color: number }
+  | { type: 'text'; x: number; y: number; text: string; color: number } // no longer sent (v57: cues replace floating text); decoded, never drawn
   | { type: 'fx'; name: FxName; x: number; y: number; dir?: number; p?: number } // `p`: the player it happened to (heroHurt)
   | { type: 'lightning'; x: number; y: number; seed: number } // a bolt lands here (the seed shapes it the same everywhere)
   | { type: 'defeat'; player: number }; // this player (0 is the host) was knocked out and sent back to spawn

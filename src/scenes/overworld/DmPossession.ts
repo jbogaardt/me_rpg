@@ -61,8 +61,7 @@ export class DmPossession {
     dm.hidden = true;
     dm.body.visible = false;
     this.arena.inZone(zone, () => {
-      this.sim.fx('castGlow', mob.body.x, mob.body.y - 14);
-      this.sim.text(mob.body.x, mob.body.y - 60 * mob.body.size, 'Possessed!', 0xd070ff);
+      this.sim.fx('castGlow', mob.body.x, mob.body.y - 14); // the flash is the cue: the DM's own bar says they possess
     });
     this.follow();
   }

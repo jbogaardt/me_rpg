@@ -1282,6 +1282,17 @@
       "choices": []
     },
     {
+      "node_id": "ruin_temple",
+      "biome_type": "ruin_temple",
+      "entities": [
+        { "entity": "orc", "x": 10, "y": 9, "level": 6 },
+        { "entity": "orc", "x": 15, "y": 12, "level": 6 },
+        { "entity": "warg", "x": 12, "y": 17, "level": 6 },
+        { "entity": "tuskGuard", "x": 22, "y": 11, "level": 7 }
+      ],
+      "choices": []
+    },
+    {
       "node_id": "crypt_barrow",
       "biome_type": "crypt_barrow",
       "entities": [

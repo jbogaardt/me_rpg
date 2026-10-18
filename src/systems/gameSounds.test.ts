@@ -1,16 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SFX_NAMES } from './cues';
 import { PARTICLE_EFFECTS } from './particleEffects';
-import {
-  FX_SOUNDS,
-  GAME_SOUND_NAMES,
-  LEVEL_UP_TEXT,
-  MAX_VOICES,
-  VoiceCap,
-  jitter,
-  soundForFx,
-  soundForText,
-} from './gameSounds';
+import { FX_SOUNDS, GAME_SOUND_NAMES, MAX_VOICES, VoiceCap, jitter, soundForFx } from './gameSounds';
 
 describe('event to sound table', () => {
   it('covers the effects the combat flow plays', () => {
@@ -39,9 +30,11 @@ describe('event to sound table', () => {
     expect(soundForFx('smoke')).toBeUndefined();
     expect(soundForFx('drip')).toBeUndefined();
   });
-  it('chimes only for the level-up text', () => {
-    expect(soundForText(LEVEL_UP_TEXT)).toBe('levelUp');
-    expect(soundForText('12')).toBeUndefined();
+  it('chimes for the level ring, thuds for a refusal, and has no sound for a word', () => {
+    expect(soundForFx('levelRing')).toBe('levelUp');
+    expect(soundForFx('deny')).toBe('deny');
+    expect(soundForFx('hitHeavy')).toBe('hit');
+    expect(soundForFx('heroHurtHeavy')).toBe('hurt');
   });
   it('keeps the DM cue vocabulary separate from the game sounds', () => {
     expect(SFX_NAMES as readonly string[]).not.toContain('swing');

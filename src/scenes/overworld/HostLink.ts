@@ -1,6 +1,7 @@
 import { decodeAim } from '../../core/aim';
 import { barrelsWire } from '../../systems/barrels';
 import { dirIndex } from '../../core/direction';
+import { particleEffect } from '../../entities/ParticleEffect';
 import { NO_COMMAND, type Command, type Player } from '../../entities/Player';
 import { cellFeet } from '../../map/doors';
 import { DEFAULT_VIEW, eventInView, fitEvents, MobFeed, SNAP_BUDGET } from '../../net/feed';
@@ -23,7 +24,6 @@ import {
 import type { Session } from '../../net/session';
 import type { Hero, Stats } from '../../systems/combat';
 import { itemCode } from '../../systems/inventory';
-import { PLAYER_COLORS, playerName } from '../../systems/looks';
 import { NO_WEATHER } from '../../systems/weather';
 import type { ZoneState } from '../ZoneState';
 import type { Arena } from './Arena';
@@ -79,7 +79,7 @@ export class HostLink {
   leave() {
     const { arena } = this;
     for (const slot of [...arena.remotes.keys()]) {
-      this.remove(slot, (p) => this.sim.text(p.body.x, p.body.y - 54, `${playerName(slot)} left`, 0xffffff));
+      this.remove(slot, (p) => this.leaves(p));
     }
     arena.local.body.setTag(null);
     arena.setDm(arena.local, false); // back to playing their own hero, as they left it
@@ -130,15 +130,18 @@ export class HostLink {
       // Spread newcomers along the spawn cell so they don't stand exactly on top of each other.
       const [x, y] = cellFeet(arena.home.data.spawn);
       remote.body.position.set(x + (slot - 2) * 8, y);
-      arena.inZone(arena.home, () =>
-        this.sim.text(remote.body.x, remote.body.y - 54, `${playerName(slot)} joined`, PLAYER_COLORS[slot] ?? 0xffffff),
-      );
+      arena.inZone(arena.home, () => this.sim.fx('blink', remote.body.x, remote.body.y - 14, undefined, slot)); // arrives in a flash
     }
     for (const slot of [...arena.remotes.keys()]) {
       if (connected.includes(slot)) continue;
-      this.remove(slot, (p) => this.sim.text(p.body.x, p.body.y - 54, `${playerName(slot)} left`, 0xffffff));
+      this.remove(slot, (p) => this.leaves(p));
     }
     for (const slot of [...this.waiting.keys()]) if (!connected.includes(slot)) this.waiting.delete(slot);
+  }
+
+  /** A friend leaves: a grey-blue breath where they stood (silent; a guest's page shows its own when they drop out of the snapshot). */
+  private leaves(p: Player) {
+    this.arena.effects.add(particleEffect('fall', p.body.x, p.body.y - 14));
   }
 
   /** Take a friend out of the game and forget what was kept about them. */
