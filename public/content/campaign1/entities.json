@@ -287,7 +287,8 @@
         "recover": 0.65,
         "stagger": 0.35,
         "poiseMax": 4,
-        "charge": {}
+        "charge": {},
+        "immovable": true
       }
     },
     "chieftain": {
@@ -382,7 +383,8 @@
         "recover": 0.45,
         "stagger": 0.4,
         "poiseMax": 6,
-        "charge": {}
+        "charge": {},
+        "immovable": true
       }
     },
     "wraith": {
@@ -545,7 +547,8 @@
         "stagger": 0.35,
         "poiseMax": 4,
         "charge": {},
-        "guard": {}
+        "guard": {},
+        "immovable": true
       }
     },
     "frostWarden": {
@@ -578,7 +581,8 @@
         "stagger": 0.35,
         "poiseMax": 5,
         "charge": {},
-        "guard": {}
+        "guard": {},
+        "immovable": true
       }
     },
     "snowman": {
@@ -603,7 +607,8 @@
         "recover": 0.9,
         "stagger": 0.4,
         "poiseMax": 6,
-        "charge": {}
+        "charge": {},
+        "immovable": true
       }
     },
     "elder": {
@@ -980,7 +985,8 @@
         "stagger": 0.35,
         "poiseMax": 4,
         "charge": {},
-        "guard": {}
+        "guard": {},
+        "immovable": true
       }
     },
     "stillheart": {
@@ -1318,7 +1324,7 @@
         "gold": 2
       },
       "behavior": {
-        "windup": 0.3,
+        "windup": 0.35,
         "recover": 1.0,
         "stagger": 0.1,
         "quick": true
@@ -1369,7 +1375,7 @@
         "gold": 6
       },
       "behavior": {
-        "windup": 0.3,
+        "windup": 0.35,
         "recover": 1.0,
         "stagger": 0.2,
         "quick": true

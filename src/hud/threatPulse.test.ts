@@ -92,6 +92,21 @@ describe('keepClear', () => {
     [390, 844],
     [360, 640],
     [844, 390],
+  ])('keeps a pulse off the dodge roll button at %ix%i, and clear of A and the item button too', (w, h) => {
+    // ui.css: #btn-roll is 60 px, 12 px left of A, its bottom 36 px up; the item button sits above it, A to its right.
+    const roll = { x: w - 150, y: h - 66 };
+    keepClear(roll, w, h, true);
+    const inRoll = roll.x > w - 180 - 14 && roll.x < w - 120 + 14 && roll.y > h - 96 - 14 && roll.y < h - 36 + 14;
+    expect(inRoll).toBe(false);
+    const desk = { x: w - 150, y: h - 66 };
+    keepClear(desk, w, h, false); // no touch cluster on desktop: nothing to clear
+    expect(desk).toEqual({ x: w - 150, y: h - 66 });
+  });
+
+  it.each([
+    [390, 844],
+    [360, 640],
+    [844, 390],
     [1280, 720],
   ])('leaves a pulse inside the screen at %ix%i', (w, h) => {
     for (const touch of [true, false]) {

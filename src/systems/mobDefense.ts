@@ -140,6 +140,17 @@ export const CHARGE_DEFAULTS: MobCharge = {
 
 export const resolveCharge = (c: Partial<MobCharge> = {}): MobCharge => ({ ...CHARGE_DEFAULTS, ...c });
 
+// --- Farming (a spot cannot be ground for XP and gold) ---
+
+/** Seconds a foe stays down the first time it falls. */
+export const RESPAWN_BASE = 60;
+/** Each fall of the same foe keeps it down this much longer than the last, up to `RESPAWN_CAP`. */
+export const RESPAWN_GROWTH = 1.5;
+export const RESPAWN_CAP = 300;
+
+/** How long a foe stays down after its `falls`-th fall (0 for the first): a minute, then 90 s, 135 s... at most five minutes. */
+export const respawnWait = (falls: number): number => Math.min(RESPAWN_CAP, RESPAWN_BASE * RESPAWN_GROWTH ** falls);
+
 // --- Sprint (a burst of speed) ---
 
 export const SPRINT_DEFAULTS: MobSprint = {
@@ -156,8 +167,8 @@ export const resolveSprint = (s: Partial<MobSprint> = {}): MobSprint => ({ ...SP
 
 // --- Quick (a snap attacker) ---
 
-/** The shortest windup of a quick kind (its spread may take 20% off): a reaction is about 0.25 s, so it is a test of reflexes, not a trap. */
-export const QUICK_WINDUP = 0.3;
+/** The shortest windup a quick kind has once the melee pace is applied (`mobTimings`; its spread may take 20% off): a test of reflexes, not a trap. */
+export const QUICK_WINDUP = 0.2;
 /** A quick kind's blow is this share of a plain one, and it must rest at least `QUICK_RECOVER` after it. */
 export const QUICK_POWER = 0.75;
 export const QUICK_RECOVER = 1;

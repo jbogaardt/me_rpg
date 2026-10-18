@@ -101,7 +101,7 @@ export class Persistence {
 
   /**
    * Put the world's save back, if there is one: the hero, the chests opened, the explored map, the scenario node. The hero
-   * is placed at the world's home (`arena.home`, the start node's zone), not where they stood. Saving starts after it either way.
+   * is placed at the world's home (`arena.wake()`: the content's `home`, else the start node's zone), not where they stood. Saving starts after it either way.
    */
   async restore(): Promise<boolean> {
     const { arena, zones } = this;
@@ -123,9 +123,10 @@ export class Persistence {
       } catch (err) {
         console.warn('Could not return to the saved scenario node; starting at the beginning', err);
       }
-      const { home } = arena;
-      const at = reloadPlace(save, { zone: home.name, feet: cellFeet(home.data.spawn) });
-      if (arena.local.zone !== at.zone) zones.travel(arena.local, home, home.data.spawn);
+      await zones.loadHome();
+      const home = arena.wake(); // the same place a fall wakes at: the content's home (the town), else the start
+      const at = reloadPlace(save, { zone: home.zone.name, feet: cellFeet(home.spot) });
+      if (arena.local.zone !== at.zone) zones.travel(arena.local, home.zone, home.spot);
       arena.player.position.set(at.x, at.y);
       return true;
     } finally {

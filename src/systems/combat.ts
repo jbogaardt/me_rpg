@@ -158,6 +158,8 @@ export interface MobKind {
   poiseMax?: number;
   /** Seconds unhurt before its poise is whole again (default `POISE_REGEN`). */
   poiseRegen?: number;
+  /** Never pushed back by a blow (a brute, a giant, a named boss): hit, but it holds its ground (`Mob.hit`). */
+  immovable?: boolean;
   /** A gap-closer for when it is kited: a telegraphed dash at a hero who stays out of range (`Mob.ts`). */
   charge?: MobCharge;
   /** A shield: turns frontal arrows and spells aside while it is up (`frontal`, systems/mobDefense.ts). */
@@ -223,10 +225,19 @@ export interface MobSpread {
 
 const DEFAULT_TIMINGS = { windup: 0.5, recover: 0.7, stagger: 0.3 };
 
+/**
+ * A melee blow's telegraph is this share of the kind's `windup`: with the mouse a hero aims exactly and a half-second
+ * tell is a free dodge, so it is quick (a plain blow 0.33 s, spread to 0.26 s at the quickest). A shot or beam keeps its
+ * authored windup: it is dodged by moving, not by aim.
+ */
+export const WINDUP_PACE = 0.65;
+/** The shortest windup a spread blow may have: a clear tell is still a quarter second. The content check holds every kind to it. */
+export const WINDUP_FLOOR = 0.25;
+
 /** How long a kind telegraphs, rests after an attack, and is stunned by a hit (seconds). */
 export function mobTimings(kind: MobKind): { windup: number; recover: number; stagger: number } {
   return {
-    windup: kind.windup ?? DEFAULT_TIMINGS.windup,
+    windup: (kind.windup ?? DEFAULT_TIMINGS.windup) * (kind.shot || kind.ray ? 1 : WINDUP_PACE),
     recover: kind.recover ?? DEFAULT_TIMINGS.recover,
     stagger: kind.stagger ?? DEFAULT_TIMINGS.stagger,
   };
@@ -308,8 +319,11 @@ export const attackPower = (h: Hero) => h.stats.attack + gearAttack(h);
 export const defensePower = (h: Hero) => h.stats.defense + gearDefense(h);
 /** The strength behind a combo's damage and healing: the magic stat, plus what the wand or tome adds and any magic from gear (nothing otherwise). */
 export const spellPower = (h: Hero) => h.stats.magic + (h.weapon.focus?.power ?? 0) + gearMagic(h);
-/** XP to go from `level` to the next. Grows faster than linearly: 20 at level 1, 224 at 5, 632 at 10. */
-export const xpToNext = (level: number) => Math.round(20 * level ** 1.5);
+/**
+ * XP to go from `level` to the next. Grows faster than linearly, and past level 4 steeper still (an extra sixth of a
+ * level's worth per level) so the climb to 30 takes hours, not one: 20 at level 1, 261 at 5, 1265 at 10, 6559 at 20.
+ */
+export const xpToNext = (level: number) => Math.round(20 * level ** 1.5 * (1 + Math.max(0, level - 4) / 6));
 
 /**
  * The hero level a foe is a match for, read from its own body (attack and health, so no content has to say): a goblin is 1,

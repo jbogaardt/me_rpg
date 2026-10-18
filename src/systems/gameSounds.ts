@@ -25,6 +25,7 @@ export const GAME_SOUND_NAMES = [
   'pickup', // an item picked up
   'tell', // a foe's windup begins: a rising tone, the cue to dodge
   'deny', // the quick-item button refused (nothing to use, or no need): a short dull thud
+  'roll', // the dodge roll: a short low whoosh of air and a soft scuff
 ] as const;
 export type GameSoundName = (typeof GAME_SOUND_NAMES)[number];
 

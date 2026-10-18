@@ -25,7 +25,7 @@ import { onlyFeeds } from '../systems/needs';
 import { MOB_DEATHS, type MobDeath } from '../systems/particleEffects';
 import { CROPS } from '../systems/crops';
 import { SLOTS, type Outfit } from '../sprites/doll';
-import { GEAR_SLOTS, type GearSlot, type Item } from '../systems/combat';
+import { GEAR_SLOTS, WINDUP_PACE, type GearSlot, type Item } from '../systems/combat';
 import { iconKind } from '../systems/inventory';
 import { ITEM_VARIANTS } from '../systems/itemArt';
 import type { ItemId, StartGear } from '../systems/items';
@@ -68,6 +68,7 @@ export interface EntityBehavior {
   /** Blows it shrugs off before a hit staggers it (whole number, 0 = every blow staggers; systems/mobDefense.ts). Elites 3-6. */
   poiseMax?: number;
   poiseRegen?: number; // seconds unhurt before its poise is whole again (default 2)
+  immovable?: boolean; // never pushed back by a blow (a brute or giant; every named boss is); it still staggers when its poise breaks
   /** A gap-closer for a hero who stays out of range (not for a shooter or a ray caster); each field falls back to `CHARGE_DEFAULTS`. */
   charge?: Partial<Record<'range' | 'after' | 'windup' | 'speed' | 'duration' | 'cooldown' | 'power', number>>;
   /** A shield that turns frontal arrows and spells aside; `arc` degrees covered, `chip` the share that still hurts (`GUARD_DEFAULTS`). */
@@ -183,6 +184,11 @@ export interface ScenarioNode {
 export interface Scenarios {
   /** The node the game starts in. */
   start: string;
+  /**
+   * The node whose zone and spot a solo hero wakes at after a fall or a reload (the town, by story): its `spawn`, else the
+   * map's. Absent: the start node. Online (host or guest) and live worlds keep waking at the start.
+   */
+  home?: string;
   /** The engine's features this campaign switches off or tunes (systems/capabilities.ts); any not named are on. */
   capabilities: CapabilitySpec;
   nodes: Map<string, ScenarioNode>;
@@ -387,6 +393,10 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
         r.fail(`${p}.poiseMax`, `must be a whole number from 0 to ${POISE_CAP}`);
       else behavior.poiseMax = poiseMax;
     }
+    if (b.immovable !== undefined) {
+      if (typeof b.immovable !== 'boolean') r.fail(`${p}.immovable`, 'must be true or false');
+      else if (b.immovable) behavior.immovable = true;
+    }
     const poiseRegen = r.optionalNumber(b.poiseRegen, `${p}.poiseRegen`, 0.1);
     if (poiseRegen !== undefined) behavior.poiseRegen = poiseRegen;
     if (b.charge !== undefined) {
@@ -448,8 +458,8 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
     if (b.quick !== undefined) {
       if (typeof b.quick !== 'boolean') r.fail(`${p}.quick`, 'must be true or false');
       else if (b.quick) {
-        if (behavior.windup !== undefined && behavior.windup < QUICK_WINDUP)
-          r.fail(`${p}.windup`, `a quick kind winds up for at least ${QUICK_WINDUP} s`);
+        if (behavior.windup !== undefined && behavior.windup * WINDUP_PACE < QUICK_WINDUP)
+          r.fail(`${p}.windup`, `a quick kind winds up for at least ${(QUICK_WINDUP / WINDUP_PACE).toFixed(2)} s`);
         behavior.quick = true;
       }
     }
@@ -607,6 +617,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
   r.version(file, 'scenarios.json');
   const start = r.string(file.start, 'scenarios.json.start');
   const capabilities = readCapabilities(r, file.capabilities, 'scenarios.json.capabilities', 'campaign');
+  const home = file.home === undefined ? undefined : r.string(file.home, 'scenarios.json.home');
   r.array(file.nodes, 'scenarios.json.nodes').forEach((v, i) => {
     const o = r.object(v, `nodes[${i}]`);
     if (!o) return;
@@ -640,7 +651,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
     }
     nodes.set(id, node);
   });
-  return { start, capabilities, nodes };
+  return { start, ...(home ? { home } : {}), capabilities, nodes };
 }
 
 const SITE_SHAPES = ['mushroom', 'stone', 'sand'] as const;
@@ -1075,6 +1086,8 @@ function crossCheck(r: Reader, c: Content) {
   checkAgainstCapabilities(r, c);
   if (c.scenarios.start && !c.scenarios.nodes.has(c.scenarios.start))
     r.fail('scenarios.json.start', `no node "${c.scenarios.start}"`);
+  if (c.scenarios.home && !c.scenarios.nodes.has(c.scenarios.home))
+    r.fail('scenarios.json.home', `no node "${c.scenarios.home}"`);
   for (const node of c.scenarios.nodes.values()) {
     const path = `nodes.${node.node_id}`;
     if (!c.biomes[node.biome_type]) r.fail(`${path}.biome_type`, `"${node.biome_type}" is not in biomes.json`);
@@ -1197,6 +1210,7 @@ export function toMobKind(def: EntityDef): MobKind {
   };
   if (def.scale !== undefined) kind.scale = def.scale;
   if (def.boss) kind.named = true;
+  if (def.boss || b.immovable) kind.immovable = true;
   if (def.death) kind.death = def.death;
   if (b.windup !== undefined) kind.windup = b.windup;
   if (b.recover !== undefined) kind.recover = b.recover;

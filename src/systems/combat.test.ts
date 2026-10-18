@@ -7,6 +7,8 @@ import {
   defensePower,
   gainXp,
   killShare,
+  WINDUP_FLOOR,
+  WINDUP_PACE,
   levelGains,
   mobLevel,
   MOB_KINDS,
@@ -61,7 +63,7 @@ describe('gainXp', () => {
   });
 
   it('needs more XP at higher levels, and the step between levels grows too', () => {
-    expect([1, 2, 5, 10].map(xpToNext)).toEqual([20, 57, 224, 632]);
+    expect([1, 2, 5, 10].map(xpToNext)).toEqual([20, 57, 261, 1265]);
     for (let level = 1; level < 30; level++) {
       const step = xpToNext(level + 1) - xpToNext(level);
       expect(step).toBeGreaterThan(xpToNext(level) - xpToNext(Math.max(1, level - 1)));
@@ -122,11 +124,11 @@ describe('MOB_KINDS', () => {
 
   it.each(Object.entries(MOB_KINDS))('%s has sane pacing', (_key, kind) => {
     const { windup, recover, stagger } = mobTimings(kind);
-    // The telegraph must stay readable: a hero needs about 0.4 s to see it and step away (windups are spread -20%, so the kind's is 0.5+).
+    // The telegraph stays a clear tell (a quarter second at the quickest), but is quick: a mouse-aimed hero dodges a slow one for free.
     if (kind.quick) {
       expect(windup).toBeGreaterThanOrEqual(QUICK_WINDUP); // a snap attacker pays with a long rest
       expect(recover).toBeGreaterThanOrEqual(QUICK_RECOVER);
-    } else expect(windup * 0.8).toBeGreaterThanOrEqual(0.4); // even the shortest spread windup (-20%) outlasts a reaction
+    } else expect(windup * 0.8).toBeGreaterThanOrEqual(WINDUP_FLOOR); // even the shortest spread windup (-20%) is a clear tell
     expect(recover).toBeGreaterThan(0);
     expect(stagger).toBeGreaterThanOrEqual(0);
     expect(stagger).toBeLessThan(windup + recover); // a stun never outlasts a whole attack cycle
@@ -182,9 +184,9 @@ describe('MOB_KINDS', () => {
       speed: 1,
       sight: 1,
     };
-    expect(mobTimings(plain)).toEqual({ windup: 0.5, recover: 0.7, stagger: 0.3 });
+    expect(mobTimings(plain)).toEqual({ windup: 0.5 * WINDUP_PACE, recover: 0.7, stagger: 0.3 });
     expect(mobTimings({ ...plain, windup: 0.3, stagger: 0 })).toEqual({
-      windup: 0.3,
+      windup: 0.3 * WINDUP_PACE,
       recover: 0.7,
       stagger: 0,
     });

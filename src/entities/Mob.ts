@@ -15,7 +15,7 @@ import {
   squashY,
   tremblePx,
 } from '../systems/tellLook';
-import { Poise, QUICK_POWER, frontal, type Blow } from '../systems/mobDefense';
+import { Poise, QUICK_POWER, frontal, respawnWait, type Blow } from '../systems/mobDefense';
 import {
   hitPauseFor,
   KNOCK_DECAY,
@@ -62,7 +62,7 @@ type State = MobState;
  * A melee mob starts its windup from this close (feet to feet). It is more than the sword's own reach (its hit circle
  * ends about 38 px ahead of the hero), so a hero close enough to land a blow is close enough to be swung at. It is also
  * short enough that the slowest lunge (14 px) plus the blow's circle (32 px) still reaches a hero who stands still, and
- * long enough that a hero who sees the tell (>= 0.4 s, 48 px of walking) can step out of the lane before the blow.
+ * long enough that a hero who sees the tell (about 0.3 s at the quickest) can still step out of the lane before the blow.
  */
 export const REACH = 44;
 /** A windup tells (a rising tone) only to a hero this near: every page plays it from the state, so distance gates it. */
@@ -90,7 +90,6 @@ const MEND = 0.25; // share of its max HP a mob mends per second once it has los
 const SHRUG = 0.9;
 const COMMITTED = 0.5;
 const KEEP_AWAY = 0.4; // a shooter backs off when the hero is closer than this fraction of its range
-const RESPAWN = 60; // an adventure, not a grind: a foe that falls stays down for a minute
 const FADE = 0.4;
 const HEARING = 0.35; // share of its sight a mob notices a hero through a wall (noise, footsteps)
 const MEMORY = 2; // seconds a chasing mob keeps hunting a hero it cannot see before it gives up
@@ -179,6 +178,9 @@ export class Mob {
 
   /** Comes back after a while when defeated. A training ground's enemies do not (the trial is over when they are all down). */
   respawns = true;
+  /** Times it has fallen (host/solo only; a zone that is unloaded starts its foes afresh). */
+  private falls = 0;
+  private wait = 0; // how long this fall keeps it down
 
   get alive() {
     return this.state !== 'dead';
@@ -283,18 +285,21 @@ export class Mob {
       this.knock = knockVelocity(vx, vy, KNOCK_SPEED);
       this.body.play('hurt', this.t.stagger * 1000);
       this.state = 'dead';
-      this.timer = RESPAWN;
+      this.wait = respawnWait(this.falls++); // an adventure, not a grind: each fall keeps it down longer
+      this.timer = this.wait;
       return true;
     }
     if (this.state === 'channel' && damage > 0) {
       this.breakRay(); // any blow breaks the beam, however poised: it is stunned and then only fights up close
     }
     if (!staggers) {
-      this.knock = knockVelocity(vx, vy, this.poise.armed ? KNOCK_NUDGE : KNOCK_SHOVE); // hurt, but not stopped
+      this.knock = this.kind.immovable
+        ? { x: 0, y: 0 }
+        : knockVelocity(vx, vy, this.poise.armed ? KNOCK_NUDGE : KNOCK_SHOVE); // hurt, but not stopped
       return false;
     }
     const stagger = this.t.stagger * stun;
-    this.knock = knockVelocity(vx, vy, KNOCK_SPEED * stun);
+    this.knock = this.kind.immovable ? { x: 0, y: 0 } : knockVelocity(vx, vy, KNOCK_SPEED * stun);
     this.body.play('hurt', stagger * 1000);
     this.state = 'recover';
     this.lunging = 0; // a staggering hit stops a lunge; the blow (if it has not landed) is lost
@@ -767,7 +772,7 @@ export class Mob {
 
   /** Fade out while dead; it comes back (reset) when the timer runs out. */
   private fade() {
-    this.body.alpha = Math.max(0, (this.timer - (RESPAWN - FADE)) / FADE);
+    this.body.alpha = Math.max(0, (this.timer - (this.wait - FADE)) / FADE);
     this.body.visible = this.body.alpha > 0;
   }
 
