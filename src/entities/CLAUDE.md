@@ -19,5 +19,7 @@
   a beam from the `channel` state itself, but never decides anything. The host alone damages.
 - **Ambient life** (`ambient.ts`: footprints, falling leaves) is passive, driven by body movement and map metadata
   (`surface`, object `tag`, canopy sheet name), with no hooks into collision. Keep any new effect pooled and capped.
+- **Places and light** (`Hearth.ts`, `LightGlow.ts`, `DarknessLayer.ts`; `docs/effects.md`): smoke, bubbles, drips and the
+  underground's fog of war come from map data and run near the screen. Visual only, so no co-op change.
 - Effects (`effects.ts`, `ParticleEffect.ts`) are transient visuals owned by an `Effects` list; add a particle effect
   with the `add-particle-effect` skill. Dynamic in-world text is `BitmapText` with the `FloatText` font.

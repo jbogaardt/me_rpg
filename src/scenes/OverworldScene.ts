@@ -1,5 +1,5 @@
 import type { Container, Renderer } from 'pixi.js';
-import { enabled, flag } from '../systems/capabilities';
+import { enabled, flag, setting } from '../systems/capabilities';
 import { sayTime } from '../systems/dmPowers';
 import { ReadingPause } from '../systems/readingPause';
 import type { Sprites, Zone } from '../assets';
@@ -22,10 +22,14 @@ import { STOCK_EPICS } from '../content/epics';
 import type { EpicTemplate } from '../systems/dmEpics';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
+import { DarknessLayer } from '../entities/DarknessLayer';
+import { LightGlow } from '../entities/LightGlow';
+import { glowStrength } from '../systems/lights';
 import { MapOverlay } from '../hud/MapOverlay';
 import { PartnerArrows } from '../hud/PartnerArrows';
 import { AreaBanner } from '../hud/AreaBanner';
 import { LevelSplash } from '../hud/LevelSplash';
+import { ScreenFx } from '../hud/ScreenFx';
 import { Pacing } from './overworld/Pacing';
 import {} from '../systems/places';
 import type { Menu } from '../hud/Menu';
@@ -154,6 +158,7 @@ export class OverworldScene implements Scene {
   private partnerArrows = new PartnerArrows();
   private banner = new AreaBanner();
   private levelSplash = new LevelSplash();
+  private screenFx = new ScreenFx();
   private storyUi!: StoryUi; // what the local player is told and shown about their quests
   private interact!: Interactions; // what the action key does
   private input!: LocalInput; // this keyboard's controls as a Command
@@ -161,6 +166,8 @@ export class OverworldScene implements Scene {
   private atlas = new Atlas(); // what the players have seen of each zone, for the map
   private dayClock = new DayClock(); // the hour comes from the wall clock, so co-op players agree with nothing sent
   private night = new NightLayer();
+  private dark = new DarknessLayer();
+  private glow = new LightGlow();
   /** The solo game's save in the browser. */
   readonly persistence: Persistence;
   /** The "level up" splash (watches the hero's level). */
@@ -286,6 +293,8 @@ export class OverworldScene implements Scene {
     this.interact.onTalk = (entity) => this.epics.talked(entity); // a saga's person has been spoken to
     this.zones.root.addChildAt(this.storyUi.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
+    this.zones.root.addChildAt(this.dark, 2); // the underground's fog of war, over the night shade
+    this.zones.root.addChildAt(this.glow, 3); // the warm light of fires, over both
     ui.shop.onGearChange = () => arena.refreshLook();
     ui.shop.trader = () => this.pack.trader();
   }
@@ -410,6 +419,8 @@ export class OverworldScene implements Scene {
     this.persistence.update(dt);
     if (arena.local.dm) this.levelSplash.reset();
     else this.levelSplash.sync(this.hero.stats);
+    const { stats } = this.hero;
+    this.screenFx.sync(arena.local.dm ? 1 : stats.hp, stats.maxHp, arena.local.down, dt);
     this.pickups.update(dt, foeNear(arena.zone, arena.local));
     this.updateDm(dt);
     const online = arena.role !== 'solo';
@@ -515,9 +526,35 @@ export class OverworldScene implements Scene {
     const { arena } = this;
     const z = arena.zone;
     z.effects.update(dt);
-    this.night.update(
-      this.dayClock.sky(),
-      !z.data.indoor && enabled('dayNight', z.name),
+    const dusk = !z.data.indoor && enabled('dayNight', z.name);
+    this.night.update(this.dayClock.sky(), dusk, arena.screen.width, arena.screen.height);
+    const view = z.camera.view(arena.screen.width, arena.screen.height);
+    z.hearth.update(view, dusk && this.dayClock.sky() !== 0xffffff);
+    const underground = z.data.dark && enabled('darkness', z.name);
+    const lights = z.hearth.lights(view, arena.clock);
+    this.glow.update(
+      lights,
+      view,
+      underground ? 1 : dusk ? glowStrength(this.dayClock.sky()) : 0,
+      arena.screen.width,
+      arena.screen.height,
+    );
+    this.dark.update(
+      underground
+        ? {
+            zone: z.name,
+            data: z.data,
+            view,
+            heroes: arena
+              .players()
+              .filter((p) => !p.dm && p.body.visible)
+              .map((p) => p.body),
+            radius: setting('darkness', 'radius', z.name),
+            lights,
+            dim: setting('darkness', 'dim', z.name),
+            memory: flag('darkness', 'memory', z.name),
+          }
+        : null,
       arena.screen.width,
       arena.screen.height,
     );
@@ -621,7 +658,8 @@ export class OverworldScene implements Scene {
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
     const raw = this.input.command(dt, reading);
     this.possession.drive(raw, reading); // a possessed foe takes the DM's keys; the DM's own body stands still
-    const cmd = this.possession.active ? NO_COMMAND : reading ? { ...raw, dx: 0, dy: 0 } : raw;
+    const down = arena.local.down !== null; // a hero on the ground does nothing (systems/downfall.ts)
+    const cmd = this.possession.active || down ? NO_COMMAND : reading ? { ...raw, dx: 0, dy: 0 } : raw;
     const guests = [...arena.remotes.values()].map((p) => ({ p, cmd: this.host.command(p) }));
     const commandOf = (p: Player) => (p === arena.local ? cmd : (guests.find((g) => g.p === p)?.cmd ?? NO_COMMAND));
     const here = arena.zone;
@@ -644,7 +682,7 @@ export class OverworldScene implements Scene {
             sim.weather(dt);
             for (const p of present) {
               const combo = commandOf(p).combo;
-              if (combo !== undefined) sim.combo(p, combo);
+              if (combo !== undefined && p.down === null) sim.combo(p, combo);
             }
           }
           if (z !== here) z.effects.update(dt); // the local zone's effects are updated with the rest of what is drawn
@@ -666,7 +704,9 @@ export class OverworldScene implements Scene {
     }
     if (!menu.open && !shop.open && !trade.open && !busy)
       this.interact.handleAction(cmd.act, () => this.interact.act(arena.local));
-    if (!stopped) for (const g of guests) if (g.cmd.act) arena.inZone(arena.zoneOf(g.p), () => this.interact.act(g.p));
+    if (!stopped)
+      for (const g of guests)
+        if (g.cmd.act && g.p.down === null) arena.inZone(arena.zoneOf(g.p), () => this.interact.act(g.p));
     if (!reading) this.zones.checkDoors(arena.local);
     for (const g of guests) this.zones.checkDoors(g.p);
     this.possession.follow();
@@ -684,14 +724,15 @@ export class OverworldScene implements Scene {
     for (const crop of this.arena.crops) crop.grow(dt, false); // only the host says when a plot is ripe
     const busy = this.zones.transition.busy;
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
-    const cmd = this.input.command(dt, reading);
+    const fallen = this.arena.local.down !== null; // told by the host (`FLAG.down`): nothing to send while on the ground
+    const cmd = fallen ? NO_COMMAND : this.input.command(dt, reading);
     this.interact.trackGuestDrink(cmd); // a guest's own idea of whether it is drinking
     if (!menu.open && !shop.open && !trade.open && !busy)
       this.interact.handleAction(cmd.act, () => this.guest.pressAction());
     if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);
     this.guest.sendInput(
       dt,
-      reading ? 0 : packKeys(cmd.dx, cmd.dy),
+      reading || fallen ? 0 : packKeys(cmd.dx, cmd.dy),
       cmd.aim,
       this.desk.voteInput,
       this.desk.requestInput,

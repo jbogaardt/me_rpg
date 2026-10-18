@@ -7,6 +7,8 @@ import { Barrel } from '../entities/Barrel';
 import { Chest } from '../entities/Chest';
 import { Crop, type CropMemory } from '../entities/Crop';
 import { Effects } from '../entities/effects';
+import { Hearth } from '../entities/Hearth';
+import { particleEffect } from '../entities/ParticleEffect';
 import type { GroundItem } from '../entities/GroundItem';
 import { Pet } from '../entities/Pet';
 import { QuestSite } from '../entities/QuestSite';
@@ -84,6 +86,8 @@ export class ZoneState {
   readonly effects: Effects;
   /** Footprints and falling leaves: only in the open air, and only worth updating where someone is looking. */
   readonly ambient: Ambient | null;
+  /** The smoke, bubbles and drips this map's fires, lava and caves give off (visual only, drawn near the screen). */
+  readonly hearth: Hearth;
   readonly weatherLayer: WeatherLayer | null;
   /** This biome's own weather (precipitation and wind by its climate); rooms have none. Host and solo roll it, a guest is told. */
   readonly weather: Weather | null;
@@ -184,9 +188,11 @@ export class ZoneState {
     this.camera = new Camera(this.world);
     this.collision = new Collision(data.width, data.height, data.collision);
     this.effects = new Effects(this.world.layer);
+    this.hearth = new Hearth(this.effects, data);
     this.pondBeds = new PondBeds(data, this.world);
     this.world.layer.addChild(this.pondBeds);
     this.ambient = data.indoor ? null : new Ambient(this.world.layer, data);
+    if (this.ambient) this.ambient.onStep = (name, x, y) => this.effects.add(particleEffect(name, x, y));
     this.weatherLayer = data.indoor ? null : new WeatherLayer(this.world.layer);
     // No sky in a room. A campaign (or a Dungeon Master) without weather keeps it clear and still (Simulation.weather
     // asks systems/capabilities.ts each tick, so switching it on or off takes effect at once).

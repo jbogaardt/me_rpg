@@ -5,6 +5,7 @@ import { particleEffect } from '../../entities/ParticleEffect';
 import { CELL } from '../../map/types';
 import type { WorldEvent } from '../../net/protocol';
 import { effectColor } from '../../systems/looks';
+import { FX_SHAKE } from '../../systems/feel';
 import type { ParticleEffectName } from '../../systems/particleEffects';
 import type { Arena } from './Arena';
 import { BOLT_HEIGHT, BOLT_RANGE, MELEE_REACH } from './constants';
@@ -26,8 +27,13 @@ export class Visuals {
   }
 
   /** A one-shot particle effect. `dir` is an angle in radians. */
-  particles(name: ParticleEffectName, x: number, y: number, dir?: number) {
+  particles(name: ParticleEffectName, x: number, y: number, dir?: number, p?: number) {
     this.arena.effects.add(particleEffect(name, x, y, { dir }));
+    if (name === 'cheer') this.arena.playerNumbered(p)?.body.celebrate();
+    if (name === 'fall') this.arena.playerNumbered(p)?.body.play('hurt');
+    const shake = FX_SHAKE[name];
+    if (shake && (!shake.own || p === this.arena.local.slot))
+      this.arena.zone.camera.shake(shake.strength, shake.seconds);
   }
 
   /** A sword swing by a player standing at (x, y) facing `dir`: the arc, and leaves shaken from any canopy it reaches. */
@@ -145,7 +151,7 @@ export class Visuals {
         this.text(e.x, e.y, e.text, e.color);
         break;
       case 'fx':
-        this.particles(e.name, e.x, e.y, e.dir);
+        this.particles(e.name, e.x, e.y, e.dir, e.p);
         if (e.name === 'heroHurt') arena.playerNumbered(e.p)?.body.play('hurt');
         if (e.name === 'castGlow') arena.playerNumbered(e.p)?.body.play('cast'); // a combo went off
         break;

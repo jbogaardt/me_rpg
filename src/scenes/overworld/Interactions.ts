@@ -303,7 +303,9 @@ export class Interactions {
       return;
     }
     chest.setOpen(true);
-    sim.fx('levelUp', x, y + 6);
+    sim.fx('sparkle', x, y + 6);
+    sim.fx('coinPop', x, y + 10);
+    if (found.gear) sim.fx('lootBeam', x, y + 14); // a piece of gear: a column of light as it comes out
     sim.text(x, y - 14, found.text, 0xffd34d);
     if (found.gear) arena.refreshLook(p);
     if (found.levels) {

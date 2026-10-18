@@ -162,6 +162,8 @@ export interface MapData {
   doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
   ports: PortSpawn[]; // doorways the content binds to other maps' ports (left out of the file when there are none)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
+  /** Underground and unlit (a cave, a sewer, a crypt): the `darkness` capability fogs it round the lights (entities/DarknessLayer.ts). */
+  dark: boolean;
   /** The zone's weather (a key of CLIMATES in systems/weather.ts): what falls and blows there. Rooms have none. */
   climate: string;
 }
@@ -239,6 +241,7 @@ function unpacked(json: unknown): MapData {
       return { ...p, h, side: p.side ?? portSide(p.col, p.row, p.w, h, d.width!, d.height!) };
     }),
     indoor: d.indoor ?? false,
+    dark: d.dark ?? false,
     climate: d.climate ?? 'temperate',
   };
 }

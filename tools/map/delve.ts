@@ -118,6 +118,7 @@ export class Delve {
       throw new Error(`the grid is ${this.width}x${this.height}, the zone ${z.width}x${z.height}`);
     }
     z.indoor();
+    z.dark();
     z.fill(theme.floor);
     for (let row = 0; row < this.height; row++) {
       for (let col = 0; col < this.width; col++) {

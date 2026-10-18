@@ -12,6 +12,7 @@ import { SKILL_IDS, SKILLS } from '../systems/skills';
 import { CapabilityTable, checkCapabilities, DIALS, type CapabilitySpec, type Dial } from '../systems/capabilities';
 import { BONUS_KEYS, isGem, type Bonus, type BonusKey } from '../systems/gems';
 import { onlyFeeds } from '../systems/needs';
+import { MOB_DEATHS, type MobDeath } from '../systems/particleEffects';
 import { CROPS } from '../systems/crops';
 import { SLOTS, type Outfit } from '../sprites/doll';
 import { GEAR_SLOTS, type GearSlot, type Item } from '../systems/combat';
@@ -67,6 +68,8 @@ export interface EntityDef {
   scale?: number;
   /** A named boss (mobs only): placed once in its zone, a `boss` objective's target; see `systems/bosses.ts`. */
   boss?: boolean;
+  /** How a mob goes when it dies (`MOB_DEATHS` in systems/particleEffects.ts); absent: the plain poof. */
+  death?: MobDeath;
   stats?: EntityStats; // mobs only (required for them)
   behavior?: EntityBehavior; // mobs only
   /** What an NPC placed by a scenario says when the player talks to it. */
@@ -274,6 +277,12 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
       def.roam = r.number(e.roam, `${path}.roam`, 1);
       if (def.roam > MAX_ROAM_CELLS) r.fail(`${path}.roam`, `must be at most ${MAX_ROAM_CELLS} cells`);
     }
+  }
+  if (e.death !== undefined) {
+    if (def.type === 'npc') r.fail(`${path}.death`, 'only a mob dies');
+    else if (typeof e.death !== 'string' || !(MOB_DEATHS as readonly string[]).includes(e.death))
+      r.fail(`${path}.death`, `must be one of ${MOB_DEATHS.join(', ')}`);
+    else def.death = e.death as MobDeath;
   }
   if (e.boss !== undefined) {
     if (e.boss !== true || e.type === 'npc') r.fail(`${path}.boss`, 'is true on a mob, or left out');
@@ -1083,6 +1092,7 @@ export function toMobKind(def: EntityDef): MobKind {
   };
   if (def.scale !== undefined) kind.scale = def.scale;
   if (def.boss) kind.named = true;
+  if (def.death) kind.death = def.death;
   if (b.windup !== undefined) kind.windup = b.windup;
   if (b.recover !== undefined) kind.recover = b.recover;
   if (b.stagger !== undefined) kind.stagger = b.stagger;

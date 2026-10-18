@@ -6,6 +6,11 @@ import { releaseSheet } from '../sprites/Wardrobe';
 
 const DIRECTIONS: Direction[] = ['up', 'left', 'down', 'right'];
 
+/** How long a victory pose lasts, the cast frames it rises through (the last is held), and its hop height (px) at a time. */
+const CHEER_MS = 1300;
+const CHEER_COLS = [1, 2, 3, 4];
+const hop = (ms: number) => Math.abs(Math.sin(ms / 110)) * 5 * Math.max(0, 1 - ms / CHEER_MS);
+
 type FrameSet = Record<AnimName, Record<Direction, Texture[]>>;
 const frameCache = new WeakMap<Texture, FrameSet>();
 
@@ -52,6 +57,7 @@ export class Character extends Container {
   private loopAnim: AnimName = 'idle';
   private action: { anim: AnimName; time: number; ms: number } | null = null;
   private held: { anim: AnimName; col: number } | null = null;
+  private cheer: { time: number; face: Direction } | null = null;
   private auraTime = 0;
   private auraColor = 0x4de3ff;
   private tag: BitmapText | null = null;
@@ -126,6 +132,15 @@ export class Character extends Container {
     this.held = null;
   }
 
+  /**
+   * A victory pose: turn to the viewer, throw the hands up (the spell-cast frames, held at the top) and hop, for
+   * `CHEER_MS`; the facing it had comes back after. No art of its own: it is the cast row, held and bounced.
+   */
+  celebrate() {
+    this.cheer = { time: 0, face: this.cheer?.face ?? this.direction };
+    this.direction = 'down';
+  }
+
   /** Is a one-shot animation still playing? */
   get acting(): boolean {
     return this.action !== null;
@@ -136,6 +151,7 @@ export class Character extends Container {
     this.auraTime += dtMs;
     if (this.withAura) this.drawAura(this.auraTime);
     const { anim, col } = this.pose(dtMs, moving);
+    if (this.cheer) this.sprite.position.y = -hop(this.cheer.time);
     this.shownAnim = anim;
     this.shownCol = col;
     this.sprite.texture = this.frame(anim, col);
@@ -143,6 +159,15 @@ export class Character extends Container {
   }
 
   private pose(dtMs: number, moving: boolean): { anim: AnimName; col: number } {
+    if (this.cheer) {
+      const c = this.cheer;
+      c.time += dtMs;
+      if (c.time < CHEER_MS && !moving)
+        return { anim: 'cast', col: CHEER_COLS[Math.min(CHEER_COLS.length - 1, Math.floor(c.time / 80))] ?? 4 };
+      this.direction = c.face;
+      this.cheer = null;
+      this.sprite.position.y = 0;
+    }
     const act = this.action;
     if (act) {
       act.time += dtMs;

@@ -3,6 +3,7 @@
   "entities": {
     "shade": {
       "type": "mob",
+      "death": "mobWisp",
       "name": "Shade",
       "notes": "The original test enemy, now a caster: hangs back and hurls slow violet bolts you can sidestep. Level 1.",
       "sprite": {
@@ -59,6 +60,7 @@
     },
     "frostbound": {
       "type": "mob",
+      "death": "mobDust",
       "name": "Frostbound",
       "notes": "Frost enemy: an armoured, icy skeleton, tuned for roughly levels 5-7.",
       "sprite": {
@@ -137,6 +139,7 @@
     },
     "skeleton": {
       "type": "mob",
+      "death": "mobDust",
       "name": "Skeleton",
       "notes": "Undead archer: keeps its distance and flicks bone shards, slowly but hard.",
       "sprite": {
@@ -166,6 +169,7 @@
     },
     "zombie": {
       "type": "mob",
+      "death": "mobSplat",
       "name": "Zombie",
       "notes": "Shambling and tanky for its level, but very slow.",
       "sprite": {
@@ -187,6 +191,7 @@
     },
     "mummy": {
       "type": "mob",
+      "death": "mobDust",
       "name": "Mummy",
       "notes": "Desert enemy: a mummy that sears you with its sceptre from a distance and bludgeons you up close. Levels 4-6.",
       "sprite": {
@@ -297,6 +302,7 @@
     },
     "cultist": {
       "type": "mob",
+      "death": "mobWisp",
       "name": "Cultist",
       "notes": "A hooded ranged fighter for the level 10 trial.",
       "sprite": {
@@ -354,6 +360,7 @@
     },
     "wraith": {
       "type": "mob",
+      "death": "mobWisp",
       "name": "Wraith",
       "notes": "A hooded caster for the second trial: slow blue bolts that hurt a level 15 hero.",
       "sprite": {
@@ -383,6 +390,7 @@
     },
     "hexer": {
       "type": "mob",
+      "death": "mobWisp",
       "name": "Hexer",
       "notes": "The Mirewater's marsh witch: stays back in the reeds and flings murky bolts. Levels 6-8.",
       "sprite": {
@@ -413,6 +421,7 @@
     },
     "bogGhoul": {
       "type": "mob",
+      "death": "mobSplat",
       "name": "Bog Ghoul",
       "notes": "A bloated swamp corpse: slow, soaks up blows and hits hard. Levels 6-8.",
       "sprite": {
@@ -492,6 +501,7 @@
     },
     "frostWarden": {
       "type": "mob",
+      "death": "mobDust",
       "name": "Frost Warden",
       "notes": "The deep Frostlands' sentry: a frostbound in a great helm and a kite shield. Levels 7-9.",
       "sprite": {
@@ -852,6 +862,7 @@
     },
     "palelurker": {
       "type": "mob",
+      "death": "mobWisp",
       "name": "The Pale Lurker",
       "notes": "A story boss of the Greenwood (quest 'glade'): the Shade that wounded Captain Hale. A tougher, bigger Shade that hangs back and hurls slow bolts. Levels 2-3.",
       "scale": 1.25,
@@ -999,6 +1010,7 @@
     },
     "paleWarden": {
       "type": "mob",
+      "death": "mobDust",
       "boss": true,
       "name": "The Pale Warden",
       "notes": "The Barrow Deep's boss (saga 'barrow_deep'): the first watchman of the Barrow Lands, still keeping his post. Made for a level 14 hero.",
@@ -1187,6 +1199,7 @@
     },
     "slime": {
       "type": "mob",
+      "death": "mobSplat",
       "name": "Green Slime",
       "notes": "Level 1 fodder: slow, soft and easy to read; wobbles toward you and bumps.",
       "sprite": {
@@ -1275,6 +1288,7 @@
     },
     "haunt": {
       "type": "mob",
+      "death": "mobWisp",
       "name": "Haunt",
       "notes": "Level 4-7: a hooded ghost that drifts after the living and shrieks when it strikes.",
       "sprite": {
@@ -1324,6 +1338,7 @@
     },
     "gutworm": {
       "type": "mob",
+      "death": "mobSplat",
       "name": "Gutworm",
       "notes": "Level 6-9: a big burrowing worm; slow, with a crushing lunge and hide thick enough to shrug off a first hit.",
       "sprite": {

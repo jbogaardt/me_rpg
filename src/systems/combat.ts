@@ -7,6 +7,7 @@ import { newNeeds, type Needs } from './needs';
 import type { Focus } from './spells';
 import type { SkillId } from './skills';
 import type { Gem } from './gems';
+import type { MobDeath } from './particleEffects';
 
 export interface Stats {
   level: number;
@@ -149,6 +150,8 @@ export interface MobKind {
   level?: number;
   /** A boss of the Dungeon Master's quest (systems/dmBoss.ts): made for the quest, not a kind of the content, and it does not respawn. */
   boss?: boolean;
+  /** How it goes when it dies (`MOB_DEATHS`): crumbling bones, a splat, a wisp. Absent: the plain poof. */
+  death?: MobDeath;
   /** A named boss of the content (entities.json `boss`, systems/bosses.ts): placed once, never respawns, mends when the party leaves it. */
   named?: boolean;
 }

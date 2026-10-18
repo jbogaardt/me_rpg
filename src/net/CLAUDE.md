@@ -68,3 +68,4 @@ packet can't drop a click. Only pack items are offered; the trade ends if player
 
 Pure parts have unit tests (`session.test.ts` drives the whole seat lifecycle with a fake link and relay);
 `e2e/multiplayer.spec.ts` connects real browser contexts through a local copy of the relay.
+- **A fallen hero** (`FLAG.down`, `docs/effects.md`): the host runs the fall (`Player.down`), a guest sees the flag, lies the body down and runs its own clock for the fade; it sends no keys meanwhile. Foe-death, cheer and shake effects are plain `fx` events.

@@ -88,6 +88,16 @@ export const CAPABILITIES = {
     off: 'Always day: the night shade never falls.',
     scope: 'zone',
   },
+  darkness: {
+    name: 'Underground darkness',
+    off: 'Caves, sewers and crypts are lit like the open air: no fog of war, no pools of torchlight.',
+    scope: 'zone',
+    settings: {
+      radius: { about: 'How far (in cells) the light each hero carries reaches.', default: 5, min: 2, max: 20 },
+      dim: { about: 'How dark the unlit ground is: 0.3 a gloom, 1 pitch black.', default: 0.92, min: 0.3, max: 1 },
+      memory: { about: 'Ground already seen stays faintly visible.', default: true },
+    },
+  },
   carrying: {
     name: 'Carrying barrels',
     off: 'Barrels stay where they stand: they still block, but cannot be picked up or moved.',

@@ -30,6 +30,7 @@ describe('parseMap', () => {
       signs: [],
       doors: [],
       indoor: false,
+      dark: false,
       climate: 'temperate',
     });
   });

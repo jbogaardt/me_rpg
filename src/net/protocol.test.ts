@@ -5,6 +5,7 @@ import { MAX_GROUND } from '../systems/inventory';
 import { MAX_SAY_CUED } from '../systems/cues';
 import { fitEvents, SNAP_BUDGET } from './feed';
 import {
+  FX_NAMES,
   pondsFromWire,
   pondsWire,
   decodeEvent,
@@ -392,7 +393,7 @@ describe('messages', () => {
       { ...snap, players: [[-1, 1, 2, 0, 0]] },
       { ...snap, players: [[0, 1, 2, 0]] }, // the old four-number shape
       { ...snap, players: [[0, 1, 2, 9, 0]] }, // direction out of range
-      { ...snap, players: [[0, 1, 2, 0, 200]] }, // unknown flags
+      { ...snap, players: [[0, 1, 2, 0, 300]] }, // unknown flags
       { ...snap, players: [[0, Infinity, 2, 0, 0]] },
       { ...snap, mobs: [[0, 1, 2, 0, 99, 5, 0, 0]] }, // unknown state
       { ...snap, mobs: [[0, 1, 2, 0, 0, 5, 0]] }, // short tuple (no mob number)
@@ -415,7 +416,7 @@ describe('messages', () => {
       { ...snap, events: [[1, 3, 0, 0, 1, 0]] }, // arrow: no range
       { ...snap, events: [[1, 3, 0, 0, 1, 0, -5]] },
       { ...snap, events: [[1, 1, 0, 0, 1, 0, -1, 0x1000000]] }, // bolt: colour out of range
-      { ...snap, events: [[1, 5, 12, 0, 0]] }, // fx: no such one-shot effect (continuous ones stay local)
+      { ...snap, events: [[1, 5, FX_NAMES.length, 0, 0]] }, // fx: no such one-shot effect (continuous ones stay local)
       { ...snap, events: [[1, 5, 'hitSpark', 0, 0]] },
       { ...snap, events: [[1, 5, 0, 0, 0, 'up']] },
       { ...snap, events: Array.from({ length: 65 }, (_, i) => [i, 6, 0]) },
