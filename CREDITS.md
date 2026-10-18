@@ -28,11 +28,13 @@ Zimmerman (Sharm), Leonard Pabin, Chris Phillips, Barbara Rivera and Talosaurus.
 licence is in [`art/lpc_trees/CREDITS-trees.txt`](art/lpc_trees/CREDITS-trees.txt), kept with the art. Selected trees and
 bushes are cut out and repacked by `tools/map/trees.ts`; the frost and swamp sheets are recolours of the green one.
 
-## Shop buildings (`public/tilesets/town.png`, source in `art/town_rpg_pack/`)
+## Shop buildings (`public/tilesets/town.png`, source in `art/lpc_city/`)
 
-"Town RPG Pack" by Luis Zuno ([@ansimuz](https://ansimuz.com)), [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
-(public domain; credit is not required but is given). The inn and the tall house are cut out of the pack's tile map,
-scaled 2x, recoloured and given doors and emblems by `tools/map/town.ts`.
+Composed by `tools/map/town.ts` from "[LPC] City outside" (https://opengameart.org/content/lpc-city-outside), CC-BY-SA 3.0 /
+GPL 3.0, by Reemax (Tuomo Untinen), Xenodora, Sharm (Lanea Zimmerman), Johann C, Guido Bos (doors), Hyptosis (windows) and
+Johannes Sjolund; the full list is in [`art/lpc_city/CREDITS-city.txt`](art/lpc_city/CREDITS-city.txt), kept with the art.
+Roofs, walls, windows and doors are cut from the pack's sheet on its own pixels and assembled into six shops; the roofs
+of four are recoloured. (Earlier shops were cut from the CC0 "Town RPG Pack" by Luis Zuno; they were replaced to match the LPC look.)
 
 ## Crops (`public/tilesets/crops.png`, source in `art/lpc_crops/`)
 

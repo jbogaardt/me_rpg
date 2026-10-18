@@ -1,43 +1,47 @@
-// Builds public/tilesets/town.png: the shop buildings, cut from the CC0 "Town RPG Pack" by Luis Zuno (ansimuz) in
-// art/town_rpg_pack/. The pack is drawn on a 16px grid and the map on a 32px one, so every piece is doubled
-// (nearest neighbour). The pack has one big inn and one tall house, so each is cut out and turned into two shops: the
-// roof is recoloured, the tall house gets the inn's door (it has none), and a small emblem replaces the "INN" sign.
+// Builds public/tilesets/town.png: the shop buildings, composed from the LPC "City outside" pack (Reemax, Hyptosis, Guido Bos,
+// Sharm and others, CC-BY-SA 3.0 / GPL 3.0; art/lpc_city/). The pack is drawn on the map's own 32px grid, so pieces are
+// cut and placed pixel for pixel. Four wide halls (smithy, apothecary, wizard, tavern) are a flat roof over a wall with
+// windows and a double door; two narrow houses (armory, ranger) are a gable over a wall with one door. Roofs are recoloured
+// so each trade has its own colour; a shop's sign is the hanging board beside its door (SIGN_PREFABS in catalog.ts).
 // Run with `npm run tilesets`; the output is committed. Coordinates of each building are in catalog.ts (BUILDINGS).
 
 import path from 'node:path';
 import { readPng, ROOT, writePng, type Image } from './image';
 import { BUILDINGS } from './catalog';
 
-const SRC = readPng(path.join(ROOT, 'art/town_rpg_pack/transparent-bg-tiles.png'));
+const SRC = readPng(path.join(ROOT, 'art/lpc_city/city_outside.png'));
 const OUT = path.join(ROOT, 'public/tilesets/town.png');
 
 type RGB = [number, number, number];
 
 const blank = (width: number, height: number): Image => ({ width, height, data: Buffer.alloc(width * height * 4) });
 
-/** Copy the opaque pixels of a rect of `from` onto `to` at (dx, dy). */
-function blit(to: Image, from: Image, sx: number, sy: number, w: number, h: number, dx: number, dy: number) {
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = ((sy + y) * from.width + sx + x) * 4;
-      if (from.data[i + 3] === 0) continue;
-      const j = ((dy + y) * to.width + dx + x) * 4;
-      from.data.copy(to.data, j, i, i + 4);
+/** A rectangle of the pack as an image of its own. */
+function cut(x: number, y: number, w: number, h: number): Image {
+  const out = blank(w, h);
+  for (let yy = 0; yy < h; yy++)
+    SRC.data.copy(out.data, yy * w * 4, ((y + yy) * SRC.width + x) * 4, ((y + yy) * SRC.width + x + w) * 4);
+  return out;
+}
+
+/** Draw the opaque pixels of `src` over `dst` at (dx, dy). */
+function over(dst: Image, src: Image, dx: number, dy: number) {
+  for (let y = 0; y < src.height; y++)
+    for (let x = 0; x < src.width; x++) {
+      const tx = dx + x;
+      const ty = dy + y;
+      if (tx < 0 || ty < 0 || tx >= dst.width || ty >= dst.height) continue;
+      const i = (y * src.width + x) * 4;
+      if (src.data[i + 3] === 0) continue;
+      src.data.copy(dst.data, (ty * dst.width + tx) * 4, i, i + 4);
     }
-  }
 }
 
-function setPixel(img: Image, x: number, y: number, [r, g, b]: RGB) {
-  const i = (y * img.width + x) * 4;
-  img.data[i] = r;
-  img.data[i + 1] = g;
-  img.data[i + 2] = b;
-  img.data[i + 3] = 255;
-}
-
-function getPixel(img: Image, x: number, y: number): RGB {
-  const i = (y * img.width + x) * 4;
-  return [img.data[i], img.data[i + 1], img.data[i + 2]];
+/** `piece` repeated across w x h. */
+function tiled(piece: Image, w: number, h: number): Image {
+  const out = blank(w, h);
+  for (let y = 0; y < h; y += piece.height) for (let x = 0; x < w; x += piece.width) over(out, piece, x, y);
+  return out;
 }
 
 function toHsl([r, g, b]: RGB): [number, number, number] {
@@ -65,71 +69,72 @@ function fromHsl(h: number, s: number, l: number): RGB {
   return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255];
 }
 
-/** Recolour the roof: the warm tiles (red-brown and orange, including the dark ones) in rows y0..y1 get a new hue. */
-function recolorRoof(img: Image, y0: number, y1: number, hue: number, sat: number) {
-  for (let y = y0; y < y1; y++) {
-    for (let x = 0; x < img.width; x++) {
-      const i = (y * img.width + x) * 4;
-      if (img.data[i + 3] === 0) continue;
-      const [h, s, l] = toHsl(getPixel(img, x, y));
-      if (s < 0.15 || !(h < 50 || h > 300)) continue; // walls are green-grey, the dark gable is green
-      const [r, g, b] = fromHsl(hue + (h > 300 ? h - 360 : h) * 0.3, Math.min(1, s * sat), l);
-      setPixel(img, x, y, [Math.round(r), Math.round(g), Math.round(b)]);
-    }
+/** `img` with every hue turned by `turn` degrees and saturation scaled by `sat`. */
+function recoloured(img: Image, turn: number, sat: number): Image {
+  const out = { ...img, data: Buffer.from(img.data) };
+  for (let i = 0; i < out.data.length; i += 4) {
+    if (out.data[i + 3] === 0) continue;
+    const [h, s, l] = toHsl([out.data[i]!, out.data[i + 1]!, out.data[i + 2]!]);
+    const [r, g, b] = fromHsl(h + turn, Math.min(1, s * sat), l);
+    out.data[i] = Math.round(r);
+    out.data[i + 1] = Math.round(g);
+    out.data[i + 2] = Math.round(b);
   }
+  return out;
 }
 
-import { ACCENT, EMBLEMS, INK, LIGHT } from './emblems';
+// Pieces of the pack (source pixels). Roof tiles are 96x96 and repeat sideways; walls have a body that repeats and a base.
+const ROOF = { red: cut(96, 128, 96, 96), slate: cut(0, 128, 96, 96) };
+const WALL = {
+  tan: { body: cut(576, 192, 96, 80), base: cut(576, 272, 96, 16) },
+  stone: { body: cut(448, 288, 96, 64), base: cut(448, 352, 96, 32) },
+  brick: { body: cut(192, 96, 96, 64), base: cut(192, 160, 96, 32) },
+};
+const GABLE = { slate: cut(32, 224, 96, 160), red: cut(320, 224, 96, 160) }; // the middle 96px of each 160px gable
+const WINDOW = cut(640, 32, 32, 32); // dark panes with a flower box
+const DOUBLE_DOOR = cut(672, 16, 64, 48);
+const SINGLE_DOOR = cut(704, 16, 32, 48);
 
-/** Paint an emblem into the awning strip of a door (23x7 px at (x, y)), replacing the inn's red stripes. */
-function paintEmblem(img: Image, x: number, y: number, w: number, h: number, name: string, back = LIGHT, ink = INK) {
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) setPixel(img, x + i, y + j, back);
-  const rows = EMBLEMS[name];
-  if (!rows) throw new Error(`No emblem for ${name}`);
-  const ox = x + Math.floor((w - 8) / 2);
-  const oy = y + Math.floor((h - rows.length) / 2);
-  rows.forEach((row, j) =>
-    [...row].forEach((c, i) => {
-      if (c === '#' || c === 'o') setPixel(img, ox + i, oy + j, c === '#' ? ink : back);
-      else if (c === 'x' || c === '>') setPixel(img, ox + i, oy + j, ink === INK ? (ACCENT[name] ?? INK) : ink);
-    }),
-  );
+type Wall = keyof typeof WALL;
+
+/** A wall `w` x `h` standing on the ground line: the body tiled above, the base under it. */
+function wall(kind: Wall, w: number, h: number): Image {
+  const { body, base } = WALL[kind];
+  const out = blank(w, h);
+  over(out, tiled(body, w, h - base.height), 0, 0);
+  over(out, tiled(base, w, base.height), 0, h - base.height);
+  return out;
 }
 
-// Source rects in the pack (1x pixels). The hall's door sits at x 176-207; its awning is the 23x7 strip above the door.
-const HALL = { x: 144, y: 10, w: 96, h: 108 }; // the inn: roof rows y 10-47, wall below, porch step at the bottom
-const TOWER = { x: 288, y: 12, w: 48, h: 132 }; // the tall house (no door of its own)
-const DOOR = { x: 176, y: 80, w: 32, h: 38 }; // door, posts and awning (rows 0-31) plus the step (rows 32-37)
-const AWNING = { x: 180, y: 81, w: 23, h: 7 }; // inside DOOR's region, source coordinates
-
-function hall(name: string, hue: number, sat: number): Image {
-  const img = blank(96, 112);
-  blit(img, SRC, HALL.x, HALL.y, HALL.w, HALL.h, 0, 4);
-  recolorRoof(img, 4, 42, hue, sat);
-  paintEmblem(img, AWNING.x - HALL.x, AWNING.y - HALL.y + 4, AWNING.w, AWNING.h, name);
-  // The hanging "INN" board beside the door: wipe the letters and show the emblem again, light on wood.
-  const board = { x: 157 - HALL.x, y: 89 - HALL.y + 4, w: 10, h: 6 };
-  paintEmblem(img, board.x, board.y, board.w, board.h, name, [150, 112, 80], LIGHT);
-  return img;
+/** A wide hall, 192x224: a flat roof (96 high), then the wall with two windows and a double door at x 64-128. */
+function hall(roof: Image, kind: Wall): Image {
+  const out = blank(192, 224);
+  over(out, wall(kind, 192, 128), 0, 96);
+  const base = WALL[kind].base.height;
+  over(out, DOUBLE_DOOR, 64, 224 - base - 48 + 6);
+  for (const x of [16, 144]) over(out, WINDOW, x, 112);
+  over(out, tiled(roof, 192, 96), 0, 0);
+  return out;
 }
 
-function tower(name: string, hue: number, sat: number): Image {
-  const img = blank(48, 144);
-  blit(img, SRC, TOWER.x, TOWER.y, TOWER.w, TOWER.h, 0, 6);
-  // Replace the ground-floor window with the inn's door: its wall ends where the tower's does (row 138).
-  blit(img, SRC, DOOR.x, DOOR.y, DOOR.w, DOOR.h, 8, 138 - 32);
-  recolorRoof(img, 6, 73, hue, sat);
-  paintEmblem(img, 8 + AWNING.x - DOOR.x, 106 + AWNING.y - DOOR.y, AWNING.w, AWNING.h, name);
-  return img;
+/** A narrow house, 96x288: a gable roof over a wall with a window above a single door at x 32-64. */
+function house(gable: Image, kind: Wall): Image {
+  const out = blank(96, 288);
+  const base = WALL[kind].base.height;
+  over(out, wall(kind, 96, 176), 0, 112);
+  over(out, SINGLE_DOOR, 32, 288 - base - 48 + 6);
+  over(out, WINDOW, 32, 288 - base - 48 + 6 - 48);
+  over(out, gable, 0, 0);
+  return out;
 }
 
 const pieces: Record<keyof typeof BUILDINGS, Image> = {
-  smithy: hall('smithy', 14, 1), // the inn's own terracotta
-  apothecary: hall('apothecary', 135, 0.55), // mossy green
-  wizard: hall('wizard', 275, 0.55), // violet
-  tavern: hall('tavern', 175, 0.5), // teal
-  armory: tower('armory', 215, 0.3), // slate
-  ranger: tower('ranger', 40, 0.85), // golden thatch
+  smithy: hall(ROOF.red, 'tan'), // the pack's own red roof
+  apothecary: hall(recoloured(ROOF.red, 100, 0.6), 'tan'), // mossy green
+  wizard: hall(recoloured(ROOF.slate, 40, 1.8), 'stone'), // violet slate
+  tavern: hall(recoloured(ROOF.slate, 0, 1), 'brick'), // the pack's blue-grey roof over red brick
+  armory: house(GABLE.slate, 'stone'),
+  ranger: house(recoloured(GABLE.red, 28, 0.9), 'brick'), // golden-brown
 };
 
 const width = Object.values(BUILDINGS).reduce((sum, b) => sum + b.w, 0);
@@ -137,13 +142,9 @@ const height = Math.max(...Object.values(BUILDINGS).map((b) => b.h));
 const sheet = blank(width, height);
 for (const [name, b] of Object.entries(BUILDINGS)) {
   const img = pieces[name as keyof typeof BUILDINGS];
-  for (let y = 0; y < b.h; y++) {
-    for (let x = 0; x < b.w; x++) {
-      const i = (Math.floor(y / 2) * img.width + Math.floor(x / 2)) * 4;
-      if (img.data[i + 3] === 0) continue;
-      img.data.copy(sheet.data, ((b.y + y) * width + b.x + x) * 4, i, i + 4);
-    }
-  }
+  if (img.width !== b.w || img.height !== b.h)
+    throw new Error(`${name}: drew ${img.width}x${img.height}, catalog says ${b.w}x${b.h}`);
+  over(sheet, img, b.x, b.y);
 }
 writePng(OUT, sheet);
 console.log(`wrote town.png (${width}x${height})`);

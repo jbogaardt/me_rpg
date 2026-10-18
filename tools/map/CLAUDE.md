@@ -47,10 +47,10 @@ sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs
 
 ## Shop buildings
 
-`town.png` (`town.ts`, from the CC0 Town RPG Pack in `art/`) holds the shop prefabs (`BUILDINGS` in `catalog.ts`),
+`town.png` (`town.ts`, composed from the LPC City outside pack in `art/lpc_city/`) holds the shop prefabs (`BUILDINGS` in `catalog.ts`),
 solid from the ground up; each has a door into its interior room (`interiors.ts`). Six shops stand in Lanternrest; the
-tavern (teal roof, tankard emblem, the Resting Lantern) is the one a breather is spent in. A new shop is a hall (an emblem
-in `emblems.ts`, a shelf and sign in `interior.ts`), a `SHOP_DOORS` entry, a room spec and its shop, keeper and node in the content.
+tavern (blue-grey roof over red brick, the Resting Lantern) is the one a breather is spent in. A new shop is a hall or house in `town.ts` (a hanging sign by its door; an emblem
+in `emblems.ts` and a shelf and sign in `interior.ts` for its room), a `SHOP_DOORS` entry, a room spec and its shop, keeper and node in the content.
 
 ## Ruins
 
