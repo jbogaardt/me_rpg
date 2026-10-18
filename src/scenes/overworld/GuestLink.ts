@@ -189,8 +189,8 @@ export class GuestLink {
     const { arena } = this;
     const { local } = arena;
     if (!this.predicted || !local.target || (local.flags & (FLAG.hidden | FLAG.down)) !== 0) return;
-    if (local.flags & FLAG.roll) {
-      this.rec.reset(); // the host is rolling this hero: it glides to where the host says, and walking resumes from there
+    if (local.flags & (FLAG.roll | FLAG.hop)) {
+      this.rec.reset(); // the host is rolling or hopping this hero: it glides to where the host says, and walking resumes from there
       return;
     }
     const { dx, dy } = unpackKeys(keys);
@@ -381,7 +381,7 @@ export class GuestLink {
 
   /** Draw a player from what the host last said (position glides; the rest comes from the flags). */
   private drawPlayer(p: Player, dt: number) {
-    const own = this.predicted && p === this.arena.local && (p.flags & FLAG.roll) === 0; // walked by `predict`, corrected by the host's acknowledgements
+    const own = this.predicted && p === this.arena.local && (p.flags & (FLAG.roll | FLAG.hop)) === 0; // walked by `predict`, corrected by the host's acknowledgements
     if (p.target && !own) glide(p.body, p.target.x, p.target.y, dt);
     const [fx, fy] = DIR_VEC[p.body.facing];
     const swinging = (p.flags & FLAG.swing) !== 0;
@@ -404,5 +404,6 @@ export class GuestLink {
     }
     p.body.animate(dt * 1000, own ? this.predMoving : (p.flags & FLAG.moving) !== 0);
     p.rollLook.step(p.body, (p.flags & FLAG.roll) !== 0, p === this.arena.local, dt, this.arena.effects);
+    p.hopLook.step(p.body, (p.flags & FLAG.hop) !== 0, p === this.arena.local, dt, this.arena.effects);
   }
 }

@@ -105,6 +105,15 @@ describe('the dodge roll (v58)', () => {
   });
 });
 
+describe('the ledge drop (v60)', () => {
+  it('shows a hopping hero in the snapshot flags (up to 1023), beside the older bits', () => {
+    expect(FLAG.hop).toBe(512);
+    const hopping = { ...snap, players: [[0, 1, 2, 0, FLAG.hop | FLAG.invuln]] };
+    expect(parseMessage(JSON.stringify(hopping))).toMatchObject({ players: [[0, 1, 2, 0, 514]] });
+    expect(parseMessage(JSON.stringify({ ...snap, players: [[0, 1, 2, 0, 1024]] }))).toBeNull();
+  });
+});
+
 describe('the split action key (v59)', () => {
   it('KEY.split is held and KEY.use toggles, apart from walking and the roll', () => {
     expect([KEY.split, KEY.use]).toEqual([32, 64]);
@@ -440,7 +449,7 @@ describe('messages', () => {
       { ...snap, players: [[-1, 1, 2, 0, 0]] },
       { ...snap, players: [[0, 1, 2, 0]] }, // the old four-number shape
       { ...snap, players: [[0, 1, 2, 9, 0]] }, // direction out of range
-      { ...snap, players: [[0, 1, 2, 0, 512]] }, // unknown flags
+      { ...snap, players: [[0, 1, 2, 0, 1024]] }, // unknown flags
       { ...snap, players: [[0, Infinity, 2, 0, 0]] },
       { ...snap, mobs: [[0, 1, 2, 0, 99, 5, 0, 0]] }, // unknown state
       { ...snap, mobs: [[0, 1, 2, 0, 0, 5, 0]] }, // short tuple (no mob number)
@@ -829,7 +838,7 @@ describe('the cue effects (v57)', () => {
       'itemMote',
       'questTick',
     ]);
-    expect(PROTOCOL_VERSION).toBe(59);
+    expect(PROTOCOL_VERSION).toBe(60);
   });
 
   it('round-trip on the wire, each with its player', () => {

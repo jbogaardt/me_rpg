@@ -303,6 +303,7 @@ export class Zones {
     p.vel = { x: 0, y: 0 };
     p.knock = { x: 0, y: 0 };
     p.pendingShot = null;
+    p.hop = null;
     p.grace = Math.max(p.grace, ARRIVE_GRACE);
     if (link && door?.dir) {
       // The map's coordinates jump ahead of the player here; their drawing eases up to them (`update`), so they walk on.

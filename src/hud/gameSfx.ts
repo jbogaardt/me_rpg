@@ -151,6 +151,14 @@ export const GAME_RECIPES: Record<GameSoundName, GameRecipe> = {
     noise: { filter: 'bandpass', from: 350, to: 1500, q: 0.9, gain: 0.8 },
     tones: [{ wave: 'sine', from: 170, to: 80, gain: 0.35 }],
   },
+  // Landing off a ledge: a soft low thud with a little scuff, quieter than a blow (no hit-pause goes with it).
+  land: {
+    dur: 0.14,
+    gain: 0.26,
+    pitch: 0.08,
+    noise: { filter: 'lowpass', from: 900, to: 300, gain: 0.45 },
+    tones: [{ wave: 'sine', from: 130, to: 60, gain: 0.7 }],
+  },
   pickup: { dur: 0.18, gain: 0.2, pitch: 0.06, tones: [{ wave: 'sine', from: 1320, to: 1760, gain: 1 }] },
 };
 

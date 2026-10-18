@@ -26,6 +26,7 @@ import {
 } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
 import { canRoll, moveRoll, rollDirection, rollWaitFor, startRoll } from '../../systems/roll';
+import { hopTick, watchLedge } from './Ledges';
 import { assistFacing } from '../../systems/meleeAssist';
 import {
   afterArmor,
@@ -254,6 +255,7 @@ export class Simulation {
       p.attackBuffer.clear();
       p.rollBuffer.clear();
       p.roll = null;
+      p.hop = null;
       p.swing = null;
       return this.downTick(p, dt);
     }
@@ -300,7 +302,7 @@ export class Simulation {
     if (p.hitstop > 0) {
       // Hit-pause: the hero holds mid-blow (no walking, the pose and swing hold) while cooldowns and i-frames run on.
       p.hitstop = tickPause(p.hitstop, dt);
-      if (!p.roll) {
+      if (!p.roll && !p.hop) {
         // (A roll in progress is not held by a pause of its own blow: its clock, and so its i-frame window, must run on.)
         p.moving = false;
         p.body.alpha = blinkAlpha(p.invuln);
@@ -309,8 +311,13 @@ export class Simulation {
     }
     // The dodge roll (systems/roll.ts): a buffered press starts it the first tick it is legal; it then replaces walking.
     if (p.rollBuffer.step(dt, this.rollWait(p, cmd), p.zone)) this.beginRoll(p, cmd);
-    if (p.roll) p.moving = this.rollTick(p, dt);
-    else p.moving = this.move(p, cmd, dt);
+    if (p.hop) p.moving = hopTick(p, cmd, dt);
+    else if (p.roll) p.moving = this.rollTick(p, dt);
+    else {
+      const beforeY = p.body.y;
+      p.moving = this.move(p, cmd, dt);
+      watchLedge(this.arena, p, cmd, beforeY, dt); // pushing south into a plateau's face may hop the hero down (ledges)
+    }
     if (p.swing && p.mouseAim) p.body.face(p.swingDir);
     this.drinkTick(p, dt);
     // The blade is out: the blow lands now, on the frame the body shows it (before `animate` below, so the hit-stop it
@@ -328,6 +335,7 @@ export class Simulation {
     p.body.setTint(auraTint({ ward: p.ward > 0, edge: p.edge.charges > 0, guard: p.guard > 0 }));
     p.body.animate(dt * 1000, p.moving);
     p.rollLook.step(p.body, p.roll !== null, p === this.arena.local, dt, this.arena.effects);
+    p.hopLook.step(p.body, p.hop !== null, p === this.arena.local, dt, this.arena.effects);
   }
 
   /** The way a roll pressed now would go: the walk keys, else the aim, else the facing. */
@@ -340,7 +348,9 @@ export class Simulation {
   private rollWait(p: Player, cmd: Command): number {
     const stunned = p.hitstop > 0 || p.knock.x !== 0 || p.knock.y !== 0;
     const cooldown = rollWaitFor(p.rollSince, p.rollDir, this.rollAim(p, cmd));
-    return canRoll({ cooldown, rolling: p.roll !== null, down: p.down !== null, stunned, dm: p.dm }) ? 0 : 1;
+    return canRoll({ cooldown, rolling: p.roll !== null || p.hop !== null, down: p.down !== null, stunned, dm: p.dm })
+      ? 0
+      : 1;
   }
 
   /**
@@ -440,7 +450,7 @@ export class Simulation {
 
   /** The action button's attack: swing the sword, or start drawing the bow. */
   attack(p: Player) {
-    if (p.attackCooldown > 0 || p.roll) {
+    if (p.attackCooldown > 0 || p.roll || p.hop) {
       p.attackBuffer.press(p.zone); // too soon: keep the press for the first tick the cooldown allows
       return;
     }
@@ -541,7 +551,7 @@ export class Simulation {
 
   /** The player tapped out combo `index` of their wand or tome: cast its spell if there is the mana for it. */
   combo(p: Player, index: number) {
-    if (p.dm || p.roll) return; // the Dungeon Master casts nothing at the party's foes; a roll is no free cast
+    if (p.dm || p.roll || p.hop) return; // the Dungeon Master casts nothing at the party's foes; a roll or a hop is no free cast
     this.casting.combo(p, index);
   }
 

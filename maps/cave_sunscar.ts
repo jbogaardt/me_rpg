@@ -9,7 +9,7 @@ import { CAVE_ARRIVAL, DEPTHS_ARRIVAL, caveExit } from '../tools/map/delves';
 const W = 80;
 const H = 64;
 
-const cave = new Delve(W, H);
+export const cave = new Delve(W, H);
 cave
   .ellipse(14, 10, 9, 5, '.', 0.3) // the foyer
   .rect(11, 5, 7, 4) // flat floor under the exit
@@ -145,6 +145,7 @@ cave
     ],
     3,
   )
+  .rect(27, 43, 16, 12) // the terrace hall: a squared room for a two-tier mesa (joins the south way and the long hall's tunnel)
   .ellipse(31, 29, 5, 3, '^') // the lava lake
   .ellipse(9, 36, 3, 2, '~') // the grotto's pool
   .ellipse(38, 12, 2.5, 1.5, '~'); // a pool in the east hall
@@ -171,9 +172,22 @@ export default defineZone({
     z.chest('iron', 'hoard', ...cave.firstOpen(46, 17, 5, 3));
     z.chest('wood', 'elixir', ...cave.firstOpen(5, 31, 3, 3));
     z.chest('iron', 'relic', ...cave.firstOpen(48, 38, 3, 3));
-    // A rock ledge in the great cavern, a level above the floor: a ramp up its south face, a chest on top.
-    z.plateau({ col: 19, row: 23, w: 7, h: 4 }, { kind: 'rock', stairs: [22] });
+    // A rock mesa in the great cavern, a level above the floor, looking over the lava: stairs up its south face, a ledge to drop
+    // back to the floor (its landing is south of the face, clear of the lava), a chest on top.
+    z.plateau({ col: 19, row: 23, w: 9, h: 4 }, { kind: 'rock', stairs: [24], ledges: [21] });
     z.chest('wood', 'potion', 22, 24);
+    // The terrace hall: a broad mesa (stairs 35, ledges 30 and 38 to the floor) with a smaller one stacked on it (stairs 36, a
+    // ledge at 33 down to the lower top). Chests: the lower west bay, and the crown.
+    z.plateau({ col: 28, row: 44, w: 14, h: 8 }, { kind: 'rock', stairs: [35], ledges: [30, 38] });
+    z.plateau({ col: 31, row: 45, w: 8, h: 4 }, { kind: 'rock', stairs: [36], ledges: [33] });
+    z.chest('wood', 'elixir', 29, 46);
+    z.chest('iron', 'relic', 37, 46);
+    // A drop reads like a wall from the floor, so fallen rock flanks the ones that have room, a row behind the lip, the way to it left open.
+    for (const [c, r] of [
+      [21, 26],
+      [33, 48],
+    ] as const)
+      for (const dc of [-1, 1]) z.prop('ruinRubbleC', c + dc, r - 1);
     z.chest('iron', 'relic', ...cave.firstOpen(73, 14, 3, 4)); // the island
     z.chest('wood', 'elixir', ...cave.firstOpen(70, 24, 4, 4));
     z.chest('iron', 'hoard', ...cave.firstOpen(10, 53, 3, 3));
