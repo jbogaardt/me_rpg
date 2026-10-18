@@ -372,6 +372,9 @@ body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
 #dm-bar .row { display: flex; align-items: center; gap: 8px; }
 #dm-bar .row .hint { flex: 1 1 auto; }
 /* On a phone the bar goes to the top (the pad and buttons own the bottom), folds away until the handle opens it, and every button is a thumb's size. */
+body.touch-ui #dm-bar { grid-template-columns: minmax(0, 1fr); }
+body.touch-ui #dm-bar form { flex-wrap: wrap; }
+body.touch-ui #dm-bar form input { flex: 1 1 100%; }
 body.touch-ui #dm-bar { top: calc(60px + env(safe-area-inset-top)); bottom: auto; left: 8px; right: 8px; transform: none; width: auto; max-height: 55vh; overflow-y: auto; }
 #dm-bar.folded { width: max-content; }
 #dm-bar.folded .tools { display: none; }

@@ -450,7 +450,7 @@ test('the Dungeon Master can run the game from a phone: folded tools, thumb-size
   await expect(host.locator('#mp-active .mp-connected')).toHaveText('Connected to Player 2', { timeout: 30_000 });
   await host.locator('#mp-start').click();
   // A physical key (the menu was opened with one) hides the touch controls; a touch brings them back.
-  await host.touchscreen.tap(195, 400);
+  await host.touchscreen.tap(40, 700); // low at the left, where a thumb rests (the floating pad appears under it)
   await expect(host.locator('#touch-controls')).toBeVisible();
   await expect(host.locator('body')).toHaveClass(/touch-ui/);
 
