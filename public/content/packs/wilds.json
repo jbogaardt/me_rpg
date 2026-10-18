@@ -70,6 +70,96 @@
       "tags": ["brute", "undead", "swamp"],
       "level": [3, 5]
     },
+    "slime": {
+      "type": "mob",
+      "name": "Green Slime",
+      "notes": "Level 1 fodder: slow, soft and easy to read; wobbles toward you and bumps.",
+      "sprite": { "body": "body.slime" },
+      "stats": { "hp": 20, "attack": 6, "defense": 0, "speed": 50, "sight": 120, "xp": 6, "gold": 3 },
+      "behavior": { "windup": 0.4, "recover": 0.6, "stagger": 0.2 },
+      "tags": ["common", "swamp"],
+      "level": [1, 3]
+    },
+    "hornet": {
+      "type": "mob",
+      "name": "Hornet",
+      "notes": "Level 1-2 fodder: fast and fragile, stings and flits away.",
+      "sprite": { "body": "body.bee" },
+      "stats": { "hp": 12, "attack": 5, "defense": 0, "speed": 112, "sight": 150, "xp": 5, "gold": 2 },
+      "behavior": { "windup": 0.25, "recover": 0.4, "stagger": 0.1 },
+      "tags": ["common", "beast"],
+      "level": [1, 2]
+    },
+    "bat": {
+      "type": "mob",
+      "name": "Cave Bat",
+      "notes": "Level 2-4: quick, erratic and bites hard for its size. Roosts in caves, woods and ruins.",
+      "sprite": { "body": "body.bat" },
+      "stats": { "hp": 18, "attack": 9, "defense": 0, "speed": 105, "sight": 170, "xp": 9, "gold": 4 },
+      "behavior": { "windup": 0.3, "recover": 0.5, "stagger": 0.15 },
+      "tags": ["hunter", "undead", "beast"],
+      "level": [2, 4]
+    },
+    "adder": {
+      "type": "mob",
+      "name": "Adder",
+      "notes": "Level 3-5: low and quick to strike, a venomous bite from the grass or sand.",
+      "sprite": { "body": "body.snake" },
+      "stats": { "hp": 26, "attack": 12, "defense": 0, "speed": 78, "sight": 150, "xp": 12, "gold": 6 },
+      "behavior": { "windup": 0.3, "recover": 0.7, "stagger": 0.2 },
+      "tags": ["hunter", "beast", "swamp"],
+      "level": [3, 5]
+    },
+    "haunt": {
+      "type": "mob",
+      "name": "Haunt",
+      "notes": "Level 4-7: a hooded ghost that drifts after the living and shrieks when it strikes.",
+      "sprite": { "body": "body.ghost" },
+      "stats": { "hp": 48, "attack": 14, "defense": 1, "speed": 52, "sight": 190, "xp": 22, "gold": 12 },
+      "behavior": { "windup": 0.55, "recover": 0.8, "stagger": 0.1 },
+      "tags": ["hunter", "undead"],
+      "level": [4, 6]
+    },
+    "watcher": {
+      "type": "mob",
+      "name": "Watcher",
+      "notes": "Level 5-8: a floating eye that stays at range and fires a red bolt. Keep close or break line of sight.",
+      "sprite": { "body": "body.eyeball" },
+      "stats": { "hp": 44, "attack": 13, "defense": 1, "speed": 40, "sight": 200, "xp": 26, "gold": 14 },
+      "behavior": {
+        "windup": 0.6,
+        "recover": 1.0,
+        "stagger": 0.2,
+        "shot": { "range": 170, "speed": 150, "color": "#ff5577" }
+      },
+      "tags": ["ranged", "undead"],
+      "level": [5, 7]
+    },
+    "gutworm": {
+      "type": "mob",
+      "name": "Gutworm",
+      "notes": "Level 6-9: a big burrowing worm; slow, with a crushing lunge and hide thick enough to shrug off a first hit.",
+      "sprite": { "body": "body.bigworm" },
+      "stats": { "hp": 96, "attack": 20, "defense": 2, "speed": 38, "sight": 140, "xp": 40, "gold": 24 },
+      "behavior": { "windup": 0.6, "recover": 1.0, "stagger": 0.05 },
+      "tags": ["brute", "swamp", "beast"],
+      "level": [6, 9]
+    },
+    "pumpking": {
+      "type": "mob",
+      "name": "Pumpking",
+      "notes": "Level 8-10 elite: a crowned gourd that spits a fan of embers. Deep in the autumn woods.",
+      "sprite": { "body": "body.pumpking" },
+      "stats": { "hp": 140, "attack": 20, "defense": 3, "speed": 44, "sight": 190, "xp": 70, "gold": 41 },
+      "behavior": {
+        "windup": 0.55,
+        "recover": 0.9,
+        "stagger": 0.1,
+        "ray": { "range": 128, "color": "#ff9a2f", "tick": 0.5, "power": 0.3, "duration": 5, "rest": 6 }
+      },
+      "tags": ["boss", "fire"],
+      "level": [8, 10]
+    },
     "barrowLord": {
       "type": "mob",
       "name": "Barrow Lord",

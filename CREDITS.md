@@ -74,6 +74,13 @@ a bell and a cross added pixel by pixel), come from "[LPC] City outside"
 Johann C and Johannes Sjölund. Pieces are cut and composed on the packs' own pixels, never scaled or recoloured. The
 packs are not kept in the repository.
 
+## Monsters (`public/sprites/lpc/body.<name>.0.png`, source in `art/lpc_monsters/`)
+
+The slime, bat, snake, ghost, eyeball, pumpking, big worm and bee are "[LPC] Monsters" (https://opengameart.org/content/lpc-monsters)
+by Charles Sanchez (CharlesGabriel), bagzie and bluecarrot16, from the Liberated Pixel Cup base assets by Lanea Zimmerman (Sharm),
+CC-BY-SA 3.0+ or GPL 3.0+ (see [`art/lpc_monsters/CREDITS-monsters.txt`](art/lpc_monsters/CREDITS-monsters.txt)). Their frames are
+repacked into the game's character layout by `tools/sprites/monsters.ts` (moved, never redrawn; the hurt pose is a white flash).
+
 ## Characters (`public/sprites/lpc/`, catalog in `sprites/parts.ts`)
 
 Hero, NPC and monster art comes from the [Universal LPC Spritesheet Character Generator](https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator)

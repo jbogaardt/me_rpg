@@ -78,6 +78,30 @@ export const CUSTOM_PARTS: Record<string, CustomPart> = {
   },
 };
 
+// The "[LPC] Monsters" pack, repacked into doll sheets by tools/sprites/monsters.ts (`npm run monsters`).
+const LPC_MONSTER_CREDIT = {
+  authors: ['Charles Sanchez (CharlesGabriel)', 'bagzie', 'bluecarrot16', 'Lanea Zimmerman (Sharm)'],
+  licenses: ['CC-BY-SA 3.0', 'GPL 3.0'],
+  urls: ['https://opengameart.org/content/lpc-monsters'],
+};
+for (const [id, file, what] of [
+  ['slime', 'slime', 'Green slime'],
+  ['bat', 'bat', 'Bat'],
+  ['snake', 'snake', 'Snake'],
+  ['ghost', 'ghost', 'Hooded ghost'],
+  ['eyeball', 'eyeball', 'Floating eyeball'],
+  ['pumpking', 'pumpking', 'Pumpking'],
+  ['bigworm', 'big_worm', 'Big worm'],
+  ['bee', 'bee', 'Bee'],
+] as const) {
+  CUSTOM_PARTS[`body.${id}`] = {
+    source: `art/lpc_monsters/${file}_doll.png`,
+    z: 10,
+    notes: `${what} mob: "[LPC] Monsters" repacked into a doll sheet by tools/sprites/monsters.ts`,
+    ...LPC_MONSTER_CREDIT,
+  };
+}
+
 /** Bodies that already include their head. */
 export const WHOLE_BODIES: ReadonlySet<string> = new Set(Object.keys(CUSTOM_PARTS));
 

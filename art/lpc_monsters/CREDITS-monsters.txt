@@ -1,0 +1,6 @@
+"[LPC] Monsters" by Charles Sanchez (CharlesGabriel), bagzie, and bluecarrot16, based on the Liberated Pixel Cup base
+assets by Lanea Zimmerman (Sharm) and the "Bat sprite" entry. CC-BY-SA 3.0+ or GPL 3.0+.
+https://opengameart.org/content/lpc-monsters
+https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+https://opengameart.org/content/bat-sprite
+The sheets here are copied unmodified; tools/sprites/monsters.ts repacks their frames into the game's doll layout.

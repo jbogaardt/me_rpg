@@ -23,11 +23,17 @@
       "generation": {
         "roam": [
           {
-            "kinds": ["raider", "wolfkin", "shade", "raider"],
+            "kinds": ["raider", "wolfkin", "shade", "raider", "adder"],
             "count": 6,
             "seed": 104,
             "apart": 12,
-            "avoid": [{ "x": 55, "y": 26, "radius": 14 }]
+            "avoid": [
+              {
+                "x": 55,
+                "y": 26,
+                "radius": 14
+              }
+            ]
           },
           {
             "kinds": ["raider", "wolfkin", "shade"],
@@ -35,7 +41,13 @@
             "seed": 912,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 31, "y": 49, "radius": 22 }],
+            "within": [
+              {
+                "x": 31,
+                "y": 49,
+                "radius": 22
+              }
+            ],
             "level": 8
           }
         ]
@@ -45,7 +57,9 @@
     "cave_sunscar": {
       "name": "The Sunscar Hollow",
       "levels": [4, 5],
-      "capabilities": { "levelGates": true },
+      "capabilities": {
+        "levelGates": true
+      },
       "map": "cave_sunscar",
       "climate": null,
       "music": null,
@@ -81,7 +95,13 @@
             "count": 14,
             "seed": 103,
             "apart": 12,
-            "avoid": [{ "x": 14, "y": 98, "radius": 20 }]
+            "avoid": [
+              {
+                "x": 14,
+                "y": 98,
+                "radius": 20
+              }
+            ]
           },
           {
             "kinds": ["mummy", "orc", "raider", "skeleton"],
@@ -89,7 +109,13 @@
             "seed": 913,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 76, "y": 61, "radius": 43 }],
+            "within": [
+              {
+                "x": 76,
+                "y": 61,
+                "radius": 43
+              }
+            ],
             "level": 12
           },
           {
@@ -98,8 +124,22 @@
             "seed": 924,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 38, "y": 9, "radius": 43 }],
+            "within": [
+              {
+                "x": 38,
+                "y": 9,
+                "radius": 43
+              }
+            ],
             "level": 20
+          },
+          {
+            "kinds": ["adder"],
+            "count": 4,
+            "seed": 7102,
+            "apart": 8,
+            "avoid": [],
+            "level": 5
           }
         ]
       },
@@ -133,19 +173,31 @@
       "generation": {
         "roam": [
           {
-            "kinds": ["wolfkin", "skeleton", "goblin", "shade", "zombie"],
+            "kinds": ["wolfkin", "skeleton", "goblin", "shade", "zombie", "bat", "adder", "haunt"],
             "count": 7,
             "seed": 102,
             "apart": 12,
-            "avoid": [{ "x": 46, "y": 56, "radius": 16 }]
+            "avoid": [
+              {
+                "x": 46,
+                "y": 56,
+                "radius": 16
+              }
+            ]
           },
           {
-            "kinds": ["zombie", "skeleton", "wolfkin"],
+            "kinds": ["zombie", "skeleton", "wolfkin", "haunt", "bat"],
             "count": 5,
             "seed": 915,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 37, "y": 112, "radius": 31 }],
+            "within": [
+              {
+                "x": 37,
+                "y": 112,
+                "radius": 31
+              }
+            ],
             "level": 8
           }
         ]
@@ -187,15 +239,27 @@
             "count": 10,
             "seed": 109,
             "apart": 12,
-            "avoid": [{ "x": 118, "y": 64, "radius": 16 }]
+            "avoid": [
+              {
+                "x": 118,
+                "y": 64,
+                "radius": 16
+              }
+            ]
           },
           {
-            "kinds": ["frostbound", "hexer", "skeleton", "warg"],
+            "kinds": ["frostbound", "hexer", "skeleton", "warg", "haunt"],
             "count": 6,
             "seed": 917,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 144, "y": 43, "radius": 42 }],
+            "within": [
+              {
+                "x": 144,
+                "y": 43,
+                "radius": 42
+              }
+            ],
             "level": 16
           },
           {
@@ -204,7 +268,13 @@
             "seed": 928,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 67, "y": 100, "radius": 42 }],
+            "within": [
+              {
+                "x": 67,
+                "y": 100,
+                "radius": 42
+              }
+            ],
             "level": 24
           },
           {
@@ -213,7 +283,13 @@
             "seed": 939,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 144, "y": 146, "radius": 39 }],
+            "within": [
+              {
+                "x": 144,
+                "y": 146,
+                "radius": 39
+              }
+            ],
             "level": 30
           }
         ]
@@ -245,20 +321,40 @@
       "generation": {
         "roam": [
           {
-            "kinds": ["goblin", "wolfkin", "goblin", "shade", "goblin", "wolfkin"],
+            "kinds": ["goblin", "wolfkin", "goblin", "shade", "goblin", "wolfkin", "slime", "slime"],
             "count": 14,
             "seed": 101,
             "apart": 12,
-            "avoid": [{ "x": 138, "y": 108, "radius": 34 }]
+            "avoid": [
+              {
+                "x": 138,
+                "y": 108,
+                "radius": 34
+              }
+            ]
           },
           {
-            "kinds": ["wolfkin", "goblin", "shade"],
+            "kinds": ["wolfkin", "goblin", "shade", "bat"],
             "count": 6,
             "seed": 916,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 81, "y": 38, "radius": 50 }],
+            "within": [
+              {
+                "x": 81,
+                "y": 38,
+                "radius": 50
+              }
+            ],
             "level": 6
+          },
+          {
+            "kinds": ["hornet"],
+            "count": 3,
+            "seed": 7101,
+            "apart": 8,
+            "avoid": [],
+            "level": 1
           }
         ]
       },
@@ -293,15 +389,27 @@
             "count": 9,
             "seed": 106,
             "apart": 12,
-            "avoid": [{ "x": 63, "y": 70, "radius": 16 }]
+            "avoid": [
+              {
+                "x": 63,
+                "y": 70,
+                "radius": 16
+              }
+            ]
           },
           {
-            "kinds": ["orc", "tuskGuard", "warg"],
+            "kinds": ["orc", "tuskGuard", "warg", "gutworm"],
             "count": 6,
             "seed": 913,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 50, "y": 49, "radius": 23 }],
+            "within": [
+              {
+                "x": 50,
+                "y": 49,
+                "radius": 23
+              }
+            ],
             "level": 14
           },
           {
@@ -310,8 +418,22 @@
             "seed": 924,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 88, "y": 46, "radius": 20 }],
+            "within": [
+              {
+                "x": 88,
+                "y": 46,
+                "radius": 20
+              }
+            ],
             "level": 22
+          },
+          {
+            "kinds": ["adder", "hornet"],
+            "count": 4,
+            "seed": 7103,
+            "apart": 8,
+            "avoid": [],
+            "level": 6
           }
         ]
       },
@@ -346,7 +468,13 @@
             "count": 3,
             "seed": 108,
             "apart": 12,
-            "avoid": [{ "x": 43, "y": 35, "radius": 14 }]
+            "avoid": [
+              {
+                "x": 43,
+                "y": 35,
+                "radius": 14
+              }
+            ]
           },
           {
             "kinds": ["bogGhoul", "hexer", "troll"],
@@ -354,8 +482,22 @@
             "seed": 912,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 62, "y": 35, "radius": 19 }],
+            "within": [
+              {
+                "x": 62,
+                "y": 35,
+                "radius": 19
+              }
+            ],
             "level": 18
+          },
+          {
+            "kinds": ["slime"],
+            "count": 2,
+            "seed": 7104,
+            "apart": 8,
+            "avoid": [],
+            "level": 6
           }
         ]
       },
@@ -364,7 +506,9 @@
     "sewer_lanternrest": {
       "name": "The Lanternrest Sewers",
       "levels": [1, 2],
-      "capabilities": { "levelGates": true },
+      "capabilities": {
+        "levelGates": true
+      },
       "map": "sewer_lanternrest",
       "climate": null,
       "music": null,
@@ -517,20 +661,40 @@
       "generation": {
         "roam": [
           {
-            "kinds": ["skeleton", "zombie", "zombie", "skeleton", "shade"],
+            "kinds": ["skeleton", "zombie", "zombie", "skeleton", "shade", "haunt"],
             "count": 10,
             "seed": 105,
             "apart": 12,
-            "avoid": [{ "x": 74, "y": 66, "radius": 16 }]
+            "avoid": [
+              {
+                "x": 74,
+                "y": 66,
+                "radius": 16
+              }
+            ]
           },
           {
-            "kinds": ["skeleton", "zombie", "shade"],
+            "kinds": ["skeleton", "zombie", "shade", "haunt", "watcher"],
             "count": 6,
             "seed": 913,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 35, "y": 44, "radius": 31 }],
+            "within": [
+              {
+                "x": 35,
+                "y": 44,
+                "radius": 31
+              }
+            ],
             "level": 10
+          },
+          {
+            "kinds": ["bat"],
+            "count": 3,
+            "seed": 7105,
+            "apart": 8,
+            "avoid": [],
+            "level": 3
           }
         ]
       },
@@ -565,15 +729,27 @@
             "count": 8,
             "seed": 107,
             "apart": 12,
-            "avoid": [{ "x": 70, "y": 30, "radius": 16 }]
+            "avoid": [
+              {
+                "x": 70,
+                "y": 30,
+                "radius": 16
+              }
+            ]
           },
           {
-            "kinds": ["bogGhoul", "hexer", "warg", "zombie"],
+            "kinds": ["bogGhoul", "hexer", "warg", "zombie", "gutworm"],
             "count": 3,
             "seed": 915,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 113, "y": 91, "radius": 31 }],
+            "within": [
+              {
+                "x": 113,
+                "y": 91,
+                "radius": 31
+              }
+            ],
             "level": 14
           },
           {
@@ -582,8 +758,22 @@
             "seed": 926,
             "apart": 8,
             "avoid": [],
-            "within": [{ "x": 113, "y": 7, "radius": 27 }],
+            "within": [
+              {
+                "x": 113,
+                "y": 7,
+                "radius": 27
+              }
+            ],
             "level": 18
+          },
+          {
+            "kinds": ["slime", "adder"],
+            "count": 4,
+            "seed": 7106,
+            "apart": 8,
+            "avoid": [],
+            "level": 5
           }
         ]
       },
@@ -644,21 +834,45 @@
       "generation": {
         "roam": [
           {
-            "kinds": ["orc", "raider", "mummy", "skeleton"],
+            "kinds": ["orc", "raider", "mummy", "skeleton", "watcher"],
             "count": 8,
             "seed": 910,
             "apart": 10,
-            "avoid": [{ "x": 44, "y": 21, "radius": 26 }],
-            "within": [{ "x": 38, "y": 92, "radius": 45 }],
+            "avoid": [
+              {
+                "x": 44,
+                "y": 21,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 38,
+                "y": 92,
+                "radius": 45
+              }
+            ],
             "level": 22
           },
           {
-            "kinds": ["troll", "orc", "mummy", "cultist"],
+            "kinds": ["troll", "orc", "mummy", "cultist", "pumpking"],
             "count": 8,
             "seed": 921,
             "apart": 10,
-            "avoid": [{ "x": 44, "y": 21, "radius": 26 }],
-            "within": [{ "x": 70, "y": 7, "radius": 45 }],
+            "avoid": [
+              {
+                "x": 44,
+                "y": 21,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 70,
+                "y": 7,
+                "radius": 45
+              }
+            ],
             "level": 26
           },
           {
@@ -666,8 +880,20 @@
             "count": 6,
             "seed": 932,
             "apart": 10,
-            "avoid": [{ "x": 44, "y": 21, "radius": 26 }],
-            "within": [{ "x": 158, "y": 7, "radius": 43 }],
+            "avoid": [
+              {
+                "x": 44,
+                "y": 21,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 158,
+                "y": 7,
+                "radius": 43
+              }
+            ],
             "level": 30
           }
         ]
@@ -701,12 +927,24 @@
       "generation": {
         "roam": [
           {
-            "kinds": ["frostbound", "warg", "hexer", "snowman"],
+            "kinds": ["frostbound", "warg", "hexer", "snowman", "haunt"],
             "count": 8,
             "seed": 909,
             "apart": 10,
-            "avoid": [{ "x": 42, "y": 49, "radius": 26 }],
-            "within": [{ "x": 158, "y": 61, "radius": 45 }],
+            "avoid": [
+              {
+                "x": 42,
+                "y": 49,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 158,
+                "y": 61,
+                "radius": 45
+              }
+            ],
             "level": 28
           },
           {
@@ -714,8 +952,20 @@
             "count": 8,
             "seed": 920,
             "apart": 10,
-            "avoid": [{ "x": 42, "y": 49, "radius": 26 }],
-            "within": [{ "x": 65, "y": 151, "radius": 45 }],
+            "avoid": [
+              {
+                "x": 42,
+                "y": 49,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 65,
+                "y": 151,
+                "radius": 45
+              }
+            ],
             "level": 32
           },
           {
@@ -723,8 +973,20 @@
             "count": 6,
             "seed": 931,
             "apart": 10,
-            "avoid": [{ "x": 42, "y": 49, "radius": 26 }],
-            "within": [{ "x": 158, "y": 151, "radius": 45 }],
+            "avoid": [
+              {
+                "x": 42,
+                "y": 49,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 158,
+                "y": 151,
+                "radius": 45
+              }
+            ],
             "level": 36
           }
         ]
@@ -756,12 +1018,24 @@
       "generation": {
         "roam": [
           {
-            "kinds": ["raider", "mummy", "orc", "skeleton"],
+            "kinds": ["raider", "mummy", "orc", "skeleton", "watcher", "gutworm"],
             "count": 8,
             "seed": 911,
             "apart": 10,
-            "avoid": [{ "x": 46, "y": 21, "radius": 26 }],
-            "within": [{ "x": 34, "y": 90, "radius": 45 }],
+            "avoid": [
+              {
+                "x": 46,
+                "y": 21,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 34,
+                "y": 90,
+                "radius": 45
+              }
+            ],
             "level": 34
           },
           {
@@ -769,8 +1043,20 @@
             "count": 8,
             "seed": 922,
             "apart": 10,
-            "avoid": [{ "x": 46, "y": 21, "radius": 26 }],
-            "within": [{ "x": 73, "y": 7, "radius": 45 }],
+            "avoid": [
+              {
+                "x": 46,
+                "y": 21,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 73,
+                "y": 7,
+                "radius": 45
+              }
+            ],
             "level": 38
           },
           {
@@ -778,8 +1064,20 @@
             "count": 6,
             "seed": 933,
             "apart": 10,
-            "avoid": [{ "x": 46, "y": 21, "radius": 26 }],
-            "within": [{ "x": 160, "y": 7, "radius": 42 }],
+            "avoid": [
+              {
+                "x": 46,
+                "y": 21,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 160,
+                "y": 7,
+                "radius": 42
+              }
+            ],
             "level": 42
           }
         ]
@@ -810,12 +1108,24 @@
       "generation": {
         "roam": [
           {
-            "kinds": ["bogGhoul", "hexer", "zombie", "warg"],
+            "kinds": ["bogGhoul", "hexer", "zombie", "warg", "haunt", "gutworm"],
             "count": 8,
             "seed": 911,
             "apart": 10,
-            "avoid": [{ "x": 39, "y": 49, "radius": 26 }],
-            "within": [{ "x": 155, "y": 61, "radius": 45 }],
+            "avoid": [
+              {
+                "x": 39,
+                "y": 49,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 155,
+                "y": 61,
+                "radius": 45
+              }
+            ],
             "level": 40
           },
           {
@@ -823,8 +1133,20 @@
             "count": 8,
             "seed": 922,
             "apart": 10,
-            "avoid": [{ "x": 39, "y": 49, "radius": 26 }],
-            "within": [{ "x": 64, "y": 151, "radius": 45 }],
+            "avoid": [
+              {
+                "x": 39,
+                "y": 49,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 64,
+                "y": 151,
+                "radius": 45
+              }
+            ],
             "level": 44
           },
           {
@@ -832,8 +1154,20 @@
             "count": 6,
             "seed": 933,
             "apart": 10,
-            "avoid": [{ "x": 39, "y": 49, "radius": 26 }],
-            "within": [{ "x": 154, "y": 151, "radius": 45 }],
+            "avoid": [
+              {
+                "x": 39,
+                "y": 49,
+                "radius": 26
+              }
+            ],
+            "within": [
+              {
+                "x": 154,
+                "y": 151,
+                "radius": 45
+              }
+            ],
             "level": 48
           }
         ]

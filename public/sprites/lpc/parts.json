@@ -11,6 +11,24 @@
    "z": 110
   }
  ],
+ "body.bat": [
+  {
+   "file": "body.bat.0.png",
+   "z": 10
+  }
+ ],
+ "body.bee": [
+  {
+   "file": "body.bee.0.png",
+   "z": 10
+  }
+ ],
+ "body.bigworm": [
+  {
+   "file": "body.bigworm.0.png",
+   "z": 10
+  }
+ ],
  "body.bronze": [
   {
    "file": "body.bronze.0.png",
@@ -26,6 +44,12 @@
  "body.dark_green": [
   {
    "file": "body.dark_green.0.png",
+   "z": 10
+  }
+ ],
+ "body.eyeball": [
+  {
+   "file": "body.eyeball.0.png",
    "z": 10
   }
  ],
@@ -65,6 +89,12 @@
    "z": 10
   }
  ],
+ "body.ghost": [
+  {
+   "file": "body.ghost.0.png",
+   "z": 10
+  }
+ ],
  "body.green": [
   {
    "file": "body.green.0.png",
@@ -89,6 +119,12 @@
    "z": 10
   }
  ],
+ "body.pumpking": [
+  {
+   "file": "body.pumpking.0.png",
+   "z": 10
+  }
+ ],
  "body.shade": [
   {
    "file": "body.shade.0.png",
@@ -98,6 +134,18 @@
  "body.skeleton": [
   {
    "file": "body.skeleton.0.png",
+   "z": 10
+  }
+ ],
+ "body.slime": [
+  {
+   "file": "body.slime.0.png",
+   "z": 10
+  }
+ ],
+ "body.snake": [
+  {
+   "file": "body.snake.0.png",
    "z": 10
   }
  ],
