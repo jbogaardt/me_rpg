@@ -48,6 +48,15 @@ export interface SaveData {
 
 const STAT_KEYS = ['level', 'xp', 'hp', 'maxHp', 'mp', 'maxMp', 'attack', 'defense', 'magic'] as const;
 
+/**
+ * Where a reloaded solo game puts the hero: always the world's home (the zone and spawn a fall also wakes at, the start
+ * node's), never the saved zone and spot, so a refresh cannot respawn the foes the hero stood beside (the level-farming
+ * exploit). The save's `zone`, `x` and `y` stay in the format but are not read for placement.
+ */
+export function reloadPlace(_save: SaveData, home: { zone: string; feet: [number, number] }) {
+  return { zone: home.zone, x: home.feet[0], y: home.feet[1] };
+}
+
 /** The hero as a save: an item not in the campaign's list (one the DM made up) cannot be named, so it is left out. */
 export function heroToSave(hero: Hero): HeroSave {
   const gear: HeroSave['gear'] = {};
