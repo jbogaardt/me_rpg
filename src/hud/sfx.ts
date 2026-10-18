@@ -2,8 +2,10 @@
 // from a few oscillators and filtered noise: nothing is downloaded, nothing goes over the wire, so every page plays the
 // cue itself when the reading reaches it. Muted with the DM's 🔊 (the voice's mute), since these are part of the telling.
 // Each name has a recipe (the type forces it); a page that cannot make sound simply stays silent.
+// The game's own sounds (swing, hit, hurt...) are `gameSfx.ts`, with their own mute; the two share one audio context.
 
 import { SFX_NAMES, type SfxName } from '../systems/cues';
+import { playGame, sharedContext } from './gameSfx';
 import { voice } from './voice';
 
 interface Recipe {
@@ -47,23 +49,21 @@ export const RECIPES: Record<SfxName, Recipe> = {
 /** Every name has a recipe (the type says so; this is for the test that says it of the vocabulary too). */
 export const SFX_RECIPES_COMPLETE = SFX_NAMES.every((n) => n in RECIPES);
 
-let ctx: AudioContext | null = null;
-
 /** Play a cue's sound now. Silent when muted, when the page has no audio, or when the browser has not let it start yet. */
 export function playSfx(name: SfxName) {
   play(RECIPES[name]);
 }
 
-/** The short chime of an item picked up (not a DM cue, so it is not in the cue vocabulary). */
-const PING: Recipe = { dur: 0.18, gain: 0.2, tones: [{ wave: 'sine', from: 1320, to: 1760, gain: 1 }] };
+/** The short chime of an item picked up: a game sound (`gameSfx.ts`), muted with the sound effects, not the DM's voice. */
 export function playPing() {
-  play(PING);
+  playGame('pickup');
 }
 
 function play(recipe: Recipe) {
-  if (voice.muted || typeof AudioContext === 'undefined') return;
+  if (voice.muted) return;
   try {
-    ctx ??= new AudioContext();
+    const ctx = sharedContext();
+    if (!ctx) return;
     if (ctx.state === 'suspended') void ctx.resume();
     const t0 = ctx.currentTime;
     const out = ctx.createGain();

@@ -4,6 +4,8 @@ import type { Mob } from '../../entities/Mob';
 import { particleEffect } from '../../entities/ParticleEffect';
 import { CELL } from '../../map/types';
 import type { WorldEvent } from '../../net/protocol';
+import { playGame } from '../../hud/gameSfx';
+import { soundForFx, soundForText } from '../../systems/gameSounds';
 import { effectColor } from '../../systems/looks';
 import { FX_SHAKE } from '../../systems/feel';
 import type { ParticleEffectName } from '../../systems/particleEffects';
@@ -24,11 +26,15 @@ export class Visuals {
   /** A floating number or word. */
   text(x: number, y: number, text: string, color: number) {
     this.arena.effects.add(floatText(x, y, text, color));
+    const sound = soundForText(text);
+    if (sound) playGame(sound);
   }
 
   /** A one-shot particle effect. `dir` is an angle in radians. */
   particles(name: ParticleEffectName, x: number, y: number, dir?: number, p?: number) {
     this.arena.effects.add(particleEffect(name, x, y, { dir }));
+    const sound = soundForFx(name);
+    if (sound) playGame(sound);
     if (name === 'cheer') this.arena.playerNumbered(p)?.body.celebrate();
     if (name === 'fall') this.arena.playerNumbered(p)?.body.play('hurt');
     const shake = FX_SHAKE[name];
@@ -39,6 +45,7 @@ export class Visuals {
   /** A sword swing by a player standing at (x, y) facing `dir`: the arc, and leaves shaken from any canopy it reaches. */
   swing(x: number, y: number, dir: Direction, p?: number) {
     const [vx, vy] = DIR_VEC[dir];
+    playGame('swing');
     this.arena.effects.add(slashEffect(x + vx * 6, y - 12 + vy * 6, dir, effectColor(p)));
     this.arena.zone.ambient?.shake(x + vx * 16, y + vy * 16 - 6, MELEE_REACH);
   }
@@ -46,6 +53,7 @@ export class Visuals {
   /** A player's bolt (wand, tome or spell) in flight. `onHit` applies the damage (the host). */
   bolt(x: number, y: number, vx: number, vy: number, onHit?: (mob: Mob) => void, p?: number) {
     const { effects } = this.arena;
+    playGame('bolt');
     const trail = particleEffect('boltTrail', x, y);
     effects.add(trail);
     effects.add(
@@ -61,7 +69,10 @@ export class Visuals {
         },
         (bx, by, hit) => {
           trail.stop();
-          if (hit) effects.add(particleEffect('boltImpact', bx, by));
+          if (hit) {
+            effects.add(particleEffect('boltImpact', bx, by));
+            playGame('boltHit');
+          }
         },
         effectColor(p),
       ),
@@ -70,6 +81,7 @@ export class Visuals {
 
   /** A player's arrow in flight. `onHit` applies the damage (the host). */
   arrow(x: number, y: number, vx: number, vy: number, range: number, onHit?: (mob: Mob) => void, p?: number) {
+    playGame('arrow');
     this.arena.effects.add(
       arrowEffect(
         x,
@@ -100,7 +112,11 @@ export class Visuals {
         (bx, by) =>
           collision.isBlocked(Math.floor(bx / CELL), Math.floor((by + BOLT_HEIGHT) / CELL)) ||
           (onStep?.(bx, by) ?? false),
-        (bx, by, hit) => hit && effects.add(particleEffect('hitSpark', bx, by)),
+        (bx, by, hit) => {
+          if (!hit) return;
+          effects.add(particleEffect('hitSpark', bx, by));
+          playGame('clack'); // a shot against a hero's gear or a wall: the hard sound, not the flesh one
+        },
         color,
       ),
     );

@@ -23,6 +23,7 @@ import { dmQuestPage, questPage } from './QuestLog';
 import type { TaskView } from '../systems/dmTasks';
 import { AidSetting } from './AidSetting';
 import { AimSetting } from './AimSetting';
+import { SoundSetting } from './SoundSetting';
 import { VoiceSetting } from './VoiceSetting';
 import { Keybinds } from './Keybinds';
 import { JoinStatus } from './JoinStatus';
@@ -58,6 +59,7 @@ export class Menu {
   private aim: AimSetting;
   private aids = new AidSetting();
   private voiceSetting: VoiceSetting;
+  private soundSetting: SoundSetting;
 
   constructor(session: Session, touch: TouchControls) {
     new Multiplayer(session, () => this.close()); // owns the Online tab
@@ -68,6 +70,7 @@ export class Menu {
     this.keybinds = new Keybinds(touch); // owns the key editor on the Controls tab
     this.aim = new AimSetting(touch); // owns the aiming choice on the Controls tab
     this.voiceSetting = new VoiceSetting(); // and the voice choice
+    this.soundSetting = new SoundSetting(); // and the sound-effects mute and volume
     for (const [i, name] of TABS.entries()) {
       this.tabButton(name).addEventListener('click', () => this.select(i));
     }
@@ -240,6 +243,7 @@ export class Menu {
     this.aim.refresh();
     this.aids.refresh();
     this.voiceSetting.refresh();
+    this.soundSetting.refresh();
     this.select(this.tab);
   }
 }
