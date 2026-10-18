@@ -139,3 +139,14 @@ export const CHARGE_DEFAULTS: MobCharge = {
 };
 
 export const resolveCharge = (c: Partial<MobCharge> = {}): MobCharge => ({ ...CHARGE_DEFAULTS, ...c });
+
+// --- Farming (a spot cannot be ground for XP and gold) ---
+
+/** Seconds a foe stays down the first time it falls. */
+export const RESPAWN_BASE = 60;
+/** Each fall of the same foe keeps it down this much longer than the last, up to `RESPAWN_CAP`. */
+export const RESPAWN_GROWTH = 1.5;
+export const RESPAWN_CAP = 300;
+
+/** How long a foe stays down after its `falls`-th fall (0 for the first): a minute, then 90 s, 135 s... at most five minutes. */
+export const respawnWait = (falls: number): number => Math.min(RESPAWN_CAP, RESPAWN_BASE * RESPAWN_GROWTH ** falls);

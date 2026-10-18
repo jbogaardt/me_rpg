@@ -19,6 +19,8 @@ import {
   resolveCharge,
   resolveGuard,
   stunFactor,
+  respawnWait,
+  RESPAWN_CAP,
 } from './mobDefense';
 
 const kind = (over: Partial<MobKind> = {}): MobKind => ({ ...MOB_KINDS.troll!, ...over });
@@ -150,5 +152,14 @@ describe('a Dungeon Master boss', () => {
     expect(boss.poiseMax).toBeGreaterThanOrEqual(BOSS_POISE);
     expect(levelGap(boss, 1)).toBe(0);
     expect(boss.level).toBe(12);
+  });
+});
+
+describe('respawn (farming)', () => {
+  it('keeps a foe down longer each time it falls, to a cap', () => {
+    expect(respawnWait(0)).toBe(60);
+    expect(respawnWait(1)).toBe(90);
+    expect(respawnWait(2)).toBe(135);
+    expect(respawnWait(50)).toBe(RESPAWN_CAP);
   });
 });
