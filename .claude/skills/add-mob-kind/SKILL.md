@@ -21,9 +21,9 @@ new kind needs no new code unless it needs new behaviour.
    name): `type: "mob"`, `name`, `notes` (what it is for and its level band), `sprite` (the look), optional `scale`, and
    `stats`: `hp`, `attack`, `defense`, `xp` (on kill), `gold` (dropped on kill, rolled ±30%; keep it rising with `xp`, a test checks), `speed` (px/s while chasing), `sight`
    (px; starts chasing inside this). `src/content/schema.ts` (`toMobKind`) turns it into the engine's `MobKind`. Optional
-   pacing, under `behavior`: `windup` (telegraph, default 0.45 s), `recover` (rest after an
+   pacing, under `behavior`: `windup` (telegraph, default 0.5 s; the windup is spread -20%, so a basic melee kind needs 0.5+ to stay over 0.4 s, heavier more, and pay for it in `recover`), `recover` (rest after an
    attack, 0.7 s) and `stagger` (stun when hit, 0.3 s): fast kinds shorten them, big kinds set `stagger` near 0 so
-   the hero cannot stun-lock them. Optional `behavior.telegraph: { color: "#rrggbb", ground: bool }` tunes the windup cue (flash colour, default the special's colour or yellow; a ground lane toward the target that fills as the blow lands, default on for shots and rays). Optional `behavior.shot: { range, speed, color: "#rrggbb" }` makes it a ranged attacker (it stops
+   the hero cannot stun-lock them. Optional `behavior.telegraph: { color: "#rrggbb", ground: bool }` tunes the windup cue (body glow colour, default the special's colour or hot orange; give every melee kind its own; a ground lane toward the target that fills as the blow lands, on for every attack). Optional `behavior.shot: { range, speed, color: "#rrggbb" }` makes it a ranged attacker (it stops
    `range` px away, telegraphs with the cast pose, then fires a projectile worth its `attack` damage; keep `range <=
    sight`, `speed` below ~190 so it can be dodged, and `windup >= 0.5`; unit tests check these). The starter hero deals about `5 + 2 = 7` per swing and has 30 HP; fodder for levels 1-3
    should be playable against that (the unit test requires the hero can always hurt a kind: `defense < 7`), while the deep
@@ -44,7 +44,7 @@ new kind needs no new code unless it needs new behaviour.
 
 - Damage is `power ± 15%` minus defense, min 1 (`rollDamage`). A kind with `defense` ≥ the hero's attack power is
   unkillable at level 1; keep it below.
-- Windup, recover and stagger default to 0.45 s / 0.7 s / 0.3 s and are overridable per kind (`mobTimings` in
+- Windup, recover and stagger default to 0.5 s / 0.7 s / 0.3 s and are overridable per kind (`mobTimings` in
   `combat.ts`); each windup is randomised ±20%. Reach, the lunge (`lungeOf`, from the kind's `speed`: a fast kind
   pounces further), the whiff recovery, mending, leash and the shooter's back-off distance are shared constants at the
   top of `Mob.ts`.

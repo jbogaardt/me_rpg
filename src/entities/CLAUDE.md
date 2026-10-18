@@ -18,7 +18,7 @@
   so balance is untouched. Knockback starts on the hit tick (about 30px, decaying, through the pause too). Host/solo only;
   a guest sees mobs stop because snapshots stop moving them (a friend's own hero walks on its own screen, so it feels the
   host's pause on its hero only as a held snapshot). Nothing on the wire. i-frames (`INVULN_TIME`) and blink: same module.
-- **Windup cue is data** (`MobKind.telegraph`, `telegraphOf` in `systems/combat.ts`): flash colour and a ground lane for specials. The guest draws it from the existing `windup` state and timer (no protocol field).
+- **Windup cue is data** (`MobKind.telegraph`, `telegraphOf` in `systems/combat.ts`; `Mob.drawTell`): a basic melee windup is 0.5 s (spread -20%/+20%, so at least 0.4 s, heavier kinds more; paid in `recover`), it starts at `REACH` (44 px), and the cue is the body glowing in the kind's colour, a lane on the ground that fills toward the strike (its edge goes solid at COMMITTED, when the aim locks) and a ring closing on the landing spot, plus one rising tone (`tell`, played when a view enters windup within 240 px). All of it is drawn from the existing `windup` state and timer on every page (a guest included, no protocol field); the lane aim on a guest points at the nearest hero.
 - **On a co-op guest a `Mob` is only a view of the host's state** (`setRemote`): it plays windup and hurt poses and draws
   a beam from the `channel` state itself, but never decides anything. The host alone damages.
 - **Ambient life** (`ambient.ts`: footprints, falling leaves) is passive, driven by body movement and map metadata

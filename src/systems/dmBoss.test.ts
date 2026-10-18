@@ -48,7 +48,7 @@ describe('boss', () => {
     const k = bossKind(base, 5, 2, 'the Hollow Goblin King');
     expect(k).toMatchObject({ boss: true, name: 'the Hollow Goblin King', look: base.look, scale: BOSS_SCALE });
     expect(k.maxHp).toBe(bossStats(5, 2).maxHp);
-    expect(k.windup!).toBeGreaterThan(base.windup ?? 0.45); // a readable telegraph
+    expect(k.windup!).toBeGreaterThan(base.windup ?? 0.5); // a readable telegraph
     const shell = bossShell(base, k.maxHp, k.name);
     expect(shell).toMatchObject({ boss: true, scale: k.scale, maxHp: k.maxHp, look: k.look });
     expect(bossKind({ ...base, scale: 1.5 }, 5, 2, 'x').scale).toBeCloseTo(1.5 * BOSS_SCALE);
