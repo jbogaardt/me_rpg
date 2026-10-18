@@ -41,7 +41,8 @@ import {
 } from '../../systems/needs';
 import { bossMends } from '../../systems/bosses';
 import { GIVERS, QUEST_GIVER, recordKill, recordVisit, type Progress } from '../../systems/quests';
-import { SHOOT_RELEASE_MS } from '../../sprites/doll';
+import { ANIMS, SHOOT_RELEASE_MS } from '../../sprites/doll';
+import { SWORD_SWING, contactHits, startSwing, stepSwing, swingAnimMs, type PendingSwing } from '../../systems/swing';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
 import { blinkAlpha, heroPauseFor, HERO_HURT_PAUSE, tickPause } from '../../systems/hitPause';
 import type { Strike } from '../../entities/WeatherLayer';
@@ -240,6 +241,7 @@ export class Simulation {
     if (p.dm) return this.updateDm(p, cmd, dt);
     if (p.down !== null) {
       p.attackBuffer.clear();
+      p.swing = null;
       return this.downTick(p, dt);
     }
     const s = p.hero.stats;
@@ -288,7 +290,15 @@ export class Simulation {
       return;
     }
     p.moving = this.move(p, cmd, dt);
+    if (p.swing && p.mouseAim) p.body.face(p.swingDir);
     this.drinkTick(p, dt);
+    // The blade is out: the blow lands now, on the frame the body shows it (before `animate` below, so the hit-stop it
+    // causes holds the hero on that frame). A hero who changed zone since the press swings at nothing.
+    const swing = p.swing;
+    if (swing && stepSwing(swing, dt)) {
+      if (swing.zone === p.zone) this.strike(p, swing);
+      else p.swing = null;
+    }
     // Lunge into a swing; blink while invulnerable.
     const [fx, fy] = DIR_VEC[p.body.facing];
     const swinging = this.isSwinging(p);
@@ -389,19 +399,28 @@ export class Simulation {
         .map((m) => ({ x: m.body.x, y: m.body.y, allowance: (m.body.size - 1) * 14 }));
       p.body.face(assistFacing(p.body.x, p.body.y, p.body.facing, foes, MELEE_REACH));
     }
-    p.body.play('slash');
+    // The body starts swinging on the next tick, sped up so the blade is fully out at contact (systems/swing.ts); the
+    // blow, the arc and the hit-stop wait for that tick (`strike`).
+    p.body.play('slash', swingAnimMs(SWORD_SWING, ANIMS.slash.cycle.length));
+    p.swing = startSwing(SWORD_SWING, p.zone);
+    p.swingDir = p.body.facing;
+  }
+
+  /** The tick a swing's blade is out: the arc, the sound and the hits, from where the hero and the foes stand now. */
+  private strike(p: Player, swing: PendingSwing) {
+    p.swing = null;
+    if (p.mouseAim) p.body.face(p.swingDir); // the mouse chose this swing's direction; walking must not turn it
     const dir = p.body.facing;
     const [vx, vy] = DIR_VEC[dir];
     this.visuals.swing(p.body.x, p.body.y, dir, p.slot);
     this.emit({ type: 'slash', x: round1(p.body.x), y: round1(p.body.y), dir: dirIndex(dir), p: p.slot });
-    const cx = p.body.x + vx * 16;
-    const cy = p.body.y + vy * 16;
     const edge = this.takeEdge(p); // Arcane Edge: this swing carries extra magic
-    for (const mob of this.arena.mobs) {
-      if (mob.alive && Math.hypot(mob.body.x - cx, mob.body.y - cy) < MELEE_REACH + (mob.body.size - 1) * 14) {
-        this.hitMob(mob, rollDamage(attackPower(p.hero) + edge, mob.kind.defense), vx, vy, false, p);
-        if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
-      }
+    const foes = this.arena.mobs
+      .filter((m) => m.alive)
+      .map((mob) => ({ mob, x: mob.body.x, y: mob.body.y, allowance: (mob.body.size - 1) * 14 }));
+    for (const { mob } of contactHits(p.body.x, p.body.y, dir, foes, MELEE_REACH, swing.hit)) {
+      this.hitMob(mob, rollDamage(attackPower(p.hero) + edge, mob.kind.defense), vx, vy, false, p);
+      if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
     }
   }
 
@@ -654,6 +673,7 @@ export class Simulation {
     p.invuln = INVULN_TIME;
     p.hitstop = Math.max(p.hitstop, HERO_HURT_PAUSE);
     p.pendingShot = null; // a hit spoils the shot
+    p.swing = null; // and the swing: a struck hero lands no ghost blow
     p.body.play('hurt');
     const dx = p.body.x - fromX;
     const dy = p.body.y - fromY;
@@ -683,6 +703,7 @@ export class Simulation {
     p.down = 0;
     p.hitstop = 0;
     p.pendingShot = null;
+    p.swing = null;
     p.vel = { x: 0, y: 0 };
     p.body.play('hurt');
     this.fx('fall', p.body.x, p.body.y - 18, undefined, p.slot);
@@ -729,6 +750,7 @@ export class Simulation {
     p.vel = { x: 0, y: 0 };
     p.invuln = 0;
     p.pendingShot = null;
+    p.swing = null;
     p.ward = 0;
     p.edge = { charges: 0, timer: 0 };
     p.guard = 0;

@@ -118,8 +118,8 @@ export class Character extends Container {
    * Play a one-shot animation (slash, cast, hurt), stretched to `ms` if given. It replaces idle/walk until it ends;
    * starting another action restarts from its first frame.
    */
-  play(anim: AnimName, ms?: number) {
-    this.action = { anim, time: 0, ms: ms ?? ANIMS[anim].cycle.length * ANIMS[anim].ms };
+  play(anim: AnimName, ms?: number, elapsedMs = 0) {
+    this.action = { anim, time: elapsedMs, ms: ms ?? ANIMS[anim].cycle.length * ANIMS[anim].ms };
   }
 
   /** Freeze on one frame of an animation (a channelled attack) until `release()`; a one-shot action still plays over it. */

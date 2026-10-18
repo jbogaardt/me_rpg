@@ -2,7 +2,9 @@ import type { Texture } from 'pixi.js';
 import { PositionClaim } from '../core/claim';
 import type { Hero, Ranged } from '../systems/combat';
 import type { SkillId } from '../systems/skills';
+import type { Direction } from '../core/direction';
 import { AttackBuffer } from '../systems/inputBuffer';
+import type { PendingSwing } from '../systems/swing';
 import { DM_COLOR, PLAYER_COLORS } from '../systems/looks';
 import { Character } from './Character';
 
@@ -31,6 +33,9 @@ export class Player {
   attackCooldown = 0;
   /** An attack pressed just before `attackCooldown` ends (systems/inputBuffer.ts; host and solo own it). */
   readonly attackBuffer = new AttackBuffer();
+  /** A sword swing between the press and its contact (systems/swing.ts; host and solo own it; a blow on the hero cancels it). */
+  swing: PendingSwing | null = null;
+  swingDir: Direction = 'down'; // the way the press aimed it (a mouse-aimed swing keeps it through startup)
   castCooldown = 0; // seconds before the next combo
   /** Arcane Edge (systems/skills.ts): the next `charges` attacks carry extra magic, for `timer` more seconds. */
   edge = { charges: 0, timer: 0 };
