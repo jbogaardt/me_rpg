@@ -415,6 +415,7 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
 #dm-hold { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); top: 8px; padding: 4px 14px; font: 700 15px var(--title); color: #9fe8ff; text-shadow: 0 1px 2px #000; pointer-events: none; }
 #dm-hold[hidden] { display: none; }
 #dm-card { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); bottom: calc(112px + env(safe-area-inset-bottom)); width: min(420px, calc(100vw - 32px)); padding: 10px 14px 12px; box-sizing: border-box; font-family: var(--body); }
+#dm-card { max-height: calc(100dvh - 130px - env(safe-area-inset-bottom)); overflow-y: auto; } /* a long list of sagas scrolls, never runs off the screen */
 #dm-card[hidden] { display: none; }
 #dm-card .close { position: absolute; top: 4px; right: 8px; background: none; border: 0; font: 700 16px var(--body); color: var(--ink-soft); cursor: pointer; }
 #dm-card .title { margin: 0 18px 2px 0; font: 700 17px var(--title); }
