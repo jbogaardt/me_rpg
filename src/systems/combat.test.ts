@@ -121,8 +121,8 @@ describe('MOB_KINDS', () => {
 
   it.each(Object.entries(MOB_KINDS))('%s has sane pacing', (_key, kind) => {
     const { windup, recover, stagger } = mobTimings(kind);
-    // The telegraph must stay readable: a hero needs about a third of a second to see it and step away.
-    expect(windup).toBeGreaterThanOrEqual(0.25);
+    // The telegraph must stay readable: a hero needs about 0.4 s to see it and step away (windups are spread -20%, so the kind's is 0.5+).
+    expect(windup * 0.8).toBeGreaterThanOrEqual(0.4); // even the shortest spread windup (-20%) outlasts a reaction
     expect(recover).toBeGreaterThan(0);
     expect(stagger).toBeGreaterThanOrEqual(0);
     expect(stagger).toBeLessThan(windup + recover); // a stun never outlasts a whole attack cycle
@@ -144,7 +144,7 @@ describe('MOB_KINDS', () => {
       expect(mobAttack(kind, REACH - 1)).toBe('melee');
       expect(mobAttack(kind, ray.range - 1)).toBe('ray');
       expect(mobAttack(kind, ray.range + 1)).toBeNull();
-      expect(kind.windup ?? 0.45).toBeGreaterThanOrEqual(0.5); // time to leave before it connects
+      expect(kind.windup ?? 0.5).toBeGreaterThanOrEqual(0.5); // time to leave before it connects
     },
   );
 
@@ -158,7 +158,7 @@ describe('MOB_KINDS', () => {
       expect(shot.speed).toBeGreaterThan(0);
       expect(shot.speed).toBeLessThan(HERO_SPEED * 1.6); // a sidestep after release still works
       expect(shot.color).toBeLessThanOrEqual(0xffffff);
-      expect(kind.windup ?? 0.45).toBeGreaterThanOrEqual(0.5); // ranged attacks telegraph longer than a swing
+      expect(kind.windup ?? 0.5).toBeGreaterThanOrEqual(0.5); // ranged attacks telegraph longer than a swing
     },
   );
 
@@ -174,7 +174,7 @@ describe('MOB_KINDS', () => {
       speed: 1,
       sight: 1,
     };
-    expect(mobTimings(plain)).toEqual({ windup: 0.45, recover: 0.7, stagger: 0.3 });
+    expect(mobTimings(plain)).toEqual({ windup: 0.5, recover: 0.7, stagger: 0.3 });
     expect(mobTimings({ ...plain, windup: 0.3, stagger: 0 })).toEqual({
       windup: 0.3,
       recover: 0.7,
@@ -194,7 +194,7 @@ describe('MOB_KINDS', () => {
       speed: 1,
       sight: 1,
     };
-    expect(telegraphOf(plain, 'melee')).toEqual({ color: 0xffe080, ground: false });
+    expect(telegraphOf(plain, 'melee')).toEqual({ color: 0xff9a2a, ground: true });
     const archer = { ...plain, shot: { range: 100, speed: 90, color: 0x112233 } };
     expect(telegraphOf(archer, 'shot')).toEqual({ color: 0x112233, ground: true });
     expect(telegraphOf({ ...archer, telegraph: { color: 0xff0000, ground: false } }, 'shot')).toEqual({

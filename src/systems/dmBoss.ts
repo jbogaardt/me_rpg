@@ -66,7 +66,7 @@ export function fightOdds(
   const h = heroModel(level);
   const n = Math.max(1, Math.round(size));
   const perSecond = (Math.max(1, h.power - kind.defense) / SWING) * UPTIME * n;
-  const cycle = (kind.windup ?? 0.45) + (kind.recover ?? 0.7);
+  const cycle = (kind.windup ?? 0.5) + (kind.recover ?? 0.7);
   const blow = Math.max(1, kind.attack - h.defense);
   const rate = (HIT * blow) / cycle; // health lost a second, by someone
   return { kill: kind.maxHp / perSecond, last: (n * h.hp) / rate };
@@ -86,7 +86,7 @@ export function bossKind(base: MobKind, level: number, size: number, name: strin
     defense: s.defense,
     xp: s.xp,
     gold: s.gold,
-    windup: Math.round((base.windup ?? 0.45) * 1.2 * 100) / 100, // a giant's blow is easier to read
+    windup: Math.round((base.windup ?? 0.5) * 1.2 * 100) / 100, // a giant's blow is easier to read
     recover: base.recover ?? 0.7,
     stagger: Math.min(base.stagger ?? 0.3, 0.15), // it is not to be juggled
     sight: Math.max(base.sight, 200),

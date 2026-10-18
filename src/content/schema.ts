@@ -48,7 +48,7 @@ export interface EntityStats {
 
 /** How a mob fights. Everything is optional: a plain melee brute has no behaviour beyond the defaults. */
 export interface EntityBehavior {
-  windup?: number; // seconds of telegraph before a blow (default 0.45)
+  windup?: number; // seconds of telegraph before a blow (default 0.5)
   recover?: number; // seconds busy after attacking (default 0.7)
   stagger?: number; // seconds a hit stuns it (default 0.3)
   telegraph?: { color?: string; ground?: boolean }; // windup cue: flash colour "#rrggbb", ground warning

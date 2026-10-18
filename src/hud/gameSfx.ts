@@ -125,6 +125,17 @@ export const GAME_RECIPES: Record<GameSoundName, GameRecipe> = {
       { wave: 'sine', from: 1568, to: 1572, gain: 0.3 },
     ],
   },
+  // A foe's windup begins: one rising voice (a tone and a thin rising hiss), the cue to dodge; lower than a spell's `cast`.
+  tell: {
+    dur: 0.25,
+    gain: 0.22,
+    pitch: 0.05,
+    noise: { filter: 'bandpass', from: 500, to: 2200, q: 2, gain: 0.2 },
+    tones: [
+      { wave: 'triangle', from: 280, to: 700, gain: 0.7 },
+      { wave: 'sine', from: 420, to: 1050, gain: 0.25 },
+    ],
+  },
   pickup: { dur: 0.18, gain: 0.2, pitch: 0.06, tones: [{ wave: 'sine', from: 1320, to: 1760, gain: 1 }] },
 };
 

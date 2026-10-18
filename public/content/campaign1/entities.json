@@ -53,9 +53,12 @@
         "gold": 18
       },
       "behavior": {
-        "windup": 0.38,
-        "recover": 0.5,
-        "stagger": 0.2
+        "windup": 0.5,
+        "recover": 0.43,
+        "stagger": 0.2,
+        "telegraph": {
+          "color": "#ff8a1e"
+        }
       }
     },
     "frostbound": {
@@ -81,9 +84,12 @@
         "gold": 37
       },
       "behavior": {
-        "windup": 0.4,
-        "recover": 0.6,
-        "stagger": 0.1
+        "windup": 0.55,
+        "recover": 0.5,
+        "stagger": 0.1,
+        "telegraph": {
+          "color": "#6ad8ff"
+        }
       }
     },
     "goblin": {
@@ -108,9 +114,12 @@
         "gold": 4
       },
       "behavior": {
-        "windup": 0.3,
-        "recover": 0.45,
-        "stagger": 0.18
+        "windup": 0.5,
+        "recover": 0.3,
+        "stagger": 0.18,
+        "telegraph": {
+          "color": "#b6ff2a"
+        }
       }
     },
     "wolfkin": {
@@ -132,9 +141,12 @@
         "gold": 8
       },
       "behavior": {
-        "windup": 0.28,
-        "recover": 0.4,
-        "stagger": 0.12
+        "windup": 0.5,
+        "recover": 0.3,
+        "stagger": 0.12,
+        "telegraph": {
+          "color": "#ffb02a"
+        }
       }
     },
     "skeleton": {
@@ -187,7 +199,13 @@
         "xp": 28,
         "gold": 16
       },
-      "behavior": {}
+      "behavior": {
+        "telegraph": {
+          "color": "#9aff6a"
+        },
+        "windup": 0.5,
+        "recover": 0.65
+      }
     },
     "mummy": {
       "type": "mob",
@@ -243,9 +261,12 @@
         "gold": 25
       },
       "behavior": {
-        "windup": 0.4,
-        "recover": 0.55,
-        "stagger": 0.08
+        "windup": 0.55,
+        "recover": 0.45,
+        "stagger": 0.08,
+        "telegraph": {
+          "color": "#ff6a1e"
+        }
       }
     },
     "troll": {
@@ -267,9 +288,12 @@
         "gold": 60
       },
       "behavior": {
-        "windup": 0.5,
-        "recover": 0.8,
-        "stagger": 0.04
+        "windup": 0.65,
+        "recover": 0.65,
+        "stagger": 0.04,
+        "telegraph": {
+          "color": "#ff4a2a"
+        }
       }
     },
     "chieftain": {
@@ -295,9 +319,12 @@
         "gold": 55
       },
       "behavior": {
-        "windup": 0.5,
-        "recover": 0.6,
-        "stagger": 0.06
+        "windup": 0.65,
+        "recover": 0.45,
+        "stagger": 0.06,
+        "telegraph": {
+          "color": "#ff3a3a"
+        }
       }
     },
     "cultist": {
@@ -353,9 +380,12 @@
         "gold": 90
       },
       "behavior": {
-        "windup": 0.5,
-        "recover": 0.6,
-        "stagger": 0.05
+        "windup": 0.65,
+        "recover": 0.45,
+        "stagger": 0.05,
+        "telegraph": {
+          "color": "#ff2a5a"
+        }
       }
     },
     "wraith": {
@@ -442,7 +472,10 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.8,
-        "stagger": 0.1
+        "stagger": 0.1,
+        "telegraph": {
+          "color": "#5aff9a"
+        }
       }
     },
     "warg": {
@@ -465,9 +498,12 @@
         "gold": 29
       },
       "behavior": {
-        "windup": 0.3,
-        "recover": 0.45,
-        "stagger": 0.1
+        "windup": 0.5,
+        "recover": 0.3,
+        "stagger": 0.1,
+        "telegraph": {
+          "color": "#ffd02a"
+        }
       }
     },
     "tuskGuard": {
@@ -494,9 +530,12 @@
         "gold": 57
       },
       "behavior": {
-        "windup": 0.45,
-        "recover": 0.6,
-        "stagger": 0.06
+        "windup": 0.55,
+        "recover": 0.5,
+        "stagger": 0.06,
+        "telegraph": {
+          "color": "#8ab8ff"
+        }
       }
     },
     "frostWarden": {
@@ -524,9 +563,12 @@
         "gold": 67
       },
       "behavior": {
-        "windup": 0.45,
-        "recover": 0.6,
-        "stagger": 0.05
+        "windup": 0.55,
+        "recover": 0.5,
+        "stagger": 0.05,
+        "telegraph": {
+          "color": "#3aa8ff"
+        }
       }
     },
     "snowman": {
@@ -549,7 +591,10 @@
       "behavior": {
         "windup": 0.6,
         "recover": 0.9,
-        "stagger": 0.05
+        "stagger": 0.05,
+        "telegraph": {
+          "color": "#c8f0ff"
+        }
       }
     },
     "elder": {
@@ -916,9 +961,12 @@
         "gold": 56
       },
       "behavior": {
-        "windup": 0.45,
-        "recover": 0.6,
-        "stagger": 0.06
+        "windup": 0.6,
+        "recover": 0.45,
+        "stagger": 0.06,
+        "telegraph": {
+          "color": "#7a98ff"
+        }
       }
     },
     "stillheart": {
@@ -946,7 +994,10 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.9,
-        "stagger": 0.03
+        "stagger": 0.03,
+        "telegraph": {
+          "color": "#ff5a8a"
+        }
       }
     },
     "ashmaw": {
@@ -1215,9 +1266,12 @@
         "gold": 3
       },
       "behavior": {
-        "windup": 0.4,
-        "recover": 0.6,
-        "stagger": 0.2
+        "windup": 0.5,
+        "recover": 0.5,
+        "stagger": 0.2,
+        "telegraph": {
+          "color": "#5aff5a"
+        }
       }
     },
     "hornet": {
@@ -1237,9 +1291,12 @@
         "gold": 2
       },
       "behavior": {
-        "windup": 0.25,
-        "recover": 0.4,
-        "stagger": 0.1
+        "windup": 0.5,
+        "recover": 0.3,
+        "stagger": 0.1,
+        "telegraph": {
+          "color": "#ffe82a"
+        }
       }
     },
     "bat": {
@@ -1259,9 +1316,12 @@
         "gold": 4
       },
       "behavior": {
-        "windup": 0.3,
-        "recover": 0.5,
-        "stagger": 0.15
+        "windup": 0.5,
+        "recover": 0.3,
+        "stagger": 0.15,
+        "telegraph": {
+          "color": "#d070ff"
+        }
       }
     },
     "adder": {
@@ -1281,9 +1341,12 @@
         "gold": 6
       },
       "behavior": {
-        "windup": 0.3,
-        "recover": 0.7,
-        "stagger": 0.2
+        "windup": 0.5,
+        "recover": 0.5,
+        "stagger": 0.2,
+        "telegraph": {
+          "color": "#a8ff2a"
+        }
       }
     },
     "haunt": {
@@ -1306,7 +1369,10 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.8,
-        "stagger": 0.1
+        "stagger": 0.1,
+        "telegraph": {
+          "color": "#b8a8ff"
+        }
       }
     },
     "watcher": {
@@ -1356,7 +1422,10 @@
       "behavior": {
         "windup": 0.6,
         "recover": 1.0,
-        "stagger": 0.05
+        "stagger": 0.05,
+        "telegraph": {
+          "color": "#c8ff4a"
+        }
       }
     },
     "pumpking": {

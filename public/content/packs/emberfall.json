@@ -15,7 +15,7 @@
         "weapon": "weapon.dagger"
       },
       "stats": { "hp": 20, "attack": 8, "defense": 0, "speed": 86, "sight": 160, "xp": 8, "gold": 4 },
-      "behavior": { "windup": 0.3, "recover": 0.45, "stagger": 0.2 },
+      "behavior": { "windup": 0.5, "recover": 0.3, "stagger": 0.2 },
       "tags": ["common", "fire"],
       "level": [1, 2]
     },
@@ -25,7 +25,7 @@
       "notes": "A grey-furred hunter of the ash fields: fast, bites hard. Levels 1-2.",
       "sprite": { "body": "body.fur_grey", "head": "head.wolf", "legs": "legs.pants_charcoal" },
       "stats": { "hp": 30, "attack": 10, "defense": 0, "speed": 100, "sight": 208, "xp": 13, "gold": 7 },
-      "behavior": { "windup": 0.28, "recover": 0.42, "stagger": 0.12 },
+      "behavior": { "windup": 0.5, "recover": 0.3, "stagger": 0.12 },
       "tags": ["hunter", "fire", "beast"],
       "level": [1, 3]
     },

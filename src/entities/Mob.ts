@@ -1,4 +1,5 @@
 import { Graphics, type Texture } from 'pixi.js';
+import { playGame } from '../hud/gameSfx';
 import { CELL } from '../map/types';
 import { DIR_VEC, directionToward, type Direction } from '../core/direction';
 import { glide } from '../core/interp';
@@ -45,9 +46,13 @@ type State = MobState;
 
 /**
  * A melee mob starts its windup from this close (feet to feet). It is more than the sword's own reach (its hit circle
- * ends about 38 px ahead of the hero), so a hero close enough to land a blow is close enough to be swung at.
+ * ends about 38 px ahead of the hero), so a hero close enough to land a blow is close enough to be swung at. It is also
+ * short enough that the slowest lunge (14 px) plus the blow's circle (32 px) still reaches a hero who stands still, and
+ * long enough that a hero who sees the tell (>= 0.4 s, 48 px of walking) can step out of the lane before the blow.
  */
-export const REACH = 32;
+export const REACH = 44;
+/** A windup tells (a rising tone) only to a hero this near: every page plays it from the state, so distance gates it. */
+const TELL_HEARD = 240;
 /** The held pose of a ray caster: the sceptre thrust out (`slash` frame 3), and where its head is from the feet (left; mirrored for right). */
 const RAY_POSE = { anim: 'slash', col: 3, headX: 21, headY: -30 } as const;
 // Windup (telegraph before the blow lands, so the hero can dodge), recover and stagger (the pause after being hit,
@@ -124,6 +129,8 @@ export class Mob {
   private swing = false; // the lunge has not hit anyone yet
   private rayTimer = 0; // seconds until the next burn of a held ray
   private rayRest = 0; // seconds before it may cast another ray (after a break)
+  private lane = new Graphics(); // the ground lane of a windup, under the body (see drawTell)
+  private glow = new Graphics(); // the body glow of a windup (additive), over the body
   private beam = new Graphics(); // the held ray, drawn from the sceptre to the hero (every client draws its own)
   private heroes: MobWorld['heroes'] = []; // guest: who the beam can be on
   private remote: { x: number; y: number } | null = null; // guest only: where the host says this mob is
@@ -139,7 +146,9 @@ export class Mob {
     this.t = mobTimings(kind);
     this.body = new Character(sheet);
     this.body.setScale(kind.scale ?? 1);
-    this.body.addChild(this.bar, this.beam);
+    this.glow.blendMode = 'add';
+    this.body.addChildAt(this.lane, 0);
+    this.body.addChild(this.glow, this.bar, this.beam);
     this.hp = kind.maxHp;
     this.reset();
   }
@@ -164,6 +173,8 @@ export class Mob {
     this.driver = null;
     this.rayRest = 0;
     this.beam.clear();
+    this.lane.clear();
+    this.glow.clear();
     this.body.release();
     this.knock = { x: 0, y: 0 };
     this.hitstop = 0;
@@ -185,6 +196,8 @@ export class Mob {
     this.timer = 1;
     this.flash = 0;
     this.beam.clear();
+    this.lane.clear();
+    this.glow.clear();
     this.body.release();
     this.body.setOffset(0, 0);
     this.body.setTint(0xffffff);
@@ -206,6 +219,8 @@ export class Mob {
     if (this.hp <= 0) {
       this.lunging = 0;
       this.beam.clear();
+      this.lane.clear();
+      this.glow.clear();
       this.body.release();
       this.knock = knockVelocity(vx, vy, KNOCK_SPEED);
       this.body.play('hurt', this.t.stagger * 1000);
@@ -238,6 +253,8 @@ export class Mob {
     this.timer = this.t.recover;
     this.rayRest = this.kind.ray?.rest ?? 0;
     this.beam.clear();
+    this.lane.clear();
+    this.glow.clear();
     this.body.release();
   }
 
@@ -279,6 +296,7 @@ export class Mob {
       this.aim = { x: aim.x, y: aim.y };
       this.body.face(directionToward(aim.x, aim.y));
       this.body.play(this.attack === 'shot' ? 'cast' : 'slash', this.windupLen * 1000);
+      this.tell(world.heroes);
       return false;
     }
     return len > 0 ? this.walk(d.dx / len, d.dy / len, this.kind.speed * dt, world) : false;
@@ -408,6 +426,7 @@ export class Mob {
           this.aim = { x: dx / (dist || 1), y: dy / (dist || 1) };
           this.body.face(attack === 'ray' ? sideToward(dx) : directionToward(dx, dy)); // the sceptre is only drawn left or right
           this.body.play(attack === 'shot' ? 'cast' : 'slash', this.windupLen * 1000); // the pose is the telegraph; the blow lands as it ends
+          this.tell(world.heroes);
         } else {
           moving = this.walk(dx / dist, dy / dist, this.kind.speed * dt, world);
         }
@@ -487,7 +506,9 @@ export class Mob {
       const near = nearest(this.body, heroes);
       const dist = near ? Math.hypot(near.x - this.body.x, near.y - this.body.y) : Infinity;
       this.attack = mobAttack(this.kind, dist) ?? (this.kind.shot ? 'shot' : this.kind.ray ? 'ray' : 'melee');
-      this.body.play(this.attack === 'shot' ? 'cast' : 'slash', this.t.windup * 1000); // the pose is the telegraph
+      this.windupLen = Math.max(timer, 0.05); // the host's (spread) windup, as it was when we first heard of it
+      this.body.play(this.attack === 'shot' ? 'cast' : 'slash', this.windupLen * 1000); // the pose is the telegraph
+      this.tell(heroes);
     }
     if (hp !== this.hp) {
       this.hp = hp;
@@ -519,40 +540,82 @@ export class Mob {
     this.present(dt, this.moving);
   }
 
+  /** The rising tone of a windup, once as it starts, on every page, for a hero near enough to hear it. */
+  private tell(heroes: MobWorld['heroes']) {
+    const near = nearest(this.body, heroes);
+    if (near && Math.hypot(near.x - this.body.x, near.y - this.body.y) <= TELL_HEARD) playGame('tell');
+  }
+
   /** Draw the state: the windup telegraph, the hit flash, the walk cycle. Shared by the host's AI and the guest's copy. */
   private present(dt: number, moving: boolean) {
-    // Telegraph: blink yellow and draw back during the windup, then lunge forward as it strikes.
+    // Telegraph: a glowing body and a lane on the ground that fills toward the strike, drawn back before the lunge.
     const [fx, fy] = DIR_VEC[this.body.facing];
     if (this.state === 'windup')
-      this.body.setOffset(-fx * 3, -fy * 3); // draws back before the lunge
+      this.body.setOffset(-fx * 4, -fy * 4); // draws back before the lunge
     else this.body.setOffset(0, 0);
-    const blink = this.state === 'windup' && Math.floor(this.timer * 16) % 2 === 0;
     const cue = telegraphOf(this.kind, this.attack);
     this.drawBeam();
-    if (this.state === 'windup' && cue.ground) this.drawWarning(cue.color);
-    this.body.setTint(this.flash > 0 ? 0xff6060 : this.frozen > 0 ? 0xa8d8ff : blink ? cue.color : 0xffffff);
+    const on = this.drawTell(cue);
+    this.body.setTint(this.flash > 0 ? 0xff6060 : this.frozen > 0 ? 0xa8d8ff : on ? cue.color : 0xffffff);
     this.body.animate(dt * 1000, moving);
   }
 
-  /** Ground warning of a windup: a lane toward where the blow, shot or beam will go, filling in as the windup runs out. */
-  private drawWarning(color: number) {
+  /**
+   * The windup cue, one function for the host and the guest (it reads only the state and the timer): the lane the blow,
+   * shot or beam will take (a melee blow: the lunge and its circle) fills as the strike nears, and its edge goes solid
+   * once the aim is locked (COMMITTED: the blow can no longer be interrupted or turned); a ring closes on the spot the
+   * blow lands; the body glows in the kind's colour, pulsing faster and ending solid. Returns whether the body tint is on.
+   */
+  private drawTell({ color, ground }: { color: number; ground: boolean }): boolean {
+    this.lane.clear();
+    this.glow.clear();
+    if (this.state !== 'windup') return false;
     const len = this.windupLen > 0 ? this.windupLen : this.t.windup;
-    const progress = Math.min(1, Math.max(0, 1 - this.timer / len));
+    const elapsed = Math.min(len, Math.max(0, len - this.timer));
+    const progress = elapsed / len;
+    const locked = this.timer < len * COMMITTED;
+    const phase = Math.PI * 2 * (3 * elapsed + (5 * elapsed * elapsed) / len); // quickens toward the strike
+    const on = progress > 0.85 || Math.sin(phase) > 0;
+    const pulse = progress > 0.85 ? 1 : 0.65 + 0.35 * Math.sin(phase);
+    this.glow.ellipse(0, -24, 14, 24).fill({ color, alpha: Math.min(0.85, (0.25 + 0.5 * progress) * pulse) });
+    if (!ground) return on;
+    const scale = this.kind.scale ?? 1;
     let [dx, dy] = [this.aim.x, this.aim.y];
     if (this.remote) {
       const near = nearest(this.body, this.heroes); // a guest does not know the host's aim: it points at the nearest hero
       if (near) [dx, dy] = [near.x - this.body.x, near.y - this.body.y];
     }
     const norm = Math.hypot(dx, dy) || 1;
-    const reach = this.attack === 'shot' ? this.kind.shot?.range : this.attack === 'ray' ? this.kind.ray?.range : REACH;
-    const [ex, ey] = [(dx / norm) * (reach ?? REACH), (dy / norm) * (reach ?? REACH)];
-    this.beam
-      .moveTo(0, 0)
-      .lineTo(ex, ey)
-      .stroke({ width: 10, color, alpha: 0.12 + 0.2 * progress, cap: 'round' })
-      .moveTo(0, 0)
-      .lineTo(ex * progress, ey * progress)
-      .stroke({ width: 4, color, alpha: 0.6, cap: 'round' });
+    const [ux, uy] = [dx / norm, dy / norm];
+    const melee = this.attack === 'melee';
+    const reach = melee
+      ? lungeOf(this.kind) + (HIT_AHEAD + HIT_RADIUS) * scale
+      : ((this.attack === 'shot' ? this.kind.shot?.range : this.kind.ray?.range) ?? REACH);
+    const half = melee ? HIT_RADIUS * scale * 0.85 : this.attack === 'shot' ? 7 : 6;
+    const [nx, ny] = [-uy * half, ux * half];
+    const strip = (length: number) => [
+      nx,
+      ny,
+      ux * length + nx,
+      uy * length + ny,
+      ux * length - nx,
+      uy * length - ny,
+      -nx,
+      -ny,
+    ];
+    this.lane
+      .poly(strip(reach))
+      .fill({ color, alpha: 0.2 + 0.1 * progress })
+      .stroke({ width: locked ? 3 : 2, color, alpha: locked ? 1 : 0.55 })
+      .poly(strip(Math.max(1, reach * progress)))
+      .fill({ color, alpha: 0.45 });
+    if (melee) {
+      const at = lungeOf(this.kind) + HIT_AHEAD * scale; // where the blow's circle ends up: a ring closes on it
+      this.lane
+        .circle(ux * at, uy * at, HIT_RADIUS * scale * (1 + 0.7 * (1 - progress)))
+        .stroke({ width: 2, color, alpha: 0.4 + 0.6 * progress });
+    }
+    return on;
   }
 
   /** The held ray: a pink beam from the sceptre to the hero's chest, on every client (a guest picks the nearest hero). */

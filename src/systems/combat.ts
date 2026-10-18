@@ -131,7 +131,7 @@ export interface MobKind {
   gold: number; // dropped on kill, give or take 30% (see `rollGold`)
   speed: number; // pixels per second while chasing
   sight: number; // pixels: starts chasing inside this range
-  /** Seconds of telegraph before the blow (or shot) lands. Default 0.45. */
+  /** Seconds of telegraph before the blow (or shot) lands. Default 0.5. */
   windup?: number;
   /** Seconds the mob is busy after attacking before it chases again. Default 0.7. */
   recover?: number;
@@ -158,8 +158,8 @@ export interface MobKind {
 
 /** Per-kind tuning of the windup cue. */
 export interface MobTelegraph {
-  color?: number; // 0xRRGGBB the body flashes during the windup (default: the special's colour, else warm yellow)
-  ground?: boolean; // draw a warning on the ground (default: true for a shot or ray, false for a plain blow)
+  color?: number; // 0xRRGGBB the body glows during the windup (default: the special's colour, else hot orange)
+  ground?: boolean; // draw the lane on the ground (default: true for every attack)
 }
 
 export interface MobRay {
@@ -177,7 +177,7 @@ export interface MobShot {
   color: number; // 0xRRGGBB glow of the projectile, so each kind's shot reads differently
 }
 
-const DEFAULT_TIMINGS = { windup: 0.45, recover: 0.7, stagger: 0.3 };
+const DEFAULT_TIMINGS = { windup: 0.5, recover: 0.7, stagger: 0.3 };
 
 /** How long a kind telegraphs, rests after an attack, and is stunned by a hit (seconds). */
 export function mobTimings(kind: MobKind): { windup: number; recover: number; stagger: number } {
@@ -188,14 +188,15 @@ export function mobTimings(kind: MobKind): { windup: number; recover: number; st
   };
 }
 
-const MELEE_FLASH = 0xffe080;
+/** A plain blow's flash when the kind names none: a hot orange (clearly not the pale hit flash). */
+const MELEE_FLASH = 0xff9a2a;
 
-/** The windup cue for a kind's attack: flash colour and whether a ground warning is drawn. */
+/** The windup cue for a kind's attack: flash colour and whether the ground lane is drawn (always, unless the kind opts out). */
 export function telegraphOf(kind: MobKind, attack: 'melee' | 'shot' | 'ray'): { color: number; ground: boolean } {
   const special = attack === 'shot' ? kind.shot : attack === 'ray' ? kind.ray : undefined;
   return {
     color: kind.telegraph?.color ?? special?.color ?? MELEE_FLASH,
-    ground: kind.telegraph?.ground ?? special !== undefined,
+    ground: kind.telegraph?.ground ?? true, // every attack lays its lane on the ground (a kind may switch it off)
   };
 }
 

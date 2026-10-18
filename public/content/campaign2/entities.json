@@ -23,9 +23,12 @@
         "gold": 4
       },
       "behavior": {
-        "windup": 0.3,
-        "recover": 0.45,
-        "stagger": 0.2
+        "windup": 0.5,
+        "recover": 0.3,
+        "stagger": 0.2,
+        "telegraph": {
+          "color": "#ff7a2a"
+        }
       }
     },
     "ashHound": {
@@ -47,9 +50,12 @@
         "gold": 7
       },
       "behavior": {
-        "windup": 0.28,
-        "recover": 0.42,
-        "stagger": 0.12
+        "windup": 0.5,
+        "recover": 0.3,
+        "stagger": 0.12,
+        "telegraph": {
+          "color": "#ffa03a"
+        }
       }
     },
     "emberCaster": {
@@ -104,7 +110,10 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.8,
-        "stagger": 0.06
+        "stagger": 0.06,
+        "telegraph": {
+          "color": "#ff4a1e"
+        }
       }
     },
     "obsidianWarden": {
@@ -134,7 +143,10 @@
       "behavior": {
         "windup": 0.6,
         "recover": 0.85,
-        "stagger": 0.03
+        "stagger": 0.03,
+        "telegraph": {
+          "color": "#ff3a6a"
+        }
       }
     },
     "ysolde": {

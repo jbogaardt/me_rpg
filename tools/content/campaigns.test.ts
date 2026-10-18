@@ -50,7 +50,7 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
   it.each(mobs)('%s is a fair enemy for a hero who can reach it', (id) => {
     const kind = content.mobKind(id);
     const { windup, recover, stagger } = mobTimings(kind);
-    expect(windup).toBeGreaterThanOrEqual(0.25);
+    expect(windup * 0.8).toBeGreaterThanOrEqual(0.4); // even the shortest spread windup (-20%) outlasts a reaction
     expect(stagger).toBeLessThan(windup + recover);
     expect(heroModel(mobLevel(kind)).power - kind.defense).toBeGreaterThan(0); // a hero of its own level can always hurt it
     if (kind.shot) {
