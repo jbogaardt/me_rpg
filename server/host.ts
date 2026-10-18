@@ -192,8 +192,6 @@ class Dm {
         await this.say(end.say);
       }
     }
-    const prev = this.memory.prev;
-    if (prev && (prev.epic || prev.questing) && !s.epic && !s.questing) this.clock.lastEnded = this.clock.now;
     if (!CHATTER) this.memory.prev = s; // narrate() keeps it otherwise
     if (CHATTER && (await this.narrate(s))) return; // unprompted remarks are off: the sagas speak, and a player can ask
     const step = nextStep(s, this.clock, this.startAt);

@@ -48,8 +48,6 @@ export interface DirectorState {
 
 /** Seconds of quiet (no task) before "what now?", and between such nudges. */
 export const IDLE_BEFORE_NEXT = 90;
-/** Seconds after a quest ends before the next is suggested: time to wander, shop and talk. */
-const AFTER_QUEST = 45;
 /** Seconds between cards that are only colour; the urgent ones (a fallen player, the story) wait much less. */
 export const CARD_GAP = 10;
 const URGENT_GAP = 3;
@@ -99,7 +97,7 @@ export class Director {
       this.lost = -Infinity;
       this.finishedSaid = false;
     }
-    if (this.wasActive && !active) this.idle = IDLE_BEFORE_NEXT - AFTER_QUEST; // the quest just ended: a wait, then the next
+    if (this.wasActive && !active) this.idle = IDLE_BEFORE_NEXT; // the quest just ended: the next may be suggested at once
     this.wasActive = active;
     if (active) this.idle = 0;
     else this.idle += dt;
