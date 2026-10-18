@@ -246,7 +246,7 @@
       "generation": {
         "roam": [
           {
-            "kinds": ["goblin", "wolfkin", "goblin", "shade", "goblin", "wolfkin", "slime", "slime"],
+            "kinds": ["goblin", "slime", "wolfkin", "slime", "goblin", "shade", "slime", "slime", "goblin", "wolfkin"],
             "count": 14,
             "seed": 101,
             "apart": 12,
@@ -261,7 +261,7 @@
             "within": [{ "x": 81, "y": 38, "radius": 50 }],
             "level": 6
           },
-          { "kinds": ["hornet"], "count": 3, "seed": 7101, "apart": 8, "avoid": [], "level": 1 }
+          { "kinds": ["hornet"], "count": 5, "seed": 7101, "apart": 8, "avoid": [], "level": 1 }
         ]
       },
       "links": ["town", "desert", "undead", "eastwood"]

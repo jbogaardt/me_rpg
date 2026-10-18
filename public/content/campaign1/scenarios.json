@@ -72,7 +72,7 @@
           "y": 10
         },
         {
-          "entity": "raider",
+          "entity": "bat",
           "x": 23,
           "y": 31
         },
@@ -87,7 +87,7 @@
           "y": 26
         },
         {
-          "entity": "raider",
+          "entity": "bat",
           "x": 28,
           "y": 33
         },
@@ -112,7 +112,7 @@
           "y": 19
         },
         {
-          "entity": "warg",
+          "entity": "bat",
           "x": 46,
           "y": 38
         }
@@ -605,12 +605,12 @@
       "biome_type": "sewer_lanternrest",
       "entities": [
         {
-          "entity": "goblin",
+          "entity": "slime",
           "x": 8,
           "y": 8
         },
         {
-          "entity": "goblin",
+          "entity": "slime",
           "x": 40,
           "y": 8
         },
@@ -625,7 +625,7 @@
           "y": 30
         },
         {
-          "entity": "goblin",
+          "entity": "slime",
           "x": 14,
           "y": 15
         },
@@ -635,7 +635,7 @@
           "y": 15
         },
         {
-          "entity": "wolfkin",
+          "entity": "slime",
           "x": 20,
           "y": 21
         },
@@ -650,7 +650,7 @@
           "y": 7
         },
         {
-          "entity": "wolfkin",
+          "entity": "slime",
           "x": 40,
           "y": 29
         }
