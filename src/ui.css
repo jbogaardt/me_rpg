@@ -6,15 +6,8 @@
   --gold-dim: #b48a4a;
   --ink: #33230f;
   --ink-soft: #6b5434;
-  /* One pixel face for the HUD, banners, tabs, chips and the world's labels (Pixelify Sans, OFL); the body face stays a
-     book serif for the long lines of the dialog and the menu's text. */
-  --title: 'Pixelify Sans', 'Courier New', monospace;
+  --title: 'Cinzel', Georgia, serif;
   --body: 'Crimson Text', Georgia, serif;
-  /* A hard pixel outline for text over the world (four 1 px offsets and a drop). */
-  --outline: -1px 0 0 #120a06, 1px 0 0 #120a06, 0 -1px 0 #120a06, 0 1px 0 #120a06, 0 2px 0 rgba(0, 0, 0, 0.55);
-  --outline-big: -3px 0 0 #120a06, 3px 0 0 #120a06, 0 -3px 0 #120a06, 0 3px 0 #120a06, -2px -2px 0 #120a06, 2px -2px 0 #120a06, -2px 2px 0 #120a06, 2px 2px 0 #120a06, 0 6px 0 rgba(0, 0, 0, 0.5);
-  --notch: polygon(0 var(--n), var(--n) var(--n), var(--n) 0, calc(100% - var(--n)) 0, calc(100% - var(--n)) var(--n), 100% var(--n),
-    100% calc(100% - var(--n)), calc(100% - var(--n)) calc(100% - var(--n)), calc(100% - var(--n)) 100%, var(--n) 100%, var(--n) calc(100% - var(--n)), 0 calc(100% - var(--n)));
   /* Bar fills, sampled from the kit's gradients.png */
   --grad-xp: linear-gradient(90deg, #7c230f, #b3632a, #dc9e4c, #f5d175, #fdfca6);
 }
@@ -35,18 +28,11 @@
 .panel.thin { border-width: 10px; border-image: url('./ui/frame-thin.png') 10 stretch; }
 .wood { background: url('./ui/wood.jpg') center / 256px; }
 .paper { background: url('./ui/paper.jpg') center / 256px; color: var(--ink); }
-/* A pixel chip: notched corners, a gold rail and a dark inner rail, no radius and no gradient (the tracker, the level badge,
-   the Dungeon Master's badge). Same family as the plank buttons and the slots. */
-.pix {
-  --n: 3px; box-sizing: border-box; padding: 6px 12px; font-family: var(--title); font-weight: 500; color: #ffe9a8; text-shadow: 0 1px 0 #000;
-  background: #2a1d10; box-shadow: inset 0 0 0 2px var(--gold-dim), inset 0 0 0 4px #120c06, inset 0 6px 0 4px rgba(242, 211, 138, 0.1);
-  clip-path: var(--notch);
-}
 
 /* --- Loading overlay (hidden by Loading.ts once the first scene is ready) --- */
 #loading {
   position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px; background: #1a1a2e; color: var(--gold); font: 700 20px/1.3 var(--title);
+  gap: 12px; background: #1a1a2e; color: var(--gold); font: 700 20px/1.3 'Cinzel', Georgia, serif;
   padding: 0 24px; text-align: center;
 }
 #loading[hidden] { display: none; }
@@ -73,8 +59,8 @@
 /* The combos of a wand or tome, under the bars: arrows light up as they are tapped, dim when the mana is short. */
 #combo-hud {
   position: fixed; z-index: 2; pointer-events: none; margin: 0; padding: 4px 8px; list-style: none;
-  top: calc(70px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
-  background: rgba(23, 18, 12, 0.6); box-shadow: inset 0 0 0 2px var(--gold-dim);
+  top: calc(52px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
+  background: rgba(23, 18, 12, 0.6); border: 1px solid var(--gold-dim); border-radius: 3px;
   font: 700 12px/17px var(--title); color: #e8dcc0; text-shadow: 0 1px 2px #000;
 }
 #combo-hud[hidden] { display: none; }
@@ -115,7 +101,7 @@ body:not(.touch-ui) #item-btn { right: calc(24px + env(safe-area-inset-right)); 
 #item-pop .ip-icon { display: block; width: 100%; height: 100%; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)); }
 #item-pop .ip-icon > * { display: block; width: 100%; height: 100%; }
 /* On a phone the quest tracker takes the line under the bars, so the combo list sits below it. */
-@media (max-width: 600px) { #combo-hud { top: calc(104px + env(safe-area-inset-top)); } }
+@media (max-width: 600px) { #combo-hud { top: calc(84px + env(safe-area-inset-top)); } }
 #combo-hud .keys { display: inline-block; min-width: 6.2em; letter-spacing: 0.12em; }
 #combo-hud i { font-style: normal; opacity: 0.8; }
 #combo-hud b { color: #7fe6ff; text-shadow: 0 0 6px #4de3ff; }
@@ -140,78 +126,44 @@ body:not(.touch-ui) #item-btn { right: calc(24px + env(safe-area-inset-right)); 
 .magic-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .magic-actions .mp-btn { padding: 2px 8px; font-size: 12px; }
 
-/* The quiet HUD (src/hud/Hud.ts, rules in src/systems/hudRules.ts): a row of pixel hearts, then mana and needs as thin pixel
-   bars that fade when nothing changes, and a gold chip that flashes for two seconds. The art is a CSS variable set by Hud.ts
-   (--heart-full, --heart-empty, --coin: pixel grids as SVG, src/hud/heartArt.ts); --u is one art pixel in CSS px (a whole
-   number, so the pixels stay square). */
-#hud-stats { --u: 3px; display: flex; flex-direction: column; gap: 6px; flex: 0 1 auto; min-width: 0; margin-right: 8px; padding: 2px 0 0 2px; }
-@media (max-width: 600px) {
-  #hud-stats.many { --u: 2px; }
-  #hud-stats.huge .hearts { max-width: calc(5 * 12 * var(--u)); } /* nine or ten hearts wrap five and five beside the buttons */
-}
+/* HP and MP as mirror-image bars on one line: HP drains toward the left edge, MP toward the right.
+   XP and level are in the pause menu. */
+#hud-stats { display: flex; gap: 6px; flex: 0 1 400px; min-width: 0; margin-right: 8px; padding: 3px 4px; }
+#hud-stats .bar { flex: 1 1 0; min-width: 0; }
 #hud-stats[hidden] { display: none; }
-#hud-stats .vrow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-height: calc(var(--u) * 5); }
-/* Online, the host is the Dungeon Master: no hearts of their own, just who they are. */
-#hud-dm { flex: 0 1 auto; margin-right: auto; font-size: 14px; color: #ffd34d; }
+/* Online, the host is the Dungeon Master: no bars of their own, just who they are. */
+#hud-dm { flex: 0 1 auto; margin-right: auto; padding: 3px 10px; color: #ffd34d; font: 700 14px/18px var(--title); text-shadow: 0 1px 2px #000; }
 #hud-dm[hidden] { display: none; }
-#hud-hp { transition: opacity 0.5s; }
-#hud-hp.dim { opacity: 0.35; }
-/* Mana and the needs leave the screen altogether when nothing is going on (only the hearts stay, faintly). */
-.pbar.dim { opacity: 0; }
-#hud-hp .hearts { display: flex; flex-wrap: wrap; gap: var(--u); filter: drop-shadow(0 var(--u) 0 rgba(0, 0, 0, 0.45)); }
-#hud-hp .hearts i {
-  position: relative; display: block; width: calc(11 * var(--u)); height: calc(10 * var(--u));
-  background: var(--heart-empty) center / 100% 100% no-repeat; image-rendering: pixelated;
-}
-#hud-hp .hearts b { position: absolute; inset: 0; background: var(--heart-full) center / 100% 100% no-repeat; clip-path: inset(0 0 0 0); }
-#hud-hp .hearts i[data-f="0"] b { display: none; }
-#hud-hp .hearts i[data-f="1"] b { clip-path: inset(0 75% 0 0); }
-#hud-hp .hearts i[data-f="2"] b { clip-path: inset(0 50% 0 0); }
-#hud-hp .hearts i[data-f="3"] b { clip-path: inset(0 25% 0 0); }
-/* The heart that lost health jumps and shakes in whole-pixel steps (not for players who ask for reduced motion). */
-#hud-hp .hearts i.pop { animation: heart-pop 0.45s steps(9) both; }
-@keyframes heart-pop {
-  0% { transform: scale(1.5); filter: brightness(2.2); }
-  22% { transform: translate(calc(var(--u) * -1), calc(var(--u) * -2)) scale(1.3); }
-  44% { transform: translate(var(--u), 0) scale(1.15); filter: none; }
-  66% { transform: translate(calc(var(--u) * -1), 0); }
-  100% { transform: none; filter: none; }
-}
-@media (prefers-reduced-motion: reduce) { #hud-hp .hearts i.pop { animation: none; } }
-/* Visually hidden, still read aloud: the exact numbers (the menu's Status tab shows them to everyone). */
-#hud-stats .label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-#hud-stats #hud-hp, #hud-stats .pbar { position: relative; }
-/* Thin pixel bars: mana, and under it food and water. A hard 2 px dark rim and a 1 px gold rail, a lit top line on the fill. */
-.pbar {
-  --c: #4f8fe6; position: relative; flex: none; box-sizing: border-box; width: calc(30 * var(--u)); height: calc(3 * var(--u)); margin: 2px;
-  background: #19141f; box-shadow: 0 0 0 2px #120d08, 0 0 0 3px rgba(242, 211, 138, 0.55), 0 3px 0 3px rgba(0, 0, 0, 0.35);
-  transition: opacity 0.5s;
-}
-.pbar .fill {
-  height: 100%; clip-path: inset(0 calc(100% - var(--frac, 1) * 100%) 0 0); transition: clip-path 0.15s;
-  background: linear-gradient(rgba(255, 255, 255, 0.45) 0 1px, transparent 1px calc(2 * var(--u) - 1px), rgba(0, 0, 0, 0.25) 0) , var(--c);
-}
-#hud-needs { display: flex; gap: 10px; }
-#hud-needs[hidden] { display: none; }
-#hud-needs .pbar { width: calc(18 * var(--u)); height: calc(2 * var(--u)); }
-#hud-food { --c: #e7782f; }
-#hud-water { --c: #4fb4dc; }
-#hud-needs .pbar.low .fill { animation: need-pulse 1s infinite alternate; }
-#hud-needs .pbar.empty { box-shadow: 0 0 0 2px #120d08, 0 0 0 3px #d9302c; }
-@keyframes need-pulse { to { opacity: 0.45; } }
-/* The gold chip beside the hearts, only for two seconds after gold changes. */
-#hud-gold { display: flex; align-items: center; gap: 6px; flex: none; color: var(--gold); font: 700 max(16px, calc(var(--u) * 7))/1 var(--title); animation: gold-in 0.25s steps(4); }
-#hud-gold[hidden] { display: none; }
-#hud-gold i { display: block; width: calc(9 * var(--u)); height: calc(9 * var(--u)); background: var(--coin) center / 100% 100% no-repeat; image-rendering: pixelated; }
-#hud-gold .label { position: static; width: auto; height: auto; margin: 0; clip-path: none; text-shadow: var(--outline); }
-@keyframes gold-in { from { transform: translateY(4px); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { #hud-gold { animation: none; } }
 .bar {
-  position: relative; height: 12px; overflow: hidden; box-sizing: border-box;
-  background: #19141f; box-shadow: 0 0 0 2px #120d08, 0 0 0 3px rgba(242, 211, 138, 0.55);
+  position: relative; height: 14px; overflow: hidden;
+  background: #17120c; border: 1px solid var(--gold-dim); border-radius: 2px; box-shadow: inset 0 1px 3px #000;
 }
-.bar .fill { height: 100%; clip-path: inset(0 calc(100% - var(--frac, 1) * 100%) 0 0); transition: clip-path 0.15s; }
-.bar.xp { height: 8px; margin: 5px 3px 3px; }
+/* The fill always spans the track (so MP/XP gradients run dark→bright across the whole bar) and is
+   clipped to --frac (set by Hud.ts / Menu.ts); HP is coloured by Hud.ts. */
+.bar .fill {
+  height: 100%; clip-path: inset(0 calc(100% - var(--frac, 1) * 100%) 0 0);
+  transition: clip-path 0.15s, background-color 0.15s;
+}
+.bar.mirror .fill { clip-path: inset(0 0 0 calc(100% - var(--frac, 1) * 100%)); }
+.bar .label { position: absolute; inset: 0; color: #fff; font: 600 11px/14px var(--body); text-align: center; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 2px #000; }
+#hud-hp .label::before { content: 'HP '; font-weight: 700; }
+#hud-mp .label::before { content: 'MP '; font-weight: 700; }
+#hud-hp .fill { background-image: linear-gradient(rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.25)); }
+#hud-mp .fill { background-image: linear-gradient(270deg, #363c4e, #586c78, #7796a5, #90b8d1, #a8d3fc); }
+/* Food and water: a second row of bars under HP and MP (Hud.ts sets --frac and the low/empty classes). */
+#hud-stats { flex-wrap: wrap; }
+#hud-needs { display: flex; gap: 6px; flex: 1 1 100%; min-width: 0; }
+#hud-needs[hidden] { display: none; }
+#hud-needs .bar { flex: 1 1 0; min-width: 0; height: 11px; }
+#hud-needs .label { font-size: 9px; line-height: 11px; }
+#hud-food .label::before { content: 'FOOD '; font-weight: 700; }
+#hud-water .label::before { content: 'WATER '; font-weight: 700; }
+#hud-food .fill { background-image: linear-gradient(270deg, #963a11, #e7682f, #ffb13f); }
+#hud-water .fill { background-image: linear-gradient(270deg, #1a3051, #406181, #5b93c9); }
+#hud-needs .bar.low .fill { animation: need-pulse 1s infinite alternate; }
+#hud-needs .bar.empty { border-color: #b82024; }
+@keyframes need-pulse { to { opacity: 0.45; } }
+.bar.xp { height: 8px; margin-top: 3px; }
 .bar.xp .fill { background-image: var(--grad-xp); }
 
 /* Plain text buttons inside the panels (New game, wear, use, buy, sell, trade replies): a pixel plank with notched
@@ -242,39 +194,34 @@ body:not(.touch-ui) #item-btn { right: calc(24px + env(safe-area-inset-right)); 
 #hud-buttons { display: flex; gap: 12px; flex: none; }
 #menu-btn, #map-btn, #inv-btn, #req-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
 
-/* --- Map (src/hud/MapOverlay.ts): parchment in a stone frame, like the menu (a wood panel holding a thin paper one). It never
-   takes input, so the game stays playable around it. The picture's cells that are not explored yet are transparent, so the
-   parchment shows through as unexplored land. --- */
+/* --- Co-op map (src/hud/MapOverlay.ts): never takes input, so the game stays playable behind it --- */
 #map-overlay {
-  position: fixed; z-index: 2; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); pointer-events: none;
-  width: max-content; max-width: calc(100vw - 8px); padding: 4px 6px 8px; text-align: center;
+  position: fixed; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none;
+  width: min(92vw, calc(78dvh * var(--aspect, 1.333))); aspect-ratio: var(--aspect, 1.333);
+  opacity: 0.65; background: rgba(23, 18, 12, 0.6); border: 2px solid var(--gold-dim); border-radius: 3px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
 }
 #map-overlay[hidden] { display: none; }
-#map-overlay .zone-title { margin: 0 0 6px; font: 700 18px/1.1 var(--title); color: var(--gold); text-shadow: var(--outline); letter-spacing: 0.04em; }
-#map-overlay .sheet { display: block; padding: 0; }
-#map-overlay .stage {
-  position: relative; box-sizing: border-box; aspect-ratio: var(--aspect, 1.333); overflow: hidden;
-  width: min(calc(100vw - 80px), calc((100dvh - 200px) * var(--aspect, 1.333)));
-}
-#map-overlay .stage img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
-/* A pin is a small pixel square in its player's colour with a dark rim and a light one inside. */
+#map-overlay img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 #map-overlay .pin {
-  position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; box-sizing: border-box; background: var(--pin, #ffb13f);
-  border: 2px solid #120a06; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; box-sizing: border-box;
+  border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #000, 0 0 6px #000;
 }
 #map-overlay .pin[hidden] { display: none; }
-#map-overlay .pin.friend { animation: ping 1.2s steps(6) infinite; }
-@keyframes ping { 0% { outline: 0 solid rgba(18, 10, 6, 0.8); } 100% { outline: 10px solid rgba(18, 10, 6, 0); } }
-@media (prefers-reduced-motion: reduce) { #map-overlay .pin.friend { animation: none; } }
-/* Who is who, on the frame under the picture. */
-#map-overlay .legend { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 6px; margin-top: 8px; min-height: 14px; font: 500 12px/1 var(--title); color: var(--gold); text-shadow: var(--outline); }
-#map-overlay .legend i { width: 10px; height: 10px; box-sizing: border-box; margin-left: 8px; background: var(--pin, #ffb13f); border: 2px solid #120a06; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7); }
-#map-overlay .legend i:first-child { margin-left: 0; }
+#map-overlay .pin { background: var(--pin, #ffb13f); }
+#map-overlay .pin.friend { animation: ping 1.2s ease-out infinite; }
+@keyframes ping { 0% { box-shadow: 0 0 0 1px #000, 0 0 0 0 rgba(255, 255, 255, 0.9); } 100% { box-shadow: 0 0 0 1px #000, 0 0 0 12px rgba(255, 255, 255, 0); } }
+#map-overlay .legend {
+  position: absolute; left: 6px; bottom: 4px; display: flex; align-items: center; gap: 4px;
+  font: 700 12px var(--body); color: #fff; text-shadow: 0 1px 2px #000, 0 0 3px #000;
+}
+#map-overlay .legend i { width: 9px; height: 9px; border: 1.5px solid #fff; border-radius: 50%; margin-left: 6px; }
+#map-overlay .legend i { background: var(--pin, #ffb13f); }
 /* A room has no overview: the heading and a note instead of the picture and pins. */
 #map-overlay .room-note { display: none; }
-#map-overlay.room { width: min(92vw, 420px); padding: 14px 16px 18px; }
-#map-overlay.room .sheet, #map-overlay.room .legend { display: none; }
-#map-overlay.room .room-note { display: block; margin: 8px 0 0; font: 500 14px/1.4 var(--title); color: #e8dcc0; text-shadow: var(--outline); }
+#map-overlay.room { aspect-ratio: auto; width: min(92vw, 420px); padding: 18px 16px 22px; }
+#map-overlay.room img, #map-overlay.room .pin, #map-overlay.room .legend, #map-overlay.room .place, #map-overlay.room .guide { display: none; }
+#map-overlay.room .room-note { display: block; margin: 8px 0 0; text-align: center; font: 600 16px var(--body); color: #fff; text-shadow: 0 1px 2px #000; }
 
 /* --- Dialog box (tap it, or press the action key, to advance) --- */
 #dialog {
@@ -372,30 +319,25 @@ body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
   overflow-y: auto; padding: 6px 8px 10px;
 }
 #menu header, #shop header, #trade header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
-#menu nav, #shop nav, #trade nav { display: flex; flex: 1; flex-wrap: wrap; gap: 3px 2px; min-width: 0; }
+#menu nav, #shop nav, #trade nav { display: flex; flex: 1; gap: 2px; min-width: 0; }
 #menu [role="tab"], #shop [role="tab"], #trade [role="tab"] {
-  flex: 1 1 calc(33.3% - 3px); min-width: 0; min-height: 26px; display: flex; align-items: center; justify-content: center;
+  flex: 1 1 0; min-width: 0; aspect-ratio: 289 / 60; display: flex; align-items: center; justify-content: center;
   background: url('./ui/plank-dim.png') center / 100% 100% no-repeat;
-  font: 500 12px/1 var(--title); color: #c8c2b0; text-shadow: 0 1px 0 #000; letter-spacing: 0.02em;
+  font: 700 clamp(10px, 3.2vw, 14px) var(--title); color: #b9b3a2; text-shadow: 0 1px 2px #000; letter-spacing: 0.03em;
 }
-/* A landscape phone is short: the six tabs go back to one row (11 px). */
-@media (max-height: 500px) { #menu nav [role="tab"] { flex-basis: calc(16.6% - 3px); font-size: 11px; letter-spacing: 0; } }
-#menu nav:has([data-tab="trade"]:not([hidden])) [role="tab"], #menu nav:has([data-tab="party"]:not([hidden])) [role="tab"] { flex-basis: calc(25% - 3px); }
-/* The shop and the trade window have two or three tabs: they share the row. */
-#shop [role="tab"], #trade [role="tab"] { flex: 1 1 0; min-height: 28px; font-size: 13px; }
-/* Up to eight tabs: three to a row (four when the trade or party tab is there) at a size a phone can read (12 px). */
+/* Seven or eight tabs share one row: smaller lettering so none runs into its neighbour. */
+#menu nav [role="tab"] { font-size: clamp(8px, 2.3vw, 11px); letter-spacing: 0; }
 #menu [role="tab"][hidden] { display: none; }
 /* Credits sits alone in the bottom-left corner, as wide as one of the tabs along the top. */
 #menu footer { display: flex; margin-top: 8px; }
-#menu footer [role="tab"] { flex: none; width: 104px; }
-#menu [role="tab"].active, #shop [role="tab"].active, #trade [role="tab"].active { background-image: url('./ui/plank.png'); color: var(--gold); font-weight: 700; }
+#menu footer [role="tab"] { flex: none; width: 92px; }
+#menu [role="tab"].active, #shop [role="tab"].active, #trade [role="tab"].active { background-image: url('./ui/plank.png'); color: var(--gold); }
 #menu .close, #shop .close, #trade .close { flex: none; width: 36px; height: 36px; font-size: 18px; line-height: 36px; }
 #menu section { color: var(--ink); padding: 4px 12px 10px; font-size: 17px; }
 #menu section[hidden] { display: none; }
 #menu h2, #shop h2, #trade h2 { margin: 6px 0 4px; font: 700 20px var(--title); color: var(--ink); }
 #menu h2 small, #shop h2 small, #trade h2 small { font: 600 15px var(--body); color: var(--ink-soft); margin-left: 6px; }
 #menu h3 { margin: 14px 0 4px; font: 700 15px var(--title); color: var(--ink); }
-#menu h3 .purse { float: right; font: 500 14px var(--title); color: var(--ink); }
 #menu dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 10px 0 0; }
 #menu dt { color: var(--ink-soft); font-weight: 600; }
 #menu dd { margin: 0; }
@@ -553,6 +495,10 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
 #keybinds .bind.listening { color: var(--gold); background: #4a3418; border-color: var(--ink); }
 .keybinds-note { min-height: 1.3em; margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); }
 .keybinds-note.error { color: #9b2a1c; font-weight: 600; }
+/* --- Gold on the HUD --- */
+#hud-gold { display: flex; align-items: center; gap: 4px; flex: none; padding: 0 2px; color: var(--gold); font: 700 12px/14px var(--title); text-shadow: 0 1px 2px #000, 0 0 2px #000; }
+#hud-gold[hidden] { display: none; }
+#hud-gold i { width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff2a8, #e0a820 60%, #8a5a10); box-shadow: 0 0 0 1px #4a3000; }
 
 /* --- Shop counter and the pack: rows of an item, its price and a button --- */
 #shop > .panel, #trade > .panel { display: flex; flex-direction: column; }
@@ -686,21 +632,21 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
 .quest-note { color: var(--ink-soft); }
 .quest-done { margin: 4px 0 0; padding-left: 20px; color: var(--ink-soft); }
 
-/* --- The area name that shows in the top middle on entering a zone (src/hud/AreaBanner.ts): pixel lettering with a hard outline --- */
+/* --- The area name that shows in the top middle on entering a zone (src/hud/AreaBanner.ts) --- */
 #area-banner {
   position: fixed; z-index: 2; left: 50%; top: calc(72px + env(safe-area-inset-top)); transform: translateX(-50%);
   width: calc(100vw - 24px); text-align: center; pointer-events: none; opacity: 0; font-family: var(--title);
+  text-shadow: 0 2px 3px #000, 0 0 10px #000, 0 0 3px #000;
 }
-#area-banner .title { font-weight: 700; font-size: clamp(26px, 6vw, 52px); line-height: 1.15; color: var(--gold, #f5d175); letter-spacing: 0.05em; text-shadow: var(--outline-big); }
-#area-banner .sub { font: 500 clamp(12px, 2.2vw, 16px) var(--title); color: #f1e4c0; letter-spacing: 0.14em; text-transform: uppercase; min-height: 1.2em; text-shadow: var(--outline); margin-bottom: 4px; }
-#area-banner.show { animation: area-banner 4.2s steps(14) forwards; }
+#area-banner .title { font-weight: 700; font-size: clamp(30px, 7vw, 60px); line-height: 1.1; color: var(--gold, #f5d175); letter-spacing: 0.04em; }
+#area-banner .sub { font: 600 clamp(13px, 2.4vw, 18px) var(--body); color: #e8dcc0; letter-spacing: 0.2em; text-transform: uppercase; min-height: 1.2em; }
+#area-banner.show { animation: area-banner 4.2s ease-out forwards; }
 @keyframes area-banner {
-  0% { opacity: 0; transform: translateX(-50%) translateY(-8px); }
-  10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  0% { opacity: 0; transform: translateX(-50%) translateY(-8px) scale(0.96); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
   75% { opacity: 1; }
   100% { opacity: 0; }
 }
-@media (prefers-reduced-motion: reduce) { #area-banner.show { animation-name: area-banner-calm; } @keyframes area-banner-calm { 0%, 75% { opacity: 1; } 100% { opacity: 0; } } }
 
 /* --- Screen feel: the red edge when the hero is low, and the fall to black when they go down (src/hud/ScreenFx.ts) --- */
 #hurt-vignette {
@@ -716,16 +662,16 @@ body.dm-possessing #hurt-vignette, body.dm-possessing #downfall { display: none;
 /* --- The badge when the hero gains a level (src/hud/LevelSplash.ts): small, at the top, for about a second, so it never covers
        the fight (the ring, glow and chime in the world are the real cue) --- */
 #level-splash {
-  --n: 3px; position: fixed; z-index: 3; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%);
-  display: flex; align-items: center; gap: 8px; padding: 5px 14px; text-align: center; white-space: nowrap; box-sizing: border-box;
-  pointer-events: none; opacity: 0; font-family: var(--title); background: #2a1d10;
-  box-shadow: inset 0 0 0 2px var(--gold-dim), inset 0 0 0 4px #120c06; clip-path: var(--notch); text-shadow: 0 1px 0 #000;
+  position: fixed; z-index: 3; left: 50%; top: calc(54px + env(safe-area-inset-top)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; padding: 3px 12px; text-align: center; white-space: nowrap;
+  pointer-events: none; opacity: 0; font-family: var(--title); background: rgba(23, 18, 12, 0.7);
+  border: 1px solid var(--gold, #f5d175); border-radius: 12px; text-shadow: 0 1px 2px #000;
 }
-#level-splash .sub { font: 500 12px var(--title); color: #fff4c8; letter-spacing: 0.14em; text-transform: uppercase; }
+#level-splash .sub { font: 700 11px var(--body); color: #fff4c8; letter-spacing: 0.2em; text-transform: uppercase; }
 #level-splash .level { font-weight: 700; font-size: 20px; line-height: 1; color: var(--gold, #f5d175); }
 #level-splash .gains { display: none; }
-@media (max-width: 600px) { #level-splash { top: calc(104px + env(safe-area-inset-top)); } } /* below the hearts and the tracker chip */
-#level-splash.show { animation: level-splash 1.3s steps(13) forwards; }
+@media (max-width: 600px) { #level-splash { top: calc(128px + env(safe-area-inset-top)); } } /* below the wrapped bars and the tracker chip */
+#level-splash.show { animation: level-splash 1.3s ease-out forwards; }
 @keyframes level-splash {
   0% { opacity: 0; transform: translateX(-50%) scale(0.7); }
   15% { opacity: 1; transform: translateX(-50%) scale(1.1); }
@@ -737,39 +683,43 @@ body.dm-possessing #hurt-vignette, body.dm-possessing #downfall { display: none;
   #level-splash.show { animation-name: level-splash-calm; }
   @keyframes level-splash-calm { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
 }
+body.dm-possessing #level-splash { display: none; }
 
 /* --- Quest reminder (src/hud/Hud.ts) --- */
 #quest-tracker {
   position: fixed; z-index: 2; pointer-events: none; max-width: min(340px, 60vw);
-  top: calc(64px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); text-align: right;
-  padding: 5px 12px; font-size: 13px; line-height: 17px;
+  top: calc(72px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); text-align: right;
+  padding: 3px 8px; background: rgba(23, 18, 12, 0.6); border: 1px solid var(--gold-dim); border-radius: 3px;
+  font: 700 13px/17px var(--title); color: #ffe9a8; text-shadow: 0 1px 2px #000;
 }
-#quest-tracker[hidden], body.map-open #quest-tracker { display: none; }
-#quest-tracker.tick { animation: quest-tick 0.7s steps(7); }
+#quest-tracker[hidden] { display: none; }
+#quest-tracker.tick { animation: quest-tick 0.7s ease-out; }
 @keyframes quest-tick {
-  0% { transform: scale(1.12); filter: brightness(1.9); }
-  100% { transform: scale(1); filter: none; }
+  0% { transform: scale(1.18); border-color: #fff; background: rgba(120, 96, 40, 0.85); }
+  100% { transform: scale(1); border-color: var(--gold-dim); background: rgba(23, 18, 12, 0.6); }
 }
-@media (prefers-reduced-motion: reduce) { #quest-tracker.tick { animation: none; } }
-/* On a phone the chip takes the line under the hearts and the buttons, and the area banner (a few seconds only) goes below
-   the hero, clear of the HUD, the guide caption and the swing. */
+/* On a phone the bars wrap to two rows beside the buttons: the chip goes below them, and the area banner (a few seconds
+   only) goes below the hero, clear of the HUD, the guide caption and the swing. */
 @media (max-width: 600px) {
-  #quest-tracker { top: calc(70px + env(safe-area-inset-top)); max-width: calc(100vw - 16px - env(safe-area-inset-right) - env(safe-area-inset-left)); }
+  #quest-tracker { top: calc(96px + env(safe-area-inset-top)); max-width: calc(100vw - 16px - env(safe-area-inset-right) - env(safe-area-inset-left)); }
 }
 @media (max-width: 600px), (max-height: 500px) {
   #area-banner { top: 60%; }
 }
 @media (max-height: 500px) {
-  #quest-tracker { max-width: min(340px, 45vw); top: calc(62px + env(safe-area-inset-top)); }
-  #area-banner .title { font-size: 30px; }
+  #quest-tracker { max-width: min(340px, 45vw); }
+  #area-banner .title { font-size: 34px; }
 }
 
-/* --- Map: places explored so far (a pixel dot with its name below; the quest's star sits on the dot, the name clear of it) --- */
-#map-overlay .place {
-  position: absolute; transform: translate(-50%, -3px); display: flex; flex-direction: column; align-items: center; gap: 2px;
-  white-space: nowrap; font: 700 11px/1 var(--title); color: #3a2410; text-shadow: 0 0 2px #e8d4a0, 0 0 2px #e8d4a0, 1px 1px 0 rgba(232, 212, 160, 0.9);
+/* --- Map: the zone's name and the places explored so far --- */
+#map-overlay .zone-title {
+  position: absolute; left: 0; right: 0; top: 4px; text-align: center; font: 700 18px var(--title); color: #fff;
+  text-shadow: 0 1px 3px #000, 0 0 4px #000;
 }
-#map-overlay .place::before { content: ''; width: 6px; height: 6px; background: #5a3418; box-shadow: 0 0 0 1px #e8d4a0; }
+#map-overlay .place {
+  position: absolute; transform: translate(-50%, -50%); white-space: nowrap; font: 700 12px var(--body); color: #fff4c8;
+  text-shadow: 0 1px 2px #000, 0 0 3px #000, 0 0 3px #000;
+}
 .quest-hint { font-style: italic; color: var(--ink-soft); }
 
 /* The picture of what a quest wants, beside its hint */
@@ -781,14 +731,13 @@ body.dm-possessing #hurt-vignette, body.dm-possessing #downfall { display: none;
 .quest-art .item-art .item-pic { width: 100%; height: 100%; }
 
 /* Where the current quest leads, on the map: a dashed search circle for something to find, a star for a person or door */
-#map-overlay .guide { position: absolute; transform: translate(-50%, -50%); text-align: center; font-family: var(--title); font-weight: 700; color: #a8261a; text-shadow: 0 0 2px #e8d4a0, 0 0 3px #e8d4a0; }
+#map-overlay .guide { position: absolute; transform: translate(-50%, -50%); text-align: center; font-family: var(--title); font-weight: 700; color: #ffe27a; text-shadow: 0 1px 3px #000, 0 0 4px #000; }
 #map-overlay .guide.search {
-  aspect-ratio: 1; min-width: 56px; border: 3px dashed #a8261a; border-radius: 50%; background: rgba(200, 60, 30, 0.2);
-  display: flex; align-items: center; justify-content: center; font-size: 28px; animation: search-pulse 1.8s steps(6) infinite;
+  aspect-ratio: 1; min-width: 56px; border: 3px dashed #ffd34d; border-radius: 50%; background: rgba(255, 211, 77, 0.3); box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.55), 0 0 14px rgba(255, 211, 77, 0.8);
+  display: flex; align-items: center; justify-content: center; font-size: 30px; animation: search-pulse 1.8s ease-in-out infinite;
 }
-#map-overlay .guide.place-star { font-size: 22px; transform: translate(-50%, -85%); animation: search-pulse 1.8s steps(6) infinite; }
+#map-overlay .guide.place-star { font-size: 22px; animation: search-pulse 1.8s ease-in-out infinite; }
 @keyframes search-pulse { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.45; } }
-@media (prefers-reduced-motion: reduce) { #map-overlay .guide { animation: none !important; } }
 
 /* Chapter heading and the journal on the Quests tab */
 .quest-chapter-title { margin: 0 0 4px; font: 600 15px var(--body); color: var(--ink-soft); letter-spacing: 0.04em; }

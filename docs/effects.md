@@ -16,22 +16,10 @@ the screen. A new kind of source is an entry in `HEARTH_EFFECTS`, `HEARTH_MARGIN
 - **Night warmth**: `LightGlow` (additive, above the night shade) draws an orange pool at each fire, torch and lava
   source (`systems/lights.ts`, radii in `LIGHT_RADIUS`), scaled by `glowStrength` of the sky colour.
 - **Underground darkness** (capability `darkness`, zone scope; settings `radius`, `dim`, `memory`): `MapData.dark` is set
-  by every `Delve` (cave, sewer, crypt) and `DarknessLayer` cuts pre-rendered pools out of a small smooth mask for each
-  hero and light, with ground already seen faintly visible. `DitherFilter` (one GPU pass, WebGL) then cuts the mask into
-  4 flat steps stippled by a 4x4 Bayer table anchored to world pixels (no swim when the camera moves), in a blue-black
-  `FOG_COLOR` capped at 0.94 so unseen rooms never read as holes. The carried light is a tight flat core
-  (`carriedFlicker`); torches and fires breathe with `flicker` (`Light.f` is their brightness) and `LightGlow` adds the warm
-  additive pool on the stone (5 dithered steps, plus a faint warm pool at each carried lamp). Maths in `systems/darkLook.ts`.
-  Nothing hides from the rules: a mob in the dark still sees you. A campaign, arc or biome turns it off with
-  `"darkness": false`. The two masks are the textures with linear filtering (the filter reads them smooth).
+  by every `Delve` (cave, sewer, crypt) and `DarknessLayer` cuts pools out of a dark mask for each hero and light, with
+  ground already seen faintly visible. Nothing hides from the rules: a mob in the dark still sees you. A campaign, arc or
+  biome turns it off with `"darkness": false`. It is the one linear-filtered texture (the soft edge needs it).
 - **Cave backdrop** (capability `parallax`): the dark beyond a delve's walls is a two-layer parallax backdrop (`src/map/CLAUDE.md`), under the fog above.
-- **Water, drips and mist underground** (`entities/Atmosphere.ts`, `Hearth.ts`; `systems/waterRuns.ts` finds the water):
-  two ripple layers (a normal pale one, an additive glint one) slide over each pool as tiling sprites scrolled in whole
-  pixels, and each torch over a channel casts a wobbling warm reflection (6 bars, additive). `Hearth` adds `mist` (a faint
-  rising wisp, `sort: world` so it sits behind the hero) on 1 in 9 water cells and `drip` + `dripRipple` (bead, then the
-  pixel ring 32 px lower, unseen until the bead lands) on 1 in 45 floor and 1 in 20 water cells. The baked part is the map's:
-  foam where water meets floor, contact shadows at walls, wet patches, cracks, moss, pebbles and a speckled roof
-  (`tools/map/CLAUDE.md`). All cosmetic, from map data and the clock, so a guest sees the same.
 
 ## The hero
 

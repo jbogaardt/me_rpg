@@ -40,15 +40,3 @@ describe('glowStrength', () => {
     expect(glowStrength(0x2a3a66)).toBeGreaterThan(0.8);
   });
 });
-
-describe('flame brightness', () => {
-  it('gives every flickering light a brightness between a gutter and full, and lava none', () => {
-    const got = visibleLights([src('torch', 50, 50), src('torch', 90, 50), src('lava', 60, 60)], view, 3.3);
-    for (const l of got.slice(0, 2)) {
-      expect(l.f).toBeGreaterThanOrEqual(0.65);
-      expect(l.f).toBeLessThanOrEqual(1);
-    }
-    expect(got[2]!.f).toBe(0.9);
-    expect(got[0]!.f).not.toBe(got[1]!.f);
-  });
-});

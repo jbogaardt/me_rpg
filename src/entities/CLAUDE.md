@@ -21,7 +21,7 @@
   ordinary `bolt` events; `heal` makes a healer: in a fight and in sight it mends the most wounded non-boss ally (the ally's `hp` in the snapshot, the existing `heal` fx), then rests (a recover, so a blow staggers it).
   **Aggro needs line of sight** (`MobWorld.sees`, `Collision.hasLineOfSight`): walls do not pull rooms; a mob also hears a
   hero at `HEARING` of its sight, and a chaser keeps `MEMORY` seconds after losing sight, and gives up the moment the hero is past its sight range. Host-only, so no co-op change.
-  **Immovable** (`MobKind.immovable`, behavior `immovable`, every named boss; needs poise): a blow never pushes it, even when its poise breaks (a nudge-free hit). **Farming**: each fall of the same foe keeps it down longer (`respawnWait`: 60 s, 90 s, 135 s... at most 5 min; an unloaded zone starts afresh, and a reload puts the hero home). **Giants** (`MobKind.scale`) draw bigger and the rules follow: collision box, reach, hit circle. Only bosses and elites get a health bar.
+  **Immovable** (`MobKind.immovable`, behavior `immovable`, every named boss; needs poise): a blow never pushes it, even when its poise breaks (a nudge-free hit). **Farming**: each fall of the same foe keeps it down longer (`respawnWait`: 60 s, 90 s, 135 s... at most 5 min; an unloaded zone starts afresh, and a reload puts the hero home). **Giants** (`MobKind.scale`) draw bigger and the rules follow: collision box, reach, hit circle, bars.
 - **Hit-pause** (`systems/hitPause.ts`): per actor, never a world freeze. A surviving mob freezes and flashes 100-150ms on
   a blow, then staggers; the hero who landed a sword blow or arrow holds 50-70ms (`Player.hitstop`: no walking, pose held),
   110ms on a kill (a boss 200ms), and a struck hero holds 80ms. A killed mob holds the same kill pause and its death
@@ -34,8 +34,8 @@
   a beam from the `channel` state itself, but never decides anything. The host alone damages.
 - **Ambient life** (`ambient.ts`: footprints, falling leaves) is passive, driven by body movement and map metadata
   (`surface`, object `tag`, canopy sheet name), with no hooks into collision. Keep any new effect pooled and capped.
-- **Places and light** (`Hearth.ts`, `LightGlow.ts`, `DarknessLayer.ts`, `DitherFilter.ts`, `Atmosphere.ts`; `docs/effects.md`): smoke, drips, mist and the
-  underground's fog of war come from map data and run near the screen. Dark and glow are small canvases of pre-rendered pools stepped by a world-anchored dither filter on the GPU:
+- **Places and light** (`Hearth.ts`, `LightGlow.ts`, `DarknessLayer.ts`; `docs/effects.md`): smoke, drips, mist and the
+  underground's fog of war come from map data and run near the screen. Dark and glow are small canvases drawn from pre-rendered pools, smooth (no dither):
   no per-frame gradient, readback or allocation. Visual only, so no co-op change.
 - **Show, don't tell** (`systems/cueRules.ts`, `Visuals`; core engine, cosmetic, co-op via `fx` events, `src/net/CLAUDE.md`): no popup text for state or combat. A blow's weight is the spark tier (`hitTier`: graze under 12% of the foe's health, heavy from 30% or a kill) on top of hit-pause and kick; a refusal is one `deny` cue (red puff, the actor's head-shake, a thud; where the reason is not on screen, ONE passive `dialog.note` line); pay is `gainMotes` (coins fly to the hero, `moteArc`); a level is `levelRing` (ring, body glow, chime, small badge). Low HP, hunger and thirst tint the local hero (`BodyCues`, `Character.setStrain`). Numbers exist only behind Controls > "Damage numbers" (`core/damageNumbers.ts`, off by default, solo and host only). New state goes through a cue, never `floatText`.
 - Effects (`effects.ts`, `ParticleEffect.ts`) are transient visuals owned by an `Effects` list; add a particle effect
