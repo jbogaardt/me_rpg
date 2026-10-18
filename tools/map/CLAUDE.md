@@ -49,8 +49,10 @@ sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs
 
 `town.png` (`town.ts`, composed from the LPC City outside pack in `art/lpc_city/`) holds the shop prefabs (`BUILDINGS` in `catalog.ts`),
 solid from the ground up; each has a door into its interior room (`interiors.ts`). Six shops stand in Lanternrest; the
-tavern (red roof over brick, the Resting Lantern) is the one a breather is spent in. Halls are 5 cells wide with a one-cell door, houses 3 (a shop is told by its hanging sign, not its colour). A new shop is a hall or house in `town.ts` (a hanging sign by its door; an emblem
-in `emblems.ts` and a shelf and sign in `interior.ts` for its room), a `SHOP_DOORS` entry, a room spec and its shop, keeper and node in the content.
+tavern (red roof over brick, the Resting Lantern) is the one a breather is spent in. Halls are 5 cells wide with a one-cell door, houses 3 (a shop is told by its hanging sign, not its colour). A new shop is a hall or house in `town.ts` (a hanging sign by its door; a shelf and sign
+in `interior.ts` for its room), a `SHOP_DOORS` entry, a room spec and its shop, keeper and node in the content.
+
+`interior.png` (`interior.ts`, from LPC floors, furniture and the base wall in `art/lpc_interior/`, with item icons and hanging signs we already ship) holds the room pieces named in `INTERIOR` (`catalog.ts`); `compose.ts` has the cut/overlay helpers it shares with `town.ts`. Rooms keep the same layout (`interiors.ts`).
 
 ## Ruins
 

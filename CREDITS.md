@@ -35,6 +35,16 @@ GPL 3.0, by Reemax (Tuomo Untinen), Xenodora, Sharm (Lanea Zimmerman), Johann C,
 Johannes Sjolund; the full list is in [`art/lpc_city/CREDITS-city.txt`](art/lpc_city/CREDITS-city.txt), kept with the art.
 Gables, walls, windows and doors are cut from the pack's sheet on its own pixels and assembled into six shops; no pixel is recoloured. (Earlier shops were cut from the CC0 "Town RPG Pack" by Luis Zuno; they were replaced to match the LPC look.)
 
+## Shop interiors (`public/tilesets/interior.png`, source in `art/lpc_interior/`)
+
+Composed by `tools/map/interior.ts`, no pixel scaled or recoloured. Floors from "[LPC] Floors" (https://opengameart.org/content/lpc-floors)
+by bluecarrot16, Lanea Zimmerman (Sharm), William.Thompsonj, Hyptosis, Reemax and others, CC-BY-SA 4.0 (credits in
+[`art/lpc_interior/CREDITS-floors.txt`](art/lpc_interior/CREDITS-floors.txt)). Counter and lectern from "LPC Wooden Furniture"
+(https://opengameart.org/content/lpc-wooden-furniture) by bluecarrot16, Basto, Sharm, William.Thompsonj, Reemax and Janna/Lilius/Jannax,
+CC-BY-SA 4.0 / 3.0 or GPL 3.0 ([`CREDITS-furniture.txt`](art/lpc_interior/CREDITS-furniture.txt)). The wall is the interior wall of
+the LPC Base Assets by Lanea Zimmerman (Sharm), CC-BY-SA 3.0 / GPL 3.0 ([`CREDITS-base.txt`](art/lpc_interior/CREDITS-base.txt)).
+The stock on the shelves is the item sheet below and the signs are the hanging signs.
+
 ## Crops (`public/tilesets/crops.png`, source in `art/lpc_crops/`)
 
 "[LPC] Crops" (https://opengameart.org/content/lpc-crops) by bluecarrot16, Daniel Eddeland (daneeklu), Joshua Taylor and

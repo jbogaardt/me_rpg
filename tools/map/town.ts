@@ -9,46 +9,17 @@
 
 import path from 'node:path';
 import { readPng, ROOT, writePng, type Image } from './image';
+import { blank, crop, over, tiled } from './compose';
 import { BUILDINGS } from './catalog';
 
 const SRC = readPng(path.join(ROOT, 'art/lpc_city/city_outside.png'));
 const OUT = path.join(ROOT, 'public/tilesets/town.png');
-
-const blank = (width: number, height: number): Image => ({ width, height, data: Buffer.alloc(width * height * 4) });
 
 /** A rectangle of the pack as an image of its own. */
 function cut(x: number, y: number, w: number, h: number): Image {
   const out = blank(w, h);
   for (let yy = 0; yy < h; yy++)
     SRC.data.copy(out.data, yy * w * 4, ((y + yy) * SRC.width + x) * 4, ((y + yy) * SRC.width + x + w) * 4);
-  return out;
-}
-
-/** A rectangle of `img` as an image of its own. */
-function crop(img: Image, x: number, y: number, w: number, h: number): Image {
-  const out = blank(w, h);
-  for (let yy = 0; yy < h; yy++)
-    img.data.copy(out.data, yy * w * 4, ((y + yy) * img.width + x) * 4, ((y + yy) * img.width + x + w) * 4);
-  return out;
-}
-
-/** Draw the opaque pixels of `src` over `dst` at (dx, dy). */
-function over(dst: Image, src: Image, dx: number, dy: number) {
-  for (let y = 0; y < src.height; y++)
-    for (let x = 0; x < src.width; x++) {
-      const tx = dx + x;
-      const ty = dy + y;
-      if (tx < 0 || ty < 0 || tx >= dst.width || ty >= dst.height) continue;
-      const i = (y * src.width + x) * 4;
-      if (src.data[i + 3] === 0) continue;
-      src.data.copy(dst.data, (ty * dst.width + tx) * 4, i, i + 4);
-    }
-}
-
-/** `piece` repeated across w x h. */
-function tiled(piece: Image, w: number, h: number): Image {
-  const out = blank(w, h);
-  for (let y = 0; y < h; y += piece.height) for (let x = 0; x < w; x += piece.width) over(out, piece, x, y);
   return out;
 }
 
@@ -77,7 +48,7 @@ function wall(kind: Wall, w: number, h: number): Image {
   return out;
 }
 
-const alphaAt = (img: Image, x: number, y: number) => img.data[(y * img.width + x) * 4 + 3]!;
+const alphaAt = (img: Image, x: number, y: number) => img.data[(y * img.width + x) * 4 + 3];
 
 /**
  * `roof` made `cut` pixels shallower: in every pixel column the middle of its opaque run is dropped, so both outlines (the
@@ -114,7 +85,7 @@ function shade(img: Image, x: number, y0: number, y1: number, amount: number) {
   for (let y = y0; y <= y1; y++) {
     const i = (y * img.width + x) * 4;
     if (img.data[i + 3] === 0) continue;
-    for (let c = 0; c < 3; c++) img.data[i + c] = Math.round(img.data[i + c]! * (1 - amount));
+    for (let c = 0; c < 3; c++) img.data[i + c] = Math.round(img.data[i + c] * (1 - amount));
   }
 }
 

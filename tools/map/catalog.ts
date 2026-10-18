@@ -13,7 +13,7 @@ export const FROST_SHEET = 'frost_ground.png'; // sand -> snow, water -> ice
 export const FROST_OBJECTS = 'frost_objects.png'; // blue-grey rocks (trees and bushes: trees_<kind>.png, see trees.ts)
 export const RUINS_SHEET = 'ruins.png'; // ruined temples, walls, pillars, statues: tools/map/ruins.ts (LPC Jungle Ruins)
 export const TOWN_SHEET = 'town.png'; // the shop buildings, composed from the LPC City outside pack by tools/map/town.ts
-export const INTERIOR_SHEET = 'interior.png'; // shop interiors: floor, wall, counter, shelves, signs (tools/map/interior.ts)
+export const INTERIOR_SHEET = 'interior.png'; // shop interiors: floor, wall, counter, shelves, signs (tools/map/interior.ts, LPC art)
 export const TERRAIN_SHEET = 'lpc_terrain.png'; // the LPC terrain atlas (art/lpc_terrain/): autotiled terrains, see terrain.ts
 export const CLIFF_SHEET = 'Cliff_tileset.png'; // Avalon cliffs: a plateau blob, stairs, notches
 export const FROST_CLIFFS = 'frost_cliffs.png'; // cliffs with snow tops and blue-grey rock (recolor.ts)
@@ -497,7 +497,7 @@ export const BUILDINGS = {
   wizard: { x: 512, y: 0, w: 160, h: 224 },
   tavern: { x: 672, y: 0, w: 160, h: 224 },
 };
-/** Where each piece of the shop interior sits on interior.png (2x the 16px drawing in tools/map/interior.ts). */
+/** Where each piece of the shop interior sits on interior.png (composed by tools/map/interior.ts). */
 export const INTERIOR = {
   planksA: { x: 0, y: 0, w: 32, h: 32 },
   planksB: { x: 32, y: 0, w: 32, h: 32 },
