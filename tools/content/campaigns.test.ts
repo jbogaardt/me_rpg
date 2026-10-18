@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { WHOLE_BODIES } from '../../sprites/parts';
 import { outfitLayers, type Outfit, type PartManifest } from '../../src/sprites/doll';
-import { mobLevel, mobTimings, telegraphOf } from '../../src/systems/combat';
+import { mobLevel, mobTimings } from '../../src/systems/combat';
 import { heroModel } from '../../src/systems/dmBoss';
 import { ROOT } from '../map/image';
 import { capabilityTable } from '../../src/content/schema';
@@ -63,15 +63,10 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
     }
   });
 
-  it.each(mobs)('%s warns before it attacks (a windup and a telegraph colour) unless listed in NO_TELL', (id) => {
+  it.each(mobs)('%s warns before it attacks (a windup) unless listed in NO_TELL', (id) => {
     if (NO_TELL.has(id)) return;
     const kind = content.mobKind(id);
     expect(mobTimings(kind).windup, `${id} has no windup`).toBeGreaterThan(0);
-    const attacks = ['melee', ...(kind.shot ? ['shot' as const] : []), ...(kind.ray ? ['ray' as const] : [])];
-    for (const attack of attacks) {
-      const { color } = telegraphOf(kind, attack as 'melee' | 'shot' | 'ray');
-      expect(Number.isInteger(color) && color > 0 && color <= 0xffffff, `${id} ${attack} telegraph colour`).toBe(true);
-    }
   });
 
   it.each(Object.entries(items.items))(

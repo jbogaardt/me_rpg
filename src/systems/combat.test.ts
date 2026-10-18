@@ -182,7 +182,7 @@ describe('MOB_KINDS', () => {
     });
   });
 
-  it('telegraphOf defaults and overrides', () => {
+  it("telegraphOf: the ground marks are on unless a kind opts out (the colour is one palette, not the kind's)", () => {
     const plain: MobKind = {
       name: 'x',
       look: { body: 'body.light' },
@@ -194,14 +194,8 @@ describe('MOB_KINDS', () => {
       speed: 1,
       sight: 1,
     };
-    expect(telegraphOf(plain, 'melee')).toEqual({ color: 0xff9a2a, ground: true });
-    const archer = { ...plain, shot: { range: 100, speed: 90, color: 0x112233 } };
-    expect(telegraphOf(archer, 'shot')).toEqual({ color: 0x112233, ground: true });
-    expect(telegraphOf({ ...archer, telegraph: { color: 0xff0000, ground: false } }, 'shot')).toEqual({
-      color: 0xff0000,
-      ground: false,
-    });
-    expect(telegraphOf({ ...plain, telegraph: { ground: true } }, 'melee').ground).toBe(true);
+    expect(telegraphOf(plain)).toEqual({ ground: true });
+    expect(telegraphOf({ ...plain, telegraph: { ground: false } })).toEqual({ ground: false });
   });
 
   it('the starter hero can always hurt a starter mob (a kind for levels 1 to 5)', () => {

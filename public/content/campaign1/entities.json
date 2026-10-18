@@ -55,10 +55,7 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.43,
-        "stagger": 0.2,
-        "telegraph": {
-          "color": "#ff8a1e"
-        }
+        "stagger": 0.2
       }
     },
     "frostbound": {
@@ -86,10 +83,7 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.5,
-        "stagger": 0.1,
-        "telegraph": {
-          "color": "#6ad8ff"
-        }
+        "stagger": 0.1
       }
     },
     "goblin": {
@@ -116,10 +110,7 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.3,
-        "stagger": 0.18,
-        "telegraph": {
-          "color": "#b6ff2a"
-        }
+        "stagger": 0.18
       }
     },
     "wolfkin": {
@@ -143,10 +134,7 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.3,
-        "stagger": 0.12,
-        "telegraph": {
-          "color": "#ffb02a"
-        }
+        "stagger": 0.12
       }
     },
     "skeleton": {
@@ -200,9 +188,6 @@
         "gold": 16
       },
       "behavior": {
-        "telegraph": {
-          "color": "#9aff6a"
-        },
         "windup": 0.5,
         "recover": 0.65
       }
@@ -263,10 +248,7 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.45,
-        "stagger": 0.08,
-        "telegraph": {
-          "color": "#ff6a1e"
-        }
+        "stagger": 0.08
       }
     },
     "troll": {
@@ -290,10 +272,7 @@
       "behavior": {
         "windup": 0.65,
         "recover": 0.65,
-        "stagger": 0.04,
-        "telegraph": {
-          "color": "#ff4a2a"
-        }
+        "stagger": 0.04
       }
     },
     "chieftain": {
@@ -321,10 +300,7 @@
       "behavior": {
         "windup": 0.65,
         "recover": 0.45,
-        "stagger": 0.06,
-        "telegraph": {
-          "color": "#ff3a3a"
-        }
+        "stagger": 0.06
       }
     },
     "cultist": {
@@ -382,10 +358,7 @@
       "behavior": {
         "windup": 0.65,
         "recover": 0.45,
-        "stagger": 0.05,
-        "telegraph": {
-          "color": "#ff2a5a"
-        }
+        "stagger": 0.05
       }
     },
     "wraith": {
@@ -472,10 +445,7 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.8,
-        "stagger": 0.1,
-        "telegraph": {
-          "color": "#5aff9a"
-        }
+        "stagger": 0.1
       }
     },
     "warg": {
@@ -500,10 +470,7 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.3,
-        "stagger": 0.1,
-        "telegraph": {
-          "color": "#ffd02a"
-        }
+        "stagger": 0.1
       }
     },
     "tuskGuard": {
@@ -532,10 +499,7 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.5,
-        "stagger": 0.06,
-        "telegraph": {
-          "color": "#8ab8ff"
-        }
+        "stagger": 0.06
       }
     },
     "frostWarden": {
@@ -565,10 +529,7 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.5,
-        "stagger": 0.05,
-        "telegraph": {
-          "color": "#3aa8ff"
-        }
+        "stagger": 0.05
       }
     },
     "snowman": {
@@ -591,10 +552,7 @@
       "behavior": {
         "windup": 0.6,
         "recover": 0.9,
-        "stagger": 0.05,
-        "telegraph": {
-          "color": "#c8f0ff"
-        }
+        "stagger": 0.05
       }
     },
     "elder": {
@@ -963,10 +921,7 @@
       "behavior": {
         "windup": 0.6,
         "recover": 0.45,
-        "stagger": 0.06,
-        "telegraph": {
-          "color": "#7a98ff"
-        }
+        "stagger": 0.06
       }
     },
     "stillheart": {
@@ -994,10 +949,7 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.9,
-        "stagger": 0.03,
-        "telegraph": {
-          "color": "#ff5a8a"
-        }
+        "stagger": 0.03
       }
     },
     "ashmaw": {
@@ -1268,10 +1220,7 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.5,
-        "stagger": 0.2,
-        "telegraph": {
-          "color": "#5aff5a"
-        }
+        "stagger": 0.2
       }
     },
     "hornet": {
@@ -1293,10 +1242,7 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.3,
-        "stagger": 0.1,
-        "telegraph": {
-          "color": "#ffe82a"
-        }
+        "stagger": 0.1
       }
     },
     "bat": {
@@ -1318,10 +1264,7 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.3,
-        "stagger": 0.15,
-        "telegraph": {
-          "color": "#d070ff"
-        }
+        "stagger": 0.15
       }
     },
     "adder": {
@@ -1343,10 +1286,7 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.5,
-        "stagger": 0.2,
-        "telegraph": {
-          "color": "#a8ff2a"
-        }
+        "stagger": 0.2
       }
     },
     "haunt": {
@@ -1369,10 +1309,7 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.8,
-        "stagger": 0.1,
-        "telegraph": {
-          "color": "#b8a8ff"
-        }
+        "stagger": 0.1
       }
     },
     "watcher": {
@@ -1422,10 +1359,7 @@
       "behavior": {
         "windup": 0.6,
         "recover": 1.0,
-        "stagger": 0.05,
-        "telegraph": {
-          "color": "#c8ff4a"
-        }
+        "stagger": 0.05
       }
     },
     "pumpking": {

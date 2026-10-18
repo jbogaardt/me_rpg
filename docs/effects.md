@@ -51,6 +51,14 @@ the screen. A new kind of source is an entry in `HEARTH_EFFECTS`, `HEARTH_MARGIN
   (lightning, a foe's bolt) fly right, so pass one if the source has a direction.
 - The arc is drawn the moment the swing starts, while the body's blade extends later; phasing them is a separate job.
 
+## The windup tell
+
+A foe's warning is body language, not an overlay (`Mob.drawTell`, `entities/WindupCue.ts`, maths and palette in
+`systems/tellLook.ts`): coil and warm flush on the body, a stepped-alpha contact shadow that widens and darkens, a row of
+ground marks toward the blow (a runner mark for shots and rays), then near-white marks and four sparks at the aim lock.
+Everything is derived from the windup state and timer, so every page draws it and nothing is sent. Warm red-orange for
+every damaging cue, near-white at the lock, never green. Timing and balance are not touched by the look.
+
 ## Adding one
 
 A one-off burst is an entry in `PARTICLE_EFFECTS` (the `add-particle-effect` skill); if the host plays it for a guest it

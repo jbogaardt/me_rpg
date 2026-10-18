@@ -51,7 +51,7 @@ export interface EntityBehavior {
   windup?: number; // seconds of telegraph before a blow (default 0.5)
   recover?: number; // seconds busy after attacking (default 0.7)
   stagger?: number; // seconds a hit stuns it (default 0.3)
-  telegraph?: { color?: string; ground?: boolean }; // windup cue: flash colour "#rrggbb", ground warning
+  telegraph?: { color?: string; ground?: boolean }; // windup cue: `ground` the marks toward the blow; `color` is legacy, accepted and unread
   shot?: { range: number; speed: number; color: string }; // a ranged attacker (color "#rrggbb")
   ray?: { range: number; color: string; tick: number; power: number; duration: number; rest: number }; // a held beam
 }
@@ -319,7 +319,7 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
       const tg = r.object(b.telegraph, `${p}.telegraph`);
       if (tg) {
         const t: NonNullable<EntityBehavior['telegraph']> = {};
-        if (tg.color !== undefined) t.color = r.color(tg.color, `${p}.telegraph.color`);
+        if (tg.color !== undefined) r.color(tg.color, `${p}.telegraph.color`); // legacy: valid, but the cue is one danger palette
         if (tg.ground !== undefined) {
           if (typeof tg.ground !== 'boolean') r.fail(`${p}.telegraph.ground`, 'must be true or false');
           else t.ground = tg.ground;
@@ -1098,7 +1098,6 @@ export function toMobKind(def: EntityDef): MobKind {
   if (b.stagger !== undefined) kind.stagger = b.stagger;
   if (b.telegraph) {
     kind.telegraph = {};
-    if (b.telegraph.color !== undefined) kind.telegraph.color = colorNumber(b.telegraph.color);
     if (b.telegraph.ground !== undefined) kind.telegraph.ground = b.telegraph.ground;
   }
   if (b.shot) kind.shot = { ...b.shot, color: colorNumber(b.shot.color) };

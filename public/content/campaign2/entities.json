@@ -25,10 +25,7 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.3,
-        "stagger": 0.2,
-        "telegraph": {
-          "color": "#ff7a2a"
-        }
+        "stagger": 0.2
       }
     },
     "ashHound": {
@@ -52,10 +49,7 @@
       "behavior": {
         "windup": 0.5,
         "recover": 0.3,
-        "stagger": 0.12,
-        "telegraph": {
-          "color": "#ffa03a"
-        }
+        "stagger": 0.12
       }
     },
     "emberCaster": {
@@ -110,10 +104,7 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.8,
-        "stagger": 0.06,
-        "telegraph": {
-          "color": "#ff4a1e"
-        }
+        "stagger": 0.06
       }
     },
     "obsidianWarden": {
@@ -143,10 +134,7 @@
       "behavior": {
         "windup": 0.6,
         "recover": 0.85,
-        "stagger": 0.03,
-        "telegraph": {
-          "color": "#ff3a6a"
-        }
+        "stagger": 0.03
       }
     },
     "ysolde": {
