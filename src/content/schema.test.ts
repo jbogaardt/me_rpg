@@ -436,6 +436,31 @@ describe('toMobKind', () => {
     expect(kind.recover).toBeUndefined();
   });
 
+  describe('a fan (shot.spread)', () => {
+    const spread = { count: 3, arc: 60, power: 0.4, every: 3, recover: 1.5 };
+    const withSpread = (over: Record<string, unknown>) => {
+      const f = files();
+      const goblin = (f.entities as { entities: { goblin: { behavior: { shot: Record<string, unknown> } } } }).entities
+        .goblin;
+      goblin.behavior.shot.spread = { ...spread, ...over };
+      return f;
+    };
+    it('is read into the kind', () => {
+      expect(toMobKind(parseContent(withSpread({})).entities.goblin!).shot?.spread).toEqual(spread);
+    });
+    it.each([
+      [{ arc: 50 }, /under 30 degrees between lanes/],
+      [{ count: 6, arc: 200 }, /whole number from 2 to 5/],
+      [{ count: 5, arc: 170 }, /at most 160 degrees/],
+      [{ every: 2 }, /every/],
+      [{ every: 3.5 }, /whole number/],
+      [{ power: 0.9 }, /at most 0.6/],
+      [{ recover: 0.5 }, /at least 1 second/],
+    ])('refuses %j', (over, message) => {
+      expect(() => parseContent(withSpread(over))).toThrow(message);
+    });
+  });
+
   it('reads a telegraph tuning; a legacy colour is accepted and unread', () => {
     const f = files();
     (f.entities as { entities: { goblin: { behavior: object } } }).entities.goblin.behavior = {

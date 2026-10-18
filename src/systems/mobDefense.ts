@@ -183,8 +183,15 @@ export const QUICK_RECOVER = 1;
 
 // --- Spread (a fan of bolts) ---
 
-export const SPREAD_MAX_COUNT = 7;
-export const SPREAD_MAX_ARC = 120;
+export const SPREAD_MAX_COUNT = 5;
+/** The least angle (degrees) between two lanes of a fan: a hero can stand in the gap, or step into it, at any range. */
+export const SPREAD_MIN_GAP = 30;
+/** The fan is at most one shot in this many (`MobSpread.every` is at least it): a caster alternates plain shots and the fan. */
+export const SPREAD_MIN_EVERY = 3;
+/** A fan's windup is this many times the kind's plain one (jitter included they never overlap), so every page can tell them apart. */
+export const FAN_WINDUP = 2;
+/** The widest fan (degrees, first bolt to last): five lanes 30 degrees apart are 120, so there is room above it. */
+export const SPREAD_MAX_ARC = 160;
 
 /** The bolt angles of a fan around `aim` (radians): `count` of them, `arc` degrees from first to last; one bolt flies straight. */
 export function spreadAngles(aim: number, spread: Pick<MobSpread, 'count' | 'arc'>): number[] {
@@ -193,6 +200,20 @@ export function spreadAngles(aim: number, spread: Pick<MobSpread, 'count' | 'arc
   const step = (arc * (Math.PI / 180)) / (count - 1);
   return Array.from({ length: count }, (_, i) => aim + (i - (count - 1) / 2) * step);
 }
+
+/** Degrees between two neighbouring lanes of a fan. */
+export const spreadGap = (spread: Pick<MobSpread, 'count' | 'arc'>): number =>
+  spread.count > 1 ? spread.arc / (spread.count - 1) : 360;
+
+/** Whether the `n`th shot of a mob (counted from 1) is its fan: deterministic, so a hero can learn the rhythm. */
+export const isFanShot = (n: number, spread: Pick<MobSpread, 'every'>): boolean => n % spread.every === 0;
+
+/**
+ * Whether a windup heard of `timer` seconds in is a fan's, from what a co-op guest has (the kind and the windup's first
+ * heard timer): a plain shot's windup is at most 1.2x the kind's, a fan's at least `FAN_WINDUP` x 0.8, so the line between
+ * them (1.4x) leaves 0.2 x of lag for the snapshot that told the guest.
+ */
+export const seemsFanWindup = (kindWindup: number, timer: number): boolean => timer > kindWindup * 1.4;
 
 /** How fast a shot may fly: fair at a plain windup up to 1.6x the hero's walk, faster only with a longer telegraph. */
 export const FAST_SHOT_WINDUP = 0.75;

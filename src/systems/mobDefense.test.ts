@@ -28,6 +28,10 @@ import {
   stunFactor,
   respawnWait,
   RESPAWN_CAP,
+  FAN_WINDUP,
+  isFanShot,
+  seemsFanWindup,
+  spreadGap,
 } from './mobDefense';
 
 const kind = (over: Partial<MobKind> = {}): MobKind => ({ ...MOB_KINDS.troll!, ...over });
@@ -184,6 +188,24 @@ describe('spread', () => {
     expect(a[2]! - a[1]!).toBeCloseTo(Math.PI / 6);
     expect(a[0]).toBeCloseTo(-a[2]!);
     expect(spreadAngles(0, { count: 4, arc: 90 })).toHaveLength(4);
+  });
+});
+
+describe('a fan', () => {
+  const fan = { count: 3, arc: 60, power: 0.4, every: 3, recover: 1.5 };
+  it('measures the gap between lanes and takes its turn by a counter', () => {
+    expect(spreadGap(fan)).toBe(30);
+    expect([1, 2, 3, 4, 5, 6].filter((n) => isFanShot(n, fan))).toEqual([3, 6]);
+  });
+  it('is told from a plain shot by the windup alone, whatever the jitter and the snapshot lag', () => {
+    const w = 0.65; // the kind's windup
+    const plainMax = w * 1.2;
+    const fanMin = w * FAN_WINDUP * 0.8;
+    expect(plainMax).toBeLessThan(fanMin);
+    for (const lag of [0, 0.05, 0.1]) {
+      expect(seemsFanWindup(w, plainMax)).toBe(false);
+      expect(seemsFanWindup(w, fanMin - lag)).toBe(true);
+    }
   });
 });
 

@@ -7,11 +7,13 @@ import { WHOLE_BODIES } from '../../sprites/parts';
 import { outfitLayers, type Outfit, type PartManifest } from '../../src/sprites/doll';
 import { mobLevel, mobTimings, WINDUP_FLOOR } from '../../src/systems/combat';
 import {
+  FAN_WINDUP,
   FAST_SHOT_WINDUP,
   POISE_CAP,
   QUICK_RECOVER,
   QUICK_WINDUP,
   SPRINT_MAX_DURATION,
+  spreadGap,
 } from '../../src/systems/mobDefense';
 import { heroModel } from '../../src/systems/dmBoss';
 import { ROOT } from '../map/image';
@@ -79,6 +81,20 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
         expect(windup, `${id}: a fast shot needs a long telegraph`).toBeGreaterThanOrEqual(FAST_SHOT_WINDUP);
       }
       expect(windup).toBeGreaterThanOrEqual(0.5);
+      const fan = kind.shot.spread;
+      if (fan) {
+        // A fan (every 3rd+ shot, `shot.spread`): learnable lanes, a long tell, a long rest, slow small bolts; one special per kind.
+        expect(fan.count, `${id}: lanes`).toBeLessThanOrEqual(5);
+        expect(spreadGap(fan), `${id}: degrees between lanes`).toBeGreaterThanOrEqual(30);
+        expect(fan.every, `${id}: a fan at most one shot in three`).toBeGreaterThanOrEqual(3);
+        expect(fan.recover, `${id}: the punish window`).toBeGreaterThanOrEqual(1.4);
+        expect(fan.recover, `${id}: the punish window`).toBeLessThanOrEqual(1.6);
+        expect(fan.power, `${id}: a bolt of the fan`).toBeLessThanOrEqual(0.5);
+        expect(kind.shot.speed, `${id}: fan bolt speed`).toBeGreaterThanOrEqual(110);
+        expect(kind.shot.speed, `${id}: fan bolt speed`).toBeLessThanOrEqual(140);
+        expect(windup * FAN_WINDUP * 0.8, `${id}: the fan's shortest windup`).toBeGreaterThanOrEqual(0.6);
+        expect(kind.sprint ?? kind.quick ?? kind.heal, `${id}: one special at a time`).toBeUndefined();
+      }
     }
   });
 

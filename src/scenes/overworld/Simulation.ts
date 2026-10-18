@@ -155,7 +155,7 @@ export class Simulation {
         ),
       sees: (x0, y0, x1, y1) => z.collision.hasLineOfSight(x0, y0, x1, y1),
       strike: (mob, target, power) => arena.inZone(z, () => this.hurtHero(mob, target, power)),
-      shoot: (mob, ux, uy) => arena.inZone(z, () => this.mobShoot(mob, ux, uy)),
+      shoot: (mob, ux, uy, fan) => arena.inZone(z, () => this.mobShoot(mob, ux, uy, fan)),
       ray: (mob, target) => arena.inZone(z, () => this.mobRay(mob, target)),
       heal: (mob) => arena.inZone(z, () => this.mobHeal(z, mob)),
     };
@@ -570,12 +570,14 @@ export class Simulation {
     return true;
   }
 
-  /** A ranged mob lets go of a shot along (ux, uy), from its hands at chest height: one bolt, or a fan of them (`shot.spread`). */
-  private mobShoot(mob: Mob, ux: number, uy: number) {
+  /** A ranged mob lets go of a shot along (ux, uy), from its hands at chest height: one bolt, or (`fan`, the mob's counter says so) a fan of them (`shot.spread`),
+   * each an ordinary `bolt` event, so a guest draws them with no new message. */
+  private mobShoot(mob: Mob, ux: number, uy: number, fan = false) {
     const { shot } = mob.kind;
     if (!shot) return;
-    const angles = shot.spread ? spreadAngles(Math.atan2(uy, ux), shot.spread) : [Math.atan2(uy, ux)];
-    const power = shot.spread?.power ?? 1;
+    const lanes = fan ? shot.spread : undefined;
+    const angles = lanes ? spreadAngles(Math.atan2(uy, ux), lanes) : [Math.atan2(uy, ux)];
+    const power = lanes?.power ?? 1;
     for (const a of angles) {
       const [vx, vy] = [Math.cos(a), Math.sin(a)];
       const x = mob.body.x + vx * 10;
@@ -586,7 +588,7 @@ export class Simulation {
         const hit = this.arena
           .party()
           .find((p) => !p.safe && Math.abs(bx - p.body.x) < 11 && Math.abs(by + BOLT_HEIGHT - p.body.y) < 14);
-        if (hit) this.hurtHero(mob, hit.body, power);
+        if (hit) this.hurtHero(mob, hit.body, power, lanes !== undefined);
         return hit !== undefined;
       });
       this.emit({
@@ -759,10 +761,15 @@ export class Simulation {
     this.cheer(p);
   }
 
-  private hurtHero(mob: Mob, victim: Character, power = 1) {
+  private hurtHero(mob: Mob, victim: Character, power = 1, afterArmor = false) {
     const p = this.arena.party().find((q) => q.body === victim);
     if (!p || p.safe) return;
-    const damage = this.pressed(this.furious(mob, p, rollDamage(mob.kind.attack * power, defensePower(p.hero))));
+    // `afterArmor`: the power is a share of the blow that gets through (a fan's bolt is 0.4 of a plain shot at every
+    // level), not of the attack before the hero's flat defense, which would leave a bolt at 1 damage in good armour.
+    const blow = afterArmor
+      ? Math.max(1, Math.round(rollDamage(mob.kind.attack, defensePower(p.hero)) * power))
+      : rollDamage(mob.kind.attack * power, defensePower(p.hero));
+    const damage = this.pressed(this.furious(mob, p, blow));
     this.onHurt(p, mobKey(mob.kind) ?? '', damage);
     this.harm(p, damage, mob.body.x, mob.body.y);
   }

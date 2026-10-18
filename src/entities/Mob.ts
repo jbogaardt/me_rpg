@@ -15,7 +15,17 @@ import {
   squashY,
   tremblePx,
 } from '../systems/tellLook';
-import { Poise, QUICK_POWER, frontal, respawnWait, type Blow } from '../systems/mobDefense';
+import {
+  FAN_WINDUP,
+  Poise,
+  QUICK_POWER,
+  frontal,
+  isFanShot,
+  respawnWait,
+  seemsFanWindup,
+  spreadGap,
+  type Blow,
+} from '../systems/mobDefense';
 import {
   hitPauseFor,
   KNOCK_DECAY,
@@ -41,7 +51,7 @@ export interface MobWorld {
   /** The mob's melee attack connected with `target`; `power` is a multiplier on the blow (a charge lands heavier). */
   strike(mob: Mob, target: Character, power?: number): void;
   /** A ranged mob fires along the unit vector (ux, uy); the scene flies the projectile and decides what it hits. */
-  shoot(mob: Mob, ux: number, uy: number): void;
+  shoot(mob: Mob, ux: number, uy: number, fan?: boolean): void;
   /** A healer mends the most wounded ally in range and sight (`MobKind.heal`); false when there is none to mend. */
   heal?(mob: Mob): boolean;
   /** One burn of a held ray on `target`. Returns false when the beam cannot reach them (a wall): it then ends. */
@@ -154,7 +164,9 @@ export class Mob {
   private swing = false; // the lunge has not hit anyone yet
   private rayTimer = 0; // seconds until the next burn of a held ray
   private rayRest = 0; // seconds before it may cast another ray (after a break)
-  private cue = new WindupCue(); // the windup's shadow, ground marks and sparks (see drawTell)
+  private readonly cue: WindupCue; // the windup's shadow, ground marks and sparks (see drawTell)
+  private shots = 0; // shots it has let go (host/solo): every `shot.spread.every`th is the fan
+  private fan = false; // the current windup leads to a fan (a guest reads it from the windup's length: `seemsFanWindup`)
   private cueState = newCueState();
   private beam = new Graphics(); // the held ray, drawn from the sceptre to the hero (every client draws its own)
   private heroes: MobWorld['heroes'] = []; // guest: who the beam can be on
@@ -171,6 +183,7 @@ export class Mob {
   ) {
     this.t = mobTimings(kind);
     this.poise = new Poise(kind.poiseMax ?? 0, kind.poiseRegen);
+    this.cue = new WindupCue(kind.shot?.spread?.count ?? 0);
     this.body = new Character(sheet);
     this.body.setScale(kind.scale ?? 1);
     this.body.addChildAt(this.cue.ground, 0);
@@ -225,6 +238,8 @@ export class Mob {
     this.beckoned = null;
     this.driver = null;
     this.rayRest = 0;
+    this.shots = 0;
+    this.fan = false;
     this.beam.clear();
     this.cue.hide();
     this.body.release();
@@ -382,6 +397,7 @@ export class Mob {
       const aim = d.aim ?? this.lastAim;
       this.state = 'windup';
       this.attack = this.kind.shot ? 'shot' : 'melee'; // a ray kind fights close when driven
+      this.fan = false; // a possessed shooter lets go plain shots
       this.windupLen = this.t.windup;
       this.timer = this.windupLen;
       this.aim = { x: aim.x, y: aim.y };
@@ -525,7 +541,9 @@ export class Mob {
           }
           this.farFor = 0;
           this.state = 'windup';
-          this.windupLen = this.t.windup * (1 + WINDUP_SPREAD * (Math.random() * 2 - 1));
+          const spread = shot?.spread;
+          this.fan = attack === 'shot' && !!spread && isFanShot(this.shots + 1, spread); // by a counter: learnable
+          this.windupLen = this.t.windup * (this.fan ? FAN_WINDUP : 1) * (1 + WINDUP_SPREAD * (Math.random() * 2 - 1));
           this.timer = this.windupLen;
           this.attack = attack;
           this.aim = { x: dx / (dist || 1), y: dy / (dist || 1) };
@@ -558,7 +576,7 @@ export class Mob {
       }
       case 'windup':
         if (
-          (this.attack === 'melee' || this.attack === 'charge') &&
+          (this.attack === 'melee' || this.attack === 'charge' || this.fan) &&
           target &&
           !this.driver &&
           this.timer > this.windupLen * COMMITTED
@@ -567,9 +585,16 @@ export class Mob {
           this.body.face(directionToward(dx, dy));
         }
         if (this.timer <= 0) {
-          if (this.attack === 'shot')
-            world.shoot(this, this.driver ? this.aim.x : dx / (dist || 1), this.driver ? this.aim.y : dy / (dist || 1)); // aimed as it lets go
-          else if (this.attack === 'ray' && this.kind.ray) {
+          if (this.attack === 'shot') {
+            // A plain shot is aimed as it lets go; a fan's lanes were locked at COMMITTED, so stepping into a gap works.
+            const own = this.driver || this.fan;
+            world.shoot(this, own ? this.aim.x : dx / (dist || 1), own ? this.aim.y : dy / (dist || 1), this.fan);
+            this.shots++;
+            this.state = 'recover';
+            this.timer = this.fan && this.kind.shot?.spread ? this.kind.shot.spread.recover : this.t.recover;
+            this.fan = false;
+            break;
+          } else if (this.attack === 'ray' && this.kind.ray) {
             this.state = 'channel'; // hold the beam on the hero until it runs out or something breaks it
             this.body.hold(RAY_POSE.anim, RAY_POSE.col);
             this.timer = this.kind.ray.duration;
@@ -655,6 +680,7 @@ export class Mob {
       this.attack =
         mobAttack(this.kind, dist) ?? (this.kind.shot ? 'shot' : this.kind.ray ? 'ray' : charging ? 'charge' : 'melee');
       this.windupLen = Math.max(timer, 0.05); // the host's (spread) windup, as it was when we first heard of it
+      this.fan = this.attack === 'shot' && seemsFanWindup(this.t.windup, timer); // a fan's windup is twice as long
       this.body.play(this.attack === 'shot' ? 'cast' : 'slash', this.windupLen * 1000); // the pose is the telegraph
       this.tell(heroes);
     }
@@ -760,6 +786,9 @@ export class Mob {
     q.reach = melee ? lungeOf(this.kind) + (HIT_AHEAD + HIT_RADIUS) * scale : 0;
     q.scale = scale;
     q.line = !melee; // a shot, a ray or a charge: a long line of marks
+    const lanes = this.fan ? this.kind.shot?.spread : undefined;
+    q.lanes = lanes?.count ?? 0; // a fan: a row of marks down each lane
+    q.laneGap = lanes ? (spreadGap(lanes) * Math.PI) / 180 : 0;
     q.marks = ground;
     this.cue.update(q);
     return flush(progress, elapsed, len);

@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { attackPower, gainXp, MOB_KINDS, newHero, spellPower, xpToNext, type Hero, type Item } from './combat';
+import {
+  attackPower,
+  gainXp,
+  MOB_KINDS,
+  mobLevel,
+  mobTimings,
+  newHero,
+  spellPower,
+  xpToNext,
+  type Hero,
+  type Item,
+} from './combat';
+import { FAN_WINDUP, spreadGap } from './mobDefense';
 import { itemOf } from './items';
 import { lungeOf, REACH } from '../entities/Mob';
 import { bossKind, fightOdds, heroModel } from './dmBoss';
@@ -139,6 +151,71 @@ describe('enemy balance', () => {
     expect(lungeOf(MOB_KINDS.warg!)).toBeGreaterThan(lungeOf(MOB_KINDS.zombie!));
     expect(REACH).toBeGreaterThan(30);
   });
+});
+
+describe("fan balance (a caster's spread shot)", () => {
+  const fans = Object.entries(MOB_KINDS).filter(([, k]) => k.shot?.spread);
+  const HIT_X = 11; // the bolt's hit box around a hero (Simulation.mobShoot): half its width and height
+  const HIT_Y = 14;
+  /** Seconds and damage of one plain-shot cycle and of the fan cycle, against a typical hero of the kind's own level. */
+  const cost = (key: string) => {
+    const kind = MOB_KINDS[key]!;
+    const { shot } = kind;
+    const spread = shot!.spread!;
+    const hero = heroModel(mobLevel(kind));
+    const t = mobTimings(kind);
+    const plain = Math.max(1, kind.attack - hero.defense);
+    const bolt = Math.max(1, Math.round(plain * spread.power)); // a share of the blow that gets through (`Simulation.hurtHero`)
+    const plainTime = t.windup + t.recover;
+    const fanTime = t.windup * FAN_WINDUP + spread.recover;
+    // Worst case: the hero stands still in the lanes and every bolt lands (the i-frames only ever make it less).
+    const mixed = ((spread.every - 1) * plain + spread.count * bolt) / ((spread.every - 1) * plainTime + fanTime);
+    return { kind, spread, hero, plain, bolt, plainDps: plain / plainTime, mixedDps: mixed, fanTime, plainTime };
+  };
+
+  it("exists on one caster only: the fan is a special, not a trash mob's shot", () => {
+    expect(fans.map(([k]) => k)).toEqual(['wraith']);
+  });
+
+  it.each(fans.map(([k]) => k))(
+    '%s costs at most 1.25x its plain shots in damage per second, all bolts landing',
+    (key) => {
+      const c = cost(key);
+      expect(c.mixedDps / c.plainDps).toBeLessThanOrEqual(1.25);
+      expect(c.mixedDps / c.plainDps).toBeGreaterThan(0.5); // and it is not a punishment to fight either
+    },
+  );
+
+  it.each(fans.map(([k]) => k))('%s: a whole fan landing is a fraction of the hero, a bolt is a scratch', (key) => {
+    const c = cost(key);
+    expect((c.spread.count * c.bolt) / c.hero.hp).toBeLessThan(0.35);
+    expect(c.bolt / c.plain).toBeGreaterThan(0.3); // about 0.4 of a plain shot, in any armour
+    expect(c.bolt / c.plain).toBeLessThan(0.5);
+    expect(c.spread.recover).toBeGreaterThanOrEqual(1.4);
+    expect(c.spread.recover).toBeLessThanOrEqual(1.6);
+  });
+
+  it.each(fans.map(([k]) => k))('%s: a lane-free gap exists at every range the caster shoots from', (key) => {
+    const { kind, spread } = cost(key);
+    expect(spreadGap(spread)).toBeGreaterThanOrEqual(30);
+    const tan = Math.tan((spreadGap(spread) * Math.PI) / 180);
+    // From 40 px (the caster's cornered) a hero fits between two lanes (22 px wide)...
+    for (let d = 40; d <= kind.shot!.range; d += 8) expect(d * tan - 2 * HIT_X, `gap at ${d} px`).toBeGreaterThan(0);
+    // ...and from where it holds off (a 0.4 share of its range) with room to spare, the tallest way (28 px).
+    for (let d = kind.shot!.range * 0.4; d <= kind.shot!.range; d += 8)
+      expect(d * tan - 2 * HIT_Y, `gap at ${d} px`).toBeGreaterThan(0);
+  });
+
+  it.each(fans.map(([k]) => k))(
+    '%s: its bolts are slow enough to step out of and its windup long enough to read',
+    (key) => {
+      const c = cost(key);
+      expect(c.kind.shot!.speed).toBeGreaterThanOrEqual(110);
+      expect(c.kind.shot!.speed).toBeLessThanOrEqual(140);
+      expect(c.kind.windup! * FAN_WINDUP * 0.8).toBeGreaterThanOrEqual(0.6); // even the shortest jittered fan windup
+      expect(c.spread.every).toBeGreaterThanOrEqual(3);
+    },
+  );
 });
 
 describe('boss balance', () => {

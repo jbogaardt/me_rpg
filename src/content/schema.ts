@@ -3,7 +3,7 @@
 // here when it loads (`parseContent`), and a broken file stops the game with a list of every problem, not a crash later.
 // The source of the JSON (static files today, a database later) is ContentManager's business, not this file's.
 
-import type { MobKind } from '../systems/combat';
+import type { MobKind, MobSpread } from '../systems/combat';
 import {
   POISE_CAP,
   QUICK_WINDUP,
@@ -13,6 +13,9 @@ import {
   resolveSprint,
   SPREAD_MAX_ARC,
   SPREAD_MAX_COUNT,
+  SPREAD_MIN_EVERY,
+  SPREAD_MIN_GAP,
+  spreadGap,
   SPRINT_MAX_DURATION,
 } from '../systems/mobDefense';
 import { MAX_BAND } from '../systems/bands';
@@ -63,8 +66,8 @@ export interface EntityBehavior {
   recover?: number; // seconds busy after attacking (default 0.7)
   stagger?: number; // seconds a hit stuns it (default 0.3)
   telegraph?: { color?: string; ground?: boolean }; // windup cue: `ground` the marks toward the blow; `color` is legacy, accepted and unread
-  /** A ranged attacker (color "#rrggbb"); `spread` fans `count` bolts over `arc` degrees, each `power` of its attack (systems/mobDefense.ts). */
-  shot?: { range: number; speed: number; color: string; spread?: { count: number; arc: number; power: number } };
+  /** A ranged attacker (color "#rrggbb"); `spread` makes every `every`th shot a fan of `count` bolts over `arc` degrees (systems/mobDefense.ts). */
+  shot?: { range: number; speed: number; color: string; spread?: MobSpread };
   ray?: { range: number; color: string; tick: number; power: number; duration: number; rest: number }; // a held beam
   /** Blows it shrugs off before a hit staggers it (whole number, 0 = every blow staggers; systems/mobDefense.ts). Elites 3-6. */
   poiseMax?: number;
@@ -369,12 +372,24 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
       if (shot && behavior.shot && shot.spread !== undefined) {
         const sp = r.object(shot.spread, `${p}.shot.spread`);
         if (sp) {
-          const count = r.number(sp.count, `${p}.shot.spread.count`, 2);
-          const arc = r.number(sp.arc, `${p}.shot.spread.arc`, 1);
+          const at = `${p}.shot.spread`;
+          const count = r.number(sp.count, `${at}.count`, 2);
+          const arc = r.number(sp.arc, `${at}.arc`, 1);
+          const every = r.number(sp.every, `${at}.every`, SPREAD_MIN_EVERY);
+          const recover = r.number(sp.recover, `${at}.recover`, 0);
+          const power = r.number(sp.power, `${at}.power`, 0.1);
           if (!Number.isInteger(count) || count > SPREAD_MAX_COUNT)
-            r.fail(`${p}.shot.spread.count`, `must be a whole number from 2 to ${SPREAD_MAX_COUNT}`);
-          else if (arc > SPREAD_MAX_ARC) r.fail(`${p}.shot.spread.arc`, `is at most ${SPREAD_MAX_ARC} degrees`);
-          else behavior.shot.spread = { count, arc, power: r.number(sp.power, `${p}.shot.spread.power`, 0.1) };
+            r.fail(`${at}.count`, `must be a whole number from 2 to ${SPREAD_MAX_COUNT}`);
+          else if (arc > SPREAD_MAX_ARC) r.fail(`${at}.arc`, `is at most ${SPREAD_MAX_ARC} degrees`);
+          else if (spreadGap({ count, arc }) < SPREAD_MIN_GAP)
+            r.fail(
+              `${at}.arc`,
+              `leaves under ${SPREAD_MIN_GAP} degrees between lanes (arc / (count - 1)): no gap to step into`,
+            );
+          else if (!Number.isInteger(every)) r.fail(`${at}.every`, 'must be a whole number');
+          else if (power > 0.6) r.fail(`${at}.power`, 'is at most 0.6 of a plain shot: every bolt can land');
+          else if (recover < 1) r.fail(`${at}.recover`, 'is at least 1 second: the fan is followed by a long rest');
+          else behavior.shot.spread = { count, arc, power, every, recover };
         }
       }
     }

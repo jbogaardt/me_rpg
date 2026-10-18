@@ -224,14 +224,16 @@ export interface MobShot {
   range: number; // pixels: starts a shot from this close (must not exceed `sight`, or it never gets to fire)
   speed: number; // pixels per second; the hero walks at 120, so keep it dodgeable
   color: number; // 0xRRGGBB glow of the projectile, so each kind's shot reads differently
-  /** A fan: `count` bolts spread over `arc` degrees, centred on the aim, each worth `power` of the kind's attack. */
+  /** A fan: every `every`th shot is `count` bolts spread over `arc` degrees, centred on an aim locked at COMMITTED (`mobDefense.ts`). */
   spread?: MobSpread;
 }
 
 export interface MobSpread {
-  count: number; // bolts per shot (2-7)
-  arc: number; // degrees from the first bolt to the last (up to 120)
-  power: number; // each bolt's share of the kind's `attack`
+  count: number; // bolts in the fan (2-5)
+  arc: number; // degrees from the first bolt to the last: the gap between lanes is arc / (count - 1), at least 30
+  power: number; // each bolt's share of the kind's `attack` (the fan's own, not a plain shot's)
+  every: number; // the kind's 3rd, 6th... shot is the fan (at least 3: it alternates with plain shots, by a counter)
+  recover: number; // the rest after a fan (1.4-1.6 s): the punish window
 }
 
 const DEFAULT_TIMINGS = { windup: 0.5, recover: 0.7, stagger: 0.3 };
