@@ -12,12 +12,11 @@ import {
   MARK_REACH_CELLS,
   MARK_SECONDS,
   MARK_STING,
-  SKILLS,
   VOLLEY_BOLTS,
   VOLLEY_POWER,
   type SkillCombo,
 } from '../../systems/skills';
-import { SPELLS, type Combo, type Focus } from '../../systems/spells';
+import { type Combo, type Focus } from '../../systems/spells';
 import { recordCast } from '../../systems/quests';
 import type { Mob } from '../../entities/Mob';
 import type { Arena } from './Arena';
@@ -87,7 +86,7 @@ export class Casting {
     const { x, y } = p.body;
     if (stats.mp < combo.cost) {
       p.castCooldown = COMBO_COOLDOWN;
-      this.sim.text(x, y - 54, 'No MP', 0x8fb3ff);
+      this.sim.refuse(p, x, y - 20, 'noMana'); // the MP bar says why
       return;
     }
     if (p.mouseAim) p.body.face(directionToward(p.aim.x, p.aim.y));
@@ -96,7 +95,6 @@ export class Casting {
     stats.mp -= combo.cost;
     p.castCooldown = COMBO_COOLDOWN;
     this.sim.fx('castGlow', x, y - 22, undefined, p.slot);
-    this.sim.text(x, y - 66, combo.skill ? SKILLS[combo.skill].name : SPELLS[combo.spell].name, 0xcfe8ff);
     this.sim.onCast(p, p.zone, combo.skill ?? combo.spell);
     this.sim.questNote(p, recordCast(p.hero, p.zone)); // a quest of spells counts it
   }
@@ -135,7 +133,7 @@ export class Casting {
     const reach = MARK_REACH_CELLS * CELL;
     const near = this.arena.mobs.filter((m) => m.alive && dist(m.body, p.body) <= reach);
     if (!near.length) {
-      this.sim.text(p.body.x, p.body.y - 54, 'No target', 0x8fb3ff);
+      this.sim.refuse(p, p.body.x, p.body.y - 20, 'noTarget');
       return false;
     }
     this.sim.fx('nova', p.body.x, p.body.y - 14);
@@ -146,7 +144,6 @@ export class Casting {
       if (!mob.alive) continue;
       this.marks.set(mob, this.arena.clock + MARK_SECONDS);
       this.sim.fx('blink', mob.body.x, mob.body.y - 18);
-      this.sim.text(mob.body.x, mob.body.y - 66, 'Marked', 0xd9a8ff);
     }
     return true;
   }
@@ -222,7 +219,7 @@ export class Casting {
       .sort((a, b) => dist(a.body, p.body) - dist(b.body, p.body))
       .slice(0, c.count ?? 3);
     if (!near.length) {
-      this.sim.text(p.body.x, p.body.y - 54, 'No target', 0x8fb3ff);
+      this.sim.refuse(p, p.body.x, p.body.y - 20, 'noTarget');
       return false;
     }
     const damage = spellPower(p.hero) * c.power;
@@ -286,15 +283,13 @@ export class Casting {
     const amount = Math.max(1, Math.round(spellPower(p.hero) * c.power));
     const hurt = this.friends(p).filter((q) => q.hero.stats.hp < q.hero.stats.maxHp);
     if (!hurt.length) {
-      this.sim.text(p.body.x, p.body.y - 54, 'Full HP', 0x8fb3ff);
+      this.sim.refuse(p, p.body.x, p.body.y - 20, 'nothingToDo');
       return false;
     }
     for (const q of hurt) {
       const s = q.hero.stats;
-      const gained = Math.min(amount, Math.ceil(s.maxHp - s.hp));
       s.hp = Math.min(s.maxHp, s.hp + amount);
       this.sim.fx('heal', q.body.x, q.body.y - 10);
-      this.sim.text(q.body.x, q.body.y - 54, `+${gained}`, 0x7dff8f);
     }
     return true;
   }
@@ -375,7 +370,6 @@ export class Casting {
     if (gained > 0) {
       s.hp = Math.min(s.maxHp, s.hp + gained);
       this.sim.fx('heal', p.body.x, p.body.y - 10);
-      this.sim.text(p.body.x, p.body.y - 54, `+${gained}`, 0x7dff8f);
     }
     return true;
   }
@@ -426,7 +420,7 @@ export class Casting {
 
   /** Say there was nobody to hit: the spell costs no mana. */
   private noTarget(p: Player): Cast {
-    this.sim.text(p.body.x, p.body.y - 54, 'No target', 0x8fb3ff);
+    this.sim.refuse(p, p.body.x, p.body.y - 20, 'noTarget');
     return false;
   }
 

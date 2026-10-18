@@ -3,6 +3,7 @@ import { type Direction } from '../core/direction';
 import { makeFrame } from '../core/textures';
 import { ANIMS, ANIM_NAMES, feetAnchor, frameRect, type AnimName } from '../sprites/doll';
 import { releaseSheet } from '../sprites/Wardrobe';
+import { washTint } from '../systems/cueRules';
 
 const DIRECTIONS: Direction[] = ['up', 'left', 'down', 'right'];
 
@@ -10,6 +11,12 @@ const DIRECTIONS: Direction[] = ['up', 'left', 'down', 'right'];
 const CHEER_MS = 1300;
 const CHEER_COLS = [1, 2, 3, 4];
 const hop = (ms: number) => Math.abs(Math.sin(ms / 110)) * 5 * Math.max(0, 1 - ms / CHEER_MS);
+
+/** A head-shake (a refusal): the body wobbles side to side for this long, at most this many px. */
+const SHAKE_MS = 260;
+const SHAKE_PX = 2;
+/** The glow of a gained level: the body washes to a warm light and back over this long. */
+const GLOW_MS = 900;
 
 type FrameSet = Record<AnimName, Record<Direction, Texture[]>>;
 const frameCache = new WeakMap<Texture, FrameSet>();
@@ -61,6 +68,13 @@ export class Character extends Container {
   private auraTime = 0;
   private auraColor = 0x4de3ff;
   private tag: BitmapText | null = null;
+  private baseTint = 0xffffff;
+  private strainColor = 0xffffff;
+  private strainAmount = 0;
+  private glowColor = 0xffe9a0;
+  private glowLeft = 0;
+  private shakeLeft = 0;
+  private offX = 0;
 
   /** `aura` adds the hero's pulsing time-ring; everyone else just gets a plain shadow. */
   constructor(
@@ -100,7 +114,40 @@ export class Character extends Container {
 
   /** Colour the body (not the shadow), e.g. to flash on a hit. 0xffffff is untinted. */
   setTint(color: number) {
-    this.sprite.tint = color;
+    this.baseTint = color;
+    this.applyTint();
+  }
+
+  /**
+   * Wash the body toward `color` by `amount` (0 to 1) to show how the hero is (a red pulse at low health, a sallow wash
+   * when starving); the buff tint under it stays. Called each frame by whoever reads the state; 0 clears it.
+   */
+  setStrain(color: number, amount: number) {
+    this.strainColor = color;
+    this.strainAmount = amount;
+    this.applyTint();
+  }
+
+  /** A brief warm glow of the whole body (a level gained): it fades by itself. */
+  glow(color = 0xffe9a0, ms = GLOW_MS) {
+    this.glowColor = color;
+    this.glowLeft = ms;
+  }
+
+  /** A head-shake of the body (a refusal): a short side-to-side wobble, then still. */
+  shake() {
+    this.shakeLeft = SHAKE_MS;
+  }
+
+  private applyTint() {
+    const glow = this.glowLeft > 0 ? 0.7 * (this.glowLeft / GLOW_MS) : 0;
+    const [color, amount] = glow > this.strainAmount ? [this.glowColor, glow] : [this.strainColor, this.strainAmount];
+    this.sprite.tint = washTint(this.baseTint, color, amount);
+  }
+
+  /** The frame on screen, for an afterimage: its texture, where its feet are in the cell and its size. */
+  snapshot(): { texture: Texture; anchorY: number; scale: number } {
+    return { texture: this.sprite.texture, anchorY: this.sprite.anchor.y, scale: this.size };
   }
 
   /** Draw the body bigger or smaller than the usual 64px frame, still standing on the same feet point. */
@@ -116,7 +163,12 @@ export class Character extends Container {
 
   /** Nudge the body off its feet point, e.g. to lunge into an attack. */
   setOffset(dx: number, dy: number) {
-    this.sprite.position.set(dx, dy);
+    this.offX = dx;
+    this.sprite.position.set(dx + this.shakeX(), dy);
+  }
+
+  private shakeX(): number {
+    return this.shakeLeft > 0 ? Math.sin(this.shakeLeft / 22) * SHAKE_PX * (this.shakeLeft / SHAKE_MS) : 0;
   }
 
   /**
@@ -156,6 +208,12 @@ export class Character extends Container {
     this.auraTime += dtMs;
     if (this.withAura) this.drawAura(this.auraTime);
     const { anim, col } = this.pose(dtMs, moving);
+    if (this.glowLeft > 0 || this.shakeLeft > 0) {
+      this.glowLeft = Math.max(0, this.glowLeft - dtMs);
+      this.shakeLeft = Math.max(0, this.shakeLeft - dtMs);
+      this.sprite.position.x = this.offX + this.shakeX();
+      this.applyTint();
+    }
     if (this.cheer) this.sprite.position.y = -hop(this.cheer.time);
     this.shownAnim = anim;
     this.shownCol = col;

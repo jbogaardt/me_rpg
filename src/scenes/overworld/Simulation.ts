@@ -49,7 +49,8 @@ import {
   thirsty,
 } from '../../systems/needs';
 import { bossMends } from '../../systems/bosses';
-import { GIVERS, QUEST_GIVER, recordKill, recordVisit, type Progress } from '../../systems/quests';
+import { recordKill, recordVisit, type Progress } from '../../systems/quests';
+import { HIT_FX, hitTier, hurtFx, refusalFx, type Refusal } from '../../systems/cueRules';
 import { ANIMS, SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { SWORD_SWING, contactHits, startSwing, stepSwing, swingAnimMs, type PendingSwing } from '../../systems/swing';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
@@ -157,10 +158,16 @@ export class Simulation {
 
   // --- Drawn here and also shown to the friends ---
 
-  /** A floating number or word, also shown to the guest. */
-  text(x: number, y: number, text: string, color: number) {
-    this.visuals.text(x, y, text, color);
-    this.emit({ type: 'text', x: round1(x), y: round1(y), text, color });
+  /** A damage number: the debug setting's, drawn on this page only (never sent: the game shows weight, not numbers). */
+  number(x: number, y: number, n: number, color: number) {
+    this.visuals.number(x, y, n, color);
+  }
+
+  /** A refusal as a cue, shown to everyone (`systems/cueRules.ts`): a red puff, the actor's head-shake and the dull thud. */
+  refuse(p: Player | undefined, x: number, y: number, why: Refusal, line?: string) {
+    this.fx(refusalFx(why), x, y, undefined, p?.slot);
+    // Only where the player cannot see the reason for themselves: one short passive line, never a popup (this page's hero only).
+    if (line && p && p === this.arena.local) this.announce([line]);
   }
 
   /** A one-shot particle effect, also shown to the guest. `dir` is an angle in radians; `p` the player it happened to. */
@@ -189,13 +196,8 @@ export class Simulation {
     const water = drinkableNear(z.data, x, y);
     if (!water) return false;
     p.body.face(directionToward(water.x - x, water.y - y));
-    const why = !thirsty(p.hero.needs)
-      ? 'Not thirsty'
-      : z.ponds.level(pondId(z.data, water.cell)) >= 1
-        ? 'The pond is dry'
-        : '';
-    if (why) {
-      this.text(x, y - 40, why, 0xff8a7a);
+    if (!thirsty(p.hero.needs) || z.ponds.level(pondId(z.data, water.cell)) >= 1) {
+      this.refuse(p, x, y - 14, 'nothingToDo'); // full, or the pond is dry (it shows as bare ground)
       return true;
     }
     if (!p.drinking) this.fx('levelUp', water.x, water.y);
@@ -221,11 +223,9 @@ export class Simulation {
     return this.startDrinking(p);
   }
 
-  /** The player stops drinking: how much it did them good floats over them. */
+  /** The player stops drinking (the water bar and the pond's level show how much it did them good). */
   stopDrinking(p: Player) {
-    const gained = Math.round(p.drinking?.gained ?? 0);
     p.drinking = null;
-    if (gained > 0) this.text(p.body.x, p.body.y - 40, `+${gained} water`, 0x8fc8ff);
   }
 
   /** A drinking player's tick: water flows from the pond into them; walking off, a full meter or a dry pond stops it. */
@@ -239,10 +239,7 @@ export class Simulation {
     const room = 100 - p.hero.needs.water;
     const got = z.ponds.drink(pond, Math.min(POND_FLOW * dt, room), pondCapacity(z.data, pond));
     sip.gained += sipWater(p.hero.needs, got, 1);
-    if (z.ponds.level(pond) >= 1) {
-      this.stopDrinking(p);
-      this.text(p.body.x, p.body.y - 52, 'The pond is dry', 0xd8b080);
-    }
+    if (z.ponds.level(pond) >= 1) this.stopDrinking(p); // the pond shows as bare ground
   }
 
   /** One tick for a player: cooldowns and regeneration, knockback, walking (or sliding on ice), and the poses. */
@@ -624,21 +621,17 @@ export class Simulation {
     );
     if (by && !bolt && !guard) by.hitstop = Math.max(by.hitstop, heroPauseFor(damage, mob.kind.maxHp, killed, boss));
     this.onDealt(mobKey(mob.kind) ?? '', damage, killed);
-    // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
-    if (!bolt || guard) this.fx('hitSpark', mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx), by?.slot);
-    this.text(
-      mob.body.x,
-      mob.body.y - 54 * mob.body.size,
-      guard && damage === 0 ? 'Blocked' : String(damage),
-      guard ? 0x9fb4c8 : 0xffffff,
-    );
+    // Sparks fly on from the blow (the bolt has its own impact burst), at chest height; how big and what colour says how
+    // hard. A blow the shield turned aside does nothing, so it reads as the faintest spark (a graze), spell or not.
+    const tier = HIT_FX[hitTier(damage, mob.kind.maxHp, killed)];
+    if (!bolt || guard) this.fx(tier, mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx), by?.slot);
+    this.number(mob.body.x, mob.body.y - 54 * mob.body.size, damage, guard ? 0x9fb4c8 : 0xffffff);
     if (!killed) return;
     this.onKill(this.arena.zone.name, mobKey(mob.kind) ?? '');
     const earned = (p: Player) => Math.round(mob.kind.xp * killShare(p.hero.stats.level, mob.kind));
-    this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${earned(this.arena.local)} XP`, 0xffb13f); // this page's own hero
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
-    this.text(mob.body.x, mob.body.y - 78 * mob.body.size, `+${gold}g`, 0xffd34d);
     for (const p of this.arena.party()) {
+      this.fx('gainMotes', mob.body.x, mob.body.y - 14 * mob.body.size, undefined, p.slot); // the pay flies to each who earns it
       if (boss) this.cheer(p);
       p.hero.gold += goldFor(p.hero, gold); // gear can add to the purse and the XP, so each player gets their own share
       if (gainXp(p.hero.stats, xpFor(p.hero, earned(p)))) this.levelUp(p);
@@ -650,19 +643,20 @@ export class Simulation {
   reward(p: Player, xp: number, gold: number) {
     this.arena.inZone(this.arena.zoneOf(p), () => {
       p.hero.gold += goldFor(p.hero, gold);
-      this.text(p.body.x, p.body.y - 66, `+${xp} XP`, 0xffb13f);
-      this.text(p.body.x, p.body.y - 78, `+${gold}g`, 0xffd34d);
+      this.fx('gainMotes', p.body.x, p.body.y - 30, undefined, p.slot);
       if (gainXp(p.hero.stats, xpFor(p.hero, xp))) this.levelUp(p);
       else this.cheer(p);
     });
   }
 
-  /** Float a quest's progress ("3/5 goblins") over the player, and a nudge once it can be handed in. */
+  /**
+   * A quest moved on (the journal and the tracker hold the words): a ring of pale sparks round the hero and, on the hero's
+   * own page, a tick on the HUD tracker (`Visuals.onQuestTick`). A quest that can now be handed in also shimmers.
+   */
   questNote(p: Player, progress: Progress | null) {
     if (!progress) return;
-    this.text(p.body.x, p.body.y - 74, progress.text, 0x9fe8ff);
-    if (progress.ready)
-      this.text(p.body.x, p.body.y - 86, `Return to ${GIVERS[QUEST_GIVER]?.tag ?? 'the warden'}`, 0xffd34d);
+    this.fx('questTick', p.body.x, p.body.y - 20, undefined, p.slot);
+    if (progress.ready) this.fx('shimmer', p.body.x, p.body.y - 8, undefined, p.slot);
   }
 
   /** A victory pose and a shower of confetti for something good (a level, a boss, a finished task). */
@@ -673,7 +667,7 @@ export class Simulation {
 
   /** A player gained a level (from a kill or a quest reward). */
   levelUp(p: Player) {
-    this.text(p.body.x, p.body.y - 62, 'LEVEL UP!', 0xffb13f);
+    this.fx('levelRing', p.body.x, p.body.y - 4, undefined, p.slot); // the chime, a ring of light, the body's glow
     this.fx('levelUp', p.body.x, p.body.y - 14);
     this.cheer(p);
   }
@@ -707,9 +701,9 @@ export class Simulation {
     if (p.guard > 0) damage = Math.max(1, Math.round(damage * GUARD_TAKEN)); // Iron Skin
     s.hp -= damage;
     p.sinceHit = 0;
-    this.text(p.body.x, p.body.y - 54, String(damage), burn ? 0xff7fd0 : 0xff5a5a);
+    this.number(p.body.x, p.body.y - 54, damage, burn ? 0xff7fd0 : 0xff5a5a);
     const away = Math.atan2(p.body.y - fromY, p.body.x - fromX); // the blow's direction, for the kick on this screen
-    this.fx('heroHurt', p.body.x, p.body.y - 14, burn ? undefined : away, p.slot);
+    this.fx(hurtFx(damage, s.maxHp), p.body.x, p.body.y - 14, burn ? undefined : away, p.slot);
     if (burn) {
       // damage over time: no knockback, no stun, no blinking immunity (the next burn must land), the shot still goes
       if (s.hp <= 0) this.fall(p);

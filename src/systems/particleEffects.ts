@@ -807,6 +807,274 @@ export const PARTICLE_EFFECTS = {
       },
     ],
   },
+
+  // --- Show, don't tell (systems/cueRules.ts): what a floating number or word used to say ---
+
+  /** A glancing blow (under an eighth of the foe's health): a few short pale streaks, no flash. `dir` as `hitSpark`. */
+  hitGraze: {
+    emitters: [
+      {
+        shape: 'streak',
+        burst: [5, 6],
+        life: [0.12, 0.2],
+        speed: [90, 170],
+        angle: [-0.5, 0.5],
+        size: [10, 15],
+        sizeOverLife: [1, 0.3],
+        alphaOverLife: [1, 1, 0],
+        colorOverLife: [0xffffff, 0xd8dde4, 0x9aa3b0],
+        drag: 5,
+        align: true,
+      },
+    ],
+  },
+
+  /** A crushing blow (a third of the foe's health, or the kill): a wide fan of long red-gold streaks and a big flash. */
+  hitHeavy: {
+    emitters: [
+      {
+        shape: 'streak',
+        burst: [12, 14],
+        life: [0.2, 0.32],
+        speed: [170, 340],
+        angle: [-0.95, 0.95],
+        size: [16, 28],
+        sizeOverLife: [1, 0.3],
+        alphaOverLife: [1, 1, 0],
+        colorOverLife: [0xffffff, 0xff9a3a, 0xd02a1c],
+        drag: 4,
+        align: true,
+      },
+      {
+        shape: 'dot',
+        burst: [4, 6],
+        life: [0.25, 0.4],
+        speed: [60, 140],
+        size: [3, 5],
+        sizeOverLife: [1, 0.4],
+        alphaOverLife: [1, 1, 0],
+        colorOverLife: [0xffe9a8, 0xe7682f],
+        gravity: 200,
+        drag: 2,
+      },
+      {
+        shape: 'glow',
+        burst: 1,
+        life: 0.14,
+        size: 46,
+        sizeOverLife: [0.6, 1.3],
+        alphaOverLife: [1, 0],
+        colorOverLife: [0xffffff, 0xffc878],
+      },
+    ],
+  },
+
+  /** A savage blow on the hero (a quarter of their health): twice the red flecks and a red flash. */
+  heroHurtHeavy: {
+    emitters: [
+      {
+        shape: 'dot',
+        burst: [15, 18],
+        life: [0.25, 0.5],
+        speed: [70, 170],
+        size: [3, 5],
+        sizeOverLife: [1, 0.3],
+        alphaOverLife: [1, 1, 0],
+        colorOverLife: [0xff5a5a, 0xb82024],
+        drag: 4,
+        gravity: 90,
+      },
+      {
+        shape: 'glow',
+        burst: 1,
+        life: 0.16,
+        size: 34,
+        sizeOverLife: [0.6, 1.3],
+        alphaOverLife: [0.8, 0],
+        colorOverLife: [0xff8a7a, 0xb82024],
+      },
+    ],
+  },
+
+  /** A refusal (no room, locked, no mana): a dull red puff that spreads and fades. The actor shakes its head with it. */
+  deny: {
+    emitters: [
+      {
+        shape: 'glow',
+        burst: [5, 6],
+        life: [0.4, 0.55],
+        speed: [10, 30],
+        radius: [0, 6],
+        size: [18, 26],
+        sizeOverLife: [0.7, 1.5],
+        alphaOverLife: [1, 0.6, 0],
+        colorOverLife: [0xff8070, 0xe03a2c, 0x7a1c1c],
+        drag: 2,
+      },
+      {
+        shape: 'dot',
+        burst: 6,
+        life: [0.25, 0.4],
+        speed: [30, 70],
+        size: [3, 4],
+        alphaOverLife: [1, 0],
+        colorOverLife: [0xff7a6a, 0xc02a2a],
+        drag: 4,
+      },
+    ],
+  },
+
+  /** A way opening (a gate, a door): a column of pale-gold and cyan glints that rises and fades. */
+  shimmer: {
+    emitters: [
+      {
+        shape: 'dot',
+        rate: 60,
+        duration: 0.55,
+        life: [0.4, 0.7],
+        speed: [8, 24],
+        angle: [-Math.PI / 2 - 0.3, -Math.PI / 2 + 0.3],
+        radius: [2, 16],
+        size: [3, 5],
+        sizeOverLife: [1, 0.3],
+        alphaOverLife: [0, 1, 0],
+        colorOverLife: [0xffffff, 0x9fe8ff, 0xffd34a],
+        gravity: -30,
+      },
+      {
+        shape: 'glow',
+        burst: 1,
+        life: 0.5,
+        size: 44,
+        sizeOverLife: [0.6, 1.3],
+        alphaOverLife: [0, 0.6, 0],
+        colorOverLife: 0xcfeeff,
+      },
+    ],
+  },
+
+  /** A level gained: a ring of gold sparks spreading from the hero's feet and a warm column of light (the body glows too). */
+  levelRing: {
+    emitters: [
+      {
+        shape: 'dot',
+        burst: 20,
+        life: [0.45, 0.6],
+        speed: [70, 80],
+        radius: 4,
+        size: [4, 6],
+        sizeOverLife: [1, 0.3],
+        alphaOverLife: [1, 1, 0],
+        colorOverLife: [0xffffff, 0xffd34a, 0xe7682f],
+        drag: 3,
+      },
+      {
+        shape: 'glow',
+        burst: 1,
+        life: 0.55,
+        size: 56,
+        sizeOverLife: [0.5, 1.2],
+        alphaOverLife: [0.8, 0],
+        colorOverLife: [0xfff4c8, 0xffd34a],
+      },
+    ],
+  },
+
+  /** What a kill or a task pays: the coins and sparks pop from the foe (they then fly to the hero as `moteArc`). */
+  gainMotes: {
+    emitters: [
+      {
+        shape: 'dot',
+        burst: [5, 6],
+        life: [0.25, 0.4],
+        speed: [30, 80],
+        angle: [-Math.PI / 2 - 0.9, -Math.PI / 2 + 0.9],
+        size: [3, 4],
+        alphaOverLife: [1, 1, 0],
+        colorOverLife: [0xffe9a8, 0xffd34a, 0xe7a31f],
+        gravity: 220,
+        drag: 2,
+      },
+    ],
+  },
+
+  /** An item taken up off the ground: a small bright glint where it lay. */
+  itemMote: {
+    emitters: [
+      {
+        shape: 'glow',
+        burst: 1,
+        life: 0.2,
+        size: 18,
+        sizeOverLife: [0.6, 1.3],
+        alphaOverLife: [0.9, 0],
+        colorOverLife: [0xffffff, 0xffe9a8],
+      },
+    ],
+  },
+
+  /** A quest moving on: a small ring of pale cyan sparks around the hero. */
+  questTick: {
+    emitters: [
+      {
+        shape: 'dot',
+        burst: 10,
+        life: [0.35, 0.5],
+        speed: [35, 45],
+        radius: 3,
+        size: [3, 4],
+        sizeOverLife: [1, 0.3],
+        alphaOverLife: [1, 1, 0],
+        colorOverLife: [0xffffff, 0x9fe8ff],
+        drag: 4,
+        gravity: -30,
+      },
+    ],
+  },
+
+  /** Hunger or thirst on the hero (local only): a few dull drops that sag from them. */
+  wilt: {
+    emitters: [
+      {
+        shape: 'dot',
+        burst: 3,
+        life: [0.8, 1.1],
+        speed: [6, 14],
+        angle: [Math.PI * 0.2, Math.PI * 0.8],
+        radius: [0, 6],
+        size: [3, 4],
+        alphaOverLife: [0.8, 0],
+        colorOverLife: [0xc4bc98, 0x706c58],
+        gravity: 36,
+      },
+    ],
+  },
+
+  /** A sidestep (local, a director cue): a pale flash and a few cool flecks (the afterimage is the body's own). */
+  dodge: {
+    emitters: [
+      {
+        shape: 'dot',
+        burst: 5,
+        life: [0.18, 0.3],
+        speed: [40, 90],
+        size: [2, 4],
+        sizeOverLife: [1, 0.3],
+        alphaOverLife: [1, 0],
+        colorOverLife: [0xe8fdff, 0x9ac4e0],
+        drag: 4,
+      },
+      {
+        shape: 'glow',
+        burst: 1,
+        life: 0.12,
+        size: 24,
+        sizeOverLife: [0.6, 1.2],
+        alphaOverLife: [0.8, 0],
+        colorOverLife: 0xffffff,
+      },
+    ],
+  },
 } as const satisfies Record<string, EffectDef>;
 
 export type ParticleEffectName = keyof typeof PARTICLE_EFFECTS;

@@ -31,7 +31,7 @@ function game(role: 'host' | 'solo' = 'host') {
       moved.push({ slot: p.slot, zone: dest.name, cell }),
   } as unknown as Zones;
   const fx: string[] = [];
-  const sim = { onDefeat: () => {}, fx: (n: string) => fx.push(n), text: () => {} } as unknown as Simulation;
+  const sim = { onDefeat: () => {}, fx: (n: string) => fx.push(n) } as unknown as Simulation;
   const revive = new DmRevive(arena, sim, zonesApi);
   const fall = (p: Player, zone: string, x: number, y: number) => sim.onDefeat(p, zone, x, y);
   return { revive, fall, party, moved, fx };

@@ -29,7 +29,10 @@ export const KICK_KILL: Kick = { px: 3.5, seconds: 0.12, own: true };
 
 export const FX_KICK: Partial<Record<ParticleEffectName, Kick>> = {
   hitSpark: KICK_HIT,
+  hitGraze: { px: 1, seconds: 0.07, own: true },
+  hitHeavy: { px: 3.5, seconds: 0.12, own: true },
   heroHurt: { px: 4, seconds: 0.14, own: true },
+  heroHurtHeavy: { px: 6, seconds: 0.18, own: true },
   mobPoof: KICK_KILL,
   mobDust: KICK_KILL,
   mobSplat: KICK_KILL,
@@ -39,8 +42,13 @@ export const FX_KICK: Partial<Record<ParticleEffectName, Kick>> = {
 /** The effects that are a foe going (they have no angle of their own: the last blow's is used). */
 export const DEATH_FX: readonly ParticleEffectName[] = ['mobPoof', 'mobDust', 'mobSplat', 'mobWisp'];
 
+/** The effects that are a blow landing on a foe (the angle of the last one is what a death's kick follows). */
+export const HIT_FX_NAMES: readonly ParticleEffectName[] = ['hitSpark', 'hitGraze', 'hitHeavy'];
+
 export const FX_SHAKE: Partial<Record<ParticleEffectName, Shake>> = {
   heroHurt: { strength: 0.16, seconds: 0.14, own: true },
+  heroHurtHeavy: { strength: 0.3, seconds: 0.2, own: true },
+  hitHeavy: { strength: 0.06, seconds: 0.08, own: true },
   blast: { strength: 0.3, seconds: 0.28 },
   nova: { strength: 0.18, seconds: 0.2 },
   bossFinale: { strength: 0.8, seconds: 0.7 },

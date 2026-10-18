@@ -1,4 +1,28 @@
 {
+ "arms.bracers_leather": [
+  {
+   "file": "arms.bracers_leather.0.png",
+   "z": 70
+  }
+ ],
+ "arms.legion_iron": [
+  {
+   "file": "arms.legion_iron.0.png",
+   "z": 60
+  }
+ ],
+ "arms.plate_gold": [
+  {
+   "file": "arms.plate_gold.0.png",
+   "z": 60
+  }
+ ],
+ "arms.plate_steel": [
+  {
+   "file": "arms.plate_steel.0.png",
+   "z": 60
+  }
+ ],
  "beard.brown": [
   {
    "file": "beard.brown.0.png",

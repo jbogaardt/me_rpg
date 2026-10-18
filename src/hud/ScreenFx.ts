@@ -1,3 +1,4 @@
+import { heartbeat } from '../systems/cueRules';
 import { downCard, downDark, lowHealth, wakeDark } from '../systems/downfall';
 
 /**
@@ -18,7 +19,7 @@ export class ScreenFx {
     this.clock += dt;
     const low = down === null ? lowHealth(hp, maxHp) : 0;
     // A slow heartbeat on top of the edge, faster as it gets worse.
-    const beat = 0.75 + 0.25 * Math.sin(this.clock * (4 + 4 * low));
+    const beat = heartbeat(this.clock, low); // the hero's body pulses in the same step (`BodyCues`)
     this.vignette.style.opacity = low > 0 ? String((low * beat).toFixed(3)) : '0';
 
     let dark = 0;
