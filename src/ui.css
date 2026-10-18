@@ -596,6 +596,32 @@ body.touch-ui #dm-hot .mp-btn { min-height: 44px; padding: 6px 10px; font-size: 
   100% { opacity: 0; }
 }
 
+/* --- The splash when the hero gains a level (src/hud/LevelSplash.ts) --- */
+#level-splash {
+  position: fixed; z-index: 3; left: 50%; top: 36%; transform: translate(-50%, -50%); width: calc(100vw - 24px); text-align: center;
+  pointer-events: none; opacity: 0; font-family: var(--title); text-shadow: 0 2px 3px #000, 0 0 12px #000, 0 0 3px #000;
+}
+#level-splash::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: min(520px, 90vw); height: 220px; transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(255, 177, 63, 0.45), rgba(255, 177, 63, 0) 100%); z-index: -1;
+}
+#level-splash .sub { font: 700 clamp(16px, 3vw, 24px) var(--body); color: #fff4c8; letter-spacing: 0.35em; text-transform: uppercase; }
+#level-splash .level { font-weight: 700; font-size: clamp(64px, 16vw, 130px); line-height: 1; color: var(--gold, #f5d175); }
+#level-splash .gains { font: 600 clamp(14px, 2.6vw, 19px) var(--body); color: #e8dcc0; letter-spacing: 0.08em; min-height: 1.2em; }
+#level-splash.show { animation: level-splash 3.2s ease-out forwards; }
+@keyframes level-splash {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  22% { transform: translate(-50%, -50%) scale(1); }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -58%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #level-splash.show { animation-name: level-splash-calm; }
+  @keyframes level-splash-calm { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+}
+body.dm-possessing #level-splash { display: none; }
+
 /* --- Quest reminder (src/hud/Hud.ts) --- */
 #quest-tracker {
   position: fixed; z-index: 2; pointer-events: none; max-width: min(340px, 60vw);

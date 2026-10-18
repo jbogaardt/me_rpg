@@ -154,6 +154,7 @@ void (async () => {
     scenes.change(overworld);
     scenes.start();
     await overworld.persistence.restore(); // a solo game picks up where this browser left off
+    overworld.splash.reset(); // the saved level is not one just gained
     ui.menu.onNewGame = overworld.persistence.enabled
       ? () => {
           overworld.persistence.forget();

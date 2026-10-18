@@ -25,6 +25,7 @@ import { Atlas } from '../map/explored';
 import { MapOverlay } from '../hud/MapOverlay';
 import { PartnerArrows } from '../hud/PartnerArrows';
 import { AreaBanner } from '../hud/AreaBanner';
+import { LevelSplash } from '../hud/LevelSplash';
 import { Pacing } from './overworld/Pacing';
 import {} from '../systems/places';
 import type { Menu } from '../hud/Menu';
@@ -152,6 +153,7 @@ export class OverworldScene implements Scene {
   private overlay = new MapOverlay();
   private partnerArrows = new PartnerArrows();
   private banner = new AreaBanner();
+  private levelSplash = new LevelSplash();
   private storyUi!: StoryUi; // what the local player is told and shown about their quests
   private interact!: Interactions; // what the action key does
   private input!: LocalInput; // this keyboard's controls as a Command
@@ -161,6 +163,10 @@ export class OverworldScene implements Scene {
   private night = new NightLayer();
   /** The solo game's save in the browser. */
   readonly persistence: Persistence;
+  /** The "level up" splash (watches the hero's level). */
+  get splash() {
+    return this.levelSplash;
+  }
 
   constructor(
     zone: Zone,
@@ -402,6 +408,8 @@ export class OverworldScene implements Scene {
     this.syncRole(session.role);
     arena.clock += dt;
     this.persistence.update(dt);
+    if (arena.local.dm) this.levelSplash.reset();
+    else this.levelSplash.sync(this.hero.stats);
     this.pickups.update(dt, foeNear(arena.zone, arena.local));
     this.updateDm(dt);
     const online = arena.role !== 'solo';
@@ -710,6 +718,7 @@ export class OverworldScene implements Scene {
     else if (arena.role === 'client') this.guest.leave();
     arena.role = 'solo'; // so nothing from here on is recorded for friends until the new role is set
     this.desk.reset(); // what a DM set lasts for their game only
+    this.levelSplash.reset(); // another game's hero is not a level gained
     this.readers.clear();
     arena.pressure = role === 'host' ? this.ui.session.hostPressure : 'steady'; // what the host chose in the lobby
     this.powers.reset();
