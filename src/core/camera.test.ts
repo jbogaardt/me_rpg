@@ -19,8 +19,19 @@ describe('pickZoom', () => {
     expect(pickZoom(1366, 768)).toBe(2);
     expect(pickZoom(1920, 1080)).toBe(2);
     expect(pickZoom(2560, 1440)).toBe(3);
-    expect(pickZoom(390, 844)).toBe(1);
+    expect(pickZoom(768, 1024)).toBe(1);
+    expect(pickZoom(1280, 720)).toBe(2);
     expect(pickZoom(320, 240)).toBe(1);
+  });
+
+  it('gives a phone (short side under the design height 440) zoom 2 so the hero is readable, in portrait and landscape', () => {
+    expect(pickZoom(390, 844)).toBe(2);
+    expect(pickZoom(360, 640)).toBe(2);
+    expect(pickZoom(430, 932)).toBe(2);
+    expect(pickZoom(844, 390)).toBe(2);
+    expect(pickZoom(439, 900)).toBe(2);
+    expect(pickZoom(440, 900)).toBe(1); // not a phone: the design rule
+    expect(pickZoom(640, 440)).toBe(1);
   });
 });
 

@@ -7,8 +7,18 @@ import type { Container } from 'pixi.js';
 export const DESIGN_W = 640;
 export const DESIGN_H = 440;
 
+/**
+ * A phone is a window whose short side is under this (the design height, so a desktop window keeps its zoom). There the design view would leave the hero ~35 px tall on a 390 px
+ * screen, so the zoom is chosen from a narrower view instead (PHONE_VIEW px of world across the short side).
+ */
+export const PHONE_SHORT_SIDE = DESIGN_H;
+export const PHONE_VIEW = 195;
+export const PHONE_MAX_ZOOM = 2;
+
 /** Integer zoom keeps pixel art crisp. */
 export function pickZoom(screenW: number, screenH: number): number {
+  const short = Math.min(screenW, screenH);
+  if (short < PHONE_SHORT_SIDE) return Math.min(PHONE_MAX_ZOOM, Math.max(1, Math.round(short / PHONE_VIEW)));
   return Math.max(1, Math.round(Math.min(screenW / DESIGN_W, screenH / DESIGN_H)));
 }
 

@@ -2,6 +2,11 @@ import { BitmapText, Container, Graphics } from 'pixi.js';
 
 const RING = 64; // px from the hero (screen space) to the arrow
 const ARRIVED = 130; // px: this close to the target the arrow goes away (you are there)
+const CAPTION_ABOVE = 90; // px above the hero's chest: over the head, clear of the feet and the swing
+const CAPTION_TOP = 100; // but never higher than this (under the HUD's buttons)
+const EDGE = 8; // px kept clear at the screen's sides
+const RESERVE = 60; // px kept clear on the right of a narrow screen (the quick-slot column)
+const NARROW = 600;
 const TURN = 10; // how fast the arrow swings round to a new heading (per second)
 
 /**
@@ -29,7 +34,13 @@ export class GuideArrow extends Container {
   }
 
   /** Point from `hero` at `target` (both screen px), or hide when there is nothing to point at or you are there. */
-  update(dt: number, hero: { x: number; y: number }, target: { x: number; y: number } | null, label: string) {
+  update(
+    dt: number,
+    hero: { x: number; y: number },
+    target: { x: number; y: number } | null,
+    label: string,
+    screen: { width: number; height: number },
+  ) {
     const dx = target ? target.x - hero.x : 0;
     const dy = target ? target.y - hero.y : 0;
     const dist = Math.hypot(dx, dy);
@@ -49,6 +60,14 @@ export class GuideArrow extends Container {
     this.arrow.position.set(Math.round(hero.x + this.ux * RING), Math.round(hero.y + this.uy * RING));
     this.arrow.rotation = Math.atan2(this.uy, this.ux);
     this.caption.text = label;
-    this.caption.position.set(Math.round(hero.x + this.ux * (RING + 24)), Math.round(hero.y + this.uy * (RING + 24)));
+    // Not by the arrow (under the hero's feet it covers the swing, and near an edge it is clipped): a line above the
+    // hero's head, centred, kept inside the screen and shrunk to fit a narrow one.
+    const right = screen.width < NARROW ? RESERVE : EDGE;
+    const room = Math.max(1, screen.width - EDGE - right);
+    this.caption.scale.set(1.6);
+    if (this.caption.width > room) this.caption.scale.set((1.6 * room) / this.caption.width);
+    const half = this.caption.width / 2;
+    const cx = Math.min(Math.max(screen.width / 2, EDGE + half), screen.width - right - half);
+    this.caption.position.set(Math.round(cx), Math.round(Math.max(CAPTION_TOP, hero.y - CAPTION_ABOVE)));
   }
 }

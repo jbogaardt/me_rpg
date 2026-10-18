@@ -12,7 +12,7 @@ Scene loop, camera, input, bindings, combos, touch. Headers of each file explain
 - **The stick floats by default** (`stick.ts`, Pixi-free): a touch on the bare canvas in the left half plants the pad
   there and it follows the thumb; `fixed` keeps the corner pad. Deadzone 0.05 to 0.6, saved in localStorage,
   `?stick=`/`?deadzone=`. Input only, no co-op impact (host and guest read the same keys).
-- **One camera rule everywhere** (`camera.ts`): integer zoom chosen from the window, the player in the middle, the
+- **One camera rule everywhere** (`camera.ts`): integer zoom chosen from the window (a phone, short side under 440, gets 2 so the hero is readable), the player in the middle, the
   camera easing after them and never leaving the map; the iris and zone crossings only `punch`/`adopt` it.
   `shake` is a random wobble (big moments); `kick(dx, dy, px, seconds)` is the weight of a blow: a whole-pixel push along
   its direction that fades linearly (2 px / 0.09 s a hit, 3.5 px / 0.12 s a kill, 4 px on the hero hurt; capped at 6),
