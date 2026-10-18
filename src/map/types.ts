@@ -97,6 +97,16 @@ export interface DoorSpawn extends CellPoint {
 }
 
 /**
+ * A one-way drop off a plateau's south edge (`z.plateau(..., { ledges })`): a hero standing on the edge row (`row`, the
+ * `w` cells from `col`) and walking south hops down over the rock face to the floor `land` (a row) below, and cannot come
+ * back that way (the plateau's stairs are the way up). Mobs do not use ledges.
+ */
+export interface LedgeSpawn extends CellPoint {
+  w: number;
+  land: number;
+}
+
+/**
  * A doorway whose far side is the content's to decide, not the map's (a random campaign joins regions by their ports):
  * the `w` cells from `col,row` are the doorway, `arrive` is where a player coming in through it appears. The content
  * (biomes.json `ports`) binds it to another map's port, which makes it a door (`wireDoors`, src/content/ports.ts); a
@@ -161,6 +171,7 @@ export interface MapData {
   sites: SiteSpawn[]; // where gather quests send the player; touched with the action key while a quest wants them
   doors: DoorSpawn[]; // cells that lead to another zone (a shop's door, a gap into the next biome, and the ways back)
   ports: PortSpawn[]; // doorways the content binds to other maps' ports (left out of the file when there are none)
+  ledges?: LedgeSpawn[]; // one-way drops off plateau edges (left out when a map has none)
   indoor: boolean; // no weather, no overlay map: a room rather than the open world
   /** Underground and unlit (a cave, a sewer, a crypt): the `darkness` capability fogs it round the lights (entities/DarknessLayer.ts). */
   dark: boolean;
@@ -242,6 +253,7 @@ function unpacked(json: unknown): MapData {
       const h = p.h ?? 1;
       return { ...p, h, side: p.side ?? portSide(p.col, p.row, p.w, h, d.width!, d.height!) };
     }),
+    ...(d.ledges?.length ? { ledges: d.ledges } : {}),
     indoor: d.indoor ?? false,
     dark: d.dark ?? false,
     ...(d.backdrop ? { backdrop: d.backdrop } : {}),

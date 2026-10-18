@@ -6,6 +6,7 @@ import {
   type ChestSpawn,
   type CropSpawn,
   type DoorSpawn,
+  type LedgeSpawn,
   type PortSpawn,
   type ShopSpawn,
   type GroundCell,
@@ -64,7 +65,7 @@ export interface ZoneApi {
   prop(name: PrefabName, col: number, row: number, nudge?: { dx?: number; dy?: number }): unknown;
   forest(rect: Rect, opts?: { seed?: number; trees?: PrefabName[] }): unknown;
   grove(area: Rect | Rect[], opts?: WoodsOptions): unknown;
-  plateau(rect: Rect, opts?: { kind?: CliffKind; stairs?: number[] }): unknown;
+  plateau(rect: Rect, opts?: { kind?: CliffKind; stairs?: number[]; ledges?: number[] }): unknown;
   block(rect: Rect, reason: string): unknown;
   unblock(rect: Rect): unknown;
   glare(col: number, row: number): unknown;
@@ -180,8 +181,12 @@ export class WorldWindow implements ZoneApi {
     );
     return this;
   }
-  plateau(rect: Rect, opts: { kind?: CliffKind; stairs?: number[] } = {}) {
-    this.z.plateau(this.rect(rect), { ...opts, stairs: opts.stairs?.map((c) => c - this.o.col) });
+  plateau(rect: Rect, opts: { kind?: CliffKind; stairs?: number[]; ledges?: number[] } = {}) {
+    this.z.plateau(this.rect(rect), {
+      ...opts,
+      stairs: opts.stairs?.map((c) => c - this.o.col),
+      ledges: opts.ledges?.map((c) => c - this.o.col),
+    });
     return this;
   }
   block(rect: Rect, reason: string) {
@@ -379,6 +384,7 @@ export class Zone {
   private placeList: PlaceSpawn[] = [];
   private signList: SignSpawn[] = [];
   private doorList: DoorSpawn[] = [];
+  private ledgeList: LedgeSpawn[] = [];
   private portList: PortSpawn[] = [];
   private seals = new Map<string, Placed[]>();
   private isIndoor = false;
@@ -724,7 +730,7 @@ export class Zone {
    * face (each needs rect.col+2 <= column <= rect.col+w-3, so w >= 5, and >= 3 columns between stairs).
    * The top becomes level (existing level + 1); the stair cells are ramps connecting it to the level below.
    */
-  plateau(rect: Rect, opts: { kind?: CliffKind; stairs?: number[] } = {}) {
+  plateau(rect: Rect, opts: { kind?: CliffKind; stairs?: number[]; ledges?: number[] } = {}) {
     const { col, row, w, h } = rect;
     if (w < 4 || h < 4) throw new Error(`plateau needs at least 4x4 cells of walkable top, got ${w}x${h}`);
     const stairCols = [...(opts.stairs ?? [])].sort((a, b) => a - b);
@@ -734,6 +740,18 @@ export class Zone {
       if (i && c - stairCols[i - 1] < 3)
         throw new Error(`stairs at columns ${stairCols[i - 1]} and ${c} overlap (need 3+ apart)`);
     });
+    // Ledges: 3-wide one-way drops off the south edge, centred on the given columns, clear of the stairs and each other.
+    const ledgeCols = [...(opts.ledges ?? [])].sort((a, b) => a - b);
+    if (ledgeCols.length && !stairCols.length) {
+      throw new Error('a plateau with ledges needs stairs too: the way back up (a drop is one-way)');
+    }
+    ledgeCols.forEach((c, i) => {
+      if (c < col + 2 || c > col + w - 3)
+        throw new Error(`ledge column ${c} must be within ${col + 2}..${col + w - 3} of this plateau`);
+      if ((i && c - ledgeCols[i - 1] < 3) || stairCols.some((s) => Math.abs(s - c) < 3))
+        throw new Error(`ledge at column ${c} overlaps another ledge or the stairs (need 3+ apart)`);
+    });
+    for (const c of ledgeCols) this.ledgeList.push({ col: c - 1, row: row + h - 1, w: 3, land: row + h + 2 });
     const kind = opts.kind ?? 'grass';
     const sheet = CLIFF.sheets[kind];
     this.fill(TOP_GROUND[kind], rect);
@@ -1232,6 +1250,7 @@ export class Zone {
       places: this.placeList,
       signs: this.signList,
       doors: this.doorList,
+      ...(this.ledgeList.length ? { ledges: this.ledgeList } : {}),
       ports,
       indoor: this.isIndoor,
       dark: this.isDark,

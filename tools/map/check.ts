@@ -223,6 +223,14 @@ export function checkMap(d: MapData, reasons: Map<number, string> = new Map()): 
     if (!beside.some(([c, r]) => inMap(c, r) && reach[r * W + c]))
       errors.push(`${name} (${p.col},${p.row}) has no reachable cell beside it`);
   }
+  // A ledge drops a hero from its edge row to the floor below: both must be open, and the landing reachable.
+  for (const l of d.ledges ?? []) {
+    for (let c = l.col; c < l.col + l.w; c++) {
+      if (blocked.has(l.row * W + c)) errors.push(`the ledge edge (${c},${l.row}) is blocked: nothing can stand there`);
+      if (blocked.has(l.land * W + c) || !reach[l.land * W + c])
+        errors.push(`the ledge landing (${c},${l.land}) is blocked or unreachable from the spawn`);
+    }
+  }
   const unreachable = d.width * d.height - blocked.size - reach.reduce((n, v) => n + v, 0);
   if (unreachable > 0) {
     const first = reach.findIndex((v, i) => !v && !blocked.has(i));
