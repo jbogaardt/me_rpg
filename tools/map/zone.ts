@@ -95,6 +95,8 @@ export interface ZoneApi {
   ): unknown;
   indoor(): unknown;
   dark(): unknown;
+  backdrop(name: string): unknown;
+  clearGround(rect: Rect): unknown;
   climate(name: ClimateName): unknown;
 }
 
@@ -267,6 +269,14 @@ export class WorldWindow implements ZoneApi {
     this.z.dark();
     return this;
   }
+  backdrop(name: string) {
+    this.z.backdrop(name);
+    return this;
+  }
+  clearGround(rect: Rect) {
+    this.z.clearGround(this.rect(rect));
+    return this;
+  }
   climate(name: ClimateName) {
     this.z.climate(name);
     return this;
@@ -373,6 +383,8 @@ export class Zone {
   private seals = new Map<string, Placed[]>();
   private isIndoor = false;
   private isDark = false;
+  private backdropName: string | undefined;
+  private voids = new Set<number>();
   private weather: ClimateName = DEFAULT_CLIMATE;
 
   constructor(
@@ -976,6 +988,21 @@ export class Zone {
     return this;
   }
 
+  /**
+   * Draw the far backdrop (`src/map/backdrop.ts`, a key of `BACKDROPS`) behind the ground: cells given up with
+   * `clearGround` show it, scrolling slower than the floor when the `parallax` capability is on.
+   */
+  backdrop(name: string) {
+    this.backdropName = name;
+    return this;
+  }
+
+  /** Leave cells with no ground at all (the backdrop shows through; collision is the spec's own). */
+  clearGround(rect: Rect) {
+    for (const { col, row } of this.cells(rect)) this.voids.add(row * this.width + col);
+    return this;
+  }
+
   /** What the spec placed besides terrain and props: the start, NPC, chests, shopkeepers and doors. */
   entities() {
     return {
@@ -1087,6 +1114,7 @@ export class Zone {
     };
     const surface = [...this.surfaceAt];
     const ground: (GroundCell | null)[] = this.ground.map((g, i) => {
+      if (this.voids.has(i)) return null;
       const col = i % this.width,
         row = Math.floor(i / this.width);
       let layers: number[] = g ? [sheetIndex(g.sheet), g.x, g.y] : [];
@@ -1207,6 +1235,7 @@ export class Zone {
       ports,
       indoor: this.isIndoor,
       dark: this.isDark,
+      ...(this.backdropName ? { backdrop: this.backdropName } : {}),
       climate: this.weather,
     };
   }

@@ -744,6 +744,12 @@ class BiomeWindow implements BiomeApi {
   dark() {
     throw new Error('a biome is open air; only a delve (a cave, a sewer, a crypt) is dark');
   }
+  backdrop(): never {
+    throw new Error('a biome is open air; only a delve has a backdrop');
+  }
+  clearGround(): never {
+    throw new Error('a biome is open air; only a delve leaves cells with no ground');
+  }
   climate(name: ClimateName) {
     this.z.climate(name);
   }

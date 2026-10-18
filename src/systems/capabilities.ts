@@ -98,6 +98,19 @@ export const CAPABILITIES = {
       memory: { about: 'Ground already seen stays faintly visible.', default: true },
     },
   },
+  parallax: {
+    name: 'Cave parallax',
+    off: 'The dark beyond a cave, sewer or crypt wall is flat: it scrolls with the floor, no depth.',
+    scope: 'zone',
+    settings: {
+      depth: {
+        about: 'How far behind the floor the background lies: 0 moves with the floor, 1 hardly moves at all.',
+        default: 0.6,
+        min: 0,
+        max: 1,
+      },
+    },
+  },
   carrying: {
     name: 'Carrying barrels',
     off: 'Barrels stay where they stand: they still block, but cannot be picked up or moved.',

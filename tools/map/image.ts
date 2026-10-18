@@ -3,6 +3,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { PNG } from 'pngjs';
 import { CELL, sortKey, type MapData } from '../../src/map/types';
+import { BACKDROPS, isBackdrop } from '../../src/map/backdrop';
 import { SHADOWS } from './shadows';
 
 export const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -176,7 +177,10 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
   const W = data.width * CELL;
   const H = data.height * CELL;
   const out: Image = { width: W, height: H, data: Buffer.alloc(W * H * 4) };
-  for (let i = 0; i < W * H; i++) out.data.writeUInt32BE(0x1a1a2eff, i * 4); // game background
+  // The game background, or a delve's backdrop (its deepest dark: the preview does not scroll the layers).
+  const bg =
+    data.backdrop && isBackdrop(data.backdrop) ? ((BACKDROPS[data.backdrop].base << 8) | 0xff) >>> 0 : 0x1a1a2eff;
+  for (let i = 0; i < W * H; i++) out.data.writeUInt32BE(bg, i * 4);
   const blit = (img: Image, sx: number, sy: number, w: number, h: number, dx: number, dy: number) => {
     for (let y = 0; y < h; y++) {
       const ty = dy + y;
