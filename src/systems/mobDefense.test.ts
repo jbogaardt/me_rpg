@@ -18,6 +18,10 @@ import {
   poiseCost,
   resolveCharge,
   resolveSprint,
+  resolveHeal,
+  HEAL_DEFAULTS,
+  pickPatient,
+  mendAmount,
   spreadAngles,
   SPRINT_DEFAULTS,
   resolveGuard,
@@ -154,6 +158,21 @@ describe('sprint', () => {
     expect(resolveSprint()).toEqual(SPRINT_DEFAULTS);
     expect(resolveSprint({ duration: 0.8 })).toEqual({ ...SPRINT_DEFAULTS, duration: 0.8 });
     expect(SPRINT_DEFAULTS.speed).toBeGreaterThan(120);
+  });
+});
+
+describe('heal', () => {
+  const at = (x: number, hp: number, mendable = true) => ({ x, y: 0, hp, maxHp: 100, mendable });
+  it('goes for the most wounded ally in range, and no one healthy, far off or a boss', () => {
+    expect(resolveHeal({ cooldown: 9 })).toEqual({ ...HEAL_DEFAULTS, cooldown: 9 });
+    expect(pickPatient(0, 0, [at(50, 50), at(60, 20), at(70, 90)], HEAL_DEFAULTS)).toBe(1);
+    expect(pickPatient(0, 0, [at(50, 80)], HEAL_DEFAULTS)).toBe(-1); // not hurt enough
+    expect(pickPatient(0, 0, [at(HEAL_DEFAULTS.range + 1, 10)], HEAL_DEFAULTS)).toBe(-1); // too far
+    expect(pickPatient(0, 0, [at(50, 10, false)], HEAL_DEFAULTS)).toBe(-1); // a boss, or out of sight
+  });
+  it('gives back a share of the ally health, never past full', () => {
+    expect(mendAmount(40, 100, HEAL_DEFAULTS)).toBe(25);
+    expect(mendAmount(90, 100, { ...HEAL_DEFAULTS, below: 1 })).toBe(10);
   });
 });
 

@@ -353,6 +353,10 @@
             "arc": 28,
             "power": 0.7
           }
+        },
+        "heal": {
+          "amount": 0.25,
+          "cooldown": 7
         }
       }
     },
@@ -456,6 +460,11 @@
             "arc": 36,
             "power": 0.7
           }
+        },
+        "heal": {
+          "amount": 0.2,
+          "cooldown": 6,
+          "range": 176
         }
       }
     },

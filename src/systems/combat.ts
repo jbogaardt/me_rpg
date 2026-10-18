@@ -166,8 +166,19 @@ export interface MobKind {
   guard?: MobGuard;
   /** A burst of speed: for a few seconds it runs faster than the hero, then it is back to its walk (`resolveSprint`, systems/mobDefense.ts). */
   sprint?: MobSprint;
+  /** A healer: now and then it mends a wounded ally in sight instead of attacking (`resolveHeal`, systems/mobDefense.ts). */
+  heal?: MobHeal;
   /** A snap attacker: its windup may be as short as `QUICK_WINDUP`, and it pays with a weaker blow and a long recovery (`QUICK_POWER`). */
   quick?: boolean;
+}
+
+/** A kind's mending of its allies, every number in full (the content gives only what it changes, `resolveHeal`). */
+export interface MobHeal {
+  range: number; // px: an ally this close (and in sight) may be mended
+  amount: number; // share of the ally's max HP given back
+  cooldown: number; // seconds before it may mend again
+  below: number; // 0..1: only an ally under this share of its HP is mended
+  rest: number; // seconds it is busy casting (it does not attack, and a blow staggers it as in any recover)
 }
 
 /** A kind's burst of speed, every number in full (the content gives only what it changes, `resolveSprint`). */

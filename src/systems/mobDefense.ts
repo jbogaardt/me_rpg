@@ -13,7 +13,15 @@
 //    or break its poise.
 //  - Charge: a gap-closer for the foe that is kited (see `Mob.ts`); its defaults and the check on it are here.
 
-import { mobLevel, type MobCharge, type MobGuard, type MobKind, type MobSpread, type MobSprint } from './combat';
+import {
+  mobLevel,
+  type MobCharge,
+  type MobGuard,
+  type MobHeal,
+  type MobKind,
+  type MobSpread,
+  type MobSprint,
+} from './combat';
 
 // --- Poise ---
 
@@ -188,3 +196,41 @@ export function spreadAngles(aim: number, spread: Pick<MobSpread, 'count' | 'arc
 
 /** How fast a shot may fly: fair at a plain windup up to 1.6x the hero's walk, faster only with a longer telegraph. */
 export const FAST_SHOT_WINDUP = 0.75;
+
+// --- Heal (a support foe mends its allies) ---
+
+export const HEAL_DEFAULTS: MobHeal = {
+  range: 160, // px
+  amount: 0.25, // a quarter of the ally's health
+  cooldown: 6, // seconds between mends: a healer slows a fight, it cannot make a foe immortal
+  below: 0.6, // only an ally under this share of its health is mended
+  rest: 0.9, // seconds busy casting: the healer is open to a blow while it does
+};
+
+export const resolveHeal = (h: Partial<MobHeal> = {}): MobHeal => ({ ...HEAL_DEFAULTS, ...h });
+
+/** A foe a healer may mend: alive, not itself, not a boss, and hurt (under `below` of its health). */
+export interface Patient {
+  x: number;
+  y: number;
+  hp: number;
+  maxHp: number;
+  mendable: boolean;
+}
+
+/** The index of the most wounded patient within range of (x, y), or -1: the healer goes for whoever is worst off. */
+export function pickPatient(x: number, y: number, patients: readonly Patient[], heal: MobHeal): number {
+  let best = -1;
+  let worst = heal.below;
+  patients.forEach((p, i) => {
+    const share = p.hp / p.maxHp;
+    if (!p.mendable || share >= worst || Math.hypot(p.x - x, p.y - y) > heal.range) return;
+    worst = share;
+    best = i;
+  });
+  return best;
+}
+
+/** What a mend gives back: `amount` of the patient's max HP, never past full. */
+export const mendAmount = (hp: number, maxHp: number, heal: MobHeal): number =>
+  Math.max(0, Math.min(maxHp - hp, Math.round(maxHp * heal.amount)));

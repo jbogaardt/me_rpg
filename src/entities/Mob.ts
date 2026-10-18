@@ -42,6 +42,8 @@ export interface MobWorld {
   strike(mob: Mob, target: Character, power?: number): void;
   /** A ranged mob fires along the unit vector (ux, uy); the scene flies the projectile and decides what it hits. */
   shoot(mob: Mob, ux: number, uy: number): void;
+  /** A healer mends the most wounded ally in range and sight (`MobKind.heal`); false when there is none to mend. */
+  heal?(mob: Mob): boolean;
   /** One burn of a held ray on `target`. Returns false when the beam cannot reach them (a wall): it then ends. */
   ray(mob: Mob, target: Character): boolean;
 }
@@ -142,6 +144,7 @@ export class Mob {
   private chargeCool = 0; // seconds before it may charge again
   private sprinting = 0; // seconds of burst left (`MobKind.sprint`)
   private sprintCool = 0; // seconds before it may burst again
+  private healCool = 0; // seconds before it may mend an ally again (`MobKind.heal`)
   private bang = new Graphics(); // the "!" over its head while a charge winds up
   private moving = false;
   private attack: MobAttack = 'melee'; // what the current windup leads to
@@ -202,6 +205,13 @@ export class Mob {
     return true;
   }
 
+  /** An ally's mending: some health back, up to full (the host's; a guest reads hp from the snapshot). */
+  mend(amount: number) {
+    if (this.state === 'dead' || amount <= 0) return;
+    this.hp = Math.min(this.kind.maxHp, this.hp + amount);
+    this.drawBar();
+  }
+
   /** Back home at full health. */
   reset() {
     this.body.position.set(this.homeX, this.homeY);
@@ -228,6 +238,7 @@ export class Mob {
     this.chargeCool = 0;
     this.sprinting = 0;
     this.sprintCool = 0;
+    this.healCool = 0;
     this.lunging = 0;
     this.swing = false;
     this.drawBar();
@@ -438,6 +449,7 @@ export class Mob {
     this.rayRest = Math.max(0, this.rayRest - dt);
     this.chargeCool = Math.max(0, this.chargeCool - dt);
     this.sprintCool = Math.max(0, this.sprintCool - dt);
+    this.healCool = Math.max(0, this.healCool - dt);
     this.slideKnock(dt, world);
 
     this.heroes = world.heroes;
@@ -491,6 +503,14 @@ export class Mob {
         if (dist > this.kind.sight || (this.unseen > MEMORY && dist > this.kind.sight * HEARING)) {
           this.state = 'idle';
           this.timer = 1;
+        } else if (this.kind.heal && this.healCool <= 0 && seen && world.heal?.(this)) {
+          // It mended an ally: the cast is a recover, so it is busy (and open to a blow) for a moment, not a windup (guests see the motes).
+          this.healCool = this.kind.heal.cooldown;
+          this.state = 'recover';
+          this.timer = this.kind.heal.rest;
+          this.body.face(directionToward(dx, dy));
+          this.body.play('cast', this.kind.heal.rest * 1000);
+          break;
         } else if (attack) {
           // A shooter first backs away if the hero is on top of it (unless it is cornered, then it just shoots).
           if (

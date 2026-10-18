@@ -9,6 +9,7 @@ import {
   QUICK_WINDUP,
   resolveCharge,
   resolveGuard,
+  resolveHeal,
   resolveSprint,
   SPREAD_MAX_ARC,
   SPREAD_MAX_COUNT,
@@ -75,6 +76,8 @@ export interface EntityBehavior {
   guard?: { arc?: number; chip?: number };
   /** A burst of speed (not for a shooter or a ray caster); each field falls back to `SPRINT_DEFAULTS`. */
   sprint?: Partial<Record<'speed' | 'duration' | 'cooldown' | 'range', number>>;
+  /** A healer: mends a wounded ally in sight now and then (`HEAL_DEFAULTS`); each field falls back to them. */
+  heal?: Partial<Record<'range' | 'amount' | 'cooldown' | 'below' | 'rest', number>>;
   /** A snap attacker: windup down to `QUICK_WINDUP`, a weaker blow, a long recovery. */
   quick?: boolean;
 }
@@ -453,6 +456,26 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
         if (sprint.duration !== undefined && sprint.duration > SPRINT_MAX_DURATION)
           r.fail(`${p}.sprint.duration`, `is at most ${SPRINT_MAX_DURATION} seconds (a medium burst)`);
         behavior.sprint = sprint;
+      }
+    }
+    if (b.heal !== undefined) {
+      const h = r.object(b.heal, `${p}.heal`);
+      if (h) {
+        const heal: NonNullable<EntityBehavior['heal']> = {};
+        for (const [key, min] of [
+          ['range', 1],
+          ['amount', 0.05],
+          ['cooldown', 2],
+          ['below', 0.1],
+          ['rest', 0.3],
+        ] as const) {
+          const n = r.optionalNumber(h[key], `${p}.heal.${key}`, min);
+          if (n === undefined) continue;
+          if ((key === 'amount' && n > 0.5) || (key === 'below' && n > 1))
+            r.fail(`${p}.heal.${key}`, key === 'amount' ? "is at most half of an ally's health" : 'is a share up to 1');
+          else heal[key] = n;
+        }
+        behavior.heal = heal;
       }
     }
     if (b.quick !== undefined) {
@@ -1225,6 +1248,7 @@ export function toMobKind(def: EntityDef): MobKind {
   if (b.poiseRegen !== undefined) kind.poiseRegen = b.poiseRegen;
   if (b.charge) kind.charge = resolveCharge(b.charge);
   if (b.guard) kind.guard = resolveGuard(b.guard);
+  if (b.heal) kind.heal = resolveHeal(b.heal);
   if (b.sprint) kind.sprint = resolveSprint(b.sprint);
   if (b.quick) kind.quick = true;
   return kind;

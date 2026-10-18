@@ -33,6 +33,8 @@ import {
   furyFactor,
   gapArmor,
   levelGap,
+  mendAmount,
+  pickPatient,
   poiseCost,
   spreadAngles,
   stunFactor,
@@ -155,6 +157,7 @@ export class Simulation {
       strike: (mob, target, power) => arena.inZone(z, () => this.hurtHero(mob, target, power)),
       shoot: (mob, ux, uy) => arena.inZone(z, () => this.mobShoot(mob, ux, uy)),
       ray: (mob, target) => arena.inZone(z, () => this.mobRay(mob, target)),
+      heal: (mob) => arena.inZone(z, () => this.mobHeal(z, mob)),
     };
   }
 
@@ -535,6 +538,31 @@ export class Simulation {
   combo(p: Player, index: number) {
     if (p.dm || p.roll) return; // the Dungeon Master casts nothing at the party's foes; a roll is no free cast
     this.casting.combo(p, index);
+  }
+
+  /** A healer mends the most wounded ally in its zone that it can see (host and solo): green motes rise on the ally, and its bar fills. */
+  private mobHeal(z: ZoneState, healer: Mob): boolean {
+    const { heal } = healer.kind;
+    if (!heal) return false;
+    const others = z.mobs.filter((m) => m !== healer && m.alive);
+    const seen = (m: Mob) => z.collision.hasLineOfSight(healer.body.x, healer.body.y, m.body.x, m.body.y);
+    const i = pickPatient(
+      healer.body.x,
+      healer.body.y,
+      others.map((m) => ({
+        x: m.body.x,
+        y: m.body.y,
+        hp: m.hp,
+        maxHp: m.kind.maxHp,
+        mendable: !m.kind.boss && !m.kind.named && seen(m),
+      })),
+      heal,
+    );
+    const ally = others[i];
+    if (!ally) return false;
+    ally.mend(mendAmount(ally.hp, ally.kind.maxHp, heal));
+    this.fx('heal', ally.body.x, ally.body.y);
+    return true;
   }
 
   /** A ranged mob lets go of a shot along (ux, uy), from its hands at chest height: one bolt, or a fan of them (`shot.spread`). */
