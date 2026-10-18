@@ -44,3 +44,27 @@ describe('PARTICLE_EFFECTS', () => {
     expect(em.done).toBe(true);
   });
 });
+
+describe('hitSpark', () => {
+  const streak = PARTICLE_EFFECTS.hitSpark.emitters.find((e) => e.shape === 'streak') as EmitterDef;
+
+  it('sprays 6-10 streaks for 150-250 ms', () => {
+    const [lo, hi] = bounds(streak.burst ?? 0);
+    expect(lo).toBeGreaterThanOrEqual(6);
+    expect(hi).toBeLessThanOrEqual(10);
+    const [l0, l1] = bounds(streak.life);
+    expect(l0).toBeGreaterThanOrEqual(0.15);
+    expect(l1).toBeLessThanOrEqual(0.25);
+  });
+
+  it('is a cone along the blow, every spark flung away from the hit', () => {
+    const [a0, a1] = bounds(streak.angle ?? [-Math.PI, Math.PI]);
+    expect(a0).toBeGreaterThanOrEqual(-Math.PI / 2);
+    expect(a1).toBeLessThanOrEqual(Math.PI / 2);
+    expect(streak.align).toBe(true);
+  });
+
+  it('one draw call per emitter, no more than two emitters', () => {
+    expect(PARTICLE_EFFECTS.hitSpark.emitters.length).toBeLessThanOrEqual(2);
+  });
+});

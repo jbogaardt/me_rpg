@@ -41,6 +41,17 @@ the screen. A new kind of source is an entry in `HEARTH_EFFECTS`, `HEARTH_MARGIN
   played where it fell. A named or DM boss also plays `bossFinale` (a big flash and shake).
 - A chest opens with `sparkle` and `coinPop`, and `lootBeam` when it held gear.
 
+## The blow
+
+- The sword's arc (`slashEffect`, maths in `systems/slashArc.ts`) is a swept crescent: ~150 ms in three stages (the head
+  sweeps ~115 degrees across the facing, the strike at full brightness, then the tail closes and it fades), tapered to a
+  point at the tail, outer radius from the weapon's reach (`Visuals.swing`'s `reach`, default `MELEE_REACH`). One Graphics
+  with two polygons redrawn in place, no per-frame allocation. A guest draws the same from the `slash` event's facing.
+- `hitSpark` is a cone of 7-9 streaks (150-250 ms) along the blow's `dir`, plus a white-to-gold flash glow; 2 emitters
+  (2 draw calls). The hit tint on the foe is `Mob`'s existing red flash (not changed here). Sparks with no `dir`
+  (lightning, a foe's bolt) fly right, so pass one if the source has a direction.
+- The arc is drawn the moment the swing starts, while the body's blade extends later; phasing them is a separate job.
+
 ## Adding one
 
 A one-off burst is an entry in `PARTICLE_EFFECTS` (the `add-particle-effect` skill); if the host plays it for a guest it
