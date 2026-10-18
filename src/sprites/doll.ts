@@ -86,6 +86,7 @@ export const SLOTS = [
   'hair',
   'beard',
   'torso',
+  'arms',
   'legs',
   'feet',
   'hands',
