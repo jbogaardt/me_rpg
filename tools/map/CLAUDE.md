@@ -8,9 +8,8 @@ catalog and the pitfalls checklist). Never hand-edit `public/maps/*.json`; `npm 
 
 - A zone spec uses the `Zone` builder (`zone.ts`) with named assets from `catalog.ts` and writes a packed `MapData`
   (`src/map/types.ts`: ground cells over shared tilesets, y-sorted free-placed objects with a `tag`, a collision cell
-  list, per-cell metadata such as `surface` and `level`, spawn and door cells). The game's `MapView` and the previews in
-  `image.ts` draw it the same way. All art is cut on a 32 px grid; tilesets are in `public/tilesets/`, some derived
-  (recoloured) by `recolor.ts`, trees cut from the LPC pack by `trees.ts` (`treeAtlas.ts` is generated; kinds green, frost, dry, jungle, dead, swamp and autumn, the last used by the marches pack's Harvestwood).
+  list, per-cell metadata such as `surface` and `level`, spawn and door cells). `MapView` and the previews in `image.ts` draw it the same way. All art is cut on a 32 px grid; tilesets are in `public/tilesets/`, some derived
+  (recoloured) by `recolor.ts`, trees cut from the LPC pack by `trees.ts` (`treeAtlas.ts` is generated).
 - **Collision follows the art**: a prop blocks the cells its solid band covers (`Prefab.solid`); forests and woods block
   where their art covers; a prop flagged `movable` (barrels) blocks no cell, because it is a body in play. Don't
   `block()` props by hand.
@@ -23,8 +22,7 @@ catalog and the pitfalls checklist). Never hand-edit `public/maps/*.json`; `npm 
 cells. `buildWorld` walls every border, cuts a corridor with a door either side at each gap, composes one world and
 cuts each biome's map from it: **its own cells plus a margin of its neighbours' (surface `beyond`, blocked)**. The game
 does not draw the margin in this zone's view; it lays the neighbour's own map beside it (see `src/scenes/CLAUDE.md`).
-Consequences that bite: objects in the margin exist in this map's data too (anything that treats map objects as "mine"
-must skip `beyond` cells), and the margin is how two maps line up.
+Objects in the margin exist in this map's data too: anything treating map objects as "mine" must skip `beyond` cells.
 
 ## What the checks enforce (and why)
 
@@ -42,30 +40,28 @@ must skip `beyond` cells), and the margin is how two maps line up.
 ## Signs
 
 Signposts (`z.sign`, alternating `signpost`/`signpostB`), notice boards and hanging shop signs (`hang*`, `wall: true`: one a cell up beside a door, nudged `dy: -6`) are OpenGameArt
-sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs/`). Only a signpost's post blocks. A signpost's `ways` are authored hints: the game reads the real neighbours (`systems/signs.ts`), and on a biome the check fails a way naming a zone that no gap door on that side reaches. Give a town or haven a notice board and a hanging sign by each shop, hall or inn door; graves and ruins go in clearings off the roads (keepClear them).
+sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs/`). Only a signpost's post blocks. A signpost's `ways` are authored hints: the game reads the real neighbours (`systems/signs.ts`), and on a biome the check fails a way naming a zone that no gap door on that side reaches.
 
 ## Shop buildings
 
 `town.png` (`town.ts`, composed from the LPC City outside pack in `art/lpc_city/`) holds the shop prefabs (`BUILDINGS` in `catalog.ts`),
 solid from the ground up; each has a door into its interior room (`interiors.ts`). Halls are 5 cells wide with a one-cell door, houses 3; a
 shop is told by its hanging sign, not its colour. Six shops stand in Lanternrest; the tavern (the Resting Lantern) is where a party rests.
-A new shop is a hall or house in `town.ts`, a `SHOP_DOORS` entry, a room spec, a shelf and sign in `interior.ts`, and its shop, keeper and
-node in the content. `interior.png` (`interior.ts`, from LPC floors, furniture and the City wall in `art/lpc_interior/`) holds the room
+A new shop is a hall or house in `town.ts`, a `SHOP_DOORS` entry, a room spec in `interior.ts`, and its shop, keeper and node in the content. `interior.png` (`interior.ts`, from LPC floors, furniture and the City wall in `art/lpc_interior/`) holds the room
 pieces (`INTERIOR` in `catalog.ts`); `compose.ts` has the cut and overlay helpers `town.ts` shares.
 
 ## Rock plateaus
 
 `z.plateau(rect, { kind: 'rock', stairs })` raises a mesa cut from the LPC mountains (`ROCK_SHEET`): cobble top, brown face, a cobble ramp at
 each stair column. It draws its own top, so it sits on cave floor, dirt or sand alike; collision and levels are shared with the other
-cliffs (`plateauSolid`). The Sunscar Hollow has one. Mobs ignore heights for now: keep placements off the face rows.
+cliffs (`plateauSolid`). Mobs ignore heights for now: keep placements off the face rows.
 
 ## Ruins
 
 `ruins.png` (`ruins.ts`, from the OGA-BY/CC-BY "[LPC] Jungle Ruins", not kept in the repo: `RUINS_DIR=<unzipped pack> npm run ruins`)
-holds the `ruin*` prefabs (`RUIN_PREFABS`): a pyramid, temple, hall, hut, walls, an arch, pillars, idols, rubble.
+holds the `ruin*` prefabs: pyramid, temple, hall, hut, walls, arch, pillars, idols, rubble.
 Buildings and walls are solid from the ground up; pillars and idols block along their whole height; the arch blocks only
-its dark half, so its open half is a gate. Scenery, except the jungle temple's arch (door into `maps/ruin_temple.ts`). Used in the jungle, desert, undead lands and
-the Wilds' old shrine and barrow. The quest `ruin` landmark (`entities/Landmark.ts`) uses the same sheet.
+its dark half, so its open half is a gate. Scenery, except three arches (jungle temple and hall, desert temple: doors into `maps/ruin_*.ts`, `ruinRooms.ts`); `Prefab.foot` sorts a building on its wall's base, not its pillars'. The quest `ruin` landmark (`entities/Landmark.ts`) uses the same sheet.
 
 ## Landmarks
 
@@ -73,7 +69,7 @@ the Wilds' old shrine and barrow. The quest `ruin` landmark (`entities/Landmark.
 
 ## Caves and sewers
 
-Underground rooms are indoor zones (`z.indoor()`, so no seam check) painted from a grid by `delve.ts`: a spec makes a `Delve`, carves chambers, tunnels and pools into solid rock, and `paint` shows each rock cell by its distance to the open floor south of it (wall face, second face row, rim, then plain dark roof; the view is from the south, so only that side of a wall is seen). A wall needs two rows of rock for its whole face: carve rooms that far apart. Themes `cave`, `rock` and `sewer` name the grounds (`dungeonGrounds` in `catalog.ts`); `cave` is MrBeast's CC-BY 3.0 tileset (`art/oga_dungeon/`, doubled by `dungeonSheets.ts`), `rock` and `sewer` are cut from the LPC base assets by `rockCave.ts` and `sewerLpc.ts` (with the sewer's props). Campaign 1 stacks them: the Hollow leads to the Sunscar Depths, a sewer to the Undercroft, the graveyard's tomb to the Barrow Deep (foes banded 9 to 22). Caves and sewers are core engine (just a map and doors); who lives there is content (a scenario node per zone, one biome entry linking back). A doorway to the open air is in `delves.ts` (both ends read it); its overworld end is a prop (`caveMouth`, `sewerHatch`) with a door. Their ground names sit last in `SURFACES` (`zone.ts`) so the open-air maps' surface indices never move.
+Underground rooms are indoor zones (`z.indoor()`, so no seam check) painted from a grid by `delve.ts`: a spec makes a `Delve`, carves chambers, tunnels and pools into solid rock, and `paint` shows each rock cell by its distance to the open floor south of it (wall face, second face row, rim, then plain dark roof; the view is from the south, so only that side of a wall is seen). A wall needs as many rock rows as its theme has face rows (`rock` four, `cave` three, `sewer` four); Per theme: `shade` (contact-shadow floor south of rock), `roofAlt` (grainy roof), and `waterTerrain`/`lavaTerrain` (the autotiled `murk`/`lava` painted over pools and lava for soft shorelines; collision stays on the grid, `murk` is not drinkable). Themes `cave`, `rock` and `sewer` name the grounds (`dungeonGrounds` in `catalog.ts`); `cave` is MrBeast's CC-BY 3.0 tileset (`art/oga_dungeon/`, doubled by `dungeonSheets.ts`), `rock` and `sewer` are cut from the LPC base assets by `rockCave.ts` and `sewerLpc.ts` (with the sewer's props). Campaign 1 stacks them (Hollow to Sunscar Depths, sewer to Undercroft, tomb to Barrow Deep). Caves and sewers are core engine (just a map and doors); who lives there is content (a scenario node per zone, one biome entry linking back). A doorway to the open air is in `delves.ts` (both ends read it); its overworld end is a prop (`caveMouth`, `sewerHatch`, `tombB`) with a door. `entrances.ts` composes the mouth (a 4-cell rock mound, door 2 wide in its middle, sand-frayed foot, soft shadow) and the hatch into `entrances.png`. Their ground names sit last in `SURFACES` (`zone.ts`) so the open-air maps' surface indices never move.
 
 ## Camps
 

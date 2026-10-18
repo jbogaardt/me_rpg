@@ -140,7 +140,7 @@ export class Casting {
     const sting = spellPower(p.hero) * MARK_STING;
     for (const mob of near) {
       const [ux, uy] = unit(mob.body.x - p.body.x, mob.body.y - p.body.y);
-      this.sim.hitMob(mob, rollDamage(sting, mob.kind.defense), ux, uy, true); // before the mark: only later hits take more
+      this.hit(p, mob, rollDamage(sting, mob.kind.defense), ux, uy, true); // before the mark: only later hits take more
       if (!mob.alive) continue;
       this.marks.set(mob, this.arena.clock + MARK_SECONDS);
       this.sim.fx('blink', mob.body.x, mob.body.y - 18);
@@ -193,7 +193,7 @@ export class Casting {
       y,
       vx,
       vy,
-      (mob) => this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux, uy, true),
+      (mob) => this.hit(p, mob, rollDamage(damage, mob.kind.defense), ux, uy, true),
       p.slot,
     );
     this.emit({ type: 'bolt', x: round1(x), y: round1(y), vx: round1(vx), vy: round1(vy), p: p.slot });
@@ -226,7 +226,7 @@ export class Casting {
     for (const mob of near) {
       this.sim.fx('zap', mob.body.x, mob.body.y - 16);
       const [ux, uy] = unit(mob.body.x - p.body.x, mob.body.y - p.body.y);
-      this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux, uy, true);
+      this.hit(p, mob, rollDamage(damage, mob.kind.defense), ux, uy, true);
     }
     return true;
   }
@@ -246,7 +246,7 @@ export class Casting {
     const damage = spellPower(p.hero) * c.power;
     for (const mob of this.arena.mobs) {
       if (!mob.alive || distToSegment(mob.body, x0, y0, p.body.x, p.body.y) > 22) continue;
-      this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux, uy);
+      this.hit(p, mob, rollDamage(damage, mob.kind.defense), ux, uy);
     }
     this.sim.fx('blink', x0, y0 - 14);
     this.sim.fx('blink', p.body.x, p.body.y - 14);
@@ -257,7 +257,7 @@ export class Casting {
   private nova(p: Player, c: Combo): Cast {
     const damage = spellPower(p.hero) * c.power;
     this.sim.fx('nova', p.body.x, p.body.y - 14);
-    this.hitAround(p.body, NOVA_RADIUS, damage);
+    this.hitAround(p, p.body, NOVA_RADIUS, damage);
     return true;
   }
 
@@ -274,7 +274,7 @@ export class Casting {
     }
     const at = { x: p.body.x + ux * reach, y: p.body.y + uy * reach };
     this.sim.fx('blast', at.x, at.y - 8);
-    this.hitAround(at, BLAST_RADIUS, spellPower(p.hero) * c.power);
+    this.hitAround(p, at, BLAST_RADIUS, spellPower(p.hero) * c.power);
     return true;
   }
 
@@ -319,7 +319,7 @@ export class Casting {
     const damage = spellPower(p.hero) * c.power;
     for (const mob of this.arena.mobs) {
       if (!mob.alive || distToSegment(mob.body, p.body.x, p.body.y, end.x, end.y) > LANCE_WIDTH) continue;
-      this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux, uy, true);
+      this.hit(p, mob, rollDamage(damage, mob.kind.defense), ux, uy, true);
     }
     return true;
   }
@@ -331,7 +331,7 @@ export class Casting {
     this.sim.fx('blast', target.body.x, target.body.y - 8);
     this.sim.fx('zap', target.body.x, target.body.y - 16);
     const [ux, uy] = unit(target.body.x - p.body.x, target.body.y - p.body.y);
-    this.sim.hitMob(target, rollDamage(spellPower(p.hero) * c.power, target.kind.defense), ux, uy, true);
+    this.hit(p, target, rollDamage(spellPower(p.hero) * c.power, target.kind.defense), ux, uy, true);
     return true;
   }
 
@@ -348,7 +348,7 @@ export class Casting {
     if (!near.length) return this.noTarget(p);
     for (const d of [1.2, 2.6, 4]) this.sim.fx('blink', p.body.x + ux * d * CELL, p.body.y + uy * d * CELL - 14);
     const damage = spellPower(p.hero) * c.power;
-    for (const mob of near) this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux * 2.4, uy * 2.4, true);
+    for (const mob of near) this.hit(p, mob, rollDamage(damage, mob.kind.defense), ux * 2.4, uy * 2.4, true);
     return true;
   }
 
@@ -363,7 +363,7 @@ export class Casting {
       dealt += hit;
       this.sim.fx('zap', mob.body.x, mob.body.y - 16);
       const [ux, uy] = unit(mob.body.x - p.body.x, mob.body.y - p.body.y);
-      this.sim.hitMob(mob, hit, ux, uy, true);
+      this.hit(p, mob, hit, ux, uy, true);
     }
     const s = p.hero.stats;
     const gained = Math.min(Math.round(dealt * DRAIN_SHARE), Math.ceil(s.maxHp - s.hp));
@@ -382,7 +382,7 @@ export class Casting {
     const damage = spellPower(p.hero) * c.power;
     for (const mob of near) {
       const [ux, uy] = unit(mob.body.x - p.body.x, mob.body.y - p.body.y);
-      this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux * 0.2, uy * 0.2, true);
+      this.hit(p, mob, rollDamage(damage, mob.kind.defense), ux * 0.2, uy * 0.2, true);
       if (!mob.alive) continue;
       mob.freeze(c.count ?? 2);
       this.sim.fx('frost', mob.body.x, mob.body.y - 14);
@@ -399,12 +399,17 @@ export class Casting {
     for (const mob of near) {
       const [ux, uy] = unit(p.body.x - mob.body.x, p.body.y - mob.body.y); // toward the caster
       this.sim.fx('blink', mob.body.x, mob.body.y - 16);
-      this.sim.hitMob(mob, rollDamage(damage, mob.kind.defense), ux * 2.6, uy * 2.6, true);
+      this.hit(p, mob, rollDamage(damage, mob.kind.defense), ux * 2.6, uy * 2.6, true);
     }
     return true;
   }
 
   // --- Helpers ---
+
+  /** A spell's blow on a foe: the simulation is told who cast it (their level sets how a high-level foe takes it). */
+  private hit(p: Player, mob: Mob, damage: number, vx: number, vy: number, bolt = false) {
+    this.sim.hitMob(mob, damage, vx, vy, bolt, undefined, { from: p });
+  }
 
   /** The nearest living foe within `range` of the caster. */
   private nearest(p: Player, range: number): Mob | undefined {
@@ -425,11 +430,11 @@ export class Casting {
   }
 
   /** Hit every foe within `radius` of `at`, knocking it away from the centre. */
-  private hitAround(at: { x: number; y: number }, radius: number, power: number) {
+  private hitAround(p: Player, at: { x: number; y: number }, radius: number, power: number) {
     for (const mob of this.arena.mobs) {
       if (!mob.alive || dist(mob.body, at) > radius) continue;
       const [ux, uy] = unit(mob.body.x - at.x, mob.body.y - at.y);
-      this.sim.hitMob(mob, rollDamage(power, mob.kind.defense), ux, uy, true);
+      this.hit(p, mob, rollDamage(power, mob.kind.defense), ux, uy, true);
     }
   }
 }

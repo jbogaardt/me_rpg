@@ -48,5 +48,10 @@ new kind needs no new code unless it needs new behaviour.
   `combat.ts`); each windup is randomised ±20%. Reach, the lunge (`lungeOf`, from the kind's `speed`: a fast kind
   pounces further), the whiff recovery, mending, leash and the shooter's back-off distance are shared constants at the
   top of `Mob.ts`.
+- **Tough kinds opt into `behavior.poiseMax` (3-6 for an elite, none below about level 5), `charge` and `guard`** (`systems/mobDefense.ts`,
+  `src/entities/CLAUDE.md`) rather than a near-zero `stagger`: poise makes it shrug off most blows, and `stagger` is then the window after a
+  break (0.3-0.4 s). A melee kind of level 7+ must walk at the hero's pace (`speed` 120+) or have a `charge` (`campaigns.test.ts`); a
+  shielded one needs `guard` (and poise, so it can be broken); `charge` is `{}` or overrides of `range`, `after`, `windup`, `speed`, `duration`,
+  `cooldown`, `power`; `guard` is `{ arc, chip }`. `defense` is flat armor, and a hero 3+ levels under the kind faces more of it.
 - A stagger shorter than the hero's attack cooldown (0.35 s) lets a mob act between hits; the lower it is, the harder
   the fight. Ranged kinds are hardest when two or more shoot at once, so place them singly among melee mobs.

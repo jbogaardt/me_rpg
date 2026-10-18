@@ -23,7 +23,7 @@ capability nothing asks `enabled()` about or that is not listed here. The ids: `
 
 ## Balance
 
-Each `MobKind` is tuned for a band of hero levels and biomes hand them out by band; `balance.test.ts` guards it. Bows deal about 75% of a same-priced sword's damage per second, a wand's plain bolt 65%, a tome's 40%; a combo is a burst, not a better sword. **Retune against that test.** Past the kinds' own bands a zone makes foes for a level (`bands.ts`, `src/content/CLAUDE.md`).
+Each `MobKind` is tuned for a band of hero levels and biomes hand them out by band; `balance.test.ts` guards it. Bows deal about 75% of a same-priced sword's damage per second, a wand's plain bolt 65%, a tome's 40%; a combo is a burst, not a better sword. **Retune against that test.** Elite foes: poise, armor and gap rules in `mobDefense.ts` (`src/entities/CLAUDE.md`). Past the kinds' own bands a zone makes foes for a level (`bands.ts`, `src/content/CLAUDE.md`).
 
 ## Features (design notes)
 
@@ -45,7 +45,7 @@ Each `MobKind` is tuned for a band of hero levels and biomes hand them out by ba
   list the reader, HUD and caster use.
 - **Survival** (`needs.ts`, `crops.ts`): food and water drain with time (host/solo only; a guest shows what `pack` says). Drinking is steady, from ponds that **only rain refills**, while no foe is near. Crops need three
   waterings, are decided by the host and ride the snapshot as a state code.
-- **Weather and day** (`weather.ts`, `daynight.ts`): cosmetic atmosphere per biome (lightning aside, not combat or collision). The host rolls each zone's weather and sends it in the snapshot.
+- **Weather and day** (`weather.ts`, `daynight.ts`): cosmetic atmosphere per biome. The host rolls each zone's weather and sends it in the snapshot.
 - **Inventory, economy, chests** (`inventory.ts`, `shops.ts`, `chests.ts`, `trade.ts`): the host owns every hero's gold,
   pack and gear. A guest applies an inventory op at once and sends the oldest unconfirmed one (numbered); the
   host does each once, in order, and confirms with `pack.ack`. Shops specialise and buy back only their own trade at a
@@ -67,4 +67,4 @@ Each `MobKind` is tuned for a band of hero levels and biomes hand them out by ba
 - **Props** (`barrels.ts`, `signs.ts`, `pets.ts`, `ice.ts`): barrels are bodies you carry and set down (gated by
   `carrying`; the host decides, `SnapMsg.barrels` shows them; a map object in a neighbour's margin is not this map's
   barrel); signposts read their ways from the loaded map when read (a live DM's `sign` log entry overrides); pets are local
-  scenery (each player's wander independently); ice is a velocity rule for players.
+  scenery; ice is a velocity rule for players.

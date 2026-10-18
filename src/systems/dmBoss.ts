@@ -10,6 +10,9 @@ import { hashOf, seeded } from './phrases';
 
 /** How much bigger than the kind it is drawn (a giant: its reach and lunge grow with it, `Mob`). */
 export const BOSS_SCALE = 1.7;
+/** A boss shrugs off this many blows before one staggers it (`Poise`), and is stunned this long when it does (seconds). */
+export const BOSS_POISE = 5;
+export const BOSS_STAGGER = 0.25;
 /** The key a boss's kill is counted under: the one thing no kind of the content is called (`quests.ts` `mobKey`). */
 export const BOSS_KEY = 'boss';
 
@@ -88,7 +91,9 @@ export function bossKind(base: MobKind, level: number, size: number, name: strin
     gold: s.gold,
     windup: Math.round((base.windup ?? 0.5) * 1.2 * 100) / 100, // a giant's blow is easier to read
     recover: base.recover ?? 0.7,
-    stagger: Math.min(base.stagger ?? 0.3, 0.15), // it is not to be juggled
+    level, // made for the party: no level gap (`levelGap` leaves a boss alone), whatever its numbers read as
+    stagger: BOSS_STAGGER, // it is not to be juggled: it staggers only when its poise breaks (a short window, then it swings)
+    poiseMax: Math.max(base.poiseMax ?? 0, BOSS_POISE),
     sight: Math.max(base.sight, 200),
   };
 }

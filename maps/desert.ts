@@ -1,7 +1,8 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { DRY_TREES } from '../tools/map/catalog';
 import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
-import { CAVE_ARRIVAL, CAVE_MOUTH } from '../tools/map/delves';
+import { CAVE_ARRIVAL, CAVE_MOUTH, DESERT_TEMPLE_DOOR } from '../tools/map/delves';
+import { RUIN_ARRIVAL } from '../tools/map/ruinRooms';
 import layout from './world';
 
 // The desert: the whole north-west, stepping down to the Greenwood. Dunes, a buried skull, red badlands, an oasis, a
@@ -59,11 +60,11 @@ export default defineBiome({
     // --- A cave mouth in an outcrop of rock: the way down into the Sunscar Hollow (maps/cave_sunscar.ts) ---------------------
     z.keepClear([{ col: CAVE_MOUTH.col - 5, row: CAVE_MOUTH.row - 5, w: 12, h: 10 }]);
     z.prop('caveMouth', CAVE_MOUTH.col, CAVE_MOUTH.row);
-    z.door(CAVE_MOUTH.col + 1, CAVE_MOUTH.row, 1, 'cave_sunscar', CAVE_ARRIVAL.col, CAVE_ARRIVAL.row);
+    z.door(CAVE_MOUTH.col + 1, CAVE_MOUTH.row, 2, 'cave_sunscar', CAVE_ARRIVAL.col, CAVE_ARRIVAL.row);
     z.prop('sandBoulder', CAVE_MOUTH.col - 3, CAVE_MOUTH.row);
-    z.prop('sandBoulderB', CAVE_MOUTH.col + 2, CAVE_MOUTH.row);
+    z.prop('sandBoulderB', CAVE_MOUTH.col + 5, CAVE_MOUTH.row);
     z.prop('sandSpire', CAVE_MOUTH.col - 1, CAVE_MOUTH.row - 2);
-    z.prop('sandSpire', CAVE_MOUTH.col + 4, CAVE_MOUTH.row - 1);
+    z.prop('sandSpire', CAVE_MOUTH.col + 4, CAVE_MOUTH.row - 2);
     z.keepFree(CAVE_MOUTH.col + 1, CAVE_MOUTH.row + 1);
     z.place('The Sunscar Hollow', CAVE_MOUTH.col + 1, CAVE_MOUTH.row + 3);
 
@@ -125,6 +126,14 @@ export default defineBiome({
     // --- A half-buried temple, a fallen wall and a gate on the trail (art: LPC Jungle Ruins, ruins.png) ---------------
     z.keepClear([{ col: 93, row: 29, w: 15, h: 14 }]);
     z.prop('ruinTemple', 96, 40);
+    z.door(
+      DESERT_TEMPLE_DOOR.col,
+      DESERT_TEMPLE_DOOR.row,
+      DESERT_TEMPLE_DOOR.w,
+      'ruin_temple_desert',
+      RUIN_ARRIVAL.col,
+      RUIN_ARRIVAL.row + 1,
+    ); // its arch leads in (maps/ruin_temple_desert.ts)
     z.prop('ruinStatue', 94, 41);
     z.prop('ruinStatueB', 105, 41);
     z.prop('ruinRubbleB', 99, 42);

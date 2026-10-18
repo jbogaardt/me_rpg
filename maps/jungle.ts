@@ -1,7 +1,8 @@
 import { defineBiome, worldOf } from '../tools/map/world';
 import { JUNGLE_TREES } from '../tools/map/catalog';
 import { awayFrom, blob, pick, pond, reedsAt, trail, units } from '../tools/map/helpers';
-import { TEMPLE_ARRIVAL, TEMPLE_DOOR } from '../tools/map/delves';
+import { HALL_DOOR, TEMPLE_DOOR } from '../tools/map/delves';
+import { RUIN_ARRIVAL } from '../tools/map/ruinRooms';
 import layout from './world';
 
 // The jungle: a tall band of jungle trees in the middle of the north, from the sea down to the Eastwood. Thick groves,
@@ -84,12 +85,13 @@ export default defineBiome({
     ]); // no scattered trees across the pyramid and the temple
     z.prop('ruinPyramid', ...L(44, 18));
     z.prop('ruinTemple', ...L(32, 14));
-    z.door(TEMPLE_DOOR.col, TEMPLE_DOOR.row, TEMPLE_DOOR.w, 'ruin_temple', TEMPLE_ARRIVAL.col, TEMPLE_ARRIVAL.row + 1); // its dark arch leads in (maps/ruin_temple.ts)
+    z.door(TEMPLE_DOOR.col, TEMPLE_DOOR.row, TEMPLE_DOOR.w, 'ruin_temple', RUIN_ARRIVAL.col, RUIN_ARRIVAL.row + 1); // its dark arch leads in (maps/ruin_temple.ts)
     z.prop('ruinRubbleB', ...L(48, 19));
     z.prop('ruinRubbleF', ...L(57, 19));
     z.prop('ruinPillarBroken', ...L(41, 19));
     z.prop('ruinPillar', ...L(30, 15));
     z.prop('ruinHall', ...L(47, 66));
+    z.door(HALL_DOOR.col, HALL_DOOR.row, HALL_DOOR.w, 'ruin_hall', RUIN_ARRIVAL.col, RUIN_ARRIVAL.row + 1); // its arch leads in (maps/ruin_hall.ts)
     z.prop('ruinHut', ...L(48, 74));
     z.prop('ruinStatueB', ...L(54, 72));
     z.prop('ruinRubbleD', ...L(55, 69));
