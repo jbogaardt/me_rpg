@@ -1,3 +1,4 @@
+import { contextKey, keyMeaning } from '../../core/contextKey';
 import { directionToward } from '../../core/direction';
 import type { Character } from '../../entities/Character';
 import type { Chest } from '../../entities/Chest';
@@ -6,6 +7,8 @@ import type { Command, Player } from '../../entities/Player';
 import type { QuestSite } from '../../entities/QuestSite';
 import type { Dialog } from '../../hud/Dialog';
 import { DRINK_KEY, HarvestButtons, type HarvestSpot } from '../../hud/HarvestButtons';
+import { InteractMarks } from '../../hud/InteractMarks';
+import { MAX_MARKS, nearestInReach, newThing, pickMarks, type MarkKind, type Thing } from '../../hud/interactThings';
 import type { ShopCounter } from '../../hud/ShopCounter';
 import { CELL } from '../../map/types';
 import { enabled } from '../../systems/capabilities';
@@ -15,12 +18,13 @@ import { lecternIn, lecternPages } from '../../systems/lectern';
 import { drinkableNear, thirsty } from '../../systems/needs';
 import { petSound } from '../../systems/pets';
 import { progressOf, recordSite, siteNote, siteOpen } from '../../systems/quests';
+import { BARREL_REACH } from '../../systems/barrels';
 import { SHOPS } from '../../systems/shops';
 import { signLines, signNear } from '../../systems/signs';
 import { TRAINER, trainerTalk, type Skill } from '../../systems/skills';
 import type { ZoneState } from '../ZoneState';
 import type { Arena } from './Arena';
-import { CHEST_REACH, CROP_REACH, KEEPER_REACH, SIGN_REACH, SITE_REACH } from './constants';
+import { CHEST_REACH, CROP_REACH, KEEPER_REACH, PICKUP_REACH, SIGN_REACH, SITE_REACH } from './constants';
 import type { Ground } from './Ground';
 import type { Barrels } from './Barrels';
 import type { DmTasks } from './DmTasks';
@@ -40,13 +44,18 @@ const FIGHT_RANGE = CELL * 10;
 const GUEST_REPEAT_S = 0.05;
 
 /**
- * What the action key does at this keyboard, and the buttons beside it: advance a dialog, read a sign or the lectern,
- * talk (keepers, quest givers, the trainer, pets, folk), open a chest, water or pick a crop, touch a quest site, set down or
- * pick up a barrel or an item, drink, otherwise attack. Solo and the host act on the real world (`act`, also for a friend's
- * press); a guest only reads and talks locally and sends its press to the host (`guestPress`).
+ * What the keys do at this keyboard, and the buttons beside them. SPLIT keys (the default, `core/contextKey.ts`): the attack
+ * key only swings (`swing`), the interact key only reads, talks, opens, picks up, harvests and drinks (`chain(false)`, then `useAt`
+ * on the real world); both advance an open dialog. CONTEXTUAL (a setting): the one key does what it used to (`chain(true)`:
+ * a foe near makes it a sword, else talk, open, pick up, otherwise attack). Solo and the host act on the real world (`act`
+ * for the contextual key, `swingAt` and `useAt` for the split ones, also for a friend's press, `hostedPress`); a guest only
+ * reads and talks locally and sends its press to the host with its intent (`guestPress`).
  */
 export class Interactions {
   private harvestButtons = new HarvestButtons();
+  private marks = new InteractMarks(); // the glints in the world and the touch button's glyph
+  private things: Thing[] = []; // what the hero could use now (a reused pool: nothing allocated per frame)
+  private picked: Thing[] = Array.from({ length: MAX_MARKS }, newThing);
   private guestDrinking = false; // guest: asked the host to let it drink (see `drinking`)
 
   constructor(
@@ -59,8 +68,8 @@ export class Interactions {
     private barrels: Barrels,
     private ground: Ground,
     private storyUi: StoryUi,
-    /** A guest sends an action press to the host. */
-    private guestPress: () => void,
+    /** A guest sends an action press to the host: `act` (attack, or the contextual key) or `use` (interact, split keys). */
+    private guestPress: (intent: 'act' | 'use') => void,
     /** What the Dungeon Master wrote on the sign at a cell of a zone (a live world's log), if they did. */
     private signWritten: (zone: string, col: number, row: number) => readonly string[] | undefined = () => undefined,
   ) {
@@ -73,7 +82,7 @@ export class Interactions {
   /** The kinds of quest site whose note has been shown (once each). */
   private siteTold = new Set<string>();
 
-  /** Is a foe within `FIGHT_RANGE` of the local hero? Then the action key only attacks (and holding it keeps swinging). */
+  /** Is a foe within `FIGHT_RANGE` of the local hero? Then the contextual key only attacks (and holding it keeps swinging). */
   fighting(): boolean {
     const { player } = this.arena;
     return this.arena.mobs.some((m) => m.alive && Math.hypot(player.x - m.body.x, player.y - m.body.y) < FIGHT_RANGE);
@@ -86,8 +95,20 @@ export class Interactions {
    */
   holdAttack(held: boolean | undefined, reading: boolean) {
     const p = this.arena.local;
-    if (reading || p.dm || p.down !== null) return p.attackBuffer.clear();
-    if (held && this.fighting() && !this.ui.dialog.active) p.attackBuffer.press(p.zone);
+    if (!held) this.holdBlocked = false;
+    if (reading || p.dm || p.down !== null) {
+      this.holdBlocked = !!held; // a press that began in a menu or dialog never turns into swings when it closes
+      return p.attackBuffer.clear();
+    }
+    if (held && !this.holdBlocked && this.holds() && !this.ui.dialog.active) p.attackBuffer.press(p.zone);
+  }
+
+  /** The attack key held by a dialog line (it advanced one) must not swing when the box closes: blocked until released. */
+  private holdBlocked = false;
+
+  /** Does holding the attack key keep swinging here? Always with split keys; only in a fight with the contextual key. */
+  private holds(): boolean {
+    return !contextKey.on || this.fighting();
   }
 
   /**
@@ -95,7 +116,7 @@ export class Interactions {
    * the host's buffer stays fresh and its swings chain). The guest does not know the cooldown; the host decides.
    */
   guestHold(held: boolean | undefined, dt: number): boolean {
-    if (!held || !this.fighting() || this.ui.dialog.active) {
+    if (!held || this.holdBlocked || !this.holds() || this.ui.dialog.active) {
       this.holdTimer = 0;
       return false;
     }
@@ -113,9 +134,44 @@ export class Interactions {
     if (this.guestHold(cmd.held && !cmd.act && !reading, dt)) press();
   }
 
-  /** The local player's action button: advance the dialog, talk when next to the NPC or a shopkeeper, otherwise `attack`. */
-  handleAction(pressed: boolean, attack: () => void) {
-    if (!pressed) return;
+  /**
+   * The local player's presses (the scene calls this unless a menu or shop is up). Either key advances an open dialog.
+   * Split keys: attack swings, interact uses. Contextual: the one key decides by what is near (`chain`).
+   */
+  handleAction(cmd: Pick<Command, 'act' | 'use'>) {
+    if (!cmd.act && !cmd.use) return;
+    if (this.ui.dialog.active) {
+      this.holdBlocked = true; // the key that turned the page is not a swing
+      return this.ui.dialog.advance();
+    }
+    if (contextKey.on) {
+      if (cmd.act) this.chain(true);
+      return;
+    }
+    if (cmd.act && keyMeaning(false, 'attack', { foe: false, thing: false }) === 'swing') this.swing();
+    if (cmd.use) this.chain(false);
+  }
+
+  /** Split keys, the attack key: swing, cast or shoot, nothing else (the host decides which; a guest asks it). */
+  private swing() {
+    if (this.arena.local.dm) return;
+    if (this.arena.role === 'client') this.guestPress('act');
+    else this.swingAt(this.arena.local);
+  }
+
+  /** An interact or contextual press that reaches the world: the host acts at once, a guest asks (`use` or `act`). */
+  private pressWorld(contextual: boolean) {
+    if (this.arena.role === 'client') this.guestPress(contextual ? 'act' : 'use');
+    else if (contextual) this.act(this.arena.local);
+    else this.useOnly(this.arena.local);
+  }
+
+  /**
+   * What a press does by what is near: read or talk to what the hero stands beside, else the world (`pressWorld`). With
+   * `contextual` (the single key) a foe within `FIGHT_RANGE` or nothing near makes it a swing (`keyMeaning`); the interact
+   * key (not contextual) never swings.
+   */
+  private chain(contextual: boolean) {
     const { dialog } = this.ui;
     const { arena } = this;
     const near = (body: { x: number; y: number }, reach = CELL * 1.5) =>
@@ -129,12 +185,15 @@ export class Interactions {
     const site = arena.sites.find((s) => s.visible && near(s, SITE_REACH));
     const pet = arena.pets.find((p) => near(p));
     const folk = arena.zone.folk.find((f) => near(f.body));
-    // With a foe about the action key only swings: nobody starts a talk (or freezes the world to read) in a fight.
-    const fighting = this.fighting();
-    if (dialog.active) {
-      dialog.advance();
-    } else if (fighting && !arena.local.dm) {
-      attack();
+    const npcNear = !!npc?.visible && near(npc);
+    const thing = !!(lectern || sign || keeper || giver || site || pet || folk || npcNear);
+    // With a foe about, the single key only swings: nobody starts a talk (or freezes the world to read) in a fight.
+    const what = keyMeaning(contextual, contextual ? 'attack' : 'interact', {
+      foe: this.fighting() && !arena.local.dm,
+      thing,
+    });
+    if (what === 'swing') {
+      this.pressWorld(true); // the contextual key's weapon swing (a guest's host re-checks what is near)
     } else if (arena.local.dm && !lectern && !sign) {
       // The Dungeon Master reads the world (signs, the lectern) but takes no part in it: no shops, quests or swings.
     } else if (lectern) {
@@ -157,7 +216,7 @@ export class Interactions {
         this.siteTold.add(site.kind); // once per kind, as passive text: not a popup for every one picked up
         dialog.note(siteNote(site.kind, progressOf(this.arena.hero)));
       }
-      attack();
+      this.pressWorld(contextual);
     } else if (pet) {
       pet.attend(this.arena.player.x, this.arena.player.y);
       dialog.say([petSound(pet.kind, pet.talks++)]);
@@ -165,13 +224,13 @@ export class Interactions {
       arena.zone.attend(folk, this.arena.player.x, this.arena.player.y); // stops, faces the hero, later goes home
       dialog.say(folk.lines, undefined, { pauses: true });
       // The host settles it for a friend: their press reaches `act`, which counts the talk as it does for the host's own.
-      if (arena.role === 'client') this.guestPress();
+      if (arena.role === 'client') this.guestPress(contextual ? 'act' : 'use');
       else this.onTalk(folk.entity);
-    } else if (npc?.visible && near(npc)) {
+    } else if (npc && npcNear) {
       npc.face(directionToward(this.arena.player.x - npc.x, this.arena.player.y - npc.y));
       dialog.say(NPC_LINES, undefined, { pauses: true });
     } else {
-      attack();
+      this.pressWorld(contextual);
     }
   }
 
@@ -202,38 +261,93 @@ export class Interactions {
     this.ui.dialog.say(shop.greeting, () => this.ui.shop.show(shop, this.arena.hero));
   }
 
-  /** A player's action button (host and solo): open a chest within reach, pick something up, otherwise attack. */
+  /** The contextual key at the world (host and solo, also a friend's `act` from an old or contextual page): use what is near, otherwise attack. */
   act(p: Player) {
     if (p.dm) return; // the Dungeon Master opens, picks and strikes nothing
-    if (this.barrels.setDown(p)) return; // carrying a barrel: A sets it down
+    if (!this.useAt(p)) this.sim.attack(p);
+  }
+
+  /** Split keys, the attack key (host and solo, and a friend's `act` from a split page): swing, cast or shoot. Never opens or picks up. */
+  swingAt(p: Player) {
+    if (p.dm) return;
+    if (p.drinking) this.sim.stopDrinking(p); // one cannot drink and swing: the swing wins
+    this.sim.attack(p);
+  }
+
+  /** Split keys, the interact key (host and solo, and a friend's `use`): everything `act` does that is not a swing. */
+  useOnly(p: Player) {
+    if (p.dm) return;
+    this.useAt(p);
+  }
+
+  /** A friend's presses this tick (host): the intent each carries decides what the host runs (`Command.split`, `Command.use`). */
+  hostedPress(p: Player, cmd: Command) {
+    if (p.down !== null) return;
+    this.arena.inZone(this.arena.zoneOf(p), () => {
+      if (cmd.act) {
+        if (cmd.split) this.swingAt(p);
+        else this.act(p);
+      }
+      if (cmd.use) this.useOnly(p);
+    });
+  }
+
+  /**
+   * Use what `p` stands beside, in this order: set down a carried barrel, open a chest within reach, pick or water a crop,
+   * touch a quest site, pick up a barrel, drink, talk to a person, pick up an item from the ground. True if something was
+   * done (so a contextual press does not also swing).
+   */
+  private useAt(p: Player): boolean {
+    if (this.barrels.setDown(p)) return true; // carrying a barrel: the key sets it down
     const chest = this.arena.chests.find(
       (c) => !c.opened && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CHEST_REACH,
     );
-    if (chest) return this.openChest(p, chest);
+    if (chest) {
+      this.openChest(p, chest);
+      return true;
+    }
     const farming = enabled('farming', this.arena.zone.name); // without it, crop plots are scenery
     const crop = farming && this.arena.crops.find((c) => c.ripe && this.inReach(p, c));
-    if (crop) return this.pickCrop(p, crop);
+    if (crop) {
+      this.pickCrop(p, crop);
+      return true;
+    }
     const dry =
       farming &&
       this.arena.crops.find((c) => c.thirsty && Math.hypot(p.body.x - c.x, p.body.y - (c.y - CELL / 2)) < CROP_REACH);
-    if (dry) return this.waterCrop(p, dry);
-    const site = this.arena.sites.find(
-      (s) =>
-        Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH &&
-        ((this.arena.role === 'solo' && siteOpen(p.hero, s.kind, this.arena.zone.name, s.index)) ||
-          this.storyUi.questWants(this.arena.zone.name, s)),
-    );
-    if (site) return this.touchSite(p, site);
-    if (this.barrels.pickUp(p)) return;
-    if (this.sim.pondAction(p)) return; // A by a pond drinks (or stops drinking) instead of swinging
+    if (dry) {
+      this.waterCrop(p, dry);
+      return true;
+    }
+    const site = this.arena.sites.find((s) => this.siteWanted(p, s));
+    if (site) {
+      this.touchSite(p, site);
+      return true;
+    }
+    if (this.barrels.pickUp(p)) return true;
+    if (this.sim.pondAction(p)) return true; // by a pond: drinks (or stops drinking)
     const folk = this.arena.zone.folk.find((f) => Math.hypot(p.body.x - f.body.x, p.body.y - f.body.y) < CELL * 1.5);
     if (folk) {
       this.arena.zone.attend(folk, p.body.x, p.body.y);
-      return this.onTalk(folk.entity);
-    } // a friend talking to a person: no swing
+      this.onTalk(folk.entity);
+      return true; // a friend talking to a person: no swing
+    }
     const loose = this.ground.nearest(p);
-    if (loose) this.ground.pickUp(p, loose);
-    else this.sim.attack(p);
+    if (!loose) return false;
+    this.ground.pickUp(p, loose);
+    return true;
+  }
+
+  /** Is `s` a quest site `p` touches now (within reach, and open to them, or wanted by the DM's quest)? */
+  private siteWanted(p: Player, s: QuestSite): boolean {
+    return Math.hypot(p.body.x - s.x, p.body.y - s.y) < SITE_REACH && this.siteOpenTo(p, s);
+  }
+
+  private siteOpenTo(p: Player, s: QuestSite): boolean {
+    return (
+      (this.arena.role === 'solo' && siteOpen(p.hero, s.kind, this.arena.zone.name, s.index)) ||
+      this.storyUi.questWants(this.arena.zone.name, s)
+    );
   }
 
   /** A player touches a quest site that their quest wants: it counts once for them, and the world sees the sparkle. */
@@ -282,7 +396,7 @@ export class Interactions {
     if (key === DRINK_KEY) return this.drinkPressed();
     const crop = this.arena.crops[key];
     if (!crop?.ripe || !this.inReach(this.arena.local, crop)) return;
-    if (this.arena.role === 'client') this.guestPress();
+    if (this.arena.role === 'client') this.guestPress(contextKey.on ? 'act' : 'use');
     else this.pickCrop(this.arena.local, crop);
   }
 
@@ -368,15 +482,102 @@ export class Interactions {
    * stops the drink, an enemy near turns A into an attack, otherwise A by a pond starts or stops it.
    */
   trackGuestDrink(cmd: Command) {
+    const { arena } = this;
+    const drinkToggle = () => {
+      if (this.guestDrinking || canDrink(arena.zone, arena.local)) this.guestDrinking = !this.guestDrinking;
+    };
     if (cmd.dx || cmd.dy) this.guestDrinking = false;
-    else if (cmd.act && foeNear(this.arena.zone, this.arena.local)) this.guestDrinking = false;
-    else if (cmd.act && (this.guestDrinking || canDrink(this.arena.zone, this.arena.local))) {
-      this.guestDrinking = !this.guestDrinking;
+    else if (contextKey.on) {
+      if (cmd.act && foeNear(arena.zone, arena.local)) this.guestDrinking = false;
+      else if (cmd.act) drinkToggle();
+    } else if (cmd.act) {
+      this.guestDrinking = false; // a swing ends the drink (the host: `swingAt`)
+    } else if (cmd.use) {
+      if (foeNear(arena.zone, arena.local)) this.guestDrinking = false;
+      else drinkToggle();
     }
+  }
+
+  /**
+   * Fill `things` with what the interact key would act on near the local hero (the same reaches `useAt` and `chain` use):
+   * chests, people (keepers, quest givers, folk, pets, the guide), signs and the lectern, quest sites, ripe or dry plots,
+   * loose barrels, items on the ground, a pond to drink, a barrel in hand. Returns how many.
+   */
+  private collectThings(): number {
+    const { arena } = this;
+    const me = arena.local;
+    const { x, y } = me.body;
+    let n = 0;
+    const put = (tx: number, ty: number, kind: MarkKind, reach: number, dist: number, mark = true) => {
+      const t = (this.things[n] ??= newThing());
+      t.x = tx;
+      t.y = ty;
+      t.kind = kind;
+      t.reach = reach;
+      t.dist = dist;
+      t.mark = mark;
+      n++;
+    };
+    const person = (b: { x: number; y: number }, reach = CELL * 1.5) =>
+      put(b.x, b.y - CELL * 1.6, 'talk', reach, Math.hypot(x - b.x, y - b.y));
+    for (const c of arena.chests) {
+      if (!c.opened) put(c.x, c.y - CELL * 1.3, 'chest', CHEST_REACH, Math.hypot(x - c.x, y - (c.y - CELL / 2)));
+    }
+    for (const k of arena.keepers) person(k.body, KEEPER_REACH);
+    for (const g of arena.givers) person(g.body, KEEPER_REACH);
+    for (const f of arena.zone.folk) person(f.body);
+    for (const p of arena.pets) put(p.x, p.y - CELL, 'talk', CELL * 1.5, Math.hypot(x - p.x, y - p.y));
+    if (arena.npc?.visible) person(arena.npc);
+    const stand = lecternIn(arena.zone.name);
+    if (stand)
+      put(stand.x, stand.y - CELL * 1.2, 'talk', CELL * 1.5, Math.hypot(x - stand.x, y - (stand.y - CELL / 2)));
+    const sign = signNear(arena.zone.data.signs, x, y, SIGN_REACH + CELL * 2);
+    if (sign) {
+      const [sx, sy] = [(sign.col + 0.5) * CELL, (sign.row + 0.5) * CELL];
+      put(sx, sy - CELL, 'talk', SIGN_REACH, Math.hypot(x - sx, y - sy));
+    }
+    for (const s of arena.sites) {
+      if (s.visible && this.siteOpenTo(me, s)) put(s.x, s.y - 14, 'hand', SITE_REACH, Math.hypot(x - s.x, y - s.y));
+    }
+    if (enabled('farming', arena.zone.name)) {
+      for (const c of arena.crops) {
+        if (c.ripe || c.thirsty)
+          put(c.x, c.y - CELL, 'hand', CROP_REACH, Math.hypot(x - c.x, y - (c.y - CELL / 2)), false);
+      }
+    }
+    if (enabled('carrying', arena.zone.name)) {
+      const carrying = arena.barrels.some((b) => b.carrier === me.slot);
+      if (carrying)
+        put(x, y, 'hand', 1, 0, false); // the key sets it down
+      else
+        for (const b of arena.barrels)
+          if (!b.carried) put(b.x, b.y - CELL, 'hand', BARREL_REACH, Math.hypot(x - b.x, y - b.y));
+    }
+    for (const g of arena.ground) put(g.x, g.y - 14, 'hand', PICKUP_REACH, Math.hypot(x - g.x, y - g.y));
+    const water = this.drinking() || canDrink(arena.zone, me);
+    if (water && drinkableNear(arena.zone.data, x, y)) put(x, y, 'hand', 1, 0, false);
+    return n;
+  }
+
+  /**
+   * Each frame, from the scene: glint over what the interact key could use and show or hide the touch interact button with
+   * the glyph of the nearest thing in reach. `hidden` (a menu, a dialog, a door, the Dungeon Master's view) clears both. Split
+   * keys only show the button (the contextual key has none).
+   */
+  updateMarks(hidden: boolean, seconds: number) {
+    const { arena } = this;
+    const { world } = arena.view;
+    const out = { x: world.x, y: world.y, scale: world.scale.x };
+    if (hidden || arena.local.dm || arena.local.down !== null)
+      return this.marks.update(this.picked, 0, out, null, seconds);
+    const count = this.collectThings();
+    const shown = pickMarks(this.things, count, this.picked);
+    this.marks.update(this.picked, shown, out, contextKey.on ? null : nearestInReach(this.things, count), seconds);
   }
 
   /** Forget the Harvest and Drink buttons (the scene is being left). */
   clear() {
     this.harvestButtons.clear();
+    this.marks.update(this.picked, 0, { x: 0, y: 0, scale: 1 }, null, 0);
   }
 }

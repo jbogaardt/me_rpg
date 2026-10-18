@@ -58,6 +58,9 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v50: `SnapMsg.ia`, the newest input number the host has applied for the recipient (client-side prediction).
  * v51: `SnapMsg.folk`, where the people who stroll about their post (content `roam`) stand.
  * v52: `HelloMsg.id`, a friend's own lasting id, so the host can give a rejoiner their hero back.
+ * v59: the split action key. `KEY.use` (64) in `InputMsg.keys` is a toggle that flips on every INTERACT press (talk, open, pick up; like
+ * `KEY.roll`), and `KEY.split` (32) is held while this page plays the split keys (`act` is then attack only; without it `act` is the old
+ * contextual key the host resolves itself), so `keys` may be up to 127. An old page rejects the wider `keys`, so pages must reload.
  * v58: the dodge roll. `KEY.roll` (16) in `InputMsg.keys` is a toggle that flips on every roll press (state, not an event: a lost packet
  * cannot lose a press, the host rolls when it differs from the last bit it saw), so `keys` may be up to 31; `FLAG.roll` (256) in a player's
  * flags says the hero is rolling, so flags may be up to 511. An old page would drop the new input or snapshot, so pages must reload.
@@ -77,11 +80,14 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
  * within a size budget.
  */
-export const PROTOCOL_VERSION = 58;
+export const PROTOCOL_VERSION = 59;
 
 /** Held-key bits in InputMsg.keys. */
 /** `roll` is not a held key: it flips with every roll press (v58), see `unpackRoll`. */
-export const KEY = { up: 1, down: 2, left: 4, right: 8, roll: 16 } as const;
+export const KEY = { up: 1, down: 2, left: 4, right: 8, roll: 16, split: 32, use: 64 } as const;
+/** `split` is a held state (this page plays split keys); `use` flips with every interact press, like `roll`. */
+export const useBit = (keys: number): 0 | 1 => (keys & KEY.use ? 1 : 0);
+export const splitKeys = (keys: number): boolean => (keys & KEY.split) !== 0;
 
 /** The roll toggle bit of `keys` (0 or 1). */
 export const rollBit = (keys: number): 0 | 1 => (keys & KEY.roll ? 1 : 0);
@@ -728,7 +734,7 @@ export function parseMessage(raw: unknown): Message | null {
       if (!(
         isCount(m.n) &&
         isCount(m.keys) &&
-        m.keys <= 31 &&
+        m.keys <= 127 &&
         isCount(m.act) &&
         isCount(m.cb) &&
         isCount(m.ci) &&

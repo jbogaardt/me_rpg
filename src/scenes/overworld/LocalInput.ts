@@ -1,4 +1,5 @@
 import type { Aim } from '../../core/aim';
+import { contextKey } from '../../core/contextKey';
 import { COMBO_WINDOW, COMBO_WINDOW_TOUCH, ComboReader } from '../../core/combo';
 import { actionDown, actionPressed, actionTouchedOnly, pointerAim } from '../../core/controls';
 import type { Command } from '../../entities/Player';
@@ -65,7 +66,9 @@ export class LocalInput {
     return {
       dx: dx || wx,
       dy: dy || wy,
-      act: actionPressed('attack'),
+      // Split keys (the default): attack and interact are two presses. The single contextual key: either key is the one `act`.
+      act: actionPressed('attack') || (contextKey.on && actionPressed('interact')),
+      use: !contextKey.on && actionPressed('interact'),
       held: actionDown('attack'),
       roll: actionPressed('roll'),
       ...(combo === undefined ? {} : { combo }),

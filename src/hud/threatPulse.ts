@@ -92,6 +92,7 @@ const rects: Rect[] = [
   { x: 0, y: 0, w: 0, h: 0 },
   { x: 0, y: 0, w: 0, h: 0 },
   { x: 0, y: 0, w: 0, h: 0 },
+  { x: 0, y: 0, w: 0, h: 0 },
 ];
 const set = (r: Rect, x: number, y: number, w: number, h: number) => {
   r.x = x;
@@ -106,7 +107,7 @@ const PAD = 14; // a pulse is about this big: its whole body clears the rectangl
 
 /**
  * Move a pulse that would sit under the HUD or the on-screen controls to the nearest free spot on the same screen
- * (rectangles mirror ui.css: `#hud`, `#item-btn`, `#dpad`, `#buttons`, `#btn-roll`). Only the position moves; the angle still points at the shooter.
+ * (rectangles mirror ui.css: `#hud`, `#item-btn`, `#dpad`, `#buttons`, `#btn-roll`, `#btn-use`). Only the position moves; the angle still points at the shooter.
  */
 export function keepClear(p: { x: number; y: number }, screenW: number, screenH: number, touch: boolean): void {
   set(rects[0]!, 0, 0, screenW, HUD_TOP);
@@ -118,10 +119,13 @@ export function keepClear(p: { x: number; y: number }, screenW: number, screenH:
     set(rects[3]!, screenW - 132, screenH - 172, 132, 172);
     // The dodge roll button (ui.css `#btn-roll`, 60 px, 12 px left of A, 36 px up from the bottom).
     set(rects[4]!, screenW - 180, screenH - 96, 60, 60);
+    // The interact button (ui.css `#btn-use`, 60 px, centred above A: 36 px from the right, 144 px up). Kept clear even while hidden.
+    set(rects[5]!, screenW - 96, screenH - 204, 60, 60);
   } else {
     set(rects[2]!, 0, 0, 0, 0);
     set(rects[3]!, 0, 0, 0, 0);
     set(rects[4]!, 0, 0, 0, 0);
+    set(rects[5]!, 0, 0, 0, 0);
   }
   for (let pass = 0; pass < 2; pass++) {
     for (const r of rects) {

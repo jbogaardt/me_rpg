@@ -298,7 +298,7 @@ export class OverworldScene implements Scene {
       this.barrels,
       this.ground,
       this.storyUi,
-      () => this.guest.pressAction(),
+      (intent) => (intent === 'use' ? this.guest.pressUse() : this.guest.pressAction()),
       (zone, col, row) => this.liveStory.signOverride(zone, col, row),
     );
     this.interact.onTalk = (entity) => this.epics.talked(entity); // a saga's person has been spoken to
@@ -572,10 +572,10 @@ export class OverworldScene implements Scene {
       item.update(dt, Math.hypot(this.player.x - item.x, this.player.y - item.y) < PICKUP_REACH);
     }
     for (const body of arena.bodies()) body.zIndex = body.y;
-    this.interact.updateHarvestButtons(
-      z,
-      menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy || arena.local.dm,
-    );
+    const covered =
+      menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy || arena.local.dm;
+    this.interact.updateHarvestButtons(z, covered);
+    this.interact.updateMarks(covered, arena.clock); // the glints over what the interact key could use, and its touch button
     hud.update(
       this.hero,
       this.input.typed,
@@ -686,12 +686,9 @@ export class OverworldScene implements Scene {
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
     }
-    if (!menu.open && !shop.open && !trade.open && !busy)
-      this.interact.handleAction(cmd.act, () => this.interact.act(arena.local));
+    if (!menu.open && !shop.open && !trade.open && !busy) this.interact.handleAction(cmd);
     this.interact.holdAttack(cmd.held, reading); // a held button keeps swinging in a fight; a dialog forgets a pending press
-    if (!stopped)
-      for (const g of guests)
-        if (g.cmd.act && g.p.down === null) arena.inZone(arena.zoneOf(g.p), () => this.interact.act(g.p));
+    if (!stopped) for (const g of guests) this.interact.hostedPress(g.p, g.cmd); // each friend's intent: swing, or use
     if (!reading) this.zones.checkDoors(arena.local);
     for (const g of guests) this.zones.checkDoors(g.p);
     this.possession.follow();
@@ -712,8 +709,7 @@ export class OverworldScene implements Scene {
     const fallen = this.arena.local.down !== null; // told by the host (`FLAG.down`): nothing to send while on the ground
     const cmd = fallen ? NO_COMMAND : this.input.command(dt, reading);
     this.interact.trackGuest(cmd, reading, dt, () => this.guest.pressAction()); // its own idea of drinking; a held A in a fight repeats
-    if (!menu.open && !shop.open && !trade.open && !busy)
-      this.interact.handleAction(cmd.act, () => this.guest.pressAction());
+    if (!menu.open && !shop.open && !trade.open && !busy) this.interact.handleAction(cmd);
     if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);
     if (cmd.roll && !reading && !fallen) this.guest.pressRoll(); // the host rolls this hero (a toggle bit in the keys)
     this.guest.sendInput(

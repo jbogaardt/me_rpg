@@ -13,6 +13,7 @@ export const ACTIONS = [
   'itemPrev',
   'itemNext',
   'roll',
+  'interact',
 ] as const;
 export type Action = (typeof ACTIONS)[number];
 export const SLOTS = 2;
@@ -22,12 +23,13 @@ export const ACTION_LABELS: Record<Action, string> = {
   down: 'Move down',
   left: 'Move left',
   right: 'Move right',
-  attack: 'Attack / talk',
+  attack: 'Attack',
   inventory: 'Inventory',
   itemUse: 'Use quick item',
   itemPrev: 'Previous quick item',
   itemNext: 'Next quick item',
   roll: 'Dodge roll',
+  interact: 'Interact (talk, open, pick up)',
 };
 
 export type Slots = readonly [string, string]; // '' = unbound
@@ -43,6 +45,8 @@ export const DEFAULT_BINDINGS: Record<Action, Slots> = {
   itemPrev: ['KeyQ', ''],
   itemNext: ['KeyE', ''],
   roll: ['ShiftLeft', ''],
+  // R is under the left hand beside WASD and F, free of every other binding; right click is the mouse's second button
+  interact: ['KeyR', 'Mouse2'],
 };
 
 /** What the on-screen buttons press, whatever the keyboard is bound to. */
@@ -59,6 +63,8 @@ export const TOUCH_CODES: Record<Action, readonly string[]> = {
   itemNext: [],
   // the dodge roll button (a plain data-key button, index.html `#btn-roll`)
   roll: ['KeyK'],
+  // the interact button (index.html `#btn-use`), shown only while something is within reach
+  interact: ['KeyL'],
 };
 
 /**

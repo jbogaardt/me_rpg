@@ -107,6 +107,18 @@ describe('keepClear', () => {
     [390, 844],
     [360, 640],
     [844, 390],
+  ])('keeps a pulse off the interact button (60 px above A) at %ix%i', (w, h) => {
+    // ui.css: #btn-use is 60 px, 36 px from the right and 144 px up, centred above A.
+    const use = { x: w - 66, y: h - 174 };
+    keepClear(use, w, h, true);
+    const inUse = use.x > w - 96 - 14 && use.x < w - 36 + 14 && use.y > h - 204 - 14 && use.y < h - 144 + 14;
+    expect(inUse).toBe(false);
+  });
+
+  it.each([
+    [390, 844],
+    [360, 640],
+    [844, 390],
     [1280, 720],
   ])('leaves a pulse inside the screen at %ix%i', (w, h) => {
     for (const touch of [true, false]) {

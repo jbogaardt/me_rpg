@@ -27,6 +27,22 @@ describe('Bindings', () => {
     expect(ACTIONS.filter((a) => a !== 'roll').some((a) => b.codes(a).includes('ShiftLeft'))).toBe(false);
   });
 
+  it('binds interact to R and right click by default, clashing with nothing, with its own touch code', () => {
+    const b = new Bindings();
+    expect(b.codes('interact')).toEqual(['KeyR', 'Mouse2']);
+    expect(TOUCH_CODES.interact).toEqual(['KeyL']);
+    expect(
+      ACTIONS.filter((a) => a !== 'interact').some((a) => b.codes(a).some((c) => b.codes('interact').includes(c))),
+    ).toBe(false);
+    expect(b.codes('attack')).toEqual(['Mouse0', 'Space']); // the attack bindings are unchanged
+  });
+
+  it('an older save that bound R to something else keeps it, and interact loses the clash', () => {
+    const b = new Bindings({ itemUse: ['KeyR', ''] });
+    expect(b.codes('itemUse')).toEqual(['KeyR']);
+    expect(b.codes('interact')).toEqual(['Mouse2']);
+  });
+
   it('keeps a saved binding of an older game (no roll saved) and still has the roll', () => {
     const b = new Bindings({ up: ['KeyI', ''], attack: ['ShiftLeft', ''] });
     expect(b.codes('up')).toEqual(['KeyI']);
