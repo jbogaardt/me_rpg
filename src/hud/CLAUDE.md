@@ -5,7 +5,7 @@ phones and respects safe-area insets; markup in `index.html`, styles in `src/ui.
 (the smoke tests rely on it): the map is painted on a detached canvas and shown as an `<img>`.
 
 - **Reuse the UI kit classes** (`.panel`, `.wood`, `.paper`, plank tabs, square buttons; Lamoot's RPG GUI kit, CC-BY, see
-  CREDITS.md, cut by `tools/ui/cut-gui.ts`), `.pix` (notched pixel chip: tracker, level badge, DM badge) and the two fonts rather than inventing styles: **Pixelify Sans** (OFL, the one pixel face: HUD, titles, tabs, banners, chips, and the world's `FloatText` labels) and Crimson Text (long body text). Pixel art is code (`heartArt.ts`: ASCII grid to SVG); text over the world uses `--outline`.
+  CREDITS.md, cut by `tools/ui/cut-gui.ts`), `.pix` (notched pixel chip: tracker, level badge, DM badge) and the fonts (Cinzel titles, Crimson Text body) rather than inventing styles. Pixel art is code (`gridSvg.ts`: ASCII grid to SVG); text over the world uses `--outline`.
 - Build text with `textContent`, never `innerHTML`, for anything that came from a player or content.
 - **Item pictures** are `iconSvg(kind, art)` (`itemIcons.ts`): the item's `art` cell of the item sheet (`systems/itemArt.ts`, built by `tools/sprites/itemSheet.ts`, a CSS background of `--item-sheet`), else the SVG fallback; presentation only, no co-op traffic; anything eaten or drunk is the `food` kind. Ground items and relics use the same cells in Pixi (`entities/itemArt.ts`).
 - A new tappable overlay must be added to the touch allow-list (`src/core/CLAUDE.md`); a new button is a `data-key` element.

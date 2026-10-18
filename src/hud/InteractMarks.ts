@@ -1,4 +1,4 @@
-import { gridSvg } from './heartArt';
+import { gridSvg } from './gridSvg';
 import { glow, MAX_MARKS, type MarkKind, type Thing } from './interactThings';
 
 // The interact key shown, not told. (1) In the world: a soft pixel glint that bobs over each chest, person or pickup the hero
