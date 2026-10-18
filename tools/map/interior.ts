@@ -60,7 +60,8 @@ const STOCK: Record<keyof typeof SIGN_CELL, [Item, Item, Item, Item, Item, Item]
 };
 
 const OPEN_SHELF = crop(FURNITURE, 320, 128, 32, 64); // dark open shelving, four boards
-const SIDEBOARD = crop(FURNITURE, 64, 306, 64, 46); // a counter's front: top, two drawers
+// The counter is three kitchen-counter segments end to end (they are drawn to join): all plain.
+const COUNTER = [crop(FURNITURE, 96, 12, 64, 38), crop(FURNITURE, 160, 12, 32, 38), crop(FURNITURE, 160, 12, 32, 38)];
 const STAND = crop(FURNITURE, 448, 290, 32, 30); // a small cabinet, for the lectern
 
 const sheet = blank(768, 208);
@@ -75,9 +76,12 @@ put('wallTop', crop(CITY, 480, 288, 32, 32));
 put('wallBase', crop(CITY, 480, 352, 32, 32));
 put('mat', crop(FLOORS, 96, 1090, 32, 32));
 
-// The counter: two sideboards end to end, standing on the bottom of its 48px box.
-put('counter', SIDEBOARD, 0, 2);
-put('counter', SIDEBOARD, 64, 2);
+// The counter, standing on the bottom of its 48px box.
+let cx = 0;
+for (const piece of COUNTER) {
+  put('counter', piece, cx, 10);
+  cx += piece.width;
+}
 
 for (const trade of Object.keys(SIGN_CELL) as (keyof typeof SIGN_CELL)[]) {
   const cap = trade.charAt(0).toUpperCase() + trade.slice(1);
