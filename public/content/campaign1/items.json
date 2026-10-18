@@ -1,8 +1,7 @@
 {
   "version": 1,
   "start": {
-    "weapon": "rustySword",
-    "cape": "travelerCloak"
+    "weapon": "stick"
   },
   "items": {
     "rustySword": {
@@ -1435,6 +1434,16 @@
       "use": {
         "hp": 105,
         "mp": 45
+      }
+    },
+    "stick": {
+      "name": "Wooden Stick",
+      "art": 0,
+      "value": 2,
+      "slot": "weapon",
+      "attack": 1,
+      "look": {
+        "weapon": "weapon.dagger"
       }
     }
   },

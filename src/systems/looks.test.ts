@@ -57,6 +57,7 @@ describe('player looks', () => {
       chest: itemOf('plateArmor'),
       legs: itemOf('steelGreaves'),
       feet: itemOf('steelBoots'),
+      cape: itemOf('travelerCloak'),
     });
     const o = heroOutfit(hero);
     expect(o).toMatchObject({

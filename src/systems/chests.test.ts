@@ -16,7 +16,7 @@ describe('collect', () => {
     const found = collect(hero, CHEST_LOOTS.bronzeSword!);
     expect(hero.weapon.name).toBe('Silver Sword');
     expect(found.gear).toBeUndefined();
-    expect(hero.pack.map((i) => i.name)).toEqual(['Rusty Sword', 'Bronze Sword']); // the replaced and the unused, both kept
+    expect(hero.pack.map((i) => i.name)).toEqual(['Wooden Stick', 'Bronze Sword']); // the replaced and the unused, both kept
   });
 
   it('puts each piece of gear in its own slot', () => {
@@ -33,8 +33,8 @@ describe('collect', () => {
       'Iron Boots',
       'Kite Shield',
     ]);
-    expect(hero.weapon.name).toBe('Rusty Sword'); // none of that touched the weapon
-    expect(hero.cape?.name).toBe("Traveler's Cloak");
+    expect(hero.weapon.name).toBe('Wooden Stick'); // none of that touched the weapon
+    expect(hero.cape).toBeUndefined(); // and the hero starts without a cloak
   });
 
   it('takes anything for an empty slot but only upgrades for a filled one', () => {

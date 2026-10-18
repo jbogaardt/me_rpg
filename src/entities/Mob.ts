@@ -352,7 +352,7 @@ export class Mob {
         const attack = mobAttack(this.kind, dist, this.rayRest <= 0);
         const seen = !target || (world.sees?.(this.body.x, this.body.y, target.x, target.y) ?? true);
         this.unseen = seen ? 0 : this.unseen + dt;
-        if (dist > this.kind.sight ||(this.unseen > MEMORY && dist > this.kind.sight * HEARING)) {
+        if (dist > this.kind.sight || (this.unseen > MEMORY && dist > this.kind.sight * HEARING)) {
           this.state = 'idle';
           this.timer = 1;
         } else if (attack) {

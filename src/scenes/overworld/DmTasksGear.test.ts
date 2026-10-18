@@ -65,7 +65,7 @@ describe('a forge quest, on the host', () => {
         p.hero.offhand,
         ...p.hero.pack,
       ];
-      expect(owned.filter((i) => i && i !== itemOf('rustySword') && i !== itemOf('travelerCloak')).length).toBe(1);
+      expect(owned.filter((i) => i && i !== itemOf('stick') && i !== itemOf('travelerCloak')).length).toBe(1);
     }
     expect(looks).toHaveLength(2);
     tasks.update(TASK_LINGER + 1);

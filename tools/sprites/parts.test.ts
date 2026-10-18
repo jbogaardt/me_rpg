@@ -48,10 +48,10 @@ describe('sprite parts', () => {
 });
 
 describe('hero gear looks', () => {
-  it('starts with a sword and a cloak, drawn over the base clothes', () => {
+  it('starts with a stick and no cloak, over the base clothes', () => {
     const o = heroOutfit(newHero());
-    expect(o.weapon).toBe(itemOf('rustySword').look!.weapon);
-    expect(o.cape).toBe(itemOf('travelerCloak').look!.cape);
+    expect(o.weapon).toBe(itemOf('stick').look!.weapon);
+    expect(o.cape).toBeUndefined();
     expect(o.torso).toBe(HERO_BASE.torso);
   });
 

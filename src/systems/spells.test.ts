@@ -127,7 +127,7 @@ describe('wands and tomes', () => {
     hero.pack.push(itemOf('noviceTome'));
     expect(equipFromPack(hero, 0)).toEqual({ ok: true });
     expect(hero.weapon).toBe(itemOf('noviceTome'));
-    expect(hero.pack).toEqual([itemOf('rustySword')]);
+    expect(hero.pack).toEqual([itemOf('stick')]);
     expect(iconKind(hero.weapon)).toBe('tome');
     expect(iconKind(itemOf('apprenticeWand'))).toBe('wand');
   });

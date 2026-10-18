@@ -86,6 +86,7 @@ describe('ITEMS', () => {
 describe('equip', () => {
   it('replaces only the slot the item belongs to', () => {
     const hero = newHero();
+    equip(hero, itemOf('travelerCloak'));
     equip(hero, itemOf('vikingHelm'));
     equip(hero, itemOf('kiteShield'));
     equip(hero, itemOf('shortBow'));

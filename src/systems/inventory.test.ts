@@ -93,7 +93,7 @@ describe('equipping from the pack', () => {
     hero.pack.push(itemOf('steelSword'));
     equipFromPack(hero, 0);
     expect(hero.weapon).toBe(itemOf('steelSword'));
-    expect(hero.pack).toEqual([itemOf('rustySword')]);
+    expect(hero.pack).toEqual([itemOf('stick')]);
   });
 
   it('wears a one-handed weapon in either hand, but not a bow in the off-hand', () => {
@@ -105,7 +105,7 @@ describe('equipping from the pack', () => {
     hero.pack.push(itemOf('bronzeSword'), itemOf('shortBow'));
     expect(equipFromPack(hero, 0, 'offhand')).toEqual({ ok: true });
     expect(hero.offhand).toBe(itemOf('bronzeSword'));
-    expect(hero.weapon).toBe(itemOf('rustySword'));
+    expect(hero.weapon).toBe(itemOf('stick'));
     expect(equipFromPack(hero, 0, 'offhand').ok).toBe(false);
   });
 
@@ -136,6 +136,7 @@ describe('equipping from the pack', () => {
 describe('taking off and dropping', () => {
   it('moves worn gear to the pack, but never the weapon', () => {
     const hero = newHero();
+    hero.cape = itemOf('travelerCloak');
     expect(unequip(hero, 'cape')).toEqual({ ok: true });
     expect(hero.cape).toBeUndefined();
     expect(hero.pack).toEqual([itemOf('travelerCloak')]);
@@ -145,12 +146,14 @@ describe('taking off and dropping', () => {
 
   it('will not take off into a full pack', () => {
     const hero = filled(BASE_PACK);
+    hero.cape = itemOf('travelerCloak');
     expect(unequip(hero, 'cape').ok).toBe(false);
     expect(hero.cape).toBe(itemOf('travelerCloak'));
   });
 
   it('drops from the pack and from the body, which frees the slot', () => {
     const hero = filled(2);
+    hero.cape = itemOf('travelerCloak');
     expect(dropFromPack(hero, 0)).toBe(itemOf('clothHood'));
     expect(hero.pack).toHaveLength(1);
     expect(dropWorn(hero, 'cape')).toEqual({ ok: true, item: itemOf('travelerCloak') });
@@ -189,7 +192,7 @@ describe('wearIfBetter', () => {
     const hero = newHero();
     expect(wearIfBetter(hero, itemOf('bronzeSword'))).toBe(true);
     expect(hero.weapon).toBe(itemOf('bronzeSword'));
-    expect(hero.pack).toEqual([itemOf('rustySword')]);
+    expect(hero.pack).toEqual([itemOf('stick')]);
   });
 
   it('fills an empty slot without touching the pack, and leaves a worse piece alone', () => {
@@ -206,9 +209,9 @@ describe('wearFromPack', () => {
   it('wears a piece from the pack, swapping with what is worn', () => {
     const hero = newHero();
     hero.weapon = itemOf('bronzeSword');
-    hero.pack.push(itemOf('rustySword'));
-    expect(wearFromPack(hero, itemOf('rustySword'))).toEqual({ ok: true });
-    expect(hero.weapon).toBe(itemOf('rustySword'));
+    hero.pack.push(itemOf('stick'));
+    expect(wearFromPack(hero, itemOf('stick'))).toEqual({ ok: true });
+    expect(hero.weapon).toBe(itemOf('stick'));
     expect(hero.pack).toEqual([itemOf('bronzeSword')]);
     expect(wearFromPack(hero, itemOf('steelSword')).ok).toBe(false); // not in the pack
     hero.pack.push(itemOf('potion'));
@@ -220,8 +223,8 @@ describe('isBetter and upgrade', () => {
   it('compares against the worn piece in the same slot', () => {
     const hero = newHero();
     expect(isBetter(hero, itemOf('steelSword'))).toBe(true);
-    expect(isBetter(hero, itemOf('rustySword'))).toBe(false);
-    expect(upgrade(hero, itemOf('steelSword'))).toBe(3);
+    expect(isBetter(hero, itemOf('stick'))).toBe(false);
+    expect(upgrade(hero, itemOf('steelSword'))).toBe(4);
     expect(upgrade(hero, itemOf('clothHood'))).toBe(1); // an empty slot is worth nothing
     expect(upgrade(hero, itemOf('potion'))).toBe(0);
   });
@@ -288,6 +291,7 @@ describe('item codes', () => {
     const hero = newHero();
     wearIfBetter(hero, itemOf('steelSword'));
     wearIfBetter(hero, itemOf('greatHelm'));
+    hero.cape = itemOf('travelerCloak');
     hero.bag = itemOf('sack');
     hero.pack.push(itemOf('potion'), itemOf('potion'));
     const copy = newHero();
@@ -309,7 +313,7 @@ describe('item codes', () => {
     setGear(hero, GEAR_NONE);
     expect(hero.head).toBeUndefined();
     expect(hero.cape).toBeUndefined();
-    expect(hero.weapon).toBe(itemOf('rustySword'));
+    expect(hero.weapon).toBe(itemOf('stick'));
   });
 });
 
@@ -344,6 +348,7 @@ describe('Inventory actions as data', () => {
 
   it('does the action and hands back what was dropped', () => {
     const hero = newHero();
+    hero.cape = itemOf('travelerCloak');
     hero.pack.push(itemOf('kettleHat'));
     expect(applyInvOp(hero, { t: 'dropPack', index: 0 })).toEqual({ ok: true, dropped: itemOf('kettleHat') });
     expect(hero.pack).toEqual([]);

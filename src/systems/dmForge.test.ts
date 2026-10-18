@@ -28,11 +28,12 @@ describe('recipes the party could make', () => {
 
   it('read the pieces from what the hero has: no gem, no recipe; no piece to fit, no recipe', () => {
     expect(recipesFor([heroWith('steelSword')])).toEqual([]);
-    const hero = newHero(); // a rusty sword and a cloak: the dearer piece takes the stone
+    const hero = newHero(); // a stick and a cloak: the dearer piece takes the stone
+    hero.cape = itemOf('travelerCloak');
     hero.pack = [itemOf('ruby')];
     expect(recipesFor([hero]).map((r) => r.made)).toEqual(['travelerCloak+ruby']);
     delete hero.cape;
-    expect(recipesFor([hero]).map((r) => r.made)).toEqual(['rustySword+ruby']);
+    expect(recipesFor([hero]).map((r) => r.made)).toEqual(['stick+ruby']);
   });
 
   it('offer a gem a shop sells when the hero can pay for it, after the ones already carried', () => {

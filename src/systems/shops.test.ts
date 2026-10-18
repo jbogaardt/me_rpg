@@ -48,7 +48,7 @@ describe('buy', () => {
     expect(trade).toMatchObject({ ok: true, worn: itemOf('bronzeSword') });
     expect(hero.gold).toBe(60);
     expect(hero.weapon).toBe(itemOf('bronzeSword'));
-    expect(hero.pack).toEqual([itemOf('rustySword')]);
+    expect(hero.pack).toEqual([itemOf('stick')]);
   });
 
   it('keeps gear that is no upgrade in the pack, without wearing it', () => {
@@ -77,7 +77,7 @@ describe('buy', () => {
     const trade = buy(hero, smithy, 'bronzeSword');
     expect(trade).toEqual({ ok: false, text: 'Not enough gold (1 short)' });
     expect(hero.gold).toBe(39);
-    expect(hero.weapon).toBe(itemOf('rustySword'));
+    expect(hero.weapon).toBe(itemOf('stick'));
   });
 
   it('refuses to buy with nowhere to put it, taking no gold', () => {
@@ -114,7 +114,7 @@ describe('sell', () => {
     hero.pack.push(itemOf('potion'));
     expect(sell(hero, smithy, itemOf('potion')).ok).toBe(false);
     expect(sell(hero, smithy, itemOf('steelSword')).ok).toBe(false);
-    expect(sell(hero, smithy, itemOf('rustySword')).ok).toBe(false); // worn, not in the pack
+    expect(sell(hero, smithy, itemOf('stick')).ok).toBe(false); // worn, not in the pack
     expect(hero.gold).toBe(0);
     expect(hero.pack).toEqual([itemOf('potion')]);
   });
