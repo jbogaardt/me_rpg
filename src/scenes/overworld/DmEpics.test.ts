@@ -65,7 +65,7 @@ function game(far = false, story: unknown = null, stock: typeof STOCK_EPICS = ST
     onKill: () => {},
     onDefeat: () => {},
     reward: (p: unknown, xp: number, gold: number) => paid.push([p, xp, gold]),
-    text: () => {},
+    fx: () => {},
   } as unknown as Simulation;
   const said: string[] = [];
   const desk = { say: (t: string) => said.push(t) } as unknown as DmDesk;

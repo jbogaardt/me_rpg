@@ -3,14 +3,17 @@
 // itself from the tagged words it was told, so a cue is local and cosmetic: it never changes a rule, a mob's state or
 // anything the host owns (a guest's `Mob` is only a view anyway), and it needs nothing on the wire. Core engine, co-op.
 
-import { floatText } from '../../entities/effects';
+import { DIR_VEC } from '../../core/direction';
+import { afterimage } from '../../entities/effects';
+import { particleEffect } from '../../entities/ParticleEffect';
+import { playGame } from '../../hud/gameSfx';
 import type { Character } from '../../entities/Character';
 import { playSfx } from '../../hud/sfx';
 import type { AnimName } from '../../sprites/doll';
 import type { AnimAction, Cue } from '../../systems/cues';
 import type { Arena } from './Arena';
 
-/** The pose each action plays. `dodge` has none: it floats a word over the actor instead. */
+/** The pose each action plays. `dodge` has none: it leaves an afterimage and a spark instead. */
 const POSE: Record<Exclude<AnimAction, 'dodge'>, AnimName> = {
   slash: 'slash',
   lunge: 'slash',
@@ -19,7 +22,6 @@ const POSE: Record<Exclude<AnimAction, 'dodge'>, AnimName> = {
   hurt: 'hurt',
   stagger: 'hurt',
 };
-const DODGE_COLOR = 0xcfd6dd;
 
 export class CueDirector {
   constructor(private arena: Arena) {}
@@ -35,9 +37,18 @@ export class CueDirector {
     for (const body of this.actors(cue.actor)) {
       if (cue.dir) body.face(cue.dir);
       if (cue.action === 'dodge') {
-        this.arena.view.effects.add(floatText(body.x, body.y - 30, 'Dodged!', DODGE_COLOR));
+        this.dodge(body);
       } else body.play(POSE[cue.action]);
     }
+  }
+
+  /** A sidestep: a pale copy of the body left behind (the way it came from), a spark and a whisper of air. */
+  private dodge(body: Character) {
+    const [dx, dy] = DIR_VEC[body.facing];
+    const { effects } = this.arena.view;
+    effects.add(afterimage(body.snapshot(), body.x, body.y, -dx, -dy));
+    effects.add(particleEffect('dodge', body.x, body.y - 18));
+    playGame('swing');
   }
 
   /** The bodies an actor names in the zone the local player is in (none when that one is elsewhere: nothing is shown). */

@@ -28,7 +28,7 @@ function game() {
     zoneOf: () => ({ name: 'fen' }),
     refreshLook: (p: unknown) => looks.push(p),
   } as unknown as Arena;
-  const sim = { onKill: () => {}, onDefeat: () => {}, reward: () => {}, text: () => {} } as unknown as Simulation;
+  const sim = { onKill: () => {}, onDefeat: () => {}, reward: () => {}, fx: () => {} } as unknown as Simulation;
   const desk = { say: () => {} } as unknown as DmDesk;
   const tasks = new DmTasks(arena, sim, desk);
   const forge = () =>

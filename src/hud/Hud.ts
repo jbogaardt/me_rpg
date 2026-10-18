@@ -47,6 +47,14 @@ export class Hud {
   private stats = document.getElementById('hud-stats')!;
   private dmBadge = document.getElementById('hud-dm')!;
   private shown = '';
+
+  /** A quest moved on: the tracker pulses once (the world shows a ring of sparks; the words are the tracker's own). */
+  tickQuest() {
+    this.tracker.classList.remove('tick');
+    void this.tracker.offsetWidth; // restart the animation when a second tick follows quickly
+    this.tracker.classList.add('tick');
+  }
+
   private shownCombos = '';
 
   /** `story`: the story's own quest shows in the tracker (solo); online only the Dungeon Master's does. `typed` is what the player has tapped toward a combo so far (lights the first arrows of the ones it leads to). */

@@ -58,6 +58,8 @@ import { HostLink } from './overworld/HostLink';
 import { PackSync } from './overworld/PackSync';
 import { foeNear, Simulation } from './overworld/Simulation';
 import { PickupToasts } from '../hud/PickupToasts';
+import { playGame } from '../hud/gameSfx';
+import { BodyCues } from './overworld/BodyCues';
 import { playPing } from '../hud/sfx';
 import { Trading } from './overworld/Trading';
 import { Training } from './overworld/Training';
@@ -87,7 +89,6 @@ import { VotePanel } from '../hud/VotePanel';
 import { RequestPanel } from '../hud/RequestPanel';
 import type { World } from '../content/world';
 import { particleEffect } from '../entities/ParticleEffect';
-import { floatText } from '../entities/effects';
 
 export type { ZoneLoader, ZoneUnloader };
 
@@ -163,6 +164,7 @@ export class OverworldScene implements Scene {
   private banner = new AreaBanner();
   private levelSplash = new LevelSplash();
   private screenFx = new ScreenFx();
+  private bodyCues: BodyCues;
   private storyUi!: StoryUi; // what the local player is told and shown about their quests
   private interact!: Interactions; // what the action key does
   private input!: LocalInput; // this keyboard's controls as a Command
@@ -194,13 +196,16 @@ export class OverworldScene implements Scene {
   ) {
     this.epicsOnOffer = () => [...STOCK_EPICS, ...content.content.epics];
     const arena = (this.arena = new Arena(sprites.wardrobe));
+    this.bodyCues = new BodyCues(arena);
     this.zones = new Zones(arena, sprites, loadZone, unloadZone, ui, renderer, content);
     const visuals = new Visuals(arena);
     const say = (lines: string[]) => ui.dialog.note(lines); // a defeat or a trial's result: passive text, not a popup
     // The simulation reports what a friend should see through the host link (which only records it while hosting).
     this.sim = new Simulation(arena, visuals, this.zones, (e) => this.host.emit(e), say);
     this.zones.makeMobWorld = (z) => this.sim.mobWorldFor(z);
-    this.zones.say = (p, text) => this.sim.text(p.body.x, p.body.y - 66, text, 0xffd27a); // a door turning a hero away
+    // A door turning a hero away: the refusal cue, and the one short reason (the level band) as a passive line.
+    this.zones.say = (p, text) => this.sim.refuse(p, p.body.x, p.body.y - 20, 'locked', text);
+    visuals.onQuestTick = () => ui.hud.tickQuest();
     this.ground = new Ground(arena, this.sim);
     this.ground.onPicked = (p, name) => {
       if (p !== arena.local) return; // a friend's pickup is theirs to see
@@ -233,15 +238,15 @@ export class OverworldScene implements Scene {
     this.liveStory.onOpened = (zone, x, y) => {
       const z = arena.zones.get(zone);
       if (!z) return;
-      z.effects.add(floatText(x, y - 24, 'The way opens', 0xffd34d));
+      z.effects.add(particleEffect('shimmer', x, y - 8)); // the way opens: a shimmer where it did
       z.effects.add(particleEffect('levelUp', x, y));
+      playGame('glint');
     };
     this.liveStory.onGrew = (land) => this.banner.show(land, 'The story leads on to');
-    this.liveStory.onCast = (zone, x, y, name) => {
+    this.liveStory.onCast = (zone, x, y) => {
       const z = arena.zones.get(zone);
       if (!z) return;
-      z.effects.add(particleEffect('levelUp', x, y - 16));
-      z.effects.add(floatText(x, y - 56, name, 0xffd34d));
+      z.effects.add(particleEffect('levelUp', x, y - 16)); // the name of what was cast is the DM's to tell, not a popup
     };
     this.desk = new DmDesk(arena, ui.session, content, this.dayClock);
     this.votePanel.onChoose = (i) => this.desk.castVote(i);
@@ -425,6 +430,7 @@ export class OverworldScene implements Scene {
     else this.levelSplash.sync(this.hero.stats);
     const { stats } = this.hero;
     this.screenFx.sync(arena.local.dm ? 1 : stats.hp, stats.maxHp, arena.local.down, dt);
+    this.bodyCues.update(dt);
     this.pickups.update(dt, foeNear(arena.zone, arena.local));
     this.updateDm(dt);
     const online = arena.role !== 'solo';

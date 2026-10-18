@@ -3,7 +3,6 @@ import { barrelsFromWire } from '../../systems/barrels';
 import { DIRS, DIR_VEC } from '../../core/direction';
 import { glide } from '../../core/interp';
 import { Reconciler } from '../../core/prediction';
-import { floatText } from '../../entities/effects';
 import type { Player } from '../../entities/Player';
 import type { Menu } from '../../hud/Menu';
 import type { ShopCounter } from '../../hud/ShopCounter';
@@ -23,6 +22,7 @@ import { newHero, speedFactor, type Hero } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
 import { encodeOp, type InvOpWire } from '../../systems/inventory';
 import { heroOutfit, playerName } from '../../systems/looks';
+import { particleEffect } from '../../entities/ParticleEffect';
 import type { Arena } from './Arena';
 import { auraTint, DEFEAT_LINES, SPEED } from './constants';
 import type { Ground } from './Ground';
@@ -124,7 +124,7 @@ export class GuestLink {
     local.body.alpha = 1;
     local.body.setOffset(0, 0);
     for (const z of arena.zones.values()) for (const mob of z.mobs) mob.release();
-    arena.effects.add(floatText(local.body.x, local.body.y - 54, 'Disconnected', 0xffffff));
+    arena.effects.add(particleEffect('fall', local.body.x, local.body.y - 14)); // the join status says why, in words
   }
 
   /** The action button was pressed (counted, so a lost packet cannot lose a press). */
@@ -300,9 +300,7 @@ export class GuestLink {
     for (const slot of snap.away) zones.place(arena.remotes.get(slot), null);
     for (const slot of [...arena.remotes.keys()]) {
       if (!present.has(slot)) {
-        arena.removeRemote(slot, (p) =>
-          arena.effects.add(floatText(p.body.x, p.body.y - 54, `${playerName(slot)} left`, 0xffffff)),
-        );
+        arena.removeRemote(slot, (p) => arena.effects.add(particleEffect('fall', p.body.x, p.body.y - 14)));
       }
     }
 

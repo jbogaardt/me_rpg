@@ -26,7 +26,7 @@ the screen. A new kind of source is an entry in `HEARTH_EFFECTS`, `HEARTH_MARGIN
   screen goes dark under a "You fell" card (`hud/ScreenFx.ts`), then `Simulation.defeat` wakes them as it always did.
   They take no hits and no commands meanwhile; a trial's defeat stays instant. Co-op: `FLAG.down` in the snapshot, and the
   guest keeps its own clock for the same fade.
-- **Low HP**: a pulsing red edge under a third of HP (`lowHealth`), local only.
+- **Low HP**: a pulsing red edge under a third of HP (`lowHealth`) and the hero's body pulsing red in step with it (`heartbeat`, `BodyCues`); starving washes it sallow (food) or grey-blue (water) with a few dull drops (`wilt`) when empty. Local only.
 - **Victory**: `Character.celebrate` (the cast frames held at the top, a hop, back to the old facing) with the `cheer`
   confetti, on a level, a boss kill and a finished DM task (`Simulation.cheer`). The pose rides the `cheer` fx with `p`.
 - **Feel** (`systems/feel.ts`, `FX_SHAKE`): the camera shakes with `blast`, `nova`, `bossFinale` and the hero's own
@@ -45,6 +45,7 @@ the screen. A new kind of source is an entry in `HEARTH_EFFECTS`, `HEARTH_MARGIN
   sweeps ~115 degrees across the facing, the strike at full brightness, then the tail closes and it fades), tapered to a
   point at the tail, outer radius from the weapon's reach (`Visuals.swing`'s `reach`, default `MELEE_REACH`). One Graphics
   with two polygons redrawn in place, no per-frame allocation. A guest draws the same from the `slash` event's facing.
+- A blow's weight (`systems/cueRules.ts`): `hitGraze` (3-4 short pale streaks) under 12% of the foe's health, `hitSpark` between, `hitHeavy` (a fan of long red-gold streaks, chips, a big flash and a hair of shake) from 30% or a kill; `heroHurtHeavy` from 25% of the hero's health. Numbers are a local debug setting (off).
 - `hitSpark` is a cone of 7-9 streaks (150-250 ms) along the blow's `dir`, plus a white-to-gold flash glow; 2 emitters
   (2 draw calls). The hit tint on the foe is `Mob`'s existing red flash (not changed here). Sparks with no `dir`
   (lightning, a foe's bolt) fly right, so pass one if the source has a direction.
