@@ -93,6 +93,13 @@ Cut and arranged by `tools/sprites/itemSheet.ts`, no pixel redrawn: weapons, arm
 The mountains sheet of the Liberated Pixel Cup base assets (https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles)
 by Lanea Zimmerman (Sharm), CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0, used unmodified for the plateau (`tools/map/zone.ts`); `tools/map/rockCave.ts` cuts the rock cave's tiles from the same sheet (`public/tilesets/rock_cave.png`; the floor tiles are darkened and browned).
 
+## Sewers (`public/tilesets/sewer_lpc.png`, source in `art/lpc_sewer/`)
+
+Cut by `tools/map/sewerLpc.ts` from the Liberated Pixel Cup base assets (https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles)
+by Lanea Zimmerman (Sharm) and others, CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0 (credits in [`art/lpc_sewer/CREDITS-sewer.txt`](art/lpc_sewer/CREDITS-sewer.txt)):
+the castle walls and floors, the dungeon sheet's drain, the barrel, buckets and wall torch. The stone is darkened and the water
+recoloured to murky green; the doorway, gate and grate are drawn here from the pack's stone and colours.
+
 ## Characters (`public/sprites/lpc/`, catalog in `sprites/parts.ts`)
 
 Hero, NPC and monster art comes from the [Universal LPC Spritesheet Character Generator](https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator)
@@ -183,9 +190,9 @@ CC-BY-SA 3.0 text. The pack's shadowless 32x32 sheets are used **unmodified** (r
 markers out as prefabs (cemeteries on the undead, barrow, old shrine and haven town maps) and `src/entities/Landmark.ts`
 draws one headstone as the "grave" quest landmark. As the other CC-BY-SA art here, the sheets stay under CC-BY-SA 3.0 or later.
 
-## Caves, sewers and cave mouths (`public/tilesets/dungeon_cave.png`, `dungeon_sewer.png`, `dunes.png`, source in `art/oga_dungeon/`)
+## Caves and cave mouths (`public/tilesets/dungeon_cave.png`, `dunes.png`, source in `art/oga_dungeon/`)
 
-Cave, sewer and desert tilesets by MrBeast, from the OpenGameArt collection
+Cave and desert tilesets by MrBeast (the sewer tileset of the collection is no longer used), from the OpenGameArt collection
 ["16x16 JRPG tilesets enlarged 2x"](https://opengameart.org/content/16x16-jrpg-tilesets-enlarged-2x) (originals:
 [cave](https://opengameart.org/content/cave-tileset-0), [sewer](https://opengameart.org/content/sewer-tileset)), licensed
 [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/). The collection asks that used together they carry a link to

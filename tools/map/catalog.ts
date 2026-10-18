@@ -23,7 +23,7 @@ export const ROCK_SHEET = 'lpc_mountains.png'; // the LPC base assets' mountains
 
 // MrBeast's cave, sewer and desert tilesets (art/oga_dungeon/, CC-BY 3.0), doubled to the 32px cell by dungeonSheets.ts.
 export const CAVE_SHEET = 'dungeon_cave.png';
-export const SEWER_SHEET = 'dungeon_sewer.png';
+export const SEWER_SHEET = 'sewer_lpc.png'; // the sewer's ground tiles and props, cut from the LPC base assets by tools/map/sewerLpc.ts
 export const DUNES_SHEET = 'dunes.png'; // the desert sheet's cliffs, sand keyed out
 
 export { SHADOW_RGB, SHADOW_FROST, SHADOWS } from './shadows';
@@ -147,46 +147,46 @@ function dungeonGrounds() {
     ]),
     sewerFloor: tiles(S, [
       [
-        [3, 0],
-        [4, 1],
+        [0, 0],
+        [1, 0],
+        [0, 0],
+        [0, 0],
+        [1, 0],
+        [0, 0],
+        [1, 0],
       ],
       [
-        [4, 2],
-        [3, 1],
+        [1, 0],
+        [0, 0],
+        [0, 0],
+        [1, 0],
+        [0, 0],
+        [0, 0],
+        [0, 0],
       ],
-    ]),
-    sewerRoof: tiles(S, [[[11, 1]]]),
-    sewerCapTop: tiles(S, [[[1, 1]]]),
-    sewerCap: tiles(S, [[[1, 2]]]),
-    sewerFaceU: tiles(S, [
       [
-        [0, 3],
-        [1, 3],
-        [2, 3],
+        [0, 0],
+        [0, 0],
+        [1, 0],
+        [0, 0],
+        [0, 0],
+        [2, 0],
+        [0, 0],
       ],
     ]),
-    sewerFaceL: tiles(S, [
-      [
-        [0, 4],
-        [1, 4],
-        [2, 4],
-      ],
-    ]),
+    sewerRoof: tiles(S, [[[5, 0]]]),
+    sewerCapTop: tiles(S, [[[6, 0]]]),
+    sewerCap: tiles(S, [[[7, 0]]]),
+    sewerFaceU: tiles(S, [[[8, 0]]]),
+    sewerFaceL: tiles(S, [[[9, 0]]]),
     sewerWater: tiles(S, [
       [
-        [9, 8],
-        [9, 8],
-        [11, 7],
+        [3, 0],
+        [4, 0],
       ],
       [
-        [10, 8],
-        [13, 7],
-        [9, 8],
-      ],
-      [
-        [9, 8],
-        [12, 8],
-        [10, 8],
+        [4, 0],
+        [3, 0],
       ],
     ]),
   } satisfies Record<string, GroundFill>;
@@ -780,6 +780,16 @@ const delveArt = (
   tag,
   about,
 });
+/** A piece of the sewer sheet (sewer_lpc.png, tools/map/sewerLpc.ts) by pixel rectangle. */
+const sewerArt = (
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  solid: Prefab['solid'],
+  tag: string,
+  about: string,
+): Prefab => ({ sheet: SEWER_SHEET, w, h, parts: [part(x, y, w, h)], solid, tag, about });
 const DELVE_PREFABS = {
   caveMouth: delveArt(
     DUNES_SHEET,
@@ -802,58 +812,29 @@ const DELVE_PREFABS = {
     'The way out of a cave: a rock face with daylight pouring in (3x2). Draw it over the wall rows north of the floor.',
   ),
   caveHole: delveArt(CAVE_SHEET, 3, 1, 3, 2, null, 'cave', 'A dark tunnel mouth in a cave wall (3x2), decoration.'),
-  sewerHatch: delveArt(
-    SEWER_SHEET,
-    1,
-    5,
-    1,
-    1,
+  sewerHatch: sewerArt(
+    256,
+    32,
+    28,
+    28,
     null,
     'hatch',
     'A round drain with a stone rim, set in the ground (1 cell): the way down into a sewer.',
   ),
-  sewerDoor: delveArt(SEWER_SHEET, 7, 0, 1, 2, null, 'sewer', 'A dark arched doorway in a sewer wall (1x2).'),
-  sewerGate: delveArt(
-    SEWER_SHEET,
-    8,
-    0,
-    1,
-    2,
+  sewerDoor: sewerArt(0, 32, 32, 64, null, 'sewer', 'A dark arched doorway in a sewer wall (1x2).'),
+  sewerGate: sewerArt(32, 32, 32, 64, null, 'sewer', 'A barred arched gate in a sewer wall (1x2), decoration.'),
+  sewerGrate: sewerArt(
+    64,
+    32,
+    96,
+    64,
     null,
     'sewer',
-    'A barred arched gate in a sewer wall (1x2), decoration.',
+    'A wide barred outflow in a stone wall over a green stain (3x2): draw it over the wall rows, decoration.',
   ),
-  sewerGrate: delveArt(
-    SEWER_SHEET,
-    11,
-    5,
-    3,
-    2,
-    null,
-    'sewer',
-    'An outflow grate in a brick wall over a pool of water (3x2): draw it over the wall rows, decoration.',
-  ),
-  sewerTorch: delveArt(SEWER_SHEET, 5, 4, 1, 1, null, 'torch', 'A torch in a bracket (1 cell), over a brick wall.'),
-  sewerCrate: delveArt(
-    SEWER_SHEET,
-    15,
-    5,
-    1,
-    1,
-    { band: 32, min: 0.3 },
-    'furniture',
-    'A wooden crate (1 cell), solid.',
-  ),
-  sewerBox: delveArt(
-    SEWER_SHEET,
-    14,
-    5,
-    1,
-    1,
-    { band: 32, min: 0.3 },
-    'furniture',
-    'A metal-bound box (1 cell), solid.',
-  ),
+  sewerTorch: sewerArt(160, 32, 28, 60, null, 'torch', 'A torch on a long stalk (1 cell wide), over a stone wall.'),
+  sewerCrate: sewerArt(192, 32, 31, 42, { band: 28, min: 0.3 }, 'furniture', 'A wooden barrel (1 cell), solid.'),
+  sewerBox: sewerArt(224, 32, 28, 24, { band: 22, min: 0.3 }, 'furniture', 'A wooden bucket (1 cell), solid.'),
 };
 
 export const PREFABS = {

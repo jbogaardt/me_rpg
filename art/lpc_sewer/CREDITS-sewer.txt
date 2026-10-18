@@ -1,0 +1,4 @@
+All sheets are from the Liberated Pixel Cup base assets (https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles)
+by Lanea Zimmerman (Sharm) and others (see CREDITS.md and the pack's own credits): castlewalls, castlefloors, water, barrel, buckets, dungeon
+and castle_lightsources, CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0. tools/map/sewerLpc.ts cuts pieces from them; the stone is darkened and the water
+recoloured to murky green.

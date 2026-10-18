@@ -19,7 +19,7 @@
     "items": "tsx tools/sprites/itemSheet.ts",
     "monsters": "tsx tools/sprites/monsters.ts",
     "landmarks": "tsx tools/map/landmarks.ts && prettier --write src/systems/landmarkAtlas.ts",
-    "tilesets": "tsx tools/map/recolor.ts && tsx tools/map/trees.ts && prettier --write tools/map/treeAtlas.ts && tsx tools/map/town.ts && tsx tools/map/interior.ts && tsx tools/map/crops.ts && tsx tools/map/dungeonSheets.ts && tsx tools/map/rockCave.ts",
+    "tilesets": "tsx tools/map/recolor.ts && tsx tools/map/trees.ts && prettier --write tools/map/treeAtlas.ts && tsx tools/map/town.ts && tsx tools/map/interior.ts && tsx tools/map/crops.ts && tsx tools/map/dungeonSheets.ts && tsx tools/map/rockCave.ts && tsx tools/map/sewerLpc.ts",
     "sprites": "tsx tools/sprites/cli.ts",
     "relay": "tsx tools/relay/dev-server.ts",
     "dm-bot": "tsx server/host.ts"

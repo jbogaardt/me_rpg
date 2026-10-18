@@ -372,7 +372,7 @@
       "map": "sewer_lanternrest",
       "climate": null,
       "music": null,
-      "tilesets": ["dungeon_sewer.png"],
+      "tilesets": ["sewer_lpc.png"],
       "generation": {},
       "links": ["town", "sewer_undercroft"]
     },
@@ -447,7 +447,7 @@
         "frost_objects.png",
         "town.png",
         "hanging_signs.png",
-        "dungeon_sewer.png"
+        "sewer_lpc.png"
       ],
       "generation": {},
       "links": [
@@ -610,7 +610,7 @@
       "map": "sewer_undercroft",
       "climate": null,
       "music": null,
-      "tilesets": ["dungeon_sewer.png"],
+      "tilesets": ["sewer_lpc.png"],
       "generation": {},
       "links": ["sewer_lanternrest"],
       "levels": [9, 11]

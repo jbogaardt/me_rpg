@@ -1,4 +1,4 @@
-// Builds the cave, sewer and desert-cliff sheets (public/tilesets/dungeon_cave.png, dungeon_sewer.png, dunes.png) from
+// Builds the cave and desert-cliff sheets (public/tilesets/dungeon_cave.png, dunes.png) from
 // the OpenGameArt tilesets in art/oga_dungeon/ (MrBeast, CC-BY 3.0, see CREDITS.txt). The art is on a 16px tile grid;
 // the map's cell is 32px, so each sheet is doubled (nearest neighbour, like the town and interior art), which keeps a
 // source tile (tx, ty) at (tx * 32, ty * 32): the catalog (DUNGEON in catalog.ts) names tiles by those source indices.
@@ -20,7 +20,6 @@ const keySand = (img: Image) => {
 
 const SHEETS = [
   ['cave.png', 'dungeon_cave.png', (img: Image) => img],
-  ['sewer_1.png', 'dungeon_sewer.png', (img: Image) => img],
   ['desert_1.png', 'dunes.png', keySand],
 ] as const;
 
