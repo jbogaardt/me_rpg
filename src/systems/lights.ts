@@ -11,6 +11,8 @@ export interface Light {
   y: number;
   /** World px. */
   r: number;
+  /** How bright the flame burns now, 0.7 (a gutter) to 1; absent is steady. */
+  f?: number;
 }
 
 /** How far each kind of source lights the ground round it (px). A lake of lava is lit by many small sources. */
@@ -20,9 +22,10 @@ export const LIGHT_RADIUS: Partial<Record<HearthKind, number>> = { fire: 150, to
 export function flicker(t: number, seed: number): number {
   return (
     1 +
-    0.045 * Math.sin(t * 7.3 + seed) +
+    0.04 * Math.sin(t * 7.3 + seed) +
     0.03 * Math.sin(t * 13.1 + seed * 2.7) +
-    0.02 * Math.sin(t * 3.1 + seed * 0.4)
+    0.02 * Math.sin(t * 3.1 + seed * 0.4) +
+    0.008 * Math.sin(t * 29 + seed * 5.3) // the quick crackle
   );
 }
 
@@ -37,7 +40,8 @@ export function visibleLights(
     const r = LIGHT_RADIUS[s.kind];
     if (r === undefined) return;
     if (s.x < view.x - r || s.x > view.x + view.w + r || s.y < view.y - r || s.y > view.y + view.h + r) return;
-    out.push({ x: s.x, y: s.y, r: r * (s.kind === 'lava' ? 1 : flicker(t, i)) });
+    const fl = s.kind === 'lava' ? 1 : flicker(t, i);
+    out.push({ x: s.x, y: s.y, r: r * fl, f: Math.min(1, 0.9 + (fl - 1) * 2.4) });
   });
   return out;
 }

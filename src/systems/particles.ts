@@ -10,8 +10,8 @@ export type Range = number | readonly [number, number];
 export type Curve = number | readonly number[];
 /** Like `Curve`, for 0xRRGGBB colours (interpolated per channel). */
 export type ColorRamp = number | readonly number[];
-/** The texture each particle is drawn with (generated in `ParticleEffect.ts`): a pixel dot, a soft glow, a streak. */
-export type Shape = 'dot' | 'glow' | 'streak';
+/** The texture each particle is drawn with (generated in `ParticleEffect.ts`): a pixel dot, a soft glow, a streak, a flat ring (a ripple). */
+export type Shape = 'dot' | 'glow' | 'streak' | 'ring';
 export type Rng = () => number;
 
 export interface EmitterDef {

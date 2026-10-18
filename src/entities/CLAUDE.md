@@ -23,8 +23,10 @@
   a beam from the `channel` state itself, but never decides anything. The host alone damages.
 - **Ambient life** (`ambient.ts`: footprints, falling leaves) is passive, driven by body movement and map metadata
   (`surface`, object `tag`, canopy sheet name), with no hooks into collision. Keep any new effect pooled and capped.
-- **Places and light** (`Hearth.ts`, `LightGlow.ts`, `DarknessLayer.ts`; `docs/effects.md`): smoke, bubbles, drips and the
-  underground's fog of war come from map data and run near the screen. Visual only, so no co-op change.
+- **Places and light** (`Hearth.ts`, `LightGlow.ts`, `DarknessLayer.ts`, `DitherFilter.ts`, `Atmosphere.ts`; `docs/effects.md`): smoke, bubbles, drips, mist and the
+  underground's fog of war come from map data and run near the screen. The dark and the glow are small canvases drawn from
+  pre-rendered pools (no gradient made per frame) and stepped by a world-anchored dither filter on the GPU; keep any new light on that path (no
+  per-frame canvas readback, no per-frame allocation). `Atmosphere` (water ripples, torch reflections) is one tiling sprite pair per pool. Visual only, so no co-op change.
 - **Show, don't tell** (`systems/cueRules.ts`, `Visuals`; core engine, cosmetic, co-op via `fx` events, `src/net/CLAUDE.md`): no popup text for state or combat. A blow's weight is the spark tier (`hitTier`: graze under 12% of the foe's health, heavy from 30% or a kill) on top of hit-pause and kick; a refusal is one `deny` cue (red puff, the actor's head-shake, a thud; where the reason is not on screen, ONE passive `dialog.note` line); pay is `gainMotes` (coins fly to the hero, `moteArc`); a level is `levelRing` (ring, body glow, chime, small badge). Low HP, hunger and thirst tint the local hero (`BodyCues`, `Character.setStrain`). Numbers exist only behind Controls > "Damage numbers" (`core/damageNumbers.ts`, off by default, solo and host only). New state goes through a cue, never `floatText`.
 - Effects (`effects.ts`, `ParticleEffect.ts`) are transient visuals owned by an `Effects` list; add a particle effect
   with the `add-particle-effect` skill. Dynamic in-world text is `BitmapText` with the `FloatText` font.

@@ -7,6 +7,7 @@ import { Barrel } from '../entities/Barrel';
 import { Chest } from '../entities/Chest';
 import { Crop, type CropMemory } from '../entities/Crop';
 import { Effects } from '../entities/effects';
+import { Atmosphere } from '../entities/Atmosphere';
 import { Hearth } from '../entities/Hearth';
 import { particleEffect } from '../entities/ParticleEffect';
 import type { GroundItem } from '../entities/GroundItem';
@@ -88,6 +89,8 @@ export class ZoneState {
   readonly ambient: Ambient | null;
   /** The smoke, bubbles and drips this map's fires, lava and caves give off (visual only, drawn near the screen). */
   readonly hearth: Hearth;
+  /** The underground's water current and torch reflections (null in the open air and where there is no water). */
+  readonly atmosphere: Atmosphere | null;
   readonly weatherLayer: WeatherLayer | null;
   /** This biome's own weather (precipitation and wind by its climate); rooms have none. Host and solo roll it, a guest is told. */
   readonly weather: Weather | null;
@@ -189,6 +192,7 @@ export class ZoneState {
     this.collision = new Collision(data.width, data.height, data.collision);
     this.effects = new Effects(this.world.layer);
     this.hearth = new Hearth(this.effects, data);
+    this.atmosphere = data.dark ? new Atmosphere(this.world.layer, data) : null;
     this.pondBeds = new PondBeds(data, this.world);
     this.world.layer.addChild(this.pondBeds);
     this.ambient = data.indoor ? null : new Ambient(this.world.layer, data);
@@ -411,6 +415,7 @@ export class ZoneState {
    * The tilesets are the asset cache's (assets.ts `unloadZone`).
    */
   dispose() {
+    this.atmosphere?.destroy();
     this.world.destroy({ children: true });
   }
 }

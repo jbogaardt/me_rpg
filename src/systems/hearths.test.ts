@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EffectDef } from './particles';
 import { PARTICLE_EFFECTS } from './particleEffects';
-import { findHearths, hearthNear, HEARTH_EFFECTS, type HearthKind } from './hearths';
+import { findHearths, hearthNear, HEARTH_EFFECTS, HEARTH_OFFSET, type HearthKind } from './hearths';
 
 const map = (over: Partial<Parameters<typeof findHearths>[0]> = {}) => ({
   width: 10,
@@ -67,4 +67,22 @@ describe('HEARTH_EFFECTS', () => {
       }
     },
   );
+});
+
+describe('water underground', () => {
+  const water = () =>
+    map({ surface: new Array<number>(100).fill(3), surfaces: ['grass', 'lava', 'caveFloor', 'sewerWater'] });
+  it('lifts mist off some of the water and drips into it, the same cells every time', () => {
+    const got = findHearths(water());
+    const kinds = new Set(got.map((s) => s.kind));
+    expect(kinds).toEqual(new Set(['mist', 'drip']));
+    expect(got.filter((s) => s.kind === 'mist').length).toBeGreaterThan(4);
+    expect(got.filter((s) => s.kind === 'mist').length).toBeLessThan(25);
+    expect(findHearths(water())).toEqual(got);
+  });
+  it('plays a ripple with every drip, 32 px under its bead', () => {
+    expect(HEARTH_EFFECTS.drip).toEqual(['drip', 'dripRipple']);
+    expect(HEARTH_OFFSET.dripRipple).toBe(32);
+    expect(HEARTH_EFFECTS.mist).toEqual(['mist']);
+  });
 });

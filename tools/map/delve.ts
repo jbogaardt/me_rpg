@@ -4,7 +4,23 @@
 // is seen): the wall face against the floor, a second face row above it, a rim, then the plain dark roof. The same
 // grid paints a cave or a sewer; a theme names the grounds (GROUND in catalog.ts, art by MrBeast, art/oga_dungeon/).
 
-import type { GroundName } from './catalog';
+import { SEWER_FLOORS, type GroundName } from './catalog';
+import {
+  decalTile,
+  DRY_MIX,
+  foamTile,
+  FX_SHEET,
+  hash,
+  maskOf,
+  pickDecal,
+  pickWeighted,
+  rimTile,
+  roofTile,
+  ROOF_VARIANTS,
+  shadowTile,
+  WET_MIX,
+  type DecalMix,
+} from './delveStyle';
 import type { ZoneApi } from './zone';
 
 export type Cell = '#' | '.' | '~' | '^';
@@ -20,6 +36,10 @@ interface Theme {
   wall: GroundName[];
   /** The wall face against water or lava instead of floor, when the art differs. */
   wallWater?: GroundName;
+  /** Several drawn tiles of the floor (sheet, x, y) picked by a hash of the cell, so no grid shows; weights per tile. */
+  floorTiles?: { sheet: string; tiles: readonly (readonly [number, number])[]; weights: readonly number[] };
+  /** The mix of cracks, puddles, moss and pebbles over the floor. */
+  decals: DecalMix;
 }
 
 export const DELVE_THEMES = {
@@ -31,6 +51,7 @@ export const DELVE_THEMES = {
     roof: 'caveRoof',
     wall: ['caveFaceL', 'caveFaceU', 'caveEdge'],
     wallWater: 'caveFaceLWater',
+    decals: DRY_MIX,
   },
   rock: {
     floor: 'rockFloor',
@@ -38,12 +59,15 @@ export const DELVE_THEMES = {
     lava: 'caveLava',
     roof: 'rockRoof',
     wall: ['rockFaceL', 'rockFaceU', 'rockEdge'],
+    decals: DRY_MIX,
   },
   sewer: {
     floor: 'sewerFloor',
     water: 'sewerWater',
     roof: 'sewerRoof',
     wall: ['sewerFaceL', 'sewerFaceU', 'sewerCap', 'sewerCapTop'],
+    floorTiles: SEWER_FLOORS,
+    decals: WET_MIX,
   },
 } satisfies Record<string, Theme>;
 export type DelveTheme = keyof typeof DELVE_THEMES;
@@ -111,6 +135,38 @@ export class Delve {
     return this.cells.map((row) => row.join(''));
   }
 
+  /**
+   * The shading and detail over the painted ground (overlay tiles from `delve_fx.png`, `delveStyle.ts`): a soft contact
+   * shadow where floor and water meet a wall, foam where water meets floor, cracks, puddles, moss and pebbles on the floor,
+   * and a rock texture with a light rim on the roof. The same for every cave, crypt and sewer.
+   */
+  private dress(z: ZoneApi, theme: Theme, grounds: GroundName[]) {
+    const rock = (c: number, r: number) => this.at(c, r) === '#';
+    const dry = (c: number, r: number) => this.at(c, r) === '.';
+    const fx = (col: number, row: number, [x, y]: readonly [number, number]) => z.overlay(col, row, FX_SHEET, x, y);
+    for (let row = 0; row < this.height; row++) {
+      for (let col = 0; col < this.width; col++) {
+        const cell = this.at(col, row);
+        if (cell === '.' || cell === '~') {
+          // Walls to the north and sides darken the ground at their foot (the south side is the wall's own face, drawn on it).
+          const shade = maskOf(rock(col, row - 1), rock(col + 1, row), false, rock(col - 1, row));
+          if (shade) fx(col, row, shadowTile(shade));
+        }
+        if (cell === '~') {
+          const foam = maskOf(dry(col, row - 1), dry(col + 1, row), dry(col, row + 1), dry(col - 1, row));
+          if (foam) fx(col, row, foamTile(foam));
+        } else if (cell === '.' && grounds[row * this.width + col] === theme.floor) {
+          const d = pickDecal(theme.decals, hash(col, row, 11), hash(col, row, 12));
+          if (d) fx(col, row, decalTile(d.kind, d.variant));
+        } else if (cell === '#' && grounds[row * this.width + col] === theme.roof) {
+          fx(col, row, roofTile(Math.floor(hash(col, row, 13) * ROOF_VARIANTS)));
+          const rim = maskOf(!rock(col, row - 1), !rock(col + 1, row), false, !rock(col - 1, row));
+          if (rim) fx(col, row, rimTile(rim));
+        }
+      }
+    }
+  }
+
   /** Paint the grid onto `z`: ground for every cell and collision for rock, water and lava. */
   paint(z: ZoneApi, themeName: DelveTheme) {
     const theme: Theme = DELVE_THEMES[themeName];
@@ -120,6 +176,7 @@ export class Delve {
     z.indoor();
     z.dark();
     z.fill(theme.floor);
+    const grounds: GroundName[] = [];
     for (let row = 0; row < this.height; row++) {
       for (let col = 0; col < this.width; col++) {
         const cell = this.at(col, row);
@@ -135,9 +192,16 @@ export class Delve {
           ground = !open || depth > theme.wall.length ? theme.roof : theme.wall[depth - 1];
           if (open && depth === 1 && below !== '.' && theme.wallWater) ground = theme.wallWater;
         }
+        grounds.push(ground);
         z.fill(ground, { col, row, w: 1, h: 1 });
+        const ft = theme.floorTiles;
+        if (cell === '.' && ground === theme.floor && ft) {
+          const [x, y] = ft.tiles[pickWeighted(ft.weights, hash(col, row, 3))];
+          z.tileAt(col, row, ground, ft.sheet, x, y);
+        }
       }
     }
+    this.dress(z, theme, grounds);
     for (const [cell, reason] of [
       ['#', 'rock wall'],
       ['~', 'water'],
@@ -154,11 +218,4 @@ export class Delve {
       }
     }
   }
-}
-
-/** Fixed pseudo-noise in 0..1 from a cell (no PRNG state, so a map is the same every build). */
-function hash(col: number, row: number, seed = 0) {
-  let h = Math.imul(col + 1, 73856093) ^ Math.imul(row + 1, 19349663) ^ Math.imul(seed + 1, 83492791);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }

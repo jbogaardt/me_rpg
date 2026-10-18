@@ -98,7 +98,9 @@ by Lanea Zimmerman (Sharm), CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0, used unmodified 
 Cut by `tools/map/sewerLpc.ts` from the Liberated Pixel Cup base assets (https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles)
 by Lanea Zimmerman (Sharm) and others, CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0 (credits in [`art/lpc_sewer/CREDITS-sewer.txt`](art/lpc_sewer/CREDITS-sewer.txt)):
 the castle walls and floors, the dungeon sheet's drain, the barrel, buckets and wall torch. The stone is darkened and the water
-recoloured to murky green; the doorway, gate and grate are drawn here from the pack's stone and colours.
+recoloured to murky green; the doorway, gate and grate are drawn here from the pack's stone and colours. The floor is also turned over (mirrored) for variety, and the doorway has a vaulted inner shadow and steps drawn here.
+`public/tilesets/delve_fx.png` (`tools/map/delveFx.ts`: edge shadows, foam, puddles, cracks, moss, pebbles, rock speckle) is drawn
+in code from plain colours, original to this project, so nothing to credit; the runtime water ripples and torch reflections are code too.
 
 ## Characters (`public/sprites/lpc/`, catalog in `sprites/parts.ts`)
 

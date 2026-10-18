@@ -516,19 +516,68 @@ export const PARTICLE_EFFECTS = {
     ],
   },
 
-  /** Drips from a cave roof: a bead falls, and a few droplets spring up where it lands. Runs until stopped. */
+  /** A bead falling from a cave or sewer roof: it lands 32 px below its source (life 0.5 s at this gravity). Runs until stopped; `dripRipple` is its other half. */
   drip: {
     emitters: [
       {
         shape: 'dot',
         rate: 0.7,
-        life: [0.45, 0.6],
+        life: 0.5,
         speed: 0,
-        radius: [0, 3],
         size: [2, 3],
         alphaOverLife: [0.9, 0.9, 0],
         colorOverLife: [0xb8d8ee, 0x6fa8cc],
         gravity: 260,
+      },
+    ],
+  },
+
+  /** The ring where a drip lands (spawn it 32 px below the `drip` source, in the same frame): waits unseen while the bead falls, then spreads and fades. */
+  dripRipple: {
+    sort: 'world',
+    emitters: [
+      {
+        shape: 'ring',
+        rate: 0.7,
+        life: 1.3,
+        size: [8, 9],
+        sizeOverLife: [0.4, 0.4, 0.4, 1, 2, 2.6],
+        alphaOverLife: [0, 0, 0, 0.95, 0.45, 0],
+        colorOverLife: [0xcfe6f0, 0x8fb6c8],
+      },
+      {
+        shape: 'dot',
+        rate: 0.7,
+        life: 0.4,
+        speed: [30, 70],
+        angle: [-Math.PI * 0.9, -Math.PI * 0.1],
+        size: [2, 2],
+        alphaOverLife: [0, 0, 0.9, 0],
+        colorOverLife: [0xcfe6f0, 0x8fb6c8],
+        gravity: 260,
+        max: 6,
+      },
+    ],
+  },
+
+  /** A thin wisp of mist rising off water: pale, slow and faint, behind the hero (it y-sorts with characters). Runs until stopped. */
+  mist: {
+    sort: 'world',
+    emitters: [
+      {
+        shape: 'glow',
+        rate: 0.5,
+        life: [3, 5],
+        speed: [2, 6],
+        angle: [-Math.PI * 0.75, -Math.PI * 0.25],
+        radius: [0, 14],
+        size: [18, 28],
+        sizeOverLife: [0.7, 1.4, 2],
+        alphaOverLife: [0, 0.26, 0],
+        colorOverLife: [0xa9c9c0, 0x8fb0b0],
+        gravity: -4,
+        drag: 0.4,
+        max: 5,
       },
     ],
   },

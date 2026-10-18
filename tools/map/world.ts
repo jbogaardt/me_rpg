@@ -640,6 +640,12 @@ class BiomeWindow implements BiomeApi {
   glare(...a: Parameters<Zone['glare']>) {
     this.z.glare(...a);
   }
+  tileAt(...a: Parameters<Zone['tileAt']>) {
+    this.z.tileAt(...a);
+  }
+  overlay(...a: Parameters<Zone['overlay']>) {
+    this.z.overlay(...a);
+  }
   prop(name: PrefabName, col: number, row: number, nudge?: { dx?: number; dy?: number }) {
     this.z.prop(name, col, row, nudge);
     this.take(this.footprint(name, col, row));

@@ -1,4 +1,11 @@
-import { findHearths, hearthNear, HEARTH_EFFECTS, NIGHT_ONLY, type HearthSource } from '../systems/hearths';
+import {
+  findHearths,
+  hearthNear,
+  HEARTH_EFFECTS,
+  HEARTH_OFFSET,
+  NIGHT_ONLY,
+  type HearthSource,
+} from '../systems/hearths';
 import type { MapData } from '../map/types';
 import type { ViewRect } from '../core/camera';
 import { visibleLights, type Light } from '../systems/lights';
@@ -36,7 +43,7 @@ export class Hearth {
       const want = hearthNear(s.at, view) && (night || !NIGHT_ONLY.includes(s.at.kind));
       if (want && s.running.length === 0) {
         for (const name of HEARTH_EFFECTS[s.at.kind]) {
-          const fx = particleEffect(name, s.at.x, s.at.y);
+          const fx = particleEffect(name, s.at.x, s.at.y + (HEARTH_OFFSET[name] ?? 0));
           this.effects.add(fx);
           s.running.push(fx);
         }

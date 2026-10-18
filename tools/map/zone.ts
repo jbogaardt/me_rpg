@@ -68,6 +68,10 @@ export interface ZoneApi {
   block(rect: Rect, reason: string): unknown;
   unblock(rect: Rect): unknown;
   glare(col: number, row: number): unknown;
+  /** One cell's ground tile picked by hand (a variant of its ground), keeping `name` as its surface. */
+  tileAt(col: number, row: number, name: GroundName, sheet: string, x: number, y: number): unknown;
+  /** A see-through tile drawn over a cell's ground (edge shadows, foam, wet patches: delve.ts). */
+  overlay(col: number, row: number, sheet: string, x: number, y: number): unknown;
   spawn(col: number, row: number): unknown;
   npc(col: number, row: number): unknown;
   chest(kind: string, loot: string, col: number, row: number): unknown;
@@ -188,6 +192,14 @@ export class WorldWindow implements ZoneApi {
   }
   glare(col: number, row: number) {
     this.z.glare(col - this.o.col, row - this.o.row);
+    return this;
+  }
+  tileAt(col: number, row: number, name: GroundName, sheet: string, x: number, y: number) {
+    this.z.tileAt(col - this.o.col, row - this.o.row, name, sheet, x, y);
+    return this;
+  }
+  overlay(col: number, row: number, sheet: string, x: number, y: number) {
+    this.z.overlay(col - this.o.col, row - this.o.row, sheet, x, y);
     return this;
   }
   spawn(col: number, row: number) {
@@ -337,6 +349,8 @@ export class Zone {
   private ramps = new Set<number>();
   /** Plateau tops: cells that show their cliff's own ground (`TOP_GROUND`) and no terrain, so the top matches its rim. */
   private tops = new Set<number>();
+  /** Per cell, tiles drawn over its ground, bottom first (`overlay`). */
+  private overlays = new Map<number, { sheet: string; x: number; y: number }[]>();
   private terrain = new Map<TerrainName, Uint8Array>(); // per terrain: which cell corners it covers, (w+1) x (h+1)
   private cellMasks = new Map<TerrainName, Uint8Array>(); // per terrain: fixed corner masks per cell (see compose)
   private blocked = new Set<number>();
@@ -392,6 +406,22 @@ export class Zone {
     const g = GROUND[name];
     const line = g.tiles[row % g.tiles.length];
     this.setGround(col, row, g.sheet, line[col % line.length], name);
+  }
+
+  /** One cell's ground tile picked by hand (a variant of its ground), keeping `name` as its surface. */
+  tileAt(col: number, row: number, name: GroundName, sheet: string, x: number, y: number) {
+    this.setGround(col, row, sheet, [x, y], name);
+    return this;
+  }
+
+  /** A see-through tile drawn over a cell's ground and its terrain: the shading and detail of the caves and sewers. */
+  overlay(col: number, row: number, sheet: string, x: number, y: number) {
+    if (!this.inMap(col, row)) return this;
+    const i = row * this.width + col;
+    const list = this.overlays.get(i) ?? [];
+    list.push({ sheet, x, y });
+    this.overlays.set(i, list);
+    return this;
   }
 
   /** The ice tile with two glare lines on it: a shine in a lake's corner. Only meaningful on an ice patch. */
@@ -984,6 +1014,8 @@ export class Zone {
       out.surfaceAt[i] = z.surfaceAt[i];
       out.levelAt[i] = z.levelAt[i];
       if (z.tops.has(i)) out.tops.add(i);
+      const over = z.overlays.get(i);
+      if (over) out.overlays.set(i, over);
       if (z.ramps.has(i)) out.ramps.add(i);
       if (z.blocked.has(i)) out.blocked.add(i);
       const soft = z.soft.get(i);
@@ -1071,6 +1103,7 @@ export class Zone {
         // Mostly covered: the cell is made of it now (footprints, ice, the co-op map).
         if ([8, 4, 2, 1].filter((b) => m & b).length >= 3) surface[i] = SURFACES.indexOf(TERRAINS[name].surface);
       }
+      for (const o of this.overlays.get(i) ?? []) layers.push(sheetIndex(o.sheet), o.x, o.y);
       return layers.length ? (layers as GroundCell) : null;
     });
 

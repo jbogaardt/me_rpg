@@ -40,6 +40,13 @@ const tiles = (sheet: string, rows: [number, number][][]): GroundFill => ({
   tiles: rows.map((row) => row.map(([tx, ty]) => [tx * 32, ty * 32] as [number, number])),
 });
 
+/** The sewer floor drawn eight ways (`sewerLpc.ts`, row y=96): cobble A turned four ways, B twice and the mossy C twice, picked by a hash of the cell (delve.ts). */
+export const SEWER_FLOORS = {
+  sheet: SEWER_SHEET,
+  tiles: Array.from({ length: 8 }, (_, i) => [i * 32, 96] as const),
+  weights: [16, 16, 16, 16, 3, 3, 1, 1],
+} as const;
+
 /**
  * The grounds of the caves and sewers (maps are painted by tools/map/delve.ts): a floor, a roof (the dark top of the rock),
  * and the wall that shows where a roof meets a floor to its south: `faceL` (the row against the floor), `faceU` above it
