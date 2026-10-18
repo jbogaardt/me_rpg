@@ -704,6 +704,7 @@ export class OverworldScene implements Scene {
     }
     if (!menu.open && !shop.open && !trade.open && !busy)
       this.interact.handleAction(cmd.act, () => this.interact.act(arena.local));
+    this.interact.holdAttack(cmd.held, reading); // a held button keeps swinging in a fight; a dialog forgets a pending press
     if (!stopped)
       for (const g of guests)
         if (g.cmd.act && g.p.down === null) arena.inZone(arena.zoneOf(g.p), () => this.interact.act(g.p));
@@ -726,7 +727,7 @@ export class OverworldScene implements Scene {
     const reading = menu.open || shop.open || trade.open || dialog.active || busy;
     const fallen = this.arena.local.down !== null; // told by the host (`FLAG.down`): nothing to send while on the ground
     const cmd = fallen ? NO_COMMAND : this.input.command(dt, reading);
-    this.interact.trackGuestDrink(cmd); // a guest's own idea of whether it is drinking
+    this.interact.trackGuest(cmd, reading, dt, () => this.guest.pressAction()); // its own idea of drinking; a held A in a fight repeats
     if (!menu.open && !shop.open && !trade.open && !busy)
       this.interact.handleAction(cmd.act, () => this.guest.pressAction());
     if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);

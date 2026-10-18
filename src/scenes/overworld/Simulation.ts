@@ -238,12 +238,17 @@ export class Simulation {
   /** One tick for a player: cooldowns and regeneration, knockback, walking (or sliding on ice), and the poses. */
   updatePlayer(p: Player, cmd: Command, dt: number) {
     if (p.dm) return this.updateDm(p, cmd, dt);
-    if (p.down !== null) return this.downTick(p, dt);
+    if (p.down !== null) {
+      p.attackBuffer.clear();
+      return this.downTick(p, dt);
+    }
     const s = p.hero.stats;
     p.idle = cmd.dx || cmd.dy || cmd.act || cmd.combo !== undefined ? 0 : p.idle + dt;
     if (p.idle >= AFK_S) this.away.add(p.body);
     else this.away.delete(p.body);
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
+    // A press made just before the cooldown ended swings now (systems/inputBuffer.ts).
+    if (p.attackBuffer.step(dt, p.attackCooldown, p.zone)) this.attack(p);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
     p.ward = Math.max(0, p.ward - dt);
     p.guard = Math.max(0, p.guard - dt);
@@ -355,7 +360,10 @@ export class Simulation {
 
   /** The action button's attack: swing the sword, or start drawing the bow. */
   attack(p: Player) {
-    if (p.attackCooldown > 0) return;
+    if (p.attackCooldown > 0) {
+      p.attackBuffer.press(p.zone); // too soon: keep the press for the first tick the cooldown allows
+      return;
+    }
     this.faceAim(p);
     const { ranged: bow, focus } = p.hero.weapon;
     if (focus) {
