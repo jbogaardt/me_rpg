@@ -154,7 +154,7 @@ export class Simulation {
 
   /** A one-shot particle effect, also shown to the guest. `dir` is an angle in radians; `p` the player it happened to. */
   fx(name: FxName, x: number, y: number, dir?: number, p?: number) {
-    this.visuals.particles(name, x, y, dir);
+    this.visuals.particles(name, x, y, dir, p);
     this.emit({
       type: 'fx',
       name,
@@ -549,7 +549,8 @@ export class Simulation {
     this.text(mob.body.x, mob.body.y - 54 * mob.body.size, String(damage), 0xffffff);
     if (!killed) return;
     this.onKill(this.arena.zone.name, mobKey(mob.kind) ?? '');
-    this.fx('mobPoof', mob.body.x, mob.body.y - 12);
+    this.fx(mob.kind.death ?? 'mobPoof', mob.body.x, mob.body.y - 12);
+    if (mob.kind.named || mob.kind.boss) this.fx('bossFinale', mob.body.x, mob.body.y - 14 * mob.body.size);
     const earned = (p: Player) => Math.round(mob.kind.xp * killShare(p.hero.stats.level, mob.kind));
     this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${earned(this.arena.local)} XP`, 0xffb13f); // this page's own hero
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP

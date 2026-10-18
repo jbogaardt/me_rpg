@@ -515,12 +515,9 @@ export class OverworldScene implements Scene {
     const { arena } = this;
     const z = arena.zone;
     z.effects.update(dt);
-    this.night.update(
-      this.dayClock.sky(),
-      !z.data.indoor && enabled('dayNight', z.name),
-      arena.screen.width,
-      arena.screen.height,
-    );
+    const dusk = !z.data.indoor && enabled('dayNight', z.name);
+    this.night.update(this.dayClock.sky(), dusk, arena.screen.width, arena.screen.height);
+    z.hearth.update(z.camera.view(arena.screen.width, arena.screen.height), dusk && this.dayClock.sky() !== 0xffffff);
     if (z.weatherLayer && z.ambient && z.weather) {
       // This biome's weather (the simulation rolls it, in every zone someone is in; a guest is told by the host).
       z.ambient.wind = z.weather.wind;
