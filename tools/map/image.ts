@@ -193,7 +193,9 @@ export function renderMap(data: MapData, opts: RenderOptions = {}): Image {
         if (a === 0) continue;
         const di = (ty * W + tx) * 4;
         if (a === 255) img.data.copy(out.data, di, si, si + 4);
-        else for (let c = 0; c < 3; c++) out.data[di + c] = Math.round(out.data[di + c] * (1 - a / 255) + img.data[si + c] * (a / 255)); // see-through overlays (shade, fade)
+        else
+          for (let c = 0; c < 3; c++)
+            out.data[di + c] = Math.round(out.data[di + c] * (1 - a / 255) + img.data[si + c] * (a / 255)); // see-through overlays (shade, fade)
       }
     }
   };
