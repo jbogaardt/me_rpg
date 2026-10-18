@@ -7,7 +7,7 @@ import type { WorldEvent } from '../../net/protocol';
 import { playGame } from '../../hud/gameSfx';
 import { soundForFx, soundForText } from '../../systems/gameSounds';
 import { effectColor } from '../../systems/looks';
-import { FX_SHAKE } from '../../systems/feel';
+import { DEATH_FX, FX_KICK, FX_SHAKE } from '../../systems/feel';
 import type { ParticleEffectName } from '../../systems/particleEffects';
 import type { Arena } from './Arena';
 import { BOLT_HEIGHT, BOLT_RANGE, MELEE_REACH } from './constants';
@@ -37,9 +37,24 @@ export class Visuals {
     if (sound) playGame(sound);
     if (name === 'cheer') this.arena.playerNumbered(p)?.body.celebrate();
     if (name === 'fall') this.arena.playerNumbered(p)?.body.play('hurt');
+    this.kick(name, dir, p);
     const shake = FX_SHAKE[name];
     if (shake && (!shake.own || p === this.arena.local.slot))
       this.arena.zone.camera.shake(shake.strength, shake.seconds);
+  }
+
+  /** The angle of the last blow that landed (a foe's death has none of its own: it takes this one). */
+  private lastBlow: number | undefined;
+
+  /** The camera's push along a landed blow, a kill or a hit on the hero (systems/feel.ts): only on the screen it happened to. */
+  private kick(name: ParticleEffectName, dir: number | undefined, p: number | undefined) {
+    const kick = FX_KICK[name];
+    if (!kick) return;
+    if (name === 'hitSpark' && dir !== undefined) this.lastBlow = dir;
+    const angle = DEATH_FX.includes(name) ? this.lastBlow : dir;
+    if (DEATH_FX.includes(name)) this.lastBlow = undefined;
+    if (angle === undefined || (kick.own && p !== this.arena.local.slot)) return;
+    this.arena.zone.camera.kick(Math.cos(angle), Math.sin(angle), kick.px, kick.seconds);
   }
 
   /** A sword swing by a player standing at (x, y) facing `dir`: the arc, and leaves shaken from any canopy it reaches. */

@@ -50,6 +50,8 @@ export class Player {
   idle = 0; // seconds with no walking, attacking or casting (online, mobs leave a player who is away from the keyboard)
   sinceHit = Infinity; // seconds since last hurt (HP regenerates after a pause)
   knock = { x: 0, y: 0 };
+  /** Hit-pause (systems/hitPause.ts): seconds this hero holds still after landing or taking a blow. Host and solo own it. */
+  hitstop = 0;
   aim = { x: 0, y: 1 }; // unit vector of the last move (diagonals included): where bolts and spells go
   mouseAim = false; // `aim` comes from the mouse: the hero turns toward it only when attacking or casting
   vel = { x: 0, y: 0 }; // px/s walking velocity; only differs from the held direction while sliding on ice

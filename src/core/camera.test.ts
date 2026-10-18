@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { Camera, SHAKE_PX, chase, followOffset, pickZoom, shakeOffset, viewRect } from './camera';
+import {
+  Camera,
+  KICK_MAX_PX,
+  SHAKE_PX,
+  chase,
+  followOffset,
+  kickOffset,
+  pickZoom,
+  shakeOffset,
+  viewRect,
+} from './camera';
 import type { Container } from 'pixi.js';
 
 describe('pickZoom', () => {
@@ -94,5 +104,59 @@ describe('Camera.shake', () => {
     camera.shake(1, 1);
     camera.shake(0.1, 0.2);
     expect((camera as unknown as { rattle: { amplitude: number } }).rattle.amplitude).toBe(SHAKE_PX);
+  });
+});
+
+describe('kickOffset', () => {
+  it('pushes along the blow in whole pixels and fades to nothing', () => {
+    expect(kickOffset(0, 0.1, 1, 0, 2)).toEqual({ x: 2, y: 0 });
+    expect(kickOffset(0.05, 0.1, 1, 0, 2)).toEqual({ x: 1, y: 0 });
+    expect(kickOffset(0.1, 0.1, 1, 0, 2)).toEqual({ x: 0, y: 0 });
+    expect(kickOffset(0.02, 0.1, -3, 0, 4)).toEqual({ x: -3, y: 0 }); // direction need not be a unit vector
+    const up = kickOffset(0, 0.1, 0, -1, 3);
+    expect(up).toEqual({ x: 0, y: -3 });
+    const o = kickOffset(0.01, 0.12, Math.SQRT1_2, Math.SQRT1_2, 3.5);
+    expect(o.x).toBe(o.y);
+    expect(Number.isInteger(o.x)).toBe(true);
+    expect(kickOffset(0, 0.1, 0, 0, 3)).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('Camera.kick', () => {
+  function rig() {
+    const at = { x: 0, y: 0 };
+    const world = { scale: { set() {} }, position: { set: (x: number, y: number) => ((at.x = x), (at.y = y)) } };
+    const camera = new Camera(world as unknown as Container);
+    const bounds = { left: 0, top: 0, right: 4000, bottom: 4000 };
+    return { at, camera, frame: (dt: number) => camera.follow(640, 440, 2000, 2000, bounds, dt) };
+  }
+
+  it('moves the view along the blow for a few frames and puts it back exactly', () => {
+    const { at, camera, frame } = rig();
+    frame(0);
+    const home = { ...at };
+    camera.kick(1, 0, 2, 0.09);
+    const dx: number[] = [];
+    for (let i = 0; i < 8; i++) {
+      frame(1 / 60);
+      dx.push(at.x - home.x);
+      expect(at.y).toBe(home.y);
+    }
+    expect(dx[0]).toBeGreaterThan(0);
+    for (let i = 1; i < dx.length; i++) expect(dx[i]).toBeLessThanOrEqual(dx[i - 1] ?? 0); // only decays
+    expect(dx[dx.length - 1]).toBe(0);
+    expect(at).toEqual(home);
+  });
+
+  it('kicks a kill harder than a hit, up to a cap, and a weak kick does not cut a strong one short', () => {
+    const { camera } = rig();
+    const thump = () => (camera as unknown as { thump: { px: number } | null }).thump;
+    camera.kick(0, 1, 3.5, 0.12);
+    camera.kick(0, 1, 1.5, 0.09);
+    expect(thump()?.px).toBe(3.5);
+    camera.kick(0, 1, 50, 0.2);
+    expect(thump()?.px).toBe(KICK_MAX_PX);
+    camera.kick(0, 0, 3, 0.1); // no direction: nothing to push along
+    expect(thump()?.px).toBe(KICK_MAX_PX);
   });
 });

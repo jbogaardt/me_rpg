@@ -11,9 +11,13 @@
   **Aggro needs line of sight** (`MobWorld.sees`, `Collision.hasLineOfSight`): walls do not pull rooms; a mob also hears a
   hero at `HEARING` of its sight, and a chaser keeps `MEMORY` seconds after losing sight, and gives up the moment the hero is past its sight range. Host-only, so no co-op change.
   **Giants** (`MobKind.scale`) draw bigger and the rules follow: collision box, reach, hit circle, bars.
-- **Hit-pause** (`systems/hitPause.ts`): a surviving mob freezes and flashes 100-150ms on a blow, then staggers; host/solo
-  only, a guest sees it stop because the snapshots stop moving it (nothing on the wire). A player's i-frames
-  (`INVULN_TIME`) and blink come from the same module.
+- **Hit-pause** (`systems/hitPause.ts`): per actor, never a world freeze. A surviving mob freezes and flashes 100-150ms on
+  a blow, then staggers; the hero who landed a sword blow or arrow holds 50-70ms (`Player.hitstop`: no walking, pose held),
+  110ms on a kill (a boss 200ms), and a struck hero holds 80ms. A killed mob holds the same kill pause and its death
+  effect plays when the hold ends (`Mob.hit`'s `onDeathHold`). Cooldowns, i-frames and damage keep running through a pause,
+  so balance is untouched. Knockback starts on the hit tick (about 30px, decaying, through the pause too). Host/solo only;
+  a guest sees mobs stop because snapshots stop moving them (a friend's own hero walks on its own screen, so it feels the
+  host's pause on its hero only as a held snapshot). Nothing on the wire. i-frames (`INVULN_TIME`) and blink: same module.
 - **Windup cue is data** (`MobKind.telegraph`, `telegraphOf` in `systems/combat.ts`): flash colour and a ground lane for specials. The guest draws it from the existing `windup` state and timer (no protocol field).
 - **On a co-op guest a `Mob` is only a view of the host's state** (`setRemote`): it plays windup and hurt poses and draws
   a beam from the `channel` state itself, but never decides anything. The host alone damages.

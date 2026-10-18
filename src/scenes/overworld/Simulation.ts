@@ -43,7 +43,7 @@ import { bossMends } from '../../systems/bosses';
 import { GIVERS, QUEST_GIVER, recordKill, recordVisit, type Progress } from '../../systems/quests';
 import { SHOOT_RELEASE_MS } from '../../sprites/doll';
 import { EDGE_SHARE, GUARD_TAKEN } from '../../systems/skills';
-import { blinkAlpha } from '../../systems/hitPause';
+import { blinkAlpha, heroPauseFor, HERO_HURT_PAUSE, tickPause } from '../../systems/hitPause';
 import type { Strike } from '../../entities/WeatherLayer';
 import type { ZoneState } from '../ZoneState';
 
@@ -280,6 +280,13 @@ export class Simulation {
       if (Math.hypot(p.knock.x, p.knock.y) < 5) p.knock = { x: 0, y: 0 };
     }
 
+    if (p.hitstop > 0) {
+      // Hit-pause: the hero holds mid-blow (no walking, the pose and swing hold) while cooldowns and i-frames run on.
+      p.hitstop = tickPause(p.hitstop, dt);
+      p.moving = false;
+      p.body.alpha = blinkAlpha(p.invuln);
+      return;
+    }
     p.moving = this.move(p, cmd, dt);
     this.drinkTick(p, dt);
     // Lunge into a swing; blink while invulnerable.
@@ -392,7 +399,7 @@ export class Simulation {
     const edge = this.takeEdge(p); // Arcane Edge: this swing carries extra magic
     for (const mob of this.arena.mobs) {
       if (mob.alive && Math.hypot(mob.body.x - cx, mob.body.y - cy) < MELEE_REACH + (mob.body.size - 1) * 14) {
-        this.hitMob(mob, rollDamage(attackPower(p.hero) + edge, mob.kind.defense), vx, vy);
+        this.hitMob(mob, rollDamage(attackPower(p.hero) + edge, mob.kind.defense), vx, vy, false, p);
         if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
       }
     }
@@ -434,7 +441,7 @@ export class Simulation {
       vy,
       shot.bow.range,
       (mob) => {
-        this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy);
+        this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy, false, p);
         if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
       },
       p.slot,
@@ -548,24 +555,30 @@ export class Simulation {
 
   // --- Damage ---
 
-  /** Every player takes the kill's XP and gold (in solo, just the one). */
-  hitMob(mob: Mob, rawDamage: number, vx: number, vy: number, bolt = false) {
+  /**
+   * Every player takes the kill's XP and gold (in solo, just the one). `by` is the striker of a sword blow or an arrow: it
+   * holds a beat with the blow (hit-pause), and its screen alone gets the kick (the effects carry it as `p`).
+   */
+  hitMob(mob: Mob, rawDamage: number, vx: number, vy: number, bolt = false, by?: Player) {
     // a foe marked by Spirit Mark takes more; the DM's pressure makes the world harder or gentler to hurt
     const damage = Math.max(1, Math.round((rawDamage * this.casting.markFactor(mob)) / this.pressure()));
-    const killed = mob.hit(damage, vx, vy);
+    const boss = !!(mob.kind.named || mob.kind.boss);
+    // A kill's death effect waits out the foe's hold (it plays from the mob's own update, in its zone).
+    const killed = mob.hit(damage, vx, vy, () => {
+      this.fx(mob.kind.death ?? 'mobPoof', mob.body.x, mob.body.y - 12, undefined, by?.slot);
+      if (boss) this.fx('bossFinale', mob.body.x, mob.body.y - 14 * mob.body.size);
+    });
+    if (by && !bolt) by.hitstop = Math.max(by.hitstop, heroPauseFor(damage, mob.kind.maxHp, killed, boss));
     this.onDealt(mobKey(mob.kind) ?? '', damage, killed);
     // Sparks fly on from the blow (the bolt has its own impact burst), at chest height.
-    if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx));
+    if (!bolt) this.fx('hitSpark', mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx), by?.slot);
     this.text(mob.body.x, mob.body.y - 54 * mob.body.size, String(damage), 0xffffff);
     if (!killed) return;
     this.onKill(this.arena.zone.name, mobKey(mob.kind) ?? '');
-    this.fx(mob.kind.death ?? 'mobPoof', mob.body.x, mob.body.y - 12);
-    if (mob.kind.named || mob.kind.boss) this.fx('bossFinale', mob.body.x, mob.body.y - 14 * mob.body.size);
     const earned = (p: Player) => Math.round(mob.kind.xp * killShare(p.hero.stats.level, mob.kind));
     this.text(mob.body.x, mob.body.y - 66 * mob.body.size, `+${earned(this.arena.local)} XP`, 0xffb13f); // this page's own hero
     const gold = rollGold(mob.kind); // everyone gets the same purse, like the XP
     this.text(mob.body.x, mob.body.y - 78 * mob.body.size, `+${gold}g`, 0xffd34d);
-    const boss = mob.kind.named || mob.kind.boss;
     for (const p of this.arena.party()) {
       if (boss) this.cheer(p);
       p.hero.gold += goldFor(p.hero, gold); // gear can add to the purse and the XP, so each player gets their own share
@@ -631,13 +644,15 @@ export class Simulation {
     s.hp -= damage;
     p.sinceHit = 0;
     this.text(p.body.x, p.body.y - 54, String(damage), burn ? 0xff7fd0 : 0xff5a5a);
-    this.fx('heroHurt', p.body.x, p.body.y - 14, undefined, p.slot);
+    const away = Math.atan2(p.body.y - fromY, p.body.x - fromX); // the blow's direction, for the kick on this screen
+    this.fx('heroHurt', p.body.x, p.body.y - 14, burn ? undefined : away, p.slot);
     if (burn) {
       // damage over time: no knockback, no stun, no blinking immunity (the next burn must land), the shot still goes
       if (s.hp <= 0) this.fall(p);
       return;
     }
     p.invuln = INVULN_TIME;
+    p.hitstop = Math.max(p.hitstop, HERO_HURT_PAUSE);
     p.pendingShot = null; // a hit spoils the shot
     p.body.play('hurt');
     const dx = p.body.x - fromX;
@@ -666,6 +681,7 @@ export class Simulation {
     if (p.down !== null || p.dm) return;
     if (p.trial !== null) return this.defeat(p);
     p.down = 0;
+    p.hitstop = 0;
     p.pendingShot = null;
     p.vel = { x: 0, y: 0 };
     p.body.play('hurt');
