@@ -4,15 +4,19 @@ import type { Hero, Ranged } from '../systems/combat';
 import type { SkillId } from '../systems/skills';
 import type { Direction } from '../core/direction';
 import { AttackBuffer } from '../systems/inputBuffer';
+import { rollInvulnerable, type RollState } from '../systems/roll';
 import type { PendingSwing } from '../systems/swing';
 import { DM_COLOR, PLAYER_COLORS } from '../systems/looks';
 import { Character } from './Character';
+import { RollLook } from './RollLook';
 
 /** What a player wants to do this tick, from the keyboard / touch controls or from the network. */
 export interface Command {
   dx: number; // -1, 0, 1
   dy: number;
   act: boolean; // action button pressed (talk / attack)
+  /** The roll key or button was pressed (systems/roll.ts). A guest's press arrives as the toggle bit `KEY.roll`. */
+  roll?: boolean;
   /** The action button is held down (the local hero only; a guest's hold is repeated as `act` presses). */
   held?: boolean;
   combo?: number; // finished a combo of the wand or tome in hand: its index in the weapon's `focus.combos`
@@ -37,6 +41,16 @@ export class Player {
   swing: PendingSwing | null = null;
   swingDir: Direction = 'down'; // the way the press aimed it (a mouse-aimed swing keeps it through startup)
   castCooldown = 0; // seconds before the next combo
+  /** The dodge roll in progress (systems/roll.ts; host and solo own it), or null. */
+  roll: RollState | null = null;
+  /** Seconds before the next roll may start (counted from the start of the last one). */
+  rollCooldown = 0;
+  /** A roll pressed just before it was legal (the same buffer as the sword's; host and solo own it). */
+  readonly rollBuffer = new AttackBuffer();
+  /** How a roll looks on this body (every page: from the host's `roll` or a guest's `FLAG.roll`). */
+  readonly rollLook = new RollLook();
+  /** Host: the last roll toggle bit honoured from a network player (`KEY.roll`). */
+  seenRoll = 0;
   /** Arcane Edge (systems/skills.ts): the next `charges` attacks carry extra magic, for `timer` more seconds. */
   edge = { charges: 0, timer: 0 };
   /** Iron Skin: seconds left of taking less damage. */
@@ -60,9 +74,9 @@ export class Player {
   aim = { x: 0, y: 1 }; // unit vector of the last move (diagonals included): where bolts and spells go
   mouseAim = false; // `aim` comes from the mouse: the hero turns toward it only when attacking or casting
   vel = { x: 0, y: 0 }; // px/s walking velocity; only differs from the held direction while sliding on ice
-  /** Immune to damage right now: a recent hit (blinking), a Ward spell (tinted), or just having come through a door (neither). */
+  /** Immune to damage right now: a recent hit (blinking), a Ward spell (tinted), the middle of a roll, or just having come through a door (neither). */
   get safe(): boolean {
-    return this.invuln > 0 || this.grace > 0 || this.ward > 0;
+    return this.invuln > 0 || this.grace > 0 || this.ward > 0 || rollInvulnerable(this.roll);
   }
   /** The zone this player is in (a key of the scene's zones). The host moves players between zones; a guest follows. */
   zone = '';

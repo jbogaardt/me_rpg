@@ -25,7 +25,17 @@ import {
   type Ranged,
 } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
+import { ROLL_COOLDOWN, canRoll, moveRoll, rollDirection, startRoll } from '../../systems/roll';
 import { assistFacing } from '../../systems/meleeAssist';
+import {
+  afterArmor,
+  blockedDamage,
+  furyFactor,
+  gapArmor,
+  levelGap,
+  poiseCost,
+  stunFactor,
+} from '../../systems/mobDefense';
 import {
   drainNeeds,
   drinkableNear,
@@ -141,7 +151,7 @@ export class Simulation {
           arena.inZone(z, () => arena.bodies()),
         ),
       sees: (x0, y0, x1, y1) => z.collision.hasLineOfSight(x0, y0, x1, y1),
-      strike: (mob, target) => arena.inZone(z, () => this.hurtHero(mob, target)),
+      strike: (mob, target, power) => arena.inZone(z, () => this.hurtHero(mob, target, power)),
       shoot: (mob, ux, uy) => arena.inZone(z, () => this.mobShoot(mob, ux, uy)),
       ray: (mob, target) => arena.inZone(z, () => this.mobRay(mob, target)),
     };
@@ -238,14 +248,18 @@ export class Simulation {
     if (p.dm) return this.updateDm(p, cmd, dt);
     if (p.down !== null) {
       p.attackBuffer.clear();
+      p.rollBuffer.clear();
+      p.roll = null;
       p.swing = null;
       return this.downTick(p, dt);
     }
     const s = p.hero.stats;
-    p.idle = cmd.dx || cmd.dy || cmd.act || cmd.combo !== undefined ? 0 : p.idle + dt;
+    p.idle = cmd.dx || cmd.dy || cmd.act || cmd.roll || cmd.combo !== undefined ? 0 : p.idle + dt;
     if (p.idle >= AFK_S) this.away.add(p.body);
     else this.away.delete(p.body);
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
+    p.rollCooldown = Math.max(0, p.rollCooldown - dt);
+    if (cmd.roll) p.rollBuffer.press(p.zone); // kept for a moment if the roll is not legal yet (`rollGate`)
     // A press made just before the cooldown ended swings now (systems/inputBuffer.ts).
     if (p.attackBuffer.step(dt, p.attackCooldown, p.zone)) this.attack(p);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
@@ -282,11 +296,17 @@ export class Simulation {
     if (p.hitstop > 0) {
       // Hit-pause: the hero holds mid-blow (no walking, the pose and swing hold) while cooldowns and i-frames run on.
       p.hitstop = tickPause(p.hitstop, dt);
-      p.moving = false;
-      p.body.alpha = blinkAlpha(p.invuln);
-      return;
+      if (!p.roll) {
+        // (A roll in progress is not held by a pause of its own blow: its clock, and so its i-frame window, must run on.)
+        p.moving = false;
+        p.body.alpha = blinkAlpha(p.invuln);
+        return;
+      }
     }
-    p.moving = this.move(p, cmd, dt);
+    // The dodge roll (systems/roll.ts): a buffered press starts it the first tick it is legal; it then replaces walking.
+    if (p.rollBuffer.step(dt, this.rollWait(p), p.zone)) this.beginRoll(p, cmd);
+    if (p.roll) p.moving = this.rollTick(p, dt);
+    else p.moving = this.move(p, cmd, dt);
     if (p.swing && p.mouseAim) p.body.face(p.swingDir);
     this.drinkTick(p, dt);
     // The blade is out: the blow lands now, on the frame the body shows it (before `animate` below, so the hit-stop it
@@ -303,6 +323,43 @@ export class Simulation {
     p.body.alpha = blinkAlpha(p.invuln);
     p.body.setTint(auraTint({ ward: p.ward > 0, edge: p.edge.charges > 0, guard: p.guard > 0 }));
     p.body.animate(dt * 1000, p.moving);
+    p.rollLook.step(p.body, p.roll !== null, p === this.arena.local, dt, this.arena.effects);
+  }
+
+  /** 0 when a roll may start now, else a positive number (the buffer holds the press while it is positive). */
+  private rollWait(p: Player): number {
+    const stunned = p.hitstop > 0 || p.knock.x !== 0 || p.knock.y !== 0;
+    return canRoll({ cooldown: p.rollCooldown, rolling: p.roll !== null, down: p.down !== null, stunned, dm: p.dm })
+      ? 0
+      : 1;
+  }
+
+  /**
+   * Start a roll: toward the walk keys (else the aim, else the facing). It cancels a swing in its startup or recovery and
+   * a bow being drawn (not hit-stun or knock: `rollWait` refuses those), and pays the cooldown from now.
+   */
+  private beginRoll(p: Player, cmd: Command) {
+    const [fx, fy] = DIR_VEC[p.body.facing];
+    const dir = rollDirection(cmd.dx, cmd.dy, p.aim, [fx, fy]);
+    p.roll = startRoll(dir.x, dir.y);
+    p.rollCooldown = ROLL_COOLDOWN;
+    p.swing = null;
+    p.pendingShot = null;
+    p.vel = { x: 0, y: 0 };
+    p.drinking = null;
+    p.body.cancelAction();
+    p.body.release();
+    p.body.face(directionToward(dir.x, dir.y));
+    p.aim = dir;
+  }
+
+  /** One tick of a roll: slide along the way it goes (in small steps, so a wall is slid along and never tunnelled). */
+  private rollTick(p: Player, dt: number): boolean {
+    const r = p.roll;
+    if (!r) return false;
+    const done = moveRoll(r, dt, (mx, my) => this.arena.collision.slide(p.body, mx, my, this.arena.bodies()));
+    if (done) p.roll = null;
+    return true;
   }
 
   /**
@@ -374,7 +431,7 @@ export class Simulation {
 
   /** The action button's attack: swing the sword, or start drawing the bow. */
   attack(p: Player) {
-    if (p.attackCooldown > 0) {
+    if (p.attackCooldown > 0 || p.roll) {
       p.attackBuffer.press(p.zone); // too soon: keep the press for the first tick the cooldown allows
       return;
     }
@@ -457,7 +514,7 @@ export class Simulation {
       vy,
       shot.bow.range,
       (mob) => {
-        this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy, false, p);
+        this.hitMob(mob, rollDamage(shot.damage + edge, mob.kind.defense), ux, uy, false, p, { arrow: true });
         if (edge) this.fx('zap', mob.body.x, mob.body.y - 16);
       },
       p.slot,
@@ -475,7 +532,7 @@ export class Simulation {
 
   /** The player tapped out combo `index` of their wand or tome: cast its spell if there is the mana for it. */
   combo(p: Player, index: number) {
-    if (p.dm) return; // the Dungeon Master casts nothing at the party's foes
+    if (p.dm || p.roll) return; // the Dungeon Master casts nothing at the party's foes; a roll is no free cast
     this.casting.combo(p, index);
   }
 
@@ -524,7 +581,9 @@ export class Simulation {
       )
         return false;
     if (p.safe) return true; // warded or just arrived: the beam holds but does nothing
-    const burn = this.pressed(rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero)));
+    const burn = this.pressed(
+      this.furious(mob, p, rollDamage(Math.max(1, mob.kind.attack * ray.power), defensePower(p.hero))),
+    );
     this.onHurt(p, mobKey(mob.kind) ?? '', burn);
     this.harm(p, burn, mob.body.x, mob.body.y, true);
     return true;
@@ -573,23 +632,48 @@ export class Simulation {
 
   /**
    * Every player takes the kill's XP and gold (in solo, just the one). `by` is the striker of a sword blow or an arrow: it
-   * holds a beat with the blow (hit-pause), and its screen alone gets the kick (the effects carry it as `p`).
+   * holds a beat with the blow (hit-pause), and its screen alone gets the kick (the effects carry it as `p`). `opts.from`
+   * names the caster of a spell (who has no `by`), `opts.arrow` marks an arrow (a projectile, like a spell, that a shield turns).
+   *
+   * What a foe does with the blow is its kind's (systems/mobDefense.ts): a hero well under it does less (flat armor
+   * on top of its defense) and stuns it for less; a shield turns a frontal arrow or spell aside (it still costs the foe poise,
+   * so enough of them break its guard); a foe with poise is only staggered once the blows empty it.
    */
-  hitMob(mob: Mob, rawDamage: number, vx: number, vy: number, bolt = false, by?: Player) {
+  hitMob(
+    mob: Mob,
+    rawDamage: number,
+    vx: number,
+    vy: number,
+    bolt = false,
+    by?: Player,
+    opts: { from?: Player; arrow?: boolean } = {},
+  ) {
+    const attacker = by ?? opts.from;
+    const gap = attacker ? levelGap(mob.kind, attacker.hero.stats.level) : 0;
     // a foe marked by Spirit Mark takes more; the DM's pressure makes the world harder or gentler to hurt
-    const damage = Math.max(1, Math.round((rawDamage * this.casting.markFactor(mob)) / this.pressure()));
+    const armored = afterArmor(rawDamage, gapArmor(gap));
+    let damage = Math.max(1, Math.round((armored * this.casting.markFactor(mob)) / this.pressure()));
+    const guard = bolt || opts.arrow ? mob.guards(vx, vy) : null;
+    if (guard) damage = blockedDamage(damage, guard);
     const boss = !!(mob.kind.named || mob.kind.boss);
     // A kill's death effect waits out the foe's hold (it plays from the mob's own update, in its zone).
-    const killed = mob.hit(damage, vx, vy, () => {
-      this.fx(mob.kind.death ?? 'mobPoof', mob.body.x, mob.body.y - 12, undefined, by?.slot);
-      if (boss) this.fx('bossFinale', mob.body.x, mob.body.y - 14 * mob.body.size);
-    });
-    if (by && !bolt) by.hitstop = Math.max(by.hitstop, heroPauseFor(damage, mob.kind.maxHp, killed, boss));
+    const killed = mob.hit(
+      damage,
+      vx,
+      vy,
+      () => {
+        this.fx(mob.kind.death ?? 'mobPoof', mob.body.x, mob.body.y - 12, undefined, by?.slot);
+        if (boss) this.fx('bossFinale', mob.body.x, mob.body.y - 14 * mob.body.size);
+      },
+      { poise: poiseCost(bolt), stun: stunFactor(gap) },
+    );
+    if (by && !bolt && !guard) by.hitstop = Math.max(by.hitstop, heroPauseFor(damage, mob.kind.maxHp, killed, boss));
     this.onDealt(mobKey(mob.kind) ?? '', damage, killed);
-    // Sparks fly on from the blow (the bolt has its own impact burst), at chest height; how big and what colour says how hard.
+    // Sparks fly on from the blow (the bolt has its own impact burst), at chest height; how big and what colour says how
+    // hard. A blow the shield turned aside does nothing, so it reads as the faintest spark (a graze), spell or not.
     const tier = HIT_FX[hitTier(damage, mob.kind.maxHp, killed)];
-    if (!bolt) this.fx(tier, mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx), by?.slot);
-    this.number(mob.body.x, mob.body.y - 54 * mob.body.size, damage, 0xffffff);
+    if (!bolt || guard) this.fx(tier, mob.body.x, mob.body.y - 14 * mob.body.size, Math.atan2(vy, vx), by?.slot);
+    this.number(mob.body.x, mob.body.y - 54 * mob.body.size, damage, guard ? 0x9fb4c8 : 0xffffff);
     if (!killed) return;
     this.onKill(this.arena.zone.name, mobKey(mob.kind) ?? '');
     const earned = (p: Player) => Math.round(mob.kind.xp * killShare(p.hero.stats.level, mob.kind));
@@ -636,12 +720,17 @@ export class Simulation {
     this.cheer(p);
   }
 
-  private hurtHero(mob: Mob, victim: Character) {
+  private hurtHero(mob: Mob, victim: Character, power = 1) {
     const p = this.arena.party().find((q) => q.body === victim);
     if (!p || p.safe) return;
-    const damage = this.pressed(rollDamage(mob.kind.attack, defensePower(p.hero)));
+    const damage = this.pressed(this.furious(mob, p, rollDamage(mob.kind.attack * power, defensePower(p.hero))));
     this.onHurt(p, mobKey(mob.kind) ?? '', damage);
     this.harm(p, damage, mob.body.x, mob.body.y);
+  }
+
+  /** A foe well over the hero's level hits harder (`furyFactor`, systems/mobDefense.ts): a mistake in its reach is punished. */
+  private furious(mob: Mob, p: Player, damage: number): number {
+    return Math.round(damage * furyFactor(levelGap(mob.kind, p.hero.stats.level)));
   }
 
   /** The DM's pressure as a factor: 0.7 gentle, 1 steady, 1.5 fierce (`systems/dmPowers.ts`). */
@@ -669,6 +758,7 @@ export class Simulation {
       return;
     }
     p.invuln = INVULN_TIME;
+    p.roll = null; // a blow that landed outside the window ends the roll (the knock below wins)
     p.hitstop = Math.max(p.hitstop, HERO_HURT_PAUSE);
     p.pendingShot = null; // a hit spoils the shot
     p.swing = null; // and the swing: a struck hero lands no ghost blow
@@ -733,15 +823,15 @@ export class Simulation {
     if (this.trialDefeat(p)) return;
     const { arena } = this;
     if (!p.dm) this.onDefeat(p, p.zone, p.body.x, p.body.y);
-    const { home } = arena;
+    const home = p === arena.local ? arena.wake() : { zone: arena.home, spot: arena.home.data.spawn };
     const s = p.hero.stats;
     s.hp = s.maxHp;
     s.mp = s.maxMp;
-    if (p.zone === home.name) {
-      p.body.position.set(...cellFeet(home.data.spawn));
+    if (p.zone === home.zone.name) {
+      p.body.position.set(...cellFeet(home.spot));
       p.body.face('down');
     } else {
-      this.zones.travel(p, home, home.data.spawn); // wake at the start of the world, whatever zone it was in
+      this.zones.travel(p, home.zone, home.spot); // wake at home (the town, else the start of the world), whatever zone it was in
     }
     p.aim = { x: 0, y: 1 };
     p.knock = { x: 0, y: 0 };

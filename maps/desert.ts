@@ -60,11 +60,11 @@ export default defineBiome({
     // --- A cave mouth in an outcrop of rock: the way down into the Sunscar Hollow (maps/cave_sunscar.ts) ---------------------
     z.keepClear([{ col: CAVE_MOUTH.col - 5, row: CAVE_MOUTH.row - 5, w: 12, h: 10 }]);
     z.prop('caveMouth', CAVE_MOUTH.col, CAVE_MOUTH.row);
-    z.door(CAVE_MOUTH.col + 1, CAVE_MOUTH.row, 1, 'cave_sunscar', CAVE_ARRIVAL.col, CAVE_ARRIVAL.row);
+    z.door(CAVE_MOUTH.col + 1, CAVE_MOUTH.row, 2, 'cave_sunscar', CAVE_ARRIVAL.col, CAVE_ARRIVAL.row);
     z.prop('sandBoulder', CAVE_MOUTH.col - 3, CAVE_MOUTH.row);
-    z.prop('sandBoulderB', CAVE_MOUTH.col + 2, CAVE_MOUTH.row);
+    z.prop('sandBoulderB', CAVE_MOUTH.col + 5, CAVE_MOUTH.row);
     z.prop('sandSpire', CAVE_MOUTH.col - 1, CAVE_MOUTH.row - 2);
-    z.prop('sandSpire', CAVE_MOUTH.col + 4, CAVE_MOUTH.row - 1);
+    z.prop('sandSpire', CAVE_MOUTH.col + 4, CAVE_MOUTH.row - 2);
     z.keepFree(CAVE_MOUTH.col + 1, CAVE_MOUTH.row + 1);
     z.place('The Sunscar Hollow', CAVE_MOUTH.col + 1, CAVE_MOUTH.row + 3);
 

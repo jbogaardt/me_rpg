@@ -5,7 +5,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { WHOLE_BODIES } from '../../sprites/parts';
 import { outfitLayers, type Outfit, type PartManifest } from '../../src/sprites/doll';
-import { mobLevel, mobTimings } from '../../src/systems/combat';
+import { mobLevel, mobTimings, WINDUP_FLOOR } from '../../src/systems/combat';
+import { POISE_CAP } from '../../src/systems/mobDefense';
 import { heroModel } from '../../src/systems/dmBoss';
 import { ROOT } from '../map/image';
 import { capabilityTable } from '../../src/content/schema';
@@ -14,6 +15,10 @@ import { campaigns, loadContentFromDisk, PACKS } from './disk';
 
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/sprites/lpc/parts.json'), 'utf8')) as PartManifest;
 const HERO_SPEED = 120;
+// Hero levels: a foe at or over ELITE_LEVEL has poise and keeps up or charges; one under LOW_TIER has none (it staggers on every blow).
+const ELITE_LEVEL = 7;
+const LOW_TIER = 5;
+const MELEE_REACH = 44; // `REACH` in src/entities/Mob.ts (the tools project has no DOM, so it cannot import that file)
 // A kind that may attack without a windup/tell: none today (every attack must warn the hero). A new entry is a
 // deliberate, documented exception ("<kind id>: why a blow without warning is fair"), reviewed by combat-and-controls.
 const NO_TELL = new Set<string>();
@@ -28,6 +33,7 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
     expect(mobs.length).toBeGreaterThan(0);
     if (campaign !== PACKS) expect(quests.quests.length).toBeGreaterThan(0); // the packs' stories are their arcs
     expect(scenarios.nodes.has(scenarios.start)).toBe(true);
+    if (scenarios.home) expect(scenarios.nodes.has(scenarios.home)).toBe(true); // where a solo hero wakes; the map check proves the spot is walkable
   });
 
   it('has no two people with the same name (a story would meet them twice)', () => {
@@ -53,13 +59,45 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
   it.each(mobs)('%s is a fair enemy for a hero who can reach it', (id) => {
     const kind = content.mobKind(id);
     const { windup, recover, stagger } = mobTimings(kind);
-    expect(windup * 0.8).toBeGreaterThanOrEqual(0.4); // even the shortest spread windup (-20%) outlasts a reaction
+    expect(windup * 0.8).toBeGreaterThanOrEqual(WINDUP_FLOOR); // even the shortest spread windup (-20%) is a clear tell
     expect(stagger).toBeLessThan(windup + recover);
     expect(heroModel(mobLevel(kind)).power - kind.defense).toBeGreaterThan(0); // a hero of its own level can always hurt it
     if (kind.shot) {
       expect(kind.shot.range).toBeLessThanOrEqual(kind.sight);
       expect(kind.shot.speed).toBeLessThan(HERO_SPEED * 1.6);
       expect(windup).toBeGreaterThanOrEqual(0.5);
+    }
+  });
+
+  // Tough foes (systems/mobDefense.ts): the elites hold their ground, and a foe that hits that hard cannot simply be walked away from.
+  it.each(mobs)('%s has the poise, speed and gap-closer its tier calls for', (id) => {
+    const kind = content.mobKind(id);
+    const melee = !kind.shot && !kind.ray;
+    const elite = !!kind.named || mobLevel(kind) >= ELITE_LEVEL;
+    if (kind.poiseMax) {
+      expect(kind.poiseMax, `${id} poise`).toBeGreaterThanOrEqual(3);
+      expect(kind.poiseMax, `${id} poise`).toBeLessThanOrEqual(POISE_CAP);
+      expect(mobTimings(kind).stagger, `${id}: a poise break must stagger it for a real moment`).toBeGreaterThanOrEqual(
+        0.25,
+      );
+    }
+    if (mobLevel(kind) < LOW_TIER && !kind.named) expect(kind.poiseMax ?? 0, `${id} is low tier`).toBe(0);
+    if (elite && melee) {
+      expect(kind.poiseMax ?? 0, `${id} is an elite`).toBeGreaterThanOrEqual(3);
+      // it keeps up with a walking hero, or it closes the gap itself
+      expect(kind.speed >= HERO_SPEED || !!kind.charge, `${id} is slow and has no charge`).toBe(true);
+    }
+    if (kind.immovable)
+      expect(kind.poiseMax ?? 0, `${id}: an unshovable foe still breaks with its poise`).toBeGreaterThan(0);
+    if (kind.guard) expect(kind.poiseMax ?? 0, `${id}: a shield breaks with its poise`).toBeGreaterThan(0);
+    if (kind.charge) {
+      expect(melee, `${id}: a shooter does not charge`).toBe(true);
+      expect(kind.charge.windup * 0.8, `${id}: a charge must be readable`).toBeGreaterThanOrEqual(0.4);
+      expect(kind.charge.speed).toBeGreaterThan(HERO_SPEED);
+      expect(kind.charge.range).toBeLessThan(kind.sight);
+      expect(kind.charge.range, `${id}: it must not charge from inside its own reach`).toBeGreaterThan(
+        MELEE_REACH * (kind.scale ?? 1),
+      );
     }
   });
 

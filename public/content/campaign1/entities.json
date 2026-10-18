@@ -83,7 +83,9 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.5,
-        "stagger": 0.1
+        "stagger": 0.3,
+        "poiseMax": 3,
+        "charge": {}
       }
     },
     "goblin": {
@@ -264,7 +266,7 @@
         "hp": 176,
         "attack": 32,
         "defense": 6,
-        "speed": 46,
+        "speed": 126,
         "sight": 160,
         "xp": 108,
         "gold": 60
@@ -272,7 +274,10 @@
       "behavior": {
         "windup": 0.65,
         "recover": 0.65,
-        "stagger": 0.04
+        "stagger": 0.35,
+        "poiseMax": 4,
+        "charge": {},
+        "immovable": true
       }
     },
     "chieftain": {
@@ -292,7 +297,7 @@
         "hp": 170,
         "attack": 32,
         "defense": 4,
-        "speed": 56,
+        "speed": 126,
         "sight": 192,
         "xp": 100,
         "gold": 55
@@ -300,7 +305,9 @@
       "behavior": {
         "windup": 0.65,
         "recover": 0.45,
-        "stagger": 0.06
+        "stagger": 0.35,
+        "poiseMax": 4,
+        "charge": {}
       }
     },
     "cultist": {
@@ -350,7 +357,7 @@
         "hp": 320,
         "attack": 46,
         "defense": 6,
-        "speed": 58,
+        "speed": 126,
         "sight": 192,
         "xp": 180,
         "gold": 90
@@ -358,7 +365,10 @@
       "behavior": {
         "windup": 0.65,
         "recover": 0.45,
-        "stagger": 0.05
+        "stagger": 0.4,
+        "poiseMax": 6,
+        "charge": {},
+        "immovable": true
       }
     },
     "wraith": {
@@ -388,7 +398,8 @@
           "range": 192,
           "speed": 150,
           "color": "#7aa8ff"
-        }
+        },
+        "poiseMax": 3
       }
     },
     "hexer": {
@@ -445,7 +456,9 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.8,
-        "stagger": 0.1
+        "stagger": 0.3,
+        "poiseMax": 3,
+        "charge": {}
       }
     },
     "warg": {
@@ -491,7 +504,7 @@
         "hp": 176,
         "attack": 35,
         "defense": 6,
-        "speed": 56,
+        "speed": 126,
         "sight": 176,
         "xp": 102,
         "gold": 57
@@ -499,7 +512,11 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.5,
-        "stagger": 0.06
+        "stagger": 0.35,
+        "poiseMax": 4,
+        "charge": {},
+        "guard": {},
+        "immovable": true
       }
     },
     "frostWarden": {
@@ -521,7 +538,7 @@
         "hp": 202,
         "attack": 38,
         "defense": 6,
-        "speed": 58,
+        "speed": 126,
         "sight": 192,
         "xp": 120,
         "gold": 67
@@ -529,7 +546,11 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.5,
-        "stagger": 0.05
+        "stagger": 0.35,
+        "poiseMax": 5,
+        "charge": {},
+        "guard": {},
+        "immovable": true
       }
     },
     "snowman": {
@@ -552,7 +573,10 @@
       "behavior": {
         "windup": 0.6,
         "recover": 0.9,
-        "stagger": 0.05
+        "stagger": 0.4,
+        "poiseMax": 6,
+        "charge": {},
+        "immovable": true
       }
     },
     "elder": {
@@ -913,7 +937,7 @@
         "hp": 160,
         "attack": 24,
         "defense": 3,
-        "speed": 60,
+        "speed": 126,
         "sight": 192,
         "xp": 100,
         "gold": 56
@@ -921,7 +945,11 @@
       "behavior": {
         "windup": 0.6,
         "recover": 0.45,
-        "stagger": 0.06
+        "stagger": 0.35,
+        "poiseMax": 4,
+        "charge": {},
+        "guard": {},
+        "immovable": true
       }
     },
     "stillheart": {
@@ -949,7 +977,9 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.9,
-        "stagger": 0.03
+        "stagger": 0.3,
+        "poiseMax": 5,
+        "charge": {}
       }
     },
     "ashmaw": {
@@ -980,7 +1010,10 @@
       "behavior": {
         "windup": 0.6,
         "recover": 0.9,
-        "stagger": 0.04
+        "stagger": 0.3,
+        "poiseMax": 6,
+        "guard": {},
+        "charge": {}
       }
     },
     "cisternKing": {
@@ -1008,7 +1041,9 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.9,
-        "stagger": 0.04
+        "stagger": 0.3,
+        "poiseMax": 6,
+        "charge": {}
       }
     },
     "paleWarden": {
@@ -1038,7 +1073,10 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.8,
-        "stagger": 0.04
+        "stagger": 0.3,
+        "poiseMax": 6,
+        "guard": {},
+        "charge": {}
       }
     },
     "cinderlord": {
@@ -1069,7 +1107,10 @@
       "behavior": {
         "windup": 0.62,
         "recover": 0.9,
-        "stagger": 0.04
+        "stagger": 0.3,
+        "poiseMax": 6,
+        "guard": {},
+        "charge": {}
       }
     },
     "hoarfather": {
@@ -1093,7 +1134,9 @@
       "behavior": {
         "windup": 0.7,
         "recover": 1.0,
-        "stagger": 0.03
+        "stagger": 0.3,
+        "poiseMax": 6,
+        "charge": {}
       }
     },
     "glassSovereign": {
@@ -1117,7 +1160,9 @@
       "behavior": {
         "windup": 0.65,
         "recover": 0.95,
-        "stagger": 0.03
+        "stagger": 0.3,
+        "poiseMax": 6,
+        "charge": {}
       }
     },
     "drownedKing": {
@@ -1145,7 +1190,9 @@
       "behavior": {
         "windup": 0.7,
         "recover": 1.0,
-        "stagger": 0.03
+        "stagger": 0.3,
+        "poiseMax": 6,
+        "charge": {}
       }
     },
     "campEmberKeeper": {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, Bindings, DEFAULT_BINDINGS, codeLabel, loadBindings, saveBindings } from './bindings';
+import { ACTIONS, Bindings, DEFAULT_BINDINGS, TOUCH_CODES, codeLabel, loadBindings, saveBindings } from './bindings';
 
 function memory() {
   const data = new Map<string, string>();
@@ -17,6 +17,21 @@ describe('Bindings', () => {
     expect(b.codes('attack')).toContain('Mouse0');
     expect(b.codes('up')).toEqual(['KeyW', 'ArrowUp']);
     expect(b.isDefault()).toBe(true);
+  });
+
+  it('binds the dodge roll to Left Shift by default, clear of every other action, with a touch button of its own', () => {
+    const b = new Bindings();
+    expect(b.codes('roll')).toEqual(['ShiftLeft']);
+    expect(b.actionFor('ShiftLeft')).toBe('roll');
+    expect(TOUCH_CODES.roll).toEqual(['KeyK']);
+    expect(ACTIONS.filter((a) => a !== 'roll').some((a) => b.codes(a).includes('ShiftLeft'))).toBe(false);
+  });
+
+  it('keeps a saved binding of an older game (no roll saved) and still has the roll', () => {
+    const b = new Bindings({ up: ['KeyI', ''], attack: ['ShiftLeft', ''] });
+    expect(b.codes('up')).toEqual(['KeyI']);
+    expect(b.codes('attack')).toEqual(['ShiftLeft']);
+    expect(b.codes('roll')).toEqual([]); // its default key was taken by an action bound earlier: no clash, rebind in Controls
   });
 
   it('takes a key away from the action that had it', () => {

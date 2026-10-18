@@ -49,7 +49,7 @@
       "map": "cave_sunscar",
       "climate": null,
       "music": null,
-      "tilesets": ["rock_cave.png", "dungeon_cave.png", "lpc_terrain.png", "lpc_mountains.png"],
+      "tilesets": ["rock_cave.png", "lpc_swamp.png", "dungeon_cave.png", "lpc_terrain.png", "lpc_mountains.png"],
       "generation": {},
       "links": ["desert", "cave_sunscar_deep"]
     },
@@ -67,7 +67,7 @@
         "trees_dry.png",
         "object-layer.png",
         "signposts.png",
-        "dunes.png",
+        "entrances.png",
         "ruins.png",
         "trees_green.png",
         "trees_dead.png",
@@ -372,7 +372,7 @@
       "map": "sewer_lanternrest",
       "climate": null,
       "music": null,
-      "tilesets": ["sewer_lpc.png"],
+      "tilesets": ["sewer_lpc.png", "lpc_swamp.png"],
       "generation": {},
       "links": ["town", "sewer_undercroft"]
     },
@@ -447,7 +447,7 @@
         "frost_objects.png",
         "town.png",
         "hanging_signs.png",
-        "sewer_lpc.png"
+        "entrances.png"
       ],
       "generation": {},
       "links": [
@@ -600,7 +600,7 @@
       "map": "cave_sunscar_deep",
       "climate": null,
       "music": null,
-      "tilesets": ["rock_cave.png", "dungeon_cave.png"],
+      "tilesets": ["rock_cave.png", "lpc_terrain.png", "dungeon_cave.png", "lpc_swamp.png"],
       "generation": {},
       "links": ["cave_sunscar"],
       "levels": [18, 22]
@@ -610,7 +610,7 @@
       "map": "sewer_undercroft",
       "climate": null,
       "music": null,
-      "tilesets": ["sewer_lpc.png"],
+      "tilesets": ["sewer_lpc.png", "lpc_swamp.png"],
       "generation": {},
       "links": ["sewer_lanternrest"],
       "levels": [9, 11]
@@ -650,7 +650,7 @@
       "map": "crypt_barrow",
       "climate": null,
       "music": null,
-      "tilesets": ["dungeon_cave.png"],
+      "tilesets": ["dungeon_cave.png", "lpc_swamp.png"],
       "generation": {},
       "links": ["undead"],
       "levels": [13, 16]

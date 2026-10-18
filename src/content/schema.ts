@@ -4,6 +4,7 @@
 // The source of the JSON (static files today, a database later) is ContentManager's business, not this file's.
 
 import type { MobKind } from '../systems/combat';
+import { POISE_CAP, resolveCharge, resolveGuard } from '../systems/mobDefense';
 import { MAX_BAND } from '../systems/bands';
 import { MAX_ROAM_CELLS } from '../systems/roam';
 import { isClimate } from '../systems/weather';
@@ -54,6 +55,14 @@ export interface EntityBehavior {
   telegraph?: { color?: string; ground?: boolean }; // windup cue: `ground` the marks toward the blow; `color` is legacy, accepted and unread
   shot?: { range: number; speed: number; color: string }; // a ranged attacker (color "#rrggbb")
   ray?: { range: number; color: string; tick: number; power: number; duration: number; rest: number }; // a held beam
+  /** Blows it shrugs off before a hit staggers it (whole number, 0 = every blow staggers; systems/mobDefense.ts). Elites 3-6. */
+  poiseMax?: number;
+  poiseRegen?: number; // seconds unhurt before its poise is whole again (default 2)
+  immovable?: boolean; // never pushed back by a blow (a brute or giant; every named boss is); it still staggers when its poise breaks
+  /** A gap-closer for a hero who stays out of range (not for a shooter or a ray caster); each field falls back to `CHARGE_DEFAULTS`. */
+  charge?: Partial<Record<'range' | 'after' | 'windup' | 'speed' | 'duration' | 'cooldown' | 'power', number>>;
+  /** A shield that turns frontal arrows and spells aside; `arc` degrees covered, `chip` the share that still hurts (`GUARD_DEFAULTS`). */
+  guard?: { arc?: number; chip?: number };
 }
 
 /** One thing a scenario can place: an enemy (`mob`) or a person to talk to (`npc`). */
@@ -161,6 +170,11 @@ export interface ScenarioNode {
 export interface Scenarios {
   /** The node the game starts in. */
   start: string;
+  /**
+   * The node whose zone and spot a solo hero wakes at after a fall or a reload (the town, by story): its `spawn`, else the
+   * map's. Absent: the start node. Online (host or guest) and live worlds keep waking at the start.
+   */
+  home?: string;
   /** The engine's features this campaign switches off or tunes (systems/capabilities.ts); any not named are on. */
   capabilities: CapabilitySpec;
   nodes: Map<string, ScenarioNode>;
@@ -348,6 +362,55 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
           rest: r.number(ray.rest, `${p}.ray.rest`, 0),
         };
     }
+    const poiseMax = r.optionalNumber(b.poiseMax, `${p}.poiseMax`, 0);
+    if (poiseMax !== undefined) {
+      if (!Number.isInteger(poiseMax) || poiseMax > POISE_CAP)
+        r.fail(`${p}.poiseMax`, `must be a whole number from 0 to ${POISE_CAP}`);
+      else behavior.poiseMax = poiseMax;
+    }
+    if (b.immovable !== undefined) {
+      if (typeof b.immovable !== 'boolean') r.fail(`${p}.immovable`, 'must be true or false');
+      else if (b.immovable) behavior.immovable = true;
+    }
+    const poiseRegen = r.optionalNumber(b.poiseRegen, `${p}.poiseRegen`, 0.1);
+    if (poiseRegen !== undefined) behavior.poiseRegen = poiseRegen;
+    if (b.charge !== undefined) {
+      const c = r.object(b.charge, `${p}.charge`);
+      if (c) {
+        if (behavior.shot || behavior.ray) r.fail(`${p}.charge`, 'a shooter or ray caster does not charge');
+        const charge: NonNullable<EntityBehavior['charge']> = {};
+        for (const [key, min] of [
+          ['range', 1],
+          ['after', 0.1],
+          ['windup', 0.5], // a charge must be as readable as a plain blow (its spread windup is 0.8 of this, at least 0.4)
+          ['speed', 1],
+          ['duration', 0.05],
+          ['cooldown', 0],
+          ['power', 0.1],
+        ] as const) {
+          const n = r.optionalNumber(c[key], `${p}.charge.${key}`, min);
+          if (n !== undefined) charge[key] = n;
+        }
+        behavior.charge = charge;
+      }
+    }
+    if (b.guard !== undefined) {
+      const g = r.object(b.guard, `${p}.guard`);
+      if (g) {
+        const guard: NonNullable<EntityBehavior['guard']> = {};
+        const arc = r.optionalNumber(g.arc, `${p}.guard.arc`, 10);
+        const chip = r.optionalNumber(g.chip, `${p}.guard.chip`, 0);
+        if (arc !== undefined) {
+          if (arc > 360) r.fail(`${p}.guard.arc`, 'is at most 360 degrees');
+          else guard.arc = arc;
+        }
+        if (chip !== undefined) {
+          if (chip > 1) r.fail(`${p}.guard.chip`, 'is a share from 0 to 1');
+          else guard.chip = chip;
+        }
+        behavior.guard = guard;
+      }
+    }
     def.behavior = behavior;
   }
   return def;
@@ -502,6 +565,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
   r.version(file, 'scenarios.json');
   const start = r.string(file.start, 'scenarios.json.start');
   const capabilities = readCapabilities(r, file.capabilities, 'scenarios.json.capabilities', 'campaign');
+  const home = file.home === undefined ? undefined : r.string(file.home, 'scenarios.json.home');
   r.array(file.nodes, 'scenarios.json.nodes').forEach((v, i) => {
     const o = r.object(v, `nodes[${i}]`);
     if (!o) return;
@@ -535,7 +599,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
     }
     nodes.set(id, node);
   });
-  return { start, capabilities, nodes };
+  return { start, ...(home ? { home } : {}), capabilities, nodes };
 }
 
 const SITE_SHAPES = ['mushroom', 'stone', 'sand'] as const;
@@ -970,6 +1034,8 @@ function crossCheck(r: Reader, c: Content) {
   checkAgainstCapabilities(r, c);
   if (c.scenarios.start && !c.scenarios.nodes.has(c.scenarios.start))
     r.fail('scenarios.json.start', `no node "${c.scenarios.start}"`);
+  if (c.scenarios.home && !c.scenarios.nodes.has(c.scenarios.home))
+    r.fail('scenarios.json.home', `no node "${c.scenarios.home}"`);
   for (const node of c.scenarios.nodes.values()) {
     const path = `nodes.${node.node_id}`;
     if (!c.biomes[node.biome_type]) r.fail(`${path}.biome_type`, `"${node.biome_type}" is not in biomes.json`);
@@ -1092,6 +1158,7 @@ export function toMobKind(def: EntityDef): MobKind {
   };
   if (def.scale !== undefined) kind.scale = def.scale;
   if (def.boss) kind.named = true;
+  if (def.boss || b.immovable) kind.immovable = true;
   if (def.death) kind.death = def.death;
   if (b.windup !== undefined) kind.windup = b.windup;
   if (b.recover !== undefined) kind.recover = b.recover;
@@ -1102,6 +1169,10 @@ export function toMobKind(def: EntityDef): MobKind {
   }
   if (b.shot) kind.shot = { ...b.shot, color: colorNumber(b.shot.color) };
   if (b.ray) kind.ray = { ...b.ray, color: colorNumber(b.ray.color) };
+  if (b.poiseMax) kind.poiseMax = b.poiseMax;
+  if (b.poiseRegen !== undefined) kind.poiseRegen = b.poiseRegen;
+  if (b.charge) kind.charge = resolveCharge(b.charge);
+  if (b.guard) kind.guard = resolveGuard(b.guard);
   return kind;
 }
 

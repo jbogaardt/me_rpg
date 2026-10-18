@@ -18,12 +18,13 @@ Invariants that bite:
   (co-op peers agree because they play the same content).
 - **The pieces gems make follow the authored items in the codes** (`systems/gems.ts`): an item with a `gem` property (what it
   adds to a weapon and to other gear) makes one piece per gear item, derived at install, never written in `items.json`. An
-  item id cannot hold `+`. Packs carry no gems yet, so only campaign 1's chests hold them (`ruby`, `emerald`, `topaz`, `sapphire` loots).
+  item id cannot hold `+`. Only campaign 1's chests hold gems (packs carry none yet).
 - **Populations are deterministic** (`populate.ts`): a guest builds the same mobs in the same order as the host, and
   snapshots refer to mobs by index. Anything that changes who stands in a zone must keep that order.
 - **Who stands in a zone is the content's, never the map's** (scenario node placements, then the biome's `roam`). A placed person
   may stroll about their post (`EntityDef.roam`, npc only, at most 8 cells, capability `roaming`); givers and keepers never roam.
-- **Foe bands** (`systems/bands.ts`, core engine): a roam group or placement may carry `level` (a group also `within` circles, the deep end of a zone): its foes are re-made as a fair fight for that hero level, same look and role, pay following the level. Campaign 1 bands its deepest ground and eastern lands; the band check judges a banded group at its own level.
+- **Foe bands** (`systems/bands.ts`, core engine): a roam group or placement may carry `level` (a group also `within` circles, the deep end of a zone): its foes are re-made as a fair fight for that hero level, same look and role, pay following the level. The band check judges a banded group at its own level.
+- **Home** (`scenarios.json` `home`, a node id; content read by `Arena.wake`): where a solo hero wakes after a fall or reload (its `spawn`, else the map's): campaign 1 `town`, campaign 2 `landing`. Unset (packs, random, live) and in co-op: the start node.
 - **Scenarios are solo only**: online, every zone shows its biome's own node (the host sends a `node_id` per zone).
 - **Capabilities** (`src/systems/CLAUDE.md`): content asking for what its own switches turn off is refused at load.
 
@@ -59,8 +60,8 @@ a port without a seal or bound to a port that is not on the opposite edge.
 
 ## Worlds from a log
 
-A world is a seed, the packs and an append-only **log** of fully resolved entries (`begin`, `step`, `side`, `join`, and the DM's `cast`, `npc`, `voice` and `sign`: a person made, put somewhere, given new words; a signpost rewritten, or restored by empty lines).
-`World.apply` validates each entry against the packs' rules and refuses a bad one without changing anything; a person (`npc`) whose id **or name** (ignoring case and spacing, the packs' people included) is already in the world is refused (cast or `voice` them instead; every campaign's people have distinct names, `campaigns.test.ts`);
+A world is a seed, the packs and an append-only **log** of fully resolved entries (`begin`, `step`, `side`, `join`, and the DM's `cast`, `npc`, `voice` and `sign`).
+`World.apply` validates each entry against the packs' rules and refuses a bad one without changing anything; a person (`npc`) whose id **or name** (ignoring case and spacing, the packs' people included) is already in the world is refused (cast or `voice` them instead; `campaigns.test.ts` keeps names distinct);
 `replay(log)` rebuilds a world with no random numbers, so every co-op player agrees. `assemble`
 is an automatic Dungeon Master that writes a whole log at once; a **live world** (`?campaign=live`) is written during
 play: the DM chooses story cues (a kind of land and crossing, never a map) and the solver picks regions that still let
@@ -80,4 +81,4 @@ nowhere). It checks every campaign, the packs' catalog and random campaigns of s
 
 ## Level bands (`systems/levels.ts`; core engine, content, capability `levelGates`)
 
-A biome may declare `levels: [lowest, highest]`: banner advice, and a map-check that each foe it places is a fair fight for a typical hero (`heroModel`) at the lowest level (error: 2 hits fell the hero or over 14 blows; warning: no fight at the top). With `levelGates` on, a door turns back a hero more than `slack` (default 1) levels under the lowest (`Zones.turnedAway`, host-side). Campaign 1 gates only its first two underground rooms.
+A biome may declare `levels: [lowest, highest]`: banner advice, and a map-check that each foe it places is a fair fight for a typical hero (`heroModel`) at the lowest level (error: 2 hits fell the hero or over 14 blows; warning: no fight at the top). With `levelGates` on, a door turns back a hero more than `slack` (default 1) levels under the lowest. Campaign 1 gates only its first two underground rooms.

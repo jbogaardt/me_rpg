@@ -128,6 +128,7 @@ export class Zones {
     const { arena } = this;
     const players = arena.role === 'client' ? [arena.local] : arena.everyone();
     const wanted = new Set<string>([arena.home.name, arena.view.name]);
+    if (arena.role === 'solo' && arena.soloHome) wanted.add(arena.soloHome.zone); // a fall wakes the hero there
     for (const p of players) {
       const here = arena.zones.get(p.zone);
       if (!here) continue;
@@ -166,6 +167,26 @@ export class Zones {
     arena.player.position.set(...cellFeet(spawn));
     arena.syncHeroBodies();
     return home;
+  }
+
+  /**
+   * A solo game: note the content's home (`scenarios.home`, the town) as where the hero wakes, and load its zone (a no-op
+   * when it is the start's, or already loaded). Resolves when the zone is in; if it will not load, waking stays at the start.
+   */
+  async loadHome(): Promise<void> {
+    const { arena, content } = this;
+    const node = content.homeNode;
+    const zone = content.getBiomeInfo(node.biome_type).map;
+    if (zone === arena.home.name) {
+      arena.soloHome = null;
+      return;
+    }
+    arena.soloHome = { zone, ...(node.spawn ? { spot: { col: node.spawn.x, row: node.spawn.y } } : {}) };
+    try {
+      await this.ensure(zone);
+    } catch {
+      // ensure has logged it
+    }
   }
 
   /** The scenario node a zone shows (the biome's own unless a scenario was loaded over it). */

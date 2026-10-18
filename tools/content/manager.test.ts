@@ -35,6 +35,25 @@ describe('ContentManager', () => {
     expect(() => content.getScenario('nowhere')).toThrow(/No scenario node "nowhere"/);
   });
 
+  describe('home (where a solo hero wakes after a fall or a reload)', () => {
+    const withHome = (home: string | undefined) =>
+      source((file, json) => {
+        if (file !== 'scenarios') return json;
+        const { home: _own, ...rest } = json as { home?: string };
+        return home === undefined ? rest : { ...rest, home };
+      }).src;
+
+    it('is the town in campaign 1, the start node where the content names none', async () => {
+      expect((await ContentManager.load(source().src)).homeNode.node_id).toBe('town');
+      const none = await ContentManager.load(withHome(undefined));
+      expect(none.homeNode.node_id).toBe(none.startNode.node_id);
+    });
+
+    it('is refused when it names a node the campaign lacks', async () => {
+      await expect(ContentManager.load(withHome('nowhere'))).rejects.toThrow(/scenarios.json.home.*no node "nowhere"/);
+    });
+  });
+
   it('refuses broken content with every problem listed', async () => {
     const { src } = source((file, json) => (file === 'scenarios' ? { ...(json as object), start: 'nowhere' } : json));
     await expect(ContentManager.load(src)).rejects.toBeInstanceOf(ContentError);

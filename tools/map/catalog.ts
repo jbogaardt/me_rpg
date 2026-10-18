@@ -24,6 +24,7 @@ export const ROCK_SHEET = 'lpc_mountains.png'; // the LPC base assets' mountains
 // MrBeast's cave, sewer and desert tilesets (art/oga_dungeon/, CC-BY 3.0), doubled to the 32px cell by dungeonSheets.ts.
 export const CAVE_SHEET = 'dungeon_cave.png';
 export const SEWER_SHEET = 'sewer_lpc.png'; // the sewer's ground tiles and props, cut from the LPC base assets by tools/map/sewerLpc.ts
+export const ENTRANCE_SHEET = 'entrances.png'; // the overworld ends of the caves and sewers, composed by tools/map/entrances.ts
 export const DUNES_SHEET = 'dunes.png'; // the desert sheet's cliffs, sand keyed out
 
 export { SHADOW_RGB, SHADOW_FROST, SHADOWS } from './shadows';
@@ -71,6 +72,9 @@ function dungeonGrounds() {
     rockEdge: tiles(R, [[[4, 0]]]),
     rockFaceU: tiles(R, [[[5, 0]]]),
     rockFaceL: tiles(R, [[[6, 0]]]),
+    rockFloorShade: tiles(R, [[[7, 0]]]),
+    rockFaceM: tiles(R, [[[8, 0]]]),
+    rockRoofB: tiles(R, [[[9, 0]]]),
     caveFloor: tiles(C, [
       [
         [0, 10],
@@ -814,16 +818,16 @@ const sewerArt = (
   about: string,
 ): Prefab => ({ sheet: SEWER_SHEET, w, h, parts: [part(x, y, w, h)], solid, tag, about });
 const DELVE_PREFABS = {
-  caveMouth: delveArt(
-    DUNES_SHEET,
-    10,
-    19,
-    2,
-    2,
-    { band: 64, min: 0.3 },
-    'rock',
-    'A cave mouth in a rock outcrop on the sand (2x2, solid): put a door on its bottom row, at the dark opening (right cell).',
-  ),
+  caveMouth: {
+    sheet: ENTRANCE_SHEET,
+    w: 128,
+    h: 83,
+    parts: [part(0, 0, 128, 83)],
+    solid: { band: 83, min: 0.3 },
+    tag: 'rock',
+    about:
+      'A cave mouth in a rounded rock mound that frays into the sand, with a soft shadow (4 cells wide, 2.5 tall, solid): put a door 2 cells wide on its bottom row at the dark opening (the middle two cells).',
+  },
   caveExit: delveArt(
     CAVE_SHEET,
     3,
@@ -835,15 +839,16 @@ const DELVE_PREFABS = {
     'The way out of a cave: a rock face with daylight pouring in (3x2). Draw it over the wall rows north of the floor.',
   ),
   caveHole: delveArt(CAVE_SHEET, 3, 1, 3, 2, null, 'cave', 'A dark tunnel mouth in a cave wall (3x2), decoration.'),
-  sewerHatch: sewerArt(
-    256,
-    32,
-    28,
-    28,
-    null,
-    'hatch',
-    'A round drain with a stone rim, set in the ground (1 cell): the way down into a sewer.',
-  ),
+  sewerHatch: {
+    sheet: ENTRANCE_SHEET,
+    w: 32,
+    h: 32,
+    parts: [part(128, 0, 32, 32)],
+    solid: null,
+    tag: 'hatch',
+    about:
+      'A round drain with a stone rim and a soft shadow ring, set in the ground (1 cell): the way down into a sewer.',
+  },
   sewerDoor: sewerArt(0, 32, 32, 64, null, 'sewer', 'A dark arched doorway in a sewer wall (1x2).'),
   sewerGate: sewerArt(32, 32, 32, 64, null, 'sewer', 'A barred arched gate in a sewer wall (1x2), decoration.'),
   sewerGrate: sewerArt(

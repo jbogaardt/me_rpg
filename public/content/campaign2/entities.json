@@ -104,7 +104,9 @@
       "behavior": {
         "windup": 0.55,
         "recover": 0.8,
-        "stagger": 0.06
+        "stagger": 0.3,
+        "poiseMax": 3,
+        "charge": {}
       }
     },
     "obsidianWarden": {
@@ -134,7 +136,9 @@
       "behavior": {
         "windup": 0.6,
         "recover": 0.85,
-        "stagger": 0.03
+        "stagger": 0.35,
+        "poiseMax": 4,
+        "charge": {}
       }
     },
     "ysolde": {
