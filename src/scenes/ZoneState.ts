@@ -190,7 +190,9 @@ export class ZoneState {
     this.data = data;
     this.source = zone;
     this.world = new MapView(data, zone.textures);
-    this.world.backdrop?.setDepth(enabled('parallax', zone.name) ? setting('parallax', 'depth', zone.name) : 0);
+    const depth = enabled('parallax', zone.name) ? setting('parallax', 'depth', zone.name) : 0;
+    this.world.backdrop?.setDepth(depth);
+    this.world.foreground?.setDepth(depth);
     this.camera = new Camera(this.world);
     this.collision = new Collision(data.width, data.height, data.collision);
     this.effects = new Effects(this.world.layer);

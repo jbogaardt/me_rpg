@@ -3,11 +3,12 @@ import { BACKDROPS, factors, isBackdrop, tileOffset } from './backdrop';
 
 describe('backdrop', () => {
   it('scrolls the far layer least, and not at all apart from the floor at depth 0', () => {
-    expect(factors(0)).toEqual({ far: 1, near: 1 });
+    expect(factors(0)).toEqual({ far: 1, near: 1, front: 1 });
     const f = factors(0.6);
     expect(f.far).toBeCloseTo(0.4);
     expect(f.far).toBeLessThan(f.near);
     expect(f.near).toBeLessThan(1);
+    expect(f.front).toBeGreaterThan(1); // the foreground passes closer than the floor
     expect(factors(5).far).toBe(0); // clamped
   });
 

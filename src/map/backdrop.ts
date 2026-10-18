@@ -13,13 +13,48 @@ export interface BackdropStyle {
   rim: number;
   /** A few faint glints (embers, damp, bones) drifting in the far layer. */
   glint: number;
+  /** The foreground over the floor: motes of dust drifting in the air, and the soft shadows of stalactites overhead. */
+  dust: number;
+  shade: number;
 }
 
 export const BACKDROPS = {
-  cave: { base: 0x1a1214, far: 0x24191b, near: 0x2f2022, rim: 0x4a3330, glint: 0x8a4a2a },
-  rock: { base: 0x1b1315, far: 0x251a1c, near: 0x30211f, rim: 0x5a3a30, glint: 0xb0562a },
-  sewer: { base: 0x0f1614, far: 0x16211e, near: 0x1d2c27, rim: 0x2f4a40, glint: 0x4a7a5a },
-  crypt: { base: 0x14141a, far: 0x1c1c25, near: 0x262633, rim: 0x403f55, glint: 0x6a6a9a },
+  cave: {
+    base: 0x1a1214,
+    far: 0x24191b,
+    near: 0x2f2022,
+    rim: 0x4a3330,
+    glint: 0x8a4a2a,
+    dust: 0xe0b890,
+    shade: 0x050304,
+  },
+  rock: {
+    base: 0x1b1315,
+    far: 0x251a1c,
+    near: 0x30211f,
+    rim: 0x5a3a30,
+    glint: 0xb0562a,
+    dust: 0xf0b888,
+    shade: 0x050304,
+  },
+  sewer: {
+    base: 0x0f1614,
+    far: 0x16211e,
+    near: 0x1d2c27,
+    rim: 0x2f4a40,
+    glint: 0x4a7a5a,
+    dust: 0xa8d0b8,
+    shade: 0x020605,
+  },
+  crypt: {
+    base: 0x14141a,
+    far: 0x1c1c25,
+    near: 0x262633,
+    rim: 0x403f55,
+    glint: 0x6a6a9a,
+    dust: 0xb8b8e0,
+    shade: 0x030308,
+  },
 } as const satisfies Record<string, BackdropStyle>;
 export type BackdropName = keyof typeof BACKDROPS;
 
@@ -29,16 +64,22 @@ export const isBackdrop = (name: string): name is BackdropName => name in BACKDR
 export interface Factors {
   far: number;
   near: number;
+  /** The foreground, over the floor: above 1, it slides faster than the camera, so it passes close by. */
+  front: number;
 }
 
 /**
  * 1 scrolls with the floor (no depth, what the capability off gives); a depth of 0.6 (the default) scrolls the far
- * layer at 0.4 and the near one at 0.67, so the layers part as the camera moves.
+ * layer at 0.4 and the near one at 0.67, so the layers part as the camera moves, and the foreground at 1.3 (closer than
+ * the floor).
  */
 export function factors(depth: number): Factors {
   const d = Math.min(1, Math.max(0, depth));
-  return { far: 1 - d, near: 1 - d * 0.55 };
+  return { far: 1 - d, near: 1 - d * 0.55, front: 1 + d * 0.5 };
 }
+
+/** Dust drifts this many px/s sideways and sinks this many, on top of the camera's pull (the air is never quite still). */
+export const DUST_DRIFT = { x: 6, y: 3 } as const;
 
 /**
  * Where a layer's texture sits for a camera at `view` (world px): whole pixels, so the nearest-scaled art never shimmers.

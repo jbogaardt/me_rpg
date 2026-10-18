@@ -16,4 +16,6 @@ map objects plus everything the scene adds.
   (`MapData.backdrop`, a key of `BACKDROPS` in `backdrop.ts`; every `Delve` does) and cells it leaves with no ground (a
   delve's roof) show it. `BackdropLayer` is `MapView`'s first child: two tiling sprites laid over the view and slid by a
   share of the camera (`factors`: far 0.4, near 0.67 at the default depth; off = 1, scrolling with the floor, so plain dark),
-  in whole pixels. Two quads, nothing allocated per frame. **Co-op**: none, built from the map and the camera.
+  in whole pixels. `ForegroundLayer` (last child of `MapView`, under the darkness) lays stalactite shadows and drifting dust over
+  the world, slid FASTER than the camera (`front`, 1.3) so the floor lies between the layers; hidden when `depth` is 0. Four quads in all,
+  nothing allocated per frame. **Co-op**: none, built from the map and the camera.

@@ -1,9 +1,11 @@
 import { Container, Texture, TilingSprite } from 'pixi.js';
 import type { ViewRect } from '../core/camera';
-import { factors, tileOffset, type BackdropStyle, type Factors } from './backdrop';
+import { DUST_DRIFT, factors, tileOffset, type BackdropStyle, type Factors } from './backdrop';
 
 const FAR = 192; // px: a wrapped tile of distant rock (all art is made at the map's own pixel size, nearest-scaled)
 const NEAR = 160;
+const SHADE = 256; // the foreground's wrapped tiles: stalactite shadows, and dust
+const DUST = 176;
 
 const css = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
 
@@ -105,6 +107,89 @@ export class BackdropLayer extends Container {
   override destroy(options?: Parameters<Container['destroy']>[0]) {
     this.far.texture.destroy(true);
     this.near.texture.destroy(true);
+    super.destroy(options);
+  }
+}
+
+/** The shadows of stalactites hanging overhead: soft dark blobs, stepped in three alphas (hard-edged, so it stays pixel art). */
+function shadeTexture(style: BackdropStyle): Texture {
+  const [c, ctx] = canvas(SHADE);
+  const rnd = stream(0xdeca);
+  for (let i = 0; i < 7; i++) {
+    const x = Math.floor(rnd() * SHADE);
+    const y = Math.floor(rnd() * SHADE);
+    const r = 14 + Math.floor(rnd() * 16);
+    for (const [grow, alpha] of [
+      [1, 0.07],
+      [0.7, 0.07],
+      [0.4, 0.09],
+    ] as const) {
+      ctx.globalAlpha = alpha;
+      disc(ctx, SHADE, x, y, Math.floor(r * grow), css(style.shade));
+    }
+  }
+  ctx.globalAlpha = 1;
+  return Texture.from(c);
+}
+
+/** Motes of dust: single pale pixels, a few of them 2x1, faint. */
+function dustTexture(style: BackdropStyle): Texture {
+  const [c, ctx] = canvas(DUST);
+  const rnd = stream(0xd057);
+  ctx.fillStyle = css(style.dust);
+  for (let i = 0; i < 16; i++) {
+    ctx.globalAlpha = 0.25 + rnd() * 0.3;
+    ctx.fillRect(Math.floor(rnd() * DUST), Math.floor(rnd() * DUST), rnd() < 0.3 ? 2 : 1, 1);
+  }
+  ctx.globalAlpha = 1;
+  return Texture.from(c);
+}
+
+/**
+ * The foreground over the floor (above the heroes, under the darkness): stalactite shadows and drifting dust, laid over the
+ * view and slid FASTER than the camera (`factors().front`), so they pass close by and the floor reads as lying between
+ * the layers. The dust also drifts on its own. Hidden when the depth is 0 (capability off). Two quads, nothing allocated.
+ */
+export class ForegroundLayer extends Container {
+  private readonly shade: TilingSprite;
+  private readonly dust: TilingSprite;
+  private f: Factors = factors(0);
+
+  constructor(style: BackdropStyle) {
+    super();
+    this.shade = new TilingSprite({ texture: shadeTexture(style) });
+    this.dust = new TilingSprite({ texture: dustTexture(style) });
+    this.addChild(this.shade, this.dust);
+    this.eventMode = 'none';
+    this.visible = false;
+  }
+
+  /** The `parallax` capability's `depth` (0 = off: the layer is hidden). */
+  setDepth(depth: number) {
+    this.f = factors(depth);
+    this.visible = this.f.front > 1;
+  }
+
+  /** Lay the layers over `view` (world px) at time `t` (seconds). */
+  update(view: ViewRect, t: number) {
+    if (!this.visible) return;
+    const [w, h] = [Math.ceil(view.w) + 2, Math.ceil(view.h) + 2];
+    const [vx, vy] = [Math.floor(view.x), Math.floor(view.y)];
+    for (const [sprite, factor, dx, dy] of [
+      [this.shade, this.f.front, 0, 0],
+      [this.dust, this.f.front * 1.15, t * DUST_DRIFT.x, -t * DUST_DRIFT.y],
+    ] as const) {
+      sprite.position.set(vx, vy);
+      sprite.width = w;
+      sprite.height = h;
+      const o = tileOffset({ x: vx, y: vy }, factor);
+      sprite.tilePosition.set(o.x - Math.floor(dx), o.y - Math.floor(dy));
+    }
+  }
+
+  override destroy(options?: Parameters<Container['destroy']>[0]) {
+    this.shade.texture.destroy(true);
+    this.dust.texture.destroy(true);
     super.destroy(options);
   }
 }

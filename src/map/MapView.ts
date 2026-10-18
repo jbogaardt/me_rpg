@@ -1,7 +1,7 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
 import { makeFrame } from '../core/textures';
 import type { ViewRect } from '../core/camera';
-import { BackdropLayer } from './BackdropLayer';
+import { BackdropLayer, ForegroundLayer } from './BackdropLayer';
 import { BACKDROPS, isBackdrop } from './backdrop';
 import { chunkRange, chunksOfObjects, CHUNK } from './chunks';
 import { CELL, sortKey, type MapData, type MapObject } from './types';
@@ -30,6 +30,8 @@ interface Chunk {
 export class MapView extends Container {
   /** The far backdrop under the ground (a map that names one in `data.backdrop`), shown through its empty cells. */
   readonly backdrop: BackdropLayer | null;
+  /** The foreground over everything in the world (dust, stalactite shadows) of a map with a backdrop. */
+  readonly foreground: ForegroundLayer | null;
   readonly ground = new Container({ isRenderGroup: true });
   readonly layer = new Container({ sortableChildren: true });
   private frames = new Map<string, Texture | null>();
@@ -50,7 +52,9 @@ export class MapView extends Container {
     const style = data.backdrop && isBackdrop(data.backdrop) ? BACKDROPS[data.backdrop] : null;
     this.backdrop = style ? new BackdropLayer(style) : null;
     if (this.backdrop) this.addChild(this.backdrop);
+    this.foreground = style ? new ForegroundLayer(style) : null;
     this.addChild(this.ground, this.layer);
+    if (this.foreground) this.addChild(this.foreground);
     this.cols = Math.ceil(data.width / CHUNK);
     this.rows = Math.ceil(data.height / CHUNK);
     this.byChunk = chunksOfObjects(data);
@@ -65,6 +69,7 @@ export class MapView extends Container {
   /** Build the chunks around `view` (world px) and free those well away from it. */
   update(view: ViewRect) {
     this.backdrop?.update(view);
+    this.foreground?.update(view, performance.now() / 1000); // visual only: any clock will do
     const near = chunkRange(view, this.cols, this.rows, 1);
     const keep = chunkRange(view, this.cols, this.rows, 2);
     for (const [i, chunk] of this.live) {
