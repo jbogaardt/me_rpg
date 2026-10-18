@@ -55,7 +55,8 @@
         "lpc_swamp.png",
         "dungeon_cave.png",
         "lpc_terrain.png",
-        "lpc_mountains.png"
+        "lpc_mountains.png",
+        "ruins.png"
       ],
       "generation": {},
       "links": ["desert", "cave_sunscar_deep"]

@@ -332,6 +332,31 @@
           "x": 66,
           "y": 44,
           "level": 8
+        },
+        {
+          "entity": "warg",
+          "x": 29,
+          "y": 49
+        },
+        {
+          "entity": "skeleton",
+          "x": 40,
+          "y": 47
+        },
+        {
+          "entity": "orc",
+          "x": 34,
+          "y": 46
+        },
+        {
+          "entity": "orc",
+          "x": 35,
+          "y": 55
+        },
+        {
+          "entity": "skeleton",
+          "x": 25,
+          "y": 24
         }
       ],
       "choices": []
