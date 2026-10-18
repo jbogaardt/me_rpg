@@ -290,6 +290,9 @@ export class Zones {
       p.body.pivot.set(vx * step, vy * step);
     }
     arena.syncHeroBodies();
+    // A zone nobody is in stops updating, so a bolt or arrow still in flight would hang there until someone returns.
+    // (One joined by a gap stays drawn beside the new zone and keeps its effects running as a lookout.)
+    if (!link && !arena.occupiedZones().includes(from)) from.effects.clear();
     if (p === arena.local) this.show(dest, link);
   }
 
