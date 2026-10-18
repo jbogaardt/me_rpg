@@ -603,7 +603,7 @@
       "tilesets": ["rock_cave.png", "lpc_terrain.png", "dungeon_cave.png", "lpc_swamp.png"],
       "generation": {},
       "links": ["cave_sunscar"],
-      "levels": [18, 22]
+      "levels": [20, 26]
     },
     "sewer_undercroft": {
       "name": "The Lanternrest Undercroft",
@@ -613,7 +613,7 @@
       "tilesets": ["sewer_lpc.png", "lpc_swamp.png"],
       "generation": {},
       "links": ["sewer_lanternrest"],
-      "levels": [9, 11]
+      "levels": [9, 14]
     },
     "ruin_temple": {
       "name": "The Old Temple",
@@ -653,7 +653,7 @@
       "tilesets": ["dungeon_cave.png", "lpc_swamp.png"],
       "generation": {},
       "links": ["undead"],
-      "levels": [13, 16]
+      "levels": [13, 19]
     },
     "emberwaste": {
       "name": "The Emberwaste",
