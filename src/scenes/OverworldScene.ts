@@ -594,7 +594,7 @@ export class OverworldScene implements Scene {
     const covered =
       menu.open || shop.open || trade.open || dialog.active || this.zones.transition.busy || arena.local.dm;
     this.interact.updateHarvestButtons(z, covered);
-    this.interact.updateMarks(covered, arena.clock); // the glints over what the interact key could use, and its touch button
+    this.interact.updateMarks(covered); // the touch interact button
     hud.update(
       this.hero,
       this.input.typed,

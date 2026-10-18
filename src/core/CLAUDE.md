@@ -18,7 +18,7 @@ Scene loop, camera, input, bindings, combos, touch. Headers of each file explain
   (Mouse0, Space, touch A) only swings, casts or shoots (`Interactions.swing`); the interact key (`interact`: R and right click, touch `#btn-use`, `data-key`
   KeyL) only reads, talks, opens, picks up, harvests, drinks (`useAt`). Both advance a dialog; a press that did is not a hold. On touch the interact button
   is hidden unless something is within reach (`hud/InteractMarks.ts`: a 60 px button above A with a pixel glyph, mirrored in `threatPulse.ts` `keepClear`), and
-  a glint bobs over each chest, person or pickup within 2 tiles (at most 8). Contextual on: the old single key (`keyMeaning`), no interact button, the
+  and the sparkle over things in the world is gone. Contextual on: the old single key (`keyMeaning`), no interact button, the
   interact key is the same key. **Co-op (v59)**: a guest sends `KEY.split` (held: its `act` is attack only, else the host treats `act` as the old contextual
   key) and the toggle `KEY.use` per interact press; the host runs `swingAt`/`useOnly` per friend (`hostedPress`). Marks are local.
 - **The stick floats by default** (`stick.ts`, Pixi-free): a touch on the bare canvas in the left half plants the pad
