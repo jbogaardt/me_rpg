@@ -105,6 +105,17 @@ describe('populate', () => {
     expect(pop.folk[1]).toEqual({ entity: 'elder', def: entities.elder, col: 31, row: 30 });
   });
 
+  it('keeps an authored boss out of the mobs: a quest makes it, so a rebuilt zone never gives it back', () => {
+    const withBoss = {
+      ...entities,
+      king: { type: 'mob', name: 'King', boss: true, sprite: { body: 'b' } },
+    } as typeof entities;
+    const placed = { ...node, entities: [...node.entities, { entity: 'king', x: 9, y: 9 }] };
+    const pop = populate(field(60), biome, placed, withBoss);
+    expect(pop.bosses).toEqual([{ kind: 'king', col: 9, row: 9 }]);
+    expect(pop.mobs.some((m) => m.kind === 'king')).toBe(false);
+  });
+
   it('with no node, only the roamers', () => {
     expect(populate(field(60), biome, undefined, entities).mobs).toHaveLength(2);
   });

@@ -38,11 +38,10 @@ writes a saga about its own world (`greenwood_reckoning`) and a pack-style one r
 quest kind (hunt, gather, find, visit, cast spells where the party has magic, haul barrels to a named place, slay a boss, master a spell, forge a gem into gear the party has or can buy; a land
 without one tells another kind: `dmTasks.ts` rules, `dmQuests.ts` writes each from the land,
 `DmTasks.ts` runs it) or `meet`. For `meet` the DM makes the step's person (an `npc` then a `cast` entry of the live world,
-on open ground in the step's land, or with `at: haven` beside a shop door of the nearest town, wearing the look a word names, and a later `meet` of them goes back to where they stand), the party is sent to find them (a `visit` quest at
-their feet), and on reaching them the DM only says they are there (if nobody speaks to them it reminds the party, then goes on: never left hanging): **the person speaks through their own dialog when talked
+on open ground in the step's land, or with `at: haven` beside a shop door of the nearest town, wearing the look a word names, and a later `meet` of them goes back to where they stand), the party is sent to find them (a `visit` quest at their feet), and on reaching them the DM only says they are there (if nobody speaks to them it reminds the party, then goes on): **the person speaks through their own dialog when talked
 to** (`DmEpics.meet` puts the step's lines on them, `talked` hears the action press, and the saga goes on a few seconds later), never in the DM's voice, and may give something to carry (`gives`). The party is told in
 **words only, nothing on the map**: when the DM notices they are lost (the director's card, or
-a player asking) the DM offers a **compass** that leans toward the place to search, and only a second time points straight at it (`HINT_AREA`, `HINT_ARROW`, v44). A failed or cancelled step ends the saga. Every player is read a step like an NPC's (`dmBrief.ts`); a quest can switch capabilities while taken (`Quest.capabilities`). Epics with people need a live world.
+a player asking) the DM offers a **compass** that leans toward the place to search, and only a second time points straight at it (`HINT_AREA`, `HINT_ARROW`, v44). A failed or cancelled step ends the saga. Every player is read a step like an NPC's (`dmBrief.ts`); a quest can switch capabilities while taken (`Quest.capabilities`). 
 
 **What a telling names is there to be found** (`systems/landmarks.ts`, `entities/Landmark.ts`, `StoryUi.syncLandmark`, local
 to every page from the synced task alone): a visit or meeting whose words (the place, the DM's note, the title) name a
@@ -69,16 +68,12 @@ player in a live world is offered an epic by the director's card; the sandbox ha
 
 ## End bosses: the climax of an epic (`systems/bosses.ts`; core engine, content, co-op)
 
-Two bosses, never mixed: the DM's (`dmBoss.ts`, `MobKind.boss`) and the **authored** one
-(`MobKind.named`). **Placement**: an `entities.json` mob with `"boss": true` (tougher stats, long `windup` as its telegraph),
+Two bosses, never mixed: the DM's (`dmBoss.ts`, `MobKind.boss`) and the **authored** (`MobKind.named`). **Placement**: an `entities.json` mob with `"boss": true` (tougher, long `windup` telegraph),
 placed once by a scenario node of its zone, never a roamer (`map -- check`). **Objective**: `{"t": "boss", "boss": "<entity>",
-"zone": "<map>", "count": 1}`, one kill. **Co-op**: the host owns the fight and
-every hero in the zone shares the kill (nothing new on the wire); online the DM's own `boss` step is the climax. **Wipe**: a knocked-out hero wakes at the start as always; the
-boss never respawns once fallen but **mends fully when a knockout leaves no hero in its zone** (`bossMends`). **Reward and beat**: the quest's `reward`; when it is the **last quest of the chain** (`isFinale`) the
-epilogue follows the reward lines and `Talk.finale` is set, the one hook for a closing scene. **DM trigger**: a saga ends in a `boss` step (`dmQuests`); it cannot yet name an authored one.
+"zone": "<map>", "count": 1}`, one kill. **Gate**: a boss is **quest-gated** (`Population.bosses`, not the zone's mobs): it stands only while a quest asks and is not done (`bossStands`, the hero's chain, solo; `taskWantsBoss`, a saga step; `StoryUi.syncNamedBoss`), so none can be farmed. **Co-op**: the host owns the fight, every hero in the zone shares the kill (nothing on the wire); online the DM's `boss` is the climax. **Wipe**: a knocked-out hero wakes at the start; the
+boss never respawns once fallen but **mends fully when a knockout leaves no hero in its zone** (`bossMends`). **Reward and beat**: the quest's `reward`; the **last quest of the chain** (`isFinale`) then tells the
+epilogue and sets `Talk.finale`, the closing-scene hook. **DM trigger**: a saga ends in a `boss` step (`dmQuests`), not yet an authored one.
 
 ## Not yet
 
-An authored boss in the packs or a DM epic's `objective`, phases and adds. A `gives` token in the pack (it is the DM's word; a finished saga does hand each hero real gear, `dmGear.ts`), branching, the packs' arcs (a third quest
-format for live worlds), people placed by the maps (a campaign's givers) and by the log (the DM's) as one
-mechanism, and one *trigger* for both holders with one telling of a step.
+An authored boss in the packs or a DM epic's `objective`, phases and adds. A `gives` token in the pack (the DM's word; a finished saga hands out gear, `dmGear.ts`), branching, the packs' arcs, people placed by the maps (a campaign's givers) and by the log (the DM's) as one mechanism, and one *trigger* for both holders with one telling of a step.
