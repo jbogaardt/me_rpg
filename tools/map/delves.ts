@@ -42,3 +42,10 @@ export const CRYPT_TOMB = { col: 141, row: 83 } as const;
 export const cryptExit = () => ({ zone: 'undead', ...W.toLocal('undead', CRYPT_TOMB.col, CRYPT_TOMB.row + 1) });
 /** Where a player appears in the Barrow Deep (under the way out). */
 export const CRYPT_ARRIVAL = { col: 12, row: 5 } as const;
+
+/** The Tuskwood temple (`ruinTemple`, 8x10 cells, local to the jungle at 32,14): its dark arch is a 2-cell door on the building's bottom row, between the two front pillars. */
+export const TEMPLE_DOOR = { col: 175 + 35, row: 14 - 1, w: 2 } as const;
+/** Where a player appears in the jungle when they leave the temple: the grass just below the arch. */
+export const templeExit = () => ({ zone: 'jungle', ...W.toLocal('jungle', TEMPLE_DOOR.col, TEMPLE_DOOR.row + 1) });
+/** Where a player appears inside the temple (just in from the way out). */
+export const TEMPLE_ARRIVAL = { col: 12, row: 3 } as const;

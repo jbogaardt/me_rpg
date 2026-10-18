@@ -62,10 +62,10 @@ cliffs (`plateauSolid`). The Sunscar Hollow has one. Mobs ignore heights for now
 ## Ruins
 
 `ruins.png` (`ruins.ts`, from the OGA-BY/CC-BY "[LPC] Jungle Ruins", not kept in the repo: `RUINS_DIR=<unzipped pack> npm run ruins`)
-holds the `ruin*` prefabs (`RUIN_PREFABS` in `catalog.ts`): a pyramid, temple, hall, hut, walls, an arch, pillars, idols and rubble.
+holds the `ruin*` prefabs (`RUIN_PREFABS`): a pyramid, temple, hall, hut, walls, an arch, pillars, idols, rubble.
 Buildings and walls are solid from the ground up; pillars and idols block along their whole height; the arch blocks only
-its dark half, so its open half is a gate. They are scenery, not enterable. Used in the jungle, desert, undead lands and
-the Wilds' old shrine and barrow; the quest `ruin` landmark (`entities/Landmark.ts`) is drawn from the same sheet.
+its dark half, so its open half is a gate. Scenery, except the jungle temple's arch (door into `maps/ruin_temple.ts`). Used in the jungle, desert, undead lands and
+the Wilds' old shrine and barrow. The quest `ruin` landmark (`entities/Landmark.ts`) uses the same sheet.
 
 ## Landmarks
 
