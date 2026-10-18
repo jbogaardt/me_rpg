@@ -18,7 +18,6 @@ export interface Frame {
   /** The zone the player is in (its key). */
   zone: string;
   level: number;
-  breather: boolean;
 }
 
 /** Seconds as "m:ss" (hours as "h:mm:ss"). */
@@ -37,8 +36,6 @@ export class Engagement {
   kills = 0;
   knockouts = 0;
   quests = { started: 0, done: 0, lost: 0 };
-  breathers = 0;
-  breatherSeconds = 0;
   firstKillAt: number | null = null;
   firstQuestAt: number | null = null;
   levelStart: number | null = null;
@@ -68,7 +65,6 @@ export class Engagement {
       this.progress();
     }
     this.stat(f.zone).seconds += dt;
-    if (f.breather) this.breatherSeconds += dt;
     // Idle time is not a stall: the player was away, not stuck.
     if (this.sinceInput < IDLE_AFTER) this.sinceProgress += dt;
     this.longestStall = Math.max(this.longestStall, this.sinceProgress);
@@ -111,10 +107,6 @@ export class Engagement {
     this.progress();
   }
 
-  breatherBegan() {
-    this.breathers++;
-  }
-
   /** One line of JSON for the console (`[engage] {...}`): the same counters, for a developer or the DM bot to read. */
   line(): string {
     return JSON.stringify({
@@ -124,7 +116,6 @@ export class Engagement {
       kills: this.kills,
       down: this.knockouts,
       quests: [this.quests.started, this.quests.done, this.quests.lost],
-      breathers: this.breathers,
       stall: Math.round(this.longestStall),
       zones: Object.fromEntries([...this.zones].map(([z, s]) => [z, Math.round(s.seconds)])),
     });

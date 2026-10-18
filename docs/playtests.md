@@ -32,7 +32,7 @@ care. Places are never named unless the game gave them.
   its search area moves; a director's card is acted on, never answered aloud.
 - Hints wait for the DM to notice: a quest is told in words, the map is marked only when the party is lost, an arrow
   only after that. Each stock line has several wordings. The evening has one arc; sagas are its chapters.
-- Pacing: a breather to wander after each saga; foes stay down 60 s; online, mobs leave a player with no input for 10 s; heat is not turned up twice in 5 min.
+- Pacing: time to wander after each saga; foes stay down 60 s; online, mobs leave a player with no input for 10 s; heat is not turned up twice in 5 min.
 - The DM walks to a party in his zone, and only teleports to one elsewhere or very far.
 
 ## Runs
@@ -54,5 +54,5 @@ care. Places are never named unless the game gave them.
 ## What players report without trying
 
 Nobody fills in a form: the host writes down what players say to the DM with the state of the game, the DM bot has Jev tag and
-triage it, and Haiku writes `reports/<date>-<code>.md` for the next session. All of it, and the breather, is in
+triage it, and Haiku writes `reports/<date>-<code>.md` for the next session. All of it is in
 `docs/feedback.md`. Start a session from the newest report.

@@ -168,7 +168,7 @@ export function hotspots(entries: readonly ReportEntry[]): Raw[] {
       });
   }
   for (const [area, at] of group(
-    (e) => e.state.stall >= LONG_STALL && e.kind !== 'breather',
+    (e) => e.state.stall >= LONG_STALL,
     (e) => e.state.area,
   )) {
     if (at.length < 2) continue;

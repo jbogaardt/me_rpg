@@ -48,9 +48,9 @@ harvest buttons, a Party tab (levels, HP, area, **Go**).
 
 - **Director** (`dmDirector.ts` says WHEN, `DmPrompts.ts` builds each card and does the pick, `hud/DmCard.ts` draws it):
   watches party health, task progress and quiet time, and suggests easing off, turning up the heat, a twist, which quest
-  (after a breather once one ends), the compass (the map stays the party's own; the compass leans toward the place, then
-  points at it), a breather, a new land's sky, raising a fallen player, or the story's next road (a vote).
-  Urgent cards wait less; dismissing one is a breather. The epic card pages (a way back, never the same list twice).
+  (after a quiet spell once one ends), the compass (the map stays the party's own; the compass leans toward the place, then
+  points at it), a new land's sky, raising a fallen player, or the story's next road (a vote).
+  Urgent cards wait less; dismissing one makes the director wait. The epic card pages (a way back, never the same list twice).
   A bot unsure on a card takes its `stay`, else nothing.
 - **Inbox** (`dmRequests.ts`): director nudges and **players' requests** (their own free-form words, from the 💬
   button) land here, one of a kind at a time, and expire. The DM **answers privately** (a canned reply or typed words,

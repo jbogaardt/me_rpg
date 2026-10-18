@@ -92,7 +92,6 @@ describe('JevTagger', () => {
       at: [10, 10] as [number, number],
       quest: null,
       party: { size: 1, avgHp: 0.9, lowest: 0.9 },
-      breather: false,
       stall: 0,
       recent: [],
     },

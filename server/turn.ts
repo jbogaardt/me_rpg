@@ -35,7 +35,7 @@ export interface Clock {
   lastQuest: number;
   /** Friends connected for at least `SETTLE_MS`. */
   settled: number;
-  /** When the last saga (or quest of its own) ended: the party is left to wander for `BREATHER_MS` after. */
+  /** When the last saga (or quest of its own) ended: the party is left to wander for `WANDER_MS` after. */
   lastEnded?: number;
   /** The latest table read, when one is fresh (see pulse.ts); without it timers decide. */
   pulse?: Pulse | null;
@@ -67,7 +67,7 @@ export const QUEST_GAP_MS = 30_000;
  * After a saga ends the party is given time to wander, go to town, shop and talk before the next is offered, whatever the
  * table read says (a player who wants one sooner can ask). An adventure breathes; a quest queue does not.
  */
-export const BREATHER_MS = 30_000;
+export const WANDER_MS = 30_000;
 
 /** `startAt`: begin the game by itself once this many friends are in (0: only when told). */
 export function nextStep(s: PageState, c: Clock, startAt = 0): Step {
@@ -82,7 +82,7 @@ export function nextStep(s: PageState, c: Clock, startAt = 0): Step {
     return { kind: 'follow', slot: first.slot };
   if (s.card) return { kind: 'card' };
   if (s.waiting > 0) return { kind: 'inbox' };
-  const resting = c.lastEnded !== undefined && c.now - c.lastEnded < BREATHER_MS;
+  const resting = c.lastEnded !== undefined && c.now - c.lastEnded < WANDER_MS;
   if (!s.lobbyOpen && !s.questing && !s.epic && !resting) {
     // With a table read, the reader says when the party needs a quest; without one, a long wait does.
     const ready = c.pulse

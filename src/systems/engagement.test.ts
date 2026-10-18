@@ -5,7 +5,6 @@ const frame = (over: Partial<Frame> = {}): Frame => ({
   input: true,
   zone: 'greenwood',
   level: 1,
-  breather: false,
   ...over,
 });
 
@@ -42,15 +41,14 @@ describe('engagement counters', () => {
     expect(e.longestStall).toBeGreaterThanOrEqual(15);
   });
 
-  it('keeps time, visits and knockouts per zone, and the breather clock', () => {
+  it('keeps time, visits and knockouts per zone', () => {
     const e = new Engagement();
     e.tick(10, frame({ zone: 'a' }));
-    e.tick(5, frame({ zone: 'b', breather: true }));
+    e.tick(5, frame({ zone: 'b' }));
     e.tick(5, frame({ zone: 'a' }));
     e.knockedOut('b');
     expect(e.zones.get('a')).toEqual({ seconds: 15, entries: 2, knockouts: 0 });
     expect(e.zones.get('b')).toEqual({ seconds: 5, entries: 1, knockouts: 1 });
-    expect(e.breatherSeconds).toBe(5);
     expect(e.knockouts).toBe(1);
   });
 

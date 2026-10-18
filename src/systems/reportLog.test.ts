@@ -60,7 +60,6 @@ const state = (over: Partial<ReportState> = {}): ReportState => ({
       },
     ],
   },
-  breather: false,
   stall: 12,
   recent: [],
   ...over,

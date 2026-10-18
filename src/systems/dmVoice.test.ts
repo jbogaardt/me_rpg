@@ -5,7 +5,6 @@ import { REPLIES } from './dmRequests';
 
 const banks: [string, string[]][] = [
   ['done', voice.DONE_WORDS],
-  ['breather', voice.BREATHER_WORDS],
   ['failed', voice.FAILED_WORDS],
   ['cancel', voice.CANCEL_WORDS],
   ['compass', voice.COMPASS_WORDS],

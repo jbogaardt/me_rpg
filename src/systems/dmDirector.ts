@@ -5,7 +5,6 @@
 // two or three buttons, answered with one tap or left alone (the game carries on). What each card says and does is
 // scenes/overworld/DmPrompts.ts.
 
-import { BREATHER_SECONDS } from './breather';
 import { HINT_ARROW } from './dmTasks';
 
 export type Suggestion =
@@ -15,7 +14,7 @@ export type Suggestion =
   | 'easy' // the party is breezing through: turn up the heat, or stay the course?
   | 'twist' // a quest is part way and the party is neither: make it interesting
   | 'lost' // the party has made no progress for a long while: point the way, or let them wander?
-  | 'done' // a quest ended quick and easy, or hard-won: raise the stakes, or give them a breather?
+  | 'done' // a quest ended quick and easy, or hard-won: raise the stakes, or ease off?
   | 'next' // nothing asked of the party for a while: which quest?
   | 'land'; // the party reached a new land: how does the sky look?
 
@@ -50,7 +49,7 @@ export interface DirectorState {
 /** Seconds of quiet (no task) before "what now?", and between such nudges. */
 export const IDLE_BEFORE_NEXT = 90;
 /** Seconds after a quest ends before the next is suggested: time to wander, shop and talk. */
-const BREATHER = BREATHER_SECONDS;
+const AFTER_QUEST = 45;
 /** Seconds between cards that are only colour; the urgent ones (a fallen player, the story) wait much less. */
 export const CARD_GAP = 10;
 const URGENT_GAP = 3;
@@ -100,7 +99,7 @@ export class Director {
       this.lost = -Infinity;
       this.finishedSaid = false;
     }
-    if (this.wasActive && !active) this.idle = IDLE_BEFORE_NEXT - BREATHER; // the quest just ended: a breather, then the next
+    if (this.wasActive && !active) this.idle = IDLE_BEFORE_NEXT - AFTER_QUEST; // the quest just ended: a wait, then the next
     this.wasActive = active;
     if (active) this.idle = 0;
     else this.idle += dt;
@@ -153,7 +152,7 @@ export class Director {
     this.idle = 0;
   }
 
-  /** The DM said "not now" to a card: a longer breather before the next. */
+  /** The DM said "not now" to a card: a longer wait before the next. */
   snooze(seconds: number) {
     this.since = Math.min(this.since, CARD_GAP - seconds);
   }

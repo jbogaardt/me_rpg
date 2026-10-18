@@ -63,11 +63,7 @@ export class DmReport {
   private signalAt = new Map<string, number>();
   private repeats = new Map<string, number>();
 
-  constructor(
-    private arena: Arena,
-    /** Is a breather running (the page's own)? */
-    private breathing: () => boolean,
-  ) {}
+  constructor(private arena: Arena) {}
 
   private get keeping(): boolean {
     return this.arena.role !== 'client';
@@ -80,7 +76,7 @@ export class DmReport {
     for (const p of this.arena.partyAll()) {
       let e = this.counters.get(p.slot);
       if (!e) this.counters.set(p.slot, (e = new Engagement()));
-      e.tick(dt, { input: p.idle < 0.5, zone: p.zone, level: p.hero.stats.level, breather: this.breathing() });
+      e.tick(dt, { input: p.idle < 0.5, zone: p.zone, level: p.hero.stats.level });
       const last = this.zones.get(p.slot);
       if (last !== undefined && last !== p.zone)
         this.log.event(this.clock, `${seatName(p.slot)} went to ${zoneName(p.zone)}`);
@@ -149,10 +145,6 @@ export class DmReport {
   /** The DM said something (what a player answers is read against it). */
   dmSaid(text: string) {
     this.log.event(this.clock, `DM: "${text.slice(0, 80)}"`);
-  }
-
-  breather() {
-    this.add('breather', null, 'a breather began');
   }
 
   reset() {
@@ -235,7 +227,6 @@ export class DmReport {
         lowest: round(fracs.length ? Math.min(...fracs) : 1),
       },
       ...(full && who && hero ? { detail: this.detail(who) } : {}),
-      breather: this.breathing(),
       stall: Math.round((who && this.counters.get(who.slot)?.stalled) || 0),
       recent: this.log.recent,
     };
