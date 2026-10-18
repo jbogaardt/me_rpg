@@ -446,6 +446,8 @@ export interface Prefab {
    * bottom `band` pixels are blocked. The art above the band is walk-behind. Null = decoration only.
    */
   solid: { band: number; min: number } | null;
+  /** Draw-order line, px from the prefab's top (default: its bottom). A building whose pillars or steps poke out below its wall sorts on the wall's base, so a hero just south of the wall is not drawn behind it. */
+  foot?: number;
   /** Hung on a building's wall: drawn over the wall even though its foot is above the wall's (z lift, see zone.ts). */
   wall?: boolean;
   /** What the object is, copied to MapObject.tag so game systems (leaf fall, rustling...) can find it. */
@@ -699,18 +701,39 @@ export const GRAVE_CROSSES = [
 // === end LPC grave markers ======================================================================================
 
 // --- Ruins (ruins.png, cut from "[LPC] Jungle Ruins" by tools/map/ruins.ts) ---
-const ruin = (name: keyof typeof RUINS_ATLAS, band: number, about: string, tag = 'ruin'): Prefab => {
+const ruin = (name: keyof typeof RUINS_ATLAS, band: number, about: string, tag = 'ruin', foot?: number): Prefab => {
   const { x, y, w, h } = RUINS_ATLAS[name];
-  return { sheet: RUINS_SHEET, w, h, parts: [part(x, y, w, h)], solid: { band, min: 0.3 }, tag, about };
+  return {
+    sheet: RUINS_SHEET,
+    w,
+    h,
+    parts: [part(x, y, w, h)],
+    solid: { band, min: 0.3 },
+    tag,
+    about,
+    ...(foot ? { foot } : {}),
+  };
 };
 const RUIN_PREFABS = {
   ruinPyramid: ruin(
     'pyramid',
     480,
     'Stepped pyramid with a grand stair and statues, 17x15 cells. Solid all over: scenery.',
+    'ruin',
+    448,
   ),
-  ruinTemple: ruin('temple', 320, 'Small temple with a dark arched door and four pillars, 8x10 cells. Solid all over.'),
-  ruinHall: ruin('hall', 192, 'Roofed hall with a colonnade and a statue at its door, 10x6 cells. Solid all over.'),
+  ruinTemple: ruin(
+    'temple',
+    320,
+    'Small temple with a dark arched door and four pillars, 8x10 cells. Solid all over; its arch is a door where a map gives it one (`z.door` on the bottom row of cells 3-4).',
+    'ruin',
+    288,
+  ),
+  ruinHall: ruin(
+    'hall',
+    192,
+    'Roofed hall with a colonnade and a statue at its door, 10x6 cells. Solid all over; its arch (cell 7 of the bottom row) is a door where a map gives it one.',
+  ),
   ruinHut: ruin('hut', 96, 'Crumbling windowed hut, 4x3 cells. Solid all over.'),
   ruinWall: ruin('wallFaces', 96, 'Long wall with carved faces and a slab, 11x3 cells. Solid.'),
   ruinWallBroken: ruin('wallRuin', 96, 'Wall fallen away on its left, with carved faces, 7x3 cells. Solid.'),
