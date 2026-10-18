@@ -659,7 +659,7 @@ export class OverworldScene implements Scene {
     const raw = this.input.command(dt, reading);
     this.possession.drive(raw, reading); // a possessed foe takes the DM's keys; the DM's own body stands still
     const down = arena.local.down !== null; // a hero on the ground does nothing (systems/downfall.ts)
-    const cmd = this.possession.active || down ? NO_COMMAND : reading ? { ...raw, dx: 0, dy: 0 } : raw;
+    const cmd = this.possession.active || down ? NO_COMMAND : reading ? { ...raw, dx: 0, dy: 0, roll: false } : raw;
     const guests = [...arena.remotes.values()].map((p) => ({ p, cmd: this.host.command(p) }));
     const commandOf = (p: Player) => (p === arena.local ? cmd : (guests.find((g) => g.p === p)?.cmd ?? NO_COMMAND));
     const here = arena.zone;
@@ -732,6 +732,7 @@ export class OverworldScene implements Scene {
     if (!menu.open && !shop.open && !trade.open && !busy)
       this.interact.handleAction(cmd.act, () => this.guest.pressAction());
     if (cmd.combo !== undefined) this.guest.castCombo(cmd.combo);
+    if (cmd.roll && !reading && !fallen) this.guest.pressRoll(); // the host rolls this hero (a toggle bit in the keys)
     this.guest.sendInput(
       dt,
       reading || fallen ? 0 : packKeys(cmd.dx, cmd.dy),

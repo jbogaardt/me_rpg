@@ -13,6 +13,8 @@ const CHEER_COLS = [1, 2, 3, 4];
 const hop = (ms: number) => Math.abs(Math.sin(ms / 110)) * 5 * Math.max(0, 1 - ms / CHEER_MS);
 
 /** A head-shake (a refusal): the body wobbles side to side for this long, at most this many px. */
+/** A roll turns the body about this point (px above the feet in the sheet's own pixels), about the waist. */
+const TUMBLE_PIVOT = -24;
 const SHAKE_MS = 260;
 const SHAKE_PX = 2;
 /** The glow of a gained level: the body washes to a warm light and back over this long. */
@@ -75,6 +77,11 @@ export class Character extends Container {
   private glowLeft = 0;
   private shakeLeft = 0;
   private offX = 0;
+  private offY = 0;
+  private tumbling = false;
+  private tumbleLift = 0;
+  private ringLevel = 1;
+  private ringFlare = 0;
 
   /** `aura` adds the hero's pulsing time-ring; everyone else just gets a plain shadow. */
   constructor(
@@ -161,10 +168,37 @@ export class Character extends Container {
     this.sprite.scale.set(this.size * sx, this.size * sy);
   }
 
+  /**
+   * Turn the body `angle` radians about its middle and lift it `lift` px (a roll: the existing frame tumbles, there is no
+   * roll art). 0, 0 puts it back. Call it after `setOffset` each frame it is in use.
+   */
+  setTumble(angle: number, lift = 0) {
+    this.tumbling = angle !== 0 || lift !== 0;
+    this.sprite.rotation = angle;
+    this.sprite.pivot.y = angle === 0 ? 0 : TUMBLE_PIVOT;
+    this.tumbleLift = -lift + (angle === 0 ? 0 : TUMBLE_PIVOT * this.size);
+    this.sprite.position.y = this.offY + this.tumbleLift;
+  }
+
   /** Nudge the body off its feet point, e.g. to lunge into an attack. */
   setOffset(dx: number, dy: number) {
     this.offX = dx;
-    this.sprite.position.set(dx + this.shakeX(), dy);
+    this.offY = dy;
+    this.sprite.position.set(dx + this.shakeX(), dy + (this.tumbling ? this.tumbleLift : 0));
+  }
+
+  /** Drop a one-shot animation at once (a roll cancels a swing's pose); idle or walking shows next. */
+  cancelAction() {
+    this.action = null;
+  }
+
+  /**
+   * The hero's ring under the feet as a readout: `level` 1 is the usual ring, less is dimmer and tighter (a cooldown still
+   * running), and `flare` (0 to 1) brightens and widens it for a moment (ready again). Only the hero's ring is drawn.
+   */
+  setRing(level: number, flare = 0) {
+    this.ringLevel = level;
+    this.ringFlare = flare;
   }
 
   private shakeX(): number {
@@ -285,8 +319,10 @@ export class Character extends Container {
     const pulse = (Math.sin(timeMs / 400) + 1) / 2;
     this.aura.clear().ellipse(0, 0, 10, 4).fill({ color: 0x000000, alpha: 0.35 });
     if (!this.withAura) return;
+    const k = 0.7 + 0.3 * this.ringLevel + this.ringFlare * 0.5; // a cooling ring is tight, a ready one flares out
+    const alpha = Math.min(1, (0.15 + pulse * 0.35) * (0.15 + 0.85 * this.ringLevel) + this.ringFlare * 0.7);
     this.aura
-      .ellipse(0, 0, 13 + pulse * 3, 5 + pulse * 1.5)
-      .stroke({ color: this.auraColor, alpha: 0.15 + pulse * 0.35, width: 1 });
+      .ellipse(0, 0, (13 + pulse * 3) * k, (5 + pulse * 1.5) * k)
+      .stroke({ color: this.auraColor, alpha, width: this.ringFlare > 0.3 ? 2 : 1 });
   }
 }

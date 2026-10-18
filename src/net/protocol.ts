@@ -58,6 +58,9 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * v50: `SnapMsg.ia`, the newest input number the host has applied for the recipient (client-side prediction).
  * v51: `SnapMsg.folk`, where the people who stroll about their post (content `roam`) stand.
  * v52: `HelloMsg.id`, a friend's own lasting id, so the host can give a rejoiner their hero back.
+ * v58: the dodge roll. `KEY.roll` (16) in `InputMsg.keys` is a toggle that flips on every roll press (state, not an event: a lost packet
+ * cannot lose a press, the host rolls when it differs from the last bit it saw), so `keys` may be up to 31; `FLAG.roll` (256) in a player's
+ * flags says the hero is rolling, so flags may be up to 511. An old page would drop the new input or snapshot, so pages must reload.
  * v57: nine more `fx` names, the cues that replace floating numbers and words (blow tiers, a heavy hit on the hero, a refusal, a door shimmer, a level ring, kill motes, an item glint, a quest tick; appended); the `text` event is no longer sent (still decoded, a guest draws nothing for it). v56: nine more `fx` names (foe deaths, a boss finale, sparkle, coins, a loot beam, a cheer, a fall; appended, so old indices hold). v55: `rq` may be a one-tap note (a mood face, "stuck"), written in the host's report and never put in the DM's inbox. v54: the DM's words (`DmMsg.say`/`reply`) may be up to 360 letters, not 240. v53: `InputMsg.px/py`, where the friend's own hero stands: the host moves it there when believable (core/claim.ts).
  * Older: v28 made a negative `SnapMsg.ponds` level mean refilling after running dry; v27 made `drink` start (item
  * 1) or stop (item 0) a steady drink and added `SnapMsg.ponds`; v26 added the `drink` op of `do`; v25 added the
@@ -74,10 +77,14 @@ import { taskFromWire, type TaskWire } from '../systems/dmTasks';
  * `w` and `lightning` events; v12 sends events as tuples, only those near a friend (a defeat or lightning always),
  * within a size budget.
  */
-export const PROTOCOL_VERSION = 57;
+export const PROTOCOL_VERSION = 58;
 
 /** Held-key bits in InputMsg.keys. */
-export const KEY = { up: 1, down: 2, left: 4, right: 8 } as const;
+/** `roll` is not a held key: it flips with every roll press (v58), see `unpackRoll`. */
+export const KEY = { up: 1, down: 2, left: 4, right: 8, roll: 16 } as const;
+
+/** The roll toggle bit of `keys` (0 or 1). */
+export const rollBit = (keys: number): 0 | 1 => (keys & KEY.roll ? 1 : 0);
 
 export function packKeys(dx: number, dy: number): number {
   return (dy < 0 ? KEY.up : 0) | (dy > 0 ? KEY.down : 0) | (dx < 0 ? KEY.left : 0) | (dx > 0 ? KEY.right : 0);
@@ -94,7 +101,17 @@ export function unpackKeys(keys: number): { dx: number; dy: number } {
 export const MAX_PLAYERS = MAX_GUESTS + 1;
 
 /** PlayerSnap flag bits. */
-export const FLAG = { moving: 1, invuln: 2, swing: 4, ward: 8, edge: 16, guard: 32, hidden: 64, down: 128 } as const;
+export const FLAG = {
+  moving: 1,
+  invuln: 2,
+  swing: 4,
+  ward: 8,
+  edge: 16,
+  guard: 32,
+  hidden: 64,
+  down: 128,
+  roll: 256,
+} as const;
 
 /** [player number, x, y, direction index, FLAG bits] */
 export type PlayerSnap = [number, number, number, number, number];
@@ -625,7 +642,7 @@ function parseTradeView(raw: unknown): TradeViewWire | null {
 function parsePlayer(raw: unknown): PlayerSnap | null {
   if (!numbers(raw, 5) || !raw.every((v, i) => (i === 1 || i === 2 ? isCoord(v) : isCount(v)))) return null;
   const [slot, x, y, dir, flags] = raw as PlayerSnap;
-  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 255 ? [slot, x, y, dir, flags] : null;
+  return isIndex(slot, MAX_PLAYERS) && isIndex(dir, DIRS.length) && flags <= 511 ? [slot, x, y, dir, flags] : null;
 }
 
 function parseGround(raw: unknown): GroundSnap | null {
@@ -711,7 +728,7 @@ export function parseMessage(raw: unknown): Message | null {
       if (!(
         isCount(m.n) &&
         isCount(m.keys) &&
-        m.keys <= 15 &&
+        m.keys <= 31 &&
         isCount(m.act) &&
         isCount(m.cb) &&
         isCount(m.ci) &&
