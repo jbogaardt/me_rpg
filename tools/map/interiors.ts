@@ -27,11 +27,12 @@ export function shopInterior(
   z.fill('wall', { col: 0, row: 0, w: SHOP_ROOM.width, h: 2 });
   z.block({ col: 0, row: 0, w: SHOP_ROOM.width, h: 2 }, 'back wall');
 
-  z.prop('shopWindow', 1, 1);
-  z.prop('shopWindow', 9, 1);
+  z.prop('shopWindow', 0, 1);
+  z.prop('shopWindow', 10, 1);
   z.prop(`sign${cap(look)}` as PrefabName, 3, 1);
-  z.prop(`shelf${cap(look)}` as PrefabName, 1, 3);
-  z.prop(`shelf${cap(look)}` as PrefabName, 7, 3);
+  // Shelves stand against the wall: their foot is on the floor line just below it and their face covers the wall.
+  z.prop(`shelf${cap(look)}` as PrefabName, 1, 1, { dy: 8 });
+  z.prop(`shelf${cap(look)}` as PrefabName, 7, 1, { dy: 8 });
   z.prop('counter', 3, 5);
   z.prop('barrel', 1, 7);
   z.prop('barrel', 9, 7);
