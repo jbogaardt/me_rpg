@@ -8,6 +8,14 @@
   blow cannot be dodged by stepping back and forth (it starts from a reach longer than the sword's, windup length varies,
   aim locks once committed, and the blow is a real lunge); a mob that loses the hero mends so chipping and healing
   doesn't work; a kind with a `ray` (the Mummy) is a caster with a melee fallback whose beam any hit interrupts.
+  **Tough foes** (`MobKind.poiseMax`/`charge`/`guard`, `systems/mobDefense.ts`; core engine, host/solo-owned, nothing on the wire, content opts in per
+  kind): *poise* is a budget of blows (sword/arrow 1, spell 2) and only the hit that empties it staggers (then it stands up whole,
+  and mends after 2 s unhurt); a hit it shrugs off is a nudge with no hit-freeze, and its whole windup, lunge and charge are uninterruptible
+  (hyper-armor). A hero 3+ levels under a foe stuns it far less, takes more from it and does less to it (flat armor); a boss or
+  named foe has no gap. A *guard* turns frontal arrows and spells aside (not melee) while it stalks and is down in a windup, recover or stagger; blocked
+  spells still cost poise, so enough of them break it. A *charge* is the answer to kiting: a hero who stays out of range for 1.5 s
+  gets a telegraphed dash (windup pose, "!" overhead, a long mark line; it is the `windup` state with `attack = 'charge'`, so a guest needs no new state).
+  Elites also walk at the hero's pace or charge (`campaigns.test.ts`).
   **Aggro needs line of sight** (`MobWorld.sees`, `Collision.hasLineOfSight`): walls do not pull rooms; a mob also hears a
   hero at `HEARING` of its sight, and a chaser keeps `MEMORY` seconds after losing sight, and gives up the moment the hero is past its sight range. Host-only, so no co-op change.
   **Giants** (`MobKind.scale`) draw bigger and the rules follow: collision box, reach, hit circle, bars.

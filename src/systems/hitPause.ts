@@ -39,6 +39,7 @@ export function killPauseFor(boss: boolean): number {
 /** Foe knockback speeds (px/s): with the decay of 12 a second below, a blow carries about speed/12 px (320 is ~30 px). */
 export const KNOCK_SPEED = 320;
 export const KNOCK_SHOVE = 90; // a foe that is poised or committed to its windup is only nudged
+export const KNOCK_NUDGE = 30; // a foe with poise that is hit but not broken is barely moved: it keeps coming
 export const KNOCK_DECAY = 12;
 export const KNOCK_CAP = 520; // a bolt's stronger shove is capped so nothing is flung across the screen
 
