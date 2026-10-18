@@ -14,7 +14,9 @@ the screen. A new kind of source is an entry in `HEARTH_EFFECTS`, `HEARTH_MARGIN
 ## Light
 
 - **Night warmth**: `LightGlow` (additive, above the night shade) draws an orange pool at each fire, torch and lava
-  source (`systems/lights.ts`, radii in `LIGHT_RADIUS`), scaled by `glowStrength` of the sky colour.
+  source (`systems/lights.ts`, radii in `LIGHT_RADIUS`), scaled by `glowStrength` of the sky colour. Flames flicker: each source has its own phase (`flickerSeed`, from where it
+  stands), the reach wobbles (`flicker`) and the brightness wobbles faster with an occasional gutter (`flameBrightness`,
+  `Light.k`); `visibleLights` fills a reused array, so a frame allocates no lights.
 - **Underground darkness** (capability `darkness`, zone scope; settings `radius`, `dim`, `memory`): `MapData.dark` is set
   by every `Delve` (cave, sewer, crypt) and `DarknessLayer` cuts pools out of a dark mask for each hero and light, with
   ground already seen faintly visible. Nothing hides from the rules: a mob in the dark still sees you. A campaign, arc or

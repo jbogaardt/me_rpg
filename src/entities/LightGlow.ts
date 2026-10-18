@@ -46,8 +46,8 @@ export class LightGlow extends Sprite {
       const cy = (l.y - view.y) * k;
       const r = l.r * 0.9 * k;
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      g.addColorStop(0, 'rgba(255, 168, 72, 0.55)');
-      g.addColorStop(0.45, 'rgba(231, 104, 47, 0.28)');
+      g.addColorStop(0, `rgba(255, 168, 72, ${0.55 * l.k})`);
+      g.addColorStop(0.45, `rgba(231, 104, 47, ${0.28 * l.k})`);
       g.addColorStop(1, 'rgba(231, 104, 47, 0)');
       ctx.fillStyle = g;
       ctx.fillRect(cx - r, cy - r, r * 2, r * 2);

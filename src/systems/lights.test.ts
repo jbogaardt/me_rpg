@@ -1,13 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import type { HearthSource } from './hearths';
-import { flicker, glowStrength, LIGHT_RADIUS, visibleLights } from './lights';
+import { flameBrightness, flicker, flickerSeed, glowStrength, LIGHT_RADIUS, visibleLights } from './lights';
 
 const view = { x: 0, y: 0, w: 400, h: 300 };
 const src = (kind: HearthSource['kind'], x: number, y: number): HearthSource => ({ kind, x, y });
 
 describe('flicker', () => {
   it('stays close to steady', () => {
-    for (let t = 0; t < 20; t += 0.1) expect(Math.abs(flicker(t, 3) - 1)).toBeLessThan(0.1);
+    for (let t = 0; t < 20; t += 0.1) expect(Math.abs(flicker(t, 3) - 1)).toBeLessThan(0.13);
+  });
+
+  it('actually moves, and differs between torches', () => {
+    const at = (seed: number) => Array.from({ length: 200 }, (_, i) => flameBrightness(i * 0.05, seed));
+    const a = at(flickerSeed(10, 20));
+    expect(Math.max(...a) - Math.min(...a)).toBeGreaterThan(0.1);
+    expect(Math.min(...a)).toBeGreaterThan(0.6);
+    expect(Math.max(...a)).toBeLessThan(1.25);
+    expect(a).not.toEqual(at(flickerSeed(11, 20)));
+    expect(flickerSeed(10, 20)).toBe(flickerSeed(10, 20));
+  });
+});
+
+describe('visibleLights reuse', () => {
+  it('fills and trims the array it is given, reusing the light objects', () => {
+    const out = visibleLights([src('torch', 10, 10), src('torch', 50, 50)], view, 1);
+    const first = out[0];
+    visibleLights([src('torch', 10, 10)], view, 2, out);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toBe(first);
   });
 });
 

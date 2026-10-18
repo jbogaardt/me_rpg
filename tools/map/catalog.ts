@@ -821,6 +821,15 @@ const DELVE_PREFABS = {
     'hatch',
     'A round drain with a stone rim, set in the ground (1 cell): the way down into a sewer.',
   ),
+  sewerStairs: sewerArt(
+    0,
+    96,
+    96,
+    96,
+    { band: 12, min: 0.5 },
+    'sewer',
+    'A brick stairwell down into the sewers (3x3): an arched opening with steps going down. Its middle cell is open ground (put the door on the bottom row, middle) and its two flanking cells are solid. Hang stairTorch props on the wall either side.',
+  ),
   sewerDoor: sewerArt(0, 32, 32, 64, null, 'sewer', 'A dark arched doorway in a sewer wall (1x2).'),
   sewerGate: sewerArt(32, 32, 32, 64, null, 'sewer', 'A barred arched gate in a sewer wall (1x2), decoration.'),
   sewerGrate: sewerArt(
@@ -833,6 +842,18 @@ const DELVE_PREFABS = {
     'A wide barred outflow in a stone wall over a green stain (3x2): draw it over the wall rows, decoration.',
   ),
   sewerTorch: sewerArt(160, 32, 28, 60, null, 'torch', 'A torch on a long stalk (1 cell wide), over a stone wall.'),
+  stairTorch: {
+    ...sewerArt(
+      160,
+      32,
+      28,
+      60,
+      null,
+      'torch',
+      'A torch on a long stalk hung on a stairwell facade, drawn over the wall (1 cell wide).',
+    ),
+    wall: true,
+  },
   sewerCrate: sewerArt(192, 32, 31, 42, { band: 28, min: 0.3 }, 'furniture', 'A wooden barrel (1 cell), solid.'),
   sewerBox: sewerArt(224, 32, 28, 24, { band: 22, min: 0.3 }, 'furniture', 'A wooden bucket (1 cell), solid.'),
 };

@@ -78,9 +78,14 @@ export default defineBiome({
       z.prop(SHOP_HANGING[id as ShopId], shop.door.col + shop.door.w, shop.building.row, { dy: -6 });
     }
     z.spawn(...z.near(168, 205));
-    // The drain in the market square: the way down into the sewers (maps/sewer_lanternrest.ts).
+    // The way down into the sewers (maps/sewer_lanternrest.ts): a brick stairwell (3x3) with a torch on the wall either side; the door is its open middle cell.
     z.keepFree(SEWER_HATCH.col, SEWER_HATCH.row + 1);
-    z.prop('sewerHatch', SEWER_HATCH.col, SEWER_HATCH.row);
+    z.prop('sewerStairs', SEWER_HATCH.col - 1, SEWER_HATCH.row);
+    z.block({ col: SEWER_HATCH.col - 1, row: SEWER_HATCH.row - 2, w: 3, h: 2 }, 'the stairwell wall');
+    z.block({ col: SEWER_HATCH.col - 1, row: SEWER_HATCH.row, w: 1, h: 1 }, 'the stairwell wall');
+    z.block({ col: SEWER_HATCH.col + 1, row: SEWER_HATCH.row, w: 1, h: 1 }, 'the stairwell wall');
+    z.prop('stairTorch', SEWER_HATCH.col - 1, SEWER_HATCH.row - 1);
+    z.prop('stairTorch', SEWER_HATCH.col + 1, SEWER_HATCH.row - 1);
     z.door(SEWER_HATCH.col, SEWER_HATCH.row, 1, 'sewer_lanternrest', SEWER_ARRIVAL.col, SEWER_ARRIVAL.row);
     z.sign(north[0] + 6, ROW - 9, { up: 'greenwood', left: 'greenwood', right: 'frostlands' }); // by the north road (systems/signs.ts)
 

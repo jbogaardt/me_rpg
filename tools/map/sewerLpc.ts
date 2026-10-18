@@ -63,7 +63,7 @@ const ground = [
   gloom(crop(WALLS, 0, 280, CELL, CELL), WALL), // face, lower row: the bricks' foot, a dentil course against the floor
 ];
 
-const sheet = blank(CELL * 10, 96);
+const sheet = blank(CELL * 10, 192);
 ground.forEach((cell, i) => over(sheet, cell, i * CELL, 0));
 const put = (img: Image, x: number, y: number) => over(sheet, img, x, y);
 
@@ -111,6 +111,43 @@ put(crop(LIGHTS, 66, 4, 28, 60), 160, 32 - 0); // torch: its stalk is taller tha
 put(crop(BARREL, 1, 14, 31, 42), 192, 32);
 put(crop(BUCKETS, 4, 6, 28, 24), 224, 32);
 put(crop(DUNGEON, 388, 104, 28, 28), 256, 32);
+
+// --- The stairwell (y 96): the way down from the market square, 96x96 = 3x3 cells. A brick facade with a crenelled cap, an
+// arched dark opening and four steps going down into it. The bottom 12px of the middle cell stay empty, so only the two
+// flanking wall cells are solid (catalog `sewerStairs`) and the way in is open. Torches (`sewerTorch`) hang on either side.
+function stairwell(): Image {
+  const img = blank(96, 96);
+  const cap = gloom(crop(WALLS, 52, 208, CELL, CELL), WALL);
+  const upper = gloom(crop(WALLS, 52, 236, CELL, CELL), WALL);
+  const lower = gloom(crop(WALLS, 0, 280, CELL, CELL), WALL);
+  for (let x = 0; x < 96; x += CELL) {
+    over(img, cap, x, 0);
+    over(img, upper, x, 32);
+    over(img, lower, x, 64);
+  }
+  const [ox, oy, ow] = [26, 22, 44]; // the opening: x 26..70, y 22..84
+  const FRAME: [number, number, number] = [112, 118, 122];
+  const FRAME_DARK: [number, number, number] = [74, 80, 86];
+  rect(img, ox - 3, oy - 3, ow + 6, 66, FRAME_DARK); // frame, shadow side
+  rect(img, ox - 2, oy - 2, ow + 4, 64, FRAME);
+  rect(img, ox, oy, ow, 62, DARK);
+  // Steps down into the dark: each one lighter and wider toward the viewer, with a bright lip.
+  const steps: [number, number][] = [
+    [50, 52],
+    [58, 60],
+    [66, 68],
+    [74, 76],
+  ];
+  steps.forEach(([y, c], i) => {
+    const inset = 8 - i * 2;
+    rect(img, ox + inset, oy + y - 22, ow - inset * 2, 8, [c, c + 4, c + 10]);
+    rect(img, ox + inset, oy + y - 22, ow - inset * 2, 1, [c + 46, c + 50, c + 54]);
+  });
+  // The threshold: the bottom 12px of the middle cell are open ground.
+  for (let y = 84; y < 96; y++) for (let x = 32; x < 64; x++) img.data.set([0, 0, 0, 0], (y * 96 + x) * 4);
+  return img;
+}
+put(stairwell(), 0, 96);
 
 writePng(path.join(ROOT, 'public/tilesets/sewer_lpc.png'), sheet);
 console.log('wrote sewer_lpc.png');
