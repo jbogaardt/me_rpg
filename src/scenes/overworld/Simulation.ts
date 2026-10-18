@@ -258,7 +258,7 @@ export class Simulation {
       return this.downTick(p, dt);
     }
     const s = p.hero.stats;
-    p.idle = cmd.dx || cmd.dy || cmd.act || cmd.roll || cmd.combo !== undefined ? 0 : p.idle + dt;
+    p.idle = cmd.dx || cmd.dy || cmd.act || cmd.use || cmd.roll || cmd.combo !== undefined ? 0 : p.idle + dt;
     if (p.idle >= AFK_S) this.away.add(p.body);
     else this.away.delete(p.body);
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);

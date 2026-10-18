@@ -14,7 +14,11 @@ import { RollLook } from './RollLook';
 export interface Command {
   dx: number; // -1, 0, 1
   dy: number;
-  act: boolean; // action button pressed (talk / attack)
+  act: boolean; // attack button pressed (the contextual single key in that mode: talk / attack)
+  /** The interact key or button was pressed (split keys only: talk, open, pick up). A guest's press arrives as the toggle bit `KEY.use`. */
+  use?: boolean;
+  /** A guest plays split keys, so its `act` is attack only (host only; from `KEY.split`). Absent: `act` is the contextual key. */
+  split?: boolean;
   /** The roll key or button was pressed (systems/roll.ts). A guest's press arrives as the toggle bit `KEY.roll`. */
   roll?: boolean;
   /** The action button is held down (the local hero only; a guest's hold is repeated as `act` presses). */
@@ -52,6 +56,8 @@ export class Player {
   readonly rollLook = new RollLook();
   /** Host: the last roll toggle bit honoured from a network player (`KEY.roll`). */
   seenRoll = 0;
+  /** Host: the last interact toggle bit honoured from a network player (`KEY.use`). */
+  seenUse = 0;
   /** Arcane Edge (systems/skills.ts): the next `charges` attacks carry extra magic, for `timer` more seconds. */
   edge = { charges: 0, timer: 0 };
   /** Iron Skin: seconds left of taking less damage. */

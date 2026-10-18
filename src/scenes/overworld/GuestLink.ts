@@ -1,4 +1,5 @@
 import { encodeAim, type Aim } from '../../core/aim';
+import { contextKey } from '../../core/contextKey';
 import { barrelsFromWire } from '../../systems/barrels';
 import { DIRS, DIR_VEC } from '../../core/direction';
 import { glide } from '../../core/interp';
@@ -49,6 +50,7 @@ export class GuestLink {
   private inputTimer = 0;
   private inputSeq = 0;
   private actCount = 0; // action presses so far, sent as a counter
+  private useCount = 0; // interact presses so far: only its parity goes out, as `KEY.use`
   private rollCount = 0; // roll presses so far: only its parity goes out, as `KEY.roll` (a toggle the host compares)
   private comboCount = 0; // combos cast so far (a counter too), and which one the last was
   private comboIndex = 0;
@@ -139,6 +141,11 @@ export class GuestLink {
     this.rollCount++;
   }
 
+  /** The interact key or button was pressed (split keys): the host acts on it when it sees the `KEY.use` toggle flip. */
+  pressUse() {
+    this.useCount++;
+  }
+
   /** The player finished combo number `index` of their wand or tome (counted, so a lost packet cannot lose it). */
   castCombo(index: number) {
     this.comboIndex = index;
@@ -167,7 +174,10 @@ export class GuestLink {
 
   /** Send the controls: when they change, and otherwise at INPUT_HZ so a lost packet is soon corrected. */
   sendInput(dt: number, keys: number, aim?: Aim, vote?: [number, number], request?: InputMsg['rq'], reading = false) {
-    this.transmit(dt, keys | (this.rollCount & 1 ? KEY.roll : 0), aim, vote, request, reading);
+    // The toggle bits ride with the walking keys; `KEY.split` tells the host this page's `act` is attack only (the old key is contextual).
+    const bits =
+      (this.rollCount & 1 ? KEY.roll : 0) | (this.useCount & 1 ? KEY.use : 0) | (contextKey.on ? 0 : KEY.split);
+    this.transmit(dt, keys | bits, aim, vote, request, reading);
     this.predict(dt, keys);
   }
 

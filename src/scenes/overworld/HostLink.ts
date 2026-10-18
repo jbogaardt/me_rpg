@@ -21,6 +21,8 @@ import {
   type WorldEvent,
   pondsWire,
   rollBit,
+  splitKeys,
+  useBit,
 } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import type { Hero, Stats } from '../../systems/combat';
@@ -170,6 +172,8 @@ export class HostLink {
     const combo = peer.cb > p.seenCombo ? peer.ci : undefined;
     const roll = rollBit(peer.keys) !== p.seenRoll; // the toggle bit flipped: a roll was pressed
     p.seenRoll = rollBit(peer.keys);
+    const use = useBit(peer.keys) !== p.seenUse; // the interact toggle bit flipped: an interact press
+    p.seenUse = useBit(peer.keys);
     p.seenAct = peer.act;
     p.seenCombo = peer.cb;
     return {
@@ -177,6 +181,8 @@ export class HostLink {
       dy,
       act,
       roll,
+      use,
+      split: splitKeys(peer.keys),
       ...(combo === undefined ? {} : { combo }),
       ...(peer.fresh && peer.px !== undefined && peer.py !== undefined
         ? { at: { n: peer.n, x: peer.px, y: peer.py } }

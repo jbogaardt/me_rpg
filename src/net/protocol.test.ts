@@ -13,6 +13,8 @@ import {
   encodeMessage,
   mergeSnapshots,
   packKeys,
+  splitKeys,
+  useBit,
   parseMessage,
   type Message,
   PROTOCOL_VERSION,
@@ -100,6 +102,25 @@ describe('the dodge roll (v58)', () => {
     for (const f of all) expect(f & (f - 1)).toBe(0); // each a single bit
     const rolling = { ...snap, players: [[0, 1, 2, 0, FLAG.roll | FLAG.invuln]] };
     expect(parseMessage(JSON.stringify(rolling))).toMatchObject({ players: [[0, 1, 2, 0, 258]] });
+  });
+});
+
+describe('the split action key (v59)', () => {
+  it('KEY.split is held and KEY.use toggles, apart from walking and the roll', () => {
+    expect([KEY.split, KEY.use]).toEqual([32, 64]);
+    const keys = packKeys(1, 0) | KEY.split;
+    expect(splitKeys(keys)).toBe(true);
+    expect(useBit(keys)).toBe(0);
+    expect(useBit(keys | KEY.use)).toBe(1);
+    expect(rollBit(keys | KEY.use)).toBe(0);
+    expect(unpackKeys(keys | KEY.use | KEY.roll)).toEqual({ dx: 1, dy: 0 });
+    expect(splitKeys(packKeys(1, 0) | KEY.roll)).toBe(false); // an old-style or contextual page: act is the one key
+  });
+
+  it('accepts every combination of the bits and nothing wider', () => {
+    const base = { k: 'in', n: 1, keys: 0, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
+    expect(parseMessage(JSON.stringify({ ...base, keys: 127 }))).toMatchObject({ keys: 127 });
+    expect(parseMessage(JSON.stringify({ ...base, keys: 128 }))).toBeNull();
   });
 });
 
@@ -264,7 +285,7 @@ describe('messages', () => {
     const base = { k: 'in', n: 1, keys: 3, act: 0, cb: 0, ci: 0, ack: 0, vr: 300 };
     expect(parseMessage(JSON.stringify(base))).not.toBeNull();
     for (const patch of [
-      { keys: 32 },
+      { keys: 128 },
       { keys: -1 },
       { n: 1.5 },
       { act: 'x' },
@@ -808,7 +829,7 @@ describe('the cue effects (v57)', () => {
       'itemMote',
       'questTick',
     ]);
-    expect(PROTOCOL_VERSION).toBe(58);
+    expect(PROTOCOL_VERSION).toBe(59);
   });
 
   it('round-trip on the wire, each with its player', () => {

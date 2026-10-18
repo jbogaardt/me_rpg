@@ -2,7 +2,7 @@
 
 `OverworldScene` is only the conductor: the frame loop (a short `update` of named steps) and the HTML overlays (menu,
 dialog, shop counter, trade window, map). **Put new code in the file that owns the concern, not in the scene**; a lint
-rule caps the file's length. What the action key does is `Interactions`, the controls are `LocalInput`, what the local
+rule caps the file's length. What the attack and interact keys do is `Interactions`, the controls are `LocalInput`, what the local
 player is told about quests is `StoryUi` (local only, nothing on the wire). The files in `overworld/` carry headers that say what each owns: `Arena` (who is
 in the game, the loaded zones, the zone context), `Zones` (loading, prefetching, travel, transitions), `Simulation` (the
 rules), `Visuals` (everything drawn from an event), `Ground`, `PackSync`, `Trading`, `HostLink`/`GuestLink` (the two sides
@@ -24,12 +24,11 @@ draw in `Visuals`, a new synced thing in the matching link. The DM's controls ar
 - **Sword input buffer** (`systems/inputBuffer.ts`; core engine, host-owned): `Simulation.attack` called inside the cooldown
   keeps the press for `ATTACK_BUFFER_S` (0.16 s) and `updatePlayer` fires it on the first tick the cooldown allows (bows,
   wands and tomes share the same gate and cooldown values). One pending press per `Player.attackBuffer`; a newer press
-  refreshes it; it dies on fire, a dialog or menu (`Interactions.holdAttack`), a fall, or a zone change. Holding the action
-  key (`Command.held`, the on-screen A button too: both are `actionDown('attack')`) refreshes it each tick but only where
-  the key means attack (`Interactions.fighting`: a foe within 10 cells), so holding by an NPC, chest or pond never repeats a
-  talk, open or pickup and a single tap there is unchanged. Only a press that reached `attack` is buffered, never `act`'s
-  other branches. **Co-op**: no protocol change. A guest's presses already arrive as the numbered `act` count and the HOST
-  buffers them per player; a guest holding in a fight sends an extra `act` press every 0.05 s (`Interactions.guestHold`)
+  refreshes it; it dies on fire, a dialog or menu (`Interactions.holdAttack`), a fall, or a zone change. Holding the
+  attack key (`Command.held`, the on-screen A button too) refreshes it each tick (always with split keys, in a fight only
+  with the contextual key: `Interactions.fighting`), unless the hold began as a dialog page's press. Only a press that
+  reached `attack` is buffered. **Co-op**: no protocol change. A guest's presses already arrive as the numbered `act` count and the HOST
+  buffers them per player; a guest holding sends an extra `act` press every 0.05 s (`Interactions.guestHold`)
   so the host's buffer stays fresh (the guest does not know the cooldown). Cooldowns, damage and balance are untouched.
 - **Phased sword swing** (`systems/swing.ts`; core engine, host-owned): a press starts the body's `slash` at once, sped up so its
   strike frame (4, blade fully out, measured from the sheet) plays 90 ms in; the blow (damage, arc, sound, spark, hit-stop,

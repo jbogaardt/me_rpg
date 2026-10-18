@@ -230,14 +230,14 @@ body:not(.touch-ui) #item-btn { right: calc(24px + env(safe-area-inset-right)); 
 .item-btn:disabled { filter: grayscale(0.8) brightness(0.65); cursor: default; }
 
 /* Square wooden buttons from the kit */
-.wood-btn, #menu-btn, #map-btn, #inv-btn, #req-btn, #btn-a, #btn-roll, #menu .close, #shop .close, #trade .close {
+.wood-btn, #menu-btn, #map-btn, #inv-btn, #req-btn, #btn-a, #btn-roll, #btn-use, #menu .close, #shop .close, #trade .close {
   background: url('./ui/button.png') center / 100% 100% no-repeat;
   color: var(--gold); font-family: var(--title); font-weight: 700; text-align: center;
   text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 #menu-btn, #map-btn, #inv-btn, #req-btn, #menu .close, #shop .close, #trade .close { background-image: url('./ui/button-small.png'); }
-#menu-btn.pressed, #map-btn.pressed, #req-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #btn-roll.pressed, #menu .close.pressed, #shop .close.pressed, #trade .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
+#menu-btn.pressed, #map-btn.pressed, #req-btn.pressed, #inv-btn.pressed, #btn-a.pressed, #btn-roll.pressed, #btn-use.pressed, #menu .close.pressed, #shop .close.pressed, #trade .close.pressed { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.8)); transform: scale(0.95); }
 /* 12px between the tappable HUD buttons (beta playtest: mis-taps); each is 46px, above the 44px touch target. */
 #hud-buttons { display: flex; gap: 12px; flex: none; }
 #menu-btn, #map-btn, #inv-btn, #req-btn { pointer-events: auto; width: 46px; height: 46px; font-size: 24px; line-height: 46px; }
@@ -346,6 +346,19 @@ body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
    button (60 px, up-left of A: its bottom edge is 116 px up, this one's top is 96 px up) and right of the floating stick's
    half of the screen (src/hud/threatPulse.ts keepClear mirrors this rectangle). */
 #btn-roll { position: absolute; pointer-events: auto; touch-action: none; right: 96px; bottom: 8px; width: 60px; height: 60px; font-size: 26px; line-height: 60px; }
+/* Interact: a 60 px button centred above A (A's top is 132 px up the screen, this one's bottom is 144 px up), 16 px right of the item
+   button and clear of the roll button. It exists only while something is within
+   reach (`hidden` otherwise, set by hud/InteractMarks.ts) and wears a pixel glyph of what it would do: no text. Mirrored in
+   src/hud/threatPulse.ts keepClear. */
+#btn-use { position: absolute; pointer-events: auto; touch-action: none; right: 12px; bottom: 116px; width: 60px; height: 60px; }
+#btn-use[hidden] { display: none; }
+#btn-use .glyph { position: absolute; left: 50%; top: 50%; width: 33px; height: 30px; margin: -15px 0 0 -16px; background: center / contain no-repeat; image-rendering: pixelated; pointer-events: none; }
+#btn-use[data-icon='talk'] .glyph { background-image: var(--glyph-talk); }
+#btn-use[data-icon='hand'] .glyph { background-image: var(--glyph-hand); }
+#btn-use[data-icon='chest'] .glyph { background-image: var(--glyph-chest); }
+/* The in-world glint over what the interact key could use (hud/InteractMarks.ts): a pixel sparkle, positioned and faded per frame. */
+#interact-marks { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+#interact-marks .glint { position: absolute; left: 0; top: 0; width: 15px; height: 15px; background: var(--glint) center / 100% 100% no-repeat; image-rendering: pixelated; filter: drop-shadow(0 0 3px rgba(242, 211, 138, 0.9)); will-change: transform, opacity; }
 
 /* --- Pause menu --- */
 #menu, #shop, #trade {
@@ -411,14 +424,14 @@ body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
   user-select: all; -webkit-user-select: all; -webkit-touch-callout: default;
 }
 #menu label { display: block; margin-top: 10px; color: var(--ink-soft); font-weight: 600; font-size: 15px; }
-#aid-setting [role='group'], #item-setting [role='group'], #sfx-setting [role='group'], #numbers-setting [role='group'] { display: flex; gap: 6px; margin: 10px 0 8px; }
+#aid-setting [role='group'], #item-setting [role='group'], #sfx-setting [role='group'], #numbers-setting [role='group'], #context-setting [role='group'] { display: flex; gap: 6px; margin: 10px 0 8px; }
 #sfx-setting input[type='range'] { width: 100%; height: 32px; margin: 4px 0 6px; accent-color: var(--gold-dim); }
 #mp-mode, #aim-mode, #voice-engine { display: flex; gap: 6px; margin: 10px 0 8px; }
-#mp-mode button, #aim-mode button, #voice-engine button, #aid-setting button, #item-setting button, #sfx-setting button, #numbers-setting button {
+#mp-mode button, #aim-mode button, #voice-engine button, #aid-setting button, #item-setting button, #sfx-setting button, #numbers-setting button, #context-setting button {
   flex: 1 1 0; padding: 7px 4px; font: 700 14px var(--title); color: var(--ink-soft); cursor: pointer;
   background: rgba(255, 250, 235, 0.5); border: 1px solid var(--gold-dim); border-radius: 3px;
 }
-#mp-mode button[aria-checked='true'], #aim-mode button[aria-checked='true'], #voice-engine button[aria-checked='true'], #aid-setting button[aria-checked='true'], #item-setting button[aria-checked='true'], #sfx-setting button[aria-checked='true'], #numbers-setting button[aria-checked='true'] { color: var(--gold); background: #4a3418; border-color: var(--ink); }
+#mp-mode button[aria-checked='true'], #aim-mode button[aria-checked='true'], #voice-engine button[aria-checked='true'], #aid-setting button[aria-checked='true'], #item-setting button[aria-checked='true'], #sfx-setting button[aria-checked='true'], #numbers-setting button[aria-checked='true'], #context-setting button[aria-checked='true'] { color: var(--gold); background: #4a3418; border-color: var(--ink); }
 #mp-mode button:disabled, #voice-engine button:disabled { opacity: 0.5; cursor: default; }
 .mp-status { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-weight: 600; }
 .mp-status .dot { width: 10px; height: 10px; border-radius: 50%; background: #8a8478; box-shadow: 0 0 0 1px var(--ink-soft); }
@@ -488,7 +501,7 @@ body.touch-ui #hud-dm { max-width: calc(100vw - 170px); overflow: hidden; text-o
 body.dm-possessing #dm-caption, body.dm-possessing #dm-card, body.dm-possessing #area-banner { display: none; }
 /* The DM has no use for Inventory or Attack on screen: the hot buttons take their place (Attack comes back to strike as a possessed foe). */
 body.dm-ui #inv-btn { display: none; }
-body.dm-ui:not(.dm-possessing) #btn-a, body.dm-ui:not(.dm-possessing) #btn-roll { display: none; }
+body.dm-ui:not(.dm-possessing) #btn-a, body.dm-ui:not(.dm-possessing) #btn-roll, body.dm-ui #btn-use { display: none; }
 #dm-hot { position: fixed; z-index: 2; right: calc(12px + env(safe-area-inset-right)); top: 40%; transform: translateY(-50%); display: grid; gap: 6px; font-family: var(--body); }
 #dm-hot[hidden] { display: none; }
 #dm-hot [data-power="inbox"] { filter: brightness(1.35); outline: 2px solid #ffd34d; animation: nudge 1.6s ease-in-out infinite; }

@@ -135,7 +135,9 @@
         <div id="dpad-knob"></div>
       </div>
       <div id="buttons">
-        <div id="btn-a" role="button" aria-label="Attack / talk" data-key="KeyJ">A</div>
+        <div id="btn-a" role="button" aria-label="Attack" data-key="KeyJ">A</div>
+        <!-- Interact (talk, open, pick up): shown only while something is within reach, above A, clear of the item and roll buttons (src/ui.css). -->
+        <div id="btn-use" role="button" aria-label="Interact" data-key="KeyL" data-icon="hand" hidden><span class="glyph"></span></div>
         <!-- Dodge roll: left of A at the same height, clear of the item button above it (src/ui.css). -->
         <div id="btn-roll" role="button" aria-label="Dodge roll" data-key="KeyK">R</div>
       </div>
@@ -275,6 +277,13 @@
                 <button type="button" role="switch" id="numbers-toggle" aria-checked="false">Off</button>
               </div>
               <p id="numbers-note" class="keybinds-note"></p>
+            </div>
+            <div id="context-setting">
+              <h3>Contextual action key <small>one key for attack and talk</small></h3>
+              <div role="group" aria-label="Contextual action key">
+                <button type="button" role="switch" id="context-toggle" aria-checked="false">Off</button>
+              </div>
+              <p id="context-note" class="keybinds-note"></p>
             </div>
             <div id="keybinds" hidden>
               <h3>Customize <small>keyboard &amp; mouse</small></h3>

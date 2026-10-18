@@ -1,7 +1,8 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
 
 // The quick-item button (src/hud/ItemButton.ts): tap uses, swipe cycles and never uses; keys 1-3, Q/E, F and the wheel on a
-// keyboard. The production build has no `__game`, so the hero is given a Potion x2 and an Elixir by editing the solo save
+// keyboard. Also the split action keys (core/contextKey.ts): a reloaded hero stands beside Maren (home), and there A swings
+// and only Interact (the round button, R) talks, until the Controls tab switches the old contextual key on. The production build has no `__game`, so the hero is given a Potion x2 and an Elixir by editing the solo save
 // (the page saves on `pagehide`, an init script puts the edited save back before the next boot reads it).
 
 async function boot(page: Page) {
@@ -52,9 +53,13 @@ async function swipe(cdp: CDPSession, x: number, y: number, dx: number, dy: numb
 const tap = (cdp: CDPSession, x: number, y: number, id: number) =>
   Promise.all([send(cdp, 'touchStart', [[x, y, id]]), send(cdp, 'touchEnd', [])]);
 
+const rectsApart = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
+  a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+
 for (const viewport of [
   { width: 844, height: 390 },
   { width: 390, height: 844 },
+  { width: 360, height: 640 },
 ]) {
   test.describe(`touch ${viewport.width}x${viewport.height}`, () => {
     test.use({ hasTouch: true, isMobile: true, viewport });
@@ -97,6 +102,37 @@ for (const viewport of [
       const cdp = await page.context().newCDPSession(page);
       await tap(cdp, roll.x, roll.y, 4);
       await expect(page.locator('#btn-roll')).toBeVisible();
+    });
+
+    test('A swings beside Maren and the Interact button, which appears only near something, talks', async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      await boot(page);
+      await giveItems(page); // a reload puts the hero at home, beside Maren
+      const cdp = await page.context().newCDPSession(page);
+      const use = page.locator('#btn-use');
+      await expect(use).toBeVisible(); // Maren is within reach
+      const u = await centre(page, '#btn-use');
+      expect(u.b.width).toBeGreaterThanOrEqual(48);
+      expect(u.b.height).toBeGreaterThanOrEqual(48);
+      for (const sel of ['#btn-a', '#btn-roll', '#item-btn']) {
+        const other = await centre(page, sel);
+        expect(rectsApart(u.b, other.b), `interact clear of ${sel}`).toBe(true);
+      }
+      expect(u.b.x).toBeGreaterThanOrEqual(viewport.width / 2); // the floating stick owns the left half
+      expect(u.b.x + u.b.width).toBeLessThanOrEqual(viewport.width);
+      expect(u.b.y).toBeGreaterThanOrEqual(0);
+
+      const a = await centre(page, '#btn-a');
+      await tap(cdp, a.x, a.y, 1); // attack: a swing, never Maren's dialog
+      await page.waitForTimeout(500);
+      await expect(page.locator('#dialog')).toBeHidden();
+      await tap(cdp, u.x, u.y, 2); // interact: the dialog opens
+      await expect(page.locator('#dialog')).toBeVisible();
+      await tap(cdp, a.x, a.y, 3); // A turns the pages like before
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: `test-results/keysplit-${viewport.width}x${viewport.height}.png` });
     });
 
     test('tap uses, swipe cycles without using, a refusal says nothing, with the stick and A held', async ({
@@ -170,6 +206,18 @@ test.describe('keyboard and mouse', () => {
     await page.locator('canvas').hover({ position: { x: 400, y: 300 } });
     const btn = page.locator('#item-btn');
     await expect(btn).toHaveAttribute('title', 'Potion');
+    // Split keys: beside Maren the attack key swings (no dialog) and the interact key (R) talks.
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(400);
+    await expect(page.locator('#dialog')).toBeHidden();
+    await page.keyboard.press('KeyR');
+    await expect(page.locator('#dialog')).toBeVisible();
+    await page.keyboard.press('Space'); // either key turns the pages; hold the last page's close off until it ends
+    for (let i = 0; i < 12 && (await page.locator('#dialog').isVisible()); i++) {
+      await page.keyboard.press('Space');
+      await page.waitForTimeout(200);
+    }
+    await expect(page.locator('#dialog')).toBeHidden();
     await page.keyboard.press('KeyE');
     await expect(btn).toHaveAttribute('title', 'Elixir');
     await page.keyboard.press('KeyQ');
@@ -191,5 +239,30 @@ test.describe('keyboard and mouse', () => {
     await popup.click();
     await expect(popup).toHaveAttribute('aria-checked', 'false');
     expect(await page.evaluate(() => localStorage.getItem('me_rpg.itempopup'))).toBe('off');
+  });
+});
+
+test.describe('the contextual action key setting', () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  test('is off by default, saved when switched on, and then the attack key talks beside Maren again', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await boot(page);
+    await giveItems(page);
+    await page.locator('canvas').hover({ position: { x: 400, y: 300 } });
+    await page.keyboard.press('Escape');
+    await page.locator('#menu [data-tab="controls"]').click();
+    const toggle = page.locator('#context-setting #context-toggle');
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect(page.locator('#keybinds')).toBeAttached();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(await page.evaluate(() => localStorage.getItem('me_rpg.contextkey'))).toBe('on');
+    await page.keyboard.press('Escape');
+    await page.locator('canvas').hover({ position: { x: 400, y: 300 } });
+    await page.keyboard.press('Space'); // the one key: beside Maren it talks
+    await expect(page.locator('#dialog')).toBeVisible();
   });
 });
