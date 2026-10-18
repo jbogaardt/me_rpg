@@ -73,7 +73,7 @@ for (const viewport of [
       expect(item.x).toBeLessThan(a.x); // and left of it
     });
 
-    test('the dodge roll button sits left of A, clear of the item button and the stick half, and rolls the hero on a tap', async ({
+    test('the dodge roll button sits left of A, clear of the item button and the stick half, and takes a tap', async ({
       page,
     }) => {
       await boot(page);
@@ -93,7 +93,7 @@ for (const viewport of [
       expect(roll.b.x).toBeGreaterThanOrEqual(viewport.width / 2); // the floating stick owns the left half
       expect(roll.x).toBeLessThan(a.x);
       expect(roll.b.y + roll.b.height).toBeLessThanOrEqual(viewport.height);
-      // A tap presses KeyK through the same touch layer as A: the hero's ring dims for the cooldown (no text anywhere).
+      // A tap goes through the same touch layer as A (the roll itself is driven in the dev playtest, not here: no `__game`).
       const cdp = await page.context().newCDPSession(page);
       await tap(cdp, roll.x, roll.y, 4);
       await expect(page.locator('#btn-roll')).toBeVisible();
