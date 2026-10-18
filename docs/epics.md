@@ -64,13 +64,13 @@ running epic (`DmBotState.epicNow`: title and chapter), never by a choose-an-epi
 
 The host, and a solo player (their own host): `DmEpics`, `DmTasks` and the DM's words work wherever the page is not a
 friend, so an epic is told alone as to a party. A friend only draws it (`dm` message, world log). A solo
-player in a live world is offered an epic by the director's card; the sandbox has no way to begin one by hand yet, so campaign 1's own chain carries three of the dungeon bosses itself (the last chapter, "Beneath the Vale": the Cistern King, the Pale Warden and Ashmaw, each as a `boss` quest, so the finale is Ashmaw's). The four land bosses (Emberwaste to Drowned Moor) are still the DM's. Online only the DM's quests count: the story chain's givers only pass the time of day.
+player in a live world is offered an epic by the director's card; the sandbox's chain ends in three dungeon `boss` quests instead. Online only the DM's quests count: the story chain's givers only pass the time of day.
 
 ## End bosses: the climax of an epic (`systems/bosses.ts`; core engine, content, co-op)
 
 Two bosses, never mixed: the DM's (`dmBoss.ts`, `MobKind.boss`) and the **authored** (`MobKind.named`). **Placement**: an `entities.json` mob with `"boss": true` (tougher, long `windup` telegraph),
 placed once by a scenario node of its zone, never a roamer (`map -- check`). **Objective**: `{"t": "boss", "boss": "<entity>",
-"zone": "<map>", "count": 1}`, one kill. **Gate**: a boss is **quest-gated** (`Population.bosses`, not the zone's mobs): it stands only while a quest asks and is not done (`bossStands`, the hero's chain, solo; `taskWantsBoss`, a saga step; `StoryUi.syncNamedBoss`), so none can be farmed. **Co-op**: the host owns the fight, every hero in the zone shares the kill (nothing on the wire); online the DM's `boss` is the climax. **Wipe**: a knocked-out hero wakes at the start; the
+"zone": "<map>", "count": 1}`, one kill. **Gate**: a boss is **quest-gated** (`Population.bosses`): it stands only while a quest asks and is not done (`bossStands`, the hero's chain, solo; `taskWantsBoss`, a saga step; `StoryUi.syncNamedBoss`), so none can be farmed. **Co-op**: the host owns the fight, every hero in the zone shares the kill (nothing on the wire); online the DM's `boss` is the climax. **Wipe**: a knocked-out hero wakes at the start; the
 boss never respawns once fallen but **mends fully when a knockout leaves no hero in its zone** (`bossMends`). **Reward and beat**: the quest's `reward`; the **last quest of the chain** (`isFinale`) then tells the
 epilogue and sets `Talk.finale`, the closing-scene hook. **DM trigger**: a saga ends in a `boss` step (`dmQuests`), not yet an authored one.
 
