@@ -1,5 +1,5 @@
 // The far backdrop of an underground zone (core engine, cosmetic, `parallax` capability): what shows through the cells a
-// map leaves with no ground (the rock mass beyond a cave's walls). Two layers of a slow-moving dark cavern, the far one
+// map leaves with no ground (the rock mass beyond a cave's walls). Two layers of a slow-moving deep cavern (receding ridges, then spikes), the far one
 // scrolling least, so the floor reads as a platform with depth under and beyond it. Pixi-free: the palettes and the
 // maths; `BackdropLayer.ts` draws them. Visual only, built from the map and the camera, so a co-op guest needs nothing.
 
@@ -8,7 +8,7 @@ export interface BackdropStyle {
   base: number;
   /** Far layer: the mottling of distant rock, a little lighter than `base`. */
   far: number;
-  /** Near layer: the silhouettes of rock columns standing out of the dark, and the lit rim along their top-left edge. */
+  /** Near layer: stalactites and stalagmites standing out of the dark, with a lit rim along their left edge. */
   near: number;
   rim: number;
   /** A few faint glints (embers, damp, bones) drifting in the far layer. */
