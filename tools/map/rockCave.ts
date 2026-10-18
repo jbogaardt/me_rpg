@@ -14,16 +14,16 @@ const CELL = 32;
 /** The void's colour, read from the middle of the pit in the sheet. */
 const dark = (): Buffer => {
   const i = (45 * SRC.width + 50) * 4;
-  return Buffer.from([SRC.data[i]!, SRC.data[i + 1]!, SRC.data[i + 2]!, 255]);
+  return Buffer.from([SRC.data[i], SRC.data[i + 1], SRC.data[i + 2], 255]);
 };
 
 /** The cobble darkened and browned, so a cave's floor is earth and a raised plateau's tan cobble stands out from it. */
 function earthen(tile: Image): Image {
   const out = { ...tile, data: Buffer.from(tile.data) };
   for (let i = 0; i < out.data.length; i += 4) {
-    out.data[i] = Math.round(out.data[i]! * 0.74);
-    out.data[i + 1] = Math.round(out.data[i + 1]! * 0.66);
-    out.data[i + 2] = Math.round(out.data[i + 2]! * 0.6);
+    out.data[i] = Math.round(out.data[i] * 0.74);
+    out.data[i + 1] = Math.round(out.data[i + 1] * 0.66);
+    out.data[i + 2] = Math.round(out.data[i + 2] * 0.6);
   }
   return out;
 }
