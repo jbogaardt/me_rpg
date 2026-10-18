@@ -22,3 +22,6 @@ Reply:
 - Reversibility: easy or hard to undo.
 - Escalate to the owner if the decision is hard to reverse, changes the direction or a priority, breaks multiplayer or needs a PROTOCOL_VERSION bump, involves licensing or anything public, or if two priorities are genuinely tied. Otherwise decide; do not hand back a survey of options. Give one recommendation.
 Keep the number of things in flight small. Prefer fewer, finished slices over many started ones. Do not review every change: you are for conflicts, priorities and vague or large requests.
+
+## Target hardware (owner decision)
+A standard modern web browser on both PC and mobile (touch). Every feature must work with touch controls and hold up on a mid-range phone, not only a desktop. Budget particles, sounds and per-frame work for the phone. Test both a desktop and a mobile viewport.

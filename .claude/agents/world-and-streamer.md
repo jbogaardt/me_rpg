@@ -31,3 +31,6 @@ When asked to define good for something new (a bigger map, more mobs), give nume
 ## Edit scope
 You may edit code and tests in your own domain: map/ (MapView, chunks), systems/collision.ts, systems/save.ts, scenes/ZoneState.ts, scenes/overworld/Zones.ts and Persistence.ts, tools/map, maps/ specs, plus their tests. Use build-zone for any map change (never hand-edit public/maps/*.json). A change outside that needs the owning authority's ruling first (ask through the main session).
 You do not approve your own work alone. Before reporting done, run `npm run typecheck` and `npm run test` (and `npm run map -- check` or `npm run sprites -- check` where they apply), and say what you ran and what you saw. Name which other authority, or product-lead, should review the change if it touches their bar. If it changes co-op behaviour, update the co-op text in the owning CLAUDE.md in the same change. No commits or pushes unless asked. Never commit secrets or private assets.
+
+## Target hardware (owner decision)
+A standard modern web browser on both PC and mobile (touch). Every feature must work with touch controls and hold up on a mid-range phone, not only a desktop. Budget particles, sounds and per-frame work for the phone. Test both a desktop and a mobile viewport.

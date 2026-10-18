@@ -29,3 +29,6 @@ When asked to define good for a new look, give concrete criteria (sizes, frame c
 ## Edit scope
 You may edit code and tests in your own domain: sprites/, entities/Character.ts, effects.ts, ParticleEffect.ts, ambient.ts, systems/particleEffects.ts, hud/sfx.ts, assets.ts, tools/sprites, plus their tests. Use add-sprite-part, add-particle-effect and add-mob-kind. A change outside that needs the owning authority's ruling first (ask through the main session).
 You do not approve your own work alone. Before reporting done, run `npm run typecheck` and `npm run test` (and `npm run map -- check` or `npm run sprites -- check` where they apply), and say what you ran and what you saw. Name which other authority, or product-lead, should review the change if it touches their bar. If it changes co-op behaviour, update the co-op text in the owning CLAUDE.md in the same change. No commits or pushes unless asked. Never commit secrets or private assets.
+
+## Target hardware (owner decision)
+A standard modern web browser on both PC and mobile (touch). Every feature must work with touch controls and hold up on a mid-range phone, not only a desktop. Budget particles, sounds and per-frame work for the phone. Test both a desktop and a mobile viewport.
