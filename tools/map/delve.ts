@@ -5,20 +5,8 @@
 // grid paints a cave or a sewer; a theme names the grounds (GROUND in catalog.ts, art by MrBeast, art/oga_dungeon/).
 
 import type { BackdropName } from '../../src/map/backdrop';
-import { SEWER_FLOORS, type GroundName } from './catalog';
-import {
-  decalTile,
-  DRY_MIX,
-  foamTile,
-  FX_SHEET,
-  hash,
-  maskOf,
-  pickDecal,
-  pickWeighted,
-  shadowTile,
-  WET_MIX,
-  type DecalMix,
-} from './delveStyle';
+import type { GroundName } from './catalog';
+import { DRY_MIX, hash, pickWeighted, WET_MIX, type DecalMix } from './delveStyle';
 import type { TerrainName } from './terrain';
 import type { ZoneApi } from './zone';
 
@@ -82,7 +70,6 @@ export const DELVE_THEMES = {
     water: 'sewerWater',
     roof: 'sewerRoof',
     wall: ['sewerFaceL', 'sewerFaceU', 'sewerCap', 'sewerCapTop'],
-    floorTiles: SEWER_FLOORS,
     decals: WET_MIX,
     backdrop: 'sewer',
   },
@@ -152,36 +139,6 @@ export class Delve {
     return this.cells.map((row) => row.join(''));
   }
 
-  /**
-   * The shading and detail over the painted ground (overlay tiles from `delve_fx.png`, `delveStyle.ts`): a soft contact
-   * shadow where floor and water meet a wall, foam where water meets floor, cracks, puddles, moss and pebbles on the floor,
-   * The roof is not dressed: it is left empty for the backdrop (see `paint`). The same for every cave, crypt and sewer, except that a theme with its
-   * own shaded floor row, grainy roof or autotiled shoreline keeps that instead (no doubling).
-   */
-  private dress(z: ZoneApi, theme: Theme, grounds: GroundName[]) {
-    const rock = (c: number, r: number) => this.at(c, r) === '#';
-    const dry = (c: number, r: number) => this.at(c, r) === '.';
-    const fx = (col: number, row: number, [x, y]: readonly [number, number]) => z.overlay(col, row, FX_SHEET, x, y);
-    for (let row = 0; row < this.height; row++) {
-      for (let col = 0; col < this.width; col++) {
-        const cell = this.at(col, row);
-        if (cell === '.' || cell === '~') {
-          // Walls to the north and sides darken the ground at their foot (the south side is the wall's own face, drawn on it).
-          const shade = maskOf(rock(col, row - 1) && !theme.shade, rock(col + 1, row), false, rock(col - 1, row));
-          if (shade) fx(col, row, shadowTile(shade));
-        }
-        if (cell === '~') {
-          if (theme.waterTerrain) continue; // its own soft shoreline is the edge
-          const foam = maskOf(dry(col, row - 1), dry(col + 1, row), dry(col, row + 1), dry(col - 1, row));
-          if (foam) fx(col, row, foamTile(foam));
-        } else if (cell === '.' && grounds[row * this.width + col] === theme.floor) {
-          const d = pickDecal(theme.decals, hash(col, row, 11), hash(col, row, 12));
-          if (d) fx(col, row, decalTile(d.kind, d.variant));
-        }
-      }
-    }
-  }
-
   /** Paint the grid onto `z`: ground for every cell and collision for rock, water and lava. */
   paint(z: ZoneApi, themeName: DelveTheme) {
     const theme: Theme = DELVE_THEMES[themeName];
@@ -237,7 +194,6 @@ export class Delve {
       }
       if (rects.length) z.paint(terrain, rects);
     }
-    this.dress(z, theme, grounds);
     // The roof is not drawn: the backdrop shows through where the rock mass was (collision stays), and slides with depth.
     for (let row = 0; row < this.height; row++) {
       for (let col = 0; col < this.width; col++) {
