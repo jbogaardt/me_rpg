@@ -4,6 +4,8 @@
 // through the same handler as typed text; core engine. Uses the browser's SpeechRecognition (Chrome, Edge, Safari; not
 // Firefox), which may send the audio to the browser maker's service: it starts only on the player's own Enter.
 
+import { voice } from './voice';
+
 interface Recognizer {
   continuous: boolean;
   interimResults: boolean;
@@ -42,6 +44,12 @@ export function transcript(results: RecognizerEvent['results']): string {
   return out.trim();
 }
 
+/** The line after more words were heard: what was already there, a space, then the new words. */
+export function joinHeard(base: string, heard: string): string {
+  const head = base.trimEnd();
+  return head && heard ? `${head} ${heard}` : head || heard;
+}
+
 export class Dictation {
   private rec: Recognizer | null = null;
   private submitOnEnd = false;
@@ -63,6 +71,8 @@ export class Dictation {
       if (action === 'listen') this.start();
       else this.finish();
     });
+    // `input` fires for the player's own edits only (setting `value` from code does not), so this is a typed fix.
+    input.addEventListener('input', () => this.restart());
     input.addEventListener('blur', () => this.cancel()); // wandered off: the mic goes off, nothing is sent
   }
 
@@ -71,14 +81,16 @@ export class Dictation {
   }
 
   /** Start the mic (a no-op where there is none, or when already listening). */
-  start() {
+  start(base = '') {
     const Rec = recognizerClass();
     if (!Rec || this.rec) return;
+    voice.hush(true); // the mic would hear the DM's own voice as the player's words
     const rec = new Rec();
     rec.continuous = true;
     rec.interimResults = true;
     rec.lang = navigator.language || 'en-US';
-    rec.onresult = (e) => (this.input.value = transcript(e.results).slice(0, this.input.maxLength));
+    // Words heard after `base` (what the line held when this recognizer started, e.g. after the player edited it).
+    rec.onresult = (e) => (this.input.value = joinHeard(base, transcript(e.results)).slice(0, this.input.maxLength));
     rec.onerror = (e) => {
       this.submitOnEnd = false;
       this.input.placeholder =
@@ -86,6 +98,7 @@ export class Dictation {
     };
     rec.onend = () => {
       this.rec = null;
+      voice.hush(false);
       this.input.placeholder = this.placeholder;
       this.onState(false);
       // Submit after the last result has landed, so no word is lost; an empty line is not sent.
@@ -100,8 +113,22 @@ export class Dictation {
       rec.start();
     } catch {
       this.rec = null;
+      voice.hush(false);
       this.onState(false);
     }
+  }
+
+  /**
+   * The player edited the line while listening: the recognizer would write its whole transcript back over the edit, so
+   * drop it and listen afresh, keeping what the line holds now (empty after a clear) as the start.
+   */
+  private restart() {
+    const old = this.rec;
+    if (!old) return;
+    old.onresult = old.onend = old.onerror = null;
+    old.abort();
+    this.rec = null;
+    this.start(this.input.value);
   }
 
   /** Stop listening and send what was heard. */

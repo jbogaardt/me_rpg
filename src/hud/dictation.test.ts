@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { enterAction, transcript } from './dictation';
+import { enterAction, joinHeard, transcript } from './dictation';
 
 describe('enterAction', () => {
   it('starts the mic on an empty line', () => {
@@ -15,6 +15,14 @@ describe('enterAction', () => {
   it('stops and sends while listening', () => {
     expect(enterAction(true, '', true)).toBe('stop');
     expect(enterAction(true, 'half a sentence', true)).toBe('stop');
+  });
+});
+
+describe('joinHeard', () => {
+  it('starts fresh after a clear and appends after kept words', () => {
+    expect(joinHeard('', 'the fen')).toBe('the fen');
+    expect(joinHeard('Beware ', 'the fen')).toBe('Beware the fen');
+    expect(joinHeard('Beware', '')).toBe('Beware');
   });
 });
 

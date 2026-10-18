@@ -16,6 +16,7 @@ const ENGINE_KEY = 'voice-natural';
 const synth = (): SpeechSynthesis | null => (typeof speechSynthesis === 'undefined' ? null : speechSynthesis);
 
 let muted = false;
+let hushed = false;
 try {
   muted = localStorage.getItem(KEY) === '1';
 } catch {
@@ -96,9 +97,14 @@ export const voice = {
     }
     if (value) this.stop();
   },
+  /** While the player dictates, the DM stays silent (the mic would hear it) and what was being said is cut off. */
+  hush(on: boolean) {
+    hushed = on;
+    if (on) this.stop();
+  },
   /** Say `text` after anything still being said. */
   speak(text: string) {
-    if (muted || !this.available || !text) return;
+    if (muted || hushed || !this.available || !text) return;
     const done = () => {
       pending = Math.max(0, pending - 1);
     };
