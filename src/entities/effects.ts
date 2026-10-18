@@ -28,6 +28,12 @@ export class Effects {
     this.layer.addChild(effect.view);
   }
 
+  /** Drop everything in flight (a zone nobody is in no longer updates, so its shots would hang there frozen). */
+  clear() {
+    for (const e of this.list) e.view.destroy({ children: true, context: true });
+    this.list = [];
+  }
+
   update(dt: number) {
     // Updating can add effects (a bolt hit spawns damage / XP / LEVEL UP text), so collect those in a
     // fresh list and keep them, rather than letting the filtered result overwrite them.
