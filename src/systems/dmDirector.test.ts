@@ -112,7 +112,7 @@ describe('the director', () => {
     expect(plain.tick(4, state({ task: task(10, 10, 1, { active: false, finished: 'plain' }) }))).toBeNull();
   });
 
-  it('asks about the sky when the party reaches a new land, and nudges after a breather once a quest ends', () => {
+  it('asks about the sky when the party reaches a new land, and nudges at once when a quest ends', () => {
     const d = new Director();
     waitFor(d, CARD_GAP, state());
     expect(d.tick(1, state({ area: 'eastwood' }))).toBe('land');
@@ -120,8 +120,7 @@ describe('the director', () => {
     waitFor(e, CARD_GAP, state({ task: task(0) }));
     e.tick(1, state({ task: task(10) }));
     e.tick(1, state({ task: { ...task(10), active: false, finished: 'plain' } })); // done
-    expect(waitFor(e, 30, state())).toBeNull(); // time to wander first
-    expect(waitFor(e, 20, state())).toBe('next');
+    expect(waitFor(e, CARD_GAP, state())).toBe('next');
   });
 
   it('asks about the sky once per newly visited area, however often the party crosses back and forth', () => {
@@ -148,7 +147,7 @@ describe('the director', () => {
   it('can be settled, snoozed and reset', () => {
     const d = new Director();
     d.snooze(30);
-    expect(waitFor(d, 20, state({ storyReady: true }))).toBeNull(); // "not now": a breather, even for the story
+    expect(waitFor(d, 20, state({ storyReady: true }))).toBeNull(); // "not now": a wait, even for the story
     expect(waitFor(d, 10, state({ storyReady: true }))).toBe('story'); // then it asks again
     const e = new Director();
     waitFor(e, 3, state());

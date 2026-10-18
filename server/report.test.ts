@@ -82,7 +82,6 @@ const state = (over: Partial<ReportState> = {}): ReportState => ({
       },
     ],
   },
-  breather: false,
   stall: 31,
   recent: ['1:00 the party killed goblin x3'],
   ...over,

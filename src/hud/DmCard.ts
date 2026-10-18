@@ -96,7 +96,7 @@ export class DmCard {
     this.root.hidden = true;
   }
 
-  /** Send the card away unanswered (✕, Esc, its time running out, a click on the game): the director gives the DM a breather. */
+  /** Send the card away unanswered (✕, Esc, its time running out, a click on the game): the director waits before the next. */
   dismiss() {
     const kind = this.spec?.kind;
     this.hide();

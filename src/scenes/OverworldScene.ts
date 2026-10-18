@@ -258,7 +258,6 @@ export class OverworldScene implements Scene {
     this.partyUi = new PartyUi(arena, this.zones, ui.menu, () => this.possession.release());
     this.storyUi = new StoryUi(arena, ui, this.zones, this.banner, this.overlay, () => this.possession.active);
     this.storyUi.pacing = new Pacing(arena, this.sim, this.prompts, this.desk);
-    this.storyUi.pacing.onBreather = () => this.prompts.sayBreather();
     this.interact = new Interactions(
       arena,
       ui,

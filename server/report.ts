@@ -53,7 +53,7 @@ const clip = (e: ReportEntry) =>
 function brief(e: ReportEntry): string {
   const s = e.state;
   const band = s.detail?.place.band ? ` levels ${s.detail.place.band[0]}\u2013${s.detail.place.band[1]}` : '';
-  return `[lv${s.level} hp ${s.hp}/${s.maxHp}, ${s.area} (${s.at[0]},${s.at[1]})${band}, quest: ${s.quest ?? 'none'}, party ${s.party.size} avg ${pctOf(s.party.avgHp)} lowest ${pctOf(s.party.lowest)}${s.stall ? `, stalled ${s.stall}s` : ''}${s.breather ? ', in a breather' : ''}]`;
+  return `[lv${s.level} hp ${s.hp}/${s.maxHp}, ${s.area} (${s.at[0]},${s.at[1]})${band}, quest: ${s.quest ?? 'none'}, party ${s.party.size} avg ${pctOf(s.party.avgHp)} lowest ${pctOf(s.party.lowest)}${s.stall ? `, stalled ${s.stall}s` : ''}]`;
 }
 
 /** One entry as lines for the analyst: the words (`how` 'words'), plus a bracket of state ('brief'), or the whole state ('full'). */
@@ -76,7 +76,7 @@ export function lineOf(e: ReportEntry, how: 'words' | 'brief' | 'full' = 'full')
     clip(e),
     `    hero: lv${s.level} hp ${s.hp}/${s.maxHp} mp ${h.mp}/${h.maxMp}, blow ${h.power} (${h.attack}+${h.attackGear} gear), armor ${h.armor} (${h.defense}+${h.defenseGear} gear), magic ${h.magic}, ${h.weapon}${h.worn.length ? ` + ${h.worn.join(', ')}` : ', nothing else worn'}, healing items ${h.potions}, food ${h.food} water ${h.water}, gold ${h.gold}, xp ${h.xp[0]}/${h.xp[1]}${h.skills.length ? `, skills ${h.skills.join(', ')}` : ''}`,
     `    fights: knocked out ${f.downs}x (${f.downsHere} in this zone), the party killed ${f.killsHere} here (${f.kills} in all); last 60s: took ${f.taken} damage in ${f.hitsTaken} hits (${by}), the party dealt ${f.dealt}${f.lastHurtBy ? `; last hurt by ${f.lastHurtBy.foe} ${f.lastHurtBy.ago}s ago` : ''}; DM pressure ${f.pressure}`,
-    `    where: ${s.area} (${s.at[0]},${s.at[1]})${place.band ? ` levels ${place.band[0]}\u2013${place.band[1]}` : ''}, ${place.alive} of ${place.total} foes alive; quest: ${s.quest ?? 'none'}; party ${s.party.size} avg ${pctOf(s.party.avgHp)} lowest ${pctOf(s.party.lowest)}; stalled ${s.stall}s${s.breather ? '; in a breather' : ''}`,
+    `    where: ${s.area} (${s.at[0]},${s.at[1]})${place.band ? ` levels ${place.band[0]}\u2013${place.band[1]}` : ''}, ${place.alive} of ${place.total} foes alive; quest: ${s.quest ?? 'none'}; party ${s.party.size} avg ${pctOf(s.party.avgHp)} lowest ${pctOf(s.party.lowest)}; stalled ${s.stall}s`,
     `    foes in the zone: ${foes.join(' | ') || 'none alive'}`,
     s.recent.length ? `    just before: ${s.recent.map(scrub).join(' | ')}` : '',
   ]
@@ -86,7 +86,7 @@ export function lineOf(e: ReportEntry, how: 'words' | 'brief' | 'full' = 'full')
 
 /**
  * The game in blocks of `BLOCK` seconds, one line each, for the whole length of the game however long it was: where the
- * party was, the levels, what the director offered (counted, not listed), knockouts, quests, breathers, how often players
+ * party was, the levels, what the director offered (counted, not listed), knockouts, quests, how often players
  * spoke. This is what keeps a three-hour campaign readable: the passive entries live here, as counts.
  */
 export function blocks(entries: readonly ReportEntry[], curve?: Curve): string[] {
@@ -127,7 +127,6 @@ export function blocks(entries: readonly ReportEntry[], curve?: Curve): string[]
             .filter((e) => e.kind === 'quest')
             .map((e) => scrub(e.text))
             .join('; ')}`,
-        count((e) => e.kind === 'breather') && `breathers x${count((e) => e.kind === 'breather')}`,
         count((e) => (e.kind === 'said' || e.kind === 'ask' || e.kind === 'note') && !offTheRecord(e)) &&
           `players spoke x${count((e) => (e.kind === 'said' || e.kind === 'ask' || e.kind === 'note') && !offTheRecord(e))}`,
         read?.has(k) && curveText(read.get(k)!),
@@ -262,14 +261,14 @@ export function facts(game: GameInfo, entries: readonly ReportEntry[]): string[]
   return [
     `${minutes} minute${minutes === 1 ? '' : 's'}, ${seats.size} player${seats.size === 1 ? '' : 's'} heard from (${[...seats].sort().join(', ') || 'none'}); ended: ${game.why}`,
     `players said ${count('said')} thing(s) to the DM, asked ${count('ask')} canned request(s), tapped ${count('note')} note(s)`,
-    `the director made ${count('signal')} nudge(s); ${count('down')} knockout(s)${areas.size ? ` (${[...areas].map(([a, n]) => `${a} ${n}`).join(', ')})` : ''}; ${count('quest')} quest end(s); ${count('breather')} breather(s)`,
+    `the director made ${count('signal')} nudge(s); ${count('down')} knockout(s)${areas.size ? ` (${[...areas].map(([a, n]) => `${a} ${n}`).join(', ')})` : ''}; ${count('quest')} quest end(s)`,
   ];
 }
 
 /** Where things are in the repo, for the analyst to point a future session at (paths of docs that exist). */
 export const REPO_MAP = [
   'CLAUDE.md: layers, commands, working procedure',
-  'docs/dungeon-master.md: the DM, the director (when cards and breathers come), epics, possession',
+  'docs/dungeon-master.md: the DM, the director (when cards come), epics, possession',
   'docs/epics.md and src/systems/dmQuests.ts, dmTasks.ts, dmEpics.ts: quests and sagas',
   'docs/playtests.md: how a run is read and what past runs settled',
   'src/systems/CLAUDE.md: capabilities, balance (heroModel), quests, survival, economy',

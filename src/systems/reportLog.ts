@@ -1,6 +1,6 @@
 // What the host writes down about how a game is going (Pixi-free, tested; core engine, co-op). Nobody fills in a form: the
 // host notes what each player says to the Dungeon Master (their own words, a canned ask, a one-tap note) and what the game
-// did around it (a director's nudge, a knockout, a quest ending, a breather), each with the state of the game at that
+// did around it (a director's nudge, a knockout, a quest ending), each with the state of the game at that
 // moment: who, level and health, where, the quest, how the party fares, what stands near, how long since anything
 // progressed, and the last few things that happened. It goes to the host's console as `[report]` lines and is held for the
 // DM bot to collect (`DmBot.reports`), which at the game's end has Haiku turn it into a prompt file for the next session
@@ -9,7 +9,7 @@
 import type { Tag } from './feedback';
 
 /** What was noted. */
-export const REPORT_KINDS = ['said', 'ask', 'note', 'signal', 'down', 'quest', 'breather'] as const;
+export const REPORT_KINDS = ['said', 'ask', 'note', 'signal', 'down', 'quest'] as const;
 export type ReportKind = (typeof REPORT_KINDS)[number];
 
 /** A hero as they really are: what they hit with and take with, and what they carry. */
@@ -108,11 +108,10 @@ export interface ReportState {
   party: { size: number; avgHp: number; lowest: number };
   /**
    * The whole fight (the hero, how fighting has gone, the zone, each kind of foe): kept for what a player said, asked or
-   * tapped and for a knockout, which are rare and need it. What the game did by itself (a nudge, a quest end, a breather) is
+   * tapped and for a knockout, which are rare and need it. What the game did by itself (a nudge, a quest end) is
    * noted lean, so a long campaign's log stays small.
    */
   detail?: StateDetail;
-  breather: boolean;
   /** Seconds this player has gone without progress (a kill, a quest event, a new zone) while at the keyboard. */
   stall: number;
   /** The last things that happened, oldest first, each with when. */

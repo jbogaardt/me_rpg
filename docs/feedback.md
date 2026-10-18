@@ -1,13 +1,12 @@
 # Feedback: how a game reports itself
 
-Read before touching `DmReport.ts`, `systems/reportLog.ts`, `systems/feedback.ts`, `systems/breather.ts` or `server/report.ts`,
+Read before touching `DmReport.ts`, `systems/reportLog.ts`, `systems/feedback.ts` or `server/report.ts`,
 `triage.ts`, `tag.ts`. How a run is read and fixed is in `docs/playtests.md`; the bot is in `server/README.md`.
 
 ## What players report without trying (the host's notebook and `reports/`)
 
 Nobody fills in a form: a menu for reporting would never be used. The host writes down, on its own, **what each player
-says to the DM** (their own words from the 💬 line, a canned ask such as "This is too hard", a tapped face on the breather
-badge) **and what the game did around it** (the director's nudges, knockouts, quests ending, breathers), each with **the
+says to the DM** (their own words from the 💬 line, a canned ask such as "This is too hard", a one-tap note) **and what the game did around it** (the director's nudges, knockouts, quests ending), each with **the
 state of the game at that moment**, as much as it takes to judge the complaint: who (P1, P2...), the hero as they really
 are (blow and armour with gear, health, mana, supplies, gold, xp), how fighting has gone (knockouts here and in all, damage
 taken and dealt in the last minute and by whom, who hurt them last, the DM's pressure), the zone (its level band, foes alive),
@@ -16,10 +15,10 @@ trivial) and the same for a typical hero of their level, so "too easy" can be ch
 quest, the party, how long since anything progressed and the last events (`DmReport`, `systems/reportLog.ts`).
 
 **Long campaigns stay small.** Only what a player said, asked or tapped, and each knockout, carry that whole state (about 1 KB
-each, and rare). What the game did by itself (a nudge, a quest end, a breather) is noted lean (about 250 bytes), and a
+each, and rare). What the game did by itself (a nudge, a quest end) is noted lean (about 250 bytes), and a
 nudge of the same kind is noted once every two minutes with a count of the repeats. The analyst is never given the raw
 log: it reads a digest kept to a character budget however long the game (`digest` in `server/report.ts`): the whole game in
-5-minute blocks (where the party was, levels, nudges counted, knockouts, quests, breathers, how often players spoke), then what
+5-minute blocks (where the party was, levels, nudges counted, knockouts, quests, how often players spoke), then what
 players said and every knockout in order. If that is too long the oldest knockouts lose their detail first, then asks and taps,
 and the players' own words last, with a count of what was left out. The full raw log stays in `reports/raw/`.
 
@@ -55,9 +54,3 @@ quotes what players typed, so players are P1, P2 and links, emails and long numb
 newest report: take its findings in order, reproduce, fix, test. Solo play has no bot, so only the console lines exist.
 
 **Issues** (`server/issues.ts`): the strongest findings (severity 2+ or two signals, at most 3 a game) are drafted as GitHub issues in `reports/raw/*.issues.json`. The text is built by rules, never by a model; quotes are stripped of links, mentions and markup. Posting is off unless `DM_BOT_ISSUES=post` with `DM_BOT_GITHUB_TOKEN` (issues scope only) and optionally `DM_BOT_ISSUES_REPO`; each carries a hash key, so a repeat finding is skipped, and nothing is filed if the duplicate check fails.
-
-A **breather** (`systems/breather.ts`) is the pause after a quest, said out loud: a 🍺 badge with a clock and three faces at
-the left of the screen (`hud/BreatherBadge.ts`) and one line from the DM (`BREATHER_WORDS`); the director leaves the same
-minute before it offers the next quest. It is local to each page, started by the quest each already sees end (a saga's
-middle step is no lull). A tapped face is the lightest report there is: a guest's travels to the host as a note (protocol 55).
-Lanternrest's tavern, the Resting Lantern, is where a party spends it.

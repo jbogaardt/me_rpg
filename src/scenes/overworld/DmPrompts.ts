@@ -1,5 +1,5 @@
 import type { CardOption, DmCard } from '../../hud/DmCard';
-import { BREATHER_WORDS, CANCEL_WORDS, COMPASS_STEADY_WORDS, COMPASS_WORDS } from '../../systems/dmVoice';
+import { CANCEL_WORDS, COMPASS_STEADY_WORDS, COMPASS_WORDS } from '../../systems/dmVoice';
 import { PRESSURES, PRESSURE_LABEL, isPressure } from '../../systems/dmPowers';
 import { Director, type Suggestion } from '../../systems/dmDirector';
 import { Inbox, MESSAGE_CODE, REPLIES, REQUESTS, describe, type InboxKind } from '../../systems/dmRequests';
@@ -22,7 +22,7 @@ import type { Story } from './Story';
 /** Seconds a card waits before it goes away on its own (the game carries on); the story and a fallen player wait longer. */
 const CARD_TIME = 20;
 const REVIVE_TIME = 30;
-/** "Not now" on a card: a breather before the director offers another. */
+/** "Not now" on a card: a longer wait before the director offers another. */
 const SNOOZE = 25;
 
 const HOURS: { id: string; label: string; hour: number }[] = [
@@ -75,11 +75,6 @@ export class DmPrompts {
   /** Set by the scene: the host's report hears everything a player asks and every nudge of the director. */
   onHeard: (slot: number, code: number, text?: string) => void = () => {};
   onSignal: (kind: string) => void = () => {};
-
-  /** A quest ended and the breather began: the DM says so, with a pint in it (only whoever runs the world speaks). */
-  sayBreather() {
-    if (this.runsWorld) this.desk.say(this.phrases.pick('breather', BREATHER_WORDS));
-  }
 
   get runsWorld(): boolean {
     return this.arena.local.dm || (this.arena.role === 'solo' && this.story.live);

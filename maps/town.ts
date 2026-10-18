@@ -20,7 +20,7 @@ export const SHOP_DOORS = {
   ranger: { building: { col: 178, row: ROW }, door: { col: 179, w: 1 }, outside: { col: 179, row: ROW + 1 } },
   // The wizard's house stands off to the east, clear of the north road (which runs straight down the middle to the market).
   wizard: { building: { col: 184, row: ROW }, door: { col: 186, w: 1 }, outside: { col: 186, row: ROW + 1 } },
-  // The tavern stands east of the wizard's house, where a breather is spent (the DM sends a party there after a saga).
+  // The tavern stands east of the wizard's house, where a party rests (the DM sends a party there after a saga).
   tavern: { building: { col: 192, row: ROW }, door: { col: 194, w: 1 }, outside: { col: 194, row: ROW + 1 } },
 } as const;
 /** The hanging sign by each shop's door (tools/map/catalog.ts SIGN_PREFABS). */

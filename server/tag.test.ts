@@ -17,7 +17,6 @@ const entry = (kind: ReportEntry['kind'], text: string): ReportEntry => ({
     at: [1, 1],
     quest: null,
     party: { size: 1, avgHp: 0.2, lowest: 0.2 },
-    breather: false,
     stall: 0,
     recent: [],
   },

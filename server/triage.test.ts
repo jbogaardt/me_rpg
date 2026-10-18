@@ -29,7 +29,6 @@ const state = (over: Partial<ReportState> = {}, withDetail = true): ReportState 
   at: [14, 30],
   quest: null,
   party: { size: 2, avgHp: 0.4, lowest: 0.25 },
-  breather: false,
   stall: 0,
   recent: [],
   ...(withDetail
