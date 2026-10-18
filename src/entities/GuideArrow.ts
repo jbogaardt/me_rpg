@@ -1,4 +1,5 @@
 import { BitmapText, Container, Graphics } from 'pixi.js';
+import { newCaption, stepCaption } from '../systems/hudRules';
 
 const RING = 64; // px from the hero (screen space) to the arrow
 const ARRIVED = 130; // px: this close to the target the arrow goes away (you are there)
@@ -14,6 +15,9 @@ const TURN = 10; // how fast the arrow swings round to a new heading (per second
  * pixels: a gold arrow on a ring round the hero, with the name of where it leads. Things to be *found* get no arrow: they
  * are an area on the map instead (systems/guide.ts). The scene gives it the hero's and the target's screen positions every
  * frame; the arrow swings smoothly rather than jumping, and stays steady (no bobbing) so it never reads as a glitch.
+ * It is quiet: arrow and caption fade in only while the hero stands still (about a second) or for a few seconds when the
+ * target is new, fade out when they move, and give way to a name label the caption would cover (`stepCaption`,
+ * systems/hudRules.ts). The edge compass for partners is a separate thing (hud/PartnerArrows.ts).
  */
 export class GuideArrow extends Container {
   private readonly arrow = new Graphics()
@@ -24,6 +28,7 @@ export class GuideArrow extends Container {
   private ux = 1; // the heading the arrow shows (a unit vector)
   private uy = 0;
   private fresh = true; // the next heading is taken at once (no swing from wherever it was)
+  private readonly shown = newCaption(); // when the caption is wanted (see stepCaption)
 
   constructor() {
     super();
@@ -33,19 +38,28 @@ export class GuideArrow extends Container {
     this.visible = false;
   }
 
-  /** Point from `hero` at `target` (both screen px), or hide when there is nothing to point at or you are there. */
+  /**
+   * Point from `hero` at `target` (both screen px), or hide when there is nothing to point at or you are there. `id` names
+   * the target without its direction (a new one shows the caption again), `moved` is whether the hero walked this frame,
+   * `avoid` the screen boxes of name labels (centre and half size) the caption must not cover.
+   */
   update(
     dt: number,
     hero: { x: number; y: number },
     target: { x: number; y: number } | null,
     label: string,
     screen: { width: number; height: number },
+    id = label,
+    moved = false,
+    avoid: readonly { x: number; y: number; hw: number; hh: number }[] = [],
   ) {
     const dx = target ? target.x - hero.x : 0;
     const dy = target ? target.y - hero.y : 0;
     const dist = Math.hypot(dx, dy);
-    this.visible = target !== null && dist > ARRIVED;
-    if (!this.visible) {
+    const there = target !== null && dist > ARRIVED;
+    if (!there) {
+      stepCaption(this.shown, dt, moved, target ? id : '', false);
+      this.visible = false;
       this.fresh = true;
       return;
     }
@@ -68,6 +82,12 @@ export class GuideArrow extends Container {
     if (this.caption.width > room) this.caption.scale.set((1.6 * room) / this.caption.width);
     const half = this.caption.width / 2;
     const cx = Math.min(Math.max(screen.width / 2, EDGE + half), screen.width - right - half);
-    this.caption.position.set(Math.round(cx), Math.round(Math.max(CAPTION_TOP, hero.y - CAPTION_ABOVE)));
+    const cy = Math.round(Math.max(CAPTION_TOP, hero.y - CAPTION_ABOVE));
+    this.caption.position.set(Math.round(cx), cy);
+    const hh = this.caption.height / 2;
+    const blocked = avoid.some((a) => Math.abs(a.x - cx) < a.hw + half && Math.abs(a.y - cy) < a.hh + hh);
+    stepCaption(this.shown, dt, moved, id, blocked);
+    this.alpha = this.shown.alpha;
+    this.visible = this.alpha > 0;
   }
 }

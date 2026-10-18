@@ -22,15 +22,20 @@
 
 
     <div id="hud">
-      <div id="hud-dm" class="panel thin wood" hidden>Dungeon Master</div>
-      <div id="hud-stats" class="panel thin wood">
-        <div id="hud-hp" class="bar"><div class="fill"></div><span class="label"></span></div>
-        <div id="hud-mp" class="bar mirror"><div class="fill"></div><span class="label"></span></div>
-        <div id="hud-needs">
-          <div id="hud-food" class="bar"><div class="fill"></div><span class="label"></span></div>
-          <div id="hud-water" class="bar mirror"><div class="fill"></div><span class="label"></span></div>
+      <div id="hud-dm" class="pix" hidden>Dungeon Master</div>
+      <!-- The quiet HUD (src/hud/Hud.ts, rules in src/systems/hudRules.ts): hearts, then mana and needs that only show when they matter, and gold that flashes. The .label spans hold the exact numbers for screen readers (visually hidden). -->
+      <div id="hud-stats">
+        <div class="vrow">
+          <div id="hud-hp" role="img" aria-label="Health"><div class="hearts"></div><span class="label"></span></div>
+          <div id="hud-gold" title="Gold" hidden><i></i><span class="label">0</span></div>
         </div>
-        <div id="hud-gold" title="Gold"><i></i><span class="label">0</span></div>
+        <div class="vrow">
+          <div id="hud-mp" class="pbar" title="Mana"><div class="fill"></div><span class="label"></span></div>
+          <div id="hud-needs">
+            <div id="hud-food" class="pbar" title="Food"><div class="fill"></div><span class="label"></span></div>
+            <div id="hud-water" class="pbar" title="Water"><div class="fill"></div><span class="label"></span></div>
+          </div>
+        </div>
       </div>
       <div id="hud-buttons">
         <!-- The map button is always shown (src/hud/MapOverlay.ts): a room opens a note instead of a map. -->
@@ -98,7 +103,7 @@
     </div>
 
     <!-- What the current quest asks, under the bars (src/hud/Hud.ts). -->
-    <div id="quest-tracker" hidden></div>
+    <div id="quest-tracker" class="pix" hidden></div>
 
     <!-- The quick-item button (src/hud/ItemButton.ts): tap uses the selected consumable, swipe left or right cycles. It reads
          pointer events itself (no data-key); bottom right on a phone, up-left of A, and a corner spot on desktop. -->
@@ -115,12 +120,11 @@
 
     <ul id="combo-hud" aria-label="Spell combos" hidden></ul>
 
-    <!-- Co-op map: the whole zone, semi-transparent, with a pin per player (each in that player's colour). -->
-    <div id="map-overlay" aria-hidden="true" hidden>
-      <img alt="" />
+    <!-- The map (src/hud/MapOverlay.ts): parchment in a frame like the menu's, a pin per player (each in that player's colour). -->
+    <div id="map-overlay" class="panel wood" aria-hidden="true" hidden>
       <div class="zone-title"></div>
+      <div class="sheet panel thin paper"><div class="stage"><img alt="" /><span class="pin me"></span></div></div>
       <p class="room-note">This is a room: there is no overview map in here. Step outside to see the land.</p>
-      <span class="pin me"></span>
       <div class="legend"></div>
     </div>
 

@@ -151,7 +151,7 @@ Licences and authors read from the two OpenGameArt pages (through a page summary
 
 ## Fonts
 
-Cinzel (Natanael Gama) and Crimson Text (Sebastian Kosch), SIL Open Font License 1.1, bundled via Fontsource.
+Pixelify Sans (Stefie Justprince) and Crimson Text (Sebastian Kosch), SIL Open Font License 1.1, bundled via Fontsource (npm `@fontsource/pixelify-sans`, `@fontsource/crimson-text`). Pixelify Sans is the one pixel face of the HUD, the menu's titles and tabs and the world's labels (the 'FloatText' bitmap font).
 
 ## Pets (`public/sprites/pets/`)
 

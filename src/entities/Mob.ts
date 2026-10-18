@@ -160,6 +160,7 @@ export class Mob {
   private heroes: MobWorld['heroes'] = []; // guest: who the beam can be on
   private remote: { x: number; y: number } | null = null; // guest only: where the host says this mob is
   private bar = new Graphics();
+  private engaged = false; // in a fight (not idle or wandering): a boss's bar shows even at full health
   private readonly t: ReturnType<typeof mobTimings>;
 
   constructor(
@@ -695,6 +696,11 @@ export class Mob {
 
   /** Draw the state: the windup telegraph, the hit flash, the walk cycle. Shared by the host's AI and the guest's copy. */
   private present(dt: number, moving: boolean) {
+    const engaged = this.state !== 'idle' && this.state !== 'wander' && this.state !== 'dead';
+    if (engaged !== this.engaged) {
+      this.engaged = engaged;
+      this.drawBar();
+    }
     const flush = this.drawTell(telegraphOf(this.kind));
     this.drawBeam();
     this.body.setTint(
@@ -898,16 +904,29 @@ export class Mob {
     }
   }
 
-  /** Small health bar over the head, shown only once damaged. */
+  /**
+   * The health bar over the head: only for the foes that matter (a boss, authored or the DM's, and an elite, one with poise)
+   * and only once hurt; an ordinary foe's health shows in how it fights, not in a bar. A pixel bar with a dark frame, a
+   * lit top line and whole-pixel fill; a boss's is wider with a gold rail.
+   */
   private drawBar() {
     this.bar.clear();
-    if (this.hp >= this.kind.maxHp || this.hp <= 0) return;
-    const w = 20;
+    const boss = !!(this.kind.named || this.kind.boss);
+    if (!boss && !(this.kind.poiseMax && this.kind.poiseMax > 0)) return;
+    if (this.hp <= 0 || (this.hp >= this.kind.maxHp && !(boss && this.engaged))) return; // a boss's bar is up as soon as it fights
+    const w = boss ? 36 : 22;
     const top = -56 * (this.kind.scale ?? 1);
+    const fill = Math.max(1, Math.round((w * this.hp) / this.kind.maxHp));
     this.bar
-      .rect(-w / 2 - 1, top, w + 2, 4)
-      .fill(0x000000)
-      .rect(-w / 2, top + 1, (w * this.hp) / this.kind.maxHp, 2)
-      .fill(0xe7682f);
+      .rect(-w / 2 - 2, top - 2, w + 4, 8)
+      .fill(boss ? 0xb48a4a : 0x120a06)
+      .rect(-w / 2 - 1, top - 1, w + 2, 6)
+      .fill(0x120a06)
+      .rect(-w / 2, top, w, 4)
+      .fill(0x3d1a14)
+      .rect(-w / 2, top, fill, 4)
+      .fill(boss ? 0xd9302c : 0xe7682f)
+      .rect(-w / 2, top, fill, 1)
+      .fill({ color: 0xffffff, alpha: 0.4 });
   }
 }

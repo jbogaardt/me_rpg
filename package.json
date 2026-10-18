@@ -25,8 +25,8 @@
     "dm-bot": "tsx server/host.ts"
   },
   "dependencies": {
-    "@fontsource/cinzel": "^5.3.0",
     "@fontsource/crimson-text": "^5.3.0",
+    "@fontsource/pixelify-sans": "^5.3.0",
     "@huggingface/transformers": "^3.8.1",
     "kokoro-js": "^1.2.1",
     "pixi.js": "^8.22.0"
