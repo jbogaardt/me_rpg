@@ -2,7 +2,17 @@
 // `KeyboardEvent.code` ('KeyW', 'Space') or a mouse button ('Mouse0' = left, 'Mouse2' = right).
 // Touch controls are not rebindable; they press fixed codes (see touch.ts, TOUCH_CODES below).
 
-export const ACTIONS = ['up', 'down', 'left', 'right', 'attack', 'inventory'] as const;
+export const ACTIONS = [
+  'up',
+  'down',
+  'left',
+  'right',
+  'attack',
+  'inventory',
+  'itemUse',
+  'itemPrev',
+  'itemNext',
+] as const;
 export type Action = (typeof ACTIONS)[number];
 export const SLOTS = 2;
 
@@ -13,6 +23,9 @@ export const ACTION_LABELS: Record<Action, string> = {
   right: 'Move right',
   attack: 'Attack / talk',
   inventory: 'Inventory',
+  itemUse: 'Use quick item',
+  itemPrev: 'Previous quick item',
+  itemNext: 'Next quick item',
 };
 
 export type Slots = readonly [string, string]; // '' = unbound
@@ -24,6 +37,9 @@ export const DEFAULT_BINDINGS: Record<Action, Slots> = {
   right: ['KeyD', 'ArrowRight'],
   attack: ['Mouse0', 'Space'],
   inventory: ['KeyI', ''],
+  itemUse: ['KeyF', ''],
+  itemPrev: ['KeyQ', ''],
+  itemNext: ['KeyE', ''],
 };
 
 /** What the on-screen buttons press, whatever the keyboard is bound to. */
@@ -34,6 +50,10 @@ export const TOUCH_CODES: Record<Action, readonly string[]> = {
   right: ['ArrowRight'],
   attack: ['KeyJ'],
   inventory: ['KeyI'],
+  // the on-screen quick-item button handles its own gestures (hud/ItemButton.ts), so no code stands in for these
+  itemUse: [],
+  itemPrev: [],
+  itemNext: [],
 };
 
 /**
@@ -44,7 +64,7 @@ export const TOUCH_CODES: Record<Action, readonly string[]> = {
  */
 export const FIXED_KEYS = { menu: ['Escape', 'Tab'], map: ['KeyM'], stop: ['KeyT'] } as const;
 
-/** The number keys 1-4 use the hotbar's quick slots (hud/Hotbar.ts); the on-screen slot buttons press the same codes. */
+/** The number keys 1-3 use the quick item slots directly (Digit4 is the hidden stored slot); fire on keydown, never rebindable. */
 export const HOTBAR_KEYS: readonly string[] = ['Digit1', 'Digit2', 'Digit3', 'Digit4'];
 
 /** Codes no action can be bound to: the fixed keys and the hotbar's number keys. */

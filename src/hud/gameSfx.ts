@@ -136,6 +136,13 @@ export const GAME_RECIPES: Record<GameSoundName, GameRecipe> = {
       { wave: 'sine', from: 420, to: 1050, gain: 0.25 },
     ],
   },
+  deny: {
+    dur: 0.11,
+    gain: 0.3,
+    pitch: 0.07,
+    noise: { filter: 'lowpass', from: 700, to: 250, gain: 0.3 },
+    tones: [{ wave: 'sine', from: 150, to: 85, gain: 0.9 }],
+  },
   pickup: { dur: 0.18, gain: 0.2, pitch: 0.06, tones: [{ wave: 'sine', from: 1320, to: 1760, gain: 1 }] },
 };
 

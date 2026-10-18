@@ -64,23 +64,42 @@
   font: 700 12px/17px var(--title); color: #e8dcc0; text-shadow: 0 1px 2px #000;
 }
 #combo-hud[hidden] { display: none; }
-/* The hotbar: a column of quick slots on the right edge, clear of the D-pad (left) and the A button (bottom right). */
-#hotbar {
-  position: fixed; z-index: 2; display: flex; flex-direction: column; gap: 6px;
-  top: 38%; right: calc(8px + env(safe-area-inset-right)); transform: translateY(-50%);
+/* The quick-item button: 60 px circle bottom right, up-left of A (84 px at right 24 / bottom 48), so it never covers the A
+   button, the left-half floating stick or the hero. The whole circle is the hit area (60 px, over the 48 px minimum). */
+#item-btn {
+  position: fixed; z-index: 2; width: 60px; height: 60px; box-sizing: border-box; cursor: pointer; user-select: none;
+  touch-action: none; -webkit-tap-highlight-color: transparent;
+  right: calc(112px + env(safe-area-inset-right)); bottom: calc(116px + env(safe-area-inset-bottom));
 }
-#hotbar[hidden], body.dm-ui #hotbar { display: none; }
-#hotbar .hb {
-  position: relative; width: 44px; height: 44px; box-sizing: border-box; cursor: pointer; user-select: none;
-  background: rgba(23, 18, 12, 0.6); border: 1px solid var(--gold-dim); border-radius: 4px; touch-action: none;
+/* Without the touch cluster (desktop) A is not drawn, so the button sits in the corner. */
+body:not(.touch-ui) #item-btn { right: calc(24px + env(safe-area-inset-right)); bottom: calc(28px + env(safe-area-inset-bottom)); }
+#item-btn[hidden], body.dm-ui #item-btn { display: none; }
+#item-btn .ib-face {
+  position: absolute; inset: 0; border-radius: 50%; overflow: hidden; transition: transform 70ms ease-out;
+  background: radial-gradient(rgba(20, 15, 8, 0.35), rgba(20, 15, 8, 0.65)); border: 2px solid rgba(242, 211, 138, 0.6);
 }
-#hotbar .hb.pressed { filter: brightness(1.4); }
-#hotbar .hb.worn { border-color: #7fe6ff; }
-#hotbar .hb.gone { opacity: 0.45; }
-#hotbar .hb .num { position: absolute; top: 1px; left: 3px; font: 700 10px/12px var(--title); color: #e8dcc0; text-shadow: 0 1px 2px #000; }
-#hotbar .hb .qty { position: absolute; right: 3px; bottom: 1px; font: 700 11px/12px var(--title); color: #fff; text-shadow: 0 1px 2px #000; }
-#hotbar .hb .item { position: absolute; inset: 6px; }
-#hotbar .hb .item svg, #hotbar .hb .item > * { width: 100%; height: 100%; }
+/* The item sheet's cells are 32 px: drawn at 64 px (exactly 2x) they stay crisp, and the circle clips the empty corners. */
+#item-btn .ib-icon { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; transition: transform 70ms ease-out, opacity 120ms; }
+#item-btn .ib-icon > * { display: block; width: 100%; height: 100%; }
+#item-btn .ib-sweep { position: absolute; inset: 0; background: conic-gradient(rgba(0, 0, 0, 0.6) var(--cd, 0deg), transparent 0); opacity: 0; }
+#item-btn.cooling .ib-sweep { opacity: 1; }
+/* Instant press-down: the face squashes and the icon lifts the moment a finger lands. */
+#item-btn.pressed .ib-face { transform: scale(0.88); filter: brightness(1.25); }
+#item-btn.pressed .ib-icon { transform: translateY(-3px) scale(1.08); }
+#item-btn.empty .ib-icon { opacity: 0.45; filter: grayscale(1); }
+#item-btn .ib-qty {
+  position: absolute; right: -2px; top: -2px; min-width: 20px; height: 20px; padding: 0 4px; box-sizing: border-box; border-radius: 10px;
+  background: #4a3418; border: 1px solid var(--gold); font: 700 12px/18px var(--title); color: #fff; text-align: center; text-shadow: 0 1px 2px #000;
+}
+#item-btn .ib-qty[hidden] { display: none; }
+#item-btn .ib-pips { position: absolute; left: 0; right: 0; bottom: -10px; display: flex; justify-content: center; gap: 5px; }
+#item-btn .ib-pips i { width: 7px; height: 7px; border-radius: 50%; background: rgba(242, 211, 138, 0.3); border: 1px solid rgba(0, 0, 0, 0.6); box-sizing: border-box; }
+#item-btn .ib-pips i.on { background: var(--gold); box-shadow: 0 0 4px rgba(242, 211, 138, 0.9); }
+/* The selected item's icon, over the hero's head for a moment (placed by ItemButton.update). */
+#item-pop { position: fixed; z-index: 2; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; pointer-events: none; will-change: transform; }
+#item-pop[hidden] { display: none; }
+#item-pop .ip-icon { display: block; width: 100%; height: 100%; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)); }
+#item-pop .ip-icon > * { display: block; width: 100%; height: 100%; }
 /* On a phone the quest tracker takes the line under the bars, so the combo list sits below it. */
 @media (max-width: 600px) { #combo-hud { top: calc(84px + env(safe-area-inset-top)); } }
 #combo-hud .keys { display: inline-block; min-width: 6.2em; letter-spacing: 0.12em; }
@@ -330,14 +349,14 @@ body.touch-ui #dm-caption .voice { min-width: 44px; min-height: 44px; }
   user-select: all; -webkit-user-select: all; -webkit-touch-callout: default;
 }
 #menu label { display: block; margin-top: 10px; color: var(--ink-soft); font-weight: 600; font-size: 15px; }
-#aid-setting [role='group'], #sfx-setting [role='group'] { display: flex; gap: 6px; margin: 10px 0 8px; }
+#aid-setting [role='group'], #item-setting [role='group'], #sfx-setting [role='group'] { display: flex; gap: 6px; margin: 10px 0 8px; }
 #sfx-setting input[type='range'] { width: 100%; height: 32px; margin: 4px 0 6px; accent-color: var(--gold-dim); }
 #mp-mode, #aim-mode, #voice-engine { display: flex; gap: 6px; margin: 10px 0 8px; }
-#mp-mode button, #aim-mode button, #voice-engine button, #aid-setting button, #sfx-setting button {
+#mp-mode button, #aim-mode button, #voice-engine button, #aid-setting button, #item-setting button, #sfx-setting button {
   flex: 1 1 0; padding: 7px 4px; font: 700 14px var(--title); color: var(--ink-soft); cursor: pointer;
   background: rgba(255, 250, 235, 0.5); border: 1px solid var(--gold-dim); border-radius: 3px;
 }
-#mp-mode button[aria-checked='true'], #aim-mode button[aria-checked='true'], #voice-engine button[aria-checked='true'], #aid-setting button[aria-checked='true'], #sfx-setting button[aria-checked='true'] { color: var(--gold); background: #4a3418; border-color: var(--ink); }
+#mp-mode button[aria-checked='true'], #aim-mode button[aria-checked='true'], #voice-engine button[aria-checked='true'], #aid-setting button[aria-checked='true'], #item-setting button[aria-checked='true'], #sfx-setting button[aria-checked='true'] { color: var(--gold); background: #4a3418; border-color: var(--ink); }
 #mp-mode button:disabled, #voice-engine button:disabled { opacity: 0.5; cursor: default; }
 .mp-status { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-weight: 600; }
 .mp-status .dot { width: 10px; height: 10px; border-radius: 50%; background: #8a8478; box-shadow: 0 0 0 1px var(--ink-soft); }
@@ -658,8 +677,7 @@ body.dm-possessing #level-splash { display: none; }
 }
 #quest-tracker[hidden] { display: none; }
 /* On a phone the bars wrap to two rows beside the buttons: the chip goes below them, and the area banner (a few seconds
-   only) goes below the hero, clear of the HUD, the guide caption and the swing. In landscape the chip steps left of the
-   hotbar column. */
+   only) goes below the hero, clear of the HUD, the guide caption and the swing. */
 @media (max-width: 600px) {
   #quest-tracker { top: calc(96px + env(safe-area-inset-top)); max-width: calc(100vw - 16px - env(safe-area-inset-right) - env(safe-area-inset-left)); }
 }
@@ -667,7 +685,7 @@ body.dm-possessing #level-splash { display: none; }
   #area-banner { top: 60%; }
 }
 @media (max-height: 500px) {
-  #quest-tracker { right: calc(62px + env(safe-area-inset-right)); max-width: min(340px, 45vw); }
+  #quest-tracker { max-width: min(340px, 45vw); }
   #area-banner .title { font-size: 34px; }
 }
 

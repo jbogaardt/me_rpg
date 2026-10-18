@@ -99,17 +99,19 @@ const set = (r: Rect, x: number, y: number, w: number, h: number) => {
   r.h = h;
 };
 
-/** The HUD bars along the top, the hotbar column on the right and (touch) the stick and A button at the bottom. */
+/** The HUD bars along the top, the item button and (touch) the stick and A button at the bottom. */
 const HUD_TOP = 58;
 const PAD = 14; // a pulse is about this big: its whole body clears the rectangle, not only its centre
 
 /**
  * Move a pulse that would sit under the HUD or the on-screen controls to the nearest free spot on the same screen
- * (rectangles mirror ui.css: `#hud`, `#hotbar`, `#dpad`, `#buttons`). Only the position moves; the angle still points at the shooter.
+ * (rectangles mirror ui.css: `#hud`, `#item-btn`, `#dpad`, `#buttons`). Only the position moves; the angle still points at the shooter.
  */
 export function keepClear(p: { x: number; y: number }, screenW: number, screenH: number, touch: boolean): void {
   set(rects[0]!, 0, 0, screenW, HUD_TOP);
-  set(rects[1]!, screenW - 62, screenH * 0.38 - 110, 62, 220);
+  // The quick-item button (ui.css `#item-btn`, 60 px plus its pips): up-left of A on touch, in the corner on desktop.
+  if (touch) set(rects[1]!, screenW - 172, screenH - 176, 60, 70);
+  else set(rects[1]!, screenW - 84, screenH - 88, 60, 70);
   if (touch) {
     set(rects[2]!, 0, screenH - 172, 172, 172);
     set(rects[3]!, screenW - 132, screenH - 172, 132, 172);

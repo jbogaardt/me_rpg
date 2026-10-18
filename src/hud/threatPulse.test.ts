@@ -73,13 +73,16 @@ describe('keepClear', () => {
     expect(desk).toEqual({ x: 18, y: H - 40 });
   });
 
-  it('keeps pulses off the HUD row and the hotbar column but leaves free edge alone', () => {
+  it('keeps pulses off the HUD row and the item button but leaves free edge alone', () => {
     const top = { x: 100, y: 18 };
     keepClear(top, W, H, false);
     expect(top.y).toBeGreaterThan(58);
-    const bar = { x: W - 18, y: H * 0.38 };
-    keepClear(bar, W, H, false);
-    expect(Math.abs(bar.y - H * 0.38) > 110 || bar.x < W - 62).toBe(true);
+    const item = { x: W - 54, y: H - 60 };
+    keepClear(item, W, H, false);
+    expect(item.x <= W - 84 - 14 || item.y <= H - 88 - 14).toBe(true);
+    const itemTouch = { x: W - 142, y: H - 146 };
+    keepClear(itemTouch, W, H, true);
+    expect(itemTouch.x <= W - 172 - 14 || itemTouch.y <= H - 176 - 14).toBe(true);
     const free = { x: 18, y: H / 2 };
     keepClear(free, W, H, true);
     expect(free).toEqual({ x: 18, y: H / 2 });
