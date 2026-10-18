@@ -518,6 +518,7 @@ export const INTERIOR = {
   shelfTavern: { x: 608, y: 32, w: 96, h: 64 },
   signTavern: { x: 640, y: 96, w: 128, h: 64 },
   lectern: { x: 0, y: 160, w: 32, h: 48 },
+  window: { x: 64, y: 160, w: 32, h: 48 },
 };
 const furniture = (name: keyof typeof INTERIOR, band: number, about: string): Prefab => {
   const { x, y, w, h } = INTERIOR[name];
@@ -872,6 +873,11 @@ export const PREFABS = {
     'lectern',
     32,
     'A reading stand with an open book, 1x1.5 cells, solid. The wizard room lists the combos on it (systems/lectern.ts).',
+  ),
+  shopWindow: furniture(
+    'window',
+    0,
+    'A window in the back wall, 1x1.5 cells, decoration (set it with its bottom on the wall base row).',
   ),
   signWizard: furniture('signWizard', 0, 'Wall sign with a star, 4x2 cells, decoration.'),
   shelfTavern: furniture('shelfTavern', 64, 'Shelves of tankards and kegs, 3x2 cells, solid.'),

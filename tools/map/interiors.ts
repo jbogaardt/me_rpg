@@ -27,6 +27,8 @@ export function shopInterior(
   z.fill('wall', { col: 0, row: 0, w: SHOP_ROOM.width, h: 2 });
   z.block({ col: 0, row: 0, w: SHOP_ROOM.width, h: 2 }, 'back wall');
 
+  z.prop('shopWindow', 1, 1);
+  z.prop('shopWindow', 9, 1);
   z.prop(`sign${cap(look)}` as PrefabName, 3, 1);
   z.prop(`shelf${cap(look)}` as PrefabName, 1, 3);
   z.prop(`shelf${cap(look)}` as PrefabName, 7, 3);

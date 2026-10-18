@@ -11,8 +11,8 @@ import { INTERIOR } from './catalog';
 
 const art = (file: string) => readPng(path.join(ROOT, 'art/lpc_interior', file));
 const FLOORS = art('floors.png');
+const CITY = readPng(path.join(ROOT, 'art/lpc_city/city_outside.png'));
 const FURNITURE = art('furniture.png');
-const INSIDE = art('inside.png');
 const ITEMS = readPng(path.join(ROOT, 'public/sprites/items/items.png'));
 const SIGNS = readPng(path.join(ROOT, 'public/tilesets/hanging_signs.png'));
 const OUT = path.join(ROOT, 'public/tilesets/interior.png');
@@ -70,8 +70,9 @@ const put = (name: keyof typeof INTERIOR, img: Image, dx = 0, dy = 0) =>
 // Ground: two plank floors, the wall's crown and baseboard rows, and a mat at the door.
 put('planksA', crop(FLOORS, 192, 1218, 32, 32));
 put('planksB', crop(FLOORS, 224, 1218, 32, 32));
-put('wallTop', crop(INSIDE, 32, 0, 32, 32));
-put('wallBase', crop(INSIDE, 32, 64, 32, 32));
+// The back wall is the City pack's grey stone: brick above, a cobbled course along the floor.
+put('wallTop', crop(CITY, 480, 288, 32, 32));
+put('wallBase', crop(CITY, 480, 352, 32, 32));
 put('mat', crop(FLOORS, 96, 1090, 32, 32));
 
 // The counter: two sideboards end to end, standing on the bottom of its 48px box.
@@ -88,6 +89,19 @@ for (const trade of Object.keys(SIGN_CELL) as (keyof typeof SIGN_CELL)[]) {
   const [col, row] = SIGN_CELL[trade];
   put(`sign${cap}` as keyof typeof INTERIOR, crop(SIGNS, col * 32, row * 32, 32, 32), 48, 16);
 }
+
+// A window: the City pack's window with the dark panes turned to daylight (we are looking out from inside).
+const pane = crop(CITY, 640, 0, 32, 32);
+for (let i = 0; i < pane.data.length; i += 4) {
+  if (pane.data[i + 3] === 0 || pane.data[i] + pane.data[i + 1] + pane.data[i + 2] > 150) continue;
+  const lift = 1 + (pane.data[i + 2] % 3) * 0.04; // a little grain so the glass is not flat
+  [pane.data[i], pane.data[i + 1], pane.data[i + 2]] = [
+    Math.round(176 * lift),
+    Math.round(208 * lift),
+    Math.round(228),
+  ];
+}
+put('window', pane);
 
 // The wizard's lectern: a stand with an open book on it.
 put('lectern', STAND, 0, 18);

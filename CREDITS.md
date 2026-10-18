@@ -41,8 +41,7 @@ Composed by `tools/map/interior.ts`, no pixel scaled or recoloured. Floors from 
 by bluecarrot16, Lanea Zimmerman (Sharm), William.Thompsonj, Hyptosis, Reemax and others, CC-BY-SA 4.0 (credits in
 [`art/lpc_interior/CREDITS-floors.txt`](art/lpc_interior/CREDITS-floors.txt)). Counter and lectern from "LPC Wooden Furniture"
 (https://opengameart.org/content/lpc-wooden-furniture) by bluecarrot16, Basto, Sharm, William.Thompsonj, Reemax and Janna/Lilius/Jannax,
-CC-BY-SA 4.0 / 3.0 or GPL 3.0 ([`CREDITS-furniture.txt`](art/lpc_interior/CREDITS-furniture.txt)). The wall is the interior wall of
-the LPC Base Assets by Lanea Zimmerman (Sharm), CC-BY-SA 3.0 / GPL 3.0 ([`CREDITS-base.txt`](art/lpc_interior/CREDITS-base.txt)).
+CC-BY-SA 4.0 / 3.0 or GPL 3.0 ([`CREDITS-furniture.txt`](art/lpc_interior/CREDITS-furniture.txt)). The back wall and window are from "[LPC] City outside" (see the shop buildings above).
 The stock on the shelves is the item sheet below and the signs are the hanging signs.
 
 ## Crops (`public/tilesets/crops.png`, source in `art/lpc_crops/`)
