@@ -90,6 +90,9 @@ export default defineZone({
     z.chest('iron', 'hoard', ...cave.firstOpen(46, 17, 5, 3));
     z.chest('wood', 'elixir', ...cave.firstOpen(5, 31, 3, 3));
     z.chest('iron', 'relic', ...cave.firstOpen(48, 38, 3, 3));
+    // A rock ledge in the great cavern, a level above the floor: a ramp up its south face, a chest on top.
+    z.plateau({ col: 19, row: 23, w: 7, h: 4 }, { kind: 'rock', stairs: [22] });
+    z.chest('wood', 'potion', 22, 24);
     z.place('The Sunscar Hollow', 30, 22);
   },
 });

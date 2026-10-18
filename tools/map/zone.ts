@@ -320,7 +320,7 @@ const GROVE_DENSITY = 0.4;
 /** The reason a border cell of a wall carries when nothing would fit over it (`checkMap` fails it). */
 export const BARE_WALL = 'a bare wall cell (nothing fits over it)';
 /** The ground a plateau's top is made of: what its cliff art's rim is drawn with. */
-const TOP_GROUND: Record<CliffKind, GroundName> = { grass: 'grass', frost: 'snow', dry: 'sand' };
+const TOP_GROUND: Record<CliffKind, GroundName> = { grass: 'grass', frost: 'snow', dry: 'sand', rock: 'cobble' };
 const WALL_DENSITY = 0.55; // share of lattice spots a wall plants (its border row is then filled, see `woods`)
 
 export class Zone {
@@ -641,6 +641,31 @@ export class Zone {
     return this;
   }
 
+  /** A plateau's collision and heights: the rim ring, two face rows and the top's rounded corners block, stairs open the face. */
+  private plateauSolid(rect: Rect, stairCols: number[], level: number) {
+    const { col, row, w, h } = rect;
+    const why = 'plateau rim';
+    this.block({ col: col - 1, row: row - 1, w: w + 2, h: 1 }, why);
+    this.block({ col: col - 1, row: row + h, w: w + 2, h: 2 }, why);
+    this.block({ col: col - 1, row, w: 1, h }, why);
+    this.block({ col: col + w, row, w: 1, h }, why);
+    for (const [c, r] of [
+      [col, row],
+      [col + w - 1, row],
+      [col, row + h - 1],
+      [col + w - 1, row + h - 1],
+    ])
+      this.block({ col: c, row: r, w: 1, h: 1 }, why);
+    for (const { col: c, row: r } of this.cells(rect)) this.levelAt[r * this.width + c] = level;
+    for (const c of stairCols) {
+      this.unblock({ col: c, row: row + h, w: 1, h: 2 });
+      for (const r of [row + h, row + h + 1]) {
+        this.levelAt[r * this.width + c] = level;
+        this.ramps.add(r * this.width + c);
+      }
+    }
+  }
+
   /**
    * A raised plateau. `rect` is the walkable top in cells (at least 4x4); the rim rocks fill the 1-cell
    * ring around it (north/west/east) and the rock face the 2 rows south of it; all of that is blocked,
@@ -665,8 +690,9 @@ export class Zone {
     const sheet = CLIFF.sheets[kind];
     this.fill(TOP_GROUND[kind], rect);
     for (const { col: c, row: r } of this.cells(rect)) this.tops.add(r * this.width + c);
-    const { xs, ys } = CLIFF;
     const level = Math.max(...this.cells(rect).map(({ col: c, row: r }) => this.levelAt[r * this.width + c])) + 1;
+    if (kind === 'rock') return this.rockPlateau(rect, stairCols, level);
+    const { xs, ys } = CLIFF;
     const nx = w - 2,
       ny = h - 2;
     const hx = (col + 1) * CELL,
@@ -722,27 +748,48 @@ export class Zone {
       });
     }
 
-    // Collision: rim ring, two face rows, rounded corners of the top; stairs open the face.
-    const why = 'plateau rim';
-    this.block({ col: col - 1, row: row - 1, w: w + 2, h: 1 }, why);
-    this.block({ col: col - 1, row: row + h, w: w + 2, h: 2 }, why);
-    this.block({ col: col - 1, row, w: 1, h }, why);
-    this.block({ col: col + w, row, w: 1, h }, why);
-    for (const [c, r] of [
-      [col, row],
-      [col + w - 1, row],
-      [col, row + h - 1],
-      [col + w - 1, row + h - 1],
-    ])
-      this.block({ col: c, row: r, w: 1, h: 1 }, why);
-    for (const { col: c, row: r } of this.cells(rect)) this.levelAt[r * this.width + c] = level;
-    for (const c of stairCols) {
-      this.unblock({ col: c, row: row + h, w: 1, h: 2 });
-      for (const r of [row + h, row + h + 1]) {
-        this.levelAt[r * this.width + c] = level;
-        this.ramps.add(r * this.width + c);
+    this.plateauSolid(rect, stairCols, level);
+    return this;
+  }
+
+  /**
+   * The rock plateau (`kind: 'rock'`): a mesa of the LPC base assets' mountains (`lpc_mountains.png`), tan cobble on top, a brown
+   * rock face below. Unlike the grass cliffs it draws its own top (the cobble covers whatever ground lies under `rect`), so it
+   * suits caves, deserts and wastes. The blob is cut at its middle (x 192-224) and repeated: a 32x32 chunk of top, a rim row
+   * above it, the two ends of the face (a lip, a foot), the side walls and the blob's rounded top corners. Ramps are tan
+   * cobble 3 cells wide between brown edges. Collision and levels are the grass plateau's (`plateauSolid`).
+   */
+  private rockPlateau(rect: Rect, stairCols: number[], level: number) {
+    const { col, row, w, h } = rect;
+    const sheet = CLIFF.sheets.rock;
+    const [L, T, R, B] = [col * CELL, row * CELL, (col + w) * CELL, (row + h) * CELL];
+    const z = FLAT_Z + level;
+    const piece = (x: number, y: number, pw: number, ph: number, px: number, py: number) =>
+      this.extras.push({ sheet, x, y, w: pw, h: ph, px, py, tag: 'cliff', z });
+    const TOP = [192, 34, CELL, CELL] as const; // tan cobble, repeats
+    const underStairs = (c: number) => stairCols.some((s) => c >= s - 1 && c <= s + 1);
+    for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) piece(...TOP, L + c * CELL, T + r * CELL);
+    for (let c = 0; c < w; c++) piece(192, 14, CELL, 20, L + c * CELL, T - 16); // the rim above the top
+    for (let r = 0; r <= h; r++) {
+      piece(176, 76, 16, CELL, L - 16, T + r * CELL - 8); // west wall
+      piece(224, 76, 16, CELL, R, T + r * CELL - 8); // east wall
+    }
+    piece(176, 14, CELL, 40, L - 16, T - 16); // the blob's rounded corners
+    piece(208, 14, CELL, 40, R - 16, T - 16);
+    for (let c = col; c < col + w; c++) {
+      if (underStairs(c)) continue;
+      piece(192, 64, CELL, CELL, c * CELL, B - 8); // lip: the tan edge over the rock face
+      piece(192, 106, CELL, 34, c * CELL, B + 24); // foot of the face
+    }
+    for (const s of stairCols) {
+      const x0 = (s - 1) * CELL;
+      for (let c = 0; c < 3; c++) for (let r = 0; r < 2; r++) piece(...TOP, x0 + c * CELL, B + r * CELL - 8);
+      for (const dy of [-8, 24]) {
+        piece(176, 76, 16, CELL, x0 - 16, B + dy); // brown edges either side of the ramp
+        piece(224, 76, 16, CELL, x0 + 3 * CELL, B + dy);
       }
     }
+    this.plateauSolid(rect, stairCols, level);
     return this;
   }
 

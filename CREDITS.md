@@ -88,6 +88,11 @@ Cut and arranged by `tools/sprites/itemSheet.ts`, no pixel redrawn: weapons, arm
 (https://opengameart.org/content/fruit-and-veggie-inventory), and prepared food from "[LPC] Food" by bluecarrot16
 (https://opengameart.org/content/lpc-food); all CC-BY-SA 3.0 / GPL 3.0 (authors in [`art/lpc_items/CREDITS-items.txt`](art/lpc_items/CREDITS-items.txt)).
 
+## Rock plateau (`public/tilesets/lpc_mountains.png`, source in `art/lpc_mountains/`)
+
+The mountains sheet of the Liberated Pixel Cup base assets (https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles)
+by Lanea Zimmerman (Sharm), CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0, used unmodified; `tools/map/zone.ts` cuts the rock plateau from its cliff blob.
+
 ## Characters (`public/sprites/lpc/`, catalog in `sprites/parts.ts`)
 
 Hero, NPC and monster art comes from the [Universal LPC Spritesheet Character Generator](https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator)

@@ -1,0 +1,3 @@
+mountains.png: from the Liberated Pixel Cup base assets (https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles)
+by Lanea Zimmerman (Sharm), CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0. Used unmodified as public/tilesets/lpc_mountains.png; tools/map/zone.ts
+cuts the rock plateau (kind 'rock') from the cliff blob at x 176-240, y 14-140.

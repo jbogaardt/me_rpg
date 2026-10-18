@@ -18,6 +18,7 @@ export const TERRAIN_SHEET = 'lpc_terrain.png'; // the LPC terrain atlas (art/lp
 export const CLIFF_SHEET = 'Cliff_tileset.png'; // Avalon cliffs: a plateau blob, stairs, notches
 export const FROST_CLIFFS = 'frost_cliffs.png'; // cliffs with snow tops and blue-grey rock (recolor.ts)
 export const DRY_CLIFFS = 'dry_cliffs.png'; // cliffs with sandy tops and ochre rock (recolor.ts)
+export const ROCK_SHEET = 'lpc_mountains.png'; // the LPC base assets' mountains: the rock plateau (kind 'rock', see zone.plateau)
 
 // MrBeast's cave, sewer and desert tilesets (art/oga_dungeon/, CC-BY 3.0), doubled to the 32px cell by dungeonSheets.ts.
 export const CAVE_SHEET = 'dungeon_cave.png';
@@ -1252,6 +1253,6 @@ export const CLIFF = {
   ys: [15, 64, 96, 128, 223],
   stairs: { x: 320, y: 128, w: 96, h: 94 },
   /** Cliff sheet per biome. Frost/dry are recolours with identical coordinates (tools/map/recolor.ts). */
-  sheets: { grass: CLIFF_SHEET, frost: FROST_CLIFFS, dry: DRY_CLIFFS },
+  sheets: { grass: CLIFF_SHEET, frost: FROST_CLIFFS, dry: DRY_CLIFFS, rock: ROCK_SHEET },
 };
 export type CliffKind = keyof typeof CLIFF.sheets;

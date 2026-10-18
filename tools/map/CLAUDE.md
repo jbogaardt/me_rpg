@@ -41,18 +41,23 @@ must skip `beyond` cells), and the margin is how two maps line up.
 
 ## Signs
 
-Signposts (`z.sign`, alternating `signpost`/`signpostB`), notice boards and the hanging shop signs (`hang*`, a prefab with
-`wall: true`, drawn in front of the wall it hangs on: put one a cell up beside a door, nudged `dy: -6`) are OpenGameArt
-sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs/`). Only a signpost's post blocks. A signpost's `ways` are authored hints: the game reads the real neighbours (`systems/signs.ts`), and on a biome the check fails a way naming a zone that no gap door on that side reaches (a side may have several doors; the authored zone stands if one matches). Give a town or haven a notice board in its square and a hanging sign by each shop, hall or inn door; graves and ruins go in clearings off the roads (keepClear them).
+Signposts (`z.sign`, alternating `signpost`/`signpostB`), notice boards and hanging shop signs (`hang*`, `wall: true`: one a cell up beside a door, nudged `dy: -6`) are OpenGameArt
+sheets used unmodified (`SIGN_PREFABS` in `catalog.ts`, credit in `art/oga_signs/`). Only a signpost's post blocks. A signpost's `ways` are authored hints: the game reads the real neighbours (`systems/signs.ts`), and on a biome the check fails a way naming a zone that no gap door on that side reaches. Give a town or haven a notice board and a hanging sign by each shop, hall or inn door; graves and ruins go in clearings off the roads (keepClear them).
 
 ## Shop buildings
 
 `town.png` (`town.ts`, composed from the LPC City outside pack in `art/lpc_city/`) holds the shop prefabs (`BUILDINGS` in `catalog.ts`),
-solid from the ground up; each has a door into its interior room (`interiors.ts`). Six shops stand in Lanternrest; the
-tavern (red roof over brick, the Resting Lantern) is the one a party rests in. Halls are 5 cells wide with a one-cell door, houses 3 (a shop is told by its hanging sign, not its colour). A new shop is a hall or house in `town.ts` (a hanging sign by its door; a shelf and sign
-in `interior.ts` for its room), a `SHOP_DOORS` entry, a room spec and its shop, keeper and node in the content.
+solid from the ground up; each has a door into its interior room (`interiors.ts`). Halls are 5 cells wide with a one-cell door, houses 3; a
+shop is told by its hanging sign, not its colour. Six shops stand in Lanternrest; the tavern (the Resting Lantern) is where a party rests.
+A new shop is a hall or house in `town.ts`, a `SHOP_DOORS` entry, a room spec, a shelf and sign in `interior.ts`, and its shop, keeper and
+node in the content. `interior.png` (`interior.ts`, from LPC floors, furniture and the City wall in `art/lpc_interior/`) holds the room
+pieces (`INTERIOR` in `catalog.ts`); `compose.ts` has the cut and overlay helpers `town.ts` shares.
 
-`interior.png` (`interior.ts`, from LPC floors, furniture and the base wall in `art/lpc_interior/`, with item icons and hanging signs we already ship) holds the room pieces named in `INTERIOR` (`catalog.ts`); `compose.ts` has the cut/overlay helpers it shares with `town.ts`. Rooms keep the same layout (`interiors.ts`).
+## Rock plateaus
+
+`z.plateau(rect, { kind: 'rock', stairs })` raises a mesa cut from the LPC mountains (`ROCK_SHEET`): cobble top, brown face, a cobble ramp at
+each stair column. It draws its own top, so it sits on cave floor, dirt or sand alike; collision and levels are shared with the other
+cliffs (`plateauSolid`). The Sunscar Hollow's great cavern has one. Mobs ignore heights for now: keep placements off the face rows.
 
 ## Ruins
 
@@ -68,7 +73,7 @@ the Wilds' old shrine and barrow; the quest `ruin` landmark (`entities/Landmark.
 
 ## Caves and sewers
 
-Underground rooms are indoor zones (`z.indoor()`, so no seam check) painted from a grid by `delve.ts`: a spec makes a `Delve`, carves chambers, tunnels and pools into solid rock, and `paint` shows each rock cell by its distance to the open floor south of it (wall face, second face row, rim, then plain dark roof; the view is from the south, so only that side of a wall is seen). A wall needs two rows of rock to show its whole face, so carve rooms at least that far apart. Themes `cave` and `sewer` name the grounds (`dungeonGrounds` in `catalog.ts`); the art is MrBeast's CC-BY 3.0 tilesets (`art/oga_dungeon/`, doubled from 16px to the 32px cell by `dungeonSheets.ts`, tiles named by source index). Campaign 1 stacks them: the Hollow's tunnel leads to the Sunscar Depths, a sewer door to the Undercroft, the graveyard's tomb to the Barrow Deep (foes banded 9 to 22, an authored boss and rare gear each). Caves and sewers are core engine (just a map and doors); who lives there is content (a scenario node per zone, one biome entry linking back). Where a doorway meets the open-air world is in `delves.ts` (both ends read it, so neither imports the other); the overworld end is a prop (`caveMouth`, `sewerHatch`) with a door on it. Their ground names sit last in `SURFACES` (`zone.ts`) so the open-air maps' surface indices never move.
+Underground rooms are indoor zones (`z.indoor()`, so no seam check) painted from a grid by `delve.ts`: a spec makes a `Delve`, carves chambers, tunnels and pools into solid rock, and `paint` shows each rock cell by its distance to the open floor south of it (wall face, second face row, rim, then plain dark roof; the view is from the south, so only that side of a wall is seen). A wall needs two rows of rock to show its whole face, so carve rooms at least that far apart. Themes `cave` and `sewer` name the grounds (`dungeonGrounds` in `catalog.ts`); the art is MrBeast's CC-BY 3.0 tilesets (`art/oga_dungeon/`, doubled from 16px to the 32px cell by `dungeonSheets.ts`, tiles named by source index). Campaign 1 stacks them: the Hollow leads to the Sunscar Depths, a sewer to the Undercroft, the graveyard's tomb to the Barrow Deep (foes banded 9 to 22). Caves and sewers are core engine (just a map and doors); who lives there is content (a scenario node per zone, one biome entry linking back). Where a doorway meets the open-air world is in `delves.ts` (both ends read it, so neither imports the other); the overworld end is a prop (`caveMouth`, `sewerHatch`) with a door on it. Their ground names sit last in `SURFACES` (`zone.ts`) so the open-air maps' surface indices never move.
 
 ## Camps
 
