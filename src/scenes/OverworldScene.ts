@@ -583,7 +583,6 @@ export class OverworldScene implements Scene {
       this.arena.local.dm,
       this.storyUi.taskLine(),
       arena.role === 'solo',
-      dt,
     );
     // Arrows toward partners out of view, and a chip for one in another zone (online only, not during a door transition).
     this.partnerArrows.update(

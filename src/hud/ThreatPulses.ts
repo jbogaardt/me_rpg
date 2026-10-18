@@ -1,5 +1,4 @@
 import type { Mob } from '../entities/Mob';
-import { chevronUrl } from './heartArt';
 import type { View } from './edgeArrow';
 import {
   keepClear,
@@ -14,11 +13,9 @@ import {
 } from './threatPulse';
 
 // A chevron on the screen edge toward each off-screen shooter that is winding up (at most MAX_PULSES, the soonest to
-// strike), in the one danger colour (every foe's windup is the same warm red-orange; `Mob.shooterTell` hands it over): it
-// closes and brightens toward the strike, goes solid for the last moment and fades when the windup ends. A soft pixel
-// chevron (a stepped pixel mask filled with the colour and a glow, no hard border), like the world's own cues. Cosmetic,
-// local, drawn from the mobs' own windup state on every page (solo, host, guest; nothing is sent). A few pooled DOM elements
-// with inline styles, pointer-events none, no text. Maths: threatPulse.ts.
+// strike), in the kind's telegraph colour: it closes and brightens toward the strike, goes solid for the last moment and
+// fades when the windup ends. Cosmetic, local, drawn from the mobs' own windup state on every page (solo, host, guest;
+// nothing is sent). A few pooled DOM elements with inline styles, pointer-events none, no text. Maths: threatPulse.ts.
 
 const FADE = 0.18; // seconds a pulse takes to fade once its windup is over (the bolt has left)
 
@@ -48,14 +45,11 @@ export class ThreatPulses {
     this.root.id = 'threat-pulses';
     this.root.setAttribute('aria-hidden', 'true');
     this.root.style.cssText = 'position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;display:none';
-    const mask = chevronUrl();
     for (let i = 0; i < MAX_PULSES; i++) {
       const el = document.createElement('div');
       el.style.cssText =
-        'position:absolute;left:0;top:0;width:18px;height:30px;opacity:0;will-change:transform,opacity';
-      const core = document.createElement('div'); // the masked chevron; the glow is on its parent (a filter would be masked away)
-      core.style.cssText = `width:100%;height:100%;image-rendering:pixelated;-webkit-mask:${mask} center/100% 100% no-repeat;mask:${mask} center/100% 100% no-repeat`;
-      el.appendChild(core);
+        'position:absolute;left:0;top:0;width:26px;height:26px;box-sizing:border-box;border-style:solid;' +
+        'border-width:6px 6px 0 0;border-radius:2px;opacity:0;will-change:transform,opacity';
       this.root.appendChild(el);
       this.slots.push({ el, id: -1, live: false, fade: 0, x: 0, y: 0, angle: 0, progress: 0, color: -1 });
     }
@@ -133,13 +127,13 @@ export class ThreatPulses {
     }
     if (s.color >= 0 && s.el.dataset.c !== String(s.color)) {
       s.el.dataset.c = String(s.color);
-      (s.el.firstChild as HTMLElement).style.backgroundColor = hex(s.color);
-      st.filter = `drop-shadow(0 0 3px ${hex(s.color)}) drop-shadow(0 2px 1px rgba(0,0,0,0.35))`;
+      st.borderColor = hex(s.color);
+      st.filter = `drop-shadow(0 0 2px #000) drop-shadow(0 0 5px ${hex(s.color)})`;
     }
     const a = s.live ? pulseAlpha(s.progress, seconds) : pulseAlpha(s.progress, seconds) * s.fade;
     st.opacity = a.toFixed(2);
     const deg = ((s.angle * 180) / Math.PI).toFixed(1);
-    // Centre on (x, y) and turn toward the shooter: the art's tip points along +x.
-    st.transform = `translate(${Math.round(s.x - 9)}px,${Math.round(s.y - 15)}px) rotate(${deg}deg) scale(${pulseScale(s.progress).toFixed(2)})`;
+    // Centre on (x, y), turn toward the shooter, then the corner of the square (45 deg) is the chevron's tip.
+    st.transform = `translate(${Math.round(s.x - 13)}px,${Math.round(s.y - 13)}px) rotate(${deg}deg) rotate(45deg) scale(${pulseScale(s.progress).toFixed(2)})`;
   }
 }
