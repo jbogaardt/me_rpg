@@ -78,6 +78,20 @@ export function shakeOffset(t: number, duration: number, amplitude: number): { x
   };
 }
 
+/** The strongest kick a camera takes (screen px). */
+export const KICK_MAX_PX = 6;
+
+/**
+ * Where a kick `t` seconds in sits (screen px): pushed `px` along (dx, dy) and fading linearly to nothing at `duration`.
+ * Whole pixels, so the art stays crisp.
+ */
+export function kickOffset(t: number, duration: number, dx: number, dy: number, px: number): { x: number; y: number } {
+  const len = Math.hypot(dx, dy);
+  if (duration <= 0 || t >= duration || px <= 0 || len === 0) return { x: 0, y: 0 };
+  const k = (px * (1 - t / duration)) / len;
+  return { x: Math.round(dx * k) || 0, y: Math.round(dy * k) || 0 };
+}
+
 /**
  * Zooms and scrolls a world container to follow a point. The player is in the middle of the screen (a little behind
  * while walking, the camera eases after them) and the view never leaves `bounds` (the map). One rule, everywhere.
@@ -91,6 +105,9 @@ export class Camera {
   /** A shake in progress (a director's cue, `systems/cues.ts`): seconds in, its length and its swing in screen px. */
   private rattle: { t: number; duration: number; amplitude: number } | null = null;
   private shaken = { x: 0, y: 0 };
+  /** A directional kick in progress (a landed blow): seconds in, its length, direction and push in screen px. */
+  private thump: { t: number; duration: number; dx: number; dy: number; px: number } | null = null;
+  private kicked = { x: 0, y: 0 };
 
   constructor(private world: Container) {}
 
@@ -108,6 +125,30 @@ export class Camera {
     if (amplitude <= 0 || seconds <= 0) return;
     if (now && now.t < now.duration && now.amplitude * (1 - now.t / now.duration) > amplitude) return;
     this.rattle = { t: 0, duration: seconds, amplitude };
+  }
+
+  /**
+   * Push the view `px` screen px along (dx, dy) and let it settle over `seconds`: the weight of a blow, along its
+   * direction (a shake only wobbles). A kick in progress is only replaced by a stronger one.
+   */
+  kick(dx: number, dy: number, px: number, seconds: number) {
+    const push = Math.min(KICK_MAX_PX, px);
+    const now = this.thump;
+    if (push <= 0 || seconds <= 0 || (dx === 0 && dy === 0)) return;
+    if (now && now.t < now.duration && now.px * (1 - now.t / now.duration) > push) return;
+    this.thump = { t: 0, duration: seconds, dx, dy, px: push };
+  }
+
+  /** Advance the kick `dt` seconds and keep where it puts the view now. */
+  private kickStep(dt: number) {
+    const k = this.thump;
+    if (!k) return;
+    k.t += dt;
+    this.kicked = kickOffset(k.t, k.duration, k.dx, k.dy, k.px);
+    if (k.t >= k.duration) {
+      this.thump = null;
+      this.kicked = { x: 0, y: 0 };
+    }
   }
 
   /** Advance the shake `dt` seconds and keep where it puts the view now. */
@@ -153,8 +194,9 @@ export class Camera {
       this.baseY = ease(this.baseY, goalY, dt);
     }
     this.shakeStep(dt);
+    this.kickStep(dt);
     this.world.scale.set(this.zoom);
-    this.world.position.set(this.baseX + this.shaken.x, this.baseY + this.shaken.y);
+    this.world.position.set(this.baseX + this.shaken.x + this.kicked.x, this.baseY + this.shaken.y + this.kicked.y);
   }
 
   /**
@@ -164,6 +206,9 @@ export class Camera {
   punch(scale: number, hx: number, hy: number, dx = 0, dy = 0) {
     const k = this.zoom * (1 - scale);
     this.world.scale.set(this.zoom * scale);
-    this.world.position.set(this.baseX + hx * k + dx + this.shaken.x, this.baseY + hy * k + dy + this.shaken.y);
+    this.world.position.set(
+      this.baseX + hx * k + dx + this.shaken.x + this.kicked.x,
+      this.baseY + hy * k + dy + this.shaken.y + this.kicked.y,
+    );
   }
 }

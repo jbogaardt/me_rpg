@@ -3,7 +3,15 @@ import { CELL } from '../map/types';
 import { DIR_VEC, directionToward, type Direction } from '../core/direction';
 import { glide } from '../core/interp';
 import { mobTimings, telegraphOf, type MobKind, type MobState, type MobView } from '../systems/combat';
-import { hitPauseFor, tickPause } from '../systems/hitPause';
+import {
+  hitPauseFor,
+  KNOCK_DECAY,
+  KNOCK_SHOVE,
+  KNOCK_SPEED,
+  killPauseFor,
+  knockVelocity,
+  tickPause,
+} from '../systems/hitPause';
 import { Character } from './Character';
 
 /** What a mob needs from the game each tick. */
@@ -61,7 +69,6 @@ const MEND = 0.25; // share of its max HP a mob mends per second once it has los
 // cannot be interrupted. It always gets to swing back.
 const POISE = 0.9;
 const COMMITTED = 0.5;
-const SHOVE = 40; // knockback speed (px/s) while it is not staggered; a staggering hit pushes 180
 const KEEP_AWAY = 0.4; // a shooter backs off when the hero is closer than this fraction of its range
 const RESPAWN = 60; // an adventure, not a grind: a foe that falls stays down for a minute
 const FADE = 0.4;
@@ -105,7 +112,9 @@ export class Mob {
   private dir = { x: 0, y: 0 };
   private knock = { x: 0, y: 0 };
   private flash = 0;
-  private hitstop = 0; // hit-pause: frozen mid-blow for this many seconds (systems/hitPause.ts)
+  private hitstop = 0; // hit-pause: frozen mid-blow for this many seconds (systems/hitPause.ts); a kill holds too
+  /** Runs once when a kill's hold ends (the death effect plays after the foe has held, not at the blow). */
+  private deathHold: (() => void) | null = null;
   private poise = 0; // seconds left in which a hit cannot stagger it again
   private moving = false;
   private attack: MobAttack = 'melee'; // what the current windup leads to
@@ -157,6 +166,8 @@ export class Mob {
     this.beam.clear();
     this.body.release();
     this.knock = { x: 0, y: 0 };
+    this.hitstop = 0;
+    this.deathHold = null;
     this.poise = 0;
     this.lunging = 0;
     this.swing = false;
@@ -179,17 +190,24 @@ export class Mob {
     this.body.setTint(0xffffff);
   }
 
-  /** Take a hit pushing along (vx, vy). Returns true if it was fatal. */
-  hit(damage: number, vx: number, vy: number): boolean {
+  /**
+   * Take a hit pushing along (vx, vy). Returns true if it was fatal. The knock starts on this tick (it slides through the
+   * hit-pause too), and a kill holds the foe a moment before `onDeathHold` (its death effect) runs.
+   */
+  hit(damage: number, vx: number, vy: number, onDeathHold?: () => void): boolean {
     this.hp = Math.max(0, this.hp - damage);
     this.flash = 0.15;
-    if (this.hp > 0 && !this.remote) this.hitstop = hitPauseFor(damage, this.kind.maxHp);
+    if (!this.remote) {
+      this.hitstop =
+        this.hp > 0 ? hitPauseFor(damage, this.kind.maxHp) : killPauseFor(!!(this.kind.named || this.kind.boss));
+    }
+    this.deathHold = this.hp <= 0 ? (onDeathHold ?? null) : null;
     this.drawBar();
     if (this.hp <= 0) {
       this.lunging = 0;
       this.beam.clear();
       this.body.release();
-      this.knock = { x: vx * 180, y: vy * 180 };
+      this.knock = knockVelocity(vx, vy, KNOCK_SPEED);
       this.body.play('hurt', this.t.stagger * 1000);
       this.state = 'dead';
       this.timer = RESPAWN;
@@ -200,10 +218,10 @@ export class Mob {
     }
     const committed = this.state === 'windup' && this.timer < this.windupLen * COMMITTED;
     if (this.poise > 0 || committed) {
-      this.knock = { x: vx * SHOVE, y: vy * SHOVE }; // hurt, but not stopped
+      this.knock = knockVelocity(vx, vy, KNOCK_SHOVE); // hurt, but not stopped
       return false;
     }
-    this.knock = { x: vx * 180, y: vy * 180 };
+    this.knock = knockVelocity(vx, vy, KNOCK_SPEED);
     this.body.play('hurt', this.t.stagger * 1000);
     this.state = 'recover';
     this.lunging = 0; // a staggering hit stops a lunge; the blow (if it has not landed) is lost
@@ -273,11 +291,32 @@ export class Mob {
     this.knock = { x: 0, y: 0 };
   }
 
+  /** One tick of the knockback: slide along it and let it decay. */
+  private slideKnock(dt: number, world: MobWorld) {
+    if (!this.knock.x && !this.knock.y) return;
+    world.slide(this.body, this.knock.x * dt, this.knock.y * dt);
+    const decay = Math.exp(-KNOCK_DECAY * dt);
+    this.knock.x *= decay;
+    this.knock.y *= decay;
+    if (Math.hypot(this.knock.x, this.knock.y) < 5) this.knock = { x: 0, y: 0 };
+  }
+
+  /** A kill's hold is over: play what waited for it, once. */
+  private releaseDeath() {
+    const run = this.deathHold;
+    this.deathHold = null;
+    run?.();
+  }
+
   update(dt: number, world: MobWorld) {
-    if (this.state !== 'dead' && this.hitstop > 0) {
-      this.hitstop = tickPause(this.hitstop, dt); // hit-pause: frozen and flashing (the flash waits out the pause)
+    if (this.hitstop > 0) {
+      // hit-pause: frozen and flashing (the flash waits out the pause), but the knock carries it from the first tick
+      this.hitstop = tickPause(this.hitstop, dt);
+      this.slideKnock(dt, world);
       this.moving = false;
-      this.present(0, false);
+      if (this.state === 'dead') {
+        if (this.hitstop === 0) this.releaseDeath();
+      } else this.present(0, false);
       return;
     }
     if (this.state !== 'dead' && this.frozen > 0) {
@@ -288,6 +327,8 @@ export class Mob {
       return;
     }
     if (this.state === 'dead') {
+      this.releaseDeath();
+      this.slideKnock(dt, world);
       this.timer = Math.max(0, this.timer - dt);
       this.fade();
       if (this.timer <= 0 && this.respawns) this.reset();
@@ -297,13 +338,7 @@ export class Mob {
     this.flash = Math.max(0, this.flash - dt);
     this.poise = Math.max(0, this.poise - dt);
     this.rayRest = Math.max(0, this.rayRest - dt);
-    if (this.knock.x || this.knock.y) {
-      world.slide(this.body, this.knock.x * dt, this.knock.y * dt);
-      const decay = Math.exp(-12 * dt);
-      this.knock.x *= decay;
-      this.knock.y *= decay;
-      if (Math.hypot(this.knock.x, this.knock.y) < 5) this.knock = { x: 0, y: 0 };
-    }
+    this.slideKnock(dt, world);
 
     this.heroes = world.heroes;
     const target = nearest(this.body, world.heroes);
