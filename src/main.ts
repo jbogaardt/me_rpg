@@ -1,7 +1,6 @@
 import { Application, BitmapFont, BitmapFontManager, CullerPlugin, extensions, TextureStyle } from 'pixi.js';
 import { disabledCapabilities } from './systems/capabilities';
-import '@fontsource/pixelify-sans/500.css';
-import '@fontsource/pixelify-sans/700.css';
+import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import './ui.css';
@@ -75,15 +74,13 @@ void (async () => {
 
     // Glyph atlas for floating combat text (white + black outline, tinted per use). The world layer is
     // scaled up by the camera zoom, so the atlas is generated at a high resolution.
-    // The same pixel face as the HUD (Pixelify Sans, OFL): wait for it, or the atlas would be drawn in the fallback.
-    await document.fonts.load('700 10px "Pixelify Sans"').catch(() => []);
     BitmapFont.install({
       name: 'FloatText',
       resolution: 4,
       chars: BitmapFontManager.ASCII,
       textureStyle: { scaleMode: 'linear' },
       style: {
-        fontFamily: '"Pixelify Sans", monospace',
+        fontFamily: 'monospace',
         fontSize: 10,
         fontWeight: 'bold',
         fill: 0xffffff,

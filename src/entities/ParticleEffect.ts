@@ -28,18 +28,6 @@ const SHAPES: Record<Shape, { w: number; h: number; draw: (ctx: CanvasRenderingC
       ctx.fillRect(0, 0, 16, 16);
     },
   },
-  // A flat pixel ring 2:1 (a ripple on water or wet stone): a one-pixel ellipse, plotted by hand so its edge stays crisp.
-  ring: {
-    w: 16,
-    h: 8,
-    draw(ctx) {
-      ctx.fillStyle = '#fff';
-      for (let a = 0; a < 64; a++) {
-        const t = (a / 64) * Math.PI * 2;
-        ctx.fillRect(Math.round(7.5 + Math.cos(t) * 7), Math.round(3.5 + Math.sin(t) * 3), 1, 1);
-      }
-    },
-  },
   // 4:1, fading in towards the head (+x, the direction of travel when `align` is set).
   streak: {
     w: 8,

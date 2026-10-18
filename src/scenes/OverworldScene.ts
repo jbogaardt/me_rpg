@@ -1,5 +1,5 @@
 import type { Container, Renderer } from 'pixi.js';
-import { enabled, flag } from '../systems/capabilities';
+import { enabled, flag, setting } from '../systems/capabilities';
 import { sayTime } from '../systems/dmPowers';
 import { ReadingPause } from '../systems/readingPause';
 import type { Sprites, Zone } from '../assets';
@@ -24,7 +24,6 @@ import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
 import { DarknessLayer } from '../entities/DarknessLayer';
 import { LightGlow } from '../entities/LightGlow';
-import { UnderLight } from './overworld/UnderLight';
 import { glowStrength } from '../systems/lights';
 import { MapOverlay } from '../hud/MapOverlay';
 import { PartnerArrows, partnersIn } from '../hud/PartnerArrows';
@@ -38,6 +37,7 @@ import type { Menu } from '../hud/Menu';
 import type {} from '../hud/Party';
 import type { ShopCounter } from '../hud/ShopCounter';
 import type { TradeUi } from '../hud/Trade';
+import {} from '../map/types';
 import { packKeys } from '../net/protocol';
 import type { Role, Session } from '../net/session';
 import type { Hero, Item } from '../systems/combat';
@@ -174,7 +174,6 @@ export class OverworldScene implements Scene {
   private night = new NightLayer();
   private dark = new DarknessLayer();
   private glow = new LightGlow();
-  private underLight = new UnderLight(this.dark, this.glow);
   /** The solo game's save in the browser. */
   readonly persistence: Persistence;
   /** The "level up" splash (watches the hero's level). */
@@ -539,13 +538,33 @@ export class OverworldScene implements Scene {
     this.night.update(this.dayClock.sky(), dusk, arena.screen.width, arena.screen.height);
     const view = z.camera.view(arena.screen.width, arena.screen.height);
     z.hearth.update(view, dusk && this.dayClock.sky() !== 0xffffff);
-    z.atmosphere?.update(view, arena.clock);
-    this.underLight.update(
-      arena,
-      z,
+    const underground = z.data.dark && enabled('darkness', z.name);
+    const lights = z.hearth.lights(view, arena.clock);
+    this.glow.update(
+      lights,
       view,
-      z.hearth.lights(view, arena.clock),
-      dusk ? glowStrength(this.dayClock.sky()) : 0,
+      underground ? 1 : dusk ? glowStrength(this.dayClock.sky()) : 0,
+      arena.screen.width,
+      arena.screen.height,
+    );
+    this.dark.update(
+      underground
+        ? {
+            zone: z.name,
+            data: z.data,
+            view,
+            heroes: arena
+              .players()
+              .filter((p) => !p.dm && p.body.visible)
+              .map((p) => p.body),
+            radius: setting('darkness', 'radius', z.name),
+            lights,
+            dim: setting('darkness', 'dim', z.name),
+            memory: flag('darkness', 'memory', z.name),
+          }
+        : null,
+      arena.screen.width,
+      arena.screen.height,
     );
     if (z.weatherLayer && z.ambient && z.weather) {
       // This biome's weather (the simulation rolls it, in every zone someone is in; a guest is told by the host).
@@ -583,7 +602,6 @@ export class OverworldScene implements Scene {
       this.arena.local.dm,
       this.storyUi.taskLine(),
       arena.role === 'solo',
-      dt,
     );
     // Arrows toward partners out of view, and a chip for one in another zone (online only, not during a door transition).
     this.partnerArrows.update(

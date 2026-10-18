@@ -113,7 +113,7 @@ export class Inventory {
           <div class="inv-grid worn">${worn}</div>
         </div>
         <div class="inv-col">
-          <h3>Pack <small>${hero.pack.length} / ${size}${size > BASE_PACK ? ` <span class="bonus">(+${size - BASE_PACK} from bag)</span>` : ''}</small> <small class="purse">${hero.gold} gold</small></h3>
+          <h3>Pack <small>${hero.pack.length} / ${size}${size > BASE_PACK ? ` <span class="bonus">(+${size - BASE_PACK} from bag)</span>` : ''}</small></h3>
           <div class="inv-grid pack">${pack}</div>
         </div>
       </div>

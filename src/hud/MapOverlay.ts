@@ -5,7 +5,7 @@ import type { Guide } from '../systems/guide';
 import { zoneName } from '../systems/places';
 import { DM_COLOR, DM_NAME, DM_SLOT, PLAYER_COLORS, playerName } from '../systems/looks';
 
-// A map of the zone (parchment in a stone frame, like the menu) you are in that fills in as you explore it (only the cells seen are drawn, see
+// A semi-transparent map of the zone you are in that fills in as you explore it (only the cells seen are drawn, see
 // map/explored.ts), with a pin for you and, in co-op, one for each friend (every player in their own colour, like their
 // tag in the game), so players can find each other. The map is core engine and always there: the M key (or the HUD map
 // button, never hidden) toggles it for everyone (solo, host, guest, DM) in every zone. A room has no overview, so there it
@@ -32,7 +32,6 @@ export class MapOverlay {
   open = false;
   private root = document.getElementById('map-overlay')!;
   private roomKey = ''; // the room shown instead of a map ('' outdoors)
-  private stage = this.root.querySelector<HTMLElement>('.stage')!; // the picture's box: pins, places and the guide are placed in it by percent
   private me = this.root.querySelector<HTMLElement>('.pin.me')!;
   private legend = this.root.querySelector<HTMLElement>('.legend')!;
   private friends = new Map<number, HTMLElement>(); // one pin per other player, by player number
@@ -83,7 +82,7 @@ export class MapOverlay {
     el.style.top = `${top}%`;
     // The radius in cells is a share of the map's width, so the circle scales with the map.
     el.style.width = guide.radius === undefined ? '' : `${((guide.radius * 2) / CELL / data.width) * 100}%`;
-    if (!el.parentElement) this.stage.append(el);
+    if (!el.parentElement) this.root.insertBefore(el, this.legend);
   }
 
   /** The zone's name as the heading, and each named place once the player has explored the ground it stands on. */
@@ -102,7 +101,7 @@ export class MapOverlay {
       el.textContent = p.name;
       el.style.left = `${left}%`;
       el.style.top = `${top}%`;
-      this.stage.append(el);
+      this.root.insertBefore(el, this.legend);
       this.labels.set(p.name, el);
     }
   }
@@ -170,7 +169,7 @@ export class MapOverlay {
         pin.className = 'pin friend';
         pin.dataset.slot = String(p.slot);
         pin.style.setProperty('--pin', otherColor(p.slot));
-        this.stage.append(pin);
+        this.root.insertBefore(pin, this.legend);
         this.friends.set(p.slot, pin);
       }
       pin.style.left = `${p.left}%`;
@@ -192,7 +191,6 @@ export class MapOverlay {
   private show(on: boolean) {
     this.open = on;
     this.root.hidden = !on;
-    document.body.classList.toggle('map-open', on); // the quest chip steps aside for the picture
     this.painted = -1; // repainted by the next setZone, with whatever was explored since
     this.placed = ''; // pins are repositioned on the next update
     this.listed = '';

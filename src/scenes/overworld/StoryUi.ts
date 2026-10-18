@@ -44,15 +44,9 @@ import type { Zones } from './Zones';
  * of a "find" quest. Local presentation only: it reads the local hero's quest log and the task every screen already has, so
  * nothing here goes over the wire (the host decides; a guest reads the same state).
  */
-/** Where a name label hangs over a person (px above their feet in the world, and its half size), so the arrow's caption can keep clear. */
-const TAG_ABOVE = 68;
-const TAG_HALF_W = 18;
-const TAG_HALF_H = 6;
-
 export class StoryUi {
   /** The quest arrow, over the world and under the door transition (the scene adds it to its root). */
   readonly arrow = new GuideArrow();
-  private lastAt = { x: 0, y: 0 }; // where the hero stood last frame (is the guide caption's hero standing still?)
   private announced = ''; // the zone the banner last named
   /** What the story last looked like for the local hero, to notice when it moves: a task done in the field, a chapter begun, the end. */
   private story = { stage: -1, ready: false, chapter: -1 };
@@ -247,24 +241,12 @@ export class StoryUi {
         ? doorToward(z.data.doors, player, z.name, task.zone)
         : null;
     const target = compassOn(z.name) ? (calling ?? toward ?? known) : null; // the compass may be off for the story or the player
-    // The arrow and its caption are quiet (they show when the hero stands still or the target is new) and never sit on a name label.
-    const moved = Math.hypot(player.x - this.lastAt.x, player.y - this.lastAt.y) > 0.2;
-    this.lastAt.x = player.x;
-    this.lastAt.y = player.y;
-    const tagBox = (c: { x: number; y: number }) => ({
-      ...at(c.x, c.y - TAG_ABOVE),
-      hw: TAG_HALF_W * camera.zoom,
-      hh: TAG_HALF_H * camera.zoom,
-    });
     this.arrow.update(
       dt,
       at(player.x, player.y - 20),
       target && at(target.x, target.y - 12),
       target?.label ? `${target.label}, ${direction(player, target).replace(/^close by, /, '')}` : '',
       this.arena.screen,
-      target?.label ?? '',
-      moved,
-      z.givers.map((g) => tagBox(g.body)),
     );
     this.overlay.setGuide(guide);
   }
