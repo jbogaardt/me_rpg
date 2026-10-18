@@ -733,15 +733,15 @@ export class Simulation {
     if (this.trialDefeat(p)) return;
     const { arena } = this;
     if (!p.dm) this.onDefeat(p, p.zone, p.body.x, p.body.y);
-    const { home } = arena;
+    const home = p === arena.local ? arena.wake() : { zone: arena.home, spot: arena.home.data.spawn };
     const s = p.hero.stats;
     s.hp = s.maxHp;
     s.mp = s.maxMp;
-    if (p.zone === home.name) {
-      p.body.position.set(...cellFeet(home.data.spawn));
+    if (p.zone === home.zone.name) {
+      p.body.position.set(...cellFeet(home.spot));
       p.body.face('down');
     } else {
-      this.zones.travel(p, home, home.data.spawn); // wake at the start of the world, whatever zone it was in
+      this.zones.travel(p, home.zone, home.spot); // wake at home (the town, else the start of the world), whatever zone it was in
     }
     p.aim = { x: 0, y: 1 };
     p.knock = { x: 0, y: 0 };
