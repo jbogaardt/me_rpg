@@ -488,14 +488,14 @@ const lily = (x: number, y: number, w: number, h: number, about: string): Prefab
 });
 const frostRocks = ROCKS(FROST_OBJECTS);
 
-/** Where each shop building sits on town.png (2x the pack's art; both sizes are whole cells so the footprint is clean). */
+/** Where each shop building sits on town.png (drawn by tools/map/town.ts on the 32px grid: halls 5x7 cells, houses 3x9). */
 export const BUILDINGS = {
-  smithy: { x: 0, y: 0, w: 192, h: 224 },
-  apothecary: { x: 192, y: 0, w: 192, h: 224 },
-  armory: { x: 384, y: 0, w: 96, h: 288 },
-  ranger: { x: 480, y: 0, w: 96, h: 288 },
-  wizard: { x: 576, y: 0, w: 192, h: 224 },
-  tavern: { x: 768, y: 0, w: 192, h: 224 },
+  smithy: { x: 0, y: 0, w: 160, h: 224 },
+  apothecary: { x: 160, y: 0, w: 160, h: 224 },
+  armory: { x: 320, y: 0, w: 96, h: 288 },
+  ranger: { x: 416, y: 0, w: 96, h: 288 },
+  wizard: { x: 512, y: 0, w: 160, h: 224 },
+  tavern: { x: 672, y: 0, w: 160, h: 224 },
 };
 /** Where each piece of the shop interior sits on interior.png (2x the 16px drawing in tools/map/interior.ts). */
 export const INTERIOR = {
@@ -839,12 +839,21 @@ export const PREFABS = {
   ...RUIN_PREFABS,
   smithy: building(
     'smithy',
-    'Blacksmith: a 6x7 hall with terracotta roof and an anvil over the door. Shopkeeper stands one row below.',
+    'Blacksmith: a 5x7 gabled hall with a red roof over stone. Hang a tools sign beside the door. Shopkeeper stands one row below.',
   ),
-  apothecary: building('apothecary', 'Apothecary: a 6x7 hall with a green roof and a flask over the door.'),
-  wizard: building('wizard', "Wizard's sanctum: a 6x7 hall with a violet roof and a star over the door."),
-  tavern: building('tavern', 'Tavern: a 6x7 hall with a teal roof and a tankard over the door.'),
-  armory: building('armory', 'Armorer: a 3x9 tall house with a slate roof and a shield over the door.'),
+  apothecary: building(
+    'apothecary',
+    'Apothecary: a 5x7 gabled hall with a red roof over brick. Hang a flask sign beside the door.',
+  ),
+  wizard: building(
+    'wizard',
+    "Wizard's sanctum: a 5x7 gabled hall with a slate roof over brick. Hang an amulet sign beside the door.",
+  ),
+  tavern: building('tavern', 'Tavern: a 5x7 gabled hall with a red roof over brick. Hang a mug sign beside the door.'),
+  armory: building(
+    'armory',
+    'Armorer: a 3x9 tall house with a slate roof over stone. Hang a helm sign beside the door.',
+  ),
   counter: furniture(
     'counter',
     32,
@@ -867,7 +876,10 @@ export const PREFABS = {
   signWizard: furniture('signWizard', 0, 'Wall sign with a star, 4x2 cells, decoration.'),
   shelfTavern: furniture('shelfTavern', 64, 'Shelves of tankards and kegs, 3x2 cells, solid.'),
   signTavern: furniture('signTavern', 0, 'Wall sign with a tankard, 4x2 cells, decoration.'),
-  ranger: building('ranger', "Ranger's lodge: a 3x9 tall house with a golden roof and a bow over the door."),
+  ranger: building(
+    'ranger',
+    "Ranger's lodge: a 3x9 tall house with a red roof over stone. Hang a sword sign beside the door.",
+  ),
   treeA: lpcTree('green', 0, 'Leafy tree, variant A. Blocks its trunk and lower canopy; the crown is walk-behind.'),
   treeB: lpcTree('green', 1, 'Leafy tree, variant B. Blocks its trunk and lower canopy; the crown is walk-behind.'),
   treeC: lpcTree('green', 2, 'Leafy tree, variant C. Blocks its trunk and lower canopy; the crown is walk-behind.'),

@@ -33,8 +33,7 @@ bushes are cut out and repacked by `tools/map/trees.ts`; the frost and swamp she
 Composed by `tools/map/town.ts` from "[LPC] City outside" (https://opengameart.org/content/lpc-city-outside), CC-BY-SA 3.0 /
 GPL 3.0, by Reemax (Tuomo Untinen), Xenodora, Sharm (Lanea Zimmerman), Johann C, Guido Bos (doors), Hyptosis (windows) and
 Johannes Sjolund; the full list is in [`art/lpc_city/CREDITS-city.txt`](art/lpc_city/CREDITS-city.txt), kept with the art.
-Roofs, walls, windows and doors are cut from the pack's sheet on its own pixels and assembled into six shops; the roofs
-of four are recoloured. (Earlier shops were cut from the CC0 "Town RPG Pack" by Luis Zuno; they were replaced to match the LPC look.)
+Gables, walls, windows and doors are cut from the pack's sheet on its own pixels and assembled into six shops; no pixel is recoloured. (Earlier shops were cut from the CC0 "Town RPG Pack" by Luis Zuno; they were replaced to match the LPC look.)
 
 ## Crops (`public/tilesets/crops.png`, source in `art/lpc_crops/`)
 

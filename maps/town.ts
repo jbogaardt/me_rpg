@@ -14,14 +14,14 @@ const ROW = 200; // the shops stand along this row (their bottom), facing the ma
  * where a player appears when they step back out (the shop interiors, maps/shop_*.ts, read this through `shopExit`).
  */
 export const SHOP_DOORS = {
-  smithy: { building: { col: 148, row: ROW }, door: { col: 150, w: 2 }, outside: { col: 150, row: ROW + 1 } },
+  smithy: { building: { col: 148, row: ROW }, door: { col: 150, w: 1 }, outside: { col: 150, row: ROW + 1 } },
   armory: { building: { col: 156, row: ROW }, door: { col: 157, w: 1 }, outside: { col: 157, row: ROW + 1 } },
-  apothecary: { building: { col: 162, row: ROW }, door: { col: 164, w: 2 }, outside: { col: 164, row: ROW + 1 } },
+  apothecary: { building: { col: 162, row: ROW }, door: { col: 164, w: 1 }, outside: { col: 164, row: ROW + 1 } },
   ranger: { building: { col: 178, row: ROW }, door: { col: 179, w: 1 }, outside: { col: 179, row: ROW + 1 } },
   // The wizard's house stands off to the east, clear of the north road (which runs straight down the middle to the market).
-  wizard: { building: { col: 184, row: ROW }, door: { col: 186, w: 2 }, outside: { col: 186, row: ROW + 1 } },
+  wizard: { building: { col: 184, row: ROW }, door: { col: 186, w: 1 }, outside: { col: 186, row: ROW + 1 } },
   // The tavern stands east of the wizard's house, where a breather is spent (the DM sends a party there after a saga).
-  tavern: { building: { col: 192, row: ROW }, door: { col: 194, w: 2 }, outside: { col: 194, row: ROW + 1 } },
+  tavern: { building: { col: 192, row: ROW }, door: { col: 194, w: 1 }, outside: { col: 194, row: ROW + 1 } },
 } as const;
 /** The hanging sign by each shop's door (tools/map/catalog.ts SIGN_PREFABS). */
 const SHOP_HANGING = {

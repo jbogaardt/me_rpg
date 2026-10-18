@@ -62,16 +62,16 @@ export default defineZone({
     // --- The town's halls, round the square (scenery: solid, you walk round them) --------------------------------------
     // Each hall is a shop: its door leads into a room (maps/haven_*.ts, the region's `rooms` in the towns pack).
     z.prop('smithy', 10, 13);
-    z.door(12, 13, 2, 'haven_forge', SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
+    z.door(12, 13, 1, 'haven_forge', SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
     z.prop('apothecary', 36, 13);
-    z.door(38, 13, 2, 'haven_goods', SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
+    z.door(38, 13, 1, 'haven_goods', SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
     z.prop('armory', 12, 34);
     z.door(13, 34, 1, 'haven_armory', SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
     z.prop('ranger', 38, 34);
     z.door(39, 34, 1, 'haven_lodge', SHOP_ARRIVAL.col, SHOP_ARRIVAL.row);
     // Hanging signs (OpenGameArt) on the wall beside each hall's door, showing what it sells.
-    z.prop('hangTools', 14, 13, { dy: -6 });
-    z.prop('hangFlask', 40, 13, { dy: -6 });
+    z.prop('hangTools', 13, 13, { dy: -6 });
+    z.prop('hangFlask', 39, 13, { dy: -6 });
     z.prop('hangPot', 37, 13, { dy: -6 }); // the goods hall sells a little of everything
     z.prop('hangHelm', 14, 34, { dy: -6 });
     z.prop('hangInn', 40, 34, { dy: -6 }); // the Gatehouse Lodge is the town's inn
