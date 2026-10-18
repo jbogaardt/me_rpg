@@ -1,3 +1,4 @@
+import type { Player } from '../entities/Player';
 import { PLAYER_COLORS, DM_COLOR, DM_NAME, DM_SLOT, playerName } from '../systems/looks';
 import { zoneName } from '../systems/places';
 import { distanceLabel, edgeArrow, type View } from './edgeArrow';
@@ -12,6 +13,19 @@ export interface Partner {
   y: number;
   here: boolean;
   zone: string;
+}
+
+/** The other players as the arrows see them, for the zone named `zone`. */
+export function partnersIn(players: readonly Player[], local: Player, zone: string): Partner[] {
+  return players
+    .filter((p) => p !== local)
+    .map((p) => ({
+      slot: p.slot,
+      x: p.body.x,
+      y: p.body.y,
+      here: p.zone === zone && p.body.visible,
+      zone: p.zone === zone ? '' : p.zone,
+    }));
 }
 
 const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;

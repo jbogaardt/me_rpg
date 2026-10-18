@@ -160,6 +160,22 @@ export class Mob {
     return this.state !== 'dead';
   }
 
+  /**
+   * A shooter (or ray caster) winding up, as the edge threat pulse reads it (hud/ThreatPulses.ts): fills `out` with
+   * where it stands, the kind's telegraph colour and how far the windup has come (0..1), and returns true. False
+   * otherwise, and for a melee blow (its lane is in the world and starts close). Reads only the state and timer, so
+   * every page has it (a guest included); fills a caller's object so a frame allocates nothing.
+   */
+  shooterTell(out: { x: number; y: number; color: number; progress: number }): boolean {
+    if (this.state !== 'windup' || this.attack === 'melee' || !this.body.visible) return false;
+    const len = this.windupLen > 0 ? this.windupLen : this.t.windup;
+    out.x = this.body.x;
+    out.y = this.body.y;
+    out.color = telegraphOf(this.kind, this.attack).color;
+    out.progress = Math.min(1, Math.max(0, 1 - this.timer / len));
+    return true;
+  }
+
   /** Back home at full health. */
   reset() {
     this.body.position.set(this.homeX, this.homeY);

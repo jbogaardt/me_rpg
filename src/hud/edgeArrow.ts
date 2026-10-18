@@ -28,10 +28,24 @@ export function edgeArrow(
   wy: number,
   margin = 28,
 ): EdgeArrow | null {
+  const out: EdgeArrow = { x: 0, y: 0, angle: 0, dist: 0 };
+  return edgeArrowInto(out, view, screenW, screenH, wx, wy, margin) ? out : null;
+}
+
+/** `edgeArrow` into a caller's object (no allocation, for per-frame use): false, and `out` untouched, when on screen. */
+export function edgeArrowInto(
+  out: EdgeArrow,
+  view: View,
+  screenW: number,
+  screenH: number,
+  wx: number,
+  wy: number,
+  margin = 28,
+): boolean {
   const scale = screenW / view.w;
   const sx = (wx - view.x) * scale;
   const sy = (wy - view.y) * scale;
-  if (sx >= 0 && sx <= screenW && sy >= 0 && sy <= screenH) return null;
+  if (sx >= 0 && sx <= screenW && sy >= 0 && sy <= screenH) return false;
   const cx = screenW / 2;
   const cy = screenH / 2;
   const dx = sx - cx;
@@ -40,12 +54,11 @@ export function edgeArrow(
   const halfH = Math.max(1, cy - margin);
   // Shrink the direction until it just touches the inset rectangle.
   const t = Math.min(dx === 0 ? Infinity : halfW / Math.abs(dx), dy === 0 ? Infinity : halfH / Math.abs(dy));
-  return {
-    x: cx + dx * t,
-    y: cy + dy * t,
-    angle: Math.atan2(dy, dx),
-    dist: Math.hypot(wx - (view.x + view.w / 2), wy - (view.y + view.h / 2)),
-  };
+  out.x = cx + dx * t;
+  out.y = cy + dy * t;
+  out.angle = Math.atan2(dy, dx);
+  out.dist = Math.hypot(wx - (view.x + view.w / 2), wy - (view.y + view.h / 2));
+  return true;
 }
 
 /** The distance as a short label in tiles of `tile` px, e.g. "12". */

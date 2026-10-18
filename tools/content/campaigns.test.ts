@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { WHOLE_BODIES } from '../../sprites/parts';
 import { outfitLayers, type Outfit, type PartManifest } from '../../src/sprites/doll';
-import { mobLevel, mobTimings } from '../../src/systems/combat';
+import { mobLevel, mobTimings, telegraphOf } from '../../src/systems/combat';
 import { heroModel } from '../../src/systems/dmBoss';
 import { ROOT } from '../map/image';
 import { capabilityTable } from '../../src/content/schema';
@@ -14,6 +14,9 @@ import { campaigns, loadContentFromDisk, PACKS } from './disk';
 
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/sprites/lpc/parts.json'), 'utf8')) as PartManifest;
 const HERO_SPEED = 120;
+// A kind that may attack without a windup/tell: none today (every attack must warn the hero). A new entry is a
+// deliberate, documented exception ("<kind id>: why a blow without warning is fair"), reviewed by combat-and-controls.
+const NO_TELL = new Set<string>();
 
 // The packs (every region and mob of them at once) are held to the same rules: any seed can put any of them in a game.
 describe.each([...campaigns(), PACKS])('%s', (campaign) => {
@@ -57,6 +60,17 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
       expect(kind.shot.range).toBeLessThanOrEqual(kind.sight);
       expect(kind.shot.speed).toBeLessThan(HERO_SPEED * 1.6);
       expect(windup).toBeGreaterThanOrEqual(0.5);
+    }
+  });
+
+  it.each(mobs)('%s warns before it attacks (a windup and a telegraph colour) unless listed in NO_TELL', (id) => {
+    if (NO_TELL.has(id)) return;
+    const kind = content.mobKind(id);
+    expect(mobTimings(kind).windup, `${id} has no windup`).toBeGreaterThan(0);
+    const attacks = ['melee', ...(kind.shot ? ['shot' as const] : []), ...(kind.ray ? ['ray' as const] : [])];
+    for (const attack of attacks) {
+      const { color } = telegraphOf(kind, attack as 'melee' | 'shot' | 'ray');
+      expect(Number.isInteger(color) && color > 0 && color <= 0xffffff, `${id} ${attack} telegraph colour`).toBe(true);
     }
   });
 

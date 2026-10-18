@@ -26,7 +26,8 @@ import { DarknessLayer } from '../entities/DarknessLayer';
 import { LightGlow } from '../entities/LightGlow';
 import { glowStrength } from '../systems/lights';
 import { MapOverlay } from '../hud/MapOverlay';
-import { PartnerArrows } from '../hud/PartnerArrows';
+import { PartnerArrows, partnersIn } from '../hud/PartnerArrows';
+import { ThreatPulses } from '../hud/ThreatPulses';
 import { AreaBanner } from '../hud/AreaBanner';
 import { LevelSplash } from '../hud/LevelSplash';
 import { ScreenFx } from '../hud/ScreenFx';
@@ -156,6 +157,7 @@ export class OverworldScene implements Scene {
   private guest: GuestLink;
   private overlay = new MapOverlay();
   private partnerArrows = new PartnerArrows();
+  private threatPulses = new ThreatPulses();
   private banner = new AreaBanner();
   private levelSplash = new LevelSplash();
   private screenFx = new ScreenFx();
@@ -598,20 +600,13 @@ export class OverworldScene implements Scene {
     // Arrows toward partners out of view, and a chip for one in another zone (online only, not during a door transition).
     this.partnerArrows.update(
       arena.role !== 'solo' && !this.zones.transition.busy,
-      z.camera.view(arena.screen.width, arena.screen.height),
+      view,
       arena.screen.width,
       arena.screen.height,
-      arena
-        .players()
-        .filter((p) => p !== arena.local)
-        .map((p) => ({
-          slot: p.slot,
-          x: p.body.x,
-          y: p.body.y,
-          here: p.zone === z.name && p.body.visible,
-          zone: p.zone === z.name ? '' : p.zone,
-        })),
+      partnersIn(arena.players(), arena.local, z.name),
     );
+    // Edge pulses toward off-screen shooters winding up: from the mobs' own state, so solo, host and guest all draw them.
+    this.threatPulses.update(!arena.local.dm && !this.zones.transition.busy, view, arena.screen, arena.mobs);
     this.hotbarView.update(this.hero, !arena.local.dm);
     if (this.overlay.open) {
       const pin = (p: Player) => ({ slot: p.slot, x: p.body.x, y: p.body.y });
