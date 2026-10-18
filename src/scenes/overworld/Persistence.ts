@@ -1,4 +1,5 @@
 import { cellFeet } from '../../map/doors';
+import type { Atlas } from '../../map/explored';
 import {
   applyHeroSave,
   clearSave,
@@ -33,6 +34,8 @@ export class Persistence {
     private scenario: Scenario,
     /** The world's tag (`CampaignChoice.tag`); empty when this world is not saved. */
     private world: string,
+    /** What the players have seen of each zone; saved with the game (written on the same events as the rest). */
+    private atlas: Atlas,
   ) {
     // A tab that is closed or put away may never get another frame: save as it goes.
     document.addEventListener('visibilitychange', () => {
@@ -64,6 +67,7 @@ export class Persistence {
       x: arena.player.x,
       y: arena.player.y,
       opened,
+      explored: this.atlas.pack(),
     };
   }
 
@@ -95,7 +99,7 @@ export class Persistence {
   }
 
   /**
-   * Put the world's save back, if there is one: the hero, the chests opened, the scenario node and where the hero
+   * Put the world's save back, if there is one: the hero, the chests opened, the explored map, the scenario node and where the hero
    * stood. Saving starts after it either way. A save that cannot be put back (a zone the world no longer has) leaves
    * the hero at the start with what they carried.
    */
@@ -106,6 +110,7 @@ export class Persistence {
       if (!save) return false;
       applyHeroSave(arena.hero, save.hero);
       arena.refreshLook();
+      for (const [name, packed] of Object.entries(save.explored ?? {})) this.atlas.restore(name, packed);
       for (const [name, opened] of Object.entries(save.opened)) {
         const z = arena.zones.get(name);
         if (z) opened.forEach((i) => z.chests[i]?.setOpen(true));

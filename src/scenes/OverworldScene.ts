@@ -224,7 +224,7 @@ export class OverworldScene implements Scene {
     this.zones.assign(zone.name, start.node_id);
     this.zones.addHome(zone, start.spawn && { col: start.spawn.x, row: start.spawn.y });
     this.scenario = new Scenario(arena, this.zones, content, ui.choices, say);
-    this.persistence = new Persistence(arena, this.zones, this.scenario, saveTag);
+    this.persistence = new Persistence(arena, this.zones, this.scenario, saveTag, this.atlas);
     this.liveStory = new Story(arena, this.zones, content, ui.session, world);
     this.liveStory.onOpened = (zone, x, y) => {
       const z = arena.zones.get(zone);

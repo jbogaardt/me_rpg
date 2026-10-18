@@ -19,7 +19,7 @@ sharp on phones and can use safe-area insets; markup is in `index.html`, styles 
   chapter's note, a trial's result) is *passive text*: `Dialog.note`, the same caption as the DM's words. Never `say` for those.
 - **Item pickups are a toast, never a card** (`PickupToasts`, rules in `toastStack.ts`): a small see-through stack at the left edge, merged repeats, gone in about 2 s (1 s with a foe near), plus a short chime (`playPing`). Local to each player, nothing is sent; core engine.
 - **The map overlay is local and always available**: it fills in as the players in view explore (`map/explored.ts`),
-  nothing is sent. The button and M key never go missing (host, guest, DM, touch, any zone); a room has no overview, so
+  nothing is sent; a solo game saves it with the rest (`Atlas.pack`). The button and M key never go missing (host, guest, DM, touch, any zone); a room has no overview, so
   there the map opens on its name and a note (`MapOverlay.setRoom`). Only the aids on it are optional: the `guide`
   capability (search circle, star, tracker line; its `fog` setting shows the whole zone) and the `compass` capability,
   each also switchable by the player in the Controls tab (`AidSetting`, `systems/aids.ts`).

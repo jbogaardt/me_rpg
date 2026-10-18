@@ -101,3 +101,17 @@ describe('save', () => {
     expect(loadSave('campaign1', full)).toBeNull();
   });
 });
+
+describe('explored map in a save', () => {
+  it('is optional: an older save without it loads', () => {
+    const back = parseSave(JSON.stringify(sample()));
+    expect(back).not.toBeNull();
+    expect(back!.explored).toBeUndefined();
+  });
+
+  it('is carried, and non-string entries are dropped', () => {
+    const text = JSON.stringify({ ...sample(), explored: { town: '2x2:AQM=', bad: 7 } });
+    expect(parseSave(text)!.explored).toEqual({ town: '2x2:AQM=' });
+    expect(parseSave(JSON.stringify({ ...sample(), explored: 'junk' }))!.explored).toBeUndefined();
+  });
+});

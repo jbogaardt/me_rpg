@@ -1,5 +1,5 @@
 // Saving a solo game in the browser (Pixi-free). The core engine's persistence: a save is the local hero (items by id, so
-// a later deploy that retunes an item still loads), where they stand and which chests are open, kept per world in
+// a later deploy that retunes an item still loads), where they stand and which chests are open and what of the map is explored, kept per world in
 // localStorage under the world's tag ("campaign1", "random:4242"). Co-op is not saved: only a solo game writes, and a
 // guest's hero belongs to the host. Content can change between deploys, so a save that names something the world no
 // longer has loads without it (an unknown item is dropped, a missing zone sends the hero to the start) and a save from
@@ -42,6 +42,8 @@ export interface SaveData {
   y: number;
   /** Indices of the chests opened, by zone. */
   opened: Record<string, number[]>;
+  /** The map explored, by zone, each packed by `map/explored.ts` (optional: older saves have none; unread packs are ignored). */
+  explored?: Record<string, string>;
 }
 
 const STAT_KEYS = ['level', 'xp', 'hp', 'maxHp', 'mp', 'maxMp', 'attack', 'defense', 'magic'] as const;
@@ -108,6 +110,9 @@ export function parseSave(text: string): SaveData | null {
   const opened: Record<string, number[]> = {};
   for (const [zone, list] of Object.entries(raw.opened))
     if (Array.isArray(list)) opened[zone] = list.filter((i): i is number => Number.isInteger(i) && i >= 0);
+  const explored: Record<string, string> = {};
+  if (isObj(raw.explored))
+    for (const [zone, pack] of Object.entries(raw.explored)) if (typeof pack === 'string') explored[zone] = pack;
   return {
     v: SAVE_VERSION,
     world: raw.world,
@@ -118,6 +123,7 @@ export function parseSave(text: string): SaveData | null {
     x: num(raw.x, 0),
     y: num(raw.y, 0),
     opened,
+    ...(Object.keys(explored).length ? { explored } : {}),
   };
 }
 
