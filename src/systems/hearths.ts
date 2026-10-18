@@ -6,7 +6,7 @@ import type { ParticleEffectName } from './particleEffects';
  * What makes a source is map data, never a content id: an object's `tag` (`fire`, `torch`), a surface name (`lava`,
  * `caveLava`, a cave or sewer floor for drips), a bush or flower at night (fireflies).
  */
-export type HearthKind = 'fire' | 'torch' | 'lava' | 'drip' | 'mist' | 'firefly';
+export type HearthKind = 'fire' | 'torch' | 'lava' | 'drip' | 'firefly';
 
 export interface HearthSource {
   kind: HearthKind;
@@ -19,30 +19,18 @@ export const HEARTH_EFFECTS: Record<HearthKind, readonly ParticleEffectName[]> =
   fire: ['flame', 'embers', 'smoke'],
   torch: ['flame', 'smoke'],
   lava: ['lavaBubble'],
-  drip: ['drip', 'dripRipple'],
-  mist: ['mist'],
+  drip: ['drip'],
   firefly: ['fireflies'],
 };
 
 /** How far past the screen's edge a source keeps running (px), so its smoke is already up when it scrolls in. */
-export const HEARTH_MARGIN: Record<HearthKind, number> = {
-  fire: 48,
-  torch: 48,
-  lava: 32,
-  drip: 16,
-  mist: 32,
-  firefly: 90,
-};
-
-/** Effects that start this many px below their source (a drip's ring is where the bead lands, 32 px under its fall). */
-export const HEARTH_OFFSET: Partial<Record<ParticleEffectName, number>> = { dripRipple: 32 };
+export const HEARTH_MARGIN: Record<HearthKind, number> = { fire: 48, torch: 48, lava: 32, drip: 16, firefly: 90 };
 
 /** Kinds that only run at night. */
 export const NIGHT_ONLY: readonly HearthKind[] = ['firefly'];
 
 const LAVA = new Set(['lava', 'caveLava']);
 const DRIPPY = new Set(['caveFloor', 'caveRubble', 'sewerFloor']);
-const WATERS = new Set(['caveWater', 'sewerWater']);
 const CELL = 32;
 
 /** One cell in `every` is picked, the same ones each time (a map keeps its look between visits). */
@@ -74,17 +62,10 @@ export function findHearths(data: Scan): HearthSource[] {
   for (let row = 0; row < data.height; row++) {
     for (let col = 0; col < data.width; col++) {
       const name = data.surfaces[data.surface[row * data.width + col] ?? 0] ?? '';
-      const x = col * CELL + CELL / 2;
-      if (WATERS.has(name)) {
-        // Mist rises off some of the water, and the odd bead drips into it.
-        if (picked(col, row, 9, 3)) out.push({ kind: 'mist', x, y: row * CELL + CELL * 0.7 });
-        if (picked(col, row, 20, 4)) out.push({ kind: 'drip', x, y: row * CELL - 10 });
-        continue;
-      }
       const lava = LAVA.has(name);
       if (!lava && !DRIPPY.has(name)) continue;
       if (lava ? picked(col, row, 6, 1) : picked(col, row, 45, 2))
-        out.push({ kind: lava ? 'lava' : 'drip', x, y: row * CELL + (lava ? CELL / 2 : -4) });
+        out.push({ kind: lava ? 'lava' : 'drip', x: col * CELL + CELL / 2, y: row * CELL + (lava ? CELL / 2 : 6) });
     }
   }
   return out;
