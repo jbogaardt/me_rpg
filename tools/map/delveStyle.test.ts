@@ -6,6 +6,8 @@ import {
   DECALS,
   DECAL_COLUMNS,
   DRY_MIX,
+  fadeTile,
+  FADE_ROWS,
   foamTile,
   FX_CELL,
   FX_SHEET,
@@ -74,15 +76,16 @@ describe('pickDecal', () => {
 });
 
 describe('the overlay sheet layout', () => {
-  it('keeps every tile inside 16 x 5 cells and none on another', () => {
+  it('keeps every tile inside 16 x 6 cells and none on another', () => {
     const tiles: [number, number][] = [];
     for (let m = 1; m < 16; m++) tiles.push([...shadowTile(m)], [...foamTile(m)], [...rimTile(m)]);
+    for (let v = 0; v < FADE_ROWS; v++) tiles.push([...fadeTile(v)]);
     for (let v = 0; v < ROOF_VARIANTS; v++) tiles.push([...roofTile(v)]);
     for (const d of DECALS) for (let v = 0; v < d.count; v++) tiles.push([...decalTile(d.kind, v)]);
     for (const [x, y] of tiles) {
       expect(x).toBeGreaterThanOrEqual(0);
       expect(x).toBeLessThan(16 * FX_CELL);
-      expect(y).toBeLessThan(5 * FX_CELL);
+      expect(y).toBeLessThan(6 * FX_CELL);
     }
     expect(new Set(tiles.map((t) => t.join(','))).size).toBe(tiles.length);
     expect(DECAL_COLUMNS).toBeLessThanOrEqual(16);
@@ -132,6 +135,28 @@ function recorder(w: number, h: number) {
 
 describe('Delve.paint dressing', () => {
   const room = () => new Delve(30, 24).rect(3, 4, 24, 16).rect(6, 9, 18, 4, '~');
+
+  it('gives open floor a lit lip on a south, east or west edge to the dark and hangs a cliff face under the south one', () => {
+    const { z, overlays, voids } = recorder(30, 24);
+    const filled: string[] = [];
+    (z as unknown as { fill: (g: string, r?: { col: number; row: number }) => void }).fill = (g, r) => {
+      if (r) filled.push(`${r.col},${r.row}=${g}`);
+    };
+    // A floor 12 wide with thick rock round it: nothing but roof south, east and west of it.
+    new Delve(30, 24).rect(8, 4, 12, 6).paint(z, 'cave');
+    const lip = (m: number) => `${rimTile(m)[0]},${rimTile(m)[1]}`;
+    expect(overlays.get('12,9')).toContainEqual(lip(maskOf(false, false, true, false)));
+    expect(overlays.get('8,6')).toContainEqual(lip(maskOf(false, false, false, true)));
+    expect(overlays.get('19,6')).toContainEqual(lip(maskOf(false, true, false, false)));
+    expect(overlays.get('12,6')).toBeUndefined(); // the middle of the floor has no edge
+    // Two rows of face hang under the south edge, fading to dark; below them the backdrop shows.
+    expect(overlays.get('12,10')).toContainEqual(`${fadeTile(0)[0]},${fadeTile(0)[1]}`);
+    expect(overlays.get('12,11')).toContainEqual(`${fadeTile(1)[0]},${fadeTile(1)[1]}`);
+    expect(filled).toContain('12,10=caveFaceU');
+    expect(filled).toContain('12,11=caveFaceL');
+    expect(voids.has('12,10')).toBe(false);
+    expect(voids.has('12,12')).toBe(true);
+  });
 
   it('is the same every time', () => {
     const a = recorder(30, 24);

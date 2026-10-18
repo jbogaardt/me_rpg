@@ -59,7 +59,7 @@
 /* The combos of a wand or tome, under the bars: arrows light up as they are tapped, dim when the mana is short. */
 #combo-hud {
   position: fixed; z-index: 2; pointer-events: none; margin: 0; padding: 4px 8px; list-style: none;
-  top: calc(52px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
+  top: calc(var(--hud-bottom, 76px) + 6px); left: calc(8px + env(safe-area-inset-left));
   background: rgba(23, 18, 12, 0.6); border: 1px solid var(--gold-dim); border-radius: 3px;
   font: 700 12px/17px var(--title); color: #e8dcc0; text-shadow: 0 1px 2px #000;
 }
@@ -100,8 +100,6 @@ body:not(.touch-ui) #item-btn { right: calc(24px + env(safe-area-inset-right)); 
 #item-pop[hidden] { display: none; }
 #item-pop .ip-icon { display: block; width: 100%; height: 100%; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)); }
 #item-pop .ip-icon > * { display: block; width: 100%; height: 100%; }
-/* On a phone the quest tracker takes the line under the bars, so the combo list sits below it. */
-@media (max-width: 600px) { #combo-hud { top: calc(84px + env(safe-area-inset-top)); } }
 #combo-hud .keys { display: inline-block; min-width: 6.2em; letter-spacing: 0.12em; }
 #combo-hud i { font-style: normal; opacity: 0.8; }
 #combo-hud b { color: #7fe6ff; text-shadow: 0 0 6px #4de3ff; }

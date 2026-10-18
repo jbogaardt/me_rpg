@@ -6,7 +6,7 @@
 
 import type { BackdropName } from '../../src/map/backdrop';
 import type { GroundName } from './catalog';
-import { DRY_MIX, hash, pickWeighted, WET_MIX, type DecalMix } from './delveStyle';
+import { DRY_MIX, fadeTile, FX_SHEET, hash, maskOf, pickWeighted, rimTile, WET_MIX, type DecalMix } from './delveStyle';
 import type { TerrainName } from './terrain';
 import type { ZoneApi } from './zone';
 
@@ -139,6 +139,33 @@ export class Delve {
     return this.cells.map((row) => row.join(''));
   }
 
+  /** 1 or 2 where a roof cell is the first or second row of the cliff face hanging under a floor's south edge, else 0. */
+  private hang(col: number, row: number, roof: boolean[]): number {
+    const is = (c: number, r: number) => roof[r * this.width + c] === true && this.at(c, r) === '#';
+    if (!is(col, row)) return 0;
+    if (this.open(col, row - 1)) return 1;
+    return is(col, row - 1) && this.open(col, row - 2) ? 2 : 0;
+  }
+
+  /**
+   * Where open floor meets the dark roof (nothing drawn there, the backdrop shows) on its south, east or west side: a lit
+   * lip on the floor's rim (`rimTile`, east/west with a thin dark side face) and, under a south edge, `hang`'s two rows
+   * of face fading to dark (`fadeTile`). Overlays only, so collision and the rest of the ground are untouched.
+   */
+  private edges(z: ZoneApi, roof: boolean[]) {
+    const dark = (c: number, r: number) => roof[r * this.width + c] === true && this.at(c, r) === '#';
+    for (let row = 0; row < this.height; row++) {
+      for (let col = 0; col < this.width; col++) {
+        if (this.at(col, row) === '.') {
+          const rim = maskOf(false, dark(col + 1, row), dark(col, row + 1), dark(col - 1, row));
+          if (rim) z.overlay(col, row, FX_SHEET, ...rimTile(rim));
+        }
+        const hang = this.hang(col, row, roof);
+        if (hang) z.overlay(col, row, FX_SHEET, ...fadeTile(hang - 1));
+      }
+    }
+  }
+
   /** Paint the grid onto `z`: ground for every cell and collision for rock, water and lava. */
   paint(z: ZoneApi, themeName: DelveTheme) {
     const theme: Theme = DELVE_THEMES[themeName];
@@ -176,6 +203,16 @@ export class Delve {
         }
       }
     }
+    // Rock under a floor's south edge keeps two rows of cliff face (fading to dark, `edges`) instead of the bare backdrop.
+    const roof = grounds.map((g) => g === theme.roof || g === theme.roofAlt);
+    for (let row = 0; row < this.height; row++) {
+      for (let col = 0; col < this.width; col++) {
+        const h = this.hang(col, row, roof);
+        if (!h) continue;
+        grounds[row * this.width + col] = theme.wall[h === 1 ? 1 : 0];
+        z.fill(theme.wall[h === 1 ? 1 : 0], { col, row, w: 1, h: 1 });
+      }
+    }
     // Pools and lava get a soft bank and a shoreline from the autotiled terrains, drawn over the ground fills above.
     for (const [cell, terrain] of [
       ['~', theme.waterTerrain],
@@ -194,6 +231,7 @@ export class Delve {
       }
       if (rects.length) z.paint(terrain, rects);
     }
+    this.edges(z, roof);
     // The roof is not drawn: the backdrop shows through where the rock mass was (collision stays), and slides with depth.
     for (let row = 0; row < this.height; row++) {
       for (let col = 0; col < this.width; col++) {
