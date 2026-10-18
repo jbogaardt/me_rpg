@@ -154,13 +154,14 @@ test('two players connect with a game code, play, and disconnect', async ({ brow
   await host.locator('#mp-disconnect').click();
   await expect(host.locator('#mp-status .label')).toHaveText('Disconnected');
   await expect(join.locator('#mp-status .label')).toHaveText('Disconnected', { timeout: 15_000 });
-  // The map works solo too, so it stays; the friend's pin goes.
+  // The map works solo too, so it stays. The menu opens to say what happened (and pauses a solo world); shut, the world runs
+  // again and the friend's pin goes.
   await expect(join.locator('#map-btn')).toBeVisible();
-  await expect(join.locator('#map-overlay .pin.friend')).toHaveCount(0);
-  await join.keyboard.press('Escape');
   await expect(join.locator('#menu-online')).toBeVisible();
   await expect(join.locator('#mp-note')).toContainText('disconnected');
   await join.keyboard.press('Escape');
+  await expect(join.locator('#menu')).toBeHidden();
+  await expect(join.locator('#map-overlay .pin.friend')).toHaveCount(0, { timeout: 30_000 }); // frames are slow on a software renderer
 });
 
 /** The pack grid's filled slots, in the open inventory. */
