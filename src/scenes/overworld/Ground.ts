@@ -19,7 +19,7 @@ export class Ground {
 
   constructor(
     private arena: Arena,
-    private sim: Pick<Simulation, 'text' | 'fx'>,
+    private sim: Pick<Simulation, 'refuse' | 'fx'>,
   ) {}
 
   /** Set by the scene: a player took an item (the HUD's pickup toast, for the local player). */
@@ -55,9 +55,9 @@ export class Ground {
   /** Pick an item up off the ground into the player's pack (it stays put if the pack is full). */
   pickUp(p: Player, g: GroundItem) {
     const [x, y, name] = [g.x, g.y, g.item.name];
-    if (!addToPack(p.hero, g.item)) return this.sim.text(x, y - 22, 'Pack full', 0xff8a7a);
+    if (!addToPack(p.hero, g.item)) return this.sim.refuse(p, x, y - 8, 'packFull');
     this.remove(g);
-    this.sim.text(x, y - 22, name, 0xffd34d);
+    this.sim.fx('itemMote', x, y - 8, undefined, p.slot); // a glint, and the item's light flies to the hero
     this.onPicked?.(p, name);
   }
 

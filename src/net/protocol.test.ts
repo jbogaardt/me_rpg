@@ -61,6 +61,9 @@ const snap: SnapMsg = {
       [8, { type: 'fx', name: 'hitSpark', x: 3, y: 4, dir: 1.6 }],
       [9, { type: 'fx', name: 'levelUp', x: 3, y: 4 }],
       [13, { type: 'fx', name: 'heroHurt', x: 3, y: 4, p: 1 }],
+      [16, { type: 'fx', name: 'hitHeavy', x: 3, y: 4, dir: 0.5, p: 1 }],
+      [17, { type: 'fx', name: 'deny', x: 3, y: 4, p: 2 }],
+      [18, { type: 'fx', name: 'gainMotes', x: 3, y: 4, p: 1 }],
     ] satisfies [number, WorldEvent][]
   ).map(([id, e]) => encodeEvent(id, e)),
 };
@@ -743,5 +746,52 @@ describe('a guest saying where its hero stands', () => {
     expect(parseMessage(JSON.stringify({ ...input, px: -3, py: 4 }))).toBeNull();
     expect(parseMessage(JSON.stringify({ ...input, px: 1e9, py: 4 }))).toBeNull();
     expect(parseMessage(JSON.stringify({ ...input, px: 'a', py: 4 }))).toBeNull();
+  });
+});
+
+describe('the cue effects (v57)', () => {
+  it('are appended after the v56 names, so every old index holds', () => {
+    expect(FX_NAMES.slice(0, 21)).toEqual([
+      'hitSpark',
+      'mobPoof',
+      'levelUp',
+      'heroHurt',
+      'castGlow',
+      'nova',
+      'blast',
+      'zap',
+      'heal',
+      'ward',
+      'blink',
+      'frost',
+      'mobDust',
+      'mobSplat',
+      'mobWisp',
+      'bossFinale',
+      'sparkle',
+      'coinPop',
+      'cheer',
+      'fall',
+      'lootBeam',
+    ]);
+    expect(FX_NAMES.slice(21)).toEqual([
+      'hitGraze',
+      'hitHeavy',
+      'heroHurtHeavy',
+      'deny',
+      'shimmer',
+      'levelRing',
+      'gainMotes',
+      'itemMote',
+      'questTick',
+    ]);
+    expect(PROTOCOL_VERSION).toBe(57);
+  });
+
+  it('round-trip on the wire, each with its player', () => {
+    for (const name of FX_NAMES.slice(21)) {
+      const e: WorldEvent = { type: 'fx', name, x: 12.3, y: 45.6, p: 2 };
+      expect(decodeEvent(encodeEvent(7, e))).toEqual({ id: 7, e: { ...e, x: 12, y: 46 } });
+    }
   });
 });

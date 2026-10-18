@@ -1,15 +1,16 @@
 import { DIRS, DIR_VEC, type Direction } from '../../core/direction';
-import { arrowEffect, boltEffect, floatText, slashEffect } from '../../entities/effects';
+import { damageNumbers } from '../../core/damageNumbers';
+import { arrowEffect, boltEffect, floatText, GAIN_MOTE_COLORS, moteArc, slashEffect } from '../../entities/effects';
 import type { Mob } from '../../entities/Mob';
 import { particleEffect } from '../../entities/ParticleEffect';
 import { CELL } from '../../map/types';
 import type { WorldEvent } from '../../net/protocol';
 import { playGame } from '../../hud/gameSfx';
-import { soundForFx, soundForText } from '../../systems/gameSounds';
+import { soundForFx } from '../../systems/gameSounds';
 import { effectColor } from '../../systems/looks';
 import { ANIMS } from '../../sprites/doll';
 import { SWORD_SWING, swingAnimMs } from '../../systems/swing';
-import { DEATH_FX, FX_KICK, FX_SHAKE } from '../../systems/feel';
+import { DEATH_FX, FX_KICK, FX_SHAKE, HIT_FX_NAMES } from '../../systems/feel';
 import type { ParticleEffectName } from '../../systems/particleEffects';
 import type { Arena } from './Arena';
 import { BOLT_HEIGHT, BOLT_RANGE, MELEE_REACH } from './constants';
@@ -25,11 +26,15 @@ import { BOLT_HEIGHT, BOLT_RANGE, MELEE_REACH } from './constants';
 export class Visuals {
   constructor(private arena: Arena) {}
 
-  /** A floating number or word. */
-  text(x: number, y: number, text: string, color: number) {
-    this.arena.effects.add(floatText(x, y, text, color));
-    const sound = soundForText(text);
-    if (sound) playGame(sound);
+  /** Called when a quest moves on for this page's own hero: the HUD tracker ticks (set by the scene). */
+  onQuestTick: (() => void) | undefined;
+
+  /**
+   * A damage number: only with the local debug setting on (`core/damageNumbers.ts`), drawn on this page alone and never
+   * sent. The game shows a blow by its weight (spark tier, kick, hit-pause), not by a number or a word.
+   */
+  number(x: number, y: number, n: number, color: number) {
+    if (damageNumbers.on) this.arena.effects.add(floatText(x, y, String(n), color));
   }
 
   /** A one-shot particle effect. `dir` is an angle in radians. */
@@ -39,10 +44,24 @@ export class Visuals {
     if (sound) playGame(sound);
     if (name === 'cheer') this.arena.playerNumbered(p)?.body.celebrate();
     if (name === 'fall') this.arena.playerNumbered(p)?.body.play('hurt');
+    this.body(name, x, y, p);
     this.kick(name, dir, p);
     const shake = FX_SHAKE[name];
     if (shake && (!shake.own || p === this.arena.local.slot))
       this.arena.zone.camera.shake(shake.strength, shake.seconds);
+  }
+
+  /** What a cue does to a body or the HUD besides its particles: a refusal shakes the actor's head, a level glows, pay flies in. */
+  private body(name: ParticleEffectName, x: number, y: number, p: number | undefined) {
+    const player = this.arena.playerNumbered(p);
+    const body = player?.body;
+    if (name === 'deny') body?.shake();
+    else if (name === 'levelRing') body?.glow();
+    else if (name === 'gainMotes' || name === 'itemMote') {
+      if (!body) return;
+      const colors = name === 'itemMote' ? [0xffffff, 0xffe9a8] : GAIN_MOTE_COLORS;
+      this.arena.effects.add(moteArc(x, y, () => (body.destroyed ? null : { x: body.x, y: body.y - 22 }), colors));
+    } else if (name === 'questTick' && p === this.arena.local.slot) this.onQuestTick?.();
   }
 
   /** The angle of the last blow that landed (a foe's death has none of its own: it takes this one). */
@@ -52,7 +71,7 @@ export class Visuals {
   private kick(name: ParticleEffectName, dir: number | undefined, p: number | undefined) {
     const kick = FX_KICK[name];
     if (!kick) return;
-    if (name === 'hitSpark' && dir !== undefined) this.lastBlow = dir;
+    if (HIT_FX_NAMES.includes(name) && dir !== undefined) this.lastBlow = dir;
     const angle = DEATH_FX.includes(name) ? this.lastBlow : dir;
     if (DEATH_FX.includes(name)) this.lastBlow = undefined;
     if (angle === undefined || (kick.own && p !== this.arena.local.slot)) return;
@@ -184,11 +203,10 @@ export class Visuals {
         }
         break;
       case 'text':
-        this.text(e.x, e.y, e.text, e.color);
-        break;
+        break; // no longer sent (v57): cues replace floating words
       case 'fx':
         this.particles(e.name, e.x, e.y, e.dir, e.p);
-        if (e.name === 'heroHurt') arena.playerNumbered(e.p)?.body.play('hurt');
+        if (e.name === 'heroHurt' || e.name === 'heroHurtHeavy') arena.playerNumbered(e.p)?.body.play('hurt');
         if (e.name === 'castGlow') arena.playerNumbered(e.p)?.body.play('cast'); // a combo went off
         break;
       case 'defeat':

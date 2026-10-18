@@ -52,7 +52,6 @@ export class Training {
         s.mp = s.maxMp;
         p.trial = skill.id;
         this.zones.travel(p, dest, dest.data.spawn);
-        this.sim.text(p.body.x, p.body.y - 66, `${skill.name}: slot 2`, 0xcfe8ff); // it takes the second slot for the trial
       })
       .finally(() => this.starting.delete(p));
     return null;
@@ -82,7 +81,7 @@ export class Training {
     s.hp = s.maxHp;
     s.mp = s.maxMp;
     p.trialExit = LEAVE_AFTER;
-    this.sim.text(p.body.x, p.body.y - 74, `${skill.name} learned!`, 0xffd34d);
+    this.sim.fx('levelRing', p.body.x, p.body.y - 4, undefined, p.slot); // learning a skill glows like a level (the words are the announcement)
     this.sim.fx('levelUp', p.body.x, p.body.y - 14);
     if (p === this.arena.local) {
       const slot = p.hero.loadout.indexOf(skill.id) + 1;
@@ -132,7 +131,7 @@ export class Training {
     p.edge = { charges: 0, timer: 0 };
     p.guard = 0;
     if (p === this.arena.local) this.announce(FAIL_LINES);
-    else this.sim.text(p.body.x, p.body.y - 62, 'Trial failed', 0xff8a7a);
+    else this.sim.refuse(p, p.body.x, p.body.y - 20, 'trial');
     return true;
   }
 }

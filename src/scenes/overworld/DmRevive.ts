@@ -81,7 +81,6 @@ export class DmRevive {
     this.zones.travel(p, dest, { col: Math.floor(x / CELL), row: Math.floor(y / CELL) });
     this.arena.inZone(dest, () => {
       this.sim.fx('heal', p.body.x, p.body.y - 14);
-      this.sim.text(p.body.x, p.body.y - 54, 'Raised!', 0x9fe8ff);
     });
     return true;
   }
