@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { WHOLE_BODIES } from '../../sprites/parts';
 import { outfitLayers, type Outfit, type PartManifest } from '../../src/sprites/doll';
-import { mobLevel, mobTimings } from '../../src/systems/combat';
+import { mobLevel, mobTimings, WINDUP_FLOOR } from '../../src/systems/combat';
 import { POISE_CAP } from '../../src/systems/mobDefense';
 import { heroModel } from '../../src/systems/dmBoss';
 import { ROOT } from '../map/image';
@@ -59,7 +59,7 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
   it.each(mobs)('%s is a fair enemy for a hero who can reach it', (id) => {
     const kind = content.mobKind(id);
     const { windup, recover, stagger } = mobTimings(kind);
-    expect(windup * 0.8).toBeGreaterThanOrEqual(0.4); // even the shortest spread windup (-20%) outlasts a reaction
+    expect(windup * 0.8).toBeGreaterThanOrEqual(WINDUP_FLOOR); // even the shortest spread windup (-20%) is a clear tell
     expect(stagger).toBeLessThan(windup + recover);
     expect(heroModel(mobLevel(kind)).power - kind.defense).toBeGreaterThan(0); // a hero of its own level can always hurt it
     if (kind.shot) {
@@ -87,6 +87,8 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
       // it keeps up with a walking hero, or it closes the gap itself
       expect(kind.speed >= HERO_SPEED || !!kind.charge, `${id} is slow and has no charge`).toBe(true);
     }
+    if (kind.immovable)
+      expect(kind.poiseMax ?? 0, `${id}: an unshovable foe still breaks with its poise`).toBeGreaterThan(0);
     if (kind.guard) expect(kind.poiseMax ?? 0, `${id}: a shield breaks with its poise`).toBeGreaterThan(0);
     if (kind.charge) {
       expect(melee, `${id}: a shooter does not charge`).toBe(true);

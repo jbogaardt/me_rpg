@@ -58,6 +58,7 @@ export interface EntityBehavior {
   /** Blows it shrugs off before a hit staggers it (whole number, 0 = every blow staggers; systems/mobDefense.ts). Elites 3-6. */
   poiseMax?: number;
   poiseRegen?: number; // seconds unhurt before its poise is whole again (default 2)
+  immovable?: boolean; // never pushed back by a blow (a brute or giant; every named boss is); it still staggers when its poise breaks
   /** A gap-closer for a hero who stays out of range (not for a shooter or a ray caster); each field falls back to `CHARGE_DEFAULTS`. */
   charge?: Partial<Record<'range' | 'after' | 'windup' | 'speed' | 'duration' | 'cooldown' | 'power', number>>;
   /** A shield that turns frontal arrows and spells aside; `arc` degrees covered, `chip` the share that still hurts (`GUARD_DEFAULTS`). */
@@ -366,6 +367,10 @@ function readEntity(r: Reader, v: unknown, path: string): EntityDef | null {
       if (!Number.isInteger(poiseMax) || poiseMax > POISE_CAP)
         r.fail(`${p}.poiseMax`, `must be a whole number from 0 to ${POISE_CAP}`);
       else behavior.poiseMax = poiseMax;
+    }
+    if (b.immovable !== undefined) {
+      if (typeof b.immovable !== 'boolean') r.fail(`${p}.immovable`, 'must be true or false');
+      else if (b.immovable) behavior.immovable = true;
     }
     const poiseRegen = r.optionalNumber(b.poiseRegen, `${p}.poiseRegen`, 0.1);
     if (poiseRegen !== undefined) behavior.poiseRegen = poiseRegen;
@@ -1153,6 +1158,7 @@ export function toMobKind(def: EntityDef): MobKind {
   };
   if (def.scale !== undefined) kind.scale = def.scale;
   if (def.boss) kind.named = true;
+  if (def.boss || b.immovable) kind.immovable = true;
   if (def.death) kind.death = def.death;
   if (b.windup !== undefined) kind.windup = b.windup;
   if (b.recover !== undefined) kind.recover = b.recover;
