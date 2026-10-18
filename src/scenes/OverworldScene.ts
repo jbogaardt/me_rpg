@@ -57,6 +57,7 @@ import { Trading } from './overworld/Trading';
 import { Training } from './overworld/Training';
 import { Visuals } from './overworld/Visuals';
 import { Zones, type ZoneLoader, type ZoneUnloader } from './overworld/Zones';
+import { Persistence } from './overworld/Persistence';
 import { Scenario } from './overworld/Scenario';
 import { StoryUi } from './overworld/StoryUi';
 import { LocalInput } from './overworld/LocalInput';
@@ -158,6 +159,8 @@ export class OverworldScene implements Scene {
   private atlas = new Atlas(); // what the players have seen of each zone, for the map
   private dayClock = new DayClock(); // the hour comes from the wall clock, so co-op players agree with nothing sent
   private night = new NightLayer();
+  /** The solo game's save in the browser. */
+  readonly persistence: Persistence;
 
   constructor(
     zone: Zone,
@@ -169,6 +172,8 @@ export class OverworldScene implements Scene {
     content: ContentManager,
     /** A live world (`?campaign=live`), grown during play by its Dungeon Master; null for every other world. */
     world: World | null = null,
+    /** The tag of the world to save the solo game under (`CampaignChoice.tag`); empty: this world is not saved. */
+    saveTag = '',
   ) {
     this.epicsOnOffer = () => [...STOCK_EPICS, ...content.content.epics];
     const arena = (this.arena = new Arena(sprites.wardrobe));
@@ -206,6 +211,7 @@ export class OverworldScene implements Scene {
     this.zones.assign(zone.name, start.node_id);
     this.zones.addHome(zone, start.spawn && { col: start.spawn.x, row: start.spawn.y });
     this.scenario = new Scenario(arena, this.zones, content, ui.choices, say);
+    this.persistence = new Persistence(arena, this.zones, this.scenario, saveTag);
     this.liveStory = new Story(arena, this.zones, content, ui.session, world);
     this.liveStory.onOpened = (zone, x, y) => {
       const z = arena.zones.get(zone);
@@ -395,6 +401,7 @@ export class OverworldScene implements Scene {
     const { arena } = this;
     this.syncRole(session.role);
     arena.clock += dt;
+    this.persistence.update(dt);
     this.pickups.update(dt, foeNear(arena.zone, arena.local));
     this.updateDm(dt);
     const online = arena.role !== 'solo';

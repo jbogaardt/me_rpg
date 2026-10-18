@@ -6,7 +6,7 @@ rule caps the file's length. What the action key does is `Interactions`, the con
 player is told about quests is `StoryUi` (local only, nothing on the wire). The files in `overworld/` carry headers that say what each owns: `Arena` (who is
 in the game, the loaded zones, the zone context), `Zones` (loading, prefetching, travel, transitions), `Simulation` (the
 rules), `Visuals` (everything drawn from an event), `Ground`, `PackSync`, `Trading`, `HostLink`/`GuestLink` (the two sides
-of the network protocol), `Training`, `Casting`, `Story`, `Scenario`, `Interactions`, `LocalInput`, `StoryUi`, `PartyUi`. A new rule belongs in `Simulation`, a new thing to
+of the network protocol), `Training`, `Casting`, `Story`, `Scenario`, `Persistence`, `Interactions`, `LocalInput`, `StoryUi`, `PartyUi`. A new rule belongs in `Simulation`, a new thing to
 draw in `Visuals`, a new synced thing in the matching link. The DM's controls are in `docs/dungeon-master.md`, spells in
 `src/systems/CLAUDE.md`.
 
@@ -28,6 +28,13 @@ draw in `Visuals`, a new synced thing in the matching link. The DM's controls ar
   unloaded after a while (`Zones.retire`). What must outlast it (opened chests, ground items, crops, ponds, moved
   barrels) is kept in `Arena.memory` (`ZoneMemory`); its mobs start afresh. Add to `ZoneMemory` when a new thing must
   survive.
+- **Saving** (`overworld/Persistence.ts`, `systems/save.ts`; core engine): a solo game of a fixed or random world autosaves to
+  `localStorage` (every 10 s, on a zone change, when the tab hides) under the world's tag, and `main.ts` puts it back at boot;
+  the Status tab's "New game" forgets it. A save is the hero (items by id, so retuned items still load; unknown ones are
+  dropped), the scenario node, where the hero stands and the chests opened. Mobs, crops, ground items and scenario choices
+  made start afresh. **Co-op**: only a solo game saves; the host's world is not saved yet and a guest's hero is the host's.
+  Live worlds are not saved (their story log is not). Add to the save when a new thing must outlast a reload, and bump
+  `SAVE_VERSION` only for a change an old save cannot be read as.
 
 ## Doors and the one world
 
