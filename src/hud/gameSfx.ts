@@ -18,12 +18,21 @@ export interface GameRecipe {
   gain: number;
   /** How much the pitch and filters may wander either way on each play (0.05 to 0.10). */
   pitch: number;
+  /** Seconds to rise to full loudness (default ATTACK, a click). A swish needs a slow one so it reads as air, not a thud. */
+  attack?: number;
   noise?: { filter: BiquadFilterType; from: number; to: number; q?: number; gain: number };
   tones?: { wave: OscillatorType; from: number; to: number; gain: number }[];
 }
 
 export const GAME_RECIPES: Record<GameSoundName, GameRecipe> = {
-  swing: { dur: 0.14, gain: 0.3, pitch: 0.1, noise: { filter: 'bandpass', from: 700, to: 2600, q: 1.2, gain: 1 } },
+  // A whiff is airy: no tone, noise swept up through the high band with a rising envelope (a hit is a low thud with a click).
+  swing: {
+    dur: 0.2,
+    gain: 0.38,
+    pitch: 0.1,
+    attack: 0.07,
+    noise: { filter: 'bandpass', from: 1400, to: 5200, q: 1.6, gain: 1 },
+  },
   arrow: {
     dur: 0.1,
     gain: 0.25,
@@ -209,7 +218,7 @@ export class GameAudio {
     const out = ctx.createGain();
     const peak = r.gain * jitter(this.rand(), 0.1);
     out.gain.setValueAtTime(0.0001, t0);
-    out.gain.linearRampToValueAtTime(peak, t0 + ATTACK);
+    out.gain.linearRampToValueAtTime(peak, t0 + (r.attack ?? ATTACK));
     out.gain.exponentialRampToValueAtTime(0.0001, end);
     out.connect(master);
     const sources: (OscillatorNode | AudioBufferSourceNode)[] = [];

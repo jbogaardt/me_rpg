@@ -81,6 +81,18 @@ const memory = () => {
   };
 };
 
+describe('whiff versus hit', () => {
+  it('a swing is airy (soft rise, high noise, no tone) and a hit is a thud (instant, low tone)', () => {
+    const { swing, hit } = GAME_RECIPES;
+    expect(swing.tones).toBeUndefined();
+    expect(swing.attack ?? 0).toBeGreaterThanOrEqual(0.05);
+    expect(hit.attack ?? 0).toBeLessThan(0.02);
+    expect(swing.noise?.filter).toBe('bandpass');
+    expect(Math.min(swing.noise?.from ?? 0, swing.noise?.to ?? 0)).toBeGreaterThanOrEqual(1000);
+    expect(Math.max(...(hit.tones ?? []).map((t) => t.from))).toBeLessThan(300);
+  });
+});
+
 describe('game sound recipes', () => {
   it('has a recipe for every game sound', () => {
     expect(GAME_RECIPES_COMPLETE).toBe(true);
