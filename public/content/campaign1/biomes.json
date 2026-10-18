@@ -197,33 +197,6 @@
             "seed": 109,
             "apart": 12,
             "avoid": [{ "x": 118, "y": 64, "radius": 16 }]
-          },
-          {
-            "kinds": ["frostbound", "hexer", "skeleton", "warg", "haunt"],
-            "count": 6,
-            "seed": 917,
-            "apart": 8,
-            "avoid": [],
-            "within": [{ "x": 144, "y": 43, "radius": 42 }],
-            "level": 16
-          },
-          {
-            "kinds": ["frostWarden", "snowman", "troll", "frostbound"],
-            "count": 6,
-            "seed": 928,
-            "apart": 8,
-            "avoid": [],
-            "within": [{ "x": 67, "y": 100, "radius": 42 }],
-            "level": 24
-          },
-          {
-            "kinds": ["snowman", "frostWarden", "troll"],
-            "count": 4,
-            "seed": 939,
-            "apart": 8,
-            "avoid": [],
-            "within": [{ "x": 144, "y": 146, "radius": 39 }],
-            "level": 30
           }
         ]
       },
