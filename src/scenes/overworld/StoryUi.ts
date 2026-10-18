@@ -245,6 +245,7 @@ export class StoryUi {
       at(player.x, player.y - 20),
       target && at(target.x, target.y - 12),
       target?.label ? `${target.label}, ${direction(player, target).replace(/^close by, /, '')}` : '',
+      this.arena.screen,
     );
     this.overlay.setGuide(guide);
   }
