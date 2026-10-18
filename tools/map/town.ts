@@ -1,9 +1,10 @@
 // Builds public/tilesets/town.png: the shop buildings, composed from the LPC "City outside" pack (Reemax, Hyptosis, Guido Bos,
 // Sharm and others, CC-BY-SA 3.0 / GPL 3.0; art/lpc_city/). The pack is drawn on the map's own 32px grid, so pieces are
 // cut and placed pixel for pixel, with no recolouring (the pack's two roofs and two walls keep the palette of the terrain,
-// trees and characters). Every building is a gabled front: the pack's gable (both slopes, a dark side face) over a wall with
-// windows and a door. Four halls are 5 cells wide (one-cell door in the middle), two houses are 3 wide. A shop's trade is
-// told by the hanging sign beside its door (SIGN_PREFABS in catalog.ts), not by colour.
+// trees and characters). Every building is the pack's gable (made shallower, see `shallower`) over a stone or brick wall
+// with a shadow under the eave, a brick chimney, a door on the ground line and windows; halls are 5 cells wide with a
+// one-cell door and a dormer in each slope, houses are 3 wide with a window in the gable end. A shop's trade is told by
+// the hanging sign beside its door (SIGN_PREFABS in catalog.ts), not by colour.
 // Run with `npm run tilesets`; the output is committed. Coordinates of each building are in catalog.ts (BUILDINGS).
 
 import path from 'node:path';
@@ -62,6 +63,7 @@ const WALL = {
 const WINDOW = cut(640, 32, 32, 32); // dark panes with a flower box
 const PANES = cut(640, 0, 32, 32); // the same window without the box
 const DOOR = cut(704, 16, 32, 48);
+const CHIMNEY = cut(514, 387, 28, 29); // red brick, stands on the roof
 
 type Roof = keyof typeof GABLE;
 type Wall = keyof typeof WALL;
@@ -75,21 +77,88 @@ function wall(kind: Wall, w: number, h: number): Image {
   return out;
 }
 
+const alphaAt = (img: Image, x: number, y: number) => img.data[(y * img.width + x) * 4 + 3]!;
+
 /**
- * A gabled front, `w` wide (96 or 160) and `h` high: the wall from y 100 down, the gable's middle `w` pixels over it, a
- * door in the middle of the ground floor, a window above it and (in a hall) a window each side of the door.
+ * `roof` made `cut` pixels shallower: in every pixel column the middle of its opaque run is dropped, so both outlines (the
+ * sloped top and the sloped eave) stay exactly as drawn and only the plain tiles between them shrink.
  */
-function front(roof: Roof, kind: Wall, w: number, h: number): Image {
+function shallower(roof: Image, cut: number): Image {
+  const out = blank(roof.width, roof.height);
+  for (let x = 0; x < roof.width; x++) {
+    let top = -1;
+    let bottom = -1;
+    for (let y = 0; y < roof.height; y++)
+      if (alphaAt(roof, x, y) > 0) {
+        if (top < 0) top = y;
+        bottom = y;
+      }
+    if (top < 0) continue;
+    const keep = Math.max(bottom - top + 1 - cut, 8);
+    const above = Math.floor(keep / 2);
+    for (let k = 0; k < keep; k++) {
+      const sy = k < above ? top + k : bottom - (keep - 1 - k);
+      roof.data.copy(
+        out.data,
+        (k + top) * out.width * 4 + x * 4,
+        (sy * roof.width + x) * 4,
+        (sy * roof.width + x) * 4 + 4,
+      );
+    }
+  }
+  return out;
+}
+
+/** The pixels of `img` in a column darkened by `amount` (0..1), for rows y0..y1. */
+function shade(img: Image, x: number, y0: number, y1: number, amount: number) {
+  for (let y = y0; y <= y1; y++) {
+    const i = (y * img.width + x) * 4;
+    if (img.data[i + 3] === 0) continue;
+    for (let c = 0; c < 3; c++) img.data[i + c] = Math.round(img.data[i + c]! * (1 - amount));
+  }
+}
+
+/** The highest opaque row of column `x`, or -1. */
+function highest(img: Image, x: number): number {
+  for (let y = 0; y < img.height; y++) if (alphaAt(img, x, y) > 0) return y;
+  return -1;
+}
+
+/** The lowest opaque row of column `x` (the eave), or -1. */
+function lowest(img: Image, x: number): number {
+  for (let y = img.height - 1; y >= 0; y--) if (alphaAt(img, x, y) > 0) return y;
+  return -1;
+}
+
+/**
+ * A gabled front, `w` wide (96 or 160) and `h` high: the pack's gable (made shallower) over the wall, a shadow under the
+ * eave, a window in the gable end, a door in the middle of the ground floor and (in a hall) a window each side of it.
+ */
+function front(roofKind: Roof, kind: Wall, w: number, h: number): Image {
   const out = blank(w, h);
   const base = WALL[kind].base.height;
-  over(out, wall(kind, w, h - 100), 0, 100);
-  const x0 = (GABLE[roof].width - w) / 2;
-  over(out, crop(GABLE[roof], x0, 0, w, 160), 0, 0);
+  const x0 = (GABLE[roofKind].width - w) / 2;
+  const roof = shallower(crop(GABLE[roofKind], x0, 0, w, 160), 36);
+  const wallTop = 56;
+  over(out, wall(kind, w, h - wallTop), 0, wallTop);
+  for (let x = 0; x < w; x++) {
+    for (let y = 0; y < highest(roof, x); y++) out.data[(y * w + x) * 4 + 3] = 0; // no wall outside the roof's outline
+    const e = lowest(roof, x);
+    if (e >= 0) shade(out, x, e + 1, e + 7, 0.4);
+  }
+  over(out, roof, 0, 0);
+  const chimneyX = Math.round(w * 0.62);
+  over(out, CHIMNEY, chimneyX, highest(roof, chimneyX + 14) - 8); // standing on the right slope
+  if (w > 96)
+    for (const x of [14, w - 46]) {
+      // A dormer in each slope: a window under a small peak cut from the gable's own ridge.
+      over(out, PANES, x, 62);
+      over(out, crop(GABLE[roofKind], 64, 0, 32, 18), x, 46);
+    }
   const doorX = (w - DOOR.width) / 2;
-  const wallY = h - base - DOOR.height + 6; // where the windows sit: a door's height above the plinth
   over(out, DOOR, doorX, h - DOOR.height - 2); // the door stands on the ground line, over the plinth
-  over(out, PANES, doorX, wallY - 48);
-  if (w > 96) for (const x of [16, w - 48]) over(out, WINDOW, x, wallY + 8);
+  if (w === 96) over(out, PANES, doorX, h - base - DOOR.height - 40); // a house's gable-end window, above the door
+  if (w > 96) for (const x of [16, w - 48]) over(out, WINDOW, x, h - base - 36);
   return out;
 }
 
