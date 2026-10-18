@@ -90,6 +90,7 @@ export interface ZoneApi {
     seal?: PrefabName[],
   ): unknown;
   indoor(): unknown;
+  dark(): unknown;
   climate(name: ClimateName): unknown;
 }
 
@@ -250,6 +251,10 @@ export class WorldWindow implements ZoneApi {
     this.z.indoor();
     return this;
   }
+  dark() {
+    this.z.dark();
+    return this;
+  }
   climate(name: ClimateName) {
     this.z.climate(name);
     return this;
@@ -353,6 +358,7 @@ export class Zone {
   private portList: PortSpawn[] = [];
   private seals = new Map<string, Placed[]>();
   private isIndoor = false;
+  private isDark = false;
   private weather: ClimateName = DEFAULT_CLIMATE;
 
   constructor(
@@ -934,6 +940,12 @@ export class Zone {
     return this;
   }
 
+  /** Mark the zone as underground and unlit: the `darkness` capability fogs it round the hero's and the torches' light. */
+  dark() {
+    this.isDark = true;
+    return this;
+  }
+
   /** What the spec placed besides terrain and props: the start, NPC, chests, shopkeepers and doors. */
   entities() {
     return {
@@ -950,6 +962,7 @@ export class Zone {
       doors: this.doorList,
       ports: this.portList,
       indoor: this.isIndoor,
+      dark: this.isDark,
       climate: this.weather,
     };
   }
@@ -1158,6 +1171,7 @@ export class Zone {
       doors: this.doorList,
       ports,
       indoor: this.isIndoor,
+      dark: this.isDark,
       climate: this.weather,
     };
   }

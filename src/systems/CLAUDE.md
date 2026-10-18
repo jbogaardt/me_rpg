@@ -10,13 +10,13 @@ A capability (`capabilities.ts`, `CAPABILITIES`) is an engine system a story can
 `scenarios.json` (`false` off, `true` on, or an object of settings), a biome may override it for its own zone
 (`scope: 'zone'`), and a random campaign takes it from its arc and regions. Each entry says what switching it off does
 (`off`), its scope, what it `requires` and its settings. `checkCapabilities` is the one validator
-(used by `parseContent` and `checkPacks`); content asking for what its own switches turn off is refused
+(for `parseContent`, `checkPacks`); content asking for what its own switches turn off is refused
 (`checkAgainstCapabilities`).
 
 **A system a story could do without must be a capability, in the same change that adds it.** Gate it with
 `enabled(id, zone)` at the one choke point where the feature starts and read tuned values with `setting`. `tools/content/capabilities.test.ts` fails a
 capability nothing asks `enabled()` about or that is not listed here. The ids: `guide`, `compass`, `needs`, `combos`,
-`skills`, `farming`, `weather`, `dayNight`, `carrying`, `roaming`, `levelGates`, `forge`, `coop`, `trading`.
+`skills`, `farming`, `weather`, `dayNight`, `darkness`, `carrying`, `roaming`, `levelGates`, `forge`, `coop`, `trading`.
 
 **The map is core engine, not a capability**: always on (M, the HUD button; a room opens a note). Its aids,
 `guide` (hints, tracker line, `fog`) and `compass` (the arrow), are switched by story and per player (`aids.ts`, local).

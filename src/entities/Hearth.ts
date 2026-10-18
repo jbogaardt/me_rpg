@@ -1,6 +1,7 @@
 import { findHearths, hearthNear, HEARTH_EFFECTS, NIGHT_ONLY, type HearthSource } from '../systems/hearths';
 import type { MapData } from '../map/types';
 import type { ViewRect } from '../core/camera';
+import { visibleLights, type Light } from '../systems/lights';
 import type { Effects } from './effects';
 import { particleEffect, type ParticleEffect } from './ParticleEffect';
 
@@ -21,6 +22,15 @@ export class Hearth {
   }
 
   /** Start the sources that have come near `view`, stop the ones that left; `night` wakes the fireflies. */
+  /** The pools of light the map's fires, torches and lava give on the screen now (for the underground's dark). */
+  lights(view: ViewRect, time: number): Light[] {
+    return visibleLights(
+      this.sources.map((s) => s.at),
+      view,
+      time,
+    );
+  }
+
   update(view: ViewRect, night: boolean) {
     for (const s of this.sources) {
       const want = hearthNear(s.at, view) && (night || !NIGHT_ONLY.includes(s.at.kind));

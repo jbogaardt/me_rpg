@@ -735,6 +735,9 @@ class BiomeWindow implements BiomeApi {
   indoor() {
     throw new Error('a biome is open air; rooms are their own zones (maps/shop_*.ts)');
   }
+  dark() {
+    throw new Error('a biome is open air; only a delve (a cave, a sewer, a crypt) is dark');
+  }
   climate(name: ClimateName) {
     this.z.climate(name);
   }
@@ -980,6 +983,7 @@ function cut(
     doors: e.doors.map(local),
     ports: [], // the world's biomes join by gaps, not ports
     indoor: false,
+    dark: false,
     climate: e.climate,
   };
   // Points must stand on the biome's own cells.

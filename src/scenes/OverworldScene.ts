@@ -1,5 +1,5 @@
 import type { Container, Renderer } from 'pixi.js';
-import { enabled, flag } from '../systems/capabilities';
+import { enabled, flag, setting } from '../systems/capabilities';
 import { sayTime } from '../systems/dmPowers';
 import { ReadingPause } from '../systems/readingPause';
 import type { Sprites, Zone } from '../assets';
@@ -22,6 +22,7 @@ import { STOCK_EPICS } from '../content/epics';
 import type { EpicTemplate } from '../systems/dmEpics';
 import type { Hud } from '../hud/Hud';
 import { Atlas } from '../map/explored';
+import { DarknessLayer } from '../entities/DarknessLayer';
 import { MapOverlay } from '../hud/MapOverlay';
 import { PartnerArrows } from '../hud/PartnerArrows';
 import { AreaBanner } from '../hud/AreaBanner';
@@ -163,6 +164,7 @@ export class OverworldScene implements Scene {
   private atlas = new Atlas(); // what the players have seen of each zone, for the map
   private dayClock = new DayClock(); // the hour comes from the wall clock, so co-op players agree with nothing sent
   private night = new NightLayer();
+  private dark = new DarknessLayer();
   /** The solo game's save in the browser. */
   readonly persistence: Persistence;
   /** The "level up" splash (watches the hero's level). */
@@ -288,6 +290,7 @@ export class OverworldScene implements Scene {
     this.interact.onTalk = (entity) => this.epics.talked(entity); // a saga's person has been spoken to
     this.zones.root.addChildAt(this.storyUi.arrow, 1);
     this.zones.root.addChildAt(this.night, 1); // over the world, under the quest arrow and the door transition
+    this.zones.root.addChildAt(this.dark, 2); // the underground's fog of war, over the night shade
     ui.shop.onGearChange = () => arena.refreshLook();
     ui.shop.trader = () => this.pack.trader();
   }
@@ -521,7 +524,27 @@ export class OverworldScene implements Scene {
     z.effects.update(dt);
     const dusk = !z.data.indoor && enabled('dayNight', z.name);
     this.night.update(this.dayClock.sky(), dusk, arena.screen.width, arena.screen.height);
-    z.hearth.update(z.camera.view(arena.screen.width, arena.screen.height), dusk && this.dayClock.sky() !== 0xffffff);
+    const view = z.camera.view(arena.screen.width, arena.screen.height);
+    z.hearth.update(view, dusk && this.dayClock.sky() !== 0xffffff);
+    this.dark.update(
+      z.data.dark && enabled('darkness', z.name)
+        ? {
+            zone: z.name,
+            data: z.data,
+            view,
+            heroes: arena
+              .players()
+              .filter((p) => !p.dm && p.body.visible)
+              .map((p) => p.body),
+            radius: setting('darkness', 'radius', z.name),
+            lights: z.hearth.lights(view, arena.clock),
+            dim: setting('darkness', 'dim', z.name),
+            memory: flag('darkness', 'memory', z.name),
+          }
+        : null,
+      arena.screen.width,
+      arena.screen.height,
+    );
     if (z.weatherLayer && z.ambient && z.weather) {
       // This biome's weather (the simulation rolls it, in every zone someone is in; a guest is told by the host).
       z.ambient.wind = z.weather.wind;
