@@ -109,6 +109,11 @@ export class Character extends Container {
     this.sprite.scale.set(factor);
   }
 
+  /** Squash or stretch the body about its feet (anticipation): 1, 1 is the usual shape; `setScale` resets it. */
+  setSquash(sx: number, sy: number) {
+    this.sprite.scale.set(this.size * sx, this.size * sy);
+  }
+
   /** Nudge the body off its feet point, e.g. to lunge into an attack. */
   setOffset(dx: number, dy: number) {
     this.sprite.position.set(dx, dy);

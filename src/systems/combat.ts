@@ -144,7 +144,7 @@ export interface MobKind {
    * as long as it lasts. Any hit on the caster breaks it, and it then only fights in melee for `ray.rest` seconds.
    */
   ray?: MobRay;
-  /** How the windup reads (colour of the flash, ground warning); see `telegraphOf`. All optional. */
+  /** How the windup reads (the ground marks); see `telegraphOf`. All optional. */
   telegraph?: MobTelegraph;
   /** The hero level this foe was made for when a zone re-bands it (`bands.ts`); absent: read from its body (`mobLevel`). */
   level?: number;
@@ -158,8 +158,7 @@ export interface MobKind {
 
 /** Per-kind tuning of the windup cue. */
 export interface MobTelegraph {
-  color?: number; // 0xRRGGBB the body glows during the windup (default: the special's colour, else hot orange)
-  ground?: boolean; // draw the lane on the ground (default: true for every attack)
+  ground?: boolean; // draw the ground marks toward the blow (default: true for every attack); the colour is one danger palette, not the kind's
 }
 
 export interface MobRay {
@@ -189,15 +188,9 @@ export function mobTimings(kind: MobKind): { windup: number; recover: number; st
 }
 
 /** A plain blow's flash when the kind names none: a hot orange (clearly not the pale hit flash). */
-const MELEE_FLASH = 0xff9a2a;
-
-/** The windup cue for a kind's attack: flash colour and whether the ground lane is drawn (always, unless the kind opts out). */
-export function telegraphOf(kind: MobKind, attack: 'melee' | 'shot' | 'ray'): { color: number; ground: boolean } {
-  const special = attack === 'shot' ? kind.shot : attack === 'ray' ? kind.ray : undefined;
-  return {
-    color: kind.telegraph?.color ?? special?.color ?? MELEE_FLASH,
-    ground: kind.telegraph?.ground ?? true, // every attack lays its lane on the ground (a kind may switch it off)
-  };
+/** The windup cue for a kind's attack: whether the ground marks are drawn (always, unless the kind opts out). The colours are the danger palette (systems/tellLook.ts) for every kind. */
+export function telegraphOf(kind: MobKind): { ground: boolean } {
+  return { ground: kind.telegraph?.ground ?? true };
 }
 
 export function newHero(): Hero {

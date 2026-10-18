@@ -5,6 +5,17 @@ import { DIR_VEC, directionToward, type Direction } from '../core/direction';
 import { glide } from '../core/interp';
 import { mobTimings, telegraphOf, type MobKind, type MobState, type MobView } from '../systems/combat';
 import {
+  TELL_COLOR,
+  TELL_FLUSH,
+  crouch,
+  flush,
+  leanPx,
+  mixColor,
+  squashX,
+  squashY,
+  tremblePx,
+} from '../systems/tellLook';
+import {
   hitPauseFor,
   KNOCK_DECAY,
   KNOCK_SHOVE,
@@ -14,6 +25,7 @@ import {
   tickPause,
 } from '../systems/hitPause';
 import { Character } from './Character';
+import { WindupCue, newCueState } from './WindupCue';
 
 /** What a mob needs from the game each tick. */
 export interface MobWorld {
@@ -129,8 +141,8 @@ export class Mob {
   private swing = false; // the lunge has not hit anyone yet
   private rayTimer = 0; // seconds until the next burn of a held ray
   private rayRest = 0; // seconds before it may cast another ray (after a break)
-  private lane = new Graphics(); // the ground lane of a windup, under the body (see drawTell)
-  private glow = new Graphics(); // the body glow of a windup (additive), over the body
+  private cue = new WindupCue(); // the windup's shadow, ground marks and sparks (see drawTell)
+  private cueState = newCueState();
   private beam = new Graphics(); // the held ray, drawn from the sceptre to the hero (every client draws its own)
   private heroes: MobWorld['heroes'] = []; // guest: who the beam can be on
   private remote: { x: number; y: number } | null = null; // guest only: where the host says this mob is
@@ -146,9 +158,8 @@ export class Mob {
     this.t = mobTimings(kind);
     this.body = new Character(sheet);
     this.body.setScale(kind.scale ?? 1);
-    this.glow.blendMode = 'add';
-    this.body.addChildAt(this.lane, 0);
-    this.body.addChild(this.glow, this.bar, this.beam);
+    this.body.addChildAt(this.cue.ground, 0);
+    this.body.addChild(this.cue.air, this.bar, this.beam);
     this.hp = kind.maxHp;
     this.reset();
   }
@@ -162,8 +173,8 @@ export class Mob {
 
   /**
    * A shooter (or ray caster) winding up, as the edge threat pulse reads it (hud/ThreatPulses.ts): fills `out` with
-   * where it stands, the kind's telegraph colour and how far the windup has come (0..1), and returns true. False
-   * otherwise, and for a melee blow (its lane is in the world and starts close). Reads only the state and timer, so
+   * where it stands, the danger colour (the same for every kind) and how far the windup has come (0..1), and returns true. False
+   * otherwise, and for a melee blow (its cue is in the world and starts close). Reads only the state and timer, so
    * every page has it (a guest included); fills a caller's object so a frame allocates nothing.
    */
   shooterTell(out: { x: number; y: number; color: number; progress: number }): boolean {
@@ -171,7 +182,7 @@ export class Mob {
     const len = this.windupLen > 0 ? this.windupLen : this.t.windup;
     out.x = this.body.x;
     out.y = this.body.y;
-    out.color = telegraphOf(this.kind, this.attack).color;
+    out.color = TELL_COLOR; // one danger colour for every kind
     out.progress = Math.min(1, Math.max(0, 1 - this.timer / len));
     return true;
   }
@@ -189,8 +200,7 @@ export class Mob {
     this.driver = null;
     this.rayRest = 0;
     this.beam.clear();
-    this.lane.clear();
-    this.glow.clear();
+    this.cue.hide();
     this.body.release();
     this.knock = { x: 0, y: 0 };
     this.hitstop = 0;
@@ -212,8 +222,7 @@ export class Mob {
     this.timer = 1;
     this.flash = 0;
     this.beam.clear();
-    this.lane.clear();
-    this.glow.clear();
+    this.cue.hide();
     this.body.release();
     this.body.setOffset(0, 0);
     this.body.setTint(0xffffff);
@@ -235,8 +244,7 @@ export class Mob {
     if (this.hp <= 0) {
       this.lunging = 0;
       this.beam.clear();
-      this.lane.clear();
-      this.glow.clear();
+      this.cue.hide();
       this.body.release();
       this.knock = knockVelocity(vx, vy, KNOCK_SPEED);
       this.body.play('hurt', this.t.stagger * 1000);
@@ -269,8 +277,7 @@ export class Mob {
     this.timer = this.t.recover;
     this.rayRest = this.kind.ray?.rest ?? 0;
     this.beam.clear();
-    this.lane.clear();
-    this.glow.clear();
+    this.cue.hide();
     this.body.release();
   }
 
@@ -564,37 +571,46 @@ export class Mob {
 
   /** Draw the state: the windup telegraph, the hit flash, the walk cycle. Shared by the host's AI and the guest's copy. */
   private present(dt: number, moving: boolean) {
-    // Telegraph: a glowing body and a lane on the ground that fills toward the strike, drawn back before the lunge.
-    const [fx, fy] = DIR_VEC[this.body.facing];
-    if (this.state === 'windup')
-      this.body.setOffset(-fx * 4, -fy * 4); // draws back before the lunge
-    else this.body.setOffset(0, 0);
-    const cue = telegraphOf(this.kind, this.attack);
+    const flush = this.drawTell(telegraphOf(this.kind));
     this.drawBeam();
-    const on = this.drawTell(cue);
-    this.body.setTint(this.flash > 0 ? 0xff6060 : this.frozen > 0 ? 0xa8d8ff : on ? cue.color : 0xffffff);
+    this.body.setTint(
+      this.flash > 0
+        ? 0xff6060
+        : this.frozen > 0
+          ? 0xa8d8ff
+          : flush > 0
+            ? mixColor(0xffffff, TELL_FLUSH, flush)
+            : 0xffffff,
+    );
     this.body.animate(dt * 1000, moving);
   }
 
   /**
-   * The windup cue, one function for the host and the guest (it reads only the state and the timer): the lane the blow,
-   * shot or beam will take (a melee blow: the lunge and its circle) fills as the strike nears, and its edge goes solid
-   * once the aim is locked (COMMITTED: the blow can no longer be interrupted or turned); a ring closes on the spot the
-   * blow lands; the body glows in the kind's colour, pulsing faster and ending solid. Returns whether the body tint is on.
+   * The windup cue, one function for the host and the guest (it reads only the state and the timer), in the world's own
+   * pixel-art language and one danger palette (systems/tellLook.ts): the body coils (leans back, sinks and spreads, warms
+   * toward red-orange, and shivers once the aim locks at COMMITTED); a contact shadow under it widens and darkens; a short
+   * row of ground marks points the way the blow or shot goes, appearing one by one, flashing near-white at the lock (and
+   * throwing a few sparks), then holding hot (a line attack runs a bright mark outward along its line). Returns how
+   * strongly the body is flushed (0 when not winding up).
    */
-  private drawTell({ color, ground }: { color: number; ground: boolean }): boolean {
-    this.lane.clear();
-    this.glow.clear();
-    if (this.state !== 'windup') return false;
+  private drawTell({ ground }: { ground: boolean }): number {
+    if (this.state !== 'windup') {
+      this.cue.hide();
+      this.body.setOffset(0, 0);
+      this.body.setSquash(1, 1);
+      return 0;
+    }
     const len = this.windupLen > 0 ? this.windupLen : this.t.windup;
     const elapsed = Math.min(len, Math.max(0, len - this.timer));
     const progress = elapsed / len;
-    const locked = this.timer < len * COMMITTED;
-    const phase = Math.PI * 2 * (3 * elapsed + (5 * elapsed * elapsed) / len); // quickens toward the strike
-    const on = progress > 0.85 || Math.sin(phase) > 0;
-    const pulse = progress > 0.85 ? 1 : 0.65 + 0.35 * Math.sin(phase);
-    this.glow.ellipse(0, -24, 14, 24).fill({ color, alpha: Math.min(0.85, (0.25 + 0.5 * progress) * pulse) });
-    if (!ground) return on;
+    const lockAt = 1 - COMMITTED; // the progress at which the aim locks
+    const c = crouch(progress, lockAt);
+    const locked = progress >= lockAt;
+    const [fx, fy] = DIR_VEC[this.body.facing];
+    const lean = leanPx(c);
+    const shiver = locked ? tremblePx(elapsed) : 0;
+    this.body.setOffset(-fx * lean + shiver, -fy * lean); // draws back before the lunge
+    this.body.setSquash(squashX(c), squashY(c));
     const scale = this.kind.scale ?? 1;
     let [dx, dy] = [this.aim.x, this.aim.y];
     if (this.remote) {
@@ -602,36 +618,20 @@ export class Mob {
       if (near) [dx, dy] = [near.x - this.body.x, near.y - this.body.y];
     }
     const norm = Math.hypot(dx, dy) || 1;
-    const [ux, uy] = [dx / norm, dy / norm];
     const melee = this.attack === 'melee';
-    const reach = melee
-      ? lungeOf(this.kind) + (HIT_AHEAD + HIT_RADIUS) * scale
-      : ((this.attack === 'shot' ? this.kind.shot?.range : this.kind.ray?.range) ?? REACH);
-    const half = melee ? HIT_RADIUS * scale * 0.85 : this.attack === 'shot' ? 7 : 6;
-    const [nx, ny] = [-uy * half, ux * half];
-    const strip = (length: number) => [
-      nx,
-      ny,
-      ux * length + nx,
-      uy * length + ny,
-      ux * length - nx,
-      uy * length - ny,
-      -nx,
-      -ny,
-    ];
-    this.lane
-      .poly(strip(reach))
-      .fill({ color, alpha: 0.2 + 0.1 * progress })
-      .stroke({ width: locked ? 3 : 2, color, alpha: locked ? 1 : 0.55 })
-      .poly(strip(Math.max(1, reach * progress)))
-      .fill({ color, alpha: 0.45 });
-    if (melee) {
-      const at = lungeOf(this.kind) + HIT_AHEAD * scale; // where the blow's circle ends up: a ring closes on it
-      this.lane
-        .circle(ux * at, uy * at, HIT_RADIUS * scale * (1 + 0.7 * (1 - progress)))
-        .stroke({ width: 2, color, alpha: 0.4 + 0.6 * progress });
-    }
-    return on;
+    const q = this.cueState;
+    q.progress = progress;
+    q.elapsed = elapsed;
+    q.len = len;
+    q.lockAt = lockAt;
+    q.ux = dx / norm;
+    q.uy = dy / norm;
+    q.reach = melee ? lungeOf(this.kind) + (HIT_AHEAD + HIT_RADIUS) * scale : 0;
+    q.scale = scale;
+    q.line = !melee;
+    q.marks = ground;
+    this.cue.update(q);
+    return flush(progress, elapsed, len);
   }
 
   /** The held ray: a pink beam from the sceptre to the hero's chest, on every client (a guest picks the nearest hero). */
