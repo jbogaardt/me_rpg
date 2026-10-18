@@ -4,7 +4,7 @@ import type { Hero, Ranged } from '../systems/combat';
 import type { SkillId } from '../systems/skills';
 import type { Direction } from '../core/direction';
 import { AttackBuffer } from '../systems/inputBuffer';
-import { rollInvulnerable, type RollState } from '../systems/roll';
+import { ROLL_COOLDOWN, rollInvulnerable, type RollState } from '../systems/roll';
 import type { PendingSwing } from '../systems/swing';
 import { DM_COLOR, PLAYER_COLORS } from '../systems/looks';
 import { Character } from './Character';
@@ -43,8 +43,9 @@ export class Player {
   castCooldown = 0; // seconds before the next combo
   /** The dodge roll in progress (systems/roll.ts; host and solo own it), or null. */
   roll: RollState | null = null;
-  /** Seconds before the next roll may start (counted from the start of the last one). */
-  rollCooldown = 0;
+  /** Seconds since the last roll began, and the way it went (`rollWaitFor`: a roll back is allowed sooner). */
+  rollSince = ROLL_COOLDOWN;
+  rollDir: { x: number; y: number } | null = null;
   /** A roll pressed just before it was legal (the same buffer as the sword's; host and solo own it). */
   readonly rollBuffer = new AttackBuffer();
   /** How a roll looks on this body (every page: from the host's `roll` or a guest's `FLAG.roll`). */

@@ -5,8 +5,8 @@
 // The move: a fast dash of ROLL_DISTANCE in ROLL_TIME, eased out (the burst is at the start, like a real dive) in the
 // direction of the walk keys, else the aim, else the facing. Invulnerable only over the middle (frames 2 to 7 of the 13
 // the roll lasts at 60 Hz). The window lives in the roll's own timer and `Player.safe` reads it, so nothing outlives the
-// roll: a roll can never grant more than ROLL_IFRAMES of safety, however it ends (a hit, a door, a fall). A cooldown of
-// ROLL_COOLDOWN runs from the START of the roll, so it can't be chained or used to travel (see `rollTravelGain`); the press is buffered (`inputBuffer.ts`'s
+// roll: a roll can never grant more than ROLL_IFRAMES of safety, however it ends (a hit, a door, a fall). A cooldown runs from the START of the roll, so it can't be chained: ROLL_COOLDOWN (5 s) for a roll the way the last went or
+// sideways, ROLL_BACK_COOLDOWN for a roll back on it, so a dodge can be undone but never used to travel (`rollTravelGain`); the press is buffered (`inputBuffer.ts`'s
 // AttackBuffer, the same 0.16 s) so a press just before it is legal fires the moment it is. No damage is dealt and nothing
 // else is spent. Stun and knock win over a roll: it cannot start in them and a blow that lands outside the window ends it.
 
@@ -15,18 +15,31 @@ export const ROLL_TIME = 13 / 60;
 /** Pixels travelled, 2.25 cells: a dodge, not a way to cross the map. */
 export const ROLL_DISTANCE = 72;
 /**
- * Seconds from the start of one roll to the next being allowed. Long enough that rolling again and again is no way to
- * travel: walking the rest of the time, a hero who rolls every time it is ready gains about a fifth on walking
- * (`rollTravelGain`, held to `MAX_TRAVEL_GAIN` by the tests).
+ * Seconds from the start of one roll to the next being allowed when it goes on the way the last went (or any way but
+ * back). Long, so rolling is no way to travel: a hero who rolls on every cooldown gains under a tenth on walking.
  */
-export const ROLL_COOLDOWN = 1.8;
+export const ROLL_COOLDOWN = 5;
+/** The cooldown of a roll BACK on the last one, a turn of 120 degrees or more: undoing a roll gets nobody anywhere, so it is the quick dodge. */
+export const ROLL_BACK_COOLDOWN = 1.2;
+/** A roll whose direction has this dot product or less with the last roll's is a roll back (cos 120 degrees). */
+export const BACK_DOT = -0.5;
 /** The hero's walking pace (px/s), as `OverworldScene` has it, for `rollTravelGain`. */
 const WALK_SPEED = 120;
 /** The most a roll-spammer may outpace a walker by (a share: 0.25 is a quarter faster). */
 export const MAX_TRAVEL_GAIN = 0.25;
 
-/** How much faster than walking a hero travels who rolls the moment each cooldown ends (0.2: a fifth faster). */
+/** How much faster than walking a hero travels who rolls the same way the moment each cooldown ends (0.08: a twelfth faster). */
 export const rollTravelGain = (): number => (ROLL_DISTANCE - WALK_SPEED * ROLL_TIME) / (WALK_SPEED * ROLL_COOLDOWN);
+
+type Dir = { x: number; y: number };
+
+/** The cooldown a roll toward `next` must wait out after one toward `prev` (none before it: the long one). */
+export const rollCooldownFor = (prev: Dir | null, next: Dir): number =>
+  prev && prev.x * next.x + prev.y * next.y <= BACK_DOT ? ROLL_BACK_COOLDOWN : ROLL_COOLDOWN;
+
+/** Seconds still to wait for a roll toward `next`, `since` seconds after the start of the last one (toward `prev`). */
+export const rollWaitFor = (since: number, prev: Dir | null, next: Dir): number =>
+  Math.max(0, rollCooldownFor(prev, next) - since);
 /** The window of invulnerability, in seconds into the roll: frames 2 to 7 at 60 Hz (six ticks, 100 ms). */
 export const ROLL_IFRAMES = { from: 2 / 60, to: 8 / 60 } as const;
 /** Longest step handed to the collision at once (px), so a long frame never tunnels through a wall. */

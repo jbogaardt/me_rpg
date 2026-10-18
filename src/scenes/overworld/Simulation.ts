@@ -25,7 +25,7 @@ import {
   type Ranged,
 } from '../../systems/combat';
 import { isIce, stepVelocity } from '../../systems/ice';
-import { ROLL_COOLDOWN, canRoll, moveRoll, rollDirection, startRoll } from '../../systems/roll';
+import { canRoll, moveRoll, rollDirection, rollWaitFor, startRoll } from '../../systems/roll';
 import { assistFacing } from '../../systems/meleeAssist';
 import {
   afterArmor,
@@ -258,7 +258,7 @@ export class Simulation {
     if (p.idle >= AFK_S) this.away.add(p.body);
     else this.away.delete(p.body);
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
-    p.rollCooldown = Math.max(0, p.rollCooldown - dt);
+    p.rollSince += dt;
     if (cmd.roll) p.rollBuffer.press(p.zone); // kept for a moment if the roll is not legal yet (`rollGate`)
     // A press made just before the cooldown ended swings now (systems/inputBuffer.ts).
     if (p.attackBuffer.step(dt, p.attackCooldown, p.zone)) this.attack(p);
@@ -304,7 +304,7 @@ export class Simulation {
       }
     }
     // The dodge roll (systems/roll.ts): a buffered press starts it the first tick it is legal; it then replaces walking.
-    if (p.rollBuffer.step(dt, this.rollWait(p), p.zone)) this.beginRoll(p, cmd);
+    if (p.rollBuffer.step(dt, this.rollWait(p, cmd), p.zone)) this.beginRoll(p, cmd);
     if (p.roll) p.moving = this.rollTick(p, dt);
     else p.moving = this.move(p, cmd, dt);
     if (p.swing && p.mouseAim) p.body.face(p.swingDir);
@@ -326,12 +326,17 @@ export class Simulation {
     p.rollLook.step(p.body, p.roll !== null, p === this.arena.local, dt, this.arena.effects);
   }
 
+  /** The way a roll pressed now would go: the walk keys, else the aim, else the facing. */
+  private rollAim(p: Player, cmd: Command): { x: number; y: number } {
+    const [fx, fy] = DIR_VEC[p.body.facing];
+    return rollDirection(cmd.dx, cmd.dy, p.aim, [fx, fy]);
+  }
+
   /** 0 when a roll may start now, else a positive number (the buffer holds the press while it is positive). */
-  private rollWait(p: Player): number {
+  private rollWait(p: Player, cmd: Command): number {
     const stunned = p.hitstop > 0 || p.knock.x !== 0 || p.knock.y !== 0;
-    return canRoll({ cooldown: p.rollCooldown, rolling: p.roll !== null, down: p.down !== null, stunned, dm: p.dm })
-      ? 0
-      : 1;
+    const cooldown = rollWaitFor(p.rollSince, p.rollDir, this.rollAim(p, cmd));
+    return canRoll({ cooldown, rolling: p.roll !== null, down: p.down !== null, stunned, dm: p.dm }) ? 0 : 1;
   }
 
   /**
@@ -339,10 +344,10 @@ export class Simulation {
    * a bow being drawn (not hit-stun or knock: `rollWait` refuses those), and pays the cooldown from now.
    */
   private beginRoll(p: Player, cmd: Command) {
-    const [fx, fy] = DIR_VEC[p.body.facing];
-    const dir = rollDirection(cmd.dx, cmd.dy, p.aim, [fx, fy]);
+    const dir = this.rollAim(p, cmd);
     p.roll = startRoll(dir.x, dir.y);
-    p.rollCooldown = ROLL_COOLDOWN;
+    p.rollSince = 0;
+    p.rollDir = dir;
     p.swing = null;
     p.pendingShot = null;
     p.vel = { x: 0, y: 0 };
