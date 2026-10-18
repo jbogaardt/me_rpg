@@ -202,11 +202,19 @@ export class Menu {
         ${speedFactor(hero) > 1 ? row('Speed', `+${Math.round((speedFactor(hero) - 1) * 100)}% <small>gear</small>`) : ''}
         ${gearRegen(hero) ? row('Mending', `${gearRegen(hero)} <small>HP/s gear</small>`) : ''}
         ${gearMpRegen(hero) ? row('Focus', `${gearMpRegen(hero)} <small>MP/s gear</small>`) : ''}
-      </dl>`;
+      </dl>
+      ${this.onNewGame ? '<p><small>Saved in this browser as you play.</small> <button id="new-game">New game</button></p>' : ''}`;
+    const fresh = document.getElementById('new-game');
+    if (fresh)
+      fresh.onclick = () => {
+        if (window.confirm('Erase the saved game and start over?')) this.onNewGame?.();
+      };
   }
 
   /** A picture URL for what a kill quest hunts (set by main.ts from the wardrobe); null until it is. */
   portrait: (mobKind: string) => string | null = () => null;
+  /** Set when this game is saved in the browser: the Status tab then offers to start over (forget the save, reload). */
+  onNewGame: (() => void) | null = null;
   private questShown = '';
   private onlineParty = false;
   /** Online, the Quests tab shows the Dungeon Master's quest (set by the scene while the menu is open) instead of the story's. */

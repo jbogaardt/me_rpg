@@ -140,9 +140,26 @@ void (async () => {
         return null;
       }
     };
-    const overworld = new OverworldScene(zone, sprites, ui, loadZone, unloadZone, app.renderer, content, world);
+    const overworld = new OverworldScene(
+      zone,
+      sprites,
+      ui,
+      loadZone,
+      unloadZone,
+      app.renderer,
+      content,
+      world,
+      live ? '' : CHOICE.tag,
+    );
     scenes.change(overworld);
     scenes.start();
+    await overworld.persistence.restore(); // a solo game picks up where this browser left off
+    ui.menu.onNewGame = overworld.persistence.enabled
+      ? () => {
+          overworld.persistence.forget();
+          window.location.reload();
+        }
+      : null;
     loading.done();
 
     // The handle an outside Dungeon Master drives this page through (tools/dm-bot), only when the address asks for it.
