@@ -86,10 +86,10 @@ function front(roof: Roof, kind: Wall, w: number, h: number): Image {
   const x0 = (GABLE[roof].width - w) / 2;
   over(out, crop(GABLE[roof], x0, 0, w, 160), 0, 0);
   const doorX = (w - DOOR.width) / 2;
-  const doorY = h - base - DOOR.height + 6;
-  over(out, DOOR, doorX, doorY);
-  over(out, PANES, doorX, doorY - 48);
-  if (w > 96) for (const x of [16, w - 48]) over(out, WINDOW, x, doorY + 8);
+  const wallY = h - base - DOOR.height + 6; // where the windows sit: a door's height above the plinth
+  over(out, DOOR, doorX, h - DOOR.height - 2); // the door stands on the ground line, over the plinth
+  over(out, PANES, doorX, wallY - 48);
+  if (w > 96) for (const x of [16, w - 48]) over(out, WINDOW, x, wallY + 8);
   return out;
 }
 
