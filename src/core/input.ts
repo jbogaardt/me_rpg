@@ -42,12 +42,25 @@ window.addEventListener('blur', () => held.clear()); // a key released in anothe
 
 // Mouse buttons count only when pressed on the game canvas (menu, HUD and touch buttons are other elements), and only a
 // real mouse: fingers use the on-screen controls.
-window.addEventListener('pointerdown', (e) => {
-  if (e.pointerType === 'mouse' && e.target instanceof HTMLCanvasElement) press(`Mouse${e.button}`);
-});
-window.addEventListener('pointerup', (e) => {
-  if (e.pointerType === 'mouse') held.delete(`Mouse${e.button}`);
-});
+// `PointerEvent.buttons` bit of each `button` index (left, middle, right, back, forward).
+const BUTTON_BITS = [1, 4, 2, 8, 16];
+const anyMouseHeld = () => [...held].some((c) => c.startsWith('Mouse'));
+/**
+ * Bring the held mouse buttons in line with `e.buttons`. A second button pressed (or the first released) while another is
+ * down fires only `pointermove`, and `pointerup` comes once, for the last button: going by `e.button` alone left Mouse0
+ * held forever after left+right chording.
+ */
+function syncMouse(e: PointerEvent, canPress: boolean) {
+  if (e.pointerType !== 'mouse') return;
+  BUTTON_BITS.forEach((bit, button) => {
+    const code = `Mouse${button}`;
+    if (!(e.buttons & bit)) held.delete(code);
+    else if (canPress && e.target instanceof HTMLCanvasElement) press(code);
+  });
+}
+window.addEventListener('pointerdown', (e) => syncMouse(e, true));
+window.addEventListener('pointermove', (e) => syncMouse(e, anyMouseHeld())); // a chorded second button arrives as a move
+window.addEventListener('pointerup', (e) => syncMouse(e, false));
 // Where the pointer last was over the game (CSS px): the mouse as it moves, or the spot a finger last tapped. Used to aim.
 let aimPoint: { x: number; y: number } | null = null;
 const trackAimPoint = (e: PointerEvent) => {

@@ -48,6 +48,18 @@ export class Hud {
   private dmBadge = document.getElementById('hud-dm')!;
   private shown = '';
 
+  constructor() {
+    // The stats panel grows and shrinks (food/water row, gold, a narrow phone wrapping the bars): the combo list rides
+    // just under its real bottom edge (`--hud-bottom`, read by #combo-hud in ui.css) instead of a guessed offset.
+    if (typeof ResizeObserver === 'undefined') return;
+    const place = () => {
+      const r = this.stats.getBoundingClientRect();
+      if (r.height > 0) document.documentElement.style.setProperty('--hud-bottom', `${Math.ceil(r.bottom)}px`);
+    };
+    new ResizeObserver(place).observe(this.stats);
+    place();
+  }
+
   /** A quest moved on: the tracker pulses once (the world shows a ring of sparks; the words are the tracker's own). */
   tickQuest() {
     this.tracker.classList.remove('tick');

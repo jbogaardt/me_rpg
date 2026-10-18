@@ -19,7 +19,7 @@ the screen. A new kind of source is an entry in `HEARTH_EFFECTS`, `HEARTH_MARGIN
   by every `Delve` (cave, sewer, crypt) and `DarknessLayer` cuts pools out of a dark mask for each hero and light, with
   ground already seen faintly visible. Nothing hides from the rules: a mob in the dark still sees you. A campaign, arc or
   biome turns it off with `"darkness": false`. It is the one linear-filtered texture (the soft edge needs it).
-- **Cave backdrop** (capability `parallax`): the dark beyond a delve's walls is a two-layer parallax backdrop (`src/map/CLAUDE.md`), under the fog above.
+- **Cave backdrop** (capability `parallax`): the dark beyond a delve's walls is a two-layer parallax backdrop (`src/map/CLAUDE.md`), under the fog above.  The `rock` backdrop (Sunscar) is lava depths: glowing flows deep behind the ridges (`BackdropStyle.lava`); the others are dark caverns.
 
 ## The hero
 

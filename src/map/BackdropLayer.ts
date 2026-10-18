@@ -36,12 +36,38 @@ function ridge(size: number, rnd: () => number, harmonics: number): (x: number) 
     0.5 + waves.reduce((sum, w) => sum + w.amp * Math.sin((x / size) * w.k * Math.PI * 2 + w.phase), 0) / (2 * total);
 }
 
+/** Glowing lava far below the rock: wavy rivers with a hot core and a soft stepped glow either side, wrapped so the tile repeats. The ridges are laid over them, so they show through the gaps. */
+function lavaRivers(ctx: CanvasRenderingContext2D, rnd: () => number, glow: number, hot: number) {
+  for (let i = 0; i < 3; i++) {
+    const y0 = Math.floor(((i + 0.1 + rnd() * 0.4) * FAR) / 3);
+    const height = ridge(FAR, rnd, 5);
+    const width = ridge(FAR, rnd, 3); // the river swells and narrows
+    for (let x = 0; x < FAR; x++) {
+      const y = y0 + Math.floor(height(x) * 34);
+      const swell = 0.4 + width(x) * 1.2;
+      for (const [dy, h, color, alpha] of [
+        [-14, 30, glow, 0.16],
+        [-8, 18, glow, 0.3],
+        [-4, 10, glow, 0.55],
+        [-2, 5, hot, 0.85],
+      ] as const) {
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = css(color);
+        for (const oy of [-FAR, 0, FAR])
+          ctx.fillRect(x, y + Math.round(dy * swell) + oy, 1, Math.max(1, Math.round(h * swell)));
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
 /** The far layer: the dark of a deep cavern, rock walls receding in bands (a jagged skyline each, farther is darker) and a few faint glints. Opaque, it is the backdrop's floor. */
 function farTexture(style: BackdropStyle): Texture {
   const [c, ctx] = canvas(FAR);
   const rnd = stream(0x51ed);
   ctx.fillStyle = css(style.base);
   ctx.fillRect(0, 0, FAR, FAR);
+  if (style.lava !== undefined) lavaRivers(ctx, rnd, style.lava, style.lavaHot ?? style.lava);
   const bands = 3;
   for (let b = 0; b < bands; b++) {
     const top = Math.floor(((b + 0.6) * FAR) / bands);
