@@ -169,6 +169,11 @@ export interface ScenarioNode {
 export interface Scenarios {
   /** The node the game starts in. */
   start: string;
+  /**
+   * The node whose zone and spot a solo hero wakes at after a fall or a reload (the town, by story): its `spawn`, else the
+   * map's. Absent: the start node. Online (host or guest) and live worlds keep waking at the start.
+   */
+  home?: string;
   /** The engine's features this campaign switches off or tunes (systems/capabilities.ts); any not named are on. */
   capabilities: CapabilitySpec;
   nodes: Map<string, ScenarioNode>;
@@ -555,6 +560,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
   r.version(file, 'scenarios.json');
   const start = r.string(file.start, 'scenarios.json.start');
   const capabilities = readCapabilities(r, file.capabilities, 'scenarios.json.capabilities', 'campaign');
+  const home = file.home === undefined ? undefined : r.string(file.home, 'scenarios.json.home');
   r.array(file.nodes, 'scenarios.json.nodes').forEach((v, i) => {
     const o = r.object(v, `nodes[${i}]`);
     if (!o) return;
@@ -588,7 +594,7 @@ export function parseScenarios(json: unknown, r = new Reader()): Scenarios {
     }
     nodes.set(id, node);
   });
-  return { start, capabilities, nodes };
+  return { start, ...(home ? { home } : {}), capabilities, nodes };
 }
 
 const SITE_SHAPES = ['mushroom', 'stone', 'sand'] as const;
@@ -1023,6 +1029,8 @@ function crossCheck(r: Reader, c: Content) {
   checkAgainstCapabilities(r, c);
   if (c.scenarios.start && !c.scenarios.nodes.has(c.scenarios.start))
     r.fail('scenarios.json.start', `no node "${c.scenarios.start}"`);
+  if (c.scenarios.home && !c.scenarios.nodes.has(c.scenarios.home))
+    r.fail('scenarios.json.home', `no node "${c.scenarios.home}"`);
   for (const node of c.scenarios.nodes.values()) {
     const path = `nodes.${node.node_id}`;
     if (!c.biomes[node.biome_type]) r.fail(`${path}.biome_type`, `"${node.biome_type}" is not in biomes.json`);

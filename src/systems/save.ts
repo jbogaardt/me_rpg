@@ -46,11 +46,14 @@ export interface SaveData {
   explored?: Record<string, string>;
 }
 
+/** The least health (a share of the maximum) a reloaded hero has, whatever the save says. */
+export const RELOAD_HP_FLOOR = 0.25;
+
 const STAT_KEYS = ['level', 'xp', 'hp', 'maxHp', 'mp', 'maxMp', 'attack', 'defense', 'magic'] as const;
 
 /**
- * Where a reloaded solo game puts the hero: always the world's home (the zone and spawn a fall also wakes at, the start
- * node's), never the saved zone and spot, so a refresh cannot respawn the foes the hero stood beside (the level-farming
+ * Where a reloaded solo game puts the hero: always the world's home (the zone and spot a fall also wakes at: the
+ * content's `home`, else the start node's; `Arena.wake`), never the saved zone and spot, so a refresh cannot respawn the foes the hero stood beside (the level-farming
  * exploit). The save's `zone`, `x` and `y` stay in the format but are not read for placement.
  */
 export function reloadPlace(_save: SaveData, home: { zone: string; feet: [number, number] }) {
@@ -89,6 +92,11 @@ export function applyHeroSave(hero: Hero, s: HeroSave): void {
   }
   hero.name = s.name;
   for (const k of STAT_KEYS) hero.stats[k] = num(s.stats[k], hero.stats[k]);
+  const st = hero.stats;
+  // Health and mana come back as saved (an older save without them loads full), but never below RELOAD_HP_FLOOR of the
+  // maximum: a refresh must not leave a near-dead hero standing in town. (A fall still wakes the hero healed: `defeat`.)
+  st.hp = Math.min(st.maxHp, Math.max(Math.ceil(st.maxHp * RELOAD_HP_FLOOR), num(s.stats.hp, st.maxHp)));
+  st.mp = Math.min(st.maxMp, Math.max(0, num(s.stats.mp, st.maxMp)));
   hero.pack = s.pack.filter(known).map(itemOf);
   hero.gold = Math.max(0, Math.floor(num(s.gold, 0)));
   hero.quests = { stage: s.quests.stage, taken: s.quests.taken, progress: s.quests.progress };

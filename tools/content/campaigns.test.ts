@@ -33,6 +33,7 @@ describe.each([...campaigns(), PACKS])('%s', (campaign) => {
     expect(mobs.length).toBeGreaterThan(0);
     if (campaign !== PACKS) expect(quests.quests.length).toBeGreaterThan(0); // the packs' stories are their arcs
     expect(scenarios.nodes.has(scenarios.start)).toBe(true);
+    if (scenarios.home) expect(scenarios.nodes.has(scenarios.home)).toBe(true); // where a solo hero wakes; the map check proves the spot is walkable
   });
 
   it('has no two people with the same name (a story would meet them twice)', () => {

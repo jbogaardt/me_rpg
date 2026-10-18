@@ -232,6 +232,7 @@ export class OverworldScene implements Scene {
     const start = content.startNode;
     this.zones.assign(zone.name, start.node_id);
     this.zones.addHome(zone, start.spawn && { col: start.spawn.x, row: start.spawn.y });
+    void this.zones.loadHome(); // solo: the town a fall wakes in loads behind the first frames (a reload awaits it)
     this.scenario = new Scenario(arena, this.zones, content, ui.choices, say);
     this.persistence = new Persistence(arena, this.zones, this.scenario, saveTag, this.atlas);
     this.liveStory = new Story(arena, this.zones, content, ui.session, world);
