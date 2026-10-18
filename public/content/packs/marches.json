@@ -256,6 +256,43 @@
           ]
         }
       }
+    },
+    "harvestwood": {
+      "biome": {
+        "name": "The Harvestwood",
+        "tint": "#e8913a",
+        "map": "marches_harvestwood",
+        "climate": "temperate",
+        "music": null,
+        "tilesets": ["ground_tiles.png", "lpc_terrain.png", "trees_autumn.png", "object-layer.png"]
+      },
+      "level": [2, 4],
+      "themes": ["beast", "undead"],
+      "ports": { "north": "north", "south": "south", "east": "east", "west": "west" },
+      "foes": { "common": {}, "hunter": {}, "ranged": {}, "brute": {} },
+      "roam": [
+        { "role": "common", "count": 3, "seed": 571, "apart": 10, "avoid": [{ "x": 26, "y": 21, "radius": 9 }] },
+        { "role": "hunter", "count": 3, "seed": 572, "apart": 10, "avoid": [{ "x": 26, "y": 21, "radius": 9 }] },
+        { "role": "ranged", "count": 2, "seed": 573, "apart": 10, "avoid": [{ "x": 26, "y": 21, "radius": 9 }] }
+      ],
+      "encounters": [
+        { "role": "hunter", "x": 30, "y": 16 },
+        { "role": "ranged", "x": 20, "y": 26 },
+        { "role": "brute", "x": 40, "y": 12 }
+      ],
+      "sites": {
+        "embercap": {
+          "name": "Embercap",
+          "plural": "embercaps",
+          "shape": "mushroom",
+          "color": "#e8913a",
+          "glow": "#ffe2a8",
+          "notes": [
+            ["An embercap: an orange mushroom that glows faintly, as if banked coals sat under its cap."],
+            ["More embercaps, ringed round a fallen branch, warm to the touch."]
+          ]
+        }
+      }
     }
   },
   "pairings": {
@@ -672,6 +709,50 @@
       "regions": ["ashen_downs", "ember_cove"],
       "tags": ["dead-end"],
       "lore": { "way": "a steaming ravine off The Ashen Downs" }
+    },
+    "harvest_ashen": {
+      "regions": ["harvestwood", "ashen_downs"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the cinder-dusted road where the orange leaves of The Harvestwood give way to the grey of The Ashen Downs",
+        "sign": {
+          "harvestwood": "Ash drifts in from The Ashen Downs and settles on the fallen leaves, and the squirrels have left.",
+          "ashen_downs": "Orange leaves blow down onto The Ashen Downs from The Harvestwood and curl in the heat."
+        }
+      }
+    },
+    "harvest_reed": {
+      "regions": ["harvestwood", "reedmere"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the leaf-strewn causeway between The Harvestwood and the reed beds of The Reedmere",
+        "sign": {
+          "harvestwood": "The causeway to The Reedmere is slick with wet leaves, and the reeds beyond rattle without any wind.",
+          "reedmere": "Leaves from The Harvestwood float on the pools of The Reedmere, turning the water the colour of rust."
+        }
+      }
+    },
+    "harvest_thorn": {
+      "regions": ["harvestwood", "thornwood"],
+      "tags": ["road"],
+      "lore": {
+        "way": "the old cart track between the orange boughs of The Harvestwood and the dark hedges of The Thornwood",
+        "sign": {
+          "harvestwood": "The track to The Thornwood is hemmed with briars that were not here last autumn.",
+          "thornwood": "Fallen leaves from The Harvestwood drift into the briars of The Thornwood and the thorns hold them like trophies."
+        }
+      }
+    },
+    "harvest_rime": {
+      "regions": ["harvestwood", "rimewood"],
+      "tags": ["frost-creep"],
+      "lore": {
+        "way": "the high path where the last orange leaves of The Harvestwood freeze on the pines of The Rimewood",
+        "sign": {
+          "harvestwood": "Frost has come early from The Rimewood: the leaves crack underfoot and the cider presses stand silent.",
+          "rimewood": "Orange leaves blow up out of The Harvestwood and freeze to the snow like flames in glass."
+        }
+      }
     }
   },
   "arcs": {

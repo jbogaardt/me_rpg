@@ -2,7 +2,7 @@
 // LPC trees pack in art/lpc_trees/ ("[LPC] Trees Mega-Pack", CC-BY-SA 3.0, see CREDITS.md). Run by
 // `npm run tilesets`; outputs are committed. Every sprite is cut out by its own shape (so a neighbouring tree
 // on the pack's sheet never bleeds in), keeps its baked translucent shadow, and the picks are packed side by
-// side. `frost` and `swamp` are recolours of the green sheet.
+// side. `frost` and `swamp` are recolours of the green sheet; `autumn` is the pack's orange sheet.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -180,6 +180,7 @@ const SOURCE: Record<Exclude<TreeKind, 'frost' | 'swamp'>, string> = {
   green: 'trees-green.png',
   dry: 'trees-brown.png',
   jungle: 'trees-pale.png',
+  autumn: 'trees-orange.png',
   dead: 'trees-dead.png',
 };
 

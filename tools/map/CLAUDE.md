@@ -10,7 +10,7 @@ catalog and the pitfalls checklist). Never hand-edit `public/maps/*.json`; `npm 
   (`src/map/types.ts`: ground cells over shared tilesets, y-sorted free-placed objects with a `tag`, a collision cell
   list, per-cell metadata such as `surface` and `level`, spawn and door cells). The game's `MapView` and the previews in
   `image.ts` draw it the same way. All art is cut on a 32 px grid; tilesets are in `public/tilesets/`, some derived
-  (recoloured) by `recolor.ts`, trees cut from the LPC pack by `trees.ts` (`treeAtlas.ts` is generated).
+  (recoloured) by `recolor.ts`, trees cut from the LPC pack by `trees.ts` (`treeAtlas.ts` is generated; kinds green, frost, dry, jungle, dead, swamp and autumn, the last used by the marches pack's Harvestwood).
 - **Collision follows the art**: a prop blocks the cells its solid band covers (`Prefab.solid`); forests and woods block
   where their art covers; a prop flagged `movable` (barrels) blocks no cell, because it is a body in play. Don't
   `block()` props by hand.

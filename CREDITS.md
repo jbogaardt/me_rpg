@@ -26,7 +26,7 @@ Jetrel, Zabin, Hyptosis, Surt, Buch, Johann Charlot, Stephen Challener and the O
 Guido Bos, Yar, Paulina Riva (PauR), William.Thompsonj, Casper Nilsson, ansimuz, qubodup, Bart K., Blarumyrran, Lanea
 Zimmerman (Sharm), Leonard Pabin, Chris Phillips, Barbara Rivera and Talosaurus. The full per-source list with each
 licence is in [`art/lpc_trees/CREDITS-trees.txt`](art/lpc_trees/CREDITS-trees.txt), kept with the art. Selected trees and
-bushes are cut out and repacked by `tools/map/trees.ts`; the frost and swamp sheets are recolours of the green one.
+bushes are cut out and repacked by `tools/map/trees.ts`; the frost and swamp sheets are recolours of the green one, and the autumn sheet is the pack's own orange one.
 
 ## Shop buildings (`public/tilesets/town.png`, source in `art/lpc_city/`)
 

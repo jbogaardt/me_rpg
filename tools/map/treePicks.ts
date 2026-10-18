@@ -2,7 +2,7 @@
 // enclose the sprite and none of its neighbours' art; trees.ts cuts the sprite out by its shape. The green,
 // dry (brown) and jungle (pale) recolours share the pack's layout, the dead sheet has its own trees.
 
-export const TREE_KINDS = ['green', 'frost', 'dry', 'jungle', 'dead', 'swamp'] as const;
+export const TREE_KINDS = ['green', 'frost', 'dry', 'jungle', 'dead', 'swamp', 'autumn'] as const;
 export type TreeKind = (typeof TREE_KINDS)[number];
 
 export interface Pick {
@@ -22,10 +22,11 @@ const LEAFY = {
   bushes: [pick(225, 366, 95, 80), pick(34, 62, 34, 32)],
 };
 
-export const TREE_PICKS: Record<'green' | 'dry' | 'jungle' | 'dead', { trees: Pick[]; bushes: Pick[] }> = {
+export const TREE_PICKS: Record<'green' | 'dry' | 'jungle' | 'dead' | 'autumn', { trees: Pick[]; bushes: Pick[] }> = {
   green: LEAFY,
   dry: LEAFY,
   jungle: LEAFY,
+  autumn: LEAFY,
   dead: {
     trees: [
       pick(58, 100, 80, 125),

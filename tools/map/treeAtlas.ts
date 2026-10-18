@@ -195,6 +195,68 @@ export const TREE_ATLAS: Record<string, { trees: TreeSprite[]; bushes: TreeSprit
       },
     ],
   },
+  autumn: {
+    trees: [
+      {
+        x: 0,
+        y: 0,
+        w: 95,
+        h: 117,
+        band: 88,
+      },
+      {
+        x: 97,
+        y: 0,
+        w: 96,
+        h: 114,
+        band: 86,
+      },
+      {
+        x: 195,
+        y: 0,
+        w: 96,
+        h: 120,
+        band: 90,
+      },
+      {
+        x: 293,
+        y: 0,
+        w: 119,
+        h: 151,
+        band: 113,
+      },
+      {
+        x: 414,
+        y: 0,
+        w: 89,
+        h: 126,
+        band: 95,
+      },
+      {
+        x: 0,
+        y: 153,
+        w: 115,
+        h: 127,
+        band: 95,
+      },
+    ],
+    bushes: [
+      {
+        x: 117,
+        y: 153,
+        w: 93,
+        h: 78,
+        band: 59,
+      },
+      {
+        x: 212,
+        y: 153,
+        w: 34,
+        h: 28,
+        band: 21,
+      },
+    ],
+  },
   dead: {
     trees: [
       {

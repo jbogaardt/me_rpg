@@ -433,7 +433,7 @@ export interface Prefab {
 
 const part = (x: number, y: number, w: number, h: number, dx = 0, dy = 0): PrefabPart => ({ x, y, w, h, dx, dy });
 
-type Biome = 'green' | 'frost' | 'dry' | 'jungle' | 'dead' | 'swamp';
+type Biome = 'green' | 'frost' | 'dry' | 'jungle' | 'dead' | 'swamp' | 'autumn';
 /** A tree of the LPC trees pack (see trees.ts): one part, trunk and lower canopy solid, the crown walk-behind. */
 const lpcTree = (biome: Biome, i: number, about: string): Prefab => {
   const t = TREE_ATLAS[biome]?.trees[i];
@@ -980,6 +980,38 @@ export const PREFABS = {
     5,
     'Autumn-brown tree (desert edge), variant F. Blocks its trunk and lower canopy; the crown is walk-behind.',
   ),
+  autumnTreeA: lpcTree(
+    'autumn',
+    0,
+    'Orange autumn tree, variant A. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  autumnTreeB: lpcTree(
+    'autumn',
+    1,
+    'Orange autumn tree, variant B. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  autumnTreeC: lpcTree(
+    'autumn',
+    2,
+    'Orange autumn tree, variant C. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  autumnTreeD: lpcTree(
+    'autumn',
+    3,
+    'Orange autumn tree, variant D. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  autumnTreeE: lpcTree(
+    'autumn',
+    4,
+    'Orange autumn tree, variant E. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  autumnTreeF: lpcTree(
+    'autumn',
+    5,
+    'Orange autumn tree, variant F. Blocks its trunk and lower canopy; the crown is walk-behind.',
+  ),
+  autumnBush: lpcBush('autumn', 0, 'Orange autumn bush.'),
+  autumnBushSmall: lpcBush('autumn', 1, 'Small orange autumn bush.'),
   dryBush: lpcBush('dry', 0, 'Autumn-brown bush.'),
   dryBushSmall: lpcBush('dry', 1, 'Small autumn-brown bush.'),
   jungleTreeA: lpcTree(
@@ -1162,6 +1194,14 @@ export const FROST_TREES = [
   'frostTreeD',
   'frostTreeE',
   'frostTreeF',
+] as const satisfies PrefabName[];
+export const AUTUMN_TREES = [
+  'autumnTreeA',
+  'autumnTreeB',
+  'autumnTreeC',
+  'autumnTreeD',
+  'autumnTreeE',
+  'autumnTreeF',
 ] as const satisfies PrefabName[];
 export const DRY_TREES = [
   'dryTreeA',
