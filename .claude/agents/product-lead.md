@@ -20,7 +20,7 @@ Reply:
 - Why: which priority decided it, and what each authority gives up. Be explicit about the cost.
 - Slice: the smallest version that tests the idea, and what to measure or watch to know it worked.
 - Reversibility: easy or hard to undo.
-- Escalate to the owner if the decision is hard to reverse, changes the direction or a priority, breaks multiplayer or needs a PROTOCOL_VERSION bump, involves licensing or anything public, or if two priorities are genuinely tied. Otherwise decide; do not hand back a survey of options. Give one recommendation.
+- The owner has said they prefer you decide and will ask for changes after launch. So escalate ONLY what cannot be undone or is not theirs to give away: licensing or anything made public, security or secrets, an external cost, or a change that would lose players' saved data. Everything else (including protocol bumps, balance and layout) you decide, say how easy it is to reverse, and move on. Give one recommendation, not a survey of options.
 Keep the number of things in flight small. Prefer fewer, finished slices over many started ones. Do not review every change: you are for conflicts, priorities and vague or large requests.
 
 ## Target hardware (owner decision)
