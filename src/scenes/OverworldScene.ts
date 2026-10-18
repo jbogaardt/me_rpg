@@ -684,13 +684,14 @@ export class OverworldScene implements Scene {
       this.barrels.update(); // carried barrels ride with whoever carries them
       // The zones drawn beside this one keep their mobs wandering, so nothing looks frozen across the border.
       const occupied = new Set(arena.occupiedZones());
-      if (!frozen)
-        for (const z of this.zones.lookouts()) {
-          if (occupied.has(z)) continue;
-          arena.inZone(z, () => {
-            for (const mob of z.mobs) mob.update(dt, z.mobWorld);
-          });
-        }
+      for (const z of this.zones.lookouts()) {
+        if (occupied.has(z) || z === here) continue;
+        // Shots in flight carry on across the border instead of hanging in the air where the hero left them.
+        arena.inZone(z, () => {
+          if (!frozen) for (const mob of z.mobs) mob.update(dt, z.mobWorld);
+          z.effects.update(dt);
+        });
+      }
       if (!frozen) this.training.update(dt);
     } else {
       this.player.animate(dt * 1000, false); // the world is frozen while talking
