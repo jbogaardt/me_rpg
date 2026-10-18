@@ -52,8 +52,7 @@ different version away), so point it at the site they use. Against a local build
   closing scene and reward are `DmEpics.close`. The end-boss quests (#34) can hook epic completion instead of `epicsDone`.
   The log line "the game code is gone" means the relay forgot the room (its code ran out, or the poll failed for good); the
   cause of a mid-game loss in issue #44 is not traced (no log), friends already in are unaffected.
-- After a saga ends the party is left to wander for `WANDER_MS` (town, shops, talk) before another is offered; a
-  written saga has at most one hunt and at least one townsperson to meet, and never mentions the map.
+- A written saga has at most one hunt and at least one townsperson to meet, and never mentions the map.
 - `conjure.ts` makes people: on arriving somewhere new (at most 6 a game, 2 minutes apart) a `Conjurer` invents a
   stranger (name, a look from the world's people, up to 4 short lines) and the page's `spawn` sets them near the party.
   The mock conjurer has a few stock characters; the page refuses anything the world's checks refuse.
