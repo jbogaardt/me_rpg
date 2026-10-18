@@ -147,7 +147,7 @@ export class Inventory {
     const btn = (action: string, text: string) =>
       `<button type="button" class="mp-btn panel thin wood" data-action="${action}">${text}</button>`;
     if (sel.from === 'pack') {
-      if (item.use) buttons.push(btn('use', 'Drink'));
+      if (item.use) buttons.push(btn('use', 'Consume'));
       const slots = slotsFor(item);
       if (slots[0]) buttons.push(btn('equip', slots[0] === 'weapon' ? 'Equip main hand' : 'Equip'));
       if (slots.includes('offhand') && item.slot === 'weapon') buttons.push(btn('equip-off', 'Equip off-hand'));

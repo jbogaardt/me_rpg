@@ -141,7 +141,7 @@ export class ShopCounter {
         const other = item.slot
           ? `<button type="button" class="item-btn" data-act="wear" data-pack="${i}">Wear</button>`
           : item.use
-            ? `<button type="button" class="item-btn" data-act="use" data-pack="${i}">Drink</button>`
+            ? `<button type="button" class="item-btn" data-act="use" data-pack="${i}">Consume</button>`
             : '';
         return `<li${trade ? '' : ' class="poor"'}><div class="info"><b>${esc(item.name)}${count > 1 ? ` ×${count}` : ''}</b> <small>${bonuses(item)}</small></div>${sellBtn}${other}</li>`;
       })
