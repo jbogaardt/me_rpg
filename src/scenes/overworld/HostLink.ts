@@ -20,6 +20,7 @@ import {
   type StatsSnap,
   type WorldEvent,
   pondsWire,
+  rollBit,
 } from '../../net/protocol';
 import type { Session } from '../../net/session';
 import type { Hero, Stats } from '../../systems/combat';
@@ -167,12 +168,15 @@ export class HostLink {
     const { dx, dy } = peer.fresh ? unpackKeys(peer.keys) : { dx: 0, dy: 0 };
     const act = peer.act > p.seenAct;
     const combo = peer.cb > p.seenCombo ? peer.ci : undefined;
+    const roll = rollBit(peer.keys) !== p.seenRoll; // the toggle bit flipped: a roll was pressed
+    p.seenRoll = rollBit(peer.keys);
     p.seenAct = peer.act;
     p.seenCombo = peer.cb;
     return {
       dx,
       dy,
       act,
+      roll,
       ...(combo === undefined ? {} : { combo }),
       ...(peer.fresh && peer.px !== undefined && peer.py !== undefined
         ? { at: { n: peer.n, x: peer.px, y: peer.py } }
@@ -270,7 +274,8 @@ export class HostLink {
       (p.edge.charges > 0 ? FLAG.edge : 0) |
       (p.guard > 0 ? FLAG.guard : 0) |
       (p.hidden ? FLAG.hidden : 0) |
-      (p.down !== null ? FLAG.down : 0);
+      (p.down !== null ? FLAG.down : 0) |
+      (p.roll ? FLAG.roll : 0);
     return [p.slot, Math.round(p.body.x), Math.round(p.body.y), dirIndex(p.body.facing), flags];
   }
 

@@ -143,6 +143,14 @@ export const GAME_RECIPES: Record<GameSoundName, GameRecipe> = {
     noise: { filter: 'lowpass', from: 700, to: 250, gain: 0.3 },
     tones: [{ wave: 'sine', from: 150, to: 85, gain: 0.9 }],
   },
+  // The dodge roll: a lower, softer whoosh than the sword's (bandpass sweeping up then settling) over a scuff of the feet.
+  roll: {
+    dur: 0.2,
+    gain: 0.28,
+    pitch: 0.08,
+    noise: { filter: 'bandpass', from: 350, to: 1500, q: 0.9, gain: 0.8 },
+    tones: [{ wave: 'sine', from: 170, to: 80, gain: 0.35 }],
+  },
   pickup: { dur: 0.18, gain: 0.2, pitch: 0.06, tones: [{ wave: 'sine', from: 1320, to: 1760, gain: 1 }] },
 };
 
