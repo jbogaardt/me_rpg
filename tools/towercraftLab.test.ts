@@ -16,8 +16,8 @@ describe('what-if overrides', () => {
     applyOverride(r, 'titan.castle.hp=-10%');
     expect(r.titan.castle.hp).toBeCloseTo(RACES.titan.castle.hp * 0.9);
     applyOverride(r, 'swarm.castle.upgrades.0.wood=99');
-    expect(r.swarm.castle.upgrades[0]!.wood).toBe(99);
-    expect(RACES.swarm.castle.upgrades[0]!.wood).not.toBe(99);
+    expect(r.swarm.castle.upgrades[0].wood).toBe(99);
+    expect(RACES.swarm.castle.upgrades[0].wood).not.toBe(99);
   });
 
   it('refuses a path or value that is not a number in the data', () => {
