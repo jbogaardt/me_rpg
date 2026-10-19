@@ -17,13 +17,14 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 - **Upgrades** (`UpgradeDef`): a click only arms the button ("Confirm?"), a second within 3 s buys (dock and castle; `confirmed` in `main.ts`); per race ground/air x damage/health, three levels of +15% (`boostOf`), bought at a smithy-type building (`buyUpgrade`, instant). Health applies to units bought later (`Unit.maxHp`), damage at once.
 - **Build area and fog of war** (`inBuildArea`, `visionOf`, `canSee`, `isSeen`; in `src/sim/CLAUDE.md`): you build only on ground your castle or a tower sees, never within `FOE_CLEAR` of a foe's castle; castle upgrades ask for buildings (`upgradeLacks`); hidden enemies are not drawn, targeted or splashed.
 - **Look** (`main.ts`, cosmetic): units at `SIZE` x2; walk, stand, strike (`Shot.by`), tower fx, pay-day figures. No sparkles.
+- **Sound** (cosmetic): `src/CLAUDE.md`.
 - **Buildings grow with upgrades** (`trim.ts`, cosmetic, Pixi-free, drawn by `drawTrim`): a castle gets +8% size, two race-coloured pennants and, at the top level, a base ring; a smithy gets a pennant and +5% size per 3 upgrade levels its owner bought. Drawn from `Match` state on each client, so lockstep is untouched.
 - **Hurt and falling buildings** (`wreck.ts`, cosmetic): smoke below half health, flames below 30%; a razed tower (`sync`'s `gone` hook keeps its sprite) or a castle at 0 shakes and sinks into the ground with dust and rubble that fades. The end screen waits for the castle (`finale`) and is see-through over the map.
 - **Races** (`races.ts`): swarm/Goblins (fast, weak, in groups), titan/Dwarves (slow, strong), legion/Germanic (archers, sweepers, sappers, catapults): 4-6 ground and 2-3 air units each.
 
 ## Online
 
-The title screen's **Solo / Host / Join** picks solo (the AI) or a game with a friend over Me RPG's relay and peer-to-peer link (a duel, or co-op as partners): lockstep, so `src/sim` must stay exact. Design and rules in `src/net/CLAUDE.md`.
+The title screen's **Solo / Host / Join** picks solo (the AI) or a game with a friend over Me RPG's relay and peer-to-peer link: lockstep, so `src/sim` must stay exact. Design and rules in `src/net/CLAUDE.md`.
 
 ## Code
 

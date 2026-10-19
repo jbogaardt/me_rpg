@@ -7,6 +7,8 @@ import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
 import { icon } from './icons';
+import { isMuted, playCues, setMuted, unlockAudio } from './audio';
+import { SoundWatch } from './soundEvents';
 import { drawnPos } from './stagger';
 import type { Ai } from './sim/ai';
 import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
@@ -781,6 +783,24 @@ void (async () => {
       held.add(k);
   });
   window.addEventListener('keyup', (e) => held.delete(e.key.toLowerCase()));
+  // Sound: browsers start audio only after a click or key press, so the first one loads it; M or the speaker button mutes.
+  window.addEventListener('pointerdown', unlockAudio);
+  window.addEventListener('keydown', unlockAudio);
+  const soundButton = $('cam-sound');
+  const showMuted = () => {
+    soundButton.textContent = isMuted() ? '🔇' : '🔊';
+    soundButton.title = isMuted() ? 'Sound is off (M)' : 'Sound is on (M)';
+  };
+  const toggleSound = () => {
+    setMuted(!isMuted());
+    showMuted();
+  };
+  soundButton.onclick = toggleSound;
+  window.addEventListener('keydown', (e) => {
+    if ((e.target as HTMLElement).tagName !== 'INPUT' && e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey)
+      toggleSound();
+  });
+  showMuted();
   window.addEventListener('blur', () => held.clear());
 
   // --- Drawing a match ----------------------------------------------------------------------------------------------
@@ -2343,6 +2363,8 @@ void (async () => {
     if (online?.lock !== lock) return; // the connection ended while the art loaded
     begin(races, map, you, seed, 2);
   }
+  /** What changed since the last tick, for the sounds (`soundEvents.ts`); made at the start of each match. */
+  let sounds: SoundWatch | undefined;
   /** Start a match: one race per seat of the map, you in seat `you`, the computers (every seat past `people`) playing by `seed`. */
   function begin(races: RaceId[], map: BoardId, you: Owner, seed: number, people: number) {
     YOU = you;
@@ -2353,6 +2375,7 @@ void (async () => {
     match = rejoinState ? unpackMatch(rejoinState) : newMatch(races, BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
     matchSeed = rejoinState?.seed ?? seed;
     ais = makeAis(match, matchSeed, people);
+    sounds = new SoundWatch(match);
     // A page that comes back in mid-match carries on from what the computers remembered, not from a fresh start.
     rejoinState?.ai.forEach((state, i) => ais[i]?.load(state));
     rejoinState = undefined;
@@ -2695,6 +2718,18 @@ void (async () => {
           strikes.set(shot.by.id, { at: clock, to: shot.to, melee: shot.melee });
       } else kicks.set(shot.by.kind === 'tower' ? shot.by.id : -1 - shot.by.id, { at: clock, to: shot.to });
     }
+    if (sounds) playCues(sounds.collect(match, YOU), soundView());
+  }
+
+  /** The part of the field on screen, in cells: sounds are louder the nearer they are to its middle, and lean to the side they come from. */
+  function soundView() {
+    const cell = CELL * world.scale.x;
+    return {
+      cx: (window.innerWidth / 2 - world.x) / cell,
+      cy: (topBar() + viewH() / 2 - world.y) / cell,
+      halfW: window.innerWidth / 2 / cell,
+      halfH: viewH() / 2 / cell,
+    };
   }
 
   app.ticker.add((ticker) => {
