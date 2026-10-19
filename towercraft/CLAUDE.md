@@ -23,7 +23,7 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 
 ## Online
 
-The title screen's **Solo / Host / Join** picks solo (the AI) or a duel with a friend over Me RPG's relay and peer-to-peer link: lockstep, so `src/sim` must stay exact. Design and rules in `src/net/CLAUDE.md`.
+The title screen's **Solo / Host / Join** picks solo (the AI) or a duel with a friend over Me RPG's relay and peer-to-peer link: lockstep, so `src/sim` must stay exact. Design and rules in `src/net/CLAUDE.md`. The panel opens with the title art (`public/ui/title.jpg`, the `.title-art` image; the `<h1>` is screen-reader only).
 
 ## Code
 
