@@ -85,6 +85,8 @@ export class PeerLink implements Link {
   constructor(
     readonly role: LinkRole,
     private handlers: LinkHandlers = {},
+    /** Me RPG streams state and wants the fast unreliable channel; a lockstep game (towercraft) asks for `{ ordered: true }`. */
+    private channelOptions: RTCDataChannelInit = CHANNEL_OPTIONS,
   ) {}
 
   get status(): LinkStatus {
@@ -101,7 +103,7 @@ export class PeerLink implements Link {
   /** Host step 1: create the data channel and an offer; resolves to the offer once all candidates are in. */
   async createOffer(): Promise<string> {
     const pc = this.begin();
-    this.attach(pc.createDataChannel(CHANNEL_LABEL, CHANNEL_OPTIONS));
+    this.attach(pc.createDataChannel(CHANNEL_LABEL, this.channelOptions));
     return this.guard(pc, async () => {
       await pc.setLocalDescription(await pc.createOffer());
       const code = await this.finishGathering(pc, 'offer');

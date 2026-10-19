@@ -13,6 +13,7 @@
 // Everything it knows about the other side is read through `foeUnits`, `foeTowers` and `foeCastle` below, which show only what its
 // vision (castle, towers and living units, as for the player) shows: it plays by the same fog.
 
+import { hypot } from './hypot';
 import type { Board } from './board';
 import { MAX_LEVEL, REACH_SCALE, type Cost, type TowerDef, type UnitDef } from './races';
 import {
@@ -85,7 +86,7 @@ function coverageOf(b: Board, col: number, row: number, range: number): { n: num
   if (!c) {
     let [n, sum] = [0, 0];
     view.samples.forEach(([x, y], i) => {
-      if (Math.hypot(x - col - 0.5, y - row - 0.5) > range) return;
+      if (hypot(x - col - 0.5, y - row - 0.5) > range) return;
       n++;
       sum += i / 2;
     });
@@ -130,13 +131,13 @@ function score(m: Match, owner: Owner, def: TowerDef, col: number, row: number):
   const centre = m.board.castles[owner];
   // Money, unlocks and upgrades sit safe and close: the nearest free cells to the castle.
   if (role === 'econ' || role === 'prod' || role === 'smith')
-    return -Math.hypot(centre[0] - col - 0.5, centre[1] - row - 0.5);
+    return -hypot(centre[0] - col - 0.5, centre[1] - row - 0.5);
   if (role === 'aura') {
     const foe = m.board.castles[enemy(owner)];
     const friends = m.towers.filter(
-      (t) => t.owner === owner && Math.hypot(t.col - col, t.row - row) <= (def.aura?.radius ?? 0),
+      (t) => t.owner === owner && hypot(t.col - col, t.row - row) <= (def.aura?.radius ?? 0),
     ).length;
-    return friends * 12 - Math.hypot(foe[0] - col - 0.5, foe[1] - row - 0.5) * 0.15;
+    return friends * 12 - hypot(foe[0] - col - 0.5, foe[1] - row - 0.5) * 0.15;
   }
   const range = role === 'detect' ? (def.detect ?? 0) : role === 'bunker' ? BUNKER_REACH : def.range;
   const c = coverageOf(m.board, col, row, range);

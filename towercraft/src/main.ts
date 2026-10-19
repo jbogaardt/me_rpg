@@ -9,6 +9,9 @@ import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Text
 import { icon } from './icons';
 import { drawnPos } from './stagger';
 import { createAi } from './sim/ai';
+import { normalizeCode } from '../../src/net/roomCode';
+import { Duel, type DuelPhase } from './net/duel';
+import { apply, Lockstep, NET_VERSION, type Command, type Message } from './net/lockstep';
 import { BOARDS, BOARD_IDS, DEFAULT_BOARD_ID } from './sim/board';
 import {
   MAX_LEVEL,
@@ -28,29 +31,23 @@ import {
   UNIT_CAP,
   boostOf,
   buildReach,
-  buildTower,
-  buyUpgrade,
   canAfford,
   repairCost,
-  repairTower,
   repairable,
   canBuild,
+  canTarget,
+  enemy,
   canSee,
   incomeOf,
   isCastleSeen,
   isSeen,
-  loadBunker,
   maxPurchases,
   newMatch,
   nextUpgrade,
-  setFocus,
-  setOrder,
   soldierCost,
   step,
   towerUnlocked,
-  trainUnits,
   unitUnlocked,
-  upgradeCastle,
   upgradeCost,
   upgradeLacks,
   upgradeLevel,
@@ -66,7 +63,8 @@ import {
 
 const CELL = 40;
 const STEP = 0.05;
-const YOU: Owner = 0;
+/** Which player this page is: 0 alone and for the host of an online match, 1 for the one who joined. */
+let YOU: Owner = 0;
 
 /** A map's id (see `BOARDS`). */
 type BoardId = string;
@@ -276,6 +274,12 @@ void (async () => {
     fogLayer.addChild(tint.sprite, shade.sprite);
   };
   let ai = createAi(1, 1);
+  /** The online match being played, if any (net/lockstep.ts): the shared clock the commands go through. */
+  let online: { lock: Lockstep } | undefined;
+  /** What the end screen says when it is not the plain win or loss (the rival left, the games disagreed). */
+  let endText: [string, string] | undefined;
+  /** How long (s) the match has been stalled waiting for the rival's commands. */
+  let stalled = 0;
   let selected: TowerDef | undefined;
   /** Your units picked to command (a group, by id), where the mouse is over the field (cells), and a line of news for the hint. */
   const selection = new Set<number>();
@@ -476,8 +480,14 @@ void (async () => {
     ghost = cell;
     ghostBar.hidden = !cell;
   };
+  /** Do something to your side of the match: at once alone, or on the same tick on both pages online (net/lockstep.ts). */
+  const cmd = (c: Command) => {
+    if (online) online.lock.issue(c);
+    else apply(match, YOU, c);
+  };
   const place = (cell: [number, number]) => {
-    if (selected && buildTower(match, YOU, selected.id, cell[0], cell[1]) === 'ok') {
+    if (selected && canBuild(match, YOU, selected, cell[0], cell[1]) === 'ok') {
+      cmd({ k: 'build', id: selected.id, col: cell[0], row: cell[1] });
       // Keep the tower selected while the player can pay for another (a row of towers is the usual use).
       if (!canAfford(match.players[YOU], selected.cost) || towerUnlocked(match, YOU, selected) !== 'ok')
         selected = undefined;
@@ -537,7 +547,8 @@ void (async () => {
   };
   /** The rival's castle, if you can see it and the point is on it. */
   const foeCastleAt = (wx: number, wy: number) =>
-    isCastleSeen(match, YOU, 1) && Math.hypot(wx - castles()[1][0], wy - (castles()[1][1] - 1.6)) <= 3;
+    isCastleSeen(match, YOU, enemy(YOU)) &&
+    Math.hypot(wx - castles()[enemy(YOU)][0], wy - (castles()[enemy(YOU)][1] - 1.6)) <= 3;
 
   /** The units you have picked that are still alive. */
   const picked = () => match.units.filter((u) => selection.has(u.id) && u.owner === YOU && u.hp > 0 && !u.spent);
@@ -566,7 +577,8 @@ void (async () => {
     const ids = units.map((u) => u.id);
     const tower = foeTowerAt(wx, wy);
     if (tower) {
-      const res = setFocus(match, YOU, ids, { kind: 'tower', id: tower.id });
+      const res = units.some((u) => canTarget(match, u.def, tower)) ? 'ok' : 'unreachable';
+      if (res === 'ok') cmd({ k: 'focus', ids, at: { kind: 'tower', id: tower.id } });
       note(
         res === 'ok' ? `${units.length} → ${tower.def.name}` : 'Out of reach: they cannot step that far off the road.',
       );
@@ -574,9 +586,9 @@ void (async () => {
       return true;
     }
     if (foeCastleAt(wx, wy)) {
-      setFocus(match, YOU, ids, { kind: 'castle' });
+      cmd({ k: 'focus', ids, at: { kind: 'castle' } });
       note(`${units.length} → the castle`);
-      sent = { x: castles()[1][0] * CELL, y: castles()[1][1] * CELL, at: clock };
+      sent = { x: castles()[enemy(YOU)][0] * CELL, y: castles()[enemy(YOU)][1] * CELL, at: clock };
       return true;
     }
     return false;
@@ -604,7 +616,7 @@ void (async () => {
       // A right-click: send the group at what is there, or back to the general orders.
       if (how.right) {
         if (selection.size && !command(wx, wy)) {
-          setFocus(match, YOU, [...selection], undefined);
+          cmd({ k: 'focus', ids: [...selection] });
           note('Back to the general orders');
         }
         return;
@@ -680,7 +692,9 @@ void (async () => {
       e.preventDefault();
       selectAll();
     } else if (started && (k === 'c' || k === 'x') && selection.size) {
-      setFocus(match, YOU, [...selection], k === 'c' ? { kind: 'castle' } : undefined);
+      cmd(
+        k === 'c' ? { k: 'focus', ids: [...selection], at: { kind: 'castle' } } : { k: 'focus', ids: [...selection] },
+      );
       note(k === 'c' ? `${selection.size} → the castle` : 'Back to the general orders');
     } else if (
       ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(k) &&
@@ -1214,8 +1228,8 @@ void (async () => {
           width: hoverFoe === t.id ? 4 : 2,
           alpha: hoverFoe === t.id ? 1 : 0.4 + 0.2 * Math.sin(clock * 4),
         });
-      if (isCastleSeen(match, YOU, 1, vision))
-        live.ellipse(castles()[1][0] * CELL, castles()[1][1] * CELL + 6, 78, 30).stroke({
+      if (isCastleSeen(match, YOU, enemy(YOU), vision))
+        live.ellipse(castles()[enemy(YOU)][0] * CELL, castles()[enemy(YOU)][1] * CELL + 6, 78, 30).stroke({
           color: 0xe0777b,
           width: hoverFoe === -1 ? 4 : 2,
           alpha: hoverFoe === -1 ? 1 : 0.4 + 0.2 * Math.sin(clock * 4),
@@ -1232,8 +1246,8 @@ void (async () => {
         if (u.focus?.kind === 'tower') {
           const t = match.towers.find((x) => x.id === (u.focus as { id: number }).id);
           if (t) goal = [(t.col + 0.5) * CELL, (t.row + 0.5) * CELL];
-        } else if (u.focus?.kind === 'castle' && isCastleSeen(match, YOU, 1, vision))
-          goal = [castles()[1][0] * CELL, castles()[1][1] * CELL];
+        } else if (u.focus?.kind === 'castle' && isCastleSeen(match, YOU, enemy(YOU), vision))
+          goal = [castles()[enemy(YOU)][0] * CELL, castles()[enemy(YOU)][1] * CELL];
         if (goal)
           live
             .moveTo(ux * CELL, uy * CELL - (u.def.air ? FLIGHT : 0) - 24)
@@ -1637,13 +1651,17 @@ void (async () => {
   $('card-body').addEventListener('click', (e) => {
     const aim = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-aim]');
     if (aim && cardOf?.kind === 'sel') {
-      setFocus(match, YOU, [...selection], aim.dataset.aim === 'castle' ? { kind: 'castle' } : undefined);
+      cmd(
+        aim.dataset.aim === 'castle'
+          ? { k: 'focus', ids: [...selection], at: { kind: 'castle' } }
+          : { k: 'focus', ids: [...selection] },
+      );
       renderCard();
       return;
     }
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-load]');
     if (!b || !cardOf || cardOf.kind !== 'bunker' || b.disabled) return;
-    loadBunker(match, YOU, cardOf.id, b.dataset.load!);
+    cmd({ k: 'bunker', tower: cardOf.id, unit: b.dataset.load! });
     renderCard();
     refresh();
   });
@@ -1757,7 +1775,7 @@ void (async () => {
       act.disabled = mending || !canAfford(match.players[YOU], cost);
       act.title = mending ? 'Already being repaired' : act.disabled ? 'Not enough wood or stone' : '';
       act.onclick = () => {
-        repairTower(match, YOU, t.id);
+        cmd({ k: 'repair', tower: t.id });
         renderCard();
         refresh();
       };
@@ -1797,7 +1815,7 @@ void (async () => {
       label = `${buyN > 1 ? `<span class="times">×${buyN}</span>` : ''}${money(total)}`;
       reason = most > 0 ? '' : unitReason(d);
       const n = buyN;
-      go = () => trainUnits(match, YOU, d.id, n);
+      go = () => cmd({ k: 'train', id: d.id, n });
     } else if (cardOf.kind === 'tower') {
       const d = cardOf.def;
       body = towerCard(d);
@@ -1878,7 +1896,7 @@ void (async () => {
       reason = cost === undefined ? 'max' : lacks.length > 0 ? 'Build what it asks for first' : lacking(cost);
       if (cost !== undefined && !reason && isArmed('castle')) label = icon('power', 'Confirm upgrade?') + money(cost);
       go = () => {
-        if (confirmed('castle')) upgradeCastle(match, YOU);
+        if (confirmed('castle')) cmd({ k: 'castle' });
       };
     }
     if (body !== cardBody) {
@@ -1953,7 +1971,7 @@ void (async () => {
       b.className = 'up wbtn';
       b.innerHTML = `<b>${up.name}</b><small>${upgradeText(up)}</small><span class="foot"><span class="pips"><i></i><i></i><i></i></span><em></em></span>`;
       b.onclick = () => {
-        if (confirmed(`up:${up.id}`)) buyUpgrade(match, YOU, up.id);
+        if (confirmed(`up:${up.id}`)) cmd({ k: 'upgrade', id: up.id });
         refresh();
       };
       $('upgrades').append(b);
@@ -1968,7 +1986,7 @@ void (async () => {
       b.className = 'tb orders wbtn';
       b.onclick = () => {
         const o = match.players[YOU].orders;
-        setOrder(match, YOU, what, o[what] === 'attack' ? 'bypass' : 'attack');
+        cmd({ k: 'order', what, to: o[what] === 'attack' ? 'bypass' : 'attack' });
         refresh();
       };
       $('castle').append(b);
@@ -2092,21 +2110,43 @@ void (async () => {
     loading = true;
     const rivals = RACE_IDS.filter((r) => r !== race);
     const rival = chosen ?? rivals[Math.floor(Math.random() * rivals.length)]!;
+    try {
+      await loadArt([race, rival], map);
+    } finally {
+      loading = false;
+    }
+    begin([race, rival], map, 0);
+  }
+  /** Wait for the art a match needs, behind a progress bar. */
+  async function loadArt(races: RaceId[], map: BoardId) {
     const bar = $('loading-bar');
     bar.style.width = '4%';
     $('loading').hidden = false;
     try {
-      await ensureAssets([race, rival], map, (done) => (bar.style.width = `${Math.max(4, done * 100)}%`));
+      await ensureAssets(races, map, (done) => (bar.style.width = `${Math.max(4, done * 100)}%`));
     } finally {
       $('loading').hidden = true;
+    }
+  }
+  /** An online match: both pages load the art, then begin on the same lockstep clock (`lock` was made for this match). */
+  async function startOnline(lock: Lockstep, races: [RaceId, RaceId], map: BoardId, you: Owner) {
+    if (loading) return;
+    loading = true;
+    try {
+      await loadArt(races, map);
+    } finally {
       loading = false;
     }
-    begin(race, rival, map);
+    if (online?.lock !== lock) return; // the connection ended while the art loaded
+    begin(races, map, you);
   }
-  function begin(race: RaceId, rival: RaceId, map: BoardId) {
-    match = newMatch([race, rival], BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
+  function begin(races: [RaceId, RaceId], map: BoardId, you: Owner) {
+    YOU = you;
+    endText = undefined;
+    stalled = 0;
+    match = newMatch(races, BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
     applyBoard();
-    ai = createAi(1, (Math.random() * 2 ** 31) | 0);
+    if (!online) ai = createAi(1, (Math.random() * 2 ** 31) | 0);
     selected = undefined;
     acc = 0;
     started = true;
@@ -2127,7 +2167,7 @@ void (async () => {
     ghost = undefined;
     lastTap = undefined;
     buildCastles();
-    makeControls(race);
+    makeControls(races[you]);
     cardOf = undefined;
     $('card').hidden = true;
     $('menu').hidden = true;
@@ -2165,12 +2205,118 @@ void (async () => {
     b.className = 'race';
     b.style.setProperty('--c', '#' + race.color.toString(16).padStart(6, '0'));
     b.innerHTML = `<span class="face">${unitThumb(race.units[0]!, 72)}</span><b>${race.name}</b>`;
-    b.onclick = () => void start(id);
+    b.onclick = () => pickRace(id);
     $('races').append(b);
   }
+  // How to play: alone, hosting a duel (the map and a game code to give), or joining one (the host's code). Online is lockstep over a
+  // direct connection set up through the matchmaking relay (net/duel.ts, net/lockstep.ts).
+  type Mode = 'solo' | 'host' | 'join';
+  let mode: Mode = 'solo';
+  /** The race picked for an online match, and whether a connection is being made (the race buttons wait). */
+  let myRace: RaceId = RACE_IDS[0]!;
+  let connecting = false;
+  const raceOk = (r: string): r is RaceId => (RACE_IDS as readonly string[]).includes(r);
+  const netText = (text: string, bad = false, code?: string) => {
+    $('net').hidden = !text && !code;
+    $('net-text').textContent = text;
+    $('net-text').classList.toggle('bad', bad);
+    $('net-code').hidden = !code;
+    $('net-code').textContent = code ?? '';
+    $('net-cancel').hidden = !connecting;
+  };
+  const setMode = (m: Mode) => {
+    duel.close();
+    connecting = false;
+    mode = m;
+    for (const b of $('modes').querySelectorAll<HTMLButtonElement>('button'))
+      b.classList.toggle('on', b.dataset.mode === m);
+    $('map-pick').hidden = m === 'join';
+    $('join-row').hidden = m !== 'join';
+    $('race-h').textContent =
+      m === 'solo' ? 'Choose your race' : m === 'host' ? 'Choose your race, then host' : 'Choose your race, then join';
+    $('races').classList.remove('busy');
+    netText(m === 'join' ? 'The host picks the map.' : '');
+  };
+  const pickRace = (id: RaceId) => {
+    if (mode === 'solo') return void start(id);
+    if (connecting) return;
+    myRace = id;
+    if (mode === 'join' && !normalizeCode($<HTMLInputElement>('code').value)) {
+      netText('Type the two-word code your host shows, then pick your race.', true);
+      return;
+    }
+    connecting = true;
+    $('races').classList.add('busy');
+    netText('Starting…');
+    void (mode === 'host' ? duel.host() : duel.join($<HTMLInputElement>('code').value));
+  };
+  const onPhase = (phase: DuelPhase, text: string, code?: string) => {
+    if (phase === 'connected') {
+      netText('Connected. Starting…');
+      if (mode === 'join') duel.send({ t: 'hi', v: NET_VERSION, race: myRace });
+      return;
+    }
+    connecting = phase === 'working' || phase === 'waiting';
+    $('races').classList.toggle('busy', connecting);
+    netText(text, phase === 'failed', code);
+  };
+  /** Both pages start the same match: a clock for the two players, then the art, then the first tick. */
+  const startDuel = (you: Owner, races: [RaceId, RaceId], map: BoardId) => {
+    const lock = new Lockstep(you, { send: (m: Message) => void duel.send(m) });
+    online = { lock };
+    void startOnline(lock, races, map, you);
+  };
+  const onMessage = (m: Message) => {
+    if (m.t === 'hi' && mode === 'host' && !online) {
+      if (m.v !== NET_VERSION || !raceOk(m.race)) {
+        duel.close();
+        connecting = false;
+        $('races').classList.remove('busy');
+        netText('That player has a different version of the game. Reload both pages and try again.', true);
+        return;
+      }
+      const races: [RaceId, RaceId] = [myRace, m.race];
+      duel.send({ t: 'go', v: NET_VERSION, map: chosenMap, races });
+      startDuel(0, races, chosenMap);
+    } else if (m.t === 'go' && mode === 'join' && !online) {
+      const [a, b] = m.races;
+      if (m.v !== NET_VERSION || !BOARDS[m.map] || !raceOk(a) || !raceOk(b) || b !== myRace) {
+        duel.close();
+        connecting = false;
+        $('races').classList.remove('busy');
+        netText('The host is on a different version of the game. Reload both pages and try again.', true);
+        return;
+      }
+      startDuel(1, [a, b], m.map);
+    } else if (m.t === 'tick') online?.lock.receive(m.n, m.c);
+    else if (m.t === 'sum') online?.lock.receiveSum(m.n, m.h);
+  };
+  const onClosed = (reason: string) => {
+    if (online && started && match.winner < 0) {
+      // The rival left (or the connection died) in the middle of the match: it is won.
+      endText = ['Victory', `${reason} The match is yours.`];
+      match.winner = YOU;
+      showEnd();
+    } else if (!started) {
+      online = undefined;
+      connecting = false;
+      $('races').classList.remove('busy');
+      netText(reason, true);
+    }
+  };
+  const duel = new Duel({ phase: onPhase, message: onMessage, closed: onClosed });
+  for (const b of $('modes').querySelectorAll<HTMLButtonElement>('button'))
+    b.onclick = () => setMode(b.dataset.mode as Mode);
+  $('net-cancel').onclick = () => setMode(mode);
+  setMode('solo');
+  window.addEventListener('pagehide', () => duel.close());
+
   $('credits-btn').onclick = () => ($('credits').hidden = false);
   $('credits-x').onclick = () => ($('credits').hidden = true);
   $('again').onclick = () => {
+    duel.close();
+    online = undefined;
+    setMode(mode);
     started = false;
     document.body.classList.remove('playing');
     $('end').hidden = true;
@@ -2198,6 +2344,42 @@ void (async () => {
   resources();
   void prefetch(); // the rest of the art, while the player chooses
 
+  function showEnd() {
+    const [title, sub] = endText ?? [
+      match.winner === YOU ? 'Victory' : match.winner === 2 ? 'Draw' : 'Defeat',
+      `${Math.floor(match.time)} seconds. ${
+        match.winner === YOU
+          ? "The rival's castle has fallen."
+          : match.winner === 2
+            ? 'Neither castle fell.'
+            : 'Your castle has fallen.'
+      }`,
+    ];
+    $('end-title').textContent = title;
+    $('end-sub').textContent = sub;
+    $('end').hidden = false;
+  }
+
+  /** One tick of the match: the foe's brain (alone), the rules, then what the tick looks like. */
+  function advance() {
+    if (!online) ai(match, STEP);
+    const pay = match.payTimer;
+    step(match, STEP);
+    if (match.payTimer < pay) payDay();
+    for (const d of match.deaths) {
+      addCorpse(d);
+      if (d.boom) booms.push({ at: d.at, r: d.boom, air: !!d.def.air, age: 0 });
+    }
+    for (const shot of match.shots) {
+      effects.push({ shot, age: 0 });
+      // A unit that hits several at once faces the first (the main target): its spray shots follow in the same step.
+      if (shot.by.kind === 'unit') {
+        if (!(shot.multi && strikes.get(shot.by.id)?.at === clock))
+          strikes.set(shot.by.id, { at: clock, to: shot.to, melee: shot.melee });
+      } else kicks.set(shot.by.kind === 'tower' ? shot.by.id : -1 - shot.by.id, { at: clock, to: shot.to });
+    }
+  }
+
   app.ticker.add((ticker) => {
     const dt = ticker.deltaMS / 1000;
     clock += dt;
@@ -2205,37 +2387,26 @@ void (async () => {
     if (started && match.winner < 0) {
       acc += Math.min(dt, 0.25);
       while (acc >= STEP && match.winner < 0) {
+        if (online) {
+          if (!online.lock.run(match, advance)) {
+            // The rival's commands for this tick have not come: hold, and do not pile up time to race through afterwards.
+            acc = Math.min(acc, STEP * 4);
+            stalled += dt;
+            break;
+          }
+          stalled = 0;
+        } else advance();
         acc -= STEP;
-        ai(match, STEP);
-        const pay = match.payTimer;
-        step(match, STEP);
-        if (match.payTimer < pay) payDay();
-        for (const d of match.deaths) {
-          addCorpse(d);
-          if (d.boom) booms.push({ at: d.at, r: d.boom, air: !!d.def.air, age: 0 });
-        }
-        for (const shot of match.shots) {
-          effects.push({ shot, age: 0 });
-          // A unit that hits several at once faces the first (the main target): its spray shots follow in the same step.
-          if (shot.by.kind === 'unit') {
-            if (!(shot.multi && strikes.get(shot.by.id)?.at === clock))
-              strikes.set(shot.by.id, { at: clock, to: shot.to, melee: shot.melee });
-          } else kicks.set(shot.by.kind === 'tower' ? shot.by.id : -1 - shot.by.id, { at: clock, to: shot.to });
-        }
+      }
+      if (online?.lock.desync && match.winner < 0) {
+        endText = ['Out of sync', 'The two games stopped agreeing, so the match was stopped. Reload both pages.'];
+        match.winner = 2;
+        duel.close();
       }
       refresh();
-      if (match.winner >= 0) {
-        $('end-title').textContent = match.winner === YOU ? 'Victory' : match.winner === 2 ? 'Draw' : 'Defeat';
-        $('end-sub').textContent = `${Math.floor(match.time)} seconds. ${
-          match.winner === YOU
-            ? "The rival's castle has fallen."
-            : match.winner === 2
-              ? 'Neither castle fell.'
-              : 'Your castle has fallen.'
-        }`;
-        $('end').hidden = false;
-      }
+      if (match.winner >= 0) showEnd();
     }
+    $('wait').hidden = !(online && started && match.winner < 0 && stalled > 0.8);
     resources();
     if (held.size) {
       const go = 640 * dt;

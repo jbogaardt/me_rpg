@@ -13,6 +13,7 @@
 // fog temporarily, and never build there. What a side cannot see it cannot target. Only the castle must fall: the first destroyed
 // loses, but razing buildings cuts the foe's income, units and upgrades.
 
+import { hypot } from './hypot';
 import { CASTLE_CLEAR, DEFAULT_BOARD, type Board } from './board';
 import {
   MAX_LEVEL,
@@ -205,7 +206,7 @@ export function unitPos(u: Pick<Unit, 'owner' | 's' | 'off'>, board: Board = DEF
   return u.off ? [x + u.off.dir[0] * u.off.d, y + u.off.dir[1] * u.off.d] : [x, y];
 }
 
-const dist = (a: readonly [number, number], b: readonly [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const dist = (a: readonly [number, number], b: readonly [number, number]) => hypot(a[0] - b[0], a[1] - b[1]);
 const centreOf = (t: { col: number; row: number }): [number, number] => [t.col + 0.5, t.row + 0.5];
 
 export type Result =
@@ -364,7 +365,7 @@ export const visionOf = (m: Match): Vision => [sightOf(m, 0), sightOf(m, 1)];
 
 /** Can `viewer` see this point (cells)? `pad` widens every circle (a body has a size: see a tower or castle by its edge). */
 export function canSee(m: Match, viewer: Owner, at: readonly [number, number], pad = 0, vision = visionOf(m)): boolean {
-  for (const s of vision[viewer]) if (Math.hypot(at[0] - s.x, at[1] - s.y) <= s.r + pad) return true;
+  for (const s of vision[viewer]) if (hypot(at[0] - s.x, at[1] - s.y) <= s.r + pad) return true;
   return false;
 }
 

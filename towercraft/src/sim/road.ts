@@ -4,6 +4,8 @@
 // others are free meanders (control points, smoothed) that are NOT symmetric: each side has its own ground, and the balance
 // harness (alternating sides) and `board.test.ts` (open ground by each castle) keep that fair.
 
+import { hypot } from './hypot';
+
 /** The grid the roads were drawn on (cells). Every map is `GROW` times as wide and tall as that, so there is room between the bends for the buildings. */
 export const DRAWN_COLS = 36;
 export const DRAWN_ROWS = 55;
@@ -32,7 +34,7 @@ export function smooth(controls: readonly Pt[], step = 0.5): [number, number][] 
   const at = (i: number) => controls[Math.min(controls.length - 1, Math.max(0, i))]!;
   for (let i = 0; i < controls.length - 1; i++) {
     const [p0, p1, p2, p3] = [at(i - 1), at(i), at(i + 1), at(i + 2)];
-    const n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    const n = Math.max(2, Math.ceil(hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
     for (let k = 0; k < n; k++) {
       const t = k / n;
       const [t2, t3] = [t * t, t * t * t];

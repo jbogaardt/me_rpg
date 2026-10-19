@@ -204,6 +204,13 @@
       .race .face { width: 100%; max-width: 96px; aspect-ratio: 6 / 5; overflow: hidden; display: grid; place-items: center; border-radius: 8px; background: rgba(51, 35, 15, 0.16); border: 1px solid var(--ink-soft); }
       .race .face img { max-width: 100%; height: auto; }
       #menu .races { margin-top: 16px; } #menu #credits-btn { margin-top: 18px; }
+      .modes { display: flex; gap: 8px; justify-content: center; margin: 6px 0 4px; } .modes .plank { min-width: 84px; font-size: 14px; }
+      #join-row input { font: 700 22px var(--title); text-align: center; width: min(320px, 90%); padding: 8px 10px; color: var(--ink); background: #e9dcb6; border: 3px solid #4a3a22; border-radius: 6px; }
+      #net { margin-top: 14px; } #net-code { font: 700 34px var(--title); letter-spacing: 0.08em; color: var(--gold); text-shadow: 0 2px 3px #000; user-select: all; }
+      #net-text { min-height: 1.4em; } #net-text.bad { color: #e0777b; } #net-cancel { margin-top: 4px; }
+      .races.busy { opacity: 0.45; pointer-events: none; }
+      #wait { position: fixed; left: 0; right: 0; top: 74px; text-align: center; color: var(--gold); font: 700 15px var(--title); text-shadow: 0 1px 3px #000, 0 0 6px #000; pointer-events: none; z-index: 1; }
+      #wait[hidden] { display: none; }
       #credits h2 { margin-top: 0; } #credits p { max-width: 560px; margin: 8px auto 16px; font-size: 14px; } #credits a { color: var(--gold); }
       .thumb { flex: none; display: block; border-radius: 3px; background-repeat: no-repeat; background-position: 0 0; }
       img.thumb { object-fit: cover; }
@@ -229,6 +236,7 @@
   <body>
     <div id="top"><span class="r w" title="Wood"><b id="wood">0</b></span><span class="r s" title="Stone"><b id="stone">0</b></span></div>
     <div id="hint"></div>
+    <div id="wait" hidden>Waiting for your rival…</div>
     <div id="marquee" hidden></div>
     <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-all" title="Pick all your units (Ctrl+A)">All</button></div>
     <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no">Cancel</button></div>
@@ -253,10 +261,26 @@
     <div class="overlay" id="menu">
       <div class="panel wood">
         <h1>Towercraft</h1>
-        <h2>Vote on map</h2>
-        <div class="maps" id="maps"></div>
-        <h2>Choose your race</h2>
+        <div class="modes" id="modes" role="group" aria-label="How to play">
+          <button class="plank on" data-mode="solo">Solo</button>
+          <button class="plank" data-mode="host">Host</button>
+          <button class="plank" data-mode="join">Join</button>
+        </div>
+        <div id="map-pick">
+          <h2>Vote on map</h2>
+          <div class="maps" id="maps"></div>
+        </div>
+        <div id="join-row" hidden>
+          <h2>The host's game code</h2>
+          <input id="code" type="text" placeholder="mighty-apples" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Game code" />
+        </div>
+        <h2 id="race-h">Choose your race</h2>
         <div class="races" id="races"></div>
+        <div id="net" hidden>
+          <div id="net-code" hidden></div>
+          <p id="net-text"></p>
+          <button class="plank" id="net-cancel" hidden>Cancel</button>
+        </div>
         <button class="plank" id="credits-btn">Credits</button>
       </div>
     </div>

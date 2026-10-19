@@ -18,7 +18,7 @@ and the game loop; headers of `feed.ts`, `PeerLink.ts`, `relayClient.ts` and `ho
   toward the latest snapshot (`core/interp.ts`). Stats, hits, pickups and doors stay the host's. Add `?netdebug` to the
   address for a round-trip and correction readout.
 - **Star topology, gameplay peer to peer.** Each friend has one data channel to the host (`ordered: false,
-  maxRetransmits: 0`, public STUN only, so two strict NATs can't connect). Only the connection setup goes through the
+  maxRetransmits: 0`; towercraft's duel asks `PeerLink` for an ordered one, see `towercraft/CLAUDE.md`; public STUN only, so two strict NATs can't connect). Only the connection setup goes through the
   matchmaking relay (`relay/`): the host prepares one offer per seat, a friend types the two-word code and is given the
   next free seat. The lobby needs no addresses: a friend whose page plays another world moves its page to the host's by
   itself (the hello carries the world tag, `setContentTag`).

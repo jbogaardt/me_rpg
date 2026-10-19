@@ -1,0 +1,284 @@
+// Online play for towercraft: two pages run the SAME deterministic match and swap only what each player does.
+//
+// The sim (src/sim, no randomness, exact arithmetic) is a pure function of its starting point and the commands applied to it, so
+// nothing about the world crosses the wire: a player's click becomes a `Command`, is scheduled `DELAY` ticks ahead and sent to the
+// other page; every tick both pages apply the same commands, player 0's first, then player 1's, then step. A tick cannot run until
+// the other player's commands for it have arrived (a stall, shown as "waiting"), so the pages never drift. Every `SUM_EVERY` ticks
+// each side sends a checksum of the match; a mismatch (a rule that is not deterministic across browsers) ends the game loudly
+// instead of letting two different games go on.
+//
+// The cost of this design: both pages hold the whole match (fog of war is drawn, not enforced, so a player who reads the match in
+// developer tools sees through it). The channel must be reliable and ordered (`duel.ts` asks for one).
+//
+// Pixi-free and tested (lockstep.test.ts).
+
+import {
+  buildTower,
+  buyUpgrade,
+  loadBunker,
+  repairTower,
+  setFocus,
+  setOrder,
+  trainUnits,
+  upgradeCastle,
+  type Focus,
+  type Match,
+  type Owner,
+} from '../sim/sim';
+
+/** What a player can ask of the match, as it travels: everything `main.ts` used to call on the sim directly. */
+export type Command =
+  | { k: 'build'; id: string; col: number; row: number }
+  | { k: 'train'; id: string; n: number }
+  | { k: 'bunker'; tower: number; unit: string }
+  | { k: 'order'; what: 'towers' | 'units'; to: 'attack' | 'bypass' }
+  | { k: 'focus'; ids: number[]; at?: Focus }
+  | { k: 'castle' }
+  | { k: 'upgrade'; id: string }
+  | { k: 'repair'; tower: number };
+
+/** Do a command for a player. The sim itself refuses anything the player may not do (money, area, ownership). */
+export function apply(m: Match, owner: Owner, c: Command): void {
+  switch (c.k) {
+    case 'build':
+      buildTower(m, owner, c.id, c.col, c.row);
+      break;
+    case 'train':
+      trainUnits(m, owner, c.id, c.n);
+      break;
+    case 'bunker':
+      loadBunker(m, owner, c.tower, c.unit);
+      break;
+    case 'order':
+      setOrder(m, owner, c.what, c.to);
+      break;
+    case 'focus':
+      setFocus(m, owner, c.ids, c.at);
+      break;
+    case 'castle':
+      upgradeCastle(m, owner);
+      break;
+    case 'upgrade':
+      buyUpgrade(m, owner, c.id);
+      break;
+    case 'repair':
+      repairTower(m, owner, c.tower);
+      break;
+  }
+}
+
+/** Ticks between a click and its effect, on both pages (the sim steps 20 times a second: this hides about 200 ms of lag). */
+export const DELAY = 4;
+/** Ticks between checksums. */
+export const SUM_EVERY = 40;
+/** The most commands one tick may carry, and how far ahead a message may be (a flood guard, not a game rule). */
+const MAX_PER_TICK = 64;
+const MAX_AHEAD = 400;
+
+// --- The wire ---
+
+export const NET_VERSION = 1;
+
+export type Message =
+  /** The joiner, once connected: who they play. */
+  | { t: 'hi'; v: number; race: string }
+  /** The host's answer: the map and both races (host first). Both pages start the match from it at once. */
+  | { t: 'go'; v: number; map: string; races: [string, string] }
+  /** A player's commands for tick `n` (possibly none: it is also the promise that nothing more is coming for it). */
+  | { t: 'tick'; n: number; c: Command[] }
+  /** Checksum of the match after `n` ticks. */
+  | { t: 'sum'; n: number; h: number };
+
+const isInt = (v: unknown, min = 0, max = 1_000_000): v is number =>
+  typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
+const isId = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 40;
+const isIds = (v: unknown): v is number[] => Array.isArray(v) && v.length <= 200 && v.every((x) => isInt(x));
+
+function parseFocus(v: unknown): Focus | undefined | null {
+  if (v === undefined) return undefined;
+  const o = (v ?? {}) as { kind?: unknown; id?: unknown };
+  if (o.kind === 'castle') return { kind: 'castle' };
+  if (o.kind === 'tower' && isInt(o.id)) return { kind: 'tower', id: o.id };
+  return null;
+}
+
+export function parseCommand(v: unknown): Command | null {
+  const c = (v ?? {}) as Record<string, unknown>;
+  switch (c.k) {
+    case 'build':
+      return isId(c.id) && isInt(c.col, 0, 1000) && isInt(c.row, 0, 1000)
+        ? { k: 'build', id: c.id, col: c.col, row: c.row }
+        : null;
+    case 'train':
+      return isId(c.id) && isInt(c.n, 1, 200) ? { k: 'train', id: c.id, n: c.n } : null;
+    case 'bunker':
+      return isInt(c.tower) && isId(c.unit) ? { k: 'bunker', tower: c.tower, unit: c.unit } : null;
+    case 'order':
+      return (c.what === 'towers' || c.what === 'units') && (c.to === 'attack' || c.to === 'bypass')
+        ? { k: 'order', what: c.what, to: c.to }
+        : null;
+    case 'focus': {
+      const at = parseFocus(c.at);
+      return isIds(c.ids) && at !== null ? (at ? { k: 'focus', ids: c.ids, at } : { k: 'focus', ids: c.ids }) : null;
+    }
+    case 'castle':
+      return { k: 'castle' };
+    case 'upgrade':
+      return isId(c.id) ? { k: 'upgrade', id: c.id } : null;
+    case 'repair':
+      return isInt(c.tower) ? { k: 'repair', tower: c.tower } : null;
+    default:
+      return null;
+  }
+}
+
+/** Read a message off the wire; null for anything that is not one (it never throws). */
+export function parseMessage(data: string): Message | null {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(data);
+  } catch {
+    return null;
+  }
+  const m = (raw ?? {}) as Record<string, unknown>;
+  switch (m.t) {
+    case 'hi':
+      return isInt(m.v) && isId(m.race) ? { t: 'hi', v: m.v, race: m.race } : null;
+    case 'go': {
+      const r = m.races;
+      return isInt(m.v) && isId(m.map) && Array.isArray(r) && r.length === 2 && isId(r[0]) && isId(r[1])
+        ? { t: 'go', v: m.v, map: m.map, races: [r[0], r[1]] }
+        : null;
+    }
+    case 'tick': {
+      if (!isInt(m.n) || !Array.isArray(m.c) || m.c.length > MAX_PER_TICK) return null;
+      const c: Command[] = [];
+      for (const x of m.c as unknown[]) {
+        const cmd = parseCommand(x);
+        if (!cmd) return null;
+        c.push(cmd);
+      }
+      return { t: 'tick', n: m.n, c };
+    }
+    case 'sum':
+      return isInt(m.n) && isInt(m.h, 0, 0xffffffff) ? { t: 'sum', n: m.n, h: m.h } : null;
+    default:
+      return null;
+  }
+}
+
+export const encode = (m: Message) => JSON.stringify(m);
+
+// --- The checksum ---
+
+/** A 32-bit fingerprint of everything that decides the match. Both pages must get the same number at the same tick. */
+export function checksum(m: Match): number {
+  const buf = new DataView(new ArrayBuffer(8));
+  let h = 0x811c9dc5;
+  const mix = (x: number) => {
+    buf.setFloat64(0, x);
+    for (let i = 0; i < 8; i += 2) h = Math.imul(h ^ buf.getUint16(i), 0x01000193);
+  };
+  mix(m.time);
+  mix(m.payTimer);
+  mix(m.nextId);
+  mix(m.winner);
+  for (const p of m.players) for (const x of [p.wood, p.stone, p.castle.hp, p.castle.level]) mix(x);
+  for (const u of m.units) for (const x of [u.id, u.hp, u.s, u.off?.d ?? -1]) mix(x);
+  for (const t of m.towers) for (const x of [t.id, t.hp, t.col, t.row]) mix(x);
+  return h >>> 0;
+}
+
+// --- The clock ---
+
+export interface Link {
+  send(message: Message): void;
+}
+
+/** One page's half of the shared clock. `you` is this page's player. */
+export class Lockstep {
+  /** The next tick to run (ticks run so far). */
+  tick = 0;
+  /** True once the two pages' checksums disagreed. */
+  desync = false;
+  private slots: [Map<number, Command[]>, Map<number, Command[]>] = [
+    new Map<number, Command[]>(),
+    new Map<number, Command[]>(),
+  ];
+  private pending: Command[] = [];
+  private committed = DELAY; // ticks before this are already settled (empty on both pages: nobody can click before tick 0)
+  private mine = new Map<number, number>();
+  private theirs = new Map<number, number>();
+
+  constructor(
+    readonly you: Owner,
+    private link: Link,
+    private delay = DELAY,
+  ) {
+    this.committed = delay;
+    for (let n = 0; n < delay; n++) {
+      this.slots[0].set(n, []);
+      this.slots[1].set(n, []);
+    }
+  }
+
+  /** The player did something: it takes effect `delay` ticks from now on both pages. */
+  issue(c: Command) {
+    this.pending.push(c);
+  }
+
+  /** The other page's commands for tick `n`. Late, repeated or absurd ones are ignored. */
+  receive(n: number, commands: Command[]) {
+    const slot = this.slots[this.you === 0 ? 1 : 0];
+    if (n < this.tick || n > this.tick + MAX_AHEAD || slot.has(n)) return;
+    slot.set(n, commands);
+  }
+
+  /** The other page's checksum after `n` ticks. */
+  receiveSum(n: number, h: number) {
+    this.theirs.set(n, h);
+    this.compare(n);
+  }
+
+  /** Whether the next tick can run: the other player's commands for it are in. */
+  ready(): boolean {
+    return this.slots[this.you === 0 ? 1 : 0].has(this.tick);
+  }
+
+  /** Run one tick if it can: apply both players' commands, then `step` the match. False when waiting for the other page. */
+  run(m: Match, step: () => void): boolean {
+    this.commit();
+    if (this.desync || !this.ready()) return false;
+    for (const owner of [0, 1] as const) {
+      for (const c of this.slots[owner].get(this.tick) ?? []) apply(m, owner, c);
+      this.slots[owner].delete(this.tick);
+    }
+    step();
+    this.tick++;
+    if (this.tick % SUM_EVERY === 0) {
+      const h = checksum(m);
+      this.mine.set(this.tick, h);
+      this.link.send({ t: 'sum', n: this.tick, h });
+      this.compare(this.tick);
+    }
+    return true;
+  }
+
+  /** Settle this player's commands for the tick `delay` ahead and send them (even if there are none: it is the other page's cue). */
+  private commit() {
+    while (this.committed <= this.tick + this.delay) {
+      const c = this.pending.splice(0, this.pending.length);
+      this.slots[this.you].set(this.committed, c);
+      this.link.send({ t: 'tick', n: this.committed, c });
+      this.committed++;
+    }
+  }
+
+  private compare(n: number) {
+    const [a, b] = [this.mine.get(n), this.theirs.get(n)];
+    if (a === undefined || b === undefined) return;
+    if (a !== b) this.desync = true;
+    this.mine.delete(n);
+    this.theirs.delete(n);
+  }
+}

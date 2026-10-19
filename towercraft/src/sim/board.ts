@@ -6,6 +6,7 @@
 // A board's road is either corners of straight runs (`waypoints`, one cell wide: the balance maps) or a dense polyline in cell
 // centres (`points`, `halfWidth` cells either side: the game's maps, which wander freely).
 
+import { hypot } from './hypot';
 import { COLS, ROADS, ROWS, type Pt } from './road';
 import { SCENERY } from './scenery';
 
@@ -89,8 +90,7 @@ function cellsNear(points: readonly Pt[], halfWidth: number, cols: number, rows:
     for (let c = Math.max(0, c0); c <= Math.min(cols - 1, c1); c++)
       for (let r = Math.max(0, r0); r <= Math.min(rows - 1, r1); r++) {
         const t = Math.min(1, Math.max(0, ((c + 0.5 - a[0]) * dx + (r + 0.5 - a[1]) * dy) / len2));
-        if (Math.hypot(c + 0.5 - (a[0] + dx * t), r + 0.5 - (a[1] + dy * t)) <= halfWidth + 1e-9)
-          cells.add(r * cols + c);
+        if (hypot(c + 0.5 - (a[0] + dx * t), r + 0.5 - (a[1] + dy * t)) <= halfWidth + 1e-9) cells.add(r * cols + c);
       }
   }
   return cells;
@@ -101,7 +101,7 @@ export function makeBoard(spec: BoardSpec): Board {
   const points: readonly Pt[] = spec.points ?? waypoints.map(centre);
   const cum = [0];
   for (let i = 1; i < points.length; i++)
-    cum.push(cum[i - 1]! + Math.hypot(points[i]![0] - points[i - 1]![0], points[i]![1] - points[i - 1]![1]));
+    cum.push(cum[i - 1]! + hypot(points[i]![0] - points[i - 1]![0], points[i]![1] - points[i - 1]![1]));
   const roadLength = cum[cum.length - 1]!;
   const feet = new Map<number, Foot | null>();
   const castles: Board['castles'] = [[...points[0]!], [...points[points.length - 1]!]];
@@ -129,7 +129,7 @@ export function makeBoard(spec: BoardSpec): Board {
   const directionAt = (dist: number): [number, number] => {
     const i = segment(Math.min(Math.max(0, dist), roadLength));
     const [a, b] = [points[i]!, points[i + 1]!];
-    const run = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const run = hypot(b[0] - a[0], b[1] - a[1]) || 1;
     return [(b[0] - a[0]) / run, (b[1] - a[1]) / run];
   };
   return {
@@ -142,7 +142,7 @@ export function makeBoard(spec: BoardSpec): Board {
     points: spec.points,
     halfWidth: spec.halfWidth,
     roadLength,
-    airLength: Math.hypot(castles[1][0] - castles[0][0], castles[1][1] - castles[0][1]),
+    airLength: hypot(castles[1][0] - castles[0][0], castles[1][1] - castles[0][1]),
     castles,
     roadCells,
     sceneryCells: new Set(spec.scenery),
@@ -170,7 +170,7 @@ export function makeBoard(spec: BoardSpec): Board {
         const len2 = dx * dx + dy * dy || 1;
         const t = Math.min(1, Math.max(0, ((tx - a[0]) * dx + (ty - a[1]) * dy) / len2));
         const [px, py] = [a[0] + dx * t, a[1] + dy * t];
-        const d = Math.hypot(tx - px, ty - py);
+        const d = hypot(tx - px, ty - py);
         if (d > 0 && (!best || d < best.d))
           best = { s: cum[i]! + t * Math.sqrt(len2), d, dir: [(tx - px) / d, (ty - py) / d] };
       }
