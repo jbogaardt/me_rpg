@@ -19,6 +19,7 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 - **Build area**: free cells your castle or a standing tower sees or reaches (`inBuildArea`; unit sight never counts), never within `FOE_CLEAR` (24) of the foe's castle. **Castle upgrades ask for buildings** (`CASTLE_NEEDS`: mills/quarries, a producer, a smithy, towers; by role, `upgradeLacks`) and cost 8x / 2.5x the written price: a level 2 before 5 minutes is a speed run.
 - **Fog of war** (`visionOf`, `canSee`, `isSeen`): castles, towers and units have a `sight` radius; the build area is permanent revealed ground; **unit sight is temporary** and never extends it. Every source sees at least `FOG_EDGE`: a cell past the longest shot (tower, loaded bunker, castle). Hidden enemies are not drawn, targeted or splashed; cloaked ones need sight *and* a detector; the AI sees through vision too.
 - **Look** (`main.ts`, cosmetic): units at `SIZE` x2; walk, stand, strike (`Shot.by`), tower fx, pay-day figures. No sparkles.
+- **Buildings grow with upgrades** (`trim.ts`, cosmetic, Pixi-free, drawn by `drawTrim`): a castle gets +8% size, two race-coloured pennants and, at the top level, a base ring; a smithy gets a pennant and +5% size per 3 upgrade levels its owner bought. Drawn from `Match` state on each client, so lockstep is untouched.
 - **Races** (`races.ts`): swarm/Goblins (fast, weak, in groups), titan/Dwarves (slow, strong), legion/Germanic (archers, sweepers, sappers, catapults): 4-6 ground and 2-3 air units each.
 
 ## Online

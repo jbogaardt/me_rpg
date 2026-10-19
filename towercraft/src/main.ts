@@ -8,6 +8,7 @@ import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
 import { icon } from './icons';
 import { drawnPos } from './stagger';
+import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
 import { createAi } from './sim/ai';
 import { normalizeCode } from '../../src/net/roomCode';
 import { Duel, type DuelPhase } from './net/duel';
@@ -26,6 +27,7 @@ import {
   MAX_LEVEL,
   RACES,
   REACH_SCALE,
+  roleOf as buildingRole,
   type Role,
   RACE_IDS,
   type Cost,
@@ -306,7 +308,25 @@ void (async () => {
 
   /** Where (px below its cell's centre) a tower's feet stand. */
   const TOWER_FOOT = 10;
+  /**
+   * Embellishments that grow with upgrades (see `trim.ts`): race-coloured pennants along the roof line, standing on poles, and a
+   * ring round the base at the top step. `half` is half the building's drawn width (px), `top` how far above its feet the roof is.
+   */
+  const drawTrim = (g: Graphics, trim: Trim, color: number, half: number, top: number) => {
+    g.clear();
+    if (trim.ring) g.ellipse(0, 8, half * 1.05, half * 0.36).stroke({ color, width: 2.5, alpha: 0.8 });
+    const n = trim.pennants;
+    for (let i = 0; i < n; i++) {
+      const x = n === 1 ? 0 : (-0.8 + (1.6 * i) / (n - 1)) * half;
+      const lift = top + (i % 2 ? 0 : 6);
+      g.moveTo(x, -lift + 18)
+        .lineTo(x, -lift - 14)
+        .stroke({ color: 0x3a2a1a, width: 2 });
+      g.poly([x, -lift - 14, x + 13, -lift - 9, x, -lift - 3]).fill({ color });
+    }
+  };
   const castleSprites: Container[] = [];
+  const castleBase = (o: Owner) => CASTLE_SCALE * castleTrim(match.players[o].castle.level).scale;
   const buildCastles = () => {
     for (const c of castleSprites) c.destroy({ children: true });
     castleSprites.length = 0;
@@ -316,8 +336,9 @@ void (async () => {
       c.addChild(new Graphics().ellipse(0, 8, 56 * CASTLE_SCALE, 20 * CASTLE_SCALE).fill({ color, alpha: 0.45 }));
       const sprite = new Sprite(castleTextures.get(RACES[match.players[o].race].castle.art));
       sprite.anchor.set(0.5, 0.78);
-      sprite.scale.set(CASTLE_SCALE);
+      sprite.scale.set(castleBase(o));
       c.addChild(sprite);
+      c.addChild(new Graphics()); // pennants and ring that grow with the castle level (`drawTrim`)
       c.position.set(castles()[o][0] * CELL, castles()[o][1] * CELL);
       c.zIndex = castles()[o][1] + 1;
       sortLayer.addChild(c);
@@ -1130,6 +1151,7 @@ void (async () => {
         c.addChild(sprite);
         c.addChild(makeTowerFx(t.def)); // the tower's own small animation: lamp, halo or sweep (see `animateTower`)
         c.addChild(new Graphics()); // the role badge (and a bunker's slots) under its feet
+        c.addChild(new Graphics()); // a smithy's pennants and ring, which grow as its owner buys upgrades (`drawTrim`)
         return c;
       },
       (t, c) => {
@@ -1142,6 +1164,23 @@ void (async () => {
           if (c.label !== key) {
             c.label = key;
             drawBadge(c.children[3] as Graphics, t);
+          }
+          if (buildingRole(t.def) === 'smithy') {
+            const bought = Object.values(match.players[t.owner].upgrades).reduce((a, b) => a + b, 0);
+            const trim = smithyTrim(bought);
+            const tkey = trimKey(trim);
+            const g = c.children[4] as Graphics;
+            if (g.label !== tkey) {
+              g.label = tkey;
+              drawTrim(
+                g,
+                trim,
+                RACES[match.players[t.owner].race].color,
+                TOWER_PX * 0.3 * trim.scale,
+                TOWER_PX * 0.55 * trim.scale,
+              );
+            }
+            c.scale.set(trim.scale);
           }
         }
       },
@@ -1221,7 +1260,15 @@ void (async () => {
     // The castles answer a shot with a small swell.
     for (const o of [0, 1] as const) {
       const r = Math.max(0, 1 - (clock - (kicks.get(-1 - o)?.at ?? -9)) / 0.3);
-      castleSprites[o]!.children[1]!.scale.set(CASTLE_SCALE * (1 + 0.03 * r * r));
+      const cs = castleSprites[o]!;
+      cs.children[1]!.scale.set(castleBase(o) * (1 + 0.03 * r * r));
+      const trim = castleTrim(match.players[o].castle.level);
+      const key = trimKey(trim);
+      if (cs.label !== key) {
+        cs.label = key;
+        const half = 56 * CASTLE_SCALE * trim.scale;
+        drawTrim(cs.children[2] as Graphics, trim, RACES[match.players[o].race].color, half * 0.7, 70 * trim.scale);
+      }
     }
 
     // The group you picked: a ring at each one's feet and a line to what it is sent after. While there is a group, what it can be
