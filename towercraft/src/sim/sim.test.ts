@@ -89,7 +89,7 @@ describe('the castle', () => {
     expect(upgradeCastle(m, 0)).toBe('max');
     expect(m.players[0].castle.level).toBe(3);
     expect(m.players[0].castle.maxHp).toBe(RACES.titan.castle.hp + 2 * RACES.titan.castle.hpPerLevel);
-    expect(m.players[0].gold).toBe(1000 - 160 - 360);
+    expect(m.players[0].gold).toBe(1000 - RACES.titan.castle.upgrades[0]! - RACES.titan.castle.upgrades[1]!);
     m.players[1].gold = 0;
     expect(upgradeCastle(m, 1)).toBe('gold');
   });
@@ -105,7 +105,7 @@ describe('training', () => {
   it('queues units, which step out after their training time, a pair for the goblins', () => {
     const m = newMatch(['swarm', 'legion']);
     expect(trainUnit(m, 0, 'spearman')).toBe('ok');
-    expect(m.players[0].gold).toBe(START_GOLD - 16);
+    expect(m.players[0].gold).toBe(START_GOLD - unitDef('swarm', 'spearman').cost);
     expect(m.units).toHaveLength(0);
     run(m, 1.6);
     expect(m.units).toHaveLength(2);
@@ -213,13 +213,12 @@ describe('tower roles', () => {
   it('keeps a ground-only tower splash off an air unit standing right beside its target', () => {
     const m = quiet(newMatch(['legion', 'swarm']));
     put(m, 0, 'legion', 'catapult', 4, 5);
+    m.towers[0]!.def = { ...m.towers[0]!.def, splash: 1.5 }; // a wide splash, so the glider is surely inside it
     const ground = standing(m, 'swarm', 'spearman', ROAD_LENGTH - 7); // on the road at (6.5, 7.5)
     // The glider flies over the point of its line nearest the target: within the catapult's splash of it.
     const glider = standing(m, 'swarm', 'glider', AIR_LENGTH * (1 - 4 / 33));
     const [gx, gy] = unitPos(ground);
-    expect(Math.hypot(unitPos(glider)[0] - gx, unitPos(glider)[1] - gy)).toBeLessThan(
-      towerDef('legion', 'catapult').splash,
-    );
+    expect(Math.hypot(unitPos(glider)[0] - gx, unitPos(glider)[1] - gy)).toBeLessThan(m.towers[0]!.def.splash);
     run(m, 4);
     expect(damageTaken(ground)).toBeGreaterThan(0);
     expect(damageTaken(glider)).toBe(0);

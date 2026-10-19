@@ -39,9 +39,22 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 
 ## State of play and the plan (StarCraft-style depth, in slices)
 
-Done: the map, castles, queue, upgrades, unit combat, towers, reach, pan and zoom, the AI, and the tower roles above (ground, air, area, poison, aura, detector). **Not tuned**: with the AI on both sides most
-matches stall to the time limit (it trickles units into towers) and legion loses to both others even with its archers and church. Fix the AI (mass before sending, push
-reach forward) and tune with seeded headless matches (as `sim.test.ts` plays them), not by feel.
+Done: everything above, and a first balance pass.
+
+**Balance** is measured: `npm run towercraft:balance [-- N [seedBase]]` (`tools/towercraftBalance.ts`) plays seeded AI-against-AI matches (N per
+pairing of races, mirrors included, sides alternating, a few processes, about a minute for 240) and prints wins per side, pairing and race, decisive
+length, and what the AI built with the race's win rate when it built more of it. Re-run it after changing `races.ts`, `ai.ts` or the constants in
+`sim.ts`; a sample of 40 has a spread of about 8 points, so judge by N of 100 or several seeds. `balance.test.ts` is only a cheap guard. Now (N 100,
+seed 7): every match decisive, median 7.3 min; win rate Goblins 52%, Dwarves 52%, Germanic 47%; pairings 56, 47 and 59%; top castle wins the mirrors
+44, 57 and 51%. Levers that mattered: pay, castle hit points, unit speed (a fast raid wins races), splash range, train times.
+**Misses:** the board is not symmetric (the top castle is 4 cells from its first run, the bottom 5; 39 rows with the bottom castle on row 35 would be),
+so the top side wins Dwarf mirrors 57-65% and cross-race games swing with the side. Castle `range` stays under 3 for that reason.
+
+**What the AI does** (`ai.ts`; a `Style` drawn from its seed, because two equal armies cancel on the road and never end a match): buys units in
+**waves** (all its gold at once, slowest first so they arrive together; the queue is all the holding there is); **upgrades** on a schedule; adds towers
+with time, as **far forward as they still see road**, so the build reach creeps toward the foe; builds a **detector** against cloaked units and a
+**shooter** against air once the foe fields them; walks **past towers** when its army could kill the castle in seconds, **past units** (a race) when it
+would win it, and always after its `rush` time, so a stalemate ends. It reads the foe only through `foeUnits`, `foeTowers` and `foeCastle`.
 
 Next, roughly in order; each is a slice with its own tests:
 1. **Fog of war and sight**: units, towers and castles see a radius; enemies out of sight are hidden and untargetable, and building needs
