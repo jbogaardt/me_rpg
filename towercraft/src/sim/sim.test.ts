@@ -114,13 +114,13 @@ describe('the castle', () => {
 });
 
 describe('training', () => {
-  it('queues units, which step out after their training time, a pair for the goblins', () => {
+  it('queues units, which step out after their training time, a trio for the goblins', () => {
     const m = newMatch(['swarm', 'legion']);
     expect(trainUnit(m, 0, 'spearman')).toBe('ok');
     expect(m.players[0].gold).toBe(START_GOLD - unitDef('swarm', 'spearman').cost);
     expect(m.units).toHaveLength(0);
     run(m, 1.6);
-    expect(m.units).toHaveLength(2);
+    expect(m.units).toHaveLength(unitDef('swarm', 'spearman').count);
     expect(m.players[0].queue).toHaveLength(0);
     expect(trainUnit(m, 0, 'thief')).toBe('tier');
     expect(trainUnit(m, 0, 'nope')).toBe('unknown');

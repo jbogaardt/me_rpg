@@ -31,7 +31,7 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
   vision too. `main.ts` draws the fog like Me RPG's underground darkness (a tiny canvas, a warm dark fill with soft pools cut out, scaled up smooth;
   a pool grows over half a second when a tower goes up). Placing: a hover (mouse) or first tap (touch, with Build/Cancel) shows a ghost with
   range, reach and sight rings; the hint line says why a cell cannot take the tower.
-- **Races** differ by how their numbers trade off (`races.ts`): swarm/Goblins (fast, weak, trained in pairs, cheap upgrades), titan/Dwarves
+- **Races** differ by how their numbers trade off (`races.ts`): swarm/Goblins (fast, weak, trained in threes, cheap upgrades), titan/Dwarves
   (slow, strong, costly, long-range towers, tough castle), legion/Germanic (the yardstick). A new race is an entry in `races.ts`.
 
 ## Code
@@ -41,21 +41,22 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
   pan, wheel or pinch to zoom, so a phone can place towers precisely) and turns taps into commands. `?debug` exposes the match and the
   cell-to-screen map to playtest scripts. The same rules can later run on a server for online play.
 - **Art** is Wyrmsun's, copied by `tools/towercraftArt.ts` from a clone of its repo (`public/art/CREDITS.md`): animated unit sheets
-  (CC-BY-SA 3.0, so the title screen credits them and the terms follow the art), CC0 castles, towers and portraits. Units walk, attack and
-  die with the rows Wyrmsun's own scripts use. The field (`lane.png`, an adaptation of the LPC terrain, so also CC-BY-SA) is drawn by Me RPG's
+  (CC-BY-SA 3.0, so the title screen credits them and the terms follow the art), CC0 castles, towers and portraits. The field (`lane.png`, an adaptation of the LPC terrain, so also CC-BY-SA) is drawn by Me RPG's
   map pipeline with `npm run towercraft:board`, which also writes `src/sim/scenery.ts` (the cells woods, lakes and rocks cover: nothing is built there); the road is `src/sim/road.ts`, then re-run it.
   The field turns half way round onto itself (road, scenery, castles), so neither side has better ground: keep it so.
-- Headless screenshots: use `--use-angle=swiftshader` (`--use-gl=swiftshader` leaves a transparent band under fixed DOM overlays).
+- Headless screenshots: use `--use-angle=swiftshader`.
 
 ## State of play and the plan (StarCraft-style depth, in slices)
 
 Done: the map, castles, queue, upgrades, unit combat, towers, reach, pan and zoom, tower roles, fog of war, orders, a balance pass.
 
 **Balance** is measured: `npm run towercraft:balance [-- N [seedBase]]` (`tools/towercraftBalance.ts`) plays seeded AI-against-AI matches (N per
-pairing of races, mirrors included, sides alternating, a minute or so for 240) and prints wins per side, pairing and race, decisive length and what the AI built. Re-run it after changing `races.ts`, `ai.ts` or the constants in `sim.ts`; a sample of 40
-swings about 8 points, so judge by N of 100 or several seeds. `balance.test.ts` is a guard only. Last measured (before fog, N 100): every match
-decisive, median 7.3 min, win rate Goblins 52%, Dwarves 52%, Germanic 47%, pairings 56, 47 and 59%. Big levers: pay, castle hp, unit speed, splash range. **Miss:** the board is not symmetric (the top castle is 4 cells from its first run, the
-bottom 5), so the top side wins Dwarf mirrors 57-65%; a symmetric board (39 rows, bottom castle on row 35) fixes it.
+pairing, mirrors included, sides alternating) and prints wins per side, pairing and race, length and what the AI built. Re-run it after changing `races.ts`, `ai.ts` or `sim.ts` constants; a sample of 40
+swings about 8 points, so judge by N of 100 or several seeds. `balance.test.ts` is a guard only. Last measured (fog, symmetric board, N 100 at seed
+bases 7, 8, 9): every match decisive, median about 6 min (Goblin games 4.5, Dwarf and Germanic 7-8); pairings Goblins vs Dwarves 52, 53 and 49% (Goblins),
+Goblins vs Germanic 47, 47 and 41%, Dwarves vs Germanic 49, 42 and 58%; mirrors top side 38-58%. Goblins once lost every game (0% vs Dwarves): their cheap pairs were out-traded per gold and died to a Dwarf fort piecemeal; fixed with
+sturdier threes (numbers), a stronger glider and castle, a slightly dearer Dwarf axefighter and ballista and a lighter Dwarf castle. Levers: pay, castle hp,
+unit hp and count, speed, splash. Thieves are touchy (three a purchase won 95%). **Miss:** Goblin games are short.
 
 **The AI** (`ai.ts`; a `Style` drawn from its seed, because two equal armies cancel and never end a match): buys units in **waves** (all its gold at
 once, slowest first; the queue is all the holding there is), **upgrades** on a schedule, adds towers with time **as far forward as they still see road**,
@@ -68,6 +69,5 @@ Next, roughly in order (each a slice with its own tests):
 2. **Detector units** (the observer): a unit that walks with the army and reveals cloaked enemies (towers and castles do it now).
 3. **More roles**: slow (a status like poison), armour, a bunker that garrisons units, a siege unit that outranges towers.
 4. **Race identity**: Goblins swarm, cloak and tunnel; Dwarves siege, bunkers and armour; Germanic the all-round with air and detection.
-5. **Control**: rally points and attack-move, then a second human (online: a host or server that runs `step`; the open question is a server that
-   decides versus peers agreeing on a deterministic replay).
+5. **Control**: rally points and attack-move, then a second human (online: a host or server that runs `step`).
 6. **Economy**: more than a flat pay (mines to take and hold), once combat is settled.
