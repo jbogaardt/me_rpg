@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RACES } from '../towercraft/src/sim/races';
-import { applyOverride, planJobs, playMatch, toCsv, winRate } from './towercraftLab';
+import { applyOverride, lengthThirds, planJobs, type Result, playMatch, toCsv, winRate } from './towercraftLab';
 
 describe('what-if overrides', () => {
   const races = () => structuredClone(RACES);
@@ -43,6 +43,24 @@ describe('the matrix and its statistics', () => {
     const pair = jobs.filter((j) => j.map === 'serpent' && j.top.race !== j.bottom.race);
     expect(pair.some((j) => j.top.race === 'swarm')).toBe(true);
     expect(pair.some((j) => j.top.race === 'titan')).toBe(true);
+  });
+
+  it('splits decisive matches into early, middle and late thirds, leaving stalemates out', () => {
+    const side = { race: 'swarm' as const, plan: 'random' };
+    const at = (time: number, winner: -1 | 0 | 1): Result => ({
+      map: 'serpent',
+      top: side,
+      bottom: side,
+      seed: 1,
+      winner,
+      time,
+      hp: [1, 0],
+      made: [{}, {}],
+    });
+    const rs = [at(60, 0), at(120, 1), at(180, 0), at(240, 1), at(300, 0), at(360, 1), at(900, -1)];
+    const [early, middle, late] = lengthThirds(rs);
+    expect([early.rs.length, middle.rs.length, late.rs.length]).toEqual([2, 2, 2]);
+    expect(Math.max(...early.rs.map((r) => r.time))).toBeLessThan(Math.min(...late.rs.map((r) => r.time)));
   });
 
   it('puts a Wilson interval round a win rate that narrows with the sample', () => {

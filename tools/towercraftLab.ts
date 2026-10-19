@@ -204,6 +204,18 @@ function tally<T extends string>(results: Result[], key: (e: Entrant) => T, keys
   });
 }
 
+/** The decisive matches split into the shortest, middle and longest third by length, with the time each third runs up to (seconds). */
+export function lengthThirds(results: Result[]): { name: string; upTo: number; rs: Result[] }[] {
+  const dec = results.filter((r) => r.winner >= 0).sort((a, b) => a.time - b.time);
+  const cut = (i: number) => dec[Math.min(dec.length - 1, Math.floor((dec.length * i) / 3))]?.time ?? 0;
+  const [c1, c2] = [cut(1), cut(2)];
+  return [
+    { name: 'early', upTo: c1, rs: dec.filter((r) => r.time < c1) },
+    { name: 'middle', upTo: c2, rs: dec.filter((r) => r.time >= c1 && r.time < c2) },
+    { name: 'late', upTo: Infinity, rs: dec.filter((r) => r.time >= c2) },
+  ];
+}
+
 export function report(results: Result[], plan: Plan): string {
   const out: string[] = [];
   const say = (s = '') => out.push(s);
@@ -219,6 +231,22 @@ export function report(results: Result[], plan: Plan): string {
     say('  race win rate against other races (all strategies; 95% interval; draws excluded)');
     for (const t of tally(rs, (e) => e.race, plan.races))
       say(`    ${t.key.padEnd(7)} ${fmt(t.w, t.l)}${t.draws ? `  (${t.draws} draws)` : ''}`);
+
+    if (plan.races.length > 1 && dec.length >= 30) {
+      const thirds = lengthThirds(rs);
+      say(
+        `  timing: race win rate in the early / middle / late third of games (cuts at ${mins(thirds[0].upTo)} and ${mins(thirds[1].upTo)} min): who wins fast, who wins slow`,
+      );
+      for (const race of plan.races)
+        say(
+          `    ${race.padEnd(7)} ${thirds
+            .map((t) => {
+              const x = tally(t.rs, (e) => e.race, [race])[0];
+              return `${t.name} ${fmt(x.w, x.l)}`;
+            })
+            .join('   ')}`,
+        );
+    }
 
     if (plan.races.length > 1) {
       say('  pairings: win rate of the first race');
