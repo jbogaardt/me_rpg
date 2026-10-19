@@ -8,6 +8,8 @@
 export const DRAWN_COLS = 36;
 export const DRAWN_ROWS = 55;
 export const GROW = 2;
+/** Extra cells of open ground on the east and west of the grown field, so the clearings between the road's bends and the woods at the edges have room for buildings. */
+export const EDGE = 8;
 
 export type Pt = readonly [number, number];
 
@@ -46,8 +48,8 @@ export function smooth(controls: readonly Pt[], step = 0.5): [number, number][] 
 const centre = ([c, r]: Pt): [number, number] => [c + 0.5, r + 0.5];
 
 /** Control points drawn for the classic field, spread over the grown one. */
-const grow = (pts: readonly Pt[]): Pt[] => pts.map(([x, y]) => [x * GROW, y * GROW]);
-const [GCOLS, GROWS] = [Math.round(DRAWN_COLS * GROW), Math.round(DRAWN_ROWS * GROW)];
+const grow = (pts: readonly Pt[]): Pt[] => pts.map(([x, y]) => [x * GROW + EDGE, y * GROW]);
+const [GCOLS, GROWS] = [Math.round(DRAWN_COLS * GROW) + 2 * EDGE, Math.round(DRAWN_ROWS * GROW)];
 /** The classic field has an odd number of rows so its middle run sits on a row of cells and the road still turns onto itself. */
 const [COLS, ROWS] = [GCOLS, GROWS + 1];
 export { COLS, ROWS };
@@ -76,7 +78,7 @@ export const DRAWN_SWITCHBACK: readonly Pt[] = (
 
 /** The classic road at `GROW` times its drawn size, every corner on a cell centre and the whole turning onto itself (the middle run, drawn at row 27, is row `ROWS / 2`). */
 const SWITCHBACK: readonly Pt[] = DRAWN_SWITCHBACK.map(([x, y]) => [
-  x * GROW + 0.5 * (x < DRAWN_COLS / 2 ? 1 : -1),
+  x * GROW + EDGE + 0.5 * (x < DRAWN_COLS / 2 ? 1 : -1),
   y === DRAWN_ROWS / 2 ? ROWS / 2 : y * GROW + (y < DRAWN_ROWS / 2 ? -0.5 : 1.5),
 ]);
 

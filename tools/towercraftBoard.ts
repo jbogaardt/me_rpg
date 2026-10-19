@@ -15,7 +15,7 @@ import { Zone, type Rect } from './map/zone';
 import type { GroundName } from './map/catalog';
 import type { TerrainName } from './map/terrain';
 import { BOARDS } from '../towercraft/src/sim/board';
-import { GROW, ROADS, type Pt, type RoadDef } from '../towercraft/src/sim/road';
+import { EDGE, GROW, ROADS, type Pt, type RoadDef } from '../towercraft/src/sim/road';
 
 /** How one map looks: Me RPG's grounds, terrains and kits for it. */
 interface Theme {
@@ -166,14 +166,14 @@ export function fieldZone(def: RoadDef): Zone {
       for (let c = col - 5; c <= col + 4; c++) for (let r = row - 2; r <= row + 2; r++) cells.push([c, r]);
       const room = Math.min(
         ...cells.map(([c, r]) => roadDist(c + 0.5, r + 0.5) - def.halfWidth - 2),
-        castleDist(col + 0.5, row + 0.5) - 8,
+        castleDist(col + 0.5, row + 0.5) - 14,
       );
-      if (room >= 0 && col >= 7 && col <= COLS - 8) spots.push([col, row, room]);
+      if (room >= 0 && col >= EDGE + 8 && col <= COLS - EDGE - 8) spots.push([col, row, room]); // never in the clearings at the edges
     }
   spots.sort((a, b) => b[2] - a[2]);
   const apart = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]) >= (twin ? 10 : 17);
   for (const [col, row] of spots) {
-    if (lakes.length >= 8) break;
+    if (lakes.length >= (twin ? 3 : 4)) break;
     const mine: [number, number] = [col, row];
     if (sites(...mine).every((a) => lakes.every((l) => sites(...l).every((b) => apart(a, b))))) lakes.push(mine);
   }
@@ -211,9 +211,10 @@ export function fieldZone(def: RoadDef): Zone {
     }
   };
   const more = (twin ? 1 : 2) * GROW * GROW; // a free map has the whole (grown) field to fill, a turned one half
-  scatter(theme.trees, 14 * more, 3.2, 11);
-  scatter(theme.bushes, 18 * more, 2.6, 9);
-  scatter(theme.rocks, 14 * more, 2.6, 9);
+  // Used sparingly: every one blocks a cell a building could have, so they keep well off the road and further off the castles.
+  scatter(theme.trees, 5 * more, 5.5, 22);
+  scatter(theme.bushes, 7 * more, 4, 16);
+  scatter(theme.rocks, 5 * more, 4, 16);
   return z;
 }
 

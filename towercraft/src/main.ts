@@ -7,6 +7,7 @@ import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
 import { icon } from './icons';
+import { drawnPos } from './stagger';
 import { createAi } from './sim/ai';
 import { BOARDS, BOARD_IDS, DEFAULT_BOARD_ID } from './sim/board';
 import {
@@ -44,7 +45,6 @@ import {
   step,
   towerUnlocked,
   trainUnits,
-  unitPos,
   unitUnlocked,
   upgradeCastle,
   upgradeCost,
@@ -503,7 +503,7 @@ void (async () => {
 
   /** One of your units under a point (cells; a unit's middle is above its feet, higher still for a flyer): the nearest. */
   const unitMid = (u: Unit): [number, number] => {
-    const [x, y] = unitPos(u, match.board);
+    const [x, y] = drawnPos(u, match.board);
     return [x, y - (figureOf(u.def.kind) * unitScale(u.def)) / 2 / CELL - (u.def.air ? FLIGHT / CELL : 0)];
   };
   const myUnitAt = (wx: number, wy: number) => {
@@ -1129,7 +1129,7 @@ void (async () => {
         return c;
       },
       (u: Unit, c) => {
-        const [x, y] = unitPos(u, match.board);
+        const [x, y] = drawnPos(u, match.board);
         c.position.set(x * CELL, y * CELL);
         c.zIndex = u.def.air ? 1000 + y : y; // flyers pass over everything
         const sheet = SHEETS[u.def.kind];
@@ -1216,7 +1216,7 @@ void (async () => {
           alpha: hoverFoe === -1 ? 1 : 0.4 + 0.2 * Math.sin(clock * 4),
         });
       for (const u of group) {
-        const [ux, uy] = unitPos(u, match.board);
+        const [ux, uy] = drawnPos(u, match.board);
         live
           .ellipse(ux * CELL, uy * CELL + 2, 22 * SIZE * 0.6, 8 * SIZE * 0.6)
           .stroke({ color: 0xf2d38a, width: 2.5, alpha: pulse });
@@ -1264,7 +1264,7 @@ void (async () => {
         );
     for (const u of match.units) {
       if (u.hp >= u.maxHp || !isSeen(match, YOU, u, vision)) continue;
-      const [x, y] = unitPos(u, match.board);
+      const [x, y] = drawnPos(u, match.board);
       bar(
         x * CELL,
         y * CELL - figureOf(u.def.kind) * unitScale(u.def) - 6 - (u.def.air ? FLIGHT : 0),
