@@ -1,19 +1,34 @@
-// Boots Towercraft: the PixiJS application, the race picker and the DOM controls, and runs the match at a fixed step.
-// The rules are in sim/ (Pixi-free); this file only draws a Match and turns clicks into commands.
+// Boots Towercraft: the PixiJS application, the race picker, the camera (drag to pan, wheel or pinch to zoom) and the DOM
+// controls, and runs the match at a fixed step. The rules are in sim/ (Pixi-free); this file only draws a Match and turns
+// taps into commands.
 
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture, TextureStyle } from 'pixi.js';
 import { createAi } from './sim/ai';
-import { COLS, ROWS, headingAt, pointAt } from './sim/board';
-import { RACES, RACE_IDS, type RaceId, type TowerDef, type UnitDef } from './sim/races';
-import { buildTower, canBuild, laneOf, newMatch, sendUnits, step, type Death, type Match } from './sim/sim';
+import { CASTLES, COLS, ROAD_LENGTH, ROWS, headingAt } from './sim/board';
+import { MAX_LEVEL, RACES, RACE_IDS, type RaceId, type TowerDef, type UnitDef } from './sim/races';
+import {
+  QUEUE_MAX,
+  buildReach,
+  buildTower,
+  canBuild,
+  newMatch,
+  step,
+  trainUnit,
+  unitPos,
+  upgradeCastle,
+  upgradeCost,
+  type Death,
+  type Match,
+  type Owner,
+  type Shot,
+  type Unit,
+} from './sim/sim';
 
 const CELL = 40;
-const GAP = 1; // cells between the lanes
-const BOARD_W = (COLS * 2 + GAP) * CELL;
+const BOARD_W = COLS * CELL;
 const BOARD_H = ROWS * CELL;
 const STEP = 0.05;
-const YOU = 0;
-const laneX = (lane: 0 | 1) => lane * (COLS + GAP) * CELL;
+const YOU: Owner = 0;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -26,23 +41,22 @@ const FIGURE = 32;
 // mirrored), and the game's own animation down the rows: 0 standing, 1-4 the walk, 5-8 an attack, 9-11 dying.
 const FRAME = 72;
 const WALK_ROWS = [1, 2, 0, 3, 4, 0]; // one stride, in poses
+const ATTACK_ROWS = [5, 6, 7, 8];
 const STRIDE = 0.9; // cells walked per stride
 const DEATH_ROWS = [9, 10, 11];
 const DEATH_FRAME = 0.12; // seconds per death frame
 const CORPSE_LIFE = 1.6; // seconds a corpse stays (fading over the last half)
 const COLUMN = { up: 0, right: 2, down: 4, left: 2 } as const;
+const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' } as const;
 
-/** A unit that is dying: the sprite plays its death frames where it fell, then fades. */
-interface Corpse {
-  container: Container;
-  sprite: Sprite;
-  sheet: string;
-  col: number;
-  age: number;
+/** Which way a unit faces: along the road, or back up it for the player whose castle is at the road's end. */
+function facing(owner: Owner, s: number) {
+  const h = headingAt(owner === 0 ? s : ROAD_LENGTH - s);
+  return owner === 0 ? h : OPPOSITE[h];
 }
 
-/** How each race tints its lane's grass: goblins sicklier, dwarves cooler, the Germanic as it is. */
-const TINT: Record<RaceId, number> = { swarm: 0xc8d88c, titan: 0xb4c4d8, legion: 0xffffff };
+const ZOOM_MAX = 2.6;
+const TAP_SLOP = 8; // px a finger may move and still be a tap
 
 void (async () => {
   TextureStyle.defaultOptions.scaleMode = 'linear';
@@ -55,26 +69,30 @@ void (async () => {
     autoDensity: true,
   });
   document.body.prepend(app.canvas);
+  app.canvas.style.touchAction = 'none'; // the game handles drag and pinch itself
 
-  // Every picture a race uses (towercraft/public/art, CREDITS.md): unit portraits whole, towers cut to their first frame.
-  const arts = new Set(RACE_IDS.flatMap((r) => [...RACES[r].units, ...RACES[r].towers].map((d) => d.art)));
-  const loaded = await Promise.all([...arts].map((name) => Assets.load<Texture>(`art/${name}.png`)));
-  const textures = new Map<string, Texture>([...arts].map((name, i) => [name, loaded[i]!]));
-  const towerFrames = new Map<string, Texture>();
-  const towerTexture = (def: TowerDef) => {
-    let t = towerFrames.get(def.art);
-    if (!t)
-      towerFrames.set(
-        def.art,
-        (t = new Texture({ source: textures.get(def.art)!.source, frame: new Rectangle(0, 0, 64, 64) })),
-      );
-    return t;
-  };
-
-  const sheets = new Set(RACE_IDS.flatMap((r) => RACES[r].units.map((u) => u.sheet)));
+  // --- Pictures (towercraft/public/art, CREDITS.md) -------------------------------------------------------------------
+  const load = (url: string) => Assets.load<Texture>(url);
+  const cut = (tex: Texture, x: number, y: number, w: number, h: number) =>
+    new Texture({ source: tex.source, frame: new Rectangle(x, y, w, h) });
+  const names = (pick: (r: (typeof RACES)[RaceId]) => string[]) => [
+    ...new Set(RACE_IDS.flatMap((r) => pick(RACES[r]))),
+  ];
+  const towerTextures = new Map<string, Texture>(
+    await Promise.all(
+      names((r) => r.towers.map((t) => t.art)).map(
+        async (n) => [n, cut(await load(`art/${n}.png`), 0, 0, 64, 64)] as const,
+      ),
+    ),
+  );
+  const castleTextures = new Map<string, Texture>(
+    await Promise.all(
+      names((r) => [r.castle.art]).map(async (n) => [n, cut(await load(`art/${n}.png`), 0, 0, 128, 128)] as const),
+    ),
+  );
   const sheetTextures = new Map<string, Texture>(
     await Promise.all(
-      [...sheets].map(async (name) => [name, await Assets.load<Texture>(`art/units/${name}.png`)] as const),
+      names((r) => r.units.map((u) => u.sheet)).map(async (n) => [n, await load(`art/units/${n}.png`)] as const),
     ),
   );
   const frames = new Map<string, Texture>();
@@ -82,40 +100,216 @@ void (async () => {
   const unitFrame = (sheet: string, row: number, col: number) => {
     const key = `${sheet}:${row}:${col}`;
     let t = frames.get(key);
-    if (!t)
-      frames.set(
-        key,
-        (t = new Texture({
-          source: sheetTextures.get(sheet)!.source,
-          frame: new Rectangle(col * FRAME, row * FRAME, FRAME, FRAME),
-        })),
-      );
+    if (!t) frames.set(key, (t = cut(sheetTextures.get(sheet)!, col * FRAME, row * FRAME, FRAME, FRAME)));
     return t;
   };
+  // The field (art/lane.png) is drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts).
+  const fieldTexture = await load('art/lane.png');
 
-  // The lane (art/lane.png) is drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts), so its road
-  // has the real blended edges and bends. Both lanes are the same road.
-  const laneTexture = await Assets.load<Texture>('art/lane.png');
-
+  // --- The scene -----------------------------------------------------------------------------------------------------
   const world = new Container();
-  const board = new Container();
-  const towerLayer = new Container(); // sorted by y so a tall tower hides the one behind it
-  towerLayer.sortableChildren = true;
+  const field = new Sprite(fieldTexture);
+  field.width = BOARD_W;
+  field.height = BOARD_H;
+  const areaLayer = new Graphics(); // where towers may be built
+  const sortLayer = new Container(); // castles, towers and units, sorted by y so what is in front hides what is behind
+  sortLayer.sortableChildren = true;
   const corpseLayer = new Container();
-  const unitLayer = new Container();
-  const live = new Graphics(); // hover, shots, health bars
-  world.addChild(board, towerLayer, corpseLayer, unitLayer, live);
+  const live = new Graphics(); // hover ring, attacks, health bars
+  world.addChild(field, areaLayer, corpseLayer, sortLayer, live);
+  app.stage.addChild(world);
 
+  let match: Match = newMatch(['legion', 'swarm']);
+  let ai = createAi(1, 1);
+  let selected: TowerDef | undefined;
+  let hover: [number, number] | undefined;
+  let acc = 0;
+  let clock = 0;
+  let started = false;
+
+  const castleSprites: Container[] = [];
+  const buildCastles = () => {
+    for (const c of castleSprites) c.destroy({ children: true });
+    castleSprites.length = 0;
+    for (const o of [0, 1] as const) {
+      const c = new Container();
+      const color = RACES[match.players[o].race].color;
+      c.addChild(new Graphics().ellipse(0, 6, 56, 20).fill({ color, alpha: 0.45 }));
+      const sprite = new Sprite(castleTextures.get(RACES[match.players[o].race].castle.art));
+      sprite.anchor.set(0.5, 0.78);
+      sprite.scale.set(0.9);
+      c.addChild(sprite);
+      c.position.set(CASTLES[o][0] * CELL, CASTLES[o][1] * CELL);
+      c.zIndex = CASTLES[o][1] + 1;
+      sortLayer.addChild(c);
+      castleSprites.push(c);
+    }
+  };
+
+  // --- Camera: drag to pan, wheel or pinch to zoom ------------------------------------------------------------------
+  const topBar = () => $('top').offsetHeight;
+  const bottomBar = () => $('bottom').offsetHeight;
+  const viewH = () => window.innerHeight - topBar() - bottomBar();
+  const fitZoom = () => Math.min(window.innerWidth / BOARD_W, viewH() / BOARD_H);
+  const minZoom = () => Math.min(fitZoom(), ZOOM_MAX);
+
+  function clampCamera() {
+    const z = Math.min(ZOOM_MAX, Math.max(minZoom(), world.scale.x));
+    world.scale.set(z);
+    const w = BOARD_W * z;
+    const h = BOARD_H * z;
+    const slack = 40; // a little of the dark may show past an edge
+    world.x =
+      w <= window.innerWidth
+        ? (window.innerWidth - w) / 2
+        : Math.min(slack, Math.max(window.innerWidth - w - slack, world.x));
+    world.y =
+      h <= viewH()
+        ? topBar() + (viewH() - h) / 2
+        : Math.min(topBar() + slack, Math.max(topBar() + viewH() - h - slack, world.y));
+  }
+  function zoomAt(sx: number, sy: number, factor: number) {
+    const before = world.scale.x;
+    const z = Math.min(ZOOM_MAX, Math.max(minZoom(), before * factor));
+    world.x = sx - ((sx - world.x) / before) * z;
+    world.y = sy - ((sy - world.y) / before) * z;
+    world.scale.set(z);
+    clampCamera();
+  }
+  /** Zoom in on a point of the field (cells) so it sits at the middle of the view. */
+  function focus(cx: number, cy: number, zoom: number) {
+    world.scale.set(zoom);
+    world.x = window.innerWidth / 2 - cx * CELL * zoom;
+    world.y = topBar() + viewH() / 2 - cy * CELL * zoom;
+    clampCamera();
+  }
+  const home = () => focus(CASTLES[YOU][0] + 3, CASTLES[YOU][1] + 7, Math.max(minZoom(), Math.min(1.1, ZOOM_MAX)));
+  window.addEventListener('resize', clampCamera);
+
+  const cellAt = (sx: number, sy: number): [number, number] | undefined => {
+    const col = Math.floor((sx - world.x) / world.scale.x / CELL);
+    const row = Math.floor((sy - world.y) / world.scale.y / CELL);
+    return col >= 0 && row >= 0 && col < COLS && row < ROWS ? [col, row] : undefined;
+  };
+
+  const pointers = new Map<number, { x: number; y: number }>();
+  let pressStart: { x: number; y: number } | undefined;
+  let dragged = false;
+  let pinch = 0;
+  app.canvas.addEventListener('pointerdown', (e) => {
+    app.canvas.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) {
+      pressStart = { x: e.clientX, y: e.clientY };
+      dragged = false;
+    } else {
+      dragged = true;
+      const [a, b] = [...pointers.values()];
+      pinch = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+    }
+  });
+  app.canvas.addEventListener('pointermove', (e) => {
+    hover = e.pointerType === 'mouse' ? cellAt(e.clientX, e.clientY) : undefined;
+    const p = pointers.get(e.pointerId);
+    if (!p) return;
+    const [dx, dy] = [e.clientX - p.x, e.clientY - p.y];
+    p.x = e.clientX;
+    p.y = e.clientY;
+    if (pointers.size === 1) {
+      if (!dragged && pressStart && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > TAP_SLOP)
+        dragged = true;
+      if (dragged) {
+        world.x += dx;
+        world.y += dy;
+        clampCamera();
+      }
+    } else if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const now = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+      if (pinch > 0) zoomAt((a!.x + b!.x) / 2, (a!.y + b!.y) / 2, now / pinch);
+      pinch = now;
+    }
+  });
+  const release = (e: PointerEvent) => {
+    const wasOne = pointers.size === 1;
+    pointers.delete(e.pointerId);
+    if (wasOne && !dragged && e.type === 'pointerup') tap(e.clientX, e.clientY);
+    pinch = 0;
+  };
+  app.canvas.addEventListener('pointerup', release);
+  app.canvas.addEventListener('pointercancel', release);
+  app.canvas.addEventListener('pointerleave', () => (hover = undefined));
+  app.canvas.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault();
+      zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015));
+    },
+    { passive: false },
+  );
+  $('cam-home').onclick = home;
+  $('cam-fit').onclick = () => focus(COLS / 2, ROWS / 2, minZoom());
+
+  function tap(sx: number, sy: number) {
+    const cell = cellAt(sx, sy);
+    if (!cell || !started || !selected) return;
+    if (buildTower(match, YOU, selected.id, cell[0], cell[1]) === 'ok') {
+      // Keep the tower selected while the player can pay for another (a row of towers is the usual use).
+      if (match.players[YOU].gold < selected.cost) selected = undefined;
+      refresh();
+    }
+  }
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      selected = undefined;
+      refresh();
+    }
+  });
+
+  // --- Drawing a match ----------------------------------------------------------------------------------------------
+  /** One sprite per tower / unit, kept while it lives. */
+  const towerSprites = new Map<number, Container>();
+  const unitSprites = new Map<number, Container>();
+  const sync = <T extends { id: number }>(
+    sprites: Map<number, Container>,
+    items: T[],
+    make: (item: T) => Container,
+    place: (item: T, c: Container) => void,
+  ) => {
+    const alive = new Set<number>();
+    for (const item of items) {
+      alive.add(item.id);
+      let c = sprites.get(item.id);
+      if (!c) {
+        c = make(item);
+        sprites.set(item.id, c);
+        sortLayer.addChild(c);
+      }
+      place(item, c);
+    }
+    for (const [id, c] of sprites) {
+      if (alive.has(id)) continue;
+      c.destroy({ children: true });
+      sprites.delete(id);
+    }
+  };
+
+  interface Corpse {
+    container: Container;
+    sprite: Sprite;
+    sheet: string;
+    col: number;
+    age: number;
+  }
   const corpses: Corpse[] = [];
   const addCorpse = (d: Death) => {
-    const [x, y] = pointAt(d.dist);
-    const heading = headingAt(d.dist);
+    const heading = facing(d.owner, d.s);
     const container = new Container();
     const sprite = new Sprite(unitFrame(d.def.sheet, DEATH_ROWS[0]!, COLUMN[heading]));
     sprite.anchor.set(0.5, 0.82);
     sprite.scale.set((heading === 'left' ? -1 : 1) * unitScale(d.def), unitScale(d.def));
     container.addChild(sprite);
-    container.position.set(laneX(d.lane) + x * CELL, y * CELL);
+    container.position.set(d.at[0] * CELL, d.at[1] * CELL);
     corpseLayer.addChild(container);
     corpses.push({ container, sprite, sheet: d.def.sheet, col: COLUMN[heading], age: 0 });
   };
@@ -137,109 +331,61 @@ void (async () => {
     }
   };
 
-  /** One sprite per tower / unit, kept while it lives. */
-  const towerSprites = new Map<number, Container>();
-  const unitSprites = new Map<number, Container>();
-  const sync = <T extends { id: number }>(
-    sprites: Map<number, Container>,
-    layer: Container,
-    items: T[],
-    make: (item: T) => Container,
-    place: (item: T, c: Container) => void,
-  ) => {
-    const alive = new Set<number>();
-    for (const item of items) {
-      alive.add(item.id);
-      let c = sprites.get(item.id);
-      if (!c) {
-        c = make(item);
-        sprites.set(item.id, c);
-        layer.addChild(c);
-      }
-      place(item, c);
-    }
-    for (const [id, c] of sprites) {
-      if (alive.has(id)) continue;
-      c.destroy({ children: true });
-      sprites.delete(id);
-    }
+  /** Attacks stay on screen a moment: a step lasts only 50 ms. */
+  const effects: { shot: Shot; age: number }[] = [];
+  const EFFECT_LIFE = 0.18;
+  const lastS = new Map<number, number>();
+
+  const bar = (x: number, y: number, w: number, frac: number, color: number) => {
+    live.rect(x - w / 2, y, w, 4).fill(0x0e1117);
+    live.rect(x - w / 2 + 0.5, y + 0.5, (w - 1) * Math.max(0, Math.min(1, frac)), 3).fill(color);
   };
-  app.stage.addChild(world);
 
-  let match: Match = newMatch(['legion', 'swarm']);
-  let ai = createAi(1, 1);
-  let selected: TowerDef | undefined;
-  let hover: [number, number] | undefined;
-  let acc = 0;
-  let started = false;
-
-  function layout() {
-    const top = 46;
-    const bottom = $('bottom').offsetHeight;
-    const scale = Math.min(window.innerWidth / (BOARD_W + 24), (window.innerHeight - top - bottom - 24) / BOARD_H);
-    world.scale.set(scale);
-    world.position.set(
-      (window.innerWidth - BOARD_W * scale) / 2,
-      top + (window.innerHeight - top - bottom - BOARD_H * scale) / 2,
-    );
-  }
-  window.addEventListener('resize', layout);
-
-  /** Both lanes, each tinted a little by its owner's race. */
-  function drawBoard() {
-    for (const c of board.removeChildren()) c.destroy({ children: true });
-    for (const lane of [0, 1] as const) {
-      const x0 = laneX(lane);
-      board.addChild(new Graphics().roundRect(x0 - 6, -6, COLS * CELL + 12, BOARD_H + 12, 10).fill(0x131925));
-      const sprite = new Sprite(laneTexture);
-      sprite.tint = TINT[match.players[lane].race];
-      sprite.position.set(x0, 0);
-      sprite.width = COLS * CELL;
-      sprite.height = BOARD_H;
-      board.addChild(sprite);
-    }
-  }
-
-  function drawLive() {
+  function drawLive(dt: number) {
     live.clear();
-    if (selected && hover && !(hover[0] < 0)) {
-      const ok = canBuild(match, YOU, selected, hover[0], hover[1]) === 'ok';
-      const cx = laneX(YOU) + (hover[0] + 0.5) * CELL;
-      const cy = (hover[1] + 0.5) * CELL;
-      live.circle(cx, cy, selected.range * CELL).fill({ color: ok ? 0xffffff : 0xb82024, alpha: 0.1 });
-      live.rect(cx - CELL / 2, cy - CELL / 2, CELL, CELL).stroke({ color: ok ? 0xffb13f : 0xb82024, width: 2 });
+    areaLayer.clear();
+
+    // Where a tower of the selected kind can go (and, with the mouse, its range at the cell under it).
+    if (selected && started) {
+      for (let row = 0; row < ROWS; row++)
+        for (let col = 0; col < COLS; col++)
+          if (canBuild(match, YOU, selected, col, row) === 'ok')
+            areaLayer.rect(col * CELL, row * CELL, CELL, CELL).fill({ color: 0x6fd36f, alpha: 0.2 });
+      if (hover) {
+        const ok = canBuild(match, YOU, selected, hover[0], hover[1]) === 'ok';
+        const cx = (hover[0] + 0.5) * CELL;
+        const cy = (hover[1] + 0.5) * CELL;
+        live.circle(cx, cy, selected.range * CELL).fill({ color: ok ? 0xffffff : 0xb82024, alpha: 0.12 });
+        live.rect(cx - CELL / 2, cy - CELL / 2, CELL, CELL).stroke({ color: ok ? 0xffb13f : 0xb82024, width: 2 });
+      }
     }
+    if (started) {
+      const [cx, cy] = CASTLES[YOU];
+      areaLayer
+        .circle(cx * CELL, cy * CELL, buildReach(match, YOU) * CELL)
+        .stroke({ color: 0xffb13f, width: 2, alpha: selected ? 0.5 : 0.2 });
+    }
+
     sync(
       towerSprites,
-      towerLayer,
       match.towers,
       (t) => {
         const c = new Container();
         const color = RACES[match.players[t.owner].race].color;
         c.addChild(new Graphics().ellipse(0, 4, 19, 9).fill({ color, alpha: 0.55 })); // the owner's colour under the tower
-        const sprite = new Sprite(towerTexture(t.def));
+        const sprite = new Sprite(towerTextures.get(t.def.art));
         sprite.anchor.set(0.5, 0.78);
         sprite.scale.set(0.78);
         c.addChild(sprite);
         return c;
       },
       (t, c) => {
-        c.position.set(laneX(t.owner) + (t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 8);
-        c.zIndex = t.row;
+        c.position.set((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 8);
+        c.zIndex = t.row + 0.5;
       },
     );
-    for (const s of match.shots) {
-      const x0 = laneX(s.lane);
-      live
-        .moveTo(x0 + s.from[0] * CELL, s.from[1] * CELL)
-        .lineTo(x0 + s.to[0] * CELL, s.to[1] * CELL)
-        .stroke({ color: 0xffb13f, width: 2, alpha: 0.8 });
-      if (s.splash > 0)
-        live.circle(x0 + s.to[0] * CELL, s.to[1] * CELL, s.splash * CELL).fill({ color: 0xffb13f, alpha: 0.18 });
-    }
     sync(
       unitSprites,
-      unitLayer,
       match.units,
       (u) => {
         const c = new Container();
@@ -251,46 +397,99 @@ void (async () => {
         c.addChild(body);
         return c;
       },
-      (u, c) => {
-        const [x, y] = pointAt(u.dist);
-        c.position.set(laneX(laneOf(u)) + x * CELL, y * CELL);
-        c.visible = u.dist >= 0; // waiting its turn to step out
-        const heading = headingAt(u.dist);
+      (u: Unit, c) => {
+        const [x, y] = unitPos(u);
+        c.position.set(x * CELL, y * CELL);
+        c.zIndex = y;
+        const heading = facing(u.owner, u.s);
+        const moved = lastS.get(u.id) !== u.s;
+        lastS.set(u.id, u.s);
         const body = c.children[1] as Sprite;
-        const pose = WALK_ROWS[Math.floor(Math.max(0, u.dist) / (STRIDE / WALK_ROWS.length)) % WALK_ROWS.length]!;
+        const pose = moved
+          ? WALK_ROWS[Math.floor(u.s / (STRIDE / WALK_ROWS.length)) % WALK_ROWS.length]!
+          : ATTACK_ROWS[Math.floor(clock * 8) % ATTACK_ROWS.length]!;
         body.texture = unitFrame(u.def.sheet, pose, COLUMN[heading]);
         body.scale.x = (heading === 'left' ? -1 : 1) * unitScale(u.def);
       },
     );
+
+    // Health bars: castles always, the rest once hurt.
+    for (const o of [0, 1] as const) {
+      const c = match.players[o].castle;
+      bar(CASTLES[o][0] * CELL, CASTLES[o][1] * CELL - 78, 84, c.hp / c.maxHp, o === YOU ? 0x6fd36f : 0xe0777b);
+    }
+    for (const t of match.towers)
+      if (t.hp < t.def.hp) bar((t.col + 0.5) * CELL, (t.row + 0.5) * CELL - 34, 30, t.hp / t.def.hp, 0xffb13f);
     for (const u of match.units) {
-      if (u.dist < 0) continue;
-      const [x, y] = pointAt(u.dist);
-      const w = 14 + FIGURE * unitScale(u.def) * 0.4;
-      const cx = laneX(laneOf(u)) + x * CELL;
-      const top = y * CELL - FIGURE * unitScale(u.def) - 6;
-      live.rect(cx - w / 2, top, w, 3).fill(0x0e1117);
-      live.rect(cx - w / 2, top, w * Math.max(0, u.hp / u.def.hp), 3).fill(0x6fd36f);
+      if (u.hp >= u.def.hp) continue;
+      const [x, y] = unitPos(u);
+      bar(
+        x * CELL,
+        y * CELL - FIGURE * unitScale(u.def) - 6,
+        14 + FIGURE * unitScale(u.def) * 0.4,
+        u.hp / u.def.hp,
+        0x6fd36f,
+      );
+    }
+
+    for (let i = effects.length - 1; i >= 0; i--) {
+      const e = effects[i]!;
+      e.age += dt;
+      if (e.age > EFFECT_LIFE) {
+        effects.splice(i, 1);
+        continue;
+      }
+      const a = 1 - e.age / EFFECT_LIFE;
+      const [x0, y0, x1, y1] = [e.shot.from[0] * CELL, e.shot.from[1] * CELL, e.shot.to[0] * CELL, e.shot.to[1] * CELL];
+      if (e.shot.melee) live.circle(x1, y1 - 12, 7).fill({ color: 0xffffff, alpha: 0.5 * a });
+      else
+        live
+          .moveTo(x0, y0 - 12)
+          .lineTo(x1, y1 - 12)
+          .stroke({ color: 0xffb13f, width: 2, alpha: 0.9 * a });
+      if (e.shot.splash > 0) live.circle(x1, y1, e.shot.splash * CELL).fill({ color: 0xffb13f, alpha: 0.2 * a });
     }
   }
 
-  function side(id: string, label: string, p: Match['players'][number]) {
+  // --- The page: top bar, controls, race picker ---------------------------------------------------------------------
+  const side = (id: string, label: string, o: Owner) => {
+    const p = match.players[o];
     $(id).innerHTML =
-      `<span>${label} · ${RACES[p.race].name}</span><b>${Math.floor(p.gold)} gold</b><span>+${10 + p.income}/pay</span><b>${p.lives} lives</b>`;
-  }
+      `<span>${label} · ${RACES[p.race].name}</span><b>${Math.floor(p.gold)} gold</b>` +
+      `<span>castle ${p.castle.level} · ${Math.max(0, Math.ceil(p.castle.hp))}/${p.castle.maxHp}</span>`;
+  };
 
   const towerThumb = (art: string, px: number) =>
     `<i class="thumb" style="width:${px}px;height:${px}px;background-image:url(art/${art}.png);background-size:${px}px auto"></i>`;
   const unitThumb = (art: string, px: number) =>
     `<img class="thumb" src="art/${art}.png" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`;
 
+  const trainButtons: [HTMLButtonElement, UnitDef][] = [];
   const buildButtons: [HTMLButtonElement, TowerDef][] = [];
-  const sendButtons: [HTMLButtonElement, { id: string; cost: number }][] = [];
+  let upgradeButton: HTMLButtonElement;
 
   function makeControls(race: RaceId) {
+    $('train').innerHTML = '<span>Train</span>';
+    $('castle').innerHTML = '';
     $('build').innerHTML = '<span>Build</span>';
-    $('send').innerHTML = '<span>Send</span>';
+    trainButtons.length = 0;
     buildButtons.length = 0;
-    sendButtons.length = 0;
+    for (const def of RACES[race].units) {
+      const b = document.createElement('button');
+      b.innerHTML = `${unitThumb(def.art, 34)}<span>${def.count > 1 ? def.count + '× ' : ''}${def.name}<small>${def.cost}g · ${def.train}s · ${def.hp} hp · ${def.damage} dmg</small></span>`;
+      b.onclick = () => {
+        trainUnit(match, YOU, def.id);
+        refresh();
+      };
+      $('train').append(b);
+      trainButtons.push([b, def]);
+    }
+    upgradeButton = document.createElement('button');
+    upgradeButton.onclick = () => {
+      upgradeCastle(match, YOU);
+      refresh();
+    };
+    $('castle').append(upgradeButton);
     for (const def of RACES[race].towers) {
       const b = document.createElement('button');
       b.innerHTML = `${towerThumb(def.art, 36)}<span>${def.name}<small>${def.cost}g · range ${def.range} · ${def.damage} dmg${def.splash ? ' · splash' : ''}</small></span>`;
@@ -301,57 +500,38 @@ void (async () => {
       $('build').append(b);
       buildButtons.push([b, def]);
     }
-    for (const def of RACES[race].units) {
-      const b = document.createElement('button');
-      b.innerHTML = `${unitThumb(def.art, 34)}<span>${def.count > 1 ? def.count + '× ' : ''}${def.name}<small>${def.cost}g · ${def.hp} hp · +${def.income} pay</small></span>`;
-      b.onclick = () => {
-        sendUnits(match, YOU, def.id);
-        refresh();
-      };
-      $('send').append(b);
-      sendButtons.push([b, def]);
-    }
   }
 
   function refresh() {
-    const gold = match.players[YOU].gold;
+    const me = match.players[YOU];
+    const { level } = me.castle;
+    const full = me.queue.length >= QUEUE_MAX;
+    for (const [b, def] of trainButtons) {
+      b.disabled = def.tier > level || def.cost > me.gold || full;
+      b.title = def.tier > level ? `Needs castle level ${def.tier}` : full ? 'The queue is full' : '';
+    }
     for (const [b, def] of buildButtons) {
-      b.disabled = def.cost > gold;
+      b.disabled = def.tier > level || def.cost > me.gold;
+      b.title = def.tier > level ? `Needs castle level ${def.tier}` : '';
       b.classList.toggle('on', selected === def);
     }
-    for (const [b, def] of sendButtons) b.disabled = def.cost > gold;
-    $('hint').textContent = selected
-      ? `Click a free cell on your side (left) to place a ${selected.name}. Esc to cancel.`
-      : '';
-  }
-
-  function cellAt(clientX: number, clientY: number): [number, number] | undefined {
-    const x = (clientX - world.x) / world.scale.x - laneX(YOU);
-    const y = (clientY - world.y) / world.scale.y;
-    const col = Math.floor(x / CELL);
-    const row = Math.floor(y / CELL);
-    return x >= 0 && y >= 0 && col < COLS && row < ROWS ? [col, row] : undefined;
-  }
-
-  app.canvas.addEventListener('pointermove', (e) => {
-    hover = cellAt(e.clientX, e.clientY);
-  });
-  app.canvas.addEventListener('pointerleave', () => {
-    hover = undefined;
-  });
-  app.canvas.addEventListener('pointerdown', (e) => {
-    const cell = cellAt(e.clientX, e.clientY);
-    hover = cell;
-    if (!cell || !started) return;
-    if (selected && buildTower(match, YOU, selected.id, cell[0], cell[1]) === 'ok' && !e.shiftKey) selected = undefined; // shift keeps the tower for more
-    refresh();
-  });
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      selected = undefined;
-      refresh();
+    const cost = upgradeCost(match, YOU);
+    if (level >= MAX_LEVEL || cost === undefined) {
+      upgradeButton.disabled = true;
+      upgradeButton.innerHTML = `<span>Castle at its highest<small>level ${level}</small></span>`;
+    } else {
+      upgradeButton.disabled = cost > me.gold;
+      const next = RACES[me.race].castle.reach[level]!;
+      upgradeButton.innerHTML = `<span>Upgrade castle to ${level + 1}<small>${cost}g · build reach ${next} · tier ${level + 1} units and towers</small></span>`;
     }
-  });
+    const queue = me.queue.map((q) => q.def.name).join(', ');
+    $('queue').textContent = queue ? `Training: ${queue}` : '';
+    $('hint').textContent = selected
+      ? `Tap a green cell to build a ${selected.name}. Esc to cancel.`
+      : level < MAX_LEVEL && !started
+        ? ''
+        : '';
+  }
 
   function start(race: RaceId) {
     const rivals = RACE_IDS.filter((r) => r !== race);
@@ -361,12 +541,17 @@ void (async () => {
     selected = undefined;
     acc = 0;
     started = true;
+    for (const c of [...towerSprites.values(), ...unitSprites.values()]) c.destroy({ children: true });
+    towerSprites.clear();
+    unitSprites.clear();
+    lastS.clear();
+    effects.length = 0;
+    buildCastles();
     makeControls(race);
-    drawBoard(); // the lanes are tinted by race
     $('menu').hidden = true;
     $('end').hidden = true;
     refresh();
-    layout(); // the bar's height depends on its buttons
+    home();
   }
 
   for (const id of RACE_IDS) {
@@ -384,32 +569,55 @@ void (async () => {
     $('menu').hidden = false;
   };
 
-  drawBoard();
+  // For playtest scripts (`?debug`): where a cell is on screen, and the match itself.
+  if (new URLSearchParams(window.location.search).has('debug'))
+    Object.assign(window, {
+      towercraft: {
+        screenOf: (col: number, row: number) => [
+          world.x + (col + 0.5) * CELL * world.scale.x,
+          world.y + (row + 0.5) * CELL * world.scale.y,
+        ],
+        match: () => match,
+        app,
+      },
+    });
+
+  buildCastles();
   makeControls('legion');
-  layout();
-  side('you', 'You', match.players[0]);
-  side('rival', 'Rival', match.players[1]);
+  refresh();
+  clampCamera();
+  focus(COLS / 2, ROWS / 2, minZoom());
+  side('you', 'You', 0);
+  side('rival', 'Rival', 1);
 
   app.ticker.add((ticker) => {
-    ageCorpses(ticker.deltaMS / 1000);
+    const dt = ticker.deltaMS / 1000;
+    clock += dt;
+    ageCorpses(dt);
     if (started && match.winner < 0) {
-      acc += Math.min(ticker.deltaMS / 1000, 0.25);
+      acc += Math.min(dt, 0.25);
       while (acc >= STEP && match.winner < 0) {
         acc -= STEP;
         ai(match, STEP);
         step(match, STEP);
         for (const d of match.deaths) addCorpse(d);
+        for (const shot of match.shots) effects.push({ shot, age: 0 });
       }
       refresh();
       if (match.winner >= 0) {
         $('end-title').textContent = match.winner === YOU ? 'Victory' : match.winner === 2 ? 'Draw' : 'Defeat';
-        $('end-sub').textContent =
-          `${Math.floor(match.time)} seconds. Lives ${match.players[0].lives} to ${match.players[1].lives}.`;
+        $('end-sub').textContent = `${Math.floor(match.time)} seconds. ${
+          match.winner === YOU
+            ? "The rival's castle has fallen."
+            : match.winner === 2
+              ? 'Neither castle fell.'
+              : 'Your castle has fallen.'
+        }`;
         $('end').hidden = false;
       }
     }
-    side('you', 'You', match.players[0]);
-    side('rival', 'Rival', match.players[1]);
-    drawLive();
+    side('you', 'You', 0);
+    side('rival', 'Rival', 1);
+    drawLive(dt);
   });
 })();

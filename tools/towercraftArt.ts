@@ -32,6 +32,10 @@ export const ART: Item[] = [
   { source: 'pack', from: 'surghan_mercenary_thane', to: 'dwarf_thane' },
   { source: 'tree', from: 'germanic/icons/warrior', to: 'germanic_warrior' },
   { source: 'tree', from: 'teuton/icons/ritter', to: 'teuton_ritter' },
+  // Castles (128x256: the first 128x128 frame is the finished one).
+  { source: 'tree', from: 'goblin/buildings/stronghold', to: 'goblin_castle' },
+  { source: 'tree', from: 'dwarf/buildings/stronghold', to: 'dwarf_castle' },
+  { source: 'tree', from: 'teuton/buildings/stronghold', to: 'teuton_castle' },
   // Towers (64x128: the first 64x64 frame is the finished tower).
   { source: 'tree', from: 'goblin/buildings/watch_tower', to: 'goblin_watch_tower' },
   { source: 'tree', from: 'goblin/buildings/guard_tower', to: 'goblin_guard_tower' },
