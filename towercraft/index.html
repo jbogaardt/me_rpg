@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Towercraft</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root { --bg: #0e1117; --panel: #161b24; --line: #2a3140; --text: #e8e4d8; --dim: #9aa0ab; --gold: #ffb13f; --red: #b82024; --blue: #406181; }
+      html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; touch-action: manipulation;
+        font: 15px/1.4 Georgia, 'Times New Roman', serif; }
+      canvas { display: block; position: fixed; inset: 0; }
+      .bar { position: fixed; left: 0; right: 0; display: flex; gap: 12px; padding: 8px 12px; background: var(--panel); border: 0 solid var(--line); z-index: 2; }
+      #top { top: 0; border-bottom-width: 1px; justify-content: space-between; }
+      #bottom { bottom: 0; border-top-width: 1px; flex-wrap: wrap; justify-content: center; }
+      .side { display: flex; gap: 14px; align-items: baseline; }
+      .side b { font-size: 16px; }
+      .you b { color: var(--gold); } .rival b { color: #e0777b; }
+      .group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+      .group > span { color: var(--dim); font-size: 13px; margin-right: 2px; }
+      button { font: inherit; color: var(--text); background: #1f2633; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+      button:hover:not(:disabled) { border-color: var(--gold); }
+      button:disabled { opacity: 0.4; cursor: default; }
+      button.on { border-color: var(--gold); background: #2b3447; }
+      button small { display: block; color: var(--dim); font-size: 11px; }
+      .overlay { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(8, 10, 14, 0.88); text-align: center; padding: 16px; }
+      .overlay[hidden] { display: none; }
+      .overlay h1 { margin: 0 0 4px; color: var(--gold); font-size: 34px; }
+      .overlay p { margin: 4px 0 16px; color: var(--dim); }
+      .races { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+      .race { width: 200px; padding: 14px; text-align: left; border-top: 4px solid var(--c); }
+      .race b { display: block; font-size: 18px; margin-bottom: 4px; }
+      .race span { color: var(--dim); font-size: 13px; }
+      #hint { position: fixed; left: 0; right: 0; top: 46px; text-align: center; color: var(--dim); font-size: 13px; pointer-events: none; z-index: 1; }
+    </style>
+  </head>
+  <body>
+    <div class="bar" id="top"><div class="side you" id="you"></div><div class="side rival" id="rival"></div></div>
+    <div id="hint"></div>
+    <div class="bar" id="bottom"><div class="group" id="build"></div><div class="group" id="send"></div></div>
+    <div class="overlay" id="menu">
+      <div>
+        <h1>Towercraft</h1>
+        <p>Build towers on your side. Send units down the rival's road. Whoever runs out of lives first loses.</p>
+        <div class="races" id="races"></div>
+      </div>
+    </div>
+    <div class="overlay" id="end" hidden>
+      <div>
+        <h1 id="end-title"></h1>
+        <p id="end-sub"></p>
+        <button id="again">Play again</button>
+      </div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

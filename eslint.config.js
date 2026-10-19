@@ -58,6 +58,21 @@ export default tseslint.config(
       ],
     },
   },
+  // Towercraft's rules (a match, its AI) are Pixi-free so they are unit-tested without a browser and can run on a server.
+  {
+    files: ['towercraft/src/sim/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['pixi.js', 'pixi.js/*'], message: 'the sim is Pixi-free (towercraft/src/main.ts draws it).' },
+          ],
+        },
+      ],
+    },
+  },
   {
     files: ['src/entities/**/*.ts'],
     ignores: ['**/*.test.ts'],
