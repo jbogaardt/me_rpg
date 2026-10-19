@@ -37,6 +37,8 @@ import {
   upgradeCastle,
   upgradeCost,
   upgradeLacks,
+  incomeOf,
+  PAY_EVERY,
   visionOf,
   type Castle,
   type Match,
@@ -112,6 +114,8 @@ export const roleOf = (def: TowerDef): Role =>
 /** Buildings that fight or help in the field (as against the ones that make money, unlock units or upgrade them). */
 const defensive = (def: TowerDef) => ['attack', 'detect', 'aura', 'bunker'].includes(roleOf(def));
 const isAntiAir = (d: TowerDef) => d.damage > 0 && d.hits !== 'ground';
+/** Seconds of income an upgrade may be away for the AI to start saving for it. */
+const SAVE_WITHIN = Number(globalThis.process?.env?.TC_SAVE ?? 120); // TEMP
 /** What a loaded soldier is assumed to reach from a bunker, for choosing where one goes. */
 const BUNKER_REACH = 5.5 * REACH_SCALE;
 
@@ -374,7 +378,7 @@ export function styleFor(random: () => number): Style {
     techStart: between(1, 2),
     techEvery: between(45, 90),
     siege: between(15, 40),
-    rush: between(300, 540),
+    rush: between(420, 780),
   };
 }
 
@@ -383,7 +387,7 @@ export function styleFor(random: () => number): Style {
  * against a rush, a turtle, and so on. They stay inside the ranges `styleFor` draws from. The game itself never uses them.
  */
 export const STRATEGIES: Record<string, Style> = {
-  /** Small quick waves, late upgrades, few towers, walks past everything early. */
+  /** Small quick waves, late upgrades, few towers, walks past everything from the third minute: a win takes 3 to 5 minutes. */
   rush: {
     waveEvery: 20,
     upgradeAfter: [90, 330],
@@ -393,7 +397,7 @@ export const STRATEGIES: Record<string, Style> = {
     techStart: 1,
     techEvery: 90,
     siege: 40,
-    rush: 300,
+    rush: 150,
   },
   /** Towers early and often, a big late wave, castle up early. */
   turtle: {
@@ -405,7 +409,7 @@ export const STRATEGIES: Record<string, Style> = {
     techStart: 1,
     techEvery: 70,
     siege: 15,
-    rush: 540,
+    rush: 780,
   },
   /** Teching: the castle up as soon as it can be, few towers, waves of the best units. */
   boom: {
@@ -417,7 +421,7 @@ export const STRATEGIES: Record<string, Style> = {
     techStart: 2,
     techEvery: 45,
     siege: 25,
-    rush: 420,
+    rush: 600,
   },
   /** Towers over units, the middle of everything else. */
   fort: {
@@ -429,7 +433,7 @@ export const STRATEGIES: Record<string, Style> = {
     techStart: 1,
     techEvery: 80,
     siege: 15,
-    rush: 480,
+    rush: 720,
   },
   /** The middle of every range. */
   balanced: {
@@ -441,7 +445,7 @@ export const STRATEGIES: Record<string, Style> = {
     techStart: 1,
     techEvery: 65,
     siege: 28,
-    rush: 420,
+    rush: 600,
   },
 };
 
@@ -499,7 +503,13 @@ export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): (m:
       upgradeCastle(m, owner);
       return;
     }
-    const saving = wantUp && !alarm;
+    // Save for it only once it is about two minutes of income away: before that the money goes on units, so a dear upgrade neither
+    // empties the army for ten minutes nor is put off for ever.
+    const pay = incomeOf(m, owner);
+    const away =
+      cost &&
+      Math.max((cost.wood - me.wood) / (pay.wood / PAY_EVERY), (cost.stone - me.stone) / (pay.stone / PAY_EVERY));
+    const saving = wantUp && !alarm && away !== undefined && away <= SAVE_WITHIN;
 
     // The answering tower first (saving for it if need be).
     if (answer && !mustUp) {

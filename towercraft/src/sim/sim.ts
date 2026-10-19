@@ -33,6 +33,10 @@ export const START_RES: Cost = price(120, 40);
 export const PAY_EVERY = 5;
 /** A match that goes on this long (seconds) is decided on castle hit points left. */
 export const TIME_LIMIT = 1800;
+/** From this time (seconds) a stalemate wears down: every blow a castle takes grows by 1 for every `SUDDEN_DEATH_RAMP` seconds more. */
+export const SUDDEN_DEATH = Number(globalThis.process?.env?.TC_SD ?? 1080); // TEMP
+export const SUDDEN_DEATH_RAMP = 90;
+export const suddenDeath = (time: number) => 1 + Math.max(0, time - SUDDEN_DEATH) / SUDDEN_DEATH_RAMP;
 /** Units one side may have alive at once (there is no queue to hold them back, so the rules do). */
 export const UNIT_CAP = 120;
 /** How far (cells) a castle's body reaches: attackers hit its edge, not its centre. */
@@ -638,7 +642,7 @@ function strike(m: Match, r: Reach, t: Target, blow: Blow) {
   m.shots.push({ by: r.by, from: [...r.from], to: at, melee: blow.melee, splash: blow.splash });
   if (t.kind === 'unit') burn(t.unit);
   else if (t.kind === 'tower') t.tower.hp -= blow.damage * blow.siege;
-  else m.players[t.owner].castle.hp -= blow.damage * blow.siege;
+  else m.players[t.owner].castle.hp -= blow.damage * blow.siege * suddenDeath(m.time);
   if (t.kind === 'unit' && blow.multi > 1) {
     const near = m.units
       .filter((u) => u !== t.unit && canHit(m, r, u) && dist(r.from, unitPos(u, m.board)) <= r.range)
