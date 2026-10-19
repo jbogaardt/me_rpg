@@ -1,9 +1,10 @@
 // The computer opponent (Pixi-free). It thinks about once a second, with a seeded random source so a match replays: it
-// raises its castle as gold and time allow, keeps a few towers where they cover the most road (pushing its build area
-// forward as it goes), and trains units with the rest. It is a sparring partner for the prototype, not a clever player.
+// raises its castle as gold and time allow, keeps a few towers (an attacker where it covers the most road, a detector near the
+// road, an aura among its towers), answers what the other side fields (air, cloaked units) and trains units with the rest.
+// It is a sparring partner for the prototype, not a clever player.
 
 import { CASTLES, COLS, ROAD_CELLS, ROAD_LENGTH, ROWS, cellIndex, pointAt } from './board';
-import { MAX_LEVEL } from './races';
+import { MAX_LEVEL, type TowerDef, type UnitDef } from './races';
 import {
   buildTower,
   canBuild,
@@ -15,7 +16,6 @@ import {
   type Match,
   type Owner,
 } from './sim';
-import type { TowerDef } from './races';
 
 /** A small seeded random source (mulberry32): same seed, same sequence. */
 export function seeded(seed: number): () => number {
@@ -45,23 +45,91 @@ function coverageOf(col: number, row: number, range: number): number {
   return n;
 }
 
-/** The cell `owner` may build this tower on that covers the most road, preferring cells nearer the enemy castle. */
+/** What a tower is for: an attacker, a detector or a helper (aura), for deciding where it goes and when it is needed. */
+export const roleOf = (def: TowerDef): 'attack' | 'detect' | 'aura' =>
+  def.damage > 0 ? 'attack' : def.detect ? 'detect' : 'aura';
+
+/** How good a cell is for this tower: road covered by what it shoots or sees, friends an aura would reach; nearer the enemy is a little better. */
+function score(m: Match, owner: Owner, def: TowerDef, col: number, row: number): number {
+  const foe = CASTLES[enemy(owner)];
+  const toFoe = Math.hypot(foe[0] - col - 0.5, foe[1] - row - 0.5);
+  const friends = () =>
+    m.towers.filter((t) => t.owner === owner && Math.hypot(t.col - col, t.row - row) <= (def.aura?.radius ?? 0)).length;
+  const base =
+    roleOf(def) === 'attack'
+      ? coverageOf(col, row, def.range)
+      : roleOf(def) === 'detect'
+        ? coverageOf(col, row, def.detect ?? 0)
+        : friends() * 12;
+  return base - toFoe * 0.15;
+}
+
+/** The cell `owner` may build this tower on that serves it best, if any is free. */
 export function bestCell(m: Match, owner: Owner, def: TowerDef): [number, number] | undefined {
   let best: [number, number] | undefined;
-  let bestScore = -1;
-  const foe = CASTLES[enemy(owner)];
+  let bestScore = -Infinity;
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
       if (ROAD_CELLS.has(cellIndex(col, row)) || canBuild(m, owner, def, col, row) !== 'ok') continue;
-      const toFoe = Math.hypot(foe[0] - col - 0.5, foe[1] - row - 0.5);
-      const score = coverageOf(col, row, def.range) - toFoe * 0.15;
-      if (score > bestScore) {
-        bestScore = score;
+      const sc = score(m, owner, def, col, row);
+      if (sc > bestScore) {
+        bestScore = sc;
         best = [col, row];
       }
     }
   }
   return best;
+}
+
+/** Which tower does `owner` need most right now? It answers what the other side has sent or can send: air, cloaked units. */
+function chooseTower(m: Match, owner: Owner, options: TowerDef[], random: () => number): TowerDef | undefined {
+  if (!options.length) return undefined;
+  const mine = m.towers.filter((t) => t.owner === owner);
+  const foe = enemy(owner);
+  const foeRace = raceOf(m, foe);
+  const sees = (hits: (t: TowerDef) => boolean) => mine.filter((t) => hits(t.def)).length;
+  const weight = (def: TowerDef) => {
+    let w = 1;
+    const role = roleOf(def);
+    // Air about (or the other race can build it): want something that shoots up, and more as it grows.
+    const air = m.units.some((u) => u.owner === foe && u.def.air);
+    const canAir = foeRace.units.some((u) => u.air);
+    const antiAir = sees((d) => d.damage > 0 && d.hits !== 'ground');
+    if (role === 'attack' && def.hits !== 'ground') w += air ? 4 / (1 + antiAir) : canAir && antiAir < 1 ? 1.5 : 0;
+    if (role === 'attack' && def.hits === 'air') w = air || (canAir && antiAir < 1) ? w : 0.15; // an air-only tower is wasted with no air about
+    // Cloaked units: a detector, once, early enough that they are not free.
+    const cloaked = m.units.some((u) => u.owner === foe && u.def.cloak) || foeRace.units.some((u) => u.cloak);
+    const detectors = sees((d) => !!d.detect);
+    if (def.detect) w = cloaked && detectors < 1 ? 5 : detectors < 1 ? 0.6 : 0.1;
+    // Auras once there are towers to strengthen.
+    if (role === 'aura') w = mine.length >= 4 && sees((d) => d.aura?.kind === def.aura?.kind) < 1 ? 2.5 : 0.1;
+    if (role === 'attack' && (def.splash > 0 || def.dot)) w += 0.5;
+    return w;
+  };
+  const weights = options.map(weight);
+  let roll = random() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < options.length; i++) {
+    roll -= weights[i]!;
+    if (roll <= 0) return options[i];
+  }
+  return options[options.length - 1];
+}
+
+/** Which unit to train: the best it can pay for, leaning to air where the other side has nothing up, cloaked where it has no detector. */
+function chooseUnit(m: Match, owner: Owner, options: UnitDef[], random: () => number): UnitDef | undefined {
+  if (!options.length) return undefined;
+  const foeTowers = m.towers.filter((t) => t.owner === enemy(owner));
+  const noAntiAir = !foeTowers.some((t) => t.def.damage > 0 && t.def.hits !== 'ground');
+  const noDetector = !foeTowers.some((t) => t.def.detect);
+  const weights = options.map(
+    (u) => 1 + u.tier + (u.air && noAntiAir ? 3 : 0) + (u.cloak && noDetector ? 2 : 0) + (u.air && !noAntiAir ? -2 : 0),
+  );
+  let roll = random() * weights.reduce((a, b) => a + Math.max(0.2, b), 0);
+  for (let i = 0; i < options.length; i++) {
+    roll -= Math.max(0.2, weights[i]!);
+    if (roll <= 0) return options[i];
+  }
+  return options[options.length - 1];
 }
 
 const THINK_EVERY = 1;
@@ -87,10 +155,13 @@ export function createAi(owner: Owner, seed: number): (m: Match, dt: number) => 
       return;
     }
 
-    const wantTowers = towers < 2 + level * 2 && random() < 0.45;
-    if (wantTowers) {
-      const options = race.towers.filter((t) => t.tier <= level && t.cost <= me.gold);
-      const def = options[Math.floor(random() * options.length)];
+    if (towers < 2 + level * 2 && random() < 0.45) {
+      const def = chooseTower(
+        m,
+        owner,
+        race.towers.filter((t) => t.tier <= level && t.cost <= me.gold),
+        random,
+      );
       const cell = def && bestCell(m, owner, def);
       if (def && cell) {
         buildTower(m, owner, def.id, cell[0], cell[1]);
@@ -98,10 +169,12 @@ export function createAi(owner: Owner, seed: number): (m: Match, dt: number) => 
       }
     }
     if (me.queue.length >= 3) return;
-    const options = race.units.filter((u) => u.tier <= level && u.cost <= me.gold);
-    if (!options.length) return;
-    // Mostly the best unit it can pay for, now and then a cheaper one.
-    const pick = random() < 0.6 ? options[options.length - 1] : options[Math.floor(random() * options.length)];
+    const pick = chooseUnit(
+      m,
+      owner,
+      race.units.filter((u) => u.tier <= level && u.cost <= me.gold),
+      random,
+    );
     if (pick) trainUnit(m, owner, pick.id);
   };
 }

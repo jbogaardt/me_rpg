@@ -15,9 +15,21 @@ import {
   trainUnit,
   unitPos,
   upgradeCastle,
+  AIR_LENGTH,
+  powerAt,
+  visibleTo,
   type Match,
+  type Owner,
+  type Unit,
 } from './sim';
 
+const unitDef = (race: RaceId, id: string) => RACES[race].units.find((u) => u.id === id)!;
+const towerDef = (race: RaceId, id: string) => RACES[race].towers.find((t) => t.id === id)!;
+/** Put a tower on the board without paying or the build rules (tests place things where they need them). */
+const put = (m: Match, owner: Owner, race: RaceId, id: string, col: number, row: number) => {
+  const def = towerDef(race, id);
+  m.towers.push({ id: m.nextId++, def, owner, col, row, hp: def.hp, cooldown: 0 });
+};
 const run = (m: Match, seconds: number) => {
   for (let i = 0; i < seconds * 20; i++) step(m, 1 / 20);
 };
@@ -35,7 +47,7 @@ describe('building', () => {
   it('takes gold, and refuses the road, a taken cell, a castle, the wrong tier and a cell out of reach', () => {
     const m = newMatch(['legion', 'legion']);
     expect(buildTower(m, 0, 'watch', ...NEAR)).toBe('ok');
-    expect(m.players[0].gold).toBe(START_GOLD - RACES.legion.towers[0]!.cost);
+    expect(m.players[0].gold).toBe(START_GOLD - towerDef('legion', 'watch').cost);
     expect(buildTower(m, 0, 'watch', ...NEAR)).toBe('taken');
     expect(buildTower(m, 1, 'watch', ...NEAR)).toBe('taken'); // a cell is one tower's, whoever's
     expect(buildTower(m, 0, 'watch', 3, 5)).toBe('road');
@@ -50,7 +62,7 @@ describe('building', () => {
 
   it('reaches further with an upgraded castle and from a tower already built', () => {
     const m = newMatch(['legion', 'legion']);
-    const def = RACES.legion.towers[0]!;
+    const def = towerDef('legion', 'watch');
     const far: [number, number] = [11, 3]; // 8 cells out: beyond the first level's reach of 6
     expect(canBuild(m, 0, def, ...far)).toBe('area');
     m.players[0].gold = 1000;
@@ -123,30 +135,198 @@ describe('fighting', () => {
     expect(m.towers.every((t) => t.hp === t.def.hp)).toBe(true); // nothing shot at the other's tower
 
     // A warrior of player 1 comes down the road to player 0's tower: it fights it (the tower's own shots hurt it too).
-    m.units.push({ id: 77, def: RACES.legion.units[1]!, owner: 1, hp: 5000, s: ROAD_LENGTH - 6, cooldown: 0 });
+    m.units.push({ id: 77, def: unitDef('legion', 'ritter'), owner: 1, hp: 5000, s: ROAD_LENGTH - 6, cooldown: 0 });
     run(m, 20);
-    expect(m.towers.find((t) => t.owner === 0)?.hp ?? 0).toBeLessThan(RACES.legion.towers[0]!.hp);
+    expect(m.towers.find((t) => t.owner === 0)?.hp ?? 0).toBeLessThan(towerDef('legion', 'watch').hp);
   });
 
   it('has a unit at the enemy castle hit it, and destroying a castle ends the match', () => {
     const m = newMatch(['legion', 'swarm']);
     m.players[1].castle.hp = 20;
-    m.units.push({ id: 99, def: RACES.legion.units[1]!, owner: 0, hp: 240, s: ROAD_LENGTH - 3, cooldown: 0 });
+    m.units.push({ id: 99, def: unitDef('legion', 'ritter'), owner: 0, hp: 240, s: ROAD_LENGTH - 3, cooldown: 0 });
     run(m, 15);
     expect(m.winner).toBe(0);
-    expect(unitPos({ owner: 0, s: 0 })).toEqual([CASTLES[0][0], CASTLES[0][1]]);
+    expect(unitPos({ owner: 0, s: 0, def: unitDef('legion', 'warrior') })).toEqual([CASTLES[0][0], CASTLES[0][1]]);
   });
 
   it('reports a kill in the step it happens', () => {
     const m = newMatch(['legion', 'legion']);
     buildTower(m, 0, 'watch', ...NEAR);
-    m.units.push({ id: 50, def: RACES.legion.units[0]!, owner: 1, hp: 1, s: ROAD_LENGTH - 5, cooldown: 99 });
+    m.units.push({ id: 50, def: unitDef('legion', 'warrior'), owner: 1, hp: 1, s: ROAD_LENGTH - 5, cooldown: 99 });
     const deaths: number[] = [];
     for (let i = 0; i < 20; i++) {
       step(m, 1 / 20);
       deaths.push(m.deaths.length);
     }
     expect(deaths.reduce((a, b) => a + b, 0)).toBe(1);
+  });
+});
+
+describe('tower roles', () => {
+  // A tower at (4,5) beside player 0's end of the road reaches both the road at 6 cells from the castle and the flight line there.
+  const GROUND_S = ROAD_LENGTH - 6;
+  const AIR_S = AIR_LENGTH - 4;
+  /** Castles that do not shoot, so a test sees only the tower it is about. */
+  const quiet = (m: Match) => {
+    for (const p of m.players) p.castle.cooldown = 1e9;
+    return m;
+  };
+  /** An enemy (player 1) unit that stands where it is put: it does not walk, hit or tire. */
+  const standing = (m: Match, race: RaceId, id: string, s: number): Unit => {
+    const u: Unit = {
+      id: m.nextId++,
+      def: { ...unitDef(race, id), speed: 0 },
+      owner: 1,
+      hp: 100_000,
+      s,
+      cooldown: 999,
+    };
+    m.units.push(u);
+    return u;
+  };
+  const damageTaken = (u: Unit) => 100_000 - u.hp;
+
+  it('has air flown over the straight line, not the road', () => {
+    const glider = { owner: 0 as Owner, s: AIR_LENGTH / 2, def: unitDef('swarm', 'glider') };
+    const [x, y] = unitPos(glider);
+    expect(x).toBeCloseTo((CASTLES[0][0] + CASTLES[1][0]) / 2);
+    expect(y).toBeCloseTo((CASTLES[0][1] + CASTLES[1][1]) / 2);
+  });
+
+  it('lets a ground-only tower ignore air, an air-only tower ignore the ground, and a both tower shoot either', () => {
+    const shotAt = (race: RaceId, id: string, unit: string, s: number) => {
+      const m = quiet(newMatch([race, 'swarm']));
+      put(m, 0, race, id, 4, 5);
+      const u = standing(m, 'swarm', unit, s);
+      run(m, 4);
+      return damageTaken(u) > 0;
+    };
+    expect(shotAt('titan', 'ballista', 'spearman', GROUND_S)).toBe(true); // ground only: hits ground
+    expect(shotAt('titan', 'ballista', 'glider', AIR_S)).toBe(false); // ...not air
+    expect(shotAt('titan', 'skyguard', 'glider', AIR_S)).toBe(true); // air only: hits air
+    expect(shotAt('titan', 'skyguard', 'spearman', GROUND_S)).toBe(false); // ...not ground
+    expect(shotAt('legion', 'watch', 'spearman', GROUND_S)).toBe(true);
+    expect(shotAt('legion', 'watch', 'glider', AIR_S)).toBe(true);
+  });
+
+  it('keeps a ground-only tower splash off an air unit standing right beside its target', () => {
+    const m = quiet(newMatch(['legion', 'swarm']));
+    put(m, 0, 'legion', 'catapult', 4, 5);
+    const ground = standing(m, 'swarm', 'spearman', ROAD_LENGTH - 7); // on the road at (6.5, 7.5)
+    // The glider flies over the point of its line nearest the target: within the catapult's splash of it.
+    const glider = standing(m, 'swarm', 'glider', AIR_LENGTH * (1 - 4 / 33));
+    const [gx, gy] = unitPos(ground);
+    expect(Math.hypot(unitPos(glider)[0] - gx, unitPos(glider)[1] - gy)).toBeLessThan(
+      towerDef('legion', 'catapult').splash,
+    );
+    run(m, 4);
+    expect(damageTaken(ground)).toBeGreaterThan(0);
+    expect(damageTaken(glider)).toBe(0);
+  });
+
+  it('hides a cloaked unit from towers until a detector of the defender is near, and from nothing of its own side', () => {
+    const m = quiet(newMatch(['legion', 'swarm']));
+    put(m, 0, 'legion', 'watch', 4, 5);
+    const thief = standing(m, 'swarm', 'thief', GROUND_S);
+    expect(visibleTo(m, thief, 0)).toBe(false);
+    expect(visibleTo(m, thief, 1)).toBe(true);
+    run(m, 4);
+    expect(damageTaken(thief)).toBe(0); // unseen: untouched
+    put(m, 0, 'legion', 'lookout', 5, 5); // a detector, radius 5
+    expect(visibleTo(m, thief, 0)).toBe(true);
+    run(m, 4);
+    expect(damageTaken(thief)).toBeGreaterThan(0);
+  });
+
+  it('lets a castle see cloaked units right at its gate', () => {
+    const m = newMatch(['legion', 'swarm']);
+    const thief = standing(m, 'swarm', 'thief', ROAD_LENGTH - 2);
+    expect(visibleTo(m, thief, 0)).toBe(true); // 2 cells from player 0's castle
+    thief.s = ROAD_LENGTH - 20;
+    expect(visibleTo(m, thief, 0)).toBe(false);
+  });
+
+  it('burns what a poison tower hits for a while after it, and renews rather than stacks', () => {
+    const m = quiet(newMatch(['swarm', 'legion']));
+    put(m, 0, 'swarm', 'spitter', 4, 5);
+    const u = standing(m, 'legion', 'ritter', GROUND_S);
+    run(m, 1.2);
+    expect(u.dot).toEqual({ dps: 6, left: expect.any(Number) as number });
+    m.towers.length = 0; // out of the tower's reach, the poison still burns
+    const before = u.hp;
+    run(m, 2);
+    expect(before - u.hp).toBeGreaterThan(5);
+    run(m, 6);
+    expect(u.dot).toBeUndefined();
+    const after = u.hp;
+    run(m, 2);
+    expect(u.hp).toBe(after); // and then it stops
+  });
+
+  it('makes a power aura strengthen towers in its radius and only theirs', () => {
+    const m = newMatch(['swarm', 'legion']);
+    expect(powerAt(m, 0, [4.5, 5.5])).toBe(1);
+    put(m, 0, 'swarm', 'temple', 5, 5);
+    expect(powerAt(m, 0, [4.5, 5.5])).toBeCloseTo(1.3);
+    expect(powerAt(m, 0, [20, 30])).toBe(1);
+    expect(powerAt(m, 1, [4.5, 5.5])).toBe(1); // the other side's friends only
+    const [plain, boosted] = [quiet(newMatch(['swarm', 'legion'])), quiet(newMatch(['swarm', 'legion']))];
+    put(plain, 0, 'swarm', 'nest', 4, 5);
+    put(boosted, 0, 'swarm', 'nest', 4, 5);
+    put(boosted, 0, 'swarm', 'temple', 5, 5);
+    const [a, b] = [standing(plain, 'legion', 'ritter', GROUND_S), standing(boosted, 'legion', 'ritter', GROUND_S)];
+    run(plain, 3);
+    run(boosted, 3);
+    expect(damageTaken(b) / damageTaken(a)).toBeCloseTo(1.3, 1);
+  });
+
+  it('heals friends inside a heal aura, never beyond their maximum, and fires nothing itself', () => {
+    const m = quiet(newMatch(['legion', 'swarm']));
+    put(m, 0, 'legion', 'church', 5, 6);
+    const own: Unit = {
+      id: m.nextId++,
+      def: { ...unitDef('legion', 'warrior'), speed: 0 },
+      owner: 0,
+      hp: 10,
+      s: 3,
+      cooldown: 999,
+    };
+    m.units.push(own);
+    run(m, 2);
+    expect(own.hp).toBeGreaterThan(15);
+    run(m, 30);
+    expect(own.hp).toBe(own.def.hp);
+    expect(m.towers[0]?.cooldown).toBeLessThanOrEqual(0); // it never fired, so its cooldown never restarted
+  });
+
+  it('lets archers shoot air units and plain warriors not', () => {
+    const exchange = (id: string) => {
+      const m = quiet(newMatch(['legion', 'swarm']));
+      const mine: Unit = {
+        id: m.nextId++,
+        def: { ...unitDef('legion', id), speed: 0 },
+        owner: 0,
+        hp: 100_000,
+        s: 8,
+        cooldown: 0,
+      };
+      m.units.push(mine);
+      // A glider over the flight line where it crosses the road's first long run, a few cells from the attacker at (7.5, 7.5).
+      const flyer = standing(m, 'swarm', 'glider', AIR_LENGTH * (1 - 4 / 33));
+      run(m, 4);
+      return damageTaken(flyer);
+    };
+    expect(exchange('archer')).toBeGreaterThan(0);
+    expect(exchange('warrior')).toBe(0);
+  });
+
+  it('keeps a support tower (no damage) from ever shooting', () => {
+    const m = quiet(newMatch(['swarm', 'legion']));
+    put(m, 0, 'swarm', 'academy', 4, 5);
+    put(m, 0, 'swarm', 'temple', 5, 5);
+    standing(m, 'legion', 'ritter', GROUND_S);
+    run(m, 5);
+    expect(m.towers.every((t) => t.cooldown <= 0)).toBe(true);
   });
 });
 

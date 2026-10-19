@@ -25,6 +25,10 @@ export const ART: Item[] = [
   { source: 'tree', from: 'dwarf/units/thane', to: 'units/thane' },
   { source: 'tree', from: 'germanic/units/warrior_bronze_shield', to: 'units/germanic_warrior' },
   { source: 'tree', from: 'teuton/units/ritter', to: 'units/teuton_ritter' },
+  // Air and ranged units: gryphon and glider sheets are 100x100 frames, the archer a standard 72x72 sheet.
+  { source: 'tree', from: 'dwarf/units/gryphon_rider', to: 'units/gryphon_rider' },
+  { source: 'tree', from: 'goblin/units/glider', to: 'units/glider' },
+  { source: 'tree', from: 'germanic/units/archer', to: 'units/germanic_archer' },
   // Portraits for the buttons and the race picker.
   { source: 'pack', from: 'goblin_spearman', to: 'goblin_spearman' },
   { source: 'pack', from: 'goblin_thief', to: 'goblin_thief' },
@@ -32,13 +36,26 @@ export const ART: Item[] = [
   { source: 'pack', from: 'surghan_mercenary_thane', to: 'dwarf_thane' },
   { source: 'tree', from: 'germanic/icons/warrior', to: 'germanic_warrior' },
   { source: 'tree', from: 'teuton/icons/ritter', to: 'teuton_ritter' },
+  { source: 'tree', from: 'goblin/icons/glider', to: 'goblin_glider' },
+  { source: 'tree', from: 'dwarf/icons/gryphon_rider', to: 'dwarf_gryphon' },
+  { source: 'tree', from: 'germanic/icons/archer', to: 'germanic_archer' },
   // Castles (128x256: the first 128x128 frame is the finished one).
   { source: 'tree', from: 'goblin/buildings/stronghold', to: 'goblin_castle' },
   { source: 'tree', from: 'dwarf/buildings/stronghold', to: 'dwarf_castle' },
   { source: 'tree', from: 'teuton/buildings/stronghold', to: 'teuton_castle' },
+  // Support buildings (96x192: the first 96x96 frame is the finished one): temples, a church and a university.
+  { source: 'tree', from: 'goblin/buildings/temple', to: 'goblin_temple' },
+  { source: 'tree', from: 'goblin/buildings/academy', to: 'goblin_academy' },
+  { source: 'tree', from: 'dwarf/buildings/temple', to: 'dwarf_temple' },
+  { source: 'tree', from: 'teuton/buildings/church', to: 'teuton_church' },
+  { source: 'tree', from: 'teuton/buildings/university', to: 'teuton_university' },
   // Towers (64x128: the first 64x64 frame is the finished tower).
   { source: 'tree', from: 'goblin/buildings/watch_tower', to: 'goblin_watch_tower' },
   { source: 'tree', from: 'goblin/buildings/guard_tower', to: 'goblin_guard_tower' },
+  { source: 'tree', from: 'goblin/buildings/catapult_tower', to: 'goblin_catapult_tower' },
+  { source: 'tree', from: 'dwarf/buildings/guard_tower', to: 'dwarf_guard_tower' },
+  { source: 'tree', from: 'dwarf/buildings/sentry_tower', to: 'dwarf_sentry_tower' },
+  { source: 'tree', from: 'teuton/buildings/guard_tower', to: 'teuton_guard_tower' },
   { source: 'tree', from: 'dwarf/buildings/ballista_tower', to: 'dwarf_ballista_tower' },
   { source: 'tree', from: 'dwarf/buildings/cannon_tower', to: 'dwarf_cannon_tower' },
   { source: 'tree', from: 'teuton/buildings/watch_tower', to: 'teuton_watch_tower' },

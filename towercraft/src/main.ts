@@ -5,7 +5,7 @@
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture, TextureStyle } from 'pixi.js';
 import { createAi } from './sim/ai';
 import { CASTLES, COLS, ROAD_LENGTH, ROWS, headingAt } from './sim/board';
-import { MAX_LEVEL, RACES, RACE_IDS, type RaceId, type TowerDef, type UnitDef } from './sim/races';
+import { MAX_LEVEL, RACES, RACE_IDS, type RaceId, type SheetKind, type TowerDef, type UnitDef } from './sim/races';
 import {
   QUEUE_MAX,
   buildReach,
@@ -17,6 +17,7 @@ import {
   unitPos,
   upgradeCastle,
   upgradeCost,
+  visibleTo,
   type Death,
   type Match,
   type Owner,
@@ -32,22 +33,40 @@ const YOU: Owner = 0;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-/** How big a unit's sprite is drawn (its 72px frame times this): tougher units are bigger. */
-const unitScale = (def: UnitDef) => 1.1 + Math.min(0.7, Math.sqrt(def.hp) / 55);
+/** How big a unit's sprite is drawn (its frame times this): walkers scale with their hit points, flyers have their own size. */
+const unitScale = (def: UnitDef) => SHEETS[def.kind].scale ?? 1.1 + Math.min(0.7, Math.sqrt(def.hp) / 55);
 /** The figure in a frame is about this tall (px), standing on the frame's anchor: where a health bar goes. */
 const FIGURE = 32;
 
-// The unit sheets are Wyrmsun's: 72x72 frames, five directions across (up, up-right, right, down-right, down; left is right
-// mirrored), and the game's own animation down the rows: 0 standing, 1-4 the walk, 5-8 an attack, 9-11 dying.
-const FRAME = 72;
-const WALK_ROWS = [1, 2, 0, 3, 4, 0]; // one stride, in poses
-const ATTACK_ROWS = [5, 6, 7, 8];
+// The unit sheets are Wyrmsun's: five directions across (up, up-right, right, down-right, down; the left ones are the right ones
+// mirrored) and the game's own animation down the rows, which differ by sheet (rows are frames / 5 in Wyrmsun's animation scripts).
+interface Sheet {
+  frame: number;
+  walk: number[];
+  attack: number[];
+  death: number[];
+  /** Drawn at this size whatever its hit points (the walkers scale with them). */
+  scale?: number;
+}
+const SHEETS: Record<SheetKind, Sheet> = {
+  foot: { frame: 72, walk: [1, 2, 0, 3, 4, 0], attack: [5, 6, 7, 8], death: [9, 10, 11] },
+  archer: { frame: 72, walk: [1, 2, 0, 3, 4, 0], attack: [5, 6, 7, 8, 9, 10], death: [11, 12, 13] },
+  gryphon: { frame: 100, walk: [0, 1, 2, 3], attack: [0, 1, 2, 3, 4, 5, 6], death: [7, 8, 9, 10, 11, 12], scale: 0.8 },
+  glider: { frame: 100, walk: [0, 1], attack: [0], death: [2, 3, 4], scale: 0.7 },
+};
 const STRIDE = 0.9; // cells walked per stride
-const DEATH_ROWS = [9, 10, 11];
 const DEATH_FRAME = 0.12; // seconds per death frame
 const CORPSE_LIFE = 1.6; // seconds a corpse stays (fading over the last half)
 const COLUMN = { up: 0, right: 2, down: 4, left: 2 } as const;
 const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' } as const;
+/** How high (px) an air unit is drawn above the ground it flies over. */
+const FLIGHT = 26;
+
+/** The sheet column (and whether to mirror it) for a unit heading along (dx, dy), screen coordinates. */
+function direction(dx: number, dy: number): { col: number; flip: boolean } {
+  const octant = Math.round((Math.atan2(dy, Math.abs(dx)) * 180) / Math.PI / 45); // -2 up .. 2 down, by 45 degrees, right side only
+  return { col: [0, 1, 2, 3, 4][octant + 2]!, flip: dx < 0 };
+}
 
 /** Which way a unit faces: along the road, or back up it for the player whose castle is at the road's end. */
 function facing(owner: Owner, s: number) {
@@ -75,19 +94,19 @@ void (async () => {
   const load = (url: string) => Assets.load<Texture>(url);
   const cut = (tex: Texture, x: number, y: number, w: number, h: number) =>
     new Texture({ source: tex.source, frame: new Rectangle(x, y, w, h) });
+  /** The first, finished frame of a building sheet: a square as wide as the sheet (64, 96 or 128 px). */
+  const squareFrame = (tex: Texture) => cut(tex, 0, 0, tex.width, tex.width);
   const names = (pick: (r: (typeof RACES)[RaceId]) => string[]) => [
     ...new Set(RACE_IDS.flatMap((r) => pick(RACES[r]))),
   ];
   const towerTextures = new Map<string, Texture>(
     await Promise.all(
-      names((r) => r.towers.map((t) => t.art)).map(
-        async (n) => [n, cut(await load(`art/${n}.png`), 0, 0, 64, 64)] as const,
-      ),
+      names((r) => r.towers.map((t) => t.art)).map(async (n) => [n, squareFrame(await load(`art/${n}.png`))] as const),
     ),
   );
   const castleTextures = new Map<string, Texture>(
     await Promise.all(
-      names((r) => [r.castle.art]).map(async (n) => [n, cut(await load(`art/${n}.png`), 0, 0, 128, 128)] as const),
+      names((r) => [r.castle.art]).map(async (n) => [n, squareFrame(await load(`art/${n}.png`))] as const),
     ),
   );
   const sheetTextures = new Map<string, Texture>(
@@ -96,11 +115,12 @@ void (async () => {
     ),
   );
   const frames = new Map<string, Texture>();
-  /** One 72x72 frame of a unit sheet (cached). */
-  const unitFrame = (sheet: string, row: number, col: number) => {
+  /** One frame of a unit sheet (cached): row, and column = direction. */
+  const unitFrame = (sheet: string, kind: SheetKind, row: number, col: number) => {
     const key = `${sheet}:${row}:${col}`;
+    const size = SHEETS[kind].frame;
     let t = frames.get(key);
-    if (!t) frames.set(key, (t = cut(sheetTextures.get(sheet)!, col * FRAME, row * FRAME, FRAME, FRAME)));
+    if (!t) frames.set(key, (t = cut(sheetTextures.get(sheet)!, col * size, row * size, size, size)));
     return t;
   };
   // The field (art/lane.png) is drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts).
@@ -297,21 +317,33 @@ void (async () => {
   interface Corpse {
     container: Container;
     sprite: Sprite;
-    sheet: string;
+    def: UnitDef;
     col: number;
     age: number;
   }
   const corpses: Corpse[] = [];
+  /** The sheet column and mirroring for a unit: along the road for walkers, along the flight line for flyers. */
+  const heading = (owner: Owner, s: number, air: boolean) =>
+    air
+      ? direction(
+          (CASTLES[owner === 0 ? 1 : 0][0] - CASTLES[owner][0]) * 1,
+          (CASTLES[owner === 0 ? 1 : 0][1] - CASTLES[owner][1]) * 1,
+        )
+      : (() => {
+          const h = facing(owner, s);
+          return { col: COLUMN[h], flip: h === 'left' };
+        })();
   const addCorpse = (d: Death) => {
-    const heading = facing(d.owner, d.s);
+    const dir = heading(d.owner, d.s, !!d.def.air);
+    const sheet = SHEETS[d.def.kind];
     const container = new Container();
-    const sprite = new Sprite(unitFrame(d.def.sheet, DEATH_ROWS[0]!, COLUMN[heading]));
+    const sprite = new Sprite(unitFrame(d.def.sheet, d.def.kind, sheet.death[0]!, dir.col));
     sprite.anchor.set(0.5, 0.82);
-    sprite.scale.set((heading === 'left' ? -1 : 1) * unitScale(d.def), unitScale(d.def));
+    sprite.scale.set((dir.flip ? -1 : 1) * unitScale(d.def), unitScale(d.def));
     container.addChild(sprite);
-    container.position.set(d.at[0] * CELL, d.at[1] * CELL);
+    container.position.set(d.at[0] * CELL, d.at[1] * CELL - (d.def.air ? FLIGHT : 0));
     corpseLayer.addChild(container);
-    corpses.push({ container, sprite, sheet: d.def.sheet, col: COLUMN[heading], age: 0 });
+    corpses.push({ container, sprite, def: d.def, col: dir.col, age: 0 });
   };
   const ageCorpses = (dt: number) => {
     for (let i = corpses.length - 1; i >= 0; i--) {
@@ -322,9 +354,11 @@ void (async () => {
         corpses.splice(i, 1);
         continue;
       }
+      const rows = SHEETS[k.def.kind].death;
       k.sprite.texture = unitFrame(
-        k.sheet,
-        DEATH_ROWS[Math.min(DEATH_ROWS.length - 1, Math.floor(k.age / DEATH_FRAME))]!,
+        k.def.sheet,
+        k.def.kind,
+        rows[Math.min(rows.length - 1, Math.floor(k.age / DEATH_FRAME))]!,
         k.col,
       );
       k.container.alpha = Math.min(1, (CORPSE_LIFE - k.age) / (CORPSE_LIFE / 2));
@@ -366,6 +400,28 @@ void (async () => {
         .stroke({ color: 0xffb13f, width: 2, alpha: selected ? 0.5 : 0.2 });
     }
 
+    // Support towers show what they cover: an aura (green heal, orange power) and a detector (violet).
+    for (const t of match.towers) {
+      const cx = (t.col + 0.5) * CELL;
+      const cy = (t.row + 0.5) * CELL;
+      const mine = t.owner === YOU;
+      if (t.def.aura)
+        areaLayer
+          .circle(cx, cy, t.def.aura.radius * CELL)
+          .stroke({ color: t.def.aura.kind === 'heal' ? 0x6fd36f : 0xffb13f, width: 1.5, alpha: mine ? 0.45 : 0.25 });
+      if (t.def.detect)
+        areaLayer.circle(cx, cy, t.def.detect * CELL).stroke({ color: 0xb48cff, width: 1.5, alpha: mine ? 0.45 : 0.2 });
+    }
+    if (selected && hover) {
+      const cx = (hover[0] + 0.5) * CELL;
+      const cy = (hover[1] + 0.5) * CELL;
+      if (selected.aura)
+        live
+          .circle(cx, cy, selected.aura.radius * CELL)
+          .stroke({ color: selected.aura.kind === 'heal' ? 0x6fd36f : 0xffb13f, width: 2 });
+      if (selected.detect) live.circle(cx, cy, selected.detect * CELL).stroke({ color: 0xb48cff, width: 2 });
+    }
+
     sync(
       towerSprites,
       match.towers,
@@ -373,9 +429,10 @@ void (async () => {
         const c = new Container();
         const color = RACES[match.players[t.owner].race].color;
         c.addChild(new Graphics().ellipse(0, 4, 19, 9).fill({ color, alpha: 0.55 })); // the owner's colour under the tower
-        const sprite = new Sprite(towerTextures.get(t.def.art));
+        const tex = towerTextures.get(t.def.art)!;
+        const sprite = new Sprite(tex);
         sprite.anchor.set(0.5, 0.78);
-        sprite.scale.set(0.78);
+        sprite.scale.set(50 / tex.width); // a tower is about a cell and a quarter wide, whatever its sheet
         c.addChild(sprite);
         return c;
       },
@@ -390,8 +447,8 @@ void (async () => {
       (u) => {
         const c = new Container();
         const color = RACES[match.players[u.owner].race].color;
-        c.addChild(new Graphics().ellipse(0, 0, 8 * unitScale(u.def), 4).fill({ color, alpha: 0.6 })); // under the feet
-        const body = new Sprite(unitFrame(u.def.sheet, 0, 4));
+        c.addChild(new Graphics().ellipse(0, 0, 8 * unitScale(u.def), 4).fill({ color, alpha: 0.6 })); // under the feet (on the ground, below a flyer)
+        const body = new Sprite(unitFrame(u.def.sheet, u.def.kind, 0, 4));
         body.anchor.set(0.5, 0.82);
         body.scale.set(unitScale(u.def));
         c.addChild(body);
@@ -400,16 +457,23 @@ void (async () => {
       (u: Unit, c) => {
         const [x, y] = unitPos(u);
         c.position.set(x * CELL, y * CELL);
-        c.zIndex = y;
-        const heading = facing(u.owner, u.s);
+        c.zIndex = u.def.air ? 1000 + y : y; // flyers pass over everything
+        const dir = heading(u.owner, u.s, !!u.def.air);
+        const sheet = SHEETS[u.def.kind];
         const moved = lastS.get(u.id) !== u.s;
         lastS.set(u.id, u.s);
         const body = c.children[1] as Sprite;
         const pose = moved
-          ? WALK_ROWS[Math.floor(u.s / (STRIDE / WALK_ROWS.length)) % WALK_ROWS.length]!
-          : ATTACK_ROWS[Math.floor(clock * 8) % ATTACK_ROWS.length]!;
-        body.texture = unitFrame(u.def.sheet, pose, COLUMN[heading]);
-        body.scale.x = (heading === 'left' ? -1 : 1) * unitScale(u.def);
+          ? sheet.walk[Math.floor(u.s / (STRIDE / sheet.walk.length)) % sheet.walk.length]!
+          : sheet.attack[Math.floor(clock * 8) % sheet.attack.length]!;
+        body.texture = unitFrame(u.def.sheet, u.def.kind, pose, dir.col);
+        body.scale.x = (dir.flip ? -1 : 1) * unitScale(u.def);
+        body.y = u.def.air ? -FLIGHT : 0;
+        // A cloaked unit is faint to its own side and invisible to the other until a detector finds it; poison tints green.
+        const seen = visibleTo(match, u, YOU);
+        c.visible = seen;
+        body.alpha = u.def.cloak ? (u.owner === YOU ? 0.5 : 0.75) : 1;
+        body.tint = u.dot ? 0x9be37a : 0xffffff;
       },
     );
 
@@ -421,11 +485,11 @@ void (async () => {
     for (const t of match.towers)
       if (t.hp < t.def.hp) bar((t.col + 0.5) * CELL, (t.row + 0.5) * CELL - 34, 30, t.hp / t.def.hp, 0xffb13f);
     for (const u of match.units) {
-      if (u.hp >= u.def.hp) continue;
+      if (u.hp >= u.def.hp || !visibleTo(match, u, YOU)) continue;
       const [x, y] = unitPos(u);
       bar(
         x * CELL,
-        y * CELL - FIGURE * unitScale(u.def) - 6,
+        y * CELL - FIGURE * unitScale(u.def) - 6 - (u.def.air ? FLIGHT : 0),
         14 + FIGURE * unitScale(u.def) * 0.4,
         u.hp / u.def.hp,
         0x6fd36f,
@@ -464,6 +528,36 @@ void (async () => {
   const unitThumb = (art: string, px: number) =>
     `<img class="thumb" src="art/${art}.png" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`;
 
+  /** What a tower is for, in a few words (the button's small print and its tooltip). */
+  const towerTags = (d: TowerDef) => {
+    const tags: string[] = [];
+    if (d.damage > 0) {
+      tags.push(d.hits === 'both' ? 'ground + air' : `${d.hits} only`, `range ${d.range}`, `${d.damage} dmg`);
+      if (d.splash) tags.push(`area ${d.splash}`);
+      if (d.dot) tags.push(`poison ${d.dot.dps}/s`);
+    }
+    if (d.aura)
+      tags.push(
+        d.aura.kind === 'heal'
+          ? `heals ${d.aura.amount}/s, ${d.aura.radius} around`
+          : `+${Math.round(d.aura.amount * 100)}% damage, ${d.aura.radius} around`,
+      );
+    if (d.detect) tags.push(`sees cloaked, ${d.detect} around`);
+    if (d.reach) tags.push(`build reach ${d.reach}`);
+    return tags.join(' · ');
+  };
+  const unitTags = (d: UnitDef) =>
+    [
+      `${d.hp} hp`,
+      `${d.damage} dmg`,
+      d.range > 1.5 ? `range ${d.range}` : '',
+      d.air ? 'flies' : '',
+      d.cloak ? 'cloaked' : '',
+      d.hitsAir ? 'hits air' : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
   const trainButtons: [HTMLButtonElement, UnitDef][] = [];
   const buildButtons: [HTMLButtonElement, TowerDef][] = [];
   let upgradeButton: HTMLButtonElement;
@@ -476,7 +570,8 @@ void (async () => {
     buildButtons.length = 0;
     for (const def of RACES[race].units) {
       const b = document.createElement('button');
-      b.innerHTML = `${unitThumb(def.art, 34)}<span>${def.count > 1 ? def.count + '× ' : ''}${def.name}<small>${def.cost}g · ${def.train}s · ${def.hp} hp · ${def.damage} dmg</small></span>`;
+      b.innerHTML = `${unitThumb(def.art, 34)}<span>${def.count > 1 ? def.count + '× ' : ''}${def.name}<small>${def.cost}g · ${def.train}s · ${unitTags(def)}</small></span>`;
+      b.title = unitTags(def);
       b.onclick = () => {
         trainUnit(match, YOU, def.id);
         refresh();
@@ -492,7 +587,8 @@ void (async () => {
     $('castle').append(upgradeButton);
     for (const def of RACES[race].towers) {
       const b = document.createElement('button');
-      b.innerHTML = `${towerThumb(def.art, 36)}<span>${def.name}<small>${def.cost}g · range ${def.range} · ${def.damage} dmg${def.splash ? ' · splash' : ''}</small></span>`;
+      b.innerHTML = `${towerThumb(def.art, 36)}<span>${def.name}<small>${def.cost}g · ${towerTags(def)}</small></span>`;
+      b.title = towerTags(def);
       b.onclick = () => {
         selected = selected === def ? undefined : def;
         refresh();
@@ -508,11 +604,11 @@ void (async () => {
     const full = me.queue.length >= QUEUE_MAX;
     for (const [b, def] of trainButtons) {
       b.disabled = def.tier > level || def.cost > me.gold || full;
-      b.title = def.tier > level ? `Needs castle level ${def.tier}` : full ? 'The queue is full' : '';
+      b.title = def.tier > level ? `Needs castle level ${def.tier}` : full ? 'The queue is full' : unitTags(def);
     }
     for (const [b, def] of buildButtons) {
       b.disabled = def.tier > level || def.cost > me.gold;
-      b.title = def.tier > level ? `Needs castle level ${def.tier}` : '';
+      b.title = def.tier > level ? `Needs castle level ${def.tier}` : towerTags(def);
       b.classList.toggle('on', selected === def);
     }
     const cost = upgradeCost(match, YOU);
@@ -533,9 +629,9 @@ void (async () => {
         : '';
   }
 
-  function start(race: RaceId) {
+  function start(race: RaceId, chosen?: RaceId) {
     const rivals = RACE_IDS.filter((r) => r !== race);
-    const rival = rivals[Math.floor(Math.random() * rivals.length)]!;
+    const rival = chosen ?? rivals[Math.floor(Math.random() * rivals.length)]!;
     match = newMatch([race, rival]);
     ai = createAi(1, (Math.random() * 2 ** 31) | 0);
     selected = undefined;
@@ -579,6 +675,9 @@ void (async () => {
         ],
         match: () => match,
         app,
+        races: RACES,
+        startMatch: (a: RaceId, b: RaceId) => start(a, b),
+        focus: (col: number, row: number, zoom: number) => focus(col, row, zoom),
       },
     });
 

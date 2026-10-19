@@ -10,18 +10,20 @@ Licensed [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) (Wyrmsu
 CC-BY-SA option). Credit is shown on the game's title screen. **The terms follow the art:** a copy of these pictures, or a picture
 made from them, must credit the artists and be shared under CC-BY-SA 3.0 (or a compatible licence). The game's code is separate.
 
-- `units/*.png`, the animated unit sheets: **b_o** (Wyrmsun), and badbuckle for the Teuton ritter.
-  goblin spearman and thief, dwarven axefighter, thane, Germanic warrior, Teuton ritter.
+- `units/*.png`, the animated unit sheets: **b_o** (Wyrmsun), and badbuckle for the Teuton ritter. Goblin spearman, thief and glider,
+  dwarven axefighter, thane and gryphon rider, Germanic warrior and archer, Teuton ritter.
 - `lane.png`, drawn by `tools/towercraftBoard.ts` (`npm run towercraft:board`) with Me RPG's map pipeline from the "Tiled Terrains" LPC
   terrain atlas by adrix89 and the Liberated Pixel Cup artists (full list: `art/lpc_terrain/Attribution.txt`, licence CC-BY-SA 3.0 or
   GPL 3.0). It is an adaptation of that atlas, so it is CC-BY-SA 3.0 too.
 
 ## CC0 art (no credit needed, given anyway)
 
-- Towers (`*_tower.png`, 64x128 sheets of which the game uses the first 64x64 frame): **Jinn** (Wyrmsun). Goblin watch and guard
-  towers, dwarf ballista and cannon towers, Teuton watch tower and catapult.
-- Portraits (46x38, for the buttons and race picker): **Jinn** (the Germanic warrior, Teuton ritter) and **Exidelo** (the goblin
-  spearman's and thief's, the dwarvish axefighter's and thane's), from the OpenGameArt pack "Wyrmsun CC0 - over 900 items"
+- Towers: **Jinn** (Wyrmsun). The `*_tower.png` sheets (64x128; the game uses the first 64x64 frame) are the goblin watch, guard and
+  catapult towers, dwarf ballista, cannon, guard and sentry towers, and Teuton watch, guard and catapult towers. The support towers
+  are 96x192 sheets (first 96x96 frame): the goblin temple and academy, dwarf temple, Teuton church and university. Castles are the
+  strongholds (128x256, first 128x128 frame).
+- Portraits (46x38, for the buttons and race picker): **Jinn** (the Germanic warrior, Teuton ritter, goblin spearman, gryphon rider)
+  and **Exidelo** (the goblin thief and glider, the dwarvish axefighter, thane, the Germanic archer), from the OpenGameArt pack "Wyrmsun CC0 - over 900 items"
   (https://opengameart.org/content/wyrmsun-cc0-over-900-items, redistributed by Drummyfish).
 
 The unit sheets are 72x72 frames, five directions across, and the animation rows are the ones Wyrmsun's own scripts use

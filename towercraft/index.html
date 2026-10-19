@@ -12,9 +12,14 @@
       canvas { display: block; position: fixed; inset: 0; }
       .bar { position: fixed; left: 0; right: 0; display: flex; gap: 12px; padding: 8px 12px; background: var(--panel); border: 0 solid var(--line); z-index: 2; }
       #top { top: 0; border-bottom-width: 1px; justify-content: space-between; }
-      #bottom { bottom: 0; border-top-width: 1px; flex-wrap: wrap; justify-content: center; gap: 6px 18px; }
+      #bottom { bottom: 0; border-top-width: 1px; flex-direction: column; gap: 4px; padding: 6px 10px; }
+      .row { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; }
+      .row .group { flex-wrap: nowrap; flex: none; }
+      #bottom button { padding: 4px 8px; }
+      #bottom button small { font-size: 10px; white-space: nowrap; }
       .side { display: flex; gap: 14px; align-items: baseline; }
-      .side b { font-size: 16px; }
+      .side { flex-wrap: wrap; gap: 2px 12px; }
+      .side span, .side b { white-space: nowrap; font-size: 13px; }
       .you b { color: var(--gold); } .rival b { color: #e0777b; }
       .group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
       .group > span { color: var(--dim); font-size: 13px; margin-right: 2px; }
@@ -49,7 +54,10 @@
     <div id="hint"></div>
     <div id="cam"><button id="cam-home" title="Back to your castle">⌂</button><button id="cam-fit" title="Zoom out to the whole map">⤢</button></div>
     <div id="queue"></div>
-    <div class="bar" id="bottom"><div class="group" id="train"></div><div class="group" id="castle"></div><div class="group" id="build"></div></div>
+    <div class="bar" id="bottom">
+      <div class="row"><div class="group" id="train"></div><div class="group" id="castle"></div></div>
+      <div class="row"><div class="group" id="build"></div></div>
+    </div>
     <div class="overlay" id="menu">
       <div>
         <h1>Towercraft</h1>

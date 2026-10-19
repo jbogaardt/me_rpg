@@ -10,6 +10,13 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 - **Everything comes from the castle**: pay for a unit and it joins the castle's train queue, then walks out and marches on its own,
   fighting whatever is in reach (units, towers, the castle). There is no unit control yet; the lever is what you train and where you build.
 - **Towers defend, they do not attack towers**: they shoot enemy units only. Units attack units, towers and castles.
+- **Tower roles** (`TowerDef` in `races.ts`; each race has a few of each): *attackers* hit `ground`, `air` or `both`, and may do area damage
+  (`splash`) or poison (`dot`, which renews, never stacks); *auras* strengthen (`power`, +% damage) or `heal` friendly towers, units and
+  the castle round them, and fire nothing; *detectors* (`detect`) reveal cloaked enemy units to the owner's towers and castle. A tower with
+  `damage: 0` never shoots. Power auras add up to at most double damage.
+- **Unit traits** (`UnitDef`): `air` units fly the straight line between the castles over everything, and only things that can hit air
+  (`hits` air/both towers, units with `hitsAir`, the castle) can hurt them; `cloak` units cannot be seen, so not targeted, unless
+  `visibleTo` finds a detector of the other side near (or the castle's own sight); archers and gryphons shoot the air.
 - **Build reach**: towers go on free cells inside the castle's reach (6, 9 then 13 cells by castle level) or inside the reach of a tower
   already built (`TowerDef.reach`), so a front line is pushed forward tower by tower. Upgrading the castle also unlocks tier 2 units and
   towers, more pay and more castle health.
@@ -30,16 +37,15 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 
 ## State of play and the plan (StarCraft-style depth, in slices)
 
-Done: the map, castles, queue, upgrades, unit combat, towers, reach, pan and zoom, the AI. **Not tuned**: with the AI on both sides most
-matches stall to the time limit (it trickles units into towers) and legion loses to both others. Fix the AI (mass before sending, push
+Done: the map, castles, queue, upgrades, unit combat, towers, reach, pan and zoom, the AI, and the tower roles above (ground, air, area, poison, aura, detector). **Not tuned**: with the AI on both sides most
+matches stall to the time limit (it trickles units into towers) and legion loses to both others even with its archers and church. Fix the AI (mass before sending, push
 reach forward) and tune with seeded headless matches (as `sim.test.ts` plays them), not by feel.
 
 Next, roughly in order; each is a slice with its own tests:
 1. **Fog of war and sight**: units, towers and castles see a radius; enemies out of sight are hidden and untargetable, and building needs
    sight. A *beacon* tower (cheap, no attack, big `reach`) extends where you can build, as in the brief.
-2. **Detection**: cloaked units (goblin shadowstalker) need a detector tower or unit (the observer/turret idea).
-3. **Air**: sky units (gryphon riders, in Wyrmsun) fly straight between castles ignoring the road; only anti-air towers (turrets) and
-   ranged units hit them.
+2. **Detector units** (the observer): a unit that walks with the army and reveals cloaked enemies near it (towers and the castle do it now).
+3. **More roles**: slow (a status like poison), armour, a bunker that garrisons units, a siege unit that outranges towers.
 4. **Race identity** (each race a different way to play): Goblins swarm, cloak and tunnel; Dwarves long-range siege, bunkers (a tower that
    garrisons units for range and armour) and armour; Germanic the all-round, with air and detection.
 5. **Control**: rally points and a hold/attack-move stance, then a second human (online, see below).

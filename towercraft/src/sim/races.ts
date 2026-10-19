@@ -1,19 +1,25 @@
-// The three races, as data (Pixi-free). Each has a castle that can be upgraded twice, two tiers of units trained there and
-// two tiers of towers built within the castle's reach. What makes a race is how its numbers trade off, and a few traits (see
-// CLAUDE.md for the plan to grow them, StarCraft-style); the ids name the role, the display names the Wyrmsun faction:
-//   swarm  (Goblins) fast, weak, many: cheap units trained in pairs, cheap towers, cheap upgrades; dies to splash.
-//   titan  (Dwarves) slow, strong, expensive: few big units, long-range towers, costly upgrades, a tough castle.
-//   legion (Germanic) the middle road on every axis, and the yardstick the other two are tuned against.
-// `art` names a picture in towercraft/public/art (CREDITS.md there); a unit's `sheet` is its animated sheet in art/units.
+// The three races, as data (Pixi-free). Each has a castle that can be upgraded twice, three tiers of units trained there and a
+// handful of towers built within the castle's reach. What makes a race is how its numbers trade off and which roles it has
+// (see CLAUDE.md for the plan to grow them); the ids name the role, the display names the Wyrmsun faction:
+//   swarm  (Goblins) fast, weak, many: cheap units in pairs, cloaked thieves, bat gliders in the air; poison and a buffing temple.
+//   titan  (Dwarves) slow, strong, costly: few big units and gryphons in the air; long-range towers, a tough bunker, a healing shrine.
+//   legion (Germanic) the middle road: archers that shoot the air, sturdy troops; balanced towers, a lookout and a healing church.
+// A tower is one of: an attacker (hits ground, air or both; maybe area damage, poison), a buffer/healer (an aura round it) or a
+// detector (reveals cloaked units). Units may fly (the straight line between castles), be cloaked (unseen without a detector)
+// and shoot the air. `art` names a picture in towercraft/public/art (CREDITS.md there); a unit's `sheet` is its animated sheet.
 // Distances are cells, times seconds, costs gold. A unit's `range` is how far its attack reaches (about 1 = melee).
 
 export type RaceId = 'swarm' | 'titan' | 'legion';
+
+/** How a unit's sprite sheet is laid out (main.ts has the frame rows of each). */
+export type SheetKind = 'foot' | 'archer' | 'gryphon' | 'glider';
 
 export interface UnitDef {
   id: string;
   name: string;
   art: string;
   sheet: string;
+  kind: SheetKind;
   /** Castle level needed to train it. */
   tier: number;
   cost: number;
@@ -26,6 +32,22 @@ export interface UnitDef {
   damage: number;
   range: number;
   cooldown: number;
+  /** Flies the straight line between the castles, over the road; only air-capable attackers can hit it. */
+  air?: boolean;
+  /** Cannot be seen, and so not attacked, unless a detector is near. */
+  cloak?: boolean;
+  /** Can attack air units (default: ground only). */
+  hitsAir?: boolean;
+}
+
+/** What a tower can shoot. */
+export type Hits = 'ground' | 'air' | 'both';
+
+export interface Aura {
+  /** `power`: friendly towers and units inside deal `amount` (a fraction, 0.3 = +30%) more damage. `heal`: they regain `amount` hp a second. */
+  kind: 'power' | 'heal';
+  radius: number;
+  amount: number;
 }
 
 export interface TowerDef {
@@ -37,10 +59,19 @@ export interface TowerDef {
   cost: number;
   hp: number;
   range: number;
+  /** 0 for a tower that only supports (an aura, a detector). */
   damage: number;
   cooldown: number;
+  /** What it can hit. */
+  hits: Hits;
   /** Cells round the target that also take the damage (0 = just the target). */
   splash: number;
+  /** Poison: what it hits burns for `dps` a second for `seconds` more (it does not stack, it renews). */
+  dot?: { dps: number; seconds: number };
+  /** An aura round the tower, for friendly towers and units. */
+  aura?: Aura;
+  /** Reveals cloaked enemy units within this many cells, to its owner's towers, units and castle. */
+  detect?: number;
   /** Cells round this tower where more may be built (0 = it extends nothing): how a front line is pushed forward. */
   reach: number;
 }
@@ -56,10 +87,11 @@ export interface CastleDef {
   pay: number[];
   /** Extra castle hit points gained with each upgrade. */
   hpPerLevel: number;
-  /** The castle shoots the nearest enemy unit in range. */
+  /** The castle shoots the nearest enemy unit in range (air too), and sees cloaked ones within `detect`. */
   range: number;
   damage: number;
   cooldown: number;
+  detect: number;
 }
 
 export interface Race {
@@ -74,11 +106,17 @@ export interface Race {
 
 export const MAX_LEVEL = 3;
 
+type UnitInit = Omit<UnitDef, 'count' | 'range' | 'kind'> & Partial<Pick<UnitDef, 'count' | 'range' | 'kind'>>;
+const unit = (u: UnitInit): UnitDef => ({ count: 1, range: 1, kind: 'foot', ...u });
+type TowerInit = Omit<TowerDef, 'splash' | 'hits' | 'damage' | 'cooldown' | 'range'> &
+  Partial<Pick<TowerDef, 'splash' | 'hits' | 'damage' | 'cooldown' | 'range'>>;
+const tower = (t: TowerInit): TowerDef => ({ splash: 0, hits: 'both', damage: 0, cooldown: 1, range: 0, ...t });
+
 export const RACES: Record<RaceId, Race> = {
   swarm: {
     id: 'swarm',
     name: 'Goblins',
-    blurb: 'Fast, weak and many. Floods the road in pairs; cheap towers and cheap upgrades.',
+    blurb: 'Fast, weak and many. Cloaked thieves, bat gliders, poison and a buffing temple; cheap everything.',
     color: 0xe7682f,
     castle: {
       art: 'goblin_castle',
@@ -90,9 +128,10 @@ export const RACES: Record<RaceId, Race> = {
       range: 3,
       damage: 5,
       cooldown: 0.8,
+      detect: 3,
     },
     units: [
-      {
+      unit({
         id: 'spearman',
         name: 'Goblin Spearmen',
         art: 'goblin_spearman',
@@ -104,27 +143,41 @@ export const RACES: Record<RaceId, Race> = {
         hp: 28,
         speed: 2.2,
         damage: 5,
-        range: 1,
         cooldown: 0.9,
-      },
-      {
+      }),
+      unit({
         id: 'thief',
         name: 'Goblin Thieves',
         art: 'goblin_thief',
         sheet: 'goblin_thief',
         tier: 2,
-        cost: 34,
+        cost: 36,
         train: 2,
         count: 2,
         hp: 42,
         speed: 3,
         damage: 8,
-        range: 1,
         cooldown: 0.6,
-      },
+        cloak: true,
+      }),
+      unit({
+        id: 'glider',
+        name: 'Glider',
+        art: 'goblin_glider',
+        sheet: 'glider',
+        kind: 'glider',
+        tier: 3,
+        cost: 90,
+        train: 4,
+        hp: 70,
+        speed: 3.4,
+        damage: 9,
+        cooldown: 0.9,
+        air: true,
+      }),
     ],
     towers: [
-      {
+      tower({
         id: 'nest',
         name: 'Watch Nest',
         art: 'goblin_watch_tower',
@@ -134,28 +187,63 @@ export const RACES: Record<RaceId, Race> = {
         range: 3,
         damage: 4,
         cooldown: 0.45,
-        splash: 0,
         reach: 3,
-      },
-      {
-        id: 'guard',
-        name: 'Guard Tower',
+      }),
+      tower({
+        id: 'spitter',
+        name: 'Poison Pit',
         art: 'goblin_guard_tower',
         tier: 2,
         cost: 70,
-        hp: 260,
+        hp: 200,
         range: 3.5,
-        damage: 6,
-        cooldown: 0.4,
-        splash: 0,
+        damage: 3,
+        cooldown: 1,
+        hits: 'ground',
+        splash: 1,
+        dot: { dps: 6, seconds: 4 },
         reach: 2,
-      },
+      }),
+      tower({
+        id: 'temple',
+        name: 'Shaman Temple',
+        art: 'goblin_temple',
+        tier: 2,
+        cost: 80,
+        hp: 220,
+        aura: { kind: 'power', radius: 4, amount: 0.3 },
+        reach: 2,
+      }),
+      tower({
+        id: 'academy',
+        name: 'Seer Academy',
+        art: 'goblin_academy',
+        tier: 2,
+        cost: 40,
+        hp: 150,
+        detect: 5,
+        reach: 3,
+      }),
+      tower({
+        id: 'catapult',
+        name: 'Catapult',
+        art: 'goblin_catapult_tower',
+        tier: 3,
+        cost: 130,
+        hp: 260,
+        range: 6.5,
+        damage: 45,
+        cooldown: 3,
+        hits: 'ground',
+        splash: 1.4,
+        reach: 2,
+      }),
     ],
   },
   titan: {
     id: 'titan',
     name: 'Dwarves',
-    blurb: 'Slow, strong and costly. A few armoured giants, long-range towers, a tough castle.',
+    blurb: 'Slow, strong and costly. Armoured giants and gryphons; long-range guns, a tough bunker, a healing shrine.',
     color: 0x406181,
     castle: {
       art: 'dwarf_castle',
@@ -167,9 +255,10 @@ export const RACES: Record<RaceId, Race> = {
       range: 4,
       damage: 14,
       cooldown: 1.4,
+      detect: 3,
     },
     units: [
-      {
+      unit({
         id: 'axefighter',
         name: 'Axefighter',
         art: 'dwarf_axefighter',
@@ -177,14 +266,12 @@ export const RACES: Record<RaceId, Race> = {
         tier: 1,
         cost: 60,
         train: 4,
-        count: 1,
         hp: 220,
         speed: 1,
         damage: 22,
-        range: 1,
         cooldown: 1.2,
-      },
-      {
+      }),
+      unit({
         id: 'thane',
         name: 'Thane',
         art: 'dwarf_thane',
@@ -192,16 +279,30 @@ export const RACES: Record<RaceId, Race> = {
         tier: 2,
         cost: 170,
         train: 7,
-        count: 1,
         hp: 700,
         speed: 0.8,
         damage: 45,
-        range: 1,
         cooldown: 1.5,
-      },
+      }),
+      unit({
+        id: 'gryphon',
+        name: 'Gryphon Rider',
+        art: 'dwarf_gryphon',
+        sheet: 'gryphon_rider',
+        kind: 'gryphon',
+        tier: 3,
+        cost: 220,
+        train: 7,
+        hp: 360,
+        speed: 3,
+        damage: 26,
+        cooldown: 1.2,
+        air: true,
+        hitsAir: true,
+      }),
     ],
     towers: [
-      {
+      tower({
         id: 'ballista',
         name: 'Ballista',
         art: 'dwarf_ballista_tower',
@@ -211,10 +312,22 @@ export const RACES: Record<RaceId, Race> = {
         range: 5,
         damage: 40,
         cooldown: 2,
-        splash: 0,
+        hits: 'ground',
         reach: 3,
-      },
-      {
+      }),
+      tower({
+        id: 'bunker',
+        name: 'Guard Bunker',
+        art: 'dwarf_guard_tower',
+        tier: 2,
+        cost: 110,
+        hp: 900,
+        range: 3,
+        damage: 12,
+        cooldown: 0.9,
+        reach: 2,
+      }),
+      tower({
         id: 'cannon',
         name: 'Cannon Tower',
         art: 'dwarf_cannon_tower',
@@ -224,15 +337,41 @@ export const RACES: Record<RaceId, Race> = {
         range: 4.5,
         damage: 70,
         cooldown: 2.8,
+        hits: 'ground',
         splash: 1.5,
         reach: 2,
-      },
+      }),
+      tower({
+        id: 'skyguard',
+        name: 'Skyguard',
+        art: 'dwarf_sentry_tower',
+        tier: 2,
+        cost: 100,
+        hp: 300,
+        range: 5,
+        damage: 22,
+        cooldown: 0.7,
+        hits: 'air',
+        reach: 2,
+      }),
+      tower({
+        id: 'shrine',
+        name: 'Rune Shrine',
+        art: 'dwarf_temple',
+        tier: 3,
+        cost: 160,
+        hp: 500,
+        aura: { kind: 'heal', radius: 4, amount: 8 },
+        detect: 4,
+        reach: 3,
+      }),
     ],
   },
   legion: {
     id: 'legion',
     name: 'Germanic',
-    blurb: 'Balanced. Dependable towers, sturdy troops and a fast heavy rider.',
+    blurb:
+      'Balanced. Archers that shoot the air, sturdy troops and a fast heavy rider; a lookout and a healing church.',
     color: 0xb82024,
     castle: {
       art: 'teuton_castle',
@@ -244,9 +383,10 @@ export const RACES: Record<RaceId, Race> = {
       range: 3.5,
       damage: 9,
       cooldown: 1,
+      detect: 3,
     },
     units: [
-      {
+      unit({
         id: 'warrior',
         name: 'Warrior',
         art: 'germanic_warrior',
@@ -254,31 +394,43 @@ export const RACES: Record<RaceId, Race> = {
         tier: 1,
         cost: 30,
         train: 2.5,
-        count: 1,
         hp: 90,
         speed: 1.4,
         damage: 10,
-        range: 1,
         cooldown: 1,
-      },
-      {
+      }),
+      unit({
+        id: 'archer',
+        name: 'Archer',
+        art: 'germanic_archer',
+        sheet: 'germanic_archer',
+        kind: 'archer',
+        tier: 2,
+        cost: 45,
+        train: 3,
+        hp: 70,
+        speed: 1.5,
+        damage: 9,
+        range: 4,
+        cooldown: 1.1,
+        hitsAir: true,
+      }),
+      unit({
         id: 'ritter',
         name: 'Ritter',
         art: 'teuton_ritter',
         sheet: 'teuton_ritter',
-        tier: 2,
-        cost: 85,
+        tier: 3,
+        cost: 90,
         train: 4,
-        count: 1,
-        hp: 240,
+        hp: 260,
         speed: 2.2,
         damage: 20,
-        range: 1,
         cooldown: 1.1,
-      },
+      }),
     ],
     towers: [
-      {
+      tower({
         id: 'watch',
         name: 'Watch Tower',
         art: 'teuton_watch_tower',
@@ -288,10 +440,21 @@ export const RACES: Record<RaceId, Race> = {
         range: 3.5,
         damage: 9,
         cooldown: 0.8,
-        splash: 0,
         reach: 3,
-      },
-      {
+      }),
+      tower({
+        id: 'guard',
+        name: 'Archer Tower',
+        art: 'teuton_guard_tower',
+        tier: 2,
+        cost: 100,
+        hp: 340,
+        range: 4.5,
+        damage: 14,
+        cooldown: 1,
+        reach: 2,
+      }),
+      tower({
         id: 'catapult',
         name: 'Catapult',
         art: 'teuton_catapult_tower',
@@ -301,9 +464,30 @@ export const RACES: Record<RaceId, Race> = {
         range: 6,
         damage: 55,
         cooldown: 3.2,
+        hits: 'ground',
         splash: 1.2,
         reach: 2,
-      },
+      }),
+      tower({
+        id: 'lookout',
+        name: 'Lookout',
+        art: 'teuton_university',
+        tier: 2,
+        cost: 45,
+        hp: 160,
+        detect: 5,
+        reach: 4,
+      }),
+      tower({
+        id: 'church',
+        name: 'Church',
+        art: 'teuton_church',
+        tier: 3,
+        cost: 150,
+        hp: 400,
+        aura: { kind: 'heal', radius: 4, amount: 5 },
+        reach: 2,
+      }),
     ],
   },
 };
