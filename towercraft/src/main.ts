@@ -1652,8 +1652,7 @@ void (async () => {
       $('card-buy').hidden = most < 2;
       $('buy-n-label').textContent = `× ${buyN * d.count}`;
       const total = { wood: d.cost.wood * buyN, stone: d.cost.stone * buyN };
-      $('buy-n-cost').innerHTML = money(total);
-      label = `Train${buyN > 1 ? ` ×${buyN}` : ''} · ${money(total)}`;
+      label = `${buyN > 1 ? `<span class="times">×${buyN}</span>` : ''}${money(total)}`;
       reason = most > 0 ? '' : unitReason(d);
       const n = buyN;
       go = () => trainUnits(match, YOU, d.id, n);
@@ -1661,13 +1660,13 @@ void (async () => {
       const d = cardOf.def;
       body = towerCard(d);
       if (selected === d) {
-        label = 'Cancel placing';
+        label = '✕';
         go = () => {
           selected = undefined;
           setGhost(undefined);
         };
       } else {
-        label = `Build · ${money(d.cost)}`;
+        label = money(d.cost);
         reason = towerReason(d);
         go = () => {
           selected = d;
@@ -1715,7 +1714,10 @@ void (async () => {
         (cost === undefined || !nextInc
           ? '<p class="note">The castle has every upgrade.</p>'
           : `<p class="note"><b>Level ${level + 1}</b> costs ${money(cost)}: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pays ${money(nextInc)}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; buildings: ${names(race.towers) || 'none'}.</p>`);
-      label = cost === undefined ? 'Fully upgraded' : `Upgrade to level ${level + 1} · ${money(cost)}`;
+      label =
+        cost === undefined
+          ? icon('power', 'Fully upgraded')
+          : `${icon('power', `Upgrade to level ${level + 1}`)}${money(cost)}`;
       reason = cost === undefined ? 'max' : lacking(cost);
       go = () => upgradeCastle(match, YOU);
     }

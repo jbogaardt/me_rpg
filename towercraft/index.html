@@ -158,6 +158,10 @@
       #card-act { display: block; width: 100%; min-height: 44px; padding: 8px 10px 10px; font-size: 15px; color: var(--gold); background: url('./ui/button.png') center / 100% 100% no-repeat; border: 0;
         font-family: var(--title); font-weight: 700; text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)); }
       #card-act[hidden] { display: none; }
+      #card-act { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 12px; font-size: 20px; }
+      #card-act:not([hidden]) { display: flex; }
+      #card-act .ic { width: 24px; height: 24px; } #card-act .times { font: 700 18px var(--title); color: var(--gold); }
+      #card-act small { flex-basis: 100%; text-align: center; }
       #card-act small { display: block; font: 600 11px var(--body); color: #f0b8ba; margin-top: 1px; text-shadow: 0 1px 2px #000; }
       #card-act i.w, #card-act i.s { font-style: normal; }
       #card-act i.w { color: #e8b27a; } #card-act i.s { color: #dfe5ea; }
