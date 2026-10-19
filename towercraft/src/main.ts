@@ -8,6 +8,7 @@ import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
 import { icon } from './icons';
 import { drawnPos } from './stagger';
+import { Wreck } from './wreck';
 import { createAi } from './sim/ai';
 import { normalizeCode } from '../../src/net/roomCode';
 import { Duel, type DuelPhase } from './net/duel';
@@ -88,6 +89,9 @@ const unitScale = (def: UnitDef) =>
 /** A tower's picture is this wide (px), whatever its sheet; a castle's sprite is drawn at CASTLE_SCALE of its frame. */
 const TOWER_PX = 50 * SIZE;
 const CASTLE_SCALE = 1.4;
+/** How long (s) a razed tower and a fallen castle take to sink into the ground. */
+const TOWER_FALL = 2.4;
+const CASTLE_FALL = 4;
 /** The figure in a frame is about this tall (px), standing on the frame's anchor: where a health bar goes. */
 const figureOf = (kind: SheetKind) => (kind === 'bat' ? 14 : kind === 'bigbat' ? 30 : 32);
 
@@ -727,6 +731,7 @@ void (async () => {
     items: T[],
     make: (item: T) => Container,
     place: (item: T, c: Container) => void,
+    gone?: (c: Container) => boolean, // takes over a container whose item has gone (a falling ruin) instead of destroying it
   ) => {
     const alive = new Set<number>();
     for (const item of items) {
@@ -741,7 +746,7 @@ void (async () => {
     }
     for (const [id, c] of sprites) {
       if (alive.has(id)) continue;
-      c.destroy({ children: true });
+      if (!gone?.(c)) c.destroy({ children: true });
       sprites.delete(id);
     }
   };
@@ -819,6 +824,12 @@ void (async () => {
     ctx.fillRect(0, 0, 64, 64);
     return Texture.from(canvas);
   })();
+  /** Smoke and flames on hurt buildings, and the ruins of fallen ones (`wreck.ts`). */
+  const wreck = new Wreck(glowTexture);
+  world.addChildAt(wreck.ground, world.getChildIndex(sortLayer));
+  world.addChildAt(wreck.air, world.getChildIndex(live));
+  /** Seconds until the end screen, while the castle that lost is still coming down. */
+  let finale: number | undefined;
   const glow = (color: number) => {
     const g = new Sprite(glowTexture);
     g.anchor.set(0.5);
@@ -1046,7 +1057,14 @@ void (async () => {
     drawFog(vision, dt);
     const aim = selected && started ? (ghost ?? hover) : undefined; // the cell being previewed: the ghost, or the mouse
     const spotted = (at: readonly [number, number]) => canSee(match, YOU, at, 0, vision);
-    for (const o of [0, 1] as const) castleSprites[o]!.visible = isCastleSeen(match, YOU, o, vision);
+    for (const o of [0, 1] as const) {
+      const cs = castleSprites[o]!;
+      cs.visible = wreck.has(cs) || isCastleSeen(match, YOU, o, vision);
+      const castle = match.players[o].castle;
+      const pic = cs.children[1] as Sprite;
+      if (cs.visible && castle.hp > 0)
+        wreck.smoulder(-1 - o, cs.x, cs.y - pic.height * 0.78, cs.y, pic.width * 0.3, 1 - castle.hp / castle.maxHp, dt);
+    }
     for (const k of corpses) k.container.visible = k.owner === YOU || spotted(k.at);
 
     // Where a tower of the selected kind can go (and, with the mouse, its range at the cell under it).
@@ -1138,12 +1156,18 @@ void (async () => {
         c.visible = isSeen(match, YOU, t, vision);
         if (c.visible) {
           animateTower(t, c);
+          const pic = c.children[1] as Sprite;
+          wreck.smoulder(t.id, c.x, c.y - pic.height * 0.78, c.y, TOWER_PX * 0.3, 1 - t.hp / t.def.hp, dt);
           const key = `${t.garrison.length}`;
           if (c.label !== key) {
             c.label = key;
             drawBadge(c.children[3] as Graphics, t);
           }
         }
+      },
+      (c) => {
+        wreck.collapse(c, c.children[1] as Sprite, TOWER_FALL, false, true);
+        return true;
       },
     );
     sync(
@@ -1288,7 +1312,7 @@ void (async () => {
 
     // Health bars: castles always, the rest once hurt.
     for (const o of [0, 1] as const) {
-      if (!isCastleSeen(match, YOU, o, vision)) continue;
+      if (!isCastleSeen(match, YOU, o, vision) || match.players[o].castle.hp <= 0) continue;
       const c = match.players[o].castle;
       bar(castles()[o][0] * CELL, castles()[o][1] * CELL - 150, 120, c.hp / c.maxHp, o === YOU ? 0x6fd36f : 0xe0777b);
     }
@@ -1378,6 +1402,7 @@ void (async () => {
       live.circle(x, y, r).stroke({ color: 0xffd9a0, width: 3, alpha: 0.7 * (1 - f) });
     }
     floatMoney(dt);
+    wreck.update(dt);
   }
 
   // --- The page: top bar, the dock of thumbnails, the card, the title screen -----------------------------------------------
@@ -2154,6 +2179,8 @@ void (async () => {
   }
   function begin(races: [RaceId, RaceId], map: BoardId, you: Owner) {
     YOU = you;
+    wreck.clear();
+    finale = undefined;
     endText = undefined;
     stalled = 0;
     match = rejoinState ? unpackMatch(rejoinState) : newMatch(races, BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
@@ -2409,6 +2436,18 @@ void (async () => {
     $('end').hidden = false;
   }
 
+  /** The castles that fell come down (the end screen waits for them); the seconds until it should show. A draw on time shows at once. */
+  function fallCastles() {
+    let seconds = 0;
+    for (const o of [0, 1] as const) {
+      const cs = castleSprites[o]!;
+      if (match.players[o].castle.hp > 0 || wreck.has(cs)) continue;
+      wreck.collapse(cs, cs.children[1] as Sprite, CASTLE_FALL, true, false);
+      seconds = CASTLE_FALL + 0.8;
+    }
+    return seconds;
+  }
+
   /** One tick of the match: the foe's brain (alone), the rules, then what the tick looks like. */
   function advance() {
     if (!online) ai(match, STEP);
@@ -2453,7 +2492,11 @@ void (async () => {
         duel.close();
       }
       refresh();
-      if (match.winner >= 0) showEnd();
+      if (match.winner >= 0) finale = fallCastles();
+    }
+    if (finale !== undefined && (finale -= dt) <= 0) {
+      finale = undefined;
+      showEnd();
     }
     const away = !!online?.lock.away;
     $('wait').hidden = !(online && started && match.winner < 0 && (away || stalled > 0.8));
