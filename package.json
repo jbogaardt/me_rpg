@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run typecheck && npm run map -- check && npm run sprites -- check && vite build",
+    "build": "npm run typecheck && npm run map -- check && npm run sprites -- check && vite build && tsx tools/site.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tools && tsc --noEmit -p e2e && tsc --noEmit -p relay && tsc --noEmit -p server",
     "lint": "eslint .",

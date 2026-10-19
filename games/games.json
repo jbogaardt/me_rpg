@@ -1,0 +1,21 @@
+[
+  {
+    "slug": "me_rpg",
+    "title": "Me RPG",
+    "blurb": "A top-down action RPG: explore many varied worlds, fight, collect and level up, solo or online with a Dungeon Master.",
+    "image": "me_rpg/title.jpg",
+    "status": "playable"
+  },
+  {
+    "slug": "towercraft",
+    "title": "Towercraft",
+    "blurb": "In development.",
+    "status": "soon"
+  },
+  {
+    "slug": "bsworld",
+    "title": "Bs World",
+    "blurb": "In development.",
+    "status": "soon"
+  }
+]

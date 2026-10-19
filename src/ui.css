@@ -32,13 +32,16 @@
 /* --- Loading overlay (hidden by Loading.ts once the first scene is ready) --- */
 #loading {
   position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px; background: #1a1a2e; color: var(--gold); font: 700 20px/1.3 'Cinzel', Georgia, serif;
+  gap: 12px; background: #0a0a0f; color: var(--gold); font: 700 20px/1.3 'Cinzel', Georgia, serif;
   padding: 0 24px; text-align: center;
 }
+/* The title art (public/title.jpg, shown by index.html) fades into the dark at its edges, so it sits on the page as is. */
+#loading .title { width: min(100vw, 1100px); max-height: 66vh; object-fit: contain; margin: 0 -24px; }
 #loading[hidden] { display: none; }
 #loading .bar { width: min(260px, 70vw); }
 #loading .fill { --frac: 0; background-image: var(--grad-xp); }
 #loading.failed .bar { display: none; }
+#loading.failed .title { display: none; }
 #loading.failed { color: #ff8a7a; font-size: 16px; }
 
 /* --- Harvest buttons: one by each ripe crop plot in reach (src/hud/HarvestButtons.ts) --- */

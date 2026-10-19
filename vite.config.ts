@@ -4,6 +4,8 @@ import { assetVersionsPlugin } from './tools/assetVersions';
 // Relative base so the build works under https://<user>.github.io/<repo>/
 export default defineConfig({
   base: './',
+  // The game is one page of the site (tools/site.ts adds the gallery and the other games round it), so it builds into its own folder.
+  build: { outDir: 'dist/me_rpg' },
   // Identifies this build for the co-op version handshake (asset URLs use content versions instead, see the plugin).
   define: { __BUILD_ID__: JSON.stringify(Date.now().toString(36)) },
   plugins: [assetVersionsPlugin()],
