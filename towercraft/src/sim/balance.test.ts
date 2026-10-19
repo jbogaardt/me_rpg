@@ -25,14 +25,14 @@ describe('the AI', () => {
       const ai = createAi(0, 11);
       const waves: number[] = [];
       const seen = new Set<number>();
-      for (let i = 0; i < 20 * 150 && m.units.every((u) => u.owner === 0); i++) {
+      for (let i = 0; i < 20 * 400 && m.units.every((u) => u.owner === 0); i++) {
         ai(m, 0.05);
         const fresh = m.units.filter((u) => !seen.has(u.id));
         for (const u of fresh) seen.add(u.id);
         if (fresh.length > 0) waves.push(fresh.length); // a purchase moment is a group of units
         step(m, 0.05);
-        m.players[0].wood += 0.25; // a steady income on top of the pay days
-        m.players[0].stone += 0.1;
+        m.players[0].wood += 1; // a steady income on top of the pay days (the castle upgrades are dear: it saves for them)
+        m.players[0].stone += 0.5;
       }
       expect(waves.length).toBeGreaterThan(1);
       expect(Math.min(...waves)).toBeGreaterThanOrEqual(2); // every purchase moment is a group

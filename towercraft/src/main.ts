@@ -14,6 +14,7 @@ import {
   MAX_LEVEL,
   RACES,
   REACH_SCALE,
+  type Role,
   RACE_IDS,
   type Cost,
   type RaceId,
@@ -48,6 +49,7 @@ import {
   unitUnlocked,
   upgradeCastle,
   upgradeCost,
+  upgradeLacks,
   upgradeLevel,
   visionOf,
   type Death,
@@ -1792,18 +1794,33 @@ void (async () => {
           .filter((i) => i.tier === level + 1)
           .map((i) => i.name)
           .join(', ');
+      const lacks = upgradeLacks(match, YOU);
+      const ROLE_NAMES: Record<Role, string> = {
+        econ: 'mill or quarry',
+        producer: 'unit building',
+        smithy: 'smithy',
+        defence: 'tower',
+      };
+      const asks = (race.castle.needs[level - 1] ?? [])
+        .map((n) => {
+          const have = lacks.find((l) => l.need === n)?.have ?? n.count;
+          const name = `${ROLE_NAMES[n.role]}${n.count > 1 ? 's' : ''}${n.tier && n.tier > 1 ? ` (level ${n.tier}+)` : ''}`;
+          return `<li class="${have >= n.count ? 'ok' : 'no'}">${have} / ${n.count} ${name}</li>`;
+        })
+        .join('');
       body =
         `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">Level ${level} of ${MAX_LEVEL}</div></div></header>` +
         `<div class="hp"><i style="width:${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%"></i><span>${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}</span></div>` +
         `<ul>${row('Castle pays', `${money(base)} every ${PAY_EVERY} s`)}${row('With mills and quarries', money(inc))}${row('Build reach', `${race.castle.reach[level - 1]} cells`)}${row('Units out', `${match.units.filter((u) => u.owner === YOU).length} of ${UNIT_CAP}`)}</ul>` +
         (cost === undefined || !nextInc
           ? '<p class="note">The castle has every upgrade.</p>'
-          : `<p class="note"><b>Level ${level + 1}</b> costs ${money(cost)}: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pays ${money(nextInc)}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; buildings: ${names(race.towers) || 'none'}.</p>`);
+          : `<p class="note"><b>Level ${level + 1}</b> costs ${money(cost)}: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pays ${money(nextInc)}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; buildings: ${names(race.towers) || 'none'}.</p>` +
+            (asks ? `<p class="note">First build:</p><ul class="needs">${asks}</ul>` : ''));
       label =
         cost === undefined
           ? icon('power', 'Fully upgraded')
           : `${icon('power', `Upgrade to level ${level + 1}`)}${money(cost)}`;
-      reason = cost === undefined ? 'max' : lacking(cost);
+      reason = cost === undefined ? 'max' : lacks.length > 0 ? 'Build what it asks for first' : lacking(cost);
       go = () => upgradeCastle(match, YOU);
     }
     if (body !== cardBody) {

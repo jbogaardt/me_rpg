@@ -36,6 +36,7 @@ import {
   unitUnlocked,
   upgradeCastle,
   upgradeCost,
+  upgradeLacks,
   visionOf,
   type Castle,
   type Match,
@@ -484,12 +485,14 @@ export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): (m:
 
     // What the foe fields decides one tower the AI must have (and so maybe a castle level to build it).
     const answer = answerTower(m, owner, race.towers);
-    const mustUp = answer !== undefined && answer.tier > level;
+    const upReady = upgradeLacks(m, owner).length === 0; // the buildings the upgrade asks for stand
+    const mustUp = upReady && answer !== undefined && answer.tier > level;
 
     // Up a level once the time is right and a tower or two stand; save for it (but not while the foe is at the gate).
     const cost = upgradeCost(m, owner);
     const wantUp =
       level < MAX_LEVEL &&
+      upReady &&
       cost !== undefined &&
       (mustUp || (m.time >= style.upgradeAfter[level - 1]! && towers.length >= 1));
     if (wantUp && canAfford(me, cost)) {

@@ -137,6 +137,8 @@ export interface CastleDef {
   reach: number[];
   /** What it costs to go up from level 1 to 2, and 2 to 3. */
   upgrades: Cost[];
+  /** The buildings that must stand for each of those upgrades (`CASTLE_NEEDS`), besides the cost. */
+  needs: UpgradeNeed[][];
   /** Income (per pay day) by castle level, before the mills and quarries. */
   income: Cost[];
   /** Extra castle hit points gained with each upgrade. */
@@ -162,6 +164,33 @@ export interface Race {
 }
 
 export const MAX_LEVEL = 3;
+
+/** What a building is for: money, unlocking units, upgrades at a smithy, or defending (shooting, an aura, a detector, a bunker). */
+export type Role = 'econ' | 'producer' | 'smithy' | 'defence';
+export const roleOf = (t: Pick<TowerDef, 'econ' | 'trains' | 'damage' | 'bunker' | 'aura' | 'detect'>): Role =>
+  t.econ ? 'econ' : t.trains ? 'producer' : t.damage > 0 || t.bunker || t.aura || t.detect ? 'defence' : 'smithy';
+
+/** A castle upgrade asks for this many standing buildings of a role (of at least a castle `tier`): a base that grew in order, not only paid. */
+export interface UpgradeNeed {
+  role: Role;
+  count: number;
+  tier?: number;
+}
+/** What each upgrade asks of the buildings: `[level 1 to 2, level 2 to 3]`. The same for every race (roles, not ids). */
+export const CASTLE_NEEDS: UpgradeNeed[][] = [
+  [
+    { role: 'econ', count: 3 },
+    { role: 'producer', count: 1 },
+    { role: 'smithy', count: 1 },
+    { role: 'defence', count: 3 },
+  ],
+  [
+    { role: 'econ', count: 4 },
+    { role: 'producer', count: 2, tier: 2 },
+    { role: 'defence', count: 3, tier: 2 },
+    { role: 'smithy', count: 1 },
+  ],
+];
 
 type UnitInit = Omit<UnitDef, 'count' | 'range' | 'kind'> & Partial<Pick<UnitDef, 'count' | 'range' | 'kind'>>;
 const unit = (u: UnitInit): UnitDef => ({ count: 1, range: 1, kind: 'foot', ...u });
@@ -193,6 +222,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
       hp: 900,
       reach: [6, 9, 13],
       upgrades: [price(70, 40), price(150, 110)],
+      needs: CASTLE_NEEDS,
       income: [price(16, 11), price(19, 13), price(22, 15)],
       hpPerLevel: 200,
       range: 2.5,
@@ -563,6 +593,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
       hp: 1000,
       reach: [6, 9, 13],
       upgrades: [price(80, 70), price(170, 170)],
+      needs: CASTLE_NEEDS,
       income: [price(18, 14), price(22, 16), price(25, 18)],
       hpPerLevel: 200,
       range: 2.8,
@@ -900,6 +931,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
       hp: 850,
       reach: [6, 9, 13],
       upgrades: [price(70, 55), price(150, 130)],
+      needs: CASTLE_NEEDS,
       income: [price(16, 11), price(19, 13), price(22, 15)],
       hpPerLevel: 200,
       range: 2.8,
@@ -1271,6 +1303,11 @@ export const REACH_SCALE = 1.5;
 const FOG_MARGIN = 1;
 const CASTLE_BODY = 1.2; // sim.ts's CASTLE_RADIUS, which a castle's shot reaches past
 
+/** How slow the game runs, against the tables as written: income (the castle's and every mill's and quarry's) is this fraction of it... */
+const PACE = 0.65;
+/** ...and the castle upgrades cost this many times as much (level 2, level 3): with the buildings it asks for (`CASTLE_NEEDS`), a first upgrade before about 5 minutes is a speed run. */
+const UPGRADE_PRICE = [11, 3.5];
+const money = (c: Cost, k: number): Cost => ({ wood: Math.round(c.wood * k), stone: Math.round(c.stone * k) });
 const stretch = (cells: number) => cells * REACH_SCALE;
 
 const scaled = (drawn: Record<RaceId, Race>): Record<RaceId, Race> => {
@@ -1298,6 +1335,8 @@ const scaled = (drawn: Record<RaceId, Race>): Record<RaceId, Race> => {
       castle: {
         ...race.castle,
         reach: race.castle.reach.map(stretch),
+        income: race.castle.income.map((c) => money(c, PACE)),
+        upgrades: race.castle.upgrades.map((c, i) => money(c, UPGRADE_PRICE[i] ?? 1)),
         range: stretch(race.castle.range),
         detect: stretch(race.castle.detect),
         sight: fog(race.castle.sight),
@@ -1309,6 +1348,7 @@ const scaled = (drawn: Record<RaceId, Race>): Record<RaceId, Race> => {
         reach: stretch(t.reach),
         sight: fog(t.sight),
         ...(t.detect === undefined ? {} : { detect: stretch(t.detect) }),
+        ...(t.econ ? { econ: money({ wood: 0, stone: 0, ...t.econ }, PACE) } : {}),
         ...(t.aura ? { aura: { ...t.aura, radius: stretch(t.aura.radius) } } : {}),
         ...(t.bunker ? { bunker: { ...t.bunker, rangeBonus: stretch(t.bunker.rangeBonus) } } : {}),
       })),

@@ -15,7 +15,10 @@ import {
 
 // The unit tests play the races as they are written down (`DRAWN_RACES`) on the field they were drawn for: the classic switchback at
 // 36 x 55 cells with no scenery. The game itself plays both stretched (`REACH_SCALE`, `GROW`), which the tests of the data check.
-export const RACES = DRAWN_RACES;
+/** The tables as written, with no building asked for a castle upgrade (the tests of the rules that are not about that upgrade just buy it). */
+export const RACES = Object.fromEntries(
+  Object.entries(DRAWN_RACES).map(([id, race]) => [id, { ...race, castle: { ...race.castle, needs: [[], []] } }]),
+) as unknown as typeof DRAWN_RACES;
 export const CLASSIC = makeBoard({
   id: 'classic',
   cols: DRAWN_COLS,
@@ -32,7 +35,7 @@ export const SCENERY_CELLS = CLASSIC.sceneryCells;
 export const DEFAULT_BOARD = CLASSIC;
 /** A match on the classic field with the races as written. */
 export const newMatch = (races: [RaceId, RaceId], board = CLASSIC): Match =>
-  newGameMatch(races, board, { races: DRAWN_RACES, detourMax: 9 });
+  newGameMatch(races, board, { races: RACES, detourMax: 9 });
 
 /** Where a unit is on the classic field. */
 export const unitPos = (u: Parameters<typeof gameUnitPos>[0]) => gameUnitPos(u, CLASSIC);

@@ -17,7 +17,9 @@ import { CASTLE_CLEAR, DEFAULT_BOARD, type Board } from './board';
 import {
   MAX_LEVEL,
   RACES,
+  roleOf,
   type Race,
+  type UpgradeNeed,
   REACH_SCALE,
   type Cost,
   type RaceId,
@@ -30,7 +32,7 @@ import {
 export const START_RES: Cost = price(120, 40);
 export const PAY_EVERY = 5;
 /** A match that goes on this long (seconds) is decided on castle hit points left. */
-export const TIME_LIMIT = 1200;
+export const TIME_LIMIT = 1800;
 /** Units one side may have alive at once (there is no queue to hold them back, so the rules do). */
 export const UNIT_CAP = 120;
 /** How far (cells) a castle's body reaches: attackers hit its edge, not its centre. */
@@ -225,6 +227,19 @@ export function incomeOf(m: Match, owner: Owner): Cost {
 /** Does `owner` have this building standing? */
 export const hasBuilding = (m: Match, owner: Owner, id: string) =>
   m.towers.some((t) => t.owner === owner && t.hp > 0 && t.def.id === id);
+
+/** What the next castle upgrade still asks of the buildings: each unmet need with how many stand now (nothing when all are met). */
+export function upgradeLacks(m: Match, owner: Owner): { need: UpgradeNeed; have: number }[] {
+  const level = m.players[owner].castle.level;
+  const needs = raceOf(m, owner).castle.needs[level - 1] ?? [];
+  const mine = m.towers.filter((t) => t.owner === owner && t.hp > 0);
+  return needs
+    .map((need) => ({
+      need,
+      have: mine.filter((t) => roleOf(t.def) === need.role && t.def.tier >= (need.tier ?? 1)).length,
+    }))
+    .filter((x) => x.have < x.need.count);
+}
 
 /** Can `owner` buy this unit now, apart from the money: the castle level and the building it needs. */
 export function unitUnlocked(m: Match, owner: Owner, def: UnitDef): 'ok' | 'tier' | 'needs' {
@@ -483,6 +498,7 @@ export function upgradeCastle(m: Match, owner: Owner): Result {
   const p = m.players[owner];
   const cost = upgradeCost(m, owner);
   if (p.castle.level >= MAX_LEVEL || cost === undefined) return 'max';
+  if (upgradeLacks(m, owner).length > 0) return 'needs';
   if (!canAfford(p, cost)) return 'gold';
   pay(p, cost);
   p.castle.level++;

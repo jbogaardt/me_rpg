@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createAi } from './ai';
-import { RACE_IDS, type RaceId } from './races';
+import { RACE_IDS, RACES as GAME_RACES, type RaceId } from './races';
 import {
   PAY_EVERY,
   START_RES,
@@ -22,6 +22,8 @@ import {
   trainUnit,
   trainUnits,
   upgradeCastle,
+  upgradeLacks,
+  newMatch as newGameMatch,
   visibleTo,
 } from './sim';
 import {
@@ -893,4 +895,44 @@ describe('a whole match', () => {
     },
     60_000,
   );
+});
+
+describe('castle upgrades ask for buildings, not only money', () => {
+  const gameMatch = () => {
+    const m = newGameMatch(['legion', 'legion']);
+    m.players[0].wood = m.players[0].stone = 1e6;
+    return m;
+  };
+  it('refuses until the buildings stand, then takes the cost', () => {
+    const m = gameMatch();
+    expect(upgradeLacks(m, 0).length).toBeGreaterThan(0);
+    expect(upgradeCastle(m, 0)).toBe('needs');
+    expect(m.players[0].castle.level).toBe(1);
+    for (const [id, count] of [
+      ['mill', 3],
+      ['barracks', 1],
+      ['armoury', 1],
+      ['watch', 3],
+    ] as const)
+      for (let k = 0; k < count; k++) {
+        const def = GAME_RACES.legion.towers.find((t) => t.id === id)!;
+        let built = false;
+        for (let r = 0; r < m.board.rows && !built; r++)
+          for (let c = 0; c < m.board.cols && !built; c++)
+            if (canBuild(m, 0, def, c, r) === 'ok') built = buildTower(m, 0, id, c, r) === 'ok';
+        expect(built, id).toBe(true);
+      }
+    expect(upgradeLacks(m, 0)).toEqual([]);
+    expect(upgradeCastle(m, 0)).toBe('ok');
+    expect(m.players[0].castle.level).toBe(2);
+    expect(upgradeLacks(m, 0).length).toBeGreaterThan(0); // the next asks for level 2 buildings
+  });
+
+  it('costs more than the first minutes earn, so an upgrade before five minutes is a speed run', () => {
+    for (const id of RACE_IDS) {
+      const c = GAME_RACES[id].castle;
+      const earned = (c.income[0]!.wood * 240) / PAY_EVERY; // the castle's pay in four minutes
+      expect(c.upgrades[0]!.wood, id).toBeGreaterThan(earned);
+    }
+  });
 });
