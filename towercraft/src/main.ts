@@ -6,6 +6,7 @@ import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
+import { icon } from './icons';
 import { createAi } from './sim/ai';
 import { BOARDS, BOARD_IDS, DEFAULT_BOARD_ID } from './sim/board';
 import {
@@ -1352,84 +1353,110 @@ void (async () => {
 
   const row = (k: string, v: string | number) => `<li><span>${k}</span><b>${v}</b></li>`;
   const per = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
-  const tags = (...t: (string | false | undefined)[]) =>
-    `<div class="tags">${t
-      .filter(Boolean)
-      .map((x) => `<i>${x}</i>`)
-      .join('')}</div>`;
   const pct = (n: number) => `+${Math.round(n * 100)}%`;
 
-  /** A unit's card: what it is and what it can do (with your upgrades counted in). */
-  const unitCard = (d: UnitDef) => {
+  // The stat cards are pictures: a heart, a sword and a running man with a bar each (against the best of any race, so a bar says how
+  // tough, hard-hitting or quick it is next to the rest), and an icon for each way it fights. Hover for the words.
+  const best = (list: number[]) => Math.max(...list, 1e-9);
+  const allUnits = RACE_IDS.flatMap((r) => RACES[r].units);
+  const allTowers = RACE_IDS.flatMap((r) => RACES[r].towers);
+  const dpsOf = (d: UnitDef) => (d.damage * (d.multi ?? 1)) / d.cooldown;
+  const MOST = {
+    hp: best(allUnits.map((u) => u.hp)),
+    dps: best(allUnits.map(dpsOf)),
+    speed: best(allUnits.map((u) => u.speed)),
+    towerHp: best(allTowers.map((t) => t.hp)),
+    towerDps: best(allTowers.map((t) => t.damage / t.cooldown)),
+    range: best(allTowers.map((t) => t.range)),
+  };
+  /** One stat: its icon and a bar (`value` of `most`; `extra` is what upgrades add, drawn in gold). */
+  const meter = (ico: string, color: string, title: string, value: number, most: number, extra = 0, id = '') => {
+    const w = Math.max(5, Math.min(100, (value / most) * 100));
+    const x = Math.max(0, Math.min(100 - w, (extra / most) * 100));
+    return (
+      `<div class="st" style="--c:${color}" title="${title}">${icon(ico, title)}<div class="meter">` +
+      `<i${id ? ` id="${id}"` : ''} style="width:${w}%"></i>${x > 0.5 ? `<b style="left:${w}%;width:${x}%"></b>` : ''}</div></div>`
+    );
+  };
+  const RED = '#b82024';
+  const ORANGE = '#e7682f';
+  const BLUE = '#406181';
+  const badges = (...b: (readonly [string, string] | false | undefined)[]) => {
+    const list = b.filter((x): x is readonly [string, string] => !!x);
+    return list.length
+      ? `<div class="badges">${list.map(([ico, t]) => `<span class="bd" title="${t}">${icon(ico, t)}</span>`).join('')}</div>`
+      : '';
+  };
+  /** The ways a unit fights, as icons. */
+  const unitBadges = (d: UnitDef) =>
+    badges(
+      d.air && (['wing', 'Flies'] as const),
+      d.cloak && (['ghost', 'Cloaked: unseen without a detector'] as const),
+      d.range > 1.5 && (['bow', `Ranged (${per(d.range)} cells)`] as const),
+      d.hitsAir && (['skyhit', 'Can hit flyers'] as const),
+      !!d.splash && (['area', 'Area damage'] as const),
+      !!d.multi && (['multi', `Hits ${d.multi} at once`] as const),
+      !!d.siege && d.siege > 1 && (['siege', 'Strong against buildings'] as const),
+      d.suicide && (['bomb', 'Blows itself up'] as const),
+      d.garrison && (['shield', 'Can man a bunker'] as const),
+    );
+  /** A unit's three bars (your upgrades are the gold tail). `live` gives its current health instead of the full, as its bar. */
+  const unitBars = (d: UnitDef) => {
     const dmg = boostOf(match, YOU, d, 'damage');
     const hp = boostOf(match, YOU, d, 'hp');
-    const boosted = (v: number, b: number) => `${per(Math.round(v * b * 10) / 10)}${b > 1 ? ` (${pct(b - 1)})` : ''}`;
     return (
-      `<header><div class="pic">${unitThumb(d, 46)}</div><div><h3>${d.name}</h3><div class="sub">Tier ${d.tier} unit · ${
-        d.count > 1 ? `${d.count} for one purchase` : 'one for one purchase'
-      }</div></div></header>` +
-      tags(
-        d.air && 'Flies',
-        d.cloak && 'Cloaked',
-        d.hitsAir && 'Hits air',
-        d.suicide && 'Blows up',
-        !!d.multi && `Hits ${d.multi} at once`,
-        !!d.splash && `Area ${per(d.splash)}`,
-        !!d.siege && d.siege > 1 && `x${per(d.siege)} vs buildings`,
-        d.range > 1.5 && `Range ${per(d.range)}`,
-        d.garrison && 'Fits a bunker',
-      ) +
-      `<ul>${row('Price', money(d.cost))}${row('Health', boosted(d.hp, hp))}${row('Damage', `${boosted(d.damage, dmg)} a hit`)}` +
-      `${row('Attacks every', `${per(d.cooldown)} s`)}${row('Damage a second', per((d.damage * dmg) / d.cooldown))}` +
-      `${row('Reach', d.range > 1.5 ? `${per(d.range)} cells` : 'melee')}${row('Speed', `${d.speed} cells a second`)}${row('Sight', `${d.sight} cells`)}` +
-      `${d.needs ? row('Comes from', towerName(d.needs)) : ''}</ul>`
+      meter('heart', RED, `Health ${Math.round(d.hp * hp)}`, d.hp, MOST.hp, d.hp * (hp - 1)) +
+      meter('sword', ORANGE, `Damage ${per(dpsOf(d) * dmg)} a second`, dpsOf(d), MOST.dps, dpsOf(d) * (dmg - 1)) +
+      meter('runner', BLUE, `Speed ${d.speed}`, d.speed, MOST.speed)
     );
   };
 
-  /** What a building does, as a line each (roles: economy, producer, smithy, bunker, attacker, aura, detector). */
+  /** A unit's card: its picture, how it fights (icons) and three bars. The price is on the button. */
+  const unitCard = (d: UnitDef) =>
+    `<header><div class="pic">${unitThumb(d, 46)}</div><div><h3>${d.name}</h3>` +
+    `<div class="sub">${d.count > 1 ? `× ${d.count} ` : ''}${d.needs ? `${icon('unlock', 'Comes from')} ${towerName(d.needs)}` : ''}</div></div></header>` +
+    unitBadges(d) +
+    `<div class="stats">${unitBars(d)}</div>`;
+
+  /** What a building does, as pictures: how it fights, what it makes or unlocks, and bars for health, damage and range. */
   const towerCard = (d: TowerDef) => {
     const race = RACES[match.players[YOU].race];
-    const names = (ids: string[], list: { id: string; name: string }[]) =>
-      ids.map((id) => list.find((x) => x.id === id)?.name ?? id).join(', ');
     const hosted = race.upgrades.filter((u) => u.needs === d.id).map((u) => u.name);
     const built = match.towers.filter((t) => t.owner === YOU && t.def.id === d.id).length;
+    const unlocks = (d.trains ?? [])
+      .map((id) => race.units.find((u) => u.id === id))
+      .filter((u): u is UnitDef => !!u)
+      .map((u) => `<span title="${u.name}">${unitThumb(u, 34)}</span>`)
+      .join('');
     return (
-      `<header><div class="pic">${towerThumb(d.art, 50)}</div><div><h3>${d.name}</h3><div class="sub">Tier ${d.tier} building · ${d.hp} health</div></div></header>` +
-      tags(
-        !!d.econ && (d.econ.wood ? 'Makes wood' : 'Makes stone'),
-        !!d.trains && 'Unlocks units',
-        !d.damage && !d.aura && !d.detect && !d.econ && !d.trains && !d.bunker && 'Upgrades',
-        !!d.bunker && 'Bunker',
-        d.damage > 0 && (d.hits === 'both' ? 'Ground + air' : d.hits === 'air' ? 'Air only' : 'Ground only'),
-        d.splash > 0 && 'Area damage',
-        !!d.dot && 'Poison',
-        d.aura && (d.aura.kind === 'heal' ? 'Healer' : 'Power aura'),
-        !!d.detect && 'Sees cloaked',
-        d.reach > 0 && 'Extends your build area',
+      `<header><div class="pic">${towerThumb(d.art, 50)}</div><div><h3>${d.name}</h3>` +
+      `<div class="sub">${d.limit ? `${built} of ${d.limit} built` : ''}${d.needs ? ` ${icon('unlock', 'Needs')} ${towerName(d.needs)}` : ''}</div></div></header>` +
+      badges(
+        d.damage > 0 && (d.hits !== 'air' ? (['ground', 'Hits the ground'] as const) : false),
+        d.damage > 0 && (d.hits !== 'ground' ? (['wing', 'Hits flyers'] as const) : false),
+        d.splash > 0 && (['area', 'Area damage'] as const),
+        !!d.dot && (['drop', 'Poison'] as const),
+        !!d.bunker && (['shield', `Bunker: ${d.bunker.slots} soldiers, +${d.bunker.rangeBonus} range`] as const),
+        d.aura && (d.aura.kind === 'heal' ? ['heal', 'Heals those near'] : ['power', 'Boosts damage of those near']),
+        !!d.detect && (['eye', 'Sees cloaked units'] as const),
+        d.reach > 0 && (['reach', `Extends your build area by ${d.reach}`] as const),
       ) +
-      `<ul>${row('Price', money(d.cost))}${d.limit ? row('Built', `${built} of ${d.limit}`) : ''}${d.needs ? row('Needs', towerName(d.needs)) : ''}${
-        d.econ
-          ? row('Pays', `+${d.econ.wood ?? d.econ.stone} ${d.econ.wood ? 'wood' : 'stone'} every ${PAY_EVERY} s`)
-          : ''
-      }${d.trains ? row('Unlocks', names(d.trains, race.units)) : ''}${hosted.length ? row('Upgrades', hosted.join(', ')) : ''}${
-        d.bunker ? row('Slots', `${d.bunker.slots} soldiers, +${d.bunker.rangeBonus} range`) : ''
-      }${
+      (d.econ
+        ? `<div class="pays">${money({ wood: d.econ.wood ?? 0, stone: d.econ.stone ?? 0 })}<small>every ${PAY_EVERY} s</small></div>`
+        : '') +
+      (unlocks ? `<div class="unlocks">${icon('unlock', 'Unlocks')}${unlocks}</div>` : '') +
+      (hosted.length ? `<p class="note">${hosted.join(' · ')}</p>` : '') +
+      `<div class="stats">${meter('heart', RED, `Health ${d.hp}`, d.hp, MOST.towerHp)}${
         d.damage > 0
-          ? row('Damage', `${d.damage} a shot`) +
-            row('Shoots every', `${per(d.cooldown)} s`) +
-            row('Damage a second', per(d.damage / d.cooldown)) +
-            row('Range', `${d.range} cells`) +
-            (d.splash > 0 ? row('Area', `${d.splash} cells round the target`) : '') +
-            (d.dot ? row('Poison', `${d.dot.dps} a second for ${d.dot.seconds} s`) : '')
+          ? meter(
+              'sword',
+              ORANGE,
+              `Damage ${per(d.damage / d.cooldown)} a second`,
+              d.damage / d.cooldown,
+              MOST.towerDps,
+            ) + meter('range', BLUE, `Range ${d.range} cells`, d.range, MOST.range)
           : ''
-      }${
-        d.aura
-          ? row(
-              d.aura.kind === 'heal' ? 'Heals' : 'Damage bonus',
-              d.aura.kind === 'heal' ? `${d.aura.amount} a second` : pct(d.aura.amount),
-            ) + row('Aura reach', `${d.aura.radius} cells`)
-          : ''
-      }${d.detect ? row('Sees cloaked', `${d.detect} cells round`) : ''}${d.reach ? row('Build reach', `${d.reach} cells`) : ''}${row('Sight', `${d.sight} cells`)}</ul>`
+      }</div>`
     );
   };
 
@@ -1557,36 +1584,40 @@ void (async () => {
     const sent = [...where].map(([name, n]) => `${n} → ${name}`).join(' · ');
     const dmg = boostOf(match, YOU, first, 'damage');
     const title = units.length === 1 ? first.name : `${units.length} units`;
-    const crowd = list.map((k) => `<span class="kind">${unitThumb(k.def, 30)}<b>${k.n}</b></span>`).join('');
+    const crowd = list
+      .map((k) => `<span class="kind" title="${k.def.name}">${unitThumb(k.def, 30)}<b>${k.n}</b></span>`)
+      .join('');
+    const single = units.length === 1;
     const body =
       `<header><div class="pic">${unitThumb(first, 46)}</div><div><h3>${title}</h3>` +
-      `<div class="sub">${units.length === 1 ? `Yours · tier ${first.tier}` : list.length === 1 ? first.name : 'a mixed group'}</div></div></header>` +
-      (units.length > 1 && list.length > 1 ? `<div class="crowd">${crowd}</div>` : '') +
-      `<div class="hp"><i id="lv-hp"></i><span id="lv-hpt"></span></div>` +
-      (units.length === 1
-        ? tags(
-            first.air && 'Flies',
-            first.cloak && 'Cloaked',
-            first.hitsAir && 'Hits air',
-            !!first.multi && `Hits ${first.multi} at once`,
-            !!first.splash && 'Area',
-            !!first.siege && first.siege > 1 && 'Siege',
-          ) +
-          `<ul>${row('Damage', `${per(Math.round(first.damage * dmg * 10) / 10)} a hit`)}${row('Attacks every', `${per(first.cooldown)} s`)}` +
-          `${row('Reach', first.range > 1.5 ? `${per(first.range)} cells` : 'melee')}${row('Speed', `${first.speed} cells a second`)}</ul>`
-        : '') +
+      `<div class="sub">${single ? '' : list.length === 1 ? first.name : ''}</div></div></header>` +
+      (!single && list.length > 1 ? `<div class="crowd">${crowd}</div>` : '') +
+      (single ? unitBadges(first) : '') +
+      `<div class="stats">${meter('heart', RED, 'Health', 100, 100, 0, 'lv-hp')}${
+        single
+          ? meter(
+              'sword',
+              ORANGE,
+              `Damage ${per(dpsOf(first) * dmg)} a second`,
+              dpsOf(first),
+              MOST.dps,
+              dpsOf(first) * (dmg - 1),
+            ) + meter('runner', BLUE, `Speed ${first.speed}`, first.speed, MOST.speed)
+          : ''
+      }</div>` +
       `<div class="targets">` +
       `<button data-aim="none"${on(!sent)} title="Follow the general orders (X)">Orders</button>` +
       `<button data-aim="castle"${on(units.every((u) => u.focus?.kind === 'castle'))} title="Walk past everything to the castle (C)">Castle</button>` +
       `</div>` +
-      `<p class="note">${sent || 'Tap a rival tower or castle to send them there.'}</p>`;
+      (sent ? `<p class="note">${sent}</p>` : '');
     if (body !== cardBody) {
       $('card-body').innerHTML = body;
       cardBody = body;
     }
     const [hp, max] = units.reduce<[number, number]>(([a, b], u) => [a + u.hp, b + u.maxHp], [0, 0]);
-    $('lv-hp').style.width = `${Math.max(0, (hp / max) * 100)}%`;
-    $('lv-hpt').textContent = `${Math.max(0, Math.ceil(hp))} / ${Math.ceil(max)}`;
+    const lv = $('lv-hp');
+    lv.style.width = `${Math.max(2, (hp / max) * 100)}%`;
+    lv.parentElement!.parentElement!.title = `Health ${Math.max(0, Math.ceil(hp))} / ${Math.ceil(max)}`;
     act.hidden = true;
   }
 
@@ -1617,7 +1648,7 @@ void (async () => {
       if (slider.max !== String(Math.max(1, most))) slider.max = String(Math.max(1, most));
       if (slider.value !== String(buyN)) slider.value = String(buyN);
       $('card-buy').hidden = most < 2;
-      $('buy-n-label').textContent = `${buyN} × ${d.name}${d.count > 1 ? ` (${buyN * d.count} units)` : ''}`;
+      $('buy-n-label').textContent = `× ${buyN * d.count}`;
       const total = { wood: d.cost.wood * buyN, stone: d.cost.stone * buyN };
       $('buy-n-cost').innerHTML = money(total);
       label = `Train${buyN > 1 ? ` ×${buyN}` : ''} · ${money(total)}`;
