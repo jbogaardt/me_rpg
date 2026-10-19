@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { createAi } from './ai';
-import { BOARDS, BOARD_IDS, CASTLE_CLEAR, COLS, ROWS, cellIndex } from './board';
+import { BOARDS, BOARD_IDS, CASTLE_CLEAR } from './board';
 import { TIME_LIMIT, canBuild, newMatch, step } from './sim';
 import { RACES } from './races';
 
 describe('the maps', () => {
   it('has maps that are not symmetric: only the classic road is turned half way round onto itself', () => {
-    const turn = (i: number) => cellIndex(COLS - 1 - (i % COLS), ROWS - 1 - Math.floor(i / COLS));
-    const symmetric = (id: string) => [...BOARDS[id]!.roadCells].every((i) => BOARDS[id]!.roadCells.has(turn(i)));
+    const symmetric = (id: string) => {
+      const { cols, rows, roadCells } = BOARDS[id]!;
+      return [...roadCells].every((i) =>
+        roadCells.has((rows - 1 - Math.floor(i / cols)) * cols + (cols - 1 - (i % cols))),
+      );
+    };
     expect(symmetric('greenwood')).toBe(true);
     expect(BOARD_IDS.filter((id) => !symmetric(id)).length).toBeGreaterThanOrEqual(4);
   });
@@ -19,6 +23,8 @@ describe('the maps', () => {
 
   for (const board of Object.values(BOARDS)) {
     describe(board.id, () => {
+      const [COLS, ROWS] = [board.cols, board.rows];
+      const cellIndex = board.cellIndex;
       it('runs from a castle to the other, in one piece, inside the field', () => {
         expect(board.roadLength).toBeGreaterThan(140);
         let prev = board.pointAt(0);

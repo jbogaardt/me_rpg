@@ -22,16 +22,16 @@
       .paper { background: url('./ui/paper.jpg') center / 256px; color: var(--ink); }
       h1, h2, h3, h4 { font-family: var(--title); margin: 0; }
 
-      /* Top bar: the two sides' names, your wood and stone with what they earn, and the castles, on a wood strip. */
-      #top { position: fixed; top: 0; left: 0; right: 0; z-index: 2; display: flex; justify-content: space-between; gap: 12px; padding: 6px 12px;
-        background: url('./ui/wood.jpg') center / 256px; border-bottom: 2px solid var(--gold-dim); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); }
-      .side { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
-      .side span, .side b { white-space: nowrap; font-size: 14px; text-shadow: 0 1px 2px #000; }
-      .side span:first-child { font-family: var(--title); font-weight: 700; font-size: 13px; letter-spacing: 0.03em; color: var(--dim); }
-      .you b { font-family: var(--title); } .you b.w, i.w { color: #e0a566; } .you b.s, i.s { color: #c9d0d9; }
-      .side .inc { color: var(--dim); font-size: 13px; }
-      i.w, i.s { font-style: normal; }
-      .side .res { display: contents; }
+      /* Wood and stone: two icons with a number each, a see-through overlay in the corner (no banner, no names), so the field shows. */
+      :root { --ico-w: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cellipse cx='12' cy='15.5' rx='9.5' ry='4.2' fill='%236b4423'/%3E%3Crect x='2.5' y='9' width='19' height='6.5' fill='%238a5a2e'/%3E%3Cellipse cx='12' cy='9' rx='9.5' ry='4.2' fill='%23c98f55'/%3E%3Cellipse cx='12' cy='9' rx='6.2' ry='2.5' fill='none' stroke='%238a5a2e' stroke-width='1.2'/%3E%3Cellipse cx='12' cy='9' rx='2.6' ry='1' fill='none' stroke='%238a5a2e' stroke-width='1'/%3E%3C/svg%3E");
+        --ico-s: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 17 7 8l6-3 7 5 2 7-5 4H7z' fill='%238d96a1'/%3E%3Cpath d='M7 8l6-3 7 5-6 3z' fill='%23c4cbd3'/%3E%3Cpath d='M14 13l6-3 2 7-5 4-3 1z' fill='%2362707d'/%3E%3C/svg%3E"); }
+      #top { position: fixed; top: 8px; left: 56px; z-index: 2; display: flex; gap: 16px; pointer-events: none; }
+      #top .r { display: flex; align-items: center; gap: 5px; font: 700 20px var(--title); color: #fff; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.75); }
+      #top .r::before, i.w::before, i.s::before { content: ''; flex: none; display: inline-block; width: 1.15em; height: 1.15em; background: center / contain no-repeat; vertical-align: -0.2em; }
+      #top .r::before { width: 28px; height: 28px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7)); }
+      #top .r.w::before, i.w::before { background-image: var(--ico-w); } #top .r.s::before, i.s::before { background-image: var(--ico-s); }
+      #top small { font: 700 14px var(--body); color: #e9e2cc; text-shadow: 0 1px 3px #000; opacity: 0.85; }
+      i.w, i.s { font-style: normal; display: inline-flex; align-items: center; gap: 2px; }
       #hint { position: fixed; left: 0; right: 0; top: 46px; text-align: center; color: var(--text); font-size: 15px; text-shadow: 0 1px 3px #000, 0 0 6px #000; pointer-events: none; z-index: 1; }
 
       /* Wooden square buttons (the kit's), used for the camera and the dock's thumbnails. */
@@ -41,7 +41,7 @@
         text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .wbtn:hover:not(:disabled) { filter: brightness(1.25) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .wbtn:active:not(:disabled) { filter: brightness(0.9); transform: translateY(1px); }
-      #cam { position: fixed; left: 10px; top: 56px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
+      #cam { position: fixed; left: 10px; top: 8px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
       #cam button { width: 40px; height: 40px; font-size: 20px; }
       .plank { background: url('./ui/plank-dim.png') center / 100% 100% no-repeat; border: 0; color: #b9b3a2; font: 700 12px var(--title); padding: 8px 14px; letter-spacing: 0.03em; text-shadow: 0 1px 2px #000; }
       .plank.on, .plank:hover:not(:disabled) { background-image: url('./ui/plank.png'); color: var(--gold); }
@@ -118,9 +118,24 @@
       #card .load em i.w, #card li i.w { color: #8a5a22; } #card .load em i.s, #card li i.s { color: #4f5a66; }
       #card li b { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
       #card .note i.w { color: #8a5a22; } #card .note i.s { color: #4f5a66; }
+      #card-buy { margin: 0 0 8px; display: grid; gap: 4px; }
+      #card-buy[hidden] { display: none; }
+      #card-buy .line { display: flex; align-items: center; justify-content: space-between; font: 700 14px var(--title); color: var(--ink); }
+      #card-buy input[type=range] { width: 100%; height: 28px; margin: 0; accent-color: #8a5a22; }
+      #card .targets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 0 0 6px; }
+      #card .targets button { padding: 6px 4px; border-radius: 6px; border: 1px solid var(--ink-soft); background: rgba(51, 35, 15, 0.14); color: var(--ink);
+        font: 700 12px var(--title); min-height: 44px; display: grid; place-items: center; gap: 1px; }
+      #card .targets button small { font: 600 11px var(--body); color: var(--ink-soft); }
+      #card .targets button:hover:not(:disabled) { background: rgba(242, 211, 138, 0.5); }
+      #card .targets button.on { background: #c98f26; border-color: var(--ink); color: #fff; } #card .targets button.on small { color: #fff3d6; }
+      #card .targets button:disabled { opacity: 0.55; }
+      #card .all { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); margin: 0 0 8px; min-height: 28px; }
+      #card .all input { width: 18px; height: 18px; accent-color: #8a5a22; }
       #card-act { display: block; width: 100%; min-height: 44px; padding: 8px 10px 10px; font-size: 15px; color: var(--gold); background: url('./ui/button.png') center / 100% 100% no-repeat; border: 0;
         font-family: var(--title); font-weight: 700; text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)); }
       #card-act[hidden] { display: none; }
+      #card-act i.w, #card-act i.s { font-style: normal; }
+      #card-act i.w { color: #e8b27a; } #card-act i.s { color: #dfe5ea; }
       #card-act:hover:not(:disabled) { filter: brightness(1.25) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)); }
       #card-act:disabled { filter: grayscale(0.8) brightness(0.65); }
       #card.placing #card-act { color: #f09a9d; }
@@ -163,10 +178,9 @@
         #card.placing { display: none; }
         .tb { width: 44px; height: 52px; } .tb.orders { width: 54px; height: 44px; } #castle .tb:first-child { width: 44px; height: 44px; }
         #tabs .plank { padding: 5px 9px; font-size: 11px; }
-        #hint { top: 66px; font-size: 14px; padding: 0 8px; } #cam { top: 70px; }
+        #hint { top: 44px; font-size: 14px; padding: 0 8px; }
         .up { width: 124px; height: 58px; padding: 5px 12px 7px; } .shelf { min-height: 56px; }
-        .side .inc { font-size: 12px; } .side b { font-size: 13px; }
-        .side .castle { order: 1; } .side .res { display: flex; order: 2; flex-basis: 100%; gap: 0 10px; align-items: baseline; }
+        #top { left: 54px; } #top .r { font-size: 17px; } #top .r::before { width: 22px; height: 22px; }
         .map { width: 92px; } .map .shot { width: 92px; height: 112px; }
         .race { width: 150px; }
         .overlay h1 { font-size: 26px; }
@@ -174,7 +188,7 @@
     </style>
   </head>
   <body>
-    <div id="top"><div class="side you" id="you"></div><div class="side rival" id="rival"></div></div>
+    <div id="top"><span class="r w" title="Wood"><b id="wood">0</b><small id="wood-inc"></small></span><span class="r s" title="Stone"><b id="stone">0</b><small id="stone-inc"></small></span></div>
     <div id="hint"></div>
     <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button></div>
     <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no">Cancel</button></div>
@@ -190,6 +204,10 @@
     <aside id="card" class="panel thin paper" hidden>
       <button class="wbtn" id="card-x" aria-label="Close">×</button>
       <div id="card-body"></div>
+      <div id="card-buy" hidden>
+        <div class="line"><span id="buy-n-label"></span><span id="buy-n-cost"></span></div>
+        <input type="range" id="buy-n" min="1" max="1" value="1" step="1" aria-label="How many to train" />
+      </div>
       <button id="card-act"></button>
     </aside>
     <div class="overlay" id="menu">

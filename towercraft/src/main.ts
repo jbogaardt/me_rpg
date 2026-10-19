@@ -7,7 +7,7 @@ import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
 import { createAi } from './sim/ai';
-import { BOARDS, BOARD_IDS, COLS, DEFAULT_BOARD_ID, ROWS } from './sim/board';
+import { BOARDS, BOARD_IDS, DEFAULT_BOARD_ID } from './sim/board';
 import {
   MAX_LEVEL,
   RACES,
@@ -33,13 +33,15 @@ import {
   isCastleSeen,
   isSeen,
   loadBunker,
+  maxPurchases,
   newMatch,
   nextUpgrade,
+  setFocus,
   setOrder,
   soldierCost,
   step,
   towerUnlocked,
-  trainUnit,
+  trainUnits,
   unitPos,
   unitUnlocked,
   upgradeCastle,
@@ -56,8 +58,6 @@ import {
 } from './sim/sim';
 
 const CELL = 40;
-const BOARD_W = COLS * CELL;
-const BOARD_H = ROWS * CELL;
 const STEP = 0.05;
 const YOU: Owner = 0;
 
@@ -181,22 +181,20 @@ void (async () => {
   // --- The scene -----------------------------------------------------------------------------------------------------
   const world = new Container();
   const field = new Sprite(fieldTextures.get('frostlands'));
-  field.width = BOARD_W;
-  field.height = BOARD_H;
   // The fog: a canvas of shade (dark where nothing of yours sees, soft round pools cut out for every castle, tower and unit)
   // and one of tint (a cool wash where only a tower, the castle or a unit sees but you may not build), scaled up smoothly.
-  const makeFogLayer = () => {
+  const makeFogLayer = (cols: number, rows: number) => {
     const canvas = document.createElement('canvas');
-    canvas.width = COLS * FOG_RES;
-    canvas.height = ROWS * FOG_RES;
+    canvas.width = cols * FOG_RES;
+    canvas.height = rows * FOG_RES;
     const ctx = canvas.getContext('2d')!;
     const sprite = new Sprite(Texture.from(canvas));
-    sprite.width = BOARD_W;
-    sprite.height = BOARD_H;
+    sprite.width = cols * CELL;
+    sprite.height = rows * CELL;
     return { canvas, ctx, sprite };
   };
-  const shade = makeFogLayer();
-  const tint = makeFogLayer();
+  let shade = makeFogLayer(1, 1);
+  let tint = makeFogLayer(1, 1);
   const fogLayer = new Container();
   fogLayer.addChild(tint.sprite, shade.sprite);
   const areaLayer = new Graphics(); // where towers may be built
@@ -222,6 +220,21 @@ void (async () => {
   let match: Match = newMatch(['legion', 'swarm'], BOARDS[chosenMap]);
   /** The castle positions of the map being played. */
   const castles = () => match.board.castles;
+  const boardW = () => match.board.cols * CELL;
+  const boardH = () => match.board.rows * CELL;
+  /** Lay a map out: its picture and a fog canvas of its size (maps differ in size). */
+  const applyBoard = () => {
+    const { cols, rows, id } = match.board;
+    field.texture = fieldTextures.get(id) ?? field.texture;
+    field.width = cols * CELL;
+    field.height = rows * CELL;
+    fogLayer.removeChildren();
+    shade.sprite.destroy(true);
+    tint.sprite.destroy(true);
+    shade = makeFogLayer(cols, rows);
+    tint = makeFogLayer(cols, rows);
+    fogLayer.addChild(tint.sprite, shade.sprite);
+  };
   let ai = createAi(1, 1);
   let selected: TowerDef | undefined;
   let hover: [number, number] | undefined;
@@ -251,17 +264,17 @@ void (async () => {
   };
 
   // --- Camera: drag to pan, wheel or pinch to zoom ------------------------------------------------------------------
-  const topBar = () => $('top').offsetHeight;
+  const topBar = () => 0; // the resources are a see-through overlay: the field runs under it
   const bottomBar = () => $('dock').offsetHeight + 12;
   const viewH = () => window.innerHeight - topBar() - bottomBar();
-  const fitZoom = () => Math.min(window.innerWidth / BOARD_W, viewH() / BOARD_H);
+  const fitZoom = () => Math.min(window.innerWidth / boardW(), viewH() / boardH());
   const minZoom = () => Math.min(fitZoom(), ZOOM_MAX);
 
   function clampCamera() {
     const z = Math.min(ZOOM_MAX, Math.max(minZoom(), world.scale.x));
     world.scale.set(z);
-    const w = BOARD_W * z;
-    const h = BOARD_H * z;
+    const w = boardW() * z;
+    const h = boardH() * z;
     const slack = 40; // a little of the dark may show past an edge
     world.x =
       w <= window.innerWidth
@@ -293,7 +306,7 @@ void (async () => {
   const cellAt = (sx: number, sy: number): [number, number] | undefined => {
     const col = Math.floor((sx - world.x) / world.scale.x / CELL);
     const row = Math.floor((sy - world.y) / world.scale.y / CELL);
-    return col >= 0 && row >= 0 && col < COLS && row < ROWS ? [col, row] : undefined;
+    return col >= 0 && row >= 0 && col < match.board.cols && row < match.board.rows ? [col, row] : undefined;
   };
 
   const pointers = new Map<number, { x: number; y: number }>();
@@ -352,7 +365,7 @@ void (async () => {
     { passive: false },
   );
   $('cam-home').onclick = home;
-  $('cam-fit').onclick = () => focus(COLS / 2, ROWS / 2, minZoom());
+  $('cam-fit').onclick = () => focus(match.board.cols / 2, match.board.rows / 2, minZoom());
 
   /** The touch's pending tower: the first tap on a valid cell leaves a ghost here; Confirm (or a second tap) places it. */
   let ghost: [number, number] | undefined;
@@ -380,9 +393,55 @@ void (async () => {
       (t) => t.owner === YOU && t.def.bunker && Math.hypot(wx - (t.col + 0.5), wy - (t.row - 0.3)) <= 1.2,
     );
 
+  /** One of your units under a tap (a unit's middle is above its feet, higher still for a flyer): the nearest. */
+  const myUnitAt = (wx: number, wy: number) => {
+    let best: Unit | undefined;
+    let bestD = Infinity;
+    for (const u of match.units) {
+      if (u.owner !== YOU || u.hp <= 0 || u.spent) continue;
+      const [x, y] = unitPos(u, match.board);
+      const half = (figureOf(u.def.kind) * unitScale(u.def)) / 2 / CELL;
+      const d = Math.hypot(wx - x, wy - (y - half - (u.def.air ? FLIGHT / CELL : 0)));
+      if (d <= Math.max(0.9, half * 1.1) && d < bestD) [best, bestD] = [u, d];
+    }
+    return best;
+  };
+  /** A tower of the rival's that you can see, under a tap (a tower is a tall sprite too). */
+  const foeTowerAt = (wx: number, wy: number) => {
+    const vision = visionOf(match);
+    let best: Tower | undefined;
+    let bestD = Infinity;
+    for (const t of match.towers) {
+      if (t.owner === YOU || t.hp <= 0 || !isSeen(match, YOU, t, vision)) continue;
+      const d = Math.hypot(wx - (t.col + 0.5), wy - (t.row - 0.4));
+      if (d <= 1.5 && d < bestD) [best, bestD] = [t, d];
+    }
+    return best;
+  };
+
   function tap(sx: number, sy: number, touch: boolean) {
-    // The castle (a tall sprite, so its middle is above its feet): tap it for its panel, anywhere else to close the panel.
+    // A tower is being picked for a unit to attack: the next tap on a rival's tower sends it.
     const [wx, wy] = [(sx - world.x) / world.scale.x / CELL, (sy - world.y) / world.scale.y / CELL];
+    if (started && pickTarget && cardOf?.kind === 'live') {
+      const t = foeTowerAt(wx, wy);
+      if (!t) {
+        pickNote = "Tap one of the rival's towers (one you can see).";
+        return;
+      }
+      const res = setFocus(match, YOU, orderedUnits(cardOf.id), { kind: 'tower', id: t.id });
+      if (res === 'ok') pickTarget = false;
+      pickNote = res === 'ok' ? '' : "That tower is out of this unit's reach: it cannot step that far off the road.";
+      renderCard();
+      return;
+    }
+    // One of your units: tap it for its card (stats, and who it is sent after).
+    const mine = started && !selected ? myUnitAt(wx, wy) : undefined;
+    if (mine) {
+      setGhost(undefined);
+      showCard({ kind: 'live', id: mine.id });
+      return;
+    }
+    // The castle (a tall sprite, so its middle is above its feet): tap it for its panel, anywhere else to close the panel.
     // One of your bunkers (a tall sprite: its middle is above its feet): tap it to load soldiers into it.
     const bunker = started && !selected ? myBunkerAt(wx, wy) : undefined;
     if (bunker) {
@@ -747,8 +806,8 @@ void (async () => {
 
     // Where a tower of the selected kind can go (and, with the mouse, its range at the cell under it).
     if (selected && started) {
-      for (let row = 0; row < ROWS; row++)
-        for (let col = 0; col < COLS; col++)
+      for (let row = 0; row < match.board.rows; row++)
+        for (let col = 0; col < match.board.cols; col++)
           if (canBuild(match, YOU, selected, col, row) === 'ok')
             areaLayer.rect(col * CELL, row * CELL, CELL, CELL).fill({ color: 0x6fd36f, alpha: 0.2 });
       if (aim) {
@@ -920,6 +979,39 @@ void (async () => {
       castleSprites[o]!.children[1]!.scale.set(CASTLE_SCALE * (1 + 0.03 * r * r));
     }
 
+    // The unit whose card is open: a ring at its feet, and a line to what it is sent after (a tower, or the rival's castle).
+    if (cardOf?.kind === 'live') {
+      const u = match.units.find((x) => x.id === (cardOf as { id: number }).id);
+      if (u) {
+        const [ux, uy] = unitPos(u, match.board);
+        const pulse = 0.6 + 0.4 * Math.sin(clock * 5);
+        live
+          .ellipse(ux * CELL, uy * CELL + 2, 22 * SIZE * 0.6, 8 * SIZE * 0.6)
+          .stroke({ color: 0xf2d38a, width: 2.5, alpha: pulse });
+        const lift = (u.def.air ? FLIGHT : 0) + 24;
+        let goal: [number, number] | undefined;
+        if (u.focus?.kind === 'tower') {
+          const t = match.towers.find((x) => x.id === (u.focus as { id: number }).id);
+          if (t) goal = [(t.col + 0.5) * CELL, (t.row + 0.5) * CELL];
+        } else if (u.focus?.kind === 'castle' && isCastleSeen(match, YOU, 1, vision))
+          goal = [castles()[1][0] * CELL, castles()[1][1] * CELL];
+        if (goal) {
+          live
+            .moveTo(ux * CELL, uy * CELL - lift)
+            .lineTo(goal[0], goal[1])
+            .stroke({ color: 0xe0777b, width: 2, alpha: 0.7 });
+          live.circle(goal[0], goal[1] + 4, 34).stroke({ color: 0xe0777b, width: 3, alpha: pulse });
+        }
+      }
+    }
+    // While a tower is being picked for it, the rival's towers you can see are ringed.
+    if (pickTarget)
+      for (const t of match.towers)
+        if (t.owner !== YOU && t.hp > 0 && isSeen(match, YOU, t, vision))
+          live
+            .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 4, 40)
+            .stroke({ color: 0xf2d38a, width: 2, alpha: 0.5 + 0.4 * Math.sin(clock * 6) });
+
     // Health bars: castles always, the rest once hurt.
     for (const o of [0, 1] as const) {
       if (!isCastleSeen(match, YOU, o, vision)) continue;
@@ -1016,15 +1108,13 @@ void (async () => {
 
   // --- The page: top bar, the dock of thumbnails, the card, the title screen -----------------------------------------------
   /** A price as coloured numbers (wood brown, stone grey); `words` spells them out, for the cards. */
-  const money = (c: Cost, words = false) =>
+  const money = (c: Cost) =>
     [
-      c.wood > 0 && `<i class="w">${c.wood}${words ? ' wood' : ''}</i>`,
-      c.stone > 0 && `<i class="s">${c.stone}${words ? ' stone' : ''}</i>`,
+      c.wood > 0 && `<i class="w" title="wood">${c.wood}</i>`,
+      c.stone > 0 && `<i class="s" title="stone">${c.stone}</i>`,
     ]
       .filter(Boolean)
       .join(' ') || '<i>free</i>';
-  const moneyWords = (c: Cost) =>
-    [c.wood > 0 && `${c.wood} wood`, c.stone > 0 && `${c.stone} stone`].filter(Boolean).join(' · ') || 'free';
   /** What the player is short of for a price ('' when they can pay). */
   const lacking = (c: Cost) => {
     const p = match.players[YOU];
@@ -1036,22 +1126,17 @@ void (async () => {
   };
   const towerName = (id: string) => RACES[match.players[YOU].race].towers.find((t) => t.id === id)?.name ?? id;
 
-  const lastSides = ['', ''];
-  const side = (id: string, label: string, o: Owner) => {
-    const p = match.players[o];
-    const name = `<span>${label} · ${RACES[p.race].name}</span>`;
-    const castle = `<span class="castle">castle ${p.castle.level} · ${Math.max(0, Math.ceil(p.castle.hp))}/${p.castle.maxHp}</span>`;
-    let html = name + castle;
-    if (o === YOU) {
-      const inc = incomeOf(match, o);
-      html =
-        name +
-        `<span class="res"><b class="w">${Math.floor(p.wood)} wood</b><b class="s">${Math.floor(p.stone)} stone</b>` +
-        `<span class="inc">+${inc.wood}w +${inc.stone}s / ${PAY_EVERY} s</span></span>` +
-        castle;
-    }
-    if (lastSides[o] !== html) $(id).innerHTML = lastSides[o] = html;
-  };
+  /** Your wood and stone, and what they earn each pay day: two numbers beside their icons, nothing else. */
+  const lastRes = { w: -1, s: -1, wi: -1, si: -1 };
+  function resources() {
+    const p = match.players[YOU];
+    const inc = incomeOf(match, YOU);
+    const [w, st] = [Math.floor(p.wood), Math.floor(p.stone)];
+    if (lastRes.w !== w) $('wood').textContent = String((lastRes.w = w));
+    if (lastRes.s !== st) $('stone').textContent = String((lastRes.s = st));
+    if (lastRes.wi !== inc.wood) $('wood-inc').textContent = `+${(lastRes.wi = inc.wood)}`;
+    if (lastRes.si !== inc.stone) $('stone-inc').textContent = `+${(lastRes.si = inc.stone)}`;
+  }
 
   const towerThumb = (art: string, px: number) =>
     `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(art/${art}.png);background-size:${px}px auto"></i>`;
@@ -1127,7 +1212,7 @@ void (async () => {
         d.range > 1.5 && `Range ${per(d.range)}`,
         d.garrison && 'Fits a bunker',
       ) +
-      `<ul>${row('Price', money(d.cost, true))}${row('Health', boosted(d.hp, hp))}${row('Damage', `${boosted(d.damage, dmg)} a hit`)}` +
+      `<ul>${row('Price', money(d.cost))}${row('Health', boosted(d.hp, hp))}${row('Damage', `${boosted(d.damage, dmg)} a hit`)}` +
       `${row('Attacks every', `${per(d.cooldown)} s`)}${row('Damage a second', per((d.damage * dmg) / d.cooldown))}` +
       `${row('Reach', d.range > 1.5 ? `${per(d.range)} cells` : 'melee')}${row('Speed', `${d.speed} cells a second`)}${row('Sight', `${d.sight} cells`)}` +
       `${d.needs ? row('Comes from', towerName(d.needs)) : ''}</ul>`
@@ -1155,7 +1240,7 @@ void (async () => {
         !!d.detect && 'Sees cloaked',
         d.reach > 0 && 'Extends your build area',
       ) +
-      `<ul>${row('Price', money(d.cost, true))}${d.limit ? row('Built', `${built} of ${d.limit}`) : ''}${d.needs ? row('Needs', towerName(d.needs)) : ''}${
+      `<ul>${row('Price', money(d.cost))}${d.limit ? row('Built', `${built} of ${d.limit}`) : ''}${d.needs ? row('Needs', towerName(d.needs)) : ''}${
         d.econ
           ? row('Pays', `+${d.econ.wood ?? d.econ.stone} ${d.econ.wood ? 'wood' : 'stone'} every ${PAY_EVERY} s`)
           : ''
@@ -1207,16 +1292,27 @@ void (async () => {
     | { kind: 'unit'; def: UnitDef }
     | { kind: 'tower'; def: TowerDef }
     | { kind: 'castle' }
-    | { kind: 'bunker'; id: number };
+    | { kind: 'bunker'; id: number }
+    | { kind: 'live'; id: number };
   let cardOf: CardOf | undefined;
   const act = $<HTMLButtonElement>('card-act');
   let cardBody = '';
+  /** How many purchases the slider is set to, whether a target order goes to every unit of the kind, and a tower is being picked. */
+  let buyN = 1;
+  let applyAll = false;
+  let pickTarget = false;
+  let pickNote = '';
   const sameCard = (a: CardOf, b: CardOf) =>
     a.kind === b.kind &&
     (a.kind === 'castle' || (a as { def?: unknown; id?: number }).def === (b as { def?: unknown }).def) &&
-    (a.kind !== 'bunker' || a.id === (b as { id: number }).id);
+    ((a.kind !== 'bunker' && a.kind !== 'live') || a.id === (b as { id: number }).id);
   function showCard(c: CardOf, toggle = false) {
     if (toggle && cardOf && sameCard(cardOf, c)) return closeCard();
+    if (!cardOf || !sameCard(cardOf, c)) {
+      buyN = 1;
+      pickTarget = false;
+      pickNote = '';
+    }
     cardOf = c;
     if (selected && !(c.kind === 'tower' && c.def === selected)) {
       selected = undefined; // looking at something else drops the tower being placed
@@ -1228,6 +1324,8 @@ void (async () => {
   }
   function closeCard() {
     cardOf = undefined;
+    pickTarget = false;
+    pickNote = '';
     $('card').hidden = true;
     selected = undefined;
     setGhost(undefined);
@@ -1235,12 +1333,41 @@ void (async () => {
   }
   $('card-x').onclick = closeCard;
   // The bunker card's own buttons (its body is rebuilt as the money and the slots change, so one listener catches them).
+  /** The units a target order goes to: the one chosen, or every one of its kind. */
+  const orderedUnits = (id: number) => {
+    const u = match.units.find((x) => x.id === id);
+    if (!u) return [];
+    return applyAll ? match.units.filter((x) => x.owner === YOU && x.def.id === u.def.id).map((x) => x.id) : [id];
+  };
+  $('card-body').addEventListener('change', (e) => {
+    const box = (e.target as HTMLElement).closest<HTMLInputElement>('input[data-all]');
+    if (!box) return;
+    applyAll = box.checked;
+    renderCard();
+  });
   $('card-body').addEventListener('click', (e) => {
+    const aim = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-aim]');
+    if (aim && cardOf?.kind === 'live') {
+      const ids = orderedUnits(cardOf.id);
+      pickNote = '';
+      if (aim.dataset.aim === 'tower') pickTarget = !pickTarget;
+      else {
+        pickTarget = false;
+        setFocus(match, YOU, ids, aim.dataset.aim === 'castle' ? { kind: 'castle' } : undefined);
+      }
+      renderCard();
+      return;
+    }
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-load]');
     if (!b || !cardOf || cardOf.kind !== 'bunker' || b.disabled) return;
     loadBunker(match, YOU, cardOf.id, b.dataset.load!);
     renderCard();
     refresh();
+  });
+
+  $('buy-n').addEventListener('input', () => {
+    buyN = Number($<HTMLInputElement>('buy-n').value);
+    renderCard();
   });
 
   /** Why a unit cannot be bought now ('' when it can). */
@@ -1260,13 +1387,55 @@ void (async () => {
     return lacking(d.cost);
   };
 
+  /** The card of one of your units on the field: its stats and health, and who it is sent after (the general orders, the castle, one tower). */
+  function renderLive(id: number) {
+    const u = match.units.find((x) => x.id === id && x.owner === YOU && x.hp > 0);
+    if (!u) return closeCard(); // it fell
+    const d = u.def;
+    const dmg = boostOf(match, YOU, d, 'damage');
+    const foes = match.towers.filter((t) => t.owner !== YOU);
+    const aimed = u.focus?.kind === 'tower' ? foes.find((t) => t.id === (u.focus as { id: number }).id) : undefined;
+    const kin = match.units.filter((x) => x.owner === YOU && x.def.id === d.id && !x.spent).length;
+    const on = (b: boolean) => (b ? ' class="on"' : '');
+    const body =
+      `<header><div class="pic">${unitThumb(d, 46)}</div><div><h3>${d.name}</h3><div class="sub">Yours · tier ${d.tier}</div></div></header>` +
+      `<div class="hp"><i id="lv-hp"></i><span id="lv-hpt"></span></div>` +
+      tags(
+        d.air && 'Flies',
+        d.cloak && 'Cloaked',
+        d.hitsAir && 'Hits air',
+        !!d.multi && `Hits ${d.multi} at once`,
+        !!d.splash && 'Area',
+        !!d.siege && d.siege > 1 && 'Siege',
+      ) +
+      `<ul>${row('Damage', `${per(Math.round(d.damage * dmg * 10) / 10)} a hit`)}${row('Attacks every', `${per(d.cooldown)} s`)}` +
+      `${row('Reach', d.range > 1.5 ? `${per(d.range)} cells` : 'melee')}${row('Speed', `${d.speed} cells a second`)}</ul>` +
+      `<div class="targets">` +
+      `<button data-aim="none"${on(!u.focus && !pickTarget)} title="Follow the general orders">Orders<small>default</small></button>` +
+      `<button data-aim="castle"${on(u.focus?.kind === 'castle')} title="Walk past everything to the castle">Castle<small>the base</small></button>` +
+      `<button data-aim="tower"${on(!!aimed || pickTarget)} title="Pick an enemy tower on the map">Tower<small>${aimed ? aimed.def.name : pickTarget ? 'tap one…' : 'pick'}</small></button>` +
+      `</div>` +
+      (kin > 1
+        ? `<label class="all"><input type="checkbox" data-all${applyAll ? ' checked' : ''} />All ${kin} ${d.name}s</label>`
+        : '');
+    if (body !== cardBody) {
+      $('card-body').innerHTML = body;
+      cardBody = body;
+    }
+    $('lv-hp').style.width = `${Math.max(0, (u.hp / u.maxHp) * 100)}%`;
+    $('lv-hpt').textContent = `${Math.max(0, Math.ceil(u.hp))} / ${Math.ceil(u.maxHp)}`;
+    act.hidden = true;
+  }
+
   function renderCard() {
     if (!cardOf) return;
     const me = match.players[YOU];
     const race = RACES[me.race];
     const { level } = me.castle;
     const card = $('card');
-    card.classList.toggle('placing', cardOf.kind === 'tower' && selected === cardOf.def);
+    card.classList.toggle('placing', (cardOf.kind === 'tower' && selected === cardOf.def) || pickTarget);
+    $('card-buy').hidden = true;
+    if (cardOf.kind === 'live') return renderLive(cardOf.id);
     let body: string;
     let label = '';
     let reason = '';
@@ -1277,9 +1446,20 @@ void (async () => {
     if (cardOf.kind === 'unit') {
       const d = cardOf.def;
       body = unitCard(d);
-      label = `Train · ${moneyWords(d.cost)}`;
-      reason = unitReason(d);
-      go = () => trainUnit(match, YOU, d.id);
+      // A slider to buy several at once, up to what the money, the unit limit and the unlocks allow.
+      const most = maxPurchases(match, YOU, d);
+      buyN = Math.max(1, Math.min(buyN, most));
+      const slider = $<HTMLInputElement>('buy-n');
+      if (slider.max !== String(Math.max(1, most))) slider.max = String(Math.max(1, most));
+      if (slider.value !== String(buyN)) slider.value = String(buyN);
+      $('card-buy').hidden = most < 2;
+      $('buy-n-label').textContent = `${buyN} × ${d.name}${d.count > 1 ? ` (${buyN * d.count} units)` : ''}`;
+      const total = { wood: d.cost.wood * buyN, stone: d.cost.stone * buyN };
+      $('buy-n-cost').innerHTML = money(total);
+      label = `Train${buyN > 1 ? ` ×${buyN}` : ''} · ${money(total)}`;
+      reason = most > 0 ? '' : unitReason(d);
+      const n = buyN;
+      go = () => trainUnits(match, YOU, d.id, n);
     } else if (cardOf.kind === 'tower') {
       const d = cardOf.def;
       body = towerCard(d);
@@ -1290,7 +1470,7 @@ void (async () => {
           setGhost(undefined);
         };
       } else {
-        label = `Build · ${moneyWords(d.cost)}`;
+        label = `Build · ${money(d.cost)}`;
         reason = towerReason(d);
         go = () => {
           selected = d;
@@ -1311,7 +1491,7 @@ void (async () => {
           return (
             `<button class="load" data-load="${u.id}"${why ? ' disabled' : ''}>${unitThumb(u, 34)}` +
             `<span><b>${u.name}</b><small>${why || `${u.damage} dmg · range ${per(u.range + b.rangeBonus)}${u.hitsAir ? ' · hits air' : ''}`}</small></span>` +
-            `<em>${money(cost, true)}</em></button>`
+            `<em>${money(cost)}</em></button>`
           );
         })
         .join('');
@@ -1334,11 +1514,11 @@ void (async () => {
       body =
         `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">Level ${level} of ${MAX_LEVEL}</div></div></header>` +
         `<div class="hp"><i style="width:${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%"></i><span>${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}</span></div>` +
-        `<ul>${row('Castle pays', `${money(base, true)} every ${PAY_EVERY} s`)}${row('With mills and quarries', money(inc, true))}${row('Build reach', `${race.castle.reach[level - 1]} cells`)}${row('Units out', `${match.units.filter((u) => u.owner === YOU).length} of ${UNIT_CAP}`)}</ul>` +
+        `<ul>${row('Castle pays', `${money(base)} every ${PAY_EVERY} s`)}${row('With mills and quarries', money(inc))}${row('Build reach', `${race.castle.reach[level - 1]} cells`)}${row('Units out', `${match.units.filter((u) => u.owner === YOU).length} of ${UNIT_CAP}`)}</ul>` +
         (cost === undefined || !nextInc
           ? '<p class="note">The castle has every upgrade.</p>'
-          : `<p class="note"><b>Level ${level + 1}</b> costs ${money(cost, true)}: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pays ${money(nextInc, true)}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; buildings: ${names(race.towers) || 'none'}.</p>`);
-      label = cost === undefined ? 'Fully upgraded' : `Upgrade to level ${level + 1} · ${moneyWords(cost)}`;
+          : `<p class="note"><b>Level ${level + 1}</b> costs ${money(cost)}: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pays ${money(nextInc)}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; buildings: ${names(race.towers) || 'none'}.</p>`);
+      label = cost === undefined ? 'Fully upgraded' : `Upgrade to level ${level + 1} · ${money(cost)}`;
       reason = cost === undefined ? 'max' : lacking(cost);
       go = () => upgradeCastle(match, YOU);
     }
@@ -1347,7 +1527,8 @@ void (async () => {
       cardBody = body;
     }
     act.hidden = cardOf.kind === 'bunker';
-    act.textContent = reason && reason !== 'max' ? `${label} (${reason.toLowerCase()})` : label;
+    const said = `${label}${reason && reason !== 'max' ? `<small>${reason}</small>` : ''}`;
+    if (act.innerHTML !== said) act.innerHTML = said;
     act.disabled = !!reason;
     act.title = reason === 'max' ? '' : reason;
     act.onclick = () => {
@@ -1527,6 +1708,7 @@ void (async () => {
             ? `Confirm to build the ${selected.name}, or tap another cell. Esc to cancel.`
             : `Tap a clear cell to build a ${selected.name}. Esc to cancel.`;
     }
+    if (started && pickTarget) text = pickNote || "Tap one of the rival's towers to send it after that tower.";
     if ($('hint').textContent !== text) $('hint').textContent = text;
   }
 
@@ -1534,7 +1716,7 @@ void (async () => {
     const rivals = RACE_IDS.filter((r) => r !== race);
     const rival = chosen ?? rivals[Math.floor(Math.random() * rivals.length)]!;
     match = newMatch([race, rival], BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
-    field.texture = fieldTextures.get(match.board.id) ?? field.texture;
+    applyBoard();
     ai = createAi(1, (Math.random() * 2 ** 31) | 0);
     selected = undefined;
     acc = 0;
@@ -1575,7 +1757,14 @@ void (async () => {
     }
     for (const [k, b] of mapButtons) b.classList.toggle('on', k === id);
     $('map-blurb').textContent = `${BOARDS[id]!.name}: ${BOARDS[id]!.blurb}`;
-    field.texture = fieldTextures.get(id) ?? field.texture;
+    if (!started) {
+      // Show the map behind the title screen.
+      match = newMatch(['legion', 'swarm'], BOARDS[id]);
+      applyBoard();
+      buildCastles();
+      clampCamera();
+      focus(match.board.cols / 2, match.board.rows / 2, minZoom());
+    }
   };
   for (const id of BOARD_IDS) {
     const b = document.createElement('button');
@@ -1623,9 +1812,8 @@ void (async () => {
   makeControls('legion');
   refresh();
   clampCamera();
-  focus(COLS / 2, ROWS / 2, minZoom());
-  side('you', 'You', 0);
-  side('rival', 'Rival', 1);
+  focus(match.board.cols / 2, match.board.rows / 2, minZoom());
+  resources();
 
   app.ticker.add((ticker) => {
     const dt = ticker.deltaMS / 1000;
@@ -1665,8 +1853,7 @@ void (async () => {
         $('end').hidden = false;
       }
     }
-    side('you', 'You', 0);
-    side('rival', 'Rival', 1);
+    resources();
     drawLive(dt);
   });
 })();

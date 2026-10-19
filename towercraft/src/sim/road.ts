@@ -4,13 +4,18 @@
 // others are free meanders (control points, smoothed) that are NOT symmetric: each side has its own ground, and the balance
 // harness (alternating sides) and `board.test.ts` (open ground by each castle) keep that fair.
 
+/** The classic field's size (cells). The other maps are `GROW` times as wide and tall, so there is room between the bends for the buildings. */
 export const COLS = 36;
 export const ROWS = 55;
+export const GROW = 1.45;
 
 export type Pt = readonly [number, number];
 
 export interface RoadDef {
   id: string;
+  /** The field's size in cells. */
+  cols: number;
+  rows: number;
   name: string;
   blurb: string;
   /** Cells whose centre is this near the road are road (a cell on a straight run: 0.5 is one wide, 1 is three). */
@@ -40,6 +45,10 @@ export function smooth(controls: readonly Pt[], step = 0.5): [number, number][] 
 
 const centre = ([c, r]: Pt): [number, number] => [c + 0.5, r + 0.5];
 
+/** Control points drawn for the classic field, spread over the grown one. */
+const grow = (pts: readonly Pt[]): Pt[] => pts.map(([x, y]) => [x * GROW, y * GROW]);
+const [GCOLS, GROWS] = [Math.round(COLS * GROW), Math.round(ROWS * GROW)];
+
 /** The classic road: straight runs back and forth across the field (corners in cells); the one symmetric road. */
 const SWITCHBACK: readonly Pt[] = (
   [
@@ -65,6 +74,8 @@ const SWITCHBACK: readonly Pt[] = (
 export const ROADS: readonly RoadDef[] = [
   {
     id: 'greenwood',
+    cols: COLS,
+    rows: ROWS,
     name: 'Greenwood Switchbacks (classic)',
     blurb: 'Long straight runs back and forth through the greenwood: easy to read, easy to hold.',
     halfWidth: 1,
@@ -72,106 +83,122 @@ export const ROADS: readonly RoadDef[] = [
   },
   {
     id: 'frostlands',
+    cols: GCOLS,
+    rows: GROWS,
     name: 'Frostbound Serpent',
     blurb: 'A snowy road that coils back on itself through drifts and frozen lakes: no two bends alike.',
     halfWidth: 1,
-    points: smooth([
-      [10, 8],
-      [14, 5],
-      [21, 4],
-      [30, 7],
-      [31, 13],
-      [22, 15],
-      [12, 12],
-      [6, 15],
-      [5, 22],
-      [13, 25],
-      [24, 21],
-      [31, 24],
-      [30, 31],
-      [21, 33],
-      [13, 30],
-      [6, 33],
-      [6, 38],
-      [14, 40],
-      [26, 37],
-      [31, 41],
-      [29, 46],
-      [21, 47],
-      [12, 47],
-    ]),
+    points: smooth(
+      grow([
+        [10, 8],
+        [14, 5],
+        [21, 4],
+        [30, 7],
+        [31, 13],
+        [22, 15],
+        [12, 12],
+        [6, 15],
+        [5, 22],
+        [13, 25],
+        [24, 21],
+        [31, 24],
+        [30, 31],
+        [21, 33],
+        [13, 30],
+        [6, 33],
+        [6, 38],
+        [14, 40],
+        [26, 37],
+        [31, 41],
+        [29, 46],
+        [21, 47],
+        [12, 47],
+      ]),
+    ),
   },
   {
     id: 'desert',
+    cols: GCOLS,
+    rows: GROWS,
     name: 'Dune Caravan Trail',
     blurb: 'A lazy caravan trail looping over red sand and dunes, starting in the east: wide curves, long sight lines.',
     halfWidth: 1,
-    points: smooth([
-      [26, 8],
-      [20, 5],
-      [13, 4],
-      [6, 7],
-      [6, 14],
-      [14, 17],
-      [23, 14],
-      [30, 15],
-      [31, 22],
-      [23, 26],
-      [15, 23],
-      [7, 27],
-      [5, 33],
-      [12, 34],
-      [21, 30],
-      [29, 33],
-      [30, 40],
-      [22, 43],
-      [14, 39],
-      [7, 42],
-      [9, 48],
-      [17, 47],
-    ]),
+    points: smooth(
+      grow([
+        [26, 8],
+        [20, 5],
+        [13, 4],
+        [6, 7],
+        [6, 14],
+        [14, 17],
+        [23, 14],
+        [30, 15],
+        [31, 22],
+        [23, 26],
+        [15, 23],
+        [7, 27],
+        [5, 33],
+        [12, 34],
+        [21, 30],
+        [29, 33],
+        [30, 40],
+        [22, 43],
+        [14, 39],
+        [7, 42],
+        [9, 48],
+        [17, 47],
+      ]),
+    ),
   },
   {
     id: 'mire',
+    cols: GCOLS,
+    rows: GROWS,
     name: 'Witchmire Causeway',
     blurb: 'A muddy causeway wandering between black pools: the bends hide what is coming.',
     halfWidth: 1,
-    points: smooth([
-      [9, 8],
-      [14, 4],
-      [24, 7],
-      [31, 12],
-      [25, 17],
-      [16, 13],
-      [8, 17],
-      [6, 24],
-      [14, 27],
-      [23, 22],
-      [31, 27],
-      [28, 34],
-      [19, 31],
-      [11, 35],
-      [6, 41],
-      [13, 45],
-      [22, 41],
-      [30, 45],
-      [26, 47],
-    ]),
+    points: smooth(
+      grow([
+        [9, 8],
+        [14, 4],
+        [24, 7],
+        [31, 12],
+        [25, 17],
+        [16, 13],
+        [8, 17],
+        [6, 24],
+        [14, 27],
+        [23, 22],
+        [31, 27],
+        [28, 34],
+        [19, 31],
+        [11, 35],
+        [6, 41],
+        [13, 45],
+        [22, 41],
+        [30, 45],
+        [26, 47],
+      ]),
+    ),
   },
   {
     id: 'ember',
+    cols: GCOLS,
+    rows: GROWS,
     name: 'Ashen Pass',
     blurb: 'A cracked road in a burnt land, in long uneven diagonals between lava lakes: short, brutal runs.',
     halfWidth: 1,
-    points: smooth([
-      [9, 8],
-      [29, 9],
-      [8, 17],
-      [30, 25],
-      [7, 33],
-      [30, 38],
-      [8, 46],
-      [18, 47],
-    ]),
+    points: smooth(
+      grow([
+        [9, 8],
+        [29, 9],
+        [8, 17],
+        [30, 25],
+        [7, 33],
+        [30, 38],
+        [8, 46],
+        [18, 47],
+      ]),
+    ),
   },
 ];

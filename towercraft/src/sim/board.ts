@@ -188,8 +188,8 @@ export const BOARDS: Readonly<Record<string, Board>> = Object.fromEntries(
   ROADS.map((def) => [
     def.id,
     makeBoard({
-      cols: COLS,
-      rows: ROWS,
+      cols: def.cols,
+      rows: def.rows,
       waypoints: [],
       scenery: SCENERY[def.id] ?? [],
       id: def.id,

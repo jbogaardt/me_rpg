@@ -15,12 +15,15 @@ import {
   canBuild,
   incomeOf,
   loadBunker,
+  maxPurchases,
   newMatch,
   powerAt,
+  setFocus,
   setOrder,
   soldierCost,
   step,
   trainUnit,
+  trainUnits,
   unitPos,
   upgradeCastle,
   visibleTo,
@@ -729,6 +732,81 @@ describe('orders', () => {
     setOrder(m, 0, 'towers', 'bypass');
     expect(m.players[0].orders).toEqual({ towers: 'bypass', units: 'attack' });
     expect(m.players[1].orders).toEqual({ towers: 'attack', units: 'attack' });
+  });
+});
+
+describe('buying many at once', () => {
+  it('buys as many as asked, never more than the money, the cap or the unlocks allow', () => {
+    const m = newMatch(['swarm', 'swarm']);
+    const def = RACES.swarm.units[0]!;
+    const can = maxPurchases(m, 0, def);
+    expect(can).toBeGreaterThan(1);
+    expect(trainUnits(m, 0, def.id, 3)).toBe(3);
+    expect(m.units.length).toBe(3 * def.count);
+    expect(maxPurchases(m, 0, def)).toBe(can - 3);
+    expect(trainUnits(m, 0, def.id, 1000)).toBe(can - 3);
+    expect(m.players[0].wood).toBeLessThan(def.cost.wood);
+    expect(trainUnits(m, 0, def.id, 5)).toBe(0);
+    const rich = newMatch(['swarm', 'swarm']);
+    rich.players[0].wood = rich.players[0].stone = 1e9;
+    expect(maxPurchases(rich, 0, def)).toBe(Math.floor(UNIT_CAP / def.count));
+    const locked = RACES.swarm.units.find((u) => u.needs)!;
+    expect(maxPurchases(rich, 0, locked)).toBe(0);
+  });
+});
+
+describe('sending a unit after one target', () => {
+  /** Player 0's warrior near the start, two enemy towers by the road (a watch and a lookout) and an enemy warrior ahead. */
+  const setup = () => {
+    const m = quiet(newMatch(['legion', 'legion']));
+    const watch = put(m, 1, 'legion', 'watch', 8, 5);
+    const lookout = put(m, 1, 'legion', 'lookout', 12, 5);
+    for (const t of [watch, lookout]) t.cooldown = 1e9;
+    const mine = spawn(m, 0, 'legion', 'warrior', 3, { hp: 1e6, maxHp: 1e6 });
+    mine.def = { ...mine.def, speed: 2 };
+    const foe = spawn(m, 1, 'legion', 'warrior', ROAD_LENGTH - 9, { hp: 5000, maxHp: 5000, cooldown: 999 });
+    foe.def = { ...foe.def, speed: 0 };
+    return { m, mine, foe, watch, lookout };
+  };
+
+  it('fights only the tower it was sent after, walking past the others and the foe', () => {
+    const { m, mine, foe, watch, lookout } = setup();
+    expect(setFocus(m, 0, [mine.id], { kind: 'tower', id: lookout.id })).toBe('ok');
+    run(m, 14);
+    expect(watch.hp).toBe(towerDef('legion', 'watch').hp);
+    expect(foe.hp).toBe(5000);
+    expect(lookout.hp).toBeLessThan(towerDef('legion', 'lookout').hp);
+  });
+
+  it('goes back to the general orders when that tower falls', () => {
+    const { m, mine, lookout } = setup();
+    lookout.hp = 20;
+    setFocus(m, 0, [mine.id], { kind: 'tower', id: lookout.id });
+    run(m, 10);
+    expect(m.towers.find((t) => t.id === lookout.id)).toBeUndefined();
+    expect(mine.focus).toBeUndefined();
+  });
+
+  it('sends a unit past every tower and unit to the castle', () => {
+    const { m, mine, foe, watch } = setup();
+    setFocus(m, 0, [mine.id], { kind: 'castle' });
+    run(m, 10);
+    expect(watch.hp).toBe(towerDef('legion', 'watch').hp);
+    expect(foe.hp).toBe(5000);
+    expect(mine.s).toBeGreaterThan(15);
+  });
+
+  it('clears a focus, and refuses a tower that is not an enemy, or not there', () => {
+    const { m, mine, lookout } = setup();
+    setFocus(m, 0, [mine.id], { kind: 'castle' });
+    expect(setFocus(m, 0, [mine.id], undefined)).toBe('ok');
+    expect(mine.focus).toBeUndefined();
+    expect(setFocus(m, 1, [mine.id], { kind: 'castle' })).toBe('ok'); // not player 1's unit: nothing happens
+    expect(mine.focus).toBeUndefined();
+    expect(setFocus(m, 0, [mine.id], { kind: 'tower', id: 9999 })).toBe('unknown');
+    const own = put(m, 0, 'legion', 'watch', 9, 4);
+    expect(setFocus(m, 0, [mine.id], { kind: 'tower', id: own.id })).toBe('unknown');
+    expect(lookout.owner).toBe(1);
   });
 });
 

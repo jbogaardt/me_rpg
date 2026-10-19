@@ -45,7 +45,12 @@ export interface Unit {
   off?: { tower: number; dir: [number, number]; d: number; max: number };
   /** Blew itself up (no bounty for the foe). */
   spent?: boolean;
+  /** Sent after one thing by its player: a particular enemy tower, or the castle. It ignores the rest (orders) until that tower falls. */
+  focus?: Focus;
 }
+
+/** What a unit may be sent after: one enemy tower (by id) or the enemy castle. */
+export type Focus = { kind: 'tower'; id: number } | { kind: 'castle' };
 
 /** A unit loaded into a bunker: it shoots from there on its own cooldown. */
 export interface Garrisoned {
@@ -357,6 +362,25 @@ export function trainUnit(m: Match, owner: Owner, unitId: string): Result {
   return 'ok';
 }
 
+/** How many purchases of this unit `owner` can make right now: limited by wood, stone, the unit cap and what the castle and buildings unlock. */
+export function maxPurchases(m: Match, owner: Owner, def: UnitDef): number {
+  if (m.winner >= 0 || unitUnlocked(m, owner, def) !== 'ok') return 0;
+  const p = m.players[owner];
+  const own = m.units.reduce((n, u) => n + (u.owner === owner ? 1 : 0), 0);
+  const byMoney = Math.min(
+    def.cost.wood > 0 ? Math.floor(p.wood / def.cost.wood) : Infinity,
+    def.cost.stone > 0 ? Math.floor(p.stone / def.cost.stone) : Infinity,
+  );
+  return Math.max(0, Math.min(byMoney, Math.floor((UNIT_CAP - own) / def.count)));
+}
+
+/** Buy up to `n` purchases of a unit at once (the slider): how many were bought. */
+export function trainUnits(m: Match, owner: Owner, unitId: string, n: number): number {
+  let bought = 0;
+  while (bought < n && trainUnit(m, owner, unitId) === 'ok') bought++;
+  return bought;
+}
+
 /** What it costs to load one soldier of a purchase into a bunker: its share of the price. */
 export const soldierCost = (def: UnitDef): Cost =>
   price(Math.ceil(def.cost.wood / def.count), Math.ceil(def.cost.stone / def.count));
@@ -382,6 +406,38 @@ export function loadBunker(m: Match, owner: Owner, towerId: number, unitId: stri
 /** Tell all of a player's units to fight what they meet (`attack`) or walk on past it (`bypass`): `what` is towers or units. */
 export function setOrder(m: Match, owner: Owner, what: keyof Orders, to: Orders[keyof Orders]): void {
   m.players[owner].orders[what] = to;
+}
+
+/** Can a unit of this kind take this tower down: from the road with its range, or by stepping off it (at most `DETOUR_MAX` cells)? */
+export function canTarget(m: Match, def: Pick<UnitDef, 'range'>, t: Tower): boolean {
+  const foot = m.board.footOf(t.col, t.row);
+  return !!foot && (foot.d - TOWER_RADIUS <= def.range || foot.d <= DETOUR_MAX);
+}
+
+/**
+ * Send these units (ids, `owner`'s own) after one enemy tower or the enemy castle, or back to the general orders (`undefined`).
+ * A unit sent after a tower fights only that tower; one sent after the castle walks past everything and fights only it.
+ */
+export function setFocus(
+  m: Match,
+  owner: Owner,
+  unitIds: readonly number[],
+  focus: Focus | undefined,
+): Result | 'unreachable' {
+  if (m.winner >= 0) return 'over';
+  const mine = m.units.filter((u) => u.owner === owner && unitIds.includes(u.id) && !u.spent);
+  if (focus?.kind === 'tower') {
+    const t = m.towers.find((x) => x.id === focus.id && x.owner !== owner && x.hp > 0);
+    if (!t) return 'unknown';
+    if (!mine.some((u) => canTarget(m, u.def, t))) return 'unreachable';
+    for (const u of mine) if (canTarget(m, u.def, t)) u.focus = focus;
+    return 'ok';
+  }
+  for (const u of mine) {
+    if (focus) u.focus = focus;
+    else delete u.focus;
+  }
+  return 'ok';
 }
 
 /** What it costs to take the castle up a level, or undefined at the top. */
@@ -467,6 +523,8 @@ interface Reach {
   units: boolean;
   towers: boolean;
   castle: boolean;
+  /** Fight only this tower among the towers (a unit sent after it). */
+  only?: number;
 }
 
 /** Could it hit this kind of unit at all (a cheap test, before distance and sight are asked)? */
@@ -488,7 +546,7 @@ function pick(m: Match, r: Reach): Target | undefined {
     }
   }
   for (const t of r.towers ? m.towers : []) {
-    if (t.owner === r.owner || t.hp <= 0) continue;
+    if (t.owner === r.owner || t.hp <= 0 || (r.only !== undefined && t.id !== r.only)) continue;
     const d = dist(r.from, centreOf(t)) - TOWER_RADIUS;
     if (d <= r.range && d < bestDist && isSeen(m, r.owner, t, r.vision)) {
       best = { kind: 'tower', tower: t };
@@ -567,11 +625,11 @@ function strike(m: Match, r: Reach, t: Target, blow: Blow) {
 }
 
 /** The tower a unit should step off the road for: one it can see, whose foot is on the stretch it walks this step, out of reach from the road. */
-function detourFor(m: Match, u: Unit, vision: Vision, nextS: number): Tower | undefined {
+function detourFor(m: Match, u: Unit, vision: Vision, nextS: number, only?: number): Tower | undefined {
   let best: Tower | undefined;
   let bestD = Infinity;
   for (const t of m.towers) {
-    if (t.owner === u.owner || t.hp <= 0) continue;
+    if (t.owner === u.owner || t.hp <= 0 || (only !== undefined && t.id !== only)) continue;
     const foot = m.board.footOf(t.col, t.row);
     if (!foot || foot.d > DETOUR_MAX || foot.d - TOWER_RADIUS <= u.def.range) continue;
     const s = u.owner === 0 ? foot.s : m.board.roadLength - foot.s;
@@ -627,6 +685,11 @@ export function step(m: Match, dt: number): void {
     u.cooldown -= dt;
     const from = unitPos(u, m.board);
     const orders = m.players[u.owner].orders;
+    // A unit sent after a tower fights only it (and the castle only once it is down); one sent after the castle ignores the rest.
+    const focused = u.focus?.kind === 'tower' ? u.focus.id : undefined;
+    const sentAt = focused === undefined ? undefined : m.towers.find((t) => t.id === focused && t.hp > 0);
+    if (focused !== undefined && !sentAt) delete u.focus;
+    const towersOn = u.focus ? sentAt !== undefined : orders.towers === 'attack';
     const reach: Reach = {
       owner: u.owner,
       by: { kind: 'unit', id: u.id },
@@ -635,9 +698,10 @@ export function step(m: Match, dt: number): void {
       range: u.def.range,
       ground: true,
       air: !!u.def.hitsAir,
-      units: orders.units === 'attack',
-      towers: orders.towers === 'attack',
-      castle: true,
+      units: u.focus ? false : orders.units === 'attack',
+      towers: towersOn,
+      castle: !sentAt,
+      only: sentAt?.id,
     };
     const target = pick(m, reach);
     if (target) {
@@ -657,12 +721,13 @@ export function step(m: Match, dt: number): void {
     } else if (u.off) {
       const off = u.off;
       const tower = m.towers.find((t) => t.id === off.tower);
-      const wanted = tower !== undefined && tower.hp > 0 && orders.towers === 'attack';
+      const wanted = tower !== undefined && tower.hp > 0 && towersOn;
       off.d = Math.min(off.max, off.d + (wanted ? 1 : -1) * u.def.speed * dt);
       if (off.d <= 0) delete u.off;
     } else {
       const next = Math.min(m.board.roadLength - CASTLE_RADIUS, u.s + u.def.speed * dt);
-      const tower = orders.towers === 'attack' ? detourFor(m, u, vision, next) : undefined;
+      const tower = towersOn ? detourFor(m, u, vision, next, sentAt?.id) : undefined;
+      if (sentAt && next >= m.board.roadLength - CASTLE_RADIUS - 1e-6 && !tower) delete u.focus; // walked the road and never got at it
       if (tower) {
         const foot = m.board.footOf(tower.col, tower.row)!;
         u.s = u.owner === 0 ? foot.s : m.board.roadLength - foot.s;
