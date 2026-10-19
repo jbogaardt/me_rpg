@@ -8,16 +8,7 @@
 // build on); only units may clear fog temporarily, and never build there. What a side cannot see it cannot target. The first
 // castle destroyed loses.
 
-import {
-  BOARDS,
-  CASTLE_CLEAR,
-  DEFAULT_BOARD,
-  DEFAULT_BOARD_ID,
-  cellIndex,
-  inBoard,
-  type Board,
-  type BoardId,
-} from './board';
+import { CASTLE_CLEAR, DEFAULT_BOARD, type Board } from './board';
 import { MAX_LEVEL, RACES, type RaceId, type TowerDef, type UnitDef } from './races';
 
 export const START_GOLD = 150;
@@ -101,7 +92,7 @@ export interface Death {
 }
 
 export interface Match {
-  /** The map: the road, the castles and what blocks building. */
+  /** The map: the road, the castles, the scenery. */
   board: Board;
   time: number;
   payTimer: number;
@@ -117,7 +108,7 @@ export interface Match {
   winner: -1 | 0 | 1 | 2;
 }
 
-export function newMatch(races: [RaceId, RaceId], board: BoardId = DEFAULT_BOARD_ID): Match {
+export function newMatch(races: [RaceId, RaceId], board: Board = DEFAULT_BOARD): Match {
   const player = (race: RaceId): Player => {
     const hp = RACES[race].castle.hp;
     return {
@@ -129,7 +120,7 @@ export function newMatch(races: [RaceId, RaceId], board: BoardId = DEFAULT_BOARD
     };
   };
   return {
-    board: BOARDS[board] ?? DEFAULT_BOARD,
+    board,
     time: 0,
     payTimer: 0,
     players: [player(races[0]), player(races[1])],
@@ -150,16 +141,16 @@ export const raceOf = (m: Match, o: Owner) => RACES[m.players[o].race];
 export const AIR_LENGTH = DEFAULT_BOARD.airLength;
 
 /** How far a unit can walk or fly toward the enemy castle before it is at the castle's edge. */
-const goalOf = (b: Board, def: Pick<UnitDef, 'air'>) => (def.air ? b.airLength : b.length) - CASTLE_RADIUS;
+const goalOf = (b: Board, def: Pick<UnitDef, 'air'>) => (def.air ? b.airLength : b.roadLength) - CASTLE_RADIUS;
 
 /** Where a unit is, in cells: along the road from its own castle, or on the straight line for an air unit. */
-export function unitPos(u: Pick<Unit, 'owner' | 's' | 'def'>, b: Board = DEFAULT_BOARD): [number, number] {
+export function unitPos(u: Pick<Unit, 'owner' | 's' | 'def'>, board: Board = DEFAULT_BOARD): [number, number] {
   if (u.def.air) {
-    const [from, to] = [b.castles[u.owner], b.castles[enemy(u.owner)]];
-    const t = Math.min(1, Math.max(0, u.s / b.airLength));
+    const [from, to] = [board.castles[u.owner], board.castles[enemy(u.owner)]];
+    const t = Math.min(1, Math.max(0, u.s / board.airLength));
     return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
   }
-  return b.pointAt(u.owner === 0 ? u.s : b.length - u.s);
+  return board.pointAt(u.owner === 0 ? u.s : board.roadLength - u.s);
 }
 
 const dist = (a: readonly [number, number], b: readonly [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -309,11 +300,12 @@ export type BuildResult = Result | 'off-board' | 'road' | 'scenery' | 'taken' | 
 
 export function canBuild(m: Match, owner: Owner, def: TowerDef, col: number, row: number): BuildResult {
   if (m.winner >= 0) return 'over';
-  if (!inBoard(col, row)) return 'off-board';
-  if (m.board.roadCells.has(cellIndex(col, row))) return 'road';
-  if (m.board.sceneryCells.has(cellIndex(col, row))) return 'scenery';
+  const b = m.board;
+  if (!b.inBoard(col, row)) return 'off-board';
+  if (b.roadCells.has(b.cellIndex(col, row))) return 'road';
+  if (b.sceneryCells.has(b.cellIndex(col, row))) return 'scenery';
   const c: [number, number] = [col + 0.5, row + 0.5];
-  if (m.board.castles.some((k) => dist(c, k) < CASTLE_CLEAR)) return 'castle';
+  if (b.castles.some((k) => dist(c, k) < CASTLE_CLEAR)) return 'castle';
   if (towerAt(m, col, row)) return 'taken';
   if (def.tier > m.players[owner].castle.level) return 'tier';
   if (!inBuildArea(m, owner, col, row)) return 'area';

@@ -7,7 +7,7 @@ import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture, TextureStyle } from 'pixi.js';
 import { createAi } from './sim/ai';
-import { BOARDS, BOARD_IDS, COLS, ROWS, type BoardId } from './sim/board';
+import { BOARDS, BOARD_IDS, COLS, DEFAULT_BOARD_ID, ROWS } from './sim/board';
 import { MAX_LEVEL, RACES, RACE_IDS, type RaceId, type SheetKind, type TowerDef, type UnitDef } from './sim/races';
 import {
   BASE_PAY,
@@ -41,6 +41,9 @@ const BOARD_W = COLS * CELL;
 const BOARD_H = ROWS * CELL;
 const STEP = 0.05;
 const YOU: Owner = 0;
+
+/** A map's id (see `BOARDS`). */
+type BoardId = string;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -189,7 +192,7 @@ void (async () => {
   } catch {
     /* no storage: the default map */
   }
-  let match: Match = newMatch(['legion', 'swarm'], chosenMap);
+  let match: Match = newMatch(['legion', 'swarm'], BOARDS[chosenMap]);
   /** The castle positions of the map being played. */
   const castles = () => match.board.castles;
   let ai = createAi(1, 1);
@@ -417,7 +420,7 @@ void (async () => {
       return direction(to[0] - from[0], to[1] - from[1]);
     }
     // Along the road, or back up it for the player whose castle is at the road's end.
-    const [hx, hy] = b.headingAt(owner === 0 ? s : b.length - s);
+    const [hx, hy] = b.directionAt(owner === 0 ? s : b.roadLength - s);
     return owner === 0 ? direction(hx, hy) : direction(-hx, -hy);
   };
   const addCorpse = (d: Death) => {
@@ -1115,7 +1118,7 @@ void (async () => {
   function start(race: RaceId, chosen?: RaceId, map: BoardId = chosenMap) {
     const rivals = RACE_IDS.filter((r) => r !== race);
     const rival = chosen ?? rivals[Math.floor(Math.random() * rivals.length)]!;
-    match = newMatch([race, rival], map);
+    match = newMatch([race, rival], BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
     field.texture = fieldTextures.get(match.board.id) ?? field.texture;
     ai = createAi(1, (Math.random() * 2 ** 31) | 0);
     selected = undefined;

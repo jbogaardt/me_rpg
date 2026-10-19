@@ -119,7 +119,7 @@ export function fieldZone(def: RoadDef): Zone {
   const castles = [pts[0], pts[pts.length - 1]];
   // Points along the road every half cell (a road may be a few long straight runs, so its corners alone are not enough).
   const board = BOARDS[def.id];
-  const along = Array.from({ length: Math.ceil(board.length * 2) + 1 }, (_, i) => board.pointAt(i / 2));
+  const along = Array.from({ length: Math.ceil(board.roadLength * 2) + 1 }, (_, i) => board.pointAt(i / 2));
   const roadDist = (x: number, y: number) => {
     let best = Infinity;
     for (const p of along) best = Math.min(best, Math.hypot(p[0] - x, p[1] - y));

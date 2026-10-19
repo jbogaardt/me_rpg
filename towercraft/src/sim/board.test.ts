@@ -14,16 +14,16 @@ describe('the maps', () => {
 
   it('has several, each with its own picture and a road that is not the same as another', () => {
     expect(BOARD_IDS.length).toBeGreaterThanOrEqual(4);
-    expect(new Set(Object.values(BOARDS).map((b) => Math.round(b.length))).size).toBeGreaterThan(2);
+    expect(new Set(Object.values(BOARDS).map((b) => Math.round(b.roadLength))).size).toBeGreaterThan(2);
   });
 
   for (const board of Object.values(BOARDS)) {
     describe(board.id, () => {
       it('runs from a castle to the other, in one piece, inside the field', () => {
-        expect(board.length).toBeGreaterThan(140);
+        expect(board.roadLength).toBeGreaterThan(140);
         let prev = board.pointAt(0);
         expect(prev).toEqual(board.castles[0]);
-        for (let d = 0.25; d <= board.length; d += 0.25) {
+        for (let d = 0.25; d <= board.roadLength; d += 0.25) {
           const p = board.pointAt(d);
           expect(Math.hypot(p[0] - prev[0], p[1] - prev[1])).toBeLessThan(0.3); // no jumps
           expect(p[0]).toBeGreaterThan(1);
@@ -32,12 +32,12 @@ describe('the maps', () => {
           expect(p[1]).toBeLessThan(ROWS - 1);
           prev = p;
         }
-        expect(board.pointAt(board.length)).toEqual(board.castles[1]);
-        expect(board.headingAt(board.length / 2).reduce((a, b) => a + b * b, 0)).toBeCloseTo(1);
+        expect(board.pointAt(board.roadLength)).toEqual(board.castles[1]);
+        expect(board.directionAt(board.roadLength / 2).reduce((a, b) => a + b * b, 0)).toBeCloseTo(1);
       });
 
       it('gives both castles about the same room to build in, whether or not the field is symmetric', () => {
-        const m = newMatch(['legion', 'legion'], board.id);
+        const m = newMatch(['legion', 'legion'], board);
         const watch = RACES.legion.towers[0]!;
         const room = ([0, 1] as const).map((o) => {
           m.players[o].gold = 9999;
@@ -60,14 +60,14 @@ describe('the maps', () => {
       });
 
       it('leaves room beside the road for towers within the castle reach and beyond it', () => {
-        const m = newMatch(['legion', 'legion'], board.id);
+        const m = newMatch(['legion', 'legion'], board);
         m.players[0].gold = 9999;
         const watch = RACES.legion.towers[0]!;
         let free = 0;
         for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (canBuild(m, 0, watch, c, r) === 'ok') free++;
         expect(free).toBeGreaterThan(25);
         // Open ground somewhere along the road for a tower to cover it (the AI needs this to place anything).
-        const covered = Array.from({ length: Math.floor(board.length / 8) }, (_, k) => k).every((k) => {
+        const covered = Array.from({ length: Math.floor(board.roadLength / 8) }, (_, k) => k).every((k) => {
           const [x, y] = board.pointAt(k * 8 + 4);
           for (let r = Math.floor(y) - 5; r <= y + 5; r++)
             for (let c = Math.floor(x) - 5; c <= x + 5; c++)
@@ -86,7 +86,7 @@ describe('the maps', () => {
       });
 
       it('plays out: two AIs fight on it until a castle falls', () => {
-        const m = newMatch(['legion', 'swarm'], board.id);
+        const m = newMatch(['legion', 'swarm'], board);
         const ai = [createAi(0, 5), createAi(1, 6)] as const;
         while (m.winner < 0) {
           ai[0](m, 0.05);

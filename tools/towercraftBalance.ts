@@ -2,14 +2,13 @@
 // numbers in towercraft/src/sim/races.ts and the AI in ai.ts. Run `npm run towercraft:balance [-- N [seedBase]]`: N matches per
 // unordered pairing of races (default 40, mirrors included; the sides alternate so side bias shows), a 0.05 s step.
 // A match is decisive when a castle falls before TIME_LIMIT; a time-limit result is a draw (a stalemate), whoever was ahead.
-// `TOWERCRAFT_MAP=<id>` plays another map than the first (see road.ts). Deterministic: the same arguments print the same table. Player 0 is the castle at the top, player 1 the one at the bottom.
+// Deterministic: the same arguments print the same table. Player 0 is the castle at the top, player 1 the one at the bottom.
 
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
-import { createAi } from '../towercraft/src/sim/ai';
 import { RACE_IDS, type RaceId } from '../towercraft/src/sim/races';
-import { TIME_LIMIT, newMatch, step } from '../towercraft/src/sim/sim';
+import { playMatch as labMatch } from './towercraftLab';
 
 export interface Result {
   top: RaceId;
@@ -21,31 +20,15 @@ export interface Result {
   made: [Record<string, number>, Record<string, number>];
 }
 
-export function playMatch(top: RaceId, bottom: RaceId, seed: number, map = process.env.TOWERCRAFT_MAP): Result {
-  const m = newMatch([top, bottom], map);
-  const ai = [createAi(0, seed * 2 + 1), createAi(1, seed * 2 + 2)] as const;
-  const made: Result['made'] = [{}, {}];
-  const seen = new Set<number>();
-  const note = (side: 0 | 1, id: string) => {
-    made[side][id] = (made[side][id] ?? 0) + 1;
-  };
-  while (m.winner < 0) {
-    ai[0](m, 0.05);
-    ai[1](m, 0.05);
-    step(m, 0.05);
-    for (const u of m.units)
-      if (!seen.has(u.id)) {
-        seen.add(u.id);
-        note(u.owner, u.def.id);
-      }
-    for (const t of m.towers)
-      if (!seen.has(t.id)) {
-        seen.add(t.id);
-        note(t.owner, t.def.id);
-      }
-  }
-  const decisive = m.time < TIME_LIMIT && (m.winner === 0 || m.winner === 1);
-  return { top, bottom, winner: decisive ? (m.winner as 0 | 1) : -1, time: m.time, made };
+/** The default map and each side's own seeded style: the lab (`towercraftLab.ts`) plays the same match on any map and strategy. */
+export function playMatch(top: RaceId, bottom: RaceId, seed: number): Result {
+  const r = labMatch({
+    map: 'serpent',
+    top: { race: top, plan: 'random' },
+    bottom: { race: bottom, plan: 'random' },
+    seed,
+  });
+  return { top, bottom, winner: r.winner, time: r.time, made: r.made };
 }
 
 const pct = (n: number, d: number) => (d ? `${((100 * n) / d).toFixed(0)}%` : '-');
