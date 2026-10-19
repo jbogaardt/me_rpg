@@ -237,6 +237,12 @@ void (async () => {
   };
   let ai = createAi(1, 1);
   let selected: TowerDef | undefined;
+  /** Your units picked to command (a group, by id), where the mouse is over the field (cells), and a line of news for the hint. */
+  const selection = new Set<number>();
+  let hoverAt: [number, number] | undefined;
+  let hintNote = '';
+  let hintUntil = 0;
+  let sent: { x: number; y: number; at: number } | undefined;
   let hover: [number, number] | undefined;
   let acc = 0;
   let clock = 0;
@@ -309,33 +315,76 @@ void (async () => {
     return col >= 0 && row >= 0 && col < match.board.cols && row < match.board.rows ? [col, row] : undefined;
   };
 
+  // Input, the same ideas for a finger and a mouse. Pan: drag with a finger, or the right or middle button, or the arrow keys / WASD.
+  // Zoom: pinch or wheel. Select: a mouse drag with the left button draws a box; on a touch screen, press and hold a moment, then
+  // drag. Tap a unit to pick it (double-tap: every one of its kind in view), tap again with Shift or Ctrl to add or drop it. Then
+  // tap (or right-click) a rival's tower or castle to send the group at it; Esc, or a tap on bare ground, lets go.
   const pointers = new Map<number, { x: number; y: number }>();
-  let pressStart: { x: number; y: number } | undefined;
-  let dragged = false;
+  type Gesture = 'wait' | 'pan' | 'box' | 'pinch';
+  let gesture: Gesture = 'wait';
+  let pressStart = { x: 0, y: 0 };
+  let pressButton = 0;
+  let pressAdd = false;
+  let boxTo = { x: 0, y: 0 };
+  let longPress: number | undefined;
   let pinch = 0;
+  const LONG_PRESS = 380;
+  const marquee = $('marquee');
+  const drawMarquee = () => {
+    const [x0, y0] = [Math.min(pressStart.x, boxTo.x), Math.min(pressStart.y, boxTo.y)];
+    marquee.hidden = false;
+    marquee.style.cssText = `left:${x0}px;top:${y0}px;width:${Math.abs(boxTo.x - pressStart.x)}px;height:${Math.abs(boxTo.y - pressStart.y)}px`;
+  };
+  app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   app.canvas.addEventListener('pointerdown', (e) => {
-    app.canvas.setPointerCapture(e.pointerId);
+    try {
+      app.canvas.setPointerCapture(e.pointerId);
+    } catch {
+      /* a pointer that is already gone */
+    }
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 1) {
       pressStart = { x: e.clientX, y: e.clientY };
-      dragged = false;
+      pressButton = e.button;
+      pressAdd = e.shiftKey || e.ctrlKey || e.metaKey;
+      gesture = 'wait';
+      window.clearTimeout(longPress);
+      if (e.pointerType !== 'mouse')
+        longPress = window.setTimeout(() => {
+          if (gesture !== 'wait' || pointers.size !== 1 || !started || selected) return;
+          gesture = 'box';
+          boxTo = { ...pressStart };
+          navigator.vibrate?.(12);
+        }, LONG_PRESS);
     } else {
-      dragged = true;
+      window.clearTimeout(longPress);
+      gesture = 'pinch';
+      marquee.hidden = true;
       const [a, b] = [...pointers.values()];
       pinch = Math.hypot(a!.x - b!.x, a!.y - b!.y);
     }
   });
   app.canvas.addEventListener('pointermove', (e) => {
     hover = e.pointerType === 'mouse' ? cellAt(e.clientX, e.clientY) : undefined;
+    hoverAt =
+      e.pointerType === 'mouse'
+        ? [(e.clientX - world.x) / world.scale.x / CELL, (e.clientY - world.y) / world.scale.y / CELL]
+        : undefined;
     const p = pointers.get(e.pointerId);
     if (!p) return;
     const [dx, dy] = [e.clientX - p.x, e.clientY - p.y];
     p.x = e.clientX;
     p.y = e.clientY;
     if (pointers.size === 1) {
-      if (!dragged && pressStart && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > TAP_SLOP)
-        dragged = true;
-      if (dragged) {
+      if (gesture === 'wait' && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > TAP_SLOP) {
+        window.clearTimeout(longPress);
+        // The left mouse button selects (unless a tower is being placed); everything else drags the field.
+        gesture = e.pointerType === 'mouse' && pressButton === 0 && started && !selected ? 'box' : 'pan';
+      }
+      if (gesture === 'box') {
+        boxTo = { x: e.clientX, y: e.clientY };
+        drawMarquee();
+      } else if (gesture === 'pan' || gesture === 'pinch') {
         world.x += dx;
         world.y += dy;
         clampCamera();
@@ -350,12 +399,22 @@ void (async () => {
   const release = (e: PointerEvent) => {
     const wasOne = pointers.size === 1;
     pointers.delete(e.pointerId);
-    if (wasOne && !dragged && e.type === 'pointerup') tap(e.clientX, e.clientY, e.pointerType !== 'mouse');
+    window.clearTimeout(longPress);
+    marquee.hidden = true;
+    if (wasOne && e.type === 'pointerup') {
+      if (gesture === 'box') finishBox();
+      else if (gesture === 'wait')
+        tap(e.clientX, e.clientY, e.pointerType !== 'mouse', { add: pressAdd, right: pressButton === 2 });
+    }
+    if (pointers.size === 0) gesture = 'wait';
     pinch = 0;
   };
   app.canvas.addEventListener('pointerup', release);
   app.canvas.addEventListener('pointercancel', release);
-  app.canvas.addEventListener('pointerleave', () => (hover = undefined));
+  app.canvas.addEventListener('pointerleave', () => {
+    hover = undefined;
+    hoverAt = undefined;
+  });
   app.canvas.addEventListener(
     'wheel',
     (e) => {
@@ -364,6 +423,7 @@ void (async () => {
     },
     { passive: false },
   );
+  $('cam-all').onclick = () => started && selectAll();
   $('cam-home').onclick = home;
   $('cam-fit').onclick = () => focus(match.board.cols / 2, match.board.rows / 2, minZoom());
 
@@ -393,20 +453,24 @@ void (async () => {
       (t) => t.owner === YOU && t.def.bunker && Math.hypot(wx - (t.col + 0.5), wy - (t.row - 0.3)) <= 1.2,
     );
 
-  /** One of your units under a tap (a unit's middle is above its feet, higher still for a flyer): the nearest. */
+  /** One of your units under a point (cells; a unit's middle is above its feet, higher still for a flyer): the nearest. */
+  const unitMid = (u: Unit): [number, number] => {
+    const [x, y] = unitPos(u, match.board);
+    return [x, y - (figureOf(u.def.kind) * unitScale(u.def)) / 2 / CELL - (u.def.air ? FLIGHT / CELL : 0)];
+  };
   const myUnitAt = (wx: number, wy: number) => {
     let best: Unit | undefined;
     let bestD = Infinity;
     for (const u of match.units) {
       if (u.owner !== YOU || u.hp <= 0 || u.spent) continue;
-      const [x, y] = unitPos(u, match.board);
-      const half = (figureOf(u.def.kind) * unitScale(u.def)) / 2 / CELL;
-      const d = Math.hypot(wx - x, wy - (y - half - (u.def.air ? FLIGHT / CELL : 0)));
-      if (d <= Math.max(0.9, half * 1.1) && d < bestD) [best, bestD] = [u, d];
+      const [x, y] = unitMid(u);
+      const d = Math.hypot(wx - x, wy - y);
+      if (d <= Math.max(0.9, (figureOf(u.def.kind) * unitScale(u.def)) / CELL / 1.8) && d < bestD)
+        [best, bestD] = [u, d];
     }
     return best;
   };
-  /** A tower of the rival's that you can see, under a tap (a tower is a tall sprite too). */
+  /** A tower of the rival's that you can see, under a point (a tower is a tall sprite too). */
   const foeTowerAt = (wx: number, wy: number) => {
     const vision = visionOf(match);
     let best: Tower | undefined;
@@ -418,60 +482,154 @@ void (async () => {
     }
     return best;
   };
+  /** The rival's castle, if you can see it and the point is on it. */
+  const foeCastleAt = (wx: number, wy: number) =>
+    isCastleSeen(match, YOU, 1) && Math.hypot(wx - castles()[1][0], wy - (castles()[1][1] - 1.6)) <= 3;
 
-  function tap(sx: number, sy: number, touch: boolean) {
-    // A tower is being picked for a unit to attack: the next tap on a rival's tower sends it.
+  /** The units you have picked that are still alive. */
+  const picked = () => match.units.filter((u) => selection.has(u.id) && u.owner === YOU && u.hp > 0 && !u.spent);
+  const select = (units: Unit[], add = false) => {
+    if (add && units.length === 1 && selection.has(units[0]!.id))
+      selection.delete(units[0]!.id); // a second tap drops it
+    else {
+      if (!add) selection.clear();
+      for (const u of units) selection.add(u.id);
+    }
+    if (selection.size) {
+      selected = undefined;
+      setGhost(undefined);
+      showCard({ kind: 'sel' });
+    } else if (cardOf?.kind === 'sel') closeCard();
+  };
+  const selectAll = () => select(match.units.filter((u) => u.owner === YOU && u.hp > 0 && !u.spent));
+  const note = (text: string) => {
+    hintNote = text;
+    hintUntil = clock + 2.6;
+  };
+  /** Send the group at the rival's tower or castle at a point (cells); false if there is neither there. */
+  function command(wx: number, wy: number): boolean {
+    const units = picked();
+    if (!units.length) return false;
+    const ids = units.map((u) => u.id);
+    const tower = foeTowerAt(wx, wy);
+    if (tower) {
+      const res = setFocus(match, YOU, ids, { kind: 'tower', id: tower.id });
+      note(
+        res === 'ok' ? `${units.length} → ${tower.def.name}` : 'Out of reach: they cannot step that far off the road.',
+      );
+      if (res === 'ok') sent = { x: (tower.col + 0.5) * CELL, y: (tower.row + 0.5) * CELL, at: clock };
+      return true;
+    }
+    if (foeCastleAt(wx, wy)) {
+      setFocus(match, YOU, ids, { kind: 'castle' });
+      note(`${units.length} → the castle`);
+      sent = { x: castles()[1][0] * CELL, y: castles()[1][1] * CELL, at: clock };
+      return true;
+    }
+    return false;
+  }
+  /** Finish a box drag: pick the units whose middle is inside it (Shift or Ctrl adds to the group). */
+  function finishBox() {
+    const [x0, x1] = [Math.min(pressStart.x, boxTo.x), Math.max(pressStart.x, boxTo.x)];
+    const [y0, y1] = [Math.min(pressStart.y, boxTo.y), Math.max(pressStart.y, boxTo.y)];
+    if (x1 - x0 < TAP_SLOP && y1 - y0 < TAP_SLOP)
+      return tap(pressStart.x, pressStart.y, true, { add: pressAdd, right: false });
+    const inside = match.units.filter((u) => {
+      if (u.owner !== YOU || u.hp <= 0 || u.spent) return false;
+      const [x, y] = unitMid(u);
+      const [sx, sy] = [world.x + x * CELL * world.scale.x, world.y + y * CELL * world.scale.y];
+      return sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1;
+    });
+    if (inside.length || !pressAdd) select(inside, pressAdd);
+  }
+  let lastUnitTap = { kind: '', at: 0 };
+
+  function tap(sx: number, sy: number, touch: boolean, how = { add: false, right: false }) {
+    if (!started) return;
     const [wx, wy] = [(sx - world.x) / world.scale.x / CELL, (sy - world.y) / world.scale.y / CELL];
-    if (started && pickTarget && cardOf?.kind === 'live') {
-      const t = foeTowerAt(wx, wy);
-      if (!t) {
-        pickNote = "Tap one of the rival's towers (one you can see).";
+    if (!selected) {
+      // A right-click: send the group at what is there, or back to the general orders.
+      if (how.right) {
+        if (selection.size && !command(wx, wy)) {
+          setFocus(match, YOU, [...selection], undefined);
+          note('Back to the general orders');
+        }
         return;
       }
-      const res = setFocus(match, YOU, orderedUnits(cardOf.id), { kind: 'tower', id: t.id });
-      if (res === 'ok') pickTarget = false;
-      pickNote = res === 'ok' ? '' : "That tower is out of this unit's reach: it cannot step that far off the road.";
-      renderCard();
-      return;
-    }
-    // One of your units: tap it for its card (stats, and who it is sent after).
-    const mine = started && !selected ? myUnitAt(wx, wy) : undefined;
-    if (mine) {
-      setGhost(undefined);
-      showCard({ kind: 'live', id: mine.id });
-      return;
+      if (selection.size && command(wx, wy)) return;
+      // One of your units: pick it (a second tap in a moment: every one of its kind in view).
+      const mine = myUnitAt(wx, wy);
+      if (mine) {
+        setGhost(undefined);
+        const now = performance.now();
+        if (!how.add && lastUnitTap.kind === mine.def.id && now - lastUnitTap.at < 420) {
+          const view = (u: Unit) => {
+            const [x, y] = unitMid(u);
+            const [px, py] = [world.x + x * CELL * world.scale.x, world.y + y * CELL * world.scale.y];
+            return px >= 0 && px <= window.innerWidth && py >= 0 && py <= window.innerHeight;
+          };
+          select(
+            match.units.filter((u) => u.owner === YOU && u.hp > 0 && !u.spent && u.def.id === mine.def.id && view(u)),
+          );
+          lastUnitTap = { kind: '', at: 0 };
+        } else {
+          select([mine], how.add);
+          lastUnitTap = { kind: mine.def.id, at: now };
+        }
+        return;
+      }
+      // One of your bunkers (a tall sprite: its middle is above its feet): tap it to load soldiers into it.
+      const bunker = myBunkerAt(wx, wy);
+      if (bunker) {
+        setGhost(undefined);
+        showCard({ kind: 'bunker', id: bunker.id });
+        return;
+      }
     }
     // The castle (a tall sprite, so its middle is above its feet): tap it for its panel, anywhere else to close the panel.
-    // One of your bunkers (a tall sprite: its middle is above its feet): tap it to load soldiers into it.
-    const bunker = started && !selected ? myBunkerAt(wx, wy) : undefined;
-    if (bunker) {
-      setGhost(undefined);
-      showCard({ kind: 'bunker', id: bunker.id });
-      return;
-    }
-    if (started && Math.hypot(wx - castles()[YOU][0], wy - (castles()[YOU][1] - 1.6)) <= 3) {
+    if (Math.hypot(wx - castles()[YOU][0], wy - (castles()[YOU][1] - 1.6)) <= 3) {
       selected = undefined;
       setGhost(undefined);
       showCard({ kind: 'castle' });
       refresh();
       return;
     }
+    if (!selected && !how.add && selection.size) selection.clear();
     if (cardOf && !selected) closeCard();
     const cell = cellAt(sx, sy);
-    if (!cell || !started || !selected) return;
+    if (!cell || !selected) return;
     lastTap = cell;
     if (canBuild(match, YOU, selected, cell[0], cell[1]) !== 'ok') return setGhost(undefined); // the hint says why
     if (!touch || (ghost && ghost[0] === cell[0] && ghost[1] === cell[1])) place(cell);
     else setGhost(cell); // a touch: show what it would do first
   }
+  // Keys: Esc lets go; Ctrl+A picks every unit; C sends the group at the castle, X back to the general orders; arrows and
+  // WASD pan the field.
+  const held = new Set<string>();
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
+    if ((e.target as HTMLElement).tagName === 'INPUT') return;
+    const k = e.key.toLowerCase();
+    if (k === 'escape') {
+      selection.clear();
       if (cardOf) closeCard();
       selected = undefined;
       setGhost(undefined);
       refresh();
-    }
+    } else if (started && k === 'a' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      selectAll();
+    } else if (started && (k === 'c' || k === 'x') && selection.size) {
+      setFocus(match, YOU, [...selection], k === 'c' ? { kind: 'castle' } : undefined);
+      note(k === 'c' ? `${selection.size} → the castle` : 'Back to the general orders');
+    } else if (
+      ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(k) &&
+      !e.ctrlKey &&
+      !e.metaKey
+    )
+      held.add(k);
   });
+  window.addEventListener('keyup', (e) => held.delete(e.key.toLowerCase()));
+  window.addEventListener('blur', () => held.clear());
 
   // --- Drawing a match ----------------------------------------------------------------------------------------------
   /** One sprite per tower / unit, kept while it lives. */
@@ -979,38 +1137,50 @@ void (async () => {
       castleSprites[o]!.children[1]!.scale.set(CASTLE_SCALE * (1 + 0.03 * r * r));
     }
 
-    // The unit whose card is open: a ring at its feet, and a line to what it is sent after (a tower, or the rival's castle).
-    if (cardOf?.kind === 'live') {
-      const u = match.units.find((x) => x.id === (cardOf as { id: number }).id);
-      if (u) {
+    // The group you picked: a ring at each one's feet and a line to what it is sent after. While there is a group, what it can be
+    // sent at (the rival's towers and castle you can see) is ringed, brighter under the mouse; a command flashes where it landed.
+    const group = started ? picked() : [];
+    if (group.length) {
+      const pulse = 0.6 + 0.4 * Math.sin(clock * 5);
+      const foes = match.towers.filter((t) => t.owner !== YOU && t.hp > 0 && isSeen(match, YOU, t, vision));
+      const hoverFoe = hoverAt
+        ? (foeTowerAt(hoverAt[0], hoverAt[1])?.id ?? (foeCastleAt(hoverAt[0], hoverAt[1]) ? -1 : undefined))
+        : undefined;
+      app.canvas.style.cursor = hoverFoe !== undefined ? 'crosshair' : '';
+      for (const t of foes)
+        live.circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 4, 40).stroke({
+          color: 0xe0777b,
+          width: hoverFoe === t.id ? 4 : 2,
+          alpha: hoverFoe === t.id ? 1 : 0.4 + 0.2 * Math.sin(clock * 4),
+        });
+      if (isCastleSeen(match, YOU, 1, vision))
+        live.ellipse(castles()[1][0] * CELL, castles()[1][1] * CELL + 6, 78, 30).stroke({
+          color: 0xe0777b,
+          width: hoverFoe === -1 ? 4 : 2,
+          alpha: hoverFoe === -1 ? 1 : 0.4 + 0.2 * Math.sin(clock * 4),
+        });
+      for (const u of group) {
         const [ux, uy] = unitPos(u, match.board);
-        const pulse = 0.6 + 0.4 * Math.sin(clock * 5);
         live
           .ellipse(ux * CELL, uy * CELL + 2, 22 * SIZE * 0.6, 8 * SIZE * 0.6)
           .stroke({ color: 0xf2d38a, width: 2.5, alpha: pulse });
-        const lift = (u.def.air ? FLIGHT : 0) + 24;
         let goal: [number, number] | undefined;
         if (u.focus?.kind === 'tower') {
           const t = match.towers.find((x) => x.id === (u.focus as { id: number }).id);
           if (t) goal = [(t.col + 0.5) * CELL, (t.row + 0.5) * CELL];
         } else if (u.focus?.kind === 'castle' && isCastleSeen(match, YOU, 1, vision))
           goal = [castles()[1][0] * CELL, castles()[1][1] * CELL];
-        if (goal) {
+        if (goal)
           live
-            .moveTo(ux * CELL, uy * CELL - lift)
+            .moveTo(ux * CELL, uy * CELL - (u.def.air ? FLIGHT : 0) - 24)
             .lineTo(goal[0], goal[1])
-            .stroke({ color: 0xe0777b, width: 2, alpha: 0.7 });
-          live.circle(goal[0], goal[1] + 4, 34).stroke({ color: 0xe0777b, width: 3, alpha: pulse });
-        }
+            .stroke({ color: 0xe0777b, width: 2, alpha: 0.45 });
       }
+    } else app.canvas.style.cursor = '';
+    if (sent && clock - sent.at < 0.55) {
+      const k = (clock - sent.at) / 0.55;
+      live.circle(sent.x, sent.y + 4, 30 + 60 * k).stroke({ color: 0xffffff, width: 3, alpha: 1 - k });
     }
-    // While a tower is being picked for it, the rival's towers you can see are ringed.
-    if (pickTarget)
-      for (const t of match.towers)
-        if (t.owner !== YOU && t.hp > 0 && isSeen(match, YOU, t, vision))
-          live
-            .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 4, 40)
-            .stroke({ color: 0xf2d38a, width: 2, alpha: 0.5 + 0.4 * Math.sin(clock * 6) });
 
     // Health bars: castles always, the rest once hurt.
     for (const o of [0, 1] as const) {
@@ -1126,16 +1296,13 @@ void (async () => {
   };
   const towerName = (id: string) => RACES[match.players[YOU].race].towers.find((t) => t.id === id)?.name ?? id;
 
-  /** Your wood and stone, and what they earn each pay day: two numbers beside their icons, nothing else. */
-  const lastRes = { w: -1, s: -1, wi: -1, si: -1 };
+  /** Your wood and stone: two numbers beside their icons (the income you feel in how they change; the mills show their own pay-day figures). */
+  const lastRes = { w: -1, s: -1 };
   function resources() {
     const p = match.players[YOU];
-    const inc = incomeOf(match, YOU);
     const [w, st] = [Math.floor(p.wood), Math.floor(p.stone)];
     if (lastRes.w !== w) $('wood').textContent = String((lastRes.w = w));
     if (lastRes.s !== st) $('stone').textContent = String((lastRes.s = st));
-    if (lastRes.wi !== inc.wood) $('wood-inc').textContent = `+${(lastRes.wi = inc.wood)}`;
-    if (lastRes.si !== inc.stone) $('stone-inc').textContent = `+${(lastRes.si = inc.stone)}`;
   }
 
   const towerThumb = (art: string, px: number) =>
@@ -1293,25 +1460,22 @@ void (async () => {
     | { kind: 'tower'; def: TowerDef }
     | { kind: 'castle' }
     | { kind: 'bunker'; id: number }
-    | { kind: 'live'; id: number };
+    | { kind: 'sel' };
   let cardOf: CardOf | undefined;
   const act = $<HTMLButtonElement>('card-act');
   let cardBody = '';
-  /** How many purchases the slider is set to, whether a target order goes to every unit of the kind, and a tower is being picked. */
+  /** How many purchases the slider is set to. */
   let buyN = 1;
-  let applyAll = false;
-  let pickTarget = false;
-  let pickNote = '';
   const sameCard = (a: CardOf, b: CardOf) =>
     a.kind === b.kind &&
-    (a.kind === 'castle' || (a as { def?: unknown; id?: number }).def === (b as { def?: unknown }).def) &&
-    ((a.kind !== 'bunker' && a.kind !== 'live') || a.id === (b as { id: number }).id);
+    (a.kind === 'castle' ||
+      a.kind === 'sel' ||
+      (a as { def?: unknown; id?: number }).def === (b as { def?: unknown }).def) &&
+    (a.kind !== 'bunker' || a.id === (b as { id: number }).id);
   function showCard(c: CardOf, toggle = false) {
     if (toggle && cardOf && sameCard(cardOf, c)) return closeCard();
     if (!cardOf || !sameCard(cardOf, c)) {
       buyN = 1;
-      pickTarget = false;
-      pickNote = '';
     }
     cardOf = c;
     if (selected && !(c.kind === 'tower' && c.def === selected)) {
@@ -1323,9 +1487,8 @@ void (async () => {
     refresh();
   }
   function closeCard() {
+    if (cardOf?.kind === 'sel') selection.clear();
     cardOf = undefined;
-    pickTarget = false;
-    pickNote = '';
     $('card').hidden = true;
     selected = undefined;
     setGhost(undefined);
@@ -1333,28 +1496,10 @@ void (async () => {
   }
   $('card-x').onclick = closeCard;
   // The bunker card's own buttons (its body is rebuilt as the money and the slots change, so one listener catches them).
-  /** The units a target order goes to: the one chosen, or every one of its kind. */
-  const orderedUnits = (id: number) => {
-    const u = match.units.find((x) => x.id === id);
-    if (!u) return [];
-    return applyAll ? match.units.filter((x) => x.owner === YOU && x.def.id === u.def.id).map((x) => x.id) : [id];
-  };
-  $('card-body').addEventListener('change', (e) => {
-    const box = (e.target as HTMLElement).closest<HTMLInputElement>('input[data-all]');
-    if (!box) return;
-    applyAll = box.checked;
-    renderCard();
-  });
   $('card-body').addEventListener('click', (e) => {
     const aim = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-aim]');
-    if (aim && cardOf?.kind === 'live') {
-      const ids = orderedUnits(cardOf.id);
-      pickNote = '';
-      if (aim.dataset.aim === 'tower') pickTarget = !pickTarget;
-      else {
-        pickTarget = false;
-        setFocus(match, YOU, ids, aim.dataset.aim === 'castle' ? { kind: 'castle' } : undefined);
-      }
+    if (aim && cardOf?.kind === 'sel') {
+      setFocus(match, YOU, [...selection], aim.dataset.aim === 'castle' ? { kind: 'castle' } : undefined);
       renderCard();
       return;
     }
@@ -1387,43 +1532,61 @@ void (async () => {
     return lacking(d.cost);
   };
 
-  /** The card of one of your units on the field: its stats and health, and who it is sent after (the general orders, the castle, one tower). */
-  function renderLive(id: number) {
-    const u = match.units.find((x) => x.id === id && x.owner === YOU && x.hp > 0);
-    if (!u) return closeCard(); // it fell
-    const d = u.def;
-    const dmg = boostOf(match, YOU, d, 'damage');
-    const foes = match.towers.filter((t) => t.owner !== YOU);
-    const aimed = u.focus?.kind === 'tower' ? foes.find((t) => t.id === (u.focus as { id: number }).id) : undefined;
-    const kin = match.units.filter((x) => x.owner === YOU && x.def.id === d.id && !x.spent).length;
+  /**
+   * The card of the group you picked: one unit's stats, or what the group is made of, with its health and who it is sent after.
+   * The main way to command is on the field (tap a rival's tower or castle); the buttons are only there to take the order back.
+   */
+  function renderSel() {
+    const units = picked();
+    if (!units.length) return closeCard(); // all fell, or were let go
+    const kinds = new Map<string, { def: UnitDef; n: number }>();
+    for (const u of units) kinds.set(u.def.id, { def: u.def, n: (kinds.get(u.def.id)?.n ?? 0) + 1 });
+    const list = [...kinds.values()].sort((a, b) => b.n - a.n);
+    const first = list[0]!.def;
     const on = (b: boolean) => (b ? ' class="on"' : '');
+    const where = new Map<string, number>();
+    for (const u of units) {
+      const f = u.focus;
+      const name = !f
+        ? ''
+        : f.kind === 'castle'
+          ? 'the castle'
+          : (match.towers.find((t) => t.id === f.id)?.def.name ?? '');
+      if (name) where.set(name, (where.get(name) ?? 0) + 1);
+    }
+    const sent = [...where].map(([name, n]) => `${n} → ${name}`).join(' · ');
+    const dmg = boostOf(match, YOU, first, 'damage');
+    const title = units.length === 1 ? first.name : `${units.length} units`;
+    const crowd = list.map((k) => `<span class="kind">${unitThumb(k.def, 30)}<b>${k.n}</b></span>`).join('');
     const body =
-      `<header><div class="pic">${unitThumb(d, 46)}</div><div><h3>${d.name}</h3><div class="sub">Yours · tier ${d.tier}</div></div></header>` +
+      `<header><div class="pic">${unitThumb(first, 46)}</div><div><h3>${title}</h3>` +
+      `<div class="sub">${units.length === 1 ? `Yours · tier ${first.tier}` : list.length === 1 ? first.name : 'a mixed group'}</div></div></header>` +
+      (units.length > 1 && list.length > 1 ? `<div class="crowd">${crowd}</div>` : '') +
       `<div class="hp"><i id="lv-hp"></i><span id="lv-hpt"></span></div>` +
-      tags(
-        d.air && 'Flies',
-        d.cloak && 'Cloaked',
-        d.hitsAir && 'Hits air',
-        !!d.multi && `Hits ${d.multi} at once`,
-        !!d.splash && 'Area',
-        !!d.siege && d.siege > 1 && 'Siege',
-      ) +
-      `<ul>${row('Damage', `${per(Math.round(d.damage * dmg * 10) / 10)} a hit`)}${row('Attacks every', `${per(d.cooldown)} s`)}` +
-      `${row('Reach', d.range > 1.5 ? `${per(d.range)} cells` : 'melee')}${row('Speed', `${d.speed} cells a second`)}</ul>` +
+      (units.length === 1
+        ? tags(
+            first.air && 'Flies',
+            first.cloak && 'Cloaked',
+            first.hitsAir && 'Hits air',
+            !!first.multi && `Hits ${first.multi} at once`,
+            !!first.splash && 'Area',
+            !!first.siege && first.siege > 1 && 'Siege',
+          ) +
+          `<ul>${row('Damage', `${per(Math.round(first.damage * dmg * 10) / 10)} a hit`)}${row('Attacks every', `${per(first.cooldown)} s`)}` +
+          `${row('Reach', first.range > 1.5 ? `${per(first.range)} cells` : 'melee')}${row('Speed', `${first.speed} cells a second`)}</ul>`
+        : '') +
       `<div class="targets">` +
-      `<button data-aim="none"${on(!u.focus && !pickTarget)} title="Follow the general orders">Orders<small>default</small></button>` +
-      `<button data-aim="castle"${on(u.focus?.kind === 'castle')} title="Walk past everything to the castle">Castle<small>the base</small></button>` +
-      `<button data-aim="tower"${on(!!aimed || pickTarget)} title="Pick an enemy tower on the map">Tower<small>${aimed ? aimed.def.name : pickTarget ? 'tap one…' : 'pick'}</small></button>` +
+      `<button data-aim="none"${on(!sent)} title="Follow the general orders (X)">Orders</button>` +
+      `<button data-aim="castle"${on(units.every((u) => u.focus?.kind === 'castle'))} title="Walk past everything to the castle (C)">Castle</button>` +
       `</div>` +
-      (kin > 1
-        ? `<label class="all"><input type="checkbox" data-all${applyAll ? ' checked' : ''} />All ${kin} ${d.name}s</label>`
-        : '');
+      `<p class="note">${sent || 'Tap a rival tower or castle to send them there.'}</p>`;
     if (body !== cardBody) {
       $('card-body').innerHTML = body;
       cardBody = body;
     }
-    $('lv-hp').style.width = `${Math.max(0, (u.hp / u.maxHp) * 100)}%`;
-    $('lv-hpt').textContent = `${Math.max(0, Math.ceil(u.hp))} / ${Math.ceil(u.maxHp)}`;
+    const [hp, max] = units.reduce<[number, number]>(([a, b], u) => [a + u.hp, b + u.maxHp], [0, 0]);
+    $('lv-hp').style.width = `${Math.max(0, (hp / max) * 100)}%`;
+    $('lv-hpt').textContent = `${Math.max(0, Math.ceil(hp))} / ${Math.ceil(max)}`;
     act.hidden = true;
   }
 
@@ -1433,9 +1596,10 @@ void (async () => {
     const race = RACES[me.race];
     const { level } = me.castle;
     const card = $('card');
-    card.classList.toggle('placing', (cardOf.kind === 'tower' && selected === cardOf.def) || pickTarget);
+    card.classList.toggle('placing', cardOf.kind === 'tower' && selected === cardOf.def);
+    card.classList.toggle('group', cardOf.kind === 'sel');
     $('card-buy').hidden = true;
-    if (cardOf.kind === 'live') return renderLive(cardOf.id);
+    if (cardOf.kind === 'sel') return renderSel();
     let body: string;
     let label = '';
     let reason = '';
@@ -1708,7 +1872,7 @@ void (async () => {
             ? `Confirm to build the ${selected.name}, or tap another cell. Esc to cancel.`
             : `Tap a clear cell to build a ${selected.name}. Esc to cancel.`;
     }
-    if (started && pickTarget) text = pickNote || "Tap one of the rival's towers to send it after that tower.";
+    if (started && !selected && clock < hintUntil) text = hintNote;
     if ($('hint').textContent !== text) $('hint').textContent = text;
   }
 
@@ -1801,6 +1965,7 @@ void (async () => {
           world.y + (row + 0.5) * CELL * world.scale.y,
         ],
         match: () => match,
+        picked: () => [...selection],
         app,
         races: RACES,
         startMatch: (a: RaceId, b: RaceId, map?: BoardId) => start(a, b, map),
@@ -1854,6 +2019,16 @@ void (async () => {
       }
     }
     resources();
+    if (held.size) {
+      const go = 640 * dt;
+      const [h, v] = [
+        (held.has('arrowleft') || held.has('a') ? 1 : 0) - (held.has('arrowright') || held.has('d') ? 1 : 0),
+        (held.has('arrowup') || held.has('w') ? 1 : 0) - (held.has('arrowdown') || held.has('s') ? 1 : 0),
+      ];
+      world.x += h * go;
+      world.y += v * go;
+      clampCamera();
+    }
     drawLive(dt);
   });
 })();

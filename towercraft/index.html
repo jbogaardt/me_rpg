@@ -30,6 +30,8 @@
       #top .r::before, i.w::before, i.s::before { content: ''; flex: none; display: inline-block; width: 1.15em; height: 1.15em; background: center / contain no-repeat; vertical-align: -0.2em; }
       #top .r::before { width: 28px; height: 28px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7)); }
       #top .r.w::before, i.w::before { background-image: var(--ico-w); } #top .r.s::before, i.s::before { background-image: var(--ico-s); }
+      #marquee { position: fixed; z-index: 3; pointer-events: none; border: 1.5px solid var(--gold); background: rgba(242, 211, 138, 0.14); border-radius: 3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35); }
+      #marquee[hidden] { display: none; }
       #top small { font: 700 14px var(--body); color: #e9e2cc; text-shadow: 0 1px 3px #000; opacity: 0.85; }
       i.w, i.s { font-style: normal; display: inline-flex; align-items: center; gap: 2px; }
       #hint { position: fixed; left: 0; right: 0; top: 46px; text-align: center; color: var(--text); font-size: 15px; text-shadow: 0 1px 3px #000, 0 0 6px #000; pointer-events: none; z-index: 1; }
@@ -42,7 +44,7 @@
       .wbtn:hover:not(:disabled) { filter: brightness(1.25) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .wbtn:active:not(:disabled) { filter: brightness(0.9); transform: translateY(1px); }
       #cam { position: fixed; left: 10px; top: 8px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
-      #cam button { width: 40px; height: 40px; font-size: 20px; }
+      #cam button { width: 40px; height: 40px; font-size: 20px; } #cam #cam-all { font-size: 13px; }
       .plank { background: url('./ui/plank-dim.png') center / 100% 100% no-repeat; border: 0; color: #b9b3a2; font: 700 12px var(--title); padding: 8px 14px; letter-spacing: 0.03em; text-shadow: 0 1px 2px #000; }
       .plank.on, .plank:hover:not(:disabled) { background-image: url('./ui/plank.png'); color: var(--gold); }
       .plank:disabled { opacity: 0.45; }
@@ -89,6 +91,8 @@
       #card { position: fixed; z-index: 4; right: 8px; top: 108px; width: min(300px, calc(100vw - 16px)); max-height: calc(100vh - 108px - var(--dock-h) - 16px);
         overflow-y: auto; padding: 4px 6px 8px; animation: pop 0.14s ease-out; }
       #card[hidden] { display: none; }
+      /* A group's card is small and sits low at the left, out of the way of the field you are commanding on. */
+      #card.group { right: auto; left: 8px; top: auto; bottom: calc(var(--dock-h) + 12px); width: min(250px, calc(100vw - 16px)); }
       @keyframes pop { from { opacity: 0; transform: translateX(14px) scale(0.97); } to { opacity: 1; transform: none; } }
       #card-x { position: absolute; top: -4px; right: -4px; width: 30px; height: 30px; font-size: 15px; background-image: url('./ui/button-small.png'); }
       #card header { display: flex; gap: 10px; align-items: center; margin: 0 24px 8px 0; }
@@ -122,13 +126,16 @@
       #card-buy[hidden] { display: none; }
       #card-buy .line { display: flex; align-items: center; justify-content: space-between; font: 700 14px var(--title); color: var(--ink); }
       #card-buy input[type=range] { width: 100%; height: 28px; margin: 0; accent-color: #8a5a22; }
-      #card .targets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 0 0 6px; }
+      #card .targets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin: 0 0 6px; }
       #card .targets button { padding: 6px 4px; border-radius: 6px; border: 1px solid var(--ink-soft); background: rgba(51, 35, 15, 0.14); color: var(--ink);
         font: 700 12px var(--title); min-height: 44px; display: grid; place-items: center; gap: 1px; }
       #card .targets button small { font: 600 11px var(--body); color: var(--ink-soft); }
       #card .targets button:hover:not(:disabled) { background: rgba(242, 211, 138, 0.5); }
       #card .targets button.on { background: #c98f26; border-color: var(--ink); color: #fff; } #card .targets button.on small { color: #fff3d6; }
       #card .targets button:disabled { opacity: 0.55; }
+      #card .crowd { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+      #card .kind { display: flex; align-items: center; gap: 4px; padding: 2px 8px 2px 3px; border-radius: 6px; background: rgba(51, 35, 15, 0.14); border: 1px solid var(--ink-soft); }
+      #card .kind b { font: 700 14px var(--title); color: var(--ink); }
       #card .all { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); margin: 0 0 8px; min-height: 28px; }
       #card .all input { width: 18px; height: 18px; accent-color: #8a5a22; }
       #card-act { display: block; width: 100%; min-height: 44px; padding: 8px 10px 10px; font-size: 15px; color: var(--gold); background: url('./ui/button.png') center / 100% 100% no-repeat; border: 0;
@@ -188,9 +195,10 @@
     </style>
   </head>
   <body>
-    <div id="top"><span class="r w" title="Wood"><b id="wood">0</b><small id="wood-inc"></small></span><span class="r s" title="Stone"><b id="stone">0</b><small id="stone-inc"></small></span></div>
+    <div id="top"><span class="r w" title="Wood"><b id="wood">0</b></span><span class="r s" title="Stone"><b id="stone">0</b></span></div>
     <div id="hint"></div>
-    <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button></div>
+    <div id="marquee" hidden></div>
+    <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-all" title="Pick all your units (Ctrl+A)">All</button></div>
     <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no">Cancel</button></div>
     <div id="dock" class="panel thin wood">
       <div class="bar">

@@ -344,6 +344,8 @@ export function powerAt(m: Match, owner: Owner, at: readonly [number, number]): 
 
 /** Spacing (cells) between units that walk out together. */
 const SPACING = 0.5;
+/** The first stretch of road (cells) a crowd of new units is spread over. */
+const SPREAD = 9;
 
 /** Buy a unit: it appears at the castle at once and marches. Needs the castle level, the building that unlocks it and the money. */
 export function trainUnit(m: Match, owner: Owner, unitId: string): Result {
@@ -357,8 +359,18 @@ export function trainUnit(m: Match, owner: Owner, unitId: string): Result {
   if (!canAfford(p, def.cost)) return 'gold';
   pay(p, def.cost);
   const maxHp = def.hp * boostOf(m, owner, def, 'hp');
+  // Units that walk out together are spread along the first stretch of road (a crowd bought at once is not one stack on one spot).
+  const queued = m.units.reduce((n, u) => n + (u.owner === owner && u.s < SPREAD ? 1 : 0), 0);
   for (let i = 0; i < def.count; i++)
-    m.units.push({ id: m.nextId++, def, owner, hp: maxHp, maxHp, s: i * SPACING, cooldown: 0 });
+    m.units.push({
+      id: m.nextId++,
+      def,
+      owner,
+      hp: maxHp,
+      maxHp,
+      s: Math.min(SPREAD, i * SPACING + queued * SPACING),
+      cooldown: 0,
+    });
   return 'ok';
 }
 

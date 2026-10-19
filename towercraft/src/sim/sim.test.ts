@@ -744,6 +744,7 @@ describe('buying many at once', () => {
     expect(trainUnits(m, 0, def.id, 3)).toBe(3);
     expect(m.units.length).toBe(3 * def.count);
     expect(maxPurchases(m, 0, def)).toBe(can - 3);
+    expect(new Set(m.units.map((u) => u.s)).size).toBe(m.units.length); // a crowd is spread out, not one stack
     expect(trainUnits(m, 0, def.id, 1000)).toBe(can - 3);
     expect(m.players[0].wood).toBeLessThan(def.cost.wood);
     expect(trainUnits(m, 0, def.id, 5)).toBe(0);
