@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newMatch, step, type Match } from '../sim/sim';
 import { RACES } from '../sim/races';
-import { checksum, encode, Lockstep, parseMessage, type Message } from './lockstep';
+import { checksum, encode, Lockstep, packMatch, parseMessage, unpackMatch, type Message } from './lockstep';
 
 const STEP = 0.05;
 const BASE = RACES.legion.units[0]!.id; // the castle sells its base unit from the start
@@ -87,6 +87,42 @@ describe('lockstep', () => {
     L.receive(4, [{ k: 'repair', tower: 1 }]);
     for (let i = 0; i < 4; i++) L.run(m, () => undefined);
     expect(L.ready()).toBe(true);
+  });
+});
+
+describe('rejoin', () => {
+  it('lets the match run on while a player is away, then brings a fresh page back in step', () => {
+    const { A, mA, pump } = pair();
+    pump(60, (t) => t === 5 && A.issue({ k: 'train', id: BASE, n: 2 }));
+    // The rival's page goes away: A plays on alone (their castle keeps paying, their units keep walking).
+    A.setAway(true);
+    const before = mA.units.length;
+    for (let i = 0; i < 100; i++) A.run(mA, () => step(mA, STEP));
+    expect(A.tick).toBeGreaterThan(150);
+    expect(mA.units.length).toBeGreaterThanOrEqual(before);
+    // They come back on a new page, from what A sends them.
+    const wire = parseMessage(encode({ t: 'snap', ...A.snapshot(), state: packMatch(mA) }));
+    expect(wire?.t).toBe('snap');
+    if (wire?.t !== 'snap') return;
+    const outA: Message[] = [];
+    const outB: Message[] = [];
+    A.rejoin();
+    (A as unknown as { link: { send(m: Message): void } }).link = { send: (m) => outA.push(m) };
+    const mB = unpackMatch(wire.state);
+    const B = new Lockstep(1, { send: (m) => outB.push(m) });
+    B.resume(wire.n, wire.c, wire.mine);
+    expect(checksum(mB)).toBe(checksum(mA));
+    for (let i = 0; i < 200; i++) {
+      if (i === 20) B.issue({ k: 'order', what: 'units', to: 'bypass' });
+      A.run(mA, () => step(mA, STEP));
+      B.run(mB, () => step(mB, STEP));
+      for (const m of outA.splice(0)) if (m.t === 'tick') B.receive(m.n, m.c);
+      for (const m of outB.splice(0)) if (m.t === 'tick') A.receive(m.n, m.c);
+    }
+    expect(A.tick).toBe(B.tick);
+    expect(A.tick).toBeGreaterThan(300);
+    expect(checksum(mA)).toBe(checksum(mB));
+    expect(mA.players[1].orders.units).toBe('bypass');
   });
 });
 

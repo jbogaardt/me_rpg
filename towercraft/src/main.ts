@@ -11,7 +11,16 @@ import { drawnPos } from './stagger';
 import { createAi } from './sim/ai';
 import { normalizeCode } from '../../src/net/roomCode';
 import { Duel, type DuelPhase } from './net/duel';
-import { apply, Lockstep, NET_VERSION, type Command, type Message } from './net/lockstep';
+import {
+  apply,
+  Lockstep,
+  NET_VERSION,
+  packMatch,
+  unpackMatch,
+  type Command,
+  type Message,
+  type Packed,
+} from './net/lockstep';
 import { BOARDS, BOARD_IDS, DEFAULT_BOARD_ID } from './sim/board';
 import {
   MAX_LEVEL,
@@ -280,6 +289,9 @@ void (async () => {
   let endText: [string, string] | undefined;
   /** How long (s) the match has been stalled waiting for the rival's commands. */
   let stalled = 0;
+  /** A rejoining player's match (what the host sent, applied when the art is loaded), and the host's code to give the rival. */
+  let rejoinState: Packed | undefined;
+  let hostCode = '';
   let selected: TowerDef | undefined;
   /** Your units picked to command (a group, by id), where the mouse is over the field (cells), and a line of news for the hint. */
   const selection = new Set<number>();
@@ -2144,7 +2156,8 @@ void (async () => {
     YOU = you;
     endText = undefined;
     stalled = 0;
-    match = newMatch(races, BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
+    match = rejoinState ? unpackMatch(rejoinState) : newMatch(races, BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
+    rejoinState = undefined;
     applyBoard();
     if (!online) ai = createAi(1, (Math.random() * 2 ** 31) | 0);
     selected = undefined;
@@ -2174,6 +2187,7 @@ void (async () => {
     $('end').hidden = true;
     refresh();
     home();
+    if (rejoinWanted) bringBack();
   }
 
   // The title screen: pick the battlefield (a picture of each map, kept for next time), then the race that starts the match.
@@ -2215,6 +2229,8 @@ void (async () => {
   /** The race picked for an online match, and whether a connection is being made (the race buttons wait). */
   let myRace: RaceId = RACE_IDS[0]!;
   let connecting = false;
+  /** The rival came back while the host's art was still loading: let them in as soon as the match begins. */
+  let rejoinWanted = false;
   const raceOk = (r: string): r is RaceId => (RACE_IDS as readonly string[]).includes(r);
   const netText = (text: string, bad = false, code?: string) => {
     $('net').hidden = !text && !code;
@@ -2251,6 +2267,7 @@ void (async () => {
     void (mode === 'host' ? duel.host() : duel.join($<HTMLInputElement>('code').value));
   };
   const onPhase = (phase: DuelPhase, text: string, code?: string) => {
+    if (code) hostCode = code;
     if (phase === 'connected') {
       netText('Connected. Starting…');
       if (mode === 'join') duel.send({ t: 'hi', v: NET_VERSION, race: myRace });
@@ -2265,9 +2282,15 @@ void (async () => {
     const lock = new Lockstep(you, { send: (m: Message) => void duel.send(m) });
     online = { lock };
     void startOnline(lock, races, map, you);
+    return lock;
   };
   const onMessage = (m: Message) => {
-    if (m.t === 'hi' && mode === 'host' && !online) {
+    if (m.t === 'hi' && mode === 'host' && online) {
+      // The rival's connection dropped and they are back on the same code: bring them in.
+      if (m.v !== NET_VERSION || !online.lock.away) return;
+      if (started) bringBack();
+      else rejoinWanted = true;
+    } else if (m.t === 'hi' && mode === 'host' && !online) {
       if (m.v !== NET_VERSION || !raceOk(m.race)) {
         duel.close();
         connecting = false;
@@ -2280,7 +2303,7 @@ void (async () => {
       startDuel(0, races, chosenMap);
     } else if (m.t === 'go' && mode === 'join' && !online) {
       const [a, b] = m.races;
-      if (m.v !== NET_VERSION || !BOARDS[m.map] || !raceOk(a) || !raceOk(b) || b !== myRace) {
+      if (m.v !== NET_VERSION || !BOARDS[m.map] || !raceOk(a) || !raceOk(b)) {
         duel.close();
         connecting = false;
         $('races').classList.remove('busy');
@@ -2288,14 +2311,38 @@ void (async () => {
         return;
       }
       startDuel(1, [a, b], m.map);
+    } else if (m.t === 'snap' && mode === 'join' && !online) {
+      // Coming back to a match in progress: the snapshot alone starts it (the match, the clock and who you are), so the page cannot begin without it.
+      const { board, players } = m.state;
+      const races: [RaceId, RaceId] = [players[0].race, players[1].race];
+      if (!BOARDS[board] || !raceOk(races[0]) || !raceOk(races[1])) {
+        duel.close();
+        connecting = false;
+        $('races').classList.remove('busy');
+        netText('The host is on a different version of the game. Reload both pages and try again.', true);
+        return;
+      }
+      myRace = races[1];
+      rejoinState = m.state;
+      startDuel(1, races, board).resume(m.n, m.c, m.mine);
     } else if (m.t === 'tick') online?.lock.receive(m.n, m.c);
     else if (m.t === 'sum') online?.lock.receiveSum(m.n, m.h);
   };
+  /** The rival is back: send them the match as it stands (the clock resumes together), and stop treating them as away. */
+  function bringBack() {
+    if (!online || match.winner >= 0) return;
+    rejoinWanted = false;
+    duel.send({ t: 'snap', ...online.lock.snapshot(), state: packMatch(match) });
+    online.lock.rejoin();
+  }
   const onClosed = (reason: string) => {
-    if (online && started && match.winner < 0) {
-      // The rival left (or the connection died) in the middle of the match: it is won.
-      endText = ['Victory', `${reason} The match is yours.`];
-      match.winner = YOU;
+    if (online && mode === 'host') {
+      // The rival dropped: their side plays on by itself (their units march, their towers shoot) and the same code lets them back in.
+      online.lock.setAway(true);
+    } else if (online && started && match.winner < 0) {
+      // The host is gone: the match cannot go on without them.
+      endText = ['Disconnected', `${reason} If the host is still there, join again with the same code to carry on.`];
+      match.winner = 2;
       showEnd();
     } else if (!started) {
       online = undefined;
@@ -2316,6 +2363,8 @@ void (async () => {
   $('again').onclick = () => {
     duel.close();
     online = undefined;
+    rejoinState = undefined;
+    rejoinWanted = false;
     setMode(mode);
     started = false;
     document.body.classList.remove('playing');
@@ -2406,7 +2455,14 @@ void (async () => {
       refresh();
       if (match.winner >= 0) showEnd();
     }
-    $('wait').hidden = !(online && started && match.winner < 0 && stalled > 0.8);
+    const away = !!online?.lock.away;
+    $('wait').hidden = !(online && started && match.winner < 0 && (away || stalled > 0.8));
+    if (!$('wait').hidden) {
+      const text = away
+        ? `Your rival is away. The match goes on; they can rejoin with ${hostCode}.`
+        : 'Waiting for your rival…';
+      if ($('wait').textContent !== text) $('wait').textContent = text;
+    }
     resources();
     if (held.size) {
       const go = 640 * dt;

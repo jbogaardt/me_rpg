@@ -12,7 +12,9 @@
 //
 // Pixi-free and tested (lockstep.test.ts).
 
+import { BOARDS } from '../sim/board';
 import {
+  newMatch,
   buildTower,
   buyUpgrade,
   loadBunker,
@@ -24,6 +26,7 @@ import {
   type Focus,
   type Match,
   type Owner,
+  type Player,
 } from '../sim/sim';
 
 /** What a player can ask of the match, as it travels: everything `main.ts` used to call on the sim directly. */
@@ -87,7 +90,9 @@ export type Message =
   /** A player's commands for tick `n` (possibly none: it is also the promise that nothing more is coming for it). */
   | { t: 'tick'; n: number; c: Command[] }
   /** Checksum of the match after `n` ticks. */
-  | { t: 'sum'; n: number; h: number };
+  | { t: 'sum'; n: number; h: number }
+  /** A rejoining player's way back in: the match as it stands at tick `n`, and the host's commands already settled for the ticks `n`..`c`-1. */
+  | { t: 'snap'; n: number; c: number; mine: Command[][]; state: Packed };
 
 const isInt = (v: unknown, min = 0, max = 1_000_000): v is number =>
   typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
@@ -160,6 +165,31 @@ export function parseMessage(data: string): Message | null {
       }
       return { t: 'tick', n: m.n, c };
     }
+    case 'snap': {
+      const mine = m.mine;
+      if (
+        !isInt(m.n) ||
+        !isInt(m.c) ||
+        m.c < m.n ||
+        m.c - m.n > 64 ||
+        !Array.isArray(mine) ||
+        mine.length !== m.c - m.n
+      )
+        return null;
+      const settled: Command[][] = [];
+      for (const slot of mine as unknown[]) {
+        if (!Array.isArray(slot) || slot.length > MAX_PER_TICK) return null;
+        const cmds: Command[] = [];
+        for (const x of slot as unknown[]) {
+          const cmd = parseCommand(x);
+          if (!cmd) return null;
+          cmds.push(cmd);
+        }
+        settled.push(cmds);
+      }
+      const state = parsePacked(m.state);
+      return state ? { t: 'snap', n: m.n, c: m.c, mine: settled, state } : null;
+    }
     case 'sum':
       return isInt(m.n) && isInt(m.h, 0, 0xffffffff) ? { t: 'sum', n: m.n, h: m.h } : null;
     default:
@@ -168,6 +198,80 @@ export function parseMessage(data: string): Message | null {
 }
 
 export const encode = (m: Message) => JSON.stringify(m);
+
+// --- The match on the wire (a rejoining player) ---
+
+/** The match as plain data: units and towers name their kind by id (the kinds are the game's own tables, the same on both pages). */
+export interface Packed {
+  board: string;
+  time: number;
+  payTimer: number;
+  nextId: number;
+  players: [Player, Player];
+  units: (Omit<Match['units'][number], 'def'> & { def: string })[];
+  towers: (Omit<Match['towers'][number], 'def' | 'garrison'> & {
+    def: string;
+    garrison: { def: string; cooldown: number }[];
+  })[];
+}
+
+export function packMatch(m: Match): Packed {
+  return {
+    board: m.board.id,
+    time: m.time,
+    payTimer: m.payTimer,
+    nextId: m.nextId,
+    players: JSON.parse(JSON.stringify(m.players)) as [Player, Player],
+    units: m.units.map((u) => ({ ...u, def: u.def.id })),
+    towers: m.towers.map((t) => ({
+      ...t,
+      def: t.def.id,
+      garrison: t.garrison.map((g) => ({ def: g.def.id, cooldown: g.cooldown })),
+    })),
+  };
+}
+
+/** Rebuild a match from `packMatch`. Throws on anything that does not fit the game's tables (the caller reports it). */
+export function unpackMatch(p: Packed): Match {
+  const board = BOARDS[p.board];
+  if (!board) throw new Error('unknown map');
+  const m = newMatch([p.players[0].race, p.players[1].race], board);
+  m.time = p.time;
+  m.payTimer = p.payTimer;
+  m.nextId = p.nextId;
+  m.players = p.players;
+  const found = <T extends { id: string }>(list: T[], id: string): T => {
+    const x = list.find((y) => y.id === id);
+    if (!x) throw new Error(`unknown kind ${id}`);
+    return x;
+  };
+  m.units = p.units.map((u) => ({ ...u, def: found(m.races[m.players[u.owner].race].units, u.def) }));
+  m.towers = p.towers.map((t) => {
+    const race = m.races[m.players[t.owner].race];
+    return {
+      ...t,
+      def: found(race.towers, t.def),
+      garrison: t.garrison.map((g) => ({ def: found(race.units, g.def), cooldown: g.cooldown })),
+    };
+  });
+  return m;
+}
+
+function parsePacked(v: unknown): Packed | null {
+  const p = (v ?? {}) as Partial<Packed>;
+  const ok =
+    typeof p.board === 'string' &&
+    typeof p.time === 'number' &&
+    typeof p.payTimer === 'number' &&
+    isInt(p.nextId, 0, 1e9) &&
+    Array.isArray(p.players) &&
+    p.players.length === 2 &&
+    Array.isArray(p.units) &&
+    p.units.length <= 1000 &&
+    Array.isArray(p.towers) &&
+    p.towers.length <= 1000;
+  return ok ? (p as Packed) : null;
+}
 
 // --- The checksum ---
 
@@ -201,6 +305,8 @@ export class Lockstep {
   tick = 0;
   /** True once the two pages' checksums disagreed. */
   desync = false;
+  /** The other player is gone (their connection dropped): their side plays on with no commands, and nothing waits for them. */
+  away = false;
   private slots: [Map<number, Command[]>, Map<number, Command[]>] = [
     new Map<number, Command[]>(),
     new Map<number, Command[]>(),
@@ -229,7 +335,7 @@ export class Lockstep {
 
   /** The other page's commands for tick `n`. Late, repeated or absurd ones are ignored. */
   receive(n: number, commands: Command[]) {
-    const slot = this.slots[this.you === 0 ? 1 : 0];
+    const slot = this.slots[this.other];
     if (n < this.tick || n > this.tick + MAX_AHEAD || slot.has(n)) return;
     slot.set(n, commands);
   }
@@ -240,22 +346,61 @@ export class Lockstep {
     this.compare(n);
   }
 
+  /** The rival dropped (or came back, see `rejoin`). Nothing is compared while they are away. */
+  setAway(on: boolean) {
+    this.away = on;
+    this.mine.clear();
+    this.theirs.clear();
+  }
+
+  /** The state a rejoining page needs to take the other player's place: the tick, and this player's settled commands from it on. */
+  snapshot(): { n: number; c: number; mine: Command[][] } {
+    const mine: Command[][] = [];
+    for (let n = this.tick; n < this.committed; n++) mine.push(this.slots[this.you].get(n) ?? []);
+    return { n: this.tick, c: this.committed, mine };
+  }
+
+  /** The rival is back (their page was just sent `snapshot`): they have no commands yet for the settled ticks. */
+  rejoin() {
+    for (let n = this.tick; n < this.committed; n++)
+      if (!this.slots[this.other].has(n)) this.slots[this.other].set(n, []);
+    this.setAway(false);
+  }
+
+  /** The rejoining page's side of `snapshot`: take up the clock where the other page is (`theirs` are its settled commands). */
+  resume(n: number, c: number, theirs: Command[][]) {
+    this.tick = n;
+    this.committed = c;
+    for (const slot of this.slots) slot.clear();
+    theirs.forEach((cmds, i) => {
+      this.slots[this.other].set(n + i, cmds);
+      this.slots[this.you].set(n + i, []);
+    });
+    this.pending = [];
+    this.setAway(false);
+  }
+
+  private get other(): Owner {
+    return this.you === 0 ? 1 : 0;
+  }
+
   /** Whether the next tick can run: the other player's commands for it are in. */
   ready(): boolean {
-    return this.slots[this.you === 0 ? 1 : 0].has(this.tick);
+    return this.away || this.slots[this.other].has(this.tick);
   }
 
   /** Run one tick if it can: apply both players' commands, then `step` the match. False when waiting for the other page. */
   run(m: Match, step: () => void): boolean {
     this.commit();
     if (this.desync || !this.ready()) return false;
+    if (this.away && !this.slots[this.other].has(this.tick)) this.slots[this.other].set(this.tick, []);
     for (const owner of [0, 1] as const) {
       for (const c of this.slots[owner].get(this.tick) ?? []) apply(m, owner, c);
       this.slots[owner].delete(this.tick);
     }
     step();
     this.tick++;
-    if (this.tick % SUM_EVERY === 0) {
+    if (!this.away && this.tick % SUM_EVERY === 0) {
       const h = checksum(m);
       this.mine.set(this.tick, h);
       this.link.send({ t: 'sum', n: this.tick, h });

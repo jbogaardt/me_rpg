@@ -23,17 +23,24 @@ function fakeRelay(): Relay {
       notify?.();
       return Promise.resolve();
     },
-    waitForAnswers: async () => {
-      if (!answer) await new Promise<void>((r) => (notify = r));
-      return { answers: [{ slot: 1, answer }], next: 1 };
+    waitForAnswers: async (_room, after) => {
+      while (!answer) await new Promise<void>((r) => (notify = r));
+      const got = answer;
+      answer = '';
+      return { answers: [{ slot: 1, answer: got }], next: after + 1 };
     },
-    closeRoom: () => undefined,
+    reopenSeat: (_room, _slot, o) => {
+      offer = o;
+      answer = '';
+      return Promise.resolve();
+    },
     cancel: () => undefined,
   };
 }
 
 /** Two links joined to each other once the host has the answer. */
 function fakeLinks() {
+  let made = 0;
   const ends: Partial<Record<LinkRole, { handlers: LinkHandlers; open: boolean }>> = {};
   const make = (role: LinkRole, handlers: LinkHandlers): Link => {
     const me = { handlers, open: false };
@@ -42,7 +49,7 @@ function fakeLinks() {
     const link: Link = {
       role,
       status: 'idle',
-      createOffer: () => Promise.resolve('offer'),
+      createOffer: () => Promise.resolve(`offer${++made}`),
       acceptAnswer: () => {
         for (const e of [ends.host!, ends.join!]) {
           e.open = true;
@@ -57,7 +64,7 @@ function fakeLinks() {
     };
     return link;
   };
-  return make;
+  return Object.assign(make, { ends });
 }
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -113,5 +120,32 @@ describe('Duel', () => {
     await d.join('quick-foxes');
     expect(texts[0]).toMatch(/^failed:That is not a game code/);
     expect(texts.at(-1)).toMatch(/^failed:/);
+  });
+
+  it('reopens the host seat when the friend drops, so the same code lets them back in', async () => {
+    const relay = fakeRelay();
+    const make = fakeLinks();
+    const hostPhases: string[] = [];
+    const closed: string[] = [];
+    const host = new Duel(
+      { phase: (p) => hostPhases.push(p), message: () => undefined, closed: (r) => closed.push(r) },
+      relay,
+      make,
+    );
+    void host.host();
+    await tick();
+    const guest = new Duel({ phase: () => undefined, message: () => undefined, closed: () => undefined }, relay, make);
+    await guest.join('mighty-apples');
+    await tick();
+    expect(host.connected).toBe(true);
+    make.ends.host!.handlers.status?.('disconnected', 'The other player disconnected.');
+    await tick();
+    expect(closed).toEqual(['The other player disconnected.']);
+    expect(host.connected).toBe(false);
+    expect(hostPhases.at(-1)).toBe('waiting');
+    const again = new Duel({ phase: () => undefined, message: () => undefined, closed: () => undefined }, relay, make);
+    await again.join('mighty-apples');
+    await tick();
+    expect(host.connected).toBe(true);
   });
 });

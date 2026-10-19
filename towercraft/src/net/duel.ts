@@ -4,6 +4,7 @@
 // that a duel has exactly one seat. The channel is ORDERED and reliable (the commands must all arrive, in order), unlike Me RPG's.
 //
 //   host: createOffer -> relay.createRoom([offer]) -> show the code -> waitForAnswers -> acceptAnswer -> channel opens
+//         and when that player's link ends, a fresh offer goes into the seat (reopenSeat) so they can rejoin with the same code
 //   join: relay.join(code) -> acceptOffer -> relay.sendAnswer -> answerDelivered -> channel opens
 //
 // Pixi-free; the relay and the link are injected so the flow is tested with fakes (duel.test.ts).
@@ -15,7 +16,10 @@ import { normalizeCode } from '../../../src/net/roomCode';
 import { encode, parseMessage, type Message } from './lockstep';
 
 export type LinkFactory = (role: LinkRole, handlers: LinkHandlers) => Link;
-export type Relay = Pick<RelayClient, 'createRoom' | 'join' | 'sendAnswer' | 'waitForAnswers' | 'closeRoom' | 'cancel'>;
+export type Relay = Pick<
+  RelayClient,
+  'createRoom' | 'join' | 'sendAnswer' | 'waitForAnswers' | 'reopenSeat' | 'cancel'
+>;
 
 /** Where the player is in setting up: the menu words each. */
 export type DuelPhase = 'idle' | 'working' | 'waiting' | 'connected' | 'failed';
@@ -25,7 +29,7 @@ export interface DuelHandlers {
   phase(phase: DuelPhase, text: string, code?: string): void;
   /** A message from the other player (connected only). */
   message(message: Message): void;
-  /** The connection ended after it was up: `reason` is for the player. */
+  /** The connection ended after it was up: `reason` is for the player. The host's seat is reopened by itself for a rejoin. */
   closed(reason: string): void;
 }
 
@@ -36,6 +40,8 @@ export class Duel {
   private abort: AbortController | null = null;
   private room: Room | null = null;
   private up = false;
+  /** The host's seat has an offer in the relay that no answer has come for yet. */
+  private seatOpen = false;
 
   constructor(
     private handlers: DuelHandlers,
@@ -52,7 +58,7 @@ export class Duel {
     return this.up && !!this.link?.send(encode(message));
   }
 
-  /** Host a game: get a code, wait for one friend. */
+  /** Host a game: get a code, wait for one friend (and keep the code good for that friend to come back). */
   async host(): Promise<void> {
     if (!RELAY_URL && this.relay instanceof RelayClient)
       return this.fail('Online play needs the game server, which is not set up here.');
@@ -64,16 +70,26 @@ export class Duel {
       const room = await this.relay.createRoom([offer], attempt.signal);
       if (attempt.signal.aborted) return void this.relay.cancel(room);
       this.room = room;
+      this.seatOpen = true;
       this.handlers.phase('waiting', 'Waiting for your rival…', room.code);
       let after = 0;
-      for (let got = false; !got;) {
-        const batch = await this.relay.waitForAnswers(room, after, attempt.signal);
+      for (;;) {
+        let batch;
+        try {
+          batch = await this.relay.waitForAnswers(room, after, attempt.signal);
+        } catch (err) {
+          if (this.up && this.abort === attempt && !attempt.signal.aborted) {
+            this.room = null; // the relay forgot the game: the match goes on, but nobody can rejoin it
+            return;
+          }
+          throw err;
+        }
         after = batch.next;
         const first = batch.answers[0];
-        if (first) {
-          got = true;
+        if (first && this.seatOpen && this.link) {
+          this.seatOpen = false;
           this.handlers.phase('working', 'Connecting…', room.code);
-          await link.acceptAnswer(first.answer);
+          await this.link.acceptAnswer(first.answer).catch(() => undefined); // a bad answer ends the link, which reopens the seat
         }
       }
     } catch (err) {
@@ -109,6 +125,7 @@ export class Duel {
     const link = this.link;
     this.link = null;
     this.up = false;
+    this.seatOpen = false;
     link?.close();
   }
 
@@ -127,12 +144,18 @@ export class Duel {
         if (this.abort !== attempt || this.link !== link) return;
         if (status === 'connected') {
           this.up = true;
-          if (this.room) this.relay.closeRoom(this.room);
-          this.room = null;
           this.handlers.phase('connected', 'Connected.');
         } else if (status === 'failed' || status === 'disconnected') {
           const wasUp = this.up;
           const reason = detail || 'The connection was lost.';
+          this.up = false;
+          if (role === 'host' && this.room) {
+            // The friend is gone, but the game and its code are not: offer the seat again.
+            link.close();
+            if (wasUp) this.handlers.closed(reason);
+            void this.reopen(attempt, wasUp);
+            return;
+          }
           this.close();
           if (wasUp) this.handlers.closed(reason);
           else this.handlers.phase('failed', reason);
@@ -145,6 +168,21 @@ export class Duel {
     });
     this.link = link;
     return link;
+  }
+
+  /** The host's friend left or never connected: a new link and offer go into the seat, so the same code works again. */
+  private async reopen(attempt: AbortController, wasUp: boolean) {
+    const room = this.room;
+    if (!room) return;
+    try {
+      const link = this.attach('host', attempt);
+      const offer = await link.createOffer();
+      await this.relay.reopenSeat(room, 1, offer, attempt.signal);
+      this.seatOpen = true;
+      if (!wasUp || !this.up) this.handlers.phase('waiting', 'Waiting for your rival…', room.code);
+    } catch (err) {
+      this.failed(err, attempt);
+    }
   }
 
   private failed(err: unknown, attempt: AbortController) {
