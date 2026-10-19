@@ -85,13 +85,13 @@ The project is in rapid development, and this is how every session (Claude or hu
 ## Roadmap
 
 1. ✅ Terrain metadata (`surface`, `level`, `ramps`, object `tag`) and visual plateaus with stairs.
-2. ✅ Footprints and falling leaves. Next ambient ideas: dust/snow puffs underfoot, drifting snow and sand, animated water (`graphics-tiles-waterflow.png`), wind sway on canopies.
+2. ✅ Footprints and falling leaves.
 3. Dynamic movement: per-level collision in `systems/collision.ts`, one-way ledges to jump down, mobs/projectiles that respect height.
 
 ## Deployment
 
 The relay (`relay/`) deploys separately: Cloudflare builds and deploys it from `main` itself (no GitHub workflow); see `relay/README.md`. A relay change only reaches players once that build has finished, so wait for it before relying on a new API.
 
-**The site is a gallery of games** (`games/`): `games/index.html` is the front page, driven by `games/games.json`, and each game is a folder of the published site. This game builds into `dist/me_rpg/` (`vite.config.ts`), `tools/site.ts` copies `games/` round it after `vite build` (and fails if a listed game has no page), so a new game is a folder in `games/` (or a build that writes `dist/<slug>/`) plus a `games.json` entry. Towercraft and Bs World are placeholders for now. Games share one origin, so **namespace any `localStorage`/IndexedDB key per game**. The gallery forwards an address that still carries a query or hash (an old `?campaign=`, `?seed=` or `#join=` link) to `me_rpg/`.
+**The site is a gallery of games** (`games/`, `games/games.json`, assembled by `tools/site.ts`, whose header says how to add one): this game builds into `dist/me_rpg/`. Games share an origin, so namespace any `localStorage`/IndexedDB key per game.
 
 `.github/workflows/deploy.yml` builds and publishes `dist/` to GitHub Pages on every push to `main` (repo Settings → Pages → Source must be "GitHub Actions"). `vite.config.ts` sets `base: './'` so asset URLs work under the `/<repo>/` subpath — keep asset references relative (put static files in `public/` and don't use root-absolute `/...` paths).
