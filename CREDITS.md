@@ -201,3 +201,7 @@ Cave and desert tilesets by MrBeast (the sewer tileset of the collection is no l
 http://opengameart.org in the credits. The sheets are drawn on a 16px grid; `tools/map/dungeonSheets.ts` doubles them to the
 32px cell (nearest neighbour) and, for the desert sheet, makes the cream sand transparent so a rock sits on the game's own
 sand. Nothing else is changed. The credit is also in the pause menu's Credits tab.
+
+## Towercraft
+
+Unit portraits and tower sprites are from Wyrmsun (CC0, via the OpenGameArt pack "Wyrmsun CC0 - over 900 items"): see `towercraft/public/art/CREDITS.md`.
