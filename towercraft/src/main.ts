@@ -487,6 +487,19 @@ void (async () => {
       (t) => t.owner === YOU && t.def.bunker && Math.hypot(wx - (t.col + 0.5), wy - (t.row - 0.3)) <= 1.2,
     );
 
+  /** A tower under a point (cells), yours or the rival's (the rival's only while you can see it): the nearest. */
+  const towerAt = (wx: number, wy: number, mine: boolean) => {
+    const vision = visionOf(match);
+    let best: Tower | undefined;
+    let bestD = Infinity;
+    for (const t of match.towers) {
+      if (t.hp <= 0 || (t.owner === YOU) !== mine || (!mine && !isSeen(match, YOU, t, vision))) continue;
+      const d = Math.hypot(wx - (t.col + 0.5), wy - (t.row - 0.4));
+      if (d <= 1.5 && d < bestD) [best, bestD] = [t, d];
+    }
+    return best;
+  };
+
   /** One of your units under a point (cells; a unit's middle is above its feet, higher still for a flyer): the nearest. */
   const unitMid = (u: Unit): [number, number] => {
     const [x, y] = unitPos(u, match.board);
@@ -617,6 +630,14 @@ void (async () => {
       if (bunker) {
         setGhost(undefined);
         showCard({ kind: 'bunker', id: bunker.id });
+        return;
+      }
+      // Any other building of yours: what it does. One of the rival's you can see: its health.
+      const ownT = towerAt(wx, wy, true);
+      const foeT = ownT ? undefined : towerAt(wx, wy, false);
+      if (ownT || foeT) {
+        setGhost(undefined);
+        showCard({ kind: ownT ? 'built' : 'foe', id: (ownT ?? foeT)!.id });
         return;
       }
     }
@@ -1211,6 +1232,15 @@ void (async () => {
             .stroke({ color: 0xe0777b, width: 2, alpha: 0.45 });
       }
     } else app.canvas.style.cursor = '';
+    if (cardOf?.kind === 'built' || cardOf?.kind === 'foe') {
+      const t = match.towers.find((x) => x.id === (cardOf as { id: number }).id);
+      if (t && t.hp > 0)
+        live.ellipse((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 8, 30 * SIZE * 0.7, 11 * SIZE * 0.7).stroke({
+          color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b,
+          width: 2.5,
+          alpha: 0.6 + 0.4 * Math.sin(clock * 5),
+        });
+    }
     if (sent && clock - sent.at < 0.55) {
       const k = (clock - sent.at) / 0.55;
       live.circle(sent.x, sent.y + 4, 30 + 60 * k).stroke({ color: 0xffffff, width: 3, alpha: 1 - k });
@@ -1454,7 +1484,7 @@ void (async () => {
     `<div class="stats">${unitBars(d)}</div>`;
 
   /** What a building does, as pictures: how it fights, what it makes or unlocks, and bars for health, damage and range. */
-  const towerCard = (d: TowerDef) => {
+  const towerCard = (d: TowerDef, live = false) => {
     const race = RACES[match.players[YOU].race];
     const hosted = race.upgrades.filter((u) => u.needs === d.id).map((u) => u.name);
     const built = match.towers.filter((t) => t.owner === YOU && t.def.id === d.id).length;
@@ -1481,7 +1511,7 @@ void (async () => {
         : '') +
       (unlocks ? `<div class="unlocks">${icon('unlock', 'Unlocks')}${unlocks}</div>` : '') +
       (hosted.length ? `<p class="note">${hosted.join(' · ')}</p>` : '') +
-      `<div class="stats">${meter('heart', RED, `Health ${d.hp}`, d.hp, MOST.towerHp)}${
+      `<div class="stats">${meter('heart', RED, `Health ${d.hp}`, d.hp, MOST.towerHp, 0, live ? 'lv-hp' : '')}${
         d.damage > 0
           ? meter(
               'sword',
@@ -1522,7 +1552,9 @@ void (async () => {
     | { kind: 'tower'; def: TowerDef }
     | { kind: 'castle' }
     | { kind: 'bunker'; id: number }
-    | { kind: 'sel' };
+    | { kind: 'sel' }
+    | { kind: 'built'; id: number }
+    | { kind: 'foe'; id: number };
   let cardOf: CardOf | undefined;
   const act = $<HTMLButtonElement>('card-act');
   let cardBody = '';
@@ -1533,7 +1565,7 @@ void (async () => {
     (a.kind === 'castle' ||
       a.kind === 'sel' ||
       (a as { def?: unknown; id?: number }).def === (b as { def?: unknown }).def) &&
-    (a.kind !== 'bunker' || a.id === (b as { id: number }).id);
+    ((a.kind !== 'bunker' && a.kind !== 'built' && a.kind !== 'foe') || a.id === (b as { id: number }).id);
   function showCard(c: CardOf, toggle = false) {
     if (toggle && cardOf && sameCard(cardOf, c)) return closeCard();
     if (!cardOf || !sameCard(cardOf, c)) {
@@ -1656,6 +1688,24 @@ void (async () => {
     act.hidden = true;
   }
 
+  /** A building that stands: yours (what it does, with its health) or the rival's (its picture and health). */
+  function renderTower(id: number, mine: boolean) {
+    const t = match.towers.find((x) => x.id === id && x.hp > 0);
+    if (!t || (!mine && !isSeen(match, YOU, t))) return closeCard(); // it fell, or slipped out of sight
+    const body = mine
+      ? towerCard(t.def, true)
+      : `<header><div class="pic">${towerThumb(t.def.art, 50)}</div><div><h3>${t.def.name}</h3></div></header>` +
+        `<div class="stats">${meter('heart', RED, 'Health', t.def.hp, MOST.towerHp, 0, 'lv-hp')}</div>`;
+    if (body !== cardBody) {
+      $('card-body').innerHTML = body;
+      cardBody = body;
+    }
+    const lv = $('lv-hp');
+    lv.style.width = `${Math.max(6, Math.min(100, Math.sqrt(Math.max(0, t.hp) / MOST.towerHp) * 100))}%`;
+    lv.parentElement!.parentElement!.title = `Health ${Math.ceil(t.hp)} / ${t.def.hp}`;
+    act.hidden = true;
+  }
+
   function renderCard() {
     if (!cardOf) return;
     const me = match.players[YOU];
@@ -1666,6 +1716,7 @@ void (async () => {
     card.classList.toggle('group', cardOf.kind === 'sel');
     $('card-buy').hidden = true;
     if (cardOf.kind === 'sel') return renderSel();
+    if (cardOf.kind === 'built' || cardOf.kind === 'foe') return renderTower(cardOf.id, cardOf.kind === 'built');
     let body: string;
     let label = '';
     let reason = '';
@@ -1856,6 +1907,7 @@ void (async () => {
     for (const [b, def] of trainButtons) {
       const open = unitUnlocked(match, YOU, def);
       const why = unitReason(def);
+      b.hidden = open !== 'ok'; // only what you can train now (a unit needs its building and a castle level)
       b.classList.toggle('lock', open !== 'ok');
       b.classList.toggle('poor', open === 'ok' && !!why);
       b.classList.toggle('open', cardOf?.kind === 'unit' && cardOf.def === def);
@@ -1868,6 +1920,7 @@ void (async () => {
     for (const [b, def] of buildButtons) {
       const open = towerUnlocked(match, YOU, def);
       const why = towerReason(def);
+      b.hidden = open !== 'ok'; // only what you can build now: its castle level and the building it needs are there
       b.classList.toggle('lock', open !== 'ok');
       b.classList.toggle('poor', open === 'ok' && !!why);
       b.classList.toggle('open', cardOf?.kind === 'tower' && cardOf.def === def && selected !== def);
@@ -1895,11 +1948,21 @@ void (async () => {
       const effect = b.querySelector('small')!;
       const said = why && next ? why : upgradeText(up);
       if (effect.textContent !== said) effect.textContent = said;
+      b.hidden = !next || !!why; // only an upgrade you can buy now
       b.classList.toggle('lock', !!why);
       b.classList.toggle('poor', poor);
       b.title = why || (poor ? lacking(next.cost) : `Buy level ${lvl + 1}`);
       b.disabled = !next || !!why;
     }
+    // A section or a tab with nothing in it is not shown; if the open tab empties, go back to the units.
+    for (const sec of document.querySelectorAll<HTMLElement>('#build .sec'))
+      sec.hidden = !sec.querySelector('.tb:not([hidden])');
+    for (const tabButton of document.querySelectorAll<HTMLButtonElement>('#tabs button')) {
+      const shelf = $(shelves[tabButton.dataset.tab as keyof typeof shelves]);
+      tabButton.hidden = !shelf.querySelector('.tb:not([hidden]), .up:not([hidden])');
+    }
+    if (tab !== 'units' && $(shelves[tab]).querySelector('.tb:not([hidden]), .up:not([hidden])') === null)
+      setTab('units');
     const upCost = upgradeCost(match, YOU);
     castleButton.classList.toggle('open', cardOf?.kind === 'castle');
     castleButton.classList.toggle('poor', upCost === undefined || !canAfford(me, upCost));
