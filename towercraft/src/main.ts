@@ -1571,6 +1571,33 @@ void (async () => {
     | { kind: 'built'; id: number }
     | { kind: 'foe'; id: number };
   let cardOf: CardOf | undefined;
+  /**
+   * Upgrades spend a lot on one click, so the first click only arms the button ("Confirm?") and a second one within
+   * `CONFIRM_MS` buys. Anything else, or waiting, disarms it.
+   */
+  const CONFIRM_MS = 3000;
+  let armedKey: string | undefined;
+  let armedTimer: ReturnType<typeof setTimeout> | undefined;
+  const isArmed = (key: string) => armedKey === key;
+  const disarm = () => {
+    armedKey = undefined;
+    clearTimeout(armedTimer);
+  };
+  /** True when this click is the confirming one; otherwise arms `key` and repaints. */
+  function confirmed(key: string): boolean {
+    if (armedKey === key) {
+      disarm();
+      return true;
+    }
+    disarm();
+    armedKey = key;
+    armedTimer = setTimeout(() => {
+      disarm();
+      if (cardOf) renderCard();
+      refresh();
+    }, CONFIRM_MS);
+    return false;
+  }
   const act = $<HTMLButtonElement>('card-act');
   let cardBody = '';
   /** How many purchases the slider is set to. */
@@ -1586,6 +1613,7 @@ void (async () => {
     if (!cardOf || !sameCard(cardOf, c)) {
       buyN = 1;
     }
+    if (!cardOf || !sameCard(cardOf, c)) disarm();
     cardOf = c;
     if (selected && !(c.kind === 'tower' && c.def === selected)) {
       selected = undefined; // looking at something else drops the tower being placed
@@ -1597,6 +1625,7 @@ void (async () => {
   }
   function closeCard() {
     if (cardOf?.kind === 'sel') selection.clear();
+    disarm();
     cardOf = undefined;
     $('card').hidden = true;
     selected = undefined;
@@ -1847,7 +1876,10 @@ void (async () => {
           ? icon('power', 'Fully upgraded')
           : `${icon('power', `Upgrade to level ${level + 1}`)}${money(cost)}`;
       reason = cost === undefined ? 'max' : lacks.length > 0 ? 'Build what it asks for first' : lacking(cost);
-      go = () => upgradeCastle(match, YOU);
+      if (cost !== undefined && !reason && isArmed('castle')) label = icon('power', 'Confirm upgrade?') + money(cost);
+      go = () => {
+        if (confirmed('castle')) upgradeCastle(match, YOU);
+      };
     }
     if (body !== cardBody) {
       $('card-body').innerHTML = body;
@@ -1921,7 +1953,7 @@ void (async () => {
       b.className = 'up wbtn';
       b.innerHTML = `<b>${up.name}</b><small>${upgradeText(up)}</small><span class="foot"><span class="pips"><i></i><i></i><i></i></span><em></em></span>`;
       b.onclick = () => {
-        buyUpgrade(match, YOU, up.id);
+        if (confirmed(`up:${up.id}`)) buyUpgrade(match, YOU, up.id);
         refresh();
       };
       $('upgrades').append(b);
@@ -1987,7 +2019,7 @@ void (async () => {
       const pips = b.querySelectorAll('.pips i');
       pips.forEach((p, i) => p.classList.toggle('on', i < lvl));
       const line = b.querySelector('em')!;
-      const text = !next ? 'max' : why ? '' : money(next.cost);
+      const text = !next ? 'max' : why ? '' : isArmed(`up:${up.id}`) ? 'Confirm?' : money(next.cost);
       if (line.innerHTML !== text) line.innerHTML = text;
       const effect = b.querySelector('small')!;
       const said = why && next ? why : upgradeText(up);
@@ -1995,6 +2027,7 @@ void (async () => {
       b.hidden = !next || !!why; // only an upgrade you can buy now
       b.classList.toggle('lock', !!why);
       b.classList.toggle('poor', poor);
+      b.classList.toggle('armed', isArmed(`up:${up.id}`));
       b.title = why || (poor ? lacking(next.cost) : `Buy level ${lvl + 1}`);
       b.disabled = !next || !!why;
     }
