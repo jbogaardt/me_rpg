@@ -2,37 +2,30 @@
 // controls, and runs the match at a fixed step. The rules are in sim/ (Pixi-free); this file only draws a Match and turns
 // taps into commands.
 
+import '@fontsource/cinzel/700.css';
+import '@fontsource/crimson-text/400.css';
+import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture, TextureStyle } from 'pixi.js';
 import { createAi } from './sim/ai';
-import { CASTLES, COLS, ROAD_LENGTH, ROWS, headingAt } from './sim/board';
-import { MAX_LEVEL, RACES, RACE_IDS, type Cost, type RaceId, type SheetKind, type TowerDef, type UnitDef, type UpgradeDef } from './sim/races';
+import { BOARDS, BOARD_IDS, COLS, DEFAULT_BOARD_ID, ROWS } from './sim/board';
+import { MAX_LEVEL, RACES, RACE_IDS, type RaceId, type SheetKind, type TowerDef, type UnitDef } from './sim/races';
 import {
+  BASE_PAY,
   PAY_EVERY,
-  UNIT_CAP,
-  boostOf,
+  QUEUE_MAX,
+  setOrder,
   buildReach,
   buildTower,
-  buyUpgrade,
-  canAfford,
   canBuild,
   canSee,
-  hasBuilding,
-  incomeOf,
   isCastleSeen,
   isSeen,
-  loadBunker,
   newMatch,
-  nextUpgrade,
-  setOrder,
-  soldierCost,
   step,
-  towerUnlocked,
   trainUnit,
   unitPos,
-  unitUnlocked,
   upgradeCastle,
   upgradeCost,
-  upgradeLevel,
   visionOf,
   type Death,
   type Match,
@@ -49,11 +42,18 @@ const BOARD_H = ROWS * CELL;
 const STEP = 0.05;
 const YOU: Owner = 0;
 
+/** A map's id (see `BOARDS`). */
+type BoardId = string;
+
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
+/** Everything that fights (units, towers) is drawn this many times its old size, so it stands in proportion to the roads. */
+const SIZE = 2;
 /** How big a unit's sprite is drawn (its frame times this): walkers scale with their hit points, flyers have their own size. */
-const unitScale = (def: UnitDef) =>
-  def.look?.scale ?? SHEETS[def.kind].scale ?? 1.1 + Math.min(0.7, Math.sqrt(def.hp) / 55);
+const unitScale = (def: UnitDef) => SIZE * (SHEETS[def.kind].scale ?? 1.1 + Math.min(0.7, Math.sqrt(def.hp) / 55));
+/** A tower's picture is this wide (px), whatever its sheet; a castle's sprite is drawn at CASTLE_SCALE of its frame. */
+const TOWER_PX = 50 * SIZE;
+const CASTLE_SCALE = 1.4;
 /** The figure in a frame is about this tall (px), standing on the frame's anchor: where a health bar goes. */
 const FIGURE = 32;
 
@@ -72,30 +72,22 @@ const SHEETS: Record<SheetKind, Sheet> = {
   archer: { frame: 72, walk: [1, 2, 0, 3, 4, 0], attack: [5, 6, 7, 8, 9, 10], death: [11, 12, 13] },
   gryphon: { frame: 100, walk: [0, 1, 2, 3], attack: [0, 1, 2, 3, 4, 5, 6], death: [7, 8, 9, 10, 11, 12], scale: 0.8 },
   glider: { frame: 100, walk: [0, 1], attack: [0], death: [2, 3, 4], scale: 0.7 },
-  // Bats and birds: a wing-beat cycle down the first rows, a dive for the attack, then the death (13 rows, 32 px or 64 px frames).
-  bat: { frame: 32, walk: [0, 1, 2, 3, 4, 5], attack: [6, 7, 8, 7], death: [9, 10, 11], scale: 1.5 },
-  bigbat: { frame: 64, walk: [0, 1, 2, 3, 4, 5], attack: [6, 7, 8, 7], death: [9, 10, 11], scale: 1 },
-  // The field catapult: four rows of the machine, drawn the same whatever it does.
-  engine: { frame: 72, walk: [0], attack: [1, 2, 3, 0], death: [3], scale: 1.2 },
 };
+/** Where in a frame (0 = top, 1 = bottom) the figure's feet are: the sheets leave empty room under the 72 px figures. */
+const feetAt = (kind: SheetKind) => (SHEETS[kind].frame === 72 ? 0.7 : 0.8);
 const STRIDE = 0.9; // cells walked per stride
 const DEATH_FRAME = 0.12; // seconds per death frame
 const CORPSE_LIFE = 1.6; // seconds a corpse stays (fading over the last half)
-const COLUMN = { up: 0, right: 2, down: 4, left: 2 } as const;
-const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' } as const;
 /** How high (px) an air unit is drawn above the ground it flies over. */
-const FLIGHT = 26;
+const FLIGHT = 26 * SIZE;
+/** How long (seconds) a unit's strike animation plays after it hits (its swing, shot or dive), and how far (px) a melee blow lunges. */
+const STRIKE_TIME = 0.42;
+const LUNGE = 9 * SIZE;
 
 /** The sheet column (and whether to mirror it) for a unit heading along (dx, dy), screen coordinates. */
 function direction(dx: number, dy: number): { col: number; flip: boolean } {
   const octant = Math.round((Math.atan2(dy, Math.abs(dx)) * 180) / Math.PI / 45); // -2 up .. 2 down, by 45 degrees, right side only
   return { col: [0, 1, 2, 3, 4][octant + 2]!, flip: dx < 0 };
-}
-
-/** Which way a unit faces: along the road, or back up it for the player whose castle is at the road's end. */
-function facing(owner: Owner, s: number) {
-  const h = headingAt(owner === 0 ? s : ROAD_LENGTH - s);
-  return owner === 0 ? h : OPPOSITE[h];
 }
 
 /** Fog texels per cell: the fog is a tiny canvas of soft round pools (the technique of Me RPG's underground darkness), scaled up smooth. */
@@ -155,12 +147,14 @@ void (async () => {
     if (!t) frames.set(key, (t = cut(sheetTextures.get(sheet)!, col * size, row * size, size, size)));
     return t;
   };
-  // The field (art/lane.png) is drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts).
-  const fieldTexture = await load('art/lane.png');
+  // The fields (art/maps/<id>.png) are drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts).
+  const fieldTextures = new Map<BoardId, Texture>(
+    await Promise.all(BOARD_IDS.map(async (id) => [id, await load(`art/maps/${id}.png`)] as const)),
+  );
 
   // --- The scene -----------------------------------------------------------------------------------------------------
   const world = new Container();
-  const field = new Sprite(fieldTexture);
+  const field = new Sprite(fieldTextures.get('frostlands'));
   field.width = BOARD_W;
   field.height = BOARD_H;
   // The fog: a canvas of shade (dark where nothing of yours sees, soft round pools cut out for every castle, tower and unit)
@@ -191,7 +185,16 @@ void (async () => {
   world.addChild(field, fogLayer, areaLayer, corpseLayer, sortLayer, live, ghostSprite);
   app.stage.addChild(world);
 
-  let match: Match = newMatch(['legion', 'swarm']);
+  let chosenMap: BoardId = 'frostlands'; // the menu's first pick: a meandering map (the sim's own default is the classic road)
+  try {
+    const saved = localStorage.getItem('towercraft:map');
+    if (saved && BOARDS[saved]) chosenMap = saved;
+  } catch {
+    /* no storage: the default map */
+  }
+  let match: Match = newMatch(['legion', 'swarm'], BOARDS[chosenMap]);
+  /** The castle positions of the map being played. */
+  const castles = () => match.board.castles;
   let ai = createAi(1, 1);
   let selected: TowerDef | undefined;
   let hover: [number, number] | undefined;
@@ -199,6 +202,8 @@ void (async () => {
   let clock = 0;
   let started = false;
 
+  /** Where (px below its cell's centre) a tower's feet stand. */
+  const TOWER_FOOT = 10;
   const castleSprites: Container[] = [];
   const buildCastles = () => {
     for (const c of castleSprites) c.destroy({ children: true });
@@ -206,13 +211,13 @@ void (async () => {
     for (const o of [0, 1] as const) {
       const c = new Container();
       const color = RACES[match.players[o].race].color;
-      c.addChild(new Graphics().ellipse(0, 6, 56, 20).fill({ color, alpha: 0.45 }));
+      c.addChild(new Graphics().ellipse(0, 8, 56 * CASTLE_SCALE, 20 * CASTLE_SCALE).fill({ color, alpha: 0.45 }));
       const sprite = new Sprite(castleTextures.get(RACES[match.players[o].race].castle.art));
       sprite.anchor.set(0.5, 0.78);
-      sprite.scale.set(0.9);
+      sprite.scale.set(CASTLE_SCALE);
       c.addChild(sprite);
-      c.position.set(CASTLES[o][0] * CELL, CASTLES[o][1] * CELL);
-      c.zIndex = CASTLES[o][1] + 1;
+      c.position.set(castles()[o][0] * CELL, castles()[o][1] * CELL);
+      c.zIndex = castles()[o][1] + 1;
       sortLayer.addChild(c);
       castleSprites.push(c);
     }
@@ -220,7 +225,7 @@ void (async () => {
 
   // --- Camera: drag to pan, wheel or pinch to zoom ------------------------------------------------------------------
   const topBar = () => $('top').offsetHeight;
-  const bottomBar = () => $('bottom').offsetHeight;
+  const bottomBar = () => $('dock').offsetHeight + 12;
   const viewH = () => window.innerHeight - topBar() - bottomBar();
   const fitZoom = () => Math.min(window.innerWidth / BOARD_W, viewH() / BOARD_H);
   const minZoom = () => Math.min(fitZoom(), ZOOM_MAX);
@@ -255,7 +260,7 @@ void (async () => {
     world.y = topBar() + viewH() / 2 - cy * CELL * zoom;
     clampCamera();
   }
-  const home = () => focus(CASTLES[YOU][0] + 4, CASTLES[YOU][1] + 5, Math.max(minZoom(), Math.min(1.1, ZOOM_MAX)));
+  const home = () => focus(castles()[YOU][0] + 4, castles()[YOU][1] + 5, Math.max(minZoom(), Math.min(1.1, ZOOM_MAX)));
   window.addEventListener('resize', clampCamera);
 
   const cellAt = (sx: number, sy: number): [number, number] | undefined => {
@@ -345,14 +350,14 @@ void (async () => {
   function tap(sx: number, sy: number, touch: boolean) {
     // The castle (a tall sprite, so its middle is above its feet): tap it for its panel, anywhere else to close the panel.
     const [wx, wy] = [(sx - world.x) / world.scale.x / CELL, (sy - world.y) / world.scale.y / CELL];
-    if (started && Math.hypot(wx - CASTLES[YOU][0], wy - (CASTLES[YOU][1] - 0.9)) <= 2) {
+    if (started && Math.hypot(wx - castles()[YOU][0], wy - (castles()[YOU][1] - 1.6)) <= 3) {
       selected = undefined;
       setGhost(undefined);
-      setPanel(true);
+      showCard({ kind: 'castle' });
       refresh();
       return;
     }
-    if (panelOpen && !selected) setPanel(false);
+    if (cardOf && !selected) closeCard();
     const cell = cellAt(sx, sy);
     if (!cell || !started || !selected) return;
     lastTap = cell;
@@ -362,6 +367,7 @@ void (async () => {
   }
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (cardOf) closeCard();
       selected = undefined;
       setGhost(undefined);
       refresh();
@@ -407,22 +413,22 @@ void (async () => {
   }
   const corpses: Corpse[] = [];
   /** The sheet column and mirroring for a unit: along the road for walkers, along the flight line for flyers. */
-  const heading = (owner: Owner, s: number, air: boolean) =>
-    air
-      ? direction(
-          (CASTLES[owner === 0 ? 1 : 0][0] - CASTLES[owner][0]) * 1,
-          (CASTLES[owner === 0 ? 1 : 0][1] - CASTLES[owner][1]) * 1,
-        )
-      : (() => {
-          const h = facing(owner, s);
-          return { col: COLUMN[h], flip: h === 'left' };
-        })();
+  const heading = (owner: Owner, s: number, air: boolean) => {
+    const b = match.board;
+    if (air) {
+      const [from, to] = [b.castles[owner], b.castles[owner === 0 ? 1 : 0]];
+      return direction(to[0] - from[0], to[1] - from[1]);
+    }
+    // Along the road, or back up it for the player whose castle is at the road's end.
+    const [hx, hy] = b.directionAt(owner === 0 ? s : b.roadLength - s);
+    return owner === 0 ? direction(hx, hy) : direction(-hx, -hy);
+  };
   const addCorpse = (d: Death) => {
     const dir = heading(d.owner, d.s, !!d.def.air);
     const sheet = SHEETS[d.def.kind];
     const container = new Container();
     const sprite = new Sprite(unitFrame(d.def.sheet, d.def.kind, sheet.death[0]!, dir.col));
-    sprite.anchor.set(0.5, 0.82);
+    sprite.anchor.set(0.5, feetAt(d.def.kind));
     sprite.scale.set((dir.flip ? -1 : 1) * unitScale(d.def), unitScale(d.def));
     container.addChild(sprite);
     container.position.set(d.at[0] * CELL, d.at[1] * CELL - (d.def.air ? FLIGHT : 0));
@@ -451,8 +457,87 @@ void (async () => {
 
   /** Attacks stay on screen a moment: a step lasts only 50 ms. */
   const effects: { shot: Shot; age: number }[] = [];
-  const EFFECT_LIFE = 0.18;
+  const EFFECT_LIFE = 0.26;
   const lastS = new Map<number, number>();
+  /** When (clock seconds) each unit last struck and what it struck at, for its swing; the same for towers (and castles, at -1 - owner), for their kick. */
+  const strikes = new Map<number, { at: number; to: [number, number]; melee: boolean }>();
+  const kicks = new Map<number, { at: number; to: [number, number] }>();
+
+  /** A soft white glow (a radial gradient, scaled and tinted): the lamps, halos and muzzle flashes of the towers. */
+  const glowTexture = (() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    g.addColorStop(0.45, 'rgba(255, 255, 255, 0.35)');
+    g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    return Texture.from(canvas);
+  })();
+  const glow = (color: number) => {
+    const g = new Sprite(glowTexture);
+    g.anchor.set(0.5);
+    g.tint = color;
+    g.blendMode = 'add';
+    return g;
+  };
+
+  /**
+   * A tower's own small animation, drawn over its picture and kept quiet: an attacker has a lamp that flickers and flares when it
+   * fires, a healing or power tower a halo that breathes on the ground round it, a detector a slow violet sweep. Every tower also
+   * breathes a little and kicks back when it shoots (`animateTower`).
+   */
+  const makeTowerFx = (def: TowerDef) => {
+    const fx = new Container();
+    if (def.aura) {
+      const halo = glow(def.aura.kind === 'heal' ? 0x6fd36f : 0xffb13f);
+      fx.addChild(halo);
+      fx.scale.y = 0.5;
+      fx.y = 4;
+    } else if (def.detect) {
+      const sweep = new Graphics()
+        .moveTo(0, 0)
+        .arc(0, 0, Math.min(def.detect, 6) * CELL, -0.32, 0.32)
+        .closePath()
+        .fill({ color: 0xb48cff, alpha: 0.2 });
+      fx.addChild(sweep);
+      fx.scale.y = 0.5;
+      fx.y = 4;
+    } else {
+      const lamp = glow(0xffb13f);
+      lamp.position.set(0, -TOWER_PX * 0.6);
+      fx.addChild(lamp);
+    }
+    return fx;
+  };
+  const animateTower = (t: Tower, c: Container) => {
+    const sprite = c.children[1] as Sprite;
+    const fx = c.children[2] as Container;
+    const base = TOWER_PX / sprite.texture.width;
+    const ph = clock + t.id * 1.7;
+    const kick = kicks.get(t.id);
+    const r = kick ? Math.max(0, 1 - (clock - kick.at) / 0.28) : 0;
+    const r2 = r * r;
+    const side = kick ? Math.sign(kick.to[0] - (t.col + 0.5)) : 0;
+    sprite.scale.set(
+      base * (1 + 0.007 * Math.sin(ph * 1.8 + 1) + 0.025 * r2),
+      base * (1 + 0.012 * Math.sin(ph * 1.8) - 0.05 * r2),
+    );
+    sprite.rotation = 0.01 * Math.sin(ph * 0.9) - side * 0.03 * r2;
+    sprite.y = 3 * r2;
+    const part = fx.children[0]!;
+    if (t.def.aura) {
+      const pulse = Math.sin(ph * 1.6);
+      part.scale.set(((TOWER_PX * 1.5) / 64) * (0.94 + 0.06 * pulse));
+      part.alpha = 0.26 + 0.1 * pulse;
+    } else if (t.def.detect) part.rotation = ph * 0.9;
+    else {
+      part.alpha = Math.min(1, 0.2 + 0.08 * Math.sin(ph * 3.1) * Math.sin(ph * 1.3) + 0.9 * r);
+      part.scale.set(0.5 + 0.7 * r);
+    }
+  };
 
   const bar = (x: number, y: number, w: number, frac: number, color: number) => {
     live.rect(x - w / 2, y, w, 4).fill(0x0e1117);
@@ -575,12 +660,12 @@ void (async () => {
     if (ghostSprite.visible && aim && selected) {
       const tex = towerTextures.get(selected.art)!;
       ghostSprite.texture = tex;
-      ghostSprite.scale.set(50 / tex.width);
-      ghostSprite.position.set((aim[0] + 0.5) * CELL, (aim[1] + 0.5) * CELL + 8);
+      ghostSprite.scale.set(TOWER_PX / tex.width);
+      ghostSprite.position.set((aim[0] + 0.5) * CELL, (aim[1] + 0.5) * CELL + TOWER_FOOT);
     }
     updateHint(aim);
     if (started) {
-      const [cx, cy] = CASTLES[YOU];
+      const [cx, cy] = castles()[YOU];
       areaLayer
         .circle(cx * CELL, cy * CELL, buildReach(match, YOU) * CELL)
         .stroke({ color: 0xffb13f, width: 2, alpha: selected ? 0.5 : 0.2 });
@@ -620,18 +705,20 @@ void (async () => {
       (t) => {
         const c = new Container();
         const color = RACES[match.players[t.owner].race].color;
-        c.addChild(new Graphics().ellipse(0, 4, 19, 9).fill({ color, alpha: 0.55 })); // the owner's colour under the tower
+        c.addChild(new Graphics().ellipse(0, 4, 19 * SIZE, 9 * SIZE).fill({ color, alpha: 0.55 })); // the owner's colour under the tower
         const tex = towerTextures.get(t.def.art)!;
         const sprite = new Sprite(tex);
         sprite.anchor.set(0.5, 0.78);
-        sprite.scale.set(50 / tex.width); // a tower is about a cell and a quarter wide, whatever its sheet
+        sprite.scale.set(TOWER_PX / tex.width); // a tower is about two and a half cells wide, whatever its sheet
         c.addChild(sprite);
+        c.addChild(makeTowerFx(t.def)); // the tower's own small animation: lamp, halo or sweep (see `animateTower`)
         return c;
       },
       (t, c) => {
-        c.position.set((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 8);
+        c.position.set((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + TOWER_FOOT);
         c.zIndex = t.row + 0.5;
         c.visible = isSeen(match, YOU, t, vision);
+        if (c.visible) animateTower(t, c);
       },
     );
     sync(
@@ -640,47 +727,81 @@ void (async () => {
       (u) => {
         const c = new Container();
         const color = RACES[match.players[u.owner].race].color;
-        c.addChild(new Graphics().ellipse(0, 0, 8 * unitScale(u.def), 4).fill({ color, alpha: 0.6 })); // under the feet (on the ground, below a flyer)
+        c.addChild(new Graphics().ellipse(0, 0, 8 * unitScale(u.def), 4 * SIZE).fill({ color, alpha: 0.6 })); // under the feet (on the ground, below a flyer)
         const body = new Sprite(unitFrame(u.def.sheet, u.def.kind, 0, 4));
-        body.anchor.set(0.5, 0.82);
+        body.anchor.set(0.5, feetAt(u.def.kind));
         body.scale.set(unitScale(u.def));
         c.addChild(body);
         return c;
       },
       (u: Unit, c) => {
-        const [x, y] = unitPos(u);
+        const [x, y] = unitPos(u, match.board);
         c.position.set(x * CELL, y * CELL);
         c.zIndex = u.def.air ? 1000 + y : y; // flyers pass over everything
-        const dir = heading(u.owner, u.s, !!u.def.air);
         const sheet = SHEETS[u.def.kind];
         const moved = lastS.get(u.id) !== u.s;
         lastS.set(u.id, u.s);
         const body = c.children[1] as Sprite;
-        const pose = moved
-          ? sheet.walk[Math.floor(u.s / (STRIDE / sheet.walk.length)) % sheet.walk.length]!
-          : sheet.attack[Math.floor(clock * 8) % sheet.attack.length]!;
+        // Strike: for STRIKE_TIME after a blow it faces its target and plays its attack frames (a lunge for a melee blow, a
+        // recoil for a shot); otherwise it walks (frames follow the distance walked), flaps if it flies, or stands.
+        const strike = strikes.get(u.id);
+        const since = strike ? clock - strike.at : Infinity;
+        const striking = since < STRIKE_TIME;
+        const dir = striking ? direction(strike!.to[0] - x, strike!.to[1] - y) : heading(u.owner, u.s, !!u.def.air);
+        let pose: number;
+        let [bx, by] = [0, 0];
+        if (striking) {
+          const p = since / STRIKE_TIME;
+          pose = sheet.attack[Math.min(sheet.attack.length - 1, Math.floor(p * sheet.attack.length))]!;
+          const [dx, dy] = [strike!.to[0] - x, strike!.to[1] - y];
+          const len = Math.hypot(dx, dy) || 1;
+          const push = Math.sin(Math.PI * Math.min(1, p * 1.2)) * (strike!.melee ? LUNGE : -LUNGE * 0.3);
+          [bx, by] = [(dx / len) * push, (dy / len) * push * 0.6];
+        } else if (moved) {
+          const phase = u.s / (STRIDE / sheet.walk.length);
+          pose = sheet.walk[Math.floor(phase) % sheet.walk.length]!;
+          by = -Math.abs(Math.sin((phase * Math.PI) / sheet.walk.length)) * 1.6 * SIZE; // a step's small bob
+        } else if (u.def.air) pose = sheet.walk[Math.floor(clock * 6 + u.id) % sheet.walk.length]!;
+        else {
+          pose = 0;
+          by = Math.sin(clock * 2.2 + u.id) * 0.6 * SIZE; // breathing while it waits
+        }
+        if (u.def.air) by += -FLIGHT + Math.sin(clock * 3 + u.id) * 2.5 * SIZE; // a flyer hovers
         body.texture = unitFrame(u.def.sheet, u.def.kind, pose, dir.col);
         body.scale.x = (dir.flip ? -1 : 1) * unitScale(u.def);
-        body.y = u.def.air ? -FLIGHT : 0;
+        body.position.set(bx, by);
         // An enemy is drawn only in sight (a cloaked one also needs a detector); cloaked is faint to its own side; poison tints green.
         c.visible = isSeen(match, YOU, u, vision);
         body.alpha = u.def.cloak ? (u.owner === YOU ? 0.5 : 0.75) : 1;
         body.tint = u.dot ? 0x9be37a : 0xffffff;
       },
     );
+    for (const id of strikes.keys()) if (!unitSprites.has(id)) strikes.delete(id);
+    for (const id of kicks.keys()) if (id >= 0 && !towerSprites.has(id)) kicks.delete(id);
+    // The castles answer a shot with a small swell.
+    for (const o of [0, 1] as const) {
+      const r = Math.max(0, 1 - (clock - (kicks.get(-1 - o)?.at ?? -9)) / 0.3);
+      castleSprites[o]!.children[1]!.scale.set(CASTLE_SCALE * (1 + 0.03 * r * r));
+    }
 
     // Health bars: castles always, the rest once hurt.
     for (const o of [0, 1] as const) {
       if (!isCastleSeen(match, YOU, o, vision)) continue;
       const c = match.players[o].castle;
-      bar(CASTLES[o][0] * CELL, CASTLES[o][1] * CELL - 78, 84, c.hp / c.maxHp, o === YOU ? 0x6fd36f : 0xe0777b);
+      bar(castles()[o][0] * CELL, castles()[o][1] * CELL - 150, 120, c.hp / c.maxHp, o === YOU ? 0x6fd36f : 0xe0777b);
     }
     for (const t of match.towers)
       if (t.hp < t.def.hp && isSeen(match, YOU, t, vision))
-        bar((t.col + 0.5) * CELL, (t.row + 0.5) * CELL - 34, 30, t.hp / t.def.hp, 0xffb13f);
+        bar(
+          (t.col + 0.5) * CELL,
+          (t.row + 0.5) * CELL + TOWER_FOOT - TOWER_PX * 0.78 - 8,
+          44,
+          t.hp / t.def.hp,
+          0xffb13f,
+        );
     for (const u of match.units) {
       if (u.hp >= u.def.hp || !isSeen(match, YOU, u, vision)) continue;
-      const [x, y] = unitPos(u);
+      const [x, y] = unitPos(u, match.board);
       bar(
         x * CELL,
         y * CELL - FIGURE * unitScale(u.def) - 6 - (u.def.air ? FLIGHT : 0),
@@ -700,17 +821,27 @@ void (async () => {
       if (!spotted(e.shot.from) && !spotted(e.shot.to)) continue; // an attack nobody of yours sees
       const a = 1 - e.age / EFFECT_LIFE;
       const [x0, y0, x1, y1] = [e.shot.from[0] * CELL, e.shot.from[1] * CELL, e.shot.to[0] * CELL, e.shot.to[1] * CELL];
-      if (e.shot.melee) live.circle(x1, y1 - 12, 7).fill({ color: 0xffffff, alpha: 0.5 * a });
-      else
+      const lift = e.shot.by.kind === 'tower' ? 44 : e.shot.by.kind === 'castle' ? 90 : 22;
+      if (e.shot.melee) live.circle(x1, y1 - 22, 14).fill({ color: 0xffffff, alpha: 0.5 * a });
+      else {
+        // A missile flying from the shooter to the target over the effect's life, with a short fading trail.
+        const f = Math.min(1, e.age / (EFFECT_LIFE * 0.8));
+        const [hx, hy] = [x0 + (x1 - x0) * f, y0 - lift + (y1 - 22 - (y0 - lift)) * f];
+        const [tx, ty] = [
+          x0 + (x1 - x0) * Math.max(0, f - 0.35),
+          y0 - lift + (y1 - 22 - (y0 - lift)) * Math.max(0, f - 0.35),
+        ];
         live
-          .moveTo(x0, y0 - 12)
-          .lineTo(x1, y1 - 12)
-          .stroke({ color: 0xffb13f, width: 2, alpha: 0.9 * a });
+          .moveTo(tx, ty)
+          .lineTo(hx, hy)
+          .stroke({ color: 0xffb13f, width: 3, alpha: 0.9 * a });
+        live.circle(hx, hy, 3).fill({ color: 0xfff1c9, alpha: a });
+      }
       if (e.shot.splash > 0) live.circle(x1, y1, e.shot.splash * CELL).fill({ color: 0xffb13f, alpha: 0.2 * a });
     }
   }
 
-  // --- The page: top bar, controls, race picker ---------------------------------------------------------------------
+  // --- The page: top bar, the dock of thumbnails, the card, the title screen -----------------------------------------------
   const side = (id: string, label: string, o: Owner) => {
     const p = match.players[o];
     $(id).innerHTML =
@@ -719,71 +850,202 @@ void (async () => {
   };
 
   const towerThumb = (art: string, px: number) =>
-    `<i class="thumb" style="width:${px}px;height:${px}px;background-image:url(art/${art}.png);background-size:${px}px auto"></i>`;
+    `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(art/${art}.png);background-size:${px}px auto"></i>`;
   const unitThumb = (art: string, px: number) =>
-    `<img class="thumb" src="art/${art}.png" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`;
+    `<img class="thumb art" src="art/${art}.png" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`;
 
-  /** What a tower is for, in a few words (the button's small print and its tooltip). */
-  const towerTags = (d: TowerDef) => {
-    const tags: string[] = [];
-    if (d.damage > 0) {
-      tags.push(d.hits === 'both' ? 'ground + air' : `${d.hits} only`, `range ${d.range}`, `${d.damage} dmg`);
-      if (d.splash) tags.push(`area ${d.splash}`);
-      if (d.dot) tags.push(`poison ${d.dot.dps}/s`);
-    }
-    if (d.aura)
-      tags.push(
-        d.aura.kind === 'heal'
-          ? `heals ${d.aura.amount}/s, ${d.aura.radius} around`
-          : `+${Math.round(d.aura.amount * 100)}% damage, ${d.aura.radius} around`,
-      );
-    if (d.detect) tags.push(`sees cloaked, ${d.detect} around`);
-    if (d.reach) tags.push(`build reach ${d.reach}`);
-    return tags.join(' · ');
-  };
-  const unitTags = (d: UnitDef) =>
-    [
-      `${d.hp} hp`,
-      `${d.damage} dmg`,
-      d.range > 1.5 ? `range ${d.range}` : '',
-      d.air ? 'flies' : '',
-      d.cloak ? 'cloaked' : '',
-      d.hitsAir ? 'hits air' : '',
-    ]
+  const row = (k: string, v: string | number) => `<li><span>${k}</span><b>${v}</b></li>`;
+  const per = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  const tags = (...t: (string | false | undefined)[]) =>
+    `<div class="tags">${t
       .filter(Boolean)
-      .join(' · ');
+      .map((x) => `<i>${x}</i>`)
+      .join('')}</div>`;
+
+  /** A unit's card: what it is and what it can do. */
+  const unitCard = (d: UnitDef) =>
+    `<header><div class="pic">${unitThumb(d.art, 46)}</div><div><h3>${d.name}</h3><div class="sub">Tier ${d.tier} unit · ${
+      d.count > 1 ? `${d.count} for one purchase` : 'one for one purchase'
+    }</div></div></header>` +
+    tags(d.air && 'Flies', d.cloak && 'Cloaked', d.hitsAir && 'Hits air') +
+    `<ul>${row('Health', d.hp)}${row('Damage', `${d.damage} a hit`)}${row('Attacks every', `${per(d.cooldown)} s`)}${row('Damage a second', per(d.damage / d.cooldown))}` +
+    `${row('Reach', d.range > 1.5 ? `${d.range} cells` : 'melee')}${row('Speed', `${d.speed} cells a second`)}${row('Training', `${d.train} s`)}${row('Sight', `${d.sight} cells`)}</ul>`;
+
+  /** A tower's card. */
+  const towerCard = (d: TowerDef) =>
+    `<header><div class="pic">${towerThumb(d.art, 50)}</div><div><h3>${d.name}</h3><div class="sub">Tier ${d.tier} tower · ${d.hp} health</div></div></header>` +
+    tags(
+      d.damage > 0 && (d.hits === 'both' ? 'Ground + air' : d.hits === 'air' ? 'Air only' : 'Ground only'),
+      d.splash > 0 && 'Area damage',
+      !!d.dot && 'Poison',
+      d.aura && (d.aura.kind === 'heal' ? 'Healer' : 'Power aura'),
+      !!d.detect && 'Sees cloaked',
+      d.reach > 0 && 'Extends your build area',
+    ) +
+    `<ul>${
+      d.damage > 0
+        ? row('Damage', `${d.damage} a shot`) +
+          row('Shoots every', `${per(d.cooldown)} s`) +
+          row('Damage a second', per(d.damage / d.cooldown)) +
+          row('Range', `${d.range} cells`) +
+          (d.splash > 0 ? row('Area', `${d.splash} cells round the target`) : '') +
+          (d.dot ? row('Poison', `${d.dot.dps} a second for ${d.dot.seconds} s`) : '')
+        : ''
+    }${
+      d.aura
+        ? row(
+            d.aura.kind === 'heal' ? 'Heals' : 'Damage bonus',
+            d.aura.kind === 'heal' ? `${d.aura.amount} a second` : `+${Math.round(d.aura.amount * 100)}%`,
+          ) + row('Aura reach', `${d.aura.radius} cells`)
+        : ''
+    }${d.detect ? row('Sees cloaked', `${d.detect} cells round`) : ''}${d.reach ? row('Build reach', `${d.reach} cells`) : ''}${row('Sight', `${d.sight} cells`)}</ul>`;
 
   const trainButtons: [HTMLButtonElement, UnitDef][] = [];
   const buildButtons: [HTMLButtonElement, TowerDef][] = [];
-  let upgradeButton: HTMLButtonElement;
+  let castleButton: HTMLButtonElement;
   const orderButtons: [HTMLButtonElement, 'towers' | 'units'][] = [];
 
+  /** One thumbnail in the dock: a wooden square with the picture, its price under it and its tier over it if the castle is too low. */
+  const thumb = (art: string, cost: string, title: string, onclick: () => void) => {
+    const b = document.createElement('button');
+    b.className = 'tb wbtn';
+    b.title = title;
+    b.innerHTML = `${art}<em>${cost}</em>`;
+    b.onclick = onclick;
+    return b;
+  };
+
+  // The card: what a thumbnail is (and, for the castle, its health, pay and the next upgrade), with the purchase button.
+  type CardOf = { kind: 'unit'; def: UnitDef } | { kind: 'tower'; def: TowerDef } | { kind: 'castle' };
+  let cardOf: CardOf | undefined;
+  const act = $<HTMLButtonElement>('card-act');
+  let cardBody = '';
+  function showCard(c: CardOf, toggle = false) {
+    const same =
+      cardOf && cardOf.kind === c.kind && (c.kind === 'castle' || (cardOf as { def: unknown }).def === c.def);
+    if (toggle && same) return closeCard();
+    cardOf = c;
+    if (selected && !(c.kind === 'tower' && c.def === selected)) {
+      selected = undefined; // looking at something else drops the tower being placed
+      setGhost(undefined);
+    }
+    $('card').hidden = false;
+    renderCard();
+    refresh();
+  }
+  function closeCard() {
+    cardOf = undefined;
+    $('card').hidden = true;
+    selected = undefined;
+    setGhost(undefined);
+    refresh();
+  }
+  $('card-x').onclick = closeCard;
+
+  function renderCard() {
+    if (!cardOf) return;
+    const me = match.players[YOU];
+    const race = RACES[me.race];
+    const { level } = me.castle;
+    const card = $('card');
+    card.classList.toggle('placing', cardOf.kind === 'tower' && selected === cardOf.def);
+    let body: string;
+    let label: string;
+    let reason = '';
+    let go: () => void = () => undefined;
+    if (cardOf.kind === 'unit') {
+      const d = cardOf.def;
+      body = unitCard(d);
+      label = `Train · ${d.cost} gold`;
+      reason =
+        d.tier > level
+          ? `Needs castle level ${d.tier}`
+          : me.queue.length >= QUEUE_MAX
+            ? 'The training queue is full'
+            : d.cost > me.gold
+              ? `Need ${Math.ceil(d.cost - me.gold)} more gold`
+              : '';
+      go = () => trainUnit(match, YOU, d.id);
+    } else if (cardOf.kind === 'tower') {
+      const d = cardOf.def;
+      body = towerCard(d);
+      if (selected === d) {
+        label = 'Cancel placing';
+        go = () => {
+          selected = undefined;
+          setGhost(undefined);
+        };
+      } else {
+        label = `Build · ${d.cost} gold`;
+        reason =
+          d.tier > level
+            ? `Needs castle level ${d.tier}`
+            : d.cost > me.gold
+              ? `Need ${Math.ceil(d.cost - me.gold)} more gold`
+              : '';
+        go = () => {
+          selected = d;
+        };
+      }
+    } else {
+      const cost = upgradeCost(match, YOU);
+      const pay = BASE_PAY + race.castle.pay[level - 1]!;
+      const queue = me.queue.map((q) => `${q.def.name} (${Math.max(0, Math.ceil(q.left))}s)`).join(', ');
+      const names = (items: { name: string; tier: number }[]) =>
+        items
+          .filter((i) => i.tier === level + 1)
+          .map((i) => i.name)
+          .join(', ');
+      body =
+        `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">Level ${level} of ${MAX_LEVEL}</div></div></header>` +
+        `<div class="hp"><i style="width:${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%"></i><span>${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}</span></div>` +
+        `<ul>${row('Pay', `+${pay} gold every ${PAY_EVERY} s`)}${row('Build reach', `${race.castle.reach[level - 1]} cells`)}${row('Training', queue || 'nothing')}</ul>` +
+        (cost === undefined
+          ? '<p class="note">The castle has every upgrade.</p>'
+          : `<p class="note"><b>Level ${level + 1}</b>: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pay +${race.castle.pay[level - 1]} → +${race.castle.pay[level]}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; towers: ${names(race.towers) || 'none'}.</p>`);
+      label = cost === undefined ? 'Fully upgraded' : `Upgrade to level ${level + 1} · ${cost} gold`;
+      reason = cost === undefined ? 'max' : cost > me.gold ? `Need ${Math.ceil(cost - me.gold)} more gold` : '';
+      go = () => upgradeCastle(match, YOU);
+    }
+    if (body !== cardBody) {
+      $('card-body').innerHTML = body;
+      cardBody = body;
+    }
+    act.textContent = reason && reason !== 'max' ? `${label} (${reason.toLowerCase()})` : label;
+    act.disabled = !!reason;
+    act.title = reason === 'max' ? '' : reason;
+    act.onclick = () => {
+      go();
+      renderCard();
+      refresh();
+    };
+  }
+
   function makeControls(race: RaceId) {
-    $('train').innerHTML = '<span>Train</span>';
-    $('castle').innerHTML = '';
-    $('build').innerHTML = '<span>Build</span>';
+    for (const id of ['train', 'build', 'castle']) $(id).innerHTML = '';
     trainButtons.length = 0;
     buildButtons.length = 0;
-    for (const def of RACES[race].units) {
-      const b = document.createElement('button');
-      b.innerHTML = `${unitThumb(def.art, 34)}<span>${def.count > 1 ? def.count + '× ' : ''}${def.name}<small>${def.cost}g · ${def.train}s · ${unitTags(def)}</small></span>`;
-      b.title = unitTags(def);
-      b.onclick = () => {
-        trainUnit(match, YOU, def.id);
-        refresh();
-      };
+    orderButtons.length = 0;
+    const r = RACES[race];
+    for (const def of r.units) {
+      const b = thumb(unitThumb(def.art, 36), `${def.cost}`, def.name, () => showCard({ kind: 'unit', def }, true));
+      b.insertAdjacentHTML('beforeend', def.tier > 1 ? `<span class="lv">L${def.tier}</span>` : '');
       $('train').append(b);
       trainButtons.push([b, def]);
     }
-    upgradeButton = document.createElement('button');
-    upgradeButton.onclick = () => {
-      upgradeCastle(match, YOU);
-      refresh();
-    };
-    $('castle').append(upgradeButton);
-    orderButtons.length = 0;
+    for (const def of r.towers) {
+      const b = thumb(towerThumb(def.art, 36), `${def.cost}`, def.name, () => showCard({ kind: 'tower', def }, true));
+      b.insertAdjacentHTML('beforeend', def.tier > 1 ? `<span class="lv">L${def.tier}</span>` : '');
+      $('build').append(b);
+      buildButtons.push([b, def]);
+    }
+    castleButton = thumb(towerThumb(r.castle.art, 40), '', 'Your castle: upgrade it', () =>
+      showCard({ kind: 'castle' }, true),
+    );
+    $('castle').append(castleButton);
     for (const what of ['towers', 'units'] as const) {
       const b = document.createElement('button');
+      b.className = 'tb orders wbtn';
       b.onclick = () => {
         const o = match.players[YOU].orders;
         setOrder(match, YOU, what, o[what] === 'attack' ? 'bypass' : 'attack');
@@ -792,98 +1054,37 @@ void (async () => {
       $('castle').append(b);
       orderButtons.push([b, what]);
     }
-    for (const def of RACES[race].towers) {
-      const b = document.createElement('button');
-      b.innerHTML = `${towerThumb(def.art, 36)}<span>${def.name}<small>${def.cost}g · ${towerTags(def)}</small></span>`;
-      b.title = towerTags(def);
-      b.onclick = () => {
-        setPanel(false);
-        selected = selected === def ? undefined : def;
-        refresh();
-      };
-      $('build').append(b);
-      buildButtons.push([b, def]);
-    }
-  }
-
-  // --- The castle panel: tap your castle for its level, health, pay, reach, queue and the next upgrade ----------------------
-  let panelOpen = false;
-  function setPanel(open: boolean) {
-    panelOpen = open;
-    $('cpanel').hidden = !open;
-    if (open) renderPanel();
-  }
-  $('cp-x').onclick = () => setPanel(false);
-  $('cp-up').onclick = () => {
-    upgradeCastle(match, YOU);
-    refresh();
-  };
-  function renderPanel() {
-    const me = match.players[YOU];
-    const race = RACES[me.race];
-    const { level } = me.castle;
-    const cost = upgradeCost(match, YOU);
-    $('cp-title').textContent = `${race.name} castle · level ${level} of ${MAX_LEVEL}`;
-    $('cp-hp').style.width = `${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%`;
-    $('cp-hptext').textContent = `${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}`;
-    const pay = BASE_PAY + race.castle.pay[level - 1]!;
-    const queue = me.queue.map((q) => `${q.def.name} (${Math.max(0, Math.ceil(q.left))}s)`).join(', ');
-    $('cp-stats').innerHTML =
-      `<li>Pay <b>+${pay} gold every ${PAY_EVERY} s</b></li>` +
-      `<li>Build reach <b>${race.castle.reach[level - 1]} cells</b> round the castle</li>` +
-      `<li>Training <b>${queue || 'nothing'}</b></li>`;
-    const up = $<HTMLButtonElement>('cp-up');
-    if (level >= MAX_LEVEL || cost === undefined) {
-      $('cp-next').innerHTML = '<small>The castle has every upgrade.</small>';
-      up.disabled = true;
-      up.textContent = 'Fully upgraded';
-      return;
-    }
-    const names = (items: { name: string; tier: number }[]) =>
-      items
-        .filter((i) => i.tier === level + 1)
-        .map((i) => i.name)
-        .join(', ');
-    $('cp-next').innerHTML =
-      `<b>Level ${level + 1}</b> for <b>${cost} gold</b>` +
-      `<small>Build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells · pay +${race.castle.pay[level - 1]} → +${race.castle.pay[level]} · castle health +${race.castle.hpPerLevel}</small>` +
-      `<small>Unlocks units: ${names(race.units) || 'none'} · towers: ${names(race.towers) || 'none'}</small>`;
-    up.disabled = cost > me.gold;
-    up.textContent =
-      cost > me.gold
-        ? `Upgrade (need ${Math.ceil(cost - me.gold)} more gold)`
-        : `Upgrade to level ${level + 1} · ${cost} gold`;
+    document.documentElement.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`);
   }
 
   function refresh() {
-    if (panelOpen) renderPanel();
     const me = match.players[YOU];
     const { level } = me.castle;
     const full = me.queue.length >= QUEUE_MAX;
     for (const [b, def] of trainButtons) {
-      b.disabled = def.tier > level || def.cost > me.gold || full;
-      b.title = def.tier > level ? `Needs castle level ${def.tier}` : full ? 'The queue is full' : unitTags(def);
+      b.classList.toggle('lock', def.tier > level);
+      b.classList.toggle('poor', def.tier <= level && (def.cost > me.gold || full));
+      b.classList.toggle('open', cardOf?.kind === 'unit' && cardOf.def === def);
     }
     for (const [b, def] of buildButtons) {
-      b.disabled = def.tier > level || def.cost > me.gold;
-      b.title = def.tier > level ? `Needs castle level ${def.tier}` : towerTags(def);
-      b.classList.toggle('on', selected === def);
+      b.classList.toggle('lock', def.tier > level);
+      b.classList.toggle('poor', def.tier <= level && def.cost > me.gold);
+      b.classList.toggle('open', cardOf?.kind === 'tower' && cardOf.def === def && selected !== def);
+      b.classList.toggle('arm', selected === def);
     }
-    const cost = upgradeCost(match, YOU);
-    if (level >= MAX_LEVEL || cost === undefined) {
-      upgradeButton.disabled = true;
-      upgradeButton.innerHTML = `<span>Castle at its highest<small>level ${level}</small></span>`;
-    } else {
-      upgradeButton.disabled = cost > me.gold;
-      const next = RACES[me.race].castle.reach[level]!;
-      upgradeButton.innerHTML = `<span>Upgrade castle to ${level + 1}<small>${cost}g · build reach ${next} · tier ${level + 1} units and towers</small></span>`;
-    }
+    const upCost = upgradeCost(match, YOU);
+    castleButton.classList.toggle('open', cardOf?.kind === 'castle');
+    castleButton.classList.toggle('poor', upCost === undefined || upCost > me.gold);
+    castleButton.querySelector('em')!.textContent = `Lv ${level}`;
     for (const [b, what] of orderButtons) {
       const attack = me.orders[what] === 'attack';
-      const label = what === 'towers' ? ['Attack towers', 'Walk past towers'] : ['Fight units', 'Walk past units'];
-      b.innerHTML = `<span>${attack ? label[0] : label[1]}<small>all your units · tap to ${attack ? 'walk past' : 'attack'}</small></span>`;
-      b.classList.toggle('on', !attack);
+      const label = what === 'towers' ? ['Attack towers', 'Pass towers'] : ['Fight units', 'Pass units'];
+      const text = `<span>${attack ? label[0] : label[1]}</span>`;
+      if (b.innerHTML !== text) b.innerHTML = text;
+      b.title = `All your units: tap to ${attack ? 'walk past' : 'attack'}`;
+      b.classList.toggle('bypass', !attack);
     }
+    renderCard();
     const queue = me.queue.map((q) => q.def.name).join(', ');
     $('queue').textContent = queue ? `Training: ${queue}` : '';
     if (!selected) setGhost(undefined);
@@ -914,10 +1115,11 @@ void (async () => {
     if ($('hint').textContent !== text) $('hint').textContent = text;
   }
 
-  function start(race: RaceId, chosen?: RaceId) {
+  function start(race: RaceId, chosen?: RaceId, map: BoardId = chosenMap) {
     const rivals = RACE_IDS.filter((r) => r !== race);
     const rival = chosen ?? rivals[Math.floor(Math.random() * rivals.length)]!;
-    match = newMatch([race, rival]);
+    match = newMatch([race, rival], BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
+    field.texture = fieldTextures.get(match.board.id) ?? field.texture;
     ai = createAi(1, (Math.random() * 2 ** 31) | 0);
     selected = undefined;
     acc = 0;
@@ -926,6 +1128,8 @@ void (async () => {
     towerSprites.clear();
     unitSprites.clear();
     lastS.clear();
+    strikes.clear();
+    kicks.clear();
     effects.length = 0;
     fogSnap = true;
     pools.clear();
@@ -934,19 +1138,44 @@ void (async () => {
     lastTap = undefined;
     buildCastles();
     makeControls(race);
-    setPanel(false);
+    cardOf = undefined;
+    $('card').hidden = true;
     $('menu').hidden = true;
     $('end').hidden = true;
     refresh();
     home();
   }
 
+  // The title screen: pick the battlefield (a picture of each map, kept for next time), then the race that starts the match.
+  const mapButtons = new Map<BoardId, HTMLButtonElement>();
+  const pickMap = (id: BoardId) => {
+    chosenMap = id;
+    try {
+      localStorage.setItem('towercraft:map', id);
+    } catch {
+      /* no storage: the choice lasts this visit */
+    }
+    for (const [k, b] of mapButtons) b.classList.toggle('on', k === id);
+    $('map-blurb').textContent = `${BOARDS[id]!.name}: ${BOARDS[id]!.blurb}`;
+    field.texture = fieldTextures.get(id) ?? field.texture;
+  };
+  for (const id of BOARD_IDS) {
+    const b = document.createElement('button');
+    b.className = 'map';
+    b.title = BOARDS[id]!.name;
+    b.innerHTML = `<span class="shot" style="background-image:url(art/maps/${id}.png)"></span><b>${BOARDS[id]!.name}</b>`;
+    b.onclick = () => pickMap(id);
+    $('maps').append(b);
+    mapButtons.set(id, b);
+  }
+  pickMap(chosenMap);
+
   for (const id of RACE_IDS) {
     const race = RACES[id];
     const b = document.createElement('button');
     b.className = 'race';
     b.style.setProperty('--c', '#' + race.color.toString(16).padStart(6, '0'));
-    b.innerHTML = `<b>${race.name}</b><span>${race.blurb}</span><div class="look">${race.units.map((u) => unitThumb(u.art, 44)).join('')}${race.towers.map((t) => towerThumb(t.art, 44)).join('')}</div>`;
+    b.innerHTML = `<b>${race.name}</b><span>${race.blurb}</span><div class="look">${race.units.map((u) => unitThumb(u.art, 40)).join('')}${race.towers.map((t) => towerThumb(t.art, 40)).join('')}</div>`;
     b.onclick = () => start(id);
     $('races').append(b);
   }
@@ -967,7 +1196,7 @@ void (async () => {
         match: () => match,
         app,
         races: RACES,
-        startMatch: (a: RaceId, b: RaceId) => start(a, b),
+        startMatch: (a: RaceId, b: RaceId, map?: BoardId) => start(a, b, map),
         focus: (col: number, row: number, zoom: number) => focus(col, row, zoom),
       },
     });
@@ -991,7 +1220,11 @@ void (async () => {
         ai(match, STEP);
         step(match, STEP);
         for (const d of match.deaths) addCorpse(d);
-        for (const shot of match.shots) effects.push({ shot, age: 0 });
+        for (const shot of match.shots) {
+          effects.push({ shot, age: 0 });
+          if (shot.by.kind === 'unit') strikes.set(shot.by.id, { at: clock, to: shot.to, melee: shot.melee });
+          else kicks.set(shot.by.kind === 'tower' ? shot.by.id : -1 - shot.by.id, { at: clock, to: shot.to });
+        }
       }
       refresh();
       if (match.winner >= 0) {

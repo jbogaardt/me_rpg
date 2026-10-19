@@ -12,10 +12,14 @@ made from them, must credit the artists and be shared under CC-BY-SA 3.0 (or a c
 
 - `units/*.png`, the animated unit sheets: **b_o** (Wyrmsun), and badbuckle for the Teuton ritter. Goblin spearman, thief and glider,
   dwarven axefighter, thane and gryphon rider, Germanic warrior and archer, Teuton ritter.
-- `lane.png`, drawn by `tools/towercraftBoard.ts` (`npm run towercraft:board`) with Me RPG's map pipeline from the "Tiled Terrains" LPC
+- `maps/*.png`, drawn by `tools/towercraftBoard.ts` (`npm run towercraft:board`) with Me RPG's map pipeline from the "Tiled Terrains" LPC
   terrain atlas by adrix89 and the Liberated Pixel Cup artists (full list: `art/lpc_terrain/Attribution.txt`, licence CC-BY-SA 3.0 or
-  GPL 3.0). It is an adaptation of that atlas, so it is CC-BY-SA 3.0 too. The same picture carries Me RPG's scenery: its trees, bushes and
+  GPL 3.0). They are adaptations of that atlas, so CC-BY-SA 3.0 too. The same pictures carry Me RPG's scenery: its trees, bushes and
   rocks (LPC and OpenGameArt artists, credited in the root `CREDITS.md`, with the licences given there) and its lake tiles from the same atlas.
+
+## Interface art (CC-BY 3.0)
+
+- `../ui/*`, the menu frames, wood and parchment, buttons and planks: "RPG GUI construction kit v1.0" by Lamoot, licensed [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/), as cut for Me RPG (`tools/ui/cut-gui.ts`).
 
 ## CC0 art (no credit needed, given anyway)
 

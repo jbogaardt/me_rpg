@@ -13,17 +13,7 @@
 // fog temporarily, and never build there. What a side cannot see it cannot target. Only the castle must fall: the first destroyed
 // loses, but razing buildings cuts the foe's income, units and upgrades.
 
-import {
-  CASTLES,
-  CASTLE_CLEAR,
-  ROAD_CELLS,
-  ROAD_LENGTH,
-  SCENERY_CELLS,
-  cellIndex,
-  footOf,
-  inBoard,
-  pointAt,
-} from './board';
+import { CASTLE_CLEAR, DEFAULT_BOARD, type Board } from './board';
 import { MAX_LEVEL, RACES, type Cost, type RaceId, type TowerDef, type UnitDef, type UpgradeDef, price } from './races';
 
 export const START_RES: Cost = price(120, 40);
@@ -100,6 +90,8 @@ export interface Player {
 
 /** An attack made this step, for the renderer: from a point to a point, in cells; `melee` is a blow, not a missile. */
 export interface Shot {
+  /** Who made it (a unit's or tower's id, or a castle's owner), so the renderer can play that attacker's swing. */
+  by: { kind: 'unit' | 'tower' | 'castle'; id: number };
   from: [number, number];
   to: [number, number];
   melee: boolean;
@@ -120,6 +112,8 @@ export interface Death {
 }
 
 export interface Match {
+  /** The map: the road, the castles, the scenery. */
+  board: Board;
   time: number;
   payTimer: number;
   players: [Player, Player];
@@ -134,7 +128,7 @@ export interface Match {
   winner: -1 | 0 | 1 | 2;
 }
 
-export function newMatch(races: [RaceId, RaceId]): Match {
+export function newMatch(races: [RaceId, RaceId], board: Board = DEFAULT_BOARD): Match {
   const player = (race: RaceId): Player => {
     const hp = RACES[race].castle.hp;
     return {
@@ -147,6 +141,7 @@ export function newMatch(races: [RaceId, RaceId]): Match {
     };
   };
   return {
+    board,
     time: 0,
     payTimer: 0,
     players: [player(races[0]), player(races[1])],
@@ -164,13 +159,10 @@ export const enemy = (o: Owner): Owner => (o === 0 ? 1 : 0);
 export const raceOf = (m: Match, o: Owner) => RACES[m.players[o].race];
 
 /** Where a unit is, in cells: along the road from its own castle (a flyer too), and off to the side when it has stepped off the road. */
-export function unitPos(u: Pick<Unit, 'owner' | 's' | 'off'>): [number, number] {
-  const [x, y] = pointAt(u.owner === 0 ? u.s : ROAD_LENGTH - u.s);
+export function unitPos(u: Pick<Unit, 'owner' | 's' | 'off'>, board: Board = DEFAULT_BOARD): [number, number] {
+  const [x, y] = board.pointAt(u.owner === 0 ? u.s : board.roadLength - u.s);
   return u.off ? [x + u.off.dir[0] * u.off.d, y + u.off.dir[1] * u.off.d] : [x, y];
 }
-
-/** How far a unit can walk before it is at the enemy castle's edge. */
-const GOAL = ROAD_LENGTH - CASTLE_RADIUS;
 
 const dist = (a: readonly [number, number], b: readonly [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const centreOf = (t: { col: number; row: number }): [number, number] => [t.col + 0.5, t.row + 0.5];
@@ -263,8 +255,8 @@ export function buyUpgrade(m: Match, owner: Owner, id: string): Result {
 /** Can `viewer` detect this unit? A cloaked one only within a detector (tower, or the castle's own sight) of the viewer's. */
 export function visibleTo(m: Match, u: Unit, viewer: Owner): boolean {
   if (!u.def.cloak || u.owner === viewer) return true;
-  const at = unitPos(u);
-  if (dist(at, CASTLES[viewer]) <= raceOf(m, viewer).castle.detect + CASTLE_RADIUS) return true;
+  const at = unitPos(u, m.board);
+  if (dist(at, m.board.castles[viewer]) <= raceOf(m, viewer).castle.detect + CASTLE_RADIUS) return true;
   return m.towers.some(
     (t) => t.owner === viewer && t.def.detect !== undefined && dist(at, centreOf(t)) <= t.def.detect,
   );
@@ -295,7 +287,7 @@ export type Vision = readonly [readonly Sight[], readonly Sight[]];
 /** The circles `owner` sees through now. */
 export function sightOf(m: Match, owner: Owner): Sight[] {
   const castle = raceOf(m, owner).castle;
-  const [cx, cy] = CASTLES[owner];
+  const [cx, cy] = m.board.castles[owner];
   const out: Sight[] = [
     { key: 'c:build', x: cx, y: cy, r: buildReach(m, owner), build: true, temporary: false },
     { key: 'c:sight', x: cx, y: cy, r: castle.sight, build: false, temporary: false },
@@ -308,7 +300,7 @@ export function sightOf(m: Match, owner: Owner): Sight[] {
   }
   for (const u of m.units) {
     if (u.owner !== owner || u.hp <= 0) continue;
-    const [x, y] = unitPos(u);
+    const [x, y] = unitPos(u, m.board);
     out.push({ key: `u${u.id}`, x, y, r: u.def.sight, build: false, temporary: true });
   }
   return out;
@@ -326,12 +318,12 @@ export function canSee(m: Match, viewer: Owner, at: readonly [number, number], p
 export function isSeen(m: Match, viewer: Owner, e: Unit | Tower, vision = visionOf(m)): boolean {
   if (e.owner === viewer) return true;
   if ('col' in e) return canSee(m, viewer, centreOf(e), TOWER_RADIUS, vision);
-  return canSee(m, viewer, unitPos(e), 0, vision) && visibleTo(m, e, viewer);
+  return canSee(m, viewer, unitPos(e, m.board), 0, vision) && visibleTo(m, e, viewer);
 }
 
 /** Can `viewer` see `owner`'s castle? Their own always. */
 export function isCastleSeen(m: Match, viewer: Owner, owner: Owner, vision = visionOf(m)): boolean {
-  return owner === viewer || canSee(m, viewer, CASTLES[owner], CASTLE_RADIUS, vision);
+  return owner === viewer || canSee(m, viewer, m.board.castles[owner], CASTLE_RADIUS, vision);
 }
 
 /** The damage multiplier `owner`'s power auras give something standing at `at` (1 = none, at most doubled). */
@@ -420,7 +412,7 @@ export const towerAt = (m: Match, col: number, row: number) => m.towers.find((t)
 /** Is this cell inside the area `owner` may build in: the castle's reach, or the reach of one of their towers? */
 export function inBuildArea(m: Match, owner: Owner, col: number, row: number): boolean {
   const c: [number, number] = [col + 0.5, row + 0.5];
-  if (dist(c, CASTLES[owner]) <= buildReach(m, owner)) return true;
+  if (dist(c, m.board.castles[owner]) <= buildReach(m, owner)) return true;
   return m.towers.some((t) => t.owner === owner && t.def.reach > 0 && dist(c, centreOf(t)) <= t.def.reach);
 }
 
@@ -428,11 +420,12 @@ export type BuildResult = Result | 'off-board' | 'road' | 'scenery' | 'taken' | 
 
 export function canBuild(m: Match, owner: Owner, def: TowerDef, col: number, row: number): BuildResult {
   if (m.winner >= 0) return 'over';
-  if (!inBoard(col, row)) return 'off-board';
-  if (ROAD_CELLS.has(cellIndex(col, row))) return 'road';
-  if (SCENERY_CELLS.has(cellIndex(col, row))) return 'scenery';
+  const b = m.board;
+  if (!b.inBoard(col, row)) return 'off-board';
+  if (b.roadCells.has(b.cellIndex(col, row))) return 'road';
+  if (b.sceneryCells.has(b.cellIndex(col, row))) return 'scenery';
   const c: [number, number] = [col + 0.5, row + 0.5];
-  if (CASTLES.some((k) => dist(c, k) < CASTLE_CLEAR)) return 'castle';
+  if (b.castles.some((k) => dist(c, k) < CASTLE_CLEAR)) return 'castle';
   if (towerAt(m, col, row)) return 'taken';
   const open = towerUnlocked(m, owner, def);
   if (open !== 'ok') return open;
@@ -463,6 +456,8 @@ type Target = { kind: 'unit'; unit: Unit } | { kind: 'tower'; tower: Tower } | {
 /** What an attacker can reach: air and/or ground units (if `units`), towers (if `towers`) and the enemy castle (if `castle`). */
 interface Reach {
   owner: Owner;
+  /** The attacker, for the shot it makes. */
+  by: Shot['by'];
   /** What every side sees this step: an attacker only hits what its owner sees. */
   vision: Vision;
   from: readonly [number, number];
@@ -486,7 +481,7 @@ function pick(m: Match, r: Reach): Target | undefined {
   let bestDist = Infinity;
   for (const u of r.units ? m.units : []) {
     if (!hittable(r, u)) continue;
-    const d = dist(r.from, unitPos(u));
+    const d = dist(r.from, unitPos(u, m.board));
     if (d <= r.range && d < bestDist && isSeen(m, r.owner, u, r.vision)) {
       best = { kind: 'unit', unit: u };
       bestDist = d;
@@ -502,15 +497,15 @@ function pick(m: Match, r: Reach): Target | undefined {
   }
   if (r.castle) {
     const foe = enemy(r.owner);
-    const d = dist(r.from, CASTLES[foe]) - CASTLE_RADIUS;
+    const d = dist(r.from, m.board.castles[foe]) - CASTLE_RADIUS;
     if (m.players[foe].castle.hp > 0 && d <= r.range && d < bestDist && isCastleSeen(m, r.owner, foe, r.vision))
       best = { kind: 'castle', owner: foe };
   }
   return best;
 }
 
-const targetPoint = (t: Target): [number, number] =>
-  t.kind === 'unit' ? unitPos(t.unit) : t.kind === 'tower' ? centreOf(t.tower) : CASTLES[t.owner];
+const targetPoint = (m: Match, t: Target): [number, number] =>
+  t.kind === 'unit' ? unitPos(t.unit, m.board) : t.kind === 'tower' ? centreOf(t.tower) : m.board.castles[t.owner];
 
 interface Blow {
   damage: number;
@@ -529,24 +524,24 @@ interface Blow {
  * towers) near it; with `multi` the nearest enemy units within the attacker's range. Poison renews on each.
  */
 function strike(m: Match, r: Reach, t: Target, blow: Blow) {
-  const at = targetPoint(t);
+  const at = targetPoint(m, t);
   const burn = (u: Unit) => {
     u.hp -= blow.damage;
     if (blow.dot) u.dot = { dps: blow.dot.dps, left: blow.dot.seconds };
   };
-  m.shots.push({ from: [...r.from], to: at, melee: blow.melee, splash: blow.splash });
+  m.shots.push({ by: r.by, from: [...r.from], to: at, melee: blow.melee, splash: blow.splash });
   if (t.kind === 'unit') burn(t.unit);
   else if (t.kind === 'tower') t.tower.hp -= blow.damage * blow.siege;
   else m.players[t.owner].castle.hp -= blow.damage * blow.siege;
   if (t.kind === 'unit' && blow.multi > 1) {
     const near = m.units
-      .filter((u) => u !== t.unit && canHit(m, r, u) && dist(r.from, unitPos(u)) <= r.range)
-      .map((u) => [u, dist(r.from, unitPos(u))] as const)
+      .filter((u) => u !== t.unit && canHit(m, r, u) && dist(r.from, unitPos(u, m.board)) <= r.range)
+      .map((u) => [u, dist(r.from, unitPos(u, m.board))] as const)
       .sort((a, b) => a[1] - b[1] || a[0].id - b[0].id)
       .slice(0, blow.multi - 1);
     for (const [u] of near) {
       burn(u);
-      m.shots.push({ from: [...r.from], to: unitPos(u), melee: false, splash: 0, multi: true });
+      m.shots.push({ by: r.by, from: [...r.from], to: unitPos(u, m.board), melee: false, splash: 0, multi: true });
     }
   }
   if (blow.splash > 0) {
@@ -554,7 +549,7 @@ function strike(m: Match, r: Reach, t: Target, blow: Blow) {
       if (
         hittable(r, u) &&
         !(t.kind === 'unit' && u === t.unit) &&
-        dist(at, unitPos(u)) <= blow.splash &&
+        dist(at, unitPos(u, m.board)) <= blow.splash &&
         canHit(m, r, u)
       )
         burn(u);
@@ -577,9 +572,9 @@ function detourFor(m: Match, u: Unit, vision: Vision, nextS: number): Tower | un
   let bestD = Infinity;
   for (const t of m.towers) {
     if (t.owner === u.owner || t.hp <= 0) continue;
-    const foot = footOf(t.col, t.row);
+    const foot = m.board.footOf(t.col, t.row);
     if (!foot || foot.d > DETOUR_MAX || foot.d - TOWER_RADIUS <= u.def.range) continue;
-    const s = u.owner === 0 ? foot.s : ROAD_LENGTH - foot.s;
+    const s = u.owner === 0 ? foot.s : m.board.roadLength - foot.s;
     if (s < u.s - 1e-6 || s > nextS + 1e-6 || foot.d >= bestD || !isSeen(m, u.owner, t, vision)) continue;
     best = t;
     bestD = foot.d;
@@ -613,12 +608,14 @@ export function step(m: Match, dt: number): void {
     const c = centreOf(t);
     const mend = aura.amount * dt;
     for (const u of m.units)
-      if (u.owner === t.owner && u.hp > 0 && dist(c, unitPos(u)) <= aura.radius) u.hp = Math.min(u.maxHp, u.hp + mend);
+      if (u.owner === t.owner && u.hp > 0 && dist(c, unitPos(u, m.board)) <= aura.radius)
+        u.hp = Math.min(u.maxHp, u.hp + mend);
     for (const o of m.towers)
       if (o.owner === t.owner && o.hp > 0 && dist(c, centreOf(o)) <= aura.radius)
         o.hp = Math.min(o.def.hp, o.hp + mend);
     const k = m.players[t.owner].castle;
-    if (k.hp > 0 && dist(c, CASTLES[t.owner]) <= aura.radius + CASTLE_RADIUS) k.hp = Math.min(k.maxHp, k.hp + mend);
+    if (k.hp > 0 && dist(c, m.board.castles[t.owner]) <= aura.radius + CASTLE_RADIUS)
+      k.hp = Math.min(k.maxHp, k.hp + mend);
   }
 
   // What each side sees this step (units that spawned count; those about to die still do until the step ends).
@@ -628,10 +625,11 @@ export function step(m: Match, dt: number): void {
   for (const u of m.units) {
     if (u.spent) continue;
     u.cooldown -= dt;
-    const from = unitPos(u);
+    const from = unitPos(u, m.board);
     const orders = m.players[u.owner].orders;
     const reach: Reach = {
       owner: u.owner,
+      by: { kind: 'unit', id: u.id },
       vision,
       from,
       range: u.def.range,
@@ -663,11 +661,11 @@ export function step(m: Match, dt: number): void {
       off.d = Math.min(off.max, off.d + (wanted ? 1 : -1) * u.def.speed * dt);
       if (off.d <= 0) delete u.off;
     } else {
-      const next = Math.min(GOAL, u.s + u.def.speed * dt);
+      const next = Math.min(m.board.roadLength - CASTLE_RADIUS, u.s + u.def.speed * dt);
       const tower = orders.towers === 'attack' ? detourFor(m, u, vision, next) : undefined;
       if (tower) {
-        const foot = footOf(tower.col, tower.row)!;
-        u.s = u.owner === 0 ? foot.s : ROAD_LENGTH - foot.s;
+        const foot = m.board.footOf(tower.col, tower.row)!;
+        u.s = u.owner === 0 ? foot.s : m.board.roadLength - foot.s;
         u.off = { tower: tower.id, dir: foot.dir, d: 0, max: Math.max(0, foot.d - TOWER_RADIUS) };
       } else u.s = next;
     }
@@ -681,6 +679,7 @@ export function step(m: Match, dt: number): void {
     if (t.cooldown <= 0 && t.def.damage > 0) {
       const reach: Reach = {
         owner: t.owner,
+        by: { kind: 'tower', id: t.id },
         vision,
         from,
         range: t.def.range,
@@ -709,6 +708,7 @@ export function step(m: Match, dt: number): void {
       if (g.cooldown > 0) continue;
       const reach: Reach = {
         owner: t.owner,
+        by: { kind: 'tower', id: t.id },
         vision,
         from,
         range: g.def.range + (t.def.bunker?.rangeBonus ?? 0),
@@ -737,8 +737,9 @@ export function step(m: Match, dt: number): void {
     const def = raceOf(m, o).castle;
     const reach: Reach = {
       owner: o,
+      by: { kind: 'castle', id: o },
       vision,
-      from: CASTLES[o],
+      from: m.board.castles[o],
       range: def.range + CASTLE_RADIUS,
       ground: true,
       air: true,
@@ -756,7 +757,7 @@ export function step(m: Match, dt: number): void {
   m.units = m.units.filter((u) => {
     if (u.hp > 0) return true;
     m.deaths.push({
-      at: unitPos(u),
+      at: unitPos(u, m.board),
       owner: u.owner,
       def: u.def,
       s: u.s,

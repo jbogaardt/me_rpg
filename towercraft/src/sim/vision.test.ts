@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createAi, foeCastle, foeTowers, foeUnits } from './ai';
-import { CASTLES, ROAD_LENGTH } from './board';
+import { CASTLES, ROAD_CELLS, ROAD_LENGTH, SCENERY_CELLS, cellIndex } from './board';
 import { RACE_IDS, RACES, type RaceId, type TowerDef } from './races';
 import {
   CASTLE_RADIUS,
@@ -77,7 +77,10 @@ describe('unit vision', () => {
     stand(m, 0, 'legion', 'warrior', 21); // walking the first long run of the road
     const warrior = m.units[0]!;
     const [x, y] = unitPos(warrior);
-    const near: [number, number] = [Math.floor(x) + 1, Math.floor(y) - 2];
+    // A free cell a couple of cells from the unit (not road, not scenery) that is outside the castle's reach.
+    const near = [-2, 2, -3, 3, -4, 4]
+      .map((dy): [number, number] => [Math.floor(x) + 1, Math.floor(y) + dy])
+      .find(([c, r]) => !ROAD_CELLS.has(cellIndex(c, r)) && !SCENERY_CELLS.has(cellIndex(c, r)))!;
     expect(canSee(m, 0, [near[0] + 0.5, near[1] + 0.5])).toBe(true);
     expect(inBuildArea(m, 0, near[0], near[1])).toBe(false);
     expect(canBuild(m, 0, towerDef('legion', 'watch'), near[0], near[1])).toBe('area');
@@ -114,12 +117,12 @@ describe('towers, castles and the build area', () => {
     expect(canSee(m, 0, [17.5, 5.5])).toBe(true);
     // Beyond the reach but inside the sight of a tower that sees further than it lets you build (a made-up one).
     const [wide] = [{ ...watch, id: 'wide', reach: 0, sight: 9 }];
-    const w = put(m, 0, wide, 14, 20);
-    expect(canSee(m, 0, [14.5, 28.5])).toBe(true);
-    expect(inBuildArea(m, 0, 14, 28)).toBe(false);
-    expect(canBuild(m, 0, watch, 14, 28)).toBe('area');
+    const w = put(m, 0, wide, 14, 22);
+    expect(canSee(m, 0, [16.5, 29.5])).toBe(true);
+    expect(inBuildArea(m, 0, 16, 29)).toBe(false);
+    expect(canBuild(m, 0, watch, 16, 29)).toBe('area');
     m.towers.splice(m.towers.indexOf(w), 1);
-    expect(canSee(m, 0, [14.5, 28.5])).toBe(false);
+    expect(canSee(m, 0, [16.5, 29.5])).toBe(false);
     m.towers.splice(m.towers.indexOf(t), 1);
     expect(inBuildArea(m, 0, 17, 5)).toBe(false);
     expect(canSee(m, 0, [17.5, 5.5])).toBe(false);

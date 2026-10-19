@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createAi } from './ai';
-import { CASTLES, ROAD_CELLS, ROAD_LENGTH, cellIndex, footOf, pointAt } from './board';
+import { CASTLES, COLS, ROAD_CELLS, ROAD_LENGTH, ROWS, SCENERY_CELLS, cellIndex, pointAt } from './board';
+import { DEFAULT_BOARD } from './board';
 import { RACE_IDS, RACES, type RaceId } from './races';
 import {
   PAY_EVERY,
@@ -42,7 +43,7 @@ describe('the board', () => {
   });
 
   it('finds the road point straight across from a tower, along one axis only', () => {
-    const foot = footOf(10, 3)!; // three rows above the first long run
+    const foot = DEFAULT_BOARD.footOf(10, 3)!; // three rows above the first long run
     expect(foot.dir).toEqual([0, -1]);
     expect(foot.d).toBeCloseTo(3);
     expect(pointAt(foot.s)[0]).toBeCloseTo(10.5);
@@ -52,7 +53,7 @@ describe('the board', () => {
       [3, 30],
       [12, 17],
     ] as const) {
-      const f = footOf(c, r);
+      const f = DEFAULT_BOARD.footOf(c, r);
       if (f) expect(Math.abs(f.dir[0]) + Math.abs(f.dir[1])).toBe(1);
     }
   });
@@ -67,13 +68,16 @@ describe('building', () => {
     expect(buildTower(m, 0, 'watch', ...NEAR)).toBe('taken');
     expect(buildTower(m, 1, 'watch', ...NEAR)).toBe('taken'); // a cell is one tower's, whoever's
     expect(buildTower(m, 0, 'watch', 5, 4)).toBe('road');
-    expect(buildTower(m, 0, 'watch', 6, 3)).toBe('castle');
+    expect(buildTower(m, 0, 'watch', 7, 3)).toBe('castle');
     expect(buildTower(m, 0, 'catapult', 9, 4)).toBe('tier');
-    expect(buildTower(m, 0, 'watch', 15, 16)).toBe('area'); // far from player 0's castle
+    const far = [...Array(ROWS * COLS).keys()]
+      .map((i): [number, number] => [i % COLS, Math.floor(i / COLS)])
+      .find(([c, r]) => !ROAD_CELLS.has(cellIndex(c, r)) && !SCENERY_CELLS.has(cellIndex(c, r)) && r > 20)!;
+    expect(buildTower(m, 0, 'watch', ...far)).toBe('area'); // far from player 0's castle
     expect(buildTower(m, 0, 'nope', 9, 4)).toBe('unknown');
     expect(buildTower(m, 0, 'watch', -1, 0)).toBe('off-board');
     m.players[0].wood = 0;
-    expect(buildTower(m, 0, 'watch', 9, 5)).toBe('gold');
+    expect(buildTower(m, 0, 'watch', 9, 4)).toBe('gold');
   });
 
   it('wants both currencies: wood alone does not buy a tower that costs stone', () => {
@@ -105,13 +109,18 @@ describe('building', () => {
     const m = rich(newMatch(['swarm', 'swarm']));
     expect(buildTower(m, 0, 'hatchery', 8, 4)).toBe('ok');
     expect(buildTower(m, 0, 'hatchery', 9, 4)).toBe('limit');
-    for (const col of [8, 9, 10]) expect(buildTower(m, 0, 'mill', col, 5)).toBe('ok');
-    expect(buildTower(m, 0, 'mill', 11, 5)).toBe('limit');
+    for (const [col, row] of [
+      [9, 4],
+      [10, 4],
+      [10, 3],
+    ] as const)
+      expect(buildTower(m, 0, 'mill', col, row)).toBe('ok');
+    expect(buildTower(m, 0, 'mill', 12, 4)).toBe('limit');
     upgradeCastle(m, 0);
     upgradeCastle(m, 0);
-    expect(buildTower(m, 0, 'roost', 9, 3)).toBe('needs'); // a Dread Roost wants a Bat Aerie
-    expect(buildTower(m, 0, 'aerie', 9, 2)).toBe('ok');
-    expect(buildTower(m, 0, 'roost', 10, 3)).toBe('ok');
+    expect(buildTower(m, 0, 'roost', 10, 8)).toBe('needs'); // a Dread Roost wants a Bat Aerie
+    expect(buildTower(m, 0, 'aerie', 8, 8)).toBe('ok');
+    expect(buildTower(m, 0, 'roost', 10, 8)).toBe('ok');
   });
 });
 
@@ -399,7 +408,7 @@ describe('leaving the road to take a tower', () => {
 
   it('steps straight off the road at the tower, never diagonally, and attacks from there', () => {
     const { m, tower, unit } = setup();
-    const foot = footOf(10, 3)!;
+    const foot = DEFAULT_BOARD.footOf(10, 3)!;
     let offSeen = false;
     for (let i = 0; i < 20 * 20; i++) {
       step(m, 0.05);
