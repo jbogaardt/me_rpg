@@ -1,5 +1,11 @@
 # Sound credits
 
+## Music
+
+- `music/heartfelt-battle_intro.ogg` and `music/heartfelt-battle_loop.ogg`: "Heartfelt Battle (loopable, fantasy, strings/piano/horn)" by request, on OpenGameArt (https://opengameart.org/content/heartfelt-battle-loopable-fantasy-stringspianohorn). **CC0** (public domain). Credit is not required; the author asks for it if used. Thanks to request.
+
+## Sound effects
+
 All the sounds in `sfx/` are **CC0** (public domain): no credit is needed, and it is given anyway. Please support the artists.
 They were taken from a public CC0 collection (https://github.com/lavenderdotpet/CC0-Public-Domain-Sounds), which gathers packs from
 the artists below. Creator declarations are provenance, not a guarantee of worldwide rights.

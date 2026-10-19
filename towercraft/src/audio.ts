@@ -85,6 +85,11 @@ export function unlockAudio() {
   loading ??= load(ctx);
 }
 
+/** Where the music plays: the same output as the sounds, so the mute button silences both. Undefined until audio is unlocked. */
+export function audioOutput(): { ctx: AudioContext; out: AudioNode } | undefined {
+  return ctx && master ? { ctx, out: master } : undefined;
+}
+
 function start(kind: SoundKind, mix: Mix) {
   const c = ctx;
   const list = buffers.get(kind);

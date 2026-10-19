@@ -8,6 +8,7 @@ import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
 import { icon } from './icons';
 import { isMuted, playCues, setMuted, unlockAudio } from './audio';
+import { playMusic, stopMusic } from './music';
 import { SoundWatch } from './soundEvents';
 import { drawnPos } from './stagger';
 import type { Ai } from './sim/ai';
@@ -2383,6 +2384,7 @@ void (async () => {
     selected = undefined;
     acc = 0;
     started = true;
+    playMusic();
     document.body.classList.add('playing');
     for (const c of [...towerSprites.values(), ...unitSprites.values()]) c.destroy({ children: true });
     for (const f of floaters) f.text.destroy();
@@ -2668,6 +2670,7 @@ void (async () => {
   void prefetch(); // the rest of the art, while the player chooses
 
   function showEnd() {
+    stopMusic();
     const won = match.winner === teamOf(match, YOU);
     const [title, sub] = endText ?? [
       won ? 'Victory' : match.winner === 2 ? 'Draw' : 'Defeat',
