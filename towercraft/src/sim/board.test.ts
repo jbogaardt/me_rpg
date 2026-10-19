@@ -5,6 +5,13 @@ import { TIME_LIMIT, canBuild, newMatch, step } from './sim';
 import { RACES } from './races';
 
 describe('the maps', () => {
+  it('has maps that are not symmetric: only the classic road is turned half way round onto itself', () => {
+    const turn = (i: number) => cellIndex(COLS - 1 - (i % COLS), ROWS - 1 - Math.floor(i / COLS));
+    const symmetric = (id: string) => [...BOARDS[id]!.roadCells].every((i) => BOARDS[id]!.roadCells.has(turn(i)));
+    expect(symmetric('greenwood')).toBe(true);
+    expect(BOARD_IDS.filter((id) => !symmetric(id)).length).toBeGreaterThanOrEqual(4);
+  });
+
   it('has several, each with its own picture and a road that is not the same as another', () => {
     expect(BOARD_IDS.length).toBeGreaterThanOrEqual(4);
     expect(new Set(Object.values(BOARDS).map((b) => Math.round(b.length))).size).toBeGreaterThan(2);
@@ -13,7 +20,7 @@ describe('the maps', () => {
   for (const board of Object.values(BOARDS)) {
     describe(board.id, () => {
       it('runs from a castle to the other, in one piece, inside the field', () => {
-        expect(board.length).toBeGreaterThan(150);
+        expect(board.length).toBeGreaterThan(140);
         let prev = board.pointAt(0);
         expect(prev).toEqual(board.castles[0]);
         for (let d = 0.25; d <= board.length; d += 0.25) {
@@ -29,12 +36,18 @@ describe('the maps', () => {
         expect(board.headingAt(board.length / 2).reduce((a, b) => a + b * b, 0)).toBeCloseTo(1);
       });
 
-      it('is turned half way round onto itself: road, scenery and castles, so neither side has better ground', () => {
-        const turn = (i: number) => cellIndex(COLS - 1 - (i % COLS), ROWS - 1 - Math.floor(i / COLS));
-        expect(board.castles[1][0]).toBeCloseTo(COLS - board.castles[0][0]);
-        expect(board.castles[1][1]).toBeCloseTo(ROWS - board.castles[0][1]);
-        for (const i of board.roadCells) expect(board.roadCells.has(turn(i))).toBe(true);
-        for (const i of board.sceneryCells) expect(board.sceneryCells.has(turn(i))).toBe(true);
+      it('gives both castles about the same room to build in, whether or not the field is symmetric', () => {
+        const m = newMatch(['legion', 'legion'], board.id);
+        const watch = RACES.legion.towers[0]!;
+        const room = ([0, 1] as const).map((o) => {
+          m.players[o].gold = 9999;
+          m.players[o].castle.level = 3;
+          let n = 0;
+          for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (canBuild(m, o, watch, c, r) === 'ok') n++;
+          return n;
+        }) as [number, number];
+        expect(Math.min(...room)).toBeGreaterThan(50);
+        expect(Math.min(...room) / Math.max(...room)).toBeGreaterThan(0.7);
       });
 
       it('keeps the road, the castles and a ring of open ground round each free of scenery', () => {

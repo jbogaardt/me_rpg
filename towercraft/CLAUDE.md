@@ -5,8 +5,8 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 
 ## The game
 
-- **One road, two castles, five maps.** One long winding road (36x55 cells, 175-225 long, units walk 2-6 cells a second) joins player 0's castle to player 1's; units meet in between. The player picks the map on the title screen, above the race (kept in `localStorage` as `towercraft:map`): `greenwood` (the original straight switchbacks), `frostlands`, `desert`, `mire` (swamp) and `ember` (zigzags between lava), each drawn in the look of the Me RPG biome of that name. The map lives in `Match.board` (`Board` in `board.ts`: road, castles, `roadCells`, `sceneryCells`, `pointAt`, `headingAt`), so the rules never read a map constant. You win by destroying the other castle (or, after `TIME_LIMIT`, by castle health left).
-- **The dock and the card** (Me RPG's menu kit: gold frames over wood and parchment, Cinzel and Crimson; `index.html`): the bottom dock is small thumbnails to train, build and command (price under each, `L2` if the castle is too low); tap one and a *card* pops up at the side (above the dock on a narrow screen) with its stats and the purchase button (Train; Build, which arms placement; Upgrade for the castle card, also opened by tapping the castle). The order toggles sit by the castle thumbnail.
+- **One road, two castles, five maps.** One long winding road (36x55 cells, 175-225 long, units walk 2-6 cells a second) joins player 0's castle to player 1's; units meet in between. The player picks the map on the title screen, above the race (kept in `localStorage` as `towercraft:map`): `greenwood` (the classic straight switchbacks, the sim's default), `frostlands` (the menu's default), `frostlands`, `desert`, `mire` (swamp) and `ember` (zigzags between lava), each drawn in the look of the Me RPG biome of that name. The map lives in `Match.board` (`Board` in `board.ts`: road, castles, `roadCells`, `sceneryCells`, `pointAt`, `headingAt`), so the rules never read a map constant. You win by destroying the other castle (or, after `TIME_LIMIT`, by castle health left).
+- **The dock and the card** (Me RPG's menu kit: gold frames over wood and parchment, Cinzel and Crimson; `index.html`): the bottom dock is small thumbnails to train, build and command (price under each, `L2` if the castle is too low); tap one and a *card* pops up at the side (above the dock on a narrow screen) with its stats and the purchase button (Train; Build, which arms placement; Upgrade for the castle card, also opened by tapping the castle).
 - **Orders** (`Orders`, `setOrder`): a player's units either stop and fight the towers and units they meet (`attack`) or walk on past (`bypass`), chosen separately; the castle is always attacked once in reach.
 - **Everything comes from the castle**: pay for a unit, it joins the train queue, walks out and marches on its own. The levers are what you train, where you build, and the orders.
 - **Towers defend**: they shoot enemy units only. Units attack units, towers and castles.
@@ -28,20 +28,19 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 - **Art** is Wyrmsun's, copied by `tools/towercraftArt.ts` from a clone of its repo (`public/art/CREDITS.md`): animated unit sheets
   (CC-BY-SA 3.0, so the title screen credits them and the terms follow the art), CC0 castles, towers and portraits. The fields (`art/maps/<id>.png`, adaptations of the LPC terrain, so also CC-BY-SA) are drawn by Me RPG's
   map pipeline with `npm run towercraft:board [-- <id>]` (`tools/towercraftBoard.ts`: one `Theme` per map, the biome's ground, trees, bushes and rocks), which also writes `src/sim/scenery.ts` (the cells woods, lakes and rocks cover on each map: nothing is built there); the roads are `src/sim/road.ts` (`ROADS`: a straight-run list, or control points for player 0's half that `meander` smooths and turns), then re-run it. **A new map** is a `ROADS` entry, a `THEMES` entry, a run of the generator and a run of `board.test.ts` (it checks the road, the symmetry, clear ground and that two AIs finish a game on it).
-  Every field turns half way round onto itself (road, scenery, castles), so neither side has better ground: keep it so. The UI kit is Me RPG's (`public/ui/`, copied from `src/ui/`).
+  Only the classic `greenwood` road is turned half way round onto itself; the others wander freely (not symmetric) and `board.test.ts` keeps them fair: both castles must have about the same free ground in reach (keep castles off the field's edges), and balance is judged with sides alternating. The UI kit is Me RPG's (`public/ui/`, copied from `src/ui/`).
 - Headless screenshots: `--use-angle=swiftshader`.
 
 ## State of play and the plan (StarCraft-style depth, in slices)
 
-Done: five maps, castles, queue, upgrades, combat, towers, reach, pan and zoom, roles, fog, orders, the card UI, animation, a balance pass.
+Done: five maps, castles, queue, upgrades, combat, towers, roles, fog, orders, card UI, animation, balance.
 
 **Balance** is measured: `npm run towercraft:balance [-- N [seedBase]]` (`tools/towercraftBalance.ts`; `TOWERCRAFT_MAP=<id>` for another map) plays seeded
 AI-against-AI matches (mirrors included, sides alternating) and prints wins per side, pairing and race, length and what the AI built. Re-run it after changing
 `races.ts`, `ai.ts` or `sim.ts` constants (a sample of 40 swings about 8 points: judge by N of 100 or several seeds). `balance.test.ts` is a guard only.
-Last measured (greenwood, fog, N 100): every match decisive, median about 6 min; every pairing 41-58%, mirrors top side 38-58%. Levers: pay, castle hp, unit
-hp and count, speed, splash. Thieves are touchy. **Miss:** Goblin games are short.
+Last measured on greenwood (N 100): all decisive, median about 6 min, pairings 41-58%. The other maps are only spot-checked (N 10). Levers: pay, castle hp, unit
+hp and count, speed, splash. **Miss:** Goblin games are short.
 
 **The AI** (`ai.ts`; a `Style` drawn from its seed, since two equal armies cancel): buys units in **waves**, **upgrades** on a schedule, adds towers **as far forward as they still see road**, builds a **detector**/**shooter** once the foe fields cloaked/air, walks **past towers** when its army could kill the castle in seconds, **past units** when it would win that race, and always after its `rush` time. It reads the foe only through `foeUnits`, `foeTowers` and `foeCastle` (vision).
 
-Next, roughly in order: a *beacon* tower (cheap, big `reach`); **detector units**; **more roles** (slow, armour, bunker, siege); **race identity**
-(Goblins swarm and tunnel, Dwarves siege and armour, Germanic all-round); **control** (rally points, attack-move, a second human online); **economy** (mines).
+Next: a *beacon* tower; **detector units**; **more roles** (slow, armour, bunker, siege); **race identity**; **control** (rally points, attack-move, a second human online); **economy** (mines).

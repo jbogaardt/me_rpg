@@ -1,9 +1,9 @@
 // Draws Towercraft's fields (towercraft/public/art/maps/<id>.png) and lists what blocks building on each
 // (towercraft/src/sim/scenery.ts) with Me RPG's own map pipeline: a ground, a road painted on cell corners (so every bend gets the
 // real LPC autotile blend, tools/map/terrain.ts), and Me RPG's woods, lakes, rocks and bushes for scenery, in the look of one of its
-// biomes (greenwood, frostlands, desert, emberwaste, witchmire). The roads are towercraft/src/sim/road.ts. Every field turns half way
-// round onto itself, scenery included, so neither player has better ground: everything is placed once and again turned, lakes in
-// shapes that are the same upside down. Woods keep to the margins and the clumps away from the road, and a band of open ground is
+// biomes (greenwood, frostlands, desert, emberwaste, witchmire). The roads are towercraft/src/sim/road.ts. The classic road turns half
+// way round onto itself, scenery included (everything placed once and again turned, lakes in shapes that are the same upside down);
+// the other roads wander freely and so does their scenery. Woods keep to the margins and the clumps away from the road, and a band of open ground is
 // left along both sides of the road for towers (bushes and rocks may still stand in it, and then block their cell).
 // Run `npm run towercraft:board` after changing a road or the scenery (`-- <id>` for one map).
 
@@ -109,6 +109,10 @@ export function fieldZone(def: RoadDef): Zone {
   z.fill(theme.ground);
   const whole: Rect = { col: 0, row: 0, w: COLS, h: ROWS };
   if (theme.cover) z.paint(theme.cover, whole);
+  // The classic road is turned half way round onto itself, so its scenery is too; every other map is free of that.
+  const twin = def.id === 'greenwood';
+  const sites = (c: number, r: number): [number, number][] => (twin ? [[c, r], turnCell(c, r)] : [[c, r]]);
+  const reach = twin ? ROWS / 2 : ROWS - 2; // rows (from the top) things are placed in; a twin is placed once and turned
   const rand = lcg(def.id.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7));
 
   const pts: readonly Pt[] = def.points;
@@ -125,10 +129,10 @@ export function fieldZone(def: RoadDef): Zone {
 
   // Patches of other earth (ground only: they never block), then the road over them.
   for (const terrain of theme.patches ?? [])
-    for (let placed = 0, tries = 0; placed < 4 && tries < 400; tries++) {
-      const [cx, cy] = [3 + Math.floor(rand() * (COLS - 6)), 3 + Math.floor(rand() * (ROWS / 2 - 4))];
+    for (let placed = 0, tries = 0; placed < (twin ? 4 : 7) && tries < 400; tries++) {
+      const [cx, cy] = [3 + Math.floor(rand() * (COLS - 6)), 3 + Math.floor(rand() * (reach - 4))];
       if (roadDist(cx, cy) < 5) continue;
-      for (const [x, y] of [[cx, cy], turnCell(cx, cy)] as const)
+      for (const [x, y] of sites(cx, cy))
         z.paint(terrain, ovalRows(x, y, 3 + Math.floor(rand() * 3), 1 + Math.floor(rand() * 2)));
       placed++;
     }
@@ -150,7 +154,7 @@ export function fieldZone(def: RoadDef): Zone {
   const lakes: [number, number][] = [];
   const spots: [number, number, number][] = [];
   for (let col = 6; col < COLS - 6; col++)
-    for (let row = 5; row < ROWS / 2 - 1; row++) {
+    for (let row = 5; row < reach - 1; row++) {
       // Every cell of the lake and its shore must be well clear of the road (two clear cells for towers) and of both castles.
       const cells: (readonly [number, number])[] = [];
       for (let c = col - 5; c <= col + 4; c++) for (let r = row - 2; r <= row + 2; r++) cells.push([c, r]);
@@ -163,14 +167,12 @@ export function fieldZone(def: RoadDef): Zone {
   spots.sort((a, b) => b[2] - a[2]);
   const apart = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]) >= 10;
   for (const [col, row] of spots) {
-    if (lakes.length >= 3) break;
-    const [tc, tr] = turnCell(col, row);
+    if (lakes.length >= (twin ? 3 : 5)) break;
     const mine: [number, number] = [col, row];
-    if (lakes.every((l) => apart(l, mine) && apart(turnCell(...l), mine)) && Math.hypot(tc - col, tr - row) >= 10)
-      lakes.push(mine);
+    if (sites(...mine).every((a) => lakes.every((l) => sites(...l).every((b) => apart(a, b))))) lakes.push(mine);
   }
   for (const [cx, cy] of lakes)
-    for (const [x, y] of [[cx, cy], turnCell(cx, cy)] as const) {
+    for (const [x, y] of sites(cx, cy)) {
       const rows = ovalRows(x, y, 4, 1);
       if (theme.lake.shore)
         z.paint(
@@ -186,24 +188,26 @@ export function fieldZone(def: RoadDef): Zone {
   const scatter = (kit: PrefabName[], count: number, minRoad: number, minCastle: number) => {
     for (let placed = 0, tries = 0; placed < count && tries < 12000; tries++) {
       const col = 2 + Math.floor(rand() * (COLS - 4));
-      const row = 2 + Math.floor(rand() * (ROWS / 2 - 3));
-      const [tc, tr] = turnCell(col, row);
+      const row = 2 + Math.floor(rand() * (reach - 3));
+      const at = sites(col, row);
       const ok = (c: number, r: number) =>
         roadDist(c + 0.5, r + 0.5) >= minRoad &&
         castleDist(c + 0.5, r + 0.5) >= minCastle &&
-        lakes.every(([lx, ly]) => Math.abs(c - lx) > 6 || Math.abs(r - ly) > 3);
-      if (!ok(col, row) || !ok(tc, tr) || taken.has(row * COLS + col) || taken.has(tr * COLS + tc)) continue;
-      taken.add(row * COLS + col);
-      taken.add(tr * COLS + tc);
+        lakes.some(([lx, ly]) => sites(lx, ly).some(([x, y]) => Math.abs(c - x) <= 6 && Math.abs(r - y) <= 3)) ===
+          false;
+      if (!at.every(([c, r]) => ok(c, r) && !taken.has(r * COLS + c))) continue;
       const name = kit[Math.floor(rand() * kit.length)];
-      z.prop(name, col, row);
-      z.prop(name, tc, tr);
+      for (const [c, r] of at) {
+        taken.add(r * COLS + c);
+        z.prop(name, c, r);
+      }
       placed++;
     }
   };
-  scatter(theme.trees, 14, 3.2, 11);
-  scatter(theme.bushes, 18, 2.6, 9);
-  scatter(theme.rocks, 14, 2.6, 9);
+  const more = twin ? 1 : 2; // a free map has the whole field to fill, a turned one half
+  scatter(theme.trees, 14 * more, 3.2, 11);
+  scatter(theme.bushes, 18 * more, 2.6, 9);
+  scatter(theme.rocks, 14 * more, 2.6, 9);
   return z;
 }
 
@@ -225,6 +229,7 @@ if (process.argv[1] === import.meta.filename) {
     const blocked = new Set<number>();
     for (const i of data.collision) {
       blocked.add(i);
+      if (def.id !== 'greenwood') continue;
       const [c, r] = turnCell(i % COLS, Math.floor(i / COLS));
       blocked.add(r * COLS + c);
     }

@@ -7,7 +7,7 @@ import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture, TextureStyle } from 'pixi.js';
 import { createAi } from './sim/ai';
-import { BOARDS, BOARD_IDS, COLS, DEFAULT_BOARD_ID, ROWS, type BoardId } from './sim/board';
+import { BOARDS, BOARD_IDS, COLS, ROWS, type BoardId } from './sim/board';
 import { MAX_LEVEL, RACES, RACE_IDS, type RaceId, type SheetKind, type TowerDef, type UnitDef } from './sim/races';
 import {
   BASE_PAY,
@@ -151,7 +151,7 @@ void (async () => {
 
   // --- The scene -----------------------------------------------------------------------------------------------------
   const world = new Container();
-  const field = new Sprite(fieldTextures.get(DEFAULT_BOARD_ID));
+  const field = new Sprite(fieldTextures.get('frostlands'));
   field.width = BOARD_W;
   field.height = BOARD_H;
   // The fog: a canvas of shade (dark where nothing of yours sees, soft round pools cut out for every castle, tower and unit)
@@ -182,7 +182,7 @@ void (async () => {
   world.addChild(field, fogLayer, areaLayer, corpseLayer, sortLayer, live, ghostSprite);
   app.stage.addChild(world);
 
-  let chosenMap: BoardId = DEFAULT_BOARD_ID;
+  let chosenMap: BoardId = 'frostlands'; // the menu's first pick: a meandering map (the sim's own default is the classic road)
   try {
     const saved = localStorage.getItem('towercraft:map');
     if (saved && BOARDS[saved]) chosenMap = saved;
