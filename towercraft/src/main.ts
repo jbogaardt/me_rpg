@@ -54,6 +54,8 @@ import {
   canSee,
   foesOf,
   laneFor,
+  nearestOnLane,
+  SWITCH_NEAR,
   openLanes,
   sightsFor,
   teamOf,
@@ -1789,10 +1791,22 @@ void (async () => {
     const aim = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-aim]');
     if (aim && cardOf?.kind === 'sel') {
       cmd(
-        aim.dataset.aim === 'castle'
-          ? { k: 'focus', ids: [...selection], at: { kind: 'castle' } }
+        aim.dataset.aim?.startsWith('castle')
+          ? {
+              k: 'focus',
+              ids: [...selection],
+              at: aim.dataset.seat ? { kind: 'castle', owner: Number(aim.dataset.seat) } : { kind: 'castle' },
+            }
           : { k: 'focus', ids: [...selection] },
       );
+      renderCard();
+      return;
+    }
+    const route = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-route]');
+    if (route && cardOf?.kind === 'sel') {
+      if (route.disabled) return;
+      cmd({ k: 'route', ids: [...selection], lane: Number(route.dataset.route) });
+      note(`${selection.size} → ${route.title}`);
       renderCard();
       return;
     }
@@ -1873,8 +1887,24 @@ void (async () => {
       }</div>` +
       `<div class="targets">` +
       `<button data-aim="none"${on(!sent)} title="Follow the general orders (X)">Orders</button>` +
-      `<button data-aim="castle"${on(units.every((u) => u.focus?.kind === 'castle'))} title="Walk past everything to the castle (C)">Castle</button>` +
+      (coop()
+        ? foesOf(match, YOU)
+            .map(
+              (o) =>
+                `<button data-aim="castle" data-seat="${o}"${on(units.every((u) => u.focus?.kind === 'castle' && (u.focus.owner ?? laneOf(match.board, u).to) === o))} title="Walk past everything to the ${castleName(o)} castle">${castleName(o)} castle</button>`,
+            )
+            .join('')
+        : `<button data-aim="castle"${on(units.every((u) => u.focus?.kind === 'castle'))} title="Walk past everything to the castle (C)">Castle</button>`) +
       `</div>` +
+      (coop()
+        ? `<p class="note">Road (before the fork):</p><div class="targets">${openLanes(match, YOU)
+            .map((l) => {
+              const reach = units.some((u) => (nearestOnLane(match, u, l.id)?.d ?? Infinity) <= SWITCH_NEAR);
+              const here = units.every((u) => (u.lane ?? match.board.homeLane[YOU]) === l.id);
+              return `<button data-route="${l.id}"${on(here)}${reach ? '' : ' disabled'} title="${l.name} to the ${castleName(l.to)} camp${reach ? '' : ' (too late: they are past the fork)'}">${l.name}<small>${castleName(l.to)}</small></button>`;
+            })
+            .join('')}</div>`
+        : '') +
       (sent ? `<p class="note">${sent}</p>` : '');
     if (body !== cardBody) {
       $('card-body').innerHTML = body;

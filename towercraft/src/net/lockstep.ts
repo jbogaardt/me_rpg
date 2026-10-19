@@ -27,6 +27,7 @@ import {
   setFocus,
   setLane,
   setOrder,
+  setRoute,
   trainUnits,
   upgradeCastle,
   type Focus,
@@ -45,7 +46,8 @@ export type Command =
   | { k: 'castle' }
   | { k: 'upgrade'; id: string }
   | { k: 'repair'; tower: number }
-  | { k: 'lane'; lane: number };
+  | { k: 'lane'; lane: number }
+  | { k: 'route'; ids: number[]; lane: number };
 
 /** Do a command for a player. The sim itself refuses anything the player may not do (money, area, ownership). */
 export function apply(m: Match, owner: Owner, c: Command): void {
@@ -77,6 +79,9 @@ export function apply(m: Match, owner: Owner, c: Command): void {
     case 'lane':
       setLane(m, owner, c.lane);
       break;
+    case 'route':
+      setRoute(m, owner, c.ids, c.lane);
+      break;
   }
 }
 
@@ -90,7 +95,7 @@ const MAX_AHEAD = 400;
 
 // --- The wire ---
 
-export const NET_VERSION = 2;
+export const NET_VERSION = 3;
 
 export type Message =
   /** The joiner, once connected: who they play. */
@@ -147,6 +152,8 @@ export function parseCommand(v: unknown): Command | null {
       return isInt(c.tower) ? { k: 'repair', tower: c.tower } : null;
     case 'lane':
       return isInt(c.lane, 0, 63) ? { k: 'lane', lane: c.lane } : null;
+    case 'route':
+      return isIds(c.ids) && isInt(c.lane, 0, 63) ? { k: 'route', ids: c.ids, lane: c.lane } : null;
     default:
       return null;
   }

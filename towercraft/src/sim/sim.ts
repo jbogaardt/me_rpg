@@ -597,20 +597,42 @@ export const SWITCH_NEAR = 4;
  * False when it is too far: nothing changes.
  */
 export function switchLane(m: Match, u: Unit, laneId: number, near = Infinity): boolean {
-  const lane = m.board.lanes[laneId];
-  if (!lane || lane.from !== u.owner) return false;
-  const at = unitPos(u, m.board);
-  let best = Infinity;
-  let bestS = 0;
-  for (let s = 0; s <= lane.length; s += 0.5) {
-    const d = dist(at, lane.pointAt(s));
-    if (d < best) [best, bestS] = [d, s];
-  }
-  if (best > near) return false;
+  const spot = nearestOnLane(m, u, laneId);
+  if (!spot || spot.d > near) return false;
   u.lane = laneId;
-  u.s = bestS;
+  u.s = spot.s;
   delete u.off;
   return true;
+}
+
+/** Where on a lane (of the unit's own seat) the unit stands nearest to, and how far off: nothing for a lane that is not its seat's. */
+export function nearestOnLane(m: Match, u: Unit, laneId: number): { s: number; d: number } | undefined {
+  const lane = m.board.lanes[laneId];
+  if (!lane || lane.from !== u.owner) return undefined;
+  const at = unitPos(u, m.board);
+  let best = { s: 0, d: Infinity };
+  for (let s = 0; s <= lane.length; s += 0.5) {
+    const d = dist(at, lane.pointAt(s));
+    if (d < best.d) best = { s, d };
+  }
+  return best;
+}
+
+/**
+ * Turn these units (ids, `owner`'s own) onto another road, the way to steer an army before a fork: only a unit still on a stretch the
+ * two roads share (within `SWITCH_NEAR`) can take it, the rest walk on. 'unreachable' when none can.
+ */
+export function setRoute(m: Match, owner: Owner, unitIds: readonly number[], laneId: number): Result | 'unreachable' {
+  if (!playing(m, owner)) return 'over';
+  if (!openLanes(m, owner).some((l) => l.id === laneId)) return 'unknown';
+  let moved = 0;
+  for (const u of m.units)
+    if (u.owner === owner && unitIds.includes(u.id) && !u.spent && switchLane(m, u, laneId, SWITCH_NEAR)) {
+      moved++;
+      if (u.focus?.kind === 'castle' && (u.focus.owner ?? m.board.lanes[laneId]!.to) !== m.board.lanes[laneId]!.to)
+        delete u.focus;
+    }
+  return moved ? 'ok' : 'unreachable';
 }
 
 /** What it costs to take the castle up a level, or undefined at the top. */

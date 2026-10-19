@@ -13,6 +13,7 @@ import {
   playing,
   setFocus,
   setLane,
+  setRoute,
   step,
   switchLane,
   teamSeats,
@@ -185,6 +186,20 @@ describe('roads that fork', () => {
     expect(stray.lane).toBe(a.id);
     // A lane that is another seat's cannot be taken.
     expect(switchLane(m, u, lane(m, 2, 0).id)).toBe(false);
+  });
+});
+
+describe('steering an army before a fork', () => {
+  it('turns units still on the shared stretch onto another road, and leaves those past it', () => {
+    const m = quiet(match());
+    const [a, b] = [lane(m, 0, 2), lane(m, 0, 3)];
+    const early = place(m, 0, a.id, 6);
+    const late = place(m, 0, a.id, a.length / 2);
+    expect(setRoute(m, 0, [early.id, late.id], b.id)).toBe('ok');
+    expect(early.lane).toBe(b.id);
+    expect(late.lane).toBe(a.id);
+    expect(setRoute(m, 0, [late.id], b.id)).toBe('unreachable');
+    expect(setRoute(m, 0, [early.id], lane(m, 2, 0).id)).toBe('unknown');
   });
 });
 

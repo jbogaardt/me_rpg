@@ -148,6 +148,7 @@ describe('wire', () => {
           { k: 'focus', ids: [1], at: { kind: 'castle', owner: 3 } },
           { k: 'focus', ids: [1], at: { kind: 'castle' } },
           { k: 'lane', lane: 5 },
+          { k: 'route', ids: [3, 4], lane: 2 },
           { k: 'castle' },
           { k: 'upgrade', id: 'ground-damage' },
           { k: 'repair', tower: 4 },
