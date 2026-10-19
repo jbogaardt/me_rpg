@@ -186,18 +186,16 @@
       .map:hover .shot { border-color: var(--gold-dim); }
       .map.on .shot { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(242, 211, 138, 0.5), 0 3px 10px rgba(0, 0, 0, 0.7); }
       .map.on b { color: var(--gold); }
-      #map-blurb { min-height: 2.6em; font-size: 15px; }
-      .race { width: 210px; padding: 12px 12px 10px; text-align: left; border-image: url('./ui/frame-thin.png') 10 stretch; border-width: 10px; border-style: solid; border-color: transparent;
-        background: url('./ui/paper.jpg') center / 256px; color: var(--ink); display: block; position: relative; }
+      .race { width: 150px; padding: 12px 10px 8px; text-align: center; border-image: url('./ui/frame-thin.png') 10 stretch; border-width: 10px; border-style: solid; border-color: transparent;
+        background: url('./ui/paper.jpg') center / 256px; color: var(--ink); display: grid; justify-items: center; gap: 6px; position: relative; }
       .race::before { content: ''; position: absolute; left: 0; right: 0; top: -2px; height: 5px; background: var(--c); border-radius: 3px; }
       .race:hover { filter: brightness(1.08); }
-      .race b { display: block; font: 700 17px var(--title); margin-bottom: 3px; }
-      .race span { color: var(--ink-soft); font-size: 14px; display: block; line-height: 1.2; }
-      .look { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; align-items: flex-end; }
+      .race b { font: 700 18px var(--title); }
+      .race .face { width: 96px; height: 80px; display: grid; place-items: center; border-radius: 8px; background: rgba(51, 35, 15, 0.16); border: 1px solid var(--ink-soft); }
+      #menu .races { margin-top: 16px; } #menu #credits-btn { margin-top: 18px; }
+      #credits h2 { margin-top: 0; } #credits p { max-width: 560px; margin: 8px auto 16px; font-size: 14px; } #credits a { color: var(--gold); }
       .thumb { flex: none; display: block; border-radius: 3px; background-repeat: no-repeat; background-position: 0 0; }
       img.thumb { object-fit: cover; }
-      .credit { max-width: 640px; margin: 16px auto 0; font-size: 12px; color: var(--dim); }
-      .credit a { color: var(--gold); }
       #end > div { padding: 18px 30px; } #end p { color: var(--text); }
       #again { padding: 10px 26px; font-size: 16px; }
 
@@ -211,7 +209,7 @@
         .up { width: 124px; height: 58px; padding: 5px 12px 7px; } .shelf { min-height: 56px; }
         #top { left: 54px; } #top .r { font-size: 17px; } #top .r::before { width: 22px; height: 22px; }
         .map { width: 92px; } .map .shot { width: 92px; height: 112px; }
-        .race { width: 150px; }
+        .race { width: 120px; }
         .overlay h1 { font-size: 26px; }
       }
     </style>
@@ -243,17 +241,20 @@
     <div class="overlay" id="menu">
       <div class="panel wood">
         <h1>Towercraft</h1>
-        <p>Cut wood and quarry stone, train units at your castle and raise buildings to unlock more of them, and send them down the road. Hold it with towers and bunkers, buy upgrades, and destroy the rival's castle to win.</p>
-        <h2>Choose the battlefield</h2>
         <div class="maps" id="maps"></div>
-        <p id="map-blurb"></p>
-        <h2>Choose your race</h2>
         <div class="races" id="races"></div>
-        <p class="credit">
+        <button class="plank" id="credits-btn">Credits</button>
+      </div>
+    </div>
+    <div class="overlay" id="credits" hidden>
+      <div class="panel wood">
+        <h2>Credits</h2>
+        <p>
           Art from <a href="https://andrettin.github.io/" target="_blank" rel="noopener">Wyrmsun</a> (b_o, badbuckle, Jinn, Exidelo; units under
           <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC-BY-SA 3.0</a>, buildings CC0 except the Germanic workshop, CC-BY-SA 3.0), the Liberated Pixel Cup terrain
           (adrix89 and others, CC-BY-SA 3.0) and Lamoot's RPG GUI kit (CC-BY 3.0). <a href="art/CREDITS.md" target="_blank" rel="noopener">Full credits</a>.
         </p>
+        <button class="plank on" id="credits-x">Back</button>
       </div>
     </div>
     <div class="overlay" id="end" hidden>

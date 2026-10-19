@@ -1955,7 +1955,6 @@ void (async () => {
       /* no storage: the choice lasts this visit */
     }
     for (const [k, b] of mapButtons) b.classList.toggle('on', k === id);
-    $('map-blurb').textContent = `${BOARDS[id]!.name}: ${BOARDS[id]!.blurb}`;
     if (!started) {
       // Show the map behind the title screen.
       match = newMatch(['legion', 'swarm'], BOARDS[id]);
@@ -1969,7 +1968,7 @@ void (async () => {
     const b = document.createElement('button');
     b.className = 'map';
     b.title = BOARDS[id]!.name;
-    b.innerHTML = `<span class="shot" style="background-image:url(art/maps/${id}.png)"></span><b>${BOARDS[id]!.name}</b>`;
+    b.innerHTML = `<span class="shot" style="background-image:url(art/maps/${id}.png)"></span>`;
     b.onclick = () => pickMap(id);
     $('maps').append(b);
     mapButtons.set(id, b);
@@ -1981,10 +1980,12 @@ void (async () => {
     const b = document.createElement('button');
     b.className = 'race';
     b.style.setProperty('--c', '#' + race.color.toString(16).padStart(6, '0'));
-    b.innerHTML = `<b>${race.name}</b><span>${race.blurb}</span><div class="look">${race.units.map((u) => unitThumb(u, 34)).join('')}</div>`;
+    b.innerHTML = `<span class="face">${unitThumb(race.units[0]!, 72)}</span><b>${race.name}</b>`;
     b.onclick = () => start(id);
     $('races').append(b);
   }
+  $('credits-btn').onclick = () => ($('credits').hidden = false);
+  $('credits-x').onclick = () => ($('credits').hidden = true);
   $('again').onclick = () => {
     started = false;
     $('end').hidden = true;
