@@ -11,10 +11,9 @@
 // Everything it knows about the other side is read through `foeUnits`, `foeTowers` and `foeCastle` below, which show only what its
 // vision (castle, towers and living units, as for the player) shows: it plays by the same fog.
 
-import { CASTLES, COLS, ROAD_CELLS, ROAD_LENGTH, ROWS, cellIndex, pointAt } from './board';
+import type { Board } from './board';
 import { MAX_LEVEL, type TowerDef, type UnitDef } from './races';
 import {
-  AIR_LENGTH,
   QUEUE_MAX,
   buildTower,
   canBuild,
@@ -46,23 +45,38 @@ export function seeded(seed: number): () => number {
   };
 }
 
-/** Points along the road, half a cell apart: what "covering the road" is counted over. */
-const ROAD_SAMPLES: [number, number][] = Array.from({ length: Math.floor(ROAD_LENGTH * 2) }, (_, i) => pointAt(i / 2));
+/** What "covering the road" is counted over, for one board: points along the road half a cell apart, and a cache of what each cell sees (a board never changes). */
+interface RoadView {
+  samples: [number, number][];
+  /** How much road a tower of some range would cover from a cell, and where along the road (cells from player 0's end). */
+  coverage: Map<string, { n: number; at: number }>;
+}
+const roadViews = new WeakMap<Board, RoadView>();
+function roadView(b: Board): RoadView {
+  let v = roadViews.get(b);
+  if (!v) {
+    v = {
+      samples: Array.from({ length: Math.floor(b.roadLength * 2) }, (_, i) => b.pointAt(i / 2)),
+      coverage: new Map(),
+    };
+    roadViews.set(b, v);
+  }
+  return v;
+}
 
-/** How much road a tower of this range would cover from each cell, and where along the road (cells from player 0's end): cached, the road never changes. */
-const coverage = new Map<string, { n: number; at: number }>();
-function coverageOf(col: number, row: number, range: number): { n: number; at: number } {
-  const key = `${cellIndex(col, row)}:${range}`;
-  let c = coverage.get(key);
+function coverageOf(b: Board, col: number, row: number, range: number): { n: number; at: number } {
+  const view = roadView(b);
+  const key = `${b.cellIndex(col, row)}:${range}`;
+  let c = view.coverage.get(key);
   if (!c) {
     let [n, sum] = [0, 0];
-    ROAD_SAMPLES.forEach(([x, y], i) => {
+    view.samples.forEach(([x, y], i) => {
       if (Math.hypot(x - col - 0.5, y - row - 0.5) > range) return;
       n++;
       sum += i / 2;
     });
     c = { n, at: n ? sum / n : 0 };
-    coverage.set(key, c);
+    view.coverage.set(key, c);
   }
   return c;
 }
@@ -80,15 +94,15 @@ const ENOUGH = 10;
 function score(m: Match, owner: Owner, def: TowerDef, col: number, row: number): number {
   const role = roleOf(def);
   if (role === 'aura') {
-    const foe = CASTLES[enemy(owner)];
+    const foe = m.board.castles[enemy(owner)];
     const friends = m.towers.filter(
       (t) => t.owner === owner && Math.hypot(t.col - col, t.row - row) <= (def.aura?.radius ?? 0),
     ).length;
     return friends * 12 - Math.hypot(foe[0] - col - 0.5, foe[1] - row - 0.5) * 0.15;
   }
-  const c = coverageOf(col, row, role === 'attack' ? def.range : (def.detect ?? 0));
+  const c = coverageOf(m.board, col, row, role === 'attack' ? def.range : (def.detect ?? 0));
   if (c.n === 0) return -Infinity; // it would see no road at all
-  const progress = owner === 0 ? c.at : ROAD_LENGTH - c.at;
+  const progress = owner === 0 ? c.at : m.board.roadLength - c.at;
   return Math.min(c.n, ENOUGH) + progress * PUSH;
 }
 
@@ -97,10 +111,11 @@ export function bestCell(m: Match, owner: Owner, def: TowerDef): [number, number
   let best: [number, number] | undefined;
   let bestScore = -Infinity;
   // Ties go to the first cell met, and each side scans from its own castle outward in the same way, so neither is favoured.
-  for (let r = 0; r < ROWS; r++) {
-    for (let k = 0; k < COLS; k++) {
-      const [row, col] = owner === 0 ? [r, k] : [ROWS - 1 - r, COLS - 1 - k];
-      if (ROAD_CELLS.has(cellIndex(col, row)) || canBuild(m, owner, def, col, row) !== 'ok') continue;
+  const { rows, cols, roadCells, cellIndex } = m.board;
+  for (let r = 0; r < rows; r++) {
+    for (let k = 0; k < cols; k++) {
+      const [row, col] = owner === 0 ? [r, k] : [rows - 1 - r, cols - 1 - k];
+      if (roadCells.has(cellIndex(col, row)) || canBuild(m, owner, def, col, row) !== 'ok') continue;
       const sc = score(m, owner, def, col, row);
       if (sc > bestScore) {
         bestScore = sc;
@@ -131,10 +146,16 @@ const ownUnits = (m: Match, owner: Owner) => m.units.filter((u) => u.owner === o
 const ownTowers = (m: Match, owner: Owner) => m.towers.filter((t) => t.owner === owner);
 const dps = (u: UnitDef) => u.damage / u.cooldown;
 /** Cells (along its way) between an enemy unit and this side's castle. */
-const fromCastle = (u: Unit) => (u.def.air ? AIR_LENGTH : ROAD_LENGTH) - u.s;
+const fromCastle = (m: Match, u: Unit) => (u.def.air ? m.board.airLength : m.board.roadLength) - u.s;
 
 /** Which tower does `owner` need most right now? It answers what the other side has sent or can send: air, cloaked units. */
-function chooseTower(m: Match, owner: Owner, options: TowerDef[], random: () => number): TowerDef | undefined {
+function chooseTower(
+  m: Match,
+  owner: Owner,
+  options: TowerDef[],
+  random: () => number,
+  bias?: Record<string, number>,
+): TowerDef | undefined {
   if (!options.length) return undefined;
   const mine = ownTowers(m, owner);
   const foeRace = raceOf(m, enemy(owner));
@@ -154,7 +175,11 @@ function chooseTower(m: Match, owner: Owner, options: TowerDef[], random: () => 
     if (def.hits === 'air') w = air || (canAir && antiAir < 1) ? w : 0.1; // an air-only tower is wasted with no air about
     return w;
   };
-  return pickWeighted(options, options.map(weight), random);
+  return pickWeighted(
+    options,
+    options.map((d) => weight(d) * (bias?.[d.id] ?? 1)),
+    random,
+  );
 }
 
 const AURA_WEIGHT = 2.5;
@@ -169,7 +194,13 @@ function pickWeighted<T>(options: T[], weights: number[], random: () => number):
 }
 
 /** Which unit to train: leaning to air where the other side has nothing up, cloaked where it has no detector, archers against air. */
-function chooseUnit(m: Match, owner: Owner, options: UnitDef[], random: () => number): UnitDef | undefined {
+function chooseUnit(
+  m: Match,
+  owner: Owner,
+  options: UnitDef[],
+  random: () => number,
+  bias?: Record<string, number>,
+): UnitDef | undefined {
   if (!options.length) return undefined;
   const towers = foeTowers(m, owner);
   const noAntiAir = !towers.some((t) => t.def.damage > 0 && t.def.hits !== 'ground');
@@ -185,16 +216,23 @@ function chooseUnit(m: Match, owner: Owner, options: UnitDef[], random: () => nu
       (u.air && !noAntiAir ? -2 : 0) +
       (u.hitsAir && foeAir > myShooters ? 3 : 0),
   );
+  if (bias) weights.forEach((w, i) => (weights[i] = w * (bias[options[i]!.id] ?? 1)));
   return pickWeighted(options, weights, random);
 }
 
 /** The units of one wave, as many as the queue and the gold allow, slowest to arrive first so that the wave reaches the foe together. */
-function pickWave(m: Match, owner: Owner, options: UnitDef[], random: () => number): UnitDef[] {
+function pickWave(
+  m: Match,
+  owner: Owner,
+  options: UnitDef[],
+  random: () => number,
+  bias?: Record<string, number>,
+): UnitDef[] {
   const wave: UnitDef[] = [];
   let gold = m.players[owner].gold;
   while (wave.length < QUEUE_MAX - m.players[owner].queue.length) {
     // What it would like, or failing the gold for that, the best it can pay for: the gold is spent, not kept for the next wave.
-    const want = chooseUnit(m, owner, options, random);
+    const want = chooseUnit(m, owner, options, random, bias);
     const pick =
       want && want.cost <= gold
         ? want
@@ -203,12 +241,13 @@ function pickWave(m: Match, owner: Owner, options: UnitDef[], random: () => numb
             owner,
             options.filter((u) => u.cost <= gold),
             random,
+            bias,
           );
     if (!pick) break;
     gold -= pick.cost;
     wave.push(pick);
   }
-  const trip = (u: UnitDef) => (u.air ? AIR_LENGTH : ROAD_LENGTH) / u.speed;
+  const trip = (u: UnitDef) => (u.air ? m.board.airLength : m.board.roadLength) / u.speed;
   return wave.sort((a, b) => trip(b) - trip(a));
 }
 
@@ -262,6 +301,10 @@ export interface Style {
   siege: number;
   /** From this time (seconds) a stalemate is broken by running past the foe's army to its castle. */
   rush: number;
+  /** Multiplies how much the AI wants a unit (by unit id) when it picks a wave: a race's own plan (all air, no thieves). Default 1. */
+  unitWeight?: Record<string, number>;
+  /** The same for towers, by tower id. */
+  towerWeight?: Record<string, number>;
 }
 
 export function styleFor(random: () => number): Style {
@@ -277,13 +320,30 @@ export function styleFor(random: () => number): Style {
   };
 }
 
-/** The AI for player `owner`: call the returned function every step with the match and the step's length. */
-export function createAi(owner: Owner, seed: number): (m: Match, dt: number) => void {
+/**
+ * Named plans for balance runs (`tools/towercraftLab.ts`): each fixes a `Style` instead of drawing one, so a race can be tested
+ * against a rush, a turtle, and so on. They stay inside the ranges `styleFor` draws from. The game itself never uses them.
+ */
+export const STRATEGIES: Record<string, Style> = {
+  /** Small quick waves, late upgrades, few towers, walks past everything early. */
+  rush: { waveEvery: 20, upgradeAfter: [90, 330], towerStart: 1, towerEvery: 120, siege: 40, rush: 300 },
+  /** Towers early and often, a big late wave, castle up early. */
+  turtle: { waveEvery: 50, upgradeAfter: [30, 110], towerStart: 3, towerEvery: 50, siege: 15, rush: 540 },
+  /** Teching: the castle up as soon as it can be, few towers, waves of the best units. */
+  boom: { waveEvery: 40, upgradeAfter: [30, 110], towerStart: 1, towerEvery: 110, siege: 25, rush: 420 },
+  /** Towers over units, the middle of everything else. */
+  fort: { waveEvery: 45, upgradeAfter: [60, 200], towerStart: 3, towerEvery: 55, siege: 15, rush: 480 },
+  /** The middle of every range. */
+  balanced: { waveEvery: 35, upgradeAfter: [60, 220], towerStart: 2, towerEvery: 85, siege: 28, rush: 420 },
+};
+
+/** The AI for player `owner`: call the returned function every step with the match and the step's length. `plan` replaces parts of the seed's style. */
+export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): (m: Match, dt: number) => void {
   // Neighbouring seeds (the two sides of a match) must not give neighbouring styles: scramble the seed first.
   let h = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
   const random = seeded((h ^ (h >>> 16)) >>> 0);
-  const style = styleFor(random);
+  const style: Style = { ...styleFor(random), ...plan };
   let timer = 0;
   let lastWave = 0;
   return (m, dt) => {
@@ -310,7 +370,7 @@ export function createAi(owner: Owner, seed: number): (m: Match, dt: number) => 
     const race2 = killIn <= patience && killIn < diesIn * RACE_MARGIN;
     setOrder(m, owner, 'units', race2 || m.time >= style.rush ? 'bypass' : 'attack');
 
-    const threat = Math.min(Infinity, ...foeUnits(m, owner).map(fromCastle));
+    const threat = Math.min(Infinity, ...foeUnits(m, owner).map((u) => fromCastle(m, u)));
     const alarm = threat < ALARM;
 
     // What the foe fields decides one tower the AI must have (and so maybe a castle level to build it).
@@ -347,6 +407,7 @@ export function createAi(owner: Owner, seed: number): (m: Match, dt: number) => 
         owner,
         race.towers.filter((t) => t.tier <= level && t.cost <= me.gold),
         random,
+        style.towerWeight,
       );
       const cell = def && bestCell(m, owner, def);
       if (def && cell) {
@@ -363,7 +424,7 @@ export function createAi(owner: Owner, seed: number): (m: Match, dt: number) => 
     const rich = me.gold >= (QUEUE_MAX * options.reduce((a, u) => a + u.cost, 0)) / options.length;
     const ready = me.queue.length <= 1 && me.gold >= cheapest * 2 && (rich || m.time - lastWave >= style.waveEvery);
     if (!ready && !alarm) return;
-    const wave = pickWave(m, owner, options, random);
+    const wave = pickWave(m, owner, options, random, style.unitWeight);
     for (const def of wave) trainUnit(m, owner, def.id);
     const bought = wave.length;
     if (bought) lastWave = m.time;

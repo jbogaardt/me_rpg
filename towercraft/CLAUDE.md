@@ -37,26 +37,25 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 ## Code
 
 - **Rules are Pixi-free and deterministic** (`src/sim/`, an ESLint rule enforces it): `sim.ts` is the whole match, `races.ts` the data,
-  `board.ts` the road and castles, `ai.ts` the opponent (seeded, so a match replays). `main.ts` draws a `Match`, owns the camera (drag to
-  pan, wheel or pinch to zoom, so a phone can place towers precisely) and turns taps into commands. `?debug` exposes the match and the
-  cell-to-screen map to playtest scripts. The same rules can later run on a server for online play.
+  `board.ts` the road and castles (a `Board`; a match carries its own, `Match.board`, and the rules read that, never a constant: the game plays `DEFAULT_BOARD`), `ai.ts` the opponent (seeded, so a match replays). `main.ts` draws a `Match`, owns the camera (drag to
+  pan, wheel or pinch to zoom, so a phone can place towers precisely) and turns taps into commands. `?debug` exposes the match to playtest scripts. The same rules can later run on a server.
 - **Art** is Wyrmsun's, copied by `tools/towercraftArt.ts` from a clone of its repo (`public/art/CREDITS.md`): animated unit sheets
-  (CC-BY-SA 3.0, so the title screen credits them and the terms follow the art), CC0 castles, towers and portraits. The field (`lane.png`, an adaptation of the LPC terrain, so also CC-BY-SA) is drawn by Me RPG's
+  (CC-BY-SA 3.0: the title screen credits them), CC0 castles, towers and portraits. The field (`lane.png`, an adaptation of the LPC terrain, so also CC-BY-SA) is drawn by Me RPG's
   map pipeline with `npm run towercraft:board`, which also writes `src/sim/scenery.ts` (the cells woods, lakes and rocks cover: nothing is built there); the road is `src/sim/road.ts`, then re-run it.
-  The field turns half way round onto itself (road, scenery, castles), so neither side has better ground: keep it so.
-- Headless screenshots: use `--use-angle=swiftshader`.
+  The field turns half way round onto itself (road, scenery, castles), so neither side has better ground.
+- Headless screenshots: `--use-angle=swiftshader`.
 
 ## State of play and the plan (StarCraft-style depth, in slices)
 
-Done: the map, castles, queue, upgrades, unit combat, towers, reach, pan and zoom, tower roles, fog of war, orders, a balance pass.
+Done: map, castles, queue, upgrades, combat, towers, reach, pan and zoom, tower roles, fog, orders, a balance pass.
+
+**The lab** (`npm run towercraft:lab -- --help`, `tools/towercraftLab.ts`; not part of the game): headless AI-against-AI matches over maps (`maps.ts`) x races x
+strategies (`STRATEGIES` in `ai.ts`, or `--define`), with win rates and 95% intervals, a CSV row per match (`--out`) and what-if overrides on the race data
+(`--set swarm.units.glider.hp=*1.2`). Sim constants are edited in source; one road only. Use n of 100+.
 
 **Balance** is measured: `npm run towercraft:balance [-- N [seedBase]]` (`tools/towercraftBalance.ts`) plays seeded AI-against-AI matches (N per
-pairing, mirrors included, sides alternating) and prints wins per side, pairing and race, length and what the AI built. Re-run it after changing `races.ts`, `ai.ts` or `sim.ts` constants; a sample of 40
-swings about 8 points, so judge by N of 100 or several seeds. `balance.test.ts` is a guard only. Last measured (fog, symmetric board, N 100 at seed
-bases 7, 8, 9): every match decisive, median about 6 min (Goblin games 4.5, Dwarf and Germanic 7-8); pairings Goblins vs Dwarves 52, 53 and 49% (Goblins),
-Goblins vs Germanic 47, 47 and 41%, Dwarves vs Germanic 49, 42 and 58%; mirrors top side 38-58%. Goblins once lost every game (0% vs Dwarves): their cheap pairs were out-traded per gold and died to a Dwarf fort piecemeal; fixed with
-sturdier threes (numbers), a stronger glider and castle, a slightly dearer Dwarf axefighter and ballista and a lighter Dwarf castle. Levers: pay, castle hp,
-unit hp and count, speed, splash. Thieves are touchy (three a purchase won 95%). **Miss:** Goblin games are short.
+pairing, mirrors included, sides alternating) and prints wins per side, pairing and race, length and what the AI built. Re-run it (or the lab) after changing `races.ts`, `ai.ts` or `sim.ts` constants. `balance.test.ts` is a guard only. Last measured (N 100): all decisive, median about 6 min (Goblins 4.5); pairings 40-58%.
+Goblins once lost every game (0% vs Dwarves): fixed with sturdier threes, a stronger glider and castle, and dearer, lighter Dwarf units and castle. Levers: pay, castle hp, unit hp and count, speed, splash. **Miss:** Goblin games are short.
 
 **The AI** (`ai.ts`; a `Style` drawn from its seed, because two equal armies cancel and never end a match): buys units in **waves** (all its gold at
 once, slowest first; the queue is all the holding there is), **upgrades** on a schedule, adds towers with time **as far forward as they still see road**,
