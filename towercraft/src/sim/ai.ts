@@ -14,7 +14,7 @@
 // vision (castle, towers and living units, as for the player) shows: it plays by the same fog.
 
 import type { Board } from './board';
-import { MAX_LEVEL, type Cost, type TowerDef, type UnitDef } from './races';
+import { MAX_LEVEL, REACH_SCALE, type Cost, type TowerDef, type UnitDef } from './races';
 import {
   UNIT_CAP,
   boostOf,
@@ -112,12 +112,12 @@ export const roleOf = (def: TowerDef): Role =>
 const defensive = (def: TowerDef) => ['attack', 'detect', 'aura', 'bunker'].includes(roleOf(def));
 const isAntiAir = (d: TowerDef) => d.damage > 0 && d.hits !== 'ground';
 /** What a loaded soldier is assumed to reach from a bunker, for choosing where one goes. */
-const BUNKER_REACH = 5.5;
+const BUNKER_REACH = 5.5 * REACH_SCALE;
 
 /** How much a cell is worth for each cell it lies nearer the enemy castle along the road: pushes the front line forward. */
 const PUSH = 0.5;
 /** Road samples (half a cell each) beyond which more coverage adds nothing: any cell beside the road sees enough of it. */
-const ENOUGH = 10;
+const ENOUGH = 10 * REACH_SCALE;
 
 /** How good a cell is for this building: enough road covered by what it shoots or sees, then as far forward as it can go; friends an aura would reach. */
 function score(m: Match, owner: Owner, def: TowerDef, col: number, row: number): number {

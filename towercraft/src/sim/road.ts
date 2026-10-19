@@ -4,10 +4,10 @@
 // others are free meanders (control points, smoothed) that are NOT symmetric: each side has its own ground, and the balance
 // harness (alternating sides) and `board.test.ts` (open ground by each castle) keep that fair.
 
-/** The classic field's size (cells). The other maps are `GROW` times as wide and tall, so there is room between the bends for the buildings. */
-export const COLS = 36;
-export const ROWS = 55;
-export const GROW = 1.45;
+/** The grid the roads were drawn on (cells). Every map is `GROW` times as wide and tall as that, so there is room between the bends for the buildings. */
+export const DRAWN_COLS = 36;
+export const DRAWN_ROWS = 55;
+export const GROW = 2;
 
 export type Pt = readonly [number, number];
 
@@ -47,10 +47,13 @@ const centre = ([c, r]: Pt): [number, number] => [c + 0.5, r + 0.5];
 
 /** Control points drawn for the classic field, spread over the grown one. */
 const grow = (pts: readonly Pt[]): Pt[] => pts.map(([x, y]) => [x * GROW, y * GROW]);
-const [GCOLS, GROWS] = [Math.round(COLS * GROW), Math.round(ROWS * GROW)];
+const [GCOLS, GROWS] = [Math.round(DRAWN_COLS * GROW), Math.round(DRAWN_ROWS * GROW)];
+/** The classic field has an odd number of rows so its middle run sits on a row of cells and the road still turns onto itself. */
+const [COLS, ROWS] = [GCOLS, GROWS + 1];
+export { COLS, ROWS };
 
 /** The classic road: straight runs back and forth across the field (corners in cells); the one symmetric road. */
-const SWITCHBACK: readonly Pt[] = (
+export const DRAWN_SWITCHBACK: readonly Pt[] = (
   [
     [5, 3],
     [5, 6],
@@ -70,6 +73,12 @@ const SWITCHBACK: readonly Pt[] = (
     [30, 51],
   ] as const
 ).map(centre);
+
+/** The classic road at `GROW` times its drawn size, every corner on a cell centre and the whole turning onto itself (the middle run, drawn at row 27, is row `ROWS / 2`). */
+const SWITCHBACK: readonly Pt[] = DRAWN_SWITCHBACK.map(([x, y]) => [
+  x * GROW + 0.5 * (x < DRAWN_COLS / 2 ? 1 : -1),
+  y === DRAWN_ROWS / 2 ? ROWS / 2 : y * GROW + (y < DRAWN_ROWS / 2 ? -0.5 : 1.5),
+]);
 
 export const ROADS: readonly RoadDef[] = [
   {

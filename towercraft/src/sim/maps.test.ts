@@ -42,7 +42,7 @@ describe('the balance maps', () => {
     const long = newMatch(['legion', 'legion'], MAPS.marathon);
     // A cell on the short map's road is off the long map's (and a tower is refused on each for its own reasons).
     const cell = [...MAPS.switchback!.roadCells][0]!;
-    const [col, row] = [cell % 36, Math.floor(cell / 36)];
+    const [col, row] = [cell % short.board.cols, Math.floor(cell / short.board.cols)];
     expect(canBuild(short, 0, short.players[0] && free, col, row)).toBe('road');
     expect(canBuild(long, 0, free, 20, 70)).not.toBe('off-board');
     expect(canBuild(short, 0, free, 20, 70)).toBe('off-board');

@@ -11,6 +11,9 @@
 // Units walk the road (flyers too); they may be cloaked (unseen without a detector), shoot the air, hit several foes at once (`multi`),
 // hit an area (`splash`) or blow themselves up (`suicide`). `art` names a picture in towercraft/public/art (CREDITS.md there); a
 // unit's `sheet` is its animated sheet. Distances are cells, times seconds. A unit's `range` is how far its attack reaches (about 1 = melee).
+// The numbers below are written for fields `REACH_SCALE` times smaller than the ones played on: `RACES` (what the rest of the game
+// reads) is them with every distance and speed stretched by it, so towers cover more road and the fields have room for more buildings
+// without changing how a match balances (see `scaled`).
 
 export type RaceId = 'swarm' | 'titan' | 'legion';
 
@@ -177,7 +180,8 @@ const levels = (base: Cost, tiers: [number, number, number] = [1, 2, 3]) =>
 const MILL_WOOD = 6;
 const QUARRY_STONE = 8;
 
-export const RACES: Record<RaceId, Race> = {
+/** The tables as written: the numbers for a field `REACH_SCALE` times smaller (the unit tests play these on the classic drawn field). */
+export const DRAWN_RACES: Record<RaceId, Race> = {
   swarm: {
     id: 'swarm',
     name: 'Goblins',
@@ -1260,5 +1264,69 @@ export const RACES: Record<RaceId, Race> = {
     ],
   },
 };
+
+/** How much longer every distance (ranges, reaches, sight, aura and detection radii) and speed is than in the tables above. The maps are `GROW` (road.ts) times their drawn size; this keeps a tower's reach in step, a bit under it so there is room to build between. */
+export const REACH_SCALE = 1.5;
+/** Fog is never drawn nearer than this many cells past the longest shot of anything: a tower's, a loaded bunker's or the castle's. */
+const FOG_MARGIN = 1;
+const CASTLE_BODY = 1.2; // sim.ts's CASTLE_RADIUS, which a castle's shot reaches past
+
+const stretch = (cells: number) => cells * REACH_SCALE;
+/** A unit's reach: melee (about 1 cell) stays one cell, only what is beyond it grows. */
+const stretchShot = (range: number) => 1 + (range - 1) * REACH_SCALE;
+
+const scaled = (drawn: Record<RaceId, Race>): Record<RaceId, Race> => {
+  const races = Object.values(drawn);
+  const units = (r: Race) => r.units.map((u) => ({ ...u, range: stretchShot(u.range), speed: stretch(u.speed) }));
+  // The longest shot anything makes (a bunker's soldier shoots from it with the bunker's bonus), so nothing can shoot what fog hides.
+  const longest = Math.max(
+    ...races.flatMap((r) => {
+      const garrison = Math.max(
+        ...units(r)
+          .filter((u) => u.garrison)
+          .map((u) => u.range),
+      );
+      return [
+        stretch(r.castle.range) + CASTLE_BODY,
+        ...r.towers.map((t) => stretch(t.range) + (t.bunker ? stretch(t.bunker.rangeBonus) + garrison : 0)),
+      ];
+    }),
+  );
+  const fog = (sight: number) => Math.max(stretch(sight), longest + FOG_MARGIN);
+  const out = {} as Record<RaceId, Race>;
+  for (const race of races)
+    out[race.id] = {
+      ...race,
+      castle: {
+        ...race.castle,
+        reach: race.castle.reach.map(stretch),
+        range: stretch(race.castle.range),
+        detect: stretch(race.castle.detect),
+        sight: fog(race.castle.sight),
+      },
+      units: units(race).map((u) => ({ ...u, sight: fog(u.sight) })),
+      towers: race.towers.map((t) => ({
+        ...t,
+        range: stretch(t.range),
+        reach: stretch(t.reach),
+        sight: fog(t.sight),
+        ...(t.detect === undefined ? {} : { detect: stretch(t.detect) }),
+        ...(t.aura ? { aura: { ...t.aura, radius: stretch(t.aura.radius) } } : {}),
+        ...(t.bunker ? { bunker: { ...t.bunker, rangeBonus: stretch(t.bunker.rangeBonus) } } : {}),
+      })),
+    };
+  return out;
+};
+
+export const RACES: Record<RaceId, Race> = scaled(DRAWN_RACES);
+
+/** The least anything sees (cells): just past the longest shot there is, so a tower can never fire from fog at what stands in its sight. */
+export const FOG_EDGE = Math.min(
+  ...Object.values(RACES).flatMap((r) => [
+    r.castle.sight,
+    ...r.towers.map((t) => t.sight),
+    ...r.units.map((u) => u.sight),
+  ]),
+);
 
 export const RACE_IDS = Object.keys(RACES) as RaceId[];

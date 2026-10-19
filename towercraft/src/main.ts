@@ -12,6 +12,7 @@ import { BOARDS, BOARD_IDS, DEFAULT_BOARD_ID } from './sim/board';
 import {
   MAX_LEVEL,
   RACES,
+  REACH_SCALE,
   RACE_IDS,
   type Cost,
   type RaceId,
@@ -810,7 +811,7 @@ void (async () => {
     } else if (def.detect) {
       const sweep = new Graphics()
         .moveTo(0, 0)
-        .arc(0, 0, Math.min(def.detect, 6) * CELL, -0.32, 0.32)
+        .arc(0, 0, Math.min(def.detect, 6 * REACH_SCALE) * CELL, -0.32, 0.32)
         .closePath()
         .fill({ color: 0xb48cff, alpha: 0.2 });
       fx.addChild(sweep);

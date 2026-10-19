@@ -15,14 +15,7 @@ import { Zone, type Rect } from './map/zone';
 import type { GroundName } from './map/catalog';
 import type { TerrainName } from './map/terrain';
 import { BOARDS } from '../towercraft/src/sim/board';
-import {
-  COLS as CLASSIC_COLS,
-  GROW,
-  ROADS,
-  ROWS as CLASSIC_ROWS,
-  type Pt,
-  type RoadDef,
-} from '../towercraft/src/sim/road';
+import { GROW, ROADS, type Pt, type RoadDef } from '../towercraft/src/sim/road';
 
 /** How one map looks: Me RPG's grounds, terrains and kits for it. */
 interface Theme {
@@ -97,7 +90,7 @@ const turnRect = (r: Rect, cols: number, rows: number): Rect => ({
   h: r.h,
 });
 /** A cell turned half way round the field. */
-const turnCell = (c: number, r: number): [number, number] => [CLASSIC_COLS - 1 - c, CLASSIC_ROWS - 1 - r];
+const turnCell = (c: number, r: number, cols: number, rows: number): [number, number] => [cols - 1 - c, rows - 1 - r];
 
 /** An oval as rows of cells that read the same turned upside down (so its turned twin is the same shape). */
 function ovalRows(cx: number, cy: number, hw: number, hh: number): Rect[] {
@@ -124,7 +117,7 @@ export function fieldZone(def: RoadDef): Zone {
   if (theme.cover) z.paint(theme.cover, whole);
   // The classic road is turned half way round onto itself, so its scenery is too; every other map is free of that.
   const twin = def.id === 'greenwood';
-  const sites = (c: number, r: number): [number, number][] => (twin ? [[c, r], turnCell(c, r)] : [[c, r]]);
+  const sites = (c: number, r: number): [number, number][] => (twin ? [[c, r], turnCell(c, r, COLS, ROWS)] : [[c, r]]);
   const reach = twin ? ROWS / 2 : ROWS - 2; // rows (from the top) things are placed in; a twin is placed once and turned
   const rand = lcg(def.id.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7));
 
@@ -142,7 +135,7 @@ export function fieldZone(def: RoadDef): Zone {
 
   // Patches of other earth (ground only: they never block), then the road over them.
   for (const terrain of theme.patches ?? [])
-    for (let placed = 0, tries = 0; placed < (twin ? 4 : Math.round(7 * GROW * GROW)) && tries < 400; tries++) {
+    for (let placed = 0, tries = 0; placed < Math.round((twin ? 4 : 7) * GROW * GROW) && tries < 400; tries++) {
       const [cx, cy] = [3 + Math.floor(rand() * (COLS - 6)), 3 + Math.floor(rand() * (reach - 4))];
       if (roadDist(cx, cy) < 5) continue;
       for (const [x, y] of sites(cx, cy))
@@ -180,7 +173,7 @@ export function fieldZone(def: RoadDef): Zone {
   spots.sort((a, b) => b[2] - a[2]);
   const apart = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]) >= (twin ? 10 : 17);
   for (const [col, row] of spots) {
-    if (lakes.length >= (twin ? 3 : 4)) break;
+    if (lakes.length >= 8) break;
     const mine: [number, number] = [col, row];
     if (sites(...mine).every((a) => lakes.every((l) => sites(...l).every((b) => apart(a, b))))) lakes.push(mine);
   }
@@ -217,7 +210,7 @@ export function fieldZone(def: RoadDef): Zone {
       placed++;
     }
   };
-  const more = twin ? 1 : 2 * GROW * GROW; // a free map has the whole (grown) field to fill, a turned one half
+  const more = (twin ? 1 : 2) * GROW * GROW; // a free map has the whole (grown) field to fill, a turned one half
   scatter(theme.trees, 14 * more, 3.2, 11);
   scatter(theme.bushes, 18 * more, 2.6, 9);
   scatter(theme.rocks, 14 * more, 2.6, 9);
@@ -269,7 +262,7 @@ if (process.argv[1] === import.meta.filename) {
     for (const i of data.collision) {
       blocked.add(i);
       if (def.id !== 'greenwood') continue;
-      const [c, r] = turnCell(i % def.cols, Math.floor(i / def.cols));
+      const [c, r] = turnCell(i % def.cols, Math.floor(i / def.cols), def.cols, def.rows);
       blocked.add(r * def.cols + c);
     }
     // A bush at the road's edge may spill onto it in the picture: the road wins (the sim asks about the road first anyway).

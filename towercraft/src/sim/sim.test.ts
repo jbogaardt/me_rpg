@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createAi } from './ai';
-import { CASTLES, COLS, ROAD_CELLS, ROAD_LENGTH, ROWS, SCENERY_CELLS, cellIndex, pointAt } from './board';
-import { DEFAULT_BOARD } from './board';
-import { RACE_IDS, RACES, type RaceId } from './races';
+import { RACE_IDS, type RaceId } from './races';
 import {
   PAY_EVERY,
   START_RES,
@@ -16,7 +14,6 @@ import {
   incomeOf,
   loadBunker,
   maxPurchases,
-  newMatch,
   powerAt,
   setFocus,
   setOrder,
@@ -24,11 +21,32 @@ import {
   step,
   trainUnit,
   trainUnits,
-  unitPos,
   upgradeCastle,
   visibleTo,
 } from './sim';
-import { damageTaken, dummy, put, quiet, run, sNear, spawn, towerDef, unitDef } from './testkit';
+import {
+  CASTLES,
+  COLS,
+  DEFAULT_BOARD,
+  RACES,
+  ROAD_CELLS,
+  ROAD_LENGTH,
+  ROWS,
+  SCENERY_CELLS,
+  cellIndex,
+  damageTaken,
+  dummy,
+  newMatch,
+  pointAt,
+  put,
+  quiet,
+  run,
+  sNear,
+  spawn,
+  towerDef,
+  unitDef,
+  unitPos,
+} from './testkit';
 
 /** A free cell near player 0's castle (inside its starting reach). */
 const NEAR: [number, number] = [8, 4];

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createAi, foeCastle, foeTowers, foeUnits } from './ai';
-import { CASTLES, ROAD_CELLS, ROAD_LENGTH, SCENERY_CELLS, cellIndex } from './board';
-import { RACE_IDS, RACES, type RaceId, type TowerDef } from './races';
+import { FOG_EDGE, RACE_IDS, RACES as GAME_RACES, type RaceId, type TowerDef } from './races';
+import { CASTLES, RACES, ROAD_CELLS, ROAD_LENGTH, SCENERY_CELLS, cellIndex, newMatch, unitPos } from './testkit';
 import {
   CASTLE_RADIUS,
   canBuild,
@@ -9,9 +9,7 @@ import {
   inBuildArea,
   isCastleSeen,
   isSeen,
-  newMatch,
   step,
-  unitPos,
   visibleTo,
   visionOf,
   type Match,
@@ -53,7 +51,7 @@ const MID = ROAD_LENGTH / 2;
 describe('the sight in the data', () => {
   it('lets everything see at least as far as it attacks, detects or heals, and a castle at least its first reach', () => {
     for (const id of RACE_IDS) {
-      const race = RACES[id];
+      const race = GAME_RACES[id];
       expect(race.castle.sight).toBeGreaterThanOrEqual(race.castle.reach[0]!);
       expect(race.castle.sight).toBeGreaterThanOrEqual(race.castle.range + CASTLE_RADIUS);
       expect(race.castle.sight).toBeGreaterThanOrEqual(race.castle.detect + CASTLE_RADIUS);
@@ -64,6 +62,27 @@ describe('the sight in the data', () => {
       }
       // Flyers see far: they look down on the whole road ahead.
       for (const u of race.units.filter((x) => x.air)) expect(u.sight, `${id} ${u.id}`).toBeGreaterThanOrEqual(7);
+    }
+  });
+});
+
+describe('the fog edge', () => {
+  it('keeps the fog past the longest shot of any tower, loaded bunker or castle, for everything that sees', () => {
+    const shots = RACE_IDS.flatMap((id) => {
+      const race = GAME_RACES[id];
+      const soldier = Math.max(...race.units.filter((u) => u.garrison).map((u) => u.range));
+      return [
+        race.castle.range + CASTLE_RADIUS,
+        ...race.towers.map((t) => t.range + (t.bunker ? t.bunker.rangeBonus + soldier : 0)),
+      ];
+    });
+    const longest = Math.max(...shots);
+    expect(FOG_EDGE).toBeGreaterThan(longest);
+    for (const id of RACE_IDS) {
+      const race = GAME_RACES[id];
+      expect(race.castle.sight, `${id} castle`).toBeGreaterThanOrEqual(FOG_EDGE);
+      for (const t of race.towers) expect(t.sight, `${id} ${t.id}`).toBeGreaterThanOrEqual(FOG_EDGE);
+      for (const u of race.units) expect(u.sight, `${id} ${u.id}`).toBeGreaterThanOrEqual(FOG_EDGE);
     }
   });
 });

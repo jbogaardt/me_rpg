@@ -14,7 +14,18 @@
 // loses, but razing buildings cuts the foe's income, units and upgrades.
 
 import { CASTLE_CLEAR, DEFAULT_BOARD, type Board } from './board';
-import { MAX_LEVEL, RACES, type Cost, type RaceId, type TowerDef, type UnitDef, type UpgradeDef, price } from './races';
+import {
+  MAX_LEVEL,
+  RACES,
+  type Race,
+  REACH_SCALE,
+  type Cost,
+  type RaceId,
+  type TowerDef,
+  type UnitDef,
+  type UpgradeDef,
+  price,
+} from './races';
 
 export const START_RES: Cost = price(120, 40);
 export const PAY_EVERY = 5;
@@ -25,8 +36,8 @@ export const UNIT_CAP = 120;
 /** How far (cells) a castle's body reaches: attackers hit its edge, not its centre. */
 export const CASTLE_RADIUS = 1.2;
 const TOWER_RADIUS = 0.5;
-/** The farthest (cells, square to the road) a unit will step off it to take a tower down. */
-export const DETOUR_MAX = 9;
+/** The farthest (cells, square to the road) a unit will step off it to take a tower down, in the game's own races' scale. */
+export const DETOUR_MAX = 9 * REACH_SCALE;
 
 export type Owner = 0 | 1;
 
@@ -119,6 +130,10 @@ export interface Death {
 export interface Match {
   /** The map: the road, the castles, the scenery. */
   board: Board;
+  /** The races' numbers it is played by (the game's `RACES`; a test may play the written-down ones on a small field). */
+  races: Record<RaceId, Race>;
+  /** The farthest (cells, square to the road) a unit will step off it to take a tower down. */
+  detourMax: number;
   time: number;
   payTimer: number;
   players: [Player, Player];
@@ -133,9 +148,13 @@ export interface Match {
   winner: -1 | 0 | 1 | 2;
 }
 
-export function newMatch(races: [RaceId, RaceId], board: Board = DEFAULT_BOARD): Match {
+export function newMatch(
+  races: [RaceId, RaceId],
+  board: Board = DEFAULT_BOARD,
+  rules: { races: Record<RaceId, Race>; detourMax: number } = { races: RACES, detourMax: DETOUR_MAX },
+): Match {
   const player = (race: RaceId): Player => {
-    const hp = RACES[race].castle.hp;
+    const hp = rules.races[race].castle.hp;
     return {
       race,
       wood: START_RES.wood,
@@ -147,6 +166,7 @@ export function newMatch(races: [RaceId, RaceId], board: Board = DEFAULT_BOARD):
   };
   return {
     board,
+    ...rules,
     time: 0,
     payTimer: 0,
     players: [player(races[0]), player(races[1])],
@@ -161,7 +181,7 @@ export function newMatch(races: [RaceId, RaceId], board: Board = DEFAULT_BOARD):
 }
 
 export const enemy = (o: Owner): Owner => (o === 0 ? 1 : 0);
-export const raceOf = (m: Match, o: Owner) => RACES[m.players[o].race];
+export const raceOf = (m: Match, o: Owner) => m.races[m.players[o].race];
 
 /** Where a unit is, in cells: along the road from its own castle (a flyer too), and off to the side when it has stepped off the road. */
 export function unitPos(u: Pick<Unit, 'owner' | 's' | 'off'>, board: Board = DEFAULT_BOARD): [number, number] {
@@ -420,10 +440,10 @@ export function setOrder(m: Match, owner: Owner, what: keyof Orders, to: Orders[
   m.players[owner].orders[what] = to;
 }
 
-/** Can a unit of this kind take this tower down: from the road with its range, or by stepping off it (at most `DETOUR_MAX` cells)? */
+/** Can a unit of this kind take this tower down: from the road with its range, or by stepping off it (at most `Match.detourMax` cells)? */
 export function canTarget(m: Match, def: Pick<UnitDef, 'range'>, t: Tower): boolean {
   const foot = m.board.footOf(t.col, t.row);
-  return !!foot && (foot.d - TOWER_RADIUS <= def.range || foot.d <= DETOUR_MAX);
+  return !!foot && (foot.d - TOWER_RADIUS <= def.range || foot.d <= m.detourMax);
 }
 
 /**
@@ -643,7 +663,7 @@ function detourFor(m: Match, u: Unit, vision: Vision, nextS: number, only?: numb
   for (const t of m.towers) {
     if (t.owner === u.owner || t.hp <= 0 || (only !== undefined && t.id !== only)) continue;
     const foot = m.board.footOf(t.col, t.row);
-    if (!foot || foot.d > DETOUR_MAX || foot.d - TOWER_RADIUS <= u.def.range) continue;
+    if (!foot || foot.d > m.detourMax || foot.d - TOWER_RADIUS <= u.def.range) continue;
     const s = u.owner === 0 ? foot.s : m.board.roadLength - foot.s;
     if (s < u.s - 1e-6 || s > nextS + 1e-6 || foot.d >= bestD || !isSeen(m, u.owner, t, vision)) continue;
     best = t;

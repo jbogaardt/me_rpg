@@ -4,6 +4,7 @@
 // Scenery is empty on these maps (no picture, nothing to avoid): only the road and the castles shape the match.
 
 import { DEFAULT_BOARD, makeBoard, type Board } from './board';
+import { GROW } from './road';
 
 type Waypoints = readonly (readonly [number, number])[];
 
@@ -16,46 +17,50 @@ export function symmetric(cols: number, rows: number, half: Waypoints): Waypoint
 const board = (cols: number, rows: number, waypoints: Waypoints): Board =>
   makeBoard({ cols, rows, waypoints, scenery: [] });
 
+/** A road drawn on the small grid (`cols` x `rows`, corners on cell centres) as `GROW` times that, like the game's maps; a turned half stays exactly turned. */
+const grown = (cols: number, rows: number, half: Waypoints, whole = true): Board => {
+  const [c, r] = [cols * GROW - 1, rows * GROW - 1];
+  const bigHalf = half.map(([x, y]) => [x * GROW, y * GROW] as const);
+  return board(c, r, whole ? symmetric(c, r, bigHalf) : bigHalf);
+};
+
 export const MAPS: Record<string, Board> = {
   /** The game's own map: a long winding road over a wooded field. */
   serpent: DEFAULT_BOARD,
   /** The same road with no woods or lakes, to see what the scenery costs. */
   bare: makeBoard({ ...DEFAULT_BOARD, scenery: [] }),
   /** A short road of three runs: fast games, the castles close, little room for towers. */
-  switchback: board(
-    36,
-    31,
-    symmetric(36, 31, [
-      [5, 3],
-      [5, 6],
-      [30, 6],
-      [30, 15],
-    ]),
-  ),
-  /** A very long road of six runs: slow games, time for towers and the tier 3 units. */
-  marathon: board(
-    36,
-    79,
-    symmetric(36, 79, [
-      [5, 3],
-      [5, 6],
-      [30, 6],
-      [30, 13],
-      [5, 13],
-      [5, 20],
-      [30, 20],
-      [30, 27],
-      [5, 27],
-      [5, 34],
-      [30, 34],
-      [30, 39],
-    ]),
-  ),
-  /** One straight road, castle to castle: air and ground arrive together, towers cover the whole of it. */
-  straight: board(21, 51, [
-    [10, 3],
-    [10, 47],
+  switchback: grown(36, 31, [
+    [5, 3],
+    [5, 6],
+    [30, 6],
+    [30, 15],
   ]),
+  /** A very long road of six runs: slow games, time for towers and the tier 3 units. */
+  marathon: grown(36, 79, [
+    [5, 3],
+    [5, 6],
+    [30, 6],
+    [30, 13],
+    [5, 13],
+    [5, 20],
+    [30, 20],
+    [30, 27],
+    [5, 27],
+    [5, 34],
+    [30, 34],
+    [30, 39],
+  ]),
+  /** One straight road, castle to castle: air and ground arrive together, towers cover the whole of it. */
+  straight: grown(
+    21,
+    51,
+    [
+      [10, 3],
+      [10, 47],
+    ],
+    false,
+  ),
 };
 
 export const MAP_IDS = Object.keys(MAPS);

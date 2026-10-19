@@ -1,8 +1,41 @@
 // Helpers the unit tests share: put things on the board without paying or the build rules, and let time pass.
 
-import { ROAD_LENGTH, pointAt } from './board';
-import { RACES, type RaceId } from './races';
-import { step, type Match, type Owner, type Tower, type Unit } from './sim';
+import { makeBoard } from './board';
+import { DRAWN_RACES, type RaceId } from './races';
+import { DRAWN_COLS, DRAWN_ROWS, DRAWN_SWITCHBACK } from './road';
+import {
+  newMatch as newGameMatch,
+  step,
+  unitPos as gameUnitPos,
+  type Match,
+  type Owner,
+  type Tower,
+  type Unit,
+} from './sim';
+
+// The unit tests play the races as they are written down (`DRAWN_RACES`) on the field they were drawn for: the classic switchback at
+// 36 x 55 cells with no scenery. The game itself plays both stretched (`REACH_SCALE`, `GROW`), which the tests of the data check.
+export const RACES = DRAWN_RACES;
+export const CLASSIC = makeBoard({
+  id: 'classic',
+  cols: DRAWN_COLS,
+  rows: DRAWN_ROWS,
+  waypoints: [],
+  points: DRAWN_SWITCHBACK,
+  halfWidth: 1,
+  scenery: [],
+});
+export const [COLS, ROWS] = [CLASSIC.cols, CLASSIC.rows];
+export const { roadLength: ROAD_LENGTH, pointAt, castles: CASTLES, cellIndex } = CLASSIC;
+export const ROAD_CELLS = CLASSIC.roadCells;
+export const SCENERY_CELLS = CLASSIC.sceneryCells;
+export const DEFAULT_BOARD = CLASSIC;
+/** A match on the classic field with the races as written. */
+export const newMatch = (races: [RaceId, RaceId], board = CLASSIC): Match =>
+  newGameMatch(races, board, { races: DRAWN_RACES, detourMax: 9 });
+
+/** Where a unit is on the classic field. */
+export const unitPos = (u: Parameters<typeof gameUnitPos>[0]) => gameUnitPos(u, CLASSIC);
 
 export const unitDef = (race: RaceId, id: string) => RACES[race].units.find((u) => u.id === id)!;
 export const towerDef = (race: RaceId, id: string) => RACES[race].towers.find((t) => t.id === id)!;
