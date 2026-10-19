@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Towercraft</title>
     <link rel="icon" href="data:," />
     <style>
@@ -175,23 +175,29 @@
       /* The title screen: a map to fight on, then a race to fight with. */
       .overlay { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(8, 10, 14, 0.9); text-align: center; padding: 10px; overflow-y: auto; }
       .overlay[hidden] { display: none; }
+      .overlay { padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); box-sizing: border-box; min-height: 100dvh; }
+      #loading { z-index: 6; background: rgba(8, 10, 14, 0.55); }
+      .loadbar { width: min(320px, 70vw); height: 14px; border-radius: 7px; background: rgba(0, 0, 0, 0.5); overflow: hidden; }
+      .loadbar i { display: block; height: 100%; width: 4%; background: var(--gold); border-radius: 7px; transition: width 0.2s; }
+      /* The game's own controls are hidden until a match begins. */
+      body:not(.playing) #top, body:not(.playing) #cam, body:not(.playing) #dock, body:not(.playing) #hint, body:not(.playing) #card { display: none; }
       #menu > div { width: min(900px, 100%); padding: 6px 10px 12px; }
       .overlay h1 { color: var(--gold); font-size: 34px; letter-spacing: 0.06em; text-shadow: 0 2px 3px #000; }
       .overlay h2 { color: var(--gold); font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; margin: 14px 0 8px; }
       .overlay p { margin: 4px 0 8px; color: var(--dim); }
-      .maps, .races { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-      .map { width: 112px; padding: 0; background: none; border: 0; text-align: center; color: var(--dim); font-size: 13px; }
-      .map .shot { display: block; position: relative; width: 112px; height: 132px; border: 3px solid #4a3a22; border-radius: 5px; background-size: 100% auto; background-position: center 30%; box-shadow: 0 3px 8px rgba(0,0,0,.6); }
-      .map b { display: block; margin-top: 4px; font: 700 12px var(--title); color: var(--text); }
+      .maps, .races { display: flex; gap: 10px; justify-content: center; }
+      .map { flex: 0 1 112px; min-width: 0; padding: 0; background: none; border: 0; text-align: center; }
+      .map .shot { display: block; width: 100%; aspect-ratio: 36 / 52; border: 3px solid #4a3a22; border-radius: 5px; background-size: cover; background-position: center; box-shadow: 0 3px 8px rgba(0,0,0,.6); box-sizing: border-box; }
       .map:hover .shot { border-color: var(--gold-dim); }
       .map.on .shot { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(242, 211, 138, 0.5), 0 3px 10px rgba(0, 0, 0, 0.7); }
       .map.on b { color: var(--gold); }
-      .race { width: 150px; padding: 12px 10px 8px; text-align: center; border-image: url('./ui/frame-thin.png') 10 stretch; border-width: 10px; border-style: solid; border-color: transparent;
+      .race { flex: 0 1 150px; min-width: 0; padding: 12px 10px 8px; text-align: center; border-image: url('./ui/frame-thin.png') 10 stretch; border-width: 10px; border-style: solid; border-color: transparent;
         background: url('./ui/paper.jpg') center / 256px; color: var(--ink); display: grid; justify-items: center; gap: 6px; position: relative; }
       .race::before { content: ''; position: absolute; left: 0; right: 0; top: -2px; height: 5px; background: var(--c); border-radius: 3px; }
       .race:hover { filter: brightness(1.08); }
       .race b { font: 700 18px var(--title); }
-      .race .face { width: 96px; height: 80px; display: grid; place-items: center; border-radius: 8px; background: rgba(51, 35, 15, 0.16); border: 1px solid var(--ink-soft); }
+      .race .face { width: 100%; max-width: 96px; aspect-ratio: 6 / 5; overflow: hidden; display: grid; place-items: center; border-radius: 8px; background: rgba(51, 35, 15, 0.16); border: 1px solid var(--ink-soft); }
+      .race .face img { max-width: 100%; height: auto; }
       #menu .races { margin-top: 16px; } #menu #credits-btn { margin-top: 18px; }
       #credits h2 { margin-top: 0; } #credits p { max-width: 560px; margin: 8px auto 16px; font-size: 14px; } #credits a { color: var(--gold); }
       .thumb { flex: none; display: block; border-radius: 3px; background-repeat: no-repeat; background-position: 0 0; }
@@ -208,8 +214,9 @@
         #hint { top: 44px; font-size: 14px; padding: 0 8px; }
         .up { width: 124px; height: 58px; padding: 5px 12px 7px; } .shelf { min-height: 56px; }
         #top { left: 54px; } #top .r { font-size: 17px; } #top .r::before { width: 22px; height: 22px; }
-        .map { width: 92px; } .map .shot { width: 92px; height: 112px; }
-        .race { width: 120px; }
+        #menu > .panel { border-width: 10px; border-image: url('./ui/frame-thin.png') 10 stretch; padding: 0 2px 6px; }
+        .maps, .races { gap: 6px; } .race { padding: 10px 4px 6px; border-width: 8px; } .race b { font-size: 14px; }
+        .overlay h2 { font-size: 12px; margin: 12px 0 6px; } #menu #credits-btn { margin-top: 14px; }
         .overlay h1 { font-size: 26px; }
       }
     </style>
@@ -241,10 +248,15 @@
     <div class="overlay" id="menu">
       <div class="panel wood">
         <h1>Towercraft</h1>
+        <h2>Vote on map</h2>
         <div class="maps" id="maps"></div>
+        <h2>Choose your race</h2>
         <div class="races" id="races"></div>
         <button class="plank" id="credits-btn">Credits</button>
       </div>
+    </div>
+    <div class="overlay" id="loading" hidden>
+      <div class="panel thin wood"><div class="loadbar"><i id="loading-bar"></i></div></div>
     </div>
     <div class="overlay" id="credits" hidden>
       <div class="panel wood">

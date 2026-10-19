@@ -147,24 +147,62 @@ void (async () => {
     new Texture({ source: tex.source, frame: new Rectangle(x, y, w, h) });
   /** The first, finished frame of a building sheet: a square as wide as the sheet (64, 96 or 128 px). */
   const squareFrame = (tex: Texture) => cut(tex, 0, 0, tex.width, tex.width);
-  const names = (pick: (r: (typeof RACES)[RaceId]) => string[]) => [
-    ...new Set(RACE_IDS.flatMap((r) => pick(RACES[r]))),
-  ];
-  const towerTextures = new Map<string, Texture>(
+  // Nothing is loaded up front: the title screen needs only its own small pictures. The art of the match is fetched while the player
+  // chooses (`prefetch`), and what is still missing when a race is picked is awaited behind a progress bar (`ensureAssets`).
+  const towerTextures = new Map<string, Texture>();
+  const castleTextures = new Map<string, Texture>();
+  const sheetTextures = new Map<string, Texture>();
+  const fieldTextures = new Map<BoardId, Texture>();
+  const jobs = new Map<string, Promise<void>>();
+  const once = (key: string, work: () => Promise<void>) => {
+    let job = jobs.get(key);
+    if (!job) jobs.set(key, (job = work()));
+    return job;
+  };
+  const getTower = (n: string) =>
+    once(`t:${n}`, async () => void towerTextures.set(n, squareFrame(await load(`art/${n}.png`))));
+  const getCastle = (n: string) =>
+    once(`c:${n}`, async () => void castleTextures.set(n, squareFrame(await load(`art/${n}.png`))));
+  const getSheet = (n: string) =>
+    once(`s:${n}`, async () => void sheetTextures.set(n, await load(`art/units/${n}.png`)));
+  /** The fields (art/maps/<id>.png) are drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts). */
+  const getField = (id: BoardId) =>
+    once(`f:${id}`, async () => void fieldTextures.set(id, await load(`art/maps/${id}.png`)));
+  /** What one race needs on the field: its buildings, castle and unit sheets. */
+  const raceJobs = (race: RaceId) =>
+    [...new Set(RACES[race].towers.map((t) => t.art))]
+      .map((n) => () => getTower(n))
+      .concat(
+        [() => getCastle(RACES[race].castle.art)],
+        [...new Set(RACES[race].units.map((u) => u.sheet))].map((n) => () => getSheet(n)),
+      );
+  /** Wait for everything a match of these races on this map needs (calling `progress` from 0 to 1 as it arrives). */
+  async function ensureAssets(races: RaceId[], map: BoardId, progress?: (done: number) => void) {
+    const all = [() => getField(map), ...[...new Set(races)].flatMap(raceJobs)];
+    let n = 0;
     await Promise.all(
-      names((r) => r.towers.map((t) => t.art)).map(async (n) => [n, squareFrame(await load(`art/${n}.png`))] as const),
-    ),
-  );
-  const castleTextures = new Map<string, Texture>(
-    await Promise.all(
-      names((r) => [r.castle.art]).map(async (n) => [n, squareFrame(await load(`art/${n}.png`))] as const),
-    ),
-  );
-  const sheetTextures = new Map<string, Texture>(
-    await Promise.all(
-      names((r) => r.units.map((u) => u.sheet)).map(async (n) => [n, await load(`art/units/${n}.png`)] as const),
-    ),
-  );
+      all.map((j) =>
+        j().then(() => {
+          progress?.(++n / all.length);
+        }),
+      ),
+    );
+  }
+  /** While the player looks at the title screen: fetch the rest, the chosen map first, a few pictures at a time. */
+  async function prefetch() {
+    const queue = [
+      () => getField(chosenMap),
+      ...RACE_IDS.flatMap(raceJobs),
+      ...BOARD_IDS.map((id) => () => getField(id)),
+    ];
+    const lane = async () => {
+      for (let j = queue.shift(); j; j = queue.shift()) {
+        await j().catch(() => undefined);
+        await new Promise((r) => window.setTimeout(r, 30)); // leave room for the page's own work
+      }
+    };
+    await Promise.all([lane(), lane(), lane()]);
+  }
   const frames = new Map<string, Texture>();
   /** One frame of a unit sheet (cached): row, and column = direction. */
   const unitFrame = (sheet: string, kind: SheetKind, row: number, col: number) => {
@@ -174,14 +212,9 @@ void (async () => {
     if (!t) frames.set(key, (t = cut(sheetTextures.get(sheet)!, col * size, row * size, size, size)));
     return t;
   };
-  // The fields (art/maps/<id>.png) are drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts).
-  const fieldTextures = new Map<BoardId, Texture>(
-    await Promise.all(BOARD_IDS.map(async (id) => [id, await load(`art/maps/${id}.png`)] as const)),
-  );
-
   // --- The scene -----------------------------------------------------------------------------------------------------
   const world = new Container();
-  const field = new Sprite(fieldTextures.get('frostlands'));
+  const field = new Sprite();
   // The fog: a canvas of shade (dark where nothing of yours sees, soft round pools cut out for every castle, tower and unit)
   // and one of tint (a cool wash where only a tower, the castle or a unit sees but you may not build), scaled up smoothly.
   const makeFogLayer = (cols: number, rows: number) => {
@@ -1911,15 +1944,32 @@ void (async () => {
     if ($('hint').textContent !== text) $('hint').textContent = text;
   }
 
-  function start(race: RaceId, chosen?: RaceId, map: BoardId = chosenMap) {
+  let loading = false;
+  /** Pick the rival, wait for the art the match needs (a progress bar over the title screen), then begin. */
+  async function start(race: RaceId, chosen?: RaceId, map: BoardId = chosenMap) {
+    if (loading) return;
+    loading = true;
     const rivals = RACE_IDS.filter((r) => r !== race);
     const rival = chosen ?? rivals[Math.floor(Math.random() * rivals.length)]!;
+    const bar = $('loading-bar');
+    bar.style.width = '4%';
+    $('loading').hidden = false;
+    try {
+      await ensureAssets([race, rival], map, (done) => (bar.style.width = `${Math.max(4, done * 100)}%`));
+    } finally {
+      $('loading').hidden = true;
+      loading = false;
+    }
+    begin(race, rival, map);
+  }
+  function begin(race: RaceId, rival: RaceId, map: BoardId) {
     match = newMatch([race, rival], BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
     applyBoard();
     ai = createAi(1, (Math.random() * 2 ** 31) | 0);
     selected = undefined;
     acc = 0;
     started = true;
+    document.body.classList.add('playing');
     for (const c of [...towerSprites.values(), ...unitSprites.values()]) c.destroy({ children: true });
     for (const f of floaters) f.text.destroy();
     floaters.length = 0;
@@ -1955,20 +2005,13 @@ void (async () => {
       /* no storage: the choice lasts this visit */
     }
     for (const [k, b] of mapButtons) b.classList.toggle('on', k === id);
-    if (!started) {
-      // Show the map behind the title screen.
-      match = newMatch(['legion', 'swarm'], BOARDS[id]);
-      applyBoard();
-      buildCastles();
-      clampCamera();
-      focus(match.board.cols / 2, match.board.rows / 2, minZoom());
-    }
+    void getField(id); // its picture, in case the player is quick
   };
   for (const id of BOARD_IDS) {
     const b = document.createElement('button');
     b.className = 'map';
     b.title = BOARDS[id]!.name;
-    b.innerHTML = `<span class="shot" style="background-image:url(art/maps/${id}.png)"></span>`;
+    b.innerHTML = `<span class="shot" style="background-image:url(art/maps/thumbs/${id}.png)"></span>`;
     b.onclick = () => pickMap(id);
     $('maps').append(b);
     mapButtons.set(id, b);
@@ -1981,13 +2024,14 @@ void (async () => {
     b.className = 'race';
     b.style.setProperty('--c', '#' + race.color.toString(16).padStart(6, '0'));
     b.innerHTML = `<span class="face">${unitThumb(race.units[0]!, 72)}</span><b>${race.name}</b>`;
-    b.onclick = () => start(id);
+    b.onclick = () => void start(id);
     $('races').append(b);
   }
   $('credits-btn').onclick = () => ($('credits').hidden = false);
   $('credits-x').onclick = () => ($('credits').hidden = true);
   $('again').onclick = () => {
     started = false;
+    document.body.classList.remove('playing');
     $('end').hidden = true;
     $('menu').hidden = false;
   };
@@ -2009,12 +2053,9 @@ void (async () => {
       },
     });
 
-  buildCastles();
-  makeControls('legion');
-  refresh();
   clampCamera();
-  focus(match.board.cols / 2, match.board.rows / 2, minZoom());
   resources();
+  void prefetch(); // the rest of the art, while the player chooses
 
   app.ticker.add((ticker) => {
     const dt = ticker.deltaMS / 1000;
@@ -2065,6 +2106,6 @@ void (async () => {
       world.y += v * go;
       clampCamera();
     }
-    drawLive(dt);
+    if (started) drawLive(dt);
   });
 })();

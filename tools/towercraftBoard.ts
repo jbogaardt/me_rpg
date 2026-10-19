@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DEAD_TREES, DRY_TREES, FROST_TREES, SWAMP_TREES, TREES, type PrefabName } from './map/catalog';
-import { ROOT, renderMap, writePng } from './map/image';
+import { ROOT, renderMap, writePng, type Image } from './map/image';
 import { Zone, type Rect } from './map/zone';
 import type { GroundName } from './map/catalog';
 import type { TerrainName } from './map/terrain';
@@ -226,6 +226,29 @@ export function fieldZone(def: RoadDef): Zone {
 
 export const PUBLIC_MAPS = path.join(ROOT, 'towercraft/public/art/maps');
 
+/** A small copy of a picture (each pixel the average of the block it covers): the title screen's map thumbnails, so it need not fetch the full fields. */
+function thumbOf(img: Image, w: number): Image {
+  const h = Math.round((img.height * w) / img.width);
+  const out: Image = { width: w, height: h, data: Buffer.alloc(w * h * 4) };
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const [x0, x1] = [
+        Math.floor((x * img.width) / w),
+        Math.max(Math.floor(((x + 1) * img.width) / w), Math.floor((x * img.width) / w) + 1),
+      ];
+      const [y0, y1] = [
+        Math.floor((y * img.height) / h),
+        Math.max(Math.floor(((y + 1) * img.height) / h), Math.floor((y * img.height) / h) + 1),
+      ];
+      const sum = [0, 0, 0, 0];
+      for (let sy = y0; sy < y1; sy++)
+        for (let sx = x0; sx < x1; sx++) for (let c = 0; c < 4; c++) sum[c] += img.data[(sy * img.width + sx) * 4 + c];
+      const n = (x1 - x0) * (y1 - y0);
+      for (let c = 0; c < 4; c++) out.data[(y * w + x) * 4 + c] = Math.round(sum[c] / n);
+    }
+  return out;
+}
+
 if (process.argv[1] === import.meta.filename) {
   const only = process.argv[2];
   const scenery: Record<string, number[]> = {};
@@ -238,7 +261,10 @@ if (process.argv[1] === import.meta.filename) {
       continue;
     }
     const data = fieldZone(def).toMapData();
-    writePng(path.join(PUBLIC_MAPS, `${def.id}.png`), renderMap(data));
+    const picture = renderMap(data);
+    writePng(path.join(PUBLIC_MAPS, `${def.id}.png`), picture);
+    fs.mkdirSync(path.join(PUBLIC_MAPS, 'thumbs'), { recursive: true });
+    writePng(path.join(PUBLIC_MAPS, 'thumbs', `${def.id}.png`), thumbOf(picture, 120));
     const blocked = new Set<number>();
     for (const i of data.collision) {
       blocked.add(i);
