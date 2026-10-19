@@ -43,6 +43,20 @@ export function pointAt(dist: number): [number, number] {
   return centre(WAYPOINTS[WAYPOINTS.length - 1]!);
 }
 
+/** Which way a unit that has walked `dist` cells is heading (before the start, down the first run). */
+export function headingAt(dist: number): 'up' | 'down' | 'left' | 'right' {
+  let left = Math.max(0, dist);
+  for (let i = 0; i < RUNS.length; i++) {
+    if (left <= RUNS[i]! || i === RUNS.length - 1) {
+      const [x0, y0] = WAYPOINTS[i]!;
+      const [x1, y1] = WAYPOINTS[i + 1]!;
+      return x1 !== x0 ? (x1 > x0 ? 'right' : 'left') : y1 > y0 ? 'down' : 'up';
+    }
+    left -= RUNS[i]!;
+  }
+  return 'down';
+}
+
 /** Every cell the road covers, as `row * COLS + col` (towers cannot stand on these). */
 export const ROAD_CELLS: ReadonlySet<number> = (() => {
   const cells = new Set<number>();

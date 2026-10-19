@@ -10,11 +10,12 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
   the lane owner's lives. Sending raises your pay for the rest of the game, so it is an investment as well as an attack.
 - **Races** differ by how their numbers trade off, not by special rules: swarm (fast, weak, many), titan (slow, strong, costly),
   legion (the middle, the yardstick), dressed as Wyrmsun's Goblins, Dwarves and Germanic. A new race is an entry in `races.ts` and nothing else.
-- **Art** is CC0 from the Wyrmsun pack on OpenGameArt (`public/art/CREDITS.md`, copied by `tools/towercraftArt.ts`). Units are the factions' portrait
-  icons (static, no walk or attack frames: those are GPL/CC-BY-SA in Wyrmsun and not used), towers are the first 64x64 frame of their sheets.
+- **Art** is Wyrmsun's, copied by `tools/towercraftArt.ts` from a clone of its repo (`public/art/CREDITS.md`): animated unit sheets (CC-BY-SA 3.0, so the
+  title screen credits them and the terms follow the art), CC0 towers and portraits. Units walk and die with the rows Wyrmsun's own scripts use
+  (`main.ts`); there is no attack animation because units never attack. The lane (`lane.png`, an adaptation of the LPC terrain, so also CC-BY-SA)
+  is drawn by Me RPG's map pipeline with `npm run towercraft:board`, so the road has real blended edges; change the road in `board.ts`, then re-run it.
 - **State of play** (prototype): one human against the AI, no sell or upgrade, no towers that slow, no air units, no online. Balance is
   not tuned: with the AI on both sides titan beats everyone, legion beats swarm, and matches run 10 to 15 minutes. Tune with a
   headless run of many seeded matches (as `sim.test.ts` plays them), not by feel.
 - **Online** (not started) would be two players against a host or server that runs `step`; the open question is a server that
   decides, versus peers that agree on a deterministic replay. The sim is built so either works.
-- **Ground** is Me RPG's overworld tileset (`public/art/ground.png`, grass and sand cells cut from `public/tilesets/ground_tiles.png`, GPL stamp: see `public/art/CREDITS.md`), each lane tinted a little by its race. The road has no autotiled edges, only a soft outline.

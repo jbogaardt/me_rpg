@@ -3,7 +3,8 @@
 //   swarm  (Goblins) fast, weak, many: cheap units that come in threes and outrun slow towers; towers are cheap and short-ranged.
 //   titan  (Dwarves) slow, strong, expensive: few big units that soak up shots; towers hit hard from afar but cost a lot.
 //   legion (Germanic) the middle road on every axis, and the yardstick the other two are tuned against.
-// `art` names a picture in towercraft/public/art (CREDITS.md there): a unit's portrait, a tower's sprite sheet.
+// `art` names a picture in towercraft/public/art (CREDITS.md there): a unit's portrait, a tower's sprite sheet; a unit's `sheet` is its
+// animated sprite sheet in art/units.
 // Costs are gold. A unit's `income` is gold added to its sender's pay every pay day for the rest of the game, so
 // sending is an investment as well as an attack. `leak` is the lives it takes from the defender when it gets through.
 
@@ -13,6 +14,8 @@ export interface UnitDef {
   id: string;
   name: string;
   art: string;
+  /** The animated sprite sheet (art/units/<sheet>.png). */
+  sheet: string;
   hp: number;
   /** Cells per second. */
   speed: number;
@@ -57,6 +60,7 @@ export const RACES: Record<RaceId, Race> = {
         id: 'skitter',
         name: 'Goblin Spearmen',
         art: 'goblin_spearman',
+        sheet: 'goblin_spearman',
         hp: 18,
         speed: 3.2,
         cost: 12,
@@ -68,6 +72,7 @@ export const RACES: Record<RaceId, Race> = {
         id: 'runner',
         name: 'Goblin Thieves',
         art: 'goblin_thief',
+        sheet: 'goblin_thief',
         hp: 45,
         speed: 4.2,
         cost: 30,
@@ -80,7 +85,7 @@ export const RACES: Record<RaceId, Race> = {
       {
         id: 'dart',
         name: 'Watch Nest',
-        art: 'wood_watch_tower',
+        art: 'goblin_watch_tower',
         cost: 25,
         range: 2.5,
         damage: 4,
@@ -90,7 +95,7 @@ export const RACES: Record<RaceId, Race> = {
       {
         id: 'spitter',
         name: 'Guard Tower',
-        art: 'stone_guard_tower',
+        art: 'goblin_guard_tower',
         cost: 60,
         range: 3,
         damage: 3,
@@ -109,6 +114,7 @@ export const RACES: Record<RaceId, Race> = {
         id: 'brute',
         name: 'Axefighter',
         art: 'dwarf_axefighter',
+        sheet: 'dwarven_axefighter',
         hp: 400,
         speed: 0.9,
         cost: 60,
@@ -120,6 +126,7 @@ export const RACES: Record<RaceId, Race> = {
         id: 'colossus',
         name: 'Thane',
         art: 'dwarf_thane',
+        sheet: 'thane',
         hp: 1500,
         speed: 0.7,
         cost: 220,
@@ -160,7 +167,8 @@ export const RACES: Record<RaceId, Race> = {
       {
         id: 'footman',
         name: 'Warrior',
-        art: 'germanic_veteran_warrior',
+        art: 'germanic_warrior',
+        sheet: 'germanic_warrior',
         cost: 20,
         hp: 60,
         speed: 1.6,
@@ -168,13 +176,24 @@ export const RACES: Record<RaceId, Race> = {
         income: 1,
         leak: 1,
       },
-      { id: 'knight', name: 'Jarl', art: 'germanic_jarl', cost: 70, hp: 220, speed: 1.2, count: 1, income: 4, leak: 1 },
+      {
+        id: 'knight',
+        name: 'Ritter',
+        art: 'teuton_ritter',
+        sheet: 'teuton_ritter',
+        cost: 70,
+        hp: 220,
+        speed: 1.2,
+        count: 1,
+        income: 4,
+        leak: 1,
+      },
     ],
     towers: [
       {
         id: 'archer',
-        name: 'Sentry Tower',
-        art: 'dwarf_sentry_tower',
+        name: 'Watch Tower',
+        art: 'teuton_watch_tower',
         cost: 40,
         range: 3,
         damage: 8,
@@ -184,7 +203,7 @@ export const RACES: Record<RaceId, Race> = {
       {
         id: 'cannon',
         name: 'Catapult',
-        art: 'catapult_tower',
+        art: 'teuton_catapult_tower',
         cost: 90,
         range: 3.5,
         damage: 30,

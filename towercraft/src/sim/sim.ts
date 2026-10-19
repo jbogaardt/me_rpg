@@ -48,6 +48,14 @@ export interface Shot {
   splash: number;
 }
 
+/** A unit killed this step, for the renderer to play its death where it fell (one that leaks is not a death). */
+export interface Death {
+  lane: 0 | 1;
+  dist: number;
+  def: UnitDef;
+  owner: 0 | 1;
+}
+
 export interface Match {
   time: number;
   payTimer: number;
@@ -55,6 +63,7 @@ export interface Match {
   units: Unit[];
   towers: Tower[];
   shots: Shot[];
+  deaths: Death[];
   nextId: number;
   /** -1 still playing, 0 or 1 the winner, 2 a draw. */
   winner: -1 | 0 | 1 | 2;
@@ -69,6 +78,7 @@ export function newMatch(races: [RaceId, RaceId]): Match {
     units: [],
     towers: [],
     shots: [],
+    deaths: [],
     nextId: 1,
     winner: -1,
   };
@@ -122,6 +132,7 @@ const bounty = (def: UnitDef) => Math.max(1, Math.round(def.cost / def.count / 4
 
 export function step(m: Match, dt: number): void {
   m.shots.length = 0;
+  m.deaths.length = 0;
   if (m.winner >= 0) return;
   m.time += dt;
 
@@ -166,6 +177,7 @@ export function step(m: Match, dt: number): void {
   m.units = m.units.filter((u) => {
     if (u.hp > 0) return true;
     // The defender is paid for what their towers kill.
+    m.deaths.push({ lane: laneOf(u), dist: u.dist, def: u.def, owner: u.owner });
     m.players[laneOf(u)].gold += bounty(u.def);
     return false;
   });

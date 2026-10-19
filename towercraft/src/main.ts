@@ -3,9 +3,9 @@
 
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture, TextureStyle } from 'pixi.js';
 import { createAi } from './sim/ai';
-import { COLS, ROAD_CELLS, ROWS, cellIndex, pointAt } from './sim/board';
+import { COLS, ROWS, headingAt, pointAt } from './sim/board';
 import { RACES, RACE_IDS, type RaceId, type TowerDef, type UnitDef } from './sim/races';
-import { buildTower, canBuild, laneOf, newMatch, sendUnits, step, type Match } from './sim/sim';
+import { buildTower, canBuild, laneOf, newMatch, sendUnits, step, type Death, type Match } from './sim/sim';
 
 const CELL = 40;
 const GAP = 1; // cells between the lanes
@@ -17,8 +17,29 @@ const laneX = (lane: 0 | 1) => lane * (COLS + GAP) * CELL;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-/** How wide (px) a unit's portrait is drawn: bigger for tougher units. */
-const unitSize = (def: UnitDef) => 20 + Math.min(14, Math.sqrt(def.hp) / 3);
+/** How big a unit's sprite is drawn (its 72px frame times this): tougher units are bigger. */
+const unitScale = (def: UnitDef) => 1.1 + Math.min(0.7, Math.sqrt(def.hp) / 55);
+/** The figure in a frame is about this tall (px), standing on the frame's anchor: where a health bar goes. */
+const FIGURE = 32;
+
+// The unit sheets are Wyrmsun's: 72x72 frames, five directions across (up, up-right, right, down-right, down; left is right
+// mirrored), and the game's own animation down the rows: 0 standing, 1-4 the walk, 5-8 an attack, 9-11 dying.
+const FRAME = 72;
+const WALK_ROWS = [1, 2, 0, 3, 4, 0]; // one stride, in poses
+const STRIDE = 0.9; // cells walked per stride
+const DEATH_ROWS = [9, 10, 11];
+const DEATH_FRAME = 0.12; // seconds per death frame
+const CORPSE_LIFE = 1.6; // seconds a corpse stays (fading over the last half)
+const COLUMN = { up: 0, right: 2, down: 4, left: 2 } as const;
+
+/** A unit that is dying: the sprite plays its death frames where it fell, then fades. */
+interface Corpse {
+  container: Container;
+  sprite: Sprite;
+  sheet: string;
+  col: number;
+  age: number;
+}
 
 /** How each race tints its lane's grass: goblins sicklier, dwarves cooler, the Germanic as it is. */
 const TINT: Record<RaceId, number> = { swarm: 0xc8d88c, titan: 0xb4c4d8, legion: 0xffffff };
@@ -39,7 +60,6 @@ void (async () => {
   const arts = new Set(RACE_IDS.flatMap((r) => [...RACES[r].units, ...RACES[r].towers].map((d) => d.art)));
   const loaded = await Promise.all([...arts].map((name) => Assets.load<Texture>(`art/${name}.png`)));
   const textures = new Map<string, Texture>([...arts].map((name, i) => [name, loaded[i]!]));
-  const unitTexture = (def: UnitDef) => textures.get(def.art)!;
   const towerFrames = new Map<string, Texture>();
   const towerTexture = (def: TowerDef) => {
     let t = towerFrames.get(def.art);
@@ -51,20 +71,71 @@ void (async () => {
     return t;
   };
 
-  // The ground is Me RPG's overworld tileset (ground.png: four grass tiles then four sand ones, cut from public/tilesets/ground_tiles.png).
-  const groundSheet = await Assets.load<Texture>('art/ground.png');
-  const groundTiles = Array.from(
-    { length: 8 },
-    (_, i) => new Texture({ source: groundSheet.source, frame: new Rectangle(i * 32, 0, 32, 32) }),
+  const sheets = new Set(RACE_IDS.flatMap((r) => RACES[r].units.map((u) => u.sheet)));
+  const sheetTextures = new Map<string, Texture>(
+    await Promise.all(
+      [...sheets].map(async (name) => [name, await Assets.load<Texture>(`art/units/${name}.png`)] as const),
+    ),
   );
+  const frames = new Map<string, Texture>();
+  /** One 72x72 frame of a unit sheet (cached). */
+  const unitFrame = (sheet: string, row: number, col: number) => {
+    const key = `${sheet}:${row}:${col}`;
+    let t = frames.get(key);
+    if (!t)
+      frames.set(
+        key,
+        (t = new Texture({
+          source: sheetTextures.get(sheet)!.source,
+          frame: new Rectangle(col * FRAME, row * FRAME, FRAME, FRAME),
+        })),
+      );
+    return t;
+  };
+
+  // The lane (art/lane.png) is drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts), so its road
+  // has the real blended edges and bends. Both lanes are the same road.
+  const laneTexture = await Assets.load<Texture>('art/lane.png');
 
   const world = new Container();
   const board = new Container();
   const towerLayer = new Container(); // sorted by y so a tall tower hides the one behind it
   towerLayer.sortableChildren = true;
+  const corpseLayer = new Container();
   const unitLayer = new Container();
   const live = new Graphics(); // hover, shots, health bars
-  world.addChild(board, towerLayer, unitLayer, live);
+  world.addChild(board, towerLayer, corpseLayer, unitLayer, live);
+
+  const corpses: Corpse[] = [];
+  const addCorpse = (d: Death) => {
+    const [x, y] = pointAt(d.dist);
+    const heading = headingAt(d.dist);
+    const container = new Container();
+    const sprite = new Sprite(unitFrame(d.def.sheet, DEATH_ROWS[0]!, COLUMN[heading]));
+    sprite.anchor.set(0.5, 0.82);
+    sprite.scale.set((heading === 'left' ? -1 : 1) * unitScale(d.def), unitScale(d.def));
+    container.addChild(sprite);
+    container.position.set(laneX(d.lane) + x * CELL, y * CELL);
+    corpseLayer.addChild(container);
+    corpses.push({ container, sprite, sheet: d.def.sheet, col: COLUMN[heading], age: 0 });
+  };
+  const ageCorpses = (dt: number) => {
+    for (let i = corpses.length - 1; i >= 0; i--) {
+      const k = corpses[i]!;
+      k.age += dt;
+      if (k.age >= CORPSE_LIFE) {
+        k.container.destroy({ children: true });
+        corpses.splice(i, 1);
+        continue;
+      }
+      k.sprite.texture = unitFrame(
+        k.sheet,
+        DEATH_ROWS[Math.min(DEATH_ROWS.length - 1, Math.floor(k.age / DEATH_FRAME))]!,
+        k.col,
+      );
+      k.container.alpha = Math.min(1, (CORPSE_LIFE - k.age) / (CORPSE_LIFE / 2));
+    }
+  };
 
   /** One sprite per tower / unit, kept while it lives. */
   const towerSprites = new Map<number, Container>();
@@ -114,46 +185,19 @@ void (async () => {
   }
   window.addEventListener('resize', layout);
 
-  /** Both lanes: grass with a sand road, each lane tinted a little by its owner's race. */
+  /** Both lanes, each tinted a little by its owner's race. */
   function drawBoard() {
     for (const c of board.removeChildren()) c.destroy({ children: true });
-    const edge = new Graphics();
     for (const lane of [0, 1] as const) {
       const x0 = laneX(lane);
-      const tint = TINT[match.players[lane].race];
-      edge.roundRect(x0 - 6, -6, COLS * CELL + 12, BOARD_H + 12, 10).fill(0x131925);
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          const road = ROAD_CELLS.has(cellIndex(c, r));
-          const tile = groundTiles[(road ? 4 : 0) + ((c * 7 + r * 13) % 4)]!;
-          const sprite = new Sprite(tile);
-          sprite.tint = road ? 0xffffff : tint;
-          sprite.position.set(x0 + c * CELL, r * CELL);
-          sprite.scale.set(CELL / 32);
-          board.addChild(sprite);
-        }
-      }
+      board.addChild(new Graphics().roundRect(x0 - 6, -6, COLS * CELL + 12, BOARD_H + 12, 10).fill(0x131925));
+      const sprite = new Sprite(laneTexture);
+      sprite.tint = TINT[match.players[lane].race];
+      sprite.position.set(x0, 0);
+      sprite.width = COLS * CELL;
+      sprite.height = BOARD_H;
+      board.addChild(sprite);
     }
-    const lines = new Graphics();
-    for (const lane of [0, 1] as const) {
-      // A soft edge where the road meets the grass.
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          if (!ROAD_CELLS.has(cellIndex(c, r))) continue;
-          const x = laneX(lane) + c * CELL;
-          const y = r * CELL;
-          const open = (dc: number, dr: number) =>
-            !ROAD_CELLS.has(cellIndex(c + dc, r + dr)) && c + dc >= 0 && c + dc < COLS && r + dr >= 0 && r + dr < ROWS;
-          if (open(0, -1)) lines.moveTo(x, y).lineTo(x + CELL, y);
-          if (open(0, 1)) lines.moveTo(x, y + CELL).lineTo(x + CELL, y + CELL);
-          if (open(-1, 0)) lines.moveTo(x, y).lineTo(x, y + CELL);
-          if (open(1, 0)) lines.moveTo(x + CELL, y).lineTo(x + CELL, y + CELL);
-        }
-      }
-    }
-    lines.stroke({ color: 0x5b4a2a, width: 2, alpha: 0.7 });
-    board.addChildAt(edge, 0);
-    board.addChild(lines);
   }
 
   function drawLive() {
@@ -199,29 +243,31 @@ void (async () => {
       match.units,
       (u) => {
         const c = new Container();
-        const w = unitSize(u.def);
-        const h = (w * 38) / 46;
         const color = RACES[match.players[u.owner].race].color;
-        c.addChild(new Graphics().roundRect(-w / 2 - 2, -h / 2 - 2, w + 4, h + 4, 4).fill(color));
-        const icon = new Sprite(unitTexture(u.def));
-        icon.anchor.set(0.5);
-        icon.width = w;
-        icon.height = h;
-        c.addChild(icon);
+        c.addChild(new Graphics().ellipse(0, 0, 8 * unitScale(u.def), 4).fill({ color, alpha: 0.6 })); // under the feet
+        const body = new Sprite(unitFrame(u.def.sheet, 0, 4));
+        body.anchor.set(0.5, 0.82);
+        body.scale.set(unitScale(u.def));
+        c.addChild(body);
         return c;
       },
       (u, c) => {
         const [x, y] = pointAt(u.dist);
         c.position.set(laneX(laneOf(u)) + x * CELL, y * CELL);
         c.visible = u.dist >= 0; // waiting its turn to step out
+        const heading = headingAt(u.dist);
+        const body = c.children[1] as Sprite;
+        const pose = WALK_ROWS[Math.floor(Math.max(0, u.dist) / (STRIDE / WALK_ROWS.length)) % WALK_ROWS.length]!;
+        body.texture = unitFrame(u.def.sheet, pose, COLUMN[heading]);
+        body.scale.x = (heading === 'left' ? -1 : 1) * unitScale(u.def);
       },
     );
     for (const u of match.units) {
       if (u.dist < 0) continue;
       const [x, y] = pointAt(u.dist);
-      const w = unitSize(u.def);
+      const w = 14 + FIGURE * unitScale(u.def) * 0.4;
       const cx = laneX(laneOf(u)) + x * CELL;
-      const top = y * CELL - (w * 38) / 46 / 2 - 8;
+      const top = y * CELL - FIGURE * unitScale(u.def) - 6;
       live.rect(cx - w / 2, top, w, 3).fill(0x0e1117);
       live.rect(cx - w / 2, top, w * Math.max(0, u.hp / u.def.hp), 3).fill(0x6fd36f);
     }
@@ -345,12 +391,14 @@ void (async () => {
   side('rival', 'Rival', match.players[1]);
 
   app.ticker.add((ticker) => {
+    ageCorpses(ticker.deltaMS / 1000);
     if (started && match.winner < 0) {
       acc += Math.min(ticker.deltaMS / 1000, 0.25);
       while (acc >= STEP && match.winner < 0) {
         acc -= STEP;
         ai(match, STEP);
         step(match, STEP);
+        for (const d of match.deaths) addCorpse(d);
       }
       refresh();
       if (match.winner >= 0) {

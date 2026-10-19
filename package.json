@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:towercraft": "vite -c towercraft/vite.config.ts",
     "towercraft:art": "tsx tools/towercraftArt.ts",
+    "towercraft:board": "tsx tools/towercraftBoard.ts",
     "build": "npm run typecheck && npm run map -- check && npm run sprites -- check && vite build && vite build -c towercraft/vite.config.ts && tsx tools/site.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tools && tsc --noEmit -p e2e && tsc --noEmit -p relay && tsc --noEmit -p server && tsc --noEmit -p towercraft",

@@ -36,6 +36,8 @@
       img.thumb { object-fit: cover; }
       .race { display: block; }
       .look { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; align-items: flex-end; }
+      .credit { max-width: 640px; margin: 20px auto 0; font-size: 12px; color: var(--dim); }
+      .credit a { color: var(--gold); }
       #hint { position: fixed; left: 0; right: 0; top: 46px; text-align: center; color: var(--dim); font-size: 13px; pointer-events: none; z-index: 1; }
     </style>
   </head>
@@ -48,6 +50,11 @@
         <h1>Towercraft</h1>
         <p>Build towers on your side. Send units down the rival's road. Whoever runs out of lives first loses.</p>
         <div class="races" id="races"></div>
+        <p class="credit">
+          Art from <a href="https://andrettin.github.io/" target="_blank" rel="noopener">Wyrmsun</a> (b_o, badbuckle, Jinn, Exidelo; units under
+          <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC-BY-SA 3.0</a>, towers CC0) and the Liberated Pixel Cup terrain
+          (adrix89 and others, CC-BY-SA 3.0). <a href="art/CREDITS.md" target="_blank" rel="noopener">Full credits</a>.
+        </p>
       </div>
     </div>
     <div class="overlay" id="end" hidden>

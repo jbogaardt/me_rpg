@@ -61,6 +61,30 @@ describe('towers', () => {
   });
 });
 
+describe('deaths', () => {
+  it('are reported for the step a unit is killed in, not for one that leaks', () => {
+    const m = newMatch(['legion', 'legion']);
+    for (const col of [3, 4, 5]) buildTower(m, 1, 'archer', col, 2);
+    sendUnits(m, 0, 'footman');
+    const died: number[] = [];
+    for (let i = 0; i < 20 * 20; i++) {
+      step(m, 1 / 20);
+      for (const d of m.deaths) died.push(d.lane);
+    }
+    expect(died).toEqual([1]); // it died in the lane it was walking: player 1's
+
+    const leaker = newMatch(['legion', 'legion']);
+    sendUnits(leaker, 0, 'footman');
+    let leaks = 0;
+    for (let i = 0; i < 60 * 20; i++) {
+      step(leaker, 1 / 20);
+      leaks += leaker.deaths.length;
+    }
+    expect(leaks).toBe(0);
+    expect(leaker.players[1].lives).toBe(START_LIVES - 1);
+  });
+});
+
 describe('a whole match', () => {
   const play = (a: RaceId, b: RaceId, seed: number) => {
     const m = newMatch([a, b]);

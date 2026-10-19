@@ -204,4 +204,4 @@ sand. Nothing else is changed. The credit is also in the pause menu's Credits ta
 
 ## Towercraft
 
-Unit portraits and tower sprites are from Wyrmsun (CC0, via the OpenGameArt pack "Wyrmsun CC0 - over 900 items"): see `towercraft/public/art/CREDITS.md`.
+Wyrmsun unit sheets (CC-BY-SA 3.0), towers and portraits (CC0) and a lane adapted from the LPC terrain atlas above (CC-BY-SA 3.0): see `towercraft/public/art/CREDITS.md`.
