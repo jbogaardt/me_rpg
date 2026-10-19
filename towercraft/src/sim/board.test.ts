@@ -40,7 +40,7 @@ describe('the maps', () => {
         const m = newMatch(['legion', 'legion'], board);
         const watch = RACES.legion.towers[0]!;
         const room = ([0, 1] as const).map((o) => {
-          m.players[o].gold = 9999;
+          m.players[o].wood = m.players[o].stone = 9999;
           m.players[o].castle.level = 3;
           let n = 0;
           for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (canBuild(m, o, watch, c, r) === 'ok') n++;
@@ -61,7 +61,7 @@ describe('the maps', () => {
 
       it('leaves room beside the road for towers within the castle reach and beyond it', () => {
         const m = newMatch(['legion', 'legion'], board);
-        m.players[0].gold = 9999;
+        m.players[0].wood = m.players[0].stone = 9999;
         const watch = RACES.legion.towers[0]!;
         let free = 0;
         for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (canBuild(m, 0, watch, c, r) === 'ok') free++;

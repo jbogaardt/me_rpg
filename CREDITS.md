@@ -204,4 +204,4 @@ sand. Nothing else is changed. The credit is also in the pause menu's Credits ta
 
 ## Towercraft
 
-Wyrmsun unit sheets (CC-BY-SA 3.0), towers and portraits (CC0) and five fields adapted from the LPC terrain atlas above (CC-BY-SA 3.0), with the menu kit credited above (Lamoot, CC-BY 3.0): see `towercraft/public/art/CREDITS.md`.
+Wyrmsun unit sheets (b_o and Jinn; CC-BY-SA 3.0; the portraits cut from them too), buildings, towers and portraits (Jinn and Exidelo; CC0, except the Germanic siege workshop, Jinn and b_o, CC-BY-SA 3.0) and five fields adapted from the LPC terrain atlas above (CC-BY-SA 3.0), with the menu kit credited above (Lamoot, CC-BY 3.0): see `towercraft/public/art/CREDITS.md`.

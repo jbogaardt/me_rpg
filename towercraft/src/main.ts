@@ -1477,8 +1477,11 @@ void (async () => {
       const pips = b.querySelectorAll('.pips i');
       pips.forEach((p, i) => p.classList.toggle('on', i < lvl));
       const line = b.querySelector('em')!;
-      const text = !next ? 'max' : why ? why : money(next.cost);
+      const text = !next ? 'max' : why ? '' : money(next.cost);
       if (line.innerHTML !== text) line.innerHTML = text;
+      const effect = b.querySelector('small')!;
+      const said = why && next ? why : upgradeText(up);
+      if (effect.textContent !== said) effect.textContent = said;
       b.classList.toggle('lock', !!why);
       b.classList.toggle('poor', poor);
       b.title = why || (poor ? lacking(next.cost) : `Buy level ${lvl + 1}`);
