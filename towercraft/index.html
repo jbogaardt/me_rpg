@@ -22,15 +22,17 @@
       .paper { background: url('./ui/paper.jpg') center / 256px; color: var(--ink); }
       h1, h2, h3, h4 { font-family: var(--title); margin: 0; }
 
-      /* Top bar: the two sides' gold, castles and names on a wood strip. */
+      /* Top bar: the two sides' names, your wood and stone with what they earn, and the castles, on a wood strip. */
       #top { position: fixed; top: 0; left: 0; right: 0; z-index: 2; display: flex; justify-content: space-between; gap: 12px; padding: 6px 12px;
         background: url('./ui/wood.jpg') center / 256px; border-bottom: 2px solid var(--gold-dim); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); }
       .side { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
       .side span, .side b { white-space: nowrap; font-size: 14px; text-shadow: 0 1px 2px #000; }
       .side span:first-child { font-family: var(--title); font-weight: 700; font-size: 13px; letter-spacing: 0.03em; color: var(--dim); }
-      .you b { color: var(--gold); font-family: var(--title); } .rival b { color: #f09a9d; font-family: var(--title); }
+      .you b { font-family: var(--title); } .you b.w, i.w { color: #e0a566; } .you b.s, i.s { color: #c9d0d9; }
+      .side .inc { color: var(--dim); font-size: 13px; }
+      i.w, i.s { font-style: normal; }
+      .side .res { display: contents; }
       #hint { position: fixed; left: 0; right: 0; top: 46px; text-align: center; color: var(--text); font-size: 15px; text-shadow: 0 1px 3px #000, 0 0 6px #000; pointer-events: none; z-index: 1; }
-      #queue { position: fixed; left: 10px; top: 70px; z-index: 1; color: var(--text); font-size: 14px; text-shadow: 0 1px 3px #000; pointer-events: none; }
 
       /* Wooden square buttons (the kit's), used for the camera and the dock's thumbnails. */
       button { font: inherit; color: var(--gold); cursor: pointer; }
@@ -45,24 +47,43 @@
       .plank.on, .plank:hover:not(:disabled) { background-image: url('./ui/plank.png'); color: var(--gold); }
       .plank:disabled { opacity: 0.45; }
 
-      /* The dock: small thumbnails to train, build and command; tap one for its card. */
-      #dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: 6px; z-index: 2; width: max-content; max-width: calc(100vw - 12px);
-        display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; padding: 0 6px; }
-      .grp { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-      .grp h4 { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-dim); text-shadow: 0 1px 2px #000; }
+      /* The dock: tabs (units, buildings, upgrades) over one shelf of small thumbnails; tap one for its card. The orders sit by the tabs. */
+      #dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: 6px; z-index: 2; width: min(900px, calc(100vw - 12px));
+        box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 0 4px; }
+      .bar { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+      #tabs, #castle { display: flex; gap: 4px; align-items: center; }
+      #tabs .plank { padding: 6px 12px; }
+      .shelf { display: flex; gap: 4px 10px; align-items: flex-end; overflow-x: auto; overflow-y: hidden; min-height: 62px; padding: 0 0 2px; scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
+      .shelf[hidden] { display: none; }
+      .sec { flex: none; display: flex; flex-direction: column; gap: 1px; }
+      .sec h4 { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-dim); text-shadow: 0 1px 2px #000; padding-left: 2px; }
       .thumbs { display: flex; gap: 4px; align-items: flex-end; }
-      .tb { position: relative; width: 54px; height: 54px; display: grid; place-items: center; padding: 0; }
+      .tb { position: relative; flex: none; width: 54px; height: 58px; display: grid; place-items: center; padding: 0; }
       .tb .art { display: block; border-radius: 3px; background-repeat: no-repeat; background-position: 0 0; pointer-events: none; }
-      .tb em { position: absolute; left: 0; right: 0; bottom: 3px; font: 700 10px var(--title); font-style: normal; text-align: center; color: var(--gold); text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }
+      img.thumb.gen { object-fit: contain; }
+      .tb em { position: absolute; left: 0; right: 0; bottom: 3px; display: flex; justify-content: center; gap: 5px; font: 700 10px var(--title); font-style: normal; text-align: center; color: var(--gold); text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }
       .tb.lock .art { filter: grayscale(1) brightness(0.55); }
       .tb.poor { filter: brightness(0.7) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
-      .tb.poor em { color: #f09a9d; }
+      .tb.poor em i { color: #f09a9d; }
       .tb.open { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.9)); }
       .tb.arm { filter: brightness(1.35) drop-shadow(0 0 8px rgba(111, 211, 111, 0.95)); }
-      .tb .lv { position: absolute; top: 3px; right: 4px; font: 700 9px var(--title); color: #f09a9d; text-shadow: 0 1px 2px #000; pointer-events: none; }
-      .tb.orders { width: 64px; font-size: 10px; line-height: 1.05; }
+      .tb .lv { position: absolute; top: 4px; left: 5px; right: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 8px var(--title); text-align: center; color: #f09a9d; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }
+      .tb .lv:empty { display: none; }
+      .tb.orders { width: 64px; height: 50px; font-size: 10px; line-height: 1.05; }
       .tb.orders span { position: relative; padding: 0 6px; text-align: center; pointer-events: none; }
       .tb.orders.bypass { filter: brightness(1.25) drop-shadow(0 0 5px rgba(231, 104, 47, 0.9)); }
+      #castle .tb:first-child { height: 50px; width: 50px; }
+      /* An upgrade line: its name, three pips, what a level adds and what the next costs (or why it cannot be bought). */
+      .up { flex: none; width: 136px; height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 14px 8px; }
+      .up .foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+      .up b { font-size: 11px; line-height: 1.1; color: var(--gold); white-space: nowrap; }
+      .up small { font: 600 11px var(--body); color: var(--dim); white-space: nowrap; }
+      .up em { font: 700 11px var(--title); font-style: normal; display: flex; gap: 6px; color: var(--gold); }
+      .up.lock em { color: #f09a9d; font-size: 10px; margin-left: auto; } .up.lock { filter: brightness(0.75) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
+      .up.poor em i { color: #f09a9d; }
+      .up:disabled:hover { filter: brightness(0.75) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
+      .pips { display: flex; gap: 4px; } .pips i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--gold-dim); box-sizing: border-box; background: rgba(0, 0, 0, 0.35); }
+      .pips i.on { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 4px rgba(242, 211, 138, 0.7); }
 
       /* The card: stats and a purchase button, popping up at the side beside the thumbnails. */
       #card { position: fixed; z-index: 4; right: 8px; top: 108px; width: min(300px, calc(100vw - 16px)); max-height: calc(100vh - 108px - var(--dock-h) - 16px);
@@ -83,8 +104,23 @@
       #card .hp { position: relative; height: 16px; border-radius: 4px; background: #2b2118; overflow: hidden; margin-bottom: 8px; }
       #card .hp i { position: absolute; inset: 0 auto 0 0; background: #6fd36f; }
       #card .hp span { position: relative; display: block; text-align: center; font-size: 12px; line-height: 16px; color: #fff; text-shadow: 0 1px 2px #000; }
+      #card .slots { display: flex; gap: 6px; margin: 0 0 8px; }
+      #card .slots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ink-soft); box-sizing: border-box; background: rgba(51, 35, 15, 0.12); }
+      #card .slots i.on { background: #c98f26; border-color: var(--ink); }
+      #card .loads { display: flex; flex-direction: column; gap: 6px; }
+      #card .load { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; text-align: left; border-radius: 6px; cursor: pointer;
+        background: rgba(51, 35, 15, 0.14); border: 1px solid var(--ink-soft); color: var(--ink); font-family: var(--body); min-height: 44px; }
+      #card .load:hover:not(:disabled) { background: rgba(242, 211, 138, 0.45); }
+      #card .load:disabled { opacity: 0.55; cursor: default; }
+      #card .load span { flex: 1; display: block; min-width: 0; } #card .load b { display: block; font: 700 13px var(--title); color: var(--ink); }
+      #card .load small { display: block; font-size: 12px; color: var(--ink-soft); }
+      #card .load em { font: 700 12px var(--title); font-style: normal; display: flex; gap: 6px; }
+      #card .load em i.w, #card li i.w { color: #8a5a22; } #card .load em i.s, #card li i.s { color: #4f5a66; }
+      #card li b { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+      #card .note i.w { color: #8a5a22; } #card .note i.s { color: #4f5a66; }
       #card-act { display: block; width: 100%; min-height: 44px; padding: 8px 10px 10px; font-size: 15px; color: var(--gold); background: url('./ui/button.png') center / 100% 100% no-repeat; border: 0;
         font-family: var(--title); font-weight: 700; text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)); }
+      #card-act[hidden] { display: none; }
       #card-act:hover:not(:disabled) { filter: brightness(1.25) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)); }
       #card-act:disabled { filter: grayscale(0.8) brightness(0.65); }
       #card.placing #card-act { color: #f09a9d; }
@@ -125,8 +161,11 @@
       @media (max-width: 760px), (max-height: 560px) {
         #card { right: 4px; left: 4px; width: auto; top: auto; bottom: calc(var(--dock-h) + 6px); max-height: 46vh; }
         #card.placing { display: none; }
-        .tb { width: 44px; height: 44px; } .tb.orders { width: 54px; }
-        #dock { gap: 2px 8px; } .grp h4 { display: none; } .grp { flex-direction: row; }
+        .tb { width: 44px; height: 52px; } .tb.orders { width: 54px; height: 44px; } #castle .tb:first-child { width: 44px; height: 44px; }
+        #tabs .plank { padding: 5px 9px; font-size: 11px; }
+        .up { width: 124px; height: 58px; padding: 5px 12px 7px; } .shelf { min-height: 56px; }
+        .side .inc { font-size: 12px; } .side b { font-size: 13px; }
+        .side .castle { order: 1; } .side .res { display: flex; order: 2; flex-basis: 100%; gap: 0 10px; align-items: baseline; }
         .map { width: 92px; } .map .shot { width: 92px; height: 112px; }
         .race { width: 150px; }
         .overlay h1 { font-size: 26px; }
@@ -138,11 +177,14 @@
     <div id="hint"></div>
     <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button></div>
     <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no">Cancel</button></div>
-    <div id="queue"></div>
     <div id="dock" class="panel thin wood">
-      <div class="grp"><h4>Train</h4><div class="thumbs" id="train"></div></div>
-      <div class="grp"><h4>Build</h4><div class="thumbs" id="build"></div></div>
-      <div class="grp"><h4>Castle</h4><div class="thumbs" id="castle"></div></div>
+      <div class="bar">
+        <div id="tabs"><button class="plank on" data-tab="units">Units</button><button class="plank" data-tab="build">Build</button><button class="plank" data-tab="upgrades">Upgrades</button></div>
+        <div id="castle"></div>
+      </div>
+      <div class="shelf" id="train"></div>
+      <div class="shelf" id="build" hidden></div>
+      <div class="shelf" id="upgrades" hidden></div>
     </div>
     <aside id="card" class="panel thin paper" hidden>
       <button class="wbtn" id="card-x" aria-label="Close">×</button>
@@ -152,7 +194,7 @@
     <div class="overlay" id="menu">
       <div class="panel wood">
         <h1>Towercraft</h1>
-        <p>Train units at your castle and send them down the road. Build towers to hold it, upgrade your castle to reach further. Destroy the rival's castle to win.</p>
+        <p>Cut wood and quarry stone, train units at your castle and raise buildings to unlock more of them, and send them down the road. Hold it with towers and bunkers, buy upgrades, and destroy the rival's castle to win.</p>
         <h2>Choose the battlefield</h2>
         <div class="maps" id="maps"></div>
         <p id="map-blurb"></p>
@@ -160,7 +202,7 @@
         <div class="races" id="races"></div>
         <p class="credit">
           Art from <a href="https://andrettin.github.io/" target="_blank" rel="noopener">Wyrmsun</a> (b_o, badbuckle, Jinn, Exidelo; units under
-          <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC-BY-SA 3.0</a>, towers CC0), the Liberated Pixel Cup terrain
+          <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC-BY-SA 3.0</a>, buildings CC0 except the Germanic workshop, CC-BY-SA 3.0), the Liberated Pixel Cup terrain
           (adrix89 and others, CC-BY-SA 3.0) and Lamoot's RPG GUI kit (CC-BY 3.0). <a href="art/CREDITS.md" target="_blank" rel="noopener">Full credits</a>.
         </p>
       </div>

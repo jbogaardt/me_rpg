@@ -5,27 +5,46 @@
 import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
-import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture, TextureStyle } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
 import { createAi } from './sim/ai';
 import { BOARDS, BOARD_IDS, COLS, DEFAULT_BOARD_ID, ROWS } from './sim/board';
-import { MAX_LEVEL, RACES, RACE_IDS, type RaceId, type SheetKind, type TowerDef, type UnitDef } from './sim/races';
 import {
-  BASE_PAY,
+  MAX_LEVEL,
+  RACES,
+  RACE_IDS,
+  type Cost,
+  type RaceId,
+  type SheetKind,
+  type TowerDef,
+  type UnitDef,
+  type UpgradeDef,
+} from './sim/races';
+import {
   PAY_EVERY,
-  QUEUE_MAX,
-  setOrder,
+  UNIT_CAP,
+  boostOf,
   buildReach,
   buildTower,
+  buyUpgrade,
+  canAfford,
   canBuild,
   canSee,
+  incomeOf,
   isCastleSeen,
   isSeen,
+  loadBunker,
   newMatch,
+  nextUpgrade,
+  setOrder,
+  soldierCost,
   step,
+  towerUnlocked,
   trainUnit,
   unitPos,
+  unitUnlocked,
   upgradeCastle,
   upgradeCost,
+  upgradeLevel,
   visionOf,
   type Death,
   type Match,
@@ -50,12 +69,13 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 /** Everything that fights (units, towers) is drawn this many times its old size, so it stands in proportion to the roads. */
 const SIZE = 2;
 /** How big a unit's sprite is drawn (its frame times this): walkers scale with their hit points, flyers have their own size. */
-const unitScale = (def: UnitDef) => SIZE * (SHEETS[def.kind].scale ?? 1.1 + Math.min(0.7, Math.sqrt(def.hp) / 55));
+const unitScale = (def: UnitDef) =>
+  SIZE * (def.look?.scale ?? SHEETS[def.kind].scale ?? 1.1 + Math.min(0.7, Math.sqrt(def.hp) / 55));
 /** A tower's picture is this wide (px), whatever its sheet; a castle's sprite is drawn at CASTLE_SCALE of its frame. */
 const TOWER_PX = 50 * SIZE;
 const CASTLE_SCALE = 1.4;
 /** The figure in a frame is about this tall (px), standing on the frame's anchor: where a health bar goes. */
-const FIGURE = 32;
+const figureOf = (kind: SheetKind) => (kind === 'bat' ? 14 : kind === 'bigbat' ? 30 : 32);
 
 // The unit sheets are Wyrmsun's: five directions across (up, up-right, right, down-right, down; the left ones are the right ones
 // mirrored) and the game's own animation down the rows, which differ by sheet (rows are frames / 5 in Wyrmsun's animation scripts).
@@ -72,10 +92,16 @@ const SHEETS: Record<SheetKind, Sheet> = {
   archer: { frame: 72, walk: [1, 2, 0, 3, 4, 0], attack: [5, 6, 7, 8, 9, 10], death: [11, 12, 13] },
   gryphon: { frame: 100, walk: [0, 1, 2, 3], attack: [0, 1, 2, 3, 4, 5, 6], death: [7, 8, 9, 10, 11, 12], scale: 0.8 },
   glider: { frame: 100, walk: [0, 1], attack: [0], death: [2, 3, 4], scale: 0.7 },
+  // Bats and birds: rows 0-5 a wing-beat cycle, 6-8 the dive, 9-11 the fall (13 rows; 32 px frames, the big bat's 64 px).
+  bat: { frame: 32, walk: [0, 1, 2, 3, 4, 5], attack: [6, 7, 8, 7], death: [9, 10, 11], scale: 1.5 },
+  bigbat: { frame: 64, walk: [0, 1, 2, 3, 4, 5], attack: [6, 7, 8, 7], death: [9, 10, 11], scale: 1 },
+  // A field engine: it rolls (row 0), throws (1-3) and falls apart (3).
+  engine: { frame: 72, walk: [0], attack: [1, 2, 3, 0], death: [3] },
 };
 /** Where in a frame (0 = top, 1 = bottom) the figure's feet are: the sheets leave empty room under the 72 px figures. */
 const feetAt = (kind: SheetKind) => (SHEETS[kind].frame === 72 ? 0.7 : 0.8);
 const STRIDE = 0.9; // cells walked per stride
+const FLAP = 10; // wing beats (sheet rows) a second for a flyer
 const DEATH_FRAME = 0.12; // seconds per death frame
 const CORPSE_LIFE = 1.6; // seconds a corpse stays (fading over the last half)
 /** How high (px) an air unit is drawn above the ground it flies over. */
@@ -178,11 +204,12 @@ void (async () => {
   sortLayer.sortableChildren = true;
   const corpseLayer = new Container();
   const live = new Graphics(); // hover ring, attacks, health bars
+  const floatLayer = new Container(); // the pay-day figures over your mills and quarries
   const ghostSprite = new Sprite(); // the tower about to be placed (a touch's first tap, or the mouse's hover)
   ghostSprite.anchor.set(0.5, 0.78);
   ghostSprite.alpha = 0.6;
   ghostSprite.visible = false;
-  world.addChild(field, fogLayer, areaLayer, corpseLayer, sortLayer, live, ghostSprite);
+  world.addChild(field, fogLayer, areaLayer, corpseLayer, sortLayer, live, floatLayer, ghostSprite);
   app.stage.addChild(world);
 
   let chosenMap: BoardId = 'frostlands'; // the menu's first pick: a meandering map (the sim's own default is the classic road)
@@ -339,7 +366,8 @@ void (async () => {
   const place = (cell: [number, number]) => {
     if (selected && buildTower(match, YOU, selected.id, cell[0], cell[1]) === 'ok') {
       // Keep the tower selected while the player can pay for another (a row of towers is the usual use).
-      if (match.players[YOU].gold < selected.cost) selected = undefined;
+      if (!canAfford(match.players[YOU], selected.cost) || towerUnlocked(match, YOU, selected) !== 'ok')
+        selected = undefined;
       refresh();
     }
     setGhost(undefined);
@@ -347,9 +375,21 @@ void (async () => {
   $('ghost-ok').onclick = () => ghost && place(ghost);
   $('ghost-no').onclick = () => setGhost(undefined);
 
+  const myBunkerAt = (wx: number, wy: number) =>
+    match.towers.find(
+      (t) => t.owner === YOU && t.def.bunker && Math.hypot(wx - (t.col + 0.5), wy - (t.row - 0.3)) <= 1.2,
+    );
+
   function tap(sx: number, sy: number, touch: boolean) {
     // The castle (a tall sprite, so its middle is above its feet): tap it for its panel, anywhere else to close the panel.
     const [wx, wy] = [(sx - world.x) / world.scale.x / CELL, (sy - world.y) / world.scale.y / CELL];
+    // One of your bunkers (a tall sprite: its middle is above its feet): tap it to load soldiers into it.
+    const bunker = started && !selected ? myBunkerAt(wx, wy) : undefined;
+    if (bunker) {
+      setGhost(undefined);
+      showCard({ kind: 'bunker', id: bunker.id });
+      return;
+    }
     if (started && Math.hypot(wx - castles()[YOU][0], wy - (castles()[YOU][1] - 1.6)) <= 3) {
       selected = undefined;
       setGhost(undefined);
@@ -412,19 +452,14 @@ void (async () => {
     at: [number, number];
   }
   const corpses: Corpse[] = [];
-  /** The sheet column and mirroring for a unit: along the road for walkers, along the flight line for flyers. */
-  const heading = (owner: Owner, s: number, air: boolean) => {
+  /** The sheet column and mirroring for a unit walking the road: along its tangent (flyers follow the road too), back up it for player 1. */
+  const heading = (owner: Owner, s: number) => {
     const b = match.board;
-    if (air) {
-      const [from, to] = [b.castles[owner], b.castles[owner === 0 ? 1 : 0]];
-      return direction(to[0] - from[0], to[1] - from[1]);
-    }
-    // Along the road, or back up it for the player whose castle is at the road's end.
     const [hx, hy] = b.directionAt(owner === 0 ? s : b.roadLength - s);
     return owner === 0 ? direction(hx, hy) : direction(-hx, -hy);
   };
   const addCorpse = (d: Death) => {
-    const dir = heading(d.owner, d.s, !!d.def.air);
+    const dir = heading(d.owner, d.s);
     const sheet = SHEETS[d.def.kind];
     const container = new Container();
     const sprite = new Sprite(unitFrame(d.def.sheet, d.def.kind, sheet.death[0]!, dir.col));
@@ -458,7 +493,11 @@ void (async () => {
   /** Attacks stay on screen a moment: a step lasts only 50 ms. */
   const effects: { shot: Shot; age: number }[] = [];
   const EFFECT_LIFE = 0.26;
-  const lastS = new Map<number, number>();
+  /** Each unit's last drawn spot, how far it has walked in all (the stride follows it, sideways steps too) and when it last moved. */
+  const tracks = new Map<number, { x: number; y: number; odo: number; movedAt: number; d: number; out: boolean }>();
+  /** Blasts (a suicide unit going off) and the pay-day figures floating up over your mills and quarries. */
+  const booms: { at: [number, number]; r: number; air: boolean; age: number }[] = [];
+  const BOOM_LIFE = 0.35;
   /** When (clock seconds) each unit last struck and what it struck at, for its swing; the same for towers (and castles, at -1 - owner), for their kick. */
   const strikes = new Map<number, { at: number; to: [number, number]; melee: boolean }>();
   const kicks = new Map<number, { at: number; to: [number, number] }>();
@@ -538,6 +577,80 @@ void (async () => {
       part.scale.set(0.5 + 0.7 * r);
     }
   };
+
+  /**
+   * A small quiet mark under a building's feet so towers that share a picture can be told apart: a filled disc for a mill (wood
+   * brown) or quarry (stone grey), a gold ring for a producer, a blue triangle for an anti-air tower, a diamond for a smithy, and
+   * for a bunker a row of its slots (a filled gold dot for each soldier inside, a steel ring for an empty one).
+   */
+  const drawBadge = (g: Graphics, t: Tower) => {
+    const d = t.def;
+    g.clear();
+    const [x, y, r] = [0, 27, 6];
+    if (d.bunker) {
+      const n = d.bunker.slots;
+      for (let i = 0; i < n; i++) {
+        const dx = (i - (n - 1) / 2) * 12;
+        if (i < t.garrison.length) g.circle(dx, y, 4.5).fill(0xf2d38a).stroke({ color: 0x1a120a, width: 1.5 });
+        else g.circle(dx, y, 4.5).fill({ color: 0x1a120a, alpha: 0.55 }).stroke({ color: 0xa7b6c7, width: 1.5 });
+      }
+    } else if (d.econ) {
+      g.circle(x, y, r)
+        .fill(d.econ.wood ? 0xc58b4e : 0xb4bcc6)
+        .stroke({ color: 0x1a120a, width: 1.5 });
+    } else if (d.trains) {
+      g.circle(x, y, r).fill({ color: 0x1a120a, alpha: 0.55 }).stroke({ color: 0xf2d38a, width: 2.5 });
+    } else if (d.damage > 0 && d.hits === 'air') {
+      g.poly([x, y - r - 1, x + r + 1, y + r - 1, x - r - 1, y + r - 1])
+        .fill(0x6fb7ff)
+        .stroke({ color: 0x1a120a, width: 1.5, join: 'round' });
+    } else if (!d.damage && !d.aura && !d.detect) {
+      g.poly([x, y - r - 1, x + r + 1, y, x, y + r + 1, x - r - 1, y])
+        .fill(0xd9825b)
+        .stroke({ color: 0x1a120a, width: 1.5, join: 'round' });
+    }
+  };
+
+  /** Pay-day figures: a small "+6" (wood brown) or "+8" (stone grey) rising over each of your mills and quarries. */
+  const floaters: { text: Text; age: number; y: number }[] = [];
+  const FLOAT_LIFE = 1.5;
+  function payDay() {
+    for (const t of match.towers) {
+      if (t.owner !== YOU || !t.def.econ) continue;
+      const wood = t.def.econ.wood ?? 0;
+      const amount = wood || (t.def.econ.stone ?? 0);
+      if (!amount) continue;
+      const text = new Text({
+        text: `+${amount}`,
+        style: {
+          fontFamily: 'Crimson Text',
+          fontWeight: '600',
+          fontSize: 22,
+          fill: wood ? 0xe0a566 : 0xd2d8df,
+          stroke: { color: 0x1a120a, width: 4, join: 'round' },
+        },
+      });
+      text.anchor.set(0.5, 1);
+      const y = (t.row + 0.5) * CELL + TOWER_FOOT - TOWER_PX * 0.78 - 6;
+      text.position.set((t.col + 0.5) * CELL, y);
+      floatLayer.addChild(text);
+      floaters.push({ text, age: 0, y });
+    }
+  }
+  function floatMoney(dt: number) {
+    for (let i = floaters.length - 1; i >= 0; i--) {
+      const f = floaters[i]!;
+      f.age += dt;
+      if (f.age >= FLOAT_LIFE) {
+        f.text.destroy();
+        floaters.splice(i, 1);
+        continue;
+      }
+      const p = f.age / FLOAT_LIFE;
+      f.text.y = f.y - 34 * (1 - (1 - p) * (1 - p));
+      f.text.alpha = Math.min(1, (1 - p) / 0.4);
+    }
+  }
 
   const bar = (x: number, y: number, w: number, frac: number, color: number) => {
     live.rect(x - w / 2, y, w, 4).fill(0x0e1117);
@@ -712,13 +825,21 @@ void (async () => {
         sprite.scale.set(TOWER_PX / tex.width); // a tower is about two and a half cells wide, whatever its sheet
         c.addChild(sprite);
         c.addChild(makeTowerFx(t.def)); // the tower's own small animation: lamp, halo or sweep (see `animateTower`)
+        c.addChild(new Graphics()); // the role badge (and a bunker's slots) under its feet
         return c;
       },
       (t, c) => {
         c.position.set((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + TOWER_FOOT);
         c.zIndex = t.row + 0.5;
         c.visible = isSeen(match, YOU, t, vision);
-        if (c.visible) animateTower(t, c);
+        if (c.visible) {
+          animateTower(t, c);
+          const key = `${t.garrison.length}`;
+          if (c.label !== key) {
+            c.label = key;
+            drawBadge(c.children[3] as Graphics, t);
+          }
+        }
       },
     );
     sync(
@@ -739,15 +860,29 @@ void (async () => {
         c.position.set(x * CELL, y * CELL);
         c.zIndex = u.def.air ? 1000 + y : y; // flyers pass over everything
         const sheet = SHEETS[u.def.kind];
-        const moved = lastS.get(u.id) !== u.s;
-        lastS.set(u.id, u.s);
+        // Motion is read from where it is drawn (a unit stepping off the road changes its offset, not its `s`).
+        let trk = tracks.get(u.id);
+        if (!trk) tracks.set(u.id, (trk = { x, y, odo: 0, movedAt: -9, d: u.off?.d ?? 0, out: true }));
+        const walked = Math.hypot(x - trk.x, y - trk.y);
+        if (walked > 1e-4) {
+          trk.odo += walked;
+          trk.movedAt = clock;
+          if (u.off && u.off.d !== trk.d) trk.out = u.off.d > trk.d;
+        }
+        [trk.x, trk.y, trk.d] = [x, y, u.off?.d ?? 0];
+        const moved = clock - trk.movedAt < 0.12;
         const body = c.children[1] as Sprite;
         // Strike: for STRIKE_TIME after a blow it faces its target and plays its attack frames (a lunge for a melee blow, a
         // recoil for a shot); otherwise it walks (frames follow the distance walked), flaps if it flies, or stands.
         const strike = strikes.get(u.id);
         const since = strike ? clock - strike.at : Infinity;
         const striking = since < STRIKE_TIME;
-        const dir = striking ? direction(strike!.to[0] - x, strike!.to[1] - y) : heading(u.owner, u.s, !!u.def.air);
+        const along = u.off
+          ? trk.out
+            ? direction(u.off.dir[0], u.off.dir[1])
+            : direction(-u.off.dir[0], -u.off.dir[1])
+          : heading(u.owner, u.s);
+        const dir = striking ? direction(strike!.to[0] - x, strike!.to[1] - y) : along;
         let pose: number;
         let [bx, by] = [0, 0];
         if (striking) {
@@ -757,12 +892,12 @@ void (async () => {
           const len = Math.hypot(dx, dy) || 1;
           const push = Math.sin(Math.PI * Math.min(1, p * 1.2)) * (strike!.melee ? LUNGE : -LUNGE * 0.3);
           [bx, by] = [(dx / len) * push, (dy / len) * push * 0.6];
-        } else if (moved) {
-          const phase = u.s / (STRIDE / sheet.walk.length);
+        } else if (u.def.air) pose = sheet.walk[Math.floor(clock * FLAP + u.id) % sheet.walk.length]!;
+        else if (moved) {
+          const phase = trk.odo / (STRIDE / sheet.walk.length);
           pose = sheet.walk[Math.floor(phase) % sheet.walk.length]!;
           by = -Math.abs(Math.sin((phase * Math.PI) / sheet.walk.length)) * 1.6 * SIZE; // a step's small bob
-        } else if (u.def.air) pose = sheet.walk[Math.floor(clock * 6 + u.id) % sheet.walk.length]!;
-        else {
+        } else {
           pose = 0;
           by = Math.sin(clock * 2.2 + u.id) * 0.6 * SIZE; // breathing while it waits
         }
@@ -773,9 +908,10 @@ void (async () => {
         // An enemy is drawn only in sight (a cloaked one also needs a detector); cloaked is faint to its own side; poison tints green.
         c.visible = isSeen(match, YOU, u, vision);
         body.alpha = u.def.cloak ? (u.owner === YOU ? 0.5 : 0.75) : 1;
-        body.tint = u.dot ? 0x9be37a : 0xffffff;
+        body.tint = u.dot ? 0x9be37a : (u.def.look?.tint ?? 0xffffff);
       },
     );
+    for (const id of tracks.keys()) if (!unitSprites.has(id)) tracks.delete(id);
     for (const id of strikes.keys()) if (!unitSprites.has(id)) strikes.delete(id);
     for (const id of kicks.keys()) if (id >= 0 && !towerSprites.has(id)) kicks.delete(id);
     // The castles answer a shot with a small swell.
@@ -800,13 +936,13 @@ void (async () => {
           0xffb13f,
         );
     for (const u of match.units) {
-      if (u.hp >= u.def.hp || !isSeen(match, YOU, u, vision)) continue;
+      if (u.hp >= u.maxHp || !isSeen(match, YOU, u, vision)) continue;
       const [x, y] = unitPos(u, match.board);
       bar(
         x * CELL,
-        y * CELL - FIGURE * unitScale(u.def) - 6 - (u.def.air ? FLIGHT : 0),
-        14 + FIGURE * unitScale(u.def) * 0.4,
-        u.hp / u.def.hp,
+        y * CELL - figureOf(u.def.kind) * unitScale(u.def) - 6 - (u.def.air ? FLIGHT : 0),
+        14 + figureOf(u.def.kind) * unitScale(u.def) * 0.4,
+        u.hp / u.maxHp,
         0x6fd36f,
       );
     }
@@ -823,7 +959,27 @@ void (async () => {
       const [x0, y0, x1, y1] = [e.shot.from[0] * CELL, e.shot.from[1] * CELL, e.shot.to[0] * CELL, e.shot.to[1] * CELL];
       const lift = e.shot.by.kind === 'tower' ? 44 : e.shot.by.kind === 'castle' ? 90 : 22;
       if (e.shot.melee) live.circle(x1, y1 - 22, 14).fill({ color: 0xffffff, alpha: 0.5 * a });
-      else {
+      else if (e.shot.multi) {
+        // One of several struck at once (a flame, a sweeping blade): a short soft arc that bows from the attacker to the target.
+        const f = Math.min(1, e.age / (EFFECT_LIFE * 0.6));
+        const [sx, sy, ex, ey] = [x0, y0 - lift, x1, y1 - 22];
+        const [nx, ny] = [-(ey - sy) * 0.18, (ex - sx) * 0.18];
+        const [mx, my] = [(sx + ex) / 2 + nx, (sy + ey) / 2 + ny];
+        const at = (t: number): [number, number] => [
+          (1 - t) * (1 - t) * sx + 2 * (1 - t) * t * mx + t * t * ex,
+          (1 - t) * (1 - t) * sy + 2 * (1 - t) * t * my + t * t * ey,
+        ];
+        const [t0, t1] = [Math.max(0, f - 0.6), f];
+        for (const [w, al] of [
+          [11, 0.2],
+          [4, 0.55],
+        ] as const) {
+          const [px, py] = at(t0);
+          live.moveTo(px, py);
+          for (let i = 1; i <= 6; i++) live.lineTo(...at(t0 + ((t1 - t0) * i) / 6));
+          live.stroke({ color: 0xff9a3c, width: w, alpha: al * a, cap: 'round', join: 'round' });
+        }
+      } else {
         // A missile flying from the shooter to the target over the effect's life, with a short fading trail.
         const f = Math.min(1, e.age / (EFFECT_LIFE * 0.8));
         const [hx, hy] = [x0 + (x1 - x0) * f, y0 - lift + (y1 - 22 - (y0 - lift)) * f];
@@ -839,20 +995,104 @@ void (async () => {
       }
       if (e.shot.splash > 0) live.circle(x1, y1, e.shot.splash * CELL).fill({ color: 0xffb13f, alpha: 0.2 * a });
     }
+
+    // A blast: one soft ring and glow spreading to the blast's radius, over a third of a second.
+    for (let i = booms.length - 1; i >= 0; i--) {
+      const k = booms[i]!;
+      k.age += dt;
+      if (k.age > BOOM_LIFE) {
+        booms.splice(i, 1);
+        continue;
+      }
+      if (!spotted(k.at)) continue;
+      const f = k.age / BOOM_LIFE;
+      const r = k.r * CELL * (0.3 + 0.7 * (1 - (1 - f) * (1 - f)));
+      const [x, y] = [k.at[0] * CELL, k.at[1] * CELL - (k.air ? FLIGHT : 0) - 8];
+      live.circle(x, y, r).fill({ color: 0xffa24a, alpha: 0.24 * (1 - f) });
+      live.circle(x, y, r).stroke({ color: 0xffd9a0, width: 3, alpha: 0.7 * (1 - f) });
+    }
+    floatMoney(dt);
   }
 
   // --- The page: top bar, the dock of thumbnails, the card, the title screen -----------------------------------------------
+  const money = (c: Cost) =>
+    [c.wood > 0 && `<i class="w">${c.wood}</i>`, c.stone > 0 && `<i class="s">${c.stone}</i>`]
+      .filter(Boolean)
+      .join(' ') || '<i>free</i>';
+  const moneyWords = (c: Cost) =>
+    [c.wood > 0 && `${c.wood} wood`, c.stone > 0 && `${c.stone} stone`].filter(Boolean).join(' · ') || 'free';
+  /** What the player is short of for a price ('' when they can pay). */
+  const lacking = (c: Cost) => {
+    const p = match.players[YOU];
+    const short = [
+      c.wood > p.wood && `${Math.ceil(c.wood - p.wood)} more wood`,
+      c.stone > p.stone && `${Math.ceil(c.stone - p.stone)} more stone`,
+    ].filter(Boolean);
+    return short.length ? `Need ${short.join(' and ')}` : '';
+  };
+  const towerName = (id: string) => RACES[match.players[YOU].race].towers.find((t) => t.id === id)?.name ?? id;
+
+  const lastSides = ['', ''];
   const side = (id: string, label: string, o: Owner) => {
     const p = match.players[o];
-    $(id).innerHTML =
-      `<span>${label} · ${RACES[p.race].name}</span><b>${Math.floor(p.gold)} gold</b>` +
-      `<span>castle ${p.castle.level} · ${Math.max(0, Math.ceil(p.castle.hp))}/${p.castle.maxHp}</span>`;
+    const name = `<span>${label} · ${RACES[p.race].name}</span>`;
+    const castle = `<span class="castle">castle ${p.castle.level} · ${Math.max(0, Math.ceil(p.castle.hp))}/${p.castle.maxHp}</span>`;
+    let html = name + castle;
+    if (o === YOU) {
+      const inc = incomeOf(match, o);
+      html =
+        name +
+        `<span class="res"><b class="w">${Math.floor(p.wood)} wood</b><b class="s">${Math.floor(p.stone)} stone</b>` +
+        `<span class="inc">+${inc.wood}w +${inc.stone}s / ${PAY_EVERY} s</span></span>` +
+        castle;
+    }
+    if (lastSides[o] !== html) $(id).innerHTML = lastSides[o] = html;
   };
 
   const towerThumb = (art: string, px: number) =>
     `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(art/${art}.png);background-size:${px}px auto"></i>`;
-  const unitThumb = (art: string, px: number) =>
-    `<img class="thumb art" src="art/${art}.png" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`;
+  /** A unit's picture where it has no portrait of its own: its front-facing standing frame, cropped to the figure and scaled up. */
+  const portraits = new Map<string, string>();
+  const portrait = (d: UnitDef) => {
+    let url = portraits.get(d.sheet);
+    if (url) return url;
+    const size = SHEETS[d.kind].frame;
+    const frame = document.createElement('canvas');
+    frame.width = frame.height = size;
+    const fx = frame.getContext('2d', { willReadFrequently: true })!;
+    fx.drawImage(
+      sheetTextures.get(d.sheet)!.source.resource as CanvasImageSource,
+      4 * size,
+      0,
+      size,
+      size,
+      0,
+      0,
+      size,
+      size,
+    );
+    const px = fx.getImageData(0, 0, size, size).data;
+    let [x0, y0, x1, y1] = [size, size, -1, -1];
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++)
+        if (px[(y * size + x) * 4 + 3]! > 24)
+          [x0, y0, x1, y1] = [Math.min(x0, x), Math.min(y0, y), Math.max(x1, x), Math.max(y1, y)];
+    if (x1 < 0) [x0, y0, x1, y1] = [0, 0, size - 1, size - 1];
+    const [w, h] = [x1 - x0 + 1, y1 - y0 + 1];
+    const k = Math.max(1, Math.floor(88 / Math.max(w, h))); // a whole number of times up, so it stays crisp
+    const out = document.createElement('canvas');
+    out.width = w * k;
+    out.height = h * k;
+    const ox = out.getContext('2d')!;
+    ox.imageSmoothingEnabled = false;
+    ox.drawImage(frame, x0, y0, w, h, 0, 0, w * k, h * k);
+    portraits.set(d.sheet, (url = out.toDataURL()));
+    return url;
+  };
+  const unitThumb = (d: UnitDef, px: number) =>
+    d.art
+      ? `<img class="thumb art" src="art/${d.art}.png" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`
+      : `<img class="thumb art gen" src="${portrait(d)}" alt="" style="width:${px}px;height:${Math.round((px * 38) / 46)}px" />`;
 
   const row = (k: string, v: string | number) => `<li><span>${k}</span><b>${v}</b></li>`;
   const per = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
@@ -861,69 +1101,118 @@ void (async () => {
       .filter(Boolean)
       .map((x) => `<i>${x}</i>`)
       .join('')}</div>`;
+  const pct = (n: number) => `+${Math.round(n * 100)}%`;
 
-  /** A unit's card: what it is and what it can do. */
-  const unitCard = (d: UnitDef) =>
-    `<header><div class="pic">${unitThumb(d.art, 46)}</div><div><h3>${d.name}</h3><div class="sub">Tier ${d.tier} unit · ${
-      d.count > 1 ? `${d.count} for one purchase` : 'one for one purchase'
-    }</div></div></header>` +
-    tags(d.air && 'Flies', d.cloak && 'Cloaked', d.hitsAir && 'Hits air') +
-    `<ul>${row('Health', d.hp)}${row('Damage', `${d.damage} a hit`)}${row('Attacks every', `${per(d.cooldown)} s`)}${row('Damage a second', per(d.damage / d.cooldown))}` +
-    `${row('Reach', d.range > 1.5 ? `${d.range} cells` : 'melee')}${row('Speed', `${d.speed} cells a second`)}${row('Training', `${d.train} s`)}${row('Sight', `${d.sight} cells`)}</ul>`;
+  /** A unit's card: what it is and what it can do (with your upgrades counted in). */
+  const unitCard = (d: UnitDef) => {
+    const dmg = boostOf(match, YOU, d, 'damage');
+    const hp = boostOf(match, YOU, d, 'hp');
+    const boosted = (v: number, b: number) => `${per(Math.round(v * b * 10) / 10)}${b > 1 ? ` (${pct(b - 1)})` : ''}`;
+    return (
+      `<header><div class="pic">${unitThumb(d, 46)}</div><div><h3>${d.name}</h3><div class="sub">Tier ${d.tier} unit · ${
+        d.count > 1 ? `${d.count} for one purchase` : 'one for one purchase'
+      }</div></div></header>` +
+      tags(
+        d.air && 'Flies',
+        d.cloak && 'Cloaked',
+        d.hitsAir && 'Hits air',
+        d.suicide && 'Blows up',
+        !!d.multi && `Hits ${d.multi} at once`,
+        !!d.splash && `Area ${per(d.splash)}`,
+        !!d.siege && d.siege > 1 && `x${per(d.siege)} vs buildings`,
+        d.range > 1.5 && `Range ${per(d.range)}`,
+        d.garrison && 'Fits a bunker',
+      ) +
+      `<ul>${row('Price', money(d.cost))}${row('Health', boosted(d.hp, hp))}${row('Damage', `${boosted(d.damage, dmg)} a hit`)}` +
+      `${row('Attacks every', `${per(d.cooldown)} s`)}${row('Damage a second', per((d.damage * dmg) / d.cooldown))}` +
+      `${row('Reach', d.range > 1.5 ? `${per(d.range)} cells` : 'melee')}${row('Speed', `${d.speed} cells a second`)}${row('Sight', `${d.sight} cells`)}` +
+      `${d.needs ? row('Comes from', towerName(d.needs)) : ''}</ul>`
+    );
+  };
 
-  /** A tower's card. */
-  const towerCard = (d: TowerDef) =>
-    `<header><div class="pic">${towerThumb(d.art, 50)}</div><div><h3>${d.name}</h3><div class="sub">Tier ${d.tier} tower · ${d.hp} health</div></div></header>` +
-    tags(
-      d.damage > 0 && (d.hits === 'both' ? 'Ground + air' : d.hits === 'air' ? 'Air only' : 'Ground only'),
-      d.splash > 0 && 'Area damage',
-      !!d.dot && 'Poison',
-      d.aura && (d.aura.kind === 'heal' ? 'Healer' : 'Power aura'),
-      !!d.detect && 'Sees cloaked',
-      d.reach > 0 && 'Extends your build area',
-    ) +
-    `<ul>${
-      d.damage > 0
-        ? row('Damage', `${d.damage} a shot`) +
-          row('Shoots every', `${per(d.cooldown)} s`) +
-          row('Damage a second', per(d.damage / d.cooldown)) +
-          row('Range', `${d.range} cells`) +
-          (d.splash > 0 ? row('Area', `${d.splash} cells round the target`) : '') +
-          (d.dot ? row('Poison', `${d.dot.dps} a second for ${d.dot.seconds} s`) : '')
-        : ''
-    }${
-      d.aura
-        ? row(
-            d.aura.kind === 'heal' ? 'Heals' : 'Damage bonus',
-            d.aura.kind === 'heal' ? `${d.aura.amount} a second` : `+${Math.round(d.aura.amount * 100)}%`,
-          ) + row('Aura reach', `${d.aura.radius} cells`)
-        : ''
-    }${d.detect ? row('Sees cloaked', `${d.detect} cells round`) : ''}${d.reach ? row('Build reach', `${d.reach} cells`) : ''}${row('Sight', `${d.sight} cells`)}</ul>`;
+  /** What a building does, as a line each (roles: economy, producer, smithy, bunker, attacker, aura, detector). */
+  const towerCard = (d: TowerDef) => {
+    const race = RACES[match.players[YOU].race];
+    const names = (ids: string[], list: { id: string; name: string }[]) =>
+      ids.map((id) => list.find((x) => x.id === id)?.name ?? id).join(', ');
+    const hosted = race.upgrades.filter((u) => u.needs === d.id).map((u) => u.name);
+    const built = match.towers.filter((t) => t.owner === YOU && t.def.id === d.id).length;
+    return (
+      `<header><div class="pic">${towerThumb(d.art, 50)}</div><div><h3>${d.name}</h3><div class="sub">Tier ${d.tier} building · ${d.hp} health</div></div></header>` +
+      tags(
+        !!d.econ && (d.econ.wood ? 'Makes wood' : 'Makes stone'),
+        !!d.trains && 'Unlocks units',
+        !d.damage && !d.aura && !d.detect && !d.econ && !d.trains && !d.bunker && 'Upgrades',
+        !!d.bunker && 'Bunker',
+        d.damage > 0 && (d.hits === 'both' ? 'Ground + air' : d.hits === 'air' ? 'Air only' : 'Ground only'),
+        d.splash > 0 && 'Area damage',
+        !!d.dot && 'Poison',
+        d.aura && (d.aura.kind === 'heal' ? 'Healer' : 'Power aura'),
+        !!d.detect && 'Sees cloaked',
+        d.reach > 0 && 'Extends your build area',
+      ) +
+      `<ul>${row('Price', money(d.cost))}${d.limit ? row('Built', `${built} of ${d.limit}`) : ''}${d.needs ? row('Needs', towerName(d.needs)) : ''}${
+        d.econ
+          ? row('Pays', `+${d.econ.wood ?? d.econ.stone} ${d.econ.wood ? 'wood' : 'stone'} every ${PAY_EVERY} s`)
+          : ''
+      }${d.trains ? row('Unlocks', names(d.trains, race.units)) : ''}${hosted.length ? row('Upgrades', hosted.join(', ')) : ''}${
+        d.bunker ? row('Slots', `${d.bunker.slots} soldiers, +${d.bunker.rangeBonus} range`) : ''
+      }${
+        d.damage > 0
+          ? row('Damage', `${d.damage} a shot`) +
+            row('Shoots every', `${per(d.cooldown)} s`) +
+            row('Damage a second', per(d.damage / d.cooldown)) +
+            row('Range', `${d.range} cells`) +
+            (d.splash > 0 ? row('Area', `${d.splash} cells round the target`) : '') +
+            (d.dot ? row('Poison', `${d.dot.dps} a second for ${d.dot.seconds} s`) : '')
+          : ''
+      }${
+        d.aura
+          ? row(
+              d.aura.kind === 'heal' ? 'Heals' : 'Damage bonus',
+              d.aura.kind === 'heal' ? `${d.aura.amount} a second` : pct(d.aura.amount),
+            ) + row('Aura reach', `${d.aura.radius} cells`)
+          : ''
+      }${d.detect ? row('Sees cloaked', `${d.detect} cells round`) : ''}${d.reach ? row('Build reach', `${d.reach} cells`) : ''}${row('Sight', `${d.sight} cells`)}</ul>`
+    );
+  };
 
   const trainButtons: [HTMLButtonElement, UnitDef][] = [];
   const buildButtons: [HTMLButtonElement, TowerDef][] = [];
+  const upgradeButtons: [HTMLButtonElement, UpgradeDef][] = [];
   let castleButton: HTMLButtonElement;
   const orderButtons: [HTMLButtonElement, 'towers' | 'units'][] = [];
 
-  /** One thumbnail in the dock: a wooden square with the picture, its price under it and its tier over it if the castle is too low. */
+  /** One thumbnail in the dock: a wooden square with the picture, its price under it and a ribbon over it if it is locked. */
   const thumb = (art: string, cost: string, title: string, onclick: () => void) => {
     const b = document.createElement('button');
     b.className = 'tb wbtn';
     b.title = title;
-    b.innerHTML = `${art}<em>${cost}</em>`;
+    b.innerHTML = `${art}<em>${cost}</em><span class="lv"></span>`;
     b.onclick = onclick;
     return b;
   };
+  const setChip = (b: HTMLElement, text: string, title: string) => {
+    const chip = b.querySelector('.lv')!;
+    if (chip.textContent !== text) chip.textContent = text;
+    b.title = title;
+  };
 
-  // The card: what a thumbnail is (and, for the castle, its health, pay and the next upgrade), with the purchase button.
-  type CardOf = { kind: 'unit'; def: UnitDef } | { kind: 'tower'; def: TowerDef } | { kind: 'castle' };
+  // The card: what a thumbnail is (and, for the castle, its health, income and the next upgrade), with the purchase button.
+  type CardOf =
+    | { kind: 'unit'; def: UnitDef }
+    | { kind: 'tower'; def: TowerDef }
+    | { kind: 'castle' }
+    | { kind: 'bunker'; id: number };
   let cardOf: CardOf | undefined;
   const act = $<HTMLButtonElement>('card-act');
   let cardBody = '';
+  const sameCard = (a: CardOf, b: CardOf) =>
+    a.kind === b.kind &&
+    (a.kind === 'castle' || (a as { def?: unknown; id?: number }).def === (b as { def?: unknown }).def) &&
+    (a.kind !== 'bunker' || a.id === (b as { id: number }).id);
   function showCard(c: CardOf, toggle = false) {
-    const same =
-      cardOf && cardOf.kind === c.kind && (c.kind === 'castle' || (cardOf as { def: unknown }).def === c.def);
-    if (toggle && same) return closeCard();
+    if (toggle && cardOf && sameCard(cardOf, c)) return closeCard();
     cardOf = c;
     if (selected && !(c.kind === 'tower' && c.def === selected)) {
       selected = undefined; // looking at something else drops the tower being placed
@@ -941,6 +1230,31 @@ void (async () => {
     refresh();
   }
   $('card-x').onclick = closeCard;
+  // The bunker card's own buttons (its body is rebuilt as the money and the slots change, so one listener catches them).
+  $('card-body').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-load]');
+    if (!b || !cardOf || cardOf.kind !== 'bunker' || b.disabled) return;
+    loadBunker(match, YOU, cardOf.id, b.dataset.load!);
+    renderCard();
+    refresh();
+  });
+
+  /** Why a unit cannot be bought now ('' when it can). */
+  const unitReason = (d: UnitDef) => {
+    const open = unitUnlocked(match, YOU, d);
+    if (open === 'tier') return `Needs castle level ${d.tier}`;
+    if (open === 'needs') return `Needs ${towerName(d.needs!)}`;
+    if (match.units.filter((u) => u.owner === YOU).length + d.count > UNIT_CAP)
+      return `Unit limit of ${UNIT_CAP} reached`;
+    return lacking(d.cost);
+  };
+  const towerReason = (d: TowerDef) => {
+    const open = towerUnlocked(match, YOU, d);
+    if (open === 'tier') return `Needs castle level ${d.tier}`;
+    if (open === 'needs') return `Needs ${towerName(d.needs!)}`;
+    if (open === 'limit') return `Only ${d.limit} allowed`;
+    return lacking(d.cost);
+  };
 
   function renderCard() {
     if (!cardOf) return;
@@ -950,21 +1264,17 @@ void (async () => {
     const card = $('card');
     card.classList.toggle('placing', cardOf.kind === 'tower' && selected === cardOf.def);
     let body: string;
-    let label: string;
+    let label = '';
     let reason = '';
     let go: () => void = () => undefined;
+    const bunker =
+      cardOf.kind === 'bunker' ? match.towers.find((t) => t.id === (cardOf as { id: number }).id) : undefined;
+    if (cardOf.kind === 'bunker' && !bunker) return closeCard(); // it fell
     if (cardOf.kind === 'unit') {
       const d = cardOf.def;
       body = unitCard(d);
-      label = `Train · ${d.cost} gold`;
-      reason =
-        d.tier > level
-          ? `Needs castle level ${d.tier}`
-          : me.queue.length >= QUEUE_MAX
-            ? 'The training queue is full'
-            : d.cost > me.gold
-              ? `Need ${Math.ceil(d.cost - me.gold)} more gold`
-              : '';
+      label = `Train · ${moneyWords(d.cost)}`;
+      reason = unitReason(d);
       go = () => trainUnit(match, YOU, d.id);
     } else if (cardOf.kind === 'tower') {
       const d = cardOf.def;
@@ -976,21 +1286,42 @@ void (async () => {
           setGhost(undefined);
         };
       } else {
-        label = `Build · ${d.cost} gold`;
-        reason =
-          d.tier > level
-            ? `Needs castle level ${d.tier}`
-            : d.cost > me.gold
-              ? `Need ${Math.ceil(d.cost - me.gold)} more gold`
-              : '';
+        label = `Build · ${moneyWords(d.cost)}`;
+        reason = towerReason(d);
         go = () => {
           selected = d;
         };
       }
+    } else if (bunker) {
+      const b = bunker.def.bunker!;
+      const dots = Array.from(
+        { length: b.slots },
+        (_, i) => `<i class="${i < bunker.garrison.length ? 'on' : ''}"></i>`,
+      ).join('');
+      const full = bunker.garrison.length >= b.slots;
+      const loads = race.units
+        .filter((u) => u.garrison)
+        .map((u) => {
+          const cost = soldierCost(u);
+          const why = full ? 'Full' : unitUnlocked(match, YOU, u) !== 'ok' ? unitReason(u) : lacking(cost);
+          return (
+            `<button class="load" data-load="${u.id}"${why ? ' disabled' : ''}>${unitThumb(u, 34)}` +
+            `<span><b>${u.name}</b><small>${why || `${u.damage} dmg · range ${per(u.range + b.rangeBonus)}${u.hitsAir ? ' · hits air' : ''}`}</small></span>` +
+            `<em>${money(cost)}</em></button>`
+          );
+        })
+        .join('');
+      body =
+        `<header><div class="pic">${towerThumb(bunker.def.art, 50)}</div><div><h3>${bunker.def.name}</h3><div class="sub">${bunker.garrison.length} of ${b.slots} soldiers inside</div></div></header>` +
+        `<div class="slots">${dots}</div>` +
+        `<div class="hp"><i style="width:${Math.max(0, (bunker.hp / bunker.def.hp) * 100)}%"></i><span>${Math.max(0, Math.ceil(bunker.hp))} / ${bunker.def.hp}</span></div>` +
+        `<p class="note">Soldiers loaded here shoot from the walls with +${b.rangeBonus} range, and fall with it. Tap one to load it.</p>` +
+        `<div class="loads">${loads || '<p class="note">None of your units fit a bunker.</p>'}</div>`;
     } else {
       const cost = upgradeCost(match, YOU);
-      const pay = BASE_PAY + race.castle.pay[level - 1]!;
-      const queue = me.queue.map((q) => `${q.def.name} (${Math.max(0, Math.ceil(q.left))}s)`).join(', ');
+      const inc = incomeOf(match, YOU);
+      const base = race.castle.income[level - 1]!;
+      const nextInc = race.castle.income[level];
       const names = (items: { name: string; tier: number }[]) =>
         items
           .filter((i) => i.tier === level + 1)
@@ -999,18 +1330,19 @@ void (async () => {
       body =
         `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">Level ${level} of ${MAX_LEVEL}</div></div></header>` +
         `<div class="hp"><i style="width:${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%"></i><span>${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}</span></div>` +
-        `<ul>${row('Pay', `+${pay} gold every ${PAY_EVERY} s`)}${row('Build reach', `${race.castle.reach[level - 1]} cells`)}${row('Training', queue || 'nothing')}</ul>` +
-        (cost === undefined
+        `<ul>${row('Castle pays', `${money(base)} every ${PAY_EVERY} s`)}${row('With mills and quarries', money(inc))}${row('Build reach', `${race.castle.reach[level - 1]} cells`)}${row('Units out', `${match.units.filter((u) => u.owner === YOU).length} of ${UNIT_CAP}`)}</ul>` +
+        (cost === undefined || !nextInc
           ? '<p class="note">The castle has every upgrade.</p>'
-          : `<p class="note"><b>Level ${level + 1}</b>: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pay +${race.castle.pay[level - 1]} → +${race.castle.pay[level]}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; towers: ${names(race.towers) || 'none'}.</p>`);
-      label = cost === undefined ? 'Fully upgraded' : `Upgrade to level ${level + 1} · ${cost} gold`;
-      reason = cost === undefined ? 'max' : cost > me.gold ? `Need ${Math.ceil(cost - me.gold)} more gold` : '';
+          : `<p class="note"><b>Level ${level + 1}</b> costs ${money(cost)}: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pays ${money(nextInc)}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; buildings: ${names(race.towers) || 'none'}.</p>`);
+      label = cost === undefined ? 'Fully upgraded' : `Upgrade to level ${level + 1} · ${moneyWords(cost)}`;
+      reason = cost === undefined ? 'max' : lacking(cost);
       go = () => upgradeCastle(match, YOU);
     }
     if (body !== cardBody) {
       $('card-body').innerHTML = body;
       cardBody = body;
     }
+    act.hidden = cardOf.kind === 'bunker';
     act.textContent = reason && reason !== 'max' ? `${label} (${reason.toLowerCase()})` : label;
     act.disabled = !!reason;
     act.title = reason === 'max' ? '' : reason;
@@ -1021,23 +1353,67 @@ void (async () => {
     };
   }
 
+  /** The dock's three shelves (units, buildings, upgrades). */
+  let tab: 'units' | 'build' | 'upgrades' = 'units';
+  const shelves = { units: 'train', build: 'build', upgrades: 'upgrades' } as const;
+  function setTab(t: typeof tab) {
+    tab = t;
+    for (const [k, id] of Object.entries(shelves)) $(id).hidden = k !== t;
+    for (const b of document.querySelectorAll<HTMLButtonElement>('#tabs button'))
+      b.classList.toggle('on', b.dataset.tab === t);
+    document.documentElement.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`);
+    clampCamera();
+  }
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#tabs button'))
+    b.onclick = () => setTab(b.dataset.tab as typeof tab);
+  window.addEventListener('resize', () =>
+    document.documentElement.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`),
+  );
+
+  /** Buildings by what they are for, so fifteen of them stay easy to find. */
+  const roleOf = (d: TowerDef) =>
+    d.econ ? 'Economy' : d.damage > 0 || d.bunker ? 'Defence' : d.aura || d.detect ? 'Support' : 'Production';
+  const ROLES = ['Economy', 'Production', 'Defence', 'Support'];
+
+  const upgradeText = (up: UpgradeDef) => `${pct(up.perLevel)} ${up.applies} ${up.stat === 'hp' ? 'health' : 'damage'}`;
+
   function makeControls(race: RaceId) {
-    for (const id of ['train', 'build', 'castle']) $(id).innerHTML = '';
+    for (const id of ['train', 'build', 'upgrades', 'castle']) $(id).innerHTML = '';
     trainButtons.length = 0;
     buildButtons.length = 0;
+    upgradeButtons.length = 0;
     orderButtons.length = 0;
     const r = RACES[race];
     for (const def of r.units) {
-      const b = thumb(unitThumb(def.art, 36), `${def.cost}`, def.name, () => showCard({ kind: 'unit', def }, true));
-      b.insertAdjacentHTML('beforeend', def.tier > 1 ? `<span class="lv">L${def.tier}</span>` : '');
+      const b = thumb(unitThumb(def, 36), money(def.cost), def.name, () => showCard({ kind: 'unit', def }, true));
       $('train').append(b);
       trainButtons.push([b, def]);
     }
-    for (const def of r.towers) {
-      const b = thumb(towerThumb(def.art, 36), `${def.cost}`, def.name, () => showCard({ kind: 'tower', def }, true));
-      b.insertAdjacentHTML('beforeend', def.tier > 1 ? `<span class="lv">L${def.tier}</span>` : '');
-      $('build').append(b);
-      buildButtons.push([b, def]);
+    for (const role of ROLES) {
+      const defs = r.towers.filter((d) => roleOf(d) === role);
+      if (!defs.length) continue;
+      const sec = document.createElement('div');
+      sec.className = 'sec';
+      sec.innerHTML = `<h4>${role}</h4><div class="thumbs"></div>`;
+      for (const def of defs) {
+        const b = thumb(towerThumb(def.art, 36), money(def.cost), def.name, () =>
+          showCard({ kind: 'tower', def }, true),
+        );
+        sec.lastElementChild!.append(b);
+        buildButtons.push([b, def]);
+      }
+      $('build').append(sec);
+    }
+    for (const up of r.upgrades) {
+      const b = document.createElement('button');
+      b.className = 'up wbtn';
+      b.innerHTML = `<b>${up.name}</b><small>${upgradeText(up)}</small><span class="foot"><span class="pips"><i></i><i></i><i></i></span><em></em></span>`;
+      b.onclick = () => {
+        buyUpgrade(match, YOU, up.id);
+        refresh();
+      };
+      $('upgrades').append(b);
+      upgradeButtons.push([b, up]);
     }
     castleButton = thumb(towerThumb(r.castle.art, 40), '', 'Your castle: upgrade it', () =>
       showCard({ kind: 'castle' }, true),
@@ -1054,27 +1430,59 @@ void (async () => {
       $('castle').append(b);
       orderButtons.push([b, what]);
     }
-    document.documentElement.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`);
+    setTab(tab);
   }
 
   function refresh() {
     const me = match.players[YOU];
     const { level } = me.castle;
-    const full = me.queue.length >= QUEUE_MAX;
     for (const [b, def] of trainButtons) {
-      b.classList.toggle('lock', def.tier > level);
-      b.classList.toggle('poor', def.tier <= level && (def.cost > me.gold || full));
+      const open = unitUnlocked(match, YOU, def);
+      const why = unitReason(def);
+      b.classList.toggle('lock', open !== 'ok');
+      b.classList.toggle('poor', open === 'ok' && !!why);
       b.classList.toggle('open', cardOf?.kind === 'unit' && cardOf.def === def);
+      setChip(
+        b,
+        open === 'tier' ? `L${def.tier}` : open === 'needs' ? towerName(def.needs!) : '',
+        `${def.name}${why ? `: ${why}` : ''}`,
+      );
     }
     for (const [b, def] of buildButtons) {
-      b.classList.toggle('lock', def.tier > level);
-      b.classList.toggle('poor', def.tier <= level && def.cost > me.gold);
+      const open = towerUnlocked(match, YOU, def);
+      const why = towerReason(def);
+      b.classList.toggle('lock', open !== 'ok');
+      b.classList.toggle('poor', open === 'ok' && !!why);
       b.classList.toggle('open', cardOf?.kind === 'tower' && cardOf.def === def && selected !== def);
       b.classList.toggle('arm', selected === def);
+      setChip(
+        b,
+        open === 'tier' ? `L${def.tier}` : open === 'needs' ? towerName(def.needs!) : open === 'limit' ? 'built' : '',
+        `${def.name}${why ? `: ${why}` : ''}`,
+      );
+    }
+    for (const [b, up] of upgradeButtons) {
+      const lvl = upgradeLevel(match, YOU, up.id);
+      const next = nextUpgrade(match, YOU, up);
+      let why = '';
+      if (!next) why = 'Fully upgraded';
+      else if (next.tier > level) why = `Needs castle level ${next.tier}`;
+      else if (!match.towers.some((t) => t.owner === YOU && t.def.id === up.needs))
+        why = `Needs ${towerName(up.needs)}`;
+      const poor = !!next && !why && !canAfford(me, next.cost);
+      const pips = b.querySelectorAll('.pips i');
+      pips.forEach((p, i) => p.classList.toggle('on', i < lvl));
+      const line = b.querySelector('em')!;
+      const text = !next ? 'max' : why ? why : money(next.cost);
+      if (line.innerHTML !== text) line.innerHTML = text;
+      b.classList.toggle('lock', !!why);
+      b.classList.toggle('poor', poor);
+      b.title = why || (poor ? lacking(next.cost) : `Buy level ${lvl + 1}`);
+      b.disabled = !next || !!why;
     }
     const upCost = upgradeCost(match, YOU);
     castleButton.classList.toggle('open', cardOf?.kind === 'castle');
-    castleButton.classList.toggle('poor', upCost === undefined || upCost > me.gold);
+    castleButton.classList.toggle('poor', upCost === undefined || !canAfford(me, upCost));
     castleButton.querySelector('em')!.textContent = `Lv ${level}`;
     for (const [b, what] of orderButtons) {
       const attack = me.orders[what] === 'attack';
@@ -1085,8 +1493,6 @@ void (async () => {
       b.classList.toggle('bypass', !attack);
     }
     renderCard();
-    const queue = me.queue.map((q) => q.def.name).join(', ');
-    $('queue').textContent = queue ? `Training: ${queue}` : '';
     if (!selected) setGhost(undefined);
   }
 
@@ -1102,8 +1508,10 @@ void (async () => {
         scenery: 'Trees, rocks or water are in the way.',
         taken: 'Something is already built there.',
         castle: 'Too close to a castle.',
-        gold: `Not enough gold for a ${selected.name}.`,
+        gold: `Not enough wood or stone for a ${selected.name}.`,
         tier: `A ${selected.name} needs a higher castle level.`,
+        needs: `A ${selected.name} needs the ${selected.needs ? towerName(selected.needs) : 'building'} first.`,
+        limit: `You can only have ${selected.limit ?? 'so many'} ${selected.name}.`,
       };
       text =
         cell && why !== 'ok'
@@ -1125,9 +1533,12 @@ void (async () => {
     acc = 0;
     started = true;
     for (const c of [...towerSprites.values(), ...unitSprites.values()]) c.destroy({ children: true });
+    for (const f of floaters) f.text.destroy();
+    floaters.length = 0;
     towerSprites.clear();
     unitSprites.clear();
-    lastS.clear();
+    tracks.clear();
+    booms.length = 0;
     strikes.clear();
     kicks.clear();
     effects.length = 0;
@@ -1175,7 +1586,7 @@ void (async () => {
     const b = document.createElement('button');
     b.className = 'race';
     b.style.setProperty('--c', '#' + race.color.toString(16).padStart(6, '0'));
-    b.innerHTML = `<b>${race.name}</b><span>${race.blurb}</span><div class="look">${race.units.map((u) => unitThumb(u.art, 40)).join('')}${race.towers.map((t) => towerThumb(t.art, 40)).join('')}</div>`;
+    b.innerHTML = `<b>${race.name}</b><span>${race.blurb}</span><div class="look">${race.units.map((u) => unitThumb(u, 34)).join('')}</div>`;
     b.onclick = () => start(id);
     $('races').append(b);
   }
@@ -1218,12 +1629,20 @@ void (async () => {
       while (acc >= STEP && match.winner < 0) {
         acc -= STEP;
         ai(match, STEP);
+        const pay = match.payTimer;
         step(match, STEP);
-        for (const d of match.deaths) addCorpse(d);
+        if (match.payTimer < pay) payDay();
+        for (const d of match.deaths) {
+          addCorpse(d);
+          if (d.boom) booms.push({ at: d.at, r: d.boom, air: !!d.def.air, age: 0 });
+        }
         for (const shot of match.shots) {
           effects.push({ shot, age: 0 });
-          if (shot.by.kind === 'unit') strikes.set(shot.by.id, { at: clock, to: shot.to, melee: shot.melee });
-          else kicks.set(shot.by.kind === 'tower' ? shot.by.id : -1 - shot.by.id, { at: clock, to: shot.to });
+          // A unit that hits several at once faces the first (the main target): its spray shots follow in the same step.
+          if (shot.by.kind === 'unit') {
+            if (!(shot.multi && strikes.get(shot.by.id)?.at === clock))
+              strikes.set(shot.by.id, { at: clock, to: shot.to, melee: shot.melee });
+          } else kicks.set(shot.by.kind === 'tower' ? shot.by.id : -1 - shot.by.id, { at: clock, to: shot.to });
         }
       }
       refresh();
