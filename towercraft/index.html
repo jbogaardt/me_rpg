@@ -222,7 +222,8 @@
       #credits h2 { margin-top: 0; } #credits p { max-width: 560px; margin: 8px auto 16px; font-size: 14px; } #credits a { color: var(--gold); }
       .thumb { flex: none; display: block; border-radius: 3px; background-repeat: no-repeat; background-position: 0 0; }
       img.thumb { object-fit: cover; }
-      #end > div { padding: 18px 30px; } #end p { color: var(--text); }
+      #end { background: rgba(8, 10, 14, 0.38); animation: end-in 0.9s ease-out; } #end > div { padding: 18px 30px; } #end p { color: var(--text); }
+      @keyframes end-in { from { opacity: 0; } to { opacity: 1; } }
       #again { padding: 10px 26px; font-size: 16px; }
 
       /* A narrow screen: the card rises over the dock instead of the side, and gets out of the way while a tower is placed. */
