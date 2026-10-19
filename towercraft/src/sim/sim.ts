@@ -13,10 +13,10 @@ import { MAX_LEVEL, RACES, type RaceId, type TowerDef, type UnitDef } from './ra
 
 export const START_GOLD = 150;
 export const PAY_EVERY = 5;
-export const BASE_PAY = 8;
+export const BASE_PAY = 30;
 /** A match that goes on this long (seconds) is decided on castle hit points left. */
 export const TIME_LIMIT = 1200;
-export const QUEUE_MAX = 6;
+export const QUEUE_MAX = 8;
 /** How far (cells) a castle's body reaches: attackers hit its edge, not its centre. */
 export const CASTLE_RADIUS = 1.2;
 const TOWER_RADIUS = 0.5;
@@ -318,7 +318,9 @@ export function buildTower(m: Match, owner: Owner, towerId: string, col: number,
 
 // --- The step --------------------------------------------------------------------------------------------------------
 
-const bounty = (def: UnitDef) => Math.max(1, Math.round(def.cost / def.count / 3));
+/** A kill pays the killer this share (1/n) of the unit's price: the lever that makes a winning fight snowball. */
+const BOUNTY_SHARE = 2;
+const bounty = (def: UnitDef) => Math.max(1, Math.round(def.cost / def.count / BOUNTY_SHARE));
 /** Spacing (cells) between units that walk out together. */
 const SPACING = 0.5;
 

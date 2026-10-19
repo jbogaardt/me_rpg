@@ -47,22 +47,29 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
   (CC-BY-SA 3.0, so the title screen credits them and the terms follow the art), CC0 castles, towers and portraits. Units walk, attack and
   die with the rows Wyrmsun's own scripts use. The field (`lane.png`, an adaptation of the LPC terrain, so also CC-BY-SA) is drawn by Me RPG's
   map pipeline with `npm run towercraft:board`; change the road in `board.ts`, then re-run it.
-- Headless screenshots: use `--use-angle=swiftshader`; the older `--use-gl=swiftshader` leaves a transparent band where fixed DOM overlays sit.
+- Headless screenshots: use `--use-angle=swiftshader` (`--use-gl=swiftshader` leaves a transparent band under fixed DOM overlays).
 
 ## State of play and the plan (StarCraft-style depth, in slices)
 
-Done: the map, castles, queue, upgrades, unit combat, towers, reach, pan and zoom, the AI, the tower roles above (ground, air, area, poison, aura, detector) and fog of war. **Not tuned**: with the AI on both sides most
-matches stall to the time limit (it trickles units into towers) and legion loses to both others even with its archers and church. Fix the AI (mass before sending, push
-reach forward) and tune with seeded headless matches (as `sim.test.ts` plays them), not by feel.
+Done: the map, castles, queue, upgrades, unit combat, towers, reach, pan and zoom, tower roles, fog of war, orders, a balance pass.
 
-Next, roughly in order; each is a slice with its own tests:
-1. A *beacon* tower (cheap, no attack, big `reach`) to push the build area (fog of war is done).
-2. **Detector units** (the observer): a unit that walks with the army and reveals cloaked enemies near it (towers and the castle do it now).
+**Balance** is measured: `npm run towercraft:balance [-- N [seedBase]]` (`tools/towercraftBalance.ts`) plays seeded AI-against-AI matches (N per
+pairing of races, mirrors included, sides alternating, a minute or so for 240) and prints wins per side, pairing and race, decisive length and what the AI built. Re-run it after changing `races.ts`, `ai.ts` or the constants in `sim.ts`; a sample of 40
+swings about 8 points, so judge by N of 100 or several seeds. `balance.test.ts` is a guard only. Last measured (before fog, N 100): every match
+decisive, median 7.3 min, win rate Goblins 52%, Dwarves 52%, Germanic 47%, pairings 56, 47 and 59%. Big levers: pay, castle hp, unit speed, splash range. **Miss:** the board is not symmetric (the top castle is 4 cells from its first run, the
+bottom 5), so the top side wins Dwarf mirrors 57-65%; a symmetric board (39 rows, bottom castle on row 35) fixes it.
+
+**The AI** (`ai.ts`; a `Style` drawn from its seed, because two equal armies cancel and never end a match): buys units in **waves** (all its gold at
+once, slowest first; the queue is all the holding there is), **upgrades** on a schedule, adds towers with time **as far forward as they still see road**,
+builds a **detector** against cloaked and a **shooter** against air once the foe fields them, walks **past towers** when its army could kill the castle
+in seconds, **past units** when it would win that race, and always after its `rush` time. It reads the foe only through `foeUnits`, `foeTowers` and
+`foeCastle`, which show only what its vision shows.
+
+Next, roughly in order (each a slice with its own tests):
+1. A *beacon* tower (cheap, no attack, big `reach`) to push the build area.
+2. **Detector units** (the observer): a unit that walks with the army and reveals cloaked enemies (towers and castles do it now).
 3. **More roles**: slow (a status like poison), armour, a bunker that garrisons units, a siege unit that outranges towers.
-4. **Race identity** (each race a different way to play): Goblins swarm, cloak and tunnel; Dwarves long-range siege, bunkers (a tower that
-   garrisons units for range and armour) and armour; Germanic the all-round, with air and detection.
-5. **Control**: rally points and a hold/attack-move stance, then a second human (online, see below).
+4. **Race identity**: Goblins swarm, cloak and tunnel; Dwarves siege, bunkers and armour; Germanic the all-round with air and detection.
+5. **Control**: rally points and attack-move, then a second human (online: a host or server that runs `step`; the open question is a server that
+   decides versus peers agreeing on a deterministic replay).
 6. **Economy**: more than a flat pay (mines to take and hold), once combat is settled.
-
-**Online** (not started) would be two players against a host or server that runs `step`; the open question is a server that decides,
-versus peers that agree on a deterministic replay. The sim is built so either works.

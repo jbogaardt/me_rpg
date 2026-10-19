@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createAi } from './ai';
+import { createAi, foeCastle, foeTowers, foeUnits } from './ai';
 import { CASTLES, ROAD_LENGTH } from './board';
 import { RACE_IDS, RACES, type RaceId, type TowerDef } from './races';
 import {
@@ -257,21 +257,19 @@ describe('the computer opponent', () => {
     expect(CASTLES[1][1]).toBeGreaterThan(30);
   });
 
-  it('leans to air against towers it has not seen, and away from air towers it has', () => {
-    // chooseUnit weighs air at +3 with no anti-air about and -2 with some: count the glider trained over many seeds.
-    const trained = (seen: boolean) => {
-      let gliders = 0;
-      for (let seed = 1; seed <= 60; seed++) {
-        const m = quiet(newMatch(['swarm', 'titan']));
-        m.players[0].gold = 1000;
-        m.players[0].castle.level = 3;
-        put(m, 1, towerDef('titan', 'skyguard'), 18, 33); // an anti-air tower deep in the other half
-        if (seen) stand(m, 0, 'swarm', 'spearman', ROAD_LENGTH - 6); // a unit of the AI's close enough to see it
-        createAi(0, seed)(m, 1);
-        if (m.players[0].queue[0]?.def.id === 'glider') gliders++;
-      }
-      return gliders;
-    };
-    expect(trained(false)).toBeGreaterThan(trained(true));
+  it('reads the other side only through what it can see (foeUnits, foeTowers, foeCastle)', () => {
+    const m = quiet(newMatch(['swarm', 'titan']));
+    put(m, 1, towerDef('titan', 'skyguard'), 18, 33); // a tower deep in the other half
+    const far = stand(m, 1, 'titan', 'axefighter', 6); // on the road 6 cells from its own castle
+    expect(foeTowers(m, 0)).toHaveLength(0);
+    expect(foeUnits(m, 0)).not.toContain(far);
+    expect(foeCastle(m, 0)).toBeUndefined();
+    // A unit of the AI's own walking down toward them sees all three.
+    stand(m, 0, 'swarm', 'spearman', ROAD_LENGTH - 4);
+    expect(foeTowers(m, 0)).toHaveLength(1);
+    expect(foeUnits(m, 0)).toContain(far);
+    expect(foeCastle(m, 0)).toBeDefined();
+    // The other side's reads are its own: it does not see the AI's far unit.
+    expect(foeUnits(m, 1).length).toBeLessThanOrEqual(1);
   });
 });
