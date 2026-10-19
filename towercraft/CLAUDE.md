@@ -30,7 +30,7 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 
 Done: five maps, upgrades, combat, fog, orders, card UI, animation; the wood/stone economy, producers, bunkers, unit upgrades, attack styles, flyers on the road, off-road tower attacks.
 
-**Lab and balance**: `npm run towercraft:lab -- --help` (`tools/towercraftLab.ts`: maps x races x `STRATEGIES`, win rates, CSV, `--set` what-ifs) and `npm run towercraft:balance [-- N [seedBase]]`; re-run after changing `races.ts`, `ai.ts` or `sim.ts` constants. Last (before the larger fields: 10 maps, 3600 matches): Goblins 48%, Dwarves 50%, Germanic 52%; Dwarves 40-62% by map.  **Miss:** Dwarf mirrors time out about a third of the time (the AI keeps at most `MAX_TOWERS` = 6 defences).
+**Lab and balance**: `npm run towercraft:lab -- --help` (`tools/towercraftLab.ts`: maps x races x `STRATEGIES`, win rates, CSV, `--set` what-ifs) and `npm run towercraft:balance [-- N [seedBase]]`; re-run after changing `races.ts`, `ai.ts` or `sim.ts` constants. Last (5 maps, 2700 matches, larger fields): Goblins 30%, Dwarves 68%, Germanic 52%: **out of balance, retune** (before the stretch it was 48/50/52). Suspect the ranged stretch.
 
 **The AI** (`Style` from its seed): mills and quarries first, tech, waves of at least `MIN_WAVE` units (bombs against towers, sweeps against crowds, archers against air), upgrades, loaded bunkers, castle levels, towers as far forward as they see road, a detector/shooter against cloaked/air, bypass when it could kill the castle fast. It reads the foe only through `foeUnits`, `foeTowers`, `foeCastle`.
 
