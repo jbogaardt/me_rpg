@@ -14,7 +14,7 @@
 // vision (castle, towers and living units, as for the player) shows: it plays by the same fog.
 
 import { hypot } from './hypot';
-import type { Board } from './board';
+import { laneOf, type Board } from './board';
 import { MAX_LEVEL, REACH_SCALE, type Cost, type TowerDef, type UnitDef } from './races';
 import {
   UNIT_CAP,
@@ -23,13 +23,15 @@ import {
   buyUpgrade,
   canAfford,
   canBuild,
-  enemy,
+  foesOf,
   hasBuilding,
   isCastleSeen,
   isSeen,
   loadBunker,
   nextUpgrade,
+  openLanes,
   raceOf,
+  setLane,
   setOrder,
   soldierCost,
   towerUnlocked,
@@ -49,47 +51,57 @@ import {
 } from './sim';
 
 /** A small seeded random source (mulberry32): same seed, same sequence. */
-export function seeded(seed: number): () => number {
+export function seeded(seed: number) {
   let a = seed >>> 0;
-  return () => {
+  const next = () => {
     a = (a + 0x6d2b79f5) >>> 0;
     let t = a;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+  /** Where the sequence is, to carry on from there elsewhere (a page that joins a match in progress). */
+  next.state = () => a;
+  next.restore = (state: number) => void (a = state >>> 0);
+  return next;
 }
 
-/** What "covering the road" is counted over, for one board: points along the road half a cell apart, and a cache of what each cell sees (a board never changes). */
+/** What "covering the road" is counted over, for one seat: points half a cell apart along each way its units walk, and a cache of what each cell sees (a board never changes). */
 interface RoadView {
-  samples: [number, number][];
-  /** How much road a tower of some range would cover from a cell, and where along the road (cells from player 0's end). */
+  samples: [number, number, number][];
+  /** How much road a tower of some range would cover from a cell, and how far along its seat's lanes (cells from its castle). */
   coverage: Map<string, { n: number; at: number }>;
 }
-const roadViews = new WeakMap<Board, RoadView>();
-function roadView(b: Board): RoadView {
-  let v = roadViews.get(b);
+const roadViews = new WeakMap<Board, Map<number, RoadView>>();
+function roadView(b: Board, seat: number): RoadView {
+  let seats = roadViews.get(b);
+  if (!seats) roadViews.set(b, (seats = new Map<number, RoadView>()));
+  let v = seats.get(seat);
   if (!v) {
-    v = {
-      samples: Array.from({ length: Math.floor(b.roadLength * 2) }, (_, i) => b.pointAt(i / 2)),
-      coverage: new Map(),
-    };
-    roadViews.set(b, v);
+    const samples: RoadView['samples'] = [];
+    for (const lane of b.lanes)
+      if (lane.from === seat)
+        for (let i = 0; i < Math.floor(lane.length * 2); i++) {
+          const [x, y] = lane.pointAt(i / 2);
+          samples.push([x, y, i / 2]);
+        }
+    v = { samples, coverage: new Map() };
+    seats.set(seat, v);
   }
   return v;
 }
 
-function coverageOf(b: Board, col: number, row: number, range: number): { n: number; at: number } {
-  const view = roadView(b);
+function coverageOf(b: Board, seat: number, col: number, row: number, range: number): { n: number; at: number } {
+  const view = roadView(b, seat);
   const key = `${b.cellIndex(col, row)}:${range}`;
   let c = view.coverage.get(key);
   if (!c) {
     let [n, sum] = [0, 0];
-    view.samples.forEach(([x, y], i) => {
-      if (hypot(x - col - 0.5, y - row - 0.5) > range) return;
+    for (const [x, y, at] of view.samples) {
+      if (hypot(x - col - 0.5, y - row - 0.5) > range) continue;
       n++;
-      sum += i / 2;
-    });
+      sum += at;
+    }
     c = { n, at: n ? sum / n : 0 };
     view.coverage.set(key, c);
   }
@@ -128,22 +140,32 @@ const ENOUGH = 10 * REACH_SCALE;
 /** How good a cell is for this building: enough road covered by what it shoots or sees, then as far forward as it can go; friends an aura would reach. */
 function score(m: Match, owner: Owner, def: TowerDef, col: number, row: number): number {
   const role = roleOf(def);
-  const centre = m.board.castles[owner];
+  const centre = m.board.castles[owner]!;
   // Money, unlocks and upgrades sit safe and close: the nearest free cells to the castle.
   if (role === 'econ' || role === 'prod' || role === 'smith')
     return -hypot(centre[0] - col - 0.5, centre[1] - row - 0.5);
   if (role === 'aura') {
-    const foe = m.board.castles[enemy(owner)];
+    const foe = nearestFoeCastle(m, owner);
     const friends = m.towers.filter(
       (t) => t.owner === owner && hypot(t.col - col, t.row - row) <= (def.aura?.radius ?? 0),
     ).length;
     return friends * 12 - hypot(foe[0] - col - 0.5, foe[1] - row - 0.5) * 0.15;
   }
   const range = role === 'detect' ? (def.detect ?? 0) : role === 'bunker' ? BUNKER_REACH : def.range;
-  const c = coverageOf(m.board, col, row, range);
+  const c = coverageOf(m.board, owner, col, row, range);
   if (c.n === 0) return -Infinity; // it would see no road at all
-  const progress = owner === 0 ? c.at : m.board.roadLength - c.at;
-  return Math.min(c.n, ENOUGH) + progress * PUSH;
+  return Math.min(c.n, ENOUGH) + c.at * PUSH;
+}
+
+/** The castle of a foe nearest `owner`'s own (where its front line is pushed to). */
+function nearestFoeCastle(m: Match, owner: Owner): readonly [number, number] {
+  const mine = m.board.castles[owner]!;
+  let best = m.board.castles[foesOf(m, owner)[0] ?? owner]!;
+  for (const o of foesOf(m, owner)) {
+    const c = m.board.castles[o]!;
+    if (hypot(c[0] - mine[0], c[1] - mine[1]) < hypot(best[0] - mine[0], best[1] - mine[1])) best = c;
+  }
+  return best;
 }
 
 /** The cell `owner` may build this tower on that serves it best, if any is free. */
@@ -152,9 +174,10 @@ export function bestCell(m: Match, owner: Owner, def: TowerDef): [number, number
   let bestScore = -Infinity;
   // Ties go to the first cell met, and each side scans from its own castle outward in the same way, so neither is favoured.
   const { rows, cols, roadCells, cellIndex } = m.board;
+  const fromTop = m.board.castles[owner]![1] < rows / 2;
   for (let r = 0; r < rows; r++) {
     for (let k = 0; k < cols; k++) {
-      const [row, col] = owner === 0 ? [r, k] : [rows - 1 - r, cols - 1 - k];
+      const [row, col] = fromTop ? [r, k] : [rows - 1 - r, cols - 1 - k];
       if (roadCells.has(cellIndex(col, row)) || canBuild(m, owner, def, col, row) !== 'ok') continue;
       const sc = score(m, owner, def, col, row);
       if (sc > bestScore) {
@@ -168,25 +191,34 @@ export function bestCell(m: Match, owner: Owner, def: TowerDef): [number, number
 
 // --- What the AI knows of the other side: only what its vision shows (the same rules as the player's fog) -------------------------
 
-/** The other side's units the AI can see. */
+/** The other side's units the AI can see (what its side sees, allies included). */
 export const foeUnits = (m: Match, owner: Owner): Unit[] => {
   const vision = visionOf(m);
-  return m.units.filter((u) => u.owner === enemy(owner) && isSeen(m, owner, u, vision));
+  const foes = foesOf(m, owner);
+  return m.units.filter((u) => foes.includes(u.owner) && isSeen(m, owner, u, vision));
 };
 /** The other side's towers the AI can see. */
 export const foeTowers = (m: Match, owner: Owner): Tower[] => {
   const vision = visionOf(m);
-  return m.towers.filter((t) => t.owner === enemy(owner) && isSeen(m, owner, t, vision));
+  const foes = foesOf(m, owner);
+  return m.towers.filter((t) => foes.includes(t.owner) && isSeen(m, owner, t, vision));
 };
-/** The other side's castle, or nothing while it is out of sight (so a rush is never planned on a castle it cannot see). */
-export const foeCastle = (m: Match, owner: Owner): Castle | undefined =>
-  isCastleSeen(m, owner, enemy(owner)) ? m.players[enemy(owner)].castle : undefined;
+/** The castle of the foe it is sending its army to (its lane's end), or nothing while that is out of sight (so a rush is never planned on a castle it cannot see). */
+export const foeCastle = (m: Match, owner: Owner): Castle | undefined => {
+  const target = m.board.lanes[m.players[owner]!.lane]?.to;
+  const seats = target !== undefined && foesOf(m, owner).includes(target) ? [target] : foesOf(m, owner);
+  const seen = seats.filter((o) => isCastleSeen(m, owner, o));
+  return seen.length ? m.players[seen[0]!]!.castle : undefined;
+};
 
 const ownUnits = (m: Match, owner: Owner) => m.units.filter((u) => u.owner === owner);
 const ownTowers = (m: Match, owner: Owner) => m.towers.filter((t) => t.owner === owner);
 const dps = (u: UnitDef) => (u.damage * (u.multi ?? 1)) / u.cooldown;
-/** Cells (along its way) between an enemy unit and this side's castle. */
-const fromCastle = (m: Match, u: Unit) => m.board.roadLength - u.s;
+/** Cells (along its way) between an enemy unit and this side's castle (a unit on its way to another castle is no threat to this one). */
+const fromCastle = (m: Match, owner: Owner, u: Unit) => {
+  const lane = laneOf(m.board, u);
+  return lane.to === owner ? lane.length - u.s : Infinity;
+};
 const total = (c: Cost) => c.wood + c.stone;
 
 /** Which defensive building does `owner` need most right now? It answers what the other side has sent or can send: air, cloaked units. */
@@ -200,12 +232,12 @@ function chooseTower(
   if (!options.length) return undefined;
   const mine = ownTowers(m, owner);
   const race = raceOf(m, owner);
-  const foeRace = raceOf(m, enemy(owner));
+  const foeRaces = foesOf(m, owner).map((o) => raceOf(m, o));
   const sees = (hits: (t: TowerDef) => boolean) => mine.filter((t) => hits(t.def)).length;
   const air = foeUnits(m, owner).some((u) => u.def.air);
-  const canAir = foeRace.units.some((u) => u.air);
+  const canAir = foeRaces.some((r) => r.units.some((u) => u.air));
   const antiAir = sees(isAntiAir);
-  const cloaked = foeUnits(m, owner).some((u) => u.def.cloak) || foeRace.units.some((u) => u.cloak);
+  const cloaked = foeUnits(m, owner).some((u) => u.def.cloak) || foeRaces.some((r) => r.units.some((u) => u.cloak));
   const detectors = sees((d) => !!d.detect);
   const bunkers = mine.filter((t) => t.def.bunker);
   const loadable = race.units.some((u) => u.garrison && unitUnlocked(m, owner, u) === 'ok');
@@ -283,7 +315,7 @@ function pickWave(
   bias?: Record<string, number>,
 ): UnitDef[] {
   const wave: UnitDef[] = [];
-  const left = { wood: m.players[owner].wood, stone: m.players[owner].stone };
+  const left = { wood: m.players[owner]!.wood, stone: m.players[owner]!.stone };
   let room = UNIT_CAP - ownUnits(m, owner).length;
   while (wave.length < WAVE_MAX) {
     const ok = options.filter((u) => canAfford(left, u.cost) && u.count <= room);
@@ -307,13 +339,13 @@ const WAVE_MAX = 12;
 /** The tower this side must have now to answer what the foe fields (or surely will): a detector for cloaked units, a shooter for air. */
 function answerTower(m: Match, owner: Owner, defs: TowerDef[]): TowerDef | undefined {
   const mine = ownTowers(m, owner);
-  const [foe, foeRace] = [foeUnits(m, owner), raceOf(m, enemy(owner))];
+  const [foe, foeRaces] = [foeUnits(m, owner), foesOf(m, owner).map((o) => raceOf(m, o))];
   const cheapest = (ok: (d: TowerDef) => boolean) =>
     defs.filter(ok).sort((a, b) => a.tier - b.tier || total(a.cost) - total(b.cost))[0];
   const cloaked = foe.filter((u) => u.def.cloak).length;
   const detectors = mine.filter((t) => t.def.detect).length;
   if (
-    (cloaked > 0 || (foeRace.units.some((u) => u.cloak) && m.time > DETECTOR_BY)) &&
+    (cloaked > 0 || (foeRaces.some((r) => r.units.some((u) => u.cloak)) && m.time > DETECTOR_BY)) &&
     detectors < (cloaked >= 8 ? 2 : 1)
   )
     return cheapest((d) => !!d.detect);
@@ -450,8 +482,24 @@ export const STRATEGIES: Record<string, Style> = {
   },
 };
 
+/** What an AI carries from one thought to the next, so a page that joins a match in progress can carry on exactly where the other is. */
+export interface AiState {
+  timer: number;
+  lastWave: number;
+  bought: number;
+  waves: number;
+  rng: number;
+}
+
+/** The AI for a seat: call it every step with the match and the step's length (`save`/`load` move its memory between pages). */
+export interface Ai {
+  (m: Match, dt: number): void;
+  save(): AiState;
+  load(state: AiState): void;
+}
+
 /** The AI for player `owner`: call the returned function every step with the match and the step's length. `plan` replaces parts of the seed's style. */
-export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): (m: Match, dt: number) => void {
+export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): Ai {
   // Neighbouring seeds (the two sides of a match) must not give neighbouring styles: scramble the seed first.
   let h = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
@@ -460,12 +508,14 @@ export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): (m:
   let timer = 0;
   let lastWave = 0;
   let bought = 0;
-  return (m, dt) => {
-    if (m.winner >= 0) return;
+  /** Waves sent so far: each goes down the next road that forks off its castle. */
+  let waves = 0;
+  const think = (m: Match, dt: number) => {
+    if (m.winner >= 0 || m.players[owner]!.out) return;
     timer += dt;
     if (timer < THINK_EVERY) return;
     timer -= THINK_EVERY;
-    const me = m.players[owner];
+    const me = m.players[owner]!;
     const race = raceOf(m, owner);
     const level = me.castle.level;
     const mine = ownUnits(m, owner);
@@ -485,7 +535,7 @@ export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): (m:
     const race2 = killIn <= patience && killIn < diesIn * RACE_MARGIN;
     setOrder(m, owner, 'units', race2 || m.time >= style.rush ? 'bypass' : 'attack');
 
-    const threat = Math.min(Infinity, ...foeUnits(m, owner).map((u) => fromCastle(m, u)));
+    const threat = Math.min(Infinity, ...foeUnits(m, owner).map((u) => fromCastle(m, owner, u)));
     const alarm = threat < ALARM;
 
     // What the foe fields decides one tower the AI must have (and so maybe a castle level to build it).
@@ -615,10 +665,22 @@ export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): (m:
     // Never a trickle: unless the foe is at the gate, wait until the money (of both kinds) buys a few units at least.
     if (!alarm && wave.reduce((n, u) => n + u.count, 0) < Math.min(MAX_MIN_WAVE, MIN_WAVE + m.time / WAVE_GROWS))
       return;
+    // Where the roads fork, each wave takes the next of them (the foes' castles in turn, or another road to the same one).
+    const lanes = openLanes(m, owner);
+    if (lanes.length > 1) setLane(m, owner, lanes[(waves + owner) % lanes.length]!.id);
     for (const def of wave) trainUnit(m, owner, def.id);
     if (wave.length) {
       lastWave = m.time;
       bought += wave.length;
+      waves++;
     }
   };
+  const ai: Ai = Object.assign(think, {
+    save: (): AiState => ({ timer, lastWave, bought, waves, rng: random.state() }),
+    load: (state: AiState) => {
+      ({ timer, lastWave, bought, waves } = state);
+      random.restore(state.rng);
+    },
+  });
+  return ai;
 }

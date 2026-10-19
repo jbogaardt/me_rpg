@@ -8,20 +8,22 @@ import '@fontsource/crimson-text/600.css';
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
 import { icon } from './icons';
 import { drawnPos } from './stagger';
-import { createAi } from './sim/ai';
+import type { Ai } from './sim/ai';
 import { normalizeCode } from '../../src/net/roomCode';
 import { Duel, type DuelPhase } from './net/duel';
 import {
   apply,
   Lockstep,
+  makeAis,
   NET_VERSION,
+  type Person,
   packMatch,
   unpackMatch,
   type Command,
   type Message,
   type Packed,
 } from './net/lockstep';
-import { BOARDS, BOARD_IDS, DEFAULT_BOARD_ID } from './sim/board';
+import { BOARDS, BOARD_IDS, DEFAULT_BOARD_ID, boardIdsFor, laneOf } from './sim/board';
 import {
   MAX_LEVEL,
   RACES,
@@ -45,8 +47,14 @@ import {
   repairable,
   canBuild,
   canTarget,
-  enemy,
+  allied,
   canSee,
+  foesOf,
+  laneFor,
+  openLanes,
+  sightsFor,
+  teamOf,
+  teamSeats,
   incomeOf,
   isCastleSeen,
   isSeen,
@@ -266,7 +274,27 @@ void (async () => {
   }
   let match: Match = newMatch(['legion', 'swarm'], BOARDS[chosenMap]);
   /** The castle positions of the map being played. */
-  const castles = () => match.board.castles;
+  const castleAt = (o: Owner) => match.board.castles[o]!;
+  /** The colour under a seat's castle, towers and units: its race's in a duel; with more seats the side's (blue for yours, red for the foe's, a shade for each seat), so allies and foes of one race still tell apart. */
+  const SIDE_COLORS = { mine: [0x4fa3ff, 0x6fe0c0], foe: [0xe0505a, 0xe9a23f] } as const;
+  const colorOf = (o: Owner): number => {
+    if (match.board.seats <= 2) return RACES[match.players[o]!.race].color;
+    const side = allied(match, o, YOU) ? SIDE_COLORS.mine : SIDE_COLORS.foe;
+    return side[teamSeats(match, o).indexOf(o)] ?? side[0];
+  };
+  const playingNow = () => !match.players[YOU]!.out && match.winner < 0;
+  /** Where a seat's camp lies on the field, in words (north-west, south, middle). */
+  const castleName = (o: Owner) => {
+    const [x, y] = castleAt(o);
+    const { cols, rows } = match.board;
+    const v = y < rows * 0.4 ? 'north' : y > rows * 0.6 ? 'south' : '';
+    const h = x < cols * 0.4 ? 'west' : x > cols * 0.6 ? 'east' : '';
+    return [v, h].filter(Boolean).join('-') || 'middle';
+  };
+  /** The road chip the mouse is over: that road is lit on the field. */
+  let laneHover: number | undefined;
+  /** The colour of a seat's health bar and rings: green for you, teal for an ally, red for a foe. */
+  const barColor = (o: Owner) => (o === YOU ? 0x6fd36f : allied(match, o, YOU) ? 0x6fc0d3 : 0xe0777b);
   const boardW = () => match.board.cols * CELL;
   const boardH = () => match.board.rows * CELL;
   /** Lay a map out: its picture and a fog canvas of its size (maps differ in size). */
@@ -282,9 +310,13 @@ void (async () => {
     tint = makeFogLayer(cols, rows);
     fogLayer.addChild(tint.sprite, shade.sprite);
   };
-  let ai = createAi(1, 1);
+  /** The computers of the match (one per seat that is not a person), and the seed they play by (the same on both pages online). */
+  let ais: Ai[] = [];
+  let matchSeed = 0;
   /** The online match being played, if any (net/lockstep.ts): the shared clock the commands go through. */
   let online: { lock: Lockstep } | undefined;
+  /** Whether the match has two on one side against computers (the other person is a partner, not a rival). */
+  const coop = () => match.board.seats > 2;
   /** What the end screen says when it is not the plain win or loss (the rival left, the games disagreed). */
   let endText: [string, string] | undefined;
   /** How long (s) the match has been stalled waiting for the rival's commands. */
@@ -310,16 +342,16 @@ void (async () => {
   const buildCastles = () => {
     for (const c of castleSprites) c.destroy({ children: true });
     castleSprites.length = 0;
-    for (const o of [0, 1] as const) {
+    for (const [o] of match.players.entries()) {
       const c = new Container();
-      const color = RACES[match.players[o].race].color;
+      const color = colorOf(o);
       c.addChild(new Graphics().ellipse(0, 8, 56 * CASTLE_SCALE, 20 * CASTLE_SCALE).fill({ color, alpha: 0.45 }));
-      const sprite = new Sprite(castleTextures.get(RACES[match.players[o].race].castle.art));
+      const sprite = new Sprite(castleTextures.get(RACES[match.players[o]!.race].castle.art));
       sprite.anchor.set(0.5, 0.78);
       sprite.scale.set(CASTLE_SCALE);
       c.addChild(sprite);
-      c.position.set(castles()[o][0] * CELL, castles()[o][1] * CELL);
-      c.zIndex = castles()[o][1] + 1;
+      c.position.set(castleAt(o)[0] * CELL, castleAt(o)[1] * CELL);
+      c.zIndex = castleAt(o)[1] + 1;
       sortLayer.addChild(c);
       castleSprites.push(c);
     }
@@ -362,7 +394,7 @@ void (async () => {
     world.y = topBar() + viewH() / 2 - cy * CELL * zoom;
     clampCamera();
   }
-  const home = () => focus(castles()[YOU][0] + 4, castles()[YOU][1] + 5, Math.max(minZoom(), Math.min(1.1, ZOOM_MAX)));
+  const home = () => focus(castleAt(YOU)[0] + 4, castleAt(YOU)[1] + 5, Math.max(minZoom(), Math.min(1.1, ZOOM_MAX)));
   window.addEventListener('resize', clampCamera);
 
   const cellAt = (sx: number, sy: number): [number, number] | undefined => {
@@ -501,7 +533,7 @@ void (async () => {
     if (selected && canBuild(match, YOU, selected, cell[0], cell[1]) === 'ok') {
       cmd({ k: 'build', id: selected.id, col: cell[0], row: cell[1] });
       // Keep the tower selected while the player can pay for another (a row of towers is the usual use).
-      if (!canAfford(match.players[YOU], selected.cost) || towerUnlocked(match, YOU, selected) !== 'ok')
+      if (!canAfford(match.players[YOU]!, selected.cost) || towerUnlocked(match, YOU, selected) !== 'ok')
         selected = undefined;
       refresh();
     }
@@ -551,16 +583,17 @@ void (async () => {
     let best: Tower | undefined;
     let bestD = Infinity;
     for (const t of match.towers) {
-      if (t.owner === YOU || t.hp <= 0 || !isSeen(match, YOU, t, vision)) continue;
+      if (allied(match, t.owner, YOU) || t.hp <= 0 || !isSeen(match, YOU, t, vision)) continue;
       const d = Math.hypot(wx - (t.col + 0.5), wy - (t.row - 0.4));
       if (d <= 1.5 && d < bestD) [best, bestD] = [t, d];
     }
     return best;
   };
-  /** The rival's castle, if you can see it and the point is on it. */
-  const foeCastleAt = (wx: number, wy: number) =>
-    isCastleSeen(match, YOU, enemy(YOU)) &&
-    Math.hypot(wx - castles()[enemy(YOU)][0], wy - (castles()[enemy(YOU)][1] - 1.6)) <= 3;
+  /** The seat of a rival castle, if you can see it and the point is on it. */
+  const foeCastleAt = (wx: number, wy: number): Owner | undefined =>
+    foesOf(match, YOU).find(
+      (o) => isCastleSeen(match, YOU, o) && Math.hypot(wx - castleAt(o)[0], wy - (castleAt(o)[1] - 1.6)) <= 3,
+    );
 
   /** The units you have picked that are still alive. */
   const picked = () => match.units.filter((u) => selection.has(u.id) && u.owner === YOU && u.hp > 0 && !u.spent);
@@ -589,7 +622,7 @@ void (async () => {
     const ids = units.map((u) => u.id);
     const tower = foeTowerAt(wx, wy);
     if (tower) {
-      const res = units.some((u) => canTarget(match, u.def, tower)) ? 'ok' : 'unreachable';
+      const res = units.some((u) => canTarget(match, u, tower)) ? 'ok' : 'unreachable';
       if (res === 'ok') cmd({ k: 'focus', ids, at: { kind: 'tower', id: tower.id } });
       note(
         res === 'ok' ? `${units.length} → ${tower.def.name}` : 'Out of reach: they cannot step that far off the road.',
@@ -597,10 +630,15 @@ void (async () => {
       if (res === 'ok') sent = { x: (tower.col + 0.5) * CELL, y: (tower.row + 0.5) * CELL, at: clock };
       return true;
     }
-    if (foeCastleAt(wx, wy)) {
-      cmd({ k: 'focus', ids, at: { kind: 'castle' } });
-      note(`${units.length} → the castle`);
-      sent = { x: castles()[enemy(YOU)][0] * CELL, y: castles()[enemy(YOU)][1] * CELL, at: clock };
+    const seat = foeCastleAt(wx, wy);
+    if (seat !== undefined) {
+      cmd({ k: 'focus', ids, at: { kind: 'castle', owner: seat } });
+      note(
+        match.board.seats > 2
+          ? `${units.length} → their castle (where the roads meet)`
+          : `${units.length} → the castle`,
+      );
+      sent = { x: castleAt(seat)[0] * CELL, y: castleAt(seat)[1] * CELL, at: clock };
       return true;
     }
     return false;
@@ -672,7 +710,7 @@ void (async () => {
       }
     }
     // The castle (a tall sprite, so its middle is above its feet): tap it for its panel, anywhere else to close the panel.
-    if (Math.hypot(wx - castles()[YOU][0], wy - (castles()[YOU][1] - 1.6)) <= 3) {
+    if (Math.hypot(wx - castleAt(YOU)[0], wy - (castleAt(YOU)[1] - 1.6)) <= 3) {
       selected = undefined;
       setGhost(undefined);
       showCard({ kind: 'castle' });
@@ -756,14 +794,13 @@ void (async () => {
     at: [number, number];
   }
   const corpses: Corpse[] = [];
-  /** The sheet column and mirroring for a unit walking the road: along its tangent (flyers follow the road too), back up it for player 1. */
-  const heading = (owner: Owner, s: number) => {
-    const b = match.board;
-    const [hx, hy] = b.directionAt(owner === 0 ? s : b.roadLength - s);
-    return owner === 0 ? direction(hx, hy) : direction(-hx, -hy);
+  /** The sheet column and mirroring for a unit walking its lane: along its tangent (flyers follow the road too). */
+  const heading = (u: { owner: Owner; lane?: number; s: number }) => {
+    const [hx, hy] = laneOf(match.board, u).directionAt(u.s);
+    return direction(hx, hy);
   };
   const addCorpse = (d: Death) => {
-    const dir = heading(d.owner, d.s);
+    const dir = heading(d);
     const sheet = SHEETS[d.def.kind];
     const container = new Container();
     const sprite = new Sprite(unitFrame(d.def.sheet, d.def.kind, sheet.death[0]!, dir.col));
@@ -990,10 +1027,12 @@ void (async () => {
   /** Redraw the fog from what `YOU` sees, growing and shrinking each pool toward it. */
   function drawFog(vision: Vision, dt: number) {
     const live = new Set<string>();
-    for (const c of vision[YOU]) {
+    for (const c of sightsFor(match, YOU, vision)) {
       live.add(c.key);
       let p = pools.get(c.key);
-      if (!p) pools.set(c.key, (p = { x: c.x, y: c.y, r: fogSnap ? c.r : 0, target: c.r, peak: 0, build: c.build }));
+      // Ground an ally may build on is revealed, not yours to build on: only your own pools are build ground.
+      const build = c.build && c.owner === YOU;
+      if (!p) pools.set(c.key, (p = { x: c.x, y: c.y, r: fogSnap ? c.r : 0, target: c.r, peak: 0, build }));
       Object.assign(p, { x: c.x, y: c.y, target: c.r });
     }
     fogSnap = false;
@@ -1003,7 +1042,7 @@ void (async () => {
       p.r = p.r < p.target ? Math.min(p.target, p.r + dr) : Math.max(p.target, p.r - dr);
       p.peak = Math.max(p.peak, p.r);
       if (p.r <= 0 && p.target === 0) {
-        if (p.build && key !== 'c:build') remembered.push({ x: p.x, y: p.y, r: p.peak });
+        if (p.build && !/^c\d+:build$/.test(key)) remembered.push({ x: p.x, y: p.y, r: p.peak });
         pools.delete(key);
       }
     }
@@ -1046,8 +1085,8 @@ void (async () => {
     drawFog(vision, dt);
     const aim = selected && started ? (ghost ?? hover) : undefined; // the cell being previewed: the ghost, or the mouse
     const spotted = (at: readonly [number, number]) => canSee(match, YOU, at, 0, vision);
-    for (const o of [0, 1] as const) castleSprites[o]!.visible = isCastleSeen(match, YOU, o, vision);
-    for (const k of corpses) k.container.visible = k.owner === YOU || spotted(k.at);
+    for (const [o, sprite] of castleSprites.entries()) sprite.visible = isCastleSeen(match, YOU, o, vision);
+    for (const k of corpses) k.container.visible = allied(match, k.owner, YOU) || spotted(k.at);
 
     // Where a tower of the selected kind can go (and, with the mouse, its range at the cell under it).
     if (selected && started) {
@@ -1081,8 +1120,22 @@ void (async () => {
       ghostSprite.position.set((aim[0] + 0.5) * CELL, (aim[1] + 0.5) * CELL + TOWER_FOOT);
     }
     updateHint(aim);
+    // A map with forks: the road your new units march down is lit (the one under the mouse, on the road chips, more).
+    if (started && match.board.seats > 2 && playingNow()) {
+      const lit = (id: number | undefined, width: number, alpha: number) => {
+        const lane = id === undefined ? undefined : match.board.lanes[id];
+        if (!lane) return;
+        lane.points.forEach(([x, y], i) => {
+          if (i === 0) live.moveTo(x * CELL, y * CELL);
+          else if (i % 2 === 0 || i === lane.points.length - 1) live.lineTo(x * CELL, y * CELL);
+        });
+        live.stroke({ color: 0xf2d38a, width, alpha, cap: 'round', join: 'round' });
+      };
+      lit(laneFor(match, YOU), 7, laneHover === undefined ? 0.28 : 0.14);
+      lit(laneHover, 9, 0.55);
+    }
     if (started) {
-      const [cx, cy] = castles()[YOU];
+      const [cx, cy] = castleAt(YOU);
       areaLayer
         .circle(cx * CELL, cy * CELL, buildReach(match, YOU) * CELL)
         .stroke({ color: 0xffb13f, width: 2, alpha: selected ? 0.5 : 0.2 });
@@ -1098,7 +1151,7 @@ void (async () => {
       if (!isSeen(match, YOU, t, vision)) continue;
       const cx = (t.col + 0.5) * CELL;
       const cy = (t.row + 0.5) * CELL;
-      const mine = t.owner === YOU;
+      const mine = allied(match, t.owner, YOU);
       if (t.def.aura)
         areaLayer
           .circle(cx, cy, t.def.aura.radius * CELL)
@@ -1121,7 +1174,7 @@ void (async () => {
       match.towers,
       (t) => {
         const c = new Container();
-        const color = RACES[match.players[t.owner].race].color;
+        const color = colorOf(t.owner);
         c.addChild(new Graphics().ellipse(0, 4, 19 * SIZE, 9 * SIZE).fill({ color, alpha: 0.55 })); // the owner's colour under the tower
         const tex = towerTextures.get(t.def.art)!;
         const sprite = new Sprite(tex);
@@ -1151,7 +1204,7 @@ void (async () => {
       match.units,
       (u) => {
         const c = new Container();
-        const color = RACES[match.players[u.owner].race].color;
+        const color = colorOf(u.owner);
         c.addChild(new Graphics().ellipse(0, 0, 8 * unitScale(u.def), 4 * SIZE).fill({ color, alpha: 0.6 })); // under the feet (on the ground, below a flyer)
         const body = new Sprite(unitFrame(u.def.sheet, u.def.kind, 0, 4));
         body.anchor.set(0.5, feetAt(u.def.kind));
@@ -1185,7 +1238,7 @@ void (async () => {
           ? trk.out
             ? direction(u.off.dir[0], u.off.dir[1])
             : direction(-u.off.dir[0], -u.off.dir[1])
-          : heading(u.owner, u.s);
+          : heading(u);
         const dir = striking ? direction(strike!.to[0] - x, strike!.to[1] - y) : along;
         let pose: number;
         let [bx, by] = [0, 0];
@@ -1211,7 +1264,7 @@ void (async () => {
         body.position.set(bx, by);
         // An enemy is drawn only in sight (a cloaked one also needs a detector); cloaked is faint to its own side; poison tints green.
         c.visible = isSeen(match, YOU, u, vision);
-        body.alpha = u.def.cloak ? (u.owner === YOU ? 0.5 : 0.75) : 1;
+        body.alpha = u.def.cloak ? (allied(match, u.owner, YOU) ? 0.5 : 0.75) : 1;
         body.tint = u.dot ? 0x9be37a : (u.def.look?.tint ?? 0xffffff);
       },
     );
@@ -1219,9 +1272,9 @@ void (async () => {
     for (const id of strikes.keys()) if (!unitSprites.has(id)) strikes.delete(id);
     for (const id of kicks.keys()) if (id >= 0 && !towerSprites.has(id)) kicks.delete(id);
     // The castles answer a shot with a small swell.
-    for (const o of [0, 1] as const) {
+    for (const [o, sprite] of castleSprites.entries()) {
       const r = Math.max(0, 1 - (clock - (kicks.get(-1 - o)?.at ?? -9)) / 0.3);
-      castleSprites[o]!.children[1]!.scale.set(CASTLE_SCALE * (1 + 0.03 * r * r));
+      sprite.children[1]!.scale.set(CASTLE_SCALE * (1 + 0.03 * r * r));
     }
 
     // The group you picked: a ring at each one's feet and a line to what it is sent after. While there is a group, what it can be
@@ -1229,9 +1282,12 @@ void (async () => {
     const group = started ? picked() : [];
     if (group.length) {
       const pulse = 0.6 + 0.4 * Math.sin(clock * 5);
-      const foes = match.towers.filter((t) => t.owner !== YOU && t.hp > 0 && isSeen(match, YOU, t, vision));
+      const foes = match.towers.filter(
+        (t) => !allied(match, t.owner, YOU) && t.hp > 0 && isSeen(match, YOU, t, vision),
+      );
+      const castleHover = hoverAt ? foeCastleAt(hoverAt[0], hoverAt[1]) : undefined;
       const hoverFoe = hoverAt
-        ? (foeTowerAt(hoverAt[0], hoverAt[1])?.id ?? (foeCastleAt(hoverAt[0], hoverAt[1]) ? -1 : undefined))
+        ? (foeTowerAt(hoverAt[0], hoverAt[1])?.id ?? (castleHover !== undefined ? -1 - castleHover : undefined))
         : undefined;
       app.canvas.style.cursor = hoverFoe !== undefined ? 'crosshair' : '';
       for (const t of foes)
@@ -1240,12 +1296,13 @@ void (async () => {
           width: hoverFoe === t.id ? 4 : 2,
           alpha: hoverFoe === t.id ? 1 : 0.4 + 0.2 * Math.sin(clock * 4),
         });
-      if (isCastleSeen(match, YOU, enemy(YOU), vision))
-        live.ellipse(castles()[enemy(YOU)][0] * CELL, castles()[enemy(YOU)][1] * CELL + 6, 78, 30).stroke({
-          color: 0xe0777b,
-          width: hoverFoe === -1 ? 4 : 2,
-          alpha: hoverFoe === -1 ? 1 : 0.4 + 0.2 * Math.sin(clock * 4),
-        });
+      for (const o of foesOf(match, YOU))
+        if (isCastleSeen(match, YOU, o, vision))
+          live.ellipse(castleAt(o)[0] * CELL, castleAt(o)[1] * CELL + 6, 78, 30).stroke({
+            color: 0xe0777b,
+            width: hoverFoe === -1 - o ? 4 : 2,
+            alpha: hoverFoe === -1 - o ? 1 : 0.4 + 0.2 * Math.sin(clock * 4),
+          });
       for (const u of group) {
         const [ux, uy] = drawnPos(u, match.board);
         live
@@ -1258,8 +1315,10 @@ void (async () => {
         if (u.focus?.kind === 'tower') {
           const t = match.towers.find((x) => x.id === (u.focus as { id: number }).id);
           if (t) goal = [(t.col + 0.5) * CELL, (t.row + 0.5) * CELL];
-        } else if (u.focus?.kind === 'castle' && isCastleSeen(match, YOU, enemy(YOU), vision))
-          goal = [castles()[enemy(YOU)][0] * CELL, castles()[enemy(YOU)][1] * CELL];
+        } else if (u.focus?.kind === 'castle') {
+          const seat = u.focus.owner ?? laneOf(match.board, u).to;
+          if (isCastleSeen(match, YOU, seat, vision)) goal = [castleAt(seat)[0] * CELL, castleAt(seat)[1] * CELL];
+        }
         if (goal)
           live
             .moveTo(ux * CELL, uy * CELL - (u.def.air ? FLIGHT : 0) - 24)
@@ -1287,10 +1346,9 @@ void (async () => {
     }
 
     // Health bars: castles always, the rest once hurt.
-    for (const o of [0, 1] as const) {
-      if (!isCastleSeen(match, YOU, o, vision)) continue;
-      const c = match.players[o].castle;
-      bar(castles()[o][0] * CELL, castles()[o][1] * CELL - 150, 120, c.hp / c.maxHp, o === YOU ? 0x6fd36f : 0xe0777b);
+    for (const [o, p] of match.players.entries()) {
+      if (p.out || !isCastleSeen(match, YOU, o, vision)) continue;
+      bar(castleAt(o)[0] * CELL, castleAt(o)[1] * CELL - 150, 120, p.castle.hp / p.castle.maxHp, barColor(o));
     }
     for (const t of match.towers)
       if (t.hp < t.def.hp && isSeen(match, YOU, t, vision))
@@ -1392,19 +1450,19 @@ void (async () => {
       .join(' ') || '<i>free</i>';
   /** What the player is short of for a price ('' when they can pay). */
   const lacking = (c: Cost) => {
-    const p = match.players[YOU];
+    const p = match.players[YOU]!;
     const short = [
       c.wood > p.wood && `${Math.ceil(c.wood - p.wood)} more wood`,
       c.stone > p.stone && `${Math.ceil(c.stone - p.stone)} more stone`,
     ].filter(Boolean);
     return short.length ? `Need ${short.join(' and ')}` : '';
   };
-  const towerName = (id: string) => RACES[match.players[YOU].race].towers.find((t) => t.id === id)?.name ?? id;
+  const towerName = (id: string) => RACES[match.players[YOU]!.race].towers.find((t) => t.id === id)?.name ?? id;
 
   /** Your wood and stone: two numbers beside their icons (the income you feel in how they change; the mills show their own pay-day figures). */
   const lastRes = { w: -1, s: -1 };
   function resources() {
-    const p = match.players[YOU];
+    const p = match.players[YOU]!;
     const [w, st] = [Math.floor(p.wood), Math.floor(p.stone)];
     if (lastRes.w !== w) $('wood').textContent = String((lastRes.w = w));
     if (lastRes.s !== st) $('stone').textContent = String((lastRes.s = st));
@@ -1526,7 +1584,7 @@ void (async () => {
 
   /** What a building does, as pictures: how it fights, what it makes or unlocks, and bars for health, damage and range. */
   const towerCard = (d: TowerDef, live = false) => {
-    const race = RACES[match.players[YOU].race];
+    const race = RACES[match.players[YOU]!.race];
     const hosted = race.upgrades.filter((u) => u.needs === d.id).map((u) => u.name);
     const built = match.towers.filter((t) => t.owner === YOU && t.def.id === d.id).length;
     const unlocks = (d.trains ?? [])
@@ -1571,6 +1629,8 @@ void (async () => {
   const upgradeButtons: [HTMLButtonElement, UpgradeDef][] = [];
   let castleButton: HTMLButtonElement;
   const orderButtons: [HTMLButtonElement, 'towers' | 'units'][] = [];
+  /** The road chips of a map with forks (a unit you buy walks the road picked), by the lane each one is. */
+  const laneButtons: [HTMLButtonElement, number][] = [];
 
   /** One thumbnail in the dock: a wooden square with the picture, its price under it and a ribbon over it if it is locked. */
   const thumb = (art: string, cost: string, title: string, onclick: () => void) => {
@@ -1784,7 +1844,7 @@ void (async () => {
       const cost = repairCost(t);
       const said = mending ? 'Mending…' : `Repair ${money(cost)}`;
       if (act.innerHTML !== said) act.innerHTML = said;
-      act.disabled = mending || !canAfford(match.players[YOU], cost);
+      act.disabled = mending || !canAfford(match.players[YOU]!, cost);
       act.title = mending ? 'Already being repaired' : act.disabled ? 'Not enough wood or stone' : '';
       act.onclick = () => {
         cmd({ k: 'repair', tower: t.id });
@@ -1796,7 +1856,7 @@ void (async () => {
 
   function renderCard() {
     if (!cardOf) return;
-    const me = match.players[YOU];
+    const me = match.players[YOU]!;
     const race = RACES[me.race];
     const { level } = me.castle;
     const card = $('card');
@@ -1957,7 +2017,29 @@ void (async () => {
     buildButtons.length = 0;
     upgradeButtons.length = 0;
     orderButtons.length = 0;
+    laneButtons.length = 0;
     const r = RACES[race];
+    // A map with roads that fork: which road the units you buy take (their castle's gate leads to every one of them).
+    const roads = match.board.lanes.filter((l) => l.from === YOU);
+    if (roads.length > 1) {
+      const sec = document.createElement('div');
+      sec.className = 'sec';
+      sec.innerHTML = '<h4>March by</h4><div class="thumbs"></div>';
+      for (const lane of roads) {
+        const b = document.createElement('button');
+        b.className = 'tb lane wbtn';
+        b.innerHTML = `<span>${lane.name}</span>`;
+        b.onclick = () => {
+          cmd({ k: 'lane', lane: lane.id });
+          refresh();
+        };
+        b.onmouseenter = () => (laneHover = lane.id);
+        b.onmouseleave = () => (laneHover = undefined);
+        sec.lastElementChild!.append(b);
+        laneButtons.push([b, lane.id]);
+      }
+      $('train').append(sec);
+    }
     for (const def of r.units) {
       const b = thumb(unitThumb(def, 36), money(def.cost), def.name, () => showCard({ kind: 'unit', def }, true));
       $('train').append(b);
@@ -1997,7 +2079,7 @@ void (async () => {
       const b = document.createElement('button');
       b.className = 'tb orders wbtn';
       b.onclick = () => {
-        const o = match.players[YOU].orders;
+        const o = match.players[YOU]!.orders;
         cmd({ k: 'order', what, to: o[what] === 'attack' ? 'bypass' : 'attack' });
         refresh();
       };
@@ -2008,7 +2090,7 @@ void (async () => {
   }
 
   function refresh() {
-    const me = match.players[YOU];
+    const me = match.players[YOU]!;
     const { level } = me.castle;
     for (const [b, def] of trainButtons) {
       const open = unitUnlocked(match, YOU, def);
@@ -2074,6 +2156,14 @@ void (async () => {
     castleButton.classList.toggle('open', cardOf?.kind === 'castle');
     castleButton.classList.toggle('poor', upCost === undefined || !canAfford(me, upCost));
     castleButton.querySelector('em')!.textContent = `Lv ${level}`;
+    const march = laneFor(match, YOU);
+    const open = new Set(openLanes(match, YOU).map((l) => l.id));
+    for (const [b, id] of laneButtons) {
+      const lane = match.board.lanes[id]!;
+      b.hidden = !open.has(id); // a road to a castle that has fallen is no road
+      b.classList.toggle('on', id === march);
+      b.title = `New units march: ${lane.name}, to the ${castleName(lane.to)} camp`;
+    }
     for (const [b, what] of orderButtons) {
       const attack = me.orders[what] === 'attack';
       const label = what === 'towers' ? ['Attack towers', 'Pass towers'] : ['Fight units', 'Pass units'];
@@ -2116,18 +2206,24 @@ void (async () => {
   }
 
   let loading = false;
-  /** Pick the rival, wait for the art the match needs (a progress bar over the title screen), then begin. */
+  /** Pick the rivals (and an ally of a co-op match who is not a friend: a computer), wait for the art the match needs, then begin. */
   async function start(race: RaceId, chosen?: RaceId, map: BoardId = chosenMap) {
     if (loading) return;
     loading = true;
-    const rivals = RACE_IDS.filter((r) => r !== race);
-    const rival = chosen ?? rivals[Math.floor(Math.random() * rivals.length)]!;
+    const seats = BOARDS[map]?.seats ?? 2;
+    const others = RACE_IDS.filter((r) => r !== race);
+    const any = () => RACE_IDS[Math.floor(Math.random() * RACE_IDS.length)]!;
+    // A duel's rival is another race than yours; allies and the computers of a bigger match are any.
+    const races: RaceId[] =
+      seats === 2
+        ? [race, chosen ?? others[Math.floor(Math.random() * others.length)]!]
+        : [race, ...Array.from({ length: seats - 1 }, any)];
     try {
-      await loadArt([race, rival], map);
+      await loadArt(races, map);
     } finally {
       loading = false;
     }
-    begin([race, rival], map, 0);
+    begin(races, map, 0, (Math.random() * 2 ** 31) | 0, 1);
   }
   /** Wait for the art a match needs, behind a progress bar. */
   async function loadArt(races: RaceId[], map: BoardId) {
@@ -2141,7 +2237,7 @@ void (async () => {
     }
   }
   /** An online match: both pages load the art, then begin on the same lockstep clock (`lock` was made for this match). */
-  async function startOnline(lock: Lockstep, races: [RaceId, RaceId], map: BoardId, you: Owner) {
+  async function startOnline(lock: Lockstep, races: RaceId[], map: BoardId, you: Person, seed: number) {
     if (loading) return;
     loading = true;
     try {
@@ -2150,16 +2246,20 @@ void (async () => {
       loading = false;
     }
     if (online?.lock !== lock) return; // the connection ended while the art loaded
-    begin(races, map, you);
+    begin(races, map, you, seed, 2);
   }
-  function begin(races: [RaceId, RaceId], map: BoardId, you: Owner) {
+  /** Start a match: one race per seat of the map, you in seat `you`, the computers (every seat past `people`) playing by `seed`. */
+  function begin(races: RaceId[], map: BoardId, you: Owner, seed: number, people: number) {
     YOU = you;
     endText = undefined;
     stalled = 0;
     match = rejoinState ? unpackMatch(rejoinState) : newMatch(races, BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
+    matchSeed = rejoinState?.seed ?? seed;
+    ais = makeAis(match, matchSeed, people);
+    // A page that comes back in mid-match carries on from what the computers remembered, not from a fresh start.
+    rejoinState?.ai.forEach((state, i) => ais[i]?.load(state));
     rejoinState = undefined;
     applyBoard();
-    if (!online) ai = createAi(1, (Math.random() * 2 ** 31) | 0);
     selected = undefined;
     acc = 0;
     started = true;
@@ -2180,7 +2280,7 @@ void (async () => {
     ghost = undefined;
     lastTap = undefined;
     buildCastles();
-    makeControls(races[you]);
+    makeControls(match.players[you]!.race);
     cardOf = undefined;
     $('card').hidden = true;
     $('menu').hidden = true;
@@ -2190,28 +2290,64 @@ void (async () => {
     if (rejoinWanted) bringBack();
   }
 
-  // The title screen: pick the battlefield (a picture of each map, kept for next time), then the race that starts the match.
+  // The title screen: how to play (solo, host, join), the format (a duel, or two on a side against computers), the battlefield (a picture
+  // of each map that fits the format, kept for next time), then the race that starts the match.
+  type Format = 'duel' | 'two-v-one' | 'two-v-two';
+  /** A format's seats (one castle each), and what the title screen says it is: alone (a computer takes the other seats) or online (a friend does). */
+  const FORMATS: Record<Format, { seats: number; solo: string; online: string }> = {
+    duel: { seats: 2, solo: 'You against a computer.', online: 'You against your friend.' },
+    'two-v-one': {
+      seats: 3,
+      solo: 'You and a computer ally against one computer. Its roads fork: send your units down the one you choose.',
+      online:
+        'You and your friend, each with your own camp, against one computer. It is paid more to make up for being alone.',
+    },
+    'two-v-two': {
+      seats: 4,
+      solo: 'You and a computer ally against two computers. Roads fork and cross: hold the forks, or split your armies.',
+      online:
+        'You and your friend, each with your own camp, against two computers. Roads fork and cross between camps.',
+    },
+  };
+  let format: Format = 'duel';
+  const mapKey = (seats: number) => (seats === 2 ? 'towercraft:map' : `towercraft:map:${seats}`);
+  /** The map last picked for this many seats, or the first that fits. */
+  const rememberedMap = (seats: number): BoardId => {
+    try {
+      const saved = localStorage.getItem(mapKey(seats));
+      if (saved && BOARDS[saved]?.seats === seats) return saved;
+    } catch {
+      /* no storage: the first map */
+    }
+    return seats === 2 ? 'frostlands' : boardIdsFor(seats)[0]!;
+  };
   const mapButtons = new Map<BoardId, HTMLButtonElement>();
   const pickMap = (id: BoardId) => {
     chosenMap = id;
     try {
-      localStorage.setItem('towercraft:map', id);
+      localStorage.setItem(mapKey(BOARDS[id]!.seats), id);
     } catch {
       /* no storage: the choice lasts this visit */
     }
     for (const [k, b] of mapButtons) b.classList.toggle('on', k === id);
     void getField(id); // its picture, in case the player is quick
   };
-  for (const id of BOARD_IDS) {
-    const b = document.createElement('button');
-    b.className = 'map';
-    b.title = BOARDS[id]!.name;
-    b.innerHTML = `<span class="shot" style="background-image:url(art/maps/thumbs/${id}.png)"></span>`;
-    b.onclick = () => pickMap(id);
-    $('maps').append(b);
-    mapButtons.set(id, b);
-  }
-  pickMap(chosenMap);
+  /** The maps that fit the format, as pictures to pick from (a co-op map says its name: its roads are the point). */
+  const buildMaps = () => {
+    $('maps').replaceChildren();
+    mapButtons.clear();
+    for (const id of boardIdsFor(FORMATS[format].seats)) {
+      const board = BOARDS[id]!;
+      const b = document.createElement('button');
+      b.className = 'map';
+      b.title = board.blurb ? `${board.name}: ${board.blurb}` : board.name;
+      b.innerHTML = `<span class="shot" style="background-image:url(art/maps/thumbs/${id}.png);aspect-ratio:${board.cols} / ${board.rows}"></span>${board.seats > 2 ? `<b>${board.name.replace(/ \(.*\)/, '')}</b>` : ''}`;
+      b.onclick = () => pickMap(id);
+      $('maps').append(b);
+      mapButtons.set(id, b);
+    }
+    pickMap(rememberedMap(FORMATS[format].seats));
+  };
 
   for (const id of RACE_IDS) {
     const race = RACES[id];
@@ -2222,14 +2358,15 @@ void (async () => {
     b.onclick = () => pickRace(id);
     $('races').append(b);
   }
-  // How to play: alone, hosting a duel (the map and a game code to give), or joining one (the host's code). Online is lockstep over a
-  // direct connection set up through the matchmaking relay (net/duel.ts, net/lockstep.ts).
+  // How to play: alone, hosting a game (the map, the format and a game code to give), or joining one (the host's code). Online is
+  // lockstep over a direct connection set up through the matchmaking relay (net/duel.ts, net/lockstep.ts). A friend is the rival of
+  // a duel and the partner of a co-op match; the computers hold every other seat on both pages.
   type Mode = 'solo' | 'host' | 'join';
   let mode: Mode = 'solo';
   /** The race picked for an online match, and whether a connection is being made (the race buttons wait). */
   let myRace: RaceId = RACE_IDS[0]!;
   let connecting = false;
-  /** The rival came back while the host's art was still loading: let them in as soon as the match begins. */
+  /** The other person came back while the host's art was still loading: let them in as soon as the match begins. */
   let rejoinWanted = false;
   const raceOk = (r: string): r is RaceId => (RACE_IDS as readonly string[]).includes(r);
   const netText = (text: string, bad = false, code?: string) => {
@@ -2240,6 +2377,24 @@ void (async () => {
     $('net-code').textContent = code ?? '';
     $('net-cancel').hidden = !connecting;
   };
+  const describe = () => {
+    $('format-pick').hidden = mode === 'join';
+    $('format-note').textContent = mode === 'solo' ? FORMATS[format].solo : FORMATS[format].online;
+    const co = format !== 'duel';
+    $('race-h').textContent =
+      mode === 'solo'
+        ? 'Choose your race'
+        : mode === 'host'
+          ? `Choose your race, then host${co ? ' (your friend is your partner)' : ''}`
+          : 'Choose your race, then join';
+  };
+  const setFormat = (f: Format) => {
+    format = f;
+    for (const b of $('formats').querySelectorAll<HTMLButtonElement>('button'))
+      b.classList.toggle('on', b.dataset.format === f);
+    buildMaps();
+    describe();
+  };
   const setMode = (m: Mode) => {
     duel.close();
     connecting = false;
@@ -2248,10 +2403,9 @@ void (async () => {
       b.classList.toggle('on', b.dataset.mode === m);
     $('map-pick').hidden = m === 'join';
     $('join-row').hidden = m !== 'join';
-    $('race-h').textContent =
-      m === 'solo' ? 'Choose your race' : m === 'host' ? 'Choose your race, then host' : 'Choose your race, then join';
+    describe();
     $('races').classList.remove('busy');
-    netText(m === 'join' ? 'The host picks the map.' : '');
+    netText(m === 'join' ? 'The host picks the map and the format.' : '');
   };
   const pickRace = (id: RaceId) => {
     if (mode === 'solo') return void start(id);
@@ -2277,67 +2431,64 @@ void (async () => {
     $('races').classList.toggle('busy', connecting);
     netText(text, phase === 'failed', code);
   };
-  /** Both pages start the same match: a clock for the two players, then the art, then the first tick. */
-  const startDuel = (you: Owner, races: [RaceId, RaceId], map: BoardId) => {
+  /** Both pages start the same match: a clock for the two people, then the art, then the first tick. */
+  const startDuel = (you: Person, races: RaceId[], map: BoardId, seed: number) => {
     const lock = new Lockstep(you, { send: (m: Message) => void duel.send(m) });
     online = { lock };
-    void startOnline(lock, races, map, you);
+    void startOnline(lock, races, map, you, seed);
     return lock;
+  };
+  const versionMismatch = (text: string) => {
+    duel.close();
+    connecting = false;
+    $('races').classList.remove('busy');
+    netText(text, true);
   };
   const onMessage = (m: Message) => {
     if (m.t === 'hi' && mode === 'host' && online) {
-      // The rival's connection dropped and they are back on the same code: bring them in.
+      // The other person's connection dropped and they are back on the same code: bring them in.
       if (m.v !== NET_VERSION || !online.lock.away) return;
       if (started) bringBack();
       else rejoinWanted = true;
     } else if (m.t === 'hi' && mode === 'host' && !online) {
-      if (m.v !== NET_VERSION || !raceOk(m.race)) {
-        duel.close();
-        connecting = false;
-        $('races').classList.remove('busy');
-        netText('That player has a different version of the game. Reload both pages and try again.', true);
-        return;
-      }
-      const races: [RaceId, RaceId] = [myRace, m.race];
-      duel.send({ t: 'go', v: NET_VERSION, map: chosenMap, races });
-      startDuel(0, races, chosenMap);
+      if (m.v !== NET_VERSION || !raceOk(m.race))
+        return versionMismatch('That player has a different version of the game. Reload both pages and try again.');
+      // A race for every seat: yours, your friend's, and the computers' (any), the same on both pages from the `go` message.
+      const seats = BOARDS[chosenMap]?.seats ?? 2;
+      const races: RaceId[] = [
+        myRace,
+        m.race,
+        ...Array.from({ length: seats - 2 }, () => RACE_IDS[Math.floor(Math.random() * RACE_IDS.length)]!),
+      ];
+      const seed = (Math.random() * 2 ** 31) | 0;
+      duel.send({ t: 'go', v: NET_VERSION, map: chosenMap, races, seed });
+      startDuel(0, races, chosenMap, seed);
     } else if (m.t === 'go' && mode === 'join' && !online) {
-      const [a, b] = m.races;
-      if (m.v !== NET_VERSION || !BOARDS[m.map] || !raceOk(a) || !raceOk(b)) {
-        duel.close();
-        connecting = false;
-        $('races').classList.remove('busy');
-        netText('The host is on a different version of the game. Reload both pages and try again.', true);
-        return;
-      }
-      startDuel(1, [a, b], m.map);
+      if (m.v !== NET_VERSION || BOARDS[m.map]?.seats !== m.races.length || !m.races.every(raceOk))
+        return versionMismatch('The host is on a different version of the game. Reload both pages and try again.');
+      startDuel(1, m.races, m.map, m.seed);
     } else if (m.t === 'snap' && mode === 'join' && !online) {
-      // Coming back to a match in progress: the snapshot alone starts it (the match, the clock and who you are), so the page cannot begin without it.
+      // Coming back to a match in progress: the snapshot alone starts it (the match, the computers' memory, the clock and who you are), so the page cannot begin without it.
       const { board, players } = m.state;
-      const races: [RaceId, RaceId] = [players[0].race, players[1].race];
-      if (!BOARDS[board] || !raceOk(races[0]) || !raceOk(races[1])) {
-        duel.close();
-        connecting = false;
-        $('races').classList.remove('busy');
-        netText('The host is on a different version of the game. Reload both pages and try again.', true);
-        return;
-      }
-      myRace = races[1];
+      const races = players.map((p) => p.race);
+      if (BOARDS[board]?.seats !== players.length || !races.every(raceOk))
+        return versionMismatch('The host is on a different version of the game. Reload both pages and try again.');
+      myRace = races[1] as RaceId;
       rejoinState = m.state;
-      startDuel(1, races, board).resume(m.n, m.c, m.mine);
+      startDuel(1, races, board, m.state.seed).resume(m.n, m.c, m.mine);
     } else if (m.t === 'tick') online?.lock.receive(m.n, m.c);
     else if (m.t === 'sum') online?.lock.receiveSum(m.n, m.h);
   };
-  /** The rival is back: send them the match as it stands (the clock resumes together), and stop treating them as away. */
+  /** The other person is back: send them the match as it stands (the clock resumes together), and stop treating them as away. */
   function bringBack() {
     if (!online || match.winner >= 0) return;
     rejoinWanted = false;
-    duel.send({ t: 'snap', ...online.lock.snapshot(), state: packMatch(match) });
+    duel.send({ t: 'snap', ...online.lock.snapshot(), state: packMatch(match, matchSeed, ais) });
     online.lock.rejoin();
   }
   const onClosed = (reason: string) => {
     if (online && mode === 'host') {
-      // The rival dropped: their side plays on by itself (their units march, their towers shoot) and the same code lets them back in.
+      // The other person dropped: their side plays on by itself (their units march, their towers shoot) and the same code lets them back in.
       online.lock.setAway(true);
     } else if (online && started && match.winner < 0) {
       // The host is gone: the match cannot go on without them.
@@ -2354,7 +2505,10 @@ void (async () => {
   const duel = new Duel({ phase: onPhase, message: onMessage, closed: onClosed });
   for (const b of $('modes').querySelectorAll<HTMLButtonElement>('button'))
     b.onclick = () => setMode(b.dataset.mode as Mode);
+  for (const b of $('formats').querySelectorAll<HTMLButtonElement>('button'))
+    b.onclick = () => setFormat(b.dataset.format as Format);
   $('net-cancel').onclick = () => setMode(mode);
+  setFormat('duel');
   setMode('solo');
   window.addEventListener('pagehide', () => duel.close());
 
@@ -2394,14 +2548,19 @@ void (async () => {
   void prefetch(); // the rest of the art, while the player chooses
 
   function showEnd() {
+    const won = match.winner === teamOf(match, YOU);
     const [title, sub] = endText ?? [
-      match.winner === YOU ? 'Victory' : match.winner === 2 ? 'Draw' : 'Defeat',
+      won ? 'Victory' : match.winner === 2 ? 'Draw' : 'Defeat',
       `${Math.floor(match.time)} seconds. ${
-        match.winner === YOU
-          ? "The rival's castle has fallen."
+        won
+          ? coop()
+            ? 'Every castle of the other side has fallen.'
+            : "The rival's castle has fallen."
           : match.winner === 2
-            ? 'Neither castle fell.'
-            : 'Your castle has fallen.'
+            ? 'Neither side won.'
+            : coop()
+              ? 'Both your castles have fallen.'
+              : 'Your castle has fallen.'
       }`,
     ];
     $('end-title').textContent = title;
@@ -2411,7 +2570,7 @@ void (async () => {
 
   /** One tick of the match: the foe's brain (alone), the rules, then what the tick looks like. */
   function advance() {
-    if (!online) ai(match, STEP);
+    for (const ai of ais) ai(match, STEP); // the same computers on both pages online: they read only the match
     const pay = match.payTimer;
     step(match, STEP);
     if (match.payTimer < pay) payDay();
@@ -2456,11 +2615,15 @@ void (async () => {
       if (match.winner >= 0) showEnd();
     }
     const away = !!online?.lock.away;
-    $('wait').hidden = !(online && started && match.winner < 0 && (away || stalled > 0.8));
+    const fallen = started && match.winner < 0 && match.players[YOU]!.out;
+    $('wait').hidden = !(fallen || (online && started && match.winner < 0 && (away || stalled > 0.8)));
     if (!$('wait').hidden) {
-      const text = away
-        ? `Your rival is away. The match goes on; they can rejoin with ${hostCode}.`
-        : 'Waiting for your rival…';
+      const other = coop() ? 'partner' : 'rival';
+      const text = fallen
+        ? 'Your castle has fallen. Your side fights on: watch it through.'
+        : away
+          ? `Your ${other} is away. The match goes on; they can rejoin with ${hostCode}.`
+          : `Waiting for your ${other}…`;
       if ($('wait').textContent !== text) $('wait').textContent = text;
     }
     resources();

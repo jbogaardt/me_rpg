@@ -525,7 +525,7 @@ describe('tower roles', () => {
     put(m, 0, 'swarm', 'spitter', 8, 5);
     const u = dummy(m, 1, 'legion', 'ritter', GROUND_S);
     run(m, 1.2);
-    expect(u.dot).toEqual({ dps: 6, left: expect.any(Number) as number });
+    expect(u.dot).toEqual({ dps: 6, left: expect.any(Number) as number, by: 0 });
     m.towers.length = 0; // out of the tower's reach, the poison still burns
     const before = u.hp;
     run(m, 2);

@@ -1,0 +1,22 @@
+# towercraft/src/sim: the rules, seats, teams and roads
+
+Pixi-free and deterministic (see `../../CLAUDE.md`). This file holds what the match is made of and the co-op design.
+
+## Seats, sides, lanes
+
+- **A seat is a castle** (`Owner` is a number, `Match.players[seat]`): its race, money, upgrades, orders, its buildings and units. A duel has two seats; co-op three or four. **Sides** are `Player.team` (from `Board.teams`): seats of one side share a win and a loss, never hurt each other (`allied`, `foesOf`, `teamSeats`) and **share sight** (`sightsFor`: an ally's tower reveals a foe to you; only your own ground is build ground). Never write `enemy(o)` for anything but a duel, and never a `1` for the foe.
+- **A road is two lanes** (`Board.lanes`, `makeBoard`): one oriented polyline each way between a seat's castle and a foe's. A unit walks `Unit.lane` (a seat's first, `Board.homeLane`, when missing: tests) by `Unit.s` cells from its own castle; `unitPos`, `detourFor`, `canTarget` and the renderer's heading all ask the lane, never a map constant. A seat sets which lane new units take with `setLane` (the `lane` command; `laneFor` falls back to the first open one); the AI takes the next lane each wave. Where lanes share a stretch they **fork**; units of different lanes meet by position, not by road.
+- **Sending units at a castle** (`Focus` `castle` with `owner`): units already on a road to it just go; others cross to a lane that ends there, but only where the roads meet (`switchLane`, within `SWITCH_NEAR`), else `unreachable`.
+- **A seat falls when its castle does** (`Player.out`, `dropOut`): its units and buildings go, the foes' units walking to it turn to the nearest open lane, it can no longer act (`playing`), and the match goes on. **The match ends when a whole side is out**: `Match.winner` is the winning *team* (2 a draw); at `TIME_LIMIT` the side with more castle health left (as a share of its castles') wins. A kill pays the seat that landed it (`Unit.by`, `Unit.dot.by`).
+- **Pace** (`Player.pace`, `Board.pace`): what a seat earns, as a multiple. A computer that stands alone against two gets more (`twinfords` 1.9, `delta` 1.5), found with `npm run towercraft:coop` (computers on every seat); humans are likely stronger than the computers, so retune from play.
+
+## Co-op maps (`road.ts`, `COOP_ROADS`)
+
+A map is camps (`camps`), sides (`teams`), and **links**: roads from a camp to a foe's, built from smooth pieces joined end to end (`piece`, `join`); roads that share a piece share its cells, which is the fork. Two against two (`crossroads`, `hbridge`) is turned half way round onto itself, so both sides have the same ground; two against one (`twinfords`, `delta`) is mirrored left to right with the lone camp on the line. 120 x 112 cells (the picture stays within 4096 px). Seats 0 and 1 are the people; the title screen offers maps by seats (`boardIdsFor`). `board.test.ts` checks every map: roads end at castles, fork and meet, every camp has the same room to build, and computers play it to the end.
+
+The title screen's **2 v 1** and **2 v 2** are co-op: alone, seat 1 is a computer ally; online, it is your friend. The computers are `createAi(seat, seed)` and know only what their side sees (`foeUnits`, `foeTowers`, `foeCastle`); `Ai.save`/`load` carry their memory to a page that joins late.
+
+## Build area and fog of war
+
+- **Build area**: free cells your castle or a standing tower sees or reaches (`inBuildArea`; unit sight never counts), never within `FOE_CLEAR` (24) of any foe's castle. **Castle upgrades ask for buildings** (`CASTLE_NEEDS`: mills/quarries, a producer, a smithy, towers; by role, `upgradeLacks`) and cost 8x / 2.5x the written price: a level 2 before 5 minutes is a speed run.
+- **Fog of war** (`visionOf`, `canSee`, `isSeen`): castles, towers and units have a `sight` radius; the build area is permanent revealed ground; **unit sight is temporary** and never extends it. Every source sees at least `FOG_EDGE`: a cell past the longest shot (tower, loaded bunker, castle). Hidden enemies are not drawn, targeted or splashed; cloaked ones need sight *and* a detector; the AI sees through vision too. A side sees through all its seats' sources.

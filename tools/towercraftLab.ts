@@ -18,8 +18,8 @@ import { createAi, STRATEGIES, type Style } from '../towercraft/src/sim/ai';
 import { BOARDS } from '../towercraft/src/sim/board';
 import { MAPS as BALANCE_MAPS } from '../towercraft/src/sim/maps';
 
-/** Every map the lab can play: the symmetric balance maps and the game's own (asymmetric) ones. */
-const MAPS = { ...BALANCE_MAPS, ...BOARDS };
+/** Every duel map the lab can play: the symmetric balance maps and the game's own (asymmetric) ones. The co-op maps (more than two seats) are for `towercraftCoop.ts`. */
+const MAPS = { ...BALANCE_MAPS, ...Object.fromEntries(Object.entries(BOARDS).filter(([, b]) => b.seats === 2)) };
 const MAP_IDS = Object.keys(MAPS);
 import { RACES, RACE_IDS, type RaceId } from '../towercraft/src/sim/races';
 import { TIME_LIMIT, newMatch, step } from '../towercraft/src/sim/sim';
@@ -70,7 +70,8 @@ export function playMatch(job: Job): Result {
   const ai = [createAi(0, seed * 2 + 1, planOf(top.plan)), createAi(1, seed * 2 + 2, planOf(bottom.plan))] as const;
   const made: Result['made'] = [{}, {}];
   const seen = new Set<number>();
-  const note = (side: 0 | 1, id: string) => {
+  const note = (side: number, id: string) => {
+    if (side !== 0 && side !== 1) return;
     made[side][id] = (made[side][id] ?? 0) + 1;
   };
   while (m.winner < 0) {

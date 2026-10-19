@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { BOARDS } from '../sim/board';
 import { newMatch, step, type Match } from '../sim/sim';
 import { RACES } from '../sim/races';
-import { checksum, encode, Lockstep, packMatch, parseMessage, unpackMatch, type Message } from './lockstep';
+import { checksum, encode, Lockstep, makeAis, packMatch, parseMessage, unpackMatch, type Message } from './lockstep';
 
 const STEP = 0.05;
 const BASE = RACES.legion.units[0]!.id; // the castle sells its base unit from the start
@@ -131,7 +132,8 @@ describe('wire', () => {
   it('round-trips every message', () => {
     const msgs: Message[] = [
       { t: 'hi', v: 1, race: 'swarm' },
-      { t: 'go', v: 1, map: 'desert', races: ['legion', 'titan'] },
+      { t: 'go', v: 2, map: 'desert', races: ['legion', 'titan'], seed: 7 },
+      { t: 'go', v: 2, map: 'crossroads', races: ['legion', 'titan', 'swarm', 'swarm'], seed: 123456 },
       { t: 'sum', n: 40, h: 123456 },
       {
         t: 'tick',
@@ -143,6 +145,9 @@ describe('wire', () => {
           { k: 'order', what: 'towers', to: 'bypass' },
           { k: 'focus', ids: [1, 2], at: { kind: 'tower', id: 7 } },
           { k: 'focus', ids: [1] },
+          { k: 'focus', ids: [1], at: { kind: 'castle', owner: 3 } },
+          { k: 'focus', ids: [1], at: { kind: 'castle' } },
+          { k: 'lane', lane: 5 },
           { k: 'castle' },
           { k: 'upgrade', id: 'ground-damage' },
           { k: 'repair', tower: 4 },
@@ -159,11 +164,100 @@ describe('wire', () => {
       '{"t":"tick","n":1,"c":[{"k":"train","id":"a","n":0}]}',
       '{"t":"tick","n":1,"c":[{"k":"order","what":"x","to":"attack"}]}',
       '{"t":"tick","n":1,"c":"x"}',
-      '{"t":"go","v":1,"map":"m","races":["a"]}',
+      '{"t":"go","v":1,"map":"m","races":["a"],"seed":1}',
+      '{"t":"go","v":1,"map":"m","races":["a","b"]}',
+      '{"t":"go","v":1,"map":"m","races":["a","b","c","d","e"],"seed":1}',
+      '{"t":"tick","n":1,"c":[{"k":"lane","lane":-1}]}',
+      '{"t":"tick","n":1,"c":[{"k":"focus","ids":[1],"at":{"kind":"castle","owner":9}}]}',
       '{"t":"sum","n":1,"h":-5}',
     ])
       expect(parseMessage(bad)).toBeNull();
   });
+});
+
+describe('co-op: two people and computers on the other seats', () => {
+  const SEED = 99;
+  const board = BOARDS.crossroads!;
+  const races = ['legion', 'titan', 'swarm', 'legion'] as const;
+  /** The same four-seat match on two pages, each running the computers itself. */
+  function coop() {
+    const a: Message[] = [];
+    const b: Message[] = [];
+    const mA = newMatch(races, board);
+    const mB = newMatch(races, board);
+    const A = new Lockstep(0, { send: (m) => a.push(m) });
+    const B = new Lockstep(1, { send: (m) => b.push(m) });
+    const aisA = makeAis(mA, SEED, 2);
+    const aisB = makeAis(mB, SEED, 2);
+    const advance = (m: Match, ais: typeof aisA) => () => {
+      for (const ai of ais) ai(m, STEP);
+      step(m, STEP);
+    };
+    const pump = (ticks: number, onTick?: (t: number) => void) => {
+      for (let t = 0; t < ticks; t++) {
+        onTick?.(t);
+        A.run(mA, advance(mA, aisA));
+        B.run(mB, advance(mB, aisB));
+        for (const m of a.splice(0)) if (m.t === 'tick') B.receive(m.n, m.c);
+        for (const m of b.splice(0)) if (m.t === 'tick') A.receive(m.n, m.c);
+      }
+    };
+    return { A, B, mA, mB, aisA, aisB, pump, a, b };
+  }
+
+  it('makes a computer for each seat past the people, the same on both pages', () => {
+    const m = newMatch(races, board);
+    expect(makeAis(m, SEED, 2)).toHaveLength(2);
+    expect(makeAis(m, SEED, 4)).toHaveLength(0);
+  });
+
+  it('keeps both pages on one match while the computers play and the two people give orders', () => {
+    const { A, B, mA, mB, pump } = coop();
+    pump(1500, (t) => {
+      if (t === 10) A.issue({ k: 'train', id: BASE, n: 2 });
+      if (t === 30) B.issue({ k: 'lane', lane: board.lanes.find((l) => l.from === 1 && l.to === 2)!.id });
+      if (t === 32) B.issue({ k: 'train', id: BASE, n: 2 });
+    });
+    expect(A.desync || B.desync).toBe(false);
+    expect(A.tick).toBe(B.tick);
+    expect(checksum(mA)).toBe(checksum(mB));
+    // The computers did something, and seat 1 sent units down the road it chose.
+    expect(mA.players[2]!.castle.level + mA.towers.filter((t) => t.owner === 2).length).toBeGreaterThan(1);
+    expect(mA.players[1].lane).toBe(board.lanes.find((l) => l.from === 1 && l.to === 2)!.id);
+  });
+
+  it("lets the second person back in mid-match with the computers' memory, and the pages agree again", () => {
+    const { A, mA, aisA, pump, a } = coop();
+    pump(800);
+    // A snapshot over the wire, then a new page rebuilt from it alone (the seed came with it).
+    const wire = parseMessage(encode({ t: 'snap', ...A.snapshot(), state: packMatch(mA, SEED, aisA) }));
+    if (wire?.t !== 'snap') throw new Error('snapshot did not parse');
+    expect(wire.state.ai).toHaveLength(2);
+    A.rejoin();
+    a.length = 0;
+    const out: Message[] = [];
+    const mB = unpackMatch(wire.state);
+    const aisB = makeAis(mB, wire.state.seed, 2);
+    aisB.forEach((ai, i) => ai.load(wire.state.ai[i]!));
+    const B = new Lockstep(1, { send: (m) => out.push(m) });
+    B.resume(wire.n, wire.c, wire.mine);
+    expect(checksum(mB)).toBe(checksum(mA));
+    (A as unknown as { link: { send(m: Message): void } }).link = { send: (m) => a.push(m) };
+    for (let i = 0; i < 600; i++) {
+      A.run(mA, () => {
+        for (const ai of aisA) ai(mA, STEP);
+        step(mA, STEP);
+      });
+      B.run(mB, () => {
+        for (const ai of aisB) ai(mB, STEP);
+        step(mB, STEP);
+      });
+      for (const m of a.splice(0)) if (m.t === 'tick') B.receive(m.n, m.c);
+      for (const m of out.splice(0)) if (m.t === 'tick') A.receive(m.n, m.c);
+    }
+    expect(A.tick).toBe(B.tick);
+    expect(checksum(mA)).toBe(checksum(mB));
+  }, 60_000);
 });
 
 export type { Match };

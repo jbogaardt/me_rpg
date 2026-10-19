@@ -7,11 +7,16 @@
 // each side sends a checksum of the match; a mismatch (a rule that is not deterministic across browsers) ends the game loudly
 // instead of letting two different games go on.
 //
+// A match may have more seats than the two people playing it (co-op: the two are on one side, computers hold the other camps and
+// maybe a third ally's). The computers are deterministic too (seeded, reading only the match), so BOTH pages run all of them
+// from the same seed and nothing about them crosses the wire; only `snap` (a rejoin) carries their memory (`AiState`).
+//
 // The cost of this design: both pages hold the whole match (fog of war is drawn, not enforced, so a player who reads the match in
 // developer tools sees through it). The channel must be reliable and ordered (`duel.ts` asks for one).
 //
 // Pixi-free and tested (lockstep.test.ts).
 
+import { createAi, type Ai, type AiState } from '../sim/ai';
 import { BOARDS } from '../sim/board';
 import {
   newMatch,
@@ -20,6 +25,7 @@ import {
   loadBunker,
   repairTower,
   setFocus,
+  setLane,
   setOrder,
   trainUnits,
   upgradeCastle,
@@ -38,7 +44,8 @@ export type Command =
   | { k: 'focus'; ids: number[]; at?: Focus }
   | { k: 'castle' }
   | { k: 'upgrade'; id: string }
-  | { k: 'repair'; tower: number };
+  | { k: 'repair'; tower: number }
+  | { k: 'lane'; lane: number };
 
 /** Do a command for a player. The sim itself refuses anything the player may not do (money, area, ownership). */
 export function apply(m: Match, owner: Owner, c: Command): void {
@@ -67,6 +74,9 @@ export function apply(m: Match, owner: Owner, c: Command): void {
     case 'repair':
       repairTower(m, owner, c.tower);
       break;
+    case 'lane':
+      setLane(m, owner, c.lane);
+      break;
   }
 }
 
@@ -80,13 +90,13 @@ const MAX_AHEAD = 400;
 
 // --- The wire ---
 
-export const NET_VERSION = 1;
+export const NET_VERSION = 2;
 
 export type Message =
   /** The joiner, once connected: who they play. */
   | { t: 'hi'; v: number; race: string }
-  /** The host's answer: the map and both races (host first). Both pages start the match from it at once. */
-  | { t: 'go'; v: number; map: string; races: [string, string] }
+  /** The host's answer: the map, a race for every seat of it (the host's, the joiner's, then the computers') and the seed the computers play by. Both pages start the match from it at once. */
+  | { t: 'go'; v: number; map: string; races: string[]; seed: number }
   /** A player's commands for tick `n` (possibly none: it is also the promise that nothing more is coming for it). */
   | { t: 'tick'; n: number; c: Command[] }
   /** Checksum of the match after `n` ticks. */
@@ -101,8 +111,11 @@ const isIds = (v: unknown): v is number[] => Array.isArray(v) && v.length <= 200
 
 function parseFocus(v: unknown): Focus | undefined | null {
   if (v === undefined) return undefined;
-  const o = (v ?? {}) as { kind?: unknown; id?: unknown };
-  if (o.kind === 'castle') return { kind: 'castle' };
+  const o = (v ?? {}) as { kind?: unknown; id?: unknown; owner?: unknown };
+  if (o.kind === 'castle') {
+    if (o.owner === undefined) return { kind: 'castle' };
+    return isInt(o.owner, 0, 3) ? { kind: 'castle', owner: o.owner } : null;
+  }
   if (o.kind === 'tower' && isInt(o.id)) return { kind: 'tower', id: o.id };
   return null;
 }
@@ -132,6 +145,8 @@ export function parseCommand(v: unknown): Command | null {
       return isId(c.id) ? { k: 'upgrade', id: c.id } : null;
     case 'repair':
       return isInt(c.tower) ? { k: 'repair', tower: c.tower } : null;
+    case 'lane':
+      return isInt(c.lane, 0, 63) ? { k: 'lane', lane: c.lane } : null;
     default:
       return null;
   }
@@ -151,8 +166,14 @@ export function parseMessage(data: string): Message | null {
       return isInt(m.v) && isId(m.race) ? { t: 'hi', v: m.v, race: m.race } : null;
     case 'go': {
       const r = m.races;
-      return isInt(m.v) && isId(m.map) && Array.isArray(r) && r.length === 2 && isId(r[0]) && isId(r[1])
-        ? { t: 'go', v: m.v, map: m.map, races: [r[0], r[1]] }
+      return isInt(m.v) &&
+        isId(m.map) &&
+        isInt(m.seed, 0, 0x7fffffff) &&
+        Array.isArray(r) &&
+        r.length >= 2 &&
+        r.length <= 4 &&
+        r.every(isId)
+        ? { t: 'go', v: m.v, map: m.map, races: r, seed: m.seed }
         : null;
     }
     case 'tick': {
@@ -199,6 +220,13 @@ export function parseMessage(data: string): Message | null {
 
 export const encode = (m: Message) => JSON.stringify(m);
 
+/** The seed a seat's computer plays by, from the match's (neighbouring seats get unrelated styles: `createAi` scrambles it). */
+export const aiSeed = (seed: number, seat: number) => (seed + seat * 1013) | 0;
+
+/** The computers of a match: one for every seat past the people (`people` seats, from seat 0), the same on every page. */
+export const makeAis = (m: Match, seed: number, people: number): Ai[] =>
+  m.players.flatMap((_, seat) => (seat >= people ? [createAi(seat, aiSeed(seed, seat))] : []));
+
 // --- The match on the wire (a rejoining player) ---
 
 /** The match as plain data: units and towers name their kind by id (the kinds are the game's own tables, the same on both pages). */
@@ -207,7 +235,10 @@ export interface Packed {
   time: number;
   payTimer: number;
   nextId: number;
-  players: [Player, Player];
+  /** The seed the computers play by and what each remembers (one per seat that is not a person, in seat order). */
+  seed: number;
+  ai: AiState[];
+  players: Player[];
   units: (Omit<Match['units'][number], 'def'> & { def: string })[];
   towers: (Omit<Match['towers'][number], 'def' | 'garrison'> & {
     def: string;
@@ -215,13 +246,15 @@ export interface Packed {
   })[];
 }
 
-export function packMatch(m: Match): Packed {
+export function packMatch(m: Match, seed = 0, ais: readonly Ai[] = []): Packed {
   return {
     board: m.board.id,
     time: m.time,
     payTimer: m.payTimer,
     nextId: m.nextId,
-    players: JSON.parse(JSON.stringify(m.players)) as [Player, Player],
+    seed,
+    ai: ais.map((ai) => ai.save()),
+    players: JSON.parse(JSON.stringify(m.players)) as Player[],
     units: m.units.map((u) => ({ ...u, def: u.def.id })),
     towers: m.towers.map((t) => ({
       ...t,
@@ -235,19 +268,23 @@ export function packMatch(m: Match): Packed {
 export function unpackMatch(p: Packed): Match {
   const board = BOARDS[p.board];
   if (!board) throw new Error('unknown map');
-  const m = newMatch([p.players[0].race, p.players[1].race], board);
+  if (p.players.length !== board.seats) throw new Error('wrong number of seats');
+  const m = newMatch(
+    p.players.map((q) => q.race),
+    board,
+  );
   m.time = p.time;
   m.payTimer = p.payTimer;
   m.nextId = p.nextId;
-  m.players = p.players;
+  m.players = p.players as Match['players'];
   const found = <T extends { id: string }>(list: T[], id: string): T => {
     const x = list.find((y) => y.id === id);
     if (!x) throw new Error(`unknown kind ${id}`);
     return x;
   };
-  m.units = p.units.map((u) => ({ ...u, def: found(m.races[m.players[u.owner].race].units, u.def) }));
+  m.units = p.units.map((u) => ({ ...u, def: found(m.races[m.players[u.owner]!.race].units, u.def) }));
   m.towers = p.towers.map((t) => {
-    const race = m.races[m.players[t.owner].race];
+    const race = m.races[m.players[t.owner]!.race];
     return {
       ...t,
       def: found(race.towers, t.def),
@@ -257,6 +294,17 @@ export function unpackMatch(p: Packed): Match {
   return m;
 }
 
+function isAiState(v: unknown): v is AiState {
+  const a = (v ?? {}) as Partial<AiState>;
+  return (
+    typeof a.timer === 'number' &&
+    typeof a.lastWave === 'number' &&
+    isInt(a.bought, 0, 1e6) &&
+    isInt(a.waves, 0, 1e6) &&
+    isInt(a.rng, 0, 0xffffffff)
+  );
+}
+
 function parsePacked(v: unknown): Packed | null {
   const p = (v ?? {}) as Partial<Packed>;
   const ok =
@@ -264,8 +312,13 @@ function parsePacked(v: unknown): Packed | null {
     typeof p.time === 'number' &&
     typeof p.payTimer === 'number' &&
     isInt(p.nextId, 0, 1e9) &&
+    isInt(p.seed, 0, 0x7fffffff) &&
+    Array.isArray(p.ai) &&
+    p.ai.length <= 2 &&
+    p.ai.every(isAiState) &&
     Array.isArray(p.players) &&
-    p.players.length === 2 &&
+    p.players.length >= 2 &&
+    p.players.length <= 4 &&
     Array.isArray(p.units) &&
     p.units.length <= 1000 &&
     Array.isArray(p.towers) &&
@@ -287,8 +340,9 @@ export function checksum(m: Match): number {
   mix(m.payTimer);
   mix(m.nextId);
   mix(m.winner);
-  for (const p of m.players) for (const x of [p.wood, p.stone, p.castle.hp, p.castle.level]) mix(x);
-  for (const u of m.units) for (const x of [u.id, u.hp, u.s, u.off?.d ?? -1]) mix(x);
+  for (const p of m.players)
+    for (const x of [p.wood, p.stone, p.castle.hp, p.castle.level, p.lane, p.out ? 1 : 0]) mix(x);
+  for (const u of m.units) for (const x of [u.id, u.hp, u.s, u.lane ?? -1, u.off?.d ?? -1]) mix(x);
   for (const t of m.towers) for (const x of [t.id, t.hp, t.col, t.row]) mix(x);
   return h >>> 0;
 }
@@ -298,6 +352,9 @@ export function checksum(m: Match): number {
 export interface Link {
   send(message: Message): void;
 }
+
+/** The two people at the table: the host (seat 0) and the one who joined (seat 1). Computers hold any seats past them. */
+export type Person = 0 | 1;
 
 /** One page's half of the shared clock. `you` is this page's player. */
 export class Lockstep {
@@ -317,7 +374,7 @@ export class Lockstep {
   private theirs = new Map<number, number>();
 
   constructor(
-    readonly you: Owner,
+    readonly you: Person,
     private link: Link,
     private delay = DELAY,
   ) {
@@ -380,7 +437,7 @@ export class Lockstep {
     this.setAway(false);
   }
 
-  private get other(): Owner {
+  private get other(): Person {
     return this.you === 0 ? 1 : 0;
   }
 

@@ -81,6 +81,11 @@ const THEMES: Record<string, Theme> = {
     rocks: names('darkBoulder', 'darkBoulderB', 'darkSpire'),
   },
 };
+// The co-op fields wear the looks of the duels' (a map is a road network and a theme).
+THEMES.crossroads = THEMES.greenwood!;
+THEMES.hbridge = THEMES.desert!;
+THEMES.twinfords = THEMES.frostlands!;
+THEMES.delta = THEMES.ember!;
 
 /** A rectangle turned half way round the field. */
 const turnRect = (r: Rect, cols: number, rows: number): Rect => ({
@@ -115,17 +120,18 @@ export function fieldZone(def: RoadDef): Zone {
   z.fill(theme.ground);
   const whole: Rect = { col: 0, row: 0, w: COLS, h: ROWS };
   if (theme.cover) z.paint(theme.cover, whole);
-  // The classic road is turned half way round onto itself, so its scenery is too; every other map is free of that.
-  const twin = def.id === 'greenwood';
+  // A field turned half way round onto itself (the classic road, the two-against-two fields) has its scenery turned too; the others are free of that.
+  const board = BOARDS[def.id];
+  const twin = board.turned;
   const sites = (c: number, r: number): [number, number][] => (twin ? [[c, r], turnCell(c, r, COLS, ROWS)] : [[c, r]]);
   const reach = twin ? ROWS / 2 : ROWS - 2; // rows (from the top) things are placed in; a twin is placed once and turned
   const rand = lcg(def.id.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7));
 
-  const pts: readonly Pt[] = def.points;
-  const castles = [pts[0], pts[pts.length - 1]];
-  // Points along the road every half cell (a road may be a few long straight runs, so its corners alone are not enough).
-  const board = BOARDS[def.id];
-  const along = Array.from({ length: Math.ceil(board.roadLength * 2) + 1 }, (_, i) => board.pointAt(i / 2));
+  const castles: readonly Pt[] = board.castles;
+  // Points along every road every half cell (a road may be a few long straight runs, so its corners alone are not enough).
+  const along = board.lanes.flatMap((lane) =>
+    lane.id % 2 === 1 ? [] : Array.from({ length: Math.ceil(lane.length * 2) + 1 }, (_, i) => lane.pointAt(i / 2)),
+  );
   const roadDist = (x: number, y: number) => {
     let best = Infinity;
     for (const p of along) best = Math.min(best, Math.hypot(p[0] - x, p[1] - y));
@@ -297,7 +303,7 @@ if (process.argv[1] === import.meta.filename) {
     const blocked = new Set<number>();
     for (const i of data.collision) {
       blocked.add(i);
-      if (def.id !== 'greenwood') continue;
+      if (!BOARDS[def.id].turned) continue;
       const [c, r] = turnCell(i % def.cols, Math.floor(i / def.cols), def.cols, def.rows);
       blocked.add(r * def.cols + c);
     }

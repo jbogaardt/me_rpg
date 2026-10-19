@@ -71,7 +71,7 @@ export class Duel {
       if (attempt.signal.aborted) return void this.relay.cancel(room);
       this.room = room;
       this.seatOpen = true;
-      this.handlers.phase('waiting', 'Waiting for your rival…', room.code);
+      this.handlers.phase('waiting', 'Waiting for your friend…', room.code);
       let after = 0;
       for (;;) {
         let batch;
@@ -179,7 +179,7 @@ export class Duel {
       const offer = await link.createOffer();
       await this.relay.reopenSeat(room, 1, offer, attempt.signal);
       this.seatOpen = true;
-      if (!wasUp || !this.up) this.handlers.phase('waiting', 'Waiting for your rival…', room.code);
+      if (!wasUp || !this.up) this.handlers.phase('waiting', 'Waiting for your friend…', room.code);
     } catch (err) {
       this.failed(err, attempt);
     }

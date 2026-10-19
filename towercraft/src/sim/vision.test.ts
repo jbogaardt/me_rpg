@@ -103,7 +103,7 @@ describe('unit vision', () => {
     expect(canSee(m, 0, [near[0] + 0.5, near[1] + 0.5])).toBe(true);
     expect(inBuildArea(m, 0, near[0], near[1])).toBe(false);
     expect(canBuild(m, 0, towerDef('legion', 'watch'), near[0], near[1])).toBe('area');
-    expect(visionOf(m)[0].some((s) => s.temporary && s.build)).toBe(false);
+    expect(visionOf(m)[0]!.some((s) => s.temporary && s.build)).toBe(false);
   });
 
   it('goes back to fog when the unit dies or is gone', () => {

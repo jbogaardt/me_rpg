@@ -15,6 +15,15 @@ export const EDGE = 8;
 
 export type Pt = readonly [number, number];
 
+/** A road between two camps (a seat's castle each) on a map with more than two: from camp `a` to camp `b`, a dense polyline in cell centres. */
+export interface RoadLink {
+  /** What the player reads on the lane picker ("West road"): the way a unit sent along it goes. */
+  name: string;
+  a: number;
+  b: number;
+  points: readonly Pt[];
+}
+
 export interface RoadDef {
   id: string;
   /** The field's size in cells. */
@@ -24,8 +33,20 @@ export interface RoadDef {
   blurb: string;
   /** Cells whose centre is this near the road are road (a cell on a straight run: 0.5 is one wide, 1 is three). */
   halfWidth: number;
-  /** The road as a dense polyline, castle to castle. */
+  /** The road as a dense polyline, castle to castle (on a map with more camps, the first of its `links`). */
   points: readonly Pt[];
+  /**
+   * Maps for co-op: one castle (camp) per seat, which seats are allies (`teams`, as many as camps) and the roads between camps of
+   * different teams, which fork and cross on the way (`board.ts` makes a lane of each, both ways). A map with none of these is a
+   * duel: one road between two castles.
+   */
+  camps?: readonly Pt[];
+  teams?: readonly number[];
+  links?: readonly RoadLink[];
+  /** The whole field (roads, camps, scenery) is turned half way round onto itself, so the two teams have the same ground. */
+  turned?: boolean;
+  /** What each seat earns, as a multiple (default 1 each): a computer side that stands alone against two people is paid more. */
+  pace?: readonly number[];
 }
 
 /** A smooth curve through the control points (Catmull-Rom), sampled about every half cell. */
@@ -84,7 +105,7 @@ const SWITCHBACK: readonly Pt[] = DRAWN_SWITCHBACK.map(([x, y]) => [
   y === DRAWN_ROWS / 2 ? ROWS / 2 : y * GROW + (y < DRAWN_ROWS / 2 ? -0.5 : 1.5),
 ]);
 
-export const ROADS: readonly RoadDef[] = [
+const DUEL_ROADS: readonly RoadDef[] = [
   {
     id: 'greenwood',
     cols: COLS,
@@ -215,3 +236,180 @@ export const ROADS: readonly RoadDef[] = [
     ),
   },
 ];
+
+// --- Maps for co-op ------------------------------------------------------------------------------------------------------------
+// One camp (castle) per seat, the two sides' camps apart, and roads that FORK on the way between them: a unit sent from a camp may
+// take any road that leads to a foe's, so a side holds each fork or splits its armies. A road is built from pieces (a `piece` is a
+// smooth curve through a few corners) joined end to end; pieces that two roads share are the same cells, which is what makes a
+// fork. A road between two camps becomes two lanes (`board.ts`), one each way. The two-against-two fields are turned half way round
+// onto themselves (so are their roads), the two-against-one fields are mirrored left to right (the lone side stands on the line).
+
+/** The pieces of a road joined end to end (a shared corner is kept once). */
+const join = (...pieces: readonly (readonly Pt[])[]): Pt[] => pieces.flatMap((p, i) => (i === 0 ? [...p] : p.slice(1)));
+const piece = (...corners: Pt[]) => smooth(corners);
+const reversed = (p: readonly Pt[]): Pt[] => [...p].reverse();
+const [NCOLS, NROWS] = [120, 112];
+/** A point turned half way round the field, or mirrored left to right. */
+const turned = (p: Pt): Pt => [NCOLS - p[0], NROWS - p[1]];
+const flipped = (p: Pt): Pt => [NCOLS - p[0], p[1]];
+
+const network = (
+  id: string,
+  name: string,
+  blurb: string,
+  camps: readonly Pt[],
+  teams: readonly number[],
+  links: readonly RoadLink[],
+  turn: boolean,
+  pace?: readonly number[],
+): RoadDef => ({
+  id,
+  cols: NCOLS,
+  rows: NROWS,
+  name,
+  blurb,
+  halfWidth: 1,
+  points: links[0]!.points,
+  camps,
+  teams,
+  links,
+  turned: turn,
+  pace,
+});
+
+/** Four camps in the corners: seats 0 and 1 on top (one side), 2 and 3 below (the other). */
+const CORNERS: readonly [Pt, Pt, Pt, Pt] = [
+  [22.5, 14.5],
+  [97.5, 14.5],
+  [22.5, 97.5],
+  [97.5, 97.5],
+];
+
+/** Two roads cross in the middle, and each camp's road forks just outside its gate: straight down the edge, or across the field. */
+const crossroads = (): RoadDef => {
+  const [j0, j1, j2, j3]: [Pt, Pt, Pt, Pt] = [
+    [22.5, 30.5],
+    [97.5, 30.5],
+    [22.5, 81.5],
+    [97.5, 81.5],
+  ];
+  const stemA0 = piece(CORNERS[0], [22.5, 22.5], j0);
+  const stemA1 = stemA0.map(flipped);
+  const stemB3 = reversed(stemA0.map(turned)); // j3 down to the camp
+  const stemB2 = stemB3.map(flipped);
+  const west = piece(j0, [13, 36], [8, 46], [15, 54], [9, 63], [14, 72], j2);
+  const east = reversed(west.map(turned));
+  const cross1 = piece(j0, [33, 35], [45, 39], [54, 47], [60, 56], [66, 65], [75, 73], [87, 77], j3);
+  const cross2 = cross1.map(flipped);
+  void j1;
+  return network(
+    'crossroads',
+    'Crossroads (2 v 2)',
+    'Four camps and two ways down for each: the edge road, or the crossing in the middle where every army meets.',
+    CORNERS,
+    [0, 0, 1, 1],
+    [
+      { name: 'West road', a: 0, b: 2, points: join(stemA0, west, stemB2) },
+      { name: 'Cross to the south-east', a: 0, b: 3, points: join(stemA0, cross1, stemB3) },
+      { name: 'East road', a: 1, b: 3, points: join(stemA1, east, stemB3) },
+      { name: 'Cross to the south-west', a: 1, b: 2, points: join(stemA1, cross2, stemB2) },
+    ],
+    true,
+  );
+};
+
+/** One road down each edge and a bridge between them half way: an army may go straight on or cross, and the bridge is the fight. */
+const hbridge = (): RoadDef => {
+  const [mL, mR]: [Pt, Pt] = [
+    [22.5, 56],
+    [97.5, 56],
+  ];
+  const westTop = piece(CORNERS[0], [15, 25], [26, 36], [16, 46], mL);
+  const eastTop = westTop.map(flipped);
+  const eastBottom = reversed(westTop.map(turned)); // mR down to the camp
+  const westBottom = eastBottom.map(flipped);
+  const bar = piece(mL, [38, 62], [50, 52], [60, 56], [70, 60], [82, 50], mR);
+  return network(
+    'hbridge',
+    'The Bridge (2 v 2)',
+    'A road down each edge and one bridge across the middle: hold the bridge, or run the edge.',
+    CORNERS,
+    [0, 0, 1, 1],
+    [
+      { name: 'West road', a: 0, b: 2, points: join(westTop, westBottom) },
+      { name: 'Over the bridge', a: 0, b: 3, points: join(westTop, bar, eastBottom) },
+      { name: 'East road', a: 1, b: 3, points: join(eastTop, eastBottom) },
+      { name: 'Over the bridge', a: 1, b: 2, points: join(eastTop, reversed(bar), westBottom) },
+    ],
+    true,
+  );
+};
+
+/** Two camps up top against one at the bottom of the field, on the line down the middle. */
+const TRIO: readonly [Pt, Pt, Pt] = [
+  [22.5, 14.5],
+  [97.5, 14.5],
+  [60, 97.5],
+];
+
+/** Each camp has a long road round its own side and a short one down the middle, where the two sides' roads merge into one road to the lone camp. */
+const twinfords = (): RoadDef => {
+  const j0: Pt = [22.5, 30.5];
+  const stemA0 = piece(TRIO[0], [22.5, 22.5], j0);
+  const stemA1 = stemA0.map(flipped);
+  const outerW = piece(j0, [12, 38], [8, 50], [14, 62], [9, 74], [18, 85], [32, 92], [46, 95], TRIO[2]);
+  const outerE = outerW.map(flipped);
+  const centreW = piece(j0, [34, 38], [46, 44], [54, 54], [60, 62]);
+  const centreE = centreW.map(flipped);
+  const trunk = piece([60, 62], [60, 80], TRIO[2]);
+  return network(
+    'twinfords',
+    'Twin Fords (2 v 1)',
+    'Two camps against one. Each of you has a long road round your side and a short one down the middle, where the roads merge.',
+    TRIO,
+    [0, 0, 1],
+    [
+      { name: 'West road', a: 0, b: 2, points: join(stemA0, outerW) },
+      { name: 'Down the middle', a: 0, b: 2, points: join(stemA0, centreW, trunk) },
+      { name: 'East road', a: 1, b: 2, points: join(stemA1, outerE) },
+      { name: 'Down the middle', a: 1, b: 2, points: join(stemA1, centreE, trunk) },
+    ],
+    false,
+    // Balanced against two computers on its side (tools/towercraftCoop.ts): the lone side earns about 1.9 times what each of them does (`npm run towercraft:coop`).
+    [1, 1, 1.9],
+  );
+};
+
+/** A road down each of the two camps' sides, a bridge that joins them, and from the bridge either straight on to the lone camp or down the middle. */
+const delta = (): RoadDef => {
+  const mL: Pt = [22.5, 58];
+  const mid: Pt = [60, 62];
+  const westTop = piece(TRIO[0], [14, 24], [26, 36], [14, 47], mL);
+  const eastTop = westTop.map(flipped);
+  const barW = piece(mL, [34, 66], [46, 56], mid);
+  const barE = barW.map(flipped);
+  const diagW = piece(mL, [14, 70], [24, 82], [38, 88], [48, 96], TRIO[2]);
+  const diagE = diagW.map(flipped);
+  const trunk = piece(mid, [60, 80], TRIO[2]);
+  return network(
+    'delta',
+    'The Delta (2 v 1)',
+    'Two camps against one. Your roads run down the sides and may turn in to the middle, where they join the way to the lone camp.',
+    TRIO,
+    [0, 0, 1],
+    [
+      { name: 'Down the side', a: 0, b: 2, points: join(westTop, diagW) },
+      { name: 'Turn to the middle', a: 0, b: 2, points: join(westTop, barW, trunk) },
+      { name: 'Down the side', a: 1, b: 2, points: join(eastTop, diagE) },
+      { name: 'Turn to the middle', a: 1, b: 2, points: join(eastTop, barE, trunk) },
+    ],
+    false,
+    [1, 1, 1.5],
+  );
+};
+
+/** The maps for more than two seats (the title screen offers them by how many play). */
+export const COOP_ROADS: readonly RoadDef[] = [crossroads(), hbridge(), twinfords(), delta()];
+
+/** Every map: the duels (one road between two castles) first, then the co-op fields. */
+export const ROADS: readonly RoadDef[] = [...DUEL_ROADS, ...COOP_ROADS];
