@@ -1224,10 +1224,7 @@ void (async () => {
           .stroke({ color: 0xf2d38a, width: 2.5, alpha: pulse });
         if (u.def.range > 1.5)
           // the reach of its shot (melee units have none worth drawing)
-          live
-            .circle(ux * CELL, uy * CELL, u.def.range * CELL)
-            .fill({ color: 0xffffff, alpha: 0.08 })
-            .stroke({ color: 0xf2d38a, width: 1.5, alpha: 0.5 });
+          live.circle(ux * CELL, uy * CELL, u.def.range * CELL).stroke({ color: 0xf2d38a, width: 1.5, alpha: 0.5 });
         let goal: [number, number] | undefined;
         if (u.focus?.kind === 'tower') {
           const t = match.towers.find((x) => x.id === (u.focus as { id: number }).id);
