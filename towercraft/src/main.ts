@@ -93,7 +93,7 @@ const SHEETS: Record<SheetKind, Sheet> = {
   gryphon: { frame: 100, walk: [0, 1, 2, 3], attack: [0, 1, 2, 3, 4, 5, 6], death: [7, 8, 9, 10, 11, 12], scale: 0.8 },
   glider: { frame: 100, walk: [0, 1], attack: [0], death: [2, 3, 4], scale: 0.7 },
   // Bats and birds: rows 0-5 a wing-beat cycle, 6-8 the dive, 9-11 the fall (13 rows; 32 px frames, the big bat's 64 px).
-  bat: { frame: 32, walk: [0, 1, 2, 3, 4, 5], attack: [6, 7, 8, 7], death: [9, 10, 11], scale: 1.5 },
+  bat: { frame: 32, walk: [0, 1, 2, 3, 4, 5], attack: [6, 7, 8, 7], death: [9, 10, 11], scale: 2 },
   bigbat: { frame: 64, walk: [0, 1, 2, 3, 4, 5], attack: [6, 7, 8, 7], death: [9, 10, 11], scale: 1 },
   // A field engine: it rolls (row 0), throws (1-3) and falls apart (3).
   engine: { frame: 72, walk: [0], attack: [1, 2, 3, 0], death: [3] },
@@ -586,28 +586,28 @@ void (async () => {
   const drawBadge = (g: Graphics, t: Tower) => {
     const d = t.def;
     g.clear();
-    const [x, y, r] = [0, 27, 6];
+    const [x, y, r] = [0, 28, 5];
+    const plate = (w: number) => g.roundRect(x - w / 2, y - 8, w, 16, 8).fill({ color: 0x1a120a, alpha: 0.62 });
     if (d.bunker) {
       const n = d.bunker.slots;
+      plate(n * 12 + 6);
       for (let i = 0; i < n; i++) {
         const dx = (i - (n - 1) / 2) * 12;
-        if (i < t.garrison.length) g.circle(dx, y, 4.5).fill(0xf2d38a).stroke({ color: 0x1a120a, width: 1.5 });
-        else g.circle(dx, y, 4.5).fill({ color: 0x1a120a, alpha: 0.55 }).stroke({ color: 0xa7b6c7, width: 1.5 });
+        if (i < t.garrison.length) g.circle(dx, y, 4).fill(0xf2d38a);
+        else g.circle(dx, y, 3.6).stroke({ color: 0xa7b6c7, width: 1.5 });
       }
     } else if (d.econ) {
-      g.circle(x, y, r)
-        .fill(d.econ.wood ? 0xc58b4e : 0xb4bcc6)
-        .stroke({ color: 0x1a120a, width: 1.5 });
+      plate(26);
+      g.circle(x, y, r + 1).fill(d.econ.wood ? 0xd49a5a : 0xcdd4dc);
     } else if (d.trains) {
-      g.circle(x, y, r).fill({ color: 0x1a120a, alpha: 0.55 }).stroke({ color: 0xf2d38a, width: 2.5 });
+      plate(26);
+      g.circle(x, y, r + 0.5).stroke({ color: 0xf2d38a, width: 2.5 });
     } else if (d.damage > 0 && d.hits === 'air') {
-      g.poly([x, y - r - 1, x + r + 1, y + r - 1, x - r - 1, y + r - 1])
-        .fill(0x6fb7ff)
-        .stroke({ color: 0x1a120a, width: 1.5, join: 'round' });
+      plate(26);
+      g.poly([x, y - r - 1, x + r + 1, y + r - 1, x - r - 1, y + r - 1]).fill(0x7fc0ff);
     } else if (!d.damage && !d.aura && !d.detect) {
-      g.poly([x, y - r - 1, x + r + 1, y, x, y + r + 1, x - r - 1, y])
-        .fill(0xd9825b)
-        .stroke({ color: 0x1a120a, width: 1.5, join: 'round' });
+      plate(26);
+      g.poly([x, y - r - 1, x + r + 1, y, x, y + r + 1, x - r - 1, y]).fill(0xe8946a);
     }
   };
 
@@ -963,7 +963,7 @@ void (async () => {
         // One of several struck at once (a flame, a sweeping blade): a short soft arc that bows from the attacker to the target.
         const f = Math.min(1, e.age / (EFFECT_LIFE * 0.6));
         const [sx, sy, ex, ey] = [x0, y0 - lift, x1, y1 - 22];
-        const [nx, ny] = [-(ey - sy) * 0.18, (ex - sx) * 0.18];
+        const [nx, ny] = [-(ey - sy) * 0.3, (ex - sx) * 0.3];
         const [mx, my] = [(sx + ex) / 2 + nx, (sy + ey) / 2 + ny];
         const at = (t: number): [number, number] => [
           (1 - t) * (1 - t) * sx + 2 * (1 - t) * t * mx + t * t * ex,
@@ -971,8 +971,8 @@ void (async () => {
         ];
         const [t0, t1] = [Math.max(0, f - 0.6), f];
         for (const [w, al] of [
-          [11, 0.2],
-          [4, 0.55],
+          [14, 0.22],
+          [5, 0.65],
         ] as const) {
           const [px, py] = at(t0);
           live.moveTo(px, py);
@@ -1015,8 +1015,12 @@ void (async () => {
   }
 
   // --- The page: top bar, the dock of thumbnails, the card, the title screen -----------------------------------------------
-  const money = (c: Cost) =>
-    [c.wood > 0 && `<i class="w">${c.wood}</i>`, c.stone > 0 && `<i class="s">${c.stone}</i>`]
+  /** A price as coloured numbers (wood brown, stone grey); `words` spells them out, for the cards. */
+  const money = (c: Cost, words = false) =>
+    [
+      c.wood > 0 && `<i class="w">${c.wood}${words ? ' wood' : ''}</i>`,
+      c.stone > 0 && `<i class="s">${c.stone}${words ? ' stone' : ''}</i>`,
+    ]
       .filter(Boolean)
       .join(' ') || '<i>free</i>';
   const moneyWords = (c: Cost) =>
@@ -1123,7 +1127,7 @@ void (async () => {
         d.range > 1.5 && `Range ${per(d.range)}`,
         d.garrison && 'Fits a bunker',
       ) +
-      `<ul>${row('Price', money(d.cost))}${row('Health', boosted(d.hp, hp))}${row('Damage', `${boosted(d.damage, dmg)} a hit`)}` +
+      `<ul>${row('Price', money(d.cost, true))}${row('Health', boosted(d.hp, hp))}${row('Damage', `${boosted(d.damage, dmg)} a hit`)}` +
       `${row('Attacks every', `${per(d.cooldown)} s`)}${row('Damage a second', per((d.damage * dmg) / d.cooldown))}` +
       `${row('Reach', d.range > 1.5 ? `${per(d.range)} cells` : 'melee')}${row('Speed', `${d.speed} cells a second`)}${row('Sight', `${d.sight} cells`)}` +
       `${d.needs ? row('Comes from', towerName(d.needs)) : ''}</ul>`
@@ -1151,7 +1155,7 @@ void (async () => {
         !!d.detect && 'Sees cloaked',
         d.reach > 0 && 'Extends your build area',
       ) +
-      `<ul>${row('Price', money(d.cost))}${d.limit ? row('Built', `${built} of ${d.limit}`) : ''}${d.needs ? row('Needs', towerName(d.needs)) : ''}${
+      `<ul>${row('Price', money(d.cost, true))}${d.limit ? row('Built', `${built} of ${d.limit}`) : ''}${d.needs ? row('Needs', towerName(d.needs)) : ''}${
         d.econ
           ? row('Pays', `+${d.econ.wood ?? d.econ.stone} ${d.econ.wood ? 'wood' : 'stone'} every ${PAY_EVERY} s`)
           : ''
@@ -1307,7 +1311,7 @@ void (async () => {
           return (
             `<button class="load" data-load="${u.id}"${why ? ' disabled' : ''}>${unitThumb(u, 34)}` +
             `<span><b>${u.name}</b><small>${why || `${u.damage} dmg · range ${per(u.range + b.rangeBonus)}${u.hitsAir ? ' · hits air' : ''}`}</small></span>` +
-            `<em>${money(cost)}</em></button>`
+            `<em>${money(cost, true)}</em></button>`
           );
         })
         .join('');
@@ -1330,10 +1334,10 @@ void (async () => {
       body =
         `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">Level ${level} of ${MAX_LEVEL}</div></div></header>` +
         `<div class="hp"><i style="width:${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%"></i><span>${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}</span></div>` +
-        `<ul>${row('Castle pays', `${money(base)} every ${PAY_EVERY} s`)}${row('With mills and quarries', money(inc))}${row('Build reach', `${race.castle.reach[level - 1]} cells`)}${row('Units out', `${match.units.filter((u) => u.owner === YOU).length} of ${UNIT_CAP}`)}</ul>` +
+        `<ul>${row('Castle pays', `${money(base, true)} every ${PAY_EVERY} s`)}${row('With mills and quarries', money(inc, true))}${row('Build reach', `${race.castle.reach[level - 1]} cells`)}${row('Units out', `${match.units.filter((u) => u.owner === YOU).length} of ${UNIT_CAP}`)}</ul>` +
         (cost === undefined || !nextInc
           ? '<p class="note">The castle has every upgrade.</p>'
-          : `<p class="note"><b>Level ${level + 1}</b> costs ${money(cost)}: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pays ${money(nextInc)}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; buildings: ${names(race.towers) || 'none'}.</p>`);
+          : `<p class="note"><b>Level ${level + 1}</b> costs ${money(cost, true)}: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pays ${money(nextInc, true)}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; buildings: ${names(race.towers) || 'none'}.</p>`);
       label = cost === undefined ? 'Fully upgraded' : `Upgrade to level ${level + 1} · ${moneyWords(cost)}`;
       reason = cost === undefined ? 'max' : lacking(cost);
       go = () => upgradeCastle(match, YOU);

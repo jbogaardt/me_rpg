@@ -41,7 +41,7 @@
         text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .wbtn:hover:not(:disabled) { filter: brightness(1.25) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .wbtn:active:not(:disabled) { filter: brightness(0.9); transform: translateY(1px); }
-      #cam { position: fixed; right: 10px; top: 56px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
+      #cam { position: fixed; left: 10px; top: 56px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
       #cam button { width: 40px; height: 40px; font-size: 20px; }
       .plank { background: url('./ui/plank-dim.png') center / 100% 100% no-repeat; border: 0; color: #b9b3a2; font: 700 12px var(--title); padding: 8px 14px; letter-spacing: 0.03em; text-shadow: 0 1px 2px #000; }
       .plank.on, .plank:hover:not(:disabled) { background-image: url('./ui/plank.png'); color: var(--gold); }
@@ -111,7 +111,7 @@
       #card .load { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; text-align: left; border-radius: 6px; cursor: pointer;
         background: rgba(51, 35, 15, 0.14); border: 1px solid var(--ink-soft); color: var(--ink); font-family: var(--body); min-height: 44px; }
       #card .load:hover:not(:disabled) { background: rgba(242, 211, 138, 0.45); }
-      #card .load:disabled { opacity: 0.55; cursor: default; }
+      #card .load:disabled { opacity: 0.7; cursor: default; }
       #card .load span { flex: 1; display: block; min-width: 0; } #card .load b { display: block; font: 700 13px var(--title); color: var(--ink); }
       #card .load small { display: block; font-size: 12px; color: var(--ink-soft); }
       #card .load em { font: 700 12px var(--title); font-style: normal; display: flex; gap: 6px; }
