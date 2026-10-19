@@ -1222,6 +1222,12 @@ void (async () => {
         live
           .ellipse(ux * CELL, uy * CELL + 2, 22 * SIZE * 0.6, 8 * SIZE * 0.6)
           .stroke({ color: 0xf2d38a, width: 2.5, alpha: pulse });
+        if (u.def.range > 1.5)
+          // the reach of its shot (melee units have none worth drawing)
+          live
+            .circle(ux * CELL, uy * CELL, u.def.range * CELL)
+            .fill({ color: 0xffffff, alpha: 0.08 })
+            .stroke({ color: 0xf2d38a, width: 1.5, alpha: 0.5 });
         let goal: [number, number] | undefined;
         if (u.focus?.kind === 'tower') {
           const t = match.towers.find((x) => x.id === (u.focus as { id: number }).id);
@@ -1237,6 +1243,11 @@ void (async () => {
     } else app.canvas.style.cursor = '';
     if (cardOf?.kind === 'built' || cardOf?.kind === 'foe') {
       const t = match.towers.find((x) => x.id === (cardOf as { id: number }).id);
+      if (t && t.hp > 0 && t.def.damage > 0)
+        live
+          .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL, t.def.range * CELL)
+          .fill({ color: 0xffffff, alpha: 0.08 })
+          .stroke({ color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b, width: 1.5, alpha: 0.5 });
       if (t && t.hp > 0)
         live.ellipse((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 8, 30 * SIZE * 0.7, 11 * SIZE * 0.7).stroke({
           color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b,
