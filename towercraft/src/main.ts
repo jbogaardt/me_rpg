@@ -2004,7 +2004,8 @@ void (async () => {
       const cell = aim ?? lastTap;
       const why = cell ? canBuild(match, YOU, selected, cell[0], cell[1]) : 'ok';
       const reasons: Record<string, string> = {
-        area: 'Fogged ground: outside your build area. Build near your castle or a tower (towers push the fog back).',
+        area: 'Fogged ground: build only where your castle or a tower sees.',
+        foe: 'Too close to the rival castle.',
         road: 'That is the road: build beside it.',
         scenery: 'Trees, rocks or water are in the way.',
         taken: 'Something is already built there.',

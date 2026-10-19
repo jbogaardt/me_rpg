@@ -1304,10 +1304,10 @@ const FOG_MARGIN = 1;
 const CASTLE_BODY = 1.2; // sim.ts's CASTLE_RADIUS, which a castle's shot reaches past
 
 /** How slow the game runs, against the tables as written: income (the castle's and every mill's and quarry's) is this fraction of it... */
-const PACE = Number(globalThis.process?.env?.TC_PACE ?? 0.65); // TEMP
+const PACE = 0.4;
 /** ...and the castle upgrades cost this many times as much (level 2, level 3): with the buildings it asks for (`CASTLE_NEEDS`), a first upgrade before about 5 minutes is a speed run. */
-const UPGRADE_PRICE = [Number(globalThis.process?.env?.TC_U2 ?? 11), Number(globalThis.process?.env?.TC_U3 ?? 3.5)]; // TEMP
-const CASTLE_HP = Number(globalThis.process?.env?.TC_HP ?? 1); // TEMP
+const UPGRADE_PRICE = [8, 2.5];
+const CASTLE_HP = 1;
 const money = (c: Cost, k: number): Cost => ({ wood: Math.round(c.wood * k), stone: Math.round(c.stone * k) });
 const stretch = (cells: number) => cells * REACH_SCALE;
 

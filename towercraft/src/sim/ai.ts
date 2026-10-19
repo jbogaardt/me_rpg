@@ -115,7 +115,7 @@ export const roleOf = (def: TowerDef): Role =>
 const defensive = (def: TowerDef) => ['attack', 'detect', 'aura', 'bunker'].includes(roleOf(def));
 const isAntiAir = (d: TowerDef) => d.damage > 0 && d.hits !== 'ground';
 /** Seconds of income an upgrade may be away for the AI to start saving for it. */
-const SAVE_WITHIN = Number(globalThis.process?.env?.TC_SAVE ?? 120); // TEMP
+const SAVE_WITHIN = 240;
 /** What a loaded soldier is assumed to reach from a bunker, for choosing where one goes. */
 const BUNKER_REACH = 5.5 * REACH_SCALE;
 

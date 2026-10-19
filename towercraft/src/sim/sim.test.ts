@@ -115,7 +115,7 @@ describe('building', () => {
   it('reaches further with an upgraded castle and from a tower already built', () => {
     const m = rich(newMatch(['legion', 'legion']));
     const def = towerDef('legion', 'watch');
-    const far: [number, number] = [12, 3]; // 7 cells out: beyond the first level's reach of 6, inside the second's 9
+    const far: [number, number] = [14, 3]; // 9 cells out: beyond the first level's reach of 6 and the castle's sight of 8, inside the second's 9
     expect(canBuild(m, 0, def, ...far)).toBe('area');
     upgradeCastle(m, 0);
     expect(buildReach(m, 0)).toBe(9);

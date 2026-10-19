@@ -48,15 +48,19 @@ describe('the balance maps', () => {
     expect(canBuild(short, 0, free, 20, 70)).toBe('off-board');
   });
 
-  it.each(MAP_IDS)('%s: two AIs play it to the end', (id) => {
-    const m = newMatch(['legion', 'swarm'], MAPS[id]);
-    const ai = [createAi(0, 1), createAi(1, 2)] as const;
-    while (m.winner < 0) {
-      ai[0](m, 0.05);
-      ai[1](m, 0.05);
-      step(m, 0.05);
-    }
-    expect(m.winner).toBeGreaterThanOrEqual(0);
-    expect(m.time).toBeGreaterThan(30);
-  });
+  it.each(MAP_IDS)(
+    '%s: two AIs play it to the end',
+    (id) => {
+      const m = newMatch(['legion', 'swarm'], MAPS[id]);
+      const ai = [createAi(0, 1), createAi(1, 2)] as const;
+      while (m.winner < 0) {
+        ai[0](m, 0.05);
+        ai[1](m, 0.05);
+        step(m, 0.05);
+      }
+      expect(m.winner).toBeGreaterThanOrEqual(0);
+      expect(m.time).toBeGreaterThan(30);
+    },
+    120_000,
+  ); // games last a quarter of an hour of game time now
 });

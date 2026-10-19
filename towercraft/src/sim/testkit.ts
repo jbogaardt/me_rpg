@@ -35,7 +35,7 @@ export const SCENERY_CELLS = CLASSIC.sceneryCells;
 export const DEFAULT_BOARD = CLASSIC;
 /** A match on the classic field with the races as written. */
 export const newMatch = (races: [RaceId, RaceId], board = CLASSIC): Match =>
-  newGameMatch(races, board, { races: RACES, detourMax: 9 });
+  newGameMatch(races, board, { races: RACES, detourMax: 9, foeClear: 0 });
 
 /** Where a unit is on the classic field. */
 export const unitPos = (u: Parameters<typeof gameUnitPos>[0]) => gameUnitPos(u, CLASSIC);

@@ -127,19 +127,21 @@ describe('unit vision', () => {
 });
 
 describe('towers, castles and the build area', () => {
-  it('keeps the build area revealed while the castle or tower stands, and lets a tower see further than it builds', () => {
+  it('keeps the build area revealed while the castle or tower stands, and builds as far as a tower or the castle sees', () => {
     const m = newMatch(['legion', 'legion']);
     const watch = towerDef('legion', 'watch');
     const t = put(m, 0, watch, 14, 5); // (put skips the build rules: this is a tower pushed far forward)
     // Inside the tower's build reach: buildable ground, and seen.
     expect(inBuildArea(m, 0, 17, 5)).toBe(true);
     expect(canSee(m, 0, [17.5, 5.5])).toBe(true);
-    // Beyond the reach but inside the sight of a tower that sees further than it lets you build (a made-up one).
+    // A tower that extends no reach still builds as far as it sees (a made-up one); past its sight it is fog and not buildable.
     const [wide] = [{ ...watch, id: 'wide', reach: 0, sight: 9 }];
     const w = put(m, 0, wide, 14, 22);
     expect(canSee(m, 0, [16.5, 29.5])).toBe(true);
-    expect(inBuildArea(m, 0, 16, 29)).toBe(false);
-    expect(canBuild(m, 0, watch, 16, 29)).toBe('area');
+    expect(inBuildArea(m, 0, 16, 29)).toBe(true);
+    expect(canSee(m, 0, [14.5, 32.5])).toBe(false);
+    expect(inBuildArea(m, 0, 14, 32)).toBe(false);
+    expect(canBuild(m, 0, watch, 14, 32)).toBe('area');
     m.towers.splice(m.towers.indexOf(w), 1);
     expect(canSee(m, 0, [16.5, 29.5])).toBe(false);
     m.towers.splice(m.towers.indexOf(t), 1);

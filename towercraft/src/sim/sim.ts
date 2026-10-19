@@ -34,7 +34,7 @@ export const PAY_EVERY = 5;
 /** A match that goes on this long (seconds) is decided on castle hit points left. */
 export const TIME_LIMIT = 1800;
 /** From this time (seconds) a stalemate wears down: every blow a castle takes grows by 1 for every `SUDDEN_DEATH_RAMP` seconds more. */
-export const SUDDEN_DEATH = Number(globalThis.process?.env?.TC_SD ?? 1080); // TEMP
+export const SUDDEN_DEATH = 1080;
 export const SUDDEN_DEATH_RAMP = 90;
 export const suddenDeath = (time: number) => 1 + Math.max(0, time - SUDDEN_DEATH) / SUDDEN_DEATH_RAMP;
 /** Units one side may have alive at once (there is no queue to hold them back, so the rules do). */
@@ -43,6 +43,8 @@ export const UNIT_CAP = 120;
 export const CASTLE_RADIUS = 1.2;
 const TOWER_RADIUS = 0.5;
 /** The farthest (cells, square to the road) a unit will step off it to take a tower down, in the game's own races' scale. */
+/** Nothing is built this near (cells) the foe's castle, however far your fog reaches: no tower creep onto their doorstep. */
+export const FOE_CLEAR = 24;
 export const DETOUR_MAX = 9 * REACH_SCALE;
 
 export type Owner = 0 | 1;
@@ -140,6 +142,8 @@ export interface Match {
   races: Record<RaceId, Race>;
   /** The farthest (cells, square to the road) a unit will step off it to take a tower down. */
   detourMax: number;
+  /** Nothing is built this near (cells) the foe's castle (`FOE_CLEAR` in the game). */
+  foeClear: number;
   time: number;
   payTimer: number;
   players: [Player, Player];
@@ -157,7 +161,11 @@ export interface Match {
 export function newMatch(
   races: [RaceId, RaceId],
   board: Board = DEFAULT_BOARD,
-  rules: { races: Record<RaceId, Race>; detourMax: number } = { races: RACES, detourMax: DETOUR_MAX },
+  rules: { races: Record<RaceId, Race>; detourMax: number; foeClear: number } = {
+    races: RACES,
+    detourMax: DETOUR_MAX,
+    foeClear: FOE_CLEAR,
+  },
 ): Match {
   const player = (race: RaceId): Player => {
     const hp = rules.races[race].castle.hp;
@@ -334,12 +342,12 @@ export function sightOf(m: Match, owner: Owner): Sight[] {
   const [cx, cy] = m.board.castles[owner];
   const out: Sight[] = [
     { key: 'c:build', x: cx, y: cy, r: buildReach(m, owner), build: true, temporary: false },
-    { key: 'c:sight', x: cx, y: cy, r: castle.sight, build: false, temporary: false },
+    { key: 'c:sight', x: cx, y: cy, r: castle.sight, build: true, temporary: false },
   ];
   for (const t of m.towers) {
     if (t.owner !== owner || t.hp <= 0) continue;
     const [x, y] = centreOf(t);
-    out.push({ key: `t${t.id}:sight`, x, y, r: t.def.sight, build: false, temporary: false });
+    out.push({ key: `t${t.id}:sight`, x, y, r: t.def.sight, build: true, temporary: false });
     if (t.def.reach > 0) out.push({ key: `t${t.id}:build`, x, y, r: t.def.reach, build: true, temporary: false });
   }
   for (const u of m.units) {
@@ -517,14 +525,17 @@ export const buildReach = (m: Match, owner: Owner) => raceOf(m, owner).castle.re
 
 export const towerAt = (m: Match, col: number, row: number) => m.towers.find((t) => t.col === col && t.row === row);
 
-/** Is this cell inside the area `owner` may build in: the castle's reach, or the reach of one of their towers? */
+/** Is this cell inside the area `owner` may build in: ground their castle or a standing tower sees (or reaches, if that is farther)? Units never add to it. */
 export function inBuildArea(m: Match, owner: Owner, col: number, row: number): boolean {
   const c: [number, number] = [col + 0.5, row + 0.5];
-  if (dist(c, m.board.castles[owner]) <= buildReach(m, owner)) return true;
-  return m.towers.some((t) => t.owner === owner && t.def.reach > 0 && dist(c, centreOf(t)) <= t.def.reach);
+  const castle = m.board.castles[owner];
+  if (dist(c, castle) <= Math.max(buildReach(m, owner), raceOf(m, owner).castle.sight)) return true;
+  return m.towers.some(
+    (t) => t.owner === owner && t.hp > 0 && dist(c, centreOf(t)) <= Math.max(t.def.reach, t.def.sight),
+  );
 }
 
-export type BuildResult = Result | 'off-board' | 'road' | 'scenery' | 'taken' | 'castle' | 'area';
+export type BuildResult = Result | 'off-board' | 'road' | 'scenery' | 'taken' | 'castle' | 'foe' | 'area';
 
 export function canBuild(m: Match, owner: Owner, def: TowerDef, col: number, row: number): BuildResult {
   if (m.winner >= 0) return 'over';
@@ -534,6 +545,7 @@ export function canBuild(m: Match, owner: Owner, def: TowerDef, col: number, row
   if (b.sceneryCells.has(b.cellIndex(col, row))) return 'scenery';
   const c: [number, number] = [col + 0.5, row + 0.5];
   if (b.castles.some((k) => dist(c, k) < CASTLE_CLEAR)) return 'castle';
+  if (dist(c, b.castles[owner === 0 ? 1 : 0]) < m.foeClear) return 'foe';
   if (towerAt(m, col, row)) return 'taken';
   const open = towerUnlocked(m, owner, def);
   if (open !== 'ok') return open;
