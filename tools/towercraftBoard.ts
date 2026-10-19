@@ -156,65 +156,100 @@ export function fieldZone(def: RoadDef): Zone {
   z.forest(margin, { seed: 1, trees: theme.trees });
   z.forest(turnRect(margin, COLS, ROWS), { seed: 11, trees: theme.trees });
 
-  // Lakes in the pockets between runs, as far from the road as the field allows: their middle rows only, leaving clear ground each side.
-  const lakes: [number, number][] = [];
-  const spots: [number, number, number][] = [];
-  for (let col = 6; col < COLS - 6; col++)
-    for (let row = 5; row < (twin ? reach - 1 : reach - 14); row++) {
-      // Every cell of the lake and its shore must be well clear of the road (two clear cells for towers) and of both castles.
-      const cells: (readonly [number, number])[] = [];
-      for (let c = col - 5; c <= col + 4; c++) for (let r = row - 2; r <= row + 2; r++) cells.push([c, r]);
-      const room = Math.min(
-        ...cells.map(([c, r]) => roadDist(c + 0.5, r + 0.5) - def.halfWidth - 2),
-        castleDist(col + 0.5, row + 0.5) - 14,
-      );
-      if (room >= 0 && col >= EDGE + 8 && col <= COLS - EDGE - 8) spots.push([col, row, room]); // never in the clearings at the edges
+  // Scenery blocks the cells a building could stand on, so there is little of it and it keeps to a few big, different things: a
+  // handful of lakes (each its own size and outline), a couple of tree patches, and a few lone trees, bushes and rocks. Everything keeps
+  // well off the road and further off the castles; the clearings at the edges stay open.
+  const taken = new Set<number>(); // cells with something on them
+  const lakeCells = new Set<number>();
+  const near = (c: number, r: number, set: Set<number>, gap: number) => {
+    for (let dc = -gap; dc <= gap; dc++)
+      for (let dr = -gap; dr <= gap; dr++) if (set.has((r + dr) * COLS + c + dc)) return true;
+    return false;
+  };
+  const roomFor = (c: number, r: number, fromRoad: number, fromCastle: number) =>
+    c >= 1 &&
+    c < COLS - 1 &&
+    r >= 1 &&
+    r < ROWS - 1 &&
+    roadDist(c + 0.5, r + 0.5) >= fromRoad &&
+    castleDist(c + 0.5, r + 0.5) >= fromCastle;
+
+  /** An irregular lake: rows of cells round (cx, cy), each row's width and middle jittered, so no two lakes are alike. */
+  const lakeRows = (cx: number, cy: number, hw: number, hh: number): Rect[] => {
+    const rows: Rect[] = [];
+    let drift = 0;
+    for (let dy = -hh; dy <= hh; dy++) {
+      const base = hw * Math.sqrt(1 - (dy / (hh + 0.7)) ** 2);
+      const half = Math.max(1, Math.round(base * (0.7 + 0.6 * rand())));
+      drift = Math.max(-2, Math.min(2, drift + Math.round(rand() * 2 - 1)));
+      rows.push({ col: cx + drift - half, row: cy + dy, w: half * 2 + Math.round(rand()), h: 1 });
     }
-  spots.sort((a, b) => b[2] - a[2]);
-  const apart = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]) >= (twin ? 10 : 17);
-  for (const [col, row] of spots) {
-    if (lakes.length >= (twin ? 3 : 4)) break;
-    const mine: [number, number] = [col, row];
-    if (sites(...mine).every((a) => lakes.every((l) => sites(...l).every((b) => apart(a, b))))) lakes.push(mine);
+    return rows;
+  };
+  const lakes: Rect[][] = [];
+  for (let tries = 0; lakes.length < (twin ? 2 : 3) && tries < 600; tries++) {
+    const hw = 3 + Math.floor(rand() * 6);
+    const hh = 1 + Math.floor(rand() * 3);
+    const cx = EDGE + 12 + Math.floor(rand() * (COLS - 2 * EDGE - 24));
+    const cy = 8 + Math.floor(rand() * (reach - 16));
+    const rows = lakeRows(cx, cy, hw, hh);
+    const cells = rows.flatMap((r) => Array.from({ length: r.w }, (_, k) => [r.col + k, r.row] as const));
+    // Clear ground all round it (the shore, then room to build) from the road and the castles, and apart from the other lakes.
+    if (!cells.every(([c, r]) => roomFor(c, r, def.halfWidth + 3.5, 24) && !near(c, r, lakeCells, 7))) continue;
+    lakes.push(rows);
+    for (const [c, r] of cells) lakeCells.add(r * COLS + c);
   }
-  for (const [cx, cy] of lakes)
-    for (const [x, y] of sites(cx, cy)) {
-      const rows = ovalRows(x, y, 4, 1);
+  for (const rows of lakes)
+    for (const at of twin ? [rows, rows.map((r) => turnRect(r, COLS, ROWS))] : [rows]) {
       if (theme.lake.shore)
         z.paint(
           theme.lake.shore,
-          rows.map((r) => ({ col: r.col - 1, row: r.row - 1, w: r.w + 2, h: r.h + 2 })),
+          at.map((r) => ({ col: r.col - 1, row: r.row - 1, w: r.w + 2, h: r.h + 2 })),
         );
-      z.paint(theme.lake.terrain, rows);
-      for (const r of rows) z.block(r, 'lake');
+      z.paint(theme.lake.terrain, at);
+      for (const r of at) z.block(r, 'lake');
+      if (twin) for (const r of at) for (let k = 0; k < r.w; k++) lakeCells.add(r.row * COLS + r.col + k);
     }
 
-  // Trees in clumps well off the road, bushes and rocks nearer it, all placed in the top half and again turned.
-  const taken = new Set<number>();
-  const scatter = (kit: PrefabName[], count: number, minRoad: number, minCastle: number) => {
-    for (let placed = 0, tries = 0; placed < count && tries < 12000; tries++) {
-      const col = 2 + Math.floor(rand() * (COLS - 4));
-      const row = 2 + Math.floor(rand() * (reach - 3));
-      const at = sites(col, row);
-      const ok = (c: number, r: number) =>
-        roadDist(c + 0.5, r + 0.5) >= minRoad &&
-        castleDist(c + 0.5, r + 0.5) >= minCastle &&
-        lakes.some(([lx, ly]) => sites(lx, ly).some(([x, y]) => Math.abs(c - x) <= 6 && Math.abs(r - y) <= 3)) ===
-          false;
-      if (!at.every(([c, r]) => ok(c, r) && !taken.has(r * COLS + c))) continue;
-      const name = kit[Math.floor(rand() * kit.length)];
-      for (const [c, r] of at) {
-        taken.add(r * COLS + c);
-        z.prop(name, c, r);
-      }
-      placed++;
+  /** Put a prop at (col, row) and, on a turned map, at its turned twin; false when there is no room for it. */
+  const plant = (kit: PrefabName[], col: number, row: number, fromRoad: number, fromCastle: number, gap: number) => {
+    const at = sites(col, row);
+    if (
+      !at.every(([c, r]) => roomFor(c, r, fromRoad, fromCastle) && !near(c, r, lakeCells, 3) && !near(c, r, taken, gap))
+    )
+      return false;
+    const name = kit[Math.floor(rand() * kit.length)];
+    for (const [c, r] of at) {
+      taken.add(r * COLS + c);
+      z.prop(name, c, r);
     }
+    return true;
   };
-  const more = (twin ? 1 : 2) * GROW * GROW; // a free map has the whole (grown) field to fill, a turned one half
-  // Used sparingly: every one blocks a cell a building could have, so they keep well off the road and further off the castles.
-  scatter(theme.trees, 5 * more, 5.5, 22);
-  scatter(theme.bushes, 7 * more, 4, 16);
-  scatter(theme.rocks, 5 * more, 4, 16);
+  // Patches of trees: a few cells across, close-set inside, with open ground between them and everything else.
+  for (let placed = 0, tries = 0; placed < (twin ? 2 : 4) && tries < 300; tries++) {
+    const radius = 3 + rand() * 3.5;
+    const cx = 6 + Math.floor(rand() * (COLS - 12));
+    const cy = 6 + Math.floor(rand() * (reach - 8));
+    if (!roomFor(cx, cy, radius + 5, radius + 22) || near(cx, cy, lakeCells, Math.ceil(radius) + 4)) continue;
+    let planted = 0;
+    for (let k = 0; k < radius * radius * 1.4; k++) {
+      const [a, d] = [rand() * Math.PI * 2, radius * Math.sqrt(rand())];
+      if (plant(theme.trees, Math.round(cx + Math.cos(a) * d), Math.round(cy + Math.sin(a) * d * 0.8), 4.5, 20, 1))
+        planted++;
+    }
+    if (planted >= 4) placed++;
+  }
+  const scatter = (kit: PrefabName[], count: number, fromRoad: number, fromCastle: number) => {
+    for (let placed = 0, tries = 0; placed < count && tries < 4000; tries++)
+      if (
+        plant(kit, 2 + Math.floor(rand() * (COLS - 4)), 2 + Math.floor(rand() * (reach - 3)), fromRoad, fromCastle, 3)
+      )
+        placed++;
+  };
+  const more = twin ? 1 : 2;
+  scatter(theme.trees, 3 * more, 5, 24);
+  scatter(theme.bushes, 4 * more, 4, 20);
+  scatter(theme.rocks, 3 * more, 4, 20);
   return z;
 }
 
