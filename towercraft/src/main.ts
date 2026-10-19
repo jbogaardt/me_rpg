@@ -1345,10 +1345,11 @@ void (async () => {
 
   // --- The page: top bar, the dock of thumbnails, the card, the title screen -----------------------------------------------
   /** A price as coloured numbers (wood brown, stone grey); `words` spells them out, for the cards. */
+  const shown = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1)); // an income may carry a tenth
   const money = (c: Cost) =>
     [
-      c.wood > 0 && `<i class="w" title="wood">${c.wood}</i>`,
-      c.stone > 0 && `<i class="s" title="stone">${c.stone}</i>`,
+      c.wood > 0 && `<i class="w" title="wood">${shown(c.wood)}</i>`,
+      c.stone > 0 && `<i class="s" title="stone">${shown(c.stone)}</i>`,
     ]
       .filter(Boolean)
       .join(' ') || '<i>free</i>';

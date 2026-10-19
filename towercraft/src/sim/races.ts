@@ -1309,6 +1309,12 @@ const PACE = 0.4;
 const UPGRADE_PRICE = [8, 2.5];
 const CASTLE_HP = 1;
 const money = (c: Cost, k: number): Cost => ({ wood: Math.round(c.wood * k), stone: Math.round(c.stone * k) });
+/** The lab's balance lever per race (all income, the castle's and the mills' and quarries'), found with `npm run towercraft:lab` at this pace. */
+const INCOME_BALANCE: Record<RaceId, number> = { swarm: 0.92, titan: 1.04, legion: 1.04 };
+const earn = (c: Cost, race: RaceId): Cost => ({
+  wood: c.wood * INCOME_BALANCE[race],
+  stone: c.stone * INCOME_BALANCE[race],
+});
 const stretch = (cells: number) => cells * REACH_SCALE;
 
 const scaled = (drawn: Record<RaceId, Race>): Record<RaceId, Race> => {
@@ -1338,7 +1344,7 @@ const scaled = (drawn: Record<RaceId, Race>): Record<RaceId, Race> => {
         reach: race.castle.reach.map(stretch),
         hp: Math.round(race.castle.hp * CASTLE_HP),
         hpPerLevel: Math.round(race.castle.hpPerLevel * CASTLE_HP),
-        income: race.castle.income.map((c) => money(c, PACE)),
+        income: race.castle.income.map((c) => earn(money(c, PACE), race.id)),
         upgrades: race.castle.upgrades.map((c, i) => money(c, UPGRADE_PRICE[i] ?? 1)),
         range: stretch(race.castle.range),
         detect: stretch(race.castle.detect),
@@ -1351,7 +1357,7 @@ const scaled = (drawn: Record<RaceId, Race>): Record<RaceId, Race> => {
         reach: stretch(t.reach),
         sight: fog(t.sight),
         ...(t.detect === undefined ? {} : { detect: stretch(t.detect) }),
-        ...(t.econ ? { econ: money({ wood: 0, stone: 0, ...t.econ }, PACE) } : {}),
+        ...(t.econ ? { econ: earn(money({ wood: 0, stone: 0, ...t.econ }, PACE), race.id) } : {}),
         ...(t.aura ? { aura: { ...t.aura, radius: stretch(t.aura.radius) } } : {}),
         ...(t.bunker ? { bunker: { ...t.bunker, rangeBonus: stretch(t.bunker.rangeBonus) } } : {}),
       })),
