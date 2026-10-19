@@ -1265,22 +1265,17 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
   },
 };
 
-/** How much longer every distance (ranges, reaches, sight, aura and detection radii) and speed is than in the tables above. The maps are `GROW` (road.ts) times their drawn size; this keeps a tower's reach in step, a bit under it so there is room to build between. */
-const ENV = (k: string, d: number) => Number(globalThis.process?.env?.[k] ?? d); // TEMP experiment
-export const REACH_SCALE = ENV('TC_REACH', 1.5);
-const SPEED_SCALE = ENV('TC_SPEED', REACH_SCALE);
-const SHOT_SCALE = ENV('TC_SHOT', REACH_SCALE);
+/** How much longer every distance (tower and castle ranges, reaches, sight, aura and detection radii) and every unit's speed is than in the tables above. The maps are `GROW` (road.ts) times their drawn size; this keeps a tower's reach in step, a bit under it so there is room to build between. */
+export const REACH_SCALE = 1.5;
 /** Fog is never drawn nearer than this many cells past the longest shot of anything: a tower's, a loaded bunker's or the castle's. */
 const FOG_MARGIN = 1;
 const CASTLE_BODY = 1.2; // sim.ts's CASTLE_RADIUS, which a castle's shot reaches past
 
 const stretch = (cells: number) => cells * REACH_SCALE;
-/** A unit's reach: melee (about 1 cell) stays one cell, only what is beyond it grows. */
-const stretchShot = (range: number) => 1 + (range - 1) * SHOT_SCALE;
 
 const scaled = (drawn: Record<RaceId, Race>): Record<RaceId, Race> => {
   const races = Object.values(drawn);
-  const units = (r: Race) => r.units.map((u) => ({ ...u, range: stretchShot(u.range), speed: u.speed * SPEED_SCALE }));
+  const units = (r: Race) => r.units.map((u) => ({ ...u, speed: stretch(u.speed) })); // a unit's own range is NOT stretched: the lab showed Dwarves 68% / Goblins 30% when it was
   // The longest shot anything makes (a bunker's soldier shoots from it with the bunker's bonus), so nothing can shoot what fog hides.
   const longest = Math.max(
     ...races.flatMap((r) => {
