@@ -2,7 +2,7 @@
 // numbers in towercraft/src/sim/races.ts and the AI in ai.ts. Run `npm run towercraft:balance [-- N [seedBase]]`: N matches per
 // unordered pairing of races (default 40, mirrors included; the sides alternate so side bias shows), a 0.05 s step.
 // A match is decisive when a castle falls before TIME_LIMIT; a time-limit result is a draw (a stalemate), whoever was ahead.
-// Deterministic: the same arguments print the same table. Player 0 is the castle at the top, player 1 the one at the bottom.
+// `TOWERCRAFT_MAP=<id>` plays another map than the first (see road.ts). Deterministic: the same arguments print the same table. Player 0 is the castle at the top, player 1 the one at the bottom.
 
 import { spawn } from 'node:child_process';
 import os from 'node:os';
@@ -21,8 +21,8 @@ export interface Result {
   made: [Record<string, number>, Record<string, number>];
 }
 
-export function playMatch(top: RaceId, bottom: RaceId, seed: number): Result {
-  const m = newMatch([top, bottom]);
+export function playMatch(top: RaceId, bottom: RaceId, seed: number, map = process.env.TOWERCRAFT_MAP): Result {
+  const m = newMatch([top, bottom], map);
   const ai = [createAi(0, seed * 2 + 1), createAi(1, seed * 2 + 2)] as const;
   const made: Result['made'] = [{}, {}];
   const seen = new Set<number>();

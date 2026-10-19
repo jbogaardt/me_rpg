@@ -1,76 +1,121 @@
-// The map (Pixi-free): ONE road from player 0's castle to player 1's, winding back and forth across a tall field (road.ts has its
-// shape, scenery.ts the cells woods and lakes cover). Units of
-// player 0 walk it from the start, player 1's from the end, so they meet somewhere between. Positions are in cells (a cell's
-// centre is at +0.5); a distance is cells along the road from its start. Towers go on the free cells beside the road.
+// The maps (Pixi-free): each is ONE road from player 0's castle to player 1's across a tall field (road.ts has the roads' shapes,
+// scenery.ts the cells woods, lakes and rocks cover on each). Units of player 0 walk the road from its start, player 1's from its
+// end, so they meet somewhere between. Positions are in cells (a cell's centre is at +0.5); a distance is cells along the road
+// from its start. Towers go on the free cells beside the road. Every field is the same size and turned half way round onto itself,
+// so the AI's two sides (and a human's) have the same ground whichever map is played.
 
-import { COLS, ROWS, WAYPOINTS } from './road';
+import { COLS, ROADS, ROWS, type Pt } from './road';
 import { SCENERY } from './scenery';
 
-export { COLS, ROWS, WAYPOINTS };
+export { COLS, ROWS };
 
-const centre = ([c, r]: readonly [number, number]): [number, number] => [c + 0.5, r + 0.5];
+export const BOARD_IDS = ROADS.map((r) => r.id);
+export type BoardId = string;
 
-const RUNS = WAYPOINTS.slice(1).map((to, i) => {
-  const [x0, y0] = centre(WAYPOINTS[i]!);
-  const [x1, y1] = centre(to);
-  return Math.hypot(x1 - x0, y1 - y0);
-});
-/** The road's length in cells. */
-export const ROAD_LENGTH = RUNS.reduce((a, b) => a + b, 0);
-
-/** Where a unit that has walked `dist` cells from the road's start is (clamped to the road). */
-export function pointAt(dist: number): [number, number] {
-  let left = Math.min(Math.max(0, dist), ROAD_LENGTH);
-  for (let i = 0; i < RUNS.length; i++) {
-    const run = RUNS[i]!;
-    if (left <= run) {
-      const [x0, y0] = centre(WAYPOINTS[i]!);
-      const [x1, y1] = centre(WAYPOINTS[i + 1]!);
-      const t = run === 0 ? 0 : left / run;
-      return [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t];
-    }
-    left -= run;
-  }
-  return centre(WAYPOINTS[WAYPOINTS.length - 1]!);
+export interface Board {
+  id: BoardId;
+  name: string;
+  blurb: string;
+  /** The road's length in cells. */
+  length: number;
+  /** How far an air unit flies between the castles: the straight line. */
+  airLength: number;
+  /** Where each player's castle stands (cell centre, in cells). */
+  castles: readonly [[number, number], [number, number]];
+  /** Every cell the road covers, as `row * COLS + col`. */
+  roadCells: ReadonlySet<number>;
+  /** Cells the scenery covers (woods, lakes, rocks): nothing is built there. Generated with the picture: `npm run towercraft:board`. */
+  sceneryCells: ReadonlySet<number>;
+  /** Where a unit that has walked `dist` cells from the road's start is (clamped to the road). */
+  pointAt(dist: number): [number, number];
+  /** Which way the road runs at `dist` (start to end), as a unit vector. */
+  headingAt(dist: number): [number, number];
 }
-
-/** Which way (in the road's own direction, start to end) the road runs at `dist`. */
-export function headingAt(dist: number): 'up' | 'down' | 'left' | 'right' {
-  let left = Math.max(0, dist);
-  for (let i = 0; i < RUNS.length; i++) {
-    if (left <= RUNS[i]! || i === RUNS.length - 1) {
-      const [x0, y0] = WAYPOINTS[i]!;
-      const [x1, y1] = WAYPOINTS[i + 1]!;
-      return x1 !== x0 ? (x1 > x0 ? 'right' : 'left') : y1 > y0 ? 'down' : 'up';
-    }
-    left -= RUNS[i]!;
-  }
-  return 'down';
-}
-
-/** Every cell the road covers, as `row * COLS + col`. */
-export const ROAD_CELLS: ReadonlySet<number> = (() => {
-  const cells = new Set<number>();
-  for (let i = 0; i < WAYPOINTS.length - 1; i++) {
-    const [c0, r0] = WAYPOINTS[i]!;
-    const [c1, r1] = WAYPOINTS[i + 1]!;
-    for (let c = Math.min(c0, c1); c <= Math.max(c0, c1); c++)
-      for (let r = Math.min(r0, r1); r <= Math.max(r0, r1); r++) cells.add(r * COLS + c);
-  }
-  return cells;
-})();
-
-/** Cells the scenery covers (woods, lakes, rocks): nothing is built there. Generated with the picture: `npm run towercraft:board`. */
-export const SCENERY_CELLS: ReadonlySet<number> = new Set(SCENERY);
 
 export const cellIndex = (col: number, row: number) => row * COLS + col;
 export const inBoard = (col: number, row: number) =>
   Number.isInteger(col) && Number.isInteger(row) && col >= 0 && row >= 0 && col < COLS && row < ROWS;
 
-/** Where each player's castle stands (cell centre, in cells). */
-export const CASTLES: readonly [[number, number], [number, number]] = [
-  centre(WAYPOINTS[0]!),
-  centre(WAYPOINTS[WAYPOINTS.length - 1]!),
-];
 /** Cells within this distance of a castle's centre belong to the castle: nothing is built there. */
 export const CASTLE_CLEAR = 2.2;
+
+/** The cells within `halfWidth` of the polyline (measured from each cell's centre). */
+function roadCellsOf(points: readonly Pt[], halfWidth: number): Set<number> {
+  const cells = new Set<number>();
+  for (let i = 0; i < points.length - 1; i++) {
+    const [a, b] = [points[i]!, points[i + 1]!];
+    const [c0, c1] = [
+      Math.floor(Math.min(a[0], b[0]) - halfWidth - 1),
+      Math.ceil(Math.max(a[0], b[0]) + halfWidth + 1),
+    ];
+    const [r0, r1] = [
+      Math.floor(Math.min(a[1], b[1]) - halfWidth - 1),
+      Math.ceil(Math.max(a[1], b[1]) + halfWidth + 1),
+    ];
+    const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
+    const len2 = dx * dx + dy * dy || 1;
+    for (let c = Math.max(0, c0); c <= Math.min(COLS - 1, c1); c++)
+      for (let r = Math.max(0, r0); r <= Math.min(ROWS - 1, r1); r++) {
+        const t = Math.min(1, Math.max(0, ((c + 0.5 - a[0]) * dx + (r + 0.5 - a[1]) * dy) / len2));
+        if (Math.hypot(c + 0.5 - (a[0] + dx * t), r + 0.5 - (a[1] + dy * t)) <= halfWidth + 1e-9)
+          cells.add(cellIndex(c, r));
+      }
+  }
+  return cells;
+}
+
+export function makeBoard(def: (typeof ROADS)[number], scenery: readonly number[]): Board {
+  const { points } = def;
+  const cum = [0];
+  for (let i = 1; i < points.length; i++)
+    cum.push(cum[i - 1]! + Math.hypot(points[i]![0] - points[i - 1]![0], points[i]![1] - points[i - 1]![1]));
+  const length = cum[cum.length - 1]!;
+  /** The index of the segment (points[i] to points[i + 1]) that distance `dist` falls on. */
+  const segment = (dist: number) => {
+    let [lo, hi] = [0, points.length - 2];
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (cum[mid + 1]! < dist) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  };
+  const castles: [[number, number], [number, number]] = [[...points[0]!], [...points[points.length - 1]!]];
+  return {
+    id: def.id,
+    name: def.name,
+    blurb: def.blurb,
+    length,
+    airLength: Math.hypot(castles[1][0] - castles[0][0], castles[1][1] - castles[0][1]),
+    castles,
+    roadCells: roadCellsOf(points, def.halfWidth),
+    sceneryCells: new Set(scenery),
+    pointAt(dist) {
+      const d = Math.min(Math.max(0, dist), length);
+      const i = segment(d);
+      const [a, b] = [points[i]!, points[i + 1]!];
+      const run = cum[i + 1]! - cum[i]!;
+      const t = run === 0 ? 0 : (d - cum[i]!) / run;
+      return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    },
+    headingAt(dist) {
+      const i = segment(Math.min(Math.max(0, dist), length));
+      const [a, b] = [points[i]!, points[i + 1]!];
+      const run = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      return [(b[0] - a[0]) / run, (b[1] - a[1]) / run];
+    },
+  };
+}
+
+export const BOARDS: Readonly<Record<BoardId, Board>> = Object.fromEntries(
+  ROADS.map((def) => [def.id, makeBoard(def, SCENERY[def.id] ?? [])]),
+);
+export const DEFAULT_BOARD_ID: BoardId = 'greenwood';
+export const DEFAULT_BOARD: Board = BOARDS[DEFAULT_BOARD_ID]!;
+
+// The default map's own constants, for the tests and tools that deal with one map.
+export const CASTLES = DEFAULT_BOARD.castles;
+export const ROAD_CELLS = DEFAULT_BOARD.roadCells;
+export const ROAD_LENGTH = DEFAULT_BOARD.length;
+export const pointAt = (dist: number) => DEFAULT_BOARD.pointAt(dist);
+export const SCENERY_CELLS = DEFAULT_BOARD.sceneryCells;

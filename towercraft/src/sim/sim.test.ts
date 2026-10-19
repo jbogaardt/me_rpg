@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createAi } from './ai';
-import { CASTLES, ROAD_CELLS, ROAD_LENGTH, cellIndex } from './board';
+import { CASTLES, COLS, ROAD_CELLS, ROAD_LENGTH, ROWS, SCENERY_CELLS, cellIndex } from './board';
 import { RACE_IDS, RACES, type RaceId } from './races';
 import {
   BASE_PAY,
@@ -64,13 +64,16 @@ describe('building', () => {
     expect(buildTower(m, 0, 'watch', ...NEAR)).toBe('taken');
     expect(buildTower(m, 1, 'watch', ...NEAR)).toBe('taken'); // a cell is one tower's, whoever's
     expect(buildTower(m, 0, 'watch', 5, 4)).toBe('road');
-    expect(buildTower(m, 0, 'watch', 6, 3)).toBe('castle');
+    expect(buildTower(m, 0, 'watch', 7, 3)).toBe('castle');
     expect(buildTower(m, 0, 'catapult', 9, 4)).toBe('tier');
-    expect(buildTower(m, 0, 'watch', 15, 16)).toBe('area'); // far from player 0's castle
+    const far = [...Array(ROWS * COLS).keys()]
+      .map((i): [number, number] => [i % COLS, Math.floor(i / COLS)])
+      .find(([c, r]) => !ROAD_CELLS.has(cellIndex(c, r)) && !SCENERY_CELLS.has(cellIndex(c, r)) && r > 20)!;
+    expect(buildTower(m, 0, 'watch', ...far)).toBe('area'); // far from player 0's castle
     expect(buildTower(m, 0, 'nope', 9, 4)).toBe('unknown');
     expect(buildTower(m, 0, 'watch', -1, 0)).toBe('off-board');
     m.players[0].gold = 0;
-    expect(buildTower(m, 0, 'watch', 9, 5)).toBe('gold');
+    expect(buildTower(m, 0, 'watch', 9, 4)).toBe('gold');
   });
 
   it('reaches further with an upgraded castle and from a tower already built', () => {

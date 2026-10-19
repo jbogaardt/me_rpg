@@ -11,10 +11,9 @@
 // Everything it knows about the other side is read through `foeUnits`, `foeTowers` and `foeCastle` below, which show only what its
 // vision (castle, towers and living units, as for the player) shows: it plays by the same fog.
 
-import { CASTLES, COLS, ROAD_CELLS, ROAD_LENGTH, ROWS, cellIndex, pointAt } from './board';
+import { COLS, ROWS, cellIndex, type Board } from './board';
 import { MAX_LEVEL, type TowerDef, type UnitDef } from './races';
 import {
-  AIR_LENGTH,
   QUEUE_MAX,
   buildTower,
   canBuild,
@@ -46,17 +45,22 @@ export function seeded(seed: number): () => number {
   };
 }
 
-/** Points along the road, half a cell apart: what "covering the road" is counted over. */
-const ROAD_SAMPLES: [number, number][] = Array.from({ length: Math.floor(ROAD_LENGTH * 2) }, (_, i) => pointAt(i / 2));
+/** Points along a road, half a cell apart: what "covering the road" is counted over (cached per map). */
+const samples = new Map<string, [number, number][]>();
+const roadSamples = (b: Board) => {
+  let s = samples.get(b.id);
+  if (!s) samples.set(b.id, (s = Array.from({ length: Math.floor(b.length * 2) }, (_, i) => b.pointAt(i / 2))));
+  return s;
+};
 
-/** How much road a tower of this range would cover from each cell, and where along the road (cells from player 0's end): cached, the road never changes. */
+/** How much road a tower of this range would cover from each cell, and where along the road (cells from player 0's end): cached, a road never changes. */
 const coverage = new Map<string, { n: number; at: number }>();
-function coverageOf(col: number, row: number, range: number): { n: number; at: number } {
-  const key = `${cellIndex(col, row)}:${range}`;
+function coverageOf(b: Board, col: number, row: number, range: number): { n: number; at: number } {
+  const key = `${b.id}:${cellIndex(col, row)}:${range}`;
   let c = coverage.get(key);
   if (!c) {
     let [n, sum] = [0, 0];
-    ROAD_SAMPLES.forEach(([x, y], i) => {
+    roadSamples(b).forEach(([x, y], i) => {
       if (Math.hypot(x - col - 0.5, y - row - 0.5) > range) return;
       n++;
       sum += i / 2;
@@ -80,15 +84,15 @@ const ENOUGH = 10;
 function score(m: Match, owner: Owner, def: TowerDef, col: number, row: number): number {
   const role = roleOf(def);
   if (role === 'aura') {
-    const foe = CASTLES[enemy(owner)];
+    const foe = m.board.castles[enemy(owner)];
     const friends = m.towers.filter(
       (t) => t.owner === owner && Math.hypot(t.col - col, t.row - row) <= (def.aura?.radius ?? 0),
     ).length;
     return friends * 12 - Math.hypot(foe[0] - col - 0.5, foe[1] - row - 0.5) * 0.15;
   }
-  const c = coverageOf(col, row, role === 'attack' ? def.range : (def.detect ?? 0));
+  const c = coverageOf(m.board, col, row, role === 'attack' ? def.range : (def.detect ?? 0));
   if (c.n === 0) return -Infinity; // it would see no road at all
-  const progress = owner === 0 ? c.at : ROAD_LENGTH - c.at;
+  const progress = owner === 0 ? c.at : m.board.length - c.at;
   return Math.min(c.n, ENOUGH) + progress * PUSH;
 }
 
@@ -100,7 +104,7 @@ export function bestCell(m: Match, owner: Owner, def: TowerDef): [number, number
   for (let r = 0; r < ROWS; r++) {
     for (let k = 0; k < COLS; k++) {
       const [row, col] = owner === 0 ? [r, k] : [ROWS - 1 - r, COLS - 1 - k];
-      if (ROAD_CELLS.has(cellIndex(col, row)) || canBuild(m, owner, def, col, row) !== 'ok') continue;
+      if (m.board.roadCells.has(cellIndex(col, row)) || canBuild(m, owner, def, col, row) !== 'ok') continue;
       const sc = score(m, owner, def, col, row);
       if (sc > bestScore) {
         bestScore = sc;
@@ -131,7 +135,7 @@ const ownUnits = (m: Match, owner: Owner) => m.units.filter((u) => u.owner === o
 const ownTowers = (m: Match, owner: Owner) => m.towers.filter((t) => t.owner === owner);
 const dps = (u: UnitDef) => u.damage / u.cooldown;
 /** Cells (along its way) between an enemy unit and this side's castle. */
-const fromCastle = (u: Unit) => (u.def.air ? AIR_LENGTH : ROAD_LENGTH) - u.s;
+const fromCastle = (m: Match, u: Unit) => (u.def.air ? m.board.airLength : m.board.length) - u.s;
 
 /** Which tower does `owner` need most right now? It answers what the other side has sent or can send: air, cloaked units. */
 function chooseTower(m: Match, owner: Owner, options: TowerDef[], random: () => number): TowerDef | undefined {
@@ -208,7 +212,7 @@ function pickWave(m: Match, owner: Owner, options: UnitDef[], random: () => numb
     gold -= pick.cost;
     wave.push(pick);
   }
-  const trip = (u: UnitDef) => (u.air ? AIR_LENGTH : ROAD_LENGTH) / u.speed;
+  const trip = (u: UnitDef) => (u.air ? m.board.airLength : m.board.length) / u.speed;
   return wave.sort((a, b) => trip(b) - trip(a));
 }
 
@@ -310,7 +314,7 @@ export function createAi(owner: Owner, seed: number): (m: Match, dt: number) => 
     const race2 = killIn <= patience && killIn < diesIn * RACE_MARGIN;
     setOrder(m, owner, 'units', race2 || m.time >= style.rush ? 'bypass' : 'attack');
 
-    const threat = Math.min(Infinity, ...foeUnits(m, owner).map(fromCastle));
+    const threat = Math.min(Infinity, ...foeUnits(m, owner).map((u) => fromCastle(m, u)));
     const alarm = threat < ALARM;
 
     // What the foe fields decides one tower the AI must have (and so maybe a castle level to build it).
