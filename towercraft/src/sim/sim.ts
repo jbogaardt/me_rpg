@@ -4,7 +4,9 @@
 // only, each its own kind (ground, air or both; area damage; poison), and some towers only help: an aura that strengthens or heals
 // friends, a detector that reveals cloaked units. Air units fly the straight line between castles; cloaked units are unseen
 // (untargetable) unless a detector of the other side is near. Towers go within the castle's build reach (grown by upgrading it) or the reach of a tower already built, so a front
-// line is pushed forward tower by tower. The first castle destroyed loses.
+// line is pushed forward tower by tower. Fog of war: each side sees round its castle, towers and units (and the ground it may
+// build on); only units may clear fog temporarily, and never build there. What a side cannot see it cannot target. The first
+// castle destroyed loses.
 
 import { CASTLES, CASTLE_CLEAR, ROAD_CELLS, ROAD_LENGTH, cellIndex, inBoard, pointAt } from './board';
 import { MAX_LEVEL, RACES, type RaceId, type TowerDef, type UnitDef } from './races';
@@ -153,7 +155,7 @@ export type Result = 'ok' | 'over' | 'gold' | 'unknown' | 'tier' | 'queue' | 'ma
 
 // --- Sight and auras -------------------------------------------------------------------------------------------------
 
-/** Can `viewer` see this unit? A cloaked one only within a detector (tower, or the castle's own sight) of the viewer's. */
+/** Can `viewer` detect this unit? A cloaked one only within a detector (tower, or the castle's own sight) of the viewer's. */
 export function visibleTo(m: Match, u: Unit, viewer: Owner): boolean {
   if (!u.def.cloak || u.owner === viewer) return true;
   const at = unitPos(u);
@@ -161,6 +163,70 @@ export function visibleTo(m: Match, u: Unit, viewer: Owner): boolean {
   return m.towers.some(
     (t) => t.owner === viewer && t.def.detect !== undefined && dist(at, centreOf(t)) <= t.def.detect,
   );
+}
+
+// --- Fog of war ------------------------------------------------------------------------------------------------------
+// Everything a player owns sees a circle round it. The ground the player may build on (the castle's reach, the reach of
+// their towers) is revealed for good (`build`); towers and the castle also see round them as long as they stand; units see
+// round them only while they live (`temporary`), and never reveal ground to build on. Enemy units, towers and castle outside
+// every circle are hidden and so cannot be targeted. A cloaked unit must be both inside a circle and detected (`visibleTo`).
+
+/** One circle of vision, in cells. */
+export interface Sight {
+  /** Which source it is (stable while that source lives): the renderer animates each pool by it. */
+  key: string;
+  x: number;
+  y: number;
+  r: number;
+  /** Part of the build area (permanent ground you may build on). */
+  build: boolean;
+  /** Given by a unit: gone when it dies or walks on. */
+  temporary: boolean;
+}
+
+/** Everything each player sees, by owner (compute once per step or frame with `visionOf`, then ask `canSee`). */
+export type Vision = readonly [readonly Sight[], readonly Sight[]];
+
+/** The circles `owner` sees through now. */
+export function sightOf(m: Match, owner: Owner): Sight[] {
+  const castle = raceOf(m, owner).castle;
+  const [cx, cy] = CASTLES[owner];
+  const out: Sight[] = [
+    { key: 'c:build', x: cx, y: cy, r: buildReach(m, owner), build: true, temporary: false },
+    { key: 'c:sight', x: cx, y: cy, r: castle.sight, build: false, temporary: false },
+  ];
+  for (const t of m.towers) {
+    if (t.owner !== owner || t.hp <= 0) continue;
+    const [x, y] = centreOf(t);
+    out.push({ key: `t${t.id}:sight`, x, y, r: t.def.sight, build: false, temporary: false });
+    if (t.def.reach > 0) out.push({ key: `t${t.id}:build`, x, y, r: t.def.reach, build: true, temporary: false });
+  }
+  for (const u of m.units) {
+    if (u.owner !== owner || u.hp <= 0) continue;
+    const [x, y] = unitPos(u);
+    out.push({ key: `u${u.id}`, x, y, r: u.def.sight, build: false, temporary: true });
+  }
+  return out;
+}
+
+export const visionOf = (m: Match): Vision => [sightOf(m, 0), sightOf(m, 1)];
+
+/** Can `viewer` see this point (cells)? `pad` widens every circle (a body has a size: see a tower or castle by its edge). */
+export function canSee(m: Match, viewer: Owner, at: readonly [number, number], pad = 0, vision = visionOf(m)): boolean {
+  for (const s of vision[viewer]) if (Math.hypot(at[0] - s.x, at[1] - s.y) <= s.r + pad) return true;
+  return false;
+}
+
+/** Can `viewer` see this unit: its own always; another's when it is in sight and, if cloaked, detected too. */
+export function isSeen(m: Match, viewer: Owner, e: Unit | Tower, vision = visionOf(m)): boolean {
+  if (e.owner === viewer) return true;
+  if ('col' in e) return canSee(m, viewer, centreOf(e), TOWER_RADIUS, vision);
+  return canSee(m, viewer, unitPos(e), 0, vision) && visibleTo(m, e, viewer);
+}
+
+/** Can `viewer` see `owner`'s castle? Their own always. */
+export function isCastleSeen(m: Match, viewer: Owner, owner: Owner, vision = visionOf(m)): boolean {
+  return owner === viewer || canSee(m, viewer, CASTLES[owner], CASTLE_RADIUS, vision);
 }
 
 /** The damage multiplier `owner`'s power auras give something standing at `at` (1 = none, at most doubled). */
@@ -261,6 +327,8 @@ type Target = { kind: 'unit'; unit: Unit } | { kind: 'tower'; tower: Tower } | {
 /** What an attacker can reach: air and/or ground units (if `units`), towers (if `towers`) and the enemy castle (if `castle`). */
 interface Reach {
   owner: Owner;
+  /** What every side sees this step: an attacker only hits what its owner sees. */
+  vision: Vision;
   from: readonly [number, number];
   range: number;
   ground: boolean;
@@ -270,17 +338,20 @@ interface Reach {
   castle: boolean;
 }
 
-const canHit = (m: Match, r: Pick<Reach, 'owner' | 'ground' | 'air'>, u: Unit) =>
-  u.owner !== r.owner && u.hp > 0 && (u.def.air ? r.air : r.ground) && visibleTo(m, u, r.owner);
+/** Could it hit this kind of unit at all (a cheap test, before distance and sight are asked)? */
+const hittable = (r: Pick<Reach, 'owner' | 'ground' | 'air'>, u: Unit) =>
+  u.owner !== r.owner && u.hp > 0 && (u.def.air ? r.air : r.ground);
+const canHit = (m: Match, r: Pick<Reach, 'owner' | 'ground' | 'air' | 'vision'>, u: Unit) =>
+  hittable(r, u) && isSeen(m, r.owner, u, r.vision);
 
 /** The nearest thing the attacker can hit within its range. */
 function pick(m: Match, r: Reach): Target | undefined {
   let best: Target | undefined;
   let bestDist = Infinity;
   for (const u of r.units ? m.units : []) {
-    if (!canHit(m, r, u)) continue;
+    if (!hittable(r, u)) continue;
     const d = dist(r.from, unitPos(u));
-    if (d <= r.range && d < bestDist) {
+    if (d <= r.range && d < bestDist && isSeen(m, r.owner, u, r.vision)) {
       best = { kind: 'unit', unit: u };
       bestDist = d;
     }
@@ -288,7 +359,7 @@ function pick(m: Match, r: Reach): Target | undefined {
   for (const t of r.towers ? m.towers : []) {
     if (t.owner === r.owner || t.hp <= 0) continue;
     const d = dist(r.from, centreOf(t)) - TOWER_RADIUS;
-    if (d <= r.range && d < bestDist) {
+    if (d <= r.range && d < bestDist && isSeen(m, r.owner, t, r.vision)) {
       best = { kind: 'tower', tower: t };
       bestDist = d;
     }
@@ -296,7 +367,8 @@ function pick(m: Match, r: Reach): Target | undefined {
   if (r.castle) {
     const foe = enemy(r.owner);
     const d = dist(r.from, CASTLES[foe]) - CASTLE_RADIUS;
-    if (m.players[foe].castle.hp > 0 && d <= r.range && d < bestDist) best = { kind: 'castle', owner: foe };
+    if (m.players[foe].castle.hp > 0 && d <= r.range && d < bestDist && isCastleSeen(m, r.owner, foe, r.vision))
+      best = { kind: 'castle', owner: foe };
   }
   return best;
 }
@@ -322,7 +394,13 @@ function strike(m: Match, r: Reach, t: Target, blow: Blow) {
   else m.players[t.owner].castle.hp -= blow.damage;
   if (blow.splash > 0)
     for (const u of m.units)
-      if (canHit(m, r, u) && !(t.kind === 'unit' && u === t.unit) && dist(at, unitPos(u)) <= blow.splash) burn(u);
+      if (
+        hittable(r, u) &&
+        !(t.kind === 'unit' && u === t.unit) &&
+        dist(at, unitPos(u)) <= blow.splash &&
+        canHit(m, r, u)
+      )
+        burn(u);
 }
 
 export function step(m: Match, dt: number): void {
@@ -374,12 +452,16 @@ export function step(m: Match, dt: number): void {
     if (k.hp > 0 && dist(c, CASTLES[t.owner]) <= aura.radius + CASTLE_RADIUS) k.hp = Math.min(k.maxHp, k.hp + mend);
   }
 
+  // What each side sees this step (units that spawned count; those about to die still do until the step ends).
+  const vision = visionOf(m);
+
   // Units fight what is in reach, or walk on.
   for (const u of m.units) {
     u.cooldown -= dt;
     const from = unitPos(u);
     const reach: Reach = {
       owner: u.owner,
+      vision,
       from,
       range: u.def.range,
       ground: true,
@@ -405,6 +487,7 @@ export function step(m: Match, dt: number): void {
     const from = centreOf(t);
     const reach: Reach = {
       owner: t.owner,
+      vision,
       from,
       range: t.def.range,
       ground: t.def.hits !== 'air',
@@ -430,6 +513,7 @@ export function step(m: Match, dt: number): void {
     const def = raceOf(m, o).castle;
     const reach: Reach = {
       owner: o,
+      vision,
       from: CASTLES[o],
       range: def.range + CASTLE_RADIUS,
       ground: true,

@@ -9,6 +9,8 @@ import {
   buildTower,
   canBuild,
   enemy,
+  isCastleSeen,
+  isSeen,
   raceOf,
   setOrder,
   trainUnit,
@@ -16,6 +18,7 @@ import {
   upgradeCost,
   type Match,
   type Owner,
+  visionOf,
 } from './sim';
 
 /** A small seeded random source (mulberry32): same seed, same sequence. */
@@ -88,18 +91,21 @@ function chooseTower(m: Match, owner: Owner, options: TowerDef[], random: () => 
   const mine = m.towers.filter((t) => t.owner === owner);
   const foe = enemy(owner);
   const foeRace = raceOf(m, foe);
+  const vision = visionOf(m); // it only reacts to what it can see
   const sees = (hits: (t: TowerDef) => boolean) => mine.filter((t) => hits(t.def)).length;
   const weight = (def: TowerDef) => {
     let w = 1;
     const role = roleOf(def);
     // Air about (or the other race can build it): want something that shoots up, and more as it grows.
-    const air = m.units.some((u) => u.owner === foe && u.def.air);
+    const air = m.units.some((u) => u.owner === foe && u.def.air && isSeen(m, owner, u, vision));
     const canAir = foeRace.units.some((u) => u.air);
     const antiAir = sees((d) => d.damage > 0 && d.hits !== 'ground');
     if (role === 'attack' && def.hits !== 'ground') w += air ? 4 / (1 + antiAir) : canAir && antiAir < 1 ? 1.5 : 0;
     if (role === 'attack' && def.hits === 'air') w = air || (canAir && antiAir < 1) ? w : 0.15; // an air-only tower is wasted with no air about
     // Cloaked units: a detector, once, early enough that they are not free.
-    const cloaked = m.units.some((u) => u.owner === foe && u.def.cloak) || foeRace.units.some((u) => u.cloak);
+    const cloaked =
+      m.units.some((u) => u.owner === foe && u.def.cloak && isSeen(m, owner, u, vision)) ||
+      foeRace.units.some((u) => u.cloak);
     const detectors = sees((d) => !!d.detect);
     if (def.detect) w = cloaked && detectors < 1 ? 5 : detectors < 1 ? 0.6 : 0.1;
     // Auras once there are towers to strengthen.
@@ -119,7 +125,8 @@ function chooseTower(m: Match, owner: Owner, options: TowerDef[], random: () => 
 /** Which unit to train: the best it can pay for, leaning to air where the other side has nothing up, cloaked where it has no detector. */
 function chooseUnit(m: Match, owner: Owner, options: UnitDef[], random: () => number): UnitDef | undefined {
   if (!options.length) return undefined;
-  const foeTowers = m.towers.filter((t) => t.owner === enemy(owner));
+  const vision = visionOf(m);
+  const foeTowers = m.towers.filter((t) => t.owner === enemy(owner) && isSeen(m, owner, t, vision));
   const noAntiAir = !foeTowers.some((t) => t.def.damage > 0 && t.def.hits !== 'ground');
   const noDetector = !foeTowers.some((t) => t.def.detect);
   const weights = options.map(
@@ -151,7 +158,12 @@ export function createAi(owner: Owner, seed: number): (m: Match, dt: number) => 
     // Orders: normally fight everything, but with a good army and the other castle hurt, run past the towers and finish it.
     const army = m.units.filter((u) => u.owner === owner).length;
     const foeCastle = m.players[enemy(owner)].castle;
-    setOrder(m, owner, 'towers', army >= 4 && foeCastle.hp < foeCastle.maxHp * 0.6 ? 'bypass' : 'attack');
+    setOrder(
+      m,
+      owner,
+      'towers',
+      army >= 4 && isCastleSeen(m, owner, enemy(owner)) && foeCastle.hp < foeCastle.maxHp * 0.6 ? 'bypass' : 'attack',
+    );
 
     // Up a level once the time is right and it can pay, and not at the cost of having no defence at all.
     const cost = upgradeCost(m, owner);

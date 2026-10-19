@@ -12,18 +12,22 @@ import {
   buildReach,
   buildTower,
   canBuild,
+  canSee,
+  isCastleSeen,
+  isSeen,
   newMatch,
   step,
   trainUnit,
   unitPos,
   upgradeCastle,
   upgradeCost,
-  visibleTo,
+  visionOf,
   type Death,
   type Match,
   type Owner,
   type Shot,
   type Unit,
+  type Vision,
 } from './sim/sim';
 
 const CELL = 40;
@@ -74,6 +78,14 @@ function facing(owner: Owner, s: number) {
   const h = headingAt(owner === 0 ? s : ROAD_LENGTH - s);
   return owner === 0 ? h : OPPOSITE[h];
 }
+
+/** Fog texels per cell: the fog is a tiny canvas of soft round pools (the technique of Me RPG's underground darkness), scaled up smooth. */
+const FOG_RES = 8;
+/** How fast (cells a second) a pool of sight grows when a tower goes up and shrinks when it falls: about half a second for a tower. */
+const FOG_SPEED = 14;
+/** Fog colour (a warm dark), how much it dims, and how much of the dark lifts over ground that was once yours to build on. */
+const FOG_COLOR = 'rgba(18, 12, 9, 0.74)';
+const FOG_MEMORY = 0.3;
 
 const ZOOM_MAX = 2.6;
 const TAP_SLOP = 8; // px a finger may move and still be a tap
@@ -132,12 +144,32 @@ void (async () => {
   const field = new Sprite(fieldTexture);
   field.width = BOARD_W;
   field.height = BOARD_H;
+  // The fog: a canvas of shade (dark where nothing of yours sees, soft round pools cut out for every castle, tower and unit)
+  // and one of tint (a cool wash where only a tower, the castle or a unit sees but you may not build), scaled up smoothly.
+  const makeFogLayer = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = COLS * FOG_RES;
+    canvas.height = ROWS * FOG_RES;
+    const ctx = canvas.getContext('2d')!;
+    const sprite = new Sprite(Texture.from(canvas));
+    sprite.width = BOARD_W;
+    sprite.height = BOARD_H;
+    return { canvas, ctx, sprite };
+  };
+  const shade = makeFogLayer();
+  const tint = makeFogLayer();
+  const fogLayer = new Container();
+  fogLayer.addChild(tint.sprite, shade.sprite);
   const areaLayer = new Graphics(); // where towers may be built
   const sortLayer = new Container(); // castles, towers and units, sorted by y so what is in front hides what is behind
   sortLayer.sortableChildren = true;
   const corpseLayer = new Container();
   const live = new Graphics(); // hover ring, attacks, health bars
-  world.addChild(field, areaLayer, corpseLayer, sortLayer, live);
+  const ghostSprite = new Sprite(); // the tower about to be placed (a touch's first tap, or the mouse's hover)
+  ghostSprite.anchor.set(0.5, 0.78);
+  ghostSprite.alpha = 0.6;
+  ghostSprite.visible = false;
+  world.addChild(field, fogLayer, areaLayer, corpseLayer, sortLayer, live, ghostSprite);
   app.stage.addChild(world);
 
   let match: Match = newMatch(['legion', 'swarm']);
@@ -254,7 +286,7 @@ void (async () => {
   const release = (e: PointerEvent) => {
     const wasOne = pointers.size === 1;
     pointers.delete(e.pointerId);
-    if (wasOne && !dragged && e.type === 'pointerup') tap(e.clientX, e.clientY);
+    if (wasOne && !dragged && e.type === 'pointerup') tap(e.clientX, e.clientY, e.pointerType !== 'mouse');
     pinch = 0;
   };
   app.canvas.addEventListener('pointerup', release);
@@ -271,18 +303,38 @@ void (async () => {
   $('cam-home').onclick = home;
   $('cam-fit').onclick = () => focus(COLS / 2, ROWS / 2, minZoom());
 
-  function tap(sx: number, sy: number) {
-    const cell = cellAt(sx, sy);
-    if (!cell || !started || !selected) return;
-    if (buildTower(match, YOU, selected.id, cell[0], cell[1]) === 'ok') {
+  /** The touch's pending tower: the first tap on a valid cell leaves a ghost here; Confirm (or a second tap) places it. */
+  let ghost: [number, number] | undefined;
+  /** The last cell tapped, so its caption stays up on a touch screen (no hover). */
+  let lastTap: [number, number] | undefined;
+  const ghostBar = $('ghost');
+  const setGhost = (cell: [number, number] | undefined) => {
+    ghost = cell;
+    ghostBar.hidden = !cell;
+  };
+  const place = (cell: [number, number]) => {
+    if (selected && buildTower(match, YOU, selected.id, cell[0], cell[1]) === 'ok') {
       // Keep the tower selected while the player can pay for another (a row of towers is the usual use).
       if (match.players[YOU].gold < selected.cost) selected = undefined;
       refresh();
     }
+    setGhost(undefined);
+  };
+  $('ghost-ok').onclick = () => ghost && place(ghost);
+  $('ghost-no').onclick = () => setGhost(undefined);
+
+  function tap(sx: number, sy: number, touch: boolean) {
+    const cell = cellAt(sx, sy);
+    if (!cell || !started || !selected) return;
+    lastTap = cell;
+    if (canBuild(match, YOU, selected, cell[0], cell[1]) !== 'ok') return setGhost(undefined); // the hint says why
+    if (!touch || (ghost && ghost[0] === cell[0] && ghost[1] === cell[1])) place(cell);
+    else setGhost(cell); // a touch: show what it would do first
   }
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       selected = undefined;
+      setGhost(undefined);
       refresh();
     }
   });
@@ -321,6 +373,8 @@ void (async () => {
     def: UnitDef;
     col: number;
     age: number;
+    owner: Owner;
+    at: [number, number];
   }
   const corpses: Corpse[] = [];
   /** The sheet column and mirroring for a unit: along the road for walkers, along the flight line for flyers. */
@@ -344,7 +398,7 @@ void (async () => {
     container.addChild(sprite);
     container.position.set(d.at[0] * CELL, d.at[1] * CELL - (d.def.air ? FLIGHT : 0));
     corpseLayer.addChild(container);
-    corpses.push({ container, sprite, def: d.def, col: dir.col, age: 0 });
+    corpses.push({ container, sprite, def: d.def, col: dir.col, age: 0, owner: d.owner, at: d.at });
   };
   const ageCorpses = (dt: number) => {
     for (let i = corpses.length - 1; i >= 0; i--) {
@@ -376,9 +430,93 @@ void (async () => {
     live.rect(x - w / 2 + 0.5, y + 0.5, (w - 1) * Math.max(0, Math.min(1, frac)), 3).fill(color);
   };
 
+  /** One animated pool of sight: it grows to its circle when the source appears and shrinks away when it is gone. */
+  interface Pool {
+    x: number;
+    y: number;
+    r: number;
+    target: number;
+    peak: number;
+    build: boolean;
+  }
+  const pools = new Map<string, Pool>();
+  /** Where a fallen tower's build area was: faintly lifted for good (never for unit sight). */
+  const remembered: { x: number; y: number; r: number }[] = [];
+  let fogSnap = true;
+
+  /** Cut one soft round pool: clear to near its edge, fading out just past it (so what is inside the sight is in the clear). */
+  const cutPool = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => {
+    if (r <= 0.02) return;
+    const [cx, cy, outer] = [x * FOG_RES, y * FOG_RES, (r + 0.7) * FOG_RES];
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, outer);
+    g.addColorStop(0, 'rgba(0, 0, 0, 1)');
+    g.addColorStop(Math.max(0, (r - 0.5) / (r + 0.7)), 'rgba(0, 0, 0, 1)');
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - outer, cy - outer, outer * 2, outer * 2);
+  };
+
+  /** Redraw the fog from what `YOU` sees, growing and shrinking each pool toward it. */
+  function drawFog(vision: Vision, dt: number) {
+    const live = new Set<string>();
+    for (const c of vision[YOU]) {
+      live.add(c.key);
+      let p = pools.get(c.key);
+      if (!p) pools.set(c.key, (p = { x: c.x, y: c.y, r: fogSnap ? c.r : 0, target: c.r, peak: 0, build: c.build }));
+      Object.assign(p, { x: c.x, y: c.y, target: c.r });
+    }
+    fogSnap = false;
+    for (const [key, p] of pools) {
+      if (!live.has(key)) p.target = 0;
+      const dr = FOG_SPEED * dt;
+      p.r = p.r < p.target ? Math.min(p.target, p.r + dr) : Math.max(p.target, p.r - dr);
+      p.peak = Math.max(p.peak, p.r);
+      if (p.r <= 0 && p.target === 0) {
+        if (p.build && key !== 'c:build') remembered.push({ x: p.x, y: p.y, r: p.peak });
+        pools.delete(key);
+      }
+    }
+    const [w, h] = [shade.canvas.width, shade.canvas.height];
+    const { ctx } = shade;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = FOG_COLOR;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.globalAlpha = FOG_MEMORY;
+    for (const m of remembered) cutPool(ctx, m.x, m.y, m.r);
+    ctx.globalAlpha = 1;
+    for (const p of pools.values()) cutPool(ctx, p.x, p.y, p.r);
+
+    // The tint: a cool wash over every pool that is not build ground, with the build ground cut back out of it.
+    const t = tint.ctx;
+    t.globalCompositeOperation = 'source-over';
+    t.clearRect(0, 0, w, h);
+    for (const p of pools.values()) {
+      if (p.build || p.r <= 0.02) continue;
+      const [cx, cy, outer] = [p.x * FOG_RES, p.y * FOG_RES, (p.r + 0.7) * FOG_RES];
+      const g = t.createRadialGradient(cx, cy, 0, cx, cy, outer);
+      g.addColorStop(0, 'rgba(120, 160, 230, 0.16)');
+      g.addColorStop(Math.max(0, (p.r - 0.5) / (p.r + 0.7)), 'rgba(120, 160, 230, 0.16)');
+      g.addColorStop(1, 'rgba(120, 160, 230, 0)');
+      t.fillStyle = g;
+      t.fillRect(cx - outer, cy - outer, outer * 2, outer * 2);
+    }
+    t.globalCompositeOperation = 'destination-out';
+    for (const p of pools.values()) if (p.build) cutPool(t, p.x, p.y, p.r);
+    for (const layer of [shade, tint]) layer.sprite.texture.source.update();
+  }
+
   function drawLive(dt: number) {
     live.clear();
     areaLayer.clear();
+    const vision = visionOf(match); // once a frame: everything below asks it what the player can see
+    drawFog(vision, dt);
+    const aim = selected && started ? (ghost ?? hover) : undefined; // the cell being previewed: the ghost, or the mouse
+    const spotted = (at: readonly [number, number]) => canSee(match, YOU, at, 0, vision);
+    for (const o of [0, 1] as const) castleSprites[o]!.visible = isCastleSeen(match, YOU, o, vision);
+    for (const k of corpses) k.container.visible = k.owner === YOU || spotted(k.at);
 
     // Where a tower of the selected kind can go (and, with the mouse, its range at the cell under it).
     if (selected && started) {
@@ -386,23 +524,47 @@ void (async () => {
         for (let col = 0; col < COLS; col++)
           if (canBuild(match, YOU, selected, col, row) === 'ok')
             areaLayer.rect(col * CELL, row * CELL, CELL, CELL).fill({ color: 0x6fd36f, alpha: 0.2 });
-      if (hover) {
-        const ok = canBuild(match, YOU, selected, hover[0], hover[1]) === 'ok';
-        const cx = (hover[0] + 0.5) * CELL;
-        const cy = (hover[1] + 0.5) * CELL;
+      if (aim) {
+        const ok = canBuild(match, YOU, selected, aim[0], aim[1]) === 'ok';
+        const cx = (aim[0] + 0.5) * CELL;
+        const cy = (aim[1] + 0.5) * CELL;
+        // Before it is placed: what it shoots (white), the ground its reach would open to build on (amber) and the fog its
+        // sight would push back (blue ring).
         live.circle(cx, cy, selected.range * CELL).fill({ color: ok ? 0xffffff : 0xb82024, alpha: 0.12 });
+        if (ok) {
+          if (selected.reach > 0)
+            live
+              .circle(cx, cy, selected.reach * CELL)
+              .fill({ color: 0xffb13f, alpha: 0.1 })
+              .stroke({ color: 0xffb13f, width: 2, alpha: 0.75 });
+          live.circle(cx, cy, selected.sight * CELL).stroke({ color: 0x9fc4ff, width: 2, alpha: 0.8 });
+        }
         live.rect(cx - CELL / 2, cy - CELL / 2, CELL, CELL).stroke({ color: ok ? 0xffb13f : 0xb82024, width: 2 });
       }
     }
+    ghostSprite.visible = !!aim && canBuild(match, YOU, selected!, aim[0], aim[1]) === 'ok';
+    if (ghostSprite.visible && aim && selected) {
+      const tex = towerTextures.get(selected.art)!;
+      ghostSprite.texture = tex;
+      ghostSprite.scale.set(50 / tex.width);
+      ghostSprite.position.set((aim[0] + 0.5) * CELL, (aim[1] + 0.5) * CELL + 8);
+    }
+    updateHint(aim);
     if (started) {
       const [cx, cy] = CASTLES[YOU];
       areaLayer
         .circle(cx * CELL, cy * CELL, buildReach(match, YOU) * CELL)
         .stroke({ color: 0xffb13f, width: 2, alpha: selected ? 0.5 : 0.2 });
+      for (const t of match.towers)
+        if (t.owner === YOU && t.def.reach > 0)
+          areaLayer
+            .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL, t.def.reach * CELL)
+            .stroke({ color: 0xffb13f, width: 1.5, alpha: selected ? 0.4 : 0.15 });
     }
 
     // Support towers show what they cover: an aura (green heal, orange power) and a detector (violet).
     for (const t of match.towers) {
+      if (!isSeen(match, YOU, t, vision)) continue;
       const cx = (t.col + 0.5) * CELL;
       const cy = (t.row + 0.5) * CELL;
       const mine = t.owner === YOU;
@@ -413,9 +575,9 @@ void (async () => {
       if (t.def.detect)
         areaLayer.circle(cx, cy, t.def.detect * CELL).stroke({ color: 0xb48cff, width: 1.5, alpha: mine ? 0.45 : 0.2 });
     }
-    if (selected && hover) {
-      const cx = (hover[0] + 0.5) * CELL;
-      const cy = (hover[1] + 0.5) * CELL;
+    if (selected && aim) {
+      const cx = (aim[0] + 0.5) * CELL;
+      const cy = (aim[1] + 0.5) * CELL;
       if (selected.aura)
         live
           .circle(cx, cy, selected.aura.radius * CELL)
@@ -440,6 +602,7 @@ void (async () => {
       (t, c) => {
         c.position.set((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 8);
         c.zIndex = t.row + 0.5;
+        c.visible = isSeen(match, YOU, t, vision);
       },
     );
     sync(
@@ -470,9 +633,8 @@ void (async () => {
         body.texture = unitFrame(u.def.sheet, u.def.kind, pose, dir.col);
         body.scale.x = (dir.flip ? -1 : 1) * unitScale(u.def);
         body.y = u.def.air ? -FLIGHT : 0;
-        // A cloaked unit is faint to its own side and invisible to the other until a detector finds it; poison tints green.
-        const seen = visibleTo(match, u, YOU);
-        c.visible = seen;
+        // An enemy is drawn only in sight (a cloaked one also needs a detector); cloaked is faint to its own side; poison tints green.
+        c.visible = isSeen(match, YOU, u, vision);
         body.alpha = u.def.cloak ? (u.owner === YOU ? 0.5 : 0.75) : 1;
         body.tint = u.dot ? 0x9be37a : 0xffffff;
       },
@@ -480,13 +642,15 @@ void (async () => {
 
     // Health bars: castles always, the rest once hurt.
     for (const o of [0, 1] as const) {
+      if (!isCastleSeen(match, YOU, o, vision)) continue;
       const c = match.players[o].castle;
       bar(CASTLES[o][0] * CELL, CASTLES[o][1] * CELL - 78, 84, c.hp / c.maxHp, o === YOU ? 0x6fd36f : 0xe0777b);
     }
     for (const t of match.towers)
-      if (t.hp < t.def.hp) bar((t.col + 0.5) * CELL, (t.row + 0.5) * CELL - 34, 30, t.hp / t.def.hp, 0xffb13f);
+      if (t.hp < t.def.hp && isSeen(match, YOU, t, vision))
+        bar((t.col + 0.5) * CELL, (t.row + 0.5) * CELL - 34, 30, t.hp / t.def.hp, 0xffb13f);
     for (const u of match.units) {
-      if (u.hp >= u.def.hp || !visibleTo(match, u, YOU)) continue;
+      if (u.hp >= u.def.hp || !isSeen(match, YOU, u, vision)) continue;
       const [x, y] = unitPos(u);
       bar(
         x * CELL,
@@ -504,6 +668,7 @@ void (async () => {
         effects.splice(i, 1);
         continue;
       }
+      if (!spotted(e.shot.from) && !spotted(e.shot.to)) continue; // an attack nobody of yours sees
       const a = 1 - e.age / EFFECT_LIFE;
       const [x0, y0, x1, y1] = [e.shot.from[0] * CELL, e.shot.from[1] * CELL, e.shot.to[0] * CELL, e.shot.to[1] * CELL];
       if (e.shot.melee) live.circle(x1, y1 - 12, 7).fill({ color: 0xffffff, alpha: 0.5 * a });
@@ -641,11 +806,31 @@ void (async () => {
     }
     const queue = me.queue.map((q) => q.def.name).join(', ');
     $('queue').textContent = queue ? `Training: ${queue}` : '';
-    $('hint').textContent = selected
-      ? `Tap a green cell to build a ${selected.name}. Esc to cancel.`
-      : level < MAX_LEVEL && !started
-        ? ''
-        : '';
+    if (!selected) setGhost(undefined);
+  }
+
+  /** The caption under the top bar: what the selected tower needs, and why the cell being looked at cannot take it. */
+  function updateHint(aim: readonly [number, number] | undefined) {
+    let text = '';
+    if (selected && started) {
+      const cell = aim ?? lastTap;
+      const why = cell ? canBuild(match, YOU, selected, cell[0], cell[1]) : 'ok';
+      const reasons: Record<string, string> = {
+        area: 'Fogged ground: outside your build area. Build near your castle or a tower (towers push the fog back).',
+        road: 'That is the road: build beside it.',
+        taken: 'Something is already built there.',
+        castle: 'Too close to a castle.',
+        gold: `Not enough gold for a ${selected.name}.`,
+        tier: `A ${selected.name} needs a higher castle level.`,
+      };
+      text =
+        cell && why !== 'ok'
+          ? (reasons[why] ?? '')
+          : ghost
+            ? `Confirm to build the ${selected.name}, or tap another cell. Esc to cancel.`
+            : `Tap a clear cell to build a ${selected.name}. Esc to cancel.`;
+    }
+    if ($('hint').textContent !== text) $('hint').textContent = text;
   }
 
   function start(race: RaceId, chosen?: RaceId) {
@@ -661,6 +846,11 @@ void (async () => {
     unitSprites.clear();
     lastS.clear();
     effects.length = 0;
+    fogSnap = true;
+    pools.clear();
+    remembered.length = 0;
+    ghost = undefined;
+    lastTap = undefined;
     buildCastles();
     makeControls(race);
     $('menu').hidden = true;

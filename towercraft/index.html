@@ -46,6 +46,9 @@
       #cam { position: fixed; right: 10px; top: 56px; z-index: 3; display: flex; flex-direction: column; gap: 6px; }
       #cam button { width: 38px; height: 38px; padding: 0; justify-content: center; font-size: 18px; background: rgba(22, 27, 36, 0.9); }
       #queue { position: fixed; left: 10px; top: 52px; z-index: 1; color: var(--dim); font-size: 12px; pointer-events: none; }
+      #ghost { position: fixed; left: 50%; transform: translateX(-50%); bottom: 150px; z-index: 3; display: flex; gap: 8px; }
+      #ghost[hidden] { display: none; }
+      #ghost button { padding: 8px 16px; background: rgba(22, 27, 36, 0.95); }
       #hint { position: fixed; left: 0; right: 0; top: 46px; text-align: center; color: var(--dim); font-size: 13px; pointer-events: none; z-index: 1; }
     </style>
   </head>
@@ -53,6 +56,7 @@
     <div class="bar" id="top"><div class="side you" id="you"></div><div class="side rival" id="rival"></div></div>
     <div id="hint"></div>
     <div id="cam"><button id="cam-home" title="Back to your castle">⌂</button><button id="cam-fit" title="Zoom out to the whole map">⤢</button></div>
+    <div id="ghost" hidden><button id="ghost-ok">Build here</button><button id="ghost-no">Cancel</button></div>
     <div id="queue"></div>
     <div class="bar" id="bottom">
       <div class="row"><div class="group" id="train"></div><div class="group" id="castle"></div></div>

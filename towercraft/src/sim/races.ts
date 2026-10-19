@@ -38,6 +38,8 @@ export interface UnitDef {
   cloak?: boolean;
   /** Can attack air units (default: ground only). */
   hitsAir?: boolean;
+  /** How far (cells) it sees while it lives: it clears fog round it, never the build area; at least its `range`. */
+  sight: number;
 }
 
 /** What a tower can shoot. */
@@ -74,6 +76,8 @@ export interface TowerDef {
   detect?: number;
   /** Cells round this tower where more may be built (0 = it extends nothing): how a front line is pushed forward. */
   reach: number;
+  /** How far (cells) it sees, for as long as it stands (not where more may be built): at least `range`, `detect` and the aura radius. */
+  sight: number;
 }
 
 export interface CastleDef {
@@ -92,6 +96,8 @@ export interface CastleDef {
   damage: number;
   cooldown: number;
   detect: number;
+  /** How far (cells) the castle sees: at least its level 1 `reach`, and its attack and detection. */
+  sight: number;
 }
 
 export interface Race {
@@ -129,11 +135,13 @@ export const RACES: Record<RaceId, Race> = {
       damage: 5,
       cooldown: 0.8,
       detect: 3,
+      sight: 8,
     },
     units: [
       unit({
         id: 'spearman',
         name: 'Goblin Spearmen',
+        sight: 4.5,
         art: 'goblin_spearman',
         sheet: 'goblin_spearman',
         tier: 1,
@@ -148,6 +156,7 @@ export const RACES: Record<RaceId, Race> = {
       unit({
         id: 'thief',
         name: 'Goblin Thieves',
+        sight: 4.5,
         art: 'goblin_thief',
         sheet: 'goblin_thief',
         tier: 2,
@@ -163,6 +172,7 @@ export const RACES: Record<RaceId, Race> = {
       unit({
         id: 'glider',
         name: 'Glider',
+        sight: 7,
         art: 'goblin_glider',
         sheet: 'glider',
         kind: 'glider',
@@ -180,6 +190,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'nest',
         name: 'Watch Nest',
+        sight: 4.5,
         art: 'goblin_watch_tower',
         tier: 1,
         cost: 30,
@@ -192,6 +203,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'spitter',
         name: 'Poison Pit',
+        sight: 5,
         art: 'goblin_guard_tower',
         tier: 2,
         cost: 70,
@@ -207,6 +219,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'temple',
         name: 'Shaman Temple',
+        sight: 5,
         art: 'goblin_temple',
         tier: 2,
         cost: 80,
@@ -217,6 +230,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'academy',
         name: 'Seer Academy',
+        sight: 6,
         art: 'goblin_academy',
         tier: 2,
         cost: 40,
@@ -227,6 +241,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'catapult',
         name: 'Catapult',
+        sight: 7.5,
         art: 'goblin_catapult_tower',
         tier: 3,
         cost: 130,
@@ -256,11 +271,13 @@ export const RACES: Record<RaceId, Race> = {
       damage: 14,
       cooldown: 1.4,
       detect: 3,
+      sight: 8,
     },
     units: [
       unit({
         id: 'axefighter',
         name: 'Axefighter',
+        sight: 4.5,
         art: 'dwarf_axefighter',
         sheet: 'dwarven_axefighter',
         tier: 1,
@@ -274,6 +291,7 @@ export const RACES: Record<RaceId, Race> = {
       unit({
         id: 'thane',
         name: 'Thane',
+        sight: 4.5,
         art: 'dwarf_thane',
         sheet: 'thane',
         tier: 2,
@@ -287,6 +305,7 @@ export const RACES: Record<RaceId, Race> = {
       unit({
         id: 'gryphon',
         name: 'Gryphon Rider',
+        sight: 7,
         art: 'dwarf_gryphon',
         sheet: 'gryphon_rider',
         kind: 'gryphon',
@@ -305,6 +324,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'ballista',
         name: 'Ballista',
+        sight: 6.5,
         art: 'dwarf_ballista_tower',
         tier: 1,
         cost: 90,
@@ -318,6 +338,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'bunker',
         name: 'Guard Bunker',
+        sight: 4.5,
         art: 'dwarf_guard_tower',
         tier: 2,
         cost: 110,
@@ -330,6 +351,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'cannon',
         name: 'Cannon Tower',
+        sight: 6,
         art: 'dwarf_cannon_tower',
         tier: 2,
         cost: 180,
@@ -344,6 +366,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'skyguard',
         name: 'Skyguard',
+        sight: 6.5,
         art: 'dwarf_sentry_tower',
         tier: 2,
         cost: 100,
@@ -357,6 +380,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'shrine',
         name: 'Rune Shrine',
+        sight: 5.5,
         art: 'dwarf_temple',
         tier: 3,
         cost: 160,
@@ -384,11 +408,13 @@ export const RACES: Record<RaceId, Race> = {
       damage: 9,
       cooldown: 1,
       detect: 3,
+      sight: 8,
     },
     units: [
       unit({
         id: 'warrior',
         name: 'Warrior',
+        sight: 4.5,
         art: 'germanic_warrior',
         sheet: 'germanic_warrior',
         tier: 1,
@@ -402,6 +428,7 @@ export const RACES: Record<RaceId, Race> = {
       unit({
         id: 'archer',
         name: 'Archer',
+        sight: 6,
         art: 'germanic_archer',
         sheet: 'germanic_archer',
         kind: 'archer',
@@ -418,6 +445,7 @@ export const RACES: Record<RaceId, Race> = {
       unit({
         id: 'ritter',
         name: 'Ritter',
+        sight: 5,
         art: 'teuton_ritter',
         sheet: 'teuton_ritter',
         tier: 3,
@@ -433,6 +461,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'watch',
         name: 'Watch Tower',
+        sight: 5,
         art: 'teuton_watch_tower',
         tier: 1,
         cost: 50,
@@ -445,6 +474,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'guard',
         name: 'Archer Tower',
+        sight: 6,
         art: 'teuton_guard_tower',
         tier: 2,
         cost: 100,
@@ -457,6 +487,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'catapult',
         name: 'Catapult',
+        sight: 7.5,
         art: 'teuton_catapult_tower',
         tier: 2,
         cost: 120,
@@ -471,6 +502,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'lookout',
         name: 'Lookout',
+        sight: 7,
         art: 'teuton_university',
         tier: 2,
         cost: 45,
@@ -481,6 +513,7 @@ export const RACES: Record<RaceId, Race> = {
       tower({
         id: 'church',
         name: 'Church',
+        sight: 5,
         art: 'teuton_church',
         tier: 3,
         cost: 150,

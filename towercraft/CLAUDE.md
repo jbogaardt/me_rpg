@@ -22,6 +22,18 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 - **Build reach**: towers go on free cells inside the castle's reach (6, 9 then 13 cells by castle level) or inside the reach of a tower
   already built (`TowerDef.reach`), so a front line is pushed forward tower by tower. Upgrading the castle also unlocks tier 2 units and
   towers, more pay and more castle health.
+- **Fog of war and sight** (`Sight`, `visionOf`, `canSee`, `isSeen`, `isCastleSeen` in `sim.ts`): every castle, tower and unit has a `sight`
+  radius (at least its range, detect and aura radius, for a castle its first reach; air units see furthest). A player sees the union of those circles *plus the ground they may build on*.
+  The build area (castle reach, tower `reach`) is the permanent, revealed ground and the only place to build; tower and castle sight stay
+  while they stand but never allow building; **unit sight is temporary** (gone when the unit dies or walks on) and **never** extends the build
+  area. Enemy units, towers and the castle outside every circle are hidden: not drawn, not targeted, not splashed, and a fogged tower stops
+  nothing. Any of the owner's sources can spot for the rest. Cloaked units need sight *and* a detector
+  (`visibleTo` is the detector half). `ai.ts` asks `isSeen` too (no peeking, though it
+  still reasons from the enemy race's roster). `main.ts` draws the fog like Me RPG's underground darkness: a tiny
+  canvas, a warm dark fill with soft round pools cut out for each `Sight` (a pool grows over about half a second when a tower goes up and
+  shrinks when it falls; a fallen tower's build ground stays faintly lifted), scaled up smooth, plus a cool tint where only sight reaches.
+  It hides enemy sprites, bars, rings and shots outside sight. Placing: a hover (mouse) or first tap (touch, with Build/Cancel) shows a
+  ghost with range, reach and sight rings; the hint line says why a fogged cell cannot take the tower.
 - **Races** differ by how their numbers trade off (`races.ts`): swarm/Goblins (fast, weak, trained in pairs, cheap upgrades), titan/Dwarves
   (slow, strong, costly, long-range towers, tough castle), legion/Germanic (the yardstick). A new race is an entry in `races.ts`.
 
@@ -39,13 +51,12 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 
 ## State of play and the plan (StarCraft-style depth, in slices)
 
-Done: the map, castles, queue, upgrades, unit combat, towers, reach, pan and zoom, the AI, and the tower roles above (ground, air, area, poison, aura, detector). **Not tuned**: with the AI on both sides most
+Done: the map, castles, queue, upgrades, unit combat, towers, reach, pan and zoom, the AI, the tower roles above (ground, air, area, poison, aura, detector) and fog of war. **Not tuned**: with the AI on both sides most
 matches stall to the time limit (it trickles units into towers) and legion loses to both others even with its archers and church. Fix the AI (mass before sending, push
 reach forward) and tune with seeded headless matches (as `sim.test.ts` plays them), not by feel.
 
 Next, roughly in order; each is a slice with its own tests:
-1. **Fog of war and sight**: units, towers and castles see a radius; enemies out of sight are hidden and untargetable, and building needs
-   sight. A *beacon* tower (cheap, no attack, big `reach`) extends where you can build, as in the brief.
+1. A *beacon* tower (cheap, no attack, big `reach`) to push the build area (fog of war is done).
 2. **Detector units** (the observer): a unit that walks with the army and reveals cloaked enemies near it (towers and the castle do it now).
 3. **More roles**: slow (a status like poison), armour, a bunker that garrisons units, a siege unit that outranges towers.
 4. **Race identity** (each race a different way to play): Goblins swarm, cloak and tunnel; Dwarves long-range siege, bunkers (a tower that
