@@ -1371,8 +1371,10 @@ void (async () => {
   };
   /** One stat: its icon and a bar (`value` of `most`; `extra` is what upgrades add, drawn in gold). */
   const meter = (ico: string, color: string, title: string, value: number, most: number, extra = 0, id = '') => {
-    const w = Math.max(5, Math.min(100, (value / most) * 100));
-    const x = Math.max(0, Math.min(100 - w, (extra / most) * 100));
+    // The length is the stat, on a square-root scale so a frail unit is still a visible bar next to the giants.
+    const at = (v: number) => Math.min(100, Math.sqrt(Math.max(0, v) / most) * 100);
+    const w = Math.max(6, at(value));
+    const x = Math.max(0, Math.min(100 - w, at(value + extra) - w));
     return (
       `<div class="st" style="--c:${color}" title="${title}">${icon(ico, title)}<div class="meter">` +
       `<i${id ? ` id="${id}"` : ''} style="width:${w}%"></i>${x > 0.5 ? `<b style="left:${w}%;width:${x}%"></b>` : ''}</div></div>`

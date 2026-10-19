@@ -111,9 +111,10 @@
       #card .stats { display: grid; gap: 8px; margin: 2px 0 10px; }
       #card .st { display: flex; align-items: center; gap: 10px; color: var(--c); }
       #card .st .ic { width: 28px; height: 28px; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35)); }
-      #card .meter { position: relative; flex: 1; height: 13px; border-radius: 7px; background: #2b2118; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6); }
-      #card .meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c); border-radius: 7px; transition: width 0.15s; }
-      #card .meter b { position: absolute; top: 0; bottom: 0; background: #f2d38a; }
+      /* No container: the length of the bar is the stat. */
+      #card .meter { position: relative; flex: 1; height: 13px; }
+      #card .meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c); border-radius: 7px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); transition: width 0.15s; }
+      #card .meter b { position: absolute; top: 0; bottom: 0; background: #f2d38a; border-radius: 0 7px 7px 0; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
       #card .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
       #card .bd { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: rgba(51, 35, 15, 0.16); border: 1px solid var(--ink-soft); color: var(--ink); }
       #card .bd .ic { width: 20px; height: 20px; }
