@@ -31,6 +31,9 @@ import {
   buildTower,
   buyUpgrade,
   canAfford,
+  repairCost,
+  repairTower,
+  repairable,
   canBuild,
   canSee,
   incomeOf,
@@ -1715,7 +1718,21 @@ void (async () => {
     const lv = $('lv-hp');
     lv.style.width = `${Math.max(6, Math.min(100, Math.sqrt(Math.max(0, t.hp) / MOST.towerHp) * 100))}%`;
     lv.parentElement!.parentElement!.title = `Health ${Math.ceil(t.hp)} / ${t.def.hp}`;
-    act.hidden = true;
+    // Your own damaged tower can be repaired for resources; the health comes back over time.
+    act.hidden = !mine || t.def.hp - t.hp < 1;
+    if (!act.hidden) {
+      const mending = repairable(t) < 1;
+      const cost = repairCost(t);
+      const said = mending ? 'Mending…' : `Repair ${money(cost)}`;
+      if (act.innerHTML !== said) act.innerHTML = said;
+      act.disabled = mending || !canAfford(match.players[YOU], cost);
+      act.title = mending ? 'Already being repaired' : act.disabled ? 'Not enough wood or stone' : '';
+      act.onclick = () => {
+        repairTower(match, YOU, t.id);
+        renderCard();
+        refresh();
+      };
+    }
   }
 
   function renderCard() {

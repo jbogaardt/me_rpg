@@ -86,6 +86,8 @@ export interface Tower {
   hp: number;
   cooldown: number;
   garrison: Garrisoned[];
+  /** Health still to be mended by a paid repair (`repairTower`); it comes back over time, not at once. */
+  mend?: number;
 }
 
 export interface Castle {
@@ -564,6 +566,31 @@ export function buildTower(m: Match, owner: Owner, towerId: string, col: number,
   return 'ok';
 }
 
+/** Repairing a tower costs this share of its price, scaled by the health it is missing; the mending takes `REPAIR_TIME`. */
+export const REPAIR_SHARE = 0.5;
+export const REPAIR_TIME = 20;
+
+/** Health a repair would still have to cover (what is missing and not already being mended). */
+export const repairable = (t: Tower) => Math.max(0, t.def.hp - t.hp - (t.mend ?? 0));
+
+/** What repairing `t` costs now: a share of its price in proportion to the health it lacks. */
+export function repairCost(t: Tower): Cost {
+  const k = (REPAIR_SHARE * repairable(t)) / t.def.hp;
+  return price(Math.ceil(t.def.cost.wood * k), Math.ceil(t.def.cost.stone * k));
+}
+
+/** Pay to mend a damaged tower of `owner`'s: it heals over `REPAIR_TIME` seconds (and may fall before it is done). */
+export function repairTower(m: Match, owner: Owner, towerId: number): Result {
+  const t = m.towers.find((x) => x.id === towerId && x.owner === owner && x.hp > 0);
+  if (!t) return 'unknown';
+  if (repairable(t) < 1) return 'max';
+  const cost = repairCost(t);
+  if (!canAfford(m.players[owner], cost)) return 'gold';
+  pay(m.players[owner], cost);
+  t.mend = (t.mend ?? 0) + repairable(t);
+  return 'ok';
+}
+
 // --- The step --------------------------------------------------------------------------------------------------------
 
 /** A kill pays the killer this share (1/n) of the unit's price: the lever that makes a winning fight snowball. */
@@ -723,6 +750,13 @@ export function step(m: Match, dt: number): void {
     u.hp -= u.dot.dps * dt;
     u.dot.left -= dt;
     if (u.dot.left <= 0) delete u.dot;
+  }
+  for (const t of m.towers) {
+    if (t.mend && t.hp > 0) {
+      const add = Math.min(t.mend, (t.def.hp / REPAIR_TIME) * dt, t.def.hp - t.hp);
+      t.hp += add;
+      t.mend = add < t.mend && t.hp < t.def.hp ? t.mend - add : undefined;
+    }
   }
   for (const t of m.towers) {
     const aura = t.def.aura;
