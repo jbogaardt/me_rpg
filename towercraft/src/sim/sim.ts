@@ -8,7 +8,7 @@
 // build on); only units may clear fog temporarily, and never build there. What a side cannot see it cannot target. The first
 // castle destroyed loses.
 
-import { CASTLES, CASTLE_CLEAR, ROAD_CELLS, ROAD_LENGTH, cellIndex, inBoard, pointAt } from './board';
+import { CASTLES, CASTLE_CLEAR, ROAD_CELLS, ROAD_LENGTH, SCENERY_CELLS, cellIndex, inBoard, pointAt } from './board';
 import { MAX_LEVEL, RACES, type RaceId, type TowerDef, type UnitDef } from './races';
 
 export const START_GOLD = 150;
@@ -291,12 +291,13 @@ export function inBuildArea(m: Match, owner: Owner, col: number, row: number): b
   return m.towers.some((t) => t.owner === owner && t.def.reach > 0 && dist(c, centreOf(t)) <= t.def.reach);
 }
 
-export type BuildResult = Result | 'off-board' | 'road' | 'taken' | 'castle' | 'area';
+export type BuildResult = Result | 'off-board' | 'road' | 'scenery' | 'taken' | 'castle' | 'area';
 
 export function canBuild(m: Match, owner: Owner, def: TowerDef, col: number, row: number): BuildResult {
   if (m.winner >= 0) return 'over';
   if (!inBoard(col, row)) return 'off-board';
   if (ROAD_CELLS.has(cellIndex(col, row))) return 'road';
+  if (SCENERY_CELLS.has(cellIndex(col, row))) return 'scenery';
   const c: [number, number] = [col + 0.5, row + 0.5];
   if (CASTLES.some((k) => dist(c, k) < CASTLE_CLEAR)) return 'castle';
   if (towerAt(m, col, row)) return 'taken';

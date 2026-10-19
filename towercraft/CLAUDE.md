@@ -5,8 +5,9 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 
 ## The game
 
-- **One road, two castles.** One winding road joins player 0's castle (top) to player 1's (bottom). Units walk it from their own castle
-  and meet in between. You win by destroying the other castle (or, after `TIME_LIMIT`, by castle health left).
+- **One road, two castles.** One long winding road (36x55 cells, about 220 long, units walk 2-6 cells a second) joins player 0's castle (top) to player 1's (bottom); units meet in between. You win by destroying the other castle (or, after `TIME_LIMIT`, by castle health left).
+- **The castle panel** (tap your castle): level, health, pay, build reach, the training queue, and the next upgrade with its cost, what it gives
+  and unlocks, and the Upgrade button.
 - **Orders** (`Orders` in `sim.ts`, set per player with `setOrder`, toggles in the control bar): all of a player's units either stop and fight the
   towers and the units they meet (`attack`), or walk on past them (`bypass`), each chosen separately; the castle is always attacked once in reach.
 - **Everything comes from the castle**: pay for a unit and it joins the castle's train queue, then walks out and marches on its own,
@@ -22,18 +23,14 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 - **Build reach**: towers go on free cells inside the castle's reach (6, 9 then 13 cells by castle level) or inside the reach of a tower
   already built (`TowerDef.reach`), so a front line is pushed forward tower by tower. Upgrading the castle also unlocks tier 2 units and
   towers, more pay and more castle health.
-- **Fog of war and sight** (`Sight`, `visionOf`, `canSee`, `isSeen`, `isCastleSeen` in `sim.ts`): every castle, tower and unit has a `sight`
-  radius (at least its range, detect and aura radius, for a castle its first reach; air units see furthest). A player sees the union of those circles *plus the ground they may build on*.
-  The build area (castle reach, tower `reach`) is the permanent, revealed ground and the only place to build; tower and castle sight stay
-  while they stand but never allow building; **unit sight is temporary** (gone when the unit dies or walks on) and **never** extends the build
-  area. Enemy units, towers and the castle outside every circle are hidden: not drawn, not targeted, not splashed, and a fogged tower stops
-  nothing. Any of the owner's sources can spot for the rest. Cloaked units need sight *and* a detector
-  (`visibleTo` is the detector half). `ai.ts` asks `isSeen` too (no peeking, though it
-  still reasons from the enemy race's roster). `main.ts` draws the fog like Me RPG's underground darkness: a tiny
-  canvas, a warm dark fill with soft round pools cut out for each `Sight` (a pool grows over about half a second when a tower goes up and
-  shrinks when it falls; a fallen tower's build ground stays faintly lifted), scaled up smooth, plus a cool tint where only sight reaches.
-  It hides enemy sprites, bars, rings and shots outside sight. Placing: a hover (mouse) or first tap (touch, with Build/Cancel) shows a
-  ghost with range, reach and sight rings; the hint line says why a fogged cell cannot take the tower.
+- **Fog of war and sight** (`visionOf`, `canSee`, `isSeen`, `isCastleSeen` in `sim.ts`): castles, towers and units each have a `sight` radius (at
+  least their range, detect and aura radius). A player sees those circles plus the ground they may build on. The build area (castle reach, tower
+  `reach`) is the permanent revealed ground and the only place to build; tower and castle sight stay while they stand but never allow building;
+  **unit sight is temporary** (gone when the unit dies or walks on) and **never** extends the build area. Enemy units, towers and the castle
+  outside every circle are hidden: not drawn, not targeted, not splashed. Cloaked units need sight *and* a detector. The AI reads the foe only through
+  vision too. `main.ts` draws the fog like Me RPG's underground darkness (a tiny canvas, a warm dark fill with soft pools cut out, scaled up smooth;
+  a pool grows over half a second when a tower goes up). Placing: a hover (mouse) or first tap (touch, with Build/Cancel) shows a ghost with
+  range, reach and sight rings; the hint line says why a cell cannot take the tower.
 - **Races** differ by how their numbers trade off (`races.ts`): swarm/Goblins (fast, weak, trained in pairs, cheap upgrades), titan/Dwarves
   (slow, strong, costly, long-range towers, tough castle), legion/Germanic (the yardstick). A new race is an entry in `races.ts`.
 
@@ -46,7 +43,8 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 - **Art** is Wyrmsun's, copied by `tools/towercraftArt.ts` from a clone of its repo (`public/art/CREDITS.md`): animated unit sheets
   (CC-BY-SA 3.0, so the title screen credits them and the terms follow the art), CC0 castles, towers and portraits. Units walk, attack and
   die with the rows Wyrmsun's own scripts use. The field (`lane.png`, an adaptation of the LPC terrain, so also CC-BY-SA) is drawn by Me RPG's
-  map pipeline with `npm run towercraft:board`; change the road in `board.ts`, then re-run it.
+  map pipeline with `npm run towercraft:board`, which also writes `src/sim/scenery.ts` (the cells woods, lakes and rocks cover: nothing is built there); the road is `src/sim/road.ts`, then re-run it.
+  The field turns half way round onto itself (road, scenery, castles), so neither side has better ground: keep it so.
 - Headless screenshots: use `--use-angle=swiftshader` (`--use-gl=swiftshader` leaves a transparent band under fixed DOM overlays).
 
 ## State of play and the plan (StarCraft-style depth, in slices)

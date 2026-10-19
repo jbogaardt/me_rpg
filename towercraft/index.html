@@ -49,6 +49,19 @@
       #ghost { position: fixed; left: 50%; transform: translateX(-50%); bottom: 150px; z-index: 3; display: flex; gap: 8px; }
       #ghost[hidden] { display: none; }
       #ghost button { padding: 8px 16px; background: rgba(22, 27, 36, 0.95); }
+      #cpanel { position: fixed; z-index: 4; top: 50px; left: 50%; transform: translateX(-50%); width: min(400px, calc(100vw - 24px)); padding: 12px 14px;
+        background: rgba(22, 27, 36, 0.96); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+      #cpanel[hidden] { display: none; }
+      #cpanel h3 { margin: 0 24px 8px 0; color: var(--gold); font-size: 17px; }
+      #cp-x { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; padding: 0; justify-content: center; }
+      .hpbar { position: relative; height: 16px; border-radius: 4px; background: #0e1117; overflow: hidden; margin-bottom: 8px; }
+      .hpbar i { position: absolute; inset: 0 auto 0 0; background: #6fd36f; }
+      .hpbar span { position: relative; display: block; text-align: center; font-size: 11px; line-height: 16px; }
+      #cp-stats { list-style: none; margin: 0 0 8px; padding: 0; font-size: 13px; color: var(--dim); }
+      #cp-stats b { color: var(--text); font-weight: normal; }
+      #cp-next { font-size: 13px; margin-bottom: 8px; }
+      #cp-next small { display: block; color: var(--dim); font-size: 12px; }
+      #cp-up { width: 100%; justify-content: center; font-size: 15px; padding: 8px; }
       #hint { position: fixed; left: 0; right: 0; top: 46px; text-align: center; color: var(--dim); font-size: 13px; pointer-events: none; z-index: 1; }
     </style>
   </head>
@@ -61,6 +74,14 @@
     <div class="bar" id="bottom">
       <div class="row"><div class="group" id="train"></div><div class="group" id="castle"></div></div>
       <div class="row"><div class="group" id="build"></div></div>
+    </div>
+    <div id="cpanel" hidden>
+      <button id="cp-x" aria-label="Close">×</button>
+      <h3 id="cp-title"></h3>
+      <div class="hpbar"><i id="cp-hp"></i><span id="cp-hptext"></span></div>
+      <ul id="cp-stats"></ul>
+      <div id="cp-next"></div>
+      <button id="cp-up"></button>
     </div>
     <div class="overlay" id="menu">
       <div>

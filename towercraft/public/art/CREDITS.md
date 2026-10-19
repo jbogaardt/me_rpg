@@ -14,7 +14,8 @@ made from them, must credit the artists and be shared under CC-BY-SA 3.0 (or a c
   dwarven axefighter, thane and gryphon rider, Germanic warrior and archer, Teuton ritter.
 - `lane.png`, drawn by `tools/towercraftBoard.ts` (`npm run towercraft:board`) with Me RPG's map pipeline from the "Tiled Terrains" LPC
   terrain atlas by adrix89 and the Liberated Pixel Cup artists (full list: `art/lpc_terrain/Attribution.txt`, licence CC-BY-SA 3.0 or
-  GPL 3.0). It is an adaptation of that atlas, so it is CC-BY-SA 3.0 too.
+  GPL 3.0). It is an adaptation of that atlas, so it is CC-BY-SA 3.0 too. The same picture carries Me RPG's scenery: its trees, bushes and
+  rocks (LPC and OpenGameArt artists, credited in the root `CREDITS.md`, with the licences given there) and its lake tiles from the same atlas.
 
 ## CC0 art (no credit needed, given anyway)
 

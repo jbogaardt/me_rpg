@@ -7,6 +7,8 @@ import { createAi } from './sim/ai';
 import { CASTLES, COLS, ROAD_LENGTH, ROWS, headingAt } from './sim/board';
 import { MAX_LEVEL, RACES, RACE_IDS, type RaceId, type SheetKind, type TowerDef, type UnitDef } from './sim/races';
 import {
+  BASE_PAY,
+  PAY_EVERY,
   QUEUE_MAX,
   setOrder,
   buildReach,
@@ -236,7 +238,7 @@ void (async () => {
     world.y = topBar() + viewH() / 2 - cy * CELL * zoom;
     clampCamera();
   }
-  const home = () => focus(CASTLES[YOU][0] + 3, CASTLES[YOU][1] + 7, Math.max(minZoom(), Math.min(1.1, ZOOM_MAX)));
+  const home = () => focus(CASTLES[YOU][0] + 4, CASTLES[YOU][1] + 5, Math.max(minZoom(), Math.min(1.1, ZOOM_MAX)));
   window.addEventListener('resize', clampCamera);
 
   const cellAt = (sx: number, sy: number): [number, number] | undefined => {
@@ -324,6 +326,16 @@ void (async () => {
   $('ghost-no').onclick = () => setGhost(undefined);
 
   function tap(sx: number, sy: number, touch: boolean) {
+    // The castle (a tall sprite, so its middle is above its feet): tap it for its panel, anywhere else to close the panel.
+    const [wx, wy] = [(sx - world.x) / world.scale.x / CELL, (sy - world.y) / world.scale.y / CELL];
+    if (started && Math.hypot(wx - CASTLES[YOU][0], wy - (CASTLES[YOU][1] - 0.9)) <= 2) {
+      selected = undefined;
+      setGhost(undefined);
+      setPanel(true);
+      refresh();
+      return;
+    }
+    if (panelOpen && !selected) setPanel(false);
     const cell = cellAt(sx, sy);
     if (!cell || !started || !selected) return;
     lastTap = cell;
@@ -768,6 +780,7 @@ void (async () => {
       b.innerHTML = `${towerThumb(def.art, 36)}<span>${def.name}<small>${def.cost}g · ${towerTags(def)}</small></span>`;
       b.title = towerTags(def);
       b.onclick = () => {
+        setPanel(false);
         selected = selected === def ? undefined : def;
         refresh();
       };
@@ -776,7 +789,57 @@ void (async () => {
     }
   }
 
+  // --- The castle panel: tap your castle for its level, health, pay, reach, queue and the next upgrade ----------------------
+  let panelOpen = false;
+  function setPanel(open: boolean) {
+    panelOpen = open;
+    $('cpanel').hidden = !open;
+    if (open) renderPanel();
+  }
+  $('cp-x').onclick = () => setPanel(false);
+  $('cp-up').onclick = () => {
+    upgradeCastle(match, YOU);
+    refresh();
+  };
+  function renderPanel() {
+    const me = match.players[YOU];
+    const race = RACES[me.race];
+    const { level } = me.castle;
+    const cost = upgradeCost(match, YOU);
+    $('cp-title').textContent = `${race.name} castle · level ${level} of ${MAX_LEVEL}`;
+    $('cp-hp').style.width = `${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%`;
+    $('cp-hptext').textContent = `${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}`;
+    const pay = BASE_PAY + race.castle.pay[level - 1]!;
+    const queue = me.queue.map((q) => `${q.def.name} (${Math.max(0, Math.ceil(q.left))}s)`).join(', ');
+    $('cp-stats').innerHTML =
+      `<li>Pay <b>+${pay} gold every ${PAY_EVERY} s</b></li>` +
+      `<li>Build reach <b>${race.castle.reach[level - 1]} cells</b> round the castle</li>` +
+      `<li>Training <b>${queue || 'nothing'}</b></li>`;
+    const up = $<HTMLButtonElement>('cp-up');
+    if (level >= MAX_LEVEL || cost === undefined) {
+      $('cp-next').innerHTML = '<small>The castle has every upgrade.</small>';
+      up.disabled = true;
+      up.textContent = 'Fully upgraded';
+      return;
+    }
+    const names = (items: { name: string; tier: number }[]) =>
+      items
+        .filter((i) => i.tier === level + 1)
+        .map((i) => i.name)
+        .join(', ');
+    $('cp-next').innerHTML =
+      `<b>Level ${level + 1}</b> for <b>${cost} gold</b>` +
+      `<small>Build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells · pay +${race.castle.pay[level - 1]} → +${race.castle.pay[level]} · castle health +${race.castle.hpPerLevel}</small>` +
+      `<small>Unlocks units: ${names(race.units) || 'none'} · towers: ${names(race.towers) || 'none'}</small>`;
+    up.disabled = cost > me.gold;
+    up.textContent =
+      cost > me.gold
+        ? `Upgrade (need ${Math.ceil(cost - me.gold)} more gold)`
+        : `Upgrade to level ${level + 1} · ${cost} gold`;
+  }
+
   function refresh() {
+    if (panelOpen) renderPanel();
     const me = match.players[YOU];
     const { level } = me.castle;
     const full = me.queue.length >= QUEUE_MAX;
@@ -818,6 +881,7 @@ void (async () => {
       const reasons: Record<string, string> = {
         area: 'Fogged ground: outside your build area. Build near your castle or a tower (towers push the fog back).',
         road: 'That is the road: build beside it.',
+        scenery: 'Trees, rocks or water are in the way.',
         taken: 'Something is already built there.',
         castle: 'Too close to a castle.',
         gold: `Not enough gold for a ${selected.name}.`,
@@ -853,6 +917,7 @@ void (async () => {
     lastTap = undefined;
     buildCastles();
     makeControls(race);
+    setPanel(false);
     $('menu').hidden = true;
     $('end').hidden = true;
     refresh();

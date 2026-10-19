@@ -1,25 +1,12 @@
-// The map (Pixi-free): ONE road from player 0's castle to player 1's, winding back and forth across a tall field. Units of
+// The map (Pixi-free): ONE road from player 0's castle to player 1's, winding back and forth across a tall field (road.ts has its
+// shape, scenery.ts the cells woods and lakes cover). Units of
 // player 0 walk it from the start, player 1's from the end, so they meet somewhere between. Positions are in cells (a cell's
 // centre is at +0.5); a distance is cells along the road from its start. Towers go on the free cells beside the road.
 
-export const COLS = 24;
-export const ROWS = 40;
+import { COLS, ROWS, WAYPOINTS } from './road';
+import { SCENERY } from './scenery';
 
-/** The road's corners, as cells: straight runs between each pair. The first is player 0's castle, the last player 1's. */
-export const WAYPOINTS: readonly (readonly [number, number])[] = [
-  [3, 3],
-  [3, 7],
-  [20, 7],
-  [20, 13],
-  [3, 13],
-  [3, 19],
-  [20, 19],
-  [20, 25],
-  [3, 25],
-  [3, 31],
-  [20, 31],
-  [20, 36],
-];
+export { COLS, ROWS, WAYPOINTS };
 
 const centre = ([c, r]: readonly [number, number]): [number, number] => [c + 0.5, r + 0.5];
 
@@ -72,6 +59,9 @@ export const ROAD_CELLS: ReadonlySet<number> = (() => {
   }
   return cells;
 })();
+
+/** Cells the scenery covers (woods, lakes, rocks): nothing is built there. Generated with the picture: `npm run towercraft:board`. */
+export const SCENERY_CELLS: ReadonlySet<number> = new Set(SCENERY);
 
 export const cellIndex = (col: number, row: number) => row * COLS + col;
 export const inBoard = (col: number, row: number) =>

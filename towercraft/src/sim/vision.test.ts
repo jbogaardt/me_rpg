@@ -149,8 +149,8 @@ describe('what is hidden', () => {
     const m = newMatch(['legion', 'swarm']);
     const mine = stand(m, 0, 'legion', 'warrior', MID);
     const foe = stand(m, 1, 'swarm', 'spearman', 10); // 10 cells along from player 1's castle
-    const mineT = put(m, 0, towerDef('legion', 'watch'), 4, 5);
-    const foeT = put(m, 1, towerDef('swarm', 'nest'), 18, 33);
+    const mineT = put(m, 0, towerDef('legion', 'watch'), 8, 5);
+    const foeT = put(m, 1, towerDef('swarm', 'nest'), 27, 49);
     expect(isSeen(m, 0, mine)).toBe(true);
     expect(isSeen(m, 1, mine)).toBe(false);
     expect(isSeen(m, 0, mineT)).toBe(true);
@@ -171,7 +171,7 @@ describe('what is hidden', () => {
     // A made-up tower that shoots further than it sees (the real ones never do), to prove the tower asks its owner's sight.
     const blind: TowerDef = { ...towerDef('legion', 'guard'), range: 8, sight: 1 };
     const m = quiet(newMatch(['legion', 'swarm']));
-    put(m, 0, blind, 4, 5);
+    put(m, 0, blind, 8, 5);
     const foe = stand(m, 1, 'swarm', 'spearman', ROAD_LENGTH - 12); // 12 cells down the road from player 0's castle, beyond its sight
     run(m, 4);
     expect(100_000 - foe.hp).toBe(0); // in range, unseen: untouched
@@ -184,7 +184,7 @@ describe('what is hidden', () => {
   it('keeps splash off a unit that is out of sight', () => {
     const m = quiet(newMatch(['legion', 'swarm']));
     // A tower that shoots and splashes far but sees little of its own (made up): it hits only what other sources of its owner see.
-    put(m, 0, { ...towerDef('legion', 'catapult'), splash: 8, sight: 1, range: 7 }, 4, 5);
+    put(m, 0, { ...towerDef('legion', 'catapult'), splash: 8, sight: 1, range: 7 }, 8, 5);
     const seer = stand(m, 0, 'legion', 'warrior', 7.5);
     seer.def = { ...seer.def, sight: 2 }; // at (7, 7.5), seeing a little round it
     const seen = stand(m, 1, 'swarm', 'spearman', ROAD_LENGTH - 8); // at (7.5, 7.5), 0.5 from the seer
@@ -259,7 +259,7 @@ describe('the computer opponent', () => {
 
   it('reads the other side only through what it can see (foeUnits, foeTowers, foeCastle)', () => {
     const m = quiet(newMatch(['swarm', 'titan']));
-    put(m, 1, towerDef('titan', 'skyguard'), 18, 33); // a tower deep in the other half
+    put(m, 1, towerDef('titan', 'skyguard'), 27, 49); // a tower deep in the other half
     const far = stand(m, 1, 'titan', 'axefighter', 6); // on the road 6 cells from its own castle
     expect(foeTowers(m, 0)).toHaveLength(0);
     expect(foeUnits(m, 0)).not.toContain(far);
