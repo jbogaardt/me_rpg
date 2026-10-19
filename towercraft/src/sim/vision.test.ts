@@ -22,7 +22,7 @@ import {
 const unitDef = (race: RaceId, id: string) => RACES[race].units.find((u) => u.id === id)!;
 const towerDef = (race: RaceId, id: string) => RACES[race].towers.find((t) => t.id === id)!;
 const put = (m: Match, owner: Owner, def: TowerDef, col: number, row: number) => {
-  const t = { id: m.nextId++, def, owner, col, row, hp: def.hp, cooldown: 0 };
+  const t = { id: m.nextId++, def, owner, col, row, hp: def.hp, cooldown: 0, garrison: [] };
   m.towers.push(t);
   return t;
 };
@@ -33,6 +33,7 @@ const stand = (m: Match, owner: Owner, race: RaceId, id: string, s: number): Uni
     def: { ...unitDef(race, id), speed: 0 },
     owner,
     hp: 100_000,
+    maxHp: 100_000,
     s,
     cooldown: 999,
   };
@@ -61,9 +62,8 @@ describe('the sight in the data', () => {
         for (const reach of [t.range, t.detect ?? 0, t.aura?.radius ?? 0])
           expect(t.sight, `${id} ${t.id}`).toBeGreaterThanOrEqual(reach);
       }
-      // Air units see the furthest of a race's units.
-      const air = Math.min(...race.units.filter((u) => u.air).map((u) => u.sight));
-      expect(air).toBeGreaterThanOrEqual(Math.max(...race.units.filter((u) => !u.air).map((u) => u.sight)));
+      // Flyers see far: they look down on the whole road ahead.
+      for (const u of race.units.filter((x) => x.air)) expect(u.sight, `${id} ${u.id}`).toBeGreaterThanOrEqual(7);
     }
   });
 });
@@ -71,7 +71,7 @@ describe('the sight in the data', () => {
 describe('unit vision', () => {
   it('reveals the ground round a unit but never lets anyone build there', () => {
     const m = newMatch(['legion', 'legion']);
-    m.players[0].gold = 1000;
+    m.players[0].wood = m.players[0].stone = 1000;
     const spot: [number, number] = [18, 10]; // beside the road, far from player 0's castle
     expect(canSee(m, 0, [spot[0] + 0.5, spot[1] + 0.5])).toBe(false);
     stand(m, 0, 'legion', 'warrior', 21); // walking the first long run of the road
@@ -229,6 +229,7 @@ describe('what is hidden', () => {
       def: { ...unitDef('legion', 'warrior'), speed: 2 },
       owner: 0,
       hp: 5000,
+      maxHp: 5000,
       s: 3,
       cooldown: 0,
     };

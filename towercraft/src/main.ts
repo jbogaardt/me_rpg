@@ -5,29 +5,40 @@
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture, TextureStyle } from 'pixi.js';
 import { createAi } from './sim/ai';
 import { CASTLES, COLS, ROAD_LENGTH, ROWS, headingAt } from './sim/board';
-import { MAX_LEVEL, RACES, RACE_IDS, type RaceId, type SheetKind, type TowerDef, type UnitDef } from './sim/races';
+import { MAX_LEVEL, RACES, RACE_IDS, type Cost, type RaceId, type SheetKind, type TowerDef, type UnitDef, type UpgradeDef } from './sim/races';
 import {
-  BASE_PAY,
   PAY_EVERY,
-  QUEUE_MAX,
-  setOrder,
+  UNIT_CAP,
+  boostOf,
   buildReach,
   buildTower,
+  buyUpgrade,
+  canAfford,
   canBuild,
   canSee,
+  hasBuilding,
+  incomeOf,
   isCastleSeen,
   isSeen,
+  loadBunker,
   newMatch,
+  nextUpgrade,
+  setOrder,
+  soldierCost,
   step,
+  towerUnlocked,
   trainUnit,
   unitPos,
+  unitUnlocked,
   upgradeCastle,
   upgradeCost,
+  upgradeLevel,
   visionOf,
   type Death,
   type Match,
   type Owner,
   type Shot,
+  type Tower,
   type Unit,
   type Vision,
 } from './sim/sim';
@@ -41,7 +52,8 @@ const YOU: Owner = 0;
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 /** How big a unit's sprite is drawn (its frame times this): walkers scale with their hit points, flyers have their own size. */
-const unitScale = (def: UnitDef) => SHEETS[def.kind].scale ?? 1.1 + Math.min(0.7, Math.sqrt(def.hp) / 55);
+const unitScale = (def: UnitDef) =>
+  def.look?.scale ?? SHEETS[def.kind].scale ?? 1.1 + Math.min(0.7, Math.sqrt(def.hp) / 55);
 /** The figure in a frame is about this tall (px), standing on the frame's anchor: where a health bar goes. */
 const FIGURE = 32;
 
@@ -60,6 +72,11 @@ const SHEETS: Record<SheetKind, Sheet> = {
   archer: { frame: 72, walk: [1, 2, 0, 3, 4, 0], attack: [5, 6, 7, 8, 9, 10], death: [11, 12, 13] },
   gryphon: { frame: 100, walk: [0, 1, 2, 3], attack: [0, 1, 2, 3, 4, 5, 6], death: [7, 8, 9, 10, 11, 12], scale: 0.8 },
   glider: { frame: 100, walk: [0, 1], attack: [0], death: [2, 3, 4], scale: 0.7 },
+  // Bats and birds: a wing-beat cycle down the first rows, a dive for the attack, then the death (13 rows, 32 px or 64 px frames).
+  bat: { frame: 32, walk: [0, 1, 2, 3, 4, 5], attack: [6, 7, 8, 7], death: [9, 10, 11], scale: 1.5 },
+  bigbat: { frame: 64, walk: [0, 1, 2, 3, 4, 5], attack: [6, 7, 8, 7], death: [9, 10, 11], scale: 1 },
+  // The field catapult: four rows of the machine, drawn the same whatever it does.
+  engine: { frame: 72, walk: [0], attack: [1, 2, 3, 0], death: [3], scale: 1.2 },
 };
 const STRIDE = 0.9; // cells walked per stride
 const DEATH_FRAME = 0.12; // seconds per death frame

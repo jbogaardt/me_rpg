@@ -74,3 +74,42 @@ export const CASTLES: readonly [[number, number], [number, number]] = [
 ];
 /** Cells within this distance of a castle's centre belong to the castle: nothing is built there. */
 export const CASTLE_CLEAR = 2.2;
+
+/** Where the road's nearest straight run lies from a point, measured at right angles (so a unit can step straight off it). */
+export interface Foot {
+  /** Cells along the road from its start to the point on it straight across from the tower. */
+  s: number;
+  /** Cells between that point on the road and the tower, straight across. */
+  d: number;
+  /** The way off the road toward the tower (a unit vector along one axis: never diagonal). */
+  dir: [number, number];
+}
+
+const feet = new Map<number, Foot | null>();
+
+/**
+ * The road point straight across from a cell (the closest run the cell lies beside, measured square to that run), or nothing when
+ * the cell is past a corner and no run is straight across from it. Units leave the road here and nowhere else to reach a tower.
+ */
+export function footOf(col: number, row: number): Foot | undefined {
+  const key = cellIndex(col, row);
+  let best = feet.get(key);
+  if (best !== undefined) return best ?? undefined;
+  const [tx, ty] = centre([col, row]);
+  best = null;
+  let walked = 0;
+  for (let i = 0; i < RUNS.length; i++) {
+    const [x0, y0] = centre(WAYPOINTS[i]!);
+    const [x1, y1] = centre(WAYPOINTS[i + 1]!);
+    if (y0 === y1 && tx >= Math.min(x0, x1) && tx <= Math.max(x0, x1)) {
+      const d = Math.abs(ty - y0);
+      if (d > 0 && (!best || d < best.d)) best = { s: walked + Math.abs(tx - x0), d, dir: [0, Math.sign(ty - y0)] };
+    } else if (x0 === x1 && ty >= Math.min(y0, y1) && ty <= Math.max(y0, y1)) {
+      const d = Math.abs(tx - x0);
+      if (d > 0 && (!best || d < best.d)) best = { s: walked + Math.abs(ty - y0), d, dir: [Math.sign(tx - x0), 0] };
+    }
+    walked += RUNS[i]!;
+  }
+  feet.set(key, best);
+  return best ?? undefined;
+}

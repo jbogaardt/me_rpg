@@ -1,25 +1,42 @@
 // The rules of a match (Pixi-free, deterministic: the same commands at the same times give the same game, so it is unit-tested
-// without a browser and can later run on a server). Two castles at the ends of one road. A castle trains units, which march
-// toward the enemy castle and fight whatever is in reach on the way: units hit units, towers and the castle. Towers hit units
-// only, each its own kind (ground, air or both; area damage; poison), and some towers only help: an aura that strengthens or heals
-// friends, a detector that reveals cloaked units. Air units fly the straight line between castles; cloaked units are unseen
-// (untargetable) unless a detector of the other side is near. Towers go within the castle's build reach (grown by upgrading it) or the reach of a tower already built, so a front
-// line is pushed forward tower by tower. Fog of war: each side sees round its castle, towers and units (and the ground it may
-// build on); only units may clear fog temporarily, and never build there. What a side cannot see it cannot target. The first
-// castle destroyed loses.
+// without a browser and can later run on a server). Two castles at the ends of one road. Everything costs wood and stone (the
+// castle's income, plus what each side's mills and quarries add every pay day) and a purchase is instant: no queue, no wait.
+// The castle sells its base unit; the other units are unlocked by the producer buildings standing (`TowerDef.trains`), and a
+// smithy-type building hosts upgrades. Units march along the road toward the enemy castle (flyers follow it too, over everything)
+// and fight what is in reach: units hit units, towers and the castle, some in a blast (`splash`), several at once (`multi`) or by
+// blowing themselves up (`suicide`); a unit that cannot reach a tower from the road steps straight off it, square to the road
+// and never diagonally, and back again when the tower is down. Towers hit units only, each its own kind (ground, air or both; area
+// damage; poison); some only help (an aura, a detector), some host units (a bunker holds ranged units that shoot from it), some
+// make money or unlock units. Cloaked units are unseen unless a detector of the other side is near. Buildings go within the
+// castle's build reach (grown by upgrading it) or the reach of a tower already built, so a front line is pushed forward tower by
+// tower. Fog of war: each side sees round its castle, towers and units (and the ground it may build on); only units may clear
+// fog temporarily, and never build there. What a side cannot see it cannot target. Only the castle must fall: the first destroyed
+// loses, but razing buildings cuts the foe's income, units and upgrades.
 
-import { CASTLES, CASTLE_CLEAR, ROAD_CELLS, ROAD_LENGTH, SCENERY_CELLS, cellIndex, inBoard, pointAt } from './board';
-import { MAX_LEVEL, RACES, type RaceId, type TowerDef, type UnitDef } from './races';
+import {
+  CASTLES,
+  CASTLE_CLEAR,
+  ROAD_CELLS,
+  ROAD_LENGTH,
+  SCENERY_CELLS,
+  cellIndex,
+  footOf,
+  inBoard,
+  pointAt,
+} from './board';
+import { MAX_LEVEL, RACES, type Cost, type RaceId, type TowerDef, type UnitDef, type UpgradeDef, price } from './races';
 
-export const START_GOLD = 150;
+export const START_RES: Cost = price(120, 40);
 export const PAY_EVERY = 5;
-export const BASE_PAY = 30;
 /** A match that goes on this long (seconds) is decided on castle hit points left. */
 export const TIME_LIMIT = 1200;
-export const QUEUE_MAX = 8;
+/** Units one side may have alive at once (there is no queue to hold them back, so the rules do). */
+export const UNIT_CAP = 120;
 /** How far (cells) a castle's body reaches: attackers hit its edge, not its centre. */
 export const CASTLE_RADIUS = 1.2;
 const TOWER_RADIUS = 0.5;
+/** The farthest (cells, square to the road) a unit will step off it to take a tower down. */
+export const DETOUR_MAX = 9;
 
 export type Owner = 0 | 1;
 
@@ -28,11 +45,22 @@ export interface Unit {
   def: UnitDef;
   owner: Owner;
   hp: number;
-  /** Cells walked from its own castle toward the other (along the road, or the straight line for an air unit). */
+  maxHp: number;
+  /** Cells walked from its own castle along the road (a flyer follows the road too). */
   s: number;
   cooldown: number;
   /** Poison on it: hit points lost a second, for `left` more seconds. */
   dot?: { dps: number; left: number };
+  /** Off the road to take a tower down: straight across from the road (`dir`, one axis), `d` cells out, at most `max`. */
+  off?: { tower: number; dir: [number, number]; d: number; max: number };
+  /** Blew itself up (no bounty for the foe). */
+  spent?: boolean;
+}
+
+/** A unit loaded into a bunker: it shoots from there on its own cooldown. */
+export interface Garrisoned {
+  def: UnitDef;
+  cooldown: number;
 }
 
 export interface Tower {
@@ -43,6 +71,7 @@ export interface Tower {
   row: number;
   hp: number;
   cooldown: number;
+  garrison: Garrisoned[];
 }
 
 export interface Castle {
@@ -50,11 +79,6 @@ export interface Castle {
   maxHp: number;
   level: number;
   cooldown: number;
-}
-
-export interface Training {
-  def: UnitDef;
-  left: number;
 }
 
 /** What this player's units do about what they meet on the way: stop and fight it, or walk on past it. */
@@ -65,9 +89,11 @@ export interface Orders {
 
 export interface Player {
   race: RaceId;
-  gold: number;
+  wood: number;
+  stone: number;
   castle: Castle;
-  queue: Training[];
+  /** Levels bought of each upgrade line (by `UpgradeDef.id`). */
+  upgrades: Record<string, number>;
   /** Orders for every unit this player has, now and later: the castle is always attacked once in reach. */
   orders: Orders;
 }
@@ -78,6 +104,8 @@ export interface Shot {
   to: [number, number];
   melee: boolean;
   splash: number;
+  /** One of several struck at once (a flame, a sweeping blade): drawn as a spray, not a missile. */
+  multi?: boolean;
 }
 
 /** A unit killed this step, where it fell, for the renderer to play its death. */
@@ -87,6 +115,8 @@ export interface Death {
   owner: Owner;
   def: UnitDef;
   s: number;
+  /** It blew itself up: the blast's radius (cells). */
+  boom?: number;
 }
 
 export interface Match {
@@ -109,9 +139,10 @@ export function newMatch(races: [RaceId, RaceId]): Match {
     const hp = RACES[race].castle.hp;
     return {
       race,
-      gold: START_GOLD,
+      wood: START_RES.wood,
+      stone: START_RES.stone,
       castle: { hp, maxHp: hp, level: 1, cooldown: 0 },
-      queue: [],
+      upgrades: {},
       orders: { towers: 'attack', units: 'attack' },
     };
   };
@@ -132,26 +163,100 @@ export function newMatch(races: [RaceId, RaceId]): Match {
 export const enemy = (o: Owner): Owner => (o === 0 ? 1 : 0);
 export const raceOf = (m: Match, o: Owner) => RACES[m.players[o].race];
 
-/** How far (cells) an air unit flies between the castles: the straight line. */
-export const AIR_LENGTH = Math.hypot(CASTLES[1][0] - CASTLES[0][0], CASTLES[1][1] - CASTLES[0][1]);
-
-/** How far a unit can walk or fly toward the enemy castle before it is at the castle's edge. */
-const goalOf = (def: Pick<UnitDef, 'air'>) => (def.air ? AIR_LENGTH : ROAD_LENGTH) - CASTLE_RADIUS;
-
-/** Where a unit is, in cells: along the road from its own castle, or on the straight line for an air unit. */
-export function unitPos(u: Pick<Unit, 'owner' | 's' | 'def'>): [number, number] {
-  if (u.def.air) {
-    const [from, to] = [CASTLES[u.owner], CASTLES[enemy(u.owner)]];
-    const t = Math.min(1, Math.max(0, u.s / AIR_LENGTH));
-    return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
-  }
-  return pointAt(u.owner === 0 ? u.s : ROAD_LENGTH - u.s);
+/** Where a unit is, in cells: along the road from its own castle (a flyer too), and off to the side when it has stepped off the road. */
+export function unitPos(u: Pick<Unit, 'owner' | 's' | 'off'>): [number, number] {
+  const [x, y] = pointAt(u.owner === 0 ? u.s : ROAD_LENGTH - u.s);
+  return u.off ? [x + u.off.dir[0] * u.off.d, y + u.off.dir[1] * u.off.d] : [x, y];
 }
+
+/** How far a unit can walk before it is at the enemy castle's edge. */
+const GOAL = ROAD_LENGTH - CASTLE_RADIUS;
 
 const dist = (a: readonly [number, number], b: readonly [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const centreOf = (t: { col: number; row: number }): [number, number] => [t.col + 0.5, t.row + 0.5];
 
-export type Result = 'ok' | 'over' | 'gold' | 'unknown' | 'tier' | 'queue' | 'max';
+export type Result =
+  'ok' | 'over' | 'gold' | 'unknown' | 'tier' | 'max' | 'needs' | 'limit' | 'cap' | 'full' | 'nobunker';
+
+// --- Money -----------------------------------------------------------------------------------------------------------
+
+export const canAfford = (p: Pick<Player, 'wood' | 'stone'>, c: Cost) => p.wood >= c.wood && p.stone >= c.stone;
+const pay = (p: Pick<Player, 'wood' | 'stone'>, c: Cost) => {
+  p.wood -= c.wood;
+  p.stone -= c.stone;
+};
+const earn = (p: Pick<Player, 'wood' | 'stone'>, c: Partial<Cost>) => {
+  p.wood += c.wood ?? 0;
+  p.stone += c.stone ?? 0;
+};
+
+/** What `owner` earns every pay day: the castle's income at its level plus every standing mill and quarry. */
+export function incomeOf(m: Match, owner: Owner): Cost {
+  const p = m.players[owner];
+  const base = raceOf(m, owner).castle.income[p.castle.level - 1]!;
+  const out = { ...base };
+  for (const t of m.towers)
+    if (t.owner === owner && t.hp > 0 && t.def.econ) {
+      out.wood += t.def.econ.wood ?? 0;
+      out.stone += t.def.econ.stone ?? 0;
+    }
+  return out;
+}
+
+// --- Buildings that must stand, and upgrades ---------------------------------------------------------------------------
+
+/** Does `owner` have this building standing? */
+export const hasBuilding = (m: Match, owner: Owner, id: string) =>
+  m.towers.some((t) => t.owner === owner && t.hp > 0 && t.def.id === id);
+
+/** Can `owner` buy this unit now, apart from the money: the castle level and the building it needs. */
+export function unitUnlocked(m: Match, owner: Owner, def: UnitDef): 'ok' | 'tier' | 'needs' {
+  if (def.tier > m.players[owner].castle.level) return 'tier';
+  if (def.needs && !hasBuilding(m, owner, def.needs)) return 'needs';
+  return 'ok';
+}
+
+/** Can `owner` build this kind of building now, apart from where and the money: the castle level, the building it needs, its limit. */
+export function towerUnlocked(m: Match, owner: Owner, def: TowerDef): 'ok' | 'tier' | 'needs' | 'limit' {
+  if (def.tier > m.players[owner].castle.level) return 'tier';
+  if (def.needs && !hasBuilding(m, owner, def.needs)) return 'needs';
+  if (def.limit !== undefined && m.towers.filter((t) => t.owner === owner && t.def.id === def.id).length >= def.limit)
+    return 'limit';
+  return 'ok';
+}
+
+/** The levels `owner` has bought of an upgrade line. */
+export const upgradeLevel = (m: Match, owner: Owner, id: string) => m.players[owner].upgrades[id] ?? 0;
+
+/** What a side's upgrades multiply a unit's `damage` or `hp` by (1 = nothing bought). */
+export function boostOf(m: Match, owner: Owner, def: Pick<UnitDef, 'air'>, stat: UpgradeDef['stat']): number {
+  let bonus = 0;
+  for (const up of raceOf(m, owner).upgrades)
+    if (up.stat === stat && up.applies === (def.air ? 'air' : 'ground'))
+      bonus += up.perLevel * upgradeLevel(m, owner, up.id);
+  return 1 + bonus;
+}
+
+/** The next level of an upgrade line: its price and castle level, or nothing at the top. */
+export function nextUpgrade(m: Match, owner: Owner, up: UpgradeDef) {
+  return up.levels[upgradeLevel(m, owner, up.id)];
+}
+
+/** Buy the next level of an upgrade line (instant): needs its building, the castle level and the money. */
+export function buyUpgrade(m: Match, owner: Owner, id: string): Result {
+  if (m.winner >= 0) return 'over';
+  const up = raceOf(m, owner).upgrades.find((u) => u.id === id);
+  if (!up) return 'unknown';
+  const next = nextUpgrade(m, owner, up);
+  if (!next) return 'max';
+  const p = m.players[owner];
+  if (next.tier > p.castle.level) return 'tier';
+  if (!hasBuilding(m, owner, up.needs)) return 'needs';
+  if (!canAfford(p, next.cost)) return 'gold';
+  pay(p, next.cost);
+  p.upgrades[id] = upgradeLevel(m, owner, id) + 1;
+  return 'ok';
+}
 
 // --- Sight and auras -------------------------------------------------------------------------------------------------
 
@@ -240,17 +345,45 @@ export function powerAt(m: Match, owner: Owner, at: readonly [number, number]): 
 
 // --- Commands --------------------------------------------------------------------------------------------------------
 
-/** Pay for a unit; the castle trains it in turn (a queue of QUEUE_MAX) and sends it down the road. */
+/** Spacing (cells) between units that walk out together. */
+const SPACING = 0.5;
+
+/** Buy a unit: it appears at the castle at once and marches. Needs the castle level, the building that unlocks it and the money. */
 export function trainUnit(m: Match, owner: Owner, unitId: string): Result {
   if (m.winner >= 0) return 'over';
   const p = m.players[owner];
   const def = raceOf(m, owner).units.find((u) => u.id === unitId);
   if (!def) return 'unknown';
-  if (def.tier > p.castle.level) return 'tier';
-  if (p.queue.length >= QUEUE_MAX) return 'queue';
-  if (p.gold < def.cost) return 'gold';
-  p.gold -= def.cost;
-  p.queue.push({ def, left: def.train });
+  const open = unitUnlocked(m, owner, def);
+  if (open !== 'ok') return open;
+  if (m.units.reduce((n, u) => n + (u.owner === owner ? 1 : 0), 0) + def.count > UNIT_CAP) return 'cap';
+  if (!canAfford(p, def.cost)) return 'gold';
+  pay(p, def.cost);
+  const maxHp = def.hp * boostOf(m, owner, def, 'hp');
+  for (let i = 0; i < def.count; i++)
+    m.units.push({ id: m.nextId++, def, owner, hp: maxHp, maxHp, s: i * SPACING, cooldown: 0 });
+  return 'ok';
+}
+
+/** What it costs to load one soldier of a purchase into a bunker: its share of the price. */
+export const soldierCost = (def: UnitDef): Cost =>
+  price(Math.ceil(def.cost.wood / def.count), Math.ceil(def.cost.stone / def.count));
+
+/** Load one ranged unit into one of `owner`'s bunkers (instant): it shoots from there for as long as the bunker stands. */
+export function loadBunker(m: Match, owner: Owner, towerId: number, unitId: string): Result {
+  if (m.winner >= 0) return 'over';
+  const t = m.towers.find((x) => x.id === towerId && x.owner === owner && x.hp > 0);
+  const def = raceOf(m, owner).units.find((u) => u.id === unitId);
+  if (!t || !def) return 'unknown';
+  if (!t.def.bunker || !def.garrison) return 'nobunker';
+  const open = unitUnlocked(m, owner, def);
+  if (open !== 'ok') return open;
+  if (t.garrison.length >= t.def.bunker.slots) return 'full';
+  const p = m.players[owner];
+  const cost = soldierCost(def);
+  if (!canAfford(p, cost)) return 'gold';
+  pay(p, cost);
+  t.garrison.push({ def, cooldown: 0 });
   return 'ok';
 }
 
@@ -259,19 +392,19 @@ export function setOrder(m: Match, owner: Owner, what: keyof Orders, to: Orders[
   m.players[owner].orders[what] = to;
 }
 
-/** Gold to take the castle up a level, or undefined at the top. */
-export function upgradeCost(m: Match, owner: Owner): number | undefined {
+/** What it costs to take the castle up a level, or undefined at the top. */
+export function upgradeCost(m: Match, owner: Owner): Cost | undefined {
   return raceOf(m, owner).castle.upgrades[m.players[owner].castle.level - 1];
 }
 
-/** Raise the castle a level: more build reach, pay and hit points, and the next tier of units and towers. */
+/** Raise the castle a level: more build reach, income and hit points, and the next tier of units and towers. */
 export function upgradeCastle(m: Match, owner: Owner): Result {
   if (m.winner >= 0) return 'over';
   const p = m.players[owner];
   const cost = upgradeCost(m, owner);
   if (p.castle.level >= MAX_LEVEL || cost === undefined) return 'max';
-  if (p.gold < cost) return 'gold';
-  p.gold -= cost;
+  if (!canAfford(p, cost)) return 'gold';
+  pay(p, cost);
   p.castle.level++;
   const extra = raceOf(m, owner).castle.hpPerLevel;
   p.castle.maxHp += extra;
@@ -301,9 +434,10 @@ export function canBuild(m: Match, owner: Owner, def: TowerDef, col: number, row
   const c: [number, number] = [col + 0.5, row + 0.5];
   if (CASTLES.some((k) => dist(c, k) < CASTLE_CLEAR)) return 'castle';
   if (towerAt(m, col, row)) return 'taken';
-  if (def.tier > m.players[owner].castle.level) return 'tier';
+  const open = towerUnlocked(m, owner, def);
+  if (open !== 'ok') return open;
   if (!inBuildArea(m, owner, col, row)) return 'area';
-  if (m.players[owner].gold < def.cost) return 'gold';
+  if (!canAfford(m.players[owner], def.cost)) return 'gold';
   return 'ok';
 }
 
@@ -312,8 +446,8 @@ export function buildTower(m: Match, owner: Owner, towerId: string, col: number,
   if (!def) return 'unknown';
   const why = canBuild(m, owner, def, col, row);
   if (why !== 'ok') return why;
-  m.players[owner].gold -= def.cost;
-  m.towers.push({ id: m.nextId++, def, owner, col, row, hp: def.hp, cooldown: 0 });
+  pay(m.players[owner], def.cost);
+  m.towers.push({ id: m.nextId++, def, owner, col, row, hp: def.hp, cooldown: 0, garrison: [] });
   return 'ok';
 }
 
@@ -321,9 +455,8 @@ export function buildTower(m: Match, owner: Owner, towerId: string, col: number,
 
 /** A kill pays the killer this share (1/n) of the unit's price: the lever that makes a winning fight snowball. */
 const BOUNTY_SHARE = 2;
-const bounty = (def: UnitDef) => Math.max(1, Math.round(def.cost / def.count / BOUNTY_SHARE));
-/** Spacing (cells) between units that walk out together. */
-const SPACING = 0.5;
+const bounty = (def: UnitDef): Cost =>
+  price(Math.round(def.cost.wood / def.count / BOUNTY_SHARE), Math.round(def.cost.stone / def.count / BOUNTY_SHARE));
 
 type Target = { kind: 'unit'; unit: Unit } | { kind: 'tower'; tower: Tower } | { kind: 'castle'; owner: Owner };
 
@@ -383,19 +516,40 @@ interface Blow {
   damage: number;
   splash: number;
   dot?: { dps: number; seconds: number };
+  /** Strike up to this many enemy units within range at once (the target and the nearest others). */
+  multi: number;
+  /** Multiplies damage against towers and castles. */
+  siege: number;
+  /** A blow, not a missile (for the renderer). */
+  melee: boolean;
 }
 
-/** Hurt a target (and, with splash, the enemy units near it that the attacker can hit; poison renews on each). */
+/**
+ * Hurt a target and, by the blow, the others it reaches: with `splash` the enemy units (and, for an attacker that may fight towers,
+ * towers) near it; with `multi` the nearest enemy units within the attacker's range. Poison renews on each.
+ */
 function strike(m: Match, r: Reach, t: Target, blow: Blow) {
   const at = targetPoint(t);
   const burn = (u: Unit) => {
     u.hp -= blow.damage;
     if (blow.dot) u.dot = { dps: blow.dot.dps, left: blow.dot.seconds };
   };
+  m.shots.push({ from: [...r.from], to: at, melee: blow.melee, splash: blow.splash });
   if (t.kind === 'unit') burn(t.unit);
-  else if (t.kind === 'tower') t.tower.hp -= blow.damage;
-  else m.players[t.owner].castle.hp -= blow.damage;
-  if (blow.splash > 0)
+  else if (t.kind === 'tower') t.tower.hp -= blow.damage * blow.siege;
+  else m.players[t.owner].castle.hp -= blow.damage * blow.siege;
+  if (t.kind === 'unit' && blow.multi > 1) {
+    const near = m.units
+      .filter((u) => u !== t.unit && canHit(m, r, u) && dist(r.from, unitPos(u)) <= r.range)
+      .map((u) => [u, dist(r.from, unitPos(u))] as const)
+      .sort((a, b) => a[1] - b[1] || a[0].id - b[0].id)
+      .slice(0, blow.multi - 1);
+    for (const [u] of near) {
+      burn(u);
+      m.shots.push({ from: [...r.from], to: unitPos(u), melee: false, splash: 0, multi: true });
+    }
+  }
+  if (blow.splash > 0) {
     for (const u of m.units)
       if (
         hittable(r, u) &&
@@ -404,6 +558,33 @@ function strike(m: Match, r: Reach, t: Target, blow: Blow) {
         canHit(m, r, u)
       )
         burn(u);
+    if (r.towers)
+      for (const o of m.towers)
+        if (
+          o.owner !== r.owner &&
+          o.hp > 0 &&
+          !(t.kind === 'tower' && o === t.tower) &&
+          dist(at, centreOf(o)) <= blow.splash + TOWER_RADIUS &&
+          isSeen(m, r.owner, o, r.vision)
+        )
+          o.hp -= blow.damage * blow.siege;
+  }
+}
+
+/** The tower a unit should step off the road for: one it can see, whose foot is on the stretch it walks this step, out of reach from the road. */
+function detourFor(m: Match, u: Unit, vision: Vision, nextS: number): Tower | undefined {
+  let best: Tower | undefined;
+  let bestD = Infinity;
+  for (const t of m.towers) {
+    if (t.owner === u.owner || t.hp <= 0) continue;
+    const foot = footOf(t.col, t.row);
+    if (!foot || foot.d > DETOUR_MAX || foot.d - TOWER_RADIUS <= u.def.range) continue;
+    const s = u.owner === 0 ? foot.s : ROAD_LENGTH - foot.s;
+    if (s < u.s - 1e-6 || s > nextS + 1e-6 || foot.d >= bestD || !isSeen(m, u.owner, t, vision)) continue;
+    best = t;
+    bestD = foot.d;
+  }
+  return best;
 }
 
 export function step(m: Match, dt: number): void {
@@ -416,22 +597,7 @@ export function step(m: Match, dt: number): void {
   m.payTimer += dt;
   while (m.payTimer >= PAY_EVERY) {
     m.payTimer -= PAY_EVERY;
-    for (const o of [0, 1] as const) {
-      const p = m.players[o];
-      p.gold += BASE_PAY + raceOf(m, o).castle.pay[p.castle.level - 1]!;
-    }
-  }
-
-  // Castles train: the head of the queue counts down, then its units step out.
-  for (const o of [0, 1] as const) {
-    const q = m.players[o].queue;
-    const head = q[0];
-    if (!head) continue;
-    head.left -= dt;
-    if (head.left > 0) continue;
-    q.shift();
-    for (let i = 0; i < head.def.count; i++)
-      m.units.push({ id: m.nextId++, def: head.def, owner: o, hp: head.def.hp, s: i * SPACING, cooldown: 0 });
+    for (const o of [0, 1] as const) earn(m.players[o], incomeOf(m, o));
   }
 
   // Poison burns, and healing auras mend.
@@ -447,7 +613,7 @@ export function step(m: Match, dt: number): void {
     const c = centreOf(t);
     const mend = aura.amount * dt;
     for (const u of m.units)
-      if (u.owner === t.owner && u.hp > 0 && dist(c, unitPos(u)) <= aura.radius) u.hp = Math.min(u.def.hp, u.hp + mend);
+      if (u.owner === t.owner && u.hp > 0 && dist(c, unitPos(u)) <= aura.radius) u.hp = Math.min(u.maxHp, u.hp + mend);
     for (const o of m.towers)
       if (o.owner === t.owner && o.hp > 0 && dist(c, centreOf(o)) <= aura.radius)
         o.hp = Math.min(o.def.hp, o.hp + mend);
@@ -458,10 +624,12 @@ export function step(m: Match, dt: number): void {
   // What each side sees this step (units that spawned count; those about to die still do until the step ends).
   const vision = visionOf(m);
 
-  // Units fight what is in reach, or walk on.
+  // Units fight what is in reach, or walk on (stepping off the road to take a tower it cannot otherwise reach).
   for (const u of m.units) {
+    if (u.spent) continue;
     u.cooldown -= dt;
     const from = unitPos(u);
+    const orders = m.players[u.owner].orders;
     const reach: Reach = {
       owner: u.owner,
       vision,
@@ -469,45 +637,98 @@ export function step(m: Match, dt: number): void {
       range: u.def.range,
       ground: true,
       air: !!u.def.hitsAir,
-      units: m.players[u.owner].orders.units === 'attack',
-      towers: m.players[u.owner].orders.towers === 'attack',
+      units: orders.units === 'attack',
+      towers: orders.towers === 'attack',
       castle: true,
     };
     const target = pick(m, reach);
     if (target) {
-      if (u.cooldown <= 0) {
-        u.cooldown = u.def.cooldown;
-        m.shots.push({ from, to: targetPoint(target), melee: u.def.range <= 1.5, splash: 0 });
-        strike(m, reach, target, { damage: u.def.damage * powerAt(m, u.owner, from), splash: 0 });
+      if (u.cooldown > 0) continue;
+      u.cooldown = u.def.cooldown;
+      strike(m, reach, target, {
+        damage: u.def.damage * boostOf(m, u.owner, u.def, 'damage') * powerAt(m, u.owner, from),
+        splash: u.def.splash ?? 0,
+        multi: u.def.multi ?? 1,
+        siege: u.def.siege ?? 1,
+        melee: u.def.range <= 1.5,
+      });
+      if (u.def.suicide) {
+        u.hp = 0;
+        u.spent = true;
       }
-    } else u.s = Math.min(goalOf(u.def), u.s + u.def.speed * dt);
+    } else if (u.off) {
+      const off = u.off;
+      const tower = m.towers.find((t) => t.id === off.tower);
+      const wanted = tower !== undefined && tower.hp > 0 && orders.towers === 'attack';
+      off.d = Math.min(off.max, off.d + (wanted ? 1 : -1) * u.def.speed * dt);
+      if (off.d <= 0) delete u.off;
+    } else {
+      const next = Math.min(GOAL, u.s + u.def.speed * dt);
+      const tower = orders.towers === 'attack' ? detourFor(m, u, vision, next) : undefined;
+      if (tower) {
+        const foot = footOf(tower.col, tower.row)!;
+        u.s = u.owner === 0 ? foot.s : ROAD_LENGTH - foot.s;
+        u.off = { tower: tower.id, dir: foot.dir, d: 0, max: Math.max(0, foot.d - TOWER_RADIUS) };
+      } else u.s = next;
+    }
   }
 
   // Towers and castles shoot units.
   for (const t of m.towers) {
-    t.cooldown -= dt;
-    if (t.cooldown > 0 || t.hp <= 0 || t.def.damage <= 0) continue;
+    if (t.hp <= 0) continue;
     const from = centreOf(t);
-    const reach: Reach = {
-      owner: t.owner,
-      vision,
-      from,
-      range: t.def.range,
-      ground: t.def.hits !== 'air',
-      air: t.def.hits !== 'ground',
-      units: true,
-      towers: false,
-      castle: false,
-    };
-    const target = pick(m, reach);
-    if (!target) continue;
-    t.cooldown = t.def.cooldown;
-    m.shots.push({ from, to: targetPoint(target), melee: false, splash: t.def.splash });
-    strike(m, reach, target, {
-      damage: t.def.damage * powerAt(m, t.owner, from),
-      splash: t.def.splash,
-      dot: t.def.dot,
-    });
+    t.cooldown -= dt;
+    if (t.cooldown <= 0 && t.def.damage > 0) {
+      const reach: Reach = {
+        owner: t.owner,
+        vision,
+        from,
+        range: t.def.range,
+        ground: t.def.hits !== 'air',
+        air: t.def.hits !== 'ground',
+        units: true,
+        towers: false,
+        castle: false,
+      };
+      const target = pick(m, reach);
+      if (target) {
+        t.cooldown = t.def.cooldown;
+        strike(m, reach, target, {
+          damage: t.def.damage * powerAt(m, t.owner, from),
+          splash: t.def.splash,
+          dot: t.def.dot,
+          multi: 1,
+          siege: 1,
+          melee: false,
+        });
+      }
+    }
+    // A bunker's soldiers shoot on their own cooldowns, each as its kind of unit does, a little further from the walls.
+    for (const g of t.garrison) {
+      g.cooldown -= dt;
+      if (g.cooldown > 0) continue;
+      const reach: Reach = {
+        owner: t.owner,
+        vision,
+        from,
+        range: g.def.range + (t.def.bunker?.rangeBonus ?? 0),
+        ground: true,
+        air: !!g.def.hitsAir,
+        units: true,
+        towers: false,
+        castle: false,
+      };
+      const target = pick(m, reach);
+      if (!target) continue;
+      g.cooldown = g.def.cooldown;
+      strike(m, reach, target, {
+        damage: g.def.damage * boostOf(m, t.owner, g.def, 'damage') * powerAt(m, t.owner, from),
+        splash: g.def.splash ?? 0,
+        multi: g.def.multi ?? 1,
+        siege: 1,
+        melee: false,
+      });
+    }
   }
   for (const o of [0, 1] as const) {
     const c = m.players[o].castle;
@@ -528,15 +749,20 @@ export function step(m: Match, dt: number): void {
     const target = pick(m, reach);
     if (!target) continue;
     c.cooldown = def.cooldown;
-    m.shots.push({ from: CASTLES[o], to: targetPoint(target), melee: false, splash: 0 });
-    strike(m, reach, target, { damage: def.damage, splash: 0 });
+    strike(m, reach, target, { damage: def.damage, splash: 0, multi: 1, siege: 1, melee: false });
   }
 
-  // The fallen: the other side is paid for units; a razed tower is just gone.
+  // The fallen: the other side is paid for units (not for bombs that went off); a razed tower is just gone.
   m.units = m.units.filter((u) => {
     if (u.hp > 0) return true;
-    m.deaths.push({ at: unitPos(u), owner: u.owner, def: u.def, s: u.s });
-    m.players[enemy(u.owner)].gold += bounty(u.def);
+    m.deaths.push({
+      at: unitPos(u),
+      owner: u.owner,
+      def: u.def,
+      s: u.s,
+      ...(u.spent && u.def.splash ? { boom: u.def.splash } : {}),
+    });
+    if (!u.spent) earn(m.players[enemy(u.owner)], bounty(u.def));
     return false;
   });
   m.towers = m.towers.filter((t) => {

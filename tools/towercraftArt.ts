@@ -29,6 +29,30 @@ export const ART: Item[] = [
   { source: 'tree', from: 'dwarf/units/gryphon_rider', to: 'units/gryphon_rider' },
   { source: 'tree', from: 'goblin/units/glider', to: 'units/glider' },
   { source: 'tree', from: 'germanic/units/archer', to: 'units/germanic_archer' },
+  // More walkers and flyers: every race's second and third units. Same 72x72 sheets (the bats and birds 32x32 and 64x64, the gryphons 100x100).
+  { source: 'tree', from: 'goblin/units/goblin_archer', to: 'units/goblin_archer' },
+  { source: 'tree', from: 'goblin/units/gunpowder_infantry', to: 'units/gunpowder_infantry' },
+  { source: 'tree', from: 'goblin/units/goblin_swordsman', to: 'units/goblin_swordsman' },
+  { source: 'tree', from: 'neutral/units/bat', to: 'units/bat' },
+  { source: 'tree', from: 'neutral/units/dread_bat', to: 'units/dread_bat' },
+  { source: 'tree', from: 'dwarf/units/thunderer', to: 'units/thunderer' },
+  { source: 'tree', from: 'dwarf/units/runesmith', to: 'units/runesmith' },
+  { source: 'tree', from: 'dwarf/units/yale_rider_black_hair_brown_fur', to: 'units/yale_rider_black_hair_brown_fur' },
+  {
+    source: 'tree',
+    from: 'dwarf/units/gryphon_rider_brown_hair_blue_feathers',
+    to: 'units/gryphon_rider_brown_hair_blue_feathers',
+  },
+  {
+    source: 'tree',
+    from: 'dwarf/units/gryphon_rider_red_hair_gray_feathers',
+    to: 'units/gryphon_rider_red_hair_gray_feathers',
+  },
+  { source: 'tree', from: 'teuton/units/saxon_swordsman', to: 'units/saxon_swordsman' },
+  { source: 'tree', from: 'teuton/units/austrian_musketeer', to: 'units/austrian_musketeer' },
+  { source: 'tree', from: 'teuton/units/catapult', to: 'units/catapult' },
+  { source: 'tree', from: 'neutral/units/bird_white', to: 'units/bird_white' },
+  { source: 'tree', from: 'neutral/units/gryphon_gray_feathers', to: 'units/gryphon_gray_feathers' },
   // Portraits for the buttons and the race picker.
   { source: 'pack', from: 'goblin_spearman', to: 'goblin_spearman' },
   { source: 'pack', from: 'goblin_thief', to: 'goblin_thief' },
@@ -60,6 +84,33 @@ export const ART: Item[] = [
   { source: 'tree', from: 'dwarf/buildings/cannon_tower', to: 'dwarf_cannon_tower' },
   { source: 'tree', from: 'teuton/buildings/watch_tower', to: 'teuton_watch_tower' },
   { source: 'tree', from: 'teuton/buildings/catapult_tower', to: 'teuton_catapult_tower' },
+  // Money, production and upgrade buildings, each race its own: mills and quarries, the halls that unlock units, smithies (96x192 or 96x288;
+  // the first square frame is the finished one), and the keep a bunker is drawn with. The goblin cannon tower is 64x128.
+  { source: 'tree', from: 'goblin/buildings/lumber_mill', to: 'goblin_lumber_mill' },
+  { source: 'tree', from: 'goblin/buildings/masons_shop', to: 'goblin_masons_shop' },
+  { source: 'tree', from: 'goblin/buildings/mess_hall', to: 'goblin_mess_hall' },
+  { source: 'tree', from: 'goblin/buildings/town_hall', to: 'goblin_town_hall' },
+  { source: 'tree', from: 'goblin/buildings/farm', to: 'goblin_farm' },
+  { source: 'tree', from: 'goblin/buildings/fortress', to: 'goblin_fortress' },
+  { source: 'tree', from: 'goblin/buildings/smithy', to: 'goblin_smithy' },
+  { source: 'tree', from: 'goblin/buildings/market', to: 'goblin_market' },
+  { source: 'tree', from: 'goblin/buildings/cannon_tower', to: 'goblin_cannon_tower' },
+  { source: 'tree', from: 'dwarf/buildings/lumber_mill', to: 'dwarf_lumber_mill' },
+  { source: 'tree', from: 'dwarf/buildings/masons_shop', to: 'dwarf_masons_shop' },
+  { source: 'tree', from: 'dwarf/buildings/citadel', to: 'dwarf_citadel' },
+  { source: 'tree', from: 'dwarf/buildings/yale_pen', to: 'dwarf_yale_pen' },
+  { source: 'tree', from: 'dwarf/buildings/yale_hunting_lodge', to: 'dwarf_yale_hunting_lodge' },
+  { source: 'tree', from: 'dwarf/buildings/academy', to: 'dwarf_academy' },
+  { source: 'tree', from: 'dwarf/buildings/smithy', to: 'dwarf_smithy' },
+  { source: 'tree', from: 'germanic/buildings/carpenters_shop', to: 'germanic_carpenters_shop' },
+  { source: 'tree', from: 'germanic/buildings/town_hall', to: 'germanic_town_hall' },
+  { source: 'tree', from: 'germanic/buildings/sheep_ranch', to: 'germanic_sheep_ranch' },
+  { source: 'tree', from: 'teuton/buildings/town_hall', to: 'teuton_town_hall' },
+  { source: 'tree', from: 'teuton/buildings/stables', to: 'teuton_stables' },
+  { source: 'tree', from: 'teuton/buildings/masons_shop', to: 'teuton_masons_shop' },
+  { source: 'tree', from: 'teuton/buildings/market', to: 'teuton_market' },
+  { source: 'tree', from: 'teuton/buildings/farm', to: 'teuton_farm' },
+  { source: 'tree', from: 'teuton/buildings/castle', to: 'teuton_fort' },
 ];
 
 /** The credits lines of a Wyrmsun-style credits.txt: `/graphics/x/y.png (by A) (licensed under B)`. */
@@ -84,7 +135,10 @@ function main(tree: string | undefined, pack: string | undefined) {
       src = path.join(tree, 'graphics', `${item.from}.png`);
       lines = treeCredits.get(`/graphics/${item.from}.png`) ?? [];
     } else {
-      if (!pack || !packCredits) throw new Error(`${item.from}: needs the unzipped CC0 pack (second argument)`);
+      if (!pack || !packCredits) {
+        console.log(`${item.to}.png  skipped (needs the unzipped CC0 pack, the second argument)`);
+        continue;
+      }
       src = path.join(pack, `${item.from}.png`);
       lines = [...packCredits].filter(([k]) => k.endsWith(`/${item.from}.png`)).flatMap(([, v]) => v);
       if (lines.length > 1)

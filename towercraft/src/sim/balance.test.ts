@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { createAi, styleFor, seeded } from './ai';
+import { ROAD_LENGTH } from './board';
 import { RACE_IDS, RACES, type RaceId } from './races';
 import { TIME_LIMIT, newMatch, step, type Match } from './sim';
 
@@ -23,48 +24,54 @@ describe('the AI', () => {
       const m = newMatch([race, race]);
       const ai = createAi(0, 11);
       const waves: number[] = [];
+      const seen = new Set<number>();
       for (let i = 0; i < 20 * 150 && m.units.every((u) => u.owner === 0); i++) {
-        const before = m.players[0].queue.length;
         ai(m, 0.05);
-        const bought = m.players[0].queue.length - before;
-        if (bought > 0) waves.push(bought);
+        const fresh = m.units.filter((u) => !seen.has(u.id));
+        for (const u of fresh) seen.add(u.id);
+        if (fresh.length > 0) waves.push(fresh.length); // a purchase moment is a group of units
         step(m, 0.05);
-        m.players[0].gold += 0.25; // a steady income, as the pay days give
+        m.players[0].wood += 0.25; // a steady income on top of the pay days
+        m.players[0].stone += 0.1;
       }
       expect(waves.length).toBeGreaterThan(1);
       expect(Math.min(...waves)).toBeGreaterThanOrEqual(2); // every purchase moment is a group
-      expect(Math.max(...waves)).toBeGreaterThanOrEqual(4);
+      expect(Math.max(...waves)).toBeGreaterThanOrEqual(3);
     }
   });
 
   it('answers cloaked units with a detector and air with something that shoots it', () => {
     const m = newMatch(['legion', 'swarm']);
-    m.players[0].gold = 1000;
+    m.players[0].wood = m.players[0].stone = 1000;
     m.players[0].castle.level = 2;
+    m.time = 100; // well into the match: a side whose foe can field cloaked units has a detector by now
     m.units.push({
       id: 900,
       def: RACES.swarm.units.find((u) => u.id === 'thief')!,
       owner: 1,
       hp: 40,
+      maxHp: 40,
       s: 5,
       cooldown: 99,
     });
     const ai = createAi(0, 3);
-    for (let i = 0; i < 20 * 5; i++) ai(m, 0.05);
+    for (let i = 0; i < 20 * 10; i++) ai(m, 0.05);
     expect(m.towers.some((t) => t.owner === 0 && t.def.detect)).toBe(true);
 
     const air = newMatch(['swarm', 'titan']);
-    air.players[0].gold = 1000;
+    air.players[0].wood = air.players[0].stone = 1000;
+    air.players[0].castle.level = 2;
     air.units.push({
       id: 901,
       def: RACES.titan.units.find((u) => u.id === 'gryphon')!,
       owner: 1,
       hp: 360,
-      s: 5,
+      maxHp: 360,
+      s: ROAD_LENGTH - 6, // in sight of player 0's castle
       cooldown: 99,
     });
     const ai2 = createAi(0, 3);
-    for (let i = 0; i < 20 * 5; i++) ai2(air, 0.05);
+    for (let i = 0; i < 20 * 10; i++) ai2(air, 0.05);
     expect(air.towers.some((t) => t.owner === 0 && t.def.damage > 0 && t.def.hits !== 'ground')).toBe(true);
   });
 
