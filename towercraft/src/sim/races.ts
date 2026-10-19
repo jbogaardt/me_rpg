@@ -1310,7 +1310,7 @@ const UPGRADE_PRICE = [8, 2.5];
 const CASTLE_HP = 1;
 const money = (c: Cost, k: number): Cost => ({ wood: Math.round(c.wood * k), stone: Math.round(c.stone * k) });
 /** The lab's balance lever per race (all income, the castle's and the mills' and quarries'), found with `npm run towercraft:lab` at this pace. */
-const INCOME_BALANCE: Record<RaceId, number> = { swarm: 0.92, titan: 1.04, legion: 1.04 };
+const INCOME_BALANCE: Record<RaceId, number> = { swarm: 0.92, titan: 1.04, legion: 1.0 };
 const earn = (c: Cost, race: RaceId): Cost => ({
   wood: c.wood * INCOME_BALANCE[race],
   stone: c.stone * INCOME_BALANCE[race],
