@@ -17,3 +17,4 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
   headless run of many seeded matches (as `sim.test.ts` plays them), not by feel.
 - **Online** (not started) would be two players against a host or server that runs `step`; the open question is a server that
   decides, versus peers that agree on a deterministic replay. The sim is built so either works.
+- **Ground** is Me RPG's overworld tileset (`public/art/ground.png`, grass and sand cells cut from `public/tilesets/ground_tiles.png`, GPL stamp: see `public/art/CREDITS.md`), each lane tinted a little by its race. The road has no autotiled edges, only a soft outline.
