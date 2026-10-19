@@ -203,6 +203,8 @@
       .race b { font: 700 18px var(--title); }
       .race .face { width: 100%; max-width: 96px; aspect-ratio: 6 / 5; overflow: hidden; display: grid; place-items: center; border-radius: 8px; background: rgba(51, 35, 15, 0.16); border: 1px solid var(--ink-soft); }
       .race .face img { max-width: 100%; height: auto; }
+      .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+      .title-art { display: block; width: auto; max-width: 100%; height: auto; max-height: 40vh; margin: 0 auto 6px; border-radius: 6px; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6); }
       #menu .races { margin-top: 16px; } #menu #credits-btn { margin-top: 18px; }
       .modes { display: flex; gap: 8px; justify-content: center; margin: 6px 0 4px; } .modes .plank { min-width: 84px; font-size: 14px; }
       #join-row input { font: 700 22px var(--title); text-align: center; width: min(320px, 90%); padding: 8px 10px; color: var(--ink); background: #e9dcb6; border: 3px solid #4a3a22; border-radius: 6px; }
@@ -260,7 +262,8 @@
     </aside>
     <div class="overlay" id="menu">
       <div class="panel wood">
-        <h1>Towercraft</h1>
+        <h1 class="sr">Towercraft</h1>
+        <img class="title-art" src="./ui/title.jpg" alt="Towercraft, an RPG adventure: a dusk siege on a stone tower" width="1024" height="572" />
         <div class="modes" id="modes" role="group" aria-label="How to play">
           <button class="plank on" data-mode="solo">Solo</button>
           <button class="plank" data-mode="host">Host</button>
