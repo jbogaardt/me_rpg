@@ -55,11 +55,19 @@ export interface Training {
   left: number;
 }
 
+/** What this player's units do about what they meet on the way: stop and fight it, or walk on past it. */
+export interface Orders {
+  towers: 'attack' | 'bypass';
+  units: 'attack' | 'bypass';
+}
+
 export interface Player {
   race: RaceId;
   gold: number;
   castle: Castle;
   queue: Training[];
+  /** Orders for every unit this player has, now and later: the castle is always attacked once in reach. */
+  orders: Orders;
 }
 
 /** An attack made this step, for the renderer: from a point to a point, in cells; `melee` is a blow, not a missile. */
@@ -97,7 +105,13 @@ export interface Match {
 export function newMatch(races: [RaceId, RaceId]): Match {
   const player = (race: RaceId): Player => {
     const hp = RACES[race].castle.hp;
-    return { race, gold: START_GOLD, castle: { hp, maxHp: hp, level: 1, cooldown: 0 }, queue: [] };
+    return {
+      race,
+      gold: START_GOLD,
+      castle: { hp, maxHp: hp, level: 1, cooldown: 0 },
+      queue: [],
+      orders: { towers: 'attack', units: 'attack' },
+    };
   };
   return {
     time: 0,
@@ -174,6 +188,11 @@ export function trainUnit(m: Match, owner: Owner, unitId: string): Result {
   return 'ok';
 }
 
+/** Tell all of a player's units to fight what they meet (`attack`) or walk on past it (`bypass`): `what` is towers or units. */
+export function setOrder(m: Match, owner: Owner, what: keyof Orders, to: Orders[keyof Orders]): void {
+  m.players[owner].orders[what] = to;
+}
+
 /** Gold to take the castle up a level, or undefined at the top. */
 export function upgradeCost(m: Match, owner: Owner): number | undefined {
   return raceOf(m, owner).castle.upgrades[m.players[owner].castle.level - 1];
@@ -239,14 +258,16 @@ const SPACING = 0.5;
 
 type Target = { kind: 'unit'; unit: Unit } | { kind: 'tower'; tower: Tower } | { kind: 'castle'; owner: Owner };
 
-/** What an attacker can reach: air and/or ground units, and (if `buildings`) towers and the castle. */
+/** What an attacker can reach: air and/or ground units (if `units`), towers (if `towers`) and the enemy castle (if `castle`). */
 interface Reach {
   owner: Owner;
   from: readonly [number, number];
   range: number;
   ground: boolean;
   air: boolean;
-  buildings: boolean;
+  units: boolean;
+  towers: boolean;
+  castle: boolean;
 }
 
 const canHit = (m: Match, r: Pick<Reach, 'owner' | 'ground' | 'air'>, u: Unit) =>
@@ -256,7 +277,7 @@ const canHit = (m: Match, r: Pick<Reach, 'owner' | 'ground' | 'air'>, u: Unit) =
 function pick(m: Match, r: Reach): Target | undefined {
   let best: Target | undefined;
   let bestDist = Infinity;
-  for (const u of m.units) {
+  for (const u of r.units ? m.units : []) {
     if (!canHit(m, r, u)) continue;
     const d = dist(r.from, unitPos(u));
     if (d <= r.range && d < bestDist) {
@@ -264,15 +285,15 @@ function pick(m: Match, r: Reach): Target | undefined {
       bestDist = d;
     }
   }
-  if (r.buildings) {
-    for (const t of m.towers) {
-      if (t.owner === r.owner || t.hp <= 0) continue;
-      const d = dist(r.from, centreOf(t)) - TOWER_RADIUS;
-      if (d <= r.range && d < bestDist) {
-        best = { kind: 'tower', tower: t };
-        bestDist = d;
-      }
+  for (const t of r.towers ? m.towers : []) {
+    if (t.owner === r.owner || t.hp <= 0) continue;
+    const d = dist(r.from, centreOf(t)) - TOWER_RADIUS;
+    if (d <= r.range && d < bestDist) {
+      best = { kind: 'tower', tower: t };
+      bestDist = d;
     }
+  }
+  if (r.castle) {
     const foe = enemy(r.owner);
     const d = dist(r.from, CASTLES[foe]) - CASTLE_RADIUS;
     if (m.players[foe].castle.hp > 0 && d <= r.range && d < bestDist) best = { kind: 'castle', owner: foe };
@@ -363,7 +384,9 @@ export function step(m: Match, dt: number): void {
       range: u.def.range,
       ground: true,
       air: !!u.def.hitsAir,
-      buildings: true,
+      units: m.players[u.owner].orders.units === 'attack',
+      towers: m.players[u.owner].orders.towers === 'attack',
+      castle: true,
     };
     const target = pick(m, reach);
     if (target) {
@@ -386,7 +409,9 @@ export function step(m: Match, dt: number): void {
       range: t.def.range,
       ground: t.def.hits !== 'air',
       air: t.def.hits !== 'ground',
-      buildings: false,
+      units: true,
+      towers: false,
+      castle: false,
     };
     const target = pick(m, reach);
     if (!target) continue;
@@ -409,7 +434,9 @@ export function step(m: Match, dt: number): void {
       range: def.range + CASTLE_RADIUS,
       ground: true,
       air: true,
-      buildings: false,
+      units: true,
+      towers: false,
+      castle: false,
     };
     const target = pick(m, reach);
     if (!target) continue;

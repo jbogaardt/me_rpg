@@ -7,8 +7,10 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 
 - **One road, two castles.** One winding road joins player 0's castle (top) to player 1's (bottom). Units walk it from their own castle
   and meet in between. You win by destroying the other castle (or, after `TIME_LIMIT`, by castle health left).
+- **Orders** (`Orders` in `sim.ts`, set per player with `setOrder`, toggles in the control bar): all of a player's units either stop and fight the
+  towers and the units they meet (`attack`), or walk on past them (`bypass`), each chosen separately; the castle is always attacked once in reach.
 - **Everything comes from the castle**: pay for a unit and it joins the castle's train queue, then walks out and marches on its own,
-  fighting whatever is in reach (units, towers, the castle). There is no unit control yet; the lever is what you train and where you build.
+  fighting whatever is in reach (units, towers, the castle). The levers are what you train, where you build, and those orders.
 - **Towers defend, they do not attack towers**: they shoot enemy units only. Units attack units, towers and castles.
 - **Tower roles** (`TowerDef` in `races.ts`; each race has a few of each): *attackers* hit `ground`, `air` or `both`, and may do area damage
   (`splash`) or poison (`dot`, which renews, never stacks); *auras* strengthen (`power`, +% damage) or `heal` friendly towers, units and

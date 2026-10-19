@@ -8,6 +8,7 @@ import { CASTLES, COLS, ROAD_LENGTH, ROWS, headingAt } from './sim/board';
 import { MAX_LEVEL, RACES, RACE_IDS, type RaceId, type SheetKind, type TowerDef, type UnitDef } from './sim/races';
 import {
   QUEUE_MAX,
+  setOrder,
   buildReach,
   buildTower,
   canBuild,
@@ -561,6 +562,7 @@ void (async () => {
   const trainButtons: [HTMLButtonElement, UnitDef][] = [];
   const buildButtons: [HTMLButtonElement, TowerDef][] = [];
   let upgradeButton: HTMLButtonElement;
+  const orderButtons: [HTMLButtonElement, 'towers' | 'units'][] = [];
 
   function makeControls(race: RaceId) {
     $('train').innerHTML = '<span>Train</span>';
@@ -585,6 +587,17 @@ void (async () => {
       refresh();
     };
     $('castle').append(upgradeButton);
+    orderButtons.length = 0;
+    for (const what of ['towers', 'units'] as const) {
+      const b = document.createElement('button');
+      b.onclick = () => {
+        const o = match.players[YOU].orders;
+        setOrder(match, YOU, what, o[what] === 'attack' ? 'bypass' : 'attack');
+        refresh();
+      };
+      $('castle').append(b);
+      orderButtons.push([b, what]);
+    }
     for (const def of RACES[race].towers) {
       const b = document.createElement('button');
       b.innerHTML = `${towerThumb(def.art, 36)}<span>${def.name}<small>${def.cost}g · ${towerTags(def)}</small></span>`;
@@ -619,6 +632,12 @@ void (async () => {
       upgradeButton.disabled = cost > me.gold;
       const next = RACES[me.race].castle.reach[level]!;
       upgradeButton.innerHTML = `<span>Upgrade castle to ${level + 1}<small>${cost}g · build reach ${next} · tier ${level + 1} units and towers</small></span>`;
+    }
+    for (const [b, what] of orderButtons) {
+      const attack = me.orders[what] === 'attack';
+      const label = what === 'towers' ? ['Attack towers', 'Walk past towers'] : ['Fight units', 'Walk past units'];
+      b.innerHTML = `<span>${attack ? label[0] : label[1]}<small>all your units · tap to ${attack ? 'walk past' : 'attack'}</small></span>`;
+      b.classList.toggle('on', !attack);
     }
     const queue = me.queue.map((q) => q.def.name).join(', ');
     $('queue').textContent = queue ? `Training: ${queue}` : '';

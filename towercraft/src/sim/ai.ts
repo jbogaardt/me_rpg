@@ -10,6 +10,7 @@ import {
   canBuild,
   enemy,
   raceOf,
+  setOrder,
   trainUnit,
   upgradeCastle,
   upgradeCost,
@@ -146,6 +147,11 @@ export function createAi(owner: Owner, seed: number): (m: Match, dt: number) => 
     const me = m.players[owner];
     const race = raceOf(m, owner);
     const level = me.castle.level;
+
+    // Orders: normally fight everything, but with a good army and the other castle hurt, run past the towers and finish it.
+    const army = m.units.filter((u) => u.owner === owner).length;
+    const foeCastle = m.players[enemy(owner)].castle;
+    setOrder(m, owner, 'towers', army >= 4 && foeCastle.hp < foeCastle.maxHp * 0.6 ? 'bypass' : 'attack');
 
     // Up a level once the time is right and it can pay, and not at the cost of having no defence at all.
     const cost = upgradeCost(m, owner);

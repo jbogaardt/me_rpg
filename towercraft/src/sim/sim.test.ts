@@ -17,6 +17,7 @@ import {
   upgradeCastle,
   AIR_LENGTH,
   powerAt,
+  setOrder,
   visibleTo,
   type Match,
   type Owner,
@@ -327,6 +328,73 @@ describe('tower roles', () => {
     standing(m, 'legion', 'ritter', GROUND_S);
     run(m, 5);
     expect(m.towers.every((t) => t.cooldown <= 0)).toBe(true);
+  });
+});
+
+describe('orders', () => {
+  /** Player 0's warrior at the start of the road, with a tower of player 1 and an enemy warrior just ahead of it. */
+  const setup = () => {
+    const m = quiet(newMatch(['legion', 'legion']));
+    put(m, 1, 'legion', 'watch', 4, 5); // beside the road, 2 cells out from player 0's castle
+    const mine: Unit = {
+      id: m.nextId++,
+      def: { ...unitDef('legion', 'warrior'), speed: 2 },
+      owner: 0,
+      hp: 5000,
+      s: 3,
+      cooldown: 0,
+    };
+    const foe: Unit = {
+      id: m.nextId++,
+      def: { ...unitDef('legion', 'warrior'), speed: 0 },
+      owner: 1,
+      hp: 5000,
+      s: ROAD_LENGTH - 9,
+      cooldown: 999,
+    };
+    m.units.push(mine, foe);
+    return { m, mine, foe };
+  };
+  const quiet = (m: Match) => {
+    for (const p of m.players) p.castle.cooldown = 1e9;
+    return m;
+  };
+
+  it('has units stop and attack a tower in reach by default', () => {
+    const { m } = setup();
+    m.towers[0]!.cooldown = 1e9; // the tower itself holds fire, so only the unit's blows count
+    run(m, 6);
+    expect(m.towers[0]!.hp).toBeLessThan(towerDef('legion', 'watch').hp);
+  });
+
+  it('has units walk past towers when told to, leaving them untouched and carrying on', () => {
+    const { m, mine } = setup();
+    m.towers[0]!.cooldown = 1e9;
+    setOrder(m, 0, 'towers', 'bypass');
+    const start = mine.s;
+    run(m, 4);
+    expect(m.towers[0]!.hp).toBe(towerDef('legion', 'watch').hp);
+    expect(mine.s).toBeGreaterThan(start + 5); // it kept walking
+  });
+
+  it('has units fight opposing units by default and walk past them when told to', () => {
+    const fight = setup();
+    fight.m.towers.length = 0;
+    run(fight.m, 12);
+    expect(fight.foe.hp).toBeLessThan(5000);
+    const pass = setup();
+    pass.m.towers.length = 0;
+    setOrder(pass.m, 0, 'units', 'bypass');
+    run(pass.m, 12);
+    expect(pass.foe.hp).toBe(5000);
+    expect(pass.mine.s).toBeGreaterThan(fight.mine.s);
+  });
+
+  it('keeps the orders per player', () => {
+    const m = newMatch(['legion', 'legion']);
+    setOrder(m, 0, 'towers', 'bypass');
+    expect(m.players[0].orders).toEqual({ towers: 'bypass', units: 'attack' });
+    expect(m.players[1].orders).toEqual({ towers: 'attack', units: 'attack' });
   });
 });
 
