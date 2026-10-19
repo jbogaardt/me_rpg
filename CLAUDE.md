@@ -92,6 +92,6 @@ The project is in rapid development, and this is how every session (Claude or hu
 
 The relay (`relay/`) deploys separately: Cloudflare builds and deploys it from `main` itself (no GitHub workflow); see `relay/README.md`. A relay change only reaches players once that build has finished, so wait for it before relying on a new API.
 
-**The site is a gallery of games** (`games/`, `games/games.json`, assembled by `tools/site.ts`, whose header says how to add one): this game builds into `dist/me_rpg/`. Games share an origin, so namespace any `localStorage`/IndexedDB key per game.
+**The site is a gallery of games** (`games/`, listed in `games.json`, assembled by `tools/site.ts`: its header says how to add one): this game builds into `dist/me_rpg/`. Games share an origin: namespace any `localStorage`/IndexedDB key per game.
 
 `.github/workflows/deploy.yml` builds and publishes `dist/` to GitHub Pages on every push to `main` (repo Settings → Pages → Source must be "GitHub Actions"). `vite.config.ts` sets `base: './'` so asset URLs work under the `/<repo>/` subpath — keep asset references relative (put static files in `public/` and don't use root-absolute `/...` paths).
