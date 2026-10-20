@@ -23,6 +23,11 @@
       .panel.thin { border-width: 10px; border-image: url('./ui/frame-thin.png') 10 stretch; }
       .wood { background: url('./ui/wood.jpg') center / 256px; }
       .paper { background: url('./ui/paper.jpg') center / 256px; color: var(--ink); }
+      /* The in-game windows (dock, card) are see-through: the same wood and paper at ~80% alpha (made from the jpgs with
+         `convert <in> -alpha set -channel A -evaluate multiply 0.78 +channel -quality 85 <out>.webp`), so the field shows under
+         them while the text, buttons and frame stay solid. Other panels (the menus) keep the opaque art. */
+      .glass.wood { background: url('./ui/wood-glass.webp') center / 256px; }
+      .glass.paper { background: url('./ui/paper-glass.webp') center / 256px; }
       h1, h2, h3, h4 { font-family: var(--title); margin: 0; }
 
       /* Wood and stone: two icons with a number each, a see-through overlay in the corner (no banner, no names), so the field shows. */
@@ -260,7 +265,7 @@
     <div id="marquee" hidden></div>
     <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-sound" title="Sound (M)">🔊</button></div>
     <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no" aria-label="Cancel">✕</button></div>
-    <div id="dock" class="panel thin wood">
+    <div id="dock" class="panel thin wood glass">
       <div class="bar">
         <div id="tabs"><button class="plank on" data-tab="units">Units</button><button class="plank" data-tab="build">Build</button><button class="plank" data-tab="upgrades">Upgrades</button></div>
         <div id="pick"><button class="tb orders wbtn" id="cam-all" title="Pick every unit you have (Ctrl+A)"><span>Select all</span></button><button class="tb orders wbtn" id="cam-box" title="Drag a box around some of your units"><span>Box select</span></button></div><div id="castle"></div>
@@ -269,7 +274,7 @@
       <div class="shelf" id="build" hidden></div>
       <div class="shelf" id="upgrades" hidden></div>
     </div>
-    <aside id="card" class="panel thin paper" hidden>
+    <aside id="card" class="panel thin paper glass" hidden>
       <button class="wbtn" id="card-x" aria-label="Close">×</button>
       <div id="card-body"></div>
       <div id="card-buy" hidden>
