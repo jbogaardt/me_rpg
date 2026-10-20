@@ -433,8 +433,8 @@ void (async () => {
     return col >= 0 && row >= 0 && col < match.board.cols && row < match.board.rows ? [col, row] : undefined;
   };
 
-  // Input, the same ideas for a finger and a mouse. Pan: drag with a finger, or the right or middle button, or the arrow keys / WASD.
-  // Zoom: pinch or wheel. Select: a mouse drag with the left button draws a box; on a touch screen, press and hold a moment, then
+  // Input, the same ideas for a finger and a mouse. Pan: drag with a finger or any mouse button, or the arrow keys / WASD.
+  // Zoom: pinch or wheel. Select: Shift or Ctrl and a left-button drag draws a box; on a touch screen, press and hold a moment, then
   // drag. Tap a unit to pick it (double-tap: every one of its kind in view), tap again with Shift or Ctrl to add or drop it. Then
   // tap (or right-click) a rival's tower or castle to send the group at it; Esc, or a tap on bare ground, lets go.
   const pointers = new Map<number, { x: number; y: number }>();
@@ -496,8 +496,8 @@ void (async () => {
     if (pointers.size === 1) {
       if (gesture === 'wait' && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > TAP_SLOP) {
         window.clearTimeout(longPress);
-        // The left mouse button selects (unless a tower is being placed); everything else drags the field.
-        gesture = e.pointerType === 'mouse' && pressButton === 0 && started && !selected ? 'box' : 'pan';
+        // Every button and finger drags the field; only Shift or Ctrl with the left mouse button draws a selection box.
+        gesture = e.pointerType === 'mouse' && pressButton === 0 && pressAdd && started && !selected ? 'box' : 'pan';
       }
       if (gesture === 'box') {
         boxTo = { x: e.clientX, y: e.clientY };
@@ -702,6 +702,18 @@ void (async () => {
         return;
       }
       if (selection.size && command(wx, wy)) return;
+      // Picked soldiers, then a tap on one of your bunkers: those that can man it march in (the rest stay in the group).
+      const into = selection.size ? myBunkerAt(wx, wy) : undefined;
+      if (into && picked().some((u) => u.def.garrison)) {
+        const ids = picked()
+          .filter((u) => u.def.garrison)
+          .map((u) => u.id);
+        cmd({ k: 'garrison', tower: into.id, ids });
+        for (const id of ids) selection.delete(id);
+        note(`Into the ${into.def.name}`);
+        refresh();
+        return;
+      }
       // One of your units: pick it (a second tap in a moment: every one of its kind in view).
       const mine = myUnitAt(wx, wy);
       if (mine) {
@@ -1195,21 +1207,26 @@ void (async () => {
       lit(laneFor(match, YOU), 7, laneHover === undefined ? 0.28 : 0.14);
       lit(laneHover, 9, 0.55);
     }
-    if (started) {
+    // Rings show only what you are looking at (a tower under the mouse or whose card is open) or, while placing, where you can build:
+    // a cluster of buildings would otherwise be a tangle of circles.
+    const inFocus = (t: Tower) =>
+      (cardOf && (cardOf.kind === 'built' || cardOf.kind === 'bunker') && cardOf.id === t.id) ||
+      (hoverAt && Math.hypot(hoverAt[0] - (t.col + 0.5), hoverAt[1] - (t.row - 0.4)) <= 1.2);
+    if (started && selected) {
       const [cx, cy] = castleAt(YOU);
       areaLayer
         .circle(cx * CELL, cy * CELL, buildReach(match, YOU) * CELL)
-        .stroke({ color: 0xffb13f, width: 2, alpha: selected ? 0.5 : 0.2 });
-      for (const t of match.towers)
-        if (t.owner === YOU && t.def.reach > 0)
-          areaLayer
-            .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL, t.def.reach * CELL)
-            .stroke({ color: 0xffb13f, width: 1.5, alpha: selected ? 0.4 : 0.15 });
+        .stroke({ color: 0xffb13f, width: 2, alpha: 0.5 });
     }
+    for (const t of match.towers)
+      if (t.owner === YOU && t.def.reach > 0 && inFocus(t))
+        areaLayer
+          .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL, t.def.reach * CELL)
+          .stroke({ color: 0xffb13f, width: 1.5, alpha: 0.4 });
 
-    // Support towers show what they cover: an aura (green heal, orange power) and a detector (violet).
+    // Support towers show what they cover (an aura: green heal, orange power; a detector: violet) when in focus.
     for (const t of match.towers) {
-      if (!isSeen(match, YOU, t, vision)) continue;
+      if (!isSeen(match, YOU, t, vision) || !inFocus(t)) continue;
       const cx = (t.col + 0.5) * CELL;
       const cy = (t.row + 0.5) * CELL;
       const mine = allied(match, t.owner, YOU);
@@ -2065,7 +2082,10 @@ void (async () => {
       const asks = (race.castle.needs[level - 1] ?? [])
         .map((n) => {
           const have = lacks.find((l) => l.need === n)?.have ?? n.count;
-          const name = `${ROLE_NAMES[n.role]}${n.count > 1 ? 's' : ''}${n.tier && n.tier > 1 ? ` (level ${n.tier}+)` : ''}`;
+          const kinds = race.towers
+            .filter((t) => buildingRole(t) === n.role && t.tier >= (n.tier ?? 1))
+            .map((t) => t.name);
+          const name = `${ROLE_NAMES[n.role]}${n.count > 1 ? 's' : ''}${n.tier && n.tier > 1 ? ` (level ${n.tier}+)` : ''}: ${kinds.join(', ')}`;
           return `<li class="${have >= n.count ? 'ok' : 'no'}">${have} / ${n.count} ${name}</li>`;
         })
         .join('');
