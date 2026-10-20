@@ -440,10 +440,10 @@ void (async () => {
     return col >= 0 && row >= 0 && col < match.board.cols && row < match.board.rows ? [col, row] : undefined;
   };
 
-  // Input, the same ideas for a finger and a mouse. Pan: drag with a finger or any mouse button, or the arrow keys / WASD.
-  // Zoom: pinch or wheel. Select: Shift or Ctrl and a left-button drag draws a box; on a touch screen, press and hold a moment, then
-  // drag. Tap a unit to pick it (double-tap: every one of its kind in view), tap again with Shift or Ctrl to add or drop it. Then
-  // tap (or right-click) a rival's tower or castle to send the group at it; Esc, or a tap on bare ground, lets go.
+  // Input, the standard for each device. Mouse: a left-button drag draws a selection box (Shift or Ctrl adds to the selection); a right
+  // or middle drag pans, as do the arrow keys and WASD. Touch: one finger drags to pan; press and hold a moment, then drag, to draw a box.
+  // Zoom: pinch or wheel. Tap a unit to pick it; double-tap a unit to pick every unit you have; tap again with Shift or Ctrl to add or
+  // drop it. Then tap (or right-click) a rival's tower or castle to send the group at it; Esc, or a tap on bare ground, lets go.
   const pointers = new Map<number, { x: number; y: number }>();
   type Gesture = 'wait' | 'pan' | 'box' | 'pinch' | 'ghost';
   let grab = { x: 0, y: 0 };
@@ -523,11 +523,7 @@ void (async () => {
       }
       if (gesture === 'wait' && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > TAP_SLOP) {
         window.clearTimeout(longPress);
-        // Every button and finger drags the field; only Shift or Ctrl with the left mouse button draws a selection box.
-        gesture =
-          started && !selected && ((e.pointerType === 'mouse' && pressButton === 0 && pressAdd) || boxMode)
-            ? 'box'
-            : 'pan';
+        gesture = started && !selected && e.pointerType === 'mouse' && pressButton === 0 ? 'box' : 'pan';
       }
       if (gesture === 'box') {
         boxTo = { x: e.clientX, y: e.clientY };
@@ -552,7 +548,6 @@ void (async () => {
     if (wasOne && e.type === 'pointerup') {
       if (gesture === 'box') {
         finishBox();
-        if (boxMode) boxButton.click(); // one box, then back to panning
       } else if (gesture === 'wait')
         tap(e.clientX, e.clientY, e.pointerType !== 'mouse', { add: pressAdd, right: pressButton === 2 });
     }
@@ -574,15 +569,6 @@ void (async () => {
     },
     { passive: false },
   );
-  $('cam-all').onclick = () => started && selectAll();
-  /** Box select mode: while on, one finger draws a box instead of panning (the long-press way is hard to find). */
-  let boxMode = false;
-  const boxButton = $('cam-box');
-  boxButton.onclick = () => {
-    boxMode = !boxMode;
-    boxButton.classList.toggle('open', boxMode);
-    if (boxMode) note('Drag a box around your units. Tap Box select again to pan.');
-  };
   $('cam-home').onclick = home;
   $('cam-fit').onclick = () => focus(match.board.cols / 2, match.board.rows / 2, minZoom());
 
@@ -778,7 +764,8 @@ void (async () => {
     });
     if (inside.length || !pressAdd) select(inside, pressAdd);
   }
-  let lastUnitTap = { kind: '', at: 0 };
+  /** When a unit was last tapped: a second tap in a moment selects every unit you have. */
+  let lastUnitTap = 0;
 
   function tap(sx: number, sy: number, touch: boolean, how = { add: false, right: false }) {
     if (!started) return;
@@ -810,19 +797,12 @@ void (async () => {
       if (mine) {
         setGhost(undefined);
         const now = performance.now();
-        if (!how.add && lastUnitTap.kind === mine.def.id && now - lastUnitTap.at < 420) {
-          const view = (u: Unit) => {
-            const [x, y] = unitMid(u);
-            const [px, py] = [world.x + x * CELL * world.scale.x, world.y + y * CELL * world.scale.y];
-            return px >= 0 && px <= window.innerWidth && py >= 0 && py <= window.innerHeight;
-          };
-          select(
-            match.units.filter((u) => u.owner === YOU && u.hp > 0 && !u.spent && u.def.id === mine.def.id && view(u)),
-          );
-          lastUnitTap = { kind: '', at: 0 };
+        if (!how.add && now - lastUnitTap < 420) {
+          selectAll();
+          lastUnitTap = 0;
         } else {
           select([mine], how.add);
-          lastUnitTap = { kind: mine.def.id, at: now };
+          lastUnitTap = now;
         }
         return;
       }
@@ -1906,6 +1886,7 @@ void (async () => {
   $('card-body').addEventListener('click', (e) => {
     const aim = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-aim]');
     if (aim && cardOf?.kind === 'sel') {
+      if (aim.dataset.aim === 'bunker') return note('Tap one of your bunkers: the soldiers that can man it march in.');
       cmd(
         aim.dataset.aim?.startsWith('castle')
           ? {
@@ -2002,15 +1983,16 @@ void (async () => {
           : ''
       }</div>` +
       `<div class="targets">` +
-      `<button data-aim="none"${on(!sent)} title="Follow the general orders (X)">Orders</button>` +
+      `<button data-aim="bunker" title="Then tap one of your bunkers: the soldiers that can man it march in">Bunker</button>` +
+      `<button data-aim="none"${on(units.every((u) => !u.focus))} title="Fight everything along the way (X)">Fight everything</button>` +
       (coop()
         ? foesOf(match, YOU)
             .map(
               (o) =>
-                `<button data-aim="castle" data-seat="${o}"${on(units.every((u) => u.focus?.kind === 'castle' && (u.focus.owner ?? laneOf(match.board, u).to) === o))} title="Walk past everything to the ${castleName(o)} castle">${castleName(o)} castle</button>`,
+                `<button data-aim="castle" data-seat="${o}"${on(units.every((u) => u.focus?.kind === 'castle' && (u.focus.owner ?? laneOf(match.board, u).to) === o))} title="Walk past everything to the ${castleName(o)} castle">Fight ${castleName(o)} castle</button>`,
             )
             .join('')
-        : `<button data-aim="castle"${on(units.every((u) => u.focus?.kind === 'castle'))} title="Walk past everything to the castle (C)">Castle</button>`) +
+        : `<button data-aim="castle"${on(units.every((u) => u.focus?.kind === 'castle'))} title="Walk past everything to the castle (C)">Fight the castle</button>`) +
       `</div>` +
       (coop()
         ? `<p class="note">Road (before the fork):</p><div class="targets">${openLanes(match, YOU)
@@ -2253,7 +2235,10 @@ void (async () => {
         cmd({ k: 'train', id: def.id, n: 1 });
         b.classList.add('bought');
         window.setTimeout(() => b.classList.remove('bought'), 160);
-        tipOnce('units', 'Tap to train, hold for details. Box select (bottom bar) lets you drag a box around units.');
+        tipOnce(
+          'units',
+          'Tap to train, hold for details. Press and hold on the field, then drag, to box-select units.',
+        );
         refresh();
       });
       b.addEventListener('pointerdown', (e) => {

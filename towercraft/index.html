@@ -61,7 +61,7 @@
       #dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(6px, var(--safe-b)); z-index: 2; width: min(900px, calc(100vw - 12px));
         box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 0 4px; }
       .bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; }
-      #tabs, #castle, #pick { display: flex; gap: 4px; align-items: center; }
+      #tabs, #castle { display: flex; gap: 4px; align-items: center; }
       #tabs .plank { padding: 6px 12px; }
       .shelf { display: flex; gap: 4px 10px; align-items: flex-end; overflow-x: auto; overflow-y: hidden; min-height: 62px; padding: 0 0 2px; scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
       .shelf[hidden] { display: none; }
@@ -268,7 +268,7 @@
     <div id="dock" class="panel thin wood glass">
       <div class="bar">
         <div id="tabs"><button class="plank on" data-tab="units">Units</button><button class="plank" data-tab="build">Build</button><button class="plank" data-tab="upgrades">Upgrades</button></div>
-        <div id="pick"><button class="tb orders wbtn" id="cam-all" title="Pick every unit you have (Ctrl+A)"><span>Select all</span></button><button class="tb orders wbtn" id="cam-box" title="Drag a box around some of your units"><span>Box select</span></button></div><div id="castle"></div>
+        <div id="castle"></div>
       </div>
       <div class="shelf" id="train"></div>
       <div class="shelf" id="build" hidden></div>
