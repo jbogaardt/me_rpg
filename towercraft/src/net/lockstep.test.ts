@@ -224,7 +224,7 @@ describe('co-op: two people and computers on the other seats', () => {
     expect(A.tick).toBe(B.tick);
     expect(checksum(mA)).toBe(checksum(mB));
     // The computers did something, and seat 1 sent units down the road it chose.
-    expect(mA.players[2]!.castle.level + mA.towers.filter((t) => t.owner === 2).length).toBeGreaterThan(1);
+    expect(mA.towers.filter((t) => t.owner >= 2).length).toBeGreaterThan(0);
     expect(mA.players[1].lane).toBe(board.lanes.find((l) => l.from === 1 && l.to === 2)!.id);
   });
 

@@ -18,9 +18,9 @@ the conventions (Vite, strict TypeScript, Pixi-free rules with unit tests beside
 - **Build area and fog of war** (`inBuildArea`, `visionOf`, `canSee`, `isSeen`; in `src/sim/CLAUDE.md`): you build only on ground your castle or a tower sees, never within `FOE_CLEAR` of a foe's castle; castle upgrades ask for buildings (`upgradeLacks`); hidden enemies are not drawn, targeted or splashed.
 - **Look** (`main.ts`, cosmetic): units at `SIZE` x2; walk, stand, strike (`Shot.by`), tower fx, pay-day figures. No sparkles.
 - **Sound** (cosmetic): `src/CLAUDE.md`.
-- **Buildings grow with upgrades** (`trim.ts`, cosmetic, Pixi-free, drawn by `drawTrim`): a castle gets +8% size, two race-coloured pennants and, at the top level, a base ring; a smithy gets a pennant and +5% size per 3 upgrade levels its owner bought. Drawn from `Match` state on each client, so lockstep is untouched.
-- **Hurt and falling buildings** (`wreck.ts`, cosmetic): smoke below half health, flames below 30%; a razed tower (`sync`'s `gone` hook keeps its sprite) or a castle at 0 shakes and sinks into the ground with dust and rubble that fades. The end screen waits for the castle (`finale`) and is see-through over the map.
-- **Races** (`races.ts`): swarm/Goblins (fast, weak, in groups), titan/Dwarves (slow, strong), legion/Germanic (archers, sweepers, sappers, catapults): 4-6 ground and 2-3 air units each.
+- **Buildings grow with upgrades** (`trim.ts`, cosmetic, drawn by `drawTrim` from `Match` state): castle size, pennants and a top-level ring; a smithy's pennant and size.
+- **Hurt and falling buildings** (`wreck.ts`, cosmetic): smoke, flames, then a razed building sinks with dust; the end screen waits for the castle (`finale`).
+- **Races** (`races.ts`): swarm/Goblins (Zerg-like swarms), titan/Dwarves (Protoss-like heavies), legion/Germanic (Terran-like marines, firebats, tanks): 4-6 ground and 2-3 air units each.
 
 ## Online
 
@@ -33,7 +33,7 @@ The title screen's **Solo / Host / Join** picks solo (the AI) or a game with a f
 
 ## State of play
 
-**Lab and balance**: `npm run towercraft:lab -- --help` (`tools/towercraftLab.ts`: duel maps x races x `STRATEGIES`, win rates, CSV, `--set` what-ifs), `npm run towercraft:coop` (`tools/towercraftCoop.ts`: the co-op maps, and the lone side's `pace`) and `npm run towercraft:balance [-- N [seedBase]]`; re-run after changing `races.ts`, `ai.ts` or `sim.ts` constants. Pace: income x0.4 (`PACE`, per-race lever `INCOME_BALANCE`); games run about 15 min, from minute 18 castle blows grow (`suddenDeath`).
+**Balance is StarCraft's** (`tools/towercraftScale.ts`: each unit has an SC analog; hit points, damage, cooldown, range, speed and price come from one conversion, so races are like-for-like and the same income applies to all; change the table, then re-run it). Buildings keep up with `DEFENCE_DAMAGE` / `BUILDING_HP` in `races.ts`. The lab (`npm run towercraft:lab`, `:coop`, `:balance`) only judges the AI against itself, not people: do not tune to it. Castle levels are swept by `techtree.test.ts`.
 
 **The AI** (`Style` from its seed): mills and quarries first, tech, waves of at least `MIN_WAVE` units (bombs against towers, sweeps against crowds, archers against air), upgrades, loaded bunkers, castle levels, towers as far forward as they see road, bypass when it could kill the castle fast. It reads the foe only through `foeUnits`, `foeTowers`, `foeCastle`.
 
