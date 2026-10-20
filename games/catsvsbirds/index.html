@@ -34,34 +34,53 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       // ---- the level: a fixed course built from a seed, so every attempt is the same and can be learned ----
       const BPM = 120, BEAT = 60 / BPM;
       function rng(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      // The bridge drawn in the backdrop is the terrain: columns 192-351 of its 480 are stairs up (4 rows every 4 columns), a
+      // flat top 32 rows high, and stairs down. The backdrop scrolls with the course and every other copy is mirrored, so
+      // bridgeH(worldX) is what the picture shows. A step is 12 px, which the cat climbs without jumping.
+      const TW = 480 * BG_S, STEP = 14;
+      const bridgeCol = (c) => (c < 192 || c > 351 ? 0 : c < 220 ? (Math.floor((c - 192) / 4) + 1) * 4 : c < 324 ? 32 : 32 - (Math.floor((c - 324) / 4) + 1) * 4);
+      function bridgeH(wx) {
+        const n = Math.floor(wx / TW); let c = Math.floor((wx - n * TW) / BG_S);
+        if (((n % 2) + 2) % 2) c = 479 - c;
+        return bridgeCol(c) * BG_S;
+      }
+      const bridgeLo = (n) => n * TW + (n % 2 ? 128 : 192) * BG_S, bridgeHi = (n) => n * TW + (n % 2 ? 288 : 352) * BG_S;
+      // the end of the bridge that [s, e] (plus a margin to take off and land) runs into, or -1
+      function bridgeNear(s, e, margin) {
+        for (let n = Math.floor((s - margin) / TW); n <= Math.floor((e + margin) / TW); n++) if (e + margin > bridgeLo(n) && s - margin < bridgeHi(n)) return bridgeHi(n);
+        return -1;
+      }
       function buildLevel() {
-        const r = rng(7), solids = [], fish = [], spd = (x) => SPEED0 + Math.min(120, x / 250);
-        let x = 0; // world position in px; ground is a list of [from, to] runs with gaps between
-        const ground = [[-200, 900]]; x = 900;
-        const COUNT = 46;
+        const r = rng(7), fish = [], spd = (x) => SPEED0 + Math.min(120, x / 250);
+        const COUNT = 46, ground = [];
+        let r0 = -200, s = 900; // r0 starts the current run of deck; s is where it ends, at the next gap
         for (let i = 0; i < COUNT; i++) {
-          // a gap is crossed in 0.2-0.4 s of flight (a jump lasts about 0.65 s) and grows a little as the course goes on
-          const gap = Math.round(spd(x) * (0.2 + Math.floor(r() * 3) * 0.07 + Math.min(0.06, i * 0.002)));
-          const runLen = Math.round(spd(x) * BEAT * (2.5 + Math.floor(r() * 5) * 0.5));
-          const kind = r();
-          const start = x + gap, end = start + runLen;
-          ground.push([start, end]);
-          if (gap > 60) fish.push({ x: x + gap / 2, y: GROUND - 150 });
-          if (kind > 0.5 && runLen > 420) { // a raised block to hop onto, with room to land and jump again
-            const bw = Math.min(runLen - 280, 150), bx = start + 190, bh = kind > 0.85 ? 90 : 55;
-            solids.push({ x: bx, w: bw, h: bh }); fish.push({ x: bx + bw / 2, y: GROUND - bh - 70 });
-          } else fish.push({ x: start + runLen / 2, y: GROUND - 60 });
-          x = end;
+          // a gap is crossed in 0.2-0.4 s of flight (a jump lasts about 0.65 s) and grows a little as the course goes on;
+          // gaps stay clear of the bridge, so the stairs are never a take-off or landing
+          const gap = Math.round(spd(s) * (0.2 + Math.floor(r() * 3) * 0.07 + Math.min(0.06, i * 0.002)));
+          let e = s + gap, z;
+          while ((z = bridgeNear(s, e, 200)) >= 0) { s = z + 200; e = s + gap; }
+          ground.push([r0, s]);
+          fish.push({ x: (s + e) / 2, y: GROUND - 150 });
+          r0 = e;
+          const runLen = Math.round(spd(r0) * BEAT * (2.5 + Math.floor(r() * 5) * 0.5));
+          if (bridgeNear(r0 + runLen / 2, r0 + runLen / 2, 0) < 0) fish.push({ x: r0 + runLen / 2, y: GROUND - 60 });
+          s = r0 + runLen;
         }
-        ground.push([x + 220, x + 1400]);
-        return { ground, solids, fish, end: x + 220 };
+        const end = r0 + 220;
+        ground.push([r0, end + 1400]);
+        for (let n = 0; n <= Math.ceil(end / TW); n++) { // three fish on top of each bridge
+          const mid = (bridgeLo(n) + bridgeHi(n)) / 2;
+          for (const d of [-90, 0, 90]) if (mid + d < end) fish.push({ x: mid + d, y: GROUND - 96 - 70 });
+        }
+        return { ground, fish, end };
       }
       const L = buildLevel();
 
       // ---- state ----
       let S;
       function reset(keepAttempt) {
-        S = { x: 0, y: GROUND, vy: 0, onGround: true, dead: 0, won: false, t: 0, scroll: 0, fishGot: new Set(), score: 0,
+        S = { x: 0, y: GROUND, ys: GROUND, vy: 0, onGround: true, dead: 0, won: false, t: 0, scroll: 0, fishGot: new Set(), score: 0,
           attempt: keepAttempt ? S.attempt + 1 : 1, best: keepAttempt ? S.best : 0, parts: [], started: false, frame: 0, coyote: 0, wasHeld: false };
       }
       reset(false);
@@ -78,8 +97,6 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') held = false; });
 
       const groundAt = (wx) => L.ground.some(([a, b]) => wx >= a && wx <= b);
-      // floor height under the cat's feet (px above GROUND), the tallest block the paws are over, else 0
-      const blockTop = (x0, x1) => { let h = -1; for (const s of L.solids) if (x1 > s.x && x0 < s.x + s.w) h = Math.max(h, s.h); return h; };
 
       function die() { if (S.dead) return; S.dead = 0.0001; S.best = Math.max(S.best, Math.round(progress() * 100)); audio.thud();
         for (let i = 0; i < 18; i++) S.parts.push({ x: CAT_X, y: S.y - 24, vx: (Math.random() - 0.5) * 520, vy: -Math.random() * 520, t: 0.7 }); }
@@ -96,20 +113,26 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         const sp = speed(); S.scroll += sp * dt; S.frame += dt * 14;
         const wx = S.scroll + CAT_X;                      // world x of the cat
         const x0 = wx - HIT_W / 2, x1 = wx + HIT_W / 2;
-        const floorH = blockTop(x0 + 6, x1 - 6);          // height of the block underfoot, -1 = none
-        const floorY = floorH >= 0 ? GROUND - floorH : (groundAt(x0 + 10) || groundAt(x1 - 10) ? GROUND : Infinity);
+        const fh = Math.max(bridgeH(x0 + 6), bridgeH(wx), bridgeH(x1 - 6)); // the tallest step under the paws
+        const floorY = fh > 0 ? GROUND - fh : (groundAt(x0 + 10) || groundAt(x1 - 10) ? GROUND : Infinity);
 
         S.coyote = S.onGround ? 0.09 : S.coyote - dt;
         if ((pressed || (held && !S.wasHeld) || (held && S.onGround)) && S.coyote > 0) { S.vy = -JUMP; S.onGround = false; S.coyote = 0; audio.jump(); }
         pressed = false; S.wasHeld = held;
 
-        S.vy += G * dt; const prevY = S.y; S.y += S.vy * dt;
-        if (S.vy >= 0 && prevY <= floorY + 1 && S.y >= floorY) { S.y = floorY; S.vy = 0; S.onGround = true; }
-        else if (S.y > floorY && floorH < 0 && S.onGround) { /* walked off an edge */ S.onGround = false; }
-        else if (S.vy >= 0 && S.y < floorY) S.onGround = false;
-
-        // running into the side of a block (paws below its top), or dropping out of the world, ends the attempt
-        for (const s of L.solids) if (x1 - 8 > s.x && x0 + 8 < s.x + s.w && S.y > GROUND - s.h + 10) { die(); return; }
+        if (S.onGround) {
+          if (floorY === Infinity) S.onGround = false;                 // ran off the edge of the deck
+          else if (floorY < S.y - STEP) { die(); return; }             // the face of something taller than a stair
+          else { S.y = floorY; S.vy = 0; }                             // climbs or descends the stairs
+        }
+        if (!S.onGround) {
+          S.vy += G * dt; const prevY = S.y; S.y += S.vy * dt;
+          if (floorY !== Infinity) {
+            if (S.vy >= 0 && S.y >= floorY && prevY <= floorY + STEP) { S.y = floorY; S.vy = 0; S.onGround = true; }
+            else if (S.y > floorY + STEP && S.y <= GROUND + 1) { die(); return; } // into the side of the bridge
+          }
+        }
+        S.ys = S.onGround ? S.ys + (S.y - S.ys) * Math.min(1, dt * 28) : S.y;   // the drawn height eases up the stairs
         if (S.y > H + 60) { die(); return; }
 
         for (let i = 0; i < L.fish.length; i++) {
@@ -124,10 +147,10 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       function draw() {
         const beat = (S.t / BEAT) % 1, pulse = Math.pow(1 - beat, 3);
         const pal = [0, 0, ACCENTS[Math.floor(S.scroll / 2600) % ACCENTS.length]];
-        // the sunset arches backdrop (480x128), drawn 3x with its deck (row 96) on the ground line; it drifts slowly, and every
-        // other copy is mirrored so the tiles meet without a seam
+        // the sunset arches backdrop (480x128), drawn 3x with its deck (row 96) on the ground line; it scrolls with the course so its bridge is
+        // the terrain, and every other copy is mirrored so the tiles meet without a seam
         ctx.fillStyle = '#7b5397'; ctx.fillRect(0, 0, W, BG_Y + 2);
-        const tw = 480 * BG_S, drift = S.scroll * 0.2, first = Math.floor(drift / tw);
+        const tw = TW, drift = S.scroll, first = Math.floor(drift / tw);
         for (let n = first; n <= first + 2; n++) {
           const tx = n * tw - drift;
           ctx.save(); if (n % 2) { ctx.translate(tx + tw, 0); ctx.scale(-1, 1); } else ctx.translate(tx, 0);
@@ -146,11 +169,11 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
           const x = Math.max(-20, sx), w = Math.min(W + 20, ex) - x;
           ctx.fillStyle = '#2c3134'; ctx.fillRect(x, GROUND, w, H - GROUND);
         }
-        for (const s of L.solids) {
-          const sx = s.x - off; if (sx + s.w < -10 || sx > W + 10) continue;
-          // the same stone as the deck and the bridge behind it, with only a faint darker edge to read against the railings
-          ctx.fillStyle = '#2c3134'; ctx.fillRect(sx, GROUND - s.h, s.w, s.h);
-          ctx.strokeStyle = '#1c2023'; ctx.lineWidth = 2; ctx.strokeRect(sx + 1, GROUND - s.h + 1, s.w - 2, s.h - 2);
+        // the arch under the bridge stays open: put its opening back over the deck fill
+        for (let n = first; n <= first + 2; n++) {
+          const tx = n * tw - drift;
+          ctx.save(); if (n % 2) { ctx.translate(tx + tw, 0); ctx.scale(-1, 1); } else ctx.translate(tx, 0);
+          ctx.drawImage(bg, 240, 96, 64, 32, 240 * BG_S, BG_Y + 96 * BG_S, 64 * BG_S, 32 * BG_S); ctx.restore();
         }
         ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; // fillStyle shows through where no colour-emoji font exists
         L.fish.forEach((f, i) => { if (S.fishGot.has(i)) return; const fx = f.x - off; if (fx > -30 && fx < W + 30) ctx.fillText('🐟', fx, f.y + Math.sin(S.t * 4 + i) * 4); });
@@ -160,7 +183,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         // the cat: the run strip when on the ground, a stretched frame in the air
         if (!S.dead) {
           const fr = S.onGround ? Math.floor(S.frame) % 6 : (S.vy < 0 ? 1 : 3);
-          ctx.save(); ctx.translate(CAT_X, S.y);
+          ctx.save(); ctx.translate(CAT_X, S.ys);
           if (!S.onGround) ctx.rotate(Math.max(-0.35, Math.min(0.45, S.vy / 2600)));
           ctx.fillStyle = '#0005'; if (S.onGround) { ctx.beginPath(); ctx.ellipse(0, 2, 34, 6, 0, 0, 7); ctx.fill(); }
           ctx.shadowColor = pal[2]; ctx.shadowBlur = 14; // a glow, so the black cat reads against the dark course
