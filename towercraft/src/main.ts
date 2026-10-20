@@ -573,13 +573,13 @@ void (async () => {
     { passive: false },
   );
   $('cam-all').onclick = () => started && selectAll();
-  /** Select mode: while on, one finger draws a box instead of panning (the long-press way is hard to find). */
+  /** Box select mode: while on, one finger draws a box instead of panning (the long-press way is hard to find). */
   let boxMode = false;
   const boxButton = $('cam-box');
   boxButton.onclick = () => {
     boxMode = !boxMode;
     boxButton.classList.toggle('open', boxMode);
-    if (boxMode) note('Drag a box around your units. Tap Select again to pan.');
+    if (boxMode) note('Drag a box around your units. Tap Box select again to pan.');
   };
   $('cam-home').onclick = home;
   $('cam-fit').onclick = () => focus(match.board.cols / 2, match.board.rows / 2, minZoom());
@@ -2254,7 +2254,7 @@ void (async () => {
         cmd({ k: 'train', id: def.id, n: 1 });
         b.classList.add('bought');
         window.setTimeout(() => b.classList.remove('bought'), 160);
-        tipOnce('units', 'Tap to train, hold for details. Select (top left) then drag a box to command units.');
+        tipOnce('units', 'Tap to train, hold for details. Box select (bottom bar) lets you drag a box around units.');
         refresh();
       });
       b.addEventListener('pointerdown', (e) => {
