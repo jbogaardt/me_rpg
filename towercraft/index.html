@@ -12,6 +12,8 @@
         --red: #b82024; --blue: #406181; --orange: #e7682f; --amber: #ffb13f;
         --title: 'Cinzel', Georgia, serif; --body: 'Crimson Text', Georgia, serif;
         --dock-h: 96px;
+        --safe-b: env(safe-area-inset-bottom, 0px);
+        --safe-l: env(safe-area-inset-left, 0px);
       }
       html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; touch-action: manipulation;
         font: 16px/1.3 var(--body); user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -43,14 +45,14 @@
         text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .wbtn:hover:not(:disabled) { filter: brightness(1.25) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .wbtn:active:not(:disabled) { filter: brightness(0.9); transform: translateY(1px); }
-      #cam { position: fixed; left: 10px; top: 8px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
-      #cam button { width: 40px; height: 40px; font-size: 20px; } #cam #cam-all { font-size: 13px; }
+      #cam { position: fixed; left: max(10px, var(--safe-l)); top: 8px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
+      #cam button { width: 40px; height: 40px; font-size: 20px; } #cam #cam-all { font-size: 13px; } #cam #cam-box { font-size: 10px; letter-spacing: 0; }
       .plank { background: url('./ui/plank-dim.png') center / 100% 100% no-repeat; border: 0; color: #b9b3a2; font: 700 12px var(--title); padding: 8px 14px; letter-spacing: 0.03em; text-shadow: 0 1px 2px #000; }
       .plank.on, .plank:hover:not(:disabled) { background-image: url('./ui/plank.png'); color: var(--gold); }
       .plank:disabled { opacity: 0.45; }
 
       /* The dock: tabs (units, buildings, upgrades) over one shelf of small thumbnails; tap one for its card. The orders sit by the tabs. */
-      #dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: 6px; z-index: 2; width: min(900px, calc(100vw - 12px));
+      #dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(6px, var(--safe-b)); z-index: 2; width: min(900px, calc(100vw - 12px));
         box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 0 4px; }
       .bar { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
       #tabs, #castle { display: flex; gap: 4px; align-items: center; }
@@ -68,6 +70,7 @@
       .tb.lock .art { filter: grayscale(1) brightness(0.55); }
       .tb.poor { filter: brightness(0.7) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .tb.poor em i { color: #f09a9d; }
+      .tb.bought { filter: brightness(1.6) drop-shadow(0 0 8px rgba(242, 211, 138, 0.9)); transform: scale(1.08); }
       .tb.open { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.9)); }
       .tb.arm { filter: brightness(1.35) drop-shadow(0 0 8px rgba(111, 211, 111, 0.95)); }
       .tb .lv { position: absolute; top: 4px; left: 5px; right: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 8px var(--title); text-align: center; color: #f09a9d; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }
@@ -89,11 +92,11 @@
       .pips i.on { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 4px rgba(242, 211, 138, 0.7); }
 
       /* The card: stats and a purchase button, popping up at the side beside the thumbnails. */
-      #card { position: fixed; z-index: 4; right: 8px; top: 108px; width: min(300px, calc(100vw - 16px)); max-height: calc(100vh - 108px - var(--dock-h) - 16px);
+      #card { position: fixed; z-index: 4; right: 8px; top: 108px; width: min(300px, calc(100vw - 16px)); max-height: calc(100dvh - 108px - var(--dock-h) - var(--safe-b) - 16px);
         overflow-y: auto; padding: 4px 6px 8px; animation: pop 0.14s ease-out; }
       #card[hidden] { display: none; }
       /* A group's card is small and sits low at the left, out of the way of the field you are commanding on. */
-      #card.group { right: auto; left: 8px; top: auto; bottom: calc(var(--dock-h) + 12px); width: min(250px, calc(100vw - 16px)); }
+      #card.group { right: auto; left: 8px; top: auto; bottom: calc(var(--dock-h) + var(--safe-b) + 12px); width: min(250px, calc(100vw - 16px)); }
       @keyframes pop { from { opacity: 0; transform: translateX(14px) scale(0.97); } to { opacity: 1; transform: none; } }
       #card-x { position: absolute; top: -4px; right: -4px; width: 30px; height: 30px; font-size: 15px; background-image: url('./ui/button-small.png'); }
       #card header { display: flex; gap: 10px; align-items: center; margin: 0 24px 8px 0; }
@@ -171,7 +174,7 @@
       #card-act:hover:not(:disabled) { filter: brightness(1.25) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)); }
       #card-act:disabled { filter: grayscale(0.8) brightness(0.65); }
       #card.placing #card-act { color: #f09a9d; }
-      #ghost { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + 10px); z-index: 3; display: flex; gap: 8px; }
+      #ghost { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--safe-b) + 10px); z-index: 3; display: flex; gap: 8px; }
       #ghost[hidden] { display: none; }
       #ghost button { padding: 10px 18px; }
 
@@ -224,12 +227,15 @@
       @keyframes end-in { from { opacity: 0; } to { opacity: 1; } }
       #again { padding: 10px 26px; font-size: 16px; }
 
+      @media (pointer: coarse) { #tabs .plank { min-height: 44px; } #cam button { width: 44px; height: 44px; } #ghost button { min-height: 48px; } }
       /* A narrow screen: the card rises over the dock instead of the side, and gets out of the way while a tower is placed. */
       @media (max-width: 760px), (max-height: 560px) {
-        #card { right: 4px; left: 4px; width: auto; top: auto; bottom: calc(var(--dock-h) + 6px); max-height: 46vh; }
+        #card { right: 4px; left: 4px; width: auto; top: auto; bottom: calc(var(--dock-h) + var(--safe-b) + 6px); max-height: 40dvh; }
         #card.placing { display: none; }
-        .tb { width: 44px; height: 52px; } .tb.orders { width: 54px; height: 44px; } .tb.lane { width: 62px; height: 44px; } #castle .tb:first-child { width: 44px; height: 44px; }
-        #tabs .plank { padding: 5px 9px; font-size: 11px; }
+        .tb { width: 48px; height: 56px; } .tb.orders { width: 58px; height: 48px; } .tb.lane { width: 66px; height: 48px; } #castle .tb:first-child { width: 48px; height: 48px; }
+        .thumbs { gap: 8px; } .tb em { font-size: 11px; } #cam button { width: 44px; height: 44px; }
+        #cam { display: grid; grid-template-columns: repeat(2, 44px); gap: 6px; } /* two columns: five buttons in one would reach the dock */
+        #tabs .plank { padding: 5px 10px; font-size: 12px; min-height: 44px; }
         #hint { top: 44px; font-size: 14px; padding: 0 8px; }
         .up { width: 124px; height: 58px; padding: 5px 12px 7px; } .shelf { min-height: 56px; }
         #top { left: 54px; } #top .r { font-size: 17px; } #top .r::before { width: 22px; height: 22px; }
@@ -245,7 +251,7 @@
     <div id="hint"></div>
     <div id="wait" hidden>Waiting for your rival…</div>
     <div id="marquee" hidden></div>
-    <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-all" title="Pick all your units (Ctrl+A)">All</button><button class="wbtn" id="cam-sound" title="Sound (M)">🔊</button></div>
+    <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-box" title="Select mode: drag a box around units">Select</button><button class="wbtn" id="cam-all" title="Pick all your units (Ctrl+A)">All</button><button class="wbtn" id="cam-sound" title="Sound (M)">🔊</button></div>
     <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no" aria-label="Cancel">✕</button></div>
     <div id="dock" class="panel thin wood">
       <div class="bar">

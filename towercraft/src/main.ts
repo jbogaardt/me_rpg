@@ -389,7 +389,10 @@ void (async () => {
 
   // --- Camera: drag to pan, wheel or pinch to zoom ------------------------------------------------------------------
   const topBar = () => 0; // the resources are a see-through overlay: the field runs under it
-  const bottomBar = () => $('dock').offsetHeight + 12;
+  const bottomBar = () => {
+    const r = $('dock').getBoundingClientRect(); // from its top to the screen's bottom, so a phone's home-indicator gap counts
+    return r.height ? window.innerHeight - r.top + 6 : 12;
+  };
   const viewH = () => window.innerHeight - topBar() - bottomBar();
   const fitZoom = () => Math.min(window.innerWidth / boardW(), viewH() / boardH());
   const minZoom = () => Math.min(fitZoom(), ZOOM_MAX);
@@ -440,6 +443,7 @@ void (async () => {
   const pointers = new Map<number, { x: number; y: number }>();
   type Gesture = 'wait' | 'pan' | 'box' | 'pinch' | 'ghost';
   let grab = { x: 0, y: 0 };
+  let ghostPtr: { x: number; y: number } | undefined; // the finger holding the pending tower (it pans the field at an edge)
   const GRAB_LIFT = 36; // the pending tower rides this far above the finger so it stays in sight
   let gesture: Gesture = 'wait';
   let pressStart = { x: 0, y: 0 };
@@ -473,9 +477,10 @@ void (async () => {
         // A finger near the pending tower picks it up; anywhere else still pans the field.
         const k = world.scale.x * CELL;
         const [gx, gy] = [world.x + (ghost[0] + 0.5) * k, world.y + (ghost[1] + 0.5) * k];
-        if (Math.hypot(e.clientX - gx, e.clientY - gy) <= Math.max(64, 2.2 * k)) {
+        if (Math.hypot(e.clientX - gx, e.clientY - gy) <= Math.min(80, Math.max(48, 1.6 * k))) {
           gesture = 'ghost';
           grab = { x: gx - e.clientX, y: gy - e.clientY - GRAB_LIFT };
+          ghostPtr = { x: e.clientX, y: e.clientY };
           return;
         }
       }
@@ -507,6 +512,7 @@ void (async () => {
     p.y = e.clientY;
     if (pointers.size === 1) {
       if (gesture === 'ghost') {
+        ghostPtr = { x: e.clientX, y: e.clientY };
         const cell = cellAt(e.clientX + grab.x, e.clientY + grab.y);
         if (cell) setGhost(cell);
         return;
@@ -514,7 +520,10 @@ void (async () => {
       if (gesture === 'wait' && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > TAP_SLOP) {
         window.clearTimeout(longPress);
         // Every button and finger drags the field; only Shift or Ctrl with the left mouse button draws a selection box.
-        gesture = e.pointerType === 'mouse' && pressButton === 0 && pressAdd && started && !selected ? 'box' : 'pan';
+        gesture =
+          started && !selected && ((e.pointerType === 'mouse' && pressButton === 0 && pressAdd) || boxMode)
+            ? 'box'
+            : 'pan';
       }
       if (gesture === 'box') {
         boxTo = { x: e.clientX, y: e.clientY };
@@ -537,11 +546,14 @@ void (async () => {
     window.clearTimeout(longPress);
     marquee.hidden = true;
     if (wasOne && e.type === 'pointerup') {
-      if (gesture === 'box') finishBox();
-      else if (gesture === 'wait')
+      if (gesture === 'box') {
+        finishBox();
+        if (boxMode) boxButton.click(); // one box, then back to panning
+      } else if (gesture === 'wait')
         tap(e.clientX, e.clientY, e.pointerType !== 'mouse', { add: pressAdd, right: pressButton === 2 });
     }
     if (pointers.size === 0) gesture = 'wait';
+    if (gesture !== 'ghost') ghostPtr = undefined;
     pinch = 0;
   };
   app.canvas.addEventListener('pointerup', release);
@@ -559,6 +571,14 @@ void (async () => {
     { passive: false },
   );
   $('cam-all').onclick = () => started && selectAll();
+  /** Select mode: while on, one finger draws a box instead of panning (the long-press way is hard to find). */
+  let boxMode = false;
+  const boxButton = $('cam-box');
+  boxButton.onclick = () => {
+    boxMode = !boxMode;
+    boxButton.classList.toggle('open', boxMode);
+    if (boxMode) note('Drag a box around your units. Tap Select again to pan.');
+  };
   $('cam-home').onclick = home;
   $('cam-fit').onclick = () => focus(match.board.cols / 2, match.board.rows / 2, minZoom());
 
@@ -620,7 +640,11 @@ void (async () => {
     if (selected && touchUser) spawnGhost();
   };
   $('ghost-ok').onclick = () => ghost && place(ghost);
-  $('ghost-no').onclick = () => setGhost(undefined);
+  $('ghost-no').onclick = () => {
+    selected = undefined;
+    setGhost(undefined);
+    refresh();
+  };
 
   const myBunkerAt = (wx: number, wy: number) =>
     match.towers.find(
@@ -691,6 +715,16 @@ void (async () => {
     } else if (cardOf?.kind === 'sel') closeCard();
   };
   const selectAll = () => select(match.units.filter((u) => u.owner === YOU && u.hp > 0 && !u.spent));
+  /** A hint shown once ever on this device (`localStorage`, per game), as the note under the top bar. */
+  const tipOnce = (key: string, text: string) => {
+    try {
+      if (localStorage.getItem(`towercraft:tip:${key}`)) return;
+      localStorage.setItem(`towercraft:tip:${key}`, '1');
+    } catch {
+      return; // no storage: no tip, rather than the same one every time
+    }
+    note(text);
+  };
   const note = (text: string) => {
     hintNote = text;
     hintUntil = clock + 2.6;
@@ -2205,7 +2239,31 @@ void (async () => {
       $('train').append(sec);
     }
     for (const def of r.units) {
-      const b = thumb(unitThumb(def, 36), money(def.cost), def.name, () => showCard({ kind: 'unit', def }, true));
+      // A mouse opens the card; a finger trains one at once (hold for the card), the way phone RTS games do.
+      let heldOpen = false;
+      let holdTimer: number | undefined;
+      const b = thumb(unitThumb(def, 36), money(def.cost), def.name, () => {
+        if (!touchUser) return showCard({ kind: 'unit', def }, true);
+        if (heldOpen) return void (heldOpen = false);
+        if (maxPurchases(match, YOU, def) < 1) return showCard({ kind: 'unit', def }); // the card says why not
+        cmd({ k: 'train', id: def.id, n: 1 });
+        b.classList.add('bought');
+        window.setTimeout(() => b.classList.remove('bought'), 160);
+        tipOnce('units', 'Tap to train, hold for details. Select (top left) then drag a box to command units.');
+        refresh();
+      });
+      b.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse') return;
+        heldOpen = false;
+        window.clearTimeout(holdTimer);
+        holdTimer = window.setTimeout(() => {
+          heldOpen = true;
+          navigator.vibrate?.(12);
+          showCard({ kind: 'unit', def });
+        }, 420);
+      });
+      for (const ev of ['pointerup', 'pointerleave', 'pointercancel'] as const)
+        b.addEventListener(ev, () => window.clearTimeout(holdTimer));
       $('train').append(b);
       trainButtons.push([b, def]);
     }
@@ -2835,6 +2893,20 @@ void (async () => {
       world.x += h * go;
       world.y += v * go;
       clampCamera();
+    }
+    if (gesture === 'ghost' && ghostPtr && ghost) {
+      // A finger holding the pending tower near an edge of the field (or the dock) pans toward it.
+      const [x, y, m] = [ghostPtr.x, ghostPtr.y, 72];
+      const edge = (v: number, lo: number, hi: number) =>
+        v < lo + m ? (lo + m - v) / m : v > hi - m ? -(v - (hi - m)) / m : 0;
+      const [px, py] = [edge(x, 0, window.innerWidth), edge(y, topBar(), window.innerHeight - bottomBar())];
+      if (px || py) {
+        world.x += Math.max(-1, Math.min(1, px)) * 520 * dt;
+        world.y += Math.max(-1, Math.min(1, py)) * 520 * dt;
+        clampCamera();
+        const cell = cellAt(x + grab.x, y + grab.y);
+        if (cell) setGhost(cell);
+      }
     }
     if (started) drawLive(dt);
   });
