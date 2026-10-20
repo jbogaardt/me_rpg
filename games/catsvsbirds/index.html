@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cats vs Birds</title>
+    <link rel="icon" href="data:," />
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: #0a0a14; color: #e8e4d8; font: 15px/1.4 Georgia, 'Times New Roman', serif; }
+      body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 8px; user-select: none; -webkit-user-select: none; }
+      a { color: #f0c060; }
+      #top { width: 100%; max-width: 960px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+      h1 { margin: 0; font-size: 20px; color: #f0c060; }
+      canvas { width: 100%; max-width: 960px; height: auto; display: block; border-radius: 8px; touch-action: none; image-rendering: pixelated; cursor: pointer; }
+      #hint { color: #a9a496; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump · hold to keep jumping · M mutes</span><a href="../">All games</a></div>
+    <canvas id="c" width="960" height="540"></canvas>
+    <script>
+      'use strict';
+      const W = 960, H = 540, GROUND = 330, SPEED0 = 330, G = 2600, JUMP = 840;
+      const CAT_W = 80, CAT_H = 68, FEET = 62; // frame size of cat-run.png and the row of the paws inside it
+      const HIT_W = 44, HIT_H = 40, CAT_X = 220;
+
+      const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      const sheet = new Image(); sheet.src = 'cat-run.png';
+const bg = new Image(); bg.src = 'backdrop.png';
+const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 96 of the backdrop, where its railings stand
+
+      // ---- the level: a fixed course built from a seed, so every attempt is the same and can be learned ----
+      const BPM = 120, BEAT = 60 / BPM;
+      function rng(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      function buildLevel() {
+        const r = rng(7), solids = [], fish = [], spd = (x) => SPEED0 + Math.min(120, x / 250);
+        let x = 0; // world position in px; ground is a list of [from, to] runs with gaps between
+        const ground = [[-200, 900]]; x = 900;
+        const COUNT = 46;
+        for (let i = 0; i < COUNT; i++) {
+          // a gap is crossed in 0.2-0.4 s of flight (a jump lasts about 0.65 s) and grows a little as the course goes on
+          const gap = Math.round(spd(x) * (0.2 + Math.floor(r() * 3) * 0.07 + Math.min(0.06, i * 0.002)));
+          const runLen = Math.round(spd(x) * BEAT * (2.5 + Math.floor(r() * 5) * 0.5));
+          const kind = r();
+          const start = x + gap, end = start + runLen;
+          ground.push([start, end]);
+          if (gap > 60) fish.push({ x: x + gap / 2, y: GROUND - 150 });
+          if (kind > 0.5 && runLen > 420) { // a raised block to hop onto, with room to land and jump again
+            const bw = Math.min(runLen - 280, 150), bx = start + 190, bh = kind > 0.85 ? 90 : 55;
+            solids.push({ x: bx, w: bw, h: bh }); fish.push({ x: bx + bw / 2, y: GROUND - bh - 70 });
+          } else fish.push({ x: start + runLen / 2, y: GROUND - 60 });
+          x = end;
+        }
+        ground.push([x + 220, x + 1400]);
+        return { ground, solids, fish, end: x + 220 };
+      }
+      const L = buildLevel();
+
+      // ---- state ----
+      let S;
+      function reset(keepAttempt) {
+        S = { x: 0, y: GROUND, vy: 0, onGround: true, dead: 0, won: false, t: 0, scroll: 0, fishGot: new Set(), score: 0,
+          attempt: keepAttempt ? S.attempt + 1 : 1, best: keepAttempt ? S.best : 0, parts: [], started: false, frame: 0, coyote: 0, wasHeld: false };
+      }
+      reset(false);
+      const speed = () => SPEED0 + Math.min(120, S.scroll / 250);
+
+      let held = false, pressed = false;
+      const down = () => { held = true; pressed = true; audio.start(); };
+      cv.addEventListener('pointerdown', (e) => { e.preventDefault(); down(); });
+      addEventListener('pointerup', () => { held = false; });
+      addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); if (!e.repeat) down(); held = true; }
+        else if (e.key === 'm' || e.key === 'M') audio.toggle();
+      });
+      addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') held = false; });
+
+      const groundAt = (wx) => L.ground.some(([a, b]) => wx >= a && wx <= b);
+      // floor height under the cat's feet (px above GROUND), the tallest block the paws are over, else 0
+      const blockTop = (x0, x1) => { let h = -1; for (const s of L.solids) if (x1 > s.x && x0 < s.x + s.w) h = Math.max(h, s.h); return h; };
+
+      function die() { if (S.dead) return; S.dead = 0.0001; S.best = Math.max(S.best, Math.round(progress() * 100)); audio.thud();
+        for (let i = 0; i < 18; i++) S.parts.push({ x: CAT_X, y: S.y - 24, vx: (Math.random() - 0.5) * 520, vy: -Math.random() * 520, t: 0.7 }); }
+      const progress = () => Math.min(1, S.scroll / L.end);
+
+      function update(dt) {
+        S.t += dt;
+        for (const p of S.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 1800 * dt; p.t -= dt; }
+        S.parts = S.parts.filter((p) => p.t > 0);
+        if (S.dead) { S.dead += dt; if (S.dead > 0.9) reset(true); return; }
+        if (S.won) { S.scroll += speed() * dt * 0.3; if (pressed) { reset(true); S.attempt = 1; } pressed = false; return; }
+        if (!S.started) { if (pressed) S.started = true; else { pressed = false; return; } }
+
+        const sp = speed(); S.scroll += sp * dt; S.frame += dt * 14;
+        const wx = S.scroll + CAT_X;                      // world x of the cat
+        const x0 = wx - HIT_W / 2, x1 = wx + HIT_W / 2;
+        const floorH = blockTop(x0 + 6, x1 - 6);          // height of the block underfoot, -1 = none
+        const floorY = floorH >= 0 ? GROUND - floorH : (groundAt(x0 + 10) || groundAt(x1 - 10) ? GROUND : Infinity);
+
+        S.coyote = S.onGround ? 0.09 : S.coyote - dt;
+        if ((pressed || (held && !S.wasHeld) || (held && S.onGround)) && S.coyote > 0) { S.vy = -JUMP; S.onGround = false; S.coyote = 0; audio.jump(); }
+        pressed = false; S.wasHeld = held;
+
+        S.vy += G * dt; const prevY = S.y; S.y += S.vy * dt;
+        if (S.vy >= 0 && prevY <= floorY + 1 && S.y >= floorY) { S.y = floorY; S.vy = 0; S.onGround = true; }
+        else if (S.y > floorY && floorH < 0 && S.onGround) { /* walked off an edge */ S.onGround = false; }
+        else if (S.vy >= 0 && S.y < floorY) S.onGround = false;
+
+        // running into the side of a block (paws below its top), or dropping out of the world, ends the attempt
+        for (const s of L.solids) if (x1 - 8 > s.x && x0 + 8 < s.x + s.w && S.y > GROUND - s.h + 10) { die(); return; }
+        if (S.y > H + 60) { die(); return; }
+
+        for (let i = 0; i < L.fish.length; i++) {
+          const f = L.fish[i]; if (S.fishGot.has(i)) continue;
+          if (Math.abs(f.x - wx) < 36 && Math.abs(f.y - (S.y - 26)) < 44) { S.fishGot.add(i); S.score += 10; audio.fish(); }
+        }
+        if (S.scroll >= L.end) { S.won = true; S.best = 100; }
+      }
+
+      // ---- drawing ----
+      const ACCENTS = ['#ff6f91', '#ffb13b', '#ff4fa3'];
+      function draw() {
+        const beat = (S.t / BEAT) % 1, pulse = Math.pow(1 - beat, 3);
+        const pal = [0, 0, ACCENTS[Math.floor(S.scroll / 2600) % ACCENTS.length]];
+        // the sunset arches backdrop (480x128), drawn 3x with its deck (row 96) on the ground line; it drifts slowly, and every
+        // other copy is mirrored so the tiles meet without a seam
+        ctx.fillStyle = '#7b5397'; ctx.fillRect(0, 0, W, BG_Y + 2);
+        const tw = 480 * BG_S, drift = S.scroll * 0.2, first = Math.floor(drift / tw);
+        for (let n = first; n <= first + 2; n++) {
+          const tx = n * tw - drift;
+          ctx.save(); if (n % 2) { ctx.translate(tx + tw, 0); ctx.scale(-1, 1); } else ctx.translate(tx, 0);
+          ctx.drawImage(bg, 0, 0, 480, 128, 0, BG_Y, tw, 128 * BG_S); ctx.restore();
+        }
+        ctx.globalAlpha = pulse * 0.1; ctx.fillStyle = pal[2]; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+
+        const off = S.scroll;
+        // missing planks: through a gap in the deck you see the sunset below the bridge
+        const sky = ctx.createLinearGradient(0, GROUND, 0, H); sky.addColorStop(0, '#9a5f8f'); sky.addColorStop(1, '#f66f51');
+        ctx.fillStyle = sky;
+        for (let i = 1; i < L.ground.length; i++) { const x = L.ground[i - 1][1] - off, w = L.ground[i][0] - L.ground[i - 1][1]; if (x < W && x + w > 0) ctx.fillRect(x, GROUND, w, H - GROUND); }
+        // ground runs
+        for (const [a, b] of L.ground) {
+          const sx = a - off, ex = b - off; if (ex < -20 || sx > W + 20) continue;
+          const x = Math.max(-20, sx), w = Math.min(W + 20, ex) - x;
+          ctx.fillStyle = '#2c3134'; ctx.fillRect(x, GROUND, w, H - GROUND);
+          ctx.fillStyle = pal[2]; ctx.fillRect(x, GROUND, w, 4 + pulse * 3);
+          ctx.fillStyle = pal[2] + '22'; for (let gx = Math.ceil((x + off) / 60) * 60 - off; gx < x + w; gx += 60) ctx.fillRect(gx, GROUND + 4, 2, H - GROUND);
+        }
+        for (const s of L.solids) {
+          const sx = s.x - off; if (sx + s.w < -10 || sx > W + 10) continue;
+          ctx.fillStyle = '#383e42'; ctx.fillRect(sx, GROUND - s.h, s.w, s.h);
+          ctx.strokeStyle = pal[2]; ctx.lineWidth = 3; ctx.strokeRect(sx + 1.5, GROUND - s.h + 1.5, s.w - 3, s.h - 3);
+        }
+        ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; // fillStyle shows through where no colour-emoji font exists
+        L.fish.forEach((f, i) => { if (S.fishGot.has(i)) return; const fx = f.x - off; if (fx > -30 && fx < W + 30) ctx.fillText('🐟', fx, f.y + Math.sin(S.t * 4 + i) * 4); });
+        // finish line
+        const fl = L.end - off; if (fl < W + 40) { ctx.fillStyle = '#fff'; for (let i = 0; i < 20; i++) { ctx.fillRect(fl + (i % 2) * 14, 40 + i * 18, 14, 14); ctx.fillRect(fl + 14 - (i % 2) * 14, 40 + i * 18, 14, 14); } }
+
+        // the cat: the run strip when on the ground, a stretched frame in the air
+        if (!S.dead) {
+          const fr = S.onGround ? Math.floor(S.frame) % 6 : (S.vy < 0 ? 1 : 3);
+          ctx.save(); ctx.translate(CAT_X, S.y);
+          if (!S.onGround) ctx.rotate(Math.max(-0.35, Math.min(0.45, S.vy / 2600)));
+          ctx.fillStyle = '#0005'; if (S.onGround) { ctx.beginPath(); ctx.ellipse(0, 2, 34, 6, 0, 0, 7); ctx.fill(); }
+          ctx.shadowColor = pal[2]; ctx.shadowBlur = 14; // a glow, so the black cat reads against the dark course
+          ctx.scale(-1, 1); // the sprite sheet's cat faces left; the course runs to the right
+          ctx.drawImage(sheet, fr * CAT_W, 0, CAT_W, CAT_H, -CAT_W / 2 + 4, -FEET, CAT_W, CAT_H);
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        }
+        for (const p of S.parts) { ctx.globalAlpha = Math.max(0, p.t / 0.7); ctx.fillStyle = '#2a2a33'; ctx.fillRect(p.x, p.y, 7, 7); ctx.fillStyle = '#6aff7a'; ctx.fillRect(p.x + 2, p.y + 2, 2, 2); }
+        ctx.globalAlpha = 1;
+
+        // HUD: progress bar, fish, attempt
+        ctx.fillStyle = '#0008'; ctx.fillRect(W / 2 - 200, 18, 400, 12);
+        ctx.fillStyle = pal[2]; ctx.fillRect(W / 2 - 200, 18, 400 * progress(), 12);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Georgia'; ctx.textAlign = 'left'; ctx.fillText('🐟 ' + S.score, 20, 32);
+        ctx.textAlign = 'right'; ctx.fillText('Attempt ' + S.attempt + '   Best ' + S.best + '%', W - 20, 32);
+        ctx.textAlign = 'center'; ctx.font = 'bold 20px Georgia'; ctx.fillText(Math.round(progress() * 100) + '%', W / 2, 52);
+        if (!S.started && !S.won) { ctx.font = 'bold 44px Georgia'; ctx.fillStyle = '#f0c060'; ctx.fillText('Cats vs Birds', W / 2, 190); ctx.font = '22px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText('Tap, click or press Space to start', W / 2, 232); }
+        if (S.won) { ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#f0c060'; ctx.font = 'bold 48px Georgia'; ctx.fillText('Level complete!', W / 2, 230); ctx.fillStyle = '#fff'; ctx.font = '24px Georgia'; ctx.fillText('🐟 ' + S.score + ' · attempts ' + S.attempt + ' · tap to run again', W / 2, 280); }
+      }
+
+      // ---- sound: a four-on-the-floor kick and a bass line on the beat, made with Web Audio (starts on first input) ----
+      const audio = (() => {
+        let ac = null, muted = false, next = 0, step = 0, master = null;
+        const BASS = [55, 55, 82.4, 55, 65.4, 65.4, 98, 73.4];
+        function tone(f, t, d, type, vol, f2) { const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+          g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + d); o.connect(g).connect(master); o.start(t); o.stop(t + d + 0.02); }
+        function sched() { if (!ac || ac.state !== 'running') return; while (next < ac.currentTime + 0.25) {
+          if (!muted && S.started && !S.dead && !S.won) { tone(130, next, 0.18, 'sine', 0.5, 40); tone(BASS[step % 8], next, BEAT * 0.9, 'sawtooth', 0.12); if (step % 2) tone(1800, next + BEAT / 2, 0.04, 'square', 0.04); }
+          next += BEAT; step++; } }
+        setInterval(sched, 60);
+        const sfx = (f, d, type, f2) => () => { if (ac && !muted) tone(f, ac.currentTime, d, type, 0.2, f2); };
+        return { start() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = 0.5; master.connect(ac.destination); next = ac.currentTime + 0.1; } catch (e) { ac = null; } } else if (ac.state === 'suspended') void ac.resume(); },
+          toggle() { muted = !muted; }, jump: sfx(300, 0.14, 'square', 640), fish: sfx(900, 0.1, 'triangle', 1500), thud: sfx(160, 0.3, 'sawtooth', 40) };
+      })();
+
+      let last = performance.now();
+      (function loop(now) { const dt = Math.min(0.033, (now - last) / 1000); last = now; update(dt); draw(); requestAnimationFrame(loop); })(last);
+    </script>
+  </body>
+</html>
