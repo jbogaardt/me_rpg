@@ -751,6 +751,23 @@ export function repairTower(m: Match, owner: Owner, towerId: number): Result {
   return 'ok';
 }
 
+/** Selling a standing tower of yours returns this share of its price (a bunker's soldiers are lost) and frees its ground. */
+export const SELL_SHARE = 0.5;
+
+/** What selling `t` pays back. */
+export const sellRefund = (t: Tower): Cost =>
+  price(Math.floor(t.def.cost.wood * SELL_SHARE), Math.floor(t.def.cost.stone * SELL_SHARE));
+
+/** Sell a tower of `owner`'s: it goes at once (like a razed one, so what it unlocked locks again) and pays `sellRefund`. */
+export function sellTower(m: Match, owner: Owner, towerId: number): Result {
+  if (!playing(m, owner)) return 'over';
+  const t = m.towers.find((x) => x.id === towerId && x.owner === owner && x.hp > 0);
+  if (!t) return 'unknown';
+  earn(m.players[owner]!, sellRefund(t));
+  m.towers = m.towers.filter((x) => x !== t);
+  return 'ok';
+}
+
 // --- The step --------------------------------------------------------------------------------------------------------
 
 /** A kill pays the killer this share (1/n) of the unit's price: the lever that makes a winning fight snowball. */

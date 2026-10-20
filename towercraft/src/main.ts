@@ -51,6 +51,7 @@ import {
   canAfford,
   repairCost,
   repairable,
+  sellRefund,
   canBuild,
   canTarget,
   allied,
@@ -1854,6 +1855,7 @@ void (async () => {
     | { kind: 'foe'; id: number };
   let cardOf: CardOf | undefined;
   const act = $<HTMLButtonElement>('card-act');
+  const sell = $<HTMLButtonElement>('card-sell');
   let cardBody = '';
   /** How many purchases the slider is set to. */
   let buyN = 1;
@@ -2022,6 +2024,7 @@ void (async () => {
     lv.style.width = `${Math.max(2, (hp / max) * 100)}%`;
     lv.parentElement!.parentElement!.title = `Health ${Math.max(0, Math.ceil(hp))} / ${Math.ceil(max)}`;
     act.hidden = true;
+    sell.hidden = true;
   }
 
   /** A building that stands: yours (what it does, with its health) or the rival's (its picture and health). */
@@ -2040,6 +2043,16 @@ void (async () => {
     lv.style.width = `${Math.max(6, Math.min(100, Math.sqrt(Math.max(0, t.hp) / MOST.towerHp) * 100))}%`;
     lv.parentElement!.parentElement!.title = `Health ${Math.ceil(t.hp)} / ${t.def.hp}`;
     // Your own damaged tower can be repaired for resources; the health comes back over time.
+    sell.hidden = !mine;
+    if (mine) {
+      sell.innerHTML = `Sell ${money(sellRefund(t))}`;
+      sell.title = 'Sell for half the price and free the ground';
+      sell.onclick = () => {
+        cmd({ k: 'sell', tower: t.id });
+        closeCard();
+        refresh();
+      };
+    }
     act.hidden = !mine || t.def.hp - t.hp < 1;
     if (!act.hidden) {
       const mending = repairable(t) < 1;
@@ -2179,6 +2192,7 @@ void (async () => {
       cardBody = body;
     }
     act.hidden = cardOf.kind === 'bunker';
+    sell.hidden = true;
     const said = `${label}${reason && reason !== 'max' ? `<small>${reason}</small>` : ''}`;
     if (act.innerHTML !== said) act.innerHTML = said;
     act.disabled = !!reason;

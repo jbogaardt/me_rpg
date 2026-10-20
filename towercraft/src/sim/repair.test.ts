@@ -35,3 +35,21 @@ describe('tower repair', () => {
     expect(repairTower(m, 0, t.id)).toBe('gold');
   });
 });
+
+describe('selling a tower', () => {
+  it('pays half the price, frees the ground and lets another one go there', async () => {
+    const { sellRefund, sellTower, buildTower } = await import('./sim');
+    const { m, t } = fresh();
+    m.players[0].wood = m.players[0].stone = 0;
+    const back = sellRefund(t);
+    expect(back.wood).toBe(Math.floor(t.def.cost.wood / 2));
+    expect(sellTower(m, 1, t.id)).toBe('unknown'); // not the rival's
+    expect(sellTower(m, 0, t.id)).toBe('ok');
+    expect(m.towers.includes(t)).toBe(false);
+    expect(m.players[0].wood).toBe(back.wood);
+    expect(m.players[0].stone).toBe(back.stone);
+    expect(sellTower(m, 0, t.id)).toBe('unknown');
+    m.players[0].wood = m.players[0].stone = 1000;
+    expect(buildTower(m, 0, t.def.id, t.col, t.row)).not.toBe('taken'); // the cell is free again
+  });
+});
