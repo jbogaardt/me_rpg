@@ -57,18 +57,15 @@
       .plank.on, .plank:hover:not(:disabled) { background-image: url('./ui/plank.png'); color: var(--gold); }
       .plank:disabled { opacity: 0.45; }
 
-      /* The dock: tabs (units, buildings, upgrades) over one shelf of small thumbnails; tap one for its card. The orders sit by the tabs. */
-      #dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(6px, var(--safe-b)); z-index: 2; width: min(900px, calc(100vw - 12px));
+      /* The dock: only structures, by kind (and the roads, in co-op); tap one for its card. Units and upgrades are bought from the buildings' cards. */
+      #dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(6px, var(--safe-b)); z-index: 2; width: max-content; max-width: calc(100vw - 12px);
         box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 0 4px; }
-      .bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; }
-      #tabs, #castle { display: flex; gap: 4px; align-items: center; }
-      #tabs .plank { padding: 6px 12px; }
       .shelf { display: flex; gap: 4px 10px; align-items: flex-end; overflow-x: auto; overflow-y: hidden; min-height: 62px; padding: 0 0 2px; scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
       .shelf[hidden] { display: none; }
       .sec { flex: none; display: flex; flex-direction: column; gap: 1px; }
       .sec h4 { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-dim); text-shadow: 0 1px 2px #000; padding-left: 2px; }
       .thumbs { display: flex; gap: 4px; align-items: flex-end; }
-      .tb[hidden], .up[hidden], .sec[hidden], #tabs button[hidden] { display: none; }
+      .tb[hidden], .up[hidden], .sec[hidden] { display: none; }
       .tb { position: relative; flex: none; width: 54px; height: 58px; display: grid; place-items: center; padding: 0; }
       .tb .art { display: block; border-radius: 3px; background-repeat: no-repeat; background-position: 0 0; pointer-events: none; }
       img.thumb.gen { object-fit: contain; }
@@ -84,7 +81,6 @@
       .tb.orders { width: 64px; height: 50px; font-size: 10px; line-height: 1.05; }
       .tb.orders span { position: relative; padding: 0 6px; text-align: center; pointer-events: none; }
       .tb.orders.bypass { filter: brightness(1.25) drop-shadow(0 0 5px rgba(231, 104, 47, 0.9)); }
-      #castle .tb:first-child { height: 50px; width: 50px; }
       /* An upgrade line: its name, three pips, what a level adds and what the next costs (or why it cannot be bought). */
       .up { flex: none; width: 136px; height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 14px 8px; }
       .up .foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
@@ -101,6 +97,9 @@
       #card { position: fixed; z-index: 4; right: 8px; top: 108px; width: min(300px, calc(100vw - 16px)); max-height: calc(100dvh - 108px - var(--dock-h) - var(--safe-b) - 16px);
         overflow-y: auto; padding: 4px 6px 8px; animation: pop 0.14s ease-out; }
       #card[hidden] { display: none; }
+      /* What a building sells: its units, or the upgrades it hosts, the dock's thumbnails moved in. */
+      #card-shop { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 4px 0 6px; }
+      #card-shop[hidden] { display: none; }
       /* A group's card is small and sits low at the left, out of the way of the field you are commanding on. */
       #card.group { right: auto; left: 8px; top: auto; bottom: calc(var(--dock-h) + var(--safe-b) + 12px); width: min(250px, calc(100vw - 16px)); }
       @keyframes pop { from { opacity: 0; transform: translateX(14px) scale(0.97); } to { opacity: 1; transform: none; } }
@@ -240,14 +239,13 @@
       @keyframes end-in { from { opacity: 0; } to { opacity: 1; } }
       #again { padding: 10px 26px; font-size: 16px; }
 
-      @media (pointer: coarse) { #cam-sound { display: none; } #tabs .plank { min-height: 44px; } #cam button { width: 44px; height: 44px; } #ghost button { min-height: 48px; } }
+      @media (pointer: coarse) { #cam-sound { display: none; } #cam button { width: 44px; height: 44px; } #ghost button { min-height: 48px; } }
       /* A narrow screen: the card rises over the dock instead of the side, and gets out of the way while a tower is placed. */
       @media (max-width: 760px), (max-height: 560px) {
         #card { right: 4px; left: 4px; width: auto; top: auto; bottom: calc(var(--dock-h) + var(--safe-b) + 6px); max-height: 40dvh; }
         #card.placing { display: none; }
-        .tb { width: 42px; height: 48px; } .tb.orders { width: 50px; height: 42px; } .tb.lane { width: 56px; height: 42px; } #castle .tb:first-child { width: 42px; height: 42px; }
+        .tb { width: 42px; height: 48px; } .tb.orders { width: 50px; height: 42px; } .tb.lane { width: 56px; height: 42px; }
         .shelf { flex-wrap: wrap; overflow: visible; justify-content: center; } .thumbs { gap: 8px; } .tb em { font-size: 11px; } #cam button { width: 44px; height: 44px; }
-        #tabs .plank { padding: 5px 10px; font-size: 12px; min-height: 44px; }
         #hint { top: 56px; font-size: 14px; padding: 0 8px; }
         .up { width: 124px; height: 58px; padding: 5px 12px 7px; } .shelf { min-height: 56px; }
         #top .r { font-size: 17px; } #top .r::before { width: 22px; height: 22px; }
@@ -266,17 +264,13 @@
     <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-sound" title="Sound (M)">🔊</button></div>
     <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no" aria-label="Cancel">✕</button></div>
     <div id="dock" class="panel thin wood glass">
-      <div class="bar">
-        <div id="tabs"><button class="plank on" data-tab="units">Units</button><button class="plank" data-tab="build">Build</button><button class="plank" data-tab="upgrades">Upgrades</button></div>
-        <div id="castle"></div>
-      </div>
       <div class="shelf" id="train"></div>
-      <div class="shelf" id="build" hidden></div>
-      <div class="shelf" id="upgrades" hidden></div>
+      <div class="shelf" id="build"></div>
     </div>
     <aside id="card" class="panel thin paper glass" hidden>
       <button class="wbtn" id="card-x" aria-label="Close">×</button>
       <div id="card-body"></div>
+      <div id="card-shop" hidden></div>
       <div id="card-buy" hidden>
         <div class="line"><span id="buy-n-label"></span><span id="buy-n-cost"></span></div>
         <input type="range" id="buy-n" min="1" max="1" value="1" step="1" aria-label="How many to train" />

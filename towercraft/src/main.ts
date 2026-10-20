@@ -1811,7 +1811,6 @@ void (async () => {
   const trainButtons: [HTMLButtonElement, UnitDef][] = [];
   const buildButtons: [HTMLButtonElement, TowerDef][] = [];
   const upgradeButtons: [HTMLButtonElement, UpgradeDef][] = [];
-  let castleButton: HTMLButtonElement;
   /** The road chips of a map with forks (a unit you buy walks the road picked), by the lane each one is. */
   const laneButtons: [HTMLButtonElement, number][] = [];
 
@@ -1843,6 +1842,8 @@ void (async () => {
   const act = $<HTMLButtonElement>('card-act');
   const sell = $<HTMLButtonElement>('card-sell');
   let cardBody = '';
+  /** Which building's shop the card holds now (see `fillShop`). */
+  let shopKey = '';
   /** How many purchases the slider is set to. */
   let buyN = 1;
   const sameCard = (a: CardOf, b: CardOf) =>
@@ -2065,8 +2066,38 @@ void (async () => {
     }
   }
 
+  /** What a card sells: the castle its base unit, a producer its units, a smithy its upgrades. The buttons are the dock's own (`refresh` keeps their state), moved in. */
+  function fillShop() {
+    const shop = $('card-shop');
+    const race = RACES[match.players[YOU]!.race];
+    let units: UnitDef[] = [];
+    let ups: UpgradeDef[] = [];
+    let key = '';
+    if (cardOf?.kind === 'castle') {
+      units = race.units.filter((u) => !u.needs);
+      key = 'castle';
+    } else if (cardOf?.kind === 'built') {
+      const id = cardOf.id;
+      const t = match.towers.find((x) => x.id === id && x.owner === YOU);
+      if (t) {
+        units = race.units.filter((u) => u.needs === t.def.id);
+        ups = race.upgrades.filter((u) => u.needs === t.def.id);
+        key = `built:${t.def.id}`;
+      }
+    }
+    if (key !== shopKey) {
+      shopKey = key;
+      shop.replaceChildren(
+        ...trainButtons.filter(([, d]) => units.includes(d)).map(([b]) => b),
+        ...upgradeButtons.filter(([, u]) => ups.includes(u)).map(([b]) => b),
+      );
+    }
+    shop.hidden = [...shop.children].every((b) => (b as HTMLElement).hidden);
+  }
+
   function renderCard() {
     if (!cardOf) return;
+    fillShop();
     const me = match.players[YOU]!;
     const race = RACES[me.race];
     const { level } = me.castle;
@@ -2182,22 +2213,13 @@ void (async () => {
     };
   }
 
-  /** The dock's three shelves (units, buildings, upgrades). */
-  let tab: 'units' | 'build' | 'upgrades' = 'units';
-  const shelves = { units: 'train', build: 'build', upgrades: 'upgrades' } as const;
-  function setTab(t: typeof tab) {
-    tab = t;
-    for (const [k, id] of Object.entries(shelves)) $(id).hidden = k !== t;
-    for (const b of document.querySelectorAll<HTMLButtonElement>('#tabs button'))
-      b.classList.toggle('on', b.dataset.tab === t);
+  /** The dock's height is what the field keeps clear of (`--dock-h`): measured again when the dock changes. */
+  let dockShown = -1;
+  function layoutDock() {
     document.documentElement.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`);
     clampCamera();
   }
-  for (const b of document.querySelectorAll<HTMLButtonElement>('#tabs button'))
-    b.onclick = () => setTab(b.dataset.tab as typeof tab);
-  window.addEventListener('resize', () =>
-    document.documentElement.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`),
-  );
+  window.addEventListener('resize', layoutDock);
 
   /** Buildings by what they are for, so fifteen of them stay easy to find. */
   const roleOf = (d: TowerDef) =>
@@ -2210,7 +2232,8 @@ void (async () => {
     `${pct(up.perLevel)}${icon(up.stat === 'hp' ? 'heart' : 'sword')}${icon(up.applies === 'air' ? 'wing' : 'ground')}`;
 
   function makeControls(race: RaceId) {
-    for (const id of ['train', 'build', 'upgrades', 'castle']) $(id).innerHTML = '';
+    for (const id of ['train', 'build', 'card-shop']) $(id).innerHTML = '';
+    shopKey = '';
     trainButtons.length = 0;
     buildButtons.length = 0;
     upgradeButtons.length = 0;
@@ -2238,11 +2261,10 @@ void (async () => {
       $('train').append(sec);
     }
     for (const def of r.units) {
-      // A mouse opens the card; a finger trains one at once (hold for the card), the way phone RTS games do.
+      // A tap trains one at once; hold (or right-click) for the card.
       let heldOpen = false;
       let holdTimer: number | undefined;
       const b = thumb(unitThumb(def, 36), money(def.cost), def.name, () => {
-        if (!touchUser) return showCard({ kind: 'unit', def }, true);
         if (heldOpen) return void (heldOpen = false);
         if (maxPurchases(match, YOU, def) < 1) return showCard({ kind: 'unit', def }); // the card says why not
         cmd({ k: 'train', id: def.id, n: 1 });
@@ -2266,7 +2288,10 @@ void (async () => {
       });
       for (const ev of ['pointerup', 'pointerleave', 'pointercancel'] as const)
         b.addEventListener(ev, () => window.clearTimeout(holdTimer));
-      $('train').append(b);
+      b.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showCard({ kind: 'unit', def });
+      });
       trainButtons.push([b, def]);
     }
     for (const role of ROLES) {
@@ -2292,14 +2317,10 @@ void (async () => {
         cmd({ k: 'upgrade', id: up.id });
         refresh();
       };
-      $('upgrades').append(b);
       upgradeButtons.push([b, up]);
     }
-    castleButton = thumb(towerThumb(r.castle.art, 40), '', 'Your castle: upgrade it', () =>
-      showCard({ kind: 'castle' }, true),
-    );
-    $('castle').append(castleButton);
-    setTab(tab);
+    $('train').hidden = laneButtons.length === 0;
+    layoutDock();
   }
 
   function refresh() {
@@ -2358,16 +2379,11 @@ void (async () => {
     // A section or a tab with nothing in it is not shown; if the open tab empties, go back to the units.
     for (const sec of document.querySelectorAll<HTMLElement>('#build .sec'))
       sec.hidden = !sec.querySelector('.tb:not([hidden])');
-    for (const tabButton of document.querySelectorAll<HTMLButtonElement>('#tabs button')) {
-      const shelf = $(shelves[tabButton.dataset.tab as keyof typeof shelves]);
-      tabButton.hidden = !shelf.querySelector('.tb:not([hidden]), .up:not([hidden])');
+    const shown = document.querySelectorAll('#build .tb:not([hidden])').length;
+    if (shown !== dockShown) {
+      dockShown = shown;
+      layoutDock();
     }
-    if (tab !== 'units' && $(shelves[tab]).querySelector('.tb:not([hidden]), .up:not([hidden])') === null)
-      setTab('units');
-    const upCost = upgradeCost(match, YOU);
-    castleButton.classList.toggle('open', cardOf?.kind === 'castle');
-    castleButton.classList.toggle('poor', upCost === undefined || !canAfford(me, upCost));
-    castleButton.querySelector('em')!.textContent = `Lv ${level}`;
     const march = laneFor(match, YOU);
     const open = new Set(openLanes(match, YOU).map((l) => l.id));
     for (const [b, id] of laneButtons) {
