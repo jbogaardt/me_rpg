@@ -1710,7 +1710,6 @@ void (async () => {
       ? `<img class="thumb art" src="art/${d.art}.png" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`
       : `<img class="thumb art gen" src="${portrait(d)}" alt="" style="width:${px}px;height:${Math.round((px * 38) / 46)}px" />`;
 
-  const row = (k: string, v: string | number) => `<li><span>${k}</span><b>${v}</b></li>`;
   const per = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
   const pct = (n: number) => `+${Math.round(n * 100)}%`;
 
@@ -2148,13 +2147,15 @@ void (async () => {
     } else {
       const cost = upgradeCost(match, YOU);
       const inc = incomeOf(match, YOU);
-      const base = race.castle.income[level - 1]!;
       const nextInc = race.castle.income[level];
-      const names = (items: { name: string; tier: number }[]) =>
-        items
-          .filter((i) => i.tier === level + 1)
-          .map((i) => i.name)
-          .join(', ');
+      const unlocks = [
+        ...race.units
+          .filter((u) => u.tier === level + 1)
+          .map((u) => `<span title="${u.name}">${unitThumb(u, 30)}</span>`),
+        ...race.towers
+          .filter((t) => t.tier === level + 1)
+          .map((t) => `<span title="${t.name}">${towerThumb(t.art, 30)}</span>`),
+      ].join('');
       const lacks = upgradeLacks(match, YOU);
       const ROLE_NAMES: Record<Role, string> = {
         econ: 'mill or quarry',
@@ -2162,24 +2163,34 @@ void (async () => {
         smithy: 'smithy',
         defence: 'tower',
       };
+      // What must stand first: each need as the pictures of the buildings that count, with how many of how many stand.
       const asks = (race.castle.needs[level - 1] ?? [])
         .map((n) => {
           const have = lacks.find((l) => l.need === n)?.have ?? n.count;
           const kinds = race.towers
             .filter((t) => buildingRole(t) === n.role && t.tier >= (n.tier ?? 1))
-            .map((t) => t.name);
-          const name = `${ROLE_NAMES[n.role]}${n.count > 1 ? 's' : ''}${n.tier && n.tier > 1 ? ` (level ${n.tier}+)` : ''}: ${kinds.join(', ')}`;
-          return `<li class="${have >= n.count ? 'ok' : 'no'}">${have} / ${n.count} ${name}</li>`;
+            .map((t) => `<span title="${t.name}">${towerThumb(t.art, 26)}</span>`)
+            .join('');
+          const title = `${ROLE_NAMES[n.role]}${n.tier && n.tier > 1 ? ` (level ${n.tier}+)` : ''}`;
+          return `<li class="${have >= n.count ? 'ok' : 'no'}" title="${title}"><span class="kinds">${kinds}</span><b>${have} / ${n.count}</b></li>`;
         })
         .join('');
+      const stat = (name: string, title: string, v: string | number) =>
+        `<li title="${title}"><span>${icon(name, title)}</span><b>${v}</b></li>`;
       body =
-        `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">Level ${level} of ${MAX_LEVEL}</div></div></header>` +
+        `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">${icon('power', 'Castle level')} ${level} / ${MAX_LEVEL}</div></div></header>` +
         `<div class="hp"><i style="width:${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%"></i><span>${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}</span></div>` +
-        `<ul>${row('Castle pays', `${money(base)} every ${PAY_EVERY} s`)}${row('With mills and quarries', money(inc))}${row('Build reach', `${race.castle.reach[level - 1]} cells`)}${row('Units out', `${match.units.filter((u) => u.owner === YOU).length} of ${UNIT_CAP}`)}</ul>` +
+        `<ul>${stat('heal', `Pays every ${PAY_EVERY} s (mills and quarries included)`, money(inc))}${stat('reach', 'Build reach, in cells', race.castle.reach[level - 1]!)}${stat('runner', 'Units out', `${match.units.filter((u) => u.owner === YOU).length} / ${UNIT_CAP}`)}</ul>` +
         (cost === undefined || !nextInc
-          ? '<p class="note">The castle has every upgrade.</p>'
-          : `<p class="note"><b>Level ${level + 1}</b> costs ${money(cost)}: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pays ${money(nextInc)}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; buildings: ${names(race.towers) || 'none'}.</p>` +
-            (asks ? `<p class="note">First build:</p><ul class="needs">${asks}</ul>` : ''));
+          ? `<p class="note" title="Every upgrade bought">${icon('power', 'Fully upgraded')}</p>`
+          : `<ul class="next" title="Level ${level + 1}">` +
+            stat('power', `Level ${level + 1} costs`, money(cost)) +
+            stat('reach', 'Build reach', `${race.castle.reach[level - 1]} → ${race.castle.reach[level]}`) +
+            stat('heal', 'Pays', money(nextInc)) +
+            stat('heart', 'Castle health', `+${race.castle.hpPerLevel}`) +
+            `</ul>` +
+            (unlocks ? `<div class="unlocks" title="Unlocks">${icon('unlock', 'Unlocks')}${unlocks}</div>` : '') +
+            (asks ? `<ul class="needs" title="Build first">${asks}</ul>` : ''));
       label =
         cost === undefined
           ? icon('power', 'Fully upgraded')
@@ -2227,6 +2238,9 @@ void (async () => {
   const ROLES = ['Economy', 'Production', 'Defence', 'Support'];
 
   const upgradeText = (up: UpgradeDef) => `${pct(up.perLevel)} ${up.applies} ${up.stat === 'hp' ? 'health' : 'damage'}`;
+  /** The same as pictures: +15%, a heart or a sword, and the ground or a wing. */
+  const upgradeIcons = (up: UpgradeDef) =>
+    `${pct(up.perLevel)}${icon(up.stat === 'hp' ? 'heart' : 'sword')}${icon(up.applies === 'air' ? 'wing' : 'ground')}`;
 
   function makeControls(race: RaceId) {
     for (const id of ['train', 'build', 'upgrades', 'castle']) $(id).innerHTML = '';
@@ -2304,7 +2318,7 @@ void (async () => {
     for (const up of r.upgrades) {
       const b = document.createElement('button');
       b.className = 'up wbtn';
-      b.innerHTML = `<b>${up.name}</b><small>${upgradeText(up)}</small><span class="foot"><span class="pips"><i></i><i></i><i></i></span><em></em></span>`;
+      b.innerHTML = `<b>${up.name}</b><small title="${upgradeText(up)}">${upgradeIcons(up)}</small><span class="foot"><span class="pips"><i></i><i></i><i></i></span><em></em></span>`;
       b.onclick = () => {
         cmd({ k: 'upgrade', id: up.id });
         refresh();
@@ -2375,8 +2389,8 @@ void (async () => {
       const text = !next ? 'max' : why ? '' : money(next.cost);
       if (line.innerHTML !== text) line.innerHTML = text;
       const effect = b.querySelector('small')!;
-      const said = why && next ? why : upgradeText(up);
-      if (effect.textContent !== said) effect.textContent = said;
+      const said = why && next ? why : upgradeIcons(up);
+      if (effect.innerHTML !== said) effect.innerHTML = said;
       b.hidden = !next || !!why; // only an upgrade you can buy now
       b.classList.toggle('lock', !!why);
       b.classList.toggle('poor', poor);

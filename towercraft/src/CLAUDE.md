@@ -11,3 +11,7 @@ Each page makes its own sounds from the same match, so nothing goes over the wir
 - **`audio.ts`** plays the Ogg files in `public/audio/sfx/<kind>-<n>.ogg` with Web Audio (credits and licences in `public/audio/CREDITS.md`; only CC0 or CC-BY, listed there). It starts on the first click or key press (browsers require it), loads lazily, caps each kind per tick and 24 voices, varies the pitch a little, and **M** or the speaker button mutes (`localStorage` `towercraft:muted`).
 - **`music.ts`** loops one background track through the same output (`audioOutput`), so **M** mutes it too. It starts when a match begins (`begin`) and fades out when it ends (`showEnd`); one track serves every map, and it waits for the first click if the match began before audio was unlocked. Files in `public/audio/music/` (credits in `public/audio/CREDITS.md`). Every page plays its own copy (host and guest alike), since nothing goes over the wire.
 - A new sound: add its kind to `SoundKind`, a `SOUNDS` entry and the files, and a cue in `SoundWatch.collect` (with a test). A new track: a file pair in `public/audio/music/` and a credit, then pick it in `music.ts`.
+
+## Cards
+
+The castle card and the upgrade shelf are pictures first: stat rows are an icon (`icons.ts`, the words in its tooltip) and a value; the next level lists the units and buildings it unlocks and the buildings it asks for as thumbnails with counts; an upgrade button shows `+15%`, a heart or sword, and the ground or a wing.
