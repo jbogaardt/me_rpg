@@ -67,7 +67,7 @@ export interface Unit {
   /** The seat that last hurt it, paid the bounty when it falls. */
   by?: Owner;
   /** Off the road to take a tower down: straight across from the road (`dir`, one axis), `d` cells out, at most `max`. */
-  off?: { tower: number; dir: [number, number]; d: number; max: number };
+  off?: { tower: number; dir: [number, number]; d: number; max: number; leaving?: boolean };
   /** Blew itself up (no bounty for the foe). */
   spent?: boolean;
   /** Sent after one thing by its player: a particular enemy tower, or the castle. It ignores the rest (orders) until that tower falls. */
@@ -463,21 +463,25 @@ export function trainUnit(m: Match, owner: Owner, unitId: string): Result {
   if (!canAfford(p, def.cost)) return 'gold';
   pay(p, def.cost);
   const maxHp = def.hp * boostOf(m, owner, def, 'hp');
-  const { lane: onLane, s: s0 } = spawnPoint(m, owner, def, lane);
-  // Units that walk out together are spread along the first stretch of road (a crowd bought at once is not one stack on one spot).
-  const queued = m.units.reduce(
-    (n, u) => n + (u.owner === owner && (u.lane ?? lane) === onLane && u.s >= s0 && u.s < s0 + SPREAD ? 1 : 0),
-    0,
-  );
+  const spot = spawnPoint(m, owner, def, lane);
+  // Units that walk out together are spread along the first stretch of road (a crowd bought at once is not one stack on one spot);
+  // from a building they file out of its door instead (`exitFrom`).
+  const queued = spot.out
+    ? 0
+    : m.units.reduce(
+        (n, u) =>
+          n + (u.owner === owner && (u.lane ?? lane) === spot.lane && u.s >= spot.s && u.s < spot.s + SPREAD ? 1 : 0),
+        0,
+      );
   for (let i = 0; i < def.count; i++)
     m.units.push({
       id: m.nextId++,
       def,
       owner,
-      lane: onLane,
+      lane: spot.lane,
       hp: maxHp,
       maxHp,
-      s: s0 + Math.min(SPREAD, i * SPACING + queued * SPACING),
+      ...exitFrom(spot, i, queued),
       cooldown: 0,
     });
   return 'ok';
@@ -487,7 +491,7 @@ export function trainUnit(m: Match, owner: Owner, unitId: string): Result {
  * Where a purchase of `def` walks out: from the producer building that unlocks it (the one that has sent the fewest, so several
  * share the work), at the road point straight across from it (the nearest open lane), else from the castle.
  */
-function spawnPoint(m: Match, owner: Owner, def: UnitDef, home: number): { lane: number; s: number } {
+function spawnPoint(m: Match, owner: Owner, def: UnitDef, home: number): Spot {
   let from: Tower | undefined;
   for (const t of m.towers)
     if (t.owner === owner && t.hp > 0 && def.needs !== undefined && t.def.id === def.needs)
@@ -497,18 +501,35 @@ function spawnPoint(m: Match, owner: Owner, def: UnitDef, home: number): { lane:
   return roadPointBy(m, owner, from, home);
 }
 
-/** The road point straight across from a building (on the nearest open lane), or the castle when it has none. */
-function roadPointBy(m: Match, owner: Owner, t: Tower, home: number): { lane: number; s: number } {
-  let best: { lane: number; s: number; d: number } | undefined;
+/** Where new units appear: a point on a lane, and for a building the door they walk out of (square to the road, `d` from it). */
+interface Spot {
+  lane: number;
+  s: number;
+  out?: { tower: number; dir: [number, number]; d: number };
+}
+
+/**
+ * The road point straight across from a building (on the nearest open lane), with the door it walks out of, or the castle when
+ * it has none. The unit starts at the building's edge and walks square to the road, as it does to take the building down.
+ */
+function roadPointBy(m: Match, owner: Owner, t: Tower, home: number): Spot {
+  let best: { lane: number; s: number; d: number; dir: [number, number] } | undefined;
   for (const l of openLanes(m, owner)) {
     const foot = l.footOf(t.col, t.row);
-    if (foot && (!best || foot.d < best.d)) best = { lane: l.id, s: foot.s, d: foot.d };
+    if (foot && (!best || foot.d < best.d)) best = { lane: l.id, s: foot.s, d: foot.d, dir: foot.dir };
   }
   if (!best) return { lane: home, s: 0 };
-  return {
-    lane: best.lane,
-    s: Math.min(best.s, Math.max(0, laneOf(m.board, { owner, lane: best.lane }).length - SPREAD)),
-  };
+  return { lane: best.lane, s: best.s, out: { tower: t.id, dir: best.dir, d: Math.max(0, best.d - TOWER_RADIUS) } };
+}
+
+/**
+ * Where the i-th unit out of a spot starts: from a building it files out of its door (`off`, leaving: it walks square to the road
+ * and joins it at the spot's point); otherwise on the road, `queued` units already there pushed along it.
+ */
+function exitFrom(spot: Spot, i: number, queued: number): Pick<Unit, 's' | 'off'> {
+  if (!spot.out) return { s: spot.s + Math.min(SPREAD, i * SPACING + queued * SPACING) };
+  const d = spot.out.d + i * SPACING;
+  return { s: spot.s, off: { ...spot.out, d, max: d, leaving: true } };
 }
 
 /** The lanes `owner`'s units may walk now: those that end at the castle of a foe still standing. */
@@ -802,10 +823,19 @@ export function sellTower(m: Match, owner: Owner, towerId: number): Result {
   // The soldiers inside come out onto the road beside it and march on (they were bought already: the unit cap does not stop them).
   const home = laneFor(m, owner);
   if (home !== undefined) {
-    const { lane, s } = roadPointBy(m, owner, t, home);
+    const spot = roadPointBy(m, owner, t, home);
     t.garrison.forEach((g, i) => {
       const maxHp = g.def.hp * boostOf(m, owner, g.def, 'hp');
-      m.units.push({ id: m.nextId++, def: g.def, owner, lane, hp: maxHp, maxHp, s: s + i * SPACING, cooldown: 0 });
+      m.units.push({
+        id: m.nextId++,
+        def: g.def,
+        owner,
+        lane: spot.lane,
+        hp: maxHp,
+        maxHp,
+        ...exitFrom(spot, i, 0),
+        cooldown: 0,
+      });
     });
   }
   return 'ok';
@@ -1051,7 +1081,7 @@ export function step(m: Match, dt: number): void {
     } else if (u.off) {
       const off = u.off;
       const tower = m.towers.find((t) => t.id === off.tower);
-      const wanted = tower !== undefined && tower.hp > 0 && towersOn;
+      const wanted = !off.leaving && tower !== undefined && tower.hp > 0 && towersOn;
       off.d = Math.min(off.max, off.d + (wanted ? 1 : -1) * u.def.speed * dt);
       if (off.d <= 0) delete u.off;
     } else {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createAi } from './ai';
+import { laneOf } from './board';
 import { RACE_IDS, RACES as GAME_RACES, type RaceId } from './races';
 import {
   PAY_EVERY,
@@ -219,6 +220,21 @@ describe('buying units', () => {
     upgradeCastle(m, 0);
     expect(trainUnit(m, 0, 'thief')).toBe('needs');
     expect(trainUnit(m, 1, 'archer')).toBe('needs'); // the other side has no hatchery
+  });
+
+  it('files a unit out of its building square to the road, then joins the road there', () => {
+    const m = quiet(rich(newMatch(['swarm', 'swarm'])));
+    const hatchery = put(m, 0, 'swarm', 'hatchery', ...NEAR);
+    expect(trainUnit(m, 0, 'archer')).toBe('ok');
+    const u = m.units[0]!;
+    expect(u.off?.leaving).toBe(true);
+    expect(u.off?.tower).toBe(hatchery.id);
+    const foot = laneOf(m.board, u).footOf(hatchery.col, hatchery.row)!;
+    expect(u.off?.dir).toEqual(foot.dir); // straight out from the building, square to the road
+    expect(u.s).toBeCloseTo(foot.s, 6); // and it joins the road at the point across from the building
+    for (let i = 0; i < 400 && u.off; i++) step(m, 0.05);
+    expect(u.off).toBeUndefined();
+    expect(u.s).toBeCloseTo(foot.s, 6);
   });
 
   it('locks a unit again when its building is destroyed', () => {
