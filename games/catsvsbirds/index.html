@@ -143,10 +143,9 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       }
 
       // ---- drawing ----
-      const ACCENTS = ['#ff6f91', '#ffb13b', '#ff4fa3'];
+      const ACCENT = '#ff6f91';
       function draw() {
-        const beat = (S.t / BEAT) % 1, pulse = Math.pow(1 - beat, 3);
-        const pal = [0, 0, ACCENTS[Math.floor(S.scroll / 2600) % ACCENTS.length]];
+        const pal = [0, 0, ACCENT];
         // the sunset arches backdrop (480x128), drawn 3x with its deck (row 96) on the ground line; it scrolls with the course so its bridge is
         // the terrain, and every other copy is mirrored so the tiles meet without a seam
         ctx.fillStyle = '#7b5397'; ctx.fillRect(0, 0, W, BG_Y + 2);
@@ -156,7 +155,6 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
           ctx.save(); if (n % 2) { ctx.translate(tx + tw, 0); ctx.scale(-1, 1); } else ctx.translate(tx, 0);
           ctx.drawImage(bg, 0, 0, 480, 128, 0, BG_Y, tw, 128 * BG_S); ctx.restore();
         }
-        ctx.globalAlpha = pulse * 0.1; ctx.fillStyle = pal[2]; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
 
         const off = S.scroll;
         // missing planks: through a gap in the deck you see the sunset below the bridge
