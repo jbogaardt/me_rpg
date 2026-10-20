@@ -1812,7 +1812,6 @@ void (async () => {
   const buildButtons: [HTMLButtonElement, TowerDef][] = [];
   const upgradeButtons: [HTMLButtonElement, UpgradeDef][] = [];
   let castleButton: HTMLButtonElement;
-  const orderButtons: [HTMLButtonElement, 'towers' | 'units'][] = [];
   /** The road chips of a map with forks (a unit you buy walks the road picked), by the lane each one is. */
   const laneButtons: [HTMLButtonElement, number][] = [];
 
@@ -1896,6 +1895,14 @@ void (async () => {
             }
           : { k: 'focus', ids: [...selection] },
       );
+      renderCard();
+      return;
+    }
+    const ord = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-order]');
+    if (ord && cardOf?.kind === 'castle') {
+      const what = ord.dataset.order as 'towers' | 'units';
+      const o = match.players[YOU]!.orders;
+      cmd({ k: 'order', what, to: o[what] === 'attack' ? 'bypass' : 'attack' });
       renderCard();
       return;
     }
@@ -2144,6 +2151,13 @@ void (async () => {
         `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">${icon('power', 'Castle level')} ${level} / ${MAX_LEVEL}</div></div></header>` +
         `<div class="hp"><i style="width:${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%"></i><span>${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}</span></div>` +
         `<ul>${stat('heal', `Pays every ${PAY_EVERY} s (mills and quarries included)`, money(inc))}${stat('reach', 'Build reach, in cells', race.castle.reach[level - 1]!)}${stat('runner', 'Units out', `${match.units.filter((u) => u.owner === YOU).length} / ${UNIT_CAP}`)}</ul>`;
+      // The orders for every unit you have, once per kind: attack, or walk past (the dock keeps only units and buildings).
+      const order = (what: 'towers' | 'units') => {
+        const attack = me.orders[what] === 'attack';
+        const name = what === 'towers' ? 'towers' : 'units';
+        return `<button data-order="${what}"${attack ? ' class="on"' : ''} title="All your units: tap to ${attack ? 'walk past' : 'attack'} ${name}">${attack ? (what === 'towers' ? 'Attack towers' : 'Fight units') : what === 'towers' ? 'Pass towers' : 'Pass units'}</button>`;
+      };
+      body += `<div class="targets">${order('towers')}${order('units')}</div>`;
       label =
         cost === undefined
           ? icon('power', 'Fully upgraded')
@@ -2200,7 +2214,6 @@ void (async () => {
     trainButtons.length = 0;
     buildButtons.length = 0;
     upgradeButtons.length = 0;
-    orderButtons.length = 0;
     laneButtons.length = 0;
     const r = RACES[race];
     // A map with roads that fork: which road the units you buy take (their castle's gate leads to every one of them).
@@ -2286,17 +2299,6 @@ void (async () => {
       showCard({ kind: 'castle' }, true),
     );
     $('castle').append(castleButton);
-    for (const what of ['towers', 'units'] as const) {
-      const b = document.createElement('button');
-      b.className = 'tb orders wbtn';
-      b.onclick = () => {
-        const o = match.players[YOU]!.orders;
-        cmd({ k: 'order', what, to: o[what] === 'attack' ? 'bypass' : 'attack' });
-        refresh();
-      };
-      $('castle').append(b);
-      orderButtons.push([b, what]);
-    }
     setTab(tab);
   }
 
@@ -2373,14 +2375,6 @@ void (async () => {
       b.hidden = !open.has(id); // a road to a castle that has fallen is no road
       b.classList.toggle('on', id === march);
       b.title = `New units march: ${lane.name}, to the ${castleName(lane.to)} camp`;
-    }
-    for (const [b, what] of orderButtons) {
-      const attack = me.orders[what] === 'attack';
-      const label = what === 'towers' ? ['Attack towers', 'Pass towers'] : ['Fight units', 'Pass units'];
-      const text = `<span>${attack ? label[0] : label[1]}</span>`;
-      if (b.innerHTML !== text) b.innerHTML = text;
-      b.title = `All your units: tap to ${attack ? 'walk past' : 'attack'}`;
-      b.classList.toggle('bypass', !attack);
     }
     renderCard();
     if (!selected) setGhost(undefined);
