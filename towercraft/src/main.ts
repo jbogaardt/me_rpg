@@ -438,7 +438,9 @@ void (async () => {
   // drag. Tap a unit to pick it (double-tap: every one of its kind in view), tap again with Shift or Ctrl to add or drop it. Then
   // tap (or right-click) a rival's tower or castle to send the group at it; Esc, or a tap on bare ground, lets go.
   const pointers = new Map<number, { x: number; y: number }>();
-  type Gesture = 'wait' | 'pan' | 'box' | 'pinch';
+  type Gesture = 'wait' | 'pan' | 'box' | 'pinch' | 'ghost';
+  let grab = { x: 0, y: 0 };
+  const GRAB_LIFT = 36; // the pending tower rides this far above the finger so it stays in sight
   let gesture: Gesture = 'wait';
   let pressStart = { x: 0, y: 0 };
   let pressButton = 0;
@@ -467,6 +469,16 @@ void (async () => {
       pressAdd = e.shiftKey || e.ctrlKey || e.metaKey;
       gesture = 'wait';
       window.clearTimeout(longPress);
+      if (e.pointerType !== 'mouse' && started && selected && ghost) {
+        // A finger near the pending tower picks it up; anywhere else still pans the field.
+        const k = world.scale.x * CELL;
+        const [gx, gy] = [world.x + (ghost[0] + 0.5) * k, world.y + (ghost[1] + 0.5) * k];
+        if (Math.hypot(e.clientX - gx, e.clientY - gy) <= Math.max(64, 2.2 * k)) {
+          gesture = 'ghost';
+          grab = { x: gx - e.clientX, y: gy - e.clientY - GRAB_LIFT };
+          return;
+        }
+      }
       if (e.pointerType !== 'mouse')
         longPress = window.setTimeout(() => {
           if (gesture !== 'wait' || pointers.size !== 1 || !started || selected) return;
@@ -494,6 +506,11 @@ void (async () => {
     p.x = e.clientX;
     p.y = e.clientY;
     if (pointers.size === 1) {
+      if (gesture === 'ghost') {
+        const cell = cellAt(e.clientX + grab.x, e.clientY + grab.y);
+        if (cell) setGhost(cell);
+        return;
+      }
       if (gesture === 'wait' && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > TAP_SLOP) {
         window.clearTimeout(longPress);
         // Every button and finger drags the field; only Shift or Ctrl with the left mouse button draws a selection box.
@@ -545,14 +562,46 @@ void (async () => {
   $('cam-home').onclick = home;
   $('cam-fit').onclick = () => focus(match.board.cols / 2, match.board.rows / 2, minZoom());
 
-  /** The touch's pending tower: the first tap on a valid cell leaves a ghost here; Confirm (or a second tap) places it. */
+  /** The touch's pending tower: picking a building leaves a ghost in view, a finger drags it, and Build places it. */
   let ghost: [number, number] | undefined;
+  /** Whether the last press was a finger (a phone gets the drag-and-confirm placing; a mouse hovers and clicks). */
+  let touchUser = false;
+  window.addEventListener('pointerdown', (e) => (touchUser = e.pointerType !== 'mouse'), true);
   /** The last cell tapped, so its caption stays up on a touch screen (no hover). */
   let lastTap: [number, number] | undefined;
   const ghostBar = $('ghost');
+  const ghostOk = $<HTMLButtonElement>('ghost-ok');
   const setGhost = (cell: [number, number] | undefined) => {
     ghost = cell;
     ghostBar.hidden = !cell;
+    if (cell && selected) ghostOk.innerHTML = `Build ${money(selected.cost)}`;
+  };
+  /** Leave the pending tower at the buildable cell nearest the middle of the view (or on the middle, red, if there is none). */
+  const spawnGhost = () => {
+    if (!selected) return;
+    const mid = cellAt(window.innerWidth / 2, topBar() + viewH() / 2) ?? [match.board.cols >> 1, match.board.rows >> 1];
+    for (let r = 0; r <= 30; r++)
+      for (let dc = -r; dc <= r; dc++)
+        for (let dr = -r; dr <= r; dr++)
+          if (
+            Math.max(Math.abs(dc), Math.abs(dr)) === r &&
+            canBuild(match, YOU, selected, mid[0] + dc, mid[1] + dr) === 'ok'
+          )
+            return setGhost([mid[0] + dc, mid[1] + dr]);
+    setGhost([mid[0], mid[1]]);
+  };
+  /** A building's thumbnail on a touch screen: straight into placing it (the card is for the mouse and for why it cannot be). */
+  const startPlacing = (def: TowerDef) => {
+    if (selected === def) {
+      selected = undefined;
+      setGhost(undefined);
+      return refresh();
+    }
+    if (towerReason(def)) return showCard({ kind: 'tower', def });
+    closeCard();
+    selected = def;
+    spawnGhost();
+    refresh();
   };
   /** Do something to your side of the match: at once alone, or on the same tick on both pages online (net/lockstep.ts). */
   const cmd = (c: Command) => {
@@ -568,6 +617,7 @@ void (async () => {
       refresh();
     }
     setGhost(undefined);
+    if (selected && touchUser) spawnGhost();
   };
   $('ghost-ok').onclick = () => ghost && place(ghost);
   $('ghost-no').onclick = () => setGhost(undefined);
@@ -764,9 +814,9 @@ void (async () => {
     const cell = cellAt(sx, sy);
     if (!cell || !selected) return;
     lastTap = cell;
-    if (canBuild(match, YOU, selected, cell[0], cell[1]) !== 'ok') return setGhost(undefined); // the hint says why
-    if (!touch || (ghost && ghost[0] === cell[0] && ghost[1] === cell[1])) place(cell);
-    else setGhost(cell); // a touch: show what it would do first
+    if (touch) return setGhost(cell); // a touch moves the pending tower (red where it cannot go; the hint says why)
+    if (canBuild(match, YOU, selected, cell[0], cell[1]) !== 'ok') return setGhost(undefined);
+    place(cell);
   }
   // Keys: Esc lets go; Ctrl+A picks every unit; C sends the group at the castle, X back to the general orders; arrows and
   // WASD pan the field.
@@ -1185,7 +1235,9 @@ void (async () => {
         live.rect(cx - CELL / 2, cy - CELL / 2, CELL, CELL).stroke({ color: ok ? 0xffb13f : 0xb82024, width: 2 });
       }
     }
-    ghostSprite.visible = !!aim && canBuild(match, YOU, selected!, aim[0], aim[1]) === 'ok';
+    const aimOk = !!aim && !!selected && canBuild(match, YOU, selected, aim[0], aim[1]) === 'ok';
+    ghostSprite.visible = !!aim && (aimOk || !!ghost);
+    ghostSprite.tint = aimOk ? 0xffffff : 0xff6a6a;
     if (ghostSprite.visible && aim && selected) {
       const tex = towerTextures.get(selected.art)!;
       ghostSprite.texture = tex;
@@ -1762,33 +1814,6 @@ void (async () => {
     | { kind: 'built'; id: number }
     | { kind: 'foe'; id: number };
   let cardOf: CardOf | undefined;
-  /**
-   * Upgrades spend a lot on one click, so the first click only arms the button ("Confirm?") and a second one within
-   * `CONFIRM_MS` buys. Anything else, or waiting, disarms it.
-   */
-  const CONFIRM_MS = 3000;
-  let armedKey: string | undefined;
-  let armedTimer: ReturnType<typeof setTimeout> | undefined;
-  const isArmed = (key: string) => armedKey === key;
-  const disarm = () => {
-    armedKey = undefined;
-    clearTimeout(armedTimer);
-  };
-  /** True when this click is the confirming one; otherwise arms `key` and repaints. */
-  function confirmed(key: string): boolean {
-    if (armedKey === key) {
-      disarm();
-      return true;
-    }
-    disarm();
-    armedKey = key;
-    armedTimer = setTimeout(() => {
-      disarm();
-      if (cardOf) renderCard();
-      refresh();
-    }, CONFIRM_MS);
-    return false;
-  }
   const act = $<HTMLButtonElement>('card-act');
   let cardBody = '';
   /** How many purchases the slider is set to. */
@@ -1804,7 +1829,6 @@ void (async () => {
     if (!cardOf || !sameCard(cardOf, c)) {
       buyN = 1;
     }
-    if (!cardOf || !sameCard(cardOf, c)) disarm();
     cardOf = c;
     if (selected && !(c.kind === 'tower' && c.def === selected)) {
       selected = undefined; // looking at something else drops the tower being placed
@@ -1816,7 +1840,6 @@ void (async () => {
   }
   function closeCard() {
     if (cardOf?.kind === 'sel') selection.clear();
-    disarm();
     cardOf = undefined;
     $('card').hidden = true;
     selected = undefined;
@@ -1827,7 +1850,6 @@ void (async () => {
   // (a tap on bare ground, Esc or the card closing for another reason lets the group go).
   $('card-x').onclick = () => {
     if (cardOf?.kind !== 'sel') return closeCard();
-    disarm();
     cardOf = undefined;
     $('card').hidden = true;
     refresh();
@@ -2043,6 +2065,7 @@ void (async () => {
         reason = towerReason(d);
         go = () => {
           selected = d;
+          if (touchUser) spawnGhost();
         };
       }
     } else if (bunker) {
@@ -2110,10 +2133,7 @@ void (async () => {
           ? icon('power', 'Fully upgraded')
           : `${icon('power', `Upgrade to level ${level + 1}`)}${money(cost)}`;
       reason = cost === undefined ? 'max' : lacks.length > 0 ? 'Build what it asks for first' : lacking(cost);
-      if (cost !== undefined && !reason && isArmed('castle')) label = icon('power', 'Confirm upgrade?') + money(cost);
-      go = () => {
-        if (confirmed('castle')) cmd({ k: 'castle' });
-      };
+      go = () => cmd({ k: 'castle' });
     }
     if (body !== cardBody) {
       $('card-body').innerHTML = body;
@@ -2197,7 +2217,7 @@ void (async () => {
       sec.innerHTML = `<h4>${role}</h4><div class="thumbs"></div>`;
       for (const def of defs) {
         const b = thumb(towerThumb(def.art, 36), money(def.cost), def.name, () =>
-          showCard({ kind: 'tower', def }, true),
+          touchUser ? startPlacing(def) : showCard({ kind: 'tower', def }, true),
         );
         sec.lastElementChild!.append(b);
         buildButtons.push([b, def]);
@@ -2209,7 +2229,7 @@ void (async () => {
       b.className = 'up wbtn';
       b.innerHTML = `<b>${up.name}</b><small>${upgradeText(up)}</small><span class="foot"><span class="pips"><i></i><i></i><i></i></span><em></em></span>`;
       b.onclick = () => {
-        if (confirmed(`up:${up.id}`)) cmd({ k: 'upgrade', id: up.id });
+        cmd({ k: 'upgrade', id: up.id });
         refresh();
       };
       $('upgrades').append(b);
@@ -2275,7 +2295,7 @@ void (async () => {
       const pips = b.querySelectorAll('.pips i');
       pips.forEach((p, i) => p.classList.toggle('on', i < lvl));
       const line = b.querySelector('em')!;
-      const text = !next ? 'max' : why ? '' : isArmed(`up:${up.id}`) ? 'Confirm?' : money(next.cost);
+      const text = !next ? 'max' : why ? '' : money(next.cost);
       if (line.innerHTML !== text) line.innerHTML = text;
       const effect = b.querySelector('small')!;
       const said = why && next ? why : upgradeText(up);
@@ -2283,7 +2303,6 @@ void (async () => {
       b.hidden = !next || !!why; // only an upgrade you can buy now
       b.classList.toggle('lock', !!why);
       b.classList.toggle('poor', poor);
-      b.classList.toggle('armed', isArmed(`up:${up.id}`));
       b.title = why || (poor ? lacking(next.cost) : `Buy level ${lvl + 1}`);
       b.disabled = !next || !!why;
     }
@@ -2338,11 +2357,12 @@ void (async () => {
         needs: `A ${selected.name} needs the ${selected.needs ? towerName(selected.needs) : 'building'} first.`,
         limit: `You can only have ${selected.limit ?? 'so many'} ${selected.name}.`,
       };
+      if (ghost) ghostOk.disabled = why !== 'ok';
       text =
         cell && why !== 'ok'
           ? (reasons[why] ?? '')
           : ghost
-            ? `Confirm to build the ${selected.name}, or tap another cell. Esc to cancel.`
+            ? `Drag the ${selected.name} where you want it, then tap Build.`
             : `Tap a clear cell to build a ${selected.name}. Esc to cancel.`;
     }
     if (started && !selected && clock < hintUntil) text = hintNote;

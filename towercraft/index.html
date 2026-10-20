@@ -83,8 +83,6 @@
       .up small { font: 600 11px var(--body); color: var(--dim); white-space: nowrap; }
       .up em { font: 700 11px var(--title); font-style: normal; display: flex; gap: 6px; color: var(--gold); }
       .up.lock small { color: #f09a9d; } .up.lock { filter: brightness(0.75) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
-      .up.armed { filter: brightness(1.3) drop-shadow(0 0 8px rgba(111, 211, 111, 0.95)); }
-      .up.armed em { color: #9be59b; }
       .up.poor em i { color: #f09a9d; }
       .up:disabled:hover { filter: brightness(0.75) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .pips { display: flex; gap: 4px; } .pips i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--gold-dim); box-sizing: border-box; background: rgba(0, 0, 0, 0.35); }
@@ -248,7 +246,7 @@
     <div id="wait" hidden>Waiting for your rival…</div>
     <div id="marquee" hidden></div>
     <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-all" title="Pick all your units (Ctrl+A)">All</button><button class="wbtn" id="cam-sound" title="Sound (M)">🔊</button></div>
-    <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no">Cancel</button></div>
+    <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no" aria-label="Cancel">✕</button></div>
     <div id="dock" class="panel thin wood">
       <div class="bar">
         <div id="tabs"><button class="plank on" data-tab="units">Units</button><button class="plank" data-tab="build">Build</button><button class="plank" data-tab="upgrades">Upgrades</button></div>
