@@ -158,7 +158,9 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
 
         const off = S.scroll;
         // missing planks: through a gap in the deck you see the sunset's pink and orange below the bridge
-        const sky = ctx.createLinearGradient(0, GROUND, 0, H); sky.addColorStop(0, '#d37992'); sky.addColorStop(1, '#f66f51'); // the sunset's pink just above the deck, warming to its orange
+        // the backdrop's own sky colours (as in its arch, rows 96-127), carried on below the picture, so a gap and the arch blend
+        const sky = ctx.createLinearGradient(0, GROUND, 0, H);
+        [[0, '#dd7a86'], [0.114, '#ea7973'], [0.229, '#f27460'], [0.343, '#f66f51'], [0.443, '#f76d4b'], [1, '#f76d4b']].forEach(([o, c]) => sky.addColorStop(o, c));
         ctx.fillStyle = sky;
         for (let i = 1; i < L.ground.length; i++) { const x = L.ground[i - 1][1] - off, w = L.ground[i][0] - L.ground[i - 1][1]; if (x < W && x + w > 0) ctx.fillRect(x, GROUND, w, H - GROUND); }
         // ground runs
