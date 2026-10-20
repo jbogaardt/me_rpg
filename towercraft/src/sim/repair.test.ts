@@ -71,3 +71,19 @@ describe('camps', () => {
     expect(m.units.slice(before).every((u) => u.s < 9)).toBe(true);
   });
 });
+
+describe('selling a bunker', () => {
+  it('lets the soldiers inside walk out onto the road', async () => {
+    const { sellTower } = await import('./sim');
+    const m = newMatch(['legion', 'legion']);
+    m.players[0].wood = m.players[0].stone = 9999;
+    const def = m.races.legion.towers.find((d) => d.bunker)!;
+    const b = put(m, 0, 'legion', def.id, 12, 14);
+    const soldier = m.races.legion.units.find((u) => u.garrison)!;
+    b.garrison.push({ def: soldier, cooldown: 0 }, { def: soldier, cooldown: 0 });
+    expect(m.units.length).toBe(0);
+    expect(sellTower(m, 0, b.id)).toBe('ok');
+    expect(m.units.length).toBe(2);
+    expect(m.units.every((u) => u.owner === 0 && u.def.id === soldier.id)).toBe(true);
+  });
+});

@@ -494,14 +494,21 @@ function spawnPoint(m: Match, owner: Owner, def: UnitDef, home: number): { lane:
       if (!from || (t.spawned ?? 0) < (from.spawned ?? 0)) from = t;
   if (!from) return { lane: home, s: 0 };
   from.spawned = (from.spawned ?? 0) + 1;
+  return roadPointBy(m, owner, from, home);
+}
+
+/** The road point straight across from a building (on the nearest open lane), or the castle when it has none. */
+function roadPointBy(m: Match, owner: Owner, t: Tower, home: number): { lane: number; s: number } {
   let best: { lane: number; s: number; d: number } | undefined;
   for (const l of openLanes(m, owner)) {
-    const foot = l.footOf(from.col, from.row);
+    const foot = l.footOf(t.col, t.row);
     if (foot && (!best || foot.d < best.d)) best = { lane: l.id, s: foot.s, d: foot.d };
   }
-  return best
-    ? { lane: best.lane, s: Math.min(best.s, Math.max(0, laneOf(m.board, { owner, lane: best.lane }).length - SPREAD)) }
-    : { lane: home, s: 0 };
+  if (!best) return { lane: home, s: 0 };
+  return {
+    lane: best.lane,
+    s: Math.min(best.s, Math.max(0, laneOf(m.board, { owner, lane: best.lane }).length - SPREAD)),
+  };
 }
 
 /** The lanes `owner`'s units may walk now: those that end at the castle of a foe still standing. */
@@ -792,6 +799,15 @@ export function sellTower(m: Match, owner: Owner, towerId: number): Result {
   if (!t) return 'unknown';
   earn(m.players[owner]!, sellRefund(t));
   m.towers = m.towers.filter((x) => x !== t);
+  // The soldiers inside come out onto the road beside it and march on (they were bought already: the unit cap does not stop them).
+  const home = laneFor(m, owner);
+  if (home !== undefined) {
+    const { lane, s } = roadPointBy(m, owner, t, home);
+    t.garrison.forEach((g, i) => {
+      const maxHp = g.def.hp * boostOf(m, owner, g.def, 'hp');
+      m.units.push({ id: m.nextId++, def: g.def, owner, lane, hp: maxHp, maxHp, s: s + i * SPACING, cooldown: 0 });
+    });
+  }
   return 'ok';
 }
 
