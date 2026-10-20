@@ -34,7 +34,6 @@ import {
   RACES,
   REACH_SCALE,
   roleOf as buildingRole,
-  type Role,
   RACE_IDS,
   type Cost,
   type RaceId,
@@ -2147,50 +2146,13 @@ void (async () => {
     } else {
       const cost = upgradeCost(match, YOU);
       const inc = incomeOf(match, YOU);
-      const nextInc = race.castle.income[level];
-      const unlocks = [
-        ...race.units
-          .filter((u) => u.tier === level + 1)
-          .map((u) => `<span title="${u.name}">${unitThumb(u, 30)}</span>`),
-        ...race.towers
-          .filter((t) => t.tier === level + 1)
-          .map((t) => `<span title="${t.name}">${towerThumb(t.art, 30)}</span>`),
-      ].join('');
       const lacks = upgradeLacks(match, YOU);
-      const ROLE_NAMES: Record<Role, string> = {
-        econ: 'mill or quarry',
-        producer: 'unit building',
-        smithy: 'smithy',
-        defence: 'tower',
-      };
-      // What must stand first: each need as the pictures of the buildings that count, with how many of how many stand.
-      const asks = (race.castle.needs[level - 1] ?? [])
-        .map((n) => {
-          const have = lacks.find((l) => l.need === n)?.have ?? n.count;
-          const kinds = race.towers
-            .filter((t) => buildingRole(t) === n.role && t.tier >= (n.tier ?? 1))
-            .map((t) => `<span title="${t.name}">${towerThumb(t.art, 26)}</span>`)
-            .join('');
-          const title = `${ROLE_NAMES[n.role]}${n.tier && n.tier > 1 ? ` (level ${n.tier}+)` : ''}`;
-          return `<li class="${have >= n.count ? 'ok' : 'no'}" title="${title}"><span class="kinds">${kinds}</span><b>${have} / ${n.count}</b></li>`;
-        })
-        .join('');
       const stat = (name: string, title: string, v: string | number) =>
         `<li title="${title}"><span>${icon(name, title)}</span><b>${v}</b></li>`;
       body =
         `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">${icon('power', 'Castle level')} ${level} / ${MAX_LEVEL}</div></div></header>` +
         `<div class="hp"><i style="width:${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%"></i><span>${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}</span></div>` +
-        `<ul>${stat('heal', `Pays every ${PAY_EVERY} s (mills and quarries included)`, money(inc))}${stat('reach', 'Build reach, in cells', race.castle.reach[level - 1]!)}${stat('runner', 'Units out', `${match.units.filter((u) => u.owner === YOU).length} / ${UNIT_CAP}`)}</ul>` +
-        (cost === undefined || !nextInc
-          ? `<p class="note" title="Every upgrade bought">${icon('power', 'Fully upgraded')}</p>`
-          : `<ul class="next" title="Level ${level + 1}">` +
-            stat('power', `Level ${level + 1} costs`, money(cost)) +
-            stat('reach', 'Build reach', `${race.castle.reach[level - 1]} → ${race.castle.reach[level]}`) +
-            stat('heal', 'Pays', money(nextInc)) +
-            stat('heart', 'Castle health', `+${race.castle.hpPerLevel}`) +
-            `</ul>` +
-            (unlocks ? `<div class="unlocks" title="Unlocks">${icon('unlock', 'Unlocks')}${unlocks}</div>` : '') +
-            (asks ? `<ul class="needs" title="Build first">${asks}</ul>` : ''));
+        `<ul>${stat('heal', `Pays every ${PAY_EVERY} s (mills and quarries included)`, money(inc))}${stat('reach', 'Build reach, in cells', race.castle.reach[level - 1]!)}${stat('runner', 'Units out', `${match.units.filter((u) => u.owner === YOU).length} / ${UNIT_CAP}`)}</ul>`;
       label =
         cost === undefined
           ? icon('power', 'Fully upgraded')

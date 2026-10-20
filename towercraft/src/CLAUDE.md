@@ -14,4 +14,4 @@ Each page makes its own sounds from the same match, so nothing goes over the wir
 
 ## Cards
 
-The castle card and the upgrade shelf are pictures first: stat rows are an icon (`icons.ts`, the words in its tooltip) and a value; the next level lists the units and buildings it unlocks and the buildings it asks for as thumbnails with counts; an upgrade button shows `+15%`, a heart or sword, and the ground or a wing.
+The castle card and the upgrade shelf are pictures first: stat rows are an icon (`icons.ts`, the words in its tooltip) and a value. The castle card shows only what it is now (level, health, income, reach, units out); the next level's cost, stats, unlocks and needs are left to the button, whose label and reason say them. An upgrade button shows `+15%`, a heart or sword, and the ground or a wing.
