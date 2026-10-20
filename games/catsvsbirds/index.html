@@ -17,7 +17,7 @@
     </style>
   </head>
   <body>
-    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump the gaps and the kiwis · hold to keep jumping · M mutes</span><a href="../">All games</a></div>
+    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump the gaps, kiwis and birds · hold to keep jumping · M mutes</span><a href="../">All games</a></div>
     <canvas id="c" width="960" height="540"></canvas>
     <script>
       'use strict';
@@ -29,6 +29,8 @@
       ctx.imageSmoothingEnabled = false;
       const sheet = new Image(); sheet.src = 'cat-run.png';
 const kiwiImg = new Image(); kiwiImg.src = 'kiwi-run.png';
+const birdImg = new Image(); birdImg.src = 'bird-fly.png'; // 3 left-facing frames in 24x24 cells: wings down, level, up
+const BIRD_S = 2, BIRD_C = 24 * BIRD_S, BIRD_LIFT = 50, BIRD_HIT_W = 30, BIRD_HIT_H = 24; // a bird flies body-high, so it must be jumped too
 const KIWI_RATIO = 2; // a kiwi runs at twice the cat's speed
 const KIWI_S = 1, KW = 56 * KIWI_S, KH = 36 * KIWI_S, KIWI_HIT_W = 36, KIWI_HIT_H = 24; // smaller than the cat // 4 frames of 56x36, facing left, feet on the bottom row
 const bg = new Image(); bg.src = 'backdrop.png';
@@ -55,7 +57,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       }
       function buildLevel() {
         const r = rng(7), fish = [], spd = (x) => SPEED0 + Math.min(120, x / 250);
-        const COUNT = 36, ground = [];
+        const COUNT = 28, ground = [];
         let r0 = -200, s = 900; // r0 starts the current run of deck; s is where it ends, at the next gap
         for (let i = 0; i < COUNT; i++) {
           // a gap is crossed in 0.2-0.4 s of flight (a jump lasts about 0.65 s) and grows a little as the course goes on;
@@ -67,7 +69,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
           fish.push({ x: (s + e) / 2, y: GROUND - 150 });
           r0 = e;
           // every other stretch is long, with room for kiwis to run at the cat
-          const runLen = Math.round(spd(r0) * BEAT * (i % 2 === 1 ? 6 + Math.floor(r() * 3) * 0.5 : 2.5 + Math.floor(r() * 5) * 0.5));
+          const runLen = Math.round(spd(r0) * BEAT * (i % 2 === 1 ? 9 + Math.floor(r() * 3) * 0.5 : 2.5 + Math.floor(r() * 5) * 0.5));
           if (bridgeNear(r0 + runLen / 2, r0 + runLen / 2, 0) < 0) fish.push({ x: r0 + runLen / 2, y: GROUND - 60 });
           s = r0 + runLen;
         }
@@ -81,14 +83,16 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         // starts off the right edge when the cat is about to enter the stretch, and sometimes a second follows a little later.
         const kiwis = [];
         // a kiwi is only sent when it will meet the cat on plain deck: well clear of the stairs, where a jump is awkward
-        const addKiwi = (trig, stop) => {
+        const addKiwi = (trig, stop, kind) => {
           const x0 = Math.min(trig + 760, stop), sp = spd(trig), meet = trig + ((x0 - trig) * sp) / (sp + KIWI_RATIO * sp);
-          if (bridgeNear(meet - 200, meet + 200, 0) < 0) kiwis.push({ trig, stop });
+          if (bridgeNear(meet - 200, meet + 200, 0) < 0) kiwis.push({ trig, stop, kind });
         };
+        let ei = 0; // alternate which comes first: a kiwi on the ground or a bird in the air
         for (const [a, b] of ground) {
-          if (a < 0 || b - a < 950 || b > end) continue;
-          addKiwi(a - 100, b - 60);
-          if (b - a >= 1100 && r() > 0.45) addKiwi(a + 250, b - 60);
+          if (a < 0 || b - a < 1100 || b > end) continue;
+          const first = ei++ % 2 ? 'bird' : 'kiwi';
+          addKiwi(a + 150, b - 60, first); // the cat has had time to land and settle before the first appears
+          if (b - a >= 1500 && r() > 0.3) addKiwi(a + 650, b - 60, first === 'kiwi' ? 'bird' : 'kiwi');
         }
         return { ground, fish, end, kiwis };
       }
@@ -153,10 +157,13 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         if (S.y > H + 60) { die(); return; }
 
         // kiwis: spawn off the right edge as the cat reaches each trigger, run left along the deck, and hurt on touch
-        while (S.next < L.kiwis.length && wx >= L.kiwis[S.next].trig) { const k = L.kiwis[S.next++]; S.kiwis.push({ x: Math.min(wx + 760, k.stop), ph: S.next }); }
+        while (S.next < L.kiwis.length && wx >= L.kiwis[S.next].trig) { const k = L.kiwis[S.next++]; S.kiwis.push({ x: Math.min(wx + 760, k.stop), ph: S.next, kind: k.kind }); }
         for (const k of S.kiwis) {
           k.x -= sp * KIWI_RATIO * dt;
-          if (Math.abs(k.x - wx) < (KIWI_HIT_W + HIT_W - 8) / 2 && S.y > GROUND - bridgeH(k.x) - KIWI_HIT_H) { die(); return; }
+          const base = GROUND - bridgeH(k.x);
+          if (k.kind === 'bird') { // in the air: hit unless the cat's feet are above the bird or its head is below it
+            if (Math.abs(k.x - wx) < (BIRD_HIT_W + HIT_W - 8) / 2 && S.y > base - BIRD_LIFT - BIRD_HIT_H / 2 && S.y - HIT_H < base - BIRD_LIFT + BIRD_HIT_H / 2) { die(); return; }
+          } else if (Math.abs(k.x - wx) < (KIWI_HIT_W + HIT_W - 8) / 2 && S.y > base - KIWI_HIT_H) { die(); return; }
         }
         S.kiwis = S.kiwis.filter((k) => k.x > wx - 500);
 
@@ -207,7 +214,8 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
 
         for (const k of S.kiwis) {
           const kx = k.x - off; if (kx < -80 || kx > W + 80) continue;
-          ctx.drawImage(kiwiImg, (Math.floor(S.t * 10 + k.ph) % 4) * 56, 0, 56, 36, kx - KW / 2, GROUND - bridgeH(k.x) - KH, KW, KH);
+          if (k.kind === 'bird') ctx.drawImage(birdImg, [0, 1, 2, 1][Math.floor(S.t * 9 + k.ph) % 4] * 24, 0, 24, 24, kx - BIRD_C / 2, GROUND - bridgeH(k.x) - BIRD_LIFT - BIRD_C / 2, BIRD_C, BIRD_C);
+          else ctx.drawImage(kiwiImg, (Math.floor(S.t * 10 + k.ph) % 4) * 56, 0, 56, 36, kx - KW / 2, GROUND - bridgeH(k.x) - KH, KW, KH);
         }
         // the cat: the run strip when on the ground, a stretched frame in the air
         if (!S.dead) {
