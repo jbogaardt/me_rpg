@@ -28,6 +28,8 @@
       const cv = document.getElementById('c'), ctx = cv.getContext('2d');
       ctx.imageSmoothingEnabled = false;
       const sheet = new Image(); sheet.src = 'cat-run.png';
+const bg = new Image(); bg.src = 'backdrop.png';
+const BG_S = 3, BG_Y = GROUND - 128 * BG_S;
 
       // ---- the level: a fixed course built from a seed, so every attempt is the same and can be learned ----
       const BPM = 120, BEAT = 60 / BPM;
@@ -118,29 +120,33 @@
       }
 
       // ---- drawing ----
-      const PALETTES = [['#1a1033', '#3b1d6e', '#ff4fa3'], ['#06223a', '#0c5a86', '#3be8ff'], ['#2a0f1f', '#7a1f4e', '#ffb13b']];
+      const ACCENTS = ['#ff6f91', '#ffb13b', '#ff4fa3'];
       function draw() {
         const beat = (S.t / BEAT) % 1, pulse = Math.pow(1 - beat, 3);
-        const pal = PALETTES[Math.floor(S.scroll / 2600) % PALETTES.length];
-        const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, pal[0]); g.addColorStop(1, pal[1]);
-        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-        // far skyline that scrolls slowly and bounces on the beat
-        ctx.fillStyle = pal[0] + 'cc';
-        for (let i = -1; i < 12; i++) { const bx = i * 120 - ((S.scroll * 0.25) % 120), bh = 90 + ((i * 53 + Math.floor(S.scroll * 0.25 / 120) * 53) % 5) * 28; ctx.fillRect(bx, GROUND - bh - pulse * 6, 90, bh + 6); }
-        ctx.globalAlpha = 0.08 + pulse * 0.08; ctx.fillStyle = pal[2]; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+        const pal = [0, 0, ACCENTS[Math.floor(S.scroll / 2600) % ACCENTS.length]];
+        // the sunset arches backdrop (480x128), drawn 3x with its dark base on the ground line; it drifts slowly, and every
+        // other copy is mirrored so the tiles meet without a seam
+        ctx.fillStyle = '#7b5397'; ctx.fillRect(0, 0, W, BG_Y + 2);
+        const tw = 480 * BG_S, drift = S.scroll * 0.2, first = Math.floor(drift / tw);
+        for (let n = first; n <= first + 2; n++) {
+          const tx = n * tw - drift;
+          ctx.save(); if (n % 2) { ctx.translate(tx + tw, 0); ctx.scale(-1, 1); } else ctx.translate(tx, 0);
+          ctx.drawImage(bg, 0, 0, 480, 128, 0, BG_Y, tw, 128 * BG_S); ctx.restore();
+        }
+        ctx.globalAlpha = pulse * 0.1; ctx.fillStyle = pal[2]; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
 
         const off = S.scroll;
         // ground runs
         for (const [a, b] of L.ground) {
           const sx = a - off, ex = b - off; if (ex < -20 || sx > W + 20) continue;
           const x = Math.max(-20, sx), w = Math.min(W + 20, ex) - x;
-          ctx.fillStyle = '#0d0820'; ctx.fillRect(x, GROUND, w, H - GROUND);
+          ctx.fillStyle = '#2c3134'; ctx.fillRect(x, GROUND, w, H - GROUND);
           ctx.fillStyle = pal[2]; ctx.fillRect(x, GROUND, w, 4 + pulse * 3);
           ctx.fillStyle = pal[2] + '22'; for (let gx = Math.ceil((x + off) / 60) * 60 - off; gx < x + w; gx += 60) ctx.fillRect(gx, GROUND + 4, 2, H - GROUND);
         }
         for (const s of L.solids) {
           const sx = s.x - off; if (sx + s.w < -10 || sx > W + 10) continue;
-          ctx.fillStyle = '#17103a'; ctx.fillRect(sx, GROUND - s.h, s.w, s.h);
+          ctx.fillStyle = '#383e42'; ctx.fillRect(sx, GROUND - s.h, s.w, s.h);
           ctx.strokeStyle = pal[2]; ctx.lineWidth = 3; ctx.strokeRect(sx + 1.5, GROUND - s.h + 1.5, s.w - 3, s.h - 3);
         }
         ctx.font = '28px serif'; ctx.textAlign = 'center';
