@@ -1305,8 +1305,8 @@ const CASTLE_BODY = 1.2; // sim.ts's CASTLE_RADIUS, which a castle's shot reache
 
 /** How slow the game runs, against the tables as written: income (the castle's and every mill's and quarry's) is this fraction of it... */
 const PACE = 0.4;
-/** ...and the castle upgrades cost this many times as much (level 2, level 3): with the buildings it asks for (`CASTLE_NEEDS`), a first upgrade before about 5 minutes is a speed run. */
-const UPGRADE_PRICE = [8, 2.5];
+/** ...and the castle upgrades cost this many times the written price, at every level, so level 3 stays dearer than level 2 as written. */
+const UPGRADE_PRICE = 8;
 const CASTLE_HP = 1;
 const money = (c: Cost, k: number): Cost => ({ wood: Math.round(c.wood * k), stone: Math.round(c.stone * k) });
 /** The lab's balance lever per race (all income, the castle's and the mills' and quarries'), found with `npm run towercraft:lab` at this pace. */
@@ -1345,7 +1345,7 @@ const scaled = (drawn: Record<RaceId, Race>): Record<RaceId, Race> => {
         hp: Math.round(race.castle.hp * CASTLE_HP),
         hpPerLevel: Math.round(race.castle.hpPerLevel * CASTLE_HP),
         income: race.castle.income.map((c) => earn(money(c, PACE), race.id)),
-        upgrades: race.castle.upgrades.map((c, i) => money(c, UPGRADE_PRICE[i] ?? 1)),
+        upgrades: race.castle.upgrades.map((c) => money(c, UPGRADE_PRICE)),
         range: stretch(race.castle.range),
         detect: stretch(race.castle.detect),
         sight: fog(race.castle.sight),
