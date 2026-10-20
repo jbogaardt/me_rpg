@@ -158,6 +158,8 @@ const FOG_COLOR = 'rgba(18, 12, 9, 0.74)';
 const FOG_MEMORY = 0.3;
 
 const ZOOM_MAX = 2.6;
+/** The smallest a cell is drawn while a finger places a tower (px), so the drag lands where it looks. */
+const PLACE_CELL_PX = 30;
 const TAP_SLOP = 8; // px a finger may move and still be a tap
 
 void (async () => {
@@ -621,6 +623,9 @@ void (async () => {
     closeCard();
     selected = def;
     spawnGhost();
+    // A cell must be big enough for a finger to aim at: zoom in on the ghost if the field is zoomed far out.
+    if (ghost && world.scale.x * CELL < PLACE_CELL_PX)
+      focus(ghost[0] + 0.5, ghost[1] + 0.5, Math.min(ZOOM_MAX, PLACE_CELL_PX / CELL));
     refresh();
   };
   /** Do something to your side of the match: at once alone, or on the same tick on both pages online (net/lockstep.ts). */
