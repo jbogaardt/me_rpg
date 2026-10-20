@@ -1823,7 +1823,15 @@ void (async () => {
     setGhost(undefined);
     refresh();
   }
-  $('card-x').onclick = closeCard;
+  // The group card's × only puts the card away: the group stays picked, so a phone can clear the card off the field and then tap a bunker
+  // (a tap on bare ground, Esc or the card closing for another reason lets the group go).
+  $('card-x').onclick = () => {
+    if (cardOf?.kind !== 'sel') return closeCard();
+    disarm();
+    cardOf = undefined;
+    $('card').hidden = true;
+    refresh();
+  };
   // The bunker card's own buttons (its body is rebuilt as the money and the slots change, so one listener catches them).
   $('card-body').addEventListener('click', (e) => {
     const aim = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-aim]');
