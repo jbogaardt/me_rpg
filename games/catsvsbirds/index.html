@@ -17,7 +17,7 @@
     </style>
   </head>
   <body>
-    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump the gaps, kiwis and birds · hold to keep jumping · M mutes</span><a href="../">All games</a></div>
+    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump the gaps and kiwis, stay low under birds · hold to keep jumping · M mutes</span><a href="../">All games</a></div>
     <canvas id="c" width="960" height="540"></canvas>
     <script>
       'use strict';
@@ -30,7 +30,7 @@
       const sheet = new Image(); sheet.src = 'cat-run.png';
 const kiwiImg = new Image(); kiwiImg.src = 'kiwi-run.png';
 const birdImg = new Image(); birdImg.src = 'bird-fly.png'; // 3 left-facing frames in 24x24 cells: wings down, level, up
-const BIRD_S = 2, BIRD_C = 24 * BIRD_S, BIRD_LIFT = 50, BIRD_HIT_W = 30, BIRD_HIT_H = 24; // a bird flies body-high, so it must be jumped too
+const BIRD_S = 2, BIRD_C = 24 * BIRD_S, BIRD_LIFT = 110, BIRD_HIT_W = 30, BIRD_HIT_H = 24; // a bird flies at jump height: jumping into it hurts, running under it is safe
 const KIWI_RATIO = 2; // a kiwi runs at twice the cat's speed
 const KIWI_S = 1, KW = 56 * KIWI_S, KH = 36 * KIWI_S, KIWI_HIT_W = 36, KIWI_HIT_H = 24; // smaller than the cat // 4 frames of 56x36, facing left, feet on the bottom row
 const bg = new Image(); bg.src = 'backdrop.png';
@@ -161,7 +161,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         for (const k of S.kiwis) {
           k.x -= sp * KIWI_RATIO * dt;
           const base = GROUND - bridgeH(k.x);
-          if (k.kind === 'bird') { // in the air: hit unless the cat's feet are above the bird or its head is below it
+          if (k.kind === 'bird') { // in the air: hit when the cat is up at its height, i.e. mid-jump
             if (Math.abs(k.x - wx) < (BIRD_HIT_W + HIT_W - 8) / 2 && S.y > base - BIRD_LIFT - BIRD_HIT_H / 2 && S.y - HIT_H < base - BIRD_LIFT + BIRD_HIT_H / 2) { die(); return; }
           } else if (Math.abs(k.x - wx) < (KIWI_HIT_W + HIT_W - 8) / 2 && S.y > base - KIWI_HIT_H) { die(); return; }
         }
