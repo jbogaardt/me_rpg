@@ -156,6 +156,8 @@ const FOG_SPEED = 14;
 /** Fog colour (a warm dark), how much it dims, and how much of the dark lifts over ground that was once yours to build on. */
 const FOG_COLOR = 'rgba(18, 12, 9, 0.74)';
 const FOG_MEMORY = 0.3;
+/** How strong the cool wash is over ground your units see (not build ground), however many of them overlap. */
+const FOG_WASH = 0.16;
 
 const ZOOM_MAX = 2.6;
 /** The smallest a cell is drawn while a finger places a tower (px), so the drag lands where it looks. */
@@ -1215,7 +1217,9 @@ void (async () => {
     ctx.globalAlpha = 1;
     for (const p of pools.values()) cutPool(ctx, p.x, p.y, p.r);
 
-    // The tint: a cool wash over every pool that is not build ground, with the build ground cut back out of it.
+    // The tint: a cool wash over every pool that is not build ground, with the build ground cut back out of it. The pools are
+    // drawn solid first, so where they overlap they make one shape (many units at once must not stack into an opaque wash);
+    // the wash colour is then laid on that shape once, at its strength.
     const t = tint.ctx;
     t.globalCompositeOperation = 'source-over';
     t.clearRect(0, 0, w, h);
@@ -1223,12 +1227,17 @@ void (async () => {
       if (p.build || p.r <= 0.02) continue;
       const [cx, cy, outer] = [p.x * FOG_RES, p.y * FOG_RES, (p.r + 0.7) * FOG_RES];
       const g = t.createRadialGradient(cx, cy, 0, cx, cy, outer);
-      g.addColorStop(0, 'rgba(120, 160, 230, 0.16)');
-      g.addColorStop(Math.max(0, (p.r - 0.5) / (p.r + 0.7)), 'rgba(120, 160, 230, 0.16)');
+      g.addColorStop(0, 'rgba(120, 160, 230, 1)');
+      g.addColorStop(Math.max(0, (p.r - 0.5) / (p.r + 0.7)), 'rgba(120, 160, 230, 1)');
       g.addColorStop(1, 'rgba(120, 160, 230, 0)');
       t.fillStyle = g;
       t.fillRect(cx - outer, cy - outer, outer * 2, outer * 2);
     }
+    t.globalCompositeOperation = 'source-in';
+    t.globalAlpha = FOG_WASH;
+    t.fillStyle = 'rgb(120, 160, 230)';
+    t.fillRect(0, 0, w, h);
+    t.globalAlpha = 1;
     t.globalCompositeOperation = 'destination-out';
     for (const p of pools.values()) if (p.build) cutPool(t, p.x, p.y, p.r);
     for (const layer of [shade, tint]) layer.sprite.texture.source.update();
