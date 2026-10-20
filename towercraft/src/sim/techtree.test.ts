@@ -16,13 +16,13 @@ import {
 
 /** Build everything now allowed (one pass over the cells near the castle) and return how many went up. */
 const buildAll = (m: Match): number => {
-  const [cx, cy] = m.board.castles[0]!;
+  const [cx, cy] = m.board.castles[0];
   const cells: [number, number][] = [];
   for (let row = Math.floor(cy) - 14; row <= cy + 14; row++)
     for (let col = Math.floor(cx) - 14; col <= cx + 14; col++) cells.push([col, row]);
   cells.sort((a, b) => Math.hypot(a[0] - cx, a[1] - cy) - Math.hypot(b[0] - cx, b[1] - cy));
   let built = 0;
-  for (const def of RACES[m.players[0]!.race].towers) {
+  for (const def of RACES[m.players[0].race].towers) {
     while (towerUnlocked(m, 0, def) === 'ok' && m.towers.filter((t) => t.def.id === def.id).length < 3) {
       const at = cells.find(([c, r]) => buildTower(m, 0, def.id, c, r) === 'ok');
       if (!at) break;
@@ -35,7 +35,7 @@ const buildAll = (m: Match): number => {
 describe('the tech tree', () => {
   it.each(RACE_IDS)('%s can reach castle level 3 and unlock every unit and building', (race: RaceId) => {
     const m = newMatch([race, race]);
-    const p = m.players[0]!;
+    const p = m.players[0];
     p.wood = p.stone = 1e6;
     for (let pass = 0; pass < 6; pass++) {
       buildAll(m);
@@ -51,9 +51,9 @@ describe('the tech tree', () => {
 describe('garrisoning', () => {
   it('sends picked soldiers near a bunker into it, up to its free slots, and not others', () => {
     const m = newMatch(['titan', 'legion']);
-    const [cx, cy] = m.board.castles[0]!;
-    m.players[0]!.wood = m.players[0]!.stone = 1e6;
-    m.players[0]!.castle.level = 3;
+    const [cx, cy] = m.board.castles[0];
+    m.players[0].wood = m.players[0].stone = 1e6;
+    m.players[0].castle.level = 3;
     const col = Math.floor(cx) + 4;
     const row = Math.floor(cy) + 4;
     const spot = [col, row, col + 1, row, col - 1, row, col, row + 1, col, row - 1];

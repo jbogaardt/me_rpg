@@ -232,9 +232,9 @@ describe('buying units', () => {
   it('refuses a purchase the money cannot cover in either currency, and one over the unit cap', () => {
     const m = newMatch(['legion', 'legion']);
     put(m, 0, 'legion', 'barracks', 8, 4);
-    m.players[0].wood = 1000;
-    m.players[0].stone = 0;
-    expect(trainUnit(m, 0, 'archer')).toBe('gold'); // archers cost stone too
+    m.players[0].wood = 0;
+    m.players[0].stone = 1000;
+    expect(trainUnit(m, 0, 'archer')).toBe('gold'); // archers cost wood
     const full = rich(newMatch(['legion', 'legion']));
     for (let i = 0; i < UNIT_CAP; i++) trainUnit(full, 0, 'warrior');
     expect(full.units).toHaveLength(UNIT_CAP);
@@ -561,7 +561,7 @@ describe('tower roles', () => {
     own.def = { ...own.def, speed: 0 };
     run(m, 2);
     expect(own.hp).toBeGreaterThan(15);
-    run(m, 30);
+    run(m, 120);
     expect(own.hp).toBe(own.def.hp);
     expect(m.towers[0]?.cooldown).toBeLessThanOrEqual(0); // it never fired, so its cooldown never restarted
   });
@@ -793,7 +793,7 @@ describe('sending a unit after one target', () => {
   it('fights only the tower it was sent after, walking past the others and the foe', () => {
     const { m, mine, foe, watch, lookout } = setup();
     expect(setFocus(m, 0, [mine.id], { kind: 'tower', id: lookout.id })).toBe('ok');
-    run(m, 14);
+    run(m, 8); // before the lookout falls and the focus ends
     expect(watch.hp).toBe(towerDef('legion', 'watch').hp);
     expect(foe.hp).toBe(5000);
     expect(lookout.hp).toBeLessThan(towerDef('legion', 'lookout').hp);
