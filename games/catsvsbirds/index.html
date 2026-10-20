@@ -7,286 +7,188 @@
     <link rel="icon" href="data:," />
     <style>
       * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; background: #0a0a0f; color: #e8e4d8; font: 15px/1.4 Georgia, 'Times New Roman', serif;
-        display: flex; flex-direction: column; align-items: center; padding: 8px; gap: 8px; user-select: none; -webkit-user-select: none; }
+      html, body { margin: 0; height: 100%; background: #0a0a14; color: #e8e4d8; font: 15px/1.4 Georgia, 'Times New Roman', serif; }
+      body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 8px; user-select: none; -webkit-user-select: none; }
       a { color: #f0c060; }
-      #top { width: 100%; max-width: 960px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+      #top { width: 100%; max-width: 960px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
       h1 { margin: 0; font-size: 20px; color: #f0c060; }
-      #stats { display: flex; gap: 14px; font-size: 16px; }
-      #wrap { width: 100%; max-width: 960px; }
-      canvas { width: 100%; height: auto; display: block; border-radius: 8px; background: #3f7d3a; touch-action: manipulation; }
-      #bar { width: 100%; max-width: 960px; display: flex; gap: 6px; flex-wrap: wrap; align-items: stretch; }
-      button { font: inherit; color: #e8e4d8; background: #23232e; border: 1px solid #44445a; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
-      button:hover:not(:disabled) { border-color: #f0c060; }
-      button:disabled { opacity: 0.45; cursor: default; }
-      button.on { border-color: #f0c060; background: #3a3320; }
-      .tower small { display: block; color: #a9a496; font-size: 12px; }
-      #info { flex: 1 1 200px; min-height: 44px; padding: 4px 8px; color: #cfc9b6; font-size: 14px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-      #go { background: #6b4a12; border-color: #f0c060; }
+      canvas { width: 100%; max-width: 960px; height: auto; display: block; border-radius: 8px; touch-action: none; image-rendering: pixelated; cursor: pointer; }
+      #hint { color: #a9a496; font-size: 13px; }
     </style>
   </head>
   <body>
-    <div id="top">
-      <h1>Cats vs Birds</h1>
-      <div id="stats"><span>🐟 <b id="gold">0</b></span><span>❤ <b id="lives">0</b></span><span>Wave <b id="wave">0</b>/<span id="maxwave"></span></span></div>
-      <a href="../">All games</a>
-    </div>
-    <div id="wrap"><canvas id="c" width="960" height="540"></canvas></div>
-    <div id="bar">
-      <button class="tower" data-t="tabby"></button>
-      <button class="tower" data-t="siamese"></button>
-      <button class="tower" data-t="fat"></button>
-      <div id="info"></div>
-      <button id="speed">1×</button>
-      <button id="go">Send wave</button>
-    </div>
+    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump · hold to keep jumping · M mutes</span><a href="../">All games</a></div>
+    <canvas id="c" width="960" height="540"></canvas>
     <script>
       'use strict';
-      const CELL = 60, COLS = 16, ROWS = 9, MAXWAVE = 20;
-      // The birds' flight path, as cell waypoints (col,row); the last point is off the right edge.
-      const WAY = [[-1, 2], [5, 2], [5, 6], [10, 6], [10, 1], [14, 1], [14, 7], [16, 7]];
-      const PT = WAY.map(([c, r]) => ({ x: c * CELL + CELL / 2, y: r * CELL + CELL / 2 }));
-      const SEG = []; let TOTAL = 0;
-      for (let i = 1; i < PT.length; i++) {
-        const a = PT[i - 1], b = PT[i], len = Math.hypot(b.x - a.x, b.y - a.y);
-        SEG.push({ a, b, len, start: TOTAL }); TOTAL += len;
-      }
-      const onPath = new Set();
-      for (let i = 1; i < WAY.length; i++) {
-        const [c0, r0] = WAY[i - 1], [c1, r1] = WAY[i];
-        for (let c = Math.min(c0, c1); c <= Math.max(c0, c1); c++)
-          for (let r = Math.min(r0, r1); r <= Math.max(r0, r1); r++) onPath.add(c + ',' + r);
-      }
-      const posAt = (d) => {
-        for (const s of SEG) if (d <= s.start + s.len) { const t = (d - s.start) / s.len; return { x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t }; }
-        return PT[PT.length - 1];
-      };
+      const W = 960, H = 540, GROUND = 400, SPEED0 = 330, G = 2600, JUMP = 840;
+      const CAT_W = 80, CAT_H = 68, FEET = 62; // frame size of cat-run.png and the row of the paws inside it
+      const HIT_W = 44, HIT_H = 40, CAT_X = 220;
 
-      const CATS = {
-        tabby: { name: 'Tabby', cost: 50, range: 125, dmg: 10, rate: 0.55, color: '#e0903a', tip: 'Cheap and quick hairballs' },
-        siamese: { name: 'Siamese', cost: 100, range: 230, dmg: 38, rate: 1.4, color: '#e8dcc0', tip: 'Long-range sniper' },
-        fat: { name: 'Fat Cat', cost: 130, range: 105, dmg: 9, rate: 1.0, color: '#8a8a96', splash: 60, slow: 0.5, tip: 'Splash belly-flops that slow birds' },
-      };
-      const BIRDS = {
-        sparrow: { hp: 22, speed: 95, gold: 4, color: '#a9784a', r: 9 },
-        pigeon: { hp: 55, speed: 62, gold: 6, color: '#8b93a8', r: 12 },
-        crow: { hp: 150, speed: 50, gold: 11, color: '#2a2a35', r: 14 },
-        eagle: { hp: 1400, speed: 36, gold: 90, color: '#5a3a1e', r: 22, boss: true },
-      };
+      const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      const sheet = new Image(); sheet.src = 'cat-run.png';
 
-      const $ = (id) => document.getElementById(id);
-      const cv = $('c'), ctx = cv.getContext('2d');
+      // ---- the level: a fixed course built from a seed, so every attempt is the same and can be learned ----
+      const BPM = 120, BEAT = 60 / BPM;
+      function rng(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      function buildLevel() {
+        const r = rng(7), solids = [], fish = [], spd = (x) => SPEED0 + Math.min(120, x / 250);
+        let x = 0; // world position in px; ground is a list of [from, to] runs with gaps between
+        const ground = [[-200, 900]]; x = 900;
+        const COUNT = 46;
+        for (let i = 0; i < COUNT; i++) {
+          // a gap is crossed in 0.2-0.4 s of flight (a jump lasts about 0.65 s) and grows a little as the course goes on
+          const gap = Math.round(spd(x) * (0.2 + Math.floor(r() * 3) * 0.07 + Math.min(0.06, i * 0.002)));
+          const runLen = Math.round(spd(x) * BEAT * (2.5 + Math.floor(r() * 5) * 0.5));
+          const kind = r();
+          const start = x + gap, end = start + runLen;
+          ground.push([start, end]);
+          if (gap > 60) fish.push({ x: x + gap / 2, y: GROUND - 150 });
+          if (kind > 0.5 && runLen > 420) { // a raised block to hop onto, with room to land and jump again
+            const bw = Math.min(runLen - 280, 150), bx = start + 190, bh = kind > 0.85 ? 90 : 55;
+            solids.push({ x: bx, w: bw, h: bh }); fish.push({ x: bx + bw / 2, y: GROUND - bh - 70 });
+          } else fish.push({ x: start + runLen / 2, y: GROUND - 60 });
+          x = end;
+        }
+        ground.push([x + 220, x + 1400]);
+        return { ground, solids, fish, end: x + 220 };
+      }
+      const L = buildLevel();
+
+      // ---- state ----
       let S;
-      const reset = () => {
-        S = { gold: 160, lives: 20, wave: 0, towers: [], birds: [], shots: [], fx: [], queue: [], spawnT: 0, running: false,
-          sel: null, build: 'tabby', speed: 1, over: null, hover: null, t: 0 };
-        refresh();
-      };
-
-      const cost = (tw) => Math.round(CATS[tw.type].cost * 0.8 * tw.level);
-      const sellValue = (tw) => { let v = CATS[tw.type].cost; for (let l = 1; l < tw.level; l++) v += Math.round(CATS[tw.type].cost * 0.8 * l); return Math.floor(v * 0.6); };
-      const stat = (tw) => { const c = CATS[tw.type], m = 1 + 0.45 * (tw.level - 1);
-        return { dmg: c.dmg * m, range: c.range * (1 + 0.08 * (tw.level - 1)), rate: c.rate * (1 - 0.08 * (tw.level - 1)), splash: c.splash, slow: c.slow }; };
-
-      function waveList(n) {
-        const q = [];
-        const add = (k, count) => { for (let i = 0; i < count; i++) q.push(k); };
-        add('sparrow', 5 + n);
-        if (n >= 3) add('pigeon', Math.floor(n * 0.9));
-        if (n >= 7) add('crow', Math.floor((n - 5) * 0.8));
-        if (n % 5 === 0) add('eagle', n / 5);
-        for (let i = q.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [q[i], q[j]] = [q[j], q[i]]; }
-        return q;
+      function reset(keepAttempt) {
+        S = { x: 0, y: GROUND, vy: 0, onGround: true, dead: 0, won: false, t: 0, scroll: 0, fishGot: new Set(), score: 0,
+          attempt: keepAttempt ? S.attempt + 1 : 1, best: keepAttempt ? S.best : 0, parts: [], started: false, frame: 0, coyote: 0, wasHeld: false };
       }
-      function sendWave() {
-        if (S.over || S.running || S.queue.length || S.birds.length) return;
-        S.wave++; S.queue = waveList(S.wave); S.running = true; S.spawnT = 0; refresh();
-      }
+      reset(false);
+      const speed = () => SPEED0 + Math.min(120, S.scroll / 250);
+
+      let held = false, pressed = false;
+      const down = () => { held = true; pressed = true; audio.start(); };
+      cv.addEventListener('pointerdown', (e) => { e.preventDefault(); down(); });
+      addEventListener('pointerup', () => { held = false; });
+      addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); if (!e.repeat) down(); held = true; }
+        else if (e.key === 'm' || e.key === 'M') audio.toggle();
+      });
+      addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') held = false; });
+
+      const groundAt = (wx) => L.ground.some(([a, b]) => wx >= a && wx <= b);
+      // floor height under the cat's feet (px above GROUND), the tallest block the paws are over, else 0
+      const blockTop = (x0, x1) => { let h = -1; for (const s of L.solids) if (x1 > s.x && x0 < s.x + s.w) h = Math.max(h, s.h); return h; };
+
+      function die() { if (S.dead) return; S.dead = 0.0001; S.best = Math.max(S.best, Math.round(progress() * 100)); audio.thud();
+        for (let i = 0; i < 18; i++) S.parts.push({ x: CAT_X, y: S.y - 24, vx: (Math.random() - 0.5) * 520, vy: -Math.random() * 520, t: 0.7 }); }
+      const progress = () => Math.min(1, S.scroll / L.end);
 
       function update(dt) {
         S.t += dt;
-        if (S.queue.length) {
-          S.spawnT -= dt;
-          if (S.spawnT <= 0) {
-            const k = S.queue.shift(), b = BIRDS[k], hpScale = 1 + S.wave * 0.12;
-            S.birds.push({ k, hp: b.hp * hpScale, max: b.hp * hpScale, d: 0, slowT: 0, slow: 1, flap: Math.random() * 6 });
-            S.spawnT = b.boss ? 2.5 : Math.max(0.35, 0.8 - S.wave * 0.02);
-          }
+        for (const p of S.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 1800 * dt; p.t -= dt; }
+        S.parts = S.parts.filter((p) => p.t > 0);
+        if (S.dead) { S.dead += dt; if (S.dead > 0.9) reset(true); return; }
+        if (S.won) { S.scroll += speed() * dt * 0.3; if (pressed) { reset(true); S.attempt = 1; } pressed = false; return; }
+        if (!S.started) { if (pressed) S.started = true; else { pressed = false; return; } }
+
+        const sp = speed(); S.scroll += sp * dt; S.frame += dt * 14;
+        const wx = S.scroll + CAT_X;                      // world x of the cat
+        const x0 = wx - HIT_W / 2, x1 = wx + HIT_W / 2;
+        const floorH = blockTop(x0 + 6, x1 - 6);          // height of the block underfoot, -1 = none
+        const floorY = floorH >= 0 ? GROUND - floorH : (groundAt(x0 + 10) || groundAt(x1 - 10) ? GROUND : Infinity);
+
+        S.coyote = S.onGround ? 0.09 : S.coyote - dt;
+        if ((pressed || (held && !S.wasHeld) || (held && S.onGround)) && S.coyote > 0) { S.vy = -JUMP; S.onGround = false; S.coyote = 0; audio.jump(); }
+        pressed = false; S.wasHeld = held;
+
+        S.vy += G * dt; const prevY = S.y; S.y += S.vy * dt;
+        if (S.vy >= 0 && prevY <= floorY + 1 && S.y >= floorY) { S.y = floorY; S.vy = 0; S.onGround = true; }
+        else if (S.y > floorY && floorH < 0 && S.onGround) { /* walked off an edge */ S.onGround = false; }
+        else if (S.vy >= 0 && S.y < floorY) S.onGround = false;
+
+        // running into the side of a block (paws below its top), or dropping out of the world, ends the attempt
+        for (const s of L.solids) if (x1 - 8 > s.x && x0 + 8 < s.x + s.w && S.y > GROUND - s.h + 10) { die(); return; }
+        if (S.y > H + 60) { die(); return; }
+
+        for (let i = 0; i < L.fish.length; i++) {
+          const f = L.fish[i]; if (S.fishGot.has(i)) continue;
+          if (Math.abs(f.x - wx) < 36 && Math.abs(f.y - (S.y - 26)) < 44) { S.fishGot.add(i); S.score += 10; audio.fish(); }
         }
-        for (const b of S.birds) {
-          b.slowT -= dt; if (b.slowT <= 0) b.slow = 1;
-          b.d += BIRDS[b.k].speed * b.slow * dt; b.flap += dt * 14;
-          if (b.d >= TOTAL) { b.dead = true; b.escaped = true; S.lives -= BIRDS[b.k].boss ? 5 : 1; }
-        }
-        for (const tw of S.towers) {
-          tw.cd -= dt; const st = stat(tw), tx = tw.c * CELL + CELL / 2, ty = tw.r * CELL + CELL / 2;
-          let best = null;
-          for (const b of S.birds) {
-            if (b.dead) continue; const p = posAt(b.d);
-            if (Math.hypot(p.x - tx, p.y - ty) <= st.range && (!best || b.d > best.d)) best = b;
-          }
-          if (best) {
-            const p = posAt(best.d); tw.face = Math.atan2(p.y - ty, p.x - tx);
-            if (tw.cd <= 0) { tw.cd = st.rate; S.shots.push({ x: tx, y: ty, target: best, dmg: st.dmg, splash: st.splash, slow: st.slow, color: CATS[tw.type].color }); }
-          }
-        }
-        for (const s of S.shots) {
-          const t = s.target; if (!t.dead) { const p = posAt(t.d); s.tx = p.x; s.ty = p.y; }
-          const dx = s.tx - s.x, dy = s.ty - s.y, dist = Math.hypot(dx, dy), step = 420 * dt;
-          if (dist <= step + 4) {
-            s.done = true;
-            const hit = (b, dmg) => { b.hp -= dmg; if (s.slow) { b.slow = s.slow; b.slowT = 1.8; } };
-            if (s.splash) { for (const b of S.birds) { if (!b.dead && Math.hypot(posAt(b.d).x - s.tx, posAt(b.d).y - s.ty) <= s.splash) hit(b, s.dmg); } S.fx.push({ x: s.tx, y: s.ty, r: s.splash, t: 0.3, c: s.color }); }
-            else if (!t.dead) hit(t, s.dmg);
-          } else { s.x += (dx / dist) * step; s.y += (dy / dist) * step; }
-        }
-        for (const b of S.birds) if (!b.dead && b.hp <= 0) {
-          b.dead = true; S.gold += BIRDS[b.k].gold; const p = posAt(b.d);
-          S.fx.push({ x: p.x, y: p.y, feathers: true, t: 0.6, c: BIRDS[b.k].color });
-        }
-        S.birds = S.birds.filter((b) => !b.dead); S.shots = S.shots.filter((s) => !s.done);
-        for (const f of S.fx) f.t -= dt; S.fx = S.fx.filter((f) => f.t > 0);
-        if (S.lives <= 0) { S.lives = 0; S.over = 'lose'; S.running = false; }
-        else if (S.running && !S.queue.length && !S.birds.length) {
-          S.running = false; S.gold += 20 + S.wave * 3;
-          if (S.wave >= MAXWAVE) S.over = 'win';
-        }
-        refresh();
+        if (S.scroll >= L.end) { S.won = true; S.best = 100; }
       }
 
-      function drawCat(x, y, color, face, level, big) {
-        ctx.save(); ctx.translate(x, y);
-        const r = big ? 22 : 18;
-        ctx.fillStyle = color; ctx.strokeStyle = '#1b1b22'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(-r * 0.8, -r * 0.2); ctx.lineTo(-r * 0.6, -r * 1.1); ctx.lineTo(-r * 0.1, -r * 0.7); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(r * 0.8, -r * 0.2); ctx.lineTo(r * 0.6, -r * 1.1); ctx.lineTo(r * 0.1, -r * 0.7); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.stroke();
-        const ex = Math.cos(face) * 3, ey = Math.sin(face) * 3;
-        ctx.fillStyle = '#fff';
-        for (const sx of [-6, 6]) { ctx.beginPath(); ctx.arc(sx + ex, -2 + ey, 4, 0, 7); ctx.fill(); }
-        ctx.fillStyle = '#111';
-        for (const sx of [-6, 6]) { ctx.beginPath(); ctx.arc(sx + ex * 1.6, -2 + ey * 1.6, 2, 0, 7); ctx.fill(); }
-        ctx.fillStyle = '#d98a8a'; ctx.beginPath(); ctx.arc(0, 4, 2, 0, 7); ctx.fill();
-        ctx.strokeStyle = '#1b1b22'; ctx.lineWidth = 1;
-        for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 5, 6); ctx.lineTo(s * 15, 4); ctx.moveTo(s * 5, 8); ctx.lineTo(s * 15, 10); ctx.stroke(); }
-        ctx.restore();
-        if (level > 1) { ctx.fillStyle = '#f0c060'; ctx.font = 'bold 12px Georgia'; ctx.textAlign = 'center'; ctx.fillText('★'.repeat(level - 1), x, y + 34); }
-      }
-      function drawBird(b) {
-        const d = BIRDS[b.k], p = posAt(b.d), q = posAt(b.d + 4), ang = Math.atan2(q.y - p.y, q.x - p.x), w = Math.sin(b.flap) * d.r * 0.8;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(ang);
-        ctx.fillStyle = d.color; ctx.strokeStyle = '#1b1b22'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.ellipse(-d.r * 0.9, w * 0.3, d.r * 0.5, d.r * 0.2, 0, 0, 7); ctx.fill();
-        for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(0, s * (d.r * 0.6 + w * 0.5), d.r * 0.7, d.r * 0.35, s * 0.3, 0, 7); ctx.fill(); ctx.stroke(); }
-        ctx.beginPath(); ctx.ellipse(0, 0, d.r, d.r * 0.7, 0, 0, 7); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#f2b632'; ctx.beginPath(); ctx.moveTo(d.r * 0.9, -3); ctx.lineTo(d.r * 1.5, 0); ctx.lineTo(d.r * 0.9, 3); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(d.r * 0.5, -d.r * 0.2, 2.2, 0, 7); ctx.fill();
-        ctx.restore();
-        const bw = d.r * 2; ctx.fillStyle = '#000a'; ctx.fillRect(p.x - bw / 2, p.y - d.r - 12, bw, 4);
-        ctx.fillStyle = b.hp / b.max > 0.4 ? '#7ad06a' : '#e05a4a'; ctx.fillRect(p.x - bw / 2, p.y - d.r - 12, bw * Math.max(0, b.hp / b.max), 4);
-      }
-
+      // ---- drawing ----
+      const PALETTES = [['#1a1033', '#3b1d6e', '#ff4fa3'], ['#06223a', '#0c5a86', '#3be8ff'], ['#2a0f1f', '#7a1f4e', '#ffb13b']];
       function draw() {
-        ctx.clearRect(0, 0, 960, 540);
-        for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
-          ctx.fillStyle = (c + r) % 2 ? '#427f3d' : '#3c7737'; ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+        const beat = (S.t / BEAT) % 1, pulse = Math.pow(1 - beat, 3);
+        const pal = PALETTES[Math.floor(S.scroll / 2600) % PALETTES.length];
+        const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, pal[0]); g.addColorStop(1, pal[1]);
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        // far skyline that scrolls slowly and bounces on the beat
+        ctx.fillStyle = pal[0] + 'cc';
+        for (let i = -1; i < 12; i++) { const bx = i * 120 - ((S.scroll * 0.25) % 120), bh = 90 + ((i * 53 + Math.floor(S.scroll * 0.25 / 120) * 53) % 5) * 28; ctx.fillRect(bx, GROUND - bh - pulse * 6, 90, bh + 6); }
+        ctx.globalAlpha = 0.08 + pulse * 0.08; ctx.fillStyle = pal[2]; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+
+        const off = S.scroll;
+        // ground runs
+        for (const [a, b] of L.ground) {
+          const sx = a - off, ex = b - off; if (ex < -20 || sx > W + 20) continue;
+          const x = Math.max(-20, sx), w = Math.min(W + 20, ex) - x;
+          ctx.fillStyle = '#0d0820'; ctx.fillRect(x, GROUND, w, H - GROUND);
+          ctx.fillStyle = pal[2]; ctx.fillRect(x, GROUND, w, 4 + pulse * 3);
+          ctx.fillStyle = pal[2] + '22'; for (let gx = Math.ceil((x + off) / 60) * 60 - off; gx < x + w; gx += 60) ctx.fillRect(gx, GROUND + 4, 2, H - GROUND);
         }
-        ctx.strokeStyle = '#d8c48a'; ctx.lineWidth = CELL - 10; ctx.lineJoin = 'round'; ctx.lineCap = 'butt';
-        ctx.beginPath(); PT.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.stroke();
-        ctx.strokeStyle = '#c4af74'; ctx.lineWidth = 3; ctx.setLineDash([10, 14]);
-        ctx.beginPath(); PT.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.stroke(); ctx.setLineDash([]);
-        // the fish stash the birds are after
-        ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.fillText('🐟', 936, 7 * CELL + 40);
-        if (S.hover && !onPath.has(S.hover.c + ',' + S.hover.r) && !towerAt(S.hover.c, S.hover.r)) {
-          const c = CATS[S.build], x = S.hover.c * CELL + 30, y = S.hover.r * CELL + 30;
-          ctx.fillStyle = '#ffffff14'; ctx.strokeStyle = S.gold >= c.cost ? '#ffffff88' : '#ff6a5a88'; ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.arc(x, y, c.range, 0, 7); ctx.fill(); ctx.stroke();
+        for (const s of L.solids) {
+          const sx = s.x - off; if (sx + s.w < -10 || sx > W + 10) continue;
+          ctx.fillStyle = '#17103a'; ctx.fillRect(sx, GROUND - s.h, s.w, s.h);
+          ctx.strokeStyle = pal[2]; ctx.lineWidth = 3; ctx.strokeRect(sx + 1.5, GROUND - s.h + 1.5, s.w - 3, s.h - 3);
         }
-        for (const tw of S.towers) {
-          const x = tw.c * CELL + 30, y = tw.r * CELL + 30;
-          if (tw === S.sel) { const st = stat(tw); ctx.fillStyle = '#ffffff18'; ctx.strokeStyle = '#f0c060'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, st.range, 0, 7); ctx.fill(); ctx.stroke(); }
-          ctx.fillStyle = '#0003'; ctx.beginPath(); ctx.ellipse(x, y + 18, 20, 7, 0, 0, 7); ctx.fill();
-          drawCat(x, y, CATS[tw.type].color, tw.face || 0, tw.level, tw.type === 'fat');
+        ctx.font = '28px serif'; ctx.textAlign = 'center';
+        L.fish.forEach((f, i) => { if (S.fishGot.has(i)) return; const fx = f.x - off; if (fx > -30 && fx < W + 30) ctx.fillText('🐟', fx, f.y + Math.sin(S.t * 4 + i) * 4); });
+        // finish line
+        const fl = L.end - off; if (fl < W + 40) { ctx.fillStyle = '#fff'; for (let i = 0; i < 20; i++) { ctx.fillRect(fl + (i % 2) * 14, 40 + i * 18, 14, 14); ctx.fillRect(fl + 14 - (i % 2) * 14, 40 + i * 18, 14, 14); } }
+
+        // the cat: the run strip when on the ground, a stretched frame in the air
+        if (!S.dead) {
+          const fr = S.onGround ? Math.floor(S.frame) % 6 : (S.vy < 0 ? 1 : 3);
+          ctx.save(); ctx.translate(CAT_X, S.y);
+          if (!S.onGround) ctx.rotate(Math.max(-0.35, Math.min(0.45, S.vy / 2600)));
+          ctx.fillStyle = '#0005'; if (S.onGround) { ctx.beginPath(); ctx.ellipse(0, 2, 34, 6, 0, 0, 7); ctx.fill(); }
+          ctx.shadowColor = pal[2]; ctx.shadowBlur = 14; // a glow, so the black cat reads against the dark course
+          ctx.drawImage(sheet, fr * CAT_W, 0, CAT_W, CAT_H, -CAT_W / 2 - 4, -FEET, CAT_W, CAT_H);
+          ctx.shadowBlur = 0;
+          ctx.restore();
         }
-        for (const b of S.birds) drawBird(b);
-        for (const s of S.shots) { ctx.fillStyle = s.color; ctx.strokeStyle = '#1b1b22'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(s.x, s.y, s.splash ? 8 : 5, 0, 7); ctx.fill(); ctx.stroke(); }
-        for (const f of S.fx) {
-          if (f.feathers) { ctx.fillStyle = f.c; ctx.globalAlpha = f.t / 0.6; for (let i = 0; i < 6; i++) { const a = i * 1.05, d = (0.6 - f.t) * 60; ctx.fillRect(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d - (0.6 - f.t) * 20, 4, 2); } ctx.globalAlpha = 1; }
-          else { ctx.globalAlpha = f.t / 0.3 * 0.5; ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
-        }
-        if (S.over) {
-          ctx.fillStyle = '#000b'; ctx.fillRect(0, 0, 960, 540); ctx.fillStyle = '#f0c060'; ctx.textAlign = 'center';
-          ctx.font = 'bold 48px Georgia'; ctx.fillText(S.over === 'win' ? 'The fish are safe!' : 'The birds got the fish…', 480, 250);
-          ctx.fillStyle = '#e8e4d8'; ctx.font = '22px Georgia'; ctx.fillText('Tap to play again', 480, 295);
-        }
+        for (const p of S.parts) { ctx.globalAlpha = Math.max(0, p.t / 0.7); ctx.fillStyle = '#2a2a33'; ctx.fillRect(p.x, p.y, 7, 7); ctx.fillStyle = '#6aff7a'; ctx.fillRect(p.x + 2, p.y + 2, 2, 2); }
+        ctx.globalAlpha = 1;
+
+        // HUD: progress bar, fish, attempt
+        ctx.fillStyle = '#0008'; ctx.fillRect(W / 2 - 200, 18, 400, 12);
+        ctx.fillStyle = pal[2]; ctx.fillRect(W / 2 - 200, 18, 400 * progress(), 12);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Georgia'; ctx.textAlign = 'left'; ctx.fillText('🐟 ' + S.score, 20, 32);
+        ctx.textAlign = 'right'; ctx.fillText('Attempt ' + S.attempt + '   Best ' + S.best + '%', W - 20, 32);
+        ctx.textAlign = 'center'; ctx.font = 'bold 20px Georgia'; ctx.fillText(Math.round(progress() * 100) + '%', W / 2, 52);
+        if (!S.started && !S.won) { ctx.font = 'bold 44px Georgia'; ctx.fillStyle = '#f0c060'; ctx.fillText('Cats vs Birds', W / 2, 190); ctx.font = '22px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText('Tap, click or press Space to start', W / 2, 232); }
+        if (S.won) { ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#f0c060'; ctx.font = 'bold 48px Georgia'; ctx.fillText('Level complete!', W / 2, 230); ctx.fillStyle = '#fff'; ctx.font = '24px Georgia'; ctx.fillText('🐟 ' + S.score + ' · attempts ' + S.attempt + ' · tap to run again', W / 2, 280); }
       }
 
-      const towerAt = (c, r) => S.towers.find((t) => t.c === c && t.r === r);
-      function cellOf(e) {
-        const rc = cv.getBoundingClientRect(), x = ((e.clientX - rc.left) / rc.width) * 960, y = ((e.clientY - rc.top) / rc.height) * 540;
-        return { c: Math.floor(x / CELL), r: Math.floor(y / CELL) };
-      }
-      cv.addEventListener('pointermove', (e) => { S.hover = cellOf(e); });
-      cv.addEventListener('pointerleave', () => { S.hover = null; });
-      cv.addEventListener('pointerdown', (e) => {
-        if (S.over) { reset(); return; }
-        const { c, r } = cellOf(e); S.hover = { c, r };
-        if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return;
-        const tw = towerAt(c, r);
-        if (tw) { S.sel = S.sel === tw ? null : tw; refresh(); return; }
-        S.sel = null;
-        if (onPath.has(c + ',' + r)) return;
-        const def = CATS[S.build];
-        if (S.gold >= def.cost) { S.gold -= def.cost; S.towers.push({ type: S.build, c, r, level: 1, cd: 0.3, face: 0 }); }
-        refresh();
-      });
+      // ---- sound: a four-on-the-floor kick and a bass line on the beat, made with Web Audio (starts on first input) ----
+      const audio = (() => {
+        let ac = null, muted = false, next = 0, step = 0, master = null;
+        const BASS = [55, 55, 82.4, 55, 65.4, 65.4, 98, 73.4];
+        function tone(f, t, d, type, vol, f2) { const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+          g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + d); o.connect(g).connect(master); o.start(t); o.stop(t + d + 0.02); }
+        function sched() { if (!ac || ac.state !== 'running') return; while (next < ac.currentTime + 0.25) {
+          if (!muted && S.started && !S.dead && !S.won) { tone(130, next, 0.18, 'sine', 0.5, 40); tone(BASS[step % 8], next, BEAT * 0.9, 'sawtooth', 0.12); if (step % 2) tone(1800, next + BEAT / 2, 0.04, 'square', 0.04); }
+          next += BEAT; step++; } }
+        setInterval(sched, 60);
+        const sfx = (f, d, type, f2) => () => { if (ac && !muted) tone(f, ac.currentTime, d, type, 0.2, f2); };
+        return { start() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = 0.5; master.connect(ac.destination); next = ac.currentTime + 0.1; } catch (e) { ac = null; } } else if (ac.state === 'suspended') void ac.resume(); },
+          toggle() { muted = !muted; }, jump: sfx(300, 0.14, 'square', 640), fish: sfx(900, 0.1, 'triangle', 1500), thud: sfx(160, 0.3, 'sawtooth', 40) };
+      })();
 
-      let lastKey = '';
-      function refresh() {
-        // Rebuilt only on change, or the upgrade/sell buttons would be replaced between a press and its release.
-        const key = [S.gold, S.lives, S.wave, S.sel && S.sel.level, S.sel && S.sel.c + ',' + S.sel.r, S.build, S.speed, S.over,
-          S.running, S.queue.length > 0, S.birds.length > 0].join('|');
-        if (key === lastKey) return;
-        lastKey = key;
-        $('gold').textContent = S.gold; $('lives').textContent = S.lives; $('wave').textContent = S.wave; $('maxwave').textContent = MAXWAVE;
-        for (const b of document.querySelectorAll('.tower')) {
-          const c = CATS[b.dataset.t];
-          b.innerHTML = c.name + ' — 🐟' + c.cost + '<small>' + c.tip + '</small>';
-          b.classList.toggle('on', S.build === b.dataset.t); b.disabled = false;
-        }
-        $('go').disabled = !!(S.over || S.running || S.queue.length || S.birds.length);
-        $('go').textContent = S.wave >= MAXWAVE ? 'Last wave done' : 'Send wave ' + (S.wave + 1);
-        $('speed').textContent = S.speed + '×';
-        const info = $('info'), tw = S.sel;
-        if (!tw) { info.textContent = 'Pick a cat, then tap grass to place it. Birds fly the sandy path to your fish. Tap a cat to upgrade or sell.'; return; }
-        const st = stat(tw), c = CATS[tw.type];
-        info.innerHTML = '';
-        const label = document.createElement('span');
-        label.textContent = c.name + ' L' + tw.level + ' · dmg ' + Math.round(st.dmg) + ' · range ' + Math.round(st.range);
-        const up = document.createElement('button'); up.textContent = tw.level >= 3 ? 'Max level' : 'Upgrade 🐟' + cost(tw);
-        up.disabled = tw.level >= 3 || S.gold < cost(tw);
-        up.onclick = () => { if (S.gold >= cost(tw) && tw.level < 3) { S.gold -= cost(tw); tw.level++; refresh(); } };
-        const sell = document.createElement('button'); sell.textContent = 'Sell 🐟' + sellValue(tw);
-        sell.onclick = () => { S.gold += sellValue(tw); S.towers = S.towers.filter((t) => t !== tw); S.sel = null; refresh(); };
-        info.append(label, up, sell);
-      }
-
-      document.querySelectorAll('.tower').forEach((b) => b.addEventListener('click', () => { S.build = b.dataset.t; S.sel = null; refresh(); }));
-      $('go').addEventListener('click', sendWave);
-      $('speed').addEventListener('click', () => { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 3 : 1; refresh(); });
-      addEventListener('keydown', (e) => {
-        if (e.key === '1') S.build = 'tabby'; else if (e.key === '2') S.build = 'siamese'; else if (e.key === '3') S.build = 'fat';
-        else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); sendWave(); } else return;
-        refresh();
-      });
-
-      reset();
       let last = performance.now();
-      (function loop(now) {
-        const dt = Math.min(0.05, (now - last) / 1000); last = now;
-        if (!S.over) for (let i = 0; i < S.speed; i++) update(dt);
-        draw(); requestAnimationFrame(loop);
-      })(last);
+      (function loop(now) { const dt = Math.min(0.033, (now - last) / 1000); last = now; update(dt); draw(); requestAnimationFrame(loop); })(last);
     </script>
   </body>
 </html>
