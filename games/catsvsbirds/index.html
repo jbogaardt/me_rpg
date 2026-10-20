@@ -145,13 +145,12 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
           const sx = a - off, ex = b - off; if (ex < -20 || sx > W + 20) continue;
           const x = Math.max(-20, sx), w = Math.min(W + 20, ex) - x;
           ctx.fillStyle = '#2c3134'; ctx.fillRect(x, GROUND, w, H - GROUND);
-          ctx.fillStyle = pal[2]; ctx.fillRect(x, GROUND, w, 4 + pulse * 3);
-          ctx.fillStyle = pal[2] + '22'; for (let gx = Math.ceil((x + off) / 60) * 60 - off; gx < x + w; gx += 60) ctx.fillRect(gx, GROUND + 4, 2, H - GROUND);
         }
         for (const s of L.solids) {
           const sx = s.x - off; if (sx + s.w < -10 || sx > W + 10) continue;
-          ctx.fillStyle = '#383e42'; ctx.fillRect(sx, GROUND - s.h, s.w, s.h);
-          ctx.strokeStyle = pal[2]; ctx.lineWidth = 3; ctx.strokeRect(sx + 1.5, GROUND - s.h + 1.5, s.w - 3, s.h - 3);
+          // the same stone as the deck and the bridge behind it, with only a faint darker edge to read against the railings
+          ctx.fillStyle = '#2c3134'; ctx.fillRect(sx, GROUND - s.h, s.w, s.h);
+          ctx.strokeStyle = '#1c2023'; ctx.lineWidth = 2; ctx.strokeRect(sx + 1, GROUND - s.h + 1, s.w - 2, s.h - 2);
         }
         ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; // fillStyle shows through where no colour-emoji font exists
         L.fish.forEach((f, i) => { if (S.fishGot.has(i)) return; const fx = f.x - off; if (fx > -30 && fx < W + 30) ctx.fillText('🐟', fx, f.y + Math.sin(S.t * 4 + i) * 4); });
