@@ -105,7 +105,7 @@ const MAX_AHEAD = 400;
 
 // --- The wire ---
 
-export const NET_VERSION = 5;
+export const NET_VERSION = 6;
 
 export type Message =
   /** The joiner, once connected: who they play. */
@@ -364,7 +364,7 @@ export function checksum(m: Match): number {
   for (const p of m.players)
     for (const x of [p.wood, p.stone, p.castle.hp, p.castle.level, p.lane, p.out ? 1 : 0]) mix(x);
   for (const u of m.units) for (const x of [u.id, u.hp, u.s, u.lane ?? -1, u.off?.d ?? -1]) mix(x);
-  for (const t of m.towers) for (const x of [t.id, t.hp, t.col, t.row]) mix(x);
+  for (const t of m.towers) for (const x of [t.id, t.hp, t.col, t.row, t.spawned ?? 0]) mix(x);
   return h >>> 0;
 }
 

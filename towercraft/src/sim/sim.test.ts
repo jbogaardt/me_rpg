@@ -131,14 +131,15 @@ describe('building', () => {
   it('keeps a limit on a kind of building and needs another one first (a tech tree)', () => {
     const m = rich(newMatch(['swarm', 'swarm']));
     expect(buildTower(m, 0, 'hatchery', 8, 4)).toBe('ok');
-    expect(buildTower(m, 0, 'hatchery', 9, 4)).toBe('limit');
+    for (const col of [9, 10, 11]) expect(buildTower(m, 0, 'hatchery', col, 4)).toBe('ok'); // camps: up to PRODUCER_LIMIT
+    expect(buildTower(m, 0, 'hatchery', 12, 4)).toBe('limit');
     for (const [col, row] of [
-      [9, 4],
-      [10, 4],
+      [9, 3],
       [10, 3],
+      [11, 3],
     ] as const)
       expect(buildTower(m, 0, 'mill', col, row)).toBe('ok');
-    expect(buildTower(m, 0, 'mill', 12, 4)).toBe('limit');
+    expect(buildTower(m, 0, 'mill', 12, 3)).toBe('limit');
     upgradeCastle(m, 0);
     upgradeCastle(m, 0);
     expect(buildTower(m, 0, 'roost', 10, 8)).toBe('needs'); // a Dread Roost wants a Bat Aerie

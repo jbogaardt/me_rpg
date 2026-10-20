@@ -53,3 +53,21 @@ describe('selling a tower', () => {
     expect(buildTower(m, 0, t.def.id, t.col, t.row)).not.toBe('taken'); // the cell is free again
   });
 });
+
+describe('camps', () => {
+  it('walk units out from the producer buildings, taking turns, and from the castle for the base unit', async () => {
+    const { trainUnit } = await import('./sim');
+    const m = newMatch(['swarm', 'swarm']);
+    m.players[0].wood = m.players[0].stone = 9999;
+    const unit = m.races.swarm.units.find((u) => u.needs)!;
+    const a = put(m, 0, 'swarm', unit.needs!, 12, 14);
+    const b = put(m, 0, 'swarm', unit.needs!, 12, 30);
+    for (let i = 0; i < 4; i++) expect(trainUnit(m, 0, unit.id)).toBe('ok');
+    expect([a.spawned, b.spawned]).toEqual([2, 2]);
+    expect(m.units.some((u) => u.s > 1)).toBe(true); // out where the camps are, not all at the castle
+    const base = m.races.swarm.units.find((u) => !u.needs)!;
+    const before = m.units.length;
+    expect(trainUnit(m, 0, base.id)).toBe('ok');
+    expect(m.units.slice(before).every((u) => u.s < 9)).toBe(true);
+  });
+});

@@ -92,6 +92,8 @@ export interface Tower {
   hp: number;
   cooldown: number;
   garrison: Garrisoned[];
+  /** Units this building has sent out (a producer; the next purchase leaves from the one that has sent the fewest). */
+  spawned?: number;
   /** Health still to be mended by a paid repair (`repairTower`); it comes back over time, not at once. */
   mend?: number;
 }
@@ -461,20 +463,45 @@ export function trainUnit(m: Match, owner: Owner, unitId: string): Result {
   if (!canAfford(p, def.cost)) return 'gold';
   pay(p, def.cost);
   const maxHp = def.hp * boostOf(m, owner, def, 'hp');
+  const { lane: onLane, s: s0 } = spawnPoint(m, owner, def, lane);
   // Units that walk out together are spread along the first stretch of road (a crowd bought at once is not one stack on one spot).
-  const queued = m.units.reduce((n, u) => n + (u.owner === owner && u.s < SPREAD ? 1 : 0), 0);
+  const queued = m.units.reduce(
+    (n, u) => n + (u.owner === owner && (u.lane ?? lane) === onLane && u.s >= s0 && u.s < s0 + SPREAD ? 1 : 0),
+    0,
+  );
   for (let i = 0; i < def.count; i++)
     m.units.push({
       id: m.nextId++,
       def,
       owner,
-      lane,
+      lane: onLane,
       hp: maxHp,
       maxHp,
-      s: Math.min(SPREAD, i * SPACING + queued * SPACING),
+      s: s0 + Math.min(SPREAD, i * SPACING + queued * SPACING),
       cooldown: 0,
     });
   return 'ok';
+}
+
+/**
+ * Where a purchase of `def` walks out: from the producer building that unlocks it (the one that has sent the fewest, so several
+ * share the work), at the road point straight across from it (the nearest open lane), else from the castle.
+ */
+function spawnPoint(m: Match, owner: Owner, def: UnitDef, home: number): { lane: number; s: number } {
+  let from: Tower | undefined;
+  for (const t of m.towers)
+    if (t.owner === owner && t.hp > 0 && def.needs !== undefined && t.def.id === def.needs)
+      if (!from || (t.spawned ?? 0) < (from.spawned ?? 0)) from = t;
+  if (!from) return { lane: home, s: 0 };
+  from.spawned = (from.spawned ?? 0) + 1;
+  let best: { lane: number; s: number; d: number } | undefined;
+  for (const l of openLanes(m, owner)) {
+    const foot = l.footOf(from.col, from.row);
+    if (foot && (!best || foot.d < best.d)) best = { lane: l.id, s: foot.s, d: foot.d };
+  }
+  return best
+    ? { lane: best.lane, s: Math.min(best.s, Math.max(0, laneOf(m.board, { owner, lane: best.lane }).length - SPREAD)) }
+    : { lane: home, s: 0 };
 }
 
 /** The lanes `owner`'s units may walk now: those that end at the castle of a foe still standing. */
