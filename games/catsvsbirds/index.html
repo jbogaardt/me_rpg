@@ -21,7 +21,7 @@
     <canvas id="c" width="960" height="540"></canvas>
     <script>
       'use strict';
-      const W = 960, H = 540, GROUND = 400, SPEED0 = 330, G = 2600, JUMP = 840;
+      const W = 960, H = 540, GROUND = 330, SPEED0 = 330, G = 2600, JUMP = 840;
       const CAT_W = 80, CAT_H = 68, FEET = 62; // frame size of cat-run.png and the row of the paws inside it
       const HIT_W = 44, HIT_H = 40, CAT_X = 220;
 
@@ -29,7 +29,7 @@
       ctx.imageSmoothingEnabled = false;
       const sheet = new Image(); sheet.src = 'cat-run.png';
 const bg = new Image(); bg.src = 'backdrop.png';
-const BG_S = 3, BG_Y = GROUND - 128 * BG_S;
+const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 96 of the backdrop, where its railings stand
 
       // ---- the level: a fixed course built from a seed, so every attempt is the same and can be learned ----
       const BPM = 120, BEAT = 60 / BPM;
@@ -124,7 +124,7 @@ const BG_S = 3, BG_Y = GROUND - 128 * BG_S;
       function draw() {
         const beat = (S.t / BEAT) % 1, pulse = Math.pow(1 - beat, 3);
         const pal = [0, 0, ACCENTS[Math.floor(S.scroll / 2600) % ACCENTS.length]];
-        // the sunset arches backdrop (480x128), drawn 3x with its dark base on the ground line; it drifts slowly, and every
+        // the sunset arches backdrop (480x128), drawn 3x with its deck (row 96) on the ground line; it drifts slowly, and every
         // other copy is mirrored so the tiles meet without a seam
         ctx.fillStyle = '#7b5397'; ctx.fillRect(0, 0, W, BG_Y + 2);
         const tw = 480 * BG_S, drift = S.scroll * 0.2, first = Math.floor(drift / tw);
@@ -136,6 +136,10 @@ const BG_S = 3, BG_Y = GROUND - 128 * BG_S;
         ctx.globalAlpha = pulse * 0.1; ctx.fillStyle = pal[2]; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
 
         const off = S.scroll;
+        // missing planks: through a gap in the deck you see the sunset below the bridge
+        const sky = ctx.createLinearGradient(0, GROUND, 0, H); sky.addColorStop(0, '#9a5f8f'); sky.addColorStop(1, '#f66f51');
+        ctx.fillStyle = sky;
+        for (let i = 1; i < L.ground.length; i++) { const x = L.ground[i - 1][1] - off, w = L.ground[i][0] - L.ground[i - 1][1]; if (x < W && x + w > 0) ctx.fillRect(x, GROUND, w, H - GROUND); }
         // ground runs
         for (const [a, b] of L.ground) {
           const sx = a - off, ex = b - off; if (ex < -20 || sx > W + 20) continue;
@@ -149,7 +153,7 @@ const BG_S = 3, BG_Y = GROUND - 128 * BG_S;
           ctx.fillStyle = '#383e42'; ctx.fillRect(sx, GROUND - s.h, s.w, s.h);
           ctx.strokeStyle = pal[2]; ctx.lineWidth = 3; ctx.strokeRect(sx + 1.5, GROUND - s.h + 1.5, s.w - 3, s.h - 3);
         }
-        ctx.font = '28px serif'; ctx.textAlign = 'center';
+        ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; // fillStyle shows through where no colour-emoji font exists
         L.fish.forEach((f, i) => { if (S.fishGot.has(i)) return; const fx = f.x - off; if (fx > -30 && fx < W + 30) ctx.fillText('🐟', fx, f.y + Math.sin(S.t * 4 + i) * 4); });
         // finish line
         const fl = L.end - off; if (fl < W + 40) { ctx.fillStyle = '#fff'; for (let i = 0; i < 20; i++) { ctx.fillRect(fl + (i % 2) * 14, 40 + i * 18, 14, 14); ctx.fillRect(fl + 14 - (i % 2) * 14, 40 + i * 18, 14, 14); } }
