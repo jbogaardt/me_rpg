@@ -23,9 +23,9 @@
       .panel.thin { border-width: 10px; border-image: url('./ui/frame-thin.png') 10 stretch; }
       .wood { background: url('./ui/wood.jpg') center / 256px; }
       .paper { background: url('./ui/paper.jpg') center / 256px; color: var(--ink); }
-      /* The in-game windows (dock, card) are see-through: the same wood and paper at ~80% alpha (made from the jpgs with
-         `convert <in> -alpha set -channel A -evaluate multiply 0.78 +channel -quality 85 <out>.webp`), so the field shows under
-         them while the text, buttons and frame stay solid. Other panels (the menus) keep the opaque art. */
+      /* The in-game windows (dock, card) are see-through: the same wood and paper at 45% (wood) and 55% (paper) alpha, made from
+         the jpgs with `convert <in> -alpha set -channel A -evaluate multiply <alpha> +channel -quality 85 <out>.webp`, so the field
+         shows under them while the text, buttons and frame stay solid. Other panels (the menus) keep the opaque art. */
       .glass.wood { background: url('./ui/wood-glass.webp') center / 256px; }
       .glass.paper { background: url('./ui/paper-glass.webp') center / 256px; }
       h1, h2, h3, h4 { font-family: var(--title); margin: 0; }
