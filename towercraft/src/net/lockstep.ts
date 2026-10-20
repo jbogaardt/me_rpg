@@ -22,6 +22,7 @@ import {
   newMatch,
   buildTower,
   buyUpgrade,
+  garrisonUnits,
   loadBunker,
   repairTower,
   setFocus,
@@ -41,6 +42,7 @@ export type Command =
   | { k: 'build'; id: string; col: number; row: number }
   | { k: 'train'; id: string; n: number }
   | { k: 'bunker'; tower: number; unit: string }
+  | { k: 'garrison'; tower: number; ids: number[] }
   | { k: 'order'; what: 'towers' | 'units'; to: 'attack' | 'bypass' }
   | { k: 'focus'; ids: number[]; at?: Focus }
   | { k: 'castle' }
@@ -60,6 +62,9 @@ export function apply(m: Match, owner: Owner, c: Command): void {
       break;
     case 'bunker':
       loadBunker(m, owner, c.tower, c.unit);
+      break;
+    case 'garrison':
+      garrisonUnits(m, owner, c.tower, c.ids);
       break;
     case 'order':
       setOrder(m, owner, c.what, c.to);
@@ -95,7 +100,7 @@ const MAX_AHEAD = 400;
 
 // --- The wire ---
 
-export const NET_VERSION = 3;
+export const NET_VERSION = 4;
 
 export type Message =
   /** The joiner, once connected: who they play. */
@@ -136,6 +141,8 @@ export function parseCommand(v: unknown): Command | null {
       return isId(c.id) && isInt(c.n, 1, 200) ? { k: 'train', id: c.id, n: c.n } : null;
     case 'bunker':
       return isInt(c.tower) && isId(c.unit) ? { k: 'bunker', tower: c.tower, unit: c.unit } : null;
+    case 'garrison':
+      return isInt(c.tower) && isIds(c.ids) ? { k: 'garrison', tower: c.tower, ids: c.ids } : null;
     case 'order':
       return (c.what === 'towers' || c.what === 'units') && (c.to === 'attack' || c.to === 'bypass')
         ? { k: 'order', what: c.what, to: c.to }

@@ -537,6 +537,30 @@ export function loadBunker(m: Match, owner: Owner, towerId: number, unitId: stri
   return 'ok';
 }
 
+/** How near (cells) a soldier must be to a bunker to be sent into it: a short march, not a teleport. */
+export const GARRISON_NEAR = 12;
+
+/**
+ * Send these units (ids, `owner`'s own) into one of their bunkers: each garrison-capable unit near enough, while a slot is free,
+ * leaves the road and shoots from the bunker (it keeps what it was bought for; nothing is paid). How many went in.
+ */
+export function garrisonUnits(m: Match, owner: Owner, towerId: number, unitIds: readonly number[]): number {
+  if (!playing(m, owner)) return 0;
+  const t = m.towers.find((x) => x.id === towerId && x.owner === owner && x.hp > 0);
+  if (!t?.def.bunker) return 0;
+  let went = 0;
+  for (const id of unitIds) {
+    if (t.garrison.length >= t.def.bunker.slots) break;
+    const i = m.units.findIndex((u) => u.id === id && u.owner === owner && u.hp > 0 && !u.spent && u.def.garrison);
+    const u = m.units[i];
+    if (!u || dist(unitPos(u, m.board), centreOf(t)) > GARRISON_NEAR) continue;
+    m.units.splice(i, 1);
+    t.garrison.push({ def: u.def, cooldown: 0 });
+    went++;
+  }
+  return went;
+}
+
 /** Tell all of a player's units to fight what they meet (`attack`) or walk on past it (`bypass`): `what` is towers or units. */
 export function setOrder(m: Match, owner: Owner, what: keyof Orders, to: Orders[keyof Orders]): void {
   if (playing(m, owner)) m.players[owner]!.orders[what] = to;

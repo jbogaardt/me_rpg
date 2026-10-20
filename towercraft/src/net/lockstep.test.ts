@@ -142,6 +142,7 @@ describe('wire', () => {
           { k: 'build', id: 'arrow', col: 3, row: 4 },
           { k: 'train', id: 'archer', n: 5 },
           { k: 'bunker', tower: 3, unit: 'archer' },
+          { k: 'garrison', tower: 3, ids: [4, 5] },
           { k: 'order', what: 'towers', to: 'bypass' },
           { k: 'focus', ids: [1, 2], at: { kind: 'tower', id: 7 } },
           { k: 'focus', ids: [1] },
