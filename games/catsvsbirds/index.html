@@ -17,7 +17,7 @@
     </style>
   </head>
   <body>
-    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump · hold to keep jumping · M mutes</span><a href="../">All games</a></div>
+    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump the gaps and the kiwis · hold to keep jumping · M mutes</span><a href="../">All games</a></div>
     <canvas id="c" width="960" height="540"></canvas>
     <script>
       'use strict';
@@ -28,6 +28,8 @@
       const cv = document.getElementById('c'), ctx = cv.getContext('2d');
       ctx.imageSmoothingEnabled = false;
       const sheet = new Image(); sheet.src = 'cat-run.png';
+const kiwiImg = new Image(); kiwiImg.src = 'kiwi-run.png';
+const KIWI_S = 1, KW = 56 * KIWI_S, KH = 36 * KIWI_S, KIWI_HIT_W = 36, KIWI_HIT_H = 24; // smaller than the cat // 4 frames of 56x36, facing left, feet on the bottom row
 const bg = new Image(); bg.src = 'backdrop.png';
 const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 96 of the backdrop, where its railings stand
 
@@ -52,7 +54,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       }
       function buildLevel() {
         const r = rng(7), fish = [], spd = (x) => SPEED0 + Math.min(120, x / 250);
-        const COUNT = 46, ground = [];
+        const COUNT = 36, ground = [];
         let r0 = -200, s = 900; // r0 starts the current run of deck; s is where it ends, at the next gap
         for (let i = 0; i < COUNT; i++) {
           // a gap is crossed in 0.2-0.4 s of flight (a jump lasts about 0.65 s) and grows a little as the course goes on;
@@ -63,7 +65,8 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
           ground.push([r0, s]);
           fish.push({ x: (s + e) / 2, y: GROUND - 150 });
           r0 = e;
-          const runLen = Math.round(spd(r0) * BEAT * (2.5 + Math.floor(r() * 5) * 0.5));
+          // every other stretch is long, with room for kiwis to run at the cat
+          const runLen = Math.round(spd(r0) * BEAT * (i % 2 === 1 ? 6 + Math.floor(r() * 3) * 0.5 : 2.5 + Math.floor(r() * 5) * 0.5));
           if (bridgeNear(r0 + runLen / 2, r0 + runLen / 2, 0) < 0) fish.push({ x: r0 + runLen / 2, y: GROUND - 60 });
           s = r0 + runLen;
         }
@@ -73,14 +76,28 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
           const mid = (bridgeLo(n) + bridgeHi(n)) / 2;
           for (const d of [-90, 0, 90]) if (mid + d < end) fish.push({ x: mid + d, y: GROUND - 96 - 70 });
         }
-        return { ground, fish, end };
+        // Kiwis run at the cat along the long stretches of deck (no gaps; they climb the bridge's stairs like the cat does): each
+        // starts off the right edge when the cat is about to enter the stretch, and sometimes a second follows a little later.
+        const kiwis = [];
+        // a kiwi is only sent when it will meet the cat on plain deck: well clear of the stairs, where a jump is awkward
+        const addKiwi = (trig, stop, v) => {
+          const x0 = Math.min(trig + 760, stop), sp = spd(trig), meet = trig + ((x0 - trig) * sp) / (sp + v);
+          if (bridgeNear(meet - 200, meet + 200, 0) < 0) kiwis.push({ trig, stop, v });
+        };
+        for (const [a, b] of ground) {
+          if (a < 0 || b - a < 950 || b > end) continue;
+          const v = 150 + Math.floor(r() * 4) * 30;
+          addKiwi(a - 100, b - 60, v);
+          if (b - a >= 1300 && r() > 0.45) addKiwi(a + 420, b - 60, v + 30);
+        }
+        return { ground, fish, end, kiwis };
       }
       const L = buildLevel();
 
       // ---- state ----
       let S;
       function reset(keepAttempt) {
-        S = { x: 0, y: GROUND, ys: GROUND, vy: 0, onGround: true, dead: 0, won: false, t: 0, scroll: 0, fishGot: new Set(), score: 0,
+        S = { kiwis: [], next: 0, x: 0, y: GROUND, ys: GROUND, vy: 0, onGround: true, dead: 0, won: false, t: 0, scroll: 0, fishGot: new Set(), score: 0,
           attempt: keepAttempt ? S.attempt + 1 : 1, best: keepAttempt ? S.best : 0, parts: [], started: false, frame: 0, coyote: 0, wasHeld: false };
       }
       reset(false);
@@ -135,6 +152,14 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         S.ys = S.onGround ? S.ys + (S.y - S.ys) * Math.min(1, dt * 28) : S.y;   // the drawn height eases up the stairs
         if (S.y > H + 60) { die(); return; }
 
+        // kiwis: spawn off the right edge as the cat reaches each trigger, run left along the deck, and hurt on touch
+        while (S.next < L.kiwis.length && wx >= L.kiwis[S.next].trig) { const k = L.kiwis[S.next++]; S.kiwis.push({ x: Math.min(wx + 760, k.stop), v: k.v, ph: S.next }); }
+        for (const k of S.kiwis) {
+          k.x -= k.v * dt;
+          if (Math.abs(k.x - wx) < (KIWI_HIT_W + HIT_W - 8) / 2 && S.y > GROUND - bridgeH(k.x) - KIWI_HIT_H) { die(); return; }
+        }
+        S.kiwis = S.kiwis.filter((k) => k.x > wx - 500);
+
         for (let i = 0; i < L.fish.length; i++) {
           const f = L.fish[i]; if (S.fishGot.has(i)) continue;
           if (Math.abs(f.x - wx) < 36 && Math.abs(f.y - (S.y - 26)) < 44) { S.fishGot.add(i); S.score += 10; audio.fish(); }
@@ -180,6 +205,10 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         // finish line
         const fl = L.end - off; if (fl < W + 40) { ctx.fillStyle = '#fff'; for (let i = 0; i < 20; i++) { ctx.fillRect(fl + (i % 2) * 14, 40 + i * 18, 14, 14); ctx.fillRect(fl + 14 - (i % 2) * 14, 40 + i * 18, 14, 14); } }
 
+        for (const k of S.kiwis) {
+          const kx = k.x - off; if (kx < -80 || kx > W + 80) continue;
+          ctx.drawImage(kiwiImg, (Math.floor(S.t * 10 + k.ph) % 4) * 56, 0, 56, 36, kx - KW / 2, GROUND - bridgeH(k.x) - KH, KW, KH);
+        }
         // the cat: the run strip when on the ground, a stretched frame in the air
         if (!S.dead) {
           const fr = S.onGround ? Math.floor(S.frame) % 6 : (S.vy < 0 ? 1 : 3);
