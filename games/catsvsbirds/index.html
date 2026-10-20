@@ -183,8 +183,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
           const fr = S.onGround ? Math.floor(S.frame) % 6 : (S.vy < 0 ? 1 : 3);
           ctx.save(); ctx.translate(CAT_X, S.ys);
           if (!S.onGround) ctx.rotate(Math.max(-0.35, Math.min(0.45, S.vy / 2600)));
-          ctx.fillStyle = '#0005'; if (S.onGround) { ctx.beginPath(); ctx.ellipse(0, 2, 34, 6, 0, 0, 7); ctx.fill(); }
-          ctx.shadowColor = pal[2]; ctx.shadowBlur = 14; // a glow, so the black cat reads against the dark course
+                    ctx.shadowColor = pal[2]; ctx.shadowBlur = 14; // a glow, so the black cat reads against the dark course
           ctx.scale(-1, 1); // the sprite sheet's cat faces left; the course runs to the right
           ctx.drawImage(sheet, fr * CAT_W, 0, CAT_W, CAT_H, -CAT_W / 2 + 4, -FEET, CAT_W, CAT_H);
           ctx.shadowBlur = 0;
