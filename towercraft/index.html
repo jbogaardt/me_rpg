@@ -242,8 +242,15 @@
       @media (pointer: coarse) { #cam-sound { display: none; } #cam button { width: 44px; height: 44px; } #ghost button { min-height: 48px; } }
       /* A narrow screen: the card rises over the dock instead of the side, and gets out of the way while a tower is placed. */
       @media (max-width: 760px), (max-height: 560px) {
-        #card { right: 4px; left: 4px; width: auto; top: auto; bottom: calc(var(--dock-h) + var(--safe-b) + 6px); max-height: 40dvh; }
+        #card, #card.group { right: 4px; left: 4px; width: auto; top: auto; bottom: calc(var(--dock-h) + var(--safe-b) + 6px); max-height: calc(100dvh - var(--dock-h) - var(--safe-b) - 70px); }
         #card.placing { display: none; }
+        /* The whole card on one screen, nothing to scroll: small header and bars, the three stances in one row. */
+        #card header { margin-bottom: 4px; } #card header .pic { width: 40px; height: 40px; }
+        #card .stats { gap: 4px; margin: 0 0 6px; } #card .st { gap: 8px; } #card .st .ic { width: 22px; height: 22px; } #card .meter { height: 10px; }
+        #card .badges { gap: 4px; margin: 0 0 6px; } #card .bd { width: 26px; height: 26px; } #card .bd .ic { width: 16px; height: 16px; }
+        #card .crowd { gap: 4px; margin: 0 0 6px; }
+        #card .targets { grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 0 0 4px; }
+        #card .targets button { min-height: 36px; padding: 3px 2px; font-size: 11px; line-height: 1.1; }
         .tb { width: 42px; height: 48px; } .tb.orders { width: 50px; height: 42px; } .tb.lane { width: 56px; height: 42px; }
         .shelf { flex-wrap: wrap; overflow: visible; justify-content: center; } .thumbs { gap: 8px; } .tb em { font-size: 11px; } #cam button { width: 44px; height: 44px; }
         #hint { top: 56px; font-size: 14px; padding: 0 8px; }
