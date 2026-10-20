@@ -2,13 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Cats vs Birds</title>
     <link rel="icon" href="data:," />
     <style>
       * { box-sizing: border-box; }
       html, body { margin: 0; height: 100%; background: #0a0a14; color: #e8e4d8; font: 15px/1.4 Georgia, 'Times New Roman', serif; }
-      body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 8px; user-select: none; -webkit-user-select: none; }
+      body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 8px; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
       a { color: #f0c060; }
       #top { width: 100%; max-width: 960px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
       h1 { margin: 0; font-size: 20px; color: #f0c060; }
@@ -25,6 +25,8 @@
       const CAT_W = 80, CAT_H = 68, FEET = 62; // frame size of cat-run.png and the row of the paws inside it
       const HIT_W = 44, HIT_H = 40, CAT_X = 220;
 
+      // iOS ignores user-scalable=no: stop pinch and double-tap zoom while jumping
+      for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
       const cv = document.getElementById('c'), ctx = cv.getContext('2d');
       ctx.imageSmoothingEnabled = false;
       const sheet = new Image(); sheet.src = 'cat-run.png';
