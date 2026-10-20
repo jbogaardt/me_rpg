@@ -29,6 +29,7 @@
       ctx.imageSmoothingEnabled = false;
       const sheet = new Image(); sheet.src = 'cat-run.png';
 const kiwiImg = new Image(); kiwiImg.src = 'kiwi-run.png';
+const KIWI_RATIO = 2; // a kiwi runs at twice the cat's speed
 const KIWI_S = 1, KW = 56 * KIWI_S, KH = 36 * KIWI_S, KIWI_HIT_W = 36, KIWI_HIT_H = 24; // smaller than the cat // 4 frames of 56x36, facing left, feet on the bottom row
 const bg = new Image(); bg.src = 'backdrop.png';
 const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 96 of the backdrop, where its railings stand
@@ -80,15 +81,14 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         // starts off the right edge when the cat is about to enter the stretch, and sometimes a second follows a little later.
         const kiwis = [];
         // a kiwi is only sent when it will meet the cat on plain deck: well clear of the stairs, where a jump is awkward
-        const addKiwi = (trig, stop, v) => {
-          const x0 = Math.min(trig + 760, stop), sp = spd(trig), meet = trig + ((x0 - trig) * sp) / (sp + v);
-          if (bridgeNear(meet - 200, meet + 200, 0) < 0) kiwis.push({ trig, stop, v });
+        const addKiwi = (trig, stop) => {
+          const x0 = Math.min(trig + 760, stop), sp = spd(trig), meet = trig + ((x0 - trig) * sp) / (sp + KIWI_RATIO * sp);
+          if (bridgeNear(meet - 200, meet + 200, 0) < 0) kiwis.push({ trig, stop });
         };
         for (const [a, b] of ground) {
           if (a < 0 || b - a < 950 || b > end) continue;
-          const v = 150 + Math.floor(r() * 4) * 30;
-          addKiwi(a - 100, b - 60, v);
-          if (b - a >= 1300 && r() > 0.45) addKiwi(a + 420, b - 60, v + 30);
+          addKiwi(a - 100, b - 60);
+          if (b - a >= 1100 && r() > 0.45) addKiwi(a + 250, b - 60);
         }
         return { ground, fish, end, kiwis };
       }
@@ -153,9 +153,9 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         if (S.y > H + 60) { die(); return; }
 
         // kiwis: spawn off the right edge as the cat reaches each trigger, run left along the deck, and hurt on touch
-        while (S.next < L.kiwis.length && wx >= L.kiwis[S.next].trig) { const k = L.kiwis[S.next++]; S.kiwis.push({ x: Math.min(wx + 760, k.stop), v: k.v, ph: S.next }); }
+        while (S.next < L.kiwis.length && wx >= L.kiwis[S.next].trig) { const k = L.kiwis[S.next++]; S.kiwis.push({ x: Math.min(wx + 760, k.stop), ph: S.next }); }
         for (const k of S.kiwis) {
-          k.x -= k.v * dt;
+          k.x -= sp * KIWI_RATIO * dt;
           if (Math.abs(k.x - wx) < (KIWI_HIT_W + HIT_W - 8) / 2 && S.y > GROUND - bridgeH(k.x) - KIWI_HIT_H) { die(); return; }
         }
         S.kiwis = S.kiwis.filter((k) => k.x > wx - 500);
