@@ -188,6 +188,8 @@ void (async () => {
   const towerTextures = new Map<string, Texture>();
   const castleTextures = new Map<string, Texture>();
   const sheetTextures = new Map<string, Texture>();
+  /** The portraits (art/<name>.png) of units that have one, loaded for the cards. */
+  const portraitTextures = new Map<string, Texture>();
   const fieldTextures = new Map<BoardId, Texture>();
   const jobs = new Map<string, Promise<void>>();
   const once = (key: string, work: () => Promise<void>) => {
@@ -201,6 +203,8 @@ void (async () => {
     once(`c:${n}`, async () => void castleTextures.set(n, squareFrame(await load(`art/${n}.png`))));
   const getSheet = (n: string) =>
     once(`s:${n}`, async () => void sheetTextures.set(n, await load(`art/units/${n}.png`)));
+  const getPortrait = (n: string) =>
+    once(`p:${n}`, async () => void portraitTextures.set(n, await load(`art/${n}.png`)));
   /** The fields (art/maps/<id>.png) are drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts). */
   const getField = (id: BoardId) =>
     once(`f:${id}`, async () => void fieldTextures.set(id, await load(`art/maps/${id}.png`)));
@@ -211,6 +215,7 @@ void (async () => {
       .concat(
         [() => getCastle(RACES[race].castle.art)],
         [...new Set(RACES[race].units.map((u) => u.sheet))].map((n) => () => getSheet(n)),
+        RACES[race].units.flatMap((u) => (u.art ? [() => getPortrait(u.art!)] : [])),
       );
   /** Wait for everything a match of these races on this map needs (calling `progress` from 0 to 1 as it arrives). */
   async function ensureAssets(races: RaceId[], map: BoardId, progress?: (done: number) => void) {
@@ -242,11 +247,10 @@ void (async () => {
   const frames = new Map<string, Texture>();
   /** A sheet with its purple player colour swapped for `color` (cached per sheet and colour). */
   const teamSheets = new Map<string, Texture>();
-  const teamSheet = (sheet: string, color: number) => {
-    const key = `${sheet}:${color}`;
+  const teamTexture = (key: string, src: Texture, color: number) => {
+    key = `${key}:${color}`;
     let t = teamSheets.get(key);
     if (!t) {
-      const src = sheetTextures.get(sheet)!;
       const cv = document.createElement('canvas');
       cv.width = src.width;
       cv.height = src.height;
@@ -259,6 +263,7 @@ void (async () => {
     }
     return t;
   };
+  const teamSheet = (sheet: string, color: number) => teamTexture(sheet, sheetTextures.get(sheet)!, color);
   /** One frame of a unit sheet in a seat's colour (cached): row, and column = direction. */
   const unitFrame = (sheet: string, kind: SheetKind, row: number, col: number, color: number) => {
     const key = `${sheet}:${color}:${row}:${col}`;
@@ -1714,17 +1719,19 @@ void (async () => {
 
   const towerThumb = (art: string, px: number) =>
     `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(art/${art}.png);background-size:${px}px auto"></i>`;
-  /** A unit's picture where it has no portrait of its own: its front-facing standing frame, cropped to the figure and scaled up. */
+  /** A unit's picture (in your colour) where it has no portrait of its own: its front-facing standing frame, cropped to the figure and scaled up. */
   const portraits = new Map<string, string>();
   const portrait = (d: UnitDef) => {
-    let url = portraits.get(d.sheet);
+    const color = colorOf(YOU);
+    const key = `${d.sheet}:${color}`;
+    let url = portraits.get(key);
     if (url) return url;
     const size = SHEETS[d.kind].frame;
     const frame = document.createElement('canvas');
     frame.width = frame.height = size;
     const fx = frame.getContext('2d', { willReadFrequently: true })!;
     fx.drawImage(
-      sheetTextures.get(d.sheet)!.source.resource as CanvasImageSource,
+      teamSheet(d.sheet, color).source.resource as CanvasImageSource,
       4 * size,
       0,
       size,
@@ -1749,12 +1756,25 @@ void (async () => {
     const ox = out.getContext('2d')!;
     ox.imageSmoothingEnabled = false;
     ox.drawImage(frame, x0, y0, w, h, 0, 0, w * k, h * k);
-    portraits.set(d.sheet, (url = out.toDataURL()));
+    portraits.set(key, (url = out.toDataURL()));
+    return url;
+  };
+  /** A unit portrait in your colour (a data URL), or the plain file while it is not loaded. */
+  const portraitUrl = (art: string) => {
+    const tex = portraitTextures.get(art);
+    if (!tex) return `art/${art}.png`;
+    const key = `${art}:${colorOf(YOU)}`;
+    let url = portraits.get(key);
+    if (!url)
+      portraits.set(
+        key,
+        (url = (teamTexture(art, tex, colorOf(YOU)).source.resource as HTMLCanvasElement).toDataURL()),
+      );
     return url;
   };
   const unitThumb = (d: UnitDef, px: number) =>
     d.art
-      ? `<img class="thumb art" src="art/${d.art}.png" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`
+      ? `<img class="thumb art" src="${portraitUrl(d.art)}" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`
       : `<img class="thumb art gen" src="${portrait(d)}" alt="" style="width:${px}px;height:${Math.round((px * 38) / 46)}px" />`;
 
   const per = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
