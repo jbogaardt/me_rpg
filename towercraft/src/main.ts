@@ -2221,10 +2221,15 @@ void (async () => {
   }
   window.addEventListener('resize', layoutDock);
 
-  /** Buildings by what they are for, so fifteen of them stay easy to find. */
-  const roleOf = (d: TowerDef) =>
-    d.econ ? 'Economy' : d.damage > 0 || d.bunker ? 'Defence' : d.aura || d.detect ? 'Support' : 'Production';
-  const ROLES = ['Economy', 'Production', 'Defence', 'Support'];
+  /** Buildings by what they are for, so fifteen of them stay easy to find: the rules' roles (`roleOf` in `races.ts`), named for the player. */
+  const SECTIONS: Record<ReturnType<typeof buildingRole>, string> = {
+    econ: 'Economy',
+    producer: 'Units',
+    smithy: 'Upgrades',
+    defence: 'Defence',
+  };
+  const roleOf = (d: TowerDef) => SECTIONS[buildingRole(d)];
+  const ROLES = Object.values(SECTIONS);
 
   /** What a castle upgrade still asks for, as the button's reason: "Needs 2 more defence towers". */
   const needText = ({ need, have }: ReturnType<typeof upgradeLacks>[number]) =>
