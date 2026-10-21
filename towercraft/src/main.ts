@@ -197,10 +197,8 @@ void (async () => {
     if (!job) jobs.set(key, (job = work()));
     return job;
   };
-  const getTower = (n: string) =>
-    once(`t:${n}`, async () => void towerTextures.set(n, squareFrame(await load(`art/${n}.png`))));
-  const getCastle = (n: string) =>
-    once(`c:${n}`, async () => void castleTextures.set(n, squareFrame(await load(`art/${n}.png`))));
+  const getTower = (n: string) => once(`t:${n}`, async () => void towerTextures.set(n, await load(`art/${n}.png`)));
+  const getCastle = (n: string) => once(`c:${n}`, async () => void castleTextures.set(n, await load(`art/${n}.png`)));
   const getSheet = (n: string) =>
     once(`s:${n}`, async () => void sheetTextures.set(n, await load(`art/units/${n}.png`)));
   const getPortrait = (n: string) =>
@@ -264,6 +262,14 @@ void (async () => {
     return t;
   };
   const teamSheet = (sheet: string, color: number) => teamTexture(sheet, sheetTextures.get(sheet)!, color);
+  /** A building's first frame in a seat's colour (cached): the sheets' purple is the team colour of towers and castles too. */
+  const buildings = new Map<string, Texture>();
+  const buildingTex = (raw: Map<string, Texture>, name: string, color: number) => {
+    const key = `${name}:${color}`;
+    let t = buildings.get(key);
+    if (!t) buildings.set(key, (t = squareFrame(teamTexture(`b:${name}`, raw.get(name)!, color))));
+    return t;
+  };
   /** One frame of a unit sheet in a seat's colour (cached): row, and column = direction. */
   const unitFrame = (sheet: string, kind: SheetKind, row: number, col: number, color: number) => {
     const key = `${sheet}:${color}:${row}:${col}`;
@@ -402,7 +408,7 @@ void (async () => {
       const c = new Container();
       const color = colorOf(o);
       c.addChild(new Graphics().ellipse(0, 8, 56 * CASTLE_SCALE, 20 * CASTLE_SCALE).fill({ color, alpha: 0.45 }));
-      const sprite = new Sprite(castleTextures.get(RACES[match.players[o]!.race].castle.art));
+      const sprite = new Sprite(buildingTex(castleTextures, RACES[match.players[o]!.race].castle.art, color));
       sprite.anchor.set(0.5, 0.78);
       sprite.scale.set(castleBase(o));
       c.addChild(sprite);
@@ -1330,7 +1336,7 @@ void (async () => {
     ghostSprite.visible = !!aim && (aimOk || !!ghost);
     ghostSprite.tint = aimOk ? 0xffffff : 0xff6a6a;
     if (ghostSprite.visible && aim && selected) {
-      const tex = towerTextures.get(selected.art)!;
+      const tex = buildingTex(towerTextures, selected.art, colorOf(YOU));
       ghostSprite.texture = tex;
       ghostSprite.scale.set(TOWER_PX / tex.width);
       ghostSprite.position.set((aim[0] + 0.5) * CELL, (aim[1] + 0.5) * CELL + TOWER_FOOT);
@@ -1398,7 +1404,7 @@ void (async () => {
         const c = new Container();
         const color = colorOf(t.owner);
         c.addChild(new Graphics().ellipse(0, 4, 19 * SIZE, 9 * SIZE).fill({ color, alpha: 0.55 })); // the owner's colour under the tower
-        const tex = towerTextures.get(t.def.art)!;
+        const tex = buildingTex(towerTextures, t.def.art, color);
         const sprite = new Sprite(tex);
         sprite.anchor.set(0.5, 0.78);
         sprite.scale.set(TOWER_PX / tex.width); // a tower is about two and a half cells wide, whatever its sheet
@@ -1717,8 +1723,21 @@ void (async () => {
     if (lastRes.s !== st) $('stone').textContent = String((lastRes.s = st));
   }
 
+  /** A building's picture in your colour (a data URL), or the plain file while it is not loaded. */
+  const buildingUrl = (art: string) => {
+    const raw = towerTextures.get(art) ?? castleTextures.get(art);
+    if (!raw) return `art/${art}.png`;
+    const key = `${art}:${colorOf(YOU)}`;
+    let url = portraits.get(key);
+    if (!url)
+      portraits.set(
+        key,
+        (url = (teamTexture(`b:${art}`, raw, colorOf(YOU)).source.resource as HTMLCanvasElement).toDataURL()),
+      );
+    return url;
+  };
   const towerThumb = (art: string, px: number) =>
-    `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(art/${art}.png);background-size:${px}px auto"></i>`;
+    `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(${buildingUrl(art)});background-size:${px}px auto"></i>`;
   /** A unit's picture (in your colour) where it has no portrait of its own: its front-facing standing frame, cropped to the figure and scaled up. */
   const portraits = new Map<string, string>();
   const portrait = (d: UnitDef) => {
