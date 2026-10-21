@@ -13,13 +13,27 @@
       #top { width: 100%; max-width: 960px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
       h1 { margin: 0; font-size: 20px; color: #f0c060; }
       canvas { width: 100%; max-width: 960px; height: auto; display: block; border-radius: 8px; touch-action: none; image-rendering: pixelated; cursor: pointer; }
+      #stage { position: relative; width: 100%; max-width: 960px; }
+      #creditsBtn { position: absolute; right: 10px; bottom: 10px; padding: 4px 10px; font-size: 13px; background: #0008; }
+      #credits { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 24px; background: #0a0a14ee; border-radius: 8px; }
+      #credits[hidden] { display: none; }
+      #credits h2 { margin: 0; color: #f0c060; }
+      #credits p { margin: 0; max-width: 560px; }
       #hint { color: #a9a496; font-size: 13px; }
     </style>
   </head>
   <body>
     <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump the gaps and kiwis, stay low under birds · hold to keep jumping · M mutes</span><a href="../">All games</a></div>
-    <canvas id="c" width="960" height="540"></canvas>
-    <div id="hint">Music: "The Field Of Dreams" by Paulius Jurgelevičius (public domain)</div>
+    <div id="stage">
+      <canvas id="c" width="960" height="540"></canvas>
+      <button id="creditsBtn" type="button">Credits</button>
+      <div id="credits" hidden>
+        <h2>Credits</h2>
+        <p>Music: "The Field Of Dreams" by Paulius Jurgelevičius (public domain).</p>
+        <p>Cat, kiwi, bird, fish tin and sunset bridge art: supplied by the project owner.</p>
+        <button id="creditsClose" type="button">Close</button>
+      </div>
+    </div>
     <script>
       'use strict';
       const W = 960, H = 540, GROUND = 330, SPEED0 = 330, G = 2600, JUMP = 840;
@@ -109,13 +123,18 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       reset(false);
       const speed = () => SPEED0 + Math.min(120, S.scroll / 250);
 
+      const creditsEl = document.getElementById('credits'), setCredits = (open) => { creditsEl.hidden = !open; (open ? document.getElementById('creditsClose') : document.getElementById('creditsBtn')).blur(); };
+      document.getElementById('creditsBtn').addEventListener('click', () => setCredits(true));
+      document.getElementById('creditsClose').addEventListener('click', () => setCredits(false));
+
       let held = false, pressed = false;
       const down = () => { held = true; pressed = true; audio.start(); };
       cv.addEventListener('pointerdown', (e) => { e.preventDefault(); down(); });
       addEventListener('pointerup', () => { held = false; });
       addEventListener('keydown', (e) => {
-        if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); if (!e.repeat) down(); held = true; }
+        if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); if (creditsEl.hidden) { if (!e.repeat) down(); held = true; } }
         else if (e.key === 'm' || e.key === 'M') audio.toggle();
+        else if (e.key === 'Escape') setCredits(false);
       });
       addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') held = false; });
 
