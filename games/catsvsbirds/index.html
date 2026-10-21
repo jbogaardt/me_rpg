@@ -160,7 +160,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         const floorY = fh > 0 ? GROUND - fh : (groundAt(x0 + 10) || groundAt(x1 - 10) ? GROUND : Infinity);
 
         S.coyote = S.onGround ? 0.09 : S.coyote - dt;
-        if ((pressed || (held && !S.wasHeld) || (held && S.onGround)) && S.coyote > 0) { S.vy = -JUMP; S.onGround = false; S.coyote = 0; audio.jump(); }
+        if ((pressed || (held && !S.wasHeld) || (held && S.onGround)) && S.coyote > 0) { S.vy = -JUMP; S.onGround = false; S.coyote = 0; }
         pressed = false; S.wasHeld = held;
 
         if (S.onGround) {
@@ -191,7 +191,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
 
         for (let i = 0; i < L.fish.length; i++) {
           const f = L.fish[i]; if (S.fishGot.has(i)) continue;
-          if (Math.abs(f.x - wx) < 36 && Math.abs(f.y - (S.y - 26)) < 44) { S.fishGot.add(i); S.score += f.big ? 20 : 10; audio.fish(); }
+          if (Math.abs(f.x - wx) < 36 && Math.abs(f.y - (S.y - 26)) < 44) { S.fishGot.add(i); S.score += f.big ? 20 : 10; }
         }
         if (S.scroll >= L.end) { S.won = true; S.best = 100; }
       }
@@ -268,7 +268,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         if (S.won) { ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#f0c060'; ctx.font = 'bold 48px Georgia'; ctx.fillText('Level complete!', W / 2, 230); ctx.fillStyle = '#fff'; ctx.font = '24px Georgia'; ctx.fillText(S.score + ' points · attempts ' + S.attempt + ' · tap to run again', W / 2, 280); }
       }
 
-      // ---- sound: "The Field Of Dreams" loops as the music (starts on the first input); the jump, tin and thud sounds are Web Audio ----
+      // ---- sound: "The Field Of Dreams" loops as the music (starts on the first input); only the crash sound is Web Audio ----
       const MUSIC_BEAT = 60 / 72, MUSIC_OFFSET = 0.06; // the track's pulse, found by analysis, so the flash lands on it
       const music = new Audio('field-of-dreams.mp3'); music.loop = true; music.volume = 0.6;
       const audio = (() => {
@@ -281,7 +281,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
             else if (ac.state === 'suspended') void ac.resume();
             if (music.paused) music.play().catch(() => {});
           },
-          toggle() { muted = !muted; music.muted = muted; }, jump: sfx(300, 0.14, 'square', 640), fish: sfx(900, 0.1, 'triangle', 1500), thud: sfx(160, 0.3, 'sawtooth', 40) };
+          toggle() { muted = !muted; music.muted = muted; }, thud: sfx(160, 0.3, 'sawtooth', 40) };
       })();
 
       let last = performance.now();
