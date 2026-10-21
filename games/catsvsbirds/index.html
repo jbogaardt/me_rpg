@@ -21,13 +21,36 @@
       #credits h2 { margin: 0; color: #f0c060; }
       #credits p { margin: 0; max-width: 560px; }
       #hint { color: #a9a496; font-size: 13px; }
+      button { font: inherit; padding: 4px 12px; cursor: pointer; }
+      #coopBtn { position: absolute; left: 10px; bottom: 10px; }
+      #online { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px; background: #0a0a14ee; border-radius: 8px; }
+      #online[hidden], #onChoose[hidden], #onLeaveRow[hidden] { display: none; }
+      #online h2 { margin: 0; color: #f0c060; }
+      #online p { margin: 0; max-width: 560px; }
+      #onChoose, #onLeaveRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+      #onCode { font: inherit; padding: 4px 8px; width: 11em; }
+      #onBig { font-size: 34px; color: #f0c060; letter-spacing: 1px; }
     </style>
   </head>
   <body>
-    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump the gaps and kiwis, stay low under birds · hold to keep jumping · M mutes</span><a href="../">All games</a></div>
+    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump the gaps and kiwis, stay low under birds · hold to keep jumping · M mutes · Co-op: a friend plays the birds</span><a href="../">All games</a></div>
     <div id="stage">
       <canvas id="c" width="960" height="540"></canvas>
       <button id="creditsBtn" type="button">Credits</button>
+      <button id="coopBtn" type="button">Co-op</button>
+      <div id="online" hidden>
+        <h2>Cats vs Birds, together</h2>
+        <p id="onMsg">One of you is the cat, the other is the birds.</p>
+        <div id="onBig"></div>
+        <div id="onChoose">
+          <button id="onHost" type="button">Host a game (you are the cat)</button>
+          <span>or</span>
+          <input id="onCode" type="text" placeholder="game code" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <button id="onJoin" type="button">Join (you are the birds)</button>
+        </div>
+        <div id="onLeaveRow" hidden><button id="onLeave" type="button">Leave this game</button></div>
+        <button id="onClose" type="button">Close</button>
+      </div>
       <div id="credits" hidden>
         <h2>Credits</h2>
         <p>Music: "The Field Of Dreams" by Paulius Jurgelevičius (public domain).</p>
@@ -35,6 +58,7 @@
         <button id="creditsClose" type="button">Close</button>
       </div>
     </div>
+    <script src="net.js"></script>
     <script>
       'use strict';
       const W = 960, H = 540, GROUND = 330, SPEED0 = 330, G = 2600, JUMP = 840;
@@ -48,6 +72,9 @@ const kiwiImg = new Image(); kiwiImg.src = 'kiwi-run.png';
 const canImg = new Image(), canBigImg = new Image(); canImg.src = 'can.png'; canBigImg.src = 'can-double.png'; // tins of fish, the supplied art averaged down to the cat's 4 px pixels: 32x32, and 32x48 for two stacked
 const birdImg = new Image(); birdImg.src = 'bird-fly.png'; // 3 left-facing frames in 24x24 cells: wings down, level, up
 const BIRD_S = 2, BIRD_C = 24 * BIRD_S, BIRD_LIFT = 110, BIRD_HIT_W = 30, BIRD_HIT_H = 24; // a bird flies at jump height: jumping into it hurts, running under it is safe
+// Co-op: the friend is the birds and sends a swoop in one of two lanes. A high bird flies at jump height (the cat must stay low);
+// a low one skims the deck (the cat must jump it). One swoop per SWOOP_CD seconds, and it starts off the right edge, so the cat has a second to read it.
+const BIRD_LOW = 30, SWOOP_CD = 1.0;
 const RATIO = { kiwi: 2, bird: 1 }; // how fast each runs at the cat, as a multiple of the cat's own speed
 const KIWI_S = 1, KW = 56 * KIWI_S, KH = 36 * KIWI_S, KIWI_HIT_W = 36, KIWI_HIT_H = 24; // smaller than the cat // 4 frames of 56x36, facing left, feet on the bottom row
 const bg = new Image(); bg.src = 'backdrop.png';
@@ -119,30 +146,49 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       let S;
       function reset(keepAttempt) {
         S = { kiwis: [], next: 0, x: 0, y: GROUND, ys: GROUND, vy: 0, onGround: true, dead: 0, won: false, t: 0, scroll: 0, fishGot: new Set(), score: 0,
-          attempt: keepAttempt ? S.attempt + 1 : 1, best: keepAttempt ? S.best : 0, parts: [], started: false, frame: 0, coyote: 0, wasHeld: false };
+          attempt: keepAttempt ? S.attempt + 1 : 1, best: keepAttempt ? S.best : 0, parts: [], started: false, frame: 0, coyote: 0, wasHeld: false,
+          catches: keepAttempt ? S.catches : 0, birdCd: 0 };
       }
       reset(false);
+      let mode = 'solo';    // 'solo', 'host' (the cat; online once a friend is in) or 'guest' (the birds)
+      let coop = false;     // host only: a friend is connected, so the birds are theirs
+      let net = null, hostCode = '', snapT = 0, notice = '', noticeT = 0;
+      const swoops = [];    // lanes the friend asked for, read by the next update
       const speed = () => SPEED0 + Math.min(120, S.scroll / 250);
 
       const creditsEl = document.getElementById('credits'), setCredits = (open) => { creditsEl.hidden = !open; (open ? document.getElementById('creditsClose') : document.getElementById('creditsBtn')).blur(); };
       document.getElementById('creditsBtn').addEventListener('click', () => setCredits(true));
       document.getElementById('creditsClose').addEventListener('click', () => setCredits(false));
 
+      const onlineEl = document.getElementById('online'), onMsg = document.getElementById('onMsg'), onBig = document.getElementById('onBig');
+      const setOnline = (open) => { onlineEl.hidden = !open; if (!open) document.getElementById('coopBtn').blur(); };
+      const showOnline = (msg, big) => { onMsg.textContent = msg; onBig.textContent = big || ''; document.getElementById('onChoose').hidden = mode !== 'solo'; document.getElementById('onLeaveRow').hidden = mode === 'solo'; setOnline(true); };
+      const say = (text) => { notice = text; noticeT = 5; };
+
       let held = false, pressed = false;
       const down = () => { held = true; pressed = true; audio.start(); };
-      cv.addEventListener('pointerdown', (e) => { e.preventDefault(); down(); });
+      const swoop = (lane) => { audio.start(); if (net) net.send(JSON.stringify({ t: 'in', lane })); };
+      cv.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (mode !== 'guest') return down();
+        const r = cv.getBoundingClientRect();
+        swoop(((e.clientY - r.top) / r.height) * H < GROUND - 70 ? 'high' : 'low'); // the upper part of the picture is the high lane
+      });
       addEventListener('pointerup', () => { held = false; });
       addEventListener('keydown', (e) => {
-        if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); if (creditsEl.hidden) { if (!e.repeat) down(); held = true; } }
+        if (e.target && e.target.tagName === 'INPUT') return; // typing a game code
+        if (mode === 'guest' && !e.repeat && onlineEl.hidden && creditsEl.hidden && [' ', 'ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) { e.preventDefault(); swoop(e.key === 'ArrowDown' || e.key === 's' ? 'low' : 'high'); return; }
+        if (mode === 'guest' && [' ', 'ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) e.preventDefault();
+        else if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); if (creditsEl.hidden && onlineEl.hidden) { if (!e.repeat) down(); held = true; } }
         else if (e.key === 'm' || e.key === 'M') audio.toggle();
-        else if (e.key === 'Escape') setCredits(false);
+        else if (e.key === 'Escape') { setCredits(false); setOnline(false); }
       });
       addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') held = false; });
 
       const groundAt = (wx) => L.ground.some(([a, b]) => wx >= a && wx <= b);
 
-      function die() { if (S.dead) return; S.dead = 0.0001; S.best = Math.max(S.best, Math.round(progress() * 100)); audio.thud();
-        for (let i = 0; i < 18; i++) S.parts.push({ x: CAT_X, y: S.y - 24, vx: (Math.random() - 0.5) * 520, vy: -Math.random() * 520, t: 0.7 }); }
+      function burst() { for (let i = 0; i < 18; i++) S.parts.push({ x: CAT_X, y: S.y - 24, vx: (Math.random() - 0.5) * 520, vy: -Math.random() * 520, t: 0.7 }); }
+      function die(byBird) { if (S.dead) return; S.dead = 0.0001; S.best = Math.max(S.best, Math.round(progress() * 100)); audio.thud(); if (byBird) S.catches++; burst(); }
       const progress = () => Math.min(1, S.scroll / L.end);
 
       function update(dt) {
@@ -153,7 +199,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         if (S.won) { S.scroll += speed() * dt * 0.3; if (pressed) { reset(true); S.attempt = 1; } pressed = false; return; }
         if (!S.started) { if (pressed) S.started = true; else { pressed = false; return; } }
 
-        const sp = speed(); S.scroll += sp * dt; S.frame += dt * 14;
+        const sp = speed(); S.scroll += sp * dt; S.frame += dt * 14; S.birdCd = Math.max(0, S.birdCd - dt);
         const wx = S.scroll + CAT_X;                      // world x of the cat
         const x0 = wx - HIT_W / 2, x1 = wx + HIT_W / 2;
         const fh = Math.max(bridgeH(x0 + 6), bridgeH(wx), bridgeH(x1 - 6)); // the tallest step under the paws
@@ -179,12 +225,16 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         if (S.y > H + 60) { die(); return; }
 
         // kiwis: spawn off the right edge as the cat reaches each trigger, run left along the deck, and hurt on touch
-        while (S.next < L.kiwis.length && wx >= L.kiwis[S.next].trig) { const k = L.kiwis[S.next++]; S.kiwis.push({ x: Math.min(wx + 760, k.stop), ph: S.next, kind: k.kind }); }
+        while (S.next < L.kiwis.length && wx >= L.kiwis[S.next].trig) { const k = L.kiwis[S.next++]; if (coop && k.kind === 'bird') continue; /* the friend flies the birds */ S.kiwis.push({ x: Math.min(wx + 760, k.stop), ph: S.next, kind: k.kind }); }
+        while (swoops.length) { // a bird the friend sent: it starts off the right edge, like a kiwi
+          const lane = swoops.shift();
+          if (coop && S.birdCd <= 0) { S.kiwis.push({ x: wx + 760, ph: S.next + S.kiwis.length, kind: 'bird', lane, mine: true }); S.birdCd = SWOOP_CD; }
+        }
         for (const k of S.kiwis) {
           k.x -= sp * RATIO[k.kind] * dt;
-          const base = GROUND - bridgeH(k.x);
-          if (k.kind === 'bird') { // in the air: hit when the cat is up at its height, i.e. mid-jump
-            if (Math.abs(k.x - wx) < (BIRD_HIT_W + HIT_W - 8) / 2 && S.y > base - BIRD_LIFT - BIRD_HIT_H / 2 && S.y - HIT_H < base - BIRD_LIFT + BIRD_HIT_H / 2) { die(); return; }
+          const base = GROUND - bridgeH(k.x), lift = k.lane === 'low' ? BIRD_LOW : BIRD_LIFT;
+          if (k.kind === 'bird') { // in the air: a high bird is hit mid-jump, a low one by running into it
+            if (Math.abs(k.x - wx) < (BIRD_HIT_W + HIT_W - 8) / 2 && S.y > base - lift - BIRD_HIT_H / 2 && S.y - HIT_H < base - lift + BIRD_HIT_H / 2) { die(k.mine); return; }
           } else if (Math.abs(k.x - wx) < (KIWI_HIT_W + HIT_W - 8) / 2 && S.y > base - KIWI_HIT_H) { die(); return; }
         }
         S.kiwis = S.kiwis.filter((k) => k.x > wx - 500);
@@ -195,6 +245,66 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         }
         if (S.scroll >= L.end) { S.won = true; S.best = 100; }
       }
+
+      // ---- co-op: the host runs the course and sends snapshots; the guest only draws them and sends swoops ----
+      const snapshot = () => JSON.stringify({ t: 'st', sc: Math.round(S.scroll), y: Math.round(S.y), ys: Math.round(S.ys), vy: Math.round(S.vy), og: S.onGround ? 1 : 0,
+        d: S.dead ? 1 : 0, w: S.won ? 1 : 0, s: S.started ? 1 : 0, at: S.attempt, b: S.best, p: S.score, c: S.catches, cd: Math.round(S.birdCd * 100) / 100,
+        f: [...S.fishGot], k: S.kiwis.map((k) => [Math.round(k.x), k.ph, k.kind === 'kiwi' ? 0 : k.lane === 'low' ? 2 : 1]) });
+      function applySnapshot(m) {
+        if (!m || m.t !== 'st' || !Array.isArray(m.f) || !Array.isArray(m.k)) return;
+        const err = m.sc - S.scroll;
+        S.scroll += Math.abs(err) > 120 ? err : err * 0.4;
+        S.y = m.y; S.ys = m.ys; S.vy = m.vy; S.onGround = !!m.og; S.won = !!m.w; S.started = !!m.s;
+        if (m.d && !S.dead) { S.dead = 0.0001; burst(); audio.thud(); } else if (!m.d) S.dead = 0;
+        S.attempt = m.at; S.best = m.b; S.score = m.p; S.catches = m.c; S.birdCd = m.cd; S.fishGot = new Set(m.f);
+        S.kiwis = m.k.map(([x, ph, c]) => ({ x, ph, kind: c === 0 ? 'kiwi' : 'bird', lane: c === 2 ? 'low' : 'high' }));
+      }
+      function updateGuest(dt) { // between snapshots, carry on at the course's own speed
+        S.t += dt;
+        for (const p of S.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 1800 * dt; p.t -= dt; }
+        S.parts = S.parts.filter((p) => p.t > 0);
+        if (S.dead || !S.started) return;
+        const sp = speed() * (S.won ? 0.3 : 1);
+        S.scroll += sp * dt; S.frame += dt * 14; S.birdCd = Math.max(0, S.birdCd - dt);
+        for (const k of S.kiwis) k.x -= sp * RATIO[k.kind] * dt;
+      }
+      function leaveGame() { if (net) net.stop(); net = null; mode = 'solo'; coop = false; swoops.length = 0; reset(false); }
+      function onMessage(text) {
+        let m; try { m = JSON.parse(text); } catch { return; }
+        if (mode === 'guest') applySnapshot(m);
+        else if (m && m.t === 'in' && (m.lane === 'high' || m.lane === 'low') && coop && S.started && !S.dead && !S.won && swoops.length < 3) swoops.push(m.lane);
+      }
+      async function startHost() {
+        if (!window.CvBNet || !window.RTCPeerConnection) return showOnline('This browser cannot play online.');
+        leaveGame(); mode = 'host'; showOnline('Asking for a game code…');
+        try {
+          net = await CvBNet.host({
+            code: (c) => { hostCode = c; showOnline('Tell your friend this code. They press Co-op, type it and join as the birds.', c); },
+            opened: () => { coop = true; swoops.length = 0; reset(false); setOnline(false); say('Your friend is the birds. Run, cat!'); },
+            closed: (why) => { coop = false; reset(false); showOnline('Your friend left (' + why + ') The code works again if they rejoin.', hostCode); },
+            message: onMessage,
+            error: (why) => { leaveGame(); showOnline(why); },
+          });
+        } catch (e) { leaveGame(); showOnline(e.message); }
+      }
+      async function startJoin() {
+        const code = document.getElementById('onCode').value;
+        if (!window.CvBNet || !window.RTCPeerConnection) return showOnline('This browser cannot play online.');
+        leaveGame(); showOnline('Joining…');
+        try {
+          net = await CvBNet.join(code, {
+            opened: () => { mode = 'guest'; reset(false); setOnline(false); say('You are the birds! Tap above the deck for a high swoop, below it for a low one.'); },
+            closed: (why) => { if (mode === 'guest') { leaveGame(); showOnline('Disconnected: ' + why); } },
+            message: onMessage,
+          });
+        } catch (e) { leaveGame(); showOnline(e.message); }
+      }
+      document.getElementById('coopBtn').addEventListener('click', () => showOnline(mode === 'solo' ? 'One of you is the cat, the other is the birds.' : mode === 'guest' ? 'You are the birds.' : coop ? 'Your friend is the birds.' : 'Waiting for your friend…', ''));
+      document.getElementById('onHost').addEventListener('click', () => void startHost());
+      document.getElementById('onJoin').addEventListener('click', () => void startJoin());
+      document.getElementById('onCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') void startJoin(); });
+      document.getElementById('onLeave').addEventListener('click', () => { leaveGame(); showOnline('You left the game.'); });
+      document.getElementById('onClose').addEventListener('click', () => setOnline(false));
 
       // ---- drawing ----
       const ACCENT = '#ff6f91';
@@ -237,7 +347,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
 
         for (const k of S.kiwis) {
           const kx = k.x - off; if (kx < -80 || kx > W + 80) continue;
-          if (k.kind === 'bird') ctx.drawImage(birdImg, [0, 1, 2, 1][Math.floor(S.t * 9 + k.ph) % 4] * 24, 0, 24, 24, kx - BIRD_C / 2, GROUND - bridgeH(k.x) - BIRD_LIFT - BIRD_C / 2, BIRD_C, BIRD_C);
+          if (k.kind === 'bird') ctx.drawImage(birdImg, [0, 1, 2, 1][Math.floor(S.t * 9 + k.ph) % 4] * 24, 0, 24, 24, kx - BIRD_C / 2, GROUND - bridgeH(k.x) - (k.lane === 'low' ? BIRD_LOW : BIRD_LIFT) - BIRD_C / 2, BIRD_C, BIRD_C);
           else ctx.drawImage(kiwiImg, (Math.floor(S.t * 10 + k.ph) % 4) * 56, 0, 56, 36, kx - KW / 2, GROUND - bridgeH(k.x) - KH, KW, KH);
         }
         // the cat: the run strip when on the ground, a stretched frame in the air
@@ -264,8 +374,16 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Georgia'; ctx.textAlign = 'left'; ctx.drawImage(canImg, 12, 6); ctx.fillText(S.score, 52, 32);
         ctx.textAlign = 'right'; ctx.fillText('Attempt ' + S.attempt + '   Best ' + S.best + '%', W - 20, 32);
         ctx.textAlign = 'center'; ctx.font = 'bold 20px Georgia'; ctx.fillText(Math.round(progress() * 100) + '%', W / 2, 52);
-        if (!S.started && !S.won) { ctx.font = 'bold 44px Georgia'; ctx.fillStyle = '#f0c060'; ctx.fillText('Cats vs Birds', W / 2, 190); ctx.font = '22px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText('Tap, click or press Space to start', W / 2, 232); }
-        if (S.won) { ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#f0c060'; ctx.font = 'bold 48px Georgia'; ctx.fillText('Level complete!', W / 2, 230); ctx.fillStyle = '#fff'; ctx.font = '24px Georgia'; ctx.fillText(S.score + ' points · attempts ' + S.attempt + ' · tap to run again', W / 2, 280); }
+        const birds = mode === 'guest';
+        if (mode !== 'solo' && (birds || coop)) { ctx.textAlign = 'left'; ctx.font = 'bold 18px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText('Catches ' + S.catches, 12, 62); ctx.textAlign = 'center'; }
+        if (birds) { // the swoop button's cooldown, and how to play
+          ctx.fillStyle = '#0008'; ctx.fillRect(W / 2 - 75, H - 42, 150, 10);
+          ctx.fillStyle = S.birdCd > 0 ? '#9a9486' : ACCENT; ctx.fillRect(W / 2 - 75, H - 42, 150 * (1 - Math.min(1, S.birdCd / SWOOP_CD)), 10);
+          ctx.font = '16px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText('You are the birds: tap above the deck (or ↑) to swoop high, below it (or ↓) to swoop low', W / 2, H - 14);
+        }
+        if (!S.started && !S.won) { ctx.font = 'bold 44px Georgia'; ctx.fillStyle = '#f0c060'; ctx.fillText('Cats vs Birds', W / 2, 190); ctx.font = '22px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText(birds ? 'Waiting for the cat to start…' : coop ? 'Cat: tap, click or press Space to start' : 'Tap, click or press Space to start', W / 2, 232); }
+        if (noticeT > 0) { ctx.globalAlpha = Math.min(1, noticeT); ctx.font = 'bold 20px Georgia'; ctx.fillStyle = '#ffd84a'; ctx.fillText(notice, W / 2, 84); ctx.globalAlpha = 1; }
+        if (S.won) { ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#f0c060'; ctx.font = 'bold 48px Georgia'; ctx.fillText('Level complete!', W / 2, 230); ctx.fillStyle = '#fff'; ctx.font = '24px Georgia'; ctx.fillText(S.score + ' points · attempts ' + S.attempt + (mode === 'solo' ? '' : ' · catches ' + S.catches) + (mode === 'guest' ? ' · the cat got away' : ' · tap to run again'), W / 2, 280); }
       }
 
       // ---- sound: "The Field Of Dreams" loops as the music (starts on the first input); only the crash sound is Web Audio ----
@@ -285,7 +403,13 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       })();
 
       let last = performance.now();
-      (function loop(now) { const dt = Math.min(0.033, (now - last) / 1000); last = now; update(dt); draw(); requestAnimationFrame(loop); })(last);
+      (function loop(now) {
+        const dt = Math.min(0.033, (now - last) / 1000); last = now;
+        if (mode === 'guest') updateGuest(dt); else update(dt);
+        noticeT = Math.max(0, noticeT - dt);
+        if (coop && net && (snapT += dt) >= 1 / 30) { snapT = 0; net.send(snapshot()); }
+        draw(); requestAnimationFrame(loop);
+      })(last);
     </script>
   </body>
 </html>
