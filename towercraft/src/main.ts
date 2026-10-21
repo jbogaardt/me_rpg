@@ -5,7 +5,18 @@
 import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
-import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
+import {
+  Application,
+  Assets,
+  CanvasSource,
+  Container,
+  Graphics,
+  Rectangle,
+  Sprite,
+  Text,
+  Texture,
+  TextureStyle,
+} from 'pixi.js';
 import { icon } from './icons';
 import { isMuted, playCues, setMuted, unlockAudio } from './audio';
 import { playMusic, stopMusic } from './music';
@@ -257,11 +268,12 @@ void (async () => {
       const img = cx.getImageData(0, 0, cv.width, cv.height);
       recolorTeam(img.data, color);
       cx.putImageData(img, 0, 0);
-      teamSheets.set(key, (t = Texture.from(cv)));
+      // Resolution 1, not the screen's: frames are cut in pixels.
+      teamSheets.set(key, (t = new Texture({ source: new CanvasSource({ resource: cv, resolution: 1 }) })));
     }
     return t;
   };
-  const teamSheet = (sheet: string, color: number) => teamTexture(sheet, sheetTextures.get(sheet)!, color);
+  const teamSheet = (sheet: string, color: number) => teamTexture(`s:${sheet}`, sheetTextures.get(sheet)!, color);
   /** A building's first frame in a seat's colour (cached): the sheets' purple is the team colour of towers and castles too. */
   const buildings = new Map<string, Texture>();
   const buildingTex = (raw: Map<string, Texture>, name: string, color: number) => {
@@ -1787,7 +1799,7 @@ void (async () => {
     if (!url)
       portraits.set(
         key,
-        (url = (teamTexture(art, tex, colorOf(YOU)).source.resource as HTMLCanvasElement).toDataURL()),
+        (url = (teamTexture(`p:${art}`, tex, colorOf(YOU)).source.resource as HTMLCanvasElement).toDataURL()),
       );
     return url;
   };
