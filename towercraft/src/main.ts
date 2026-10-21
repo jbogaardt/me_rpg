@@ -693,6 +693,42 @@ void (async () => {
     );
 
   /** The units you have picked that are still alive. */
+  /** The group's ground soldiers into the nearest bunkers with room (a full one passes them on to the next): they march there and go in. */
+  function sendToBunkers() {
+    let left = picked().filter((u) => u.def.garrison);
+    if (!left.length) return note('Flyers and bombers cannot man a bunker: pick some ground soldiers');
+    const [gx, gy] = [
+      left.reduce((a, u) => a + unitMid(u)[0], 0) / left.length,
+      left.reduce((a, u) => a + unitMid(u)[1], 0) / left.length,
+    ];
+    const room = (t: Tower) =>
+      t.def.bunker!.slots - t.garrison.length - match.units.filter((u) => u.enter === t.id && u.hp > 0).length;
+    const bunkers = match.towers
+      .filter((t) => t.owner === YOU && t.hp > 0 && t.def.bunker && room(t) > 0)
+      .sort((a, b) => Math.hypot(a.col - gx, a.row - gy) - Math.hypot(b.col - gx, b.row - gy));
+    if (!bunkers.length)
+      return note(
+        match.towers.some((t) => t.owner === YOU && t.def.bunker) ? 'Your bunkers are full' : 'Build a bunker first',
+      );
+    let sent = 0;
+    for (const b of bunkers) {
+      const go = left
+        .sort(
+          (a, c) =>
+            Math.hypot(unitMid(a)[0] - b.col, unitMid(a)[1] - b.row) -
+            Math.hypot(unitMid(c)[0] - b.col, unitMid(c)[1] - b.row),
+        )
+        .slice(0, room(b));
+      if (!go.length) continue;
+      cmd({ k: 'garrison', tower: b.id, ids: go.map((u) => u.id) });
+      for (const u of go) selection.delete(u.id);
+      left = left.filter((u) => !go.includes(u));
+      sent += go.length;
+      if (!left.length) break;
+    }
+    note(`${sent} marching into the bunker${bunkers.length > 1 && sent > 0 ? 's' : ''}`);
+    refresh();
+  }
   const picked = () => match.units.filter((u) => selection.has(u.id) && u.owner === YOU && u.hp > 0 && !u.spent);
   const select = (units: Unit[], add = false) => {
     if (add && units.length === 1 && selection.has(units[0]!.id))
@@ -1890,8 +1926,7 @@ void (async () => {
   $('card-body').addEventListener('click', (e) => {
     const aim = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-aim]');
     if (aim && cardOf?.kind === 'sel') {
-      if (aim.dataset.aim === 'bunker')
-        return note('Tap one of your bunkers: the ground soldiers you picked march to it and go in.');
+      if (aim.dataset.aim === 'bunker') return sendToBunkers();
       cmd(
         aim.dataset.aim?.startsWith('castle')
           ? {
@@ -1996,7 +2031,7 @@ void (async () => {
           : ''
       }</div>` +
       `<div class="targets">` +
-      `<button data-aim="bunker" title="Then tap one of your bunkers: the soldiers that can man it march in">Bunker</button>` +
+      `<button data-aim="bunker" title="The ground soldiers march into the nearest bunkers with room (or tap a bunker to pick it)">Bunker</button>` +
       `<button data-aim="none"${on(units.every((u) => !u.focus))} title="Fight everything along the way (X)">Fight everything</button>` +
       (coop()
         ? foesOf(match, YOU)
