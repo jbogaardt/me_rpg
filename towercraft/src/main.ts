@@ -11,7 +11,7 @@ import { isMuted, playCues, setMuted, unlockAudio } from './audio';
 import { playMusic, stopMusic } from './music';
 import { SoundWatch } from './soundEvents';
 import { drawnPos } from './stagger';
-import { recolorTeam, seatShade } from './teamColor';
+import { recolorTeam, seatColor } from './teamColor';
 import type { Ai } from './sim/ai';
 import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
 import { Wreck } from './wreck';
@@ -309,11 +309,11 @@ void (async () => {
   let match: Match = newMatch(['legion', 'swarm'], BOARDS[chosenMap]);
   /** The castle positions of the map being played. */
   const castleAt = (o: Owner) => match.board.castles[o]!;
-  /** The colour under a seat's castle, towers and units: its race's, lighter or darker for each further seat of the same race (allies and foes alike), so every seat tells apart. */
+  /** The colour under a seat's castle, towers and units: its race's, another hue for each further seat of the same race (allies and foes alike), so every seat tells apart. */
   const colorOf = (o: Owner): number => {
     const race = match.players[o]!.race;
     const same = match.players.flatMap((p, i) => (p.race === race ? [i] : []));
-    return seatShade(RACES[race].color, same.indexOf(o));
+    return seatColor(RACES[race].color, same.indexOf(o));
   };
   const playingNow = () => !match.players[YOU]!.out && match.winner < 0;
   /** Where a seat's camp lies on the field, in words (north-west, south, middle). */

@@ -1,21 +1,13 @@
-// Team colours (cosmetic, Pixi-free). A seat is drawn in its race's colour; seats of one race get lighter and darker shades of it, so
+// Team colours (cosmetic, Pixi-free). A seat is drawn in its race's colour; seats of one race get other hues, so
 // two goblins (allies or rivals) still tell apart. The unit sheets carry Wyrmsun's default player colour (purple) baked in:
 // `recolorTeam` swaps those pixels for the seat's colour, keeping their light and dark.
 
-/** Scale each channel of a 0xRRGGBB colour by `k` (above 1 lightens towards white, below 1 darkens). */
-export function shade(color: number, k: number): number {
-  const ch = (shift: number) => {
-    const c = (color >> shift) & 255;
-    return Math.round(k <= 1 ? c * k : c + (255 - c) * (k - 1));
-  };
-  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
-}
+/** The colours for the 2nd, 3rd... seat of one race: other hues, none purple (the sheets' own colour), kept apart from the race colours. */
+const ALTERNATES = [0xe8d23a, 0x4cc46a, 0x2ec4c4, 0xf08cc0];
 
-/** The brightness steps for the 1st, 2nd, 3rd... seat of one race. */
-const STEPS = [1, 0.62, 1.38, 0.8];
-
-/** `base` (the race's colour) for the `index`-th of the seats that share its race. */
-export const seatShade = (base: number, index: number): number => shade(base, STEPS[index % STEPS.length] ?? 1);
+/** `base` (the race's colour) for the `index`-th of the seats that share its race, then an alternate hue for each further one. */
+export const seatColor = (base: number, index: number): number =>
+  index <= 0 ? base : (ALTERNATES[(index - 1) % ALTERNATES.length] ?? base);
 
 /** Is this pixel part of the sheets' purple player colour (red and blue near each other, green well below both)? */
 export function isTeamPixel(r: number, g: number, b: number): boolean {

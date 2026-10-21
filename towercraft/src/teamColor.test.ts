@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isTeamPixel, recolorTeam, seatShade, shade } from './teamColor';
+import { isTeamPixel, recolorTeam, seatColor } from './teamColor';
 
 describe('team colours', () => {
-  it('gives seats of one race different shades, the first being the race colour', () => {
+  it('gives seats of one race different colours, the first being the race colour', () => {
     const base = 0xe7682f;
-    const shades = [0, 1, 2].map((i) => seatShade(base, i));
-    expect(shades[0]).toBe(base);
-    expect(new Set(shades).size).toBe(3);
-    expect(shade(base, 0.5)).toBeLessThan(base);
-    expect(shade(base, 1.5) & 255).toBeGreaterThan(base & 255);
+    const colors = [0, 1, 2, 3].map((i) => seatColor(base, i));
+    expect(colors[0]).toBe(base);
+    expect(new Set(colors).size).toBe(4);
   });
 
   it('finds the sheets purple and nothing else', () => {
