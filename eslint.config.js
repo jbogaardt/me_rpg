@@ -7,6 +7,7 @@ export default tseslint.config(
   {
     ignores: [
       'dist/',
+      'games/**/*.js', // the gallery's plain-script pages (no build step, no tsconfig), e.g. games/catsvsbirds/net.js
       'public/',
       'art/',
       'maps/out/',
