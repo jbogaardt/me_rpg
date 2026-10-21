@@ -984,9 +984,9 @@ void (async () => {
   }
   const corpses: Corpse[] = [];
   /** The sheet column and mirroring for a unit walking its lane: along its tangent (flyers follow the road too). */
-  const heading = (u: { owner: Owner; lane?: number; s: number }) => {
+  const heading = (u: { owner: Owner; lane?: number; s: number; back?: boolean }) => {
     const [hx, hy] = laneOf(match.board, u).directionAt(u.s);
-    return direction(hx, hy);
+    return u.back ? direction(-hx, -hy) : direction(hx, hy);
   };
   const addCorpse = (d: Death) => {
     const dir = heading(d);
@@ -2496,6 +2496,7 @@ void (async () => {
         road: 'That is the road: build beside it.',
         scenery: 'Trees, rocks or water are in the way.',
         taken: 'Something is already built there.',
+        crowded: 'Too close to another building.',
         castle: 'Too close to a castle.',
         gold: `Not enough wood or stone for a ${selected.name}.`,
         tier: `A ${selected.name} needs a higher castle level.`,

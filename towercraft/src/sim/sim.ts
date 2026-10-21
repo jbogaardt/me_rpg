@@ -76,6 +76,8 @@ export interface Unit {
   focus?: Focus;
   /** Ordered into this bunker (by id): it walks the road to the bunker's door, ignoring the fight, and goes in (`garrisonUnits`). */
   enter?: number;
+  /** Walking back along the road to its bunker, so drawn facing the way it walks. */
+  back?: boolean;
   /** Went into the bunker it was ordered to: gone from the field this step (no death, no bounty). */
   entered?: boolean;
 }
@@ -632,6 +634,7 @@ function marchIn(m: Match, u: Unit, dt: number): boolean {
     return true;
   }
   const gap = foot.s - u.s;
+  u.back = gap < 0;
   if (Math.abs(gap) > u.def.speed * dt) u.s += Math.sign(gap) * u.def.speed * dt;
   else {
     u.s = foot.s;
@@ -776,7 +779,9 @@ export function inBuildArea(m: Match, owner: Owner, col: number, row: number): b
   );
 }
 
-export type BuildResult = Result | 'off-board' | 'road' | 'scenery' | 'taken' | 'castle' | 'foe' | 'area';
+export type BuildResult = Result | 'off-board' | 'road' | 'scenery' | 'taken' | 'crowded' | 'castle' | 'foe' | 'area';
+/** How far (cells) apart two buildings' centres stand: a building is a picture about two and a half cells wide, so they never overlap or hide each other from a tap. */
+export const TOWER_SPACING = 2.5;
 
 export function canBuild(m: Match, owner: Owner, def: TowerDef, col: number, row: number): BuildResult {
   if (!playing(m, owner)) return 'over';
@@ -790,6 +795,7 @@ export function canBuild(m: Match, owner: Owner, def: TowerDef, col: number, row
   if (towerAt(m, col, row)) return 'taken';
   const open = towerUnlocked(m, owner, def);
   if (open !== 'ok') return open;
+  if (m.towers.some((t) => t.hp > 0 && dist(centreOf(t), c) < TOWER_SPACING)) return 'crowded';
   if (!inBuildArea(m, owner, col, row)) return 'area';
   if (!canAfford(m.players[owner]!, def.cost)) return 'gold';
   return 'ok';
@@ -1067,6 +1073,7 @@ export function step(m: Match, dt: number): void {
     if (u.enter !== undefined) {
       if (marchIn(m, u, dt)) continue;
       delete u.enter;
+      delete u.back;
     }
     u.cooldown -= dt;
     const from = unitPos(u, m.board);
