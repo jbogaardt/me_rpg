@@ -23,13 +23,33 @@
       #hint { color: #a9a496; font-size: 13px; }
       button { font: inherit; padding: 4px 12px; cursor: pointer; }
       #coopBtn { position: absolute; left: 10px; bottom: 10px; }
-      #online { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px; background: #0a0a14ee; border-radius: 8px; }
-      #online[hidden], #onChoose[hidden], #onLeaveRow[hidden] { display: none; }
+      #online { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px; background: #0a0a14f2; border-radius: 8px; overflow: auto; }
+      #online[hidden], #online [hidden] { display: none; }
       #online h2 { margin: 0; color: #f0c060; }
+      #online h2 small { color: #a9a496; font-size: 14px; font-weight: normal; }
       #online p { margin: 0; max-width: 560px; }
-      #onChoose, #onLeaveRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
-      #onCode { font: inherit; padding: 4px 8px; width: 11em; }
-      #onBig { font-size: 34px; color: #f0c060; letter-spacing: 1px; }
+      #mpMode { display: flex; gap: 0; }
+      #mpMode button { border-radius: 0; background: #2a2a3a; color: #e8e4d8; border: 1px solid #55546a; }
+      #mpMode button[aria-checked='true'] { background: #f0c060; color: #23232e; border-color: #f0c060; }
+      #mpMode button:disabled { opacity: 0.5; cursor: default; }
+      .mpStatus { display: flex; align-items: center; gap: 8px; font-weight: bold; }
+      .mpStatus .dot { width: 10px; height: 10px; border-radius: 50%; background: #8a8478; }
+      .mpStatus[data-state='gathering'] .dot, .mpStatus[data-state='connecting'] .dot { background: #e0a030; }
+      .mpStatus[data-state='awaiting'] .dot { background: #4f8fd0; }
+      .mpStatus[data-state='connected'] .dot { background: #4cae4c; }
+      .mpStatus[data-state='failed'] .dot, .mpStatus[data-state='disconnected'] .dot { background: #c0392b; }
+      #mpRoster { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; width: min(360px, 100%); }
+      #mpRoster li { display: flex; align-items: center; gap: 8px; padding: 4px 10px; background: #ffffff14; border-radius: 4px; text-align: left; }
+      #mpRoster li[data-state='waiting'] { opacity: 0.6; }
+      #mpRoster .name { font-weight: bold; }
+      #mpRoster .state { margin-left: auto; color: #a9a496; font-size: 13px; }
+      #mpRoster li[data-state='connected'] .state, #mpRoster li[data-state='you'] .state { color: #7fd07f; }
+      #mpHost, #mpJoin, #mpActive, #mpShare { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      #mpRow { display: flex; gap: 8px; }
+      #mpCode { font-size: 32px; color: #f0c060; letter-spacing: 1px; user-select: text; -webkit-user-select: text; }
+      #mpCodeIn { font: inherit; padding: 4px 8px; width: 12em; text-align: center; }
+      #mpNote { color: #a9a496; font-size: 14px; }
+      #mpNote.error { color: #e87b6a; }
     </style>
   </head>
   <body>
@@ -39,16 +59,33 @@
       <button id="creditsBtn" type="button">Credits</button>
       <button id="coopBtn" type="button">Co-op</button>
       <div id="online" hidden>
-        <h2>Cats vs Birds, together</h2>
-        <p id="onMsg">One of you is the cat, the other is the birds.</p>
-        <div id="onBig"></div>
-        <div id="onChoose">
-          <button id="onHost" type="button">Host a game (you are the cat)</button>
-          <span>or</span>
-          <input id="onCode" type="text" placeholder="game code" autocomplete="off" autocapitalize="off" spellcheck="false" />
-          <button id="onJoin" type="button">Join (you are the birds)</button>
+        <h2>Multiplayer <small>the cat and the birds</small></h2>
+        <div id="mpMode" role="radiogroup" aria-label="Multiplayer mode">
+          <button type="button" role="radio" data-mode="off" aria-checked="true">Solo / Off</button>
+          <button type="button" role="radio" data-mode="host" aria-checked="false">Host (the cat)</button>
+          <button type="button" role="radio" data-mode="join" aria-checked="false">Join (the birds)</button>
         </div>
-        <div id="onLeaveRow" hidden><button id="onLeave" type="button">Leave this game</button></div>
+        <p id="mpStatus" class="mpStatus"><span class="dot"></span><span class="label"></span></p>
+        <ul id="mpRoster" aria-label="Players" hidden></ul>
+        <div id="mpHost" hidden>
+          <button id="mpCreate" type="button">Create Game</button>
+          <div id="mpShare" hidden>
+            <label for="mpCode">Game code (tell your friend)</label>
+            <output id="mpCode" tabindex="0"></output>
+            <div id="mpRow"><button id="mpCopyCode" type="button">Copy Code</button><button id="mpCopyLink" type="button">Copy Join Link</button></div>
+          </div>
+        </div>
+        <div id="mpJoin" hidden>
+          <label for="mpCodeIn">Your friend's game code</label>
+          <input id="mpCodeIn" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" maxlength="40" placeholder="mighty-apples" />
+          <button id="mpJoinGo" type="button" disabled>Join Game</button>
+        </div>
+        <div id="mpActive" hidden>
+          <p id="mpConnected"></p>
+          <button id="mpStart" type="button" hidden>Start Game</button>
+          <button id="mpDisconnect" type="button">Disconnect</button>
+        </div>
+        <p id="mpNote" role="status"></p>
         <button id="onClose" type="button">Close</button>
       </div>
       <div id="credits" hidden>
@@ -150,9 +187,10 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
           catches: keepAttempt ? S.catches : 0, birdCd: 0 };
       }
       reset(false);
-      let mode = 'solo';    // 'solo', 'host' (the cat; online once a friend is in) or 'guest' (the birds)
+      let mode = 'solo';    // 'solo' (the cat, alone or hosting) or 'guest' (the birds, once the host has started the game)
       let coop = false;     // host only: a friend is connected, so the birds are theirs
-      let net = null, hostCode = '', snapT = 0, notice = '', noticeT = 0;
+      let net = null, snapT = 0, notice = '', noticeT = 0;
+      const ui = { role: 'off', status: 'idle', detail: '', code: '', linked: false, live: false }; // the Multiplayer panel's state; `live`: the host pressed Start Game
       const swoops = [];    // lanes the friend asked for, read by the next update
       const speed = () => SPEED0 + Math.min(120, S.scroll / 250);
 
@@ -160,9 +198,8 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       document.getElementById('creditsBtn').addEventListener('click', () => setCredits(true));
       document.getElementById('creditsClose').addEventListener('click', () => setCredits(false));
 
-      const onlineEl = document.getElementById('online'), onMsg = document.getElementById('onMsg'), onBig = document.getElementById('onBig');
-      const setOnline = (open) => { onlineEl.hidden = !open; if (!open) document.getElementById('coopBtn').blur(); };
-      const showOnline = (msg, big) => { onMsg.textContent = msg; onBig.textContent = big || ''; document.getElementById('onChoose').hidden = mode !== 'solo'; document.getElementById('onLeaveRow').hidden = mode === 'solo'; setOnline(true); };
+      const onlineEl = document.getElementById('online');
+      const setOnline = (open) => { onlineEl.hidden = !open; if (open) render(); else document.getElementById('coopBtn').blur(); };
       const say = (text) => { notice = text; noticeT = 5; };
 
       let held = false, pressed = false;
@@ -268,43 +305,95 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         S.scroll += sp * dt; S.frame += dt * 14; S.birdCd = Math.max(0, S.birdCd - dt);
         for (const k of S.kiwis) k.x -= sp * RATIO[k.kind] * dt;
       }
-      function leaveGame() { if (net) net.stop(); net = null; mode = 'solo'; coop = false; swoops.length = 0; reset(false); }
+      const $ = (id) => document.getElementById(id);
+      const STATUS = { idle: 'Idle', gathering: 'Gathering Candidates', awaiting: 'Awaiting Client', connecting: 'Connecting', connected: 'Connected', failed: 'Failed', disconnected: 'Disconnected' };
+      const available = () => !!(window.CvBNet && window.RTCPeerConnection);
+      const joinLink = () => location.origin + location.pathname + location.search + '#join=' + ui.code;
+      function drop() { // forget the game (the friend or the room): back to playing alone
+        if (net) net.stop(); net = null; Object.assign(ui, { status: 'idle', detail: '', code: '', linked: false, live: false });
+        mode = 'solo'; coop = false; swoops.length = 0; reset(false);
+      }
+      function render() {
+        const connected = ui.status === 'connected' && ui.linked, working = ui.status === 'gathering' || ui.status === 'connecting';
+        for (const b of $('mpMode').children) { b.setAttribute('aria-checked', String(b.dataset.mode === ui.role)); b.disabled = connected; }
+        $('mpHost').hidden = ui.role !== 'host'; $('mpJoin').hidden = connected || ui.role !== 'join'; $('mpActive').hidden = !connected;
+        $('mpStatus').dataset.state = ui.status;
+        $('mpStatus').querySelector('.label').textContent = ui.role === 'off' && !connected ? 'Solo' : STATUS[ui.status] || ui.status;
+        const host = ui.role === 'host', roster = $('mpRoster');
+        roster.hidden = ui.role === 'off';
+        const friend = connected ? 'connected' : ui.status === 'connecting' ? 'joining…' : 'waiting for a friend';
+        roster.replaceChildren(...[['The Cat', host ? 'you' : connected ? 'connected' : 'waiting', host ? 'you' : 'host'], ['The Birds', host ? (connected ? 'connected' : ui.status === 'connecting' ? 'joining' : 'waiting') : 'you', host ? friend : 'you']].map(([name, st, text]) => {
+          const li = document.createElement('li'); li.dataset.state = st;
+          const n = document.createElement('span'); n.className = 'name'; n.textContent = name;
+          const t = document.createElement('span'); t.className = 'state'; t.textContent = text; li.append(n, t); return li;
+        }));
+        $('mpShare').hidden = !ui.code; $('mpCode').textContent = ui.code;
+        $('mpCreate').hidden = connected || !!ui.code; $('mpCreate').disabled = !available() || working;
+        $('mpJoinGo').disabled = !available() || working || connected || !$('mpCodeIn').value.trim();
+        $('mpStart').hidden = !(connected && host && !ui.live);
+        $('mpConnected').textContent = host ? 'Your friend is the birds.' : ui.live ? 'The game is live.' : 'Connected to the cat (host). Waiting for the host to start the game.';
+        const failed = ui.status === 'failed' || ui.status === 'disconnected' || (ui.status === 'idle' && ui.detail !== '');
+        $('mpNote').textContent = ui.detail || hint(); $('mpNote').classList.toggle('error', failed);
+      }
+      function hint() {
+        if (ui.status === 'connected' && ui.linked) return ui.role === 'host' ? (ui.live ? 'The game is live. A friend who got dropped can rejoin with the same code. Close this to play.' : 'Tap Start Game when you are ready. You run as the cat; your friend flies the birds.') : (ui.live ? 'Close this to play.' : '');
+        if (ui.role === 'off') return 'Playing solo. Choose Host to run as the cat with a friend flying the birds, or Join to be the birds in a friend’s game.';
+        if (!available()) return 'This browser cannot play online.';
+        if (ui.role === 'host') return ui.code ? 'Tell your friend this code, or send them the join link.' : ui.status === 'gathering' ? 'Connecting…' : 'You are the cat; your friend will be the birds, flying at you from the right.';
+        return ui.status === 'gathering' || ui.status === 'connecting' ? 'Connecting…' : 'Type the game code your friend gave you, then join.';
+      }
+      function setRole(role) { if (ui.linked || ui.role === role) return; drop(); ui.role = role; render(); }
+      const linkCallbacks = { status: (st, detail) => { ui.status = st; if (detail || st === 'connecting') ui.detail = detail || ''; render(); }, message: onMessage };
+      async function createGame() {
+        drop(); ui.role = 'host'; ui.status = 'gathering'; render();
+        try {
+          net = await CvBNet.host({ ...linkCallbacks,
+            code: (c) => { ui.code = c; render(); },
+            opened: () => {
+              ui.linked = true; ui.status = 'connected'; ui.detail = '';
+              if (ui.live) { coop = true; swoops.length = 0; net.send(JSON.stringify({ t: 'go' })); say('Your friend is back as the birds.'); } // a rejoin: the run goes on
+              render();
+            },
+            closed: (why) => { ui.linked = false; coop = false; ui.status = 'awaiting'; ui.detail = 'Your friend left (' + why + ') The code works again if they rejoin.'; render(); },
+            error: (why) => { drop(); ui.status = 'failed'; ui.detail = why; render(); },
+          });
+        } catch (e) { drop(); ui.role = 'host'; ui.status = 'failed'; ui.detail = e.message; render(); }
+      }
+      async function joinGame() {
+        const code = $('mpCodeIn').value; drop(); ui.role = 'join'; ui.status = 'gathering'; render();
+        try {
+          net = await CvBNet.join(code, { ...linkCallbacks,
+            opened: () => { ui.linked = true; ui.status = 'connected'; ui.detail = ''; render(); },
+            closed: (why) => { const was = ui.live; drop(); ui.role = 'join'; ui.status = 'disconnected'; ui.detail = why; if (was) setOnline(true); else render(); },
+          });
+        } catch (e) { drop(); ui.role = 'join'; ui.status = 'failed'; ui.detail = e.message; render(); }
+      }
+      function startGame() { // the host: everyone is here
+        ui.live = true; coop = true; swoops.length = 0; reset(false); net.send(JSON.stringify({ t: 'go' })); setOnline(false); say('Your friend is the birds. Run, cat!'); render();
+      }
       function onMessage(text) {
         let m; try { m = JSON.parse(text); } catch { return; }
-        if (mode === 'guest') applySnapshot(m);
-        else if (m && m.t === 'in' && (m.lane === 'high' || m.lane === 'low') && coop && S.started && !S.dead && !S.won && swoops.length < 3) swoops.push(m.lane);
+        if (!m) return;
+        if (ui.role === 'join') {
+          if (m.t === 'go') { ui.live = true; mode = 'guest'; reset(false); setOnline(false); say('You are the birds! Tap above the deck for a high swoop, below it for a low one.'); render(); }
+          else if (mode === 'guest') applySnapshot(m);
+        } else if (m.t === 'in' && (m.lane === 'high' || m.lane === 'low') && coop && S.started && !S.dead && !S.won && swoops.length < 3) swoops.push(m.lane);
       }
-      async function startHost() {
-        if (!window.CvBNet || !window.RTCPeerConnection) return showOnline('This browser cannot play online.');
-        leaveGame(); mode = 'host'; showOnline('Asking for a game code…');
-        try {
-          net = await CvBNet.host({
-            code: (c) => { hostCode = c; showOnline('Tell your friend this code. They press Co-op, type it and join as the birds.', c); },
-            opened: () => { coop = true; swoops.length = 0; reset(false); setOnline(false); say('Your friend is the birds. Run, cat!'); },
-            closed: (why) => { coop = false; reset(false); showOnline('Your friend left (' + why + ') The code works again if they rejoin.', hostCode); },
-            message: onMessage,
-            error: (why) => { leaveGame(); showOnline(why); },
-          });
-        } catch (e) { leaveGame(); showOnline(e.message); }
-      }
-      async function startJoin() {
-        const code = document.getElementById('onCode').value;
-        if (!window.CvBNet || !window.RTCPeerConnection) return showOnline('This browser cannot play online.');
-        leaveGame(); showOnline('Joining…');
-        try {
-          net = await CvBNet.join(code, {
-            opened: () => { mode = 'guest'; reset(false); setOnline(false); say('You are the birds! Tap above the deck for a high swoop, below it for a low one.'); },
-            closed: (why) => { if (mode === 'guest') { leaveGame(); showOnline('Disconnected: ' + why); } },
-            message: onMessage,
-          });
-        } catch (e) { leaveGame(); showOnline(e.message); }
-      }
-      document.getElementById('coopBtn').addEventListener('click', () => showOnline(mode === 'solo' ? 'One of you is the cat, the other is the birds.' : mode === 'guest' ? 'You are the birds.' : coop ? 'Your friend is the birds.' : 'Waiting for your friend…', ''));
-      document.getElementById('onHost').addEventListener('click', () => void startHost());
-      document.getElementById('onJoin').addEventListener('click', () => void startJoin());
-      document.getElementById('onCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') void startJoin(); });
-      document.getElementById('onLeave').addEventListener('click', () => { leaveGame(); showOnline('You left the game.'); });
-      document.getElementById('onClose').addEventListener('click', () => setOnline(false));
+      const flash = async (btn, text) => { const old = btn.dataset.old || btn.textContent; btn.dataset.old = old; let ok = true; try { await navigator.clipboard.writeText(text); } catch { ok = false; } btn.textContent = ok ? 'Copied!' : 'Select the code and copy it'; setTimeout(() => { btn.textContent = old; }, 1500); };
+      for (const b of $('mpMode').children) b.addEventListener('click', () => setRole(b.dataset.mode));
+      $('mpCreate').addEventListener('click', () => void createGame());
+      $('mpJoinGo').addEventListener('click', () => void joinGame());
+      $('mpCodeIn').addEventListener('input', render);
+      $('mpCodeIn').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !$('mpJoinGo').disabled) $('mpJoinGo').click(); });
+      $('mpCode').addEventListener('focus', () => getSelection().selectAllChildren($('mpCode')));
+      $('mpCopyCode').addEventListener('click', () => void flash($('mpCopyCode'), ui.code));
+      $('mpCopyLink').addEventListener('click', () => void flash($('mpCopyLink'), joinLink()));
+      $('mpStart').addEventListener('click', startGame);
+      $('mpDisconnect').addEventListener('click', () => { const role = ui.role; drop(); ui.role = role; render(); });
+      $('coopBtn').addEventListener('click', () => setOnline(true));
+      $('onClose').addEventListener('click', () => setOnline(false));
+      const joinHash = /^#join=([a-z]+-[a-z]+)/i.exec(location.hash); // a join link: open the panel on Join with the code filled in
+      if (joinHash) { ui.role = 'join'; $('mpCodeIn').value = joinHash[1].toLowerCase(); setOnline(true); }
 
       // ---- drawing ----
       const ACCENT = '#ff6f91';
@@ -375,7 +464,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         ctx.textAlign = 'right'; ctx.fillText('Attempt ' + S.attempt + '   Best ' + S.best + '%', W - 20, 32);
         ctx.textAlign = 'center'; ctx.font = 'bold 20px Georgia'; ctx.fillText(Math.round(progress() * 100) + '%', W / 2, 52);
         const birds = mode === 'guest';
-        if (mode !== 'solo' && (birds || coop)) { ctx.textAlign = 'left'; ctx.font = 'bold 18px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText('Catches ' + S.catches, 12, 62); ctx.textAlign = 'center'; }
+        if (birds || coop) { ctx.textAlign = 'left'; ctx.font = 'bold 18px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText('Catches ' + S.catches, 12, 62); ctx.textAlign = 'center'; }
         if (birds) { // the swoop button's cooldown, and how to play
           ctx.fillStyle = '#0008'; ctx.fillRect(W / 2 - 75, H - 42, 150, 10);
           ctx.fillStyle = S.birdCd > 0 ? '#9a9486' : ACCENT; ctx.fillRect(W / 2 - 75, H - 42, 150 * (1 - Math.min(1, S.birdCd / SWOOP_CD)), 10);
@@ -383,7 +472,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         }
         if (!S.started && !S.won) { ctx.font = 'bold 44px Georgia'; ctx.fillStyle = '#f0c060'; ctx.fillText('Cats vs Birds', W / 2, 190); ctx.font = '22px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText(birds ? 'Waiting for the cat to start…' : coop ? 'Cat: tap, click or press Space to start' : 'Tap, click or press Space to start', W / 2, 232); }
         if (noticeT > 0) { ctx.globalAlpha = Math.min(1, noticeT); ctx.font = 'bold 20px Georgia'; ctx.fillStyle = '#ffd84a'; ctx.fillText(notice, W / 2, 84); ctx.globalAlpha = 1; }
-        if (S.won) { ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#f0c060'; ctx.font = 'bold 48px Georgia'; ctx.fillText('Level complete!', W / 2, 230); ctx.fillStyle = '#fff'; ctx.font = '24px Georgia'; ctx.fillText(S.score + ' points · attempts ' + S.attempt + (mode === 'solo' ? '' : ' · catches ' + S.catches) + (mode === 'guest' ? ' · the cat got away' : ' · tap to run again'), W / 2, 280); }
+        if (S.won) { ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#f0c060'; ctx.font = 'bold 48px Georgia'; ctx.fillText('Level complete!', W / 2, 230); ctx.fillStyle = '#fff'; ctx.font = '24px Georgia'; ctx.fillText(S.score + ' points · attempts ' + S.attempt + (birds || coop ? ' · catches ' + S.catches : '') + (mode === 'guest' ? ' · the cat got away' : ' · tap to run again'), W / 2, 280); }
       }
 
       // ---- sound: "The Field Of Dreams" loops as the music (starts on the first input); only the crash sound is Web Audio ----
