@@ -53,7 +53,15 @@
       "Bash(npm run verify)",
       "Bash(npm run map -- *)",
       "Bash(npx vitest *)",
-      "Bash(npx playwright test *)"
+      "Bash(npx playwright test *)",
+      "WebFetch(domain:api.elevenlabs.io)",
+      "WebFetch(domain:api.us.elevenlabs.io)",
+      "WebFetch(domain:elevenlabs.io)"
     ]
+  },
+  "sandbox": {
+    "network": {
+      "allowedDomains": ["api.elevenlabs.io", "api.us.elevenlabs.io", "elevenlabs.io"]
+    }
   }
 }
