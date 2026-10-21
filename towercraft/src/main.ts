@@ -1298,8 +1298,9 @@ void (async () => {
         .circle(cx * CELL, cy * CELL, buildReach(match, YOU) * CELL)
         .stroke({ color: 0xffb13f, width: 2, alpha: 0.5 });
     }
+    // A shooting tower's card already draws its firing range, so its build reach (a second circle) is shown only for those that do not shoot.
     for (const t of match.towers)
-      if (t.owner === YOU && t.def.reach > 0 && inFocus(t))
+      if (t.owner === YOU && t.def.reach > 0 && t.def.damage <= 0 && inFocus(t))
         areaLayer
           .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL, t.def.reach * CELL)
           .stroke({ color: 0xffb13f, width: 1.5, alpha: 0.4 });
