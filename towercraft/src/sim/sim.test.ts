@@ -12,6 +12,7 @@ import {
   buildTower,
   buyUpgrade,
   canBuild,
+  towerUnlocked,
   incomeOf,
   loadBunker,
   maxPurchases,
@@ -101,7 +102,7 @@ describe('building', () => {
     expect(buildTower(m, 0, 'nope', 9, 4)).toBe('unknown');
     expect(buildTower(m, 0, 'watch', -1, 0)).toBe('off-board');
     m.players[0].wood = 0;
-    expect(buildTower(m, 0, 'watch', 9, 4)).toBe('gold');
+    expect(buildTower(m, 0, 'watch', 12, 4)).toBe('gold');
   });
 
   it('wants both currencies: wood alone does not buy a tower that costs stone', () => {
@@ -131,21 +132,23 @@ describe('building', () => {
 
   it('keeps a limit on a kind of building and needs another one first (a tech tree)', () => {
     const m = rich(newMatch(['swarm', 'swarm']));
-    expect(buildTower(m, 0, 'hatchery', 8, 4)).toBe('ok');
-    for (const col of [9, 10, 11]) expect(buildTower(m, 0, 'hatchery', col, 4)).toBe('ok'); // camps: up to PRODUCER_LIMIT
-    expect(buildTower(m, 0, 'hatchery', 12, 4)).toBe('limit');
-    for (const [col, row] of [
-      [9, 3],
-      [10, 3],
-      [11, 3],
-    ] as const)
-      expect(buildTower(m, 0, 'mill', col, row)).toBe('ok');
-    expect(buildTower(m, 0, 'mill', 12, 3)).toBe('limit');
+    // Buildings stand two and a half cells apart, so each goes on the next open cell the rules allow.
+    const next = (id: string): string => {
+      const def = towerDef('swarm', id);
+      for (let r = 0; r < m.board.rows; r++)
+        for (let c = 0; c < m.board.cols; c++)
+          if (canBuild(m, 0, def, c, r) === 'ok') return buildTower(m, 0, id, c, r);
+      return towerUnlocked(m, 0, def);
+    };
+    for (let i = 0; i < 4; i++) expect(next('hatchery')).toBe('ok'); // camps: up to PRODUCER_LIMIT
+    expect(next('hatchery')).toBe('limit');
+    for (let i = 0; i < 3; i++) expect(next('mill')).toBe('ok');
+    expect(next('mill')).toBe('limit');
     upgradeCastle(m, 0);
     upgradeCastle(m, 0);
-    expect(buildTower(m, 0, 'roost', 10, 8)).toBe('needs'); // a Dread Roost wants a Bat Aerie
-    expect(buildTower(m, 0, 'aerie', 8, 8)).toBe('ok');
-    expect(buildTower(m, 0, 'roost', 10, 8)).toBe('ok');
+    expect(towerUnlocked(m, 0, towerDef('swarm', 'roost'))).toBe('needs'); // a Dread Roost wants a Bat Aerie
+    expect(next('aerie')).toBe('ok');
+    expect(next('roost')).toBe('ok');
   });
 });
 
@@ -159,7 +162,7 @@ describe('money', () => {
 
     const eco = rich(newMatch(['titan', 'titan']));
     buildTower(eco, 0, 'mill', 8, 4);
-    buildTower(eco, 0, 'quarry', 9, 4);
+    buildTower(eco, 0, 'quarry', 11, 4);
     const [wood, stone] = [eco.players[0].wood, eco.players[0].stone];
     const income = incomeOf(eco, 0);
     expect(income.wood).toBe(RACES.titan.castle.income[0]!.wood + towerDef('titan', 'mill').econ!.wood!);
