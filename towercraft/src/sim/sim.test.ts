@@ -617,7 +617,7 @@ describe('bunkers', () => {
     return { m, bunker };
   };
 
-  it('is loaded with ranged units, one soldier at a slot, for a share of the price', () => {
+  it('is loaded with ground soldiers, one at a slot, for a share of the price', () => {
     const { m, bunker } = bunkerMatch();
     const [wood, stone] = [m.players[0].wood, m.players[0].stone];
     expect(loadBunker(m, 0, bunker.id, 'thunderer')).toBe('ok');
@@ -625,7 +625,7 @@ describe('bunkers', () => {
     const cost = soldierCost(unitDef('titan', 'thunderer'));
     expect(wood - m.players[0].wood).toBe(cost.wood);
     expect(stone - m.players[0].stone).toBe(cost.stone);
-    expect(loadBunker(m, 0, bunker.id, 'axefighter')).toBe('nobunker'); // not a ranged unit
+    expect(loadBunker(m, 0, bunker.id, 'gryphon')).toBe('nobunker'); // a flyer cannot man it
     for (let i = 1; i < bunker.def.bunker!.slots; i++) loadBunker(m, 0, bunker.id, 'thunderer');
     expect(loadBunker(m, 0, bunker.id, 'thunderer')).toBe('full');
     const bare = put(m, 0, 'titan', 'ballista', 10, 4);

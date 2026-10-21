@@ -43,6 +43,8 @@ export const UNIT_CAP = 120;
 /** How far (cells) a castle's body reaches: attackers hit its edge, not its centre. */
 export const CASTLE_RADIUS = 1.2;
 const TOWER_RADIUS = 0.5;
+/** How far (cells) beyond its own reach a melee soldier in a bunker strikes: foes at the walls, not only at its door. */
+const BUNKER_GUARD = 3;
 /** The farthest (cells, square to the road) a unit will step off it to take a tower down, in the game's own races' scale. */
 /** Nothing is built this near (cells) the foe's castle, however far your fog reaches: no tower creep onto their doorstep. */
 export const FOE_CLEAR = 24;
@@ -1154,7 +1156,7 @@ export function step(m: Match, dt: number): void {
         });
       }
     }
-    // A bunker's soldiers shoot on their own cooldowns, each as its kind of unit does, a little further from the walls.
+    // A bunker's soldiers fight on their own cooldowns, each as its kind of unit does: shooters a little further from the walls, melee ones at foes near them.
     for (const g of t.garrison) {
       g.cooldown -= dt;
       if (g.cooldown > 0) continue;
@@ -1163,7 +1165,7 @@ export function step(m: Match, dt: number): void {
         by: { kind: 'tower', id: t.id },
         vision,
         from,
-        range: g.def.range + (t.def.bunker?.rangeBonus ?? 0),
+        range: g.def.range + (t.def.bunker?.rangeBonus ?? 0) + (g.def.range <= 1.5 ? BUNKER_GUARD : 0),
         ground: true,
         air: !!g.def.hitsAir,
         units: true,

@@ -105,7 +105,7 @@ const MAX_AHEAD = 400;
 
 // --- The wire ---
 
-export const NET_VERSION = 9;
+export const NET_VERSION = 10;
 
 export type Message =
   /** The joiner, once connected: who they play. */

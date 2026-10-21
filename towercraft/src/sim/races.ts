@@ -60,7 +60,7 @@ export interface UnitDef {
   siege?: number;
   /** Dies as it strikes (a bomb): its blast goes off once and it is gone. */
   suicide?: boolean;
-  /** May be loaded into a bunker: it then shoots from there, with the bunker's range bonus. */
+  /** May be loaded into a bunker (default: any ground unit that is not a bomb): a ranged one shoots from there with the bunker's range bonus, a melee one strikes foes close to the walls. */
   garrison?: boolean;
   /** How far (cells) it sees while it lives: it clears fog round it, never the build area; at least its `range`. */
   sight: number;
@@ -183,7 +183,7 @@ export const CASTLE_NEEDS: UpgradeNeed[][] = [
 ];
 
 type UnitInit = Omit<UnitDef, 'count' | 'range' | 'kind'> & Partial<Pick<UnitDef, 'count' | 'range' | 'kind'>>;
-const unit = (u: UnitInit): UnitDef => ({ count: 1, range: 1, kind: 'foot', ...u });
+const unit = (u: UnitInit): UnitDef => ({ count: 1, range: 1, kind: 'foot', garrison: !u.air && !u.suicide, ...u });
 type TowerInit = Omit<TowerDef, 'splash' | 'hits' | 'damage' | 'cooldown' | 'range'> &
   Partial<Pick<TowerDef, 'splash' | 'hits' | 'damage' | 'cooldown' | 'range'>>;
 const tower = (t: TowerInit): TowerDef => ({ splash: 0, hits: 'both', damage: 0, cooldown: 1, range: 0, ...t });

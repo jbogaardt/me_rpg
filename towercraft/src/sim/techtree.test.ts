@@ -50,7 +50,7 @@ describe('the tech tree', () => {
 });
 
 describe('garrisoning', () => {
-  it('marches picked soldiers into a bunker, up to its free slots, and not others', () => {
+  it('marches picked ground soldiers (ranged or melee) into a bunker, up to its free slots, and not flyers', () => {
     const m = newMatch(['titan', 'legion']);
     const [cx, cy] = m.board.castles[0];
     m.players[0].wood = m.players[0].stone = 1e6;
@@ -69,11 +69,37 @@ describe('garrisoning', () => {
       m.units.push(u);
       return u.id;
     };
-    const ids = [mk(thunder, 2), mk(thunder, 2.5), mk(axe, 3), ...Array.from({ length: 5 }, () => mk(thunder, 3))];
+    const gryphon = RACES.titan.units.find((u) => u.id === 'gryphon')!;
+    const ids = [mk(thunder, 2), mk(thunder, 2.5), mk(gryphon, 3), ...Array.from({ length: 5 }, () => mk(axe, 3))];
     const went = garrisonUnits(m, 0, bunker.id, ids);
     expect(went).toBe(bunker.def.bunker!.slots);
     for (let i = 0; i < 40 * 20; i++) step(m, 0.05); // they march to its door, from either side of it, and go in
     expect(bunker.garrison).toHaveLength(went);
-    expect(m.units.some((u) => u.id === ids[2])).toBe(true); // the axefighter cannot man it
+    expect(m.units.some((u) => u.id === ids[2])).toBe(true); // the flyer cannot man it
+  });
+
+  it('lets a melee soldier inside a bunker strike a foe at its walls, and not one far off', () => {
+    const m = newMatch(['titan', 'legion']);
+    const [cx, cy] = m.board.castles[0];
+    m.players[0].wood = m.players[0].stone = 1e6;
+    m.players[0].castle.level = 3;
+    let placed = false;
+    for (let dc = 4; dc < 12 && !placed; dc++)
+      placed = buildTower(m, 0, 'bunker', Math.floor(cx) + dc, Math.floor(cy) + 4) === 'ok';
+    const bunker = m.towers.find((t) => t.def.id === 'bunker')!;
+    const axe = RACES.titan.units.find((u) => u.id === 'axefighter')!;
+    expect(axe.garrison).toBe(true);
+    expect(axe.range).toBeLessThanOrEqual(1.5);
+    bunker.garrison.push({ def: axe, cooldown: 0 });
+    const foeDef = RACES.legion.units.find((u) => !u.air && u.range <= 1.5)!;
+    const foe = { id: m.nextId++, def: foeDef, owner: 1, hp: foeDef.hp, maxHp: foeDef.hp, s: 0, cooldown: 99 };
+    m.units.push(foe);
+    // Walk the foe along the road: it must get hurt at some point near the bunker, by the axefighter alone (no other tower of ours shoots).
+    let hurt = false;
+    for (let i = 0; i < 20 * 120 && !hurt && foe.hp > 0; i++) {
+      step(m, 0.05);
+      hurt = foe.hp < foe.maxHp;
+    }
+    expect(hurt || foe.hp <= 0).toBe(true);
   });
 });

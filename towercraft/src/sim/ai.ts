@@ -240,7 +240,7 @@ function chooseTower(
   const cloaked = foeUnits(m, owner).some((u) => u.def.cloak) || foeRaces.some((r) => r.units.some((u) => u.cloak));
   const detectors = sees((d) => !!d.detect);
   const bunkers = mine.filter((t) => t.def.bunker);
-  const loadable = race.units.some((u) => u.garrison && unitUnlocked(m, owner, u) === 'ok');
+  const loadable = race.units.some((u) => u.garrison && u.range > 1.5 && unitUnlocked(m, owner, u) === 'ok');
   const weight = (def: TowerDef) => {
     const role = roleOf(def);
     if (def.detect) return cloaked && detectors < 1 ? 5 : detectors < 1 ? 0.3 : 0.05; // once, early enough that they are not free
@@ -633,7 +633,7 @@ export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): Ai 
     for (const t of towers) {
       if (!t.def.bunker || t.garrison.length >= t.def.bunker.slots) continue;
       const shooters = race.units
-        .filter((u) => u.garrison && unitUnlocked(m, owner, u) === 'ok')
+        .filter((u) => u.garrison && u.range > 1.5 && unitUnlocked(m, owner, u) === 'ok')
         .sort((a, b) => total(soldierCost(b)) - total(soldierCost(a)));
       const pick = shooters.find((u) => canAfford(me, soldierCost(u)));
       if (pick) loadBunker(m, owner, t.id, pick.id);

@@ -794,7 +794,7 @@ void (async () => {
         refresh();
         return;
       }
-      if (into) return note('Only ranged soldiers can man a bunker: pick some, then tap it');
+      if (into) return note('Flyers and bombers cannot man a bunker: pick some ground soldiers, then tap it');
       // One of your units: pick it (a second tap in a moment: every one of its kind in view).
       const mine = myUnitAt(wx, wy);
       if (mine) {
@@ -1891,7 +1891,7 @@ void (async () => {
     const aim = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-aim]');
     if (aim && cardOf?.kind === 'sel') {
       if (aim.dataset.aim === 'bunker')
-        return note('Tap one of your bunkers: the ranged soldiers you picked march to it and go in.');
+        return note('Tap one of your bunkers: the ground soldiers you picked march to it and go in.');
       cmd(
         aim.dataset.aim?.startsWith('castle')
           ? {
@@ -2166,7 +2166,7 @@ void (async () => {
           const why = full ? 'Full' : unitUnlocked(match, YOU, u) !== 'ok' ? unitReason(u) : lacking(cost);
           return (
             `<button class="load" data-load="${u.id}"${why ? ' disabled' : ''}>${unitThumb(u, 34)}` +
-            `<span><b>${u.name}</b><small>${why || `${u.damage} dmg · range ${per(u.range + b.rangeBonus)}${u.hitsAir ? ' · hits air' : ''}`}</small></span>` +
+            `<span><b>${u.name}</b><small>${why || `${u.damage} dmg · ${u.range > 1.5 ? `range ${per(u.range + b.rangeBonus)}` : 'guards the walls'}${u.hitsAir ? ' · hits air' : ''}`}</small></span>` +
             `<em>${money(cost)}</em></button>`
           );
         })
@@ -2175,7 +2175,7 @@ void (async () => {
         `<header><div class="pic">${towerThumb(bunker.def.art, 50)}</div><div><h3>${bunker.def.name}</h3><div class="sub">${bunker.garrison.length} of ${b.slots} soldiers inside</div></div></header>` +
         `<div class="slots">${dots}</div>` +
         `<div class="hp"><i style="width:${Math.max(0, (bunker.hp / bunker.def.hp) * 100)}%"></i><span>${Math.max(0, Math.ceil(bunker.hp))} / ${bunker.def.hp}</span></div>` +
-        `<p class="note">Soldiers loaded here shoot from the walls with +${b.rangeBonus} range, and fall with it. Tap one to load it.</p>` +
+        `<p class="note">Soldiers loaded here shoot from the walls with +${b.rangeBonus} range (melee ones strike foes at the walls), and fall with it. Tap one to load it.</p>` +
         `<div class="loads">${loads || '<p class="note">None of your units fit a bunker.</p>'}</div>`;
     } else {
       const cost = upgradeCost(match, YOU);
