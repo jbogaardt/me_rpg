@@ -57,7 +57,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       }
       function buildLevel() {
         const r = rng(7), fish = [], spd = (x) => SPEED0 + Math.min(120, x / 250);
-        const COUNT = 28, ground = [];
+        const COUNT = 14, ground = [];
         let r0 = -200, s = 900; // r0 starts the current run of deck; s is where it ends, at the next gap
         for (let i = 0; i < COUNT; i++) {
           // a gap is crossed in 0.2-0.4 s of flight (a jump lasts about 0.65 s) and grows a little as the course goes on;
