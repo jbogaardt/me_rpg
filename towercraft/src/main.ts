@@ -786,12 +786,15 @@ void (async () => {
         const ids = picked()
           .filter((u) => u.def.garrison)
           .map((u) => u.id);
+        const room = into.def.bunker!.slots - into.garrison.length;
+        if (room <= 0) return note(`The ${into.def.name} is full`);
         cmd({ k: 'garrison', tower: into.id, ids });
         for (const id of ids) selection.delete(id);
-        note(`Into the ${into.def.name}`);
+        note(`Marching into the ${into.def.name}`);
         refresh();
         return;
       }
+      if (into) return note('Only ranged soldiers can man a bunker: pick some, then tap it');
       // One of your units: pick it (a second tap in a moment: every one of its kind in view).
       const mine = myUnitAt(wx, wy);
       if (mine) {
@@ -1516,8 +1519,8 @@ void (async () => {
       if (t && t.hp > 0 && t.def.damage > 0)
         live
           .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL, t.def.range * CELL)
-          .fill({ color: 0xffffff, alpha: 0.08 })
-          .stroke({ color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b, width: 1.5, alpha: 0.5 });
+          .fill({ color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b, alpha: 0.2 })
+          .stroke({ color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b, width: 1.5, alpha: 0.35 });
       if (t && t.hp > 0)
         live.ellipse((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 8, 30 * SIZE * 0.7, 11 * SIZE * 0.7).stroke({
           color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b,
@@ -1887,7 +1890,8 @@ void (async () => {
   $('card-body').addEventListener('click', (e) => {
     const aim = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-aim]');
     if (aim && cardOf?.kind === 'sel') {
-      if (aim.dataset.aim === 'bunker') return note('Tap one of your bunkers: the soldiers that can man it march in.');
+      if (aim.dataset.aim === 'bunker')
+        return note('Tap one of your bunkers: the ranged soldiers you picked march to it and go in.');
       cmd(
         aim.dataset.aim?.startsWith('castle')
           ? {

@@ -72,6 +72,10 @@ export interface Unit {
   spent?: boolean;
   /** Sent after one thing by its player: a particular enemy tower, or the castle. It ignores the rest (orders) until that tower falls. */
   focus?: Focus;
+  /** Ordered into this bunker (by id): it walks the road to the bunker's door, ignoring the fight, and goes in (`garrisonUnits`). */
+  enter?: number;
+  /** Went into the bunker it was ordered to: gone from the field this step (no death, no bounty). */
+  entered?: boolean;
 }
 
 /** What a unit may be sent after: one enemy tower (by id) or an enemy castle (the seat's; none named: the castle its lane ends at). */
@@ -592,28 +596,47 @@ export function loadBunker(m: Match, owner: Owner, towerId: number, unitId: stri
   return 'ok';
 }
 
-/** How near (cells) a soldier must be to a bunker to be sent into it: a short march, not a teleport. */
-export const GARRISON_NEAR = 12;
-
 /**
- * Send these units (ids, `owner`'s own) into one of their bunkers: each garrison-capable unit near enough, while a slot is free,
- * leaves the road and shoots from the bunker (it keeps what it was bought for; nothing is paid). How many went in.
+ * Order these units (ids, `owner`'s own) into one of their bunkers: each garrison-capable unit, while a slot is free (counting the ones
+ * already on their way), walks the road to the bunker's door, however far (back too), and shoots from inside it (it keeps what it was
+ * bought for; nothing is paid). How many were sent.
  */
 export function garrisonUnits(m: Match, owner: Owner, towerId: number, unitIds: readonly number[]): number {
   if (!playing(m, owner)) return 0;
   const t = m.towers.find((x) => x.id === towerId && x.owner === owner && x.hp > 0);
   if (!t?.def.bunker) return 0;
-  let went = 0;
+  let free = t.def.bunker.slots - t.garrison.length - m.units.filter((u) => u.enter === t.id && u.hp > 0).length;
+  let sent = 0;
   for (const id of unitIds) {
-    if (t.garrison.length >= t.def.bunker.slots) break;
-    const i = m.units.findIndex((u) => u.id === id && u.owner === owner && u.hp > 0 && !u.spent && u.def.garrison);
-    const u = m.units[i];
-    if (!u || dist(unitPos(u, m.board), centreOf(t)) > GARRISON_NEAR) continue;
-    m.units.splice(i, 1);
-    t.garrison.push({ def: u.def, cooldown: 0 });
-    went++;
+    if (free <= 0) break;
+    const u = m.units.find((x) => x.id === id && x.owner === owner && x.hp > 0 && !x.spent && x.def.garrison);
+    if (!u || u.enter === t.id) continue;
+    u.enter = t.id;
+    delete u.focus;
+    free--;
+    sent++;
   }
-  return went;
+  return sent;
+}
+
+/** One step of a unit ordered into a bunker: back off the road if it stepped off, walk to the door, go in. False when the order is void. */
+function marchIn(m: Match, u: Unit, dt: number): boolean {
+  const t = m.towers.find((x) => x.id === u.enter && x.owner === u.owner && x.hp > 0 && x.def.bunker);
+  const foot = t && laneOf(m.board, u).footOf(t.col, t.row);
+  if (!t || !foot || t.garrison.length >= t.def.bunker!.slots) return false;
+  if (u.off) {
+    u.off.d -= u.def.speed * dt;
+    if (u.off.d <= 0) delete u.off;
+    return true;
+  }
+  const gap = foot.s - u.s;
+  if (Math.abs(gap) > u.def.speed * dt) u.s += Math.sign(gap) * u.def.speed * dt;
+  else {
+    u.s = foot.s;
+    t.garrison.push({ def: u.def, cooldown: 0 });
+    u.entered = true;
+  }
+  return true;
 }
 
 /** Tell all of a player's units to fight what they meet (`attack`) or walk on past it (`bypass`): `what` is towers or units. */
@@ -1038,7 +1061,11 @@ export function step(m: Match, dt: number): void {
 
   // Units fight what is in reach, or walk on (stepping off the road to take a tower it cannot otherwise reach).
   for (const u of m.units) {
-    if (u.spent) continue;
+    if (u.spent || u.entered) continue;
+    if (u.enter !== undefined) {
+      if (marchIn(m, u, dt)) continue;
+      delete u.enter;
+    }
     u.cooldown -= dt;
     const from = unitPos(u, m.board);
     const orders = m.players[u.owner]!.orders;
@@ -1181,6 +1208,7 @@ export function step(m: Match, dt: number): void {
 
   // The fallen: the other side is paid for units (not for bombs that went off); a razed tower is just gone.
   m.units = m.units.filter((u) => {
+    if (u.entered) return false;
     if (u.hp > 0) return true;
     m.deaths.push({
       at: unitPos(u, m.board),

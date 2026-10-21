@@ -7,6 +7,7 @@ import {
   buildTower,
   garrisonUnits,
   newMatch,
+  step,
   towerUnlocked,
   unitUnlocked,
   upgradeCastle,
@@ -49,7 +50,7 @@ describe('the tech tree', () => {
 });
 
 describe('garrisoning', () => {
-  it('sends picked soldiers near a bunker into it, up to its free slots, and not others', () => {
+  it('marches picked soldiers into a bunker, up to its free slots, and not others', () => {
     const m = newMatch(['titan', 'legion']);
     const [cx, cy] = m.board.castles[0];
     m.players[0].wood = m.players[0].stone = 1e6;
@@ -71,6 +72,7 @@ describe('garrisoning', () => {
     const ids = [mk(thunder, 2), mk(thunder, 2.5), mk(axe, 3), ...Array.from({ length: 5 }, () => mk(thunder, 3))];
     const went = garrisonUnits(m, 0, bunker.id, ids);
     expect(went).toBe(bunker.def.bunker!.slots);
+    for (let i = 0; i < 40 * 20; i++) step(m, 0.05); // they march to its door, from either side of it, and go in
     expect(bunker.garrison).toHaveLength(went);
     expect(m.units.some((u) => u.id === ids[2])).toBe(true); // the axefighter cannot man it
   });

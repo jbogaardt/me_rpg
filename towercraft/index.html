@@ -65,6 +65,10 @@
       .sec { flex: none; display: flex; flex-direction: column; gap: 1px; }
       .sec h4 { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-dim); text-shadow: 0 1px 2px #000; padding-left: 2px; }
       .thumbs { display: flex; gap: 4px; align-items: flex-end; }
+      /* The build shelf: each kind (Economy, Units, Upgrades, Defence) is its own boxed group with its name over it and a gap between groups. */
+      #build { gap: 6px 8px; align-items: stretch; }
+      #build .sec { gap: 3px; padding: 3px 6px 4px; border: 1px solid rgba(214, 178, 106, 0.35); border-radius: 6px; background: rgba(0, 0, 0, 0.22); }
+      #build .sec h4 { font-size: 10px; padding: 0 0 2px; border-bottom: 1px solid rgba(214, 178, 106, 0.25); }
       .tb[hidden], .up[hidden], .sec[hidden] { display: none; }
       .tb { position: relative; flex: none; width: 54px; height: 58px; display: grid; place-items: center; padding: 0; }
       .tb .art { display: block; border-radius: 3px; background-repeat: no-repeat; background-position: 0 0; pointer-events: none; }
