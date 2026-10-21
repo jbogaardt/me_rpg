@@ -31,7 +31,7 @@
 const kiwiImg = new Image(); kiwiImg.src = 'kiwi-run.png';
 const birdImg = new Image(); birdImg.src = 'bird-fly.png'; // 3 left-facing frames in 24x24 cells: wings down, level, up
 const BIRD_S = 2, BIRD_C = 24 * BIRD_S, BIRD_LIFT = 110, BIRD_HIT_W = 30, BIRD_HIT_H = 24; // a bird flies at jump height: jumping into it hurts, running under it is safe
-const KIWI_RATIO = 2; // a kiwi runs at twice the cat's speed
+const RATIO = { kiwi: 2, bird: 1 }; // how fast each runs at the cat, as a multiple of the cat's own speed
 const KIWI_S = 1, KW = 56 * KIWI_S, KH = 36 * KIWI_S, KIWI_HIT_W = 36, KIWI_HIT_H = 24; // smaller than the cat // 4 frames of 56x36, facing left, feet on the bottom row
 const bg = new Image(); bg.src = 'backdrop.png';
 const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 96 of the backdrop, where its railings stand
@@ -84,7 +84,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         const kiwis = [];
         // a kiwi is only sent when it will meet the cat on plain deck: well clear of the stairs, where a jump is awkward
         const addKiwi = (trig, stop, kind) => {
-          const x0 = Math.min(trig + 760, stop), sp = spd(trig), meet = trig + ((x0 - trig) * sp) / (sp + KIWI_RATIO * sp);
+          const x0 = Math.min(trig + 760, stop), sp = spd(trig), meet = trig + ((x0 - trig) * sp) / (sp + RATIO[kind] * sp);
           if (bridgeNear(meet - 200, meet + 200, 0) < 0) kiwis.push({ trig, stop, kind });
         };
         let ei = 0; // alternate which comes first: a kiwi on the ground or a bird in the air
@@ -159,7 +159,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         // kiwis: spawn off the right edge as the cat reaches each trigger, run left along the deck, and hurt on touch
         while (S.next < L.kiwis.length && wx >= L.kiwis[S.next].trig) { const k = L.kiwis[S.next++]; S.kiwis.push({ x: Math.min(wx + 760, k.stop), ph: S.next, kind: k.kind }); }
         for (const k of S.kiwis) {
-          k.x -= sp * KIWI_RATIO * dt;
+          k.x -= sp * RATIO[k.kind] * dt;
           const base = GROUND - bridgeH(k.x);
           if (k.kind === 'bird') { // in the air: hit when the cat is up at its height, i.e. mid-jump
             if (Math.abs(k.x - wx) < (BIRD_HIT_W + HIT_W - 8) / 2 && S.y > base - BIRD_LIFT - BIRD_HIT_H / 2 && S.y - HIT_H < base - BIRD_LIFT + BIRD_HIT_H / 2) { die(); return; }
