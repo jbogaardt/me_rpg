@@ -11,6 +11,7 @@ import { isMuted, playCues, setMuted, unlockAudio } from './audio';
 import { playMusic, stopMusic } from './music';
 import { SoundWatch } from './soundEvents';
 import { drawnPos } from './stagger';
+import { recolorTeam, seatShade } from './teamColor';
 import type { Ai } from './sim/ai';
 import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
 import { Wreck } from './wreck';
@@ -62,7 +63,6 @@ import {
   openLanes,
   sightsFor,
   teamOf,
-  teamSeats,
   incomeOf,
   isCastleSeen,
   isSeen,
@@ -240,12 +240,31 @@ void (async () => {
     await Promise.all([lane(), lane(), lane()]);
   }
   const frames = new Map<string, Texture>();
-  /** One frame of a unit sheet (cached): row, and column = direction. */
-  const unitFrame = (sheet: string, kind: SheetKind, row: number, col: number) => {
-    const key = `${sheet}:${row}:${col}`;
+  /** A sheet with its purple player colour swapped for `color` (cached per sheet and colour). */
+  const teamSheets = new Map<string, Texture>();
+  const teamSheet = (sheet: string, color: number) => {
+    const key = `${sheet}:${color}`;
+    let t = teamSheets.get(key);
+    if (!t) {
+      const src = sheetTextures.get(sheet)!;
+      const cv = document.createElement('canvas');
+      cv.width = src.width;
+      cv.height = src.height;
+      const cx = cv.getContext('2d', { willReadFrequently: true })!;
+      cx.drawImage(src.source.resource as CanvasImageSource, 0, 0);
+      const img = cx.getImageData(0, 0, cv.width, cv.height);
+      recolorTeam(img.data, color);
+      cx.putImageData(img, 0, 0);
+      teamSheets.set(key, (t = Texture.from(cv)));
+    }
+    return t;
+  };
+  /** One frame of a unit sheet in a seat's colour (cached): row, and column = direction. */
+  const unitFrame = (sheet: string, kind: SheetKind, row: number, col: number, color: number) => {
+    const key = `${sheet}:${color}:${row}:${col}`;
     const size = SHEETS[kind].frame;
     let t = frames.get(key);
-    if (!t) frames.set(key, (t = cut(sheetTextures.get(sheet)!, col * size, row * size, size, size)));
+    if (!t) frames.set(key, (t = cut(teamSheet(sheet, color), col * size, row * size, size, size)));
     return t;
   };
   // --- The scene -----------------------------------------------------------------------------------------------------
@@ -290,12 +309,11 @@ void (async () => {
   let match: Match = newMatch(['legion', 'swarm'], BOARDS[chosenMap]);
   /** The castle positions of the map being played. */
   const castleAt = (o: Owner) => match.board.castles[o]!;
-  /** The colour under a seat's castle, towers and units: its race's in a duel; with more seats the side's (blue for yours, red for the foe's, a shade for each seat), so allies and foes of one race still tell apart. */
-  const SIDE_COLORS = { mine: [0x4fa3ff, 0x6fe0c0], foe: [0xe0505a, 0xe9a23f] } as const;
+  /** The colour under a seat's castle, towers and units: its race's, lighter or darker for each further seat of the same race (allies and foes alike), so every seat tells apart. */
   const colorOf = (o: Owner): number => {
-    if (match.board.seats <= 2) return RACES[match.players[o]!.race].color;
-    const side = allied(match, o, YOU) ? SIDE_COLORS.mine : SIDE_COLORS.foe;
-    return side[teamSeats(match, o).indexOf(o)] ?? side[0];
+    const race = match.players[o]!.race;
+    const same = match.players.flatMap((p, i) => (p.race === race ? [i] : []));
+    return seatShade(RACES[race].color, same.indexOf(o));
   };
   const playingNow = () => !match.players[YOU]!.out && match.winner < 0;
   /** Where a seat's camp lies on the field, in words (north-west, south, middle). */
@@ -974,7 +992,7 @@ void (async () => {
     const dir = heading(d);
     const sheet = SHEETS[d.def.kind];
     const container = new Container();
-    const sprite = new Sprite(unitFrame(d.def.sheet, d.def.kind, sheet.death[0]!, dir.col));
+    const sprite = new Sprite(unitFrame(d.def.sheet, d.def.kind, sheet.death[0]!, dir.col, colorOf(d.owner)));
     sprite.anchor.set(0.5, feetAt(d.def.kind));
     sprite.scale.set((dir.flip ? -1 : 1) * unitScale(d.def), unitScale(d.def));
     container.addChild(sprite);
@@ -997,6 +1015,7 @@ void (async () => {
         k.def.kind,
         rows[Math.min(rows.length - 1, Math.floor(k.age / DEATH_FRAME))]!,
         k.col,
+        colorOf(k.owner),
       );
       k.container.alpha = Math.min(1, (CORPSE_LIFE - k.age) / (CORPSE_LIFE / 2));
     }
@@ -1422,7 +1441,7 @@ void (async () => {
         const c = new Container();
         const color = colorOf(u.owner);
         c.addChild(new Graphics().ellipse(0, 0, 8 * unitScale(u.def), 4 * SIZE).fill({ color, alpha: 0.6 })); // under the feet (on the ground, below a flyer)
-        const body = new Sprite(unitFrame(u.def.sheet, u.def.kind, 0, 4));
+        const body = new Sprite(unitFrame(u.def.sheet, u.def.kind, 0, 4, color));
         body.anchor.set(0.5, feetAt(u.def.kind));
         body.scale.set(unitScale(u.def));
         c.addChild(body);
@@ -1475,7 +1494,7 @@ void (async () => {
           by = Math.sin(clock * 2.2 + u.id) * 0.6 * SIZE; // breathing while it waits
         }
         if (u.def.air) by += -FLIGHT + Math.sin(clock * 3 + u.id) * 2.5 * SIZE; // a flyer hovers
-        body.texture = unitFrame(u.def.sheet, u.def.kind, pose, dir.col);
+        body.texture = unitFrame(u.def.sheet, u.def.kind, pose, dir.col, colorOf(u.owner));
         body.scale.x = (dir.flip ? -1 : 1) * unitScale(u.def);
         body.position.set(bx, by);
         // An enemy is drawn only in sight (a cloaked one also needs a detector); cloaked is faint to its own side; poison tints green.

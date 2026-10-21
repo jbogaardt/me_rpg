@@ -579,7 +579,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
     name: 'Dwarves',
     blurb:
       'Slow, strong and costly. Gunners, flame bearers and armoured giants, gryphons; long-range guns, a tough bunker, a healing shrine.',
-    color: 0x406181,
+    color: 0x3f8fd6,
     castle: {
       art: 'dwarf_castle',
       hp: 1000,
