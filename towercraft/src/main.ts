@@ -2193,7 +2193,7 @@ void (async () => {
         cost === undefined
           ? icon('power', 'Fully upgraded')
           : `${icon('power', `Upgrade to level ${level + 1}`)}${money(cost)}`;
-      reason = cost === undefined ? 'max' : lacks.length > 0 ? 'Build what it asks for first' : lacking(cost);
+      reason = cost === undefined ? 'max' : lacks.length > 0 ? lacks.map(needText).join(', ') : lacking(cost);
       go = () => cmd({ k: 'castle' });
     }
     if (body !== cardBody) {
@@ -2225,6 +2225,10 @@ void (async () => {
   const roleOf = (d: TowerDef) =>
     d.econ ? 'Economy' : d.damage > 0 || d.bunker ? 'Defence' : d.aura || d.detect ? 'Support' : 'Production';
   const ROLES = ['Economy', 'Production', 'Defence', 'Support'];
+
+  /** What a castle upgrade still asks for, as the button's reason: "Needs 2 more defence towers". */
+  const needText = ({ need, have }: ReturnType<typeof upgradeLacks>[number]) =>
+    `Needs ${need.count - have} more ${need.tier && need.tier > 1 ? `level ${need.tier} ` : ''}${need.role} tower${need.count - have > 1 ? 's' : ''}`;
 
   const upgradeText = (up: UpgradeDef) => `${pct(up.perLevel)} ${up.applies} ${up.stat === 'hp' ? 'health' : 'damage'}`;
   /** The same as pictures: +15%, a heart or a sword, and the ground or a wing. */

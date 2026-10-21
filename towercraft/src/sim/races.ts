@@ -176,20 +176,10 @@ export interface UpgradeNeed {
   count: number;
   tier?: number;
 }
-/** What each upgrade asks of the buildings: `[level 1 to 2, level 2 to 3]`. The same for every race (roles, not ids). */
+/** What each upgrade asks of the buildings: `[level 1 to 2, level 2 to 3]`: towers only (economy has its own reasons to be built, and rushing a level is a risk the player takes). The same for every race (roles, not ids). */
 export const CASTLE_NEEDS: UpgradeNeed[][] = [
-  [
-    { role: 'econ', count: 3 },
-    { role: 'producer', count: 1 },
-    { role: 'smithy', count: 1 },
-    { role: 'defence', count: 3 },
-  ],
-  [
-    { role: 'econ', count: 4 },
-    { role: 'producer', count: 2, tier: 2 },
-    { role: 'defence', count: 3, tier: 2 },
-    { role: 'smithy', count: 1 },
-  ],
+  [{ role: 'defence', count: 2 }],
+  [{ role: 'defence', count: 3, tier: 2 }],
 ];
 
 type UnitInit = Omit<UnitDef, 'count' | 'range' | 'kind'> & Partial<Pick<UnitDef, 'count' | 'range' | 'kind'>>;
@@ -1321,8 +1311,8 @@ const CASTLE_BODY = 1.2; // sim.ts's CASTLE_RADIUS, which a castle's shot reache
 
 /** How slow the game runs, against the tables as written: income (the castle's and every mill's and quarry's) is this fraction of it... */
 const PACE = 0.4;
-/** ...and the castle upgrades cost this many times the written price (level 2, level 3): level 3 is the written 150 against level 2's 70, so it must stay above 3.8x or it costs less than level 2. With the buildings it asks for (`CASTLE_NEEDS`), a first upgrade before about 5 minutes is a speed run. */
-const UPGRADE_PRICE = [8, 4];
+/** ...and the castle upgrades cost this many times the written price (level 2, level 3): level 3 is the written 150 against level 2's 70, so level 2's must stay under 2.1x level 3's or it costs less than level 2. */
+const UPGRADE_PRICE = [4, 4];
 /** Units' hit points grew about this much when their numbers came from StarCraft (`tools/towercraftScale.ts`); buildings keep up: what a tower or the castle deals and what the buildings take (the lab sets these). */
 const DEFENCE_DAMAGE = 1.8;
 const BUILDING_HP = 1.5;

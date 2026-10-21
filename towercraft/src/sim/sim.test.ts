@@ -925,12 +925,7 @@ describe('castle upgrades ask for buildings, not only money', () => {
     expect(upgradeLacks(m, 0).length).toBeGreaterThan(0);
     expect(upgradeCastle(m, 0)).toBe('needs');
     expect(m.players[0].castle.level).toBe(1);
-    for (const [id, count] of [
-      ['mill', 3],
-      ['barracks', 1],
-      ['armoury', 1],
-      ['watch', 3],
-    ] as const)
+    for (const [id, count] of [['watch', 2]] as const)
       for (let k = 0; k < count; k++) {
         const def = GAME_RACES.legion.towers.find((t) => t.id === id)!;
         let built = false;
@@ -943,13 +938,5 @@ describe('castle upgrades ask for buildings, not only money', () => {
     expect(upgradeCastle(m, 0)).toBe('ok');
     expect(m.players[0].castle.level).toBe(2);
     expect(upgradeLacks(m, 0).length).toBeGreaterThan(0); // the next asks for level 2 buildings
-  });
-
-  it('costs more than the first minutes earn, so an upgrade before five minutes is a speed run', () => {
-    for (const id of RACE_IDS) {
-      const c = GAME_RACES[id].castle;
-      const earned = (c.income[0]!.wood * 240) / PAY_EVERY; // the castle's pay in four minutes
-      expect(c.upgrades[0]!.wood, id).toBeGreaterThan(earned);
-    }
   });
 });
