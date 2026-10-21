@@ -2310,9 +2310,29 @@ void (async () => {
       sec.className = 'sec';
       sec.innerHTML = `<h4>${role}</h4><div class="thumbs"></div>`;
       for (const def of defs) {
-        const b = thumb(towerThumb(def.art, 36), money(def.cost), def.name, () =>
-          touchUser ? startPlacing(def) : showCard({ kind: 'tower', def }, true),
-        );
+        // A finger: tap places it, hold shows its card (stats), whose price button then starts placing (a mouse clicks for the card).
+        let heldOpen = false;
+        let holdTimer: number | undefined;
+        const b = thumb(towerThumb(def.art, 36), money(def.cost), def.name, () => {
+          if (heldOpen) return void (heldOpen = false);
+          if (touchUser) {
+            tipOnce('towers', 'Tap a building to place it, hold it for its stats.');
+            startPlacing(def);
+          } else showCard({ kind: 'tower', def }, true);
+        });
+        b.addEventListener('pointerdown', (e) => {
+          if (e.pointerType === 'mouse') return;
+          heldOpen = false;
+          window.clearTimeout(holdTimer);
+          holdTimer = window.setTimeout(() => {
+            heldOpen = true;
+            navigator.vibrate?.(12);
+            showCard({ kind: 'tower', def });
+          }, 420);
+        });
+        for (const ev of ['pointerup', 'pointerleave', 'pointercancel'] as const)
+          b.addEventListener(ev, () => window.clearTimeout(holdTimer));
+        b.addEventListener('contextmenu', (e) => e.preventDefault());
         sec.lastElementChild!.append(b);
         buildButtons.push([b, def]);
       }
