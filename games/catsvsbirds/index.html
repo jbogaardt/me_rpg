@@ -29,7 +29,7 @@
       ctx.imageSmoothingEnabled = false;
       const sheet = new Image(); sheet.src = 'cat-run.png';
 const kiwiImg = new Image(); kiwiImg.src = 'kiwi-run.png';
-const canImg = new Image(), canBigImg = new Image(); canImg.src = 'can.png'; canBigImg.src = 'can-double.png'; // tins of fish in the cat's 4 px pixels: 36x36, and 36x52 for two stacked
+const canImg = new Image(), canBigImg = new Image(); canImg.src = 'can.png'; canBigImg.src = 'can-double.png'; // tins of fish, the supplied art averaged down to the cat's 4 px pixels: 32x32, and 32x48 for two stacked
 const birdImg = new Image(); birdImg.src = 'bird-fly.png'; // 3 left-facing frames in 24x24 cells: wings down, level, up
 const BIRD_S = 2, BIRD_C = 24 * BIRD_S, BIRD_LIFT = 110, BIRD_HIT_W = 30, BIRD_HIT_H = 24; // a bird flies at jump height: jumping into it hurts, running under it is safe
 const RATIO = { kiwi: 2, bird: 1 }; // how fast each runs at the cat, as a multiple of the cat's own speed
@@ -210,7 +210,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         }
         ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; // fillStyle shows through where no colour-emoji font exists
         L.fish.forEach((f, i) => { if (S.fishGot.has(i)) return; const fx = f.x - off; if (fx < -30 || fx > W + 30) return; const fy = f.y + Math.sin(S.t * 4 + i) * 4;
-          if (f.big) ctx.drawImage(canBigImg, fx - 18, fy - 26); else ctx.drawImage(canImg, fx - 18, fy - 18); });
+          if (f.big) ctx.drawImage(canBigImg, fx - 16, fy - 24); else ctx.drawImage(canImg, fx - 16, fy - 16); });
         // finish line
         const fl = L.end - off; if (fl < W + 40) { ctx.fillStyle = '#fff'; for (let i = 0; i < 20; i++) { ctx.fillRect(fl + (i % 2) * 14, 40 + i * 18, 14, 14); ctx.fillRect(fl + 14 - (i % 2) * 14, 40 + i * 18, 14, 14); } }
 
@@ -240,7 +240,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         // HUD: progress bar, fish, attempt
         ctx.fillStyle = '#0008'; ctx.fillRect(W / 2 - 200, 18, 400, 12);
         ctx.fillStyle = pal[2]; ctx.fillRect(W / 2 - 200, 18, 400 * progress(), 12);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Georgia'; ctx.textAlign = 'left'; ctx.drawImage(canImg, 10, 2); ctx.fillText(S.score, 52, 32);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Georgia'; ctx.textAlign = 'left'; ctx.drawImage(canImg, 12, 6); ctx.fillText(S.score, 52, 32);
         ctx.textAlign = 'right'; ctx.fillText('Attempt ' + S.attempt + '   Best ' + S.best + '%', W - 20, 32);
         ctx.textAlign = 'center'; ctx.font = 'bold 20px Georgia'; ctx.fillText(Math.round(progress() * 100) + '%', W / 2, 52);
         if (!S.started && !S.won) { ctx.font = 'bold 44px Georgia'; ctx.fillStyle = '#f0c060'; ctx.fillText('Cats vs Birds', W / 2, 190); ctx.font = '22px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText('Tap, click or press Space to start', W / 2, 232); }
