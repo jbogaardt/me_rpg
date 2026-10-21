@@ -18,7 +18,6 @@ import {
   maxPurchases,
   powerAt,
   setFocus,
-  setOrder,
   soldierCost,
   step,
   trainUnit,
@@ -479,9 +478,9 @@ describe('leaving the road to take a tower', () => {
     expect(unit.s).toBeGreaterThan(s + 5);
   });
 
-  it('walks past the tower when told to', () => {
+  it('walks past the tower when sent at the castle', () => {
     const { m, tower, unit } = setup();
-    setOrder(m, 0, 'towers', 'bypass');
+    setFocus(m, 0, [unit.id], { kind: 'castle' });
     run(m, 12);
     expect(tower.hp).toBe(towerDef('legion', 'lookout').hp);
     expect(unit.s).toBeGreaterThan(30);
@@ -744,34 +743,36 @@ describe('orders', () => {
     expect(m.towers[0]!.hp).toBeLessThan(towerDef('legion', 'watch').hp);
   });
 
-  it('has units walk past towers when told to, leaving them untouched and carrying on', () => {
+  it('has units walk past towers when sent at the castle, leaving them untouched and carrying on', () => {
     const { m, mine } = setup();
     m.towers[0]!.cooldown = 1e9;
-    setOrder(m, 0, 'towers', 'bypass');
+    setFocus(m, 0, [mine.id], { kind: 'castle' });
     const start = mine.s;
     run(m, 4);
     expect(m.towers[0]!.hp).toBe(towerDef('legion', 'watch').hp);
     expect(mine.s).toBeGreaterThan(start + 5); // it kept walking
   });
 
-  it('has units fight opposing units by default and walk past them when told to', () => {
+  it('has units fight opposing units by default and walk past them when sent at the castle', () => {
     const fight = setup();
     fight.m.towers.length = 0;
     run(fight.m, 12);
     expect(fight.foe.hp).toBeLessThan(5000);
     const pass = setup();
     pass.m.towers.length = 0;
-    setOrder(pass.m, 0, 'units', 'bypass');
+    setFocus(pass.m, 0, [pass.mine.id], { kind: 'castle' });
     run(pass.m, 12);
     expect(pass.foe.hp).toBe(5000);
     expect(pass.mine.s).toBeGreaterThan(fight.mine.s);
   });
 
-  it('keeps the orders per player', () => {
-    const m = newMatch(['legion', 'legion']);
-    setOrder(m, 0, 'towers', 'bypass');
-    expect(m.players[0].orders).toEqual({ towers: 'bypass', units: 'attack' });
-    expect(m.players[1].orders).toEqual({ towers: 'attack', units: 'attack' });
+  it('keeps an order per unit until it is changed: a unit bought later fights everything', () => {
+    const { m, mine } = setup();
+    setFocus(m, 0, [mine.id], { kind: 'castle' });
+    const later = spawn(m, 0, 'legion', 'warrior', 3);
+    run(m, 4);
+    expect(mine.focus).toEqual({ kind: 'castle' });
+    expect(later.focus).toBeUndefined();
   });
 });
 
@@ -819,7 +820,7 @@ describe('sending a unit after one target', () => {
     expect(lookout.hp).toBeLessThan(towerDef('legion', 'lookout').hp);
   });
 
-  it('goes back to the general orders when that tower falls', () => {
+  it('goes back to fighting everything when that tower falls', () => {
     const { m, mine, lookout } = setup();
     lookout.hp = 20;
     setFocus(m, 0, [mine.id], { kind: 'tower', id: lookout.id });

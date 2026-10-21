@@ -72,7 +72,7 @@ export interface Unit {
   off?: { tower: number; dir: [number, number]; d: number; max: number; leaving?: boolean };
   /** Blew itself up (no bounty for the foe). */
   spent?: boolean;
-  /** Sent after one thing by its player: a particular enemy tower, or the castle. It ignores the rest (orders) until that tower falls. */
+  /** Sent after one thing by its player: a particular enemy tower, or the castle. It keeps to it until told otherwise, or until that tower falls; with none, a unit fights everything. */
   focus?: Focus;
   /** Ordered into this bunker (by id): it walks the road to the bunker's door, ignoring the fight, and goes in (`garrisonUnits`). */
   enter?: number;
@@ -113,12 +113,6 @@ export interface Castle {
   cooldown: number;
 }
 
-/** What this player's units do about what they meet on the way: stop and fight it, or walk on past it. */
-export interface Orders {
-  towers: 'attack' | 'bypass';
-  units: 'attack' | 'bypass';
-}
-
 export interface Player {
   race: RaceId;
   /** Which side it is on: seats of one team win and lose together. */
@@ -134,8 +128,6 @@ export interface Player {
   castle: Castle;
   /** Levels bought of each upgrade line (by `UpgradeDef.id`). */
   upgrades: Record<string, number>;
-  /** Orders for every unit this player has, now and later: the castle is always attacked once in reach. */
-  orders: Orders;
 }
 
 /** An attack made this step, for the renderer: from a point to a point, in cells; `melee` is a blow, not a missile. */
@@ -215,7 +207,6 @@ export function newMatch(
       stone: START_RES.stone,
       castle: { hp, maxHp: hp, level: 1, cooldown: 0 },
       upgrades: {},
-      orders: { towers: 'attack', units: 'attack' },
     };
   };
   return {
@@ -644,11 +635,6 @@ function marchIn(m: Match, u: Unit, dt: number): boolean {
   return true;
 }
 
-/** Tell all of a player's units to fight what they meet (`attack`) or walk on past it (`bypass`): `what` is towers or units. */
-export function setOrder(m: Match, owner: Owner, what: keyof Orders, to: Orders[keyof Orders]): void {
-  if (playing(m, owner)) m.players[owner]!.orders[what] = to;
-}
-
 /** Can a unit of this kind take this tower down: from the road with its range, or by stepping off it (at most `Match.detourMax` cells)? */
 export function canTarget(
   m: Match,
@@ -661,7 +647,7 @@ export function canTarget(
 }
 
 /**
- * Send these units (ids, `owner`'s own) after one enemy tower or the enemy castle, or back to the general orders (`undefined`).
+ * Send these units (ids, `owner`'s own) after one enemy tower or the enemy castle, or back to fighting everything (`undefined`, the default for a new unit).
  * A unit sent after a tower fights only that tower; one sent after the castle walks past everything and fights only it.
  */
 export function setFocus(
@@ -1091,14 +1077,13 @@ export function step(m: Match, dt: number): void {
     }
     u.cooldown -= dt;
     const from = unitPos(u, m.board);
-    const orders = m.players[u.owner]!.orders;
     const lane = laneOf(m.board, u);
     const goal = lane.length - CASTLE_RADIUS;
     // A unit sent after a tower fights only it (and the castle only once it is down); one sent after the castle ignores the rest.
     const focused = u.focus?.kind === 'tower' ? u.focus.id : undefined;
     const sentAt = focused === undefined ? undefined : m.towers.find((t) => t.id === focused && t.hp > 0);
     if (focused !== undefined && !sentAt) delete u.focus;
-    const towersOn = u.focus ? sentAt !== undefined : orders.towers === 'attack';
+    const towersOn = !u.focus || sentAt !== undefined;
     const reach: Reach = {
       owner: u.owner,
       by: { kind: 'unit', id: u.id },
@@ -1107,7 +1092,7 @@ export function step(m: Match, dt: number): void {
       range: u.def.range,
       ground: true,
       air: !!u.def.hitsAir,
-      units: u.focus ? false : orders.units === 'attack',
+      units: !u.focus,
       towers: towersOn,
       castle: !sentAt,
       only: sentAt?.id,

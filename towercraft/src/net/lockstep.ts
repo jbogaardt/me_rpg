@@ -29,7 +29,6 @@ import {
   sellTower,
   setFocus,
   setLane,
-  setOrder,
   setRoute,
   trainUnits,
   upgradeCastle,
@@ -46,7 +45,6 @@ export type Command =
   | { k: 'bunker'; tower: number; unit: string }
   | { k: 'garrison'; tower: number; ids: number[] }
   | { k: 'empty'; tower: number }
-  | { k: 'order'; what: 'towers' | 'units'; to: 'attack' | 'bypass' }
   | { k: 'focus'; ids: number[]; at?: Focus }
   | { k: 'castle' }
   | { k: 'upgrade'; id: string }
@@ -72,9 +70,6 @@ export function apply(m: Match, owner: Owner, c: Command): void {
       break;
     case 'empty':
       emptyBunker(m, owner, c.tower);
-      break;
-    case 'order':
-      setOrder(m, owner, c.what, c.to);
       break;
     case 'focus':
       setFocus(m, owner, c.ids, c.at);
@@ -110,7 +105,7 @@ const MAX_AHEAD = 400;
 
 // --- The wire ---
 
-export const NET_VERSION = 12;
+export const NET_VERSION = 13;
 
 export type Message =
   /** The joiner, once connected: who they play. */
@@ -155,10 +150,6 @@ export function parseCommand(v: unknown): Command | null {
       return isInt(c.tower) ? { k: 'empty', tower: c.tower } : null;
     case 'garrison':
       return isInt(c.tower) && isIds(c.ids) ? { k: 'garrison', tower: c.tower, ids: c.ids } : null;
-    case 'order':
-      return (c.what === 'towers' || c.what === 'units') && (c.to === 'attack' || c.to === 'bypass')
-        ? { k: 'order', what: c.what, to: c.to }
-        : null;
     case 'focus': {
       const at = parseFocus(c.at);
       return isIds(c.ids) && at !== null ? (at ? { k: 'focus', ids: c.ids, at } : { k: 'focus', ids: c.ids }) : null;

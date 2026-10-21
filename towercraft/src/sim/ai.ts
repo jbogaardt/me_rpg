@@ -8,8 +8,8 @@
 //  - DEFENCE: a goal count that grows with the castle's level, an attacker where it covers the most road, pushed toward the foe
 //    tower by tower (towers with `reach` extend the build area), a detector against cloaked units, an anti-air tower against air,
 //    one aura of each kind among its towers, bunkers that it loads with ranged units; none that the foe cannot be hurt by.
-//  - ORDERS: normally units fight towers and units; with an army that could take the castle down in a few seconds they walk past the
-//    towers (`bypass`) and finish it.
+//  - ORDERS: units fight everything (the default); an army that could take the castle down in a few seconds, or one past the
+//    style's rush time, is sent at the castle (`setFocus`) and walks past the rest to finish it. Units keep an order once given.
 // Everything it knows about the other side is read through `foeUnits`, `foeTowers` and `foeCastle` below, which show only what its
 // vision (castle, towers and living units, as for the player) shows: it plays by the same fog.
 
@@ -32,7 +32,7 @@ import {
   openLanes,
   raceOf,
   setLane,
-  setOrder,
+  setFocus,
   soldierCost,
   towerUnlocked,
   trainUnit,
@@ -364,8 +364,6 @@ const DETECTOR_BY = 90;
 const MAX_TOWERS = 6;
 /** A foe closer than this many cells to the castle is an emergency: units are bought at once. */
 const ALARM = 24;
-/** The army walks past the foe's units only when it would kill their castle in under this share of the time theirs would kill ours. */
-const RACE_MARGIN = 0.6;
 /** Upgrades wait until this many units have been bought, and are bought only with this much money (of each currency) to spare. */
 const UPGRADE_ARMY = 6;
 
@@ -522,18 +520,21 @@ export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): Ai 
     const towers = ownTowers(m, owner);
     const defence = towers.filter((t) => defensive(t.def));
 
-    // Orders: fight everything, unless the army could take the castle down fast, then walk past the towers (and, when the foe's
-    // army could not do the same to ours first, past its units too: a race to the castles) and do it. The patience for it
-    // shrinks as the match drags on, so a stalemate does not last.
+    // Orders: units fight everything unless sent elsewhere. Once the army could take the castle down fast (the patience for it
+    // shrinks as the match drags on, so a stalemate does not last), or the rush time has come, the units that have no order are
+    // sent at the castle; units keep the order they have.
     const myDps = mine.reduce((a, u) => a + dps(u.def) * boostOf(m, owner, u.def, 'damage'), 0);
-    const foeDps = foeUnits(m, owner).reduce((a, u) => a + dps(u.def), 0);
     const seenCastle = foeCastle(m, owner);
     const killIn = seenCastle ? seenCastle.hp / Math.max(1, myDps) : Infinity;
-    const diesIn = me.castle.hp / Math.max(1, foeDps);
     const patience = style.siege + m.time / 15;
-    setOrder(m, owner, 'towers', killIn <= patience ? 'bypass' : 'attack');
-    const race2 = killIn <= patience && killIn < diesIn * RACE_MARGIN;
-    setOrder(m, owner, 'units', race2 || m.time >= style.rush ? 'bypass' : 'attack');
+    if (killIn <= patience || m.time >= style.rush) {
+      setFocus(
+        m,
+        owner,
+        mine.filter((u) => !u.focus).map((u) => u.id),
+        { kind: 'castle' },
+      );
+    }
 
     const threat = Math.min(Infinity, ...foeUnits(m, owner).map((u) => fromCastle(m, owner, u)));
     const alarm = threat < ALARM;

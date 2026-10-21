@@ -848,11 +848,11 @@ void (async () => {
     if (!started) return;
     const [wx, wy] = [(sx - world.x) / world.scale.x / CELL, (sy - world.y) / world.scale.y / CELL];
     if (!selected) {
-      // A right-click: send the group at what is there, or back to the general orders.
+      // A right-click: send the group at what is there, or back to fighting everything.
       if (how.right) {
         if (selection.size && !command(wx, wy)) {
           cmd({ k: 'focus', ids: [...selection] });
-          note('Back to the general orders');
+          note('Fighting everything');
         }
         return;
       }
@@ -919,7 +919,7 @@ void (async () => {
     if (canBuild(match, YOU, selected, cell[0], cell[1]) !== 'ok') return setGhost(undefined);
     place(cell);
   }
-  // Keys: Esc lets go; Ctrl+A picks every unit; C sends the group at the castle, X back to the general orders; arrows and
+  // Keys: Esc lets go; Ctrl+A picks every unit; C sends the group at the castle, X back to fighting everything; arrows and
   // WASD pan the field.
   const held = new Set<string>();
   window.addEventListener('keydown', (e) => {
@@ -938,7 +938,7 @@ void (async () => {
       cmd(
         k === 'c' ? { k: 'focus', ids: [...selection], at: { kind: 'castle' } } : { k: 'focus', ids: [...selection] },
       );
-      note(k === 'c' ? `${selection.size} → the castle` : 'Back to the general orders');
+      note(k === 'c' ? `${selection.size} → the castle` : 'Fighting everything');
     } else if (
       ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(k) &&
       !e.ctrlKey &&
@@ -2009,14 +2009,6 @@ void (async () => {
       renderCard();
       return;
     }
-    const ord = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-order]');
-    if (ord && cardOf?.kind === 'castle') {
-      const what = ord.dataset.order as 'towers' | 'units';
-      const o = match.players[YOU]!.orders;
-      cmd({ k: 'order', what, to: o[what] === 'attack' ? 'bypass' : 'attack' });
-      renderCard();
-      return;
-    }
     const route = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-route]');
     if (route && cardOf?.kind === 'sel') {
       if (route.disabled) return;
@@ -2300,13 +2292,6 @@ void (async () => {
         `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">${icon('power', 'Castle level')} ${level} / ${MAX_LEVEL}</div></div></header>` +
         `<div class="hp"><i style="width:${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%"></i><span>${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}</span></div>` +
         `<ul>${stat('heal', `Pays every ${PAY_EVERY} s (mills and quarries included)`, money(inc))}${stat('reach', 'Build reach, in cells', race.castle.reach[level - 1]!)}${stat('runner', 'Units out', `${match.units.filter((u) => u.owner === YOU).length} / ${UNIT_CAP}`)}</ul>`;
-      // The orders for every unit you have, once per kind: attack, or walk past (the dock keeps only units and buildings).
-      const order = (what: 'towers' | 'units') => {
-        const attack = me.orders[what] === 'attack';
-        const name = what === 'towers' ? 'towers' : 'units';
-        return `<button data-order="${what}"${attack ? ' class="on"' : ''} title="All your units: tap to ${attack ? 'walk past' : 'attack'} ${name}">${attack ? (what === 'towers' ? 'Attack towers' : 'Fight units') : what === 'towers' ? 'Pass towers' : 'Pass units'}</button>`;
-      };
-      body += `<div class="targets">${order('towers')}${order('units')}</div>`;
       label =
         cost === undefined
           ? icon('power', 'Fully upgraded')

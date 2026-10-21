@@ -274,11 +274,11 @@ describe('the computer opponent', () => {
     for (let i = 0; i < 4; i++) stand(m, 0, 'legion', 'warrior', 10 + i);
     const ai = createAi(0, 1);
     ai(m, 1);
-    expect(m.players[0].orders.towers).toBe('attack'); // it cannot see the wounded castle
+    expect(m.units.some((u) => u.focus)).toBe(false); // it cannot see the wounded castle
     for (const u of m.units) u.s = ROAD_LENGTH - 6;
     expect(isCastleSeen(m, 0, 1)).toBe(true);
     ai(m, 1);
-    expect(m.players[0].orders.towers).toBe('bypass');
+    expect(m.units.filter((u) => u.owner === 0).every((u) => u.focus?.kind === 'castle')).toBe(true);
     expect(CASTLES[1][1]).toBeGreaterThan(30);
   });
 
