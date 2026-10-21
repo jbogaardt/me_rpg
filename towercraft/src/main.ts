@@ -1955,6 +1955,13 @@ void (async () => {
       renderCard();
       return;
     }
+    if (cardOf?.kind === 'bunker' && (e.target as HTMLElement).closest('button[data-empty]')) {
+      cmd({ k: 'empty', tower: cardOf.id });
+      note('The soldiers march out');
+      renderCard();
+      refresh();
+      return;
+    }
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-load]');
     if (!b || !cardOf || cardOf.kind !== 'bunker' || b.disabled) return;
     cmd({ k: 'bunker', tower: cardOf.id, unit: b.dataset.load! });
@@ -2209,8 +2216,9 @@ void (async () => {
       body =
         `<header><div class="pic">${towerThumb(bunker.def.art, 50)}</div><div><h3>${bunker.def.name}</h3><div class="sub">${bunker.garrison.length} of ${b.slots} soldiers inside</div></div></header>` +
         `<div class="slots">${dots}</div>` +
+        `<button class="plank" data-empty${bunker.garrison.length ? '' : ' disabled'} title="Let every soldier out onto the road to join your army">Empty the bunker</button>` +
         `<div class="hp"><i style="width:${Math.max(0, (bunker.hp / bunker.def.hp) * 100)}%"></i><span>${Math.max(0, Math.ceil(bunker.hp))} / ${bunker.def.hp}</span></div>` +
-        `<p class="note">Soldiers loaded here shoot from the walls with +${b.rangeBonus} range (melee ones strike foes at the walls), and fall with it. Tap one to load it.</p>` +
+        `<p class="note">Soldiers loaded here shoot from the walls with +${b.rangeBonus} range (melee ones strike foes at the walls), and fall with it. Tap one to load it, or empty it to send them out.</p>` +
         `<div class="loads">${loads || '<p class="note">None of your units fit a bunker.</p>'}</div>`;
     } else {
       const cost = upgradeCost(match, YOU);

@@ -851,24 +851,38 @@ export function sellTower(m: Match, owner: Owner, towerId: number): Result {
   if (!t) return 'unknown';
   earn(m.players[owner]!, sellRefund(t));
   m.towers = m.towers.filter((x) => x !== t);
-  // The soldiers inside come out onto the road beside it and march on (they were bought already: the unit cap does not stop them).
+  releaseGarrison(m, owner, t);
+  return 'ok';
+}
+
+/** The soldiers inside come out onto the road beside the bunker and march on (they were bought already: the unit cap does not stop them). */
+function releaseGarrison(m: Match, owner: Owner, t: Tower) {
   const home = laneFor(m, owner);
-  if (home !== undefined) {
-    const spot = roadPointBy(m, owner, t, home);
-    t.garrison.forEach((g, i) => {
-      const maxHp = g.def.hp * boostOf(m, owner, g.def, 'hp');
-      m.units.push({
-        id: m.nextId++,
-        def: g.def,
-        owner,
-        lane: spot.lane,
-        hp: maxHp,
-        maxHp,
-        ...exitFrom(spot, i, 0),
-        cooldown: 0,
-      });
+  if (home === undefined) return;
+  const spot = roadPointBy(m, owner, t, home);
+  t.garrison.forEach((g, i) => {
+    const maxHp = g.def.hp * boostOf(m, owner, g.def, 'hp');
+    m.units.push({
+      id: m.nextId++,
+      def: g.def,
+      owner,
+      lane: spot.lane,
+      hp: maxHp,
+      maxHp,
+      ...exitFrom(spot, i, 0),
+      cooldown: 0,
     });
-  }
+  });
+  t.garrison = [];
+}
+
+/** Empty one of `owner`'s bunkers: every soldier inside walks out onto the road and joins the army (nothing is refunded). */
+export function emptyBunker(m: Match, owner: Owner, towerId: number): Result {
+  if (!playing(m, owner)) return 'over';
+  const t = m.towers.find((x) => x.id === towerId && x.owner === owner && x.hp > 0);
+  if (!t) return 'unknown';
+  if (!t.def.bunker) return 'nobunker';
+  releaseGarrison(m, owner, t);
   return 'ok';
 }
 
