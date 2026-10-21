@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { RACE_IDS, RACES, type RaceId } from './races';
 import {
   buildTower,
+  emptyBunker,
   garrisonUnits,
   newMatch,
   step,
@@ -101,5 +102,23 @@ describe('garrisoning', () => {
       hurt = foe.hp < foe.maxHp;
     }
     expect(hurt || foe.hp <= 0).toBe(true);
+  });
+
+  it('lets a bunker be emptied: every soldier walks out onto the road, and only its owner may', () => {
+    const m = newMatch(['titan', 'legion']);
+    m.players[0].wood = m.players[0].stone = 1e6;
+    m.players[0].castle.level = 3;
+    const [cx, cy] = m.board.castles[0];
+    for (let dc = 4; dc < 12 && !m.towers.length; dc++)
+      buildTower(m, 0, 'bunker', Math.floor(cx) + dc, Math.floor(cy) + 4);
+    const bunker = m.towers.find((t) => t.def.id === 'bunker')!;
+    const thunder = RACES.titan.units.find((u) => u.id === 'thunderer')!;
+    bunker.garrison.push({ def: thunder, cooldown: 0 }, { def: thunder, cooldown: 0 });
+    expect(emptyBunker(m, 1, bunker.id)).toBe('unknown');
+    expect(bunker.garrison).toHaveLength(2);
+    expect(emptyBunker(m, 0, bunker.id)).toBe('ok');
+    expect(bunker.garrison).toHaveLength(0);
+    expect(m.units.filter((u) => u.owner === 0 && u.def.id === 'thunderer')).toHaveLength(2);
+    expect(bunker.hp).toBeGreaterThan(0); // the bunker itself stands
   });
 });
