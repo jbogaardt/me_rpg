@@ -21,7 +21,7 @@ the conventions (Vite, strict TypeScript, Pixi-free tested rules, Prettier, ESLi
 - **Sound**: `src/CLAUDE.md`.
 - **Buildings grow with upgrades** (`trim.ts`, cosmetic, drawn by `drawTrim` from `Match` state): castle size, pennants and a top-level ring; a smithy's pennant and size.
 - **Hurt and falling buildings** (`wreck.ts`, cosmetic): smoke, flames, then a razed building sinks with dust.
-- **Races** (`races.ts`): swarm/Goblins (swarms), titan/Dwarves (heavies), legion/Germanic (marines, firebats, tanks): 4-6 ground and 2-3 air units each.
+- **Races** (`races.ts`): swarm/Goblins, titan/Dwarves, legion/Germanic: 4-6 ground and 2-3 air units each.
 
 ## Online
 
