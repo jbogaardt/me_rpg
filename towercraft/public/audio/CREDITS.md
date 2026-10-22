@@ -26,3 +26,7 @@ the artists below. Creator declarations are provenance, not a guarantee of world
 "25 CC0 Bang SFX" packs. They match the rubberduck packs on OpenGameArt (https://opengameart.org/users/rubberduck), which is where the
 name above comes from, but it was not checked against the OpenGameArt pages (that site was not reachable when they were added).
 Check the licence and author on those pages and fix this table if it differs.
+
+## Unit voices
+
+- `voice/<race>-<unit>-<line>.wav`: the units' lines, made with ElevenLabs text-to-speech (the lines are in `src/voiceLines.ts`). Each race uses one ElevenLabs library voice (Goblins: Callum; Dwarves: Brian; Germanic: Harry). Generated speech is not CC0 or CC-BY: check ElevenLabs' terms for the plan the files were made on (free plan usage, attribution and commercial use) before relying on them beyond this public page, and say here if the terms need a credit line.

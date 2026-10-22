@@ -152,6 +152,7 @@ describe('wire', () => {
           { k: 'castle' },
           { k: 'upgrade', id: 'ground-damage' },
           { k: 'repair', tower: 4 },
+          { k: 'sell', tower: 6 },
         ],
       },
     ];

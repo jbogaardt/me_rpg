@@ -24,6 +24,7 @@ import {
   buyUpgrade,
   loadBunker,
   repairTower,
+  sellTower,
   setFocus,
   setLane,
   setOrder,
@@ -46,6 +47,7 @@ export type Command =
   | { k: 'castle' }
   | { k: 'upgrade'; id: string }
   | { k: 'repair'; tower: number }
+  | { k: 'sell'; tower: number }
   | { k: 'lane'; lane: number }
   | { k: 'route'; ids: number[]; lane: number };
 
@@ -76,6 +78,9 @@ export function apply(m: Match, owner: Owner, c: Command): void {
     case 'repair':
       repairTower(m, owner, c.tower);
       break;
+    case 'sell':
+      sellTower(m, owner, c.tower);
+      break;
     case 'lane':
       setLane(m, owner, c.lane);
       break;
@@ -95,7 +100,7 @@ const MAX_AHEAD = 400;
 
 // --- The wire ---
 
-export const NET_VERSION = 3;
+export const NET_VERSION = 4;
 
 export type Message =
   /** The joiner, once connected: who they play. */
@@ -150,6 +155,8 @@ export function parseCommand(v: unknown): Command | null {
       return isId(c.id) ? { k: 'upgrade', id: c.id } : null;
     case 'repair':
       return isInt(c.tower) ? { k: 'repair', tower: c.tower } : null;
+    case 'sell':
+      return isInt(c.tower) ? { k: 'sell', tower: c.tower } : null;
     case 'lane':
       return isInt(c.lane, 0, 63) ? { k: 'lane', lane: c.lane } : null;
     case 'route':

@@ -2,6 +2,12 @@
 
 Rules are in `sim/` (see `sim/CLAUDE.md`); this directory draws a `Match` and turns input into commands. Everything here is cosmetic: lockstep never sees it.
 
+## Colours (`recolor.ts`; layer: this game's own, cosmetic)
+
+- **Seat colours**: a duel paints each seat in its race's hue (`RACE_HUE`: Goblins green, Dwarves blue, Germanic red); with more seats the side's (`SIDE_HUE`). A further seat that shares a hue gets a shade (`shadeOf`), so two of one race still tell apart.
+- **Painted pictures**: Wyrmsun's buildings carry their player colour as purple. `recolor` moves those pixels (only purple ones: wood, stone and gold stay) to the seat's hue, keeping their shading. `main.ts` paints each picture once per colour (`paintedArt`, cached on a canvas; the dock and cards get a data URL from it).
+- A new race or side colour: a hue in `recolor.ts`. A picture with purple that should not change: give it a different hue, not a special case.
+
 ## Sound (`soundEvents.ts`, `soundMix.ts`, `audio.ts`; layer: this game's own, nothing in the protocol)
 
 Each page makes its own sounds from the same match, so nothing goes over the wire and a page with sound off or unavailable plays the same game.
@@ -10,4 +16,5 @@ Each page makes its own sounds from the same match, so nothing goes over the wir
 - **`soundMix.ts`** (Pixi-free) sets **loudness and pan by where the action is on screen** (`mixAt`: full near the middle of the view, quieter towards and past its edge, silent far off, leaning to the side it comes from). The player's own builds and upgrades are heard in full wherever they look (`OWN`); `loudest` keeps a crowd from becoming a wall of noise.
 - **`audio.ts`** plays the Ogg files in `public/audio/sfx/<kind>-<n>.ogg` with Web Audio (credits and licences in `public/audio/CREDITS.md`; only CC0 or CC-BY, listed there). It starts on the first click or key press (browsers require it), loads lazily, caps each kind per tick and 24 voices, varies the pitch a little, and **M** or the speaker button mutes (`localStorage` `towercraft:muted`).
 - **`music.ts`** loops one background track through the same output (`audioOutput`), so **M** mutes it too. It starts when a match begins (`begin`) and fades out when it ends (`showEnd`); one track serves every map, and it waits for the first click if the match began before audio was unlocked. Files in `public/audio/music/` (credits in `public/audio/CREDITS.md`). Every page plays its own copy (host and guest alike), since nothing goes over the wire.
+- **`voice.ts`** says a unit's line when you select it (`pick`) and when you send it at a foe (`go`): `voiceLines.ts` has both lines of every unit, by race, and the files are `public/audio/voice/<race>-<unit>-<line>.wav`. The WAVs are committed (ElevenLabs text-to-speech, one library voice per race; credits in `public/audio/CREDITS.md`). A missing file is silent, and a line waits 1.2 s after the last. A new unit needs its two lines (`voiceLines.test.ts` checks) and its two WAV files.
 - A new sound: add its kind to `SoundKind`, a `SOUNDS` entry and the files, and a cue in `SoundWatch.collect` (with a test). A new track: a file pair in `public/audio/music/` and a credit, then pick it in `music.ts`.

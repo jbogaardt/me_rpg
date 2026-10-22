@@ -727,6 +727,26 @@ export function repairTower(m: Match, owner: Owner, towerId: number): Result {
   return 'ok';
 }
 
+/** Selling a building gives back this share of its price (rounded down): the way to free up space. */
+export const SELL_SHARE = 0.5;
+
+/** What selling `t` gives back. */
+export const sellValue = (t: Tower): Cost =>
+  price(Math.floor(t.def.cost.wood * SELL_SHARE), Math.floor(t.def.cost.stone * SELL_SHARE));
+
+/**
+ * Sell one of `owner`'s buildings (instant): half its price back, and it is gone, with whatever it had loaded. Its upgrades stay
+ * bought; a unit that needed it is locked again, as after a raze.
+ */
+export function sellTower(m: Match, owner: Owner, towerId: number): Result {
+  if (!playing(m, owner)) return 'over';
+  const t = m.towers.find((x) => x.id === towerId && x.owner === owner && x.hp > 0);
+  if (!t) return 'unknown';
+  earn(m.players[owner]!, sellValue(t));
+  m.towers = m.towers.filter((x) => x !== t);
+  return 'ok';
+}
+
 // --- The step --------------------------------------------------------------------------------------------------------
 
 /** A kill pays the killer this share (1/n) of the unit's price: the lever that makes a winning fight snowball. */

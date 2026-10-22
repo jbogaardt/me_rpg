@@ -4,7 +4,8 @@
 //   swarm  (Goblins) fast, weak, many: cheap units in groups, archers, suicide boomers, cloaked thieves, bats; poison and a buffing temple.
 //   titan  (Dwarves) slow, strong, costly: few big units, gun and flame carriers, gryphons; long-range towers, a tough bunker, a healing shrine.
 //   legion (Germanic) the middle road: archers that shoot the air, sturdy troops, sappers and catapults, falcons and griffins.
-// Everything is bought with two currencies, `wood` and `stone`, and there is no wait: a purchase is instant.
+// Everything is bought with two currencies, `wood` and `stone`, and there is no wait: a purchase is instant. Goblin and Germanic
+// prices ask for more wood than stone; Dwarves keep theirs stone-heavy (their mirror games stall without it, see `towercraftBalance`).
 // A building is one of: an attacker (hits ground, air or both; maybe area damage, poison), a buffer/healer (an aura round it), a
 // detector (reveals cloaked units), a bunker (loaded with ranged units that shoot from it), a producer (`trains`: the units that are
 // unlocked while it stands), an economy building (`econ`: wood or stone every pay day) or a smithy (it hosts upgrades: `UpgradeDef.needs`).
@@ -114,6 +115,8 @@ export interface TowerDef {
   reach: number;
   /** How far (cells) it sees, for as long as it stands (not where more may be built): at least `range`, `detect` and the aura radius. */
   sight: number;
+  /** A re-skin of a picture another building shares: drawn tinted (the picture, not the rules). */
+  look?: { tint: number };
 }
 
 /** A line of upgrades bought at a building: each level makes one class of unit (all ground or all air) stronger for good. */
@@ -274,9 +277,9 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         cost: price(22, 13),
         count: 2,
         hp: 25,
-        speed: 4.6,
-        damage: 60,
-        splash: 1.6,
+        speed: 3.9,
+        damage: 30,
+        splash: 1.2,
         siege: 2.5,
         suicide: true,
         cooldown: 1,
@@ -321,7 +324,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         kind: 'glider',
         tier: 2,
         needs: 'aerie',
-        cost: price(27, 31),
+        cost: price(31, 27),
         hp: 90,
         speed: 6.2,
         damage: 12,
@@ -339,9 +342,9 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         cost: price(22, 22),
         count: 2,
         hp: 30,
-        speed: 6.5,
-        damage: 45,
-        splash: 1.8,
+        speed: 5.2,
+        damage: 30,
+        splash: 1.3,
         siege: 3,
         suicide: true,
         cooldown: 1,
@@ -355,7 +358,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         kind: 'bigbat',
         tier: 3,
         needs: 'roost',
-        cost: price(54, 72),
+        cost: price(72, 54),
         hp: 320,
         speed: 5.2,
         damage: 28,
@@ -485,7 +488,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         sight: 6,
         art: 'goblin_cannon_tower',
         tier: 2,
-        cost: price(25, 29),
+        cost: price(29, 25),
         hp: 180,
         range: 5,
         damage: 16,
@@ -511,7 +514,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         sight: 5,
         art: 'goblin_temple',
         tier: 2,
-        cost: price(27, 31),
+        cost: price(31, 27),
         hp: 220,
         aura: { kind: 'power', radius: 4, amount: 0.3 },
         reach: 2,
@@ -533,7 +536,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         sight: 7.5,
         art: 'goblin_catapult_tower',
         tier: 3,
-        cost: price(54, 65),
+        cost: price(65, 54),
         hp: 260,
         range: 6.5,
         damage: 36,
@@ -569,7 +572,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         stat: 'damage',
         perLevel: 0.15,
         needs: 'aerie',
-        levels: levels(price(30, 40)),
+        levels: levels(price(40, 30)),
       },
       {
         id: 'ahp',
@@ -578,7 +581,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         stat: 'hp',
         perLevel: 0.15,
         needs: 'aerie',
-        levels: levels(price(30, 40)),
+        levels: levels(price(40, 30)),
       },
     ],
   },
@@ -997,8 +1000,8 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         cost: price(18, 14),
         hp: 40,
         speed: 3.6,
-        damage: 70,
-        splash: 1.6,
+        damage: 50,
+        splash: 1.2,
         siege: 2.5,
         suicide: true,
         cooldown: 1,
@@ -1025,7 +1028,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         kind: 'engine',
         tier: 3,
         needs: 'workshop',
-        cost: price(53, 62),
+        cost: price(62, 53),
         hp: 160,
         speed: 1.6,
         damage: 44,
@@ -1042,7 +1045,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         kind: 'bat',
         tier: 2,
         needs: 'falconry',
-        cost: price(22, 27),
+        cost: price(27, 22),
         hp: 70,
         speed: 7,
         damage: 8,
@@ -1058,7 +1061,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         kind: 'gryphon',
         tier: 3,
         needs: 'griffinroost',
-        cost: price(53, 80),
+        cost: price(80, 53),
         hp: 330,
         speed: 5.5,
         damage: 24,
@@ -1195,10 +1198,11 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
       tower({
         id: 'skybow',
         name: 'Skybow',
+        look: { tint: 0x9fc0ff },
         sight: 6.5,
         art: 'teuton_watch_tower',
         tier: 2,
-        cost: price(32, 40),
+        cost: price(40, 32),
         hp: 260,
         range: 5,
         damage: 20,
@@ -1250,7 +1254,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         sight: 5,
         art: 'teuton_church',
         tier: 3,
-        cost: price(62, 71),
+        cost: price(71, 62),
         hp: 400,
         aura: { kind: 'heal', radius: 4, amount: 5 },
         reach: 2,
@@ -1282,7 +1286,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         stat: 'damage',
         perLevel: 0.15,
         needs: 'falconry',
-        levels: levels(price(35, 50)),
+        levels: levels(price(50, 35)),
       },
       {
         id: 'ahp',
@@ -1291,7 +1295,7 @@ export const DRAWN_RACES: Record<RaceId, Race> = {
         stat: 'hp',
         perLevel: 0.15,
         needs: 'falconry',
-        levels: levels(price(35, 50)),
+        levels: levels(price(50, 35)),
       },
     ],
   },
@@ -1305,8 +1309,8 @@ const CASTLE_BODY = 1.2; // sim.ts's CASTLE_RADIUS, which a castle's shot reache
 
 /** How slow the game runs, against the tables as written: income (the castle's and every mill's and quarry's) is this fraction of it... */
 const PACE = 0.4;
-/** ...and the castle upgrades cost this many times as much (level 2, level 3): with the buildings it asks for (`CASTLE_NEEDS`), a first upgrade before about 5 minutes is a speed run. */
-const UPGRADE_PRICE = [8, 2.5];
+/** ...and the castle upgrades cost this many times as much (level 2, level 3; the third must cost more than the second): with the buildings it asks for (`CASTLE_NEEDS`), a first upgrade before about 5 minutes is a speed run. */
+const UPGRADE_PRICE = [8, 4.2];
 const CASTLE_HP = 1;
 const money = (c: Cost, k: number): Cost => ({ wood: Math.round(c.wood * k), stone: Math.round(c.stone * k) });
 /** The lab's balance lever per race (all income, the castle's and the mills' and quarries'), found with `npm run towercraft:lab` at this pace. */

@@ -134,6 +134,10 @@
       #card .slots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ink-soft); box-sizing: border-box; background: rgba(51, 35, 15, 0.12); }
       #card .slots i.on { background: #c98f26; border-color: var(--ink); }
       #card .loads { display: flex; flex-direction: column; gap: 6px; }
+      #card .sell { display: block; width: 100%; margin-top: 10px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font: 700 14px var(--title); color: var(--ink);
+        background: rgba(138, 90, 34, 0.12); border: 1px solid #8a5a22; }
+      #card .sell:hover { background: rgba(242, 211, 138, 0.45); }
+      #card .sell.armed { color: #b82024; border-color: #b82024; }
       #card .load { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; text-align: left; border-radius: 6px; cursor: pointer;
         background: rgba(51, 35, 15, 0.14); border: 1px solid var(--ink-soft); color: var(--ink); font-family: var(--body); min-height: 44px; }
       #card .load:hover:not(:disabled) { background: rgba(242, 211, 138, 0.45); }
@@ -144,10 +148,6 @@
       #card .load em i.w, #card li i.w { color: #8a5a22; } #card .load em i.s, #card li i.s { color: #4f5a66; }
       #card li b { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
       #card .note i.w { color: #8a5a22; } #card .note i.s { color: #4f5a66; }
-      #card-buy { margin: 0 0 8px; display: grid; gap: 4px; }
-      #card-buy[hidden] { display: none; }
-      #card-buy .line { display: flex; align-items: center; justify-content: space-between; font: 700 14px var(--title); color: var(--ink); }
-      #card-buy input[type=range] { width: 100%; height: 28px; margin: 0; accent-color: #8a5a22; }
       #card .targets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin: 0 0 6px; }
       #card .targets button { padding: 6px 4px; border-radius: 6px; border: 1px solid var(--ink-soft); background: rgba(51, 35, 15, 0.14); color: var(--ink);
         font: 700 12px var(--title); min-height: 44px; display: grid; place-items: center; gap: 1px; }
@@ -165,7 +165,7 @@
       #card-act[hidden] { display: none; }
       #card-act { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 12px; font-size: 20px; }
       #card-act:not([hidden]) { display: flex; }
-      #card-act .ic { width: 24px; height: 24px; } #card-act .times { font: 700 18px var(--title); color: var(--gold); }
+      #card-act .ic { width: 24px; height: 24px; }
       #card-act small { flex-basis: 100%; text-align: center; }
       #card-act small { display: block; font: 600 11px var(--body); color: #f0b8ba; margin-top: 1px; text-shadow: 0 1px 2px #000; }
       #card-act i.w, #card-act i.s { font-style: normal; }
@@ -173,6 +173,9 @@
       #card-act:hover:not(:disabled) { filter: brightness(1.25) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)); }
       #card-act:disabled { filter: grayscale(0.8) brightness(0.65); }
       #card.placing #card-act { color: #f09a9d; }
+      #tip { position: fixed; z-index: 4; transform: translate(-50%, -100%); padding: 4px 9px; border-radius: 5px; pointer-events: none; white-space: nowrap;
+        font: 600 14px var(--title); color: var(--ink); background: rgba(22, 15, 9, 0.9); border: 1px solid var(--gold-dim); }
+      #tip[hidden] { display: none; }
       #ghost { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + 10px); z-index: 3; display: flex; gap: 8px; }
       #ghost[hidden] { display: none; }
       #ghost button { padding: 10px 18px; }
@@ -247,6 +250,7 @@
     <div id="hint"></div>
     <div id="wait" hidden>Waiting for your rival…</div>
     <div id="marquee" hidden></div>
+    <div id="tip" hidden></div>
     <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-all" title="Pick all your units (Ctrl+A)">All</button><button class="wbtn" id="cam-sound" title="Sound (M)">🔊</button></div>
     <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no">Cancel</button></div>
     <div id="dock" class="panel thin wood">
@@ -261,10 +265,6 @@
     <aside id="card" class="panel thin paper" hidden>
       <button class="wbtn" id="card-x" aria-label="Close">×</button>
       <div id="card-body"></div>
-      <div id="card-buy" hidden>
-        <div class="line"><span id="buy-n-label"></span><span id="buy-n-cost"></span></div>
-        <input type="range" id="buy-n" min="1" max="1" value="1" step="1" aria-label="How many to train" />
-      </div>
       <button id="card-act"></button>
     </aside>
     <div class="overlay" id="menu">

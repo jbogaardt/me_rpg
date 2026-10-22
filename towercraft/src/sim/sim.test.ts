@@ -11,6 +11,7 @@ import {
   buildTower,
   buyUpgrade,
   canBuild,
+  sellTower,
   incomeOf,
   loadBunker,
   maxPurchases,
@@ -354,13 +355,13 @@ describe('attack styles', () => {
     const m = quiet(newMatch(['swarm', 'legion']));
     const tower = put(m, 1, 'legion', 'watch', 8, 5);
     tower.cooldown = 1e9;
-    const neighbour = put(m, 1, 'legion', 'lookout', 9, 5);
     const foes = [
       dummy(m, 1, 'legion', 'warrior', ROAD_LENGTH - 5.5),
       dummy(m, 1, 'legion', 'warrior', ROAD_LENGTH - 6.2),
     ];
     const [wood, stone] = [m.players[1].wood, m.players[1].stone];
-    const boomer = spawn(m, 0, 'swarm', 'boomer', 5.5);
+    const neighbour = put(m, 1, 'legion', 'lookout', 9, 5);
+    const boomer = spawn(m, 0, 'swarm', 'boomer', sNear(0, [8.5, 5.5]));
     run(m, 4);
     expect(m.units.includes(boomer)).toBe(false); // it is gone
     expect(tower.hp).toBeLessThan(towerDef('legion', 'watch').hp - unitDef('swarm', 'boomer').damage); // the siege bonus
@@ -828,6 +829,44 @@ describe('sending a unit after one target', () => {
     const own = put(m, 0, 'legion', 'watch', 9, 4);
     expect(setFocus(m, 0, [mine.id], { kind: 'tower', id: own.id })).toBe('unknown');
     expect(lookout.owner).toBe(1);
+  });
+});
+
+describe('selling', () => {
+  it("gives back half a building's price, wood and stone, and the building is gone", () => {
+    const m = quiet(newMatch(['legion', 'swarm']));
+    const watch = put(m, 0, 'legion', 'watch', 8, 4);
+    const [wood, stone] = [m.players[0].wood, m.players[0].stone];
+    expect(sellTower(m, 0, watch.id)).toBe('ok');
+    expect(m.players[0].wood - wood).toBe(Math.floor(towerDef('legion', 'watch').cost.wood / 2));
+    expect(m.players[0].stone - stone).toBe(Math.floor(towerDef('legion', 'watch').cost.stone / 2));
+    expect(m.towers.includes(watch)).toBe(false);
+  });
+
+  it('refuses a building that is not yours, and leaves the money alone', () => {
+    const m = quiet(newMatch(['legion', 'swarm']));
+    const theirs = put(m, 1, 'swarm', 'nest', 8, 4);
+    const wood = m.players[0].wood;
+    expect(sellTower(m, 0, theirs.id)).toBe('unknown');
+    expect(m.players[0].wood).toBe(wood);
+    expect(m.towers.includes(theirs)).toBe(true);
+  });
+});
+
+describe('the prices', () => {
+  it.each(RACE_IDS)('%s: a third castle upgrade costs more than the second', (id) => {
+    const [two, three] = RACES[id].castle.upgrades;
+    expect(three!.wood).toBeGreaterThan(two!.wood);
+    expect(three!.stone).toBeGreaterThan(two!.stone);
+  });
+
+  // Dwarves are the stone race (their mirror games stall when their prices are wood-first): the others ask for more wood.
+  it.each(RACE_IDS.filter((id) => id !== 'titan'))('%s asks for more wood than stone everywhere', (id) => {
+    const race = RACES[id];
+    const costs = [...race.units, ...race.towers, ...race.upgrades.flatMap((u) => u.levels)].map((x) =>
+      'cost' in x ? x.cost : x,
+    );
+    for (const c of costs) expect(c.wood).toBeGreaterThanOrEqual(c.stone);
   });
 });
 

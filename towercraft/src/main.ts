@@ -9,10 +9,12 @@ import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Text
 import { icon } from './icons';
 import { isMuted, playCues, setMuted, unlockAudio } from './audio';
 import { playMusic, stopMusic } from './music';
+import { say } from './voice';
 import { SoundWatch } from './soundEvents';
 import { drawnPos } from './stagger';
 import type { Ai } from './sim/ai';
 import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
+import { hslToHex, recolor, RACE_HUE, SIDE_HUE, shadeOf, type Hsl } from './recolor';
 import { Wreck } from './wreck';
 import { normalizeCode } from '../../src/net/roomCode';
 import { Duel, type DuelPhase } from './net/duel';
@@ -51,6 +53,7 @@ import {
   canAfford,
   repairCost,
   repairable,
+  sellValue,
   canBuild,
   canTarget,
   allied,
@@ -62,7 +65,6 @@ import {
   openLanes,
   sightsFor,
   teamOf,
-  teamSeats,
   incomeOf,
   isCastleSeen,
   isSeen,
@@ -286,12 +288,53 @@ void (async () => {
   let match: Match = newMatch(['legion', 'swarm'], BOARDS[chosenMap]);
   /** The castle positions of the map being played. */
   const castleAt = (o: Owner) => match.board.castles[o]!;
-  /** The colour under a seat's castle, towers and units: its race's in a duel; with more seats the side's (blue for yours, red for the foe's, a shade for each seat), so allies and foes of one race still tell apart. */
-  const SIDE_COLORS = { mine: [0x4fa3ff, 0x6fe0c0], foe: [0xe0505a, 0xe9a23f] } as const;
-  const colorOf = (o: Owner): number => {
-    if (match.board.seats <= 2) return RACES[match.players[o]!.race].color;
-    const side = allied(match, o, YOU) ? SIDE_COLORS.mine : SIDE_COLORS.foe;
-    return side[teamSeats(match, o).indexOf(o)] ?? side[0];
+  /** A seat's colour (`recolor.ts`): its race's hue in a duel, its side's with more seats, and a shade of that hue for each further seat that shares it, so two of one race still tell apart. It paints the purple of its castle, towers and buildings, and rings its units. */
+  const hueOf = (o: Owner) =>
+    match.board.seats <= 2
+      ? (RACE_HUE[match.players[o]!.race] ?? 0)
+      : allied(match, o, YOU)
+        ? SIDE_HUE.mine
+        : SIDE_HUE.foe;
+  const shadeOfSeat = (o: Owner): Hsl => {
+    const hue = hueOf(o);
+    const sharing = match.players.map((_, i) => i).filter((i) => hueOf(i) === hue);
+    return shadeOf(hue, sharing.indexOf(o));
+  };
+  const colorOf = (o: Owner): number => hslToHex(shadeOfSeat(o));
+  /** A building picture painted in a seat's colour (`recolor`): made once per picture and colour, from the sheet already loaded. */
+  const paintedCanvas = new Map<string, HTMLCanvasElement>();
+  /** `tint` (a building's `look`) multiplies the picture: the same sheet drawn another way (a Skybow is a watch tower in blue). */
+  const paintedArt = (base: Texture, o: Owner, tint = 0xffffff): HTMLCanvasElement => {
+    const key = `${base.source.uid}|${colorOf(o)}|${tint}`;
+    let canvas = paintedCanvas.get(key);
+    if (!canvas) {
+      const { x, y, width: w, height: h } = base.frame;
+      canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(base.source.resource as CanvasImageSource, x, y, w, h, 0, 0, w, h);
+      const px = ctx.getImageData(0, 0, w, h);
+      recolor(px.data, shadeOfSeat(o));
+      if (tint !== 0xffffff) {
+        const [r, g, b] = [(tint >> 16) / 255, ((tint >> 8) & 255) / 255, (tint & 255) / 255];
+        for (let i = 0; i < px.data.length; i += 4) {
+          px.data[i] = px.data[i]! * r;
+          px.data[i + 1] = px.data[i + 1]! * g;
+          px.data[i + 2] = px.data[i + 2]! * b;
+        }
+      }
+      ctx.putImageData(px, 0, 0);
+      paintedCanvas.set(key, canvas);
+    }
+    return canvas;
+  };
+  const paintedTextures = new WeakMap<HTMLCanvasElement, Texture>();
+  const paintedTexture = (base: Texture, o: Owner, tint?: number): Texture => {
+    const canvas = paintedArt(base, o, tint);
+    let tex = paintedTextures.get(canvas);
+    if (!tex) paintedTextures.set(canvas, (tex = Texture.from(canvas)));
+    return tex;
   };
   const playingNow = () => !match.players[YOU]!.out && match.winner < 0;
   /** Where a seat's camp lies on the field, in words (north-west, south, middle). */
@@ -375,7 +418,7 @@ void (async () => {
       const c = new Container();
       const color = colorOf(o);
       c.addChild(new Graphics().ellipse(0, 8, 56 * CASTLE_SCALE, 20 * CASTLE_SCALE).fill({ color, alpha: 0.45 }));
-      const sprite = new Sprite(castleTextures.get(RACES[match.players[o]!.race].castle.art));
+      const sprite = new Sprite(paintedTexture(castleTextures.get(RACES[match.players[o]!.race].castle.art)!, o));
       sprite.anchor.set(0.5, 0.78);
       sprite.scale.set(castleBase(o));
       c.addChild(sprite);
@@ -433,10 +476,11 @@ void (async () => {
     return col >= 0 && row >= 0 && col < match.board.cols && row < match.board.rows ? [col, row] : undefined;
   };
 
-  // Input, the same ideas for a finger and a mouse. Pan: drag with a finger, or the right or middle button, or the arrow keys / WASD.
-  // Zoom: pinch or wheel. Select: a mouse drag with the left button draws a box; on a touch screen, press and hold a moment, then
-  // drag. Tap a unit to pick it (double-tap: every one of its kind in view), tap again with Shift or Ctrl to add or drop it. Then
-  // tap (or right-click) a rival's tower or castle to send the group at it; Esc, or a tap on bare ground, lets go.
+  // Input, the same ideas for a finger and a mouse. Pan: drag with a finger, or the middle button, or the arrow keys / WASD. The
+  // right button does nothing (the browser's menu owns it). Zoom: pinch or wheel. Select: a mouse drag with the left button draws a
+  // box; on a touch screen, press and hold a moment, then drag. Tap a unit to pick it (double-tap: every one of its kind in view),
+  // tap again with Shift or Ctrl to add or drop it. Then tap a rival's tower or castle to send the group at it; Esc, or a tap on
+  // bare ground, lets go.
   const pointers = new Map<number, { x: number; y: number }>();
   type Gesture = 'wait' | 'pan' | 'box' | 'pinch';
   let gesture: Gesture = 'wait';
@@ -455,6 +499,7 @@ void (async () => {
   };
   app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   app.canvas.addEventListener('pointerdown', (e) => {
+    if (e.button === 2) return; // the right button is the browser's
     try {
       app.canvas.setPointerCapture(e.pointerId);
     } catch {
@@ -521,8 +566,7 @@ void (async () => {
     marquee.hidden = true;
     if (wasOne && e.type === 'pointerup') {
       if (gesture === 'box') finishBox();
-      else if (gesture === 'wait')
-        tap(e.clientX, e.clientY, e.pointerType !== 'mouse', { add: pressAdd, right: pressButton === 2 });
+      else if (gesture === 'wait') tap(e.clientX, e.clientY, e.pointerType !== 'mouse', { add: pressAdd });
     }
     if (pointers.size === 0) gesture = 'wait';
     pinch = 0;
@@ -627,6 +671,11 @@ void (async () => {
 
   /** The units you have picked that are still alive. */
   const picked = () => match.units.filter((u) => selection.has(u.id) && u.owner === YOU && u.hp > 0 && !u.spent);
+  /** One of the picked units says a line (the first of the group). */
+  const speak = (line: 'pick' | 'go') => {
+    const first = picked()[0];
+    if (first) say(match, first, line);
+  };
   const select = (units: Unit[], add = false) => {
     if (add && units.length === 1 && selection.has(units[0]!.id))
       selection.delete(units[0]!.id); // a second tap drops it
@@ -638,6 +687,7 @@ void (async () => {
       selected = undefined;
       setGhost(undefined);
       showCard({ kind: 'sel' });
+      speak('pick');
     } else if (cardOf?.kind === 'sel') closeCard();
   };
   const selectAll = () => select(match.units.filter((u) => u.owner === YOU && u.hp > 0 && !u.spent));
@@ -654,6 +704,7 @@ void (async () => {
     if (tower) {
       const res = units.some((u) => canTarget(match, u, tower)) ? 'ok' : 'unreachable';
       if (res === 'ok') cmd({ k: 'focus', ids, at: { kind: 'tower', id: tower.id } });
+      if (res === 'ok') speak('go');
       note(
         res === 'ok' ? `${units.length} → ${tower.def.name}` : 'Out of reach: they cannot step that far off the road.',
       );
@@ -663,6 +714,7 @@ void (async () => {
     const seat = foeCastleAt(wx, wy);
     if (seat !== undefined) {
       cmd({ k: 'focus', ids, at: { kind: 'castle', owner: seat } });
+      speak('go');
       note(
         match.board.seats > 2
           ? `${units.length} → their castle (where the roads meet)`
@@ -677,8 +729,7 @@ void (async () => {
   function finishBox() {
     const [x0, x1] = [Math.min(pressStart.x, boxTo.x), Math.max(pressStart.x, boxTo.x)];
     const [y0, y1] = [Math.min(pressStart.y, boxTo.y), Math.max(pressStart.y, boxTo.y)];
-    if (x1 - x0 < TAP_SLOP && y1 - y0 < TAP_SLOP)
-      return tap(pressStart.x, pressStart.y, true, { add: pressAdd, right: false });
+    if (x1 - x0 < TAP_SLOP && y1 - y0 < TAP_SLOP) return tap(pressStart.x, pressStart.y, true, { add: pressAdd });
     const inside = match.units.filter((u) => {
       if (u.owner !== YOU || u.hp <= 0 || u.spent) return false;
       const [x, y] = unitMid(u);
@@ -689,18 +740,10 @@ void (async () => {
   }
   let lastUnitTap = { kind: '', at: 0 };
 
-  function tap(sx: number, sy: number, touch: boolean, how = { add: false, right: false }) {
+  function tap(sx: number, sy: number, touch: boolean, how = { add: false }) {
     if (!started) return;
     const [wx, wy] = [(sx - world.x) / world.scale.x / CELL, (sy - world.y) / world.scale.y / CELL];
     if (!selected) {
-      // A right-click: send the group at what is there, or back to the general orders.
-      if (how.right) {
-        if (selection.size && !command(wx, wy)) {
-          cmd({ k: 'focus', ids: [...selection] });
-          note('Back to the general orders');
-        }
-        return;
-      }
       if (selection.size && command(wx, wy)) return;
       // One of your units: pick it (a second tap in a moment: every one of its kind in view).
       const mine = myUnitAt(wx, wy);
@@ -1014,7 +1057,7 @@ void (async () => {
     for (const t of match.towers) {
       if (t.owner !== YOU || !t.def.econ) continue;
       const wood = t.def.econ.wood ?? 0;
-      const amount = wood || (t.def.econ.stone ?? 0);
+      const amount = Math.round(wood || (t.def.econ.stone ?? 0));
       if (!amount) continue;
       const text = new Text({
         text: `+${amount}`,
@@ -1175,7 +1218,7 @@ void (async () => {
     }
     ghostSprite.visible = !!aim && canBuild(match, YOU, selected!, aim[0], aim[1]) === 'ok';
     if (ghostSprite.visible && aim && selected) {
-      const tex = towerTextures.get(selected.art)!;
+      const tex = paintedTexture(towerTextures.get(selected.art)!, YOU, selected.look?.tint);
       ghostSprite.texture = tex;
       ghostSprite.scale.set(TOWER_PX / tex.width);
       ghostSprite.position.set((aim[0] + 0.5) * CELL, (aim[1] + 0.5) * CELL + TOWER_FOOT);
@@ -1237,7 +1280,7 @@ void (async () => {
         const c = new Container();
         const color = colorOf(t.owner);
         c.addChild(new Graphics().ellipse(0, 4, 19 * SIZE, 9 * SIZE).fill({ color, alpha: 0.55 })); // the owner's colour under the tower
-        const tex = towerTextures.get(t.def.art)!;
+        const tex = paintedTexture(towerTextures.get(t.def.art)!, t.owner, t.def.look?.tint);
         const sprite = new Sprite(tex);
         sprite.anchor.set(0.5, 0.78);
         sprite.scale.set(TOWER_PX / tex.width); // a tower is about two and a half cells wide, whatever its sheet
@@ -1528,7 +1571,7 @@ void (async () => {
 
   // --- The page: top bar, the dock of thumbnails, the card, the title screen -----------------------------------------------
   /** A price as coloured numbers (wood brown, stone grey); `words` spells them out, for the cards. */
-  const shown = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1)); // an income may carry a tenth
+  const shown = (n: number) => String(Math.round(n)); // whole numbers only: an income is a fraction of a coin per pay day
   const money = (c: Cost) =>
     [
       c.wood > 0 && `<i class="w" title="wood">${shown(c.wood)}</i>`,
@@ -1556,8 +1599,18 @@ void (async () => {
     if (lastRes.s !== st) $('stone').textContent = String((lastRes.s = st));
   }
 
-  const towerThumb = (art: string, px: number) =>
-    `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(art/${art}.png);background-size:${px}px auto"></i>`;
+  /** A building's picture for the page (its owner's colour, from the sheet once loaded). */
+  const thumbUrls = new WeakMap<HTMLCanvasElement, string>();
+  const towerThumb = (art: string, px: number, o: Owner = YOU, tint?: number) => {
+    const base = towerTextures.get(art) ?? castleTextures.get(art);
+    let url = `art/${art}.png`;
+    if (base) {
+      const canvas = paintedArt(base, o, tint);
+      if (!thumbUrls.has(canvas)) thumbUrls.set(canvas, canvas.toDataURL());
+      url = thumbUrls.get(canvas)!;
+    }
+    return `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(${url});background-size:${px}px auto"></i>`;
+  };
   /** A unit's picture where it has no portrait of its own: its front-facing standing frame, cropped to the figure and scaled up. */
   const portraits = new Map<string, string>();
   const portrait = (d: UnitDef) => {
@@ -1681,7 +1734,7 @@ void (async () => {
       .map((u) => `<span title="${u.name}">${unitThumb(u, 34)}</span>`)
       .join('');
     return (
-      `<header><div class="pic">${towerThumb(d.art, 50)}</div><div><h3>${d.name}</h3>` +
+      `<header><div class="pic">${towerThumb(d.art, 50, YOU, d.look?.tint)}</div><div><h3>${d.name}</h3>` +
       `<div class="sub">${d.limit ? `${built} of ${d.limit} built` : ''}${d.needs ? ` ${icon('unlock', 'Needs')} ${towerName(d.needs)}` : ''}</div></div></header>` +
       badges(
         d.damage > 0 && (d.hits !== 'air' ? (['ground', 'Hits the ground'] as const) : false),
@@ -1721,18 +1774,36 @@ void (async () => {
   const laneButtons: [HTMLButtonElement, number][] = [];
 
   /** One thumbnail in the dock: a wooden square with the picture, its price under it and a ribbon over it if it is locked. */
+  /** The hover caption of a dock thumbnail (its name, and why it cannot be bought now): a mouse hovering shows it above the picture. */
+  const tip = $('tip');
+  let hovered: HTMLElement | undefined;
+  const showTip = (b: HTMLElement) => {
+    const r = b.getBoundingClientRect();
+    hovered = b;
+    tip.textContent = b.dataset.tip ?? '';
+    tip.style.left = `${r.left + r.width / 2}px`;
+    tip.style.top = `${r.top - 4}px`;
+    tip.hidden = !tip.textContent;
+  };
+  const hideTip = (b: HTMLElement) => {
+    if (hovered === b) hovered = undefined;
+    tip.hidden = true;
+  };
   const thumb = (art: string, cost: string, title: string, onclick: () => void) => {
     const b = document.createElement('button');
     b.className = 'tb wbtn';
-    b.title = title;
+    b.dataset.tip = title;
     b.innerHTML = `${art}<em>${cost}</em><span class="lv"></span>`;
     b.onclick = onclick;
+    b.onpointerenter = (e) => e.pointerType === 'mouse' && showTip(b);
+    b.onpointerleave = () => hideTip(b);
     return b;
   };
   const setChip = (b: HTMLElement, text: string, title: string) => {
     const chip = b.querySelector('.lv')!;
     if (chip.textContent !== text) chip.textContent = text;
-    b.title = title;
+    b.dataset.tip = title;
+    if (hovered === b) tip.textContent = title;
   };
 
   // The card: what a thumbnail is (and, for the castle, its health, income and the next upgrade), with the purchase button.
@@ -1774,8 +1845,6 @@ void (async () => {
   }
   const act = $<HTMLButtonElement>('card-act');
   let cardBody = '';
-  /** How many purchases the slider is set to. */
-  let buyN = 1;
   const sameCard = (a: CardOf, b: CardOf) =>
     a.kind === b.kind &&
     (a.kind === 'castle' ||
@@ -1784,9 +1853,6 @@ void (async () => {
     ((a.kind !== 'bunker' && a.kind !== 'built' && a.kind !== 'foe') || a.id === (b as { id: number }).id);
   function showCard(c: CardOf, toggle = false) {
     if (toggle && cardOf && sameCard(cardOf, c)) return closeCard();
-    if (!cardOf || !sameCard(cardOf, c)) {
-      buyN = 1;
-    }
     if (!cardOf || !sameCard(cardOf, c)) disarm();
     cardOf = c;
     if (selected && !(c.kind === 'tower' && c.def === selected)) {
@@ -1832,16 +1898,30 @@ void (async () => {
       return;
     }
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-load]');
-    if (!b || !cardOf || cardOf.kind !== 'bunker' || b.disabled) return;
-    cmd({ k: 'bunker', tower: cardOf.id, unit: b.dataset.load! });
-    renderCard();
+    if (b) {
+      if (!cardOf || cardOf.kind !== 'bunker' || b.disabled) return;
+      cmd({ k: 'bunker', tower: cardOf.id, unit: b.dataset.load! });
+      renderCard();
+      refresh();
+      return;
+    }
+    // Selling a building: the first tap arms it (the button says so), a second within a few seconds sells it.
+    const sell = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-sell]');
+    if (!sell || !cardOf || (cardOf.kind !== 'built' && cardOf.kind !== 'bunker')) return;
+    const id = cardOf.id;
+    if (!confirmed(`sell:${id}`)) return renderCard();
+    cmd({ k: 'sell', tower: id });
+    closeCard();
     refresh();
   });
-
-  $('buy-n').addEventListener('input', () => {
-    buyN = Number($<HTMLInputElement>('buy-n').value);
-    renderCard();
-  });
+  /** A building's sell button: half its price back, after a second tap. */
+  const sellButton = (t: Tower) => {
+    const armed = isArmed(`sell:${t.id}`);
+    return (
+      `<button class="sell${armed ? ' armed' : ''}" data-sell="${t.id}" title="Sell it: half its price back, and it is gone">` +
+      `${armed ? 'Tap again to sell' : `Sell for ${money(sellValue(t))}`}</button>`
+    );
+  };
 
   /** Why a unit cannot be bought now ('' when it can). */
   const unitReason = (d: UnitDef) => {
@@ -1943,8 +2023,8 @@ void (async () => {
     const t = match.towers.find((x) => x.id === id && x.hp > 0);
     if (!t || (!mine && !isSeen(match, YOU, t))) return closeCard(); // it fell, or slipped out of sight
     const body = mine
-      ? towerCard(t.def, true)
-      : `<header><div class="pic">${towerThumb(t.def.art, 50)}</div><div><h3>${t.def.name}</h3></div></header>` +
+      ? towerCard(t.def, true) + sellButton(t)
+      : `<header><div class="pic">${towerThumb(t.def.art, 50, t.owner, t.def.look?.tint)}</div><div><h3>${t.def.name}</h3></div></header>` +
         `<div class="stats">${meter('heart', RED, 'Health', t.def.hp, MOST.towerHp, 0, 'lv-hp')}</div>`;
     if (body !== cardBody) {
       $('card-body').innerHTML = body;
@@ -1978,7 +2058,6 @@ void (async () => {
     const card = $('card');
     card.classList.toggle('placing', cardOf.kind === 'tower' && selected === cardOf.def);
     card.classList.toggle('group', cardOf.kind === 'sel');
-    $('card-buy').hidden = true;
     if (cardOf.kind === 'sel') return renderSel();
     if (cardOf.kind === 'built' || cardOf.kind === 'foe') return renderTower(cardOf.id, cardOf.kind === 'built');
     let body: string;
@@ -1991,19 +2070,10 @@ void (async () => {
     if (cardOf.kind === 'unit') {
       const d = cardOf.def;
       body = unitCard(d);
-      // A slider to buy several at once, up to what the money, the unit limit and the unlocks allow.
-      const most = maxPurchases(match, YOU, d);
-      buyN = Math.max(1, Math.min(buyN, most));
-      const slider = $<HTMLInputElement>('buy-n');
-      if (slider.max !== String(Math.max(1, most))) slider.max = String(Math.max(1, most));
-      if (slider.value !== String(buyN)) slider.value = String(buyN);
-      $('card-buy').hidden = most < 2;
-      $('buy-n-label').textContent = `× ${buyN * d.count}`;
-      const total = { wood: d.cost.wood * buyN, stone: d.cost.stone * buyN };
-      label = `${buyN > 1 ? `<span class="times">×${buyN}</span>` : ''}${money(total)}`;
-      reason = most > 0 ? '' : unitReason(d);
-      const n = buyN;
-      go = () => cmd({ k: 'train', id: d.id, n });
+      // One purchase a click (they can click fast): the card says what it brings, and why it cannot be bought.
+      label = money(d.cost);
+      reason = maxPurchases(match, YOU, d) > 0 ? '' : unitReason(d);
+      go = () => cmd({ k: 'train', id: d.id, n: 1 });
     } else if (cardOf.kind === 'tower') {
       const d = cardOf.def;
       body = towerCard(d);
@@ -2040,11 +2110,12 @@ void (async () => {
         })
         .join('');
       body =
-        `<header><div class="pic">${towerThumb(bunker.def.art, 50)}</div><div><h3>${bunker.def.name}</h3><div class="sub">${bunker.garrison.length} of ${b.slots} soldiers inside</div></div></header>` +
+        `<header><div class="pic">${towerThumb(bunker.def.art, 50, bunker.owner, bunker.def.look?.tint)}</div><div><h3>${bunker.def.name}</h3><div class="sub">${bunker.garrison.length} of ${b.slots} soldiers inside</div></div></header>` +
         `<div class="slots">${dots}</div>` +
         `<div class="hp"><i style="width:${Math.max(0, (bunker.hp / bunker.def.hp) * 100)}%"></i><span>${Math.max(0, Math.ceil(bunker.hp))} / ${bunker.def.hp}</span></div>` +
         `<p class="note">Soldiers loaded here shoot from the walls with +${b.rangeBonus} range, and fall with it. Tap one to load it.</p>` +
-        `<div class="loads">${loads || '<p class="note">None of your units fit a bunker.</p>'}</div>`;
+        `<div class="loads">${loads || '<p class="note">None of your units fit a bunker.</p>'}</div>` +
+        sellButton(bunker);
     } else {
       const cost = upgradeCost(match, YOU);
       const inc = incomeOf(match, YOU);
@@ -2168,7 +2239,7 @@ void (async () => {
       sec.className = 'sec';
       sec.innerHTML = `<h4>${role}</h4><div class="thumbs"></div>`;
       for (const def of defs) {
-        const b = thumb(towerThumb(def.art, 36), money(def.cost), def.name, () =>
+        const b = thumb(towerThumb(def.art, 36, YOU, def.look?.tint), money(def.cost), def.name, () =>
           showCard({ kind: 'tower', def }, true),
         );
         sec.lastElementChild!.append(b);
@@ -2366,6 +2437,8 @@ void (async () => {
   }
   /** What changed since the last tick, for the sounds (`soundEvents.ts`); made at the start of each match. */
   let sounds: SoundWatch | undefined;
+  /** What a solo duel's computer earns against you, as a multiple (`Player.pace`). The difficulty knob: `tools/towercraftBalance.ts` plays the computers against each other, so this is tuned by play. */
+  const SOLO_COMPUTER_PACE = 1.25;
   /** Start a match: one race per seat of the map, you in seat `you`, the computers (every seat past `people`) playing by `seed`. */
   function begin(races: RaceId[], map: BoardId, you: Owner, seed: number, people: number) {
     YOU = you;
@@ -2373,7 +2446,12 @@ void (async () => {
     finale = undefined;
     endText = undefined;
     stalled = 0;
-    match = rejoinState ? unpackMatch(rejoinState) : newMatch(races, BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
+    const board = BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID];
+    if (!board) throw new Error(`no map ${map}`);
+    // A solo duel's computer earns a little more than you (the difficulty; co-op computers keep their board's pace).
+    match = rejoinState
+      ? unpackMatch(rejoinState)
+      : newMatch(races, board, undefined, people === 1 && board.seats === 2 ? [1, SOLO_COMPUTER_PACE] : board.pace);
     matchSeed = rejoinState?.seed ?? seed;
     ais = makeAis(match, matchSeed, people);
     sounds = new SoundWatch(match);
