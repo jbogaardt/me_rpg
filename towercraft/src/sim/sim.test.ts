@@ -642,8 +642,8 @@ describe('bunkers', () => {
       for (const def of m.races[id].towers.filter((t) => t.trains)) {
         const lowest = Math.min(...m.races[id].units.filter((u) => def.trains!.includes(u.id)).map((u) => u.tier));
         expect(towerTier(m, 0, def)).toBe(Math.max(def.tier, lowest));
-        m.players[0]!.castle.level = Math.max(def.tier, lowest) - 1 || 1;
-        if (towerTier(m, 0, def) > m.players[0]!.castle.level) expect(towerUnlocked(m, 0, def)).toBe('tier');
+        m.players[0].castle.level = Math.max(def.tier, lowest) - 1 || 1;
+        if (towerTier(m, 0, def) > m.players[0].castle.level) expect(towerUnlocked(m, 0, def)).toBe('tier');
       }
     }
   });
