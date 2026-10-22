@@ -1884,7 +1884,13 @@ void (async () => {
     const unlocks = (d.trains ?? [])
       .map((id) => race.units.find((u) => u.id === id))
       .filter((u): u is UnitDef => !!u)
-      .map((u) => `<span title="${u.name}">${unitThumb(u, 34)}</span>`)
+      .map((u) => {
+        // Only the castle level can still hold it back once the building stands (a card on the field), or the building itself (the dock).
+        const shut = unitUnlocked(match, YOU, u) !== 'ok';
+        return shut
+          ? `<span class="shut" title="${u.name}: ${unitReason(u)}">${unitThumb(u, 34)}${icon('locked', unitReason(u))}</span>`
+          : `<span title="${u.name}">${unitThumb(u, 34)}</span>`;
+      })
       .join('');
     return (
       `<header><div class="pic">${towerThumb(d.art, 50)}</div><div><h3>${d.name}</h3>` +

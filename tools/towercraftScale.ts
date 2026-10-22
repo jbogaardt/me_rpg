@@ -35,7 +35,7 @@ const SC: Record<string, Sc> = {
   marine: { hp: 40, dmg: 6, cd: 0.63, range: 4, speed: 3.15, min: 50, gas: 0 },
   tank: { hp: 150, dmg: 50, cd: 2, range: 7, speed: 3.15, min: 150, gas: 100 },
   mutalisk: { hp: 120, dmg: 9, cd: 1.1, range: 1, speed: 6.7, min: 100, gas: 100 },
-  scourge: { hp: 25, dmg: 55, cd: 1, range: 1, speed: 6.7, min: 25, gas: 75 },
+  scourge: { hp: 25, dmg: 30, cd: 1, range: 1, speed: 4.5, min: 25, gas: 75 },
   devourer: { hp: 250, dmg: 25, cd: 1.9, range: 1, speed: 5, min: 150, gas: 200 },
   wraith: { hp: 120, dmg: 12, cd: 1, range: 1, speed: 5, min: 150, gas: 100 },
   scout: { hp: 250, dmg: 20, cd: 1.25, range: 1, speed: 5, min: 275, gas: 125 },

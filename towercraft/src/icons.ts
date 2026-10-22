@@ -64,6 +64,7 @@ const DRAW: Record<string, [Style, string]> = {
     'line',
     '<rect x="5" y="11" width="14" height="9.500" rx="2" class="f"/><path d="M8 11V8a4 4 0 0 1 7.700-1.500"/>',
   ],
+  locked: ['line', '<rect x="5" y="11" width="14" height="9.500" rx="2" class="f"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'],
 };
 
 /** A card icon as an inline SVG (it takes the text colour; give it a size in CSS). */
