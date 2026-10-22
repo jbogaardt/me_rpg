@@ -82,6 +82,7 @@ import {
   nextUpgrade,
   soldierCost,
   step,
+  towerTier,
   towerUnlocked,
   unitUnlocked,
   upgradeCost,
@@ -2053,7 +2054,7 @@ void (async () => {
   };
   const towerReason = (d: TowerDef) => {
     const open = towerUnlocked(match, YOU, d);
-    if (open === 'tier') return `Needs castle level ${d.tier}`;
+    if (open === 'tier') return `Needs castle level ${towerTier(match, YOU, d)}`;
     if (open === 'needs') return `Needs ${towerName(d.needs!)}`;
     if (open === 'limit') return `Only ${d.limit} allowed`;
     return lacking(d.cost);

@@ -12,6 +12,7 @@ import {
   buildTower,
   buyUpgrade,
   canBuild,
+  towerTier,
   towerUnlocked,
   incomeOf,
   loadBunker,
@@ -633,6 +634,18 @@ describe('bunkers', () => {
     const bare = put(m, 0, 'titan', 'ballista', 10, 4);
     expect(loadBunker(m, 0, bare.id, 'thunderer')).toBe('nobunker'); // not a bunker
     expect(loadBunker(m, 1, bunker.id, 'thunderer')).toBe('unknown'); // not the other side's
+  });
+
+  it('never lets a camp be built while every unit it trains still needs a higher castle level', () => {
+    for (const id of RACE_IDS) {
+      const m = newMatch([id, id]);
+      for (const def of m.races[id].towers.filter((t) => t.trains)) {
+        const lowest = Math.min(...m.races[id].units.filter((u) => def.trains!.includes(u.id)).map((u) => u.tier));
+        expect(towerTier(m, 0, def)).toBe(Math.max(def.tier, lowest));
+        m.players[0]!.castle.level = Math.max(def.tier, lowest) - 1 || 1;
+        if (towerTier(m, 0, def) > m.players[0]!.castle.level) expect(towerUnlocked(m, 0, def)).toBe('tier');
+      }
+    }
   });
 
   it('needs the building that unlocks the soldier, like any purchase', () => {

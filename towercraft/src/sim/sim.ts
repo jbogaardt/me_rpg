@@ -304,9 +304,15 @@ export function unitUnlocked(m: Match, owner: Owner, def: UnitDef): 'ok' | 'tier
   return 'ok';
 }
 
+/** The castle level a building needs: its own, or that of the lowest unit it trains if higher (no camp that could sell nothing yet). */
+export function towerTier(m: Match, owner: Owner, def: TowerDef): number {
+  const units = raceOf(m, owner).units.filter((u) => def.trains?.includes(u.id));
+  return units.length ? Math.max(def.tier, Math.min(...units.map((u) => u.tier))) : def.tier;
+}
+
 /** Can `owner` build this kind of building now, apart from where and the money: the castle level, the building it needs, its limit. */
 export function towerUnlocked(m: Match, owner: Owner, def: TowerDef): 'ok' | 'tier' | 'needs' | 'limit' {
-  if (def.tier > m.players[owner]!.castle.level) return 'tier';
+  if (towerTier(m, owner, def) > m.players[owner]!.castle.level) return 'tier';
   if (def.needs && !hasBuilding(m, owner, def.needs)) return 'needs';
   if (def.limit !== undefined && m.towers.filter((t) => t.owner === owner && t.def.id === def.id).length >= def.limit)
     return 'limit';
