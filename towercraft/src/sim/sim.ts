@@ -263,6 +263,11 @@ const earn = (p: Pick<Player, 'wood' | 'stone'>, c: Partial<Cost>) => {
   p.stone += c.stone ?? 0;
 };
 
+/** How much more every mill and quarry pays for each castle level above the first (the castle's level is their upgrade). */
+export const ECON_PER_LEVEL = 0.25;
+/** What a mill or quarry of `owner`'s pays now: its written yield times its castle's level. */
+export const econBoost = (m: Match, owner: Owner) => 1 + ECON_PER_LEVEL * (m.players[owner]!.castle.level - 1);
+
 /** What `owner` earns every pay day: the castle's income at its level plus every standing mill and quarry. */
 export function incomeOf(m: Match, owner: Owner): Cost {
   const p = m.players[owner]!;
@@ -270,8 +275,8 @@ export function incomeOf(m: Match, owner: Owner): Cost {
   const out = { ...base };
   for (const t of m.towers)
     if (t.owner === owner && t.hp > 0 && t.def.econ) {
-      out.wood += t.def.econ.wood ?? 0;
-      out.stone += t.def.econ.stone ?? 0;
+      out.wood += (t.def.econ.wood ?? 0) * econBoost(m, owner);
+      out.stone += (t.def.econ.stone ?? 0) * econBoost(m, owner);
     }
   out.wood *= p.pace;
   out.stone *= p.pace;

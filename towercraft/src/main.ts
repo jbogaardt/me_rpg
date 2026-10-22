@@ -82,6 +82,7 @@ import {
   nextUpgrade,
   soldierCost,
   step,
+  econBoost,
   towerTier,
   towerUnlocked,
   unitUnlocked,
@@ -1179,7 +1180,7 @@ void (async () => {
     for (const t of match.towers) {
       if (t.owner !== YOU || !t.def.econ) continue;
       const wood = t.def.econ.wood ?? 0;
-      const amount = wood || (t.def.econ.stone ?? 0);
+      const amount = Math.round((wood || (t.def.econ.stone ?? 0)) * econBoost(match, YOU));
       if (!amount) continue;
       const text = new Text({
         text: `+${amount}`,
@@ -1907,7 +1908,7 @@ void (async () => {
         d.reach > 0 && (['reach', `Extends your build area by ${d.reach}`] as const),
       ) +
       (d.econ
-        ? `<div class="pays">${money({ wood: d.econ.wood ?? 0, stone: d.econ.stone ?? 0 })}<small>every ${PAY_EVERY} s</small></div>`
+        ? `<div class="pays">${money({ wood: Math.round((d.econ.wood ?? 0) * econBoost(match, YOU)), stone: Math.round((d.econ.stone ?? 0) * econBoost(match, YOU)) })}<small>every ${PAY_EVERY} s</small></div>`
         : '') +
       (unlocks ? `<div class="unlocks">${icon('unlock', 'Unlocks')}${unlocks}</div>` : '') +
       (hosted.length ? `<p class="note">${hosted.join(' · ')}</p>` : '') +

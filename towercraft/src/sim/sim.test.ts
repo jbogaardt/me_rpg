@@ -12,6 +12,7 @@ import {
   buildTower,
   buyUpgrade,
   canBuild,
+  ECON_PER_LEVEL,
   towerTier,
   towerUnlocked,
   incomeOf,
@@ -646,6 +647,17 @@ describe('bunkers', () => {
         if (towerTier(m, 0, def) > m.players[0]!.castle.level) expect(towerUnlocked(m, 0, def)).toBe('tier');
       }
     }
+  });
+
+  it('pays more from every mill and quarry for each castle level', () => {
+    const m = quiet(rich(newMatch(['legion', 'legion'])));
+    put(m, 0, 'legion', 'mill', 8, 5);
+    const mill = towerDef('legion', 'mill').econ!.wood!;
+    const one = incomeOf(m, 0).wood;
+    m.players[0]!.castle.level = 3;
+    const castle = m.races.legion.castle;
+    expect(incomeOf(m, 0).wood).toBeCloseTo(castle.income[2]!.wood + mill * (1 + 2 * ECON_PER_LEVEL));
+    expect(incomeOf(m, 0).wood).toBeGreaterThan(one);
   });
 
   it('needs the building that unlocks the soldier, like any purchase', () => {
