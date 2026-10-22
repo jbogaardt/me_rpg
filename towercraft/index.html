@@ -93,6 +93,7 @@
       .up:disabled:hover { filter: brightness(0.75) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .pips { display: flex; gap: 4px; } .pips i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--gold-dim); box-sizing: border-box; background: rgba(0, 0, 0, 0.35); }
       .pips i.on { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 4px rgba(242, 211, 138, 0.7); }
+      .pips i.shut { opacity: 0.35; filter: grayscale(1); }
 
       /* The card: stats and a purchase button, popping up at the side beside the thumbnails. */
       #card { position: fixed; z-index: 4; right: 8px; top: 108px; width: min(300px, calc(100vw - 16px)); max-height: calc(100dvh - 108px - var(--dock-h) - var(--safe-b) - 16px);

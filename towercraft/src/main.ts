@@ -2503,6 +2503,7 @@ void (async () => {
       const poor = !!next && !why && !canAfford(me, next.cost);
       const pips = b.querySelectorAll('.pips i');
       pips.forEach((p, i) => p.classList.toggle('on', i < lvl));
+      pips.forEach((p, i) => p.classList.toggle('shut', (up.levels[i]?.tier ?? 0) > level)); // a level the castle is too low for
       const line = b.querySelector('em')!;
       const text = !next ? 'max' : why ? '' : money(next.cost);
       if (line.innerHTML !== text) line.innerHTML = text;
