@@ -969,3 +969,40 @@ describe('castle upgrades ask for buildings, not only money', () => {
     expect(upgradeLacks(m, 0).length).toBeGreaterThan(0); // the next asks for level 2 buildings
   });
 });
+
+describe('leaving the road to defend a tower', () => {
+  /** Player 0's tower at (10, 3), off the road; a foe of player 1 comes to take it down and a unit of player 0 walks the road behind it. */
+  const setup = (focus?: boolean) => {
+    const m = quiet(newMatch(['legion', 'legion']));
+    const tower = put(m, 0, 'legion', 'lookout', 10, 3); // it never shoots: a detector
+    const foe = spawn(m, 1, 'legion', 'warrior', ROAD_LENGTH - 16, { hp: 1e5, maxHp: 1e5 });
+    const guard = spawn(m, 0, 'legion', 'warrior', 1, { hp: 1e6, maxHp: 1e6 });
+    guard.def = { ...guard.def, speed: 1 };
+    if (focus) setFocus(m, 0, [guard.id], { kind: 'castle' });
+    return { m, tower, foe, guard };
+  };
+
+  it("has a unit with no order step off the road to fight the foes at its side's tower, then go back", () => {
+    const { m, tower, foe, guard } = setup();
+    let defended = false;
+    for (let i = 0; i < 20 * 40 && !defended; i++) {
+      step(m, 0.05);
+      defended = !!guard.off?.defend;
+    }
+    expect(defended).toBe(true);
+    expect(guard.off!.tower).toBe(tower.id);
+    run(m, 6);
+    expect(damageTaken(foe)).toBeGreaterThan(0);
+    foe.hp = 0; // the attacker is gone: the guard returns to the road
+    run(m, 6);
+    expect(guard.off).toBeUndefined();
+  });
+
+  it('keeps a unit that has an order on its way', () => {
+    const { m, guard } = setup(true);
+    for (let i = 0; i < 20 * 40; i++) {
+      step(m, 0.05);
+      expect(guard.off).toBeUndefined();
+    }
+  });
+});

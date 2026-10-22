@@ -68,8 +68,8 @@ export interface Unit {
   dot?: { dps: number; left: number; by: Owner };
   /** The seat that last hurt it, paid the bounty when it falls. */
   by?: Owner;
-  /** Off the road to take a tower down: straight across from the road (`dir`, one axis), `d` cells out, at most `max`. */
-  off?: { tower: number; dir: [number, number]; d: number; max: number; leaving?: boolean };
+  /** Off the road to take a tower down (`defend`: to fight the foes besieging one of its own side's, see `defendFor`): straight across from the road (`dir`, one axis), `d` cells out, at most `max`. */
+  off?: { tower: number; dir: [number, number]; d: number; max: number; leaving?: boolean; defend?: boolean };
   /** Blew itself up (no bounty for the foe). */
   spent?: boolean;
   /** Sent after one thing by its player: a particular enemy tower, or the castle. It keeps to it until told otherwise, or until that tower falls; with none, a unit fights everything. */
@@ -1029,6 +1029,26 @@ function detourFor(m: Match, u: Unit, vision: Vision, nextS: number, only?: numb
   return best;
 }
 
+/**
+ * The own-side tower a unit with no order should step off the road to defend: foes are off the road at it, its foot is on the stretch
+ * this step covers and within `Match.detourMax`. The unit then fights whoever it can reach (the usual pick), and goes back when they are gone.
+ */
+function defendFor(m: Match, u: Unit, vision: Vision, nextS: number): Tower | undefined {
+  let best: Tower | undefined;
+  let bestD = Infinity;
+  for (const f of m.units) {
+    if (!f.off || f.off.leaving || f.hp <= 0 || allied(m, f.owner, u.owner) || (f.def.air && !u.def.hitsAir)) continue;
+    const t = m.towers.find((x) => x.id === f.off!.tower && x.hp > 0 && allied(m, x.owner, u.owner));
+    if (!t) continue;
+    const foot = laneOf(m.board, u).footOf(t.col, t.row);
+    if (!foot || foot.d > m.detourMax || foot.d - TOWER_RADIUS <= u.def.range) continue;
+    if (foot.s < u.s - 1e-6 || foot.s > nextS + 1e-6 || foot.d >= bestD || !isSeen(m, u.owner, f, vision)) continue;
+    best = t;
+    bestD = foot.d;
+  }
+  return best;
+}
+
 export function step(m: Match, dt: number): void {
   m.shots.length = 0;
   m.deaths.length = 0;
@@ -1127,7 +1147,11 @@ export function step(m: Match, dt: number): void {
     } else if (u.off) {
       const off = u.off;
       const tower = m.towers.find((t) => t.id === off.tower);
-      const wanted = !off.leaving && tower !== undefined && tower.hp > 0 && towersOn;
+      const wanted = off.defend
+        ? tower !== undefined &&
+          tower.hp > 0 &&
+          m.units.some((f) => f.off?.tower === tower.id && !f.off.leaving && f.hp > 0)
+        : !off.leaving && tower !== undefined && tower.hp > 0 && towersOn;
       off.d = Math.min(off.max, off.d + (wanted ? 1 : -1) * u.def.speed * dt);
       if (off.d <= 0) delete u.off;
     } else {
@@ -1138,7 +1162,14 @@ export function step(m: Match, dt: number): void {
         const foot = lane.footOf(tower.col, tower.row)!;
         u.s = foot.s;
         u.off = { tower: tower.id, dir: foot.dir, d: 0, max: Math.max(0, foot.d - TOWER_RADIUS) };
-      } else u.s = next;
+      } else {
+        const guard = !u.focus ? defendFor(m, u, vision, next) : undefined;
+        if (guard) {
+          const foot = lane.footOf(guard.col, guard.row)!;
+          u.s = foot.s;
+          u.off = { tower: guard.id, dir: foot.dir, d: 0, max: Math.max(0, foot.d - TOWER_RADIUS), defend: true };
+        } else u.s = next;
+      }
     }
   }
 
