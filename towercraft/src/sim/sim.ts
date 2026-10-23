@@ -43,6 +43,8 @@ export const UNIT_CAP = 120;
 /** How far (cells) a castle's body reaches: attackers hit its edge, not its centre. */
 export const CASTLE_RADIUS = 1.2;
 const TOWER_RADIUS = 0.5;
+/** How far (cells) beyond its own reach a melee soldier in a bunker strikes: foes at the walls, not only at its door. */
+const BUNKER_GUARD = 3;
 /** The farthest (cells, square to the road) a unit will step off it to take a tower down, in the game's own races' scale. */
 /** Nothing is built this near (cells) the foe's castle, however far your fog reaches: no tower creep onto their doorstep. */
 export const FOE_CLEAR = 24;
@@ -67,11 +69,17 @@ export interface Unit {
   /** The seat that last hurt it, paid the bounty when it falls. */
   by?: Owner;
   /** Off the road to take a tower down: straight across from the road (`dir`, one axis), `d` cells out, at most `max`. */
-  off?: { tower: number; dir: [number, number]; d: number; max: number };
+  off?: { tower: number; dir: [number, number]; d: number; max: number; leaving?: boolean };
   /** Blew itself up (no bounty for the foe). */
   spent?: boolean;
-  /** Sent after one thing by its player: a particular enemy tower, or the castle. It ignores the rest (orders) until that tower falls. */
+  /** Sent after one thing by its player: a particular enemy tower, or the castle. It keeps to it until told otherwise, or until that tower falls; with none, a unit fights everything. */
   focus?: Focus;
+  /** Ordered into this bunker (by id): it walks the road to the bunker's door, ignoring the fight, and goes in (`garrisonUnits`). */
+  enter?: number;
+  /** Walking back along the road to its bunker, so drawn facing the way it walks. */
+  back?: boolean;
+  /** Went into the bunker it was ordered to: gone from the field this step (no death, no bounty). */
+  entered?: boolean;
 }
 
 /** What a unit may be sent after: one enemy tower (by id) or an enemy castle (the seat's; none named: the castle its lane ends at). */
@@ -92,6 +100,8 @@ export interface Tower {
   hp: number;
   cooldown: number;
   garrison: Garrisoned[];
+  /** Units this building has sent out (a producer; the next purchase leaves from the one that has sent the fewest). */
+  spawned?: number;
   /** Health still to be mended by a paid repair (`repairTower`); it comes back over time, not at once. */
   mend?: number;
 }
@@ -101,12 +111,6 @@ export interface Castle {
   maxHp: number;
   level: number;
   cooldown: number;
-}
-
-/** What this player's units do about what they meet on the way: stop and fight it, or walk on past it. */
-export interface Orders {
-  towers: 'attack' | 'bypass';
-  units: 'attack' | 'bypass';
 }
 
 export interface Player {
@@ -124,8 +128,6 @@ export interface Player {
   castle: Castle;
   /** Levels bought of each upgrade line (by `UpgradeDef.id`). */
   upgrades: Record<string, number>;
-  /** Orders for every unit this player has, now and later: the castle is always attacked once in reach. */
-  orders: Orders;
 }
 
 /** An attack made this step, for the renderer: from a point to a point, in cells; `melee` is a blow, not a missile. */
@@ -205,7 +207,6 @@ export function newMatch(
       stone: START_RES.stone,
       castle: { hp, maxHp: hp, level: 1, cooldown: 0 },
       upgrades: {},
-      orders: { towers: 'attack', units: 'attack' },
     };
   };
   return {
@@ -303,9 +304,15 @@ export function unitUnlocked(m: Match, owner: Owner, def: UnitDef): 'ok' | 'tier
   return 'ok';
 }
 
+/** The castle level a building needs: its own, or that of the lowest unit it trains if higher (no camp that could sell nothing yet). */
+export function towerTier(m: Match, owner: Owner, def: TowerDef): number {
+  const units = raceOf(m, owner).units.filter((u) => def.trains?.includes(u.id));
+  return units.length ? Math.max(def.tier, Math.min(...units.map((u) => u.tier))) : def.tier;
+}
+
 /** Can `owner` build this kind of building now, apart from where and the money: the castle level, the building it needs, its limit. */
 export function towerUnlocked(m: Match, owner: Owner, def: TowerDef): 'ok' | 'tier' | 'needs' | 'limit' {
-  if (def.tier > m.players[owner]!.castle.level) return 'tier';
+  if (towerTier(m, owner, def) > m.players[owner]!.castle.level) return 'tier';
   if (def.needs && !hasBuilding(m, owner, def.needs)) return 'needs';
   if (def.limit !== undefined && m.towers.filter((t) => t.owner === owner && t.def.id === def.id).length >= def.limit)
     return 'limit';
@@ -461,20 +468,73 @@ export function trainUnit(m: Match, owner: Owner, unitId: string): Result {
   if (!canAfford(p, def.cost)) return 'gold';
   pay(p, def.cost);
   const maxHp = def.hp * boostOf(m, owner, def, 'hp');
-  // Units that walk out together are spread along the first stretch of road (a crowd bought at once is not one stack on one spot).
-  const queued = m.units.reduce((n, u) => n + (u.owner === owner && u.s < SPREAD ? 1 : 0), 0);
+  const spot = spawnPoint(m, owner, def, lane);
+  // Units that walk out together are spread along the first stretch of road (a crowd bought at once is not one stack on one spot);
+  // from a building they file out of its door instead (`exitFrom`).
+  const queued = spot.out
+    ? 0
+    : m.units.reduce(
+        (n, u) =>
+          n + (u.owner === owner && (u.lane ?? lane) === spot.lane && u.s >= spot.s && u.s < spot.s + SPREAD ? 1 : 0),
+        0,
+      );
   for (let i = 0; i < def.count; i++)
     m.units.push({
       id: m.nextId++,
       def,
       owner,
-      lane,
+      lane: spot.lane,
       hp: maxHp,
       maxHp,
-      s: Math.min(SPREAD, i * SPACING + queued * SPACING),
+      ...exitFrom(spot, i, queued),
       cooldown: 0,
     });
   return 'ok';
+}
+
+/**
+ * Where a purchase of `def` walks out: from the producer building that unlocks it (the one that has sent the fewest, so several
+ * share the work), at the road point straight across from it (the nearest open lane), else from the castle.
+ */
+function spawnPoint(m: Match, owner: Owner, def: UnitDef, home: number): Spot {
+  let from: Tower | undefined;
+  for (const t of m.towers)
+    if (t.owner === owner && t.hp > 0 && def.needs !== undefined && t.def.id === def.needs)
+      if (!from || (t.spawned ?? 0) < (from.spawned ?? 0)) from = t;
+  if (!from) return { lane: home, s: 0 };
+  from.spawned = (from.spawned ?? 0) + 1;
+  return roadPointBy(m, owner, from, home);
+}
+
+/** Where new units appear: a point on a lane, and for a building the door they walk out of (square to the road, `d` from it). */
+interface Spot {
+  lane: number;
+  s: number;
+  out?: { tower: number; dir: [number, number]; d: number };
+}
+
+/**
+ * The road point straight across from a building (on the nearest open lane), with the door it walks out of, or the castle when
+ * it has none. The unit starts at the building's edge and walks square to the road, as it does to take the building down.
+ */
+function roadPointBy(m: Match, owner: Owner, t: Tower, home: number): Spot {
+  let best: { lane: number; s: number; d: number; dir: [number, number] } | undefined;
+  for (const l of openLanes(m, owner)) {
+    const foot = l.footOf(t.col, t.row);
+    if (foot && (!best || foot.d < best.d)) best = { lane: l.id, s: foot.s, d: foot.d, dir: foot.dir };
+  }
+  if (!best) return { lane: home, s: 0 };
+  return { lane: best.lane, s: best.s, out: { tower: t.id, dir: best.dir, d: Math.max(0, best.d - TOWER_RADIUS) } };
+}
+
+/**
+ * Where the i-th unit out of a spot starts: from a building it files out of its door (`off`, leaving: it walks square to the road
+ * and joins it at the spot's point); otherwise on the road, `queued` units already there pushed along it.
+ */
+function exitFrom(spot: Spot, i: number, queued: number): Pick<Unit, 's' | 'off'> {
+  if (!spot.out) return { s: spot.s + Math.min(SPREAD, i * SPACING + queued * SPACING) };
+  const d = spot.out.d + i * SPACING;
+  return { s: spot.s, off: { ...spot.out, d, max: d, leaving: true } };
 }
 
 /** The lanes `owner`'s units may walk now: those that end at the castle of a foe still standing. */
@@ -537,9 +597,48 @@ export function loadBunker(m: Match, owner: Owner, towerId: number, unitId: stri
   return 'ok';
 }
 
-/** Tell all of a player's units to fight what they meet (`attack`) or walk on past it (`bypass`): `what` is towers or units. */
-export function setOrder(m: Match, owner: Owner, what: keyof Orders, to: Orders[keyof Orders]): void {
-  if (playing(m, owner)) m.players[owner]!.orders[what] = to;
+/**
+ * Order these units (ids, `owner`'s own) into one of their bunkers: each garrison-capable unit, while a slot is free (counting the ones
+ * already on their way), walks the road to the bunker's door, however far (back too), and shoots from inside it (it keeps what it was
+ * bought for; nothing is paid). How many were sent.
+ */
+export function garrisonUnits(m: Match, owner: Owner, towerId: number, unitIds: readonly number[]): number {
+  if (!playing(m, owner)) return 0;
+  const t = m.towers.find((x) => x.id === towerId && x.owner === owner && x.hp > 0);
+  if (!t?.def.bunker) return 0;
+  let free = t.def.bunker.slots - t.garrison.length - m.units.filter((u) => u.enter === t.id && u.hp > 0).length;
+  let sent = 0;
+  for (const id of unitIds) {
+    if (free <= 0) break;
+    const u = m.units.find((x) => x.id === id && x.owner === owner && x.hp > 0 && !x.spent && x.def.garrison);
+    if (!u || u.enter === t.id) continue;
+    u.enter = t.id;
+    delete u.focus;
+    free--;
+    sent++;
+  }
+  return sent;
+}
+
+/** One step of a unit ordered into a bunker: back off the road if it stepped off, walk to the door, go in. False when the order is void. */
+function marchIn(m: Match, u: Unit, dt: number): boolean {
+  const t = m.towers.find((x) => x.id === u.enter && x.owner === u.owner && x.hp > 0 && x.def.bunker);
+  const foot = t && laneOf(m.board, u).footOf(t.col, t.row);
+  if (!t || !foot || t.garrison.length >= t.def.bunker!.slots) return false;
+  if (u.off) {
+    u.off.d -= u.def.speed * dt;
+    if (u.off.d <= 0) delete u.off;
+    return true;
+  }
+  const gap = foot.s - u.s;
+  u.back = gap < 0;
+  if (Math.abs(gap) > u.def.speed * dt) u.s += Math.sign(gap) * u.def.speed * dt;
+  else {
+    u.s = foot.s;
+    t.garrison.push({ def: u.def, cooldown: 0 });
+    u.entered = true;
+  }
+  return true;
 }
 
 /** Can a unit of this kind take this tower down: from the road with its range, or by stepping off it (at most `Match.detourMax` cells)? */
@@ -554,7 +653,7 @@ export function canTarget(
 }
 
 /**
- * Send these units (ids, `owner`'s own) after one enemy tower or the enemy castle, or back to the general orders (`undefined`).
+ * Send these units (ids, `owner`'s own) after one enemy tower or the enemy castle, or back to fighting everything (`undefined`, the default for a new unit).
  * A unit sent after a tower fights only that tower; one sent after the castle walks past everything and fights only it.
  */
 export function setFocus(
@@ -672,7 +771,9 @@ export function inBuildArea(m: Match, owner: Owner, col: number, row: number): b
   );
 }
 
-export type BuildResult = Result | 'off-board' | 'road' | 'scenery' | 'taken' | 'castle' | 'foe' | 'area';
+export type BuildResult = Result | 'off-board' | 'road' | 'scenery' | 'taken' | 'crowded' | 'castle' | 'foe' | 'area';
+/** How far (cells) apart two buildings' centres stand: a building is a picture about two and a half cells wide, so they never overlap or hide each other from a tap. */
+export const TOWER_SPACING = 2.5;
 
 export function canBuild(m: Match, owner: Owner, def: TowerDef, col: number, row: number): BuildResult {
   if (!playing(m, owner)) return 'over';
@@ -686,6 +787,7 @@ export function canBuild(m: Match, owner: Owner, def: TowerDef, col: number, row
   if (towerAt(m, col, row)) return 'taken';
   const open = towerUnlocked(m, owner, def);
   if (open !== 'ok') return open;
+  if (m.towers.some((t) => t.hp > 0 && dist(centreOf(t), c) < TOWER_SPACING)) return 'crowded';
   if (!inBuildArea(m, owner, col, row)) return 'area';
   if (!canAfford(m.players[owner]!, def.cost)) return 'gold';
   return 'ok';
@@ -727,23 +829,52 @@ export function repairTower(m: Match, owner: Owner, towerId: number): Result {
   return 'ok';
 }
 
-/** Selling a building gives back this share of its price (rounded down): the way to free up space. */
+/** Selling a standing tower of yours returns this share of its price (a bunker's soldiers are lost) and frees its ground. */
 export const SELL_SHARE = 0.5;
 
-/** What selling `t` gives back. */
-export const sellValue = (t: Tower): Cost =>
+/** What selling `t` pays back. */
+export const sellRefund = (t: Tower): Cost =>
   price(Math.floor(t.def.cost.wood * SELL_SHARE), Math.floor(t.def.cost.stone * SELL_SHARE));
 
-/**
- * Sell one of `owner`'s buildings (instant): half its price back, and it is gone, with whatever it had loaded. Its upgrades stay
- * bought; a unit that needed it is locked again, as after a raze.
- */
+/** Sell a tower of `owner`'s: it goes at once (like a razed one, so what it unlocked locks again) and pays `sellRefund`. */
 export function sellTower(m: Match, owner: Owner, towerId: number): Result {
   if (!playing(m, owner)) return 'over';
   const t = m.towers.find((x) => x.id === towerId && x.owner === owner && x.hp > 0);
   if (!t) return 'unknown';
-  earn(m.players[owner]!, sellValue(t));
+  earn(m.players[owner]!, sellRefund(t));
   m.towers = m.towers.filter((x) => x !== t);
+  releaseGarrison(m, owner, t);
+  return 'ok';
+}
+
+/** The soldiers inside come out onto the road beside the bunker and march on (they were bought already: the unit cap does not stop them). */
+function releaseGarrison(m: Match, owner: Owner, t: Tower) {
+  const home = laneFor(m, owner);
+  if (home === undefined) return;
+  const spot = roadPointBy(m, owner, t, home);
+  t.garrison.forEach((g, i) => {
+    const maxHp = g.def.hp * boostOf(m, owner, g.def, 'hp');
+    m.units.push({
+      id: m.nextId++,
+      def: g.def,
+      owner,
+      lane: spot.lane,
+      hp: maxHp,
+      maxHp,
+      ...exitFrom(spot, i, 0),
+      cooldown: 0,
+    });
+  });
+  t.garrison = [];
+}
+
+/** Empty one of `owner`'s bunkers: every soldier inside walks out onto the road and joins the army (nothing is refunded). */
+export function emptyBunker(m: Match, owner: Owner, towerId: number): Result {
+  if (!playing(m, owner)) return 'over';
+  const t = m.towers.find((x) => x.id === towerId && x.owner === owner && x.hp > 0);
+  if (!t) return 'unknown';
+  if (!t.def.bunker) return 'nobunker';
+  releaseGarrison(m, owner, t);
   return 'ok';
 }
 
@@ -944,17 +1075,21 @@ export function step(m: Match, dt: number): void {
 
   // Units fight what is in reach, or walk on (stepping off the road to take a tower it cannot otherwise reach).
   for (const u of m.units) {
-    if (u.spent) continue;
+    if (u.spent || u.entered) continue;
+    if (u.enter !== undefined) {
+      if (marchIn(m, u, dt)) continue;
+      delete u.enter;
+      delete u.back;
+    }
     u.cooldown -= dt;
     const from = unitPos(u, m.board);
-    const orders = m.players[u.owner]!.orders;
     const lane = laneOf(m.board, u);
     const goal = lane.length - CASTLE_RADIUS;
     // A unit sent after a tower fights only it (and the castle only once it is down); one sent after the castle ignores the rest.
     const focused = u.focus?.kind === 'tower' ? u.focus.id : undefined;
     const sentAt = focused === undefined ? undefined : m.towers.find((t) => t.id === focused && t.hp > 0);
     if (focused !== undefined && !sentAt) delete u.focus;
-    const towersOn = u.focus ? sentAt !== undefined : orders.towers === 'attack';
+    const towersOn = !u.focus || sentAt !== undefined;
     const reach: Reach = {
       owner: u.owner,
       by: { kind: 'unit', id: u.id },
@@ -963,7 +1098,7 @@ export function step(m: Match, dt: number): void {
       range: u.def.range,
       ground: true,
       air: !!u.def.hitsAir,
-      units: u.focus ? false : orders.units === 'attack',
+      units: !u.focus,
       towers: towersOn,
       castle: !sentAt,
       only: sentAt?.id,
@@ -987,7 +1122,7 @@ export function step(m: Match, dt: number): void {
     } else if (u.off) {
       const off = u.off;
       const tower = m.towers.find((t) => t.id === off.tower);
-      const wanted = tower !== undefined && tower.hp > 0 && towersOn;
+      const wanted = !off.leaving && tower !== undefined && tower.hp > 0 && towersOn;
       off.d = Math.min(off.max, off.d + (wanted ? 1 : -1) * u.def.speed * dt);
       if (off.d <= 0) delete u.off;
     } else {
@@ -1033,7 +1168,7 @@ export function step(m: Match, dt: number): void {
         });
       }
     }
-    // A bunker's soldiers shoot on their own cooldowns, each as its kind of unit does, a little further from the walls.
+    // A bunker's soldiers fight on their own cooldowns, each as its kind of unit does: shooters a little further from the walls, melee ones at foes near them.
     for (const g of t.garrison) {
       g.cooldown -= dt;
       if (g.cooldown > 0) continue;
@@ -1042,7 +1177,7 @@ export function step(m: Match, dt: number): void {
         by: { kind: 'tower', id: t.id },
         vision,
         from,
-        range: g.def.range + (t.def.bunker?.rangeBonus ?? 0),
+        range: g.def.range + (t.def.bunker?.rangeBonus ?? 0) + (g.def.range <= 1.5 ? BUNKER_GUARD : 0),
         ground: true,
         air: !!g.def.hitsAir,
         units: true,
@@ -1087,6 +1222,7 @@ export function step(m: Match, dt: number): void {
 
   // The fallen: the other side is paid for units (not for bombs that went off); a razed tower is just gone.
   m.units = m.units.filter((u) => {
+    if (u.entered) return false;
     if (u.hp > 0) return true;
     m.deaths.push({
       at: unitPos(u, m.board),

@@ -5,16 +5,27 @@
 import '@fontsource/cinzel/700.css';
 import '@fontsource/crimson-text/400.css';
 import '@fontsource/crimson-text/600.css';
-import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, TextureStyle } from 'pixi.js';
+import {
+  Application,
+  Assets,
+  CanvasSource,
+  Container,
+  Graphics,
+  Rectangle,
+  Sprite,
+  Text,
+  Texture,
+  TextureStyle,
+} from 'pixi.js';
 import { icon } from './icons';
 import { isMuted, playCues, setMuted, unlockAudio } from './audio';
 import { playMusic, stopMusic } from './music';
 import { say } from './voice';
 import { SoundWatch } from './soundEvents';
 import { drawnPos } from './stagger';
+import { recolorTeam, seatColor } from './teamColor';
 import type { Ai } from './sim/ai';
 import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
-import { hslToHex, recolor, RACE_HUE, SIDE_HUE, shadeOf, type Hsl } from './recolor';
 import { Wreck } from './wreck';
 import { normalizeCode } from '../../src/net/roomCode';
 import { Duel, type DuelPhase } from './net/duel';
@@ -36,7 +47,6 @@ import {
   RACES,
   REACH_SCALE,
   roleOf as buildingRole,
-  type Role,
   RACE_IDS,
   type Cost,
   type RaceId,
@@ -53,7 +63,7 @@ import {
   canAfford,
   repairCost,
   repairable,
-  sellValue,
+  sellRefund,
   canBuild,
   canTarget,
   allied,
@@ -73,6 +83,7 @@ import {
   nextUpgrade,
   soldierCost,
   step,
+  towerTier,
   towerUnlocked,
   unitUnlocked,
   upgradeCost,
@@ -158,8 +169,12 @@ const FOG_SPEED = 14;
 /** Fog colour (a warm dark), how much it dims, and how much of the dark lifts over ground that was once yours to build on. */
 const FOG_COLOR = 'rgba(18, 12, 9, 0.74)';
 const FOG_MEMORY = 0.3;
+/** How strong the cool wash is over ground your units see (not build ground), however many of them overlap. */
+const FOG_WASH = 0.16;
 
 const ZOOM_MAX = 2.6;
+/** The smallest a cell is drawn while a finger places a tower (px), so the drag lands where it looks. */
+const PLACE_CELL_PX = 30;
 const TAP_SLOP = 8; // px a finger may move and still be a tap
 
 void (async () => {
@@ -186,6 +201,8 @@ void (async () => {
   const towerTextures = new Map<string, Texture>();
   const castleTextures = new Map<string, Texture>();
   const sheetTextures = new Map<string, Texture>();
+  /** The portraits (art/<name>.png) of units that have one, loaded for the cards. */
+  const portraitTextures = new Map<string, Texture>();
   const fieldTextures = new Map<BoardId, Texture>();
   const jobs = new Map<string, Promise<void>>();
   const once = (key: string, work: () => Promise<void>) => {
@@ -193,12 +210,12 @@ void (async () => {
     if (!job) jobs.set(key, (job = work()));
     return job;
   };
-  const getTower = (n: string) =>
-    once(`t:${n}`, async () => void towerTextures.set(n, squareFrame(await load(`art/${n}.png`))));
-  const getCastle = (n: string) =>
-    once(`c:${n}`, async () => void castleTextures.set(n, squareFrame(await load(`art/${n}.png`))));
+  const getTower = (n: string) => once(`t:${n}`, async () => void towerTextures.set(n, await load(`art/${n}.png`)));
+  const getCastle = (n: string) => once(`c:${n}`, async () => void castleTextures.set(n, await load(`art/${n}.png`)));
   const getSheet = (n: string) =>
     once(`s:${n}`, async () => void sheetTextures.set(n, await load(`art/units/${n}.png`)));
+  const getPortrait = (n: string) =>
+    once(`p:${n}`, async () => void portraitTextures.set(n, await load(`art/${n}.png`)));
   /** The fields (art/maps/<id>.png) are drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts). */
   const getField = (id: BoardId) =>
     once(`f:${id}`, async () => void fieldTextures.set(id, await load(`art/maps/${id}.png`)));
@@ -209,6 +226,7 @@ void (async () => {
       .concat(
         [() => getCastle(RACES[race].castle.art)],
         [...new Set(RACES[race].units.map((u) => u.sheet))].map((n) => () => getSheet(n)),
+        RACES[race].units.flatMap((u) => (u.art ? [() => getPortrait(u.art!)] : [])),
       );
   /** Wait for everything a match of these races on this map needs (calling `progress` from 0 to 1 as it arrives). */
   async function ensureAssets(races: RaceId[], map: BoardId, progress?: (done: number) => void) {
@@ -238,12 +256,40 @@ void (async () => {
     await Promise.all([lane(), lane(), lane()]);
   }
   const frames = new Map<string, Texture>();
-  /** One frame of a unit sheet (cached): row, and column = direction. */
-  const unitFrame = (sheet: string, kind: SheetKind, row: number, col: number) => {
-    const key = `${sheet}:${row}:${col}`;
+  /** A sheet with its purple player colour swapped for `color` (cached per sheet and colour). */
+  const teamSheets = new Map<string, Texture>();
+  const teamTexture = (key: string, src: Texture, color: number) => {
+    key = `${key}:${color}`;
+    let t = teamSheets.get(key);
+    if (!t) {
+      const cv = document.createElement('canvas');
+      cv.width = src.width;
+      cv.height = src.height;
+      const cx = cv.getContext('2d', { willReadFrequently: true })!;
+      cx.drawImage(src.source.resource as CanvasImageSource, 0, 0);
+      const img = cx.getImageData(0, 0, cv.width, cv.height);
+      recolorTeam(img.data, color);
+      cx.putImageData(img, 0, 0);
+      // Resolution 1, not the screen's: frames are cut in pixels.
+      teamSheets.set(key, (t = new Texture({ source: new CanvasSource({ resource: cv, resolution: 1 }) })));
+    }
+    return t;
+  };
+  const teamSheet = (sheet: string, color: number) => teamTexture(`s:${sheet}`, sheetTextures.get(sheet)!, color);
+  /** A building's first frame in a seat's colour (cached): the sheets' purple is the team colour of towers and castles too. */
+  const buildings = new Map<string, Texture>();
+  const buildingTex = (raw: Map<string, Texture>, name: string, color: number) => {
+    const key = `${name}:${color}`;
+    let t = buildings.get(key);
+    if (!t) buildings.set(key, (t = squareFrame(teamTexture(`b:${name}`, raw.get(name)!, color))));
+    return t;
+  };
+  /** One frame of a unit sheet in a seat's colour (cached): row, and column = direction. */
+  const unitFrame = (sheet: string, kind: SheetKind, row: number, col: number, color: number) => {
+    const key = `${sheet}:${color}:${row}:${col}`;
     const size = SHEETS[kind].frame;
     let t = frames.get(key);
-    if (!t) frames.set(key, (t = cut(sheetTextures.get(sheet)!, col * size, row * size, size, size)));
+    if (!t) frames.set(key, (t = cut(teamSheet(sheet, color), col * size, row * size, size, size)));
     return t;
   };
   // --- The scene -----------------------------------------------------------------------------------------------------
@@ -288,53 +334,11 @@ void (async () => {
   let match: Match = newMatch(['legion', 'swarm'], BOARDS[chosenMap]);
   /** The castle positions of the map being played. */
   const castleAt = (o: Owner) => match.board.castles[o]!;
-  /** A seat's colour (`recolor.ts`): its race's hue in a duel, its side's with more seats, and a shade of that hue for each further seat that shares it, so two of one race still tell apart. It paints the purple of its castle, towers and buildings, and rings its units. */
-  const hueOf = (o: Owner) =>
-    match.board.seats <= 2
-      ? (RACE_HUE[match.players[o]!.race] ?? 0)
-      : allied(match, o, YOU)
-        ? SIDE_HUE.mine
-        : SIDE_HUE.foe;
-  const shadeOfSeat = (o: Owner): Hsl => {
-    const hue = hueOf(o);
-    const sharing = match.players.map((_, i) => i).filter((i) => hueOf(i) === hue);
-    return shadeOf(hue, sharing.indexOf(o));
-  };
-  const colorOf = (o: Owner): number => hslToHex(shadeOfSeat(o));
-  /** A building picture painted in a seat's colour (`recolor`): made once per picture and colour, from the sheet already loaded. */
-  const paintedCanvas = new Map<string, HTMLCanvasElement>();
-  /** `tint` (a building's `look`) multiplies the picture: the same sheet drawn another way (a Skybow is a watch tower in blue). */
-  const paintedArt = (base: Texture, o: Owner, tint = 0xffffff): HTMLCanvasElement => {
-    const key = `${base.source.uid}|${colorOf(o)}|${tint}`;
-    let canvas = paintedCanvas.get(key);
-    if (!canvas) {
-      const { x, y, width: w, height: h } = base.frame;
-      canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(base.source.resource as CanvasImageSource, x, y, w, h, 0, 0, w, h);
-      const px = ctx.getImageData(0, 0, w, h);
-      recolor(px.data, shadeOfSeat(o));
-      if (tint !== 0xffffff) {
-        const [r, g, b] = [(tint >> 16) / 255, ((tint >> 8) & 255) / 255, (tint & 255) / 255];
-        for (let i = 0; i < px.data.length; i += 4) {
-          px.data[i] = px.data[i]! * r;
-          px.data[i + 1] = px.data[i + 1]! * g;
-          px.data[i + 2] = px.data[i + 2]! * b;
-        }
-      }
-      ctx.putImageData(px, 0, 0);
-      paintedCanvas.set(key, canvas);
-    }
-    return canvas;
-  };
-  const paintedTextures = new WeakMap<HTMLCanvasElement, Texture>();
-  const paintedTexture = (base: Texture, o: Owner, tint?: number): Texture => {
-    const canvas = paintedArt(base, o, tint);
-    let tex = paintedTextures.get(canvas);
-    if (!tex) paintedTextures.set(canvas, (tex = Texture.from(canvas)));
-    return tex;
+  /** The colour under a seat's castle, towers and units: its race's, another hue for each further seat of the same race (allies and foes alike), so every seat tells apart. */
+  const colorOf = (o: Owner): number => {
+    const race = match.players[o]!.race;
+    const same = match.players.flatMap((p, i) => (p.race === race ? [i] : []));
+    return seatColor(RACES[race].color, same.indexOf(o));
   };
   const playingNow = () => !match.players[YOU]!.out && match.winner < 0;
   /** Where a seat's camp lies on the field, in words (north-west, south, middle). */
@@ -418,7 +422,7 @@ void (async () => {
       const c = new Container();
       const color = colorOf(o);
       c.addChild(new Graphics().ellipse(0, 8, 56 * CASTLE_SCALE, 20 * CASTLE_SCALE).fill({ color, alpha: 0.45 }));
-      const sprite = new Sprite(paintedTexture(castleTextures.get(RACES[match.players[o]!.race].castle.art)!, o));
+      const sprite = new Sprite(buildingTex(castleTextures, RACES[match.players[o]!.race].castle.art, color));
       sprite.anchor.set(0.5, 0.78);
       sprite.scale.set(castleBase(o));
       c.addChild(sprite);
@@ -432,7 +436,10 @@ void (async () => {
 
   // --- Camera: drag to pan, wheel or pinch to zoom ------------------------------------------------------------------
   const topBar = () => 0; // the resources are a see-through overlay: the field runs under it
-  const bottomBar = () => $('dock').offsetHeight + 12;
+  const bottomBar = () => {
+    const r = $('dock').getBoundingClientRect(); // from its top to the screen's bottom, so a phone's home-indicator gap counts
+    return r.height ? window.innerHeight - r.top + 6 : 12;
+  };
   const viewH = () => window.innerHeight - topBar() - bottomBar();
   const fitZoom = () => Math.min(window.innerWidth / boardW(), viewH() / boardH());
   const minZoom = () => Math.min(fitZoom(), ZOOM_MAX);
@@ -476,13 +483,15 @@ void (async () => {
     return col >= 0 && row >= 0 && col < match.board.cols && row < match.board.rows ? [col, row] : undefined;
   };
 
-  // Input, the same ideas for a finger and a mouse. Pan: drag with a finger, or the middle button, or the arrow keys / WASD. The
-  // right button does nothing (the browser's menu owns it). Zoom: pinch or wheel. Select: a mouse drag with the left button draws a
-  // box; on a touch screen, press and hold a moment, then drag. Tap a unit to pick it (double-tap: every one of its kind in view),
-  // tap again with Shift or Ctrl to add or drop it. Then tap a rival's tower or castle to send the group at it; Esc, or a tap on
-  // bare ground, lets go.
+  // Input, the standard for each device. Mouse: a left-button drag draws a selection box (Shift or Ctrl adds to the selection); a right
+  // or middle drag pans, as do the arrow keys and WASD. Touch: one finger drags to pan; press and hold a moment, then drag, to draw a box.
+  // Zoom: pinch or wheel. Tap a unit to pick it; double-tap a unit to pick every unit you have; tap again with Shift or Ctrl to add or
+  // drop it. Then tap (or right-click) a rival's tower or castle to send the group at it; Esc, or a tap on bare ground, lets go.
   const pointers = new Map<number, { x: number; y: number }>();
-  type Gesture = 'wait' | 'pan' | 'box' | 'pinch';
+  type Gesture = 'wait' | 'pan' | 'box' | 'pinch' | 'ghost';
+  let grab = { x: 0, y: 0 };
+  let ghostPtr: { x: number; y: number } | undefined; // the finger holding the pending tower (it pans the field at an edge)
+  const GRAB_LIFT = 36; // the pending tower rides this far above the finger so it stays in sight
   let gesture: Gesture = 'wait';
   let pressStart = { x: 0, y: 0 };
   let pressButton = 0;
@@ -499,7 +508,6 @@ void (async () => {
   };
   app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   app.canvas.addEventListener('pointerdown', (e) => {
-    if (e.button === 2) return; // the right button is the browser's
     try {
       app.canvas.setPointerCapture(e.pointerId);
     } catch {
@@ -512,6 +520,17 @@ void (async () => {
       pressAdd = e.shiftKey || e.ctrlKey || e.metaKey;
       gesture = 'wait';
       window.clearTimeout(longPress);
+      if (e.pointerType !== 'mouse' && started && selected && ghost) {
+        // A finger near the pending tower picks it up; anywhere else still pans the field.
+        const k = world.scale.x * CELL;
+        const [gx, gy] = [world.x + (ghost[0] + 0.5) * k, world.y + (ghost[1] + 0.5) * k];
+        if (Math.hypot(e.clientX - gx, e.clientY - gy) <= Math.min(80, Math.max(48, 1.6 * k))) {
+          gesture = 'ghost';
+          grab = { x: gx - e.clientX, y: gy - e.clientY - GRAB_LIFT };
+          ghostPtr = { x: e.clientX, y: e.clientY };
+          return;
+        }
+      }
       if (e.pointerType !== 'mouse')
         longPress = window.setTimeout(() => {
           if (gesture !== 'wait' || pointers.size !== 1 || !started || selected) return;
@@ -539,10 +558,15 @@ void (async () => {
     p.x = e.clientX;
     p.y = e.clientY;
     if (pointers.size === 1) {
+      if (gesture === 'ghost') {
+        ghostPtr = { x: e.clientX, y: e.clientY };
+        const cell = cellAt(e.clientX + grab.x, e.clientY + grab.y);
+        if (cell) setGhost(cell);
+        return;
+      }
       if (gesture === 'wait' && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > TAP_SLOP) {
         window.clearTimeout(longPress);
-        // The left mouse button selects (unless a tower is being placed); everything else drags the field.
-        gesture = e.pointerType === 'mouse' && pressButton === 0 && started && !selected ? 'box' : 'pan';
+        gesture = started && !selected && e.pointerType === 'mouse' && pressButton === 0 ? 'box' : 'pan';
       }
       if (gesture === 'box') {
         boxTo = { x: e.clientX, y: e.clientY };
@@ -565,10 +589,13 @@ void (async () => {
     window.clearTimeout(longPress);
     marquee.hidden = true;
     if (wasOne && e.type === 'pointerup') {
-      if (gesture === 'box') finishBox();
-      else if (gesture === 'wait') tap(e.clientX, e.clientY, e.pointerType !== 'mouse', { add: pressAdd });
+      if (gesture === 'box') {
+        finishBox();
+      } else if (gesture === 'wait')
+        tap(e.clientX, e.clientY, e.pointerType !== 'mouse', { add: pressAdd, right: pressButton === 2 });
     }
     if (pointers.size === 0) gesture = 'wait';
+    if (gesture !== 'ghost') ghostPtr = undefined;
     pinch = 0;
   };
   app.canvas.addEventListener('pointerup', release);
@@ -585,18 +612,52 @@ void (async () => {
     },
     { passive: false },
   );
-  $('cam-all').onclick = () => started && selectAll();
   $('cam-home').onclick = home;
   $('cam-fit').onclick = () => focus(match.board.cols / 2, match.board.rows / 2, minZoom());
 
-  /** The touch's pending tower: the first tap on a valid cell leaves a ghost here; Confirm (or a second tap) places it. */
+  /** The touch's pending tower: picking a building leaves a ghost in view, a finger drags it, and Build places it. */
   let ghost: [number, number] | undefined;
+  /** Whether the last press was a finger (a phone gets the drag-and-confirm placing; a mouse hovers and clicks). */
+  let touchUser = false;
+  window.addEventListener('pointerdown', (e) => (touchUser = e.pointerType !== 'mouse'), true);
   /** The last cell tapped, so its caption stays up on a touch screen (no hover). */
   let lastTap: [number, number] | undefined;
   const ghostBar = $('ghost');
+  const ghostOk = $<HTMLButtonElement>('ghost-ok');
   const setGhost = (cell: [number, number] | undefined) => {
     ghost = cell;
     ghostBar.hidden = !cell;
+    if (cell && selected) ghostOk.innerHTML = `Build ${money(selected.cost)}`;
+  };
+  /** Leave the pending tower at the buildable cell nearest the middle of the view (or on the middle, red, if there is none). */
+  const spawnGhost = () => {
+    if (!selected) return;
+    const mid = cellAt(window.innerWidth / 2, topBar() + viewH() / 2) ?? [match.board.cols >> 1, match.board.rows >> 1];
+    for (let r = 0; r <= 30; r++)
+      for (let dc = -r; dc <= r; dc++)
+        for (let dr = -r; dr <= r; dr++)
+          if (
+            Math.max(Math.abs(dc), Math.abs(dr)) === r &&
+            canBuild(match, YOU, selected, mid[0] + dc, mid[1] + dr) === 'ok'
+          )
+            return setGhost([mid[0] + dc, mid[1] + dr]);
+    setGhost([mid[0], mid[1]]);
+  };
+  /** A building's thumbnail on a touch screen: straight into placing it (the card is for the mouse and for why it cannot be). */
+  const startPlacing = (def: TowerDef) => {
+    if (selected === def) {
+      selected = undefined;
+      setGhost(undefined);
+      return refresh();
+    }
+    if (towerReason(def)) return showCard({ kind: 'tower', def });
+    closeCard();
+    selected = def;
+    spawnGhost();
+    // A cell must be big enough for a finger to aim at: zoom in on the ghost if the field is zoomed far out.
+    if (ghost && world.scale.x * CELL < PLACE_CELL_PX)
+      focus(ghost[0] + 0.5, ghost[1] + 0.5, Math.min(ZOOM_MAX, PLACE_CELL_PX / CELL));
+    refresh();
   };
   /** Do something to your side of the match: at once alone, or on the same tick on both pages online (net/lockstep.ts). */
   const cmd = (c: Command) => {
@@ -612,9 +673,14 @@ void (async () => {
       refresh();
     }
     setGhost(undefined);
+    if (selected && touchUser) spawnGhost();
   };
   $('ghost-ok').onclick = () => ghost && place(ghost);
-  $('ghost-no').onclick = () => setGhost(undefined);
+  $('ghost-no').onclick = () => {
+    selected = undefined;
+    setGhost(undefined);
+    refresh();
+  };
 
   const myBunkerAt = (wx: number, wy: number) =>
     match.towers.find(
@@ -670,6 +736,42 @@ void (async () => {
     );
 
   /** The units you have picked that are still alive. */
+  /** The group's ground soldiers into the nearest bunkers with room (a full one passes them on to the next): they march there and go in. */
+  function sendToBunkers() {
+    let left = picked().filter((u) => u.def.garrison);
+    if (!left.length) return note('Flyers and bombers cannot man a bunker: pick some ground soldiers');
+    const [gx, gy] = [
+      left.reduce((a, u) => a + unitMid(u)[0], 0) / left.length,
+      left.reduce((a, u) => a + unitMid(u)[1], 0) / left.length,
+    ];
+    const room = (t: Tower) =>
+      t.def.bunker!.slots - t.garrison.length - match.units.filter((u) => u.enter === t.id && u.hp > 0).length;
+    const bunkers = match.towers
+      .filter((t) => t.owner === YOU && t.hp > 0 && t.def.bunker && room(t) > 0)
+      .sort((a, b) => Math.hypot(a.col - gx, a.row - gy) - Math.hypot(b.col - gx, b.row - gy));
+    if (!bunkers.length)
+      return note(
+        match.towers.some((t) => t.owner === YOU && t.def.bunker) ? 'Your bunkers are full' : 'Build a bunker first',
+      );
+    let sent = 0;
+    for (const b of bunkers) {
+      const go = left
+        .sort(
+          (a, c) =>
+            Math.hypot(unitMid(a)[0] - b.col, unitMid(a)[1] - b.row) -
+            Math.hypot(unitMid(c)[0] - b.col, unitMid(c)[1] - b.row),
+        )
+        .slice(0, room(b));
+      if (!go.length) continue;
+      cmd({ k: 'garrison', tower: b.id, ids: go.map((u) => u.id) });
+      for (const u of go) selection.delete(u.id);
+      left = left.filter((u) => !go.includes(u));
+      sent += go.length;
+      if (!left.length) break;
+    }
+    note(`${sent} marching into the bunker${bunkers.length > 1 && sent > 0 ? 's' : ''}`);
+    refresh();
+  }
   const picked = () => match.units.filter((u) => selection.has(u.id) && u.owner === YOU && u.hp > 0 && !u.spent);
   /** One of the picked units says a line (the first of the group). */
   const speak = (line: 'pick' | 'go') => {
@@ -691,6 +793,16 @@ void (async () => {
     } else if (cardOf?.kind === 'sel') closeCard();
   };
   const selectAll = () => select(match.units.filter((u) => u.owner === YOU && u.hp > 0 && !u.spent));
+  /** A hint shown once ever on this device (`localStorage`, per game), as the note under the top bar. */
+  const tipOnce = (key: string, text: string) => {
+    try {
+      if (localStorage.getItem(`towercraft:tip:${key}`)) return;
+      localStorage.setItem(`towercraft:tip:${key}`, '1');
+    } catch {
+      return; // no storage: no tip, rather than the same one every time
+    }
+    note(text);
+  };
   const note = (text: string) => {
     hintNote = text;
     hintUntil = clock + 2.6;
@@ -729,7 +841,8 @@ void (async () => {
   function finishBox() {
     const [x0, x1] = [Math.min(pressStart.x, boxTo.x), Math.max(pressStart.x, boxTo.x)];
     const [y0, y1] = [Math.min(pressStart.y, boxTo.y), Math.max(pressStart.y, boxTo.y)];
-    if (x1 - x0 < TAP_SLOP && y1 - y0 < TAP_SLOP) return tap(pressStart.x, pressStart.y, true, { add: pressAdd });
+    if (x1 - x0 < TAP_SLOP && y1 - y0 < TAP_SLOP)
+      return tap(pressStart.x, pressStart.y, true, { add: pressAdd, right: false });
     const inside = match.units.filter((u) => {
       if (u.owner !== YOU || u.hp <= 0 || u.spent) return false;
       const [x, y] = unitMid(u);
@@ -738,31 +851,48 @@ void (async () => {
     });
     if (inside.length || !pressAdd) select(inside, pressAdd);
   }
-  let lastUnitTap = { kind: '', at: 0 };
+  /** When a unit was last tapped: a second tap in a moment selects every unit you have. */
+  let lastUnitTap = 0;
 
-  function tap(sx: number, sy: number, touch: boolean, how = { add: false }) {
+  function tap(sx: number, sy: number, touch: boolean, how = { add: false, right: false }) {
     if (!started) return;
     const [wx, wy] = [(sx - world.x) / world.scale.x / CELL, (sy - world.y) / world.scale.y / CELL];
     if (!selected) {
+      // A right-click: send the group at what is there, or back to fighting everything.
+      if (how.right) {
+        if (selection.size && !command(wx, wy)) {
+          cmd({ k: 'focus', ids: [...selection] });
+          note('Fighting everything');
+        }
+        return;
+      }
       if (selection.size && command(wx, wy)) return;
+      // Picked soldiers, then a tap on one of your bunkers: those that can man it march in (the rest stay in the group).
+      const into = selection.size ? myBunkerAt(wx, wy) : undefined;
+      if (into && picked().some((u) => u.def.garrison)) {
+        const ids = picked()
+          .filter((u) => u.def.garrison)
+          .map((u) => u.id);
+        const room = into.def.bunker!.slots - into.garrison.length;
+        if (room <= 0) return note(`The ${into.def.name} is full`);
+        cmd({ k: 'garrison', tower: into.id, ids });
+        for (const id of ids) selection.delete(id);
+        note(`Marching into the ${into.def.name}`);
+        refresh();
+        return;
+      }
+      if (into) return note('Flyers and bombers cannot man a bunker: pick some ground soldiers, then tap it');
       // One of your units: pick it (a second tap in a moment: every one of its kind in view).
       const mine = myUnitAt(wx, wy);
       if (mine) {
         setGhost(undefined);
         const now = performance.now();
-        if (!how.add && lastUnitTap.kind === mine.def.id && now - lastUnitTap.at < 420) {
-          const view = (u: Unit) => {
-            const [x, y] = unitMid(u);
-            const [px, py] = [world.x + x * CELL * world.scale.x, world.y + y * CELL * world.scale.y];
-            return px >= 0 && px <= window.innerWidth && py >= 0 && py <= window.innerHeight;
-          };
-          select(
-            match.units.filter((u) => u.owner === YOU && u.hp > 0 && !u.spent && u.def.id === mine.def.id && view(u)),
-          );
-          lastUnitTap = { kind: '', at: 0 };
+        if (!how.add && now - lastUnitTap < 420) {
+          selectAll();
+          lastUnitTap = 0;
         } else {
           select([mine], how.add);
-          lastUnitTap = { kind: mine.def.id, at: now };
+          lastUnitTap = now;
         }
         return;
       }
@@ -795,11 +925,11 @@ void (async () => {
     const cell = cellAt(sx, sy);
     if (!cell || !selected) return;
     lastTap = cell;
-    if (canBuild(match, YOU, selected, cell[0], cell[1]) !== 'ok') return setGhost(undefined); // the hint says why
-    if (!touch || (ghost && ghost[0] === cell[0] && ghost[1] === cell[1])) place(cell);
-    else setGhost(cell); // a touch: show what it would do first
+    if (touch) return setGhost(cell); // a touch moves the pending tower (red where it cannot go; the hint says why)
+    if (canBuild(match, YOU, selected, cell[0], cell[1]) !== 'ok') return setGhost(undefined);
+    place(cell);
   }
-  // Keys: Esc lets go; Ctrl+A picks every unit; C sends the group at the castle, X back to the general orders; arrows and
+  // Keys: Esc lets go; Ctrl+A picks every unit; C sends the group at the castle, X back to fighting everything; arrows and
   // WASD pan the field.
   const held = new Set<string>();
   window.addEventListener('keydown', (e) => {
@@ -818,7 +948,7 @@ void (async () => {
       cmd(
         k === 'c' ? { k: 'focus', ids: [...selection], at: { kind: 'castle' } } : { k: 'focus', ids: [...selection] },
       );
-      note(k === 'c' ? `${selection.size} → the castle` : 'Back to the general orders');
+      note(k === 'c' ? `${selection.size} → the castle` : 'Fighting everything');
     } else if (
       ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(k) &&
       !e.ctrlKey &&
@@ -887,15 +1017,15 @@ void (async () => {
   }
   const corpses: Corpse[] = [];
   /** The sheet column and mirroring for a unit walking its lane: along its tangent (flyers follow the road too). */
-  const heading = (u: { owner: Owner; lane?: number; s: number }) => {
+  const heading = (u: { owner: Owner; lane?: number; s: number; back?: boolean }) => {
     const [hx, hy] = laneOf(match.board, u).directionAt(u.s);
-    return direction(hx, hy);
+    return u.back ? direction(-hx, -hy) : direction(hx, hy);
   };
   const addCorpse = (d: Death) => {
     const dir = heading(d);
     const sheet = SHEETS[d.def.kind];
     const container = new Container();
-    const sprite = new Sprite(unitFrame(d.def.sheet, d.def.kind, sheet.death[0]!, dir.col));
+    const sprite = new Sprite(unitFrame(d.def.sheet, d.def.kind, sheet.death[0]!, dir.col, colorOf(d.owner)));
     sprite.anchor.set(0.5, feetAt(d.def.kind));
     sprite.scale.set((dir.flip ? -1 : 1) * unitScale(d.def), unitScale(d.def));
     container.addChild(sprite);
@@ -918,6 +1048,7 @@ void (async () => {
         k.def.kind,
         rows[Math.min(rows.length - 1, Math.floor(k.age / DEATH_FRAME))]!,
         k.col,
+        colorOf(k.owner),
       );
       k.container.alpha = Math.min(1, (CORPSE_LIFE - k.age) / (CORPSE_LIFE / 2));
     }
@@ -1057,7 +1188,7 @@ void (async () => {
     for (const t of match.towers) {
       if (t.owner !== YOU || !t.def.econ) continue;
       const wood = t.def.econ.wood ?? 0;
-      const amount = Math.round(wood || (t.def.econ.stone ?? 0));
+      const amount = wood || (t.def.econ.stone ?? 0);
       if (!amount) continue;
       const text = new Text({
         text: `+${amount}`,
@@ -1157,7 +1288,9 @@ void (async () => {
     ctx.globalAlpha = 1;
     for (const p of pools.values()) cutPool(ctx, p.x, p.y, p.r);
 
-    // The tint: a cool wash over every pool that is not build ground, with the build ground cut back out of it.
+    // The tint: a cool wash over every pool that is not build ground, with the build ground cut back out of it. The pools are
+    // drawn solid first, so where they overlap they make one shape (many units at once must not stack into an opaque wash);
+    // the wash colour is then laid on that shape once, at its strength.
     const t = tint.ctx;
     t.globalCompositeOperation = 'source-over';
     t.clearRect(0, 0, w, h);
@@ -1165,12 +1298,17 @@ void (async () => {
       if (p.build || p.r <= 0.02) continue;
       const [cx, cy, outer] = [p.x * FOG_RES, p.y * FOG_RES, (p.r + 0.7) * FOG_RES];
       const g = t.createRadialGradient(cx, cy, 0, cx, cy, outer);
-      g.addColorStop(0, 'rgba(120, 160, 230, 0.16)');
-      g.addColorStop(Math.max(0, (p.r - 0.5) / (p.r + 0.7)), 'rgba(120, 160, 230, 0.16)');
+      g.addColorStop(0, 'rgba(120, 160, 230, 1)');
+      g.addColorStop(Math.max(0, (p.r - 0.5) / (p.r + 0.7)), 'rgba(120, 160, 230, 1)');
       g.addColorStop(1, 'rgba(120, 160, 230, 0)');
       t.fillStyle = g;
       t.fillRect(cx - outer, cy - outer, outer * 2, outer * 2);
     }
+    t.globalCompositeOperation = 'source-in';
+    t.globalAlpha = FOG_WASH;
+    t.fillStyle = 'rgb(120, 160, 230)';
+    t.fillRect(0, 0, w, h);
+    t.globalAlpha = 1;
     t.globalCompositeOperation = 'destination-out';
     for (const p of pools.values()) if (p.build) cutPool(t, p.x, p.y, p.r);
     for (const layer of [shade, tint]) layer.sprite.texture.source.update();
@@ -1216,9 +1354,11 @@ void (async () => {
         live.rect(cx - CELL / 2, cy - CELL / 2, CELL, CELL).stroke({ color: ok ? 0xffb13f : 0xb82024, width: 2 });
       }
     }
-    ghostSprite.visible = !!aim && canBuild(match, YOU, selected!, aim[0], aim[1]) === 'ok';
+    const aimOk = !!aim && !!selected && canBuild(match, YOU, selected, aim[0], aim[1]) === 'ok';
+    ghostSprite.visible = !!aim && (aimOk || !!ghost);
+    ghostSprite.tint = aimOk ? 0xffffff : 0xff6a6a;
     if (ghostSprite.visible && aim && selected) {
-      const tex = paintedTexture(towerTextures.get(selected.art)!, YOU, selected.look?.tint);
+      const tex = buildingTex(towerTextures, selected.art, colorOf(YOU));
       ghostSprite.texture = tex;
       ghostSprite.scale.set(TOWER_PX / tex.width);
       ghostSprite.position.set((aim[0] + 0.5) * CELL, (aim[1] + 0.5) * CELL + TOWER_FOOT);
@@ -1238,21 +1378,27 @@ void (async () => {
       lit(laneFor(match, YOU), 7, laneHover === undefined ? 0.28 : 0.14);
       lit(laneHover, 9, 0.55);
     }
-    if (started) {
+    // Rings show only what you are looking at (a tower under the mouse or whose card is open) or, while placing, where you can build:
+    // a cluster of buildings would otherwise be a tangle of circles.
+    const inFocus = (t: Tower) =>
+      (cardOf && (cardOf.kind === 'built' || cardOf.kind === 'bunker') && cardOf.id === t.id) ||
+      (hoverAt && Math.hypot(hoverAt[0] - (t.col + 0.5), hoverAt[1] - (t.row - 0.4)) <= 1.2);
+    if (started && selected) {
       const [cx, cy] = castleAt(YOU);
       areaLayer
         .circle(cx * CELL, cy * CELL, buildReach(match, YOU) * CELL)
-        .stroke({ color: 0xffb13f, width: 2, alpha: selected ? 0.5 : 0.2 });
-      for (const t of match.towers)
-        if (t.owner === YOU && t.def.reach > 0)
-          areaLayer
-            .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL, t.def.reach * CELL)
-            .stroke({ color: 0xffb13f, width: 1.5, alpha: selected ? 0.4 : 0.15 });
+        .stroke({ color: 0xffb13f, width: 2, alpha: 0.5 });
     }
+    // A shooting tower's card already draws its firing range, so its build reach (a second circle) is shown only for those that do not shoot.
+    for (const t of match.towers)
+      if (t.owner === YOU && t.def.reach > 0 && t.def.damage <= 0 && inFocus(t))
+        areaLayer
+          .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL, t.def.reach * CELL)
+          .stroke({ color: 0xffb13f, width: 1.5, alpha: 0.4 });
 
-    // Support towers show what they cover: an aura (green heal, orange power) and a detector (violet).
+    // Support towers show what they cover (an aura: green heal, orange power; a detector: violet) when in focus.
     for (const t of match.towers) {
-      if (!isSeen(match, YOU, t, vision)) continue;
+      if (!isSeen(match, YOU, t, vision) || !inFocus(t)) continue;
       const cx = (t.col + 0.5) * CELL;
       const cy = (t.row + 0.5) * CELL;
       const mine = allied(match, t.owner, YOU);
@@ -1280,7 +1426,7 @@ void (async () => {
         const c = new Container();
         const color = colorOf(t.owner);
         c.addChild(new Graphics().ellipse(0, 4, 19 * SIZE, 9 * SIZE).fill({ color, alpha: 0.55 })); // the owner's colour under the tower
-        const tex = paintedTexture(towerTextures.get(t.def.art)!, t.owner, t.def.look?.tint);
+        const tex = buildingTex(towerTextures, t.def.art, color);
         const sprite = new Sprite(tex);
         sprite.anchor.set(0.5, 0.78);
         sprite.scale.set(TOWER_PX / tex.width); // a tower is about two and a half cells wide, whatever its sheet
@@ -1328,7 +1474,7 @@ void (async () => {
         const c = new Container();
         const color = colorOf(u.owner);
         c.addChild(new Graphics().ellipse(0, 0, 8 * unitScale(u.def), 4 * SIZE).fill({ color, alpha: 0.6 })); // under the feet (on the ground, below a flyer)
-        const body = new Sprite(unitFrame(u.def.sheet, u.def.kind, 0, 4));
+        const body = new Sprite(unitFrame(u.def.sheet, u.def.kind, 0, 4, color));
         body.anchor.set(0.5, feetAt(u.def.kind));
         body.scale.set(unitScale(u.def));
         c.addChild(body);
@@ -1381,7 +1527,7 @@ void (async () => {
           by = Math.sin(clock * 2.2 + u.id) * 0.6 * SIZE; // breathing while it waits
         }
         if (u.def.air) by += -FLIGHT + Math.sin(clock * 3 + u.id) * 2.5 * SIZE; // a flyer hovers
-        body.texture = unitFrame(u.def.sheet, u.def.kind, pose, dir.col);
+        body.texture = unitFrame(u.def.sheet, u.def.kind, pose, dir.col, colorOf(u.owner));
         body.scale.x = (dir.flip ? -1 : 1) * unitScale(u.def);
         body.position.set(bx, by);
         // An enemy is drawn only in sight (a cloaked one also needs a detector); cloaked is faint to its own side; poison tints green.
@@ -1461,8 +1607,8 @@ void (async () => {
       if (t && t.hp > 0 && t.def.damage > 0)
         live
           .circle((t.col + 0.5) * CELL, (t.row + 0.5) * CELL, t.def.range * CELL)
-          .fill({ color: 0xffffff, alpha: 0.08 })
-          .stroke({ color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b, width: 1.5, alpha: 0.5 });
+          .fill({ color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b, alpha: 0.2 })
+          .stroke({ color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b, width: 1.5, alpha: 0.35 });
       if (t && t.hp > 0)
         live.ellipse((t.col + 0.5) * CELL, (t.row + 0.5) * CELL + 8, 30 * SIZE * 0.7, 11 * SIZE * 0.7).stroke({
           color: cardOf.kind === 'built' ? 0xf2d38a : 0xe0777b,
@@ -1571,7 +1717,7 @@ void (async () => {
 
   // --- The page: top bar, the dock of thumbnails, the card, the title screen -----------------------------------------------
   /** A price as coloured numbers (wood brown, stone grey); `words` spells them out, for the cards. */
-  const shown = (n: number) => String(Math.round(n)); // whole numbers only: an income is a fraction of a coin per pay day
+  const shown = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1)); // an income may carry a tenth
   const money = (c: Cost) =>
     [
       c.wood > 0 && `<i class="w" title="wood">${shown(c.wood)}</i>`,
@@ -1599,29 +1745,34 @@ void (async () => {
     if (lastRes.s !== st) $('stone').textContent = String((lastRes.s = st));
   }
 
-  /** A building's picture for the page (its owner's colour, from the sheet once loaded). */
-  const thumbUrls = new WeakMap<HTMLCanvasElement, string>();
-  const towerThumb = (art: string, px: number, o: Owner = YOU, tint?: number) => {
-    const base = towerTextures.get(art) ?? castleTextures.get(art);
-    let url = `art/${art}.png`;
-    if (base) {
-      const canvas = paintedArt(base, o, tint);
-      if (!thumbUrls.has(canvas)) thumbUrls.set(canvas, canvas.toDataURL());
-      url = thumbUrls.get(canvas)!;
-    }
-    return `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(${url});background-size:${px}px auto"></i>`;
+  /** A building's picture in your colour (a data URL), or the plain file while it is not loaded. */
+  const buildingUrl = (art: string) => {
+    const raw = towerTextures.get(art) ?? castleTextures.get(art);
+    if (!raw) return `art/${art}.png`;
+    const key = `${art}:${colorOf(YOU)}`;
+    let url = portraits.get(key);
+    if (!url)
+      portraits.set(
+        key,
+        (url = (teamTexture(`b:${art}`, raw, colorOf(YOU)).source.resource as HTMLCanvasElement).toDataURL()),
+      );
+    return url;
   };
-  /** A unit's picture where it has no portrait of its own: its front-facing standing frame, cropped to the figure and scaled up. */
+  const towerThumb = (art: string, px: number) =>
+    `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(${buildingUrl(art)});background-size:${px}px auto"></i>`;
+  /** A unit's picture (in your colour) where it has no portrait of its own: its front-facing standing frame, cropped to the figure and scaled up. */
   const portraits = new Map<string, string>();
   const portrait = (d: UnitDef) => {
-    let url = portraits.get(d.sheet);
+    const color = colorOf(YOU);
+    const key = `${d.sheet}:${color}`;
+    let url = portraits.get(key);
     if (url) return url;
     const size = SHEETS[d.kind].frame;
     const frame = document.createElement('canvas');
     frame.width = frame.height = size;
     const fx = frame.getContext('2d', { willReadFrequently: true })!;
     fx.drawImage(
-      sheetTextures.get(d.sheet)!.source.resource as CanvasImageSource,
+      teamSheet(d.sheet, color).source.resource as CanvasImageSource,
       4 * size,
       0,
       size,
@@ -1646,15 +1797,27 @@ void (async () => {
     const ox = out.getContext('2d')!;
     ox.imageSmoothingEnabled = false;
     ox.drawImage(frame, x0, y0, w, h, 0, 0, w * k, h * k);
-    portraits.set(d.sheet, (url = out.toDataURL()));
+    portraits.set(key, (url = out.toDataURL()));
+    return url;
+  };
+  /** A unit portrait in your colour (a data URL), or the plain file while it is not loaded. */
+  const portraitUrl = (art: string) => {
+    const tex = portraitTextures.get(art);
+    if (!tex) return `art/${art}.png`;
+    const key = `${art}:${colorOf(YOU)}`;
+    let url = portraits.get(key);
+    if (!url)
+      portraits.set(
+        key,
+        (url = (teamTexture(`p:${art}`, tex, colorOf(YOU)).source.resource as HTMLCanvasElement).toDataURL()),
+      );
     return url;
   };
   const unitThumb = (d: UnitDef, px: number) =>
     d.art
-      ? `<img class="thumb art" src="art/${d.art}.png" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`
+      ? `<img class="thumb art" src="${portraitUrl(d.art)}" alt="" width="${px}" height="${Math.round((px * 38) / 46)}" />`
       : `<img class="thumb art gen" src="${portrait(d)}" alt="" style="width:${px}px;height:${Math.round((px * 38) / 46)}px" />`;
 
-  const row = (k: string, v: string | number) => `<li><span>${k}</span><b>${v}</b></li>`;
   const per = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
   const pct = (n: number) => `+${Math.round(n * 100)}%`;
 
@@ -1731,10 +1894,16 @@ void (async () => {
     const unlocks = (d.trains ?? [])
       .map((id) => race.units.find((u) => u.id === id))
       .filter((u): u is UnitDef => !!u)
-      .map((u) => `<span title="${u.name}">${unitThumb(u, 34)}</span>`)
+      .map((u) => {
+        // Only the castle level can still hold it back once the building stands (a card on the field), or the building itself (the dock).
+        const shut = unitUnlocked(match, YOU, u) !== 'ok';
+        return shut
+          ? `<span class="shut" title="${u.name}: ${unitReason(u)}">${unitThumb(u, 34)}${icon('locked', unitReason(u))}</span>`
+          : `<span title="${u.name}">${unitThumb(u, 34)}</span>`;
+      })
       .join('');
     return (
-      `<header><div class="pic">${towerThumb(d.art, 50, YOU, d.look?.tint)}</div><div><h3>${d.name}</h3>` +
+      `<header><div class="pic">${towerThumb(d.art, 50)}</div><div><h3>${d.name}</h3>` +
       `<div class="sub">${d.limit ? `${built} of ${d.limit} built` : ''}${d.needs ? ` ${icon('unlock', 'Needs')} ${towerName(d.needs)}` : ''}</div></div></header>` +
       badges(
         d.damage > 0 && (d.hits !== 'air' ? (['ground', 'Hits the ground'] as const) : false),
@@ -1768,42 +1937,22 @@ void (async () => {
   const trainButtons: [HTMLButtonElement, UnitDef][] = [];
   const buildButtons: [HTMLButtonElement, TowerDef][] = [];
   const upgradeButtons: [HTMLButtonElement, UpgradeDef][] = [];
-  let castleButton: HTMLButtonElement;
-  const orderButtons: [HTMLButtonElement, 'towers' | 'units'][] = [];
   /** The road chips of a map with forks (a unit you buy walks the road picked), by the lane each one is. */
   const laneButtons: [HTMLButtonElement, number][] = [];
 
   /** One thumbnail in the dock: a wooden square with the picture, its price under it and a ribbon over it if it is locked. */
-  /** The hover caption of a dock thumbnail (its name, and why it cannot be bought now): a mouse hovering shows it above the picture. */
-  const tip = $('tip');
-  let hovered: HTMLElement | undefined;
-  const showTip = (b: HTMLElement) => {
-    const r = b.getBoundingClientRect();
-    hovered = b;
-    tip.textContent = b.dataset.tip ?? '';
-    tip.style.left = `${r.left + r.width / 2}px`;
-    tip.style.top = `${r.top - 4}px`;
-    tip.hidden = !tip.textContent;
-  };
-  const hideTip = (b: HTMLElement) => {
-    if (hovered === b) hovered = undefined;
-    tip.hidden = true;
-  };
   const thumb = (art: string, cost: string, title: string, onclick: () => void) => {
     const b = document.createElement('button');
     b.className = 'tb wbtn';
-    b.dataset.tip = title;
+    b.title = title;
     b.innerHTML = `${art}<em>${cost}</em><span class="lv"></span>`;
     b.onclick = onclick;
-    b.onpointerenter = (e) => e.pointerType === 'mouse' && showTip(b);
-    b.onpointerleave = () => hideTip(b);
     return b;
   };
   const setChip = (b: HTMLElement, text: string, title: string) => {
     const chip = b.querySelector('.lv')!;
     if (chip.textContent !== text) chip.textContent = text;
-    b.dataset.tip = title;
-    if (hovered === b) tip.textContent = title;
+    b.title = title;
   };
 
   // The card: what a thumbnail is (and, for the castle, its health, income and the next upgrade), with the purchase button.
@@ -1816,35 +1965,13 @@ void (async () => {
     | { kind: 'built'; id: number }
     | { kind: 'foe'; id: number };
   let cardOf: CardOf | undefined;
-  /**
-   * Upgrades spend a lot on one click, so the first click only arms the button ("Confirm?") and a second one within
-   * `CONFIRM_MS` buys. Anything else, or waiting, disarms it.
-   */
-  const CONFIRM_MS = 3000;
-  let armedKey: string | undefined;
-  let armedTimer: ReturnType<typeof setTimeout> | undefined;
-  const isArmed = (key: string) => armedKey === key;
-  const disarm = () => {
-    armedKey = undefined;
-    clearTimeout(armedTimer);
-  };
-  /** True when this click is the confirming one; otherwise arms `key` and repaints. */
-  function confirmed(key: string): boolean {
-    if (armedKey === key) {
-      disarm();
-      return true;
-    }
-    disarm();
-    armedKey = key;
-    armedTimer = setTimeout(() => {
-      disarm();
-      if (cardOf) renderCard();
-      refresh();
-    }, CONFIRM_MS);
-    return false;
-  }
   const act = $<HTMLButtonElement>('card-act');
+  const sell = $<HTMLButtonElement>('card-sell');
   let cardBody = '';
+  /** Which building's shop the card holds now (see `fillShop`). */
+  let shopKey = '';
+  /** How many purchases the slider is set to. */
+  let buyN = 1;
   const sameCard = (a: CardOf, b: CardOf) =>
     a.kind === b.kind &&
     (a.kind === 'castle' ||
@@ -1853,7 +1980,9 @@ void (async () => {
     ((a.kind !== 'bunker' && a.kind !== 'built' && a.kind !== 'foe') || a.id === (b as { id: number }).id);
   function showCard(c: CardOf, toggle = false) {
     if (toggle && cardOf && sameCard(cardOf, c)) return closeCard();
-    if (!cardOf || !sameCard(cardOf, c)) disarm();
+    if (!cardOf || !sameCard(cardOf, c)) {
+      buyN = 1;
+    }
     cardOf = c;
     if (selected && !(c.kind === 'tower' && c.def === selected)) {
       selected = undefined; // looking at something else drops the tower being placed
@@ -1865,18 +1994,25 @@ void (async () => {
   }
   function closeCard() {
     if (cardOf?.kind === 'sel') selection.clear();
-    disarm();
     cardOf = undefined;
     $('card').hidden = true;
     selected = undefined;
     setGhost(undefined);
     refresh();
   }
-  $('card-x').onclick = closeCard;
+  // The group card's × only puts the card away: the group stays picked, so a phone can clear the card off the field and then tap a bunker
+  // (a tap on bare ground, Esc or the card closing for another reason lets the group go).
+  $('card-x').onclick = () => {
+    if (cardOf?.kind !== 'sel') return closeCard();
+    cardOf = undefined;
+    $('card').hidden = true;
+    refresh();
+  };
   // The bunker card's own buttons (its body is rebuilt as the money and the slots change, so one listener catches them).
   $('card-body').addEventListener('click', (e) => {
     const aim = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-aim]');
     if (aim && cardOf?.kind === 'sel') {
+      if (aim.dataset.aim === 'bunker') return sendToBunkers();
       cmd(
         aim.dataset.aim?.startsWith('castle')
           ? {
@@ -1897,31 +2033,24 @@ void (async () => {
       renderCard();
       return;
     }
-    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-load]');
-    if (b) {
-      if (!cardOf || cardOf.kind !== 'bunker' || b.disabled) return;
-      cmd({ k: 'bunker', tower: cardOf.id, unit: b.dataset.load! });
+    if (cardOf?.kind === 'bunker' && (e.target as HTMLElement).closest('button[data-empty]')) {
+      cmd({ k: 'empty', tower: cardOf.id });
+      note('The soldiers march out');
       renderCard();
       refresh();
       return;
     }
-    // Selling a building: the first tap arms it (the button says so), a second within a few seconds sells it.
-    const sell = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-sell]');
-    if (!sell || !cardOf || (cardOf.kind !== 'built' && cardOf.kind !== 'bunker')) return;
-    const id = cardOf.id;
-    if (!confirmed(`sell:${id}`)) return renderCard();
-    cmd({ k: 'sell', tower: id });
-    closeCard();
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-load]');
+    if (!b || !cardOf || cardOf.kind !== 'bunker' || b.disabled) return;
+    cmd({ k: 'bunker', tower: cardOf.id, unit: b.dataset.load! });
+    renderCard();
     refresh();
   });
-  /** A building's sell button: half its price back, after a second tap. */
-  const sellButton = (t: Tower) => {
-    const armed = isArmed(`sell:${t.id}`);
-    return (
-      `<button class="sell${armed ? ' armed' : ''}" data-sell="${t.id}" title="Sell it: half its price back, and it is gone">` +
-      `${armed ? 'Tap again to sell' : `Sell for ${money(sellValue(t))}`}</button>`
-    );
-  };
+
+  $('buy-n').addEventListener('input', () => {
+    buyN = Number($<HTMLInputElement>('buy-n').value);
+    renderCard();
+  });
 
   /** Why a unit cannot be bought now ('' when it can). */
   const unitReason = (d: UnitDef) => {
@@ -1934,7 +2063,7 @@ void (async () => {
   };
   const towerReason = (d: TowerDef) => {
     const open = towerUnlocked(match, YOU, d);
-    if (open === 'tier') return `Needs castle level ${d.tier}`;
+    if (open === 'tier') return `Needs castle level ${towerTier(match, YOU, d)}`;
     if (open === 'needs') return `Needs ${towerName(d.needs!)}`;
     if (open === 'limit') return `Only ${d.limit} allowed`;
     return lacking(d.cost);
@@ -1987,15 +2116,16 @@ void (async () => {
           : ''
       }</div>` +
       `<div class="targets">` +
-      `<button data-aim="none"${on(!sent)} title="Follow the general orders (X)">Orders</button>` +
+      `<button data-aim="bunker" title="The ground soldiers march into the nearest bunkers with room (or tap a bunker to pick it)">Bunker</button>` +
+      `<button data-aim="none"${on(units.every((u) => !u.focus))} title="Fight everything along the way (X)">Fight everything</button>` +
       (coop()
         ? foesOf(match, YOU)
             .map(
               (o) =>
-                `<button data-aim="castle" data-seat="${o}"${on(units.every((u) => u.focus?.kind === 'castle' && (u.focus.owner ?? laneOf(match.board, u).to) === o))} title="Walk past everything to the ${castleName(o)} castle">${castleName(o)} castle</button>`,
+                `<button data-aim="castle" data-seat="${o}"${on(units.every((u) => u.focus?.kind === 'castle' && (u.focus.owner ?? laneOf(match.board, u).to) === o))} title="Walk past everything to the ${castleName(o)} castle">Fight ${castleName(o)} castle</button>`,
             )
             .join('')
-        : `<button data-aim="castle"${on(units.every((u) => u.focus?.kind === 'castle'))} title="Walk past everything to the castle (C)">Castle</button>`) +
+        : `<button data-aim="castle"${on(units.every((u) => u.focus?.kind === 'castle'))} title="Walk past everything to the castle (C)">Fight the castle</button>`) +
       `</div>` +
       (coop()
         ? `<p class="note">Road (before the fork):</p><div class="targets">${openLanes(match, YOU)
@@ -2016,6 +2146,7 @@ void (async () => {
     lv.style.width = `${Math.max(2, (hp / max) * 100)}%`;
     lv.parentElement!.parentElement!.title = `Health ${Math.max(0, Math.ceil(hp))} / ${Math.ceil(max)}`;
     act.hidden = true;
+    sell.hidden = true;
   }
 
   /** A building that stands: yours (what it does, with its health) or the rival's (its picture and health). */
@@ -2023,8 +2154,8 @@ void (async () => {
     const t = match.towers.find((x) => x.id === id && x.hp > 0);
     if (!t || (!mine && !isSeen(match, YOU, t))) return closeCard(); // it fell, or slipped out of sight
     const body = mine
-      ? towerCard(t.def, true) + sellButton(t)
-      : `<header><div class="pic">${towerThumb(t.def.art, 50, t.owner, t.def.look?.tint)}</div><div><h3>${t.def.name}</h3></div></header>` +
+      ? towerCard(t.def, true)
+      : `<header><div class="pic">${towerThumb(t.def.art, 50)}</div><div><h3>${t.def.name}</h3></div></header>` +
         `<div class="stats">${meter('heart', RED, 'Health', t.def.hp, MOST.towerHp, 0, 'lv-hp')}</div>`;
     if (body !== cardBody) {
       $('card-body').innerHTML = body;
@@ -2034,6 +2165,16 @@ void (async () => {
     lv.style.width = `${Math.max(6, Math.min(100, Math.sqrt(Math.max(0, t.hp) / MOST.towerHp) * 100))}%`;
     lv.parentElement!.parentElement!.title = `Health ${Math.ceil(t.hp)} / ${t.def.hp}`;
     // Your own damaged tower can be repaired for resources; the health comes back over time.
+    sell.hidden = !mine;
+    if (mine) {
+      sell.innerHTML = `Sell ${money(sellRefund(t))}`;
+      sell.title = 'Sell for half the price and free the ground';
+      sell.onclick = () => {
+        cmd({ k: 'sell', tower: t.id });
+        closeCard();
+        refresh();
+      };
+    }
     act.hidden = !mine || t.def.hp - t.hp < 1;
     if (!act.hidden) {
       const mending = repairable(t) < 1;
@@ -2050,14 +2191,45 @@ void (async () => {
     }
   }
 
+  /** What a card sells: the castle its base unit, a producer its units, a smithy its upgrades. The buttons are the dock's own (`refresh` keeps their state), moved in. */
+  function fillShop() {
+    const shop = $('card-shop');
+    const race = RACES[match.players[YOU]!.race];
+    let units: UnitDef[] = [];
+    let ups: UpgradeDef[] = [];
+    let key = '';
+    if (cardOf?.kind === 'castle') {
+      units = race.units.filter((u) => !u.needs);
+      key = 'castle';
+    } else if (cardOf?.kind === 'built') {
+      const id = cardOf.id;
+      const t = match.towers.find((x) => x.id === id && x.owner === YOU);
+      if (t) {
+        units = race.units.filter((u) => u.needs === t.def.id);
+        ups = race.upgrades.filter((u) => u.needs === t.def.id);
+        key = `built:${t.def.id}`;
+      }
+    }
+    if (key !== shopKey) {
+      shopKey = key;
+      shop.replaceChildren(
+        ...trainButtons.filter(([, d]) => units.includes(d)).map(([b]) => b),
+        ...upgradeButtons.filter(([, u]) => ups.includes(u)).map(([b]) => b),
+      );
+    }
+    shop.hidden = [...shop.children].every((b) => (b as HTMLElement).hidden);
+  }
+
   function renderCard() {
     if (!cardOf) return;
+    fillShop();
     const me = match.players[YOU]!;
     const race = RACES[me.race];
     const { level } = me.castle;
     const card = $('card');
     card.classList.toggle('placing', cardOf.kind === 'tower' && selected === cardOf.def);
     card.classList.toggle('group', cardOf.kind === 'sel');
+    $('card-buy').hidden = true;
     if (cardOf.kind === 'sel') return renderSel();
     if (cardOf.kind === 'built' || cardOf.kind === 'foe') return renderTower(cardOf.id, cardOf.kind === 'built');
     let body: string;
@@ -2070,10 +2242,19 @@ void (async () => {
     if (cardOf.kind === 'unit') {
       const d = cardOf.def;
       body = unitCard(d);
-      // One purchase a click (they can click fast): the card says what it brings, and why it cannot be bought.
-      label = money(d.cost);
-      reason = maxPurchases(match, YOU, d) > 0 ? '' : unitReason(d);
-      go = () => cmd({ k: 'train', id: d.id, n: 1 });
+      // A slider to buy several at once, up to what the money, the unit limit and the unlocks allow.
+      const most = maxPurchases(match, YOU, d);
+      buyN = Math.max(1, Math.min(buyN, most));
+      const slider = $<HTMLInputElement>('buy-n');
+      if (slider.max !== String(Math.max(1, most))) slider.max = String(Math.max(1, most));
+      if (slider.value !== String(buyN)) slider.value = String(buyN);
+      $('card-buy').hidden = most < 2;
+      $('buy-n-label').textContent = `× ${buyN * d.count}`;
+      const total = { wood: d.cost.wood * buyN, stone: d.cost.stone * buyN };
+      label = `${buyN > 1 ? `<span class="times">×${buyN}</span>` : ''}${money(total)}`;
+      reason = most > 0 ? '' : unitReason(d);
+      const n = buyN;
+      go = () => cmd({ k: 'train', id: d.id, n });
     } else if (cardOf.kind === 'tower') {
       const d = cardOf.def;
       body = towerCard(d);
@@ -2088,6 +2269,7 @@ void (async () => {
         reason = towerReason(d);
         go = () => {
           selected = d;
+          if (touchUser) spawnGhost();
         };
       }
     } else if (bunker) {
@@ -2104,65 +2286,41 @@ void (async () => {
           const why = full ? 'Full' : unitUnlocked(match, YOU, u) !== 'ok' ? unitReason(u) : lacking(cost);
           return (
             `<button class="load" data-load="${u.id}"${why ? ' disabled' : ''}>${unitThumb(u, 34)}` +
-            `<span><b>${u.name}</b><small>${why || `${u.damage} dmg · range ${per(u.range + b.rangeBonus)}${u.hitsAir ? ' · hits air' : ''}`}</small></span>` +
+            `<span><b>${u.name}</b><small>${why || `${u.damage} dmg · ${u.range > 1.5 ? `range ${per(u.range + b.rangeBonus)}` : 'guards the walls'}${u.hitsAir ? ' · hits air' : ''}`}</small></span>` +
             `<em>${money(cost)}</em></button>`
           );
         })
         .join('');
       body =
-        `<header><div class="pic">${towerThumb(bunker.def.art, 50, bunker.owner, bunker.def.look?.tint)}</div><div><h3>${bunker.def.name}</h3><div class="sub">${bunker.garrison.length} of ${b.slots} soldiers inside</div></div></header>` +
+        `<header><div class="pic">${towerThumb(bunker.def.art, 50)}</div><div><h3>${bunker.def.name}</h3><div class="sub">${bunker.garrison.length} of ${b.slots} soldiers inside</div></div></header>` +
         `<div class="slots">${dots}</div>` +
+        `<button class="plank" data-empty${bunker.garrison.length ? '' : ' disabled'} title="Let every soldier out onto the road to join your army">Empty the bunker</button>` +
         `<div class="hp"><i style="width:${Math.max(0, (bunker.hp / bunker.def.hp) * 100)}%"></i><span>${Math.max(0, Math.ceil(bunker.hp))} / ${bunker.def.hp}</span></div>` +
-        `<p class="note">Soldiers loaded here shoot from the walls with +${b.rangeBonus} range, and fall with it. Tap one to load it.</p>` +
-        `<div class="loads">${loads || '<p class="note">None of your units fit a bunker.</p>'}</div>` +
-        sellButton(bunker);
+        `<p class="note">Soldiers loaded here shoot from the walls with +${b.rangeBonus} range (melee ones strike foes at the walls), and fall with it. Tap one to load it, or empty it to send them out.</p>` +
+        `<div class="loads">${loads || '<p class="note">None of your units fit a bunker.</p>'}</div>`;
     } else {
       const cost = upgradeCost(match, YOU);
       const inc = incomeOf(match, YOU);
-      const base = race.castle.income[level - 1]!;
-      const nextInc = race.castle.income[level];
-      const names = (items: { name: string; tier: number }[]) =>
-        items
-          .filter((i) => i.tier === level + 1)
-          .map((i) => i.name)
-          .join(', ');
       const lacks = upgradeLacks(match, YOU);
-      const ROLE_NAMES: Record<Role, string> = {
-        econ: 'mill or quarry',
-        producer: 'unit building',
-        smithy: 'smithy',
-        defence: 'tower',
-      };
-      const asks = (race.castle.needs[level - 1] ?? [])
-        .map((n) => {
-          const have = lacks.find((l) => l.need === n)?.have ?? n.count;
-          const name = `${ROLE_NAMES[n.role]}${n.count > 1 ? 's' : ''}${n.tier && n.tier > 1 ? ` (level ${n.tier}+)` : ''}`;
-          return `<li class="${have >= n.count ? 'ok' : 'no'}">${have} / ${n.count} ${name}</li>`;
-        })
-        .join('');
+      const stat = (name: string, title: string, v: string | number) =>
+        `<li title="${title}"><span>${icon(name, title)}</span><b>${v}</b></li>`;
       body =
-        `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">Level ${level} of ${MAX_LEVEL}</div></div></header>` +
+        `<header><div class="pic">${towerThumb(race.castle.art, 50)}</div><div><h3>${race.name} castle</h3><div class="sub">${icon('power', 'Castle level')} ${level} / ${MAX_LEVEL}</div></div></header>` +
         `<div class="hp"><i style="width:${Math.max(0, (me.castle.hp / me.castle.maxHp) * 100)}%"></i><span>${Math.max(0, Math.ceil(me.castle.hp))} / ${me.castle.maxHp}</span></div>` +
-        `<ul>${row('Castle pays', `${money(base)} every ${PAY_EVERY} s`)}${row('With mills and quarries', money(inc))}${row('Build reach', `${race.castle.reach[level - 1]} cells`)}${row('Units out', `${match.units.filter((u) => u.owner === YOU).length} of ${UNIT_CAP}`)}</ul>` +
-        (cost === undefined || !nextInc
-          ? '<p class="note">The castle has every upgrade.</p>'
-          : `<p class="note"><b>Level ${level + 1}</b> costs ${money(cost)}: build reach ${race.castle.reach[level - 1]} → ${race.castle.reach[level]} cells, pays ${money(nextInc)}, castle health +${race.castle.hpPerLevel}. Unlocks units: ${names(race.units) || 'none'}; buildings: ${names(race.towers) || 'none'}.</p>` +
-            (asks ? `<p class="note">First build:</p><ul class="needs">${asks}</ul>` : ''));
+        `<ul>${stat('heal', `Pays every ${PAY_EVERY} s (mills and quarries included)`, money(inc))}${stat('reach', 'Build reach, in cells', race.castle.reach[level - 1]!)}${stat('runner', 'Units out', `${match.units.filter((u) => u.owner === YOU).length} / ${UNIT_CAP}`)}</ul>`;
       label =
         cost === undefined
           ? icon('power', 'Fully upgraded')
           : `${icon('power', `Upgrade to level ${level + 1}`)}${money(cost)}`;
-      reason = cost === undefined ? 'max' : lacks.length > 0 ? 'Build what it asks for first' : lacking(cost);
-      if (cost !== undefined && !reason && isArmed('castle')) label = icon('power', 'Confirm upgrade?') + money(cost);
-      go = () => {
-        if (confirmed('castle')) cmd({ k: 'castle' });
-      };
+      reason = cost === undefined ? 'max' : lacks.length > 0 ? lacks.map(needText).join(', ') : lacking(cost);
+      go = () => cmd({ k: 'castle' });
     }
     if (body !== cardBody) {
       $('card-body').innerHTML = body;
       cardBody = body;
     }
     act.hidden = cardOf.kind === 'bunker';
+    sell.hidden = true;
     const said = `${label}${reason && reason !== 'max' ? `<small>${reason}</small>` : ''}`;
     if (act.innerHTML !== said) act.innerHTML = said;
     act.disabled = !!reason;
@@ -2174,36 +2332,39 @@ void (async () => {
     };
   }
 
-  /** The dock's three shelves (units, buildings, upgrades). */
-  let tab: 'units' | 'build' | 'upgrades' = 'units';
-  const shelves = { units: 'train', build: 'build', upgrades: 'upgrades' } as const;
-  function setTab(t: typeof tab) {
-    tab = t;
-    for (const [k, id] of Object.entries(shelves)) $(id).hidden = k !== t;
-    for (const b of document.querySelectorAll<HTMLButtonElement>('#tabs button'))
-      b.classList.toggle('on', b.dataset.tab === t);
+  /** The dock's height is what the field keeps clear of (`--dock-h`): measured again when the dock changes. */
+  let dockShown = -1;
+  function layoutDock() {
     document.documentElement.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`);
     clampCamera();
   }
-  for (const b of document.querySelectorAll<HTMLButtonElement>('#tabs button'))
-    b.onclick = () => setTab(b.dataset.tab as typeof tab);
-  window.addEventListener('resize', () =>
-    document.documentElement.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`),
-  );
+  window.addEventListener('resize', layoutDock);
 
-  /** Buildings by what they are for, so fifteen of them stay easy to find. */
-  const roleOf = (d: TowerDef) =>
-    d.econ ? 'Economy' : d.damage > 0 || d.bunker ? 'Defence' : d.aura || d.detect ? 'Support' : 'Production';
-  const ROLES = ['Economy', 'Production', 'Defence', 'Support'];
+  /** Buildings by what they are for, so fifteen of them stay easy to find: the rules' roles (`roleOf` in `races.ts`), named for the player. */
+  const SECTIONS: Record<ReturnType<typeof buildingRole>, string> = {
+    econ: 'Economy',
+    producer: 'Units',
+    smithy: 'Upgrades',
+    defence: 'Defence',
+  };
+  const roleOf = (d: TowerDef) => SECTIONS[buildingRole(d)];
+  const ROLES = Object.values(SECTIONS);
+
+  /** What a castle upgrade still asks for, as the button's reason: "Needs 2 more defence towers". */
+  const needText = ({ need, have }: ReturnType<typeof upgradeLacks>[number]) =>
+    `Needs ${need.count - have} more ${need.tier && need.tier > 1 ? `level ${need.tier} ` : ''}${need.role} tower${need.count - have > 1 ? 's' : ''}`;
 
   const upgradeText = (up: UpgradeDef) => `${pct(up.perLevel)} ${up.applies} ${up.stat === 'hp' ? 'health' : 'damage'}`;
+  /** The same as pictures: +15%, a heart or a sword, and the ground or a wing. */
+  const upgradeIcons = (up: UpgradeDef) =>
+    `${pct(up.perLevel)}${icon(up.stat === 'hp' ? 'heart' : 'sword')}${icon(up.applies === 'air' ? 'wing' : 'ground')}`;
 
   function makeControls(race: RaceId) {
-    for (const id of ['train', 'build', 'upgrades', 'castle']) $(id).innerHTML = '';
+    for (const id of ['train', 'build', 'card-shop']) $(id).innerHTML = '';
+    shopKey = '';
     trainButtons.length = 0;
     buildButtons.length = 0;
     upgradeButtons.length = 0;
-    orderButtons.length = 0;
     laneButtons.length = 0;
     const r = RACES[race];
     // A map with roads that fork: which road the units you buy take (their castle's gate leads to every one of them).
@@ -2228,8 +2389,37 @@ void (async () => {
       $('train').append(sec);
     }
     for (const def of r.units) {
-      const b = thumb(unitThumb(def, 36), money(def.cost), def.name, () => showCard({ kind: 'unit', def }, true));
-      $('train').append(b);
+      // A tap trains one at once; hold (or right-click) for the card.
+      let heldOpen = false;
+      let holdTimer: number | undefined;
+      const b = thumb(unitThumb(def, 36), money(def.cost), def.name, () => {
+        if (heldOpen) return void (heldOpen = false);
+        if (maxPurchases(match, YOU, def) < 1) return showCard({ kind: 'unit', def }); // the card says why not
+        cmd({ k: 'train', id: def.id, n: 1 });
+        b.classList.add('bought');
+        window.setTimeout(() => b.classList.remove('bought'), 160);
+        tipOnce(
+          'units',
+          'Tap to train, hold for details. Press and hold on the field, then drag, to box-select units.',
+        );
+        refresh();
+      });
+      b.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse') return;
+        heldOpen = false;
+        window.clearTimeout(holdTimer);
+        holdTimer = window.setTimeout(() => {
+          heldOpen = true;
+          navigator.vibrate?.(12);
+          showCard({ kind: 'unit', def });
+        }, 420);
+      });
+      for (const ev of ['pointerup', 'pointerleave', 'pointercancel'] as const)
+        b.addEventListener(ev, () => window.clearTimeout(holdTimer));
+      b.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showCard({ kind: 'unit', def });
+      });
       trainButtons.push([b, def]);
     }
     for (const role of ROLES) {
@@ -2239,9 +2429,29 @@ void (async () => {
       sec.className = 'sec';
       sec.innerHTML = `<h4>${role}</h4><div class="thumbs"></div>`;
       for (const def of defs) {
-        const b = thumb(towerThumb(def.art, 36, YOU, def.look?.tint), money(def.cost), def.name, () =>
-          showCard({ kind: 'tower', def }, true),
-        );
+        // A finger: tap places it, hold shows its card (stats), whose price button then starts placing (a mouse clicks for the card).
+        let heldOpen = false;
+        let holdTimer: number | undefined;
+        const b = thumb(towerThumb(def.art, 36), money(def.cost), def.name, () => {
+          if (heldOpen) return void (heldOpen = false);
+          if (touchUser) {
+            tipOnce('towers', 'Tap a building to place it, hold it for its stats.');
+            startPlacing(def);
+          } else showCard({ kind: 'tower', def }, true);
+        });
+        b.addEventListener('pointerdown', (e) => {
+          if (e.pointerType === 'mouse') return;
+          heldOpen = false;
+          window.clearTimeout(holdTimer);
+          holdTimer = window.setTimeout(() => {
+            heldOpen = true;
+            navigator.vibrate?.(12);
+            showCard({ kind: 'tower', def });
+          }, 420);
+        });
+        for (const ev of ['pointerup', 'pointerleave', 'pointercancel'] as const)
+          b.addEventListener(ev, () => window.clearTimeout(holdTimer));
+        b.addEventListener('contextmenu', (e) => e.preventDefault());
         sec.lastElementChild!.append(b);
         buildButtons.push([b, def]);
       }
@@ -2250,30 +2460,15 @@ void (async () => {
     for (const up of r.upgrades) {
       const b = document.createElement('button');
       b.className = 'up wbtn';
-      b.innerHTML = `<b>${up.name}</b><small>${upgradeText(up)}</small><span class="foot"><span class="pips"><i></i><i></i><i></i></span><em></em></span>`;
+      b.innerHTML = `<b>${up.name}</b><small title="${upgradeText(up)}">${upgradeIcons(up)}</small><span class="foot"><span class="pips"><i></i><i></i><i></i></span><em></em></span>`;
       b.onclick = () => {
-        if (confirmed(`up:${up.id}`)) cmd({ k: 'upgrade', id: up.id });
+        cmd({ k: 'upgrade', id: up.id });
         refresh();
       };
-      $('upgrades').append(b);
       upgradeButtons.push([b, up]);
     }
-    castleButton = thumb(towerThumb(r.castle.art, 40), '', 'Your castle: upgrade it', () =>
-      showCard({ kind: 'castle' }, true),
-    );
-    $('castle').append(castleButton);
-    for (const what of ['towers', 'units'] as const) {
-      const b = document.createElement('button');
-      b.className = 'tb orders wbtn';
-      b.onclick = () => {
-        const o = match.players[YOU]!.orders;
-        cmd({ k: 'order', what, to: o[what] === 'attack' ? 'bypass' : 'attack' });
-        refresh();
-      };
-      $('castle').append(b);
-      orderButtons.push([b, what]);
-    }
-    setTab(tab);
+    $('train').hidden = laneButtons.length === 0;
+    layoutDock();
   }
 
   function refresh() {
@@ -2318,31 +2513,25 @@ void (async () => {
       const pips = b.querySelectorAll('.pips i');
       pips.forEach((p, i) => p.classList.toggle('on', i < lvl));
       const line = b.querySelector('em')!;
-      const text = !next ? 'max' : why ? '' : isArmed(`up:${up.id}`) ? 'Confirm?' : money(next.cost);
+      const text = !next ? 'max' : why ? '' : money(next.cost);
       if (line.innerHTML !== text) line.innerHTML = text;
       const effect = b.querySelector('small')!;
-      const said = why && next ? why : upgradeText(up);
-      if (effect.textContent !== said) effect.textContent = said;
+      const said = why && next ? why : upgradeIcons(up);
+      if (effect.innerHTML !== said) effect.innerHTML = said;
       b.hidden = !next || !!why; // only an upgrade you can buy now
       b.classList.toggle('lock', !!why);
       b.classList.toggle('poor', poor);
-      b.classList.toggle('armed', isArmed(`up:${up.id}`));
       b.title = why || (poor ? lacking(next.cost) : `Buy level ${lvl + 1}`);
       b.disabled = !next || !!why;
     }
     // A section or a tab with nothing in it is not shown; if the open tab empties, go back to the units.
     for (const sec of document.querySelectorAll<HTMLElement>('#build .sec'))
       sec.hidden = !sec.querySelector('.tb:not([hidden])');
-    for (const tabButton of document.querySelectorAll<HTMLButtonElement>('#tabs button')) {
-      const shelf = $(shelves[tabButton.dataset.tab as keyof typeof shelves]);
-      tabButton.hidden = !shelf.querySelector('.tb:not([hidden]), .up:not([hidden])');
+    const shown = document.querySelectorAll('#build .tb:not([hidden])').length;
+    if (shown !== dockShown) {
+      dockShown = shown;
+      layoutDock();
     }
-    if (tab !== 'units' && $(shelves[tab]).querySelector('.tb:not([hidden]), .up:not([hidden])') === null)
-      setTab('units');
-    const upCost = upgradeCost(match, YOU);
-    castleButton.classList.toggle('open', cardOf?.kind === 'castle');
-    castleButton.classList.toggle('poor', upCost === undefined || !canAfford(me, upCost));
-    castleButton.querySelector('em')!.textContent = `Lv ${level}`;
     const march = laneFor(match, YOU);
     const open = new Set(openLanes(match, YOU).map((l) => l.id));
     for (const [b, id] of laneButtons) {
@@ -2350,14 +2539,6 @@ void (async () => {
       b.hidden = !open.has(id); // a road to a castle that has fallen is no road
       b.classList.toggle('on', id === march);
       b.title = `New units march: ${lane.name}, to the ${castleName(lane.to)} camp`;
-    }
-    for (const [b, what] of orderButtons) {
-      const attack = me.orders[what] === 'attack';
-      const label = what === 'towers' ? ['Attack towers', 'Pass towers'] : ['Fight units', 'Pass units'];
-      const text = `<span>${attack ? label[0] : label[1]}</span>`;
-      if (b.innerHTML !== text) b.innerHTML = text;
-      b.title = `All your units: tap to ${attack ? 'walk past' : 'attack'}`;
-      b.classList.toggle('bypass', !attack);
     }
     renderCard();
     if (!selected) setGhost(undefined);
@@ -2375,17 +2556,19 @@ void (async () => {
         road: 'That is the road: build beside it.',
         scenery: 'Trees, rocks or water are in the way.',
         taken: 'Something is already built there.',
+        crowded: 'Too close to another building.',
         castle: 'Too close to a castle.',
         gold: `Not enough wood or stone for a ${selected.name}.`,
         tier: `A ${selected.name} needs a higher castle level.`,
         needs: `A ${selected.name} needs the ${selected.needs ? towerName(selected.needs) : 'building'} first.`,
         limit: `You can only have ${selected.limit ?? 'so many'} ${selected.name}.`,
       };
+      if (ghost) ghostOk.disabled = why !== 'ok';
       text =
         cell && why !== 'ok'
           ? (reasons[why] ?? '')
           : ghost
-            ? `Confirm to build the ${selected.name}, or tap another cell. Esc to cancel.`
+            ? `Drag the ${selected.name} where you want it, then tap Build.`
             : `Tap a clear cell to build a ${selected.name}. Esc to cancel.`;
     }
     if (started && !selected && clock < hintUntil) text = hintNote;
@@ -2437,8 +2620,6 @@ void (async () => {
   }
   /** What changed since the last tick, for the sounds (`soundEvents.ts`); made at the start of each match. */
   let sounds: SoundWatch | undefined;
-  /** What a solo duel's computer earns against you, as a multiple (`Player.pace`). The difficulty knob: `tools/towercraftBalance.ts` plays the computers against each other, so this is tuned by play. */
-  const SOLO_COMPUTER_PACE = 1.25;
   /** Start a match: one race per seat of the map, you in seat `you`, the computers (every seat past `people`) playing by `seed`. */
   function begin(races: RaceId[], map: BoardId, you: Owner, seed: number, people: number) {
     YOU = you;
@@ -2446,12 +2627,7 @@ void (async () => {
     finale = undefined;
     endText = undefined;
     stalled = 0;
-    const board = BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID];
-    if (!board) throw new Error(`no map ${map}`);
-    // A solo duel's computer earns a little more than you (the difficulty; co-op computers keep their board's pace).
-    match = rejoinState
-      ? unpackMatch(rejoinState)
-      : newMatch(races, board, undefined, people === 1 && board.seats === 2 ? [1, SOLO_COMPUTER_PACE] : board.pace);
+    match = rejoinState ? unpackMatch(rejoinState) : newMatch(races, BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
     matchSeed = rejoinState?.seed ?? seed;
     ais = makeAis(match, matchSeed, people);
     sounds = new SoundWatch(match);
@@ -2865,6 +3041,20 @@ void (async () => {
       world.x += h * go;
       world.y += v * go;
       clampCamera();
+    }
+    if (gesture === 'ghost' && ghostPtr && ghost) {
+      // A finger holding the pending tower near an edge of the field (or the dock) pans toward it.
+      const [x, y, m] = [ghostPtr.x, ghostPtr.y, 72];
+      const edge = (v: number, lo: number, hi: number) =>
+        v < lo + m ? (lo + m - v) / m : v > hi - m ? -(v - (hi - m)) / m : 0;
+      const [px, py] = [edge(x, 0, window.innerWidth), edge(y, topBar(), window.innerHeight - bottomBar())];
+      if (px || py) {
+        world.x += Math.max(-1, Math.min(1, px)) * 520 * dt;
+        world.y += Math.max(-1, Math.min(1, py)) * 520 * dt;
+        clampCamera();
+        const cell = cellAt(x + grab.x, y + grab.y);
+        if (cell) setGhost(cell);
+      }
     }
     if (started) drawLive(dt);
   });

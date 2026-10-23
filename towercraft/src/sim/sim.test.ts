@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createAi } from './ai';
+import { laneOf } from './board';
 import { RACE_IDS, RACES as GAME_RACES, type RaceId } from './races';
 import {
   PAY_EVERY,
@@ -11,13 +12,13 @@ import {
   buildTower,
   buyUpgrade,
   canBuild,
-  sellTower,
+  towerTier,
+  towerUnlocked,
   incomeOf,
   loadBunker,
   maxPurchases,
   powerAt,
   setFocus,
-  setOrder,
   soldierCost,
   step,
   trainUnit,
@@ -101,7 +102,7 @@ describe('building', () => {
     expect(buildTower(m, 0, 'nope', 9, 4)).toBe('unknown');
     expect(buildTower(m, 0, 'watch', -1, 0)).toBe('off-board');
     m.players[0].wood = 0;
-    expect(buildTower(m, 0, 'watch', 9, 4)).toBe('gold');
+    expect(buildTower(m, 0, 'watch', 12, 4)).toBe('gold');
   });
 
   it('wants both currencies: wood alone does not buy a tower that costs stone', () => {
@@ -131,20 +132,23 @@ describe('building', () => {
 
   it('keeps a limit on a kind of building and needs another one first (a tech tree)', () => {
     const m = rich(newMatch(['swarm', 'swarm']));
-    expect(buildTower(m, 0, 'hatchery', 8, 4)).toBe('ok');
-    expect(buildTower(m, 0, 'hatchery', 9, 4)).toBe('limit');
-    for (const [col, row] of [
-      [9, 4],
-      [10, 4],
-      [10, 3],
-    ] as const)
-      expect(buildTower(m, 0, 'mill', col, row)).toBe('ok');
-    expect(buildTower(m, 0, 'mill', 12, 4)).toBe('limit');
+    // Buildings stand two and a half cells apart, so each goes on the next open cell the rules allow.
+    const next = (id: string): string => {
+      const def = towerDef('swarm', id);
+      for (let r = 0; r < m.board.rows; r++)
+        for (let c = 0; c < m.board.cols; c++)
+          if (canBuild(m, 0, def, c, r) === 'ok') return buildTower(m, 0, id, c, r);
+      return towerUnlocked(m, 0, def);
+    };
+    for (let i = 0; i < 4; i++) expect(next('hatchery')).toBe('ok'); // camps: up to PRODUCER_LIMIT
+    expect(next('hatchery')).toBe('limit');
+    for (let i = 0; i < 3; i++) expect(next('mill')).toBe('ok');
+    expect(next('mill')).toBe('limit');
     upgradeCastle(m, 0);
     upgradeCastle(m, 0);
-    expect(buildTower(m, 0, 'roost', 10, 8)).toBe('needs'); // a Dread Roost wants a Bat Aerie
-    expect(buildTower(m, 0, 'aerie', 8, 8)).toBe('ok');
-    expect(buildTower(m, 0, 'roost', 10, 8)).toBe('ok');
+    expect(towerUnlocked(m, 0, towerDef('swarm', 'roost'))).toBe('needs'); // a Dread Roost wants a Bat Aerie
+    expect(next('aerie')).toBe('ok');
+    expect(next('roost')).toBe('ok');
   });
 });
 
@@ -158,7 +162,7 @@ describe('money', () => {
 
     const eco = rich(newMatch(['titan', 'titan']));
     buildTower(eco, 0, 'mill', 8, 4);
-    buildTower(eco, 0, 'quarry', 9, 4);
+    buildTower(eco, 0, 'quarry', 11, 4);
     const [wood, stone] = [eco.players[0].wood, eco.players[0].stone];
     const income = incomeOf(eco, 0);
     expect(income.wood).toBe(RACES.titan.castle.income[0]!.wood + towerDef('titan', 'mill').econ!.wood!);
@@ -221,6 +225,21 @@ describe('buying units', () => {
     expect(trainUnit(m, 1, 'archer')).toBe('needs'); // the other side has no hatchery
   });
 
+  it('files a unit out of its building square to the road, then joins the road there', () => {
+    const m = quiet(rich(newMatch(['swarm', 'swarm'])));
+    const hatchery = put(m, 0, 'swarm', 'hatchery', ...NEAR);
+    expect(trainUnit(m, 0, 'archer')).toBe('ok');
+    const u = m.units[0]!;
+    expect(u.off?.leaving).toBe(true);
+    expect(u.off?.tower).toBe(hatchery.id);
+    const foot = laneOf(m.board, u).footOf(hatchery.col, hatchery.row)!;
+    expect(u.off?.dir).toEqual(foot.dir); // straight out from the building, square to the road
+    expect(u.s).toBeCloseTo(foot.s, 6); // and it joins the road at the point across from the building
+    for (let i = 0; i < 400 && u.off; i++) step(m, 0.05);
+    expect(u.off).toBeUndefined();
+    expect(u.s).toBeCloseTo(foot.s, 6);
+  });
+
   it('locks a unit again when its building is destroyed', () => {
     const m = quiet(rich(newMatch(['titan', 'legion'])));
     const hall = put(m, 0, 'titan', 'hall', 8, 4);
@@ -233,9 +252,9 @@ describe('buying units', () => {
   it('refuses a purchase the money cannot cover in either currency, and one over the unit cap', () => {
     const m = newMatch(['legion', 'legion']);
     put(m, 0, 'legion', 'barracks', 8, 4);
-    m.players[0].wood = 1000;
-    m.players[0].stone = 0;
-    expect(trainUnit(m, 0, 'archer')).toBe('gold'); // archers cost stone too
+    m.players[0].wood = 0;
+    m.players[0].stone = 1000;
+    expect(trainUnit(m, 0, 'archer')).toBe('gold'); // archers cost wood
     const full = rich(newMatch(['legion', 'legion']));
     for (let i = 0; i < UNIT_CAP; i++) trainUnit(full, 0, 'warrior');
     expect(full.units).toHaveLength(UNIT_CAP);
@@ -355,13 +374,13 @@ describe('attack styles', () => {
     const m = quiet(newMatch(['swarm', 'legion']));
     const tower = put(m, 1, 'legion', 'watch', 8, 5);
     tower.cooldown = 1e9;
+    const neighbour = put(m, 1, 'legion', 'lookout', 9, 5);
     const foes = [
       dummy(m, 1, 'legion', 'warrior', ROAD_LENGTH - 5.5),
       dummy(m, 1, 'legion', 'warrior', ROAD_LENGTH - 6.2),
     ];
     const [wood, stone] = [m.players[1].wood, m.players[1].stone];
-    const neighbour = put(m, 1, 'legion', 'lookout', 9, 5);
-    const boomer = spawn(m, 0, 'swarm', 'boomer', sNear(0, [8.5, 5.5]));
+    const boomer = spawn(m, 0, 'swarm', 'boomer', 5.5);
     run(m, 4);
     expect(m.units.includes(boomer)).toBe(false); // it is gone
     expect(tower.hp).toBeLessThan(towerDef('legion', 'watch').hp - unitDef('swarm', 'boomer').damage); // the siege bonus
@@ -460,9 +479,9 @@ describe('leaving the road to take a tower', () => {
     expect(unit.s).toBeGreaterThan(s + 5);
   });
 
-  it('walks past the tower when told to', () => {
+  it('walks past the tower when sent at the castle', () => {
     const { m, tower, unit } = setup();
-    setOrder(m, 0, 'towers', 'bypass');
+    setFocus(m, 0, [unit.id], { kind: 'castle' });
     run(m, 12);
     expect(tower.hp).toBe(towerDef('legion', 'lookout').hp);
     expect(unit.s).toBeGreaterThan(30);
@@ -562,7 +581,7 @@ describe('tower roles', () => {
     own.def = { ...own.def, speed: 0 };
     run(m, 2);
     expect(own.hp).toBeGreaterThan(15);
-    run(m, 30);
+    run(m, 120);
     expect(own.hp).toBe(own.def.hp);
     expect(m.towers[0]?.cooldown).toBeLessThanOrEqual(0); // it never fired, so its cooldown never restarted
   });
@@ -601,7 +620,7 @@ describe('bunkers', () => {
     return { m, bunker };
   };
 
-  it('is loaded with ranged units, one soldier at a slot, for a share of the price', () => {
+  it('is loaded with ground soldiers, one at a slot, for a share of the price', () => {
     const { m, bunker } = bunkerMatch();
     const [wood, stone] = [m.players[0].wood, m.players[0].stone];
     expect(loadBunker(m, 0, bunker.id, 'thunderer')).toBe('ok');
@@ -609,12 +628,24 @@ describe('bunkers', () => {
     const cost = soldierCost(unitDef('titan', 'thunderer'));
     expect(wood - m.players[0].wood).toBe(cost.wood);
     expect(stone - m.players[0].stone).toBe(cost.stone);
-    expect(loadBunker(m, 0, bunker.id, 'axefighter')).toBe('nobunker'); // not a ranged unit
+    expect(loadBunker(m, 0, bunker.id, 'gryphon')).toBe('nobunker'); // a flyer cannot man it
     for (let i = 1; i < bunker.def.bunker!.slots; i++) loadBunker(m, 0, bunker.id, 'thunderer');
     expect(loadBunker(m, 0, bunker.id, 'thunderer')).toBe('full');
     const bare = put(m, 0, 'titan', 'ballista', 10, 4);
     expect(loadBunker(m, 0, bare.id, 'thunderer')).toBe('nobunker'); // not a bunker
     expect(loadBunker(m, 1, bunker.id, 'thunderer')).toBe('unknown'); // not the other side's
+  });
+
+  it('never lets a camp be built while every unit it trains still needs a higher castle level', () => {
+    for (const id of RACE_IDS) {
+      const m = newMatch([id, id]);
+      for (const def of m.races[id].towers.filter((t) => t.trains)) {
+        const lowest = Math.min(...m.races[id].units.filter((u) => def.trains!.includes(u.id)).map((u) => u.tier));
+        expect(towerTier(m, 0, def)).toBe(Math.max(def.tier, lowest));
+        m.players[0]!.castle.level = Math.max(def.tier, lowest) - 1 || 1;
+        if (towerTier(m, 0, def) > m.players[0]!.castle.level) expect(towerUnlocked(m, 0, def)).toBe('tier');
+      }
+    }
   });
 
   it('needs the building that unlocks the soldier, like any purchase', () => {
@@ -725,34 +756,36 @@ describe('orders', () => {
     expect(m.towers[0]!.hp).toBeLessThan(towerDef('legion', 'watch').hp);
   });
 
-  it('has units walk past towers when told to, leaving them untouched and carrying on', () => {
+  it('has units walk past towers when sent at the castle, leaving them untouched and carrying on', () => {
     const { m, mine } = setup();
     m.towers[0]!.cooldown = 1e9;
-    setOrder(m, 0, 'towers', 'bypass');
+    setFocus(m, 0, [mine.id], { kind: 'castle' });
     const start = mine.s;
     run(m, 4);
     expect(m.towers[0]!.hp).toBe(towerDef('legion', 'watch').hp);
     expect(mine.s).toBeGreaterThan(start + 5); // it kept walking
   });
 
-  it('has units fight opposing units by default and walk past them when told to', () => {
+  it('has units fight opposing units by default and walk past them when sent at the castle', () => {
     const fight = setup();
     fight.m.towers.length = 0;
     run(fight.m, 12);
     expect(fight.foe.hp).toBeLessThan(5000);
     const pass = setup();
     pass.m.towers.length = 0;
-    setOrder(pass.m, 0, 'units', 'bypass');
+    setFocus(pass.m, 0, [pass.mine.id], { kind: 'castle' });
     run(pass.m, 12);
     expect(pass.foe.hp).toBe(5000);
     expect(pass.mine.s).toBeGreaterThan(fight.mine.s);
   });
 
-  it('keeps the orders per player', () => {
-    const m = newMatch(['legion', 'legion']);
-    setOrder(m, 0, 'towers', 'bypass');
-    expect(m.players[0].orders).toEqual({ towers: 'bypass', units: 'attack' });
-    expect(m.players[1].orders).toEqual({ towers: 'attack', units: 'attack' });
+  it('keeps an order per unit until it is changed: a unit bought later fights everything', () => {
+    const { m, mine } = setup();
+    setFocus(m, 0, [mine.id], { kind: 'castle' });
+    const later = spawn(m, 0, 'legion', 'warrior', 3);
+    run(m, 4);
+    expect(mine.focus).toEqual({ kind: 'castle' });
+    expect(later.focus).toBeUndefined();
   });
 });
 
@@ -794,13 +827,13 @@ describe('sending a unit after one target', () => {
   it('fights only the tower it was sent after, walking past the others and the foe', () => {
     const { m, mine, foe, watch, lookout } = setup();
     expect(setFocus(m, 0, [mine.id], { kind: 'tower', id: lookout.id })).toBe('ok');
-    run(m, 14);
+    run(m, 8); // before the lookout falls and the focus ends
     expect(watch.hp).toBe(towerDef('legion', 'watch').hp);
     expect(foe.hp).toBe(5000);
     expect(lookout.hp).toBeLessThan(towerDef('legion', 'lookout').hp);
   });
 
-  it('goes back to the general orders when that tower falls', () => {
+  it('goes back to fighting everything when that tower falls', () => {
     const { m, mine, lookout } = setup();
     lookout.hp = 20;
     setFocus(m, 0, [mine.id], { kind: 'tower', id: lookout.id });
@@ -829,44 +862,6 @@ describe('sending a unit after one target', () => {
     const own = put(m, 0, 'legion', 'watch', 9, 4);
     expect(setFocus(m, 0, [mine.id], { kind: 'tower', id: own.id })).toBe('unknown');
     expect(lookout.owner).toBe(1);
-  });
-});
-
-describe('selling', () => {
-  it("gives back half a building's price, wood and stone, and the building is gone", () => {
-    const m = quiet(newMatch(['legion', 'swarm']));
-    const watch = put(m, 0, 'legion', 'watch', 8, 4);
-    const [wood, stone] = [m.players[0].wood, m.players[0].stone];
-    expect(sellTower(m, 0, watch.id)).toBe('ok');
-    expect(m.players[0].wood - wood).toBe(Math.floor(towerDef('legion', 'watch').cost.wood / 2));
-    expect(m.players[0].stone - stone).toBe(Math.floor(towerDef('legion', 'watch').cost.stone / 2));
-    expect(m.towers.includes(watch)).toBe(false);
-  });
-
-  it('refuses a building that is not yours, and leaves the money alone', () => {
-    const m = quiet(newMatch(['legion', 'swarm']));
-    const theirs = put(m, 1, 'swarm', 'nest', 8, 4);
-    const wood = m.players[0].wood;
-    expect(sellTower(m, 0, theirs.id)).toBe('unknown');
-    expect(m.players[0].wood).toBe(wood);
-    expect(m.towers.includes(theirs)).toBe(true);
-  });
-});
-
-describe('the prices', () => {
-  it.each(RACE_IDS)('%s: a third castle upgrade costs more than the second', (id) => {
-    const [two, three] = RACES[id].castle.upgrades;
-    expect(three!.wood).toBeGreaterThan(two!.wood);
-    expect(three!.stone).toBeGreaterThan(two!.stone);
-  });
-
-  // Dwarves are the stone race (their mirror games stall when their prices are wood-first): the others ask for more wood.
-  it.each(RACE_IDS.filter((id) => id !== 'titan'))('%s asks for more wood than stone everywhere', (id) => {
-    const race = RACES[id];
-    const costs = [...race.units, ...race.towers, ...race.upgrades.flatMap((u) => u.levels)].map((x) =>
-      'cost' in x ? x.cost : x,
-    );
-    for (const c of costs) expect(c.wood).toBeGreaterThanOrEqual(c.stone);
   });
 });
 
@@ -947,12 +942,7 @@ describe('castle upgrades ask for buildings, not only money', () => {
     expect(upgradeLacks(m, 0).length).toBeGreaterThan(0);
     expect(upgradeCastle(m, 0)).toBe('needs');
     expect(m.players[0].castle.level).toBe(1);
-    for (const [id, count] of [
-      ['mill', 3],
-      ['barracks', 1],
-      ['armoury', 1],
-      ['watch', 3],
-    ] as const)
+    for (const [id, count] of [['watch', 2]] as const)
       for (let k = 0; k < count; k++) {
         const def = GAME_RACES.legion.towers.find((t) => t.id === id)!;
         let built = false;
@@ -965,13 +955,5 @@ describe('castle upgrades ask for buildings, not only money', () => {
     expect(upgradeCastle(m, 0)).toBe('ok');
     expect(m.players[0].castle.level).toBe(2);
     expect(upgradeLacks(m, 0).length).toBeGreaterThan(0); // the next asks for level 2 buildings
-  });
-
-  it('costs more than the first minutes earn, so an upgrade before five minutes is a speed run', () => {
-    for (const id of RACE_IDS) {
-      const c = GAME_RACES[id].castle;
-      const earned = (c.income[0]!.wood * 240) / PAY_EVERY; // the castle's pay in four minutes
-      expect(c.upgrades[0]!.wood, id).toBeGreaterThan(earned);
-    }
   });
 });

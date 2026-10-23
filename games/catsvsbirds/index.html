@@ -6,17 +6,499 @@
     <title>Cats vs Birds</title>
     <link rel="icon" href="data:," />
     <style>
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0a0a0f; color: #e8e4d8;
-        font: 16px/1.5 Georgia, 'Times New Roman', serif; text-align: center; padding: 16px; }
-      h1 { margin: 0 0 8px; color: #f0c060; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: #0a0a14; color: #e8e4d8; font: 15px/1.4 Georgia, 'Times New Roman', serif; }
+      body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 8px; user-select: none; -webkit-user-select: none; }
       a { color: #f0c060; }
+      #top { width: 100%; max-width: 960px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+      h1 { margin: 0; font-size: 20px; color: #f0c060; }
+      canvas { width: 100%; max-width: 960px; height: auto; display: block; border-radius: 8px; touch-action: none; image-rendering: pixelated; cursor: pointer; }
+      #stage { position: relative; width: 100%; max-width: 960px; }
+      #creditsBtn { position: absolute; right: 10px; bottom: 10px; padding: 3px 12px; font: italic 17px 'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', 'Apple Chancery', cursive; background: #ced2d8; color: #23232e; border-color: #ced2d8; }
+      #creditsBtn:hover { background: #e2e5ea; }
+      #credits { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 24px; background: #0a0a14ee; border-radius: 8px; }
+      #credits[hidden] { display: none; }
+      #credits h2 { margin: 0; color: #f0c060; }
+      #credits p { margin: 0; max-width: 560px; }
+      #hint { color: #a9a496; font-size: 13px; }
+      button { font: inherit; padding: 4px 12px; cursor: pointer; }
+      #coopBtn { position: absolute; left: 10px; bottom: 10px; }
+      #online { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px; background: #0a0a14f2; border-radius: 8px; overflow: auto; }
+      #online[hidden], #online [hidden] { display: none; }
+      #online h2 { margin: 0; color: #f0c060; }
+      #online h2 small { color: #a9a496; font-size: 14px; font-weight: normal; }
+      #online p { margin: 0; max-width: 560px; }
+      #mpMode { display: flex; gap: 0; }
+      #mpMode button { border-radius: 0; background: #2a2a3a; color: #e8e4d8; border: 1px solid #55546a; }
+      #mpMode button[aria-checked='true'] { background: #f0c060; color: #23232e; border-color: #f0c060; }
+      #mpMode button:disabled { opacity: 0.5; cursor: default; }
+      .mpStatus { display: flex; align-items: center; gap: 8px; font-weight: bold; }
+      .mpStatus .dot { width: 10px; height: 10px; border-radius: 50%; background: #8a8478; }
+      .mpStatus[data-state='gathering'] .dot, .mpStatus[data-state='connecting'] .dot { background: #e0a030; }
+      .mpStatus[data-state='awaiting'] .dot { background: #4f8fd0; }
+      .mpStatus[data-state='connected'] .dot { background: #4cae4c; }
+      .mpStatus[data-state='failed'] .dot, .mpStatus[data-state='disconnected'] .dot { background: #c0392b; }
+      #mpRoster { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; width: min(360px, 100%); }
+      #mpRoster li { display: flex; align-items: center; gap: 8px; padding: 4px 10px; background: #ffffff14; border-radius: 4px; text-align: left; }
+      #mpRoster li[data-state='waiting'] { opacity: 0.6; }
+      #mpRoster .name { font-weight: bold; }
+      #mpRoster .state { margin-left: auto; color: #a9a496; font-size: 13px; }
+      #mpRoster li[data-state='connected'] .state, #mpRoster li[data-state='you'] .state { color: #7fd07f; }
+      #mpHost, #mpJoin, #mpActive, #mpShare { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      #mpRow { display: flex; gap: 8px; }
+      #mpCode { font-size: 32px; color: #f0c060; letter-spacing: 1px; user-select: text; -webkit-user-select: text; }
+      #mpCodeIn { font: inherit; padding: 4px 8px; width: 12em; text-align: center; }
+      #mpNote { color: #a9a496; font-size: 14px; }
+      #mpNote.error { color: #e87b6a; }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Cats vs Birds</h1>
-      <p>Coming soon.</p>
-      <p><a href="../">Back to all games</a></p>
-    </main>
+    <div id="top"><h1>Cats vs Birds</h1><span id="hint">Tap, click or press Space to jump the gaps and kiwis, stay low under birds · hold to keep jumping · M mutes · Co-op: a friend plays the birds</span><a href="../">All games</a></div>
+    <div id="stage">
+      <canvas id="c" width="960" height="540"></canvas>
+      <button id="creditsBtn" type="button">Credits</button>
+      <button id="coopBtn" type="button">Co-op</button>
+      <div id="online" hidden>
+        <h2>Multiplayer <small>the cat and the birds</small></h2>
+        <div id="mpMode" role="radiogroup" aria-label="Multiplayer mode">
+          <button type="button" role="radio" data-mode="off" aria-checked="true">Solo / Off</button>
+          <button type="button" role="radio" data-mode="host" aria-checked="false">Host (the cat)</button>
+          <button type="button" role="radio" data-mode="join" aria-checked="false">Join (the birds)</button>
+        </div>
+        <p id="mpStatus" class="mpStatus"><span class="dot"></span><span class="label"></span></p>
+        <ul id="mpRoster" aria-label="Players" hidden></ul>
+        <div id="mpHost" hidden>
+          <button id="mpCreate" type="button">Create Game</button>
+          <div id="mpShare" hidden>
+            <label for="mpCode">Game code (tell your friend)</label>
+            <output id="mpCode" tabindex="0"></output>
+            <div id="mpRow"><button id="mpCopyCode" type="button">Copy Code</button><button id="mpCopyLink" type="button">Copy Join Link</button></div>
+          </div>
+        </div>
+        <div id="mpJoin" hidden>
+          <label for="mpCodeIn">Your friend's game code</label>
+          <input id="mpCodeIn" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" maxlength="40" placeholder="mighty-apples" />
+          <button id="mpJoinGo" type="button" disabled>Join Game</button>
+        </div>
+        <div id="mpActive" hidden>
+          <p id="mpConnected"></p>
+          <button id="mpStart" type="button" hidden>Start Game</button>
+          <button id="mpDisconnect" type="button">Disconnect</button>
+        </div>
+        <p id="mpNote" role="status"></p>
+        <button id="onClose" type="button">Close</button>
+      </div>
+      <div id="credits" hidden>
+        <h2>Credits</h2>
+        <p>Music: "The Field Of Dreams" by Paulius Jurgelevičius (public domain).</p>
+        <p>Cat, kiwi, bird, fish tin and sunset bridge art: supplied by the project owner.</p>
+        <button id="creditsClose" type="button">Close</button>
+      </div>
+    </div>
+    <script src="net.js"></script>
+    <script>
+      'use strict';
+      const W = 960, H = 540, GROUND = 330, SPEED0 = 330, G = 2600, JUMP = 840;
+      const CAT_W = 80, CAT_H = 68, FEET = 62; // frame size of cat-run.png and the row of the paws inside it
+      const HIT_W = 44, HIT_H = 40, CAT_X = 220;
+
+      const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      const sheet = new Image(); sheet.src = 'cat-run.png';
+const kiwiImg = new Image(); kiwiImg.src = 'kiwi-run.png';
+const canImg = new Image(), canBigImg = new Image(); canImg.src = 'can.png'; canBigImg.src = 'can-double.png'; // tins of fish, the supplied art averaged down to the cat's 4 px pixels: 32x32, and 32x48 for two stacked
+const birdImg = new Image(); birdImg.src = 'bird-fly.png'; // 3 left-facing frames in 24x24 cells: wings down, level, up
+const BIRD_S = 2, BIRD_C = 24 * BIRD_S, BIRD_LIFT = 110, BIRD_HIT_W = 30, BIRD_HIT_H = 24; // a bird flies at jump height: jumping into it hurts, running under it is safe
+// Co-op: the friend is the birds and sends a swoop in one of two lanes. A high bird flies at jump height (the cat must stay low);
+// a low one skims the deck (the cat must jump it). One swoop per SWOOP_CD seconds, and it starts off the right edge, so the cat has a second to read it.
+const BIRD_LOW = 30, SWOOP_CD = 1.0;
+const RATIO = { kiwi: 2, bird: 1 }; // how fast each runs at the cat, as a multiple of the cat's own speed
+const KIWI_S = 1, KW = 56 * KIWI_S, KH = 36 * KIWI_S, KIWI_HIT_W = 36, KIWI_HIT_H = 24; // smaller than the cat // 4 frames of 56x36, facing left, feet on the bottom row
+const bg = new Image(); bg.src = 'backdrop.png';
+const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 96 of the backdrop, where its railings stand
+
+      // ---- the level: a fixed course built from a seed, so every attempt is the same and can be learned ----
+      const BPM = 120, BEAT = 60 / BPM;
+      function rng(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      // The bridge drawn in the backdrop is the terrain: columns 192-351 of its 480 are stairs up (4 rows every 4 columns), a
+      // flat top 32 rows high, and stairs down. The backdrop scrolls with the course and every other copy is mirrored, so
+      // bridgeH(worldX) is what the picture shows. A step is 12 px, which the cat climbs without jumping.
+      const TW = 480 * BG_S, STEP = 14;
+      const bridgeCol = (c) => (c < 192 || c > 351 ? 0 : c < 220 ? (Math.floor((c - 192) / 4) + 1) * 4 : c < 324 ? 32 : 32 - (Math.floor((c - 324) / 4) + 1) * 4);
+      function bridgeH(wx) {
+        const n = Math.floor(wx / TW); let c = Math.floor((wx - n * TW) / BG_S);
+        if (((n % 2) + 2) % 2) c = 479 - c;
+        return bridgeCol(c) * BG_S;
+      }
+      const bridgeLo = (n) => n * TW + (n % 2 ? 128 : 192) * BG_S, bridgeHi = (n) => n * TW + (n % 2 ? 288 : 352) * BG_S;
+      // the end of the bridge that [s, e] (plus a margin to take off and land) runs into, or -1
+      function bridgeNear(s, e, margin) {
+        for (let n = Math.floor((s - margin) / TW); n <= Math.floor((e + margin) / TW); n++) if (e + margin > bridgeLo(n) && s - margin < bridgeHi(n)) return bridgeHi(n);
+        return -1;
+      }
+      function buildLevel() {
+        const r = rng(7), fish = [], spd = (x) => SPEED0 + Math.min(120, x / 250);
+        const COUNT = 14, ground = [];
+        let r0 = -200, s = 900; // r0 starts the current run of deck; s is where it ends, at the next gap
+        for (let i = 0; i < COUNT; i++) {
+          // a gap is crossed in 0.2-0.4 s of flight (a jump lasts about 0.65 s) and grows a little as the course goes on;
+          // gaps stay clear of the bridge, so the stairs are never a take-off or landing
+          const gap = Math.round(spd(s) * (0.2 + Math.floor(r() * 3) * 0.07 + Math.min(0.06, i * 0.002)));
+          let e = s + gap, z;
+          while ((z = bridgeNear(s, e, 200)) >= 0) { s = z + 200; e = s + gap; }
+          ground.push([r0, s]);
+          fish.push({ x: (s + e) / 2, y: GROUND - 150 });
+          r0 = e;
+          // every other stretch is long, with room for kiwis to run at the cat
+          const runLen = Math.round(spd(r0) * BEAT * (i % 2 === 1 ? 9 + Math.floor(r() * 3) * 0.5 : 2.5 + Math.floor(r() * 5) * 0.5));
+          if (bridgeNear(r0 + runLen / 2, r0 + runLen / 2, 0) < 0) fish.push({ x: r0 + runLen / 2, y: GROUND - 60 });
+          s = r0 + runLen;
+        }
+        const end = r0 + 220;
+        ground.push([r0, end + 1400]);
+        for (let n = 0; n <= Math.ceil(end / TW); n++) { // three double cans on top of each bridge
+          const mid = (bridgeLo(n) + bridgeHi(n)) / 2;
+          for (const d of [-90, 0, 90]) if (mid + d < end) fish.push({ x: mid + d, y: GROUND - 96 - 70, big: true });
+        }
+        // Kiwis run at the cat along the long stretches of deck (no gaps; they climb the bridge's stairs like the cat does): each
+        // starts off the right edge when the cat is about to enter the stretch, and sometimes a second follows a little later.
+        const kiwis = [];
+        // a kiwi is only sent when it will meet the cat on plain deck: well clear of the stairs, where a jump is awkward
+        const addKiwi = (trig, stop, kind) => {
+          const x0 = Math.min(trig + 760, stop), sp = spd(trig), meet = trig + ((x0 - trig) * sp) / (sp + RATIO[kind] * sp);
+          if (bridgeNear(meet - 200, meet + 200, 0) < 0) kiwis.push({ trig, stop, kind });
+        };
+        let ei = 0; // alternate which comes first: a kiwi on the ground or a bird in the air
+        for (const [a, b] of ground) {
+          if (a < 0 || b - a < 1100 || b > end) continue;
+          const first = ei++ % 2 ? 'bird' : 'kiwi';
+          addKiwi(a + 150, b - 60, first); // the cat has had time to land and settle before the first appears
+          if (b - a >= 1500 && r() > 0.3) addKiwi(a + 650, b - 60, first === 'kiwi' ? 'bird' : 'kiwi');
+        }
+        return { ground, fish, end, kiwis };
+      }
+      const L = buildLevel();
+
+      // ---- state ----
+      let S;
+      function reset(keepAttempt) {
+        S = { kiwis: [], next: 0, x: 0, y: GROUND, ys: GROUND, vy: 0, onGround: true, dead: 0, won: false, t: 0, scroll: 0, fishGot: new Set(), score: 0,
+          attempt: keepAttempt ? S.attempt + 1 : 1, best: keepAttempt ? S.best : 0, parts: [], started: false, frame: 0, coyote: 0, wasHeld: false,
+          catches: keepAttempt ? S.catches : 0, birdCd: 0 };
+      }
+      reset(false);
+      let mode = 'solo';    // 'solo' (the cat, alone or hosting) or 'guest' (the birds, once the host has started the game)
+      let coop = false;     // host only: a friend is connected, so the birds are theirs
+      let net = null, snapT = 0, notice = '', noticeT = 0;
+      const ui = { role: 'off', status: 'idle', detail: '', code: '', linked: false, live: false }; // the Multiplayer panel's state; `live`: the host pressed Start Game
+      const swoops = [];    // lanes the friend asked for, read by the next update
+      const speed = () => SPEED0 + Math.min(120, S.scroll / 250);
+
+      const creditsEl = document.getElementById('credits'), setCredits = (open) => { creditsEl.hidden = !open; (open ? document.getElementById('creditsClose') : document.getElementById('creditsBtn')).blur(); };
+      document.getElementById('creditsBtn').addEventListener('click', () => setCredits(true));
+      document.getElementById('creditsClose').addEventListener('click', () => setCredits(false));
+
+      const onlineEl = document.getElementById('online');
+      const setOnline = (open) => { onlineEl.hidden = !open; if (open) render(); else document.getElementById('coopBtn').blur(); };
+      const say = (text) => { notice = text; noticeT = 5; };
+
+      let held = false, pressed = false;
+      const down = () => { held = true; pressed = true; audio.start(); };
+      const swoop = (lane) => { audio.start(); if (net) net.send(JSON.stringify({ t: 'in', lane })); };
+      cv.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (mode !== 'guest') return down();
+        const r = cv.getBoundingClientRect();
+        swoop(((e.clientY - r.top) / r.height) * H < GROUND - 70 ? 'high' : 'low'); // the upper part of the picture is the high lane
+      });
+      addEventListener('pointerup', () => { held = false; });
+      addEventListener('keydown', (e) => {
+        if (e.target && e.target.tagName === 'INPUT') return; // typing a game code
+        if (mode === 'guest' && !e.repeat && onlineEl.hidden && creditsEl.hidden && [' ', 'ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) { e.preventDefault(); swoop(e.key === 'ArrowDown' || e.key === 's' ? 'low' : 'high'); return; }
+        if (mode === 'guest' && [' ', 'ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) e.preventDefault();
+        else if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); if (creditsEl.hidden && onlineEl.hidden) { if (!e.repeat) down(); held = true; } }
+        else if (e.key === 'm' || e.key === 'M') audio.toggle();
+        else if (e.key === 'Escape') { setCredits(false); setOnline(false); }
+      });
+      addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') held = false; });
+
+      const groundAt = (wx) => L.ground.some(([a, b]) => wx >= a && wx <= b);
+
+      function burst() { for (let i = 0; i < 18; i++) S.parts.push({ x: CAT_X, y: S.y - 24, vx: (Math.random() - 0.5) * 520, vy: -Math.random() * 520, t: 0.7 }); }
+      function die(byBird) { if (S.dead) return; S.dead = 0.0001; S.best = Math.max(S.best, Math.round(progress() * 100)); audio.thud(); if (byBird) S.catches++; burst(); }
+      const progress = () => Math.min(1, S.scroll / L.end);
+
+      function update(dt) {
+        S.t += dt;
+        for (const p of S.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 1800 * dt; p.t -= dt; }
+        S.parts = S.parts.filter((p) => p.t > 0);
+        if (S.dead) { S.dead += dt; if (S.dead > 0.9) reset(true); return; }
+        if (S.won) { S.scroll += speed() * dt * 0.3; if (pressed) { reset(true); S.attempt = 1; } pressed = false; return; }
+        if (!S.started) { if (pressed) S.started = true; else { pressed = false; return; } }
+
+        const sp = speed(); S.scroll += sp * dt; S.frame += dt * 14; S.birdCd = Math.max(0, S.birdCd - dt);
+        const wx = S.scroll + CAT_X;                      // world x of the cat
+        const x0 = wx - HIT_W / 2, x1 = wx + HIT_W / 2;
+        const fh = Math.max(bridgeH(x0 + 6), bridgeH(wx), bridgeH(x1 - 6)); // the tallest step under the paws
+        const floorY = fh > 0 ? GROUND - fh : (groundAt(x0 + 10) || groundAt(x1 - 10) ? GROUND : Infinity);
+
+        S.coyote = S.onGround ? 0.09 : S.coyote - dt;
+        if ((pressed || (held && !S.wasHeld) || (held && S.onGround)) && S.coyote > 0) { S.vy = -JUMP; S.onGround = false; S.coyote = 0; }
+        pressed = false; S.wasHeld = held;
+
+        if (S.onGround) {
+          if (floorY === Infinity) S.onGround = false;                 // ran off the edge of the deck
+          else if (floorY < S.y - STEP) { die(); return; }             // the face of something taller than a stair
+          else { S.y = floorY; S.vy = 0; }                             // climbs or descends the stairs
+        }
+        if (!S.onGround) {
+          S.vy += G * dt; const prevY = S.y; S.y += S.vy * dt;
+          if (floorY !== Infinity) {
+            if (S.vy >= 0 && S.y >= floorY && prevY <= floorY + STEP) { S.y = floorY; S.vy = 0; S.onGround = true; }
+            else if (S.y > floorY + STEP && S.y <= GROUND + 1) { die(); return; } // into the side of the bridge
+          }
+        }
+        S.ys = S.onGround ? S.ys + (S.y - S.ys) * Math.min(1, dt * 28) : S.y;   // the drawn height eases up the stairs
+        if (S.y > H + 60) { die(); return; }
+
+        // kiwis: spawn off the right edge as the cat reaches each trigger, run left along the deck, and hurt on touch
+        while (S.next < L.kiwis.length && wx >= L.kiwis[S.next].trig) { const k = L.kiwis[S.next++]; if (coop && k.kind === 'bird') continue; /* the friend flies the birds */ S.kiwis.push({ x: Math.min(wx + 760, k.stop), ph: S.next, kind: k.kind }); }
+        while (swoops.length) { // a bird the friend sent: it starts off the right edge, like a kiwi
+          const lane = swoops.shift();
+          if (coop && S.birdCd <= 0) { S.kiwis.push({ x: wx + 760, ph: S.next + S.kiwis.length, kind: 'bird', lane, mine: true }); S.birdCd = SWOOP_CD; }
+        }
+        for (const k of S.kiwis) {
+          k.x -= sp * RATIO[k.kind] * dt;
+          const base = GROUND - bridgeH(k.x), lift = k.lane === 'low' ? BIRD_LOW : BIRD_LIFT;
+          if (k.kind === 'bird') { // in the air: a high bird is hit mid-jump, a low one by running into it
+            if (Math.abs(k.x - wx) < (BIRD_HIT_W + HIT_W - 8) / 2 && S.y > base - lift - BIRD_HIT_H / 2 && S.y - HIT_H < base - lift + BIRD_HIT_H / 2) { die(k.mine); return; }
+          } else if (Math.abs(k.x - wx) < (KIWI_HIT_W + HIT_W - 8) / 2 && S.y > base - KIWI_HIT_H) { die(); return; }
+        }
+        S.kiwis = S.kiwis.filter((k) => k.x > wx - 500);
+
+        for (let i = 0; i < L.fish.length; i++) {
+          const f = L.fish[i]; if (S.fishGot.has(i)) continue;
+          if (Math.abs(f.x - wx) < 36 && Math.abs(f.y - (S.y - 26)) < 44) { S.fishGot.add(i); S.score += f.big ? 20 : 10; }
+        }
+        if (S.scroll >= L.end) { S.won = true; S.best = 100; }
+      }
+
+      // ---- co-op: the host runs the course and sends snapshots; the guest only draws them and sends swoops ----
+      const snapshot = () => JSON.stringify({ t: 'st', sc: Math.round(S.scroll), y: Math.round(S.y), ys: Math.round(S.ys), vy: Math.round(S.vy), og: S.onGround ? 1 : 0,
+        d: S.dead ? 1 : 0, w: S.won ? 1 : 0, s: S.started ? 1 : 0, at: S.attempt, b: S.best, p: S.score, c: S.catches, cd: Math.round(S.birdCd * 100) / 100,
+        f: [...S.fishGot], k: S.kiwis.map((k) => [Math.round(k.x), k.ph, k.kind === 'kiwi' ? 0 : k.lane === 'low' ? 2 : 1]) });
+      function applySnapshot(m) {
+        if (!m || m.t !== 'st' || !Array.isArray(m.f) || !Array.isArray(m.k)) return;
+        const err = m.sc - S.scroll;
+        S.scroll += Math.abs(err) > 120 ? err : err * 0.4;
+        S.y = m.y; S.ys = m.ys; S.vy = m.vy; S.onGround = !!m.og; S.won = !!m.w; S.started = !!m.s;
+        if (m.d && !S.dead) { S.dead = 0.0001; burst(); audio.thud(); } else if (!m.d) S.dead = 0;
+        S.attempt = m.at; S.best = m.b; S.score = m.p; S.catches = m.c; S.birdCd = m.cd; S.fishGot = new Set(m.f);
+        S.kiwis = m.k.map(([x, ph, c]) => ({ x, ph, kind: c === 0 ? 'kiwi' : 'bird', lane: c === 2 ? 'low' : 'high' }));
+      }
+      function updateGuest(dt) { // between snapshots, carry on at the course's own speed
+        S.t += dt;
+        for (const p of S.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 1800 * dt; p.t -= dt; }
+        S.parts = S.parts.filter((p) => p.t > 0);
+        if (S.dead || !S.started) return;
+        const sp = speed() * (S.won ? 0.3 : 1);
+        S.scroll += sp * dt; S.frame += dt * 14; S.birdCd = Math.max(0, S.birdCd - dt);
+        for (const k of S.kiwis) k.x -= sp * RATIO[k.kind] * dt;
+      }
+      const $ = (id) => document.getElementById(id);
+      const STATUS = { idle: 'Idle', gathering: 'Gathering Candidates', awaiting: 'Awaiting Client', connecting: 'Connecting', connected: 'Connected', failed: 'Failed', disconnected: 'Disconnected' };
+      const available = () => !!(window.CvBNet && window.RTCPeerConnection);
+      const joinLink = () => location.origin + location.pathname + location.search + '#join=' + ui.code;
+      function drop() { // forget the game (the friend or the room): back to playing alone
+        if (net) net.stop(); net = null; Object.assign(ui, { status: 'idle', detail: '', code: '', linked: false, live: false });
+        mode = 'solo'; coop = false; swoops.length = 0; reset(false);
+      }
+      function render() {
+        const connected = ui.status === 'connected' && ui.linked, working = ui.status === 'gathering' || ui.status === 'connecting';
+        for (const b of $('mpMode').children) { b.setAttribute('aria-checked', String(b.dataset.mode === ui.role)); b.disabled = connected; }
+        $('mpHost').hidden = ui.role !== 'host'; $('mpJoin').hidden = connected || ui.role !== 'join'; $('mpActive').hidden = !connected;
+        $('mpStatus').dataset.state = ui.status;
+        $('mpStatus').querySelector('.label').textContent = ui.role === 'off' && !connected ? 'Solo' : STATUS[ui.status] || ui.status;
+        const host = ui.role === 'host', roster = $('mpRoster');
+        roster.hidden = ui.role === 'off';
+        const friend = connected ? 'connected' : ui.status === 'connecting' ? 'joining…' : 'waiting for a friend';
+        roster.replaceChildren(...[['The Cat', host ? 'you' : connected ? 'connected' : 'waiting', host ? 'you' : 'host'], ['The Birds', host ? (connected ? 'connected' : ui.status === 'connecting' ? 'joining' : 'waiting') : 'you', host ? friend : 'you']].map(([name, st, text]) => {
+          const li = document.createElement('li'); li.dataset.state = st;
+          const n = document.createElement('span'); n.className = 'name'; n.textContent = name;
+          const t = document.createElement('span'); t.className = 'state'; t.textContent = text; li.append(n, t); return li;
+        }));
+        $('mpShare').hidden = !ui.code; $('mpCode').textContent = ui.code;
+        $('mpCreate').hidden = connected || !!ui.code; $('mpCreate').disabled = !available() || working;
+        $('mpJoinGo').disabled = !available() || working || connected || !$('mpCodeIn').value.trim();
+        $('mpStart').hidden = !(connected && host && !ui.live);
+        $('mpConnected').textContent = host ? 'Your friend is the birds.' : ui.live ? 'The game is live.' : 'Connected to the cat (host). Waiting for the host to start the game.';
+        const failed = ui.status === 'failed' || ui.status === 'disconnected' || (ui.status === 'idle' && ui.detail !== '');
+        $('mpNote').textContent = ui.detail || hint(); $('mpNote').classList.toggle('error', failed);
+      }
+      function hint() {
+        if (ui.status === 'connected' && ui.linked) return ui.role === 'host' ? (ui.live ? 'The game is live. A friend who got dropped can rejoin with the same code. Close this to play.' : 'Tap Start Game when you are ready. You run as the cat; your friend flies the birds.') : (ui.live ? 'Close this to play.' : '');
+        if (ui.role === 'off') return 'Playing solo. Choose Host to run as the cat with a friend flying the birds, or Join to be the birds in a friend’s game.';
+        if (!available()) return 'This browser cannot play online.';
+        if (ui.role === 'host') return ui.code ? 'Tell your friend this code, or send them the join link.' : ui.status === 'gathering' ? 'Connecting…' : 'You are the cat; your friend will be the birds, flying at you from the right.';
+        return ui.status === 'gathering' || ui.status === 'connecting' ? 'Connecting…' : 'Type the game code your friend gave you, then join.';
+      }
+      function setRole(role) { if (ui.linked || ui.role === role) return; drop(); ui.role = role; render(); }
+      const linkCallbacks = { status: (st, detail) => { ui.status = st; if (detail || st === 'connecting') ui.detail = detail || ''; render(); }, message: onMessage };
+      async function createGame() {
+        drop(); ui.role = 'host'; ui.status = 'gathering'; render();
+        try {
+          net = await CvBNet.host({ ...linkCallbacks,
+            code: (c) => { ui.code = c; render(); },
+            opened: () => {
+              ui.linked = true; ui.status = 'connected'; ui.detail = '';
+              if (ui.live) { coop = true; swoops.length = 0; net.send(JSON.stringify({ t: 'go' })); say('Your friend is back as the birds.'); } // a rejoin: the run goes on
+              render();
+            },
+            closed: (why) => { ui.linked = false; coop = false; ui.status = 'awaiting'; ui.detail = 'Your friend left (' + why + ') The code works again if they rejoin.'; render(); },
+            error: (why) => { drop(); ui.status = 'failed'; ui.detail = why; render(); },
+          });
+        } catch (e) { drop(); ui.role = 'host'; ui.status = 'failed'; ui.detail = e.message; render(); }
+      }
+      async function joinGame() {
+        const code = $('mpCodeIn').value; drop(); ui.role = 'join'; ui.status = 'gathering'; render();
+        try {
+          net = await CvBNet.join(code, { ...linkCallbacks,
+            opened: () => { ui.linked = true; ui.status = 'connected'; ui.detail = ''; render(); },
+            closed: (why) => { const was = ui.live; drop(); ui.role = 'join'; ui.status = 'disconnected'; ui.detail = why; if (was) setOnline(true); else render(); },
+          });
+        } catch (e) { drop(); ui.role = 'join'; ui.status = 'failed'; ui.detail = e.message; render(); }
+      }
+      function startGame() { // the host: everyone is here
+        ui.live = true; coop = true; swoops.length = 0; reset(false); net.send(JSON.stringify({ t: 'go' })); setOnline(false); say('Your friend is the birds. Run, cat!'); render();
+      }
+      function onMessage(text) {
+        let m; try { m = JSON.parse(text); } catch { return; }
+        if (!m) return;
+        if (ui.role === 'join') {
+          if (m.t === 'go') { ui.live = true; mode = 'guest'; reset(false); setOnline(false); say('You are the birds! Tap above the deck for a high swoop, below it for a low one.'); render(); }
+          else if (mode === 'guest') applySnapshot(m);
+        } else if (m.t === 'in' && (m.lane === 'high' || m.lane === 'low') && coop && S.started && !S.dead && !S.won && swoops.length < 3) swoops.push(m.lane);
+      }
+      const flash = async (btn, text) => { const old = btn.dataset.old || btn.textContent; btn.dataset.old = old; let ok = true; try { await navigator.clipboard.writeText(text); } catch { ok = false; } btn.textContent = ok ? 'Copied!' : 'Select the code and copy it'; setTimeout(() => { btn.textContent = old; }, 1500); };
+      for (const b of $('mpMode').children) b.addEventListener('click', () => setRole(b.dataset.mode));
+      $('mpCreate').addEventListener('click', () => void createGame());
+      $('mpJoinGo').addEventListener('click', () => void joinGame());
+      $('mpCodeIn').addEventListener('input', render);
+      $('mpCodeIn').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !$('mpJoinGo').disabled) $('mpJoinGo').click(); });
+      $('mpCode').addEventListener('focus', () => getSelection().selectAllChildren($('mpCode')));
+      $('mpCopyCode').addEventListener('click', () => void flash($('mpCopyCode'), ui.code));
+      $('mpCopyLink').addEventListener('click', () => void flash($('mpCopyLink'), joinLink()));
+      $('mpStart').addEventListener('click', startGame);
+      $('mpDisconnect').addEventListener('click', () => { const role = ui.role; drop(); ui.role = role; render(); });
+      $('coopBtn').addEventListener('click', () => setOnline(true));
+      $('onClose').addEventListener('click', () => setOnline(false));
+      const joinHash = /^#join=([a-z]+-[a-z]+)/i.exec(location.hash); // a join link: open the panel on Join with the code filled in
+      if (joinHash) { ui.role = 'join'; $('mpCodeIn').value = joinHash[1].toLowerCase(); setOnline(true); }
+
+      // ---- drawing ----
+      const ACCENT = '#ff6f91';
+      function draw() {
+        const pal = [0, 0, ACCENT];
+        // the sunset arches backdrop (480x128), drawn 3x with its deck (row 96) on the ground line; it scrolls with the course so its bridge is
+        // the terrain, and every other copy is mirrored so the tiles meet without a seam
+        ctx.fillStyle = '#7b5397'; ctx.fillRect(0, 0, W, BG_Y + 2);
+        const tw = TW, drift = S.scroll, first = Math.floor(drift / tw);
+        for (let n = first; n <= first + 2; n++) {
+          const tx = n * tw - drift;
+          ctx.save(); if (n % 2) { ctx.translate(tx + tw, 0); ctx.scale(-1, 1); } else ctx.translate(tx, 0);
+          ctx.drawImage(bg, 0, 0, 480, 128, 0, BG_Y, tw, 128 * BG_S); ctx.restore();
+        }
+
+        const off = S.scroll;
+        // missing planks: through a gap in the deck you see the sunset's pink and orange below the bridge
+        // the backdrop's own sky colours (as in its arch, rows 96-127), carried on below the picture, so a gap and the arch blend
+        const sky = ctx.createLinearGradient(0, GROUND, 0, H);
+        [[0, '#dd7a86'], [0.114, '#ea7973'], [0.229, '#f27460'], [0.343, '#f66f51'], [0.443, '#f76d4b'], [1, '#f76d4b']].forEach(([o, c]) => sky.addColorStop(o, c));
+        ctx.fillStyle = sky;
+        for (let i = 1; i < L.ground.length; i++) { const x = L.ground[i - 1][1] - off, w = L.ground[i][0] - L.ground[i - 1][1]; if (x < W && x + w > 0) ctx.fillRect(x, GROUND, w, H - GROUND); }
+        // ground runs
+        for (const [a, b] of L.ground) {
+          const sx = a - off, ex = b - off; if (ex < -20 || sx > W + 20) continue;
+          const x = Math.max(-20, sx), w = Math.min(W + 20, ex) - x;
+          ctx.fillStyle = '#2c3134'; ctx.fillRect(x, GROUND, w, H - GROUND);
+        }
+        // the arch under the bridge stays open: put its opening back over the deck fill
+        for (let n = first; n <= first + 2; n++) {
+          const tx = n * tw - drift;
+          ctx.save(); if (n % 2) { ctx.translate(tx + tw, 0); ctx.scale(-1, 1); } else ctx.translate(tx, 0);
+          ctx.drawImage(bg, 240, 96, 64, 32, 240 * BG_S, BG_Y + 96 * BG_S, 64 * BG_S, 32 * BG_S); ctx.restore();
+        }
+        ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; // fillStyle shows through where no colour-emoji font exists
+        L.fish.forEach((f, i) => { if (S.fishGot.has(i)) return; const fx = f.x - off; if (fx < -30 || fx > W + 30) return; const fy = f.y + Math.sin(S.t * 4 + i) * 4;
+          if (f.big) ctx.drawImage(canBigImg, fx - 16, fy - 24); else ctx.drawImage(canImg, fx - 16, fy - 16); });
+        // finish line
+        const fl = L.end - off; if (fl < W + 40) { ctx.fillStyle = '#fff'; for (let i = 0; i < 20; i++) { ctx.fillRect(fl + (i % 2) * 14, 40 + i * 18, 14, 14); ctx.fillRect(fl + 14 - (i % 2) * 14, 40 + i * 18, 14, 14); } }
+
+        for (const k of S.kiwis) {
+          const kx = k.x - off; if (kx < -80 || kx > W + 80) continue;
+          if (k.kind === 'bird') ctx.drawImage(birdImg, [0, 1, 2, 1][Math.floor(S.t * 9 + k.ph) % 4] * 24, 0, 24, 24, kx - BIRD_C / 2, GROUND - bridgeH(k.x) - (k.lane === 'low' ? BIRD_LOW : BIRD_LIFT) - BIRD_C / 2, BIRD_C, BIRD_C);
+          else ctx.drawImage(kiwiImg, (Math.floor(S.t * 10 + k.ph) % 4) * 56, 0, 56, 36, kx - KW / 2, GROUND - bridgeH(k.x) - KH, KW, KH);
+        }
+        // the cat: the run strip when on the ground, a stretched frame in the air
+        if (!S.dead) {
+          const fr = S.onGround ? Math.floor(S.frame) % 6 : (S.vy < 0 ? 1 : 3);
+          ctx.save(); ctx.translate(CAT_X, S.ys);
+          if (!S.onGround) ctx.rotate(Math.max(-0.35, Math.min(0.45, S.vy / 2600)));
+                    ctx.shadowColor = pal[2]; ctx.shadowBlur = 14; // a glow, so the black cat reads against the dark course
+          ctx.scale(-1, 1); // the sprite sheet's cat faces left; the course runs to the right
+          ctx.drawImage(sheet, fr * CAT_W, 0, CAT_W, CAT_H, -CAT_W / 2 + 4, -FEET, CAT_W, CAT_H);
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        }
+        for (const p of S.parts) { ctx.globalAlpha = Math.max(0, p.t / 0.7); ctx.fillStyle = '#2a2a33'; ctx.fillRect(p.x, p.y, 7, 7); ctx.fillStyle = '#6aff7a'; ctx.fillRect(p.x + 2, p.y + 2, 2, 2); }
+        ctx.globalAlpha = 1;
+
+        // a yellow flash on every beat over the whole course, deck and sky alike (drawn last, under the HUD)
+        const mt = music.paused ? S.t : music.currentTime - MUSIC_OFFSET, pulse = Math.pow(1 - (((mt / MUSIC_BEAT) % 1 + 1) % 1), 3); // on the music's beat
+        if (S.started && !S.dead && !S.won) { ctx.globalAlpha = pulse * 0.16; ctx.fillStyle = '#ffd84a'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+
+        // HUD: progress bar, fish, attempt
+        ctx.fillStyle = '#0008'; ctx.fillRect(W / 2 - 200, 18, 400, 12);
+        ctx.fillStyle = pal[2]; ctx.fillRect(W / 2 - 200, 18, 400 * progress(), 12);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Georgia'; ctx.textAlign = 'left'; ctx.drawImage(canImg, 12, 6); ctx.fillText(S.score, 52, 32);
+        ctx.textAlign = 'right'; ctx.fillText('Attempt ' + S.attempt + '   Best ' + S.best + '%', W - 20, 32);
+        ctx.textAlign = 'center'; ctx.font = 'bold 20px Georgia'; ctx.fillText(Math.round(progress() * 100) + '%', W / 2, 52);
+        const birds = mode === 'guest';
+        if (birds || coop) { ctx.textAlign = 'left'; ctx.font = 'bold 18px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText('Catches ' + S.catches, 12, 62); ctx.textAlign = 'center'; }
+        if (birds) { // the swoop button's cooldown, and how to play
+          ctx.fillStyle = '#0008'; ctx.fillRect(W / 2 - 75, H - 42, 150, 10);
+          ctx.fillStyle = S.birdCd > 0 ? '#9a9486' : ACCENT; ctx.fillRect(W / 2 - 75, H - 42, 150 * (1 - Math.min(1, S.birdCd / SWOOP_CD)), 10);
+          ctx.font = '16px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText('You are the birds: tap above the deck (or ↑) to swoop high, below it (or ↓) to swoop low', W / 2, H - 14);
+        }
+        if (!S.started && !S.won) { ctx.font = 'bold 44px Georgia'; ctx.fillStyle = '#f0c060'; ctx.fillText('Cats vs Birds', W / 2, 190); ctx.font = '22px Georgia'; ctx.fillStyle = '#fff'; ctx.fillText(birds ? 'Waiting for the cat to start…' : coop ? 'Cat: tap, click or press Space to start' : 'Tap, click or press Space to start', W / 2, 232); }
+        if (noticeT > 0) { ctx.globalAlpha = Math.min(1, noticeT); ctx.font = 'bold 20px Georgia'; ctx.fillStyle = '#ffd84a'; ctx.fillText(notice, W / 2, 84); ctx.globalAlpha = 1; }
+        if (S.won) { ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#f0c060'; ctx.font = 'bold 48px Georgia'; ctx.fillText('Level complete!', W / 2, 230); ctx.fillStyle = '#fff'; ctx.font = '24px Georgia'; ctx.fillText(S.score + ' points · attempts ' + S.attempt + (birds || coop ? ' · catches ' + S.catches : '') + (mode === 'guest' ? ' · the cat got away' : ' · tap to run again'), W / 2, 280); }
+      }
+
+      // ---- sound: "The Field Of Dreams" loops as the music (starts on the first input); only the crash sound is Web Audio ----
+      const MUSIC_BEAT = 60 / 72, MUSIC_OFFSET = 0.06; // the track's pulse, found by analysis, so the flash lands on it
+      const music = new Audio('field-of-dreams.mp3'); music.loop = true; music.volume = 0.6;
+      const audio = (() => {
+        let ac = null, muted = false, master = null;
+        function tone(f, t, d, type, vol, f2) { const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+          g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + d); o.connect(g).connect(master); o.start(t); o.stop(t + d + 0.02); }
+        const sfx = (f, d, type, f2) => () => { if (ac && !muted) tone(f, ac.currentTime, d, type, 0.2, f2); };
+        return { start() {
+            if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = 0.5; master.connect(ac.destination); } catch (e) { ac = null; } }
+            else if (ac.state === 'suspended') void ac.resume();
+            if (music.paused) music.play().catch(() => {});
+          },
+          toggle() { muted = !muted; music.muted = muted; }, thud: sfx(160, 0.3, 'sawtooth', 40) };
+      })();
+
+      let last = performance.now();
+      (function loop(now) {
+        const dt = Math.min(0.033, (now - last) / 1000); last = now;
+        if (mode === 'guest') updateGuest(dt); else update(dt);
+        noticeT = Math.max(0, noticeT - dt);
+        if (coop && net && (snapT += dt) >= 1 / 30) { snapT = 0; net.send(snapshot()); }
+        draw(); requestAnimationFrame(loop);
+      })(last);
+    </script>
   </body>
 </html>

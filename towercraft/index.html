@@ -12,6 +12,9 @@
         --red: #b82024; --blue: #406181; --orange: #e7682f; --amber: #ffb13f;
         --title: 'Cinzel', Georgia, serif; --body: 'Crimson Text', Georgia, serif;
         --dock-h: 96px;
+        --safe-b: env(safe-area-inset-bottom, 0px);
+        --safe-l: env(safe-area-inset-left, 0px);
+        --safe-r: env(safe-area-inset-right, 0px);
       }
       html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; touch-action: manipulation;
         font: 16px/1.3 var(--body); user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -20,12 +23,17 @@
       .panel.thin { border-width: 10px; border-image: url('./ui/frame-thin.png') 10 stretch; }
       .wood { background: url('./ui/wood.jpg') center / 256px; }
       .paper { background: url('./ui/paper.jpg') center / 256px; color: var(--ink); }
+      /* The in-game windows (dock, card) are see-through: the same wood and paper at 45% (wood) and 55% (paper) alpha, made from
+         the jpgs with `convert <in> -alpha set -channel A -evaluate multiply <alpha> +channel -quality 85 <out>.webp`, so the field
+         shows under them while the text, buttons and frame stay solid. Other panels (the menus) keep the opaque art. */
+      .glass.wood { background: url('./ui/wood-glass.webp') center / 256px; }
+      .glass.paper { background: url('./ui/paper-glass.webp') center / 256px; }
       h1, h2, h3, h4 { font-family: var(--title); margin: 0; }
 
       /* Wood and stone: two icons with a number each, a see-through overlay in the corner (no banner, no names), so the field shows. */
       :root { --ico-w: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cellipse cx='12' cy='15.5' rx='9.5' ry='4.2' fill='%236b4423'/%3E%3Crect x='2.5' y='9' width='19' height='6.5' fill='%238a5a2e'/%3E%3Cellipse cx='12' cy='9' rx='9.5' ry='4.2' fill='%23c98f55'/%3E%3Cellipse cx='12' cy='9' rx='6.2' ry='2.5' fill='none' stroke='%238a5a2e' stroke-width='1.2'/%3E%3Cellipse cx='12' cy='9' rx='2.6' ry='1' fill='none' stroke='%238a5a2e' stroke-width='1'/%3E%3C/svg%3E");
         --ico-s: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 17 7 8l6-3 7 5 2 7-5 4H7z' fill='%238d96a1'/%3E%3Cpath d='M7 8l6-3 7 5-6 3z' fill='%23c4cbd3'/%3E%3Cpath d='M14 13l6-3 2 7-5 4-3 1z' fill='%2362707d'/%3E%3C/svg%3E"); }
-      #top { position: fixed; top: 8px; left: 56px; z-index: 2; display: flex; gap: 16px; pointer-events: none; }
+      #top { position: fixed; top: 8px; left: max(10px, var(--safe-l)); z-index: 2; display: flex; gap: 16px; pointer-events: none; }
       #top .r { display: flex; align-items: center; gap: 5px; font: 700 20px var(--title); color: #fff; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.75); }
       #top .r::before, i.w::before, i.s::before { content: ''; flex: none; display: inline-block; width: 1.15em; height: 1.15em; background: center / contain no-repeat; vertical-align: -0.2em; }
       #top .r::before { width: 28px; height: 28px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7)); }
@@ -34,7 +42,7 @@
       #marquee[hidden] { display: none; }
       #top small { font: 700 14px var(--body); color: #e9e2cc; text-shadow: 0 1px 3px #000; opacity: 0.85; }
       i.w, i.s { font-style: normal; display: inline-flex; align-items: center; gap: 2px; }
-      #hint { position: fixed; left: 0; right: 0; top: 46px; text-align: center; color: var(--text); font-size: 15px; text-shadow: 0 1px 3px #000, 0 0 6px #000; pointer-events: none; z-index: 1; }
+      #hint { position: fixed; left: 0; right: 0; top: 58px; text-align: center; color: var(--text); font-size: 15px; text-shadow: 0 1px 3px #000, 0 0 6px #000; pointer-events: none; z-index: 1; }
 
       /* Wooden square buttons (the kit's), used for the camera and the dock's thumbnails. */
       button { font: inherit; color: var(--gold); cursor: pointer; }
@@ -43,24 +51,25 @@
         text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .wbtn:hover:not(:disabled) { filter: brightness(1.25) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .wbtn:active:not(:disabled) { filter: brightness(0.9); transform: translateY(1px); }
-      #cam { position: fixed; left: 10px; top: 8px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
-      #cam button { width: 40px; height: 40px; font-size: 20px; } #cam #cam-all { font-size: 13px; }
+      #cam { position: fixed; right: max(10px, var(--safe-r)); top: 8px; z-index: 3; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: calc(100vw - 190px); }
+      #cam button { width: 40px; height: 40px; font-size: 20px; } 
       .plank { background: url('./ui/plank-dim.png') center / 100% 100% no-repeat; border: 0; color: #b9b3a2; font: 700 12px var(--title); padding: 8px 14px; letter-spacing: 0.03em; text-shadow: 0 1px 2px #000; }
       .plank.on, .plank:hover:not(:disabled) { background-image: url('./ui/plank.png'); color: var(--gold); }
       .plank:disabled { opacity: 0.45; }
 
-      /* The dock: tabs (units, buildings, upgrades) over one shelf of small thumbnails; tap one for its card. The orders sit by the tabs. */
-      #dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: 6px; z-index: 2; width: min(900px, calc(100vw - 12px));
+      /* The dock: only structures, by kind (and the roads, in co-op); tap one for its card. Units and upgrades are bought from the buildings' cards. */
+      #dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(6px, var(--safe-b)); z-index: 2; width: max-content; max-width: calc(100vw - 12px);
         box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 0 4px; }
-      .bar { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-      #tabs, #castle { display: flex; gap: 4px; align-items: center; }
-      #tabs .plank { padding: 6px 12px; }
       .shelf { display: flex; gap: 4px 10px; align-items: flex-end; overflow-x: auto; overflow-y: hidden; min-height: 62px; padding: 0 0 2px; scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
       .shelf[hidden] { display: none; }
       .sec { flex: none; display: flex; flex-direction: column; gap: 1px; }
       .sec h4 { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-dim); text-shadow: 0 1px 2px #000; padding-left: 2px; }
       .thumbs { display: flex; gap: 4px; align-items: flex-end; }
-      .tb[hidden], .up[hidden], .sec[hidden], #tabs button[hidden] { display: none; }
+      /* The build shelf: each kind (Economy, Units, Upgrades, Defence) is its own boxed group with its name over it and a gap between groups. */
+      #build { gap: 6px 8px; align-items: stretch; }
+      #build .sec { gap: 3px; padding: 3px 6px 4px; border: 1px solid rgba(214, 178, 106, 0.35); border-radius: 6px; background: rgba(0, 0, 0, 0.22); }
+      #build .sec h4 { font-size: 10px; padding: 0 0 2px; border-bottom: 1px solid rgba(214, 178, 106, 0.25); }
+      .tb[hidden], .up[hidden], .sec[hidden] { display: none; }
       .tb { position: relative; flex: none; width: 54px; height: 58px; display: grid; place-items: center; padding: 0; }
       .tb .art { display: block; border-radius: 3px; background-repeat: no-repeat; background-position: 0 0; pointer-events: none; }
       img.thumb.gen { object-fit: contain; }
@@ -68,14 +77,11 @@
       .tb.lock .art { filter: grayscale(1) brightness(0.55); }
       .tb.poor { filter: brightness(0.7) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .tb.poor em i { color: #f09a9d; }
+      .tb.bought { filter: brightness(1.6) drop-shadow(0 0 8px rgba(242, 211, 138, 0.9)); transform: scale(1.08); }
       .tb.open { filter: brightness(1.35) drop-shadow(0 0 6px rgba(242, 211, 138, 0.9)); }
       .tb.arm { filter: brightness(1.35) drop-shadow(0 0 8px rgba(111, 211, 111, 0.95)); }
       .tb .lv { position: absolute; top: 4px; left: 5px; right: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 8px var(--title); text-align: center; color: #f09a9d; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }
       .tb .lv:empty { display: none; }
-      .tb.orders { width: 64px; height: 50px; font-size: 10px; line-height: 1.05; }
-      .tb.orders span { position: relative; padding: 0 6px; text-align: center; pointer-events: none; }
-      .tb.orders.bypass { filter: brightness(1.25) drop-shadow(0 0 5px rgba(231, 104, 47, 0.9)); }
-      #castle .tb:first-child { height: 50px; width: 50px; }
       /* An upgrade line: its name, three pips, what a level adds and what the next costs (or why it cannot be bought). */
       .up { flex: none; width: 136px; height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 14px 8px; }
       .up .foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
@@ -83,19 +89,20 @@
       .up small { font: 600 11px var(--body); color: var(--dim); white-space: nowrap; }
       .up em { font: 700 11px var(--title); font-style: normal; display: flex; gap: 6px; color: var(--gold); }
       .up.lock small { color: #f09a9d; } .up.lock { filter: brightness(0.75) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
-      .up.armed { filter: brightness(1.3) drop-shadow(0 0 8px rgba(111, 211, 111, 0.95)); }
-      .up.armed em { color: #9be59b; }
       .up.poor em i { color: #f09a9d; }
       .up:disabled:hover { filter: brightness(0.75) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
       .pips { display: flex; gap: 4px; } .pips i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--gold-dim); box-sizing: border-box; background: rgba(0, 0, 0, 0.35); }
       .pips i.on { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 4px rgba(242, 211, 138, 0.7); }
 
       /* The card: stats and a purchase button, popping up at the side beside the thumbnails. */
-      #card { position: fixed; z-index: 4; right: 8px; top: 108px; width: min(300px, calc(100vw - 16px)); max-height: calc(100vh - 108px - var(--dock-h) - 16px);
+      #card { position: fixed; z-index: 4; right: 8px; top: 108px; width: min(300px, calc(100vw - 16px)); max-height: calc(100dvh - 108px - var(--dock-h) - var(--safe-b) - 16px);
         overflow-y: auto; padding: 4px 6px 8px; animation: pop 0.14s ease-out; }
       #card[hidden] { display: none; }
+      /* What a building sells: its units, or the upgrades it hosts, the dock's thumbnails moved in. */
+      #card-shop { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 4px 0 6px; }
+      #card-shop[hidden] { display: none; }
       /* A group's card is small and sits low at the left, out of the way of the field you are commanding on. */
-      #card.group { right: auto; left: 8px; top: auto; bottom: calc(var(--dock-h) + 12px); width: min(250px, calc(100vw - 16px)); }
+      #card.group { right: auto; left: 8px; top: auto; bottom: calc(var(--dock-h) + var(--safe-b) + 12px); width: min(250px, calc(100vw - 16px)); }
       @keyframes pop { from { opacity: 0; transform: translateX(14px) scale(0.97); } to { opacity: 1; transform: none; } }
       #card-x { position: absolute; top: -4px; right: -4px; width: 30px; height: 30px; font-size: 15px; background-image: url('./ui/button-small.png'); }
       #card header { display: flex; gap: 10px; align-items: center; margin: 0 24px 8px 0; }
@@ -127,6 +134,8 @@
       #card .pays { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; font: 700 18px var(--title); } #card .pays small { font: 600 13px var(--body); color: var(--ink-soft); }
       #card .unlocks { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; color: var(--ink); } #card .unlocks .ic { width: 22px; height: 22px; }
       #card .unlocks img { border-radius: 4px; border: 1px solid var(--ink-soft); display: block; }
+      #card .unlocks .shut { position: relative; display: block; } #card .unlocks .shut img { filter: grayscale(1) brightness(0.55); }
+      #card .unlocks .shut .ic { position: absolute; right: -4px; bottom: -4px; width: 16px; height: 16px; color: #f09a9d; }
       #card .hp { position: relative; height: 16px; border-radius: 4px; background: #2b2118; overflow: hidden; margin-bottom: 8px; }
       #card .hp i { position: absolute; inset: 0 auto 0 0; background: #6fd36f; }
       #card .hp span { position: relative; display: block; text-align: center; font-size: 12px; line-height: 16px; color: #fff; text-shadow: 0 1px 2px #000; }
@@ -134,10 +143,6 @@
       #card .slots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ink-soft); box-sizing: border-box; background: rgba(51, 35, 15, 0.12); }
       #card .slots i.on { background: #c98f26; border-color: var(--ink); }
       #card .loads { display: flex; flex-direction: column; gap: 6px; }
-      #card .sell { display: block; width: 100%; margin-top: 10px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font: 700 14px var(--title); color: var(--ink);
-        background: rgba(138, 90, 34, 0.12); border: 1px solid #8a5a22; }
-      #card .sell:hover { background: rgba(242, 211, 138, 0.45); }
-      #card .sell.armed { color: #b82024; border-color: #b82024; }
       #card .load { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; text-align: left; border-radius: 6px; cursor: pointer;
         background: rgba(51, 35, 15, 0.14); border: 1px solid var(--ink-soft); color: var(--ink); font-family: var(--body); min-height: 44px; }
       #card .load:hover:not(:disabled) { background: rgba(242, 211, 138, 0.45); }
@@ -147,7 +152,15 @@
       #card .load em { font: 700 12px var(--title); font-style: normal; display: flex; gap: 6px; }
       #card .load em i.w, #card li i.w { color: #8a5a22; } #card .load em i.s, #card li i.s { color: #4f5a66; }
       #card li b { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+      #card .next .ic, #card li > span > .ic { width: 20px; height: 20px; }
+      #card ul.needs li { align-items: center; } #card .kinds { display: flex; gap: 2px; flex-wrap: wrap; }
+      #card .unlocks { flex-wrap: wrap; } #card ul.next, #card ul.needs { margin-top: 10px; }
+      .up small { display: flex; align-items: center; gap: 3px; } .up small .ic { width: 13px; height: 13px; }
       #card .note i.w { color: #8a5a22; } #card .note i.s { color: #4f5a66; }
+      #card-buy { margin: 0 0 8px; display: grid; gap: 4px; }
+      #card-buy[hidden] { display: none; }
+      #card-buy .line { display: flex; align-items: center; justify-content: space-between; font: 700 14px var(--title); color: var(--ink); }
+      #card-buy input[type=range] { width: 100%; height: 28px; margin: 0; accent-color: #8a5a22; }
       #card .targets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin: 0 0 6px; }
       #card .targets button { padding: 6px 4px; border-radius: 6px; border: 1px solid var(--ink-soft); background: rgba(51, 35, 15, 0.14); color: var(--ink);
         font: 700 12px var(--title); min-height: 44px; display: grid; place-items: center; gap: 1px; }
@@ -163,9 +176,12 @@
       #card-act { display: block; width: 100%; min-height: 44px; padding: 8px 10px 10px; font-size: 15px; color: var(--gold); background: url('./ui/button.png') center / 100% 100% no-repeat; border: 0;
         font-family: var(--title); font-weight: 700; text-shadow: 0 2px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)); }
       #card-act[hidden] { display: none; }
+      #card-sell { display: block; width: 100%; min-height: 36px; margin-top: 4px; padding: 6px 10px; font: 700 15px var(--title); color: #f0b8ba; background: url('./ui/button.png') center / 100% 100% no-repeat; border: 0; text-shadow: 0 2px 2px #000; }
+      #card-sell[hidden] { display: none; }
+      #card-sell:hover:not(:disabled) { filter: brightness(1.25); }
       #card-act { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 12px; font-size: 20px; }
       #card-act:not([hidden]) { display: flex; }
-      #card-act .ic { width: 24px; height: 24px; }
+      #card-act .ic { width: 24px; height: 24px; } #card-act .times { font: 700 18px var(--title); color: var(--gold); }
       #card-act small { flex-basis: 100%; text-align: center; }
       #card-act small { display: block; font: 600 11px var(--body); color: #f0b8ba; margin-top: 1px; text-shadow: 0 1px 2px #000; }
       #card-act i.w, #card-act i.s { font-style: normal; }
@@ -173,10 +189,7 @@
       #card-act:hover:not(:disabled) { filter: brightness(1.25) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)); }
       #card-act:disabled { filter: grayscale(0.8) brightness(0.65); }
       #card.placing #card-act { color: #f09a9d; }
-      #tip { position: fixed; z-index: 4; transform: translate(-50%, -100%); padding: 4px 9px; border-radius: 5px; pointer-events: none; white-space: nowrap;
-        font: 600 14px var(--title); color: var(--ink); background: rgba(22, 15, 9, 0.9); border: 1px solid var(--gold-dim); }
-      #tip[hidden] { display: none; }
-      #ghost { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + 10px); z-index: 3; display: flex; gap: 8px; }
+      #ghost { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--safe-b) + 10px); z-index: 3; display: flex; gap: 8px; }
       #ghost[hidden] { display: none; }
       #ghost button { padding: 10px 18px; }
 
@@ -219,7 +232,7 @@
       #net { margin-top: 14px; } #net-code { font: 700 34px var(--title); letter-spacing: 0.08em; color: var(--gold); text-shadow: 0 2px 3px #000; user-select: all; }
       #net-text { min-height: 1.4em; } #net-text.bad { color: #e0777b; } #net-cancel { margin-top: 4px; }
       .races.busy { opacity: 0.45; pointer-events: none; }
-      #wait { position: fixed; left: 0; right: 0; top: 74px; text-align: center; color: var(--gold); font: 700 15px var(--title); text-shadow: 0 1px 3px #000, 0 0 6px #000; pointer-events: none; z-index: 1; }
+      #wait { position: fixed; left: 0; right: 0; top: 90px; text-align: center; color: var(--gold); font: 700 15px var(--title); text-shadow: 0 1px 3px #000, 0 0 6px #000; pointer-events: none; z-index: 1; }
       #wait[hidden] { display: none; }
       #wait { max-width: calc(100vw - 24px); margin: 0 auto; }
       #credits h2 { margin-top: 0; } #credits p { max-width: 560px; margin: 8px auto 16px; font-size: 14px; } #credits a { color: var(--gold); }
@@ -229,15 +242,23 @@
       @keyframes end-in { from { opacity: 0; } to { opacity: 1; } }
       #again { padding: 10px 26px; font-size: 16px; }
 
+      @media (pointer: coarse) { #cam-sound { display: none; } #cam button { width: 44px; height: 44px; } #ghost button { min-height: 48px; } }
       /* A narrow screen: the card rises over the dock instead of the side, and gets out of the way while a tower is placed. */
       @media (max-width: 760px), (max-height: 560px) {
-        #card { right: 4px; left: 4px; width: auto; top: auto; bottom: calc(var(--dock-h) + 6px); max-height: 46vh; }
+        #card, #card.group { right: 4px; left: 4px; width: auto; top: auto; bottom: calc(var(--dock-h) + var(--safe-b) + 6px); max-height: calc(100dvh - var(--dock-h) - var(--safe-b) - 70px); }
         #card.placing { display: none; }
-        .tb { width: 44px; height: 52px; } .tb.orders { width: 54px; height: 44px; } .tb.lane { width: 62px; height: 44px; } #castle .tb:first-child { width: 44px; height: 44px; }
-        #tabs .plank { padding: 5px 9px; font-size: 11px; }
-        #hint { top: 44px; font-size: 14px; padding: 0 8px; }
+        /* The whole card on one screen, nothing to scroll: small header and bars, the three stances in one row. */
+        #card header { margin-bottom: 4px; } #card header .pic { width: 40px; height: 40px; }
+        #card .stats { gap: 4px; margin: 0 0 6px; } #card .st { gap: 8px; } #card .st .ic { width: 22px; height: 22px; } #card .meter { height: 10px; }
+        #card .badges { gap: 4px; margin: 0 0 6px; } #card .bd { width: 26px; height: 26px; } #card .bd .ic { width: 16px; height: 16px; }
+        #card .crowd { gap: 4px; margin: 0 0 6px; }
+        #card .targets { grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 0 0 4px; }
+        #card .targets button { min-height: 36px; padding: 3px 2px; font-size: 11px; line-height: 1.1; }
+        .tb { width: 42px; height: 48px; } .tb.lane { width: 56px; height: 42px; }
+        .shelf { flex-wrap: wrap; overflow: visible; justify-content: center; } .thumbs { gap: 8px; } .tb em { font-size: 11px; } #cam button { width: 44px; height: 44px; }
+        #hint { top: 56px; font-size: 14px; padding: 0 8px; }
         .up { width: 124px; height: 58px; padding: 5px 12px 7px; } .shelf { min-height: 56px; }
-        #top { left: 54px; } #top .r { font-size: 17px; } #top .r::before { width: 22px; height: 22px; }
+        #top .r { font-size: 17px; } #top .r::before { width: 22px; height: 22px; }
         #menu > .panel { border-width: 10px; border-image: url('./ui/frame-thin.png') 10 stretch; padding: 0 2px 6px; }
         .maps, .races { gap: 6px; } .race { padding: 10px 4px 6px; border-width: 8px; } .race b { font-size: 14px; }
         .overlay h2 { font-size: 12px; margin: 12px 0 6px; } #menu #credits-btn { margin-top: 14px; }
@@ -250,22 +271,22 @@
     <div id="hint"></div>
     <div id="wait" hidden>Waiting for your rival…</div>
     <div id="marquee" hidden></div>
-    <div id="tip" hidden></div>
-    <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-all" title="Pick all your units (Ctrl+A)">All</button><button class="wbtn" id="cam-sound" title="Sound (M)">🔊</button></div>
-    <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no">Cancel</button></div>
-    <div id="dock" class="panel thin wood">
-      <div class="bar">
-        <div id="tabs"><button class="plank on" data-tab="units">Units</button><button class="plank" data-tab="build">Build</button><button class="plank" data-tab="upgrades">Upgrades</button></div>
-        <div id="castle"></div>
-      </div>
+    <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-sound" title="Sound (M)">🔊</button></div>
+    <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no" aria-label="Cancel">✕</button></div>
+    <div id="dock" class="panel thin wood glass">
       <div class="shelf" id="train"></div>
-      <div class="shelf" id="build" hidden></div>
-      <div class="shelf" id="upgrades" hidden></div>
+      <div class="shelf" id="build"></div>
     </div>
-    <aside id="card" class="panel thin paper" hidden>
+    <aside id="card" class="panel thin paper glass" hidden>
       <button class="wbtn" id="card-x" aria-label="Close">×</button>
       <div id="card-body"></div>
+      <div id="card-shop" hidden></div>
+      <div id="card-buy" hidden>
+        <div class="line"><span id="buy-n-label"></span><span id="buy-n-cost"></span></div>
+        <input type="range" id="buy-n" min="1" max="1" value="1" step="1" aria-label="How many to train" />
+      </div>
       <button id="card-act"></button>
+      <button id="card-sell" hidden></button>
     </aside>
     <div class="overlay" id="menu">
       <div class="panel wood">

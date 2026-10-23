@@ -22,12 +22,13 @@ import {
   newMatch,
   buildTower,
   buyUpgrade,
+  emptyBunker,
+  garrisonUnits,
   loadBunker,
   repairTower,
   sellTower,
   setFocus,
   setLane,
-  setOrder,
   setRoute,
   trainUnits,
   upgradeCastle,
@@ -42,7 +43,8 @@ export type Command =
   | { k: 'build'; id: string; col: number; row: number }
   | { k: 'train'; id: string; n: number }
   | { k: 'bunker'; tower: number; unit: string }
-  | { k: 'order'; what: 'towers' | 'units'; to: 'attack' | 'bypass' }
+  | { k: 'garrison'; tower: number; ids: number[] }
+  | { k: 'empty'; tower: number }
   | { k: 'focus'; ids: number[]; at?: Focus }
   | { k: 'castle' }
   | { k: 'upgrade'; id: string }
@@ -63,8 +65,11 @@ export function apply(m: Match, owner: Owner, c: Command): void {
     case 'bunker':
       loadBunker(m, owner, c.tower, c.unit);
       break;
-    case 'order':
-      setOrder(m, owner, c.what, c.to);
+    case 'garrison':
+      garrisonUnits(m, owner, c.tower, c.ids);
+      break;
+    case 'empty':
+      emptyBunker(m, owner, c.tower);
       break;
     case 'focus':
       setFocus(m, owner, c.ids, c.at);
@@ -100,7 +105,7 @@ const MAX_AHEAD = 400;
 
 // --- The wire ---
 
-export const NET_VERSION = 4;
+export const NET_VERSION = 13;
 
 export type Message =
   /** The joiner, once connected: who they play. */
@@ -141,10 +146,10 @@ export function parseCommand(v: unknown): Command | null {
       return isId(c.id) && isInt(c.n, 1, 200) ? { k: 'train', id: c.id, n: c.n } : null;
     case 'bunker':
       return isInt(c.tower) && isId(c.unit) ? { k: 'bunker', tower: c.tower, unit: c.unit } : null;
-    case 'order':
-      return (c.what === 'towers' || c.what === 'units') && (c.to === 'attack' || c.to === 'bypass')
-        ? { k: 'order', what: c.what, to: c.to }
-        : null;
+    case 'empty':
+      return isInt(c.tower) ? { k: 'empty', tower: c.tower } : null;
+    case 'garrison':
+      return isInt(c.tower) && isIds(c.ids) ? { k: 'garrison', tower: c.tower, ids: c.ids } : null;
     case 'focus': {
       const at = parseFocus(c.at);
       return isIds(c.ids) && at !== null ? (at ? { k: 'focus', ids: c.ids, at } : { k: 'focus', ids: c.ids }) : null;
@@ -356,8 +361,9 @@ export function checksum(m: Match): number {
   mix(m.winner);
   for (const p of m.players)
     for (const x of [p.wood, p.stone, p.castle.hp, p.castle.level, p.lane, p.out ? 1 : 0]) mix(x);
-  for (const u of m.units) for (const x of [u.id, u.hp, u.s, u.lane ?? -1, u.off?.d ?? -1]) mix(x);
-  for (const t of m.towers) for (const x of [t.id, t.hp, t.col, t.row]) mix(x);
+  for (const u of m.units)
+    for (const x of [u.id, u.hp, u.s, u.lane ?? -1, u.off?.d ?? -1, u.off?.leaving ? 1 : 0, u.enter ?? -1]) mix(x);
+  for (const t of m.towers) for (const x of [t.id, t.hp, t.col, t.row, t.spawned ?? 0]) mix(x);
   return h >>> 0;
 }
 

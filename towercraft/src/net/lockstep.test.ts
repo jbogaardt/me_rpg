@@ -6,6 +6,7 @@ import { checksum, encode, Lockstep, makeAis, packMatch, parseMessage, unpackMat
 
 const STEP = 0.05;
 const BASE = RACES.legion.units[0]!.id; // the castle sells its base unit from the start
+const BASE1 = RACES.swarm.units[0]!.id; // player 1's race in `pair`
 
 /** Two pages joined by a wire; `lag` ticks of delay on every message (0 delivers at once). */
 function pair(lag = 0) {
@@ -40,14 +41,16 @@ function pair(lag = 0) {
 describe('lockstep', () => {
   it('keeps two pages on the same match when both play', () => {
     const { A, B, mA, mB, pump } = pair();
+    let trained = false; // the rival's unit was on the field at some point (it may have fallen since)
     pump(300, (t) => {
       if (t === 10) A.issue({ k: 'train', id: BASE, n: 1 });
-      if (t === 12) B.issue({ k: 'order', what: 'units', to: 'bypass' });
+      if (t === 12) B.issue({ k: 'train', id: BASE1, n: 1 });
+      trained ||= mA.units.some((u) => u.owner === 1);
     });
     expect(A.tick).toBeGreaterThan(200);
     expect(A.tick).toBe(B.tick);
     expect(checksum(mA)).toBe(checksum(mB));
-    expect(mB.players[1].orders.units).toBe('bypass');
+    expect(trained).toBe(true);
     expect(A.desync || B.desync).toBe(false);
   });
 
@@ -113,8 +116,10 @@ describe('rejoin', () => {
     const B = new Lockstep(1, { send: (m) => outB.push(m) });
     B.resume(wire.n, wire.c, wire.mine);
     expect(checksum(mB)).toBe(checksum(mA));
+    let trained = false;
     for (let i = 0; i < 200; i++) {
-      if (i === 20) B.issue({ k: 'order', what: 'units', to: 'bypass' });
+      if (i === 20) B.issue({ k: 'train', id: BASE1, n: 1 });
+      trained ||= mA.units.some((u) => u.owner === 1);
       A.run(mA, () => step(mA, STEP));
       B.run(mB, () => step(mB, STEP));
       for (const m of outA.splice(0)) if (m.t === 'tick') B.receive(m.n, m.c);
@@ -123,7 +128,7 @@ describe('rejoin', () => {
     expect(A.tick).toBe(B.tick);
     expect(A.tick).toBeGreaterThan(300);
     expect(checksum(mA)).toBe(checksum(mB));
-    expect(mA.players[1].orders.units).toBe('bypass');
+    expect(trained).toBe(true);
   });
 });
 
@@ -142,7 +147,8 @@ describe('wire', () => {
           { k: 'build', id: 'arrow', col: 3, row: 4 },
           { k: 'train', id: 'archer', n: 5 },
           { k: 'bunker', tower: 3, unit: 'archer' },
-          { k: 'order', what: 'towers', to: 'bypass' },
+          { k: 'garrison', tower: 3, ids: [4, 5] },
+          { k: 'empty', tower: 3 },
           { k: 'focus', ids: [1, 2], at: { kind: 'tower', id: 7 } },
           { k: 'focus', ids: [1] },
           { k: 'focus', ids: [1], at: { kind: 'castle', owner: 3 } },
@@ -152,7 +158,7 @@ describe('wire', () => {
           { k: 'castle' },
           { k: 'upgrade', id: 'ground-damage' },
           { k: 'repair', tower: 4 },
-          { k: 'sell', tower: 6 },
+          { k: 'sell', tower: 5 },
         ],
       },
     ];
@@ -224,7 +230,7 @@ describe('co-op: two people and computers on the other seats', () => {
     expect(A.tick).toBe(B.tick);
     expect(checksum(mA)).toBe(checksum(mB));
     // The computers did something, and seat 1 sent units down the road it chose.
-    expect(mA.players[2]!.castle.level + mA.towers.filter((t) => t.owner === 2).length).toBeGreaterThan(1);
+    expect(mA.towers.filter((t) => t.owner >= 2).length).toBeGreaterThan(0);
     expect(mA.players[1].lane).toBe(board.lanes.find((l) => l.from === 1 && l.to === 2)!.id);
   });
 

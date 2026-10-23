@@ -35,3 +35,55 @@ describe('tower repair', () => {
     expect(repairTower(m, 0, t.id)).toBe('gold');
   });
 });
+
+describe('selling a tower', () => {
+  it('pays half the price, frees the ground and lets another one go there', async () => {
+    const { sellRefund, sellTower, buildTower } = await import('./sim');
+    const { m, t } = fresh();
+    m.players[0].wood = m.players[0].stone = 0;
+    const back = sellRefund(t);
+    expect(back.wood).toBe(Math.floor(t.def.cost.wood / 2));
+    expect(sellTower(m, 1, t.id)).toBe('unknown'); // not the rival's
+    expect(sellTower(m, 0, t.id)).toBe('ok');
+    expect(m.towers.includes(t)).toBe(false);
+    expect(m.players[0].wood).toBe(back.wood);
+    expect(m.players[0].stone).toBe(back.stone);
+    expect(sellTower(m, 0, t.id)).toBe('unknown');
+    m.players[0].wood = m.players[0].stone = 1000;
+    expect(buildTower(m, 0, t.def.id, t.col, t.row)).not.toBe('taken'); // the cell is free again
+  });
+});
+
+describe('camps', () => {
+  it('walk units out from the producer buildings, taking turns, and from the castle for the base unit', async () => {
+    const { trainUnit } = await import('./sim');
+    const m = newMatch(['swarm', 'swarm']);
+    m.players[0].wood = m.players[0].stone = 9999;
+    const unit = m.races.swarm.units.find((u) => u.needs)!;
+    const a = put(m, 0, 'swarm', unit.needs!, 12, 14);
+    const b = put(m, 0, 'swarm', unit.needs!, 12, 30);
+    for (let i = 0; i < 4; i++) expect(trainUnit(m, 0, unit.id)).toBe('ok');
+    expect([a.spawned, b.spawned]).toEqual([2, 2]);
+    expect(m.units.some((u) => u.s > 1)).toBe(true); // out where the camps are, not all at the castle
+    const base = m.races.swarm.units.find((u) => !u.needs)!;
+    const before = m.units.length;
+    expect(trainUnit(m, 0, base.id)).toBe('ok');
+    expect(m.units.slice(before).every((u) => u.s < 9)).toBe(true);
+  });
+});
+
+describe('selling a bunker', () => {
+  it('lets the soldiers inside walk out onto the road', async () => {
+    const { sellTower } = await import('./sim');
+    const m = newMatch(['legion', 'legion']);
+    m.players[0].wood = m.players[0].stone = 9999;
+    const def = m.races.legion.towers.find((d) => d.bunker)!;
+    const b = put(m, 0, 'legion', def.id, 12, 14);
+    const soldier = m.races.legion.units.find((u) => u.garrison)!;
+    b.garrison.push({ def: soldier, cooldown: 0 }, { def: soldier, cooldown: 0 });
+    expect(m.units.length).toBe(0);
+    expect(sellTower(m, 0, b.id)).toBe('ok');
+    expect(m.units.length).toBe(2);
+    expect(m.units.every((u) => u.owner === 0 && u.def.id === soldier.id)).toBe(true);
+  });
+});
