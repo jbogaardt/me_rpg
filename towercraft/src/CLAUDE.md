@@ -5,7 +5,7 @@ Rules are in `sim/` (see `sim/CLAUDE.md`); this directory draws a `Match` and tu
 ## Colours (`recolor.ts`; layer: this game's own, cosmetic)
 
 - **Seat colours**: a duel paints each seat in its race's hue (`RACE_HUE`: Goblins green, Dwarves blue, Germanic red); with more seats the side's (`SIDE_HUE`). A further seat that shares a hue gets a shade (`shadeOf`), so two of one race still tell apart.
-- **Painted pictures**: Wyrmsun's buildings carry their player colour as purple. `recolor` moves those pixels (only purple ones: wood, stone and gold stay) to the seat's hue, keeping their shading. `main.ts` paints each picture once per colour (`paintedArt`, cached on a canvas; the dock and cards get a data URL from it).
+- **Painted pictures**: Wyrmsun's buildings carry their player colour as purple. `recolor` moves those pixels (only purple ones: wood, stone and gold stay) to the seat's hue, keeping their shading. `main.ts` paints each picture once per colour (`buildingTex`, cached per colour; the dock and cards get a data URL from `buildingUrl`).
 - A new race or side colour: a hue in `recolor.ts`. A picture with purple that should not change: give it a different hue, not a special case.
 
 ## Sound (`soundEvents.ts`, `soundMix.ts`, `audio.ts`; layer: this game's own, nothing in the protocol)
