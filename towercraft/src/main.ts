@@ -1746,20 +1746,20 @@ void (async () => {
   }
 
   /** A building's picture in your colour (a data URL), or the plain file while it is not loaded. */
-  const buildingUrl = (art: string) => {
+  const buildingUrl = (art: string, owner: Owner = YOU) => {
     const raw = towerTextures.get(art) ?? castleTextures.get(art);
     if (!raw) return `art/${art}.png`;
-    const key = `${art}:${colorOf(YOU)}`;
+    const key = `${art}:${colorOf(owner)}`;
     let url = portraits.get(key);
     if (!url)
       portraits.set(
         key,
-        (url = (teamTexture(`b:${art}`, raw, colorOf(YOU)).source.resource as HTMLCanvasElement).toDataURL()),
+        (url = (teamTexture(`b:${art}`, raw, colorOf(owner)).source.resource as HTMLCanvasElement).toDataURL()),
       );
     return url;
   };
-  const towerThumb = (art: string, px: number) =>
-    `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(${buildingUrl(art)});background-size:${px}px auto"></i>`;
+  const towerThumb = (art: string, px: number, owner: Owner = YOU) =>
+    `<i class="thumb art" style="width:${px}px;height:${px}px;background-image:url(${buildingUrl(art, owner)});background-size:${px}px auto"></i>`;
   /** A unit's picture (in your colour) where it has no portrait of its own: its front-facing standing frame, cropped to the figure and scaled up. */
   const portraits = new Map<string, string>();
   const portrait = (d: UnitDef) => {
@@ -2155,7 +2155,7 @@ void (async () => {
     if (!t || (!mine && !isSeen(match, YOU, t))) return closeCard(); // it fell, or slipped out of sight
     const body = mine
       ? towerCard(t.def, true)
-      : `<header><div class="pic">${towerThumb(t.def.art, 50)}</div><div><h3>${t.def.name}</h3></div></header>` +
+      : `<header><div class="pic">${towerThumb(t.def.art, 50, t.owner)}</div><div><h3>${t.def.name}</h3></div></header>` +
         `<div class="stats">${meter('heart', RED, 'Health', t.def.hp, MOST.towerHp, 0, 'lv-hp')}</div>`;
     if (body !== cardBody) {
       $('card-body').innerHTML = body;
