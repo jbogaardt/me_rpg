@@ -16,8 +16,8 @@ friend waits in the lobby; the host keeps playing solo meanwhile.
   a second (scroll, the cat, the foes, the tins taken, score and the swoop cooldown). The guest runs no rules: `applySnapshot` and
   `updateGuest` only carry on at the course's speed between snapshots, and `draw` is shared.
 - **The birds' move** is a swoop in one of two lanes, sent as `{t:'in', lane}`: a *high* bird flies at jump height (the cat must stay low), a
-  *low* one skims the deck (the cat must jump). It starts off the right edge (a second to read), one per `SWOOP_CD`. The host checks the
-  cooldown and that the run is live; a guest can only ask. While a friend is in, the course's scripted birds are skipped (kiwis stay).
+  *low* one skims the deck (the cat must jump). It starts off the right edge (a second to read). The birds earn `BIRD_RATE` points a second while the run is live and each
+  bird costs `BIRD_COST` (10). The host holds the points (sent in the snapshot as `bp`), checks the cost and that the run is live; a guest can only ask. While a friend is in, the course's scripted birds are skipped (kiwis stay).
 - **Scoring**: a death by a swoop is a *catch*; the course restarts as before, and the cat wins by finishing. Solo is unchanged.
 - A friend leaving puts the host back to solo with the same code open (the seat is offered again); a friend who rejoins resumes at once, no second Start Game. Open the page with `?relay=http://localhost:8787` and
   `npm run relay` to try it locally.
