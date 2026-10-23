@@ -116,6 +116,10 @@ const BIRD_LOW = 30, BIRD_RATE = 1, BIRD_COST = 10;
 const RATIO = { kiwi: 2, bird: 1 }; // how fast each runs at the cat, as a multiple of the cat's own speed
 const KIWI_S = 1, KW = 56 * KIWI_S, KH = 36 * KIWI_S, KIWI_HIT_W = 36, KIWI_HIT_H = 24; // smaller than the cat // 4 frames of 56x36, facing left, feet on the bottom row
 const bg = new Image(); bg.src = 'backdrop.png';
+// backdrop.png split into layers so the sky can drift slower than the course (parallax): the sky with its stars (480x96, tiles sideways with no
+// seam), the moon alone (50x34, cut from x 370 of the backdrop), and the bridge with a clear sky; `bg` stays for the arch opening under the deck
+const skyImg = new Image(), moonImg = new Image(), bridgeImg = new Image(); skyImg.src = 'sky.png'; moonImg.src = 'moon.png'; bridgeImg.src = 'bridge.png';
+const STAR_PAR = 0.08, MOON_PAR = 0.03; // how fast each layer drifts, as a share of the course's scroll
 const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 96 of the backdrop, where its railings stand
 
       // ---- the level: a fixed course built from a seed, so every attempt is the same and can be learned ----
@@ -404,10 +408,14 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         // the terrain, and every other copy is mirrored so the tiles meet without a seam
         ctx.fillStyle = '#7b5397'; ctx.fillRect(0, 0, W, BG_Y + 2);
         const tw = TW, drift = S.scroll, first = Math.floor(drift / tw);
+        const sw = 480 * BG_S, sd = drift * STAR_PAR; // the far sky: stars drift slowly
+        for (let n = Math.floor(sd / sw); n <= Math.floor(sd / sw) + 1; n++) ctx.drawImage(skyImg, n * sw - sd, BG_Y, sw, 96 * BG_S);
+        const md = drift * MOON_PAR, mw = sw * 2, mn = Math.floor((md + 300) / mw); // the moon is farther still, one to a few screens
+        ctx.drawImage(moonImg, mn * mw + 810 - md, BG_Y, 50 * BG_S, 34 * BG_S);
         for (let n = first; n <= first + 2; n++) {
           const tx = n * tw - drift;
           ctx.save(); if (n % 2) { ctx.translate(tx + tw, 0); ctx.scale(-1, 1); } else ctx.translate(tx, 0);
-          ctx.drawImage(bg, 0, 0, 480, 128, 0, BG_Y, tw, 128 * BG_S); ctx.restore();
+          ctx.drawImage(bridgeImg, 0, 0, 480, 128, 0, BG_Y, tw, 128 * BG_S); ctx.restore();
         }
 
         const off = S.scroll;

@@ -21,3 +21,7 @@ friend waits in the lobby; the host keeps playing solo meanwhile.
 - **Scoring**: a death by a swoop is a *catch*; the course restarts as before, and the cat wins by finishing. Solo is unchanged.
 - A friend leaving puts the host back to solo with the same code open (the seat is offered again); a friend who rejoins resumes at once, no second Start Game. Open the page with `?relay=http://localhost:8787` and
   `npm run relay` to try it locally.
+
+## Look
+
+The backdrop is split into layers (`sky.png`, `moon.png`, `bridge.png`; `backdrop.png` is the source art) so the sky has **parallax**: the stars drift at `STAR_PAR` and the moon at `MOON_PAR` of the course's scroll, behind the bridge that scrolls with it.
