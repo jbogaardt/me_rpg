@@ -23,8 +23,10 @@
       #hint { color: #a9a496; font-size: 13px; }
       button { font: inherit; padding: 4px 12px; cursor: pointer; }
       #coopBtn { position: absolute; left: 10px; bottom: 10px; }
-      #shopBtn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); padding: 8px 14px; font-size: 18px; font-weight: bold; background: #f0c060; color: #23232e; border: 0; border-radius: 6px; }
-      #shopBtn:hover { background: #ffd886; }
+      #shopBtn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; padding: 4px 10px; background: none; color: #f0c060; border: 0; text-shadow: 0 1px 4px #000; }
+      #shopBtn .arrow { font-size: 44px; line-height: 1; }
+      #shopBtn .word { font: italic 15px 'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', 'Apple Chancery', cursive; }
+      #shopBtn:hover { color: #ffd886; }
       #shop { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px; background: #0a0a14f2; border-radius: 8px; overflow: auto; }
       #shop[hidden], #shopBtn[hidden] { display: none; }
       #shop h2 { margin: 0; color: #f0c060; }
@@ -70,7 +72,7 @@
       <canvas id="c" width="960" height="540"></canvas>
       <button id="creditsBtn" type="button">Credits</button>
       <button id="coopBtn" type="button">Co-op</button>
-      <button id="shopBtn" type="button" aria-label="Open the shop">Shop ➜</button>
+      <button id="shopBtn" type="button" aria-label="Open the shop"><span class="arrow">➜</span><span class="word">shop</span></button>
       <div id="shop" hidden>
         <h2>Shop</h2>
         <p id="shopCans"><img src="can.png" alt="" width="24" height="24" /><span id="shopCount">0</span> cans</p>
@@ -569,7 +571,6 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         noticeT = Math.max(0, noticeT - dt);
         const showShop = mode !== 'guest' && (!S.started || S.won) && onlineEl.hidden && creditsEl.hidden && shopEl.hidden; // never during a run
         if (shopBtn.hidden === showShop) shopBtn.hidden = !showShop;
-        const lbl = 'Shop ➜ ' + wallet.cans; if (shopBtn.textContent !== lbl) shopBtn.textContent = lbl;
         if (coop && net && (snapT += dt) >= 1 / 30) { snapT = 0; net.send(snapshot()); }
         draw(); requestAnimationFrame(loop);
       })(last);
