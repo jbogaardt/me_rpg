@@ -23,6 +23,18 @@
       #hint { color: #a9a496; font-size: 13px; }
       button { font: inherit; padding: 4px 12px; cursor: pointer; }
       #coopBtn { position: absolute; left: 10px; bottom: 10px; }
+      #shopBtn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); padding: 8px 14px; font-size: 18px; font-weight: bold; background: #f0c060; color: #23232e; border: 0; border-radius: 6px; }
+      #shopBtn:hover { background: #ffd886; }
+      #shop { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px; background: #0a0a14f2; border-radius: 8px; overflow: auto; }
+      #shop[hidden], #shopBtn[hidden] { display: none; }
+      #shop h2 { margin: 0; color: #f0c060; }
+      #shopList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: min(480px, 100%); }
+      #shopList li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: #ffffff14; border-radius: 4px; text-align: left; }
+      #shopList .sw { width: 16px; height: 16px; border-radius: 50%; flex: none; }
+      #shopList .desc { color: #a9a496; font-size: 13px; }
+      #shopList .what { flex: 1; }
+      #shopList button { min-width: 96px; }
+      #shopCans { display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 20px; }
       #online { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px; background: #0a0a14f2; border-radius: 8px; overflow: auto; }
       #online[hidden], #online [hidden] { display: none; }
       #online h2 { margin: 0; color: #f0c060; }
@@ -58,6 +70,13 @@
       <canvas id="c" width="960" height="540"></canvas>
       <button id="creditsBtn" type="button">Credits</button>
       <button id="coopBtn" type="button">Co-op</button>
+      <button id="shopBtn" type="button" aria-label="Open the shop">Shop ➜</button>
+      <div id="shop" hidden>
+        <h2>Shop</h2>
+        <p id="shopCans"><img src="can.png" alt="" width="24" height="24" /><span id="shopCount">0</span> cans</p>
+        <ul id="shopList"></ul>
+        <button id="shopClose" type="button">Back to the run</button>
+      </div>
       <div id="online" hidden>
         <h2>Multiplayer <small>the cat and the birds</small></h2>
         <div id="mpMode" role="radiogroup" aria-label="Multiplayer mode">
@@ -184,6 +203,23 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       }
       const L = buildLevel();
 
+      // ---- shop: cans collected in a run are kept (per browser) and spent on glow colours and a perk ----
+      const SHOP_KEY = 'catsvsbirds:shop'; // the gallery's games share an origin, so the key is namespaced
+      const GLOWS = { pink: '#ff6f91', sky: '#4fc3ff', lime: '#6aff7a', gold: '#ffd84a' };
+      const ITEMS = [
+        { id: 'pink', name: 'Pink glow', desc: 'The usual', cost: 0, glow: true },
+        { id: 'sky', name: 'Sky glow', desc: 'A cool blue aura', cost: 30, glow: true },
+        { id: 'lime', name: 'Lime glow', desc: 'A green aura', cost: 30, glow: true },
+        { id: 'gold', name: 'Golden glow', desc: 'A shining aura', cost: 60, glow: true },
+        { id: 'paws', name: 'Soft paws', desc: 'More time to jump after leaving the edge', cost: 80, perk: true },
+      ];
+      const wallet = (() => {
+        let w = { cans: 0, owned: ['pink'], glow: 'pink' };
+        try { const r = JSON.parse(localStorage.getItem(SHOP_KEY) || 'null'); if (r && typeof r.cans === 'number' && Array.isArray(r.owned)) w = { cans: r.cans, owned: r.owned, glow: GLOWS[r.glow] ? r.glow : 'pink' }; } catch (e) { /* no storage: keep it for this visit */ }
+        return w;
+      })();
+      const saveWallet = () => { try { localStorage.setItem(SHOP_KEY, JSON.stringify(wallet)); } catch (e) { /* ignore */ } };
+
       // ---- state ----
       let S;
       function reset(keepAttempt) {
@@ -221,9 +257,9 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         if (e.target && e.target.tagName === 'INPUT') return; // typing a game code
         if (mode === 'guest' && !e.repeat && onlineEl.hidden && creditsEl.hidden && [' ', 'ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) { e.preventDefault(); swoop(e.key === 'ArrowDown' || e.key === 's' ? 'low' : 'high'); return; }
         if (mode === 'guest' && [' ', 'ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) e.preventDefault();
-        else if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); if (creditsEl.hidden && onlineEl.hidden) { if (!e.repeat) down(); held = true; } }
+        else if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); if (creditsEl.hidden && onlineEl.hidden && shopEl.hidden) { if (!e.repeat) down(); held = true; } }
         else if (e.key === 'm' || e.key === 'M') audio.toggle();
-        else if (e.key === 'Escape') { setCredits(false); setOnline(false); }
+        else if (e.key === 'Escape') { setCredits(false); setOnline(false); setShop(false); }
       });
       addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') held = false; });
 
@@ -247,7 +283,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         const fh = Math.max(bridgeH(x0 + 6), bridgeH(wx), bridgeH(x1 - 6)); // the tallest step under the paws
         const floorY = fh > 0 ? GROUND - fh : (groundAt(x0 + 10) || groundAt(x1 - 10) ? GROUND : Infinity);
 
-        S.coyote = S.onGround ? 0.09 : S.coyote - dt;
+        S.coyote = S.onGround ? (wallet.owned.includes('paws') ? 0.16 : 0.09) : S.coyote - dt;
         if ((pressed || (held && !S.wasHeld) || (held && S.onGround)) && S.coyote > 0) { S.vy = -JUMP; S.onGround = false; S.coyote = 0; }
         pressed = false; S.wasHeld = held;
 
@@ -283,7 +319,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
 
         for (let i = 0; i < L.fish.length; i++) {
           const f = L.fish[i]; if (S.fishGot.has(i)) continue;
-          if (Math.abs(f.x - wx) < 36 && Math.abs(f.y - (S.y - 26)) < 44) { S.fishGot.add(i); S.score += f.big ? 20 : 10; }
+          if (Math.abs(f.x - wx) < 36 && Math.abs(f.y - (S.y - 26)) < 44) { S.fishGot.add(i); S.score += f.big ? 20 : 10; wallet.cans += f.big ? 2 : 1; saveWallet(); }
         }
         if (S.scroll >= L.end) { S.won = true; S.best = 100; }
       }
@@ -400,6 +436,31 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
       const joinHash = /^#join=([a-z]+-[a-z]+)/i.exec(location.hash); // a join link: open the panel on Join with the code filled in
       if (joinHash) { ui.role = 'join'; $('mpCodeIn').value = joinHash[1].toLowerCase(); setOnline(true); }
 
+      // ---- shop screen: the arrow beside the course opens it (only between runs, and not for the birds) ----
+      const shopEl = $('shop'), shopBtn = $('shopBtn');
+      const setShop = (open) => { shopEl.hidden = !open; if (open) { held = false; renderShop(); } else shopBtn.blur(); };
+      function renderShop() {
+        $('shopCount').textContent = wallet.cans; 
+        $('shopList').replaceChildren(...ITEMS.map((it) => {
+          const owned = wallet.owned.includes(it.id), on = it.glow && wallet.glow === it.id;
+          const li = document.createElement('li');
+          if (it.glow) { const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = GLOWS[it.id]; li.append(sw); }
+          const what = document.createElement('span'); what.className = 'what';
+          const nm = document.createElement('div'); nm.textContent = it.name; const ds = document.createElement('div'); ds.className = 'desc'; ds.textContent = it.desc; what.append(nm, ds);
+          const b = document.createElement('button'); b.type = 'button';
+          b.textContent = on ? 'Equipped' : owned ? (it.glow ? 'Equip' : 'Owned') : it.cost + ' cans';
+          b.disabled = on || (owned && !it.glow) || (!owned && wallet.cans < it.cost);
+          b.addEventListener('click', () => {
+            if (!owned) { if (wallet.cans < it.cost) return; wallet.cans -= it.cost; wallet.owned.push(it.id); }
+            if (it.glow) wallet.glow = it.id;
+            saveWallet(); renderShop();
+          });
+          li.append(what, b); return li;
+        }));
+      }
+      shopBtn.addEventListener('click', () => setShop(true));
+      $('shopClose').addEventListener('click', () => setShop(false));
+
       // ---- drawing ----
       const ACCENT = '#ff6f91';
       function draw() {
@@ -453,7 +514,7 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
           const fr = S.onGround ? Math.floor(S.frame) % 6 : (S.vy < 0 ? 1 : 3);
           ctx.save(); ctx.translate(CAT_X, S.ys);
           if (!S.onGround) ctx.rotate(Math.max(-0.35, Math.min(0.45, S.vy / 2600)));
-                    ctx.shadowColor = pal[2]; ctx.shadowBlur = 14; // a glow, so the black cat reads against the dark course
+                    ctx.shadowColor = GLOWS[wallet.glow]; ctx.shadowBlur = 14; // a glow, so the black cat reads against the dark course
           ctx.scale(-1, 1); // the sprite sheet's cat faces left; the course runs to the right
           ctx.drawImage(sheet, fr * CAT_W, 0, CAT_W, CAT_H, -CAT_W / 2 + 4, -FEET, CAT_W, CAT_H);
           ctx.shadowBlur = 0;
@@ -506,6 +567,9 @@ const BG_S = 3, BG_Y = GROUND - 96 * BG_S; // the cat runs along the deck: row 9
         const dt = Math.min(0.033, (now - last) / 1000); last = now;
         if (mode === 'guest') updateGuest(dt); else update(dt);
         noticeT = Math.max(0, noticeT - dt);
+        const showShop = mode !== 'guest' && (!S.started || S.won) && onlineEl.hidden && creditsEl.hidden && shopEl.hidden; // never during a run
+        if (shopBtn.hidden === showShop) shopBtn.hidden = !showShop;
+        const lbl = 'Shop ➜ ' + wallet.cans; if (shopBtn.textContent !== lbl) shopBtn.textContent = lbl;
         if (coop && net && (snapT += dt) >= 1 / 30) { snapT = 0; net.send(snapshot()); }
         draw(); requestAnimationFrame(loop);
       })(last);

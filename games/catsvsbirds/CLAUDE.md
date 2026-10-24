@@ -25,3 +25,7 @@ friend waits in the lobby; the host keeps playing solo meanwhile.
 ## Look
 
 The backdrop is split into layers (`sky.png`, `moon.png`, `bridge.png`; `backdrop.png` is the source art) so the sky has **parallax**: the stars drift at `STAR_PAR` and the moon at `MOON_PAR` of the course's scroll, behind the bridge that scrolls with it.
+
+## Shop
+
+Cans the cat picks up (1 a tin, 2 a double) are also added to a **wallet** kept in `localStorage` (`catsvsbirds:shop`, namespaced because the gallery shares an origin), so they survive attempts and visits; the run's score is separate. The **Shop ➜** arrow beside the course (with the wallet count) opens the shop screen: glow colours for the cat (cosmetic) and *Soft paws* (a longer jump grace after leaving the deck, which the host's rules read). The arrow shows only between runs (title or level complete), never during one. Co-op: the cat (solo or host) earns and shops; the birds' guest has no shop, since it earns nothing and the cat's look is drawn from the host's own wallet (the glow is not sent in snapshots).
