@@ -4,6 +4,10 @@
 
 - `music/heartfelt-battle_intro.ogg` and `music/heartfelt-battle_loop.ogg`: "Heartfelt Battle (loopable, fantasy, strings/piano/horn)" by request, on OpenGameArt (https://opengameart.org/content/heartfelt-battle-loopable-fantasy-stringspianohorn). **CC0** (public domain). Credit is not required; the author asks for it if used. Thanks to request.
 
+## Synthesized cues
+
+The interface sounds (click, refusal, confirm, tick), the castle alarm, the building warning, the pay-day tick, the clock warnings and the victory and defeat stingers are generated at run time with Web Audio (`src/synth.ts`). They come from no recording, so they need no credit or licence.
+
 ## Sound effects
 
 All the sounds in `sfx/` are **CC0** (public domain): no credit is needed, and it is given anyway. Please support the artists.

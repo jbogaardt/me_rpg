@@ -267,6 +267,7 @@
 
       /* ==== UX agent: touch-sized dock, compact cards, a title menu that fits, the in-match menu and How to play. Later rules win on purpose. ==== */
       #cam-menu { font-size: 22px; }
+      .overlay { grid-template-columns: minmax(0, 1fr); } /* a wide row inside (the maps) scrolls instead of widening the panel */
       #pause { background: rgba(8, 10, 14, 0.6); } #howto { z-index: 6; background: rgba(8, 10, 14, 0.7); }
       #pause > .panel, #howto > .panel { width: min(420px, 100%); padding: 0 6px 10px; }
       #pause h2, #howto h2 { margin-top: 6px; }
@@ -352,7 +353,6 @@
         #format-note { min-height: 0; font-size: 13px; }
         .map { width: 64px; }
         .race b { font-size: 13px; } .race .face { max-width: 56px; } .race { padding: 8px 2px 4px; }
-        #pause > .panel, #howto > .panel { column-count: 1; }
         #howto ul { gap: 6px; } #howto li { font-size: 14px; } #howto li .pic { width: 32px; height: 32px; }
       }
 

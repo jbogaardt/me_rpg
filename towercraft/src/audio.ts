@@ -220,7 +220,7 @@ export function playSynth(kind: SynthKind, level = 1): boolean {
   const now = c.currentTime;
   if (now - (lastAt.get(kind) ?? -Infinity) < recipe.gap) return false;
   while (synthEnds.length && synthEnds[0]! <= now) synthEnds.shift();
-  if (synthEnds.length >= SYNTH_VOICES) return false;
+  if (synthEnds.length >= SYNTH_VOICES && !recipe.duck) return false; // the alarm and the stingers always get through
   lastAt.set(kind, now);
   const { nodes, ends } = playRecipe(c, sfxBus, recipe, level);
   synthEnds.push(now + ends);
