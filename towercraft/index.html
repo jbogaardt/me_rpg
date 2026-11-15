@@ -323,12 +323,13 @@
         #card-body .sub { margin-bottom: 2px; }
         #card .stats { grid-template-columns: 1fr 1fr; column-gap: 12px; }
         #card .hp { margin-bottom: 4px; }
+        #card header .pic { overflow: hidden; } #card header .pic > * { zoom: 0.8; }
       }
       @media (max-height: 560px) and (min-aspect-ratio: 1/1) {
         #card, #card.group { left: max(8px, var(--safe-l)); right: auto; top: 54px; bottom: auto; width: min(250px, 42vw);
           max-height: calc(100dvh - 54px - var(--dock-h) - var(--safe-b) - 14px); animation: none; }
         #card .stats { grid-template-columns: 1fr; }
-        #card header .pic { width: 34px; height: 34px; } #card h3 { font-size: 15px; }
+        #card header .pic { width: 34px; height: 34px; } #card header .pic > * { zoom: 0.68; } #card h3 { font-size: 15px; }
         #card .targets { grid-template-columns: 1fr; }
         #card .targets button { min-height: 40px; }
       }

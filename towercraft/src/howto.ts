@@ -15,7 +15,10 @@ export function howtoSteps(touch: boolean): { pic: string; text: string }[] {
         ? 'Tap a building in the dock, drag its ghost into place and tap Build. Hold it to read its stats.'
         : 'Click a building in the dock for its card, then click the field to place it.',
     },
-    { pic: icon('heart'), text: 'Tap a building on the field for its card: train units and buy upgrades there.' },
+    {
+      pic: icon('heart'),
+      text: `${touch ? 'Tap' : 'Click'} a building on the field for its card: train units and buy upgrades there.`,
+    },
     {
       pic: icon('sword'),
       text: touch

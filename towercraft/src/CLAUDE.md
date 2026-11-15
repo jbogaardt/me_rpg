@@ -20,6 +20,10 @@ Each page makes its own sounds from the same match, so nothing goes over the wir
 - **`voice.ts`** says a unit's line when you select it (`pick`) and when you send it at a foe (`go`): `voiceLines.ts` has both lines of every unit, by race, and the files are `public/audio/voice/<race>-<unit>-<line>.wav`. The WAVs are committed (ElevenLabs text-to-speech, one library voice per race; credits in `public/audio/CREDITS.md`). A missing file is silent, and a line waits 1.2 s after the last. A new unit needs its two lines (`voiceLines.test.ts` checks) and its two WAV files.
 - A new sound: a file kind is a `FileKind`, a `SOUNDS` entry and the files; a synthesized one is a `SynthKind` and a `RECIPES` entry (and in `SoundKind` if the match raises it). Either way, add a cue in `SoundWatch.collect` (with a test). A new track: a file pair in `public/audio/music/` and a credit, then pick it in `music.ts`.
 
+## Battle effects (`fx.ts`, `hurt.ts`; cosmetic, nothing in the protocol)
+
+`BattleFx.collect` (once a tick: `shots`, boom `deaths`, castle health, only what you can see) and `update` (each frame) draw missiles, slashes, blasts with a fading scorch and the castle-fall shake (`world.pivot`, off under `prefers-reduced-motion`) from pooled sprites with capped counts. `hurt.ts` (Pixi-free) finds hits from health drops: red flash, eased bars with a draining chip; `readableScale` enlarges units when far out; `groundMark` is their shadow. Dev only: `window.__tc` for playtest scripts.
+
 ## Cards
 
 The cards are pictures first: stat rows are an icon (`icons.ts`, the words in its tooltip) and a value. The castle card shows only what it is now (level, health, income, reach, units out); the next level's cost, stats, unlocks and needs are left to the button, whose label and reason say them. An upgrade button shows `+15%`, a heart or sword, and the ground or a wing.
