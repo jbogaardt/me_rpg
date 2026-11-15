@@ -24,6 +24,7 @@ import {
   canAfford,
   canBuild,
   foesOf,
+  teamOf,
   hasBuilding,
   isCastleSeen,
   isSeen,
@@ -480,6 +481,43 @@ export const STRATEGIES: Record<string, Style> = {
   },
 };
 
+/**
+ * Solo play only (nothing online or in a co-op with a friend uses it: the page asks for it where it starts the match, and every page
+ * of an online match builds its computers with `normal`): how hard the computers that are against you play. It is two knobs, both
+ * deterministic: what their seats earn (`Player.pace`, `applyDifficulty`) and how they play (`tuned`: how often they think and how
+ * soon they build, send waves and rush). `normal` changes nothing.
+ */
+export type Difficulty = 'easy' | 'normal' | 'hard';
+export const DIFFICULTIES: readonly Difficulty[] = ['easy', 'normal', 'hard'];
+/** What a computer foe earns as a multiple of the usual (a mill's and a castle's pay alike). */
+export const DIFFICULTY_PACE: Record<Difficulty, number> = { easy: 0.6, normal: 1, hard: 1.25 };
+/** Seconds between a computer's thoughts: a slow one answers a rush late. */
+const DIFFICULTY_THINK: Record<Difficulty, number> = { easy: 2, normal: THINK_EVERY, hard: THINK_EVERY };
+/** How much sooner (below 1) or later (above 1) a computer builds, sends waves and rushes. */
+const DIFFICULTY_DELAY: Record<Difficulty, number> = { easy: 1.8, normal: 1, hard: 0.8 };
+
+/** Makes the seats against `you` earn what `level` says (a seat on your own side, and the people, are left as they are). */
+export function applyDifficulty(m: Match, you: Owner, people: number, level: Difficulty): void {
+  if (level === 'normal') return;
+  m.players.forEach((p, seat) => {
+    if (seat >= people && p.team !== teamOf(m, you)) p.pace *= DIFFICULTY_PACE[level];
+  });
+}
+
+function tuned(style: Style, level: Difficulty): Style {
+  if (level === 'normal') return style;
+  const k = DIFFICULTY_DELAY[level];
+  return {
+    ...style,
+    waveEvery: style.waveEvery * k,
+    upgradeAfter: [style.upgradeAfter[0] * k, style.upgradeAfter[1] * k],
+    towerEvery: style.towerEvery * k,
+    ecoEvery: style.ecoEvery * k,
+    techEvery: style.techEvery * k,
+    rush: style.rush * k,
+  };
+}
+
 /** What an AI carries from one thought to the next, so a page that joins a match in progress can carry on exactly where the other is. */
 export interface AiState {
   timer: number;
@@ -497,12 +535,13 @@ export interface Ai {
 }
 
 /** The AI for player `owner`: call the returned function every step with the match and the step's length. `plan` replaces parts of the seed's style. */
-export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): Ai {
+export function createAi(owner: Owner, seed: number, plan?: Partial<Style>, level: Difficulty = 'normal'): Ai {
   // Neighbouring seeds (the two sides of a match) must not give neighbouring styles: scramble the seed first.
   let h = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
   const random = seeded((h ^ (h >>> 16)) >>> 0);
-  const style: Style = { ...styleFor(random), ...plan };
+  const style: Style = tuned({ ...styleFor(random), ...plan }, level);
+  const thinkEvery = DIFFICULTY_THINK[level];
   let timer = 0;
   let lastWave = 0;
   let bought = 0;
@@ -511,8 +550,8 @@ export function createAi(owner: Owner, seed: number, plan?: Partial<Style>): Ai 
   const think = (m: Match, dt: number) => {
     if (m.winner >= 0 || m.players[owner]!.out) return;
     timer += dt;
-    if (timer < THINK_EVERY) return;
-    timer -= THINK_EVERY;
+    if (timer < thinkEvery) return;
+    timer -= thinkEvery;
     const me = m.players[owner]!;
     const race = raceOf(m, owner);
     const level = me.castle.level;

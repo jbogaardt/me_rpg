@@ -28,7 +28,7 @@ import { installUiSound, uiConfirm, uiRefuse, uiTick } from './uiSound';
 import { SoundWatch } from './soundEvents';
 import { drawnPos } from './stagger';
 import { recolorTeam, seatColor } from './teamColor';
-import type { Ai } from './sim/ai';
+import { DIFFICULTIES, applyDifficulty, createAi, type Ai, type Difficulty } from './sim/ai';
 import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
 import { Wreck } from './wreck';
 import { BattleFx, softEllipse } from './fx';
@@ -39,6 +39,7 @@ import { Duel, type DuelPhase } from './net/duel';
 import {
   apply,
   Lockstep,
+  aiSeed,
   makeAis,
   NET_VERSION,
   type Person,
@@ -2649,7 +2650,7 @@ void (async () => {
     } finally {
       loading = false;
     }
-    begin(races, map, 0, (Math.random() * 2 ** 31) | 0, 1);
+    begin(races, map, 0, (Math.random() * 2 ** 31) | 0, 1, difficulty);
   }
   /** Wait for the art a match needs, behind a progress bar. */
   async function loadArt(races: RaceId[], map: BoardId) {
@@ -2677,7 +2678,14 @@ void (async () => {
   /** What changed since the last tick, for the sounds (`soundEvents.ts`); made at the start of each match. */
   let sounds: SoundWatch | undefined;
   /** Start a match: one race per seat of the map, you in seat `you`, the computers (every seat past `people`) playing by `seed`. */
-  function begin(races: RaceId[], map: BoardId, you: Owner, seed: number, people: number) {
+  function begin(
+    races: RaceId[],
+    map: BoardId,
+    you: Owner,
+    seed: number,
+    people: number,
+    level: Difficulty = 'normal',
+  ) {
     YOU = you;
     wreck.clear();
     finale = undefined;
@@ -2686,6 +2694,22 @@ void (async () => {
     match = rejoinState ? unpackMatch(rejoinState) : newMatch(races, BOARDS[map] ?? BOARDS[DEFAULT_BOARD_ID]);
     matchSeed = rejoinState?.seed ?? seed;
     ais = makeAis(match, matchSeed, people);
+    if (level !== 'normal') {
+      // Solo difficulty (sim/ai.ts `Difficulty`): only the start path of a solo match passes a level, so online play is untouched.
+      applyDifficulty(match, you, people, level);
+      ais = match.players.flatMap((p, seat) =>
+        seat < people
+          ? []
+          : [
+              createAi(
+                seat,
+                aiSeed(matchSeed, seat),
+                undefined,
+                p.team === match.players[you]!.team ? 'normal' : level,
+              ),
+            ],
+      );
+    }
     sounds = new SoundWatch(match);
     // A page that comes back in mid-match carries on from what the computers remembered, not from a fresh start.
     rejoinState?.ai.forEach((state, i) => ais[i]?.load(state));
@@ -2822,6 +2846,24 @@ void (async () => {
           ? `Choose your race, then host${co ? ' (your friend is your partner)' : ''}`
           : 'Choose your race, then join';
   };
+  // Solo difficulty (Easy / Normal / Hard for the computers against you), remembered on this device; only the Solo mode shows it.
+  let difficulty: Difficulty = 'normal';
+  try {
+    const saved = localStorage.getItem('towercraft:difficulty');
+    if (DIFFICULTIES.includes(saved as Difficulty)) difficulty = saved as Difficulty;
+  } catch {
+    /* storage may be blocked */
+  }
+  const setDifficulty = (d: Difficulty) => {
+    difficulty = d;
+    for (const b of $('difficulty').querySelectorAll<HTMLButtonElement>('button'))
+      b.classList.toggle('on', b.dataset.level === d);
+    try {
+      localStorage.setItem('towercraft:difficulty', d);
+    } catch {
+      /* storage may be blocked */
+    }
+  };
   const setFormat = (f: Format) => {
     format = f;
     for (const b of $('formats').querySelectorAll<HTMLButtonElement>('button'))
@@ -2836,6 +2878,7 @@ void (async () => {
     for (const b of $('modes').querySelectorAll<HTMLButtonElement>('button'))
       b.classList.toggle('on', b.dataset.mode === m);
     $('map-pick').hidden = m === 'join';
+    $('difficulty').hidden = m !== 'solo';
     $('join-row').hidden = m !== 'join';
     describe();
     $('races').classList.remove('busy');
@@ -2941,6 +2984,9 @@ void (async () => {
     b.onclick = () => setMode(b.dataset.mode as Mode);
   for (const b of $('formats').querySelectorAll<HTMLButtonElement>('button'))
     b.onclick = () => setFormat(b.dataset.format as Format);
+  for (const b of $('difficulty').querySelectorAll<HTMLButtonElement>('button'))
+    b.onclick = () => setDifficulty(b.dataset.level as Difficulty);
+  setDifficulty(difficulty);
   $('net-cancel').onclick = () => setMode(mode);
   setFormat('duel');
   setMode('solo');

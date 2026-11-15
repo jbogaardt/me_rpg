@@ -222,6 +222,7 @@
       #menu .races { margin-top: 16px; } #menu #credits-btn { margin-top: 18px; }
       .modes { display: flex; gap: 8px; justify-content: center; margin: 6px 0 4px; } .modes .plank { min-width: 84px; font-size: 14px; }
       #format-note { min-height: 2.6em; max-width: 560px; margin: 2px auto 0; font-size: 15px; }
+      #difficulty[hidden] { display: none; } /* solo difficulty row: `.modes` would otherwise override [hidden] */
       .map b { display: block; margin-top: 3px; font: 700 12px var(--title); color: var(--dim); text-shadow: 0 1px 2px #000; }
       .maps { flex-wrap: wrap; }
       /* A road chip (a map with forks): the road your new units march down, lit when it is the one. */
@@ -435,6 +436,12 @@
             <button class="plank" data-format="two-v-two">2 v 2</button>
           </div>
           <p id="format-note"></p>
+        </div>
+        <!-- Solo difficulty (balance agent): shown only in Solo; Easy and Hard change the computers against you, never an online game. -->
+        <div class="modes" id="difficulty" role="group" aria-label="How hard the computer plays">
+          <button class="plank" data-level="easy">Easy</button>
+          <button class="plank on" data-level="normal">Normal</button>
+          <button class="plank" data-level="hard">Hard</button>
         </div>
         <div id="map-pick">
           <h2>Vote on map</h2>

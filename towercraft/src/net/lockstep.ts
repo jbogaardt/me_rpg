@@ -105,7 +105,8 @@ const MAX_AHEAD = 400;
 
 // --- The wire ---
 
-export const NET_VERSION = 13;
+/** 14: balance pass (bomb units hit buildings softer, the Dwarves' ground towers cost less and their shrine is tier 2, mills and quarries pay 3 wood / 2 stone a pay day) and the AI's `level` (solo only). */
+export const NET_VERSION = 14;
 
 export type Message =
   /** The joiner, once connected: who they play. */
