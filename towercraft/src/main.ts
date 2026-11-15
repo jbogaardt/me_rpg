@@ -1631,7 +1631,11 @@ void (async () => {
         c.visible = isSeen(match, YOU, u, vision);
         body.alpha = u.def.cloak ? (allied(match, u.owner, YOU) ? 0.5 : 0.75) : 1;
         hurt.touch(u.id, u.hp, u.maxHp, clock, 0);
-        body.tint = mixColor(u.dot ? 0x9be37a : (u.def.look?.tint ?? 0xffffff), 0xff5a4a, hurt.flash(u.id, clock) * 0.85);
+        body.tint = mixColor(
+          u.dot ? 0x9be37a : (u.def.look?.tint ?? 0xffffff),
+          0xff5a4a,
+          hurt.flash(u.id, clock) * 0.85,
+        );
         c.scale.set(unitBoost); // far out, armies stay readable
       },
     );
