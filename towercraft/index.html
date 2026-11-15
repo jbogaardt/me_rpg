@@ -264,14 +264,145 @@
         .overlay h2 { font-size: 12px; margin: 12px 0 6px; } #menu #credits-btn { margin-top: 14px; }
         .overlay h1 { font-size: 26px; }
       }
+
+      /* ==== UX agent: touch-sized dock, compact cards, a title menu that fits, the in-match menu and How to play. Later rules win on purpose. ==== */
+      #cam-menu { font-size: 22px; }
+      #pause { background: rgba(8, 10, 14, 0.6); } #howto { z-index: 6; background: rgba(8, 10, 14, 0.7); }
+      #pause > .panel, #howto > .panel { width: min(420px, 100%); padding: 0 6px 10px; }
+      #pause h2, #howto h2 { margin-top: 6px; }
+      #pause .vols { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 12px; margin: 14px 0 10px; text-align: left; }
+      #pause .vols label { font: 700 14px var(--title); color: var(--gold); }
+      #pause input[type=range] { width: 100%; height: 32px; margin: 0; accent-color: var(--gold-dim); }
+      #pause .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+      #pause .plank, #howto .plank, #howto-btn { min-height: 44px; }
+      #pause .plank.danger { background-image: url('./ui/plank.png'); color: #f0b8ba; }
+      #howto ul { list-style: none; margin: 8px 0 10px; padding: 0 4px; display: grid; gap: 10px; text-align: left; }
+      #howto li { display: flex; align-items: center; gap: 12px; font-size: 16px; line-height: 1.25; color: var(--text); }
+      #howto li .pic { flex: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; gap: 2px; border-radius: 8px;
+        background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(214, 178, 106, 0.4); color: var(--gold); }
+      #howto li .pic .ic { width: 24px; height: 24px; } #howto li .pic i { font-size: 15px; }
+      #howto-keys { font-size: 13px; color: var(--dim); margin: 4px 8px 10px; }
+      #howto-btn { margin-top: 18px; }
+      /* Hover lights only where there is a hover: a finger's last tap must not leave a button lit. */
+      @media (hover: none) {
+        .wbtn:hover:not(:disabled) { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
+        .plank:hover:not(:disabled):not(.on) { background-image: url('./ui/plank-dim.png'); color: #b9b3a2; }
+        .map:hover .shot { border-color: #4a3a22; } .map.on:hover .shot { border-color: var(--gold); }
+        #card .load:hover:not(:disabled), #card .targets button:hover:not(:disabled) { background: rgba(51, 35, 15, 0.14); }
+        #card .targets button.on:hover { background: #c98f26; }
+        #card-act:hover:not(:disabled), #card-sell:hover:not(:disabled) { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)); }
+        .race:hover { filter: none; }
+      }
+      #hint, #wait { text-shadow: 0 1px 3px #000, 0 0 6px #000, 0 0 12px #000; }
+      #cam { top: max(8px, env(safe-area-inset-top)); right: max(10px, var(--safe-r)); }
+      .overlay h2 { color: #f6dc9c; } .overlay p { color: #ddd2b3; }
+
+      /* A phone or a small window: the dock is one scrolling row of touch-sized buttons, the price on its own line under the picture. */
+      @media (pointer: coarse), (max-width: 760px), (max-height: 560px) {
+        .shelf { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; justify-content: safe center; touch-action: pan-x; padding: 4px 2px 3px; -webkit-overflow-scrolling: touch; }
+        #dock { gap: 0; }
+        .tb { width: 58px; height: 68px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 1px; padding-top: 5px; }
+        .tb .art { flex: none; }
+        .tb em { position: static; left: auto; right: auto; bottom: auto; flex: none; gap: 4px; font-size: 11px; line-height: 14px; white-space: nowrap; letter-spacing: -0.01em; }
+        .tb .lv { top: 3px; font-size: 8px; }
+        .tb.lane { width: 64px; height: 52px; justify-content: center; padding-top: 0; }
+        .up { width: 128px; height: 66px; }
+        .sec h4 { font-size: 9px; }
+        #cam-sound { display: none; }
+        #cam { max-width: calc(100vw - 20px); }
+        #cam button { width: 44px; height: 44px; }
+        #card-x { width: 36px; height: 36px; top: -8px; right: -8px; }
+      }
+      /* The card on a phone: a short sheet above the dock (portrait) or a narrow panel at the left (landscape); it scrolls inside and leaves the field in sight. */
+      @media (max-width: 760px), (max-height: 560px) {
+        #card, #card.group { max-height: min(46dvh, calc(100dvh - var(--dock-h) - var(--safe-b) - 70px)); overflow-y: auto; overscroll-behavior: contain; }
+        #card-act { width: min(100%, 260px); margin-inline: auto; min-height: 44px; padding: 6px 10px 8px; font-size: 17px; }
+        #card-act .ic { width: 20px; height: 20px; } #card-act .times { font-size: 16px; }
+        #card-sell { width: min(100%, 260px); margin-inline: auto; }
+        #card-body .sub { margin-bottom: 2px; }
+        #card .stats { grid-template-columns: 1fr 1fr; column-gap: 12px; }
+        #card .hp { margin-bottom: 4px; }
+      }
+      @media (max-height: 560px) and (min-aspect-ratio: 1/1) {
+        #card, #card.group { left: max(8px, var(--safe-l)); right: auto; top: 54px; bottom: auto; width: min(250px, 42vw);
+          max-height: calc(100dvh - 54px - var(--dock-h) - var(--safe-b) - 14px); animation: none; }
+        #card .stats { grid-template-columns: 1fr; }
+        #card header .pic { width: 34px; height: 34px; } #card h3 { font-size: 15px; }
+        #card .targets { grid-template-columns: 1fr; }
+        #card .targets button { min-height: 40px; }
+      }
+
+      /* The title menu on a small screen: maps in one scrolling row, tighter spacing; wide and short, two columns (setup left, map and race right). */
+      @media (max-width: 760px), (max-height: 560px) {
+        .maps { flex-wrap: nowrap; overflow-x: auto; justify-content: safe center; gap: 8px; padding: 2px 4px 6px; touch-action: pan-x; scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
+        .map { flex: none; width: 76px; }
+        .map b { font-size: 11px; }
+        #menu .races { margin-top: 6px; } .race { flex: 1 1 0; max-width: 150px; } .race .face { max-width: 72px; }
+        #format-note { min-height: 2.4em; font-size: 14px; margin-top: 0; }
+        .modes { margin: 4px 0 2px; gap: 6px; } .modes .plank { min-width: 76px; min-height: 40px; padding: 6px 10px; }
+        .overlay h1 { font-size: 24px; } #menu #credits-btn, #menu #howto-btn { margin-top: 10px; }
+        #menu > div { padding: 2px 4px 8px; } .overlay h2 { margin: 8px 0 4px; }
+      }
+      @media (max-height: 560px) and (min-aspect-ratio: 1/1) {
+        #menu > div { width: min(860px, 100%); column-count: 2; column-gap: 14px; }
+        #menu > div > * { break-inside: avoid; }
+        #menu > div > h1 { column-span: none; font-size: 22px; margin-top: 2px; }
+        #menu #race-h { break-before: column; margin-top: 2px; }
+        .overlay h1 { font-size: 22px; }
+        #format-note { min-height: 0; font-size: 13px; }
+        .map { width: 64px; }
+        .race b { font-size: 13px; } .race .face { max-width: 56px; } .race { padding: 8px 2px 4px; }
+        #pause > .panel, #howto > .panel { column-count: 1; }
+        #howto ul { gap: 6px; } #howto li { font-size: 14px; } #howto li .pic { width: 32px; height: 32px; }
+      }
+
+      /* ---- HUD (the HUD agent's block): #status strip, #pay chip (inside #top), #minimap, #alert toast. Shown only while a match is on. ---- */
+      body:not(.playing) #status, body:not(.playing) #minimap, body:not(.playing) #alert { display: none; }
+      #pay { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 44px; font: 700 15px var(--title); color: #cfe8b0; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.75); }
+      #pay-bar { display: block; height: 3px; border-radius: 2px; background: rgba(0, 0, 0, 0.4); overflow: hidden; position: relative; }
+      #pay-bar::after { content: ''; position: absolute; inset: 0; background: #cfe8b0; opacity: 0.8; transform-origin: left; transform: scaleX(var(--v, 0)); }
+      #status { position: fixed; z-index: 2; top: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; pointer-events: none;
+        font: 700 16px var(--title); color: #fff; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.75); font-variant-numeric: tabular-nums; }
+      #status .bar { flex: 1 1 0; width: 84px; min-width: 36px; max-width: 84px; height: 7px; border-radius: 4px; background: rgba(0, 0, 0, 0.42); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35); overflow: hidden; position: relative; }
+      #status .bar::after { content: ''; position: absolute; inset: 0; background: var(--c, #6fd36f); transform-origin: right; transform: scaleX(var(--v, 1)); transition: transform 0.3s; }
+      #status .bar.foe::after { transform-origin: left; }
+      #st-clock { min-width: 3.1ch; text-align: center; } #st-clock.late { color: var(--amber); }
+      #st-units { font: 700 14px var(--body); color: #e9e2cc; opacity: 0.9; white-space: nowrap; } #st-units.full { color: var(--amber); }
+      #minimap { position: fixed; z-index: 2; right: max(8px, var(--safe-r)); bottom: max(6px, var(--safe-b)); --mm-w: 140px; --mm-h: 104px; display: flex; align-items: flex-end; justify-content: flex-end; }
+      #minimap .mm-box { border: 1px solid rgba(242, 211, 138, 0.55); border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); overflow: hidden; line-height: 0; background: rgba(14, 19, 15, 0.3); }
+      #mm-canvas { position: static; display: block; max-width: var(--mm-w); max-height: var(--mm-h); touch-action: none; cursor: pointer; }
+      #mm-toggle { position: absolute; left: 0; top: 0; z-index: 1; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px 0 6px 0; background: rgba(14, 17, 23, 0.55); color: var(--gold); font: 700 15px/26px var(--title); }
+      #minimap.folded { width: 44px; height: 30px; } #minimap.folded .mm-box { display: none; }
+      #minimap.folded #mm-toggle { width: 44px; height: 30px; border-radius: 6px; font-size: 12px; line-height: 30px; border: 1px solid rgba(242, 211, 138, 0.55); right: 0; left: auto; bottom: 0; top: auto; }
+      #alert { position: fixed; z-index: 3; top: 86px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 20px); padding: 6px 14px; border: 1px solid rgba(224, 119, 123, 0.7); border-radius: 14px;
+        background: rgba(40, 14, 16, 0.62); color: #ffd9d6; font: 700 14px var(--title); text-shadow: 0 1px 2px #000; cursor: pointer; }
+      #alert[hidden] { display: none; } #alert.in { animation: alert-in 0.35s ease-out; }
+      @keyframes alert-in { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+      /* Narrow strip beside the resources (landscape phone or small window): between #top and #cam. */
+      @media (orientation: landscape) and (max-width: 1000px), (orientation: landscape) and (max-height: 560px) {
+        #status { left: 290px; right: 220px; transform: none; justify-content: center; gap: 8px; }
+        #minimap { top: 60px; bottom: auto; --mm-w: 84px; --mm-h: 120px; align-items: flex-start; }
+      }
+      /* Phone portrait: the strip on a second row under the resources and the camera buttons (the pay chip starts it), the hint below it. */
+      @media (max-width: 760px) and (orientation: portrait) {
+        #pay { position: fixed; left: max(10px, var(--safe-l)); top: 52px; }
+        #status { left: 90px; right: max(10px, var(--safe-r)); top: 56px; transform: none; justify-content: center; gap: 8px; }
+        #hint { top: 84px; }
+        #minimap { top: 112px; bottom: auto; --mm-w: 90px; --mm-h: 120px; align-items: flex-start; }
+        #alert { top: 112px; left: 10px; transform: none; max-width: calc(100vw - 130px); }
+        @keyframes alert-in { from { opacity: 0; } to { opacity: 1; } }
+      }
     </style>
   </head>
   <body>
-    <div id="top"><span class="r w" title="Wood"><b id="wood">0</b></span><span class="r s" title="Stone"><b id="stone">0</b></span></div>
+    <div id="top"><span class="r w" title="Wood"><b id="wood">0</b></span><span class="r s" title="Stone"><b id="stone">0</b></span><span id="pay"><b id="pay-n">+0</b><i id="pay-bar"></i></span></div>
+    <div id="status"><span class="bar" id="st-me"></span><span id="st-clock">0:00</span><span class="bar foe" id="st-foe"></span><span id="st-units" title="Units out / unit limit">0/120</span></div>
+    <div id="minimap"><div class="mm-box"><canvas id="mm-canvas"></canvas></div><button id="mm-toggle" aria-label="Hide the map">–</button></div>
+    <button id="alert" hidden></button>
     <div id="hint"></div>
     <div id="wait" hidden>Waiting for your rival…</div>
     <div id="marquee" hidden></div>
-    <div id="cam"><button class="wbtn" id="cam-home" title="Back to your castle">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map">⤢</button><button class="wbtn" id="cam-sound" title="Sound (M)">🔊</button></div>
+    <div id="cam"><button class="wbtn" id="cam-menu" title="Menu (Esc)" aria-label="Menu">☰</button><button class="wbtn" id="cam-home" title="Back to your castle (H)">⌂</button><button class="wbtn" id="cam-fit" title="Zoom out to the whole map (F)">⤢</button><button class="wbtn" id="cam-sound" title="Sound (M)">🔊</button></div>
     <div id="ghost" hidden><button class="plank on" id="ghost-ok">Build here</button><button class="plank" id="ghost-no" aria-label="Cancel">✕</button></div>
     <div id="dock" class="panel thin wood glass">
       <div class="shelf" id="train"></div>
@@ -319,7 +450,32 @@
           <p id="net-text"></p>
           <button class="plank" id="net-cancel" hidden>Cancel</button>
         </div>
-        <button class="plank" id="credits-btn">Credits</button>
+        <button class="plank" id="howto-btn">How to play</button> <button class="plank" id="credits-btn">Credits</button>
+      </div>
+    </div>
+    <!-- UX agent: the in-match menu and the How to play panel (pauseMenu.ts, howto.ts). -->
+    <div class="overlay" id="pause" hidden>
+      <div class="panel wood">
+        <h2>Menu</h2>
+        <p id="pause-note"></p>
+        <button class="plank on" id="pause-resume">Resume</button>
+        <div class="vols">
+          <label for="vol-sfx">Effects</label><input type="range" id="vol-sfx" min="0" max="100" step="5" />
+          <label for="vol-music">Music</label><input type="range" id="vol-music" min="0" max="100" step="5" />
+        </div>
+        <div class="row">
+          <button class="plank" id="pause-sound">Sound</button>
+          <button class="plank" id="pause-howto">How to play</button>
+          <button class="plank" id="pause-leave">Leave match</button>
+        </div>
+      </div>
+    </div>
+    <div class="overlay" id="howto" hidden>
+      <div class="panel wood">
+        <h2>How to play</h2>
+        <ul id="howto-list"></ul>
+        <p id="howto-keys"></p>
+        <button class="plank on" id="howto-x">Got it</button>
       </div>
     </div>
     <div class="overlay" id="loading" hidden>

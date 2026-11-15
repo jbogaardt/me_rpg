@@ -38,3 +38,22 @@ export const OWN: Mix = { gain: 1, pan: 0 };
 export function loudest<T extends { gain: number }>(sounds: T[], max: number): T[] {
   return sounds.length <= max ? sounds : [...sounds].sort((a, b) => b.gain - a.gain).slice(0, max);
 }
+
+/** A view this many cells across (half width) is the one the loudness is tuned for (a desktop window at the default zoom). */
+export const REF_HALF_W = 16;
+
+/** Zoomed far out the field is crowded and far away: a little quieter (never below 0.55); zoomed in, no louder than tuned. */
+export function zoomGain(view: View): number {
+  return Math.min(1, Math.max(0.55, Math.pow(REF_HALF_W / Math.max(1, view.halfW), 0.4)));
+}
+
+/** How tense the music is, 0 calm to 1: it jumps with fighting on screen (`hits` loud blows this tick) or a hurt castle, and falls back slowly. */
+export function fightLevel(prev: number, hits: number, castleHurt: boolean): number {
+  const now = castleHurt ? 1 : Math.min(1, hits * 0.2);
+  return Math.max(now, prev * 0.99); // a tick is 0.05 s: about a 5 s half-life
+}
+
+/** The music's low-pass cutoff (Hz): a touch muffled when calm, fully open when fighting. */
+export function cutoffOf(level: number): number {
+  return 6000 + 12000 * Math.min(1, Math.max(0, level));
+}

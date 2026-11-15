@@ -32,12 +32,12 @@ function load(ctx: AudioContext, file: string): Promise<AudioBuffer | undefined>
   return buffer;
 }
 
-/** Say a unit's line (`pick` or `go`) for the player; quietly does nothing when there is no sound. */
-export function say(m: Match, unit: Unit, line: Line) {
+/** Say a unit's line (`pick` or `go`) for the player; quietly does nothing when there is no sound. True when a line was started (so the caller can make a tick when not). */
+export function say(m: Match, unit: Unit, line: Line): boolean {
   const out = audioOutput();
-  if (!out || isMuted() || out.ctx.state !== 'running') return;
+  if (!out || isMuted() || out.ctx.state !== 'running') return false;
   const now = out.ctx.currentTime;
-  if (now - lastAt < GAP) return;
+  if (now - lastAt < GAP) return false;
   lastAt = now;
   const file = voiceFile(m.players[unit.owner]!.race, unit.def.id, line);
   void load(out.ctx, file).then((buffer) => {
@@ -47,8 +47,9 @@ export function say(m: Match, unit: Unit, line: Line) {
     src.buffer = buffer;
     const gain = out.ctx.createGain();
     gain.gain.value = VOLUME;
-    src.connect(gain).connect(out.out);
+    src.connect(gain).connect(out.sfx);
     src.start();
     playing = src;
   });
+  return true;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { SoundWatch } from './soundEvents';
-import { canSee, type Shot } from './sim/sim';
+import { ALARM_EVERY, SoundWatch, WARN_EVERY } from './soundEvents';
+import { canSee, TIME_LIMIT, PAY_EVERY, type Shot } from './sim/sim';
 import { CLASSIC, RACES, newMatch, put, quiet } from './sim/testkit';
 
 const fresh = () => quiet(newMatch(['legion', 'legion']));
@@ -75,5 +75,83 @@ describe('what a tick sounds like', () => {
     const home = CLASSIC.castles[0];
     m.razed.push({ col: Math.round(home[0]), row: Math.round(home[1]) });
     expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['razed']);
+  });
+
+  it('sounds the alarm when the player’s castle is hit, at most once every ALARM_EVERY seconds', () => {
+    const m = fresh();
+    const watch = new SoundWatch(m);
+    m.time = 100;
+    m.players[0].castle.hp -= 10;
+    expect(watch.collect(m, 0).map((c) => [c.kind, c.own])).toEqual([['alarm', true]]);
+    m.time += 1;
+    m.players[0].castle.hp -= 10;
+    expect(watch.collect(m, 0)).toEqual([]);
+    m.time += ALARM_EVERY;
+    m.players[0].castle.hp -= 10;
+    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['alarm']);
+  });
+
+  it('does not alarm for the rival’s castle, nor for a castle that fell (that has its own sound)', () => {
+    const m = fresh();
+    const watch = new SoundWatch(m);
+    m.players[1].castle.hp -= 10;
+    expect(watch.collect(m, 0)).toEqual([]);
+    m.players[0].castle.hp = 0;
+    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['fall']);
+  });
+
+  it('warns about a hurt building of the player’s, throttled, and not when it is mended', () => {
+    const m = fresh();
+    const home = CLASSIC.castles[0];
+    const t = put(m, 0, 'legion', RACES.legion.towers[0]!.id, Math.round(home[0]) + 3, Math.round(home[1]));
+    const watch = new SoundWatch(m);
+    t.hp -= 5;
+    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['warn']);
+    t.hp -= 5;
+    m.time += 1;
+    expect(watch.collect(m, 0)).toEqual([]);
+    m.time += WARN_EVERY;
+    t.hp += 3; // mended
+    expect(watch.collect(m, 0)).toEqual([]);
+    t.hp -= 3;
+    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['warn']);
+  });
+
+  it('ticks a coin only when pay-day brings income', () => {
+    const m = fresh();
+    m.payTimer = PAY_EVERY - 0.01;
+    const watch = new SoundWatch(m);
+    m.payTimer = 0.04; // wrapped: a pay-day happened
+    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['coin']);
+    m.payTimer = 0.09;
+    expect(watch.collect(m, 0)).toEqual([]);
+  });
+
+  it('warns once at a minute and once at ten seconds before the time limit', () => {
+    const m = fresh();
+    m.time = TIME_LIMIT - 61;
+    const watch = new SoundWatch(m);
+    const kinds: string[] = [];
+    for (const t of [TIME_LIMIT - 59.95, TIME_LIMIT - 59.9, TIME_LIMIT - 10.05, TIME_LIMIT - 9.95, TIME_LIMIT - 9.9]) {
+      m.time = t;
+      kinds.push(...watch.collect(m, 0).map((c) => c.kind));
+    }
+    expect(kinds).toEqual(['clock', 'clockLast']);
+  });
+
+  it('plays a stinger once at the end: victory for the winner’s team, defeat for the other, nothing for a draw', () => {
+    const won = fresh();
+    const w = new SoundWatch(won);
+    won.winner = 0;
+    expect(w.collect(won, 0).map((c) => c.kind)).toEqual(['win']);
+    expect(w.collect(won, 0)).toEqual([]);
+    const lost = fresh();
+    const l = new SoundWatch(lost);
+    lost.winner = 1;
+    expect(l.collect(lost, 0).map((c) => c.kind)).toEqual(['lose']);
+    const draw = fresh();
+    const d = new SoundWatch(draw);
+    draw.winner = 2;
+    expect(d.collect(draw, 0)).toEqual([]);
   });
 });

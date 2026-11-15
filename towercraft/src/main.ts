@@ -21,12 +21,19 @@ import { icon } from './icons';
 import { isMuted, playCues, setMuted, unlockAudio } from './audio';
 import { playMusic, stopMusic } from './music';
 import { say } from './voice';
+import { keyAction, typing } from './hotkeys';
+import { initHowto } from './howto';
+import { initPauseMenu } from './pauseMenu';
+import { installUiSound, uiConfirm, uiRefuse, uiTick } from './uiSound';
 import { SoundWatch } from './soundEvents';
 import { drawnPos } from './stagger';
 import { recolorTeam, seatColor } from './teamColor';
 import type { Ai } from './sim/ai';
 import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
 import { Wreck } from './wreck';
+import { BattleFx, softEllipse } from './fx';
+import { HurtTracker, mixColor, readableScale } from './hurt';
+import { Hud } from './statusBar';
 import { normalizeCode } from '../../src/net/roomCode';
 import { Duel, type DuelPhase } from './net/duel';
 import {
@@ -93,7 +100,6 @@ import {
   type Death,
   type Match,
   type Owner,
-  type Shot,
   type Tower,
   type Unit,
   type Vision,
@@ -323,6 +329,9 @@ void (async () => {
   ghostSprite.visible = false;
   world.addChild(field, fogLayer, areaLayer, corpseLayer, sortLayer, live, floatLayer, ghostSprite);
   app.stage.addChild(world);
+  // Dev only: a handle for playtest scripts (fast-forward with `advance`, stop the ticker, read the match).
+  if (import.meta.env.DEV)
+    Object.assign(window, { __tc: { app, world, advance: () => advance(), match: () => match, fx: () => fx } });
 
   let chosenMap: BoardId = 'frostlands'; // the menu's first pick: a meandering map (the sim's own default is the classic road)
   try {
@@ -421,7 +430,9 @@ void (async () => {
     for (const [o] of match.players.entries()) {
       const c = new Container();
       const color = colorOf(o);
-      c.addChild(new Graphics().ellipse(0, 8, 56 * CASTLE_SCALE, 20 * CASTLE_SCALE).fill({ color, alpha: 0.45 }));
+      const mark = groundMark(color, 56 * CASTLE_SCALE, 20 * CASTLE_SCALE);
+      mark.y = 8;
+      c.addChild(mark);
       const sprite = new Sprite(buildingTex(castleTextures, RACES[match.players[o]!.race].castle.art, color));
       sprite.anchor.set(0.5, 0.78);
       sprite.scale.set(castleBase(o));
@@ -650,7 +661,10 @@ void (async () => {
       setGhost(undefined);
       return refresh();
     }
-    if (towerReason(def)) return showCard({ kind: 'tower', def });
+    if (towerReason(def)) {
+      uiRefuse();
+      return showCard({ kind: 'tower', def });
+    }
     closeCard();
     selected = def;
     spawnGhost();
@@ -671,7 +685,7 @@ void (async () => {
       if (!canAfford(match.players[YOU]!, selected.cost) || towerUnlocked(match, YOU, selected) !== 'ok')
         selected = undefined;
       refresh();
-    }
+    } else if (selected) uiRefuse(); // no money, a full limit or bad ground
     setGhost(undefined);
     if (selected && touchUser) spawnGhost();
   };
@@ -776,7 +790,7 @@ void (async () => {
   /** One of the picked units says a line (the first of the group). */
   const speak = (line: 'pick' | 'go') => {
     const first = picked()[0];
-    if (first) say(match, first, line);
+    if (first && !say(match, first, line)) uiTick(); // the voice has no line now: a light tick instead
   };
   const select = (units: Unit[], add = false) => {
     if (add && units.length === 1 && selection.has(units[0]!.id))
@@ -936,6 +950,8 @@ void (async () => {
     if ((e.target as HTMLElement).tagName === 'INPUT') return;
     const k = e.key.toLowerCase();
     if (k === 'escape') {
+      if (closeTopPanel()) return; // an open panel (menu, How to play, credits) is what Esc puts away first
+      if (started && match.winner < 0 && !selection.size && !cardOf && !selected && !ghost) return menu.open();
       selection.clear();
       if (cardOf) closeCard();
       selected = undefined;
@@ -960,6 +976,7 @@ void (async () => {
   // Sound: browsers start audio only after a click or key press, so the first one loads it; M or the speaker button mutes.
   window.addEventListener('pointerdown', unlockAudio);
   window.addEventListener('keydown', unlockAudio);
+  installUiSound(); // button clicks, refusals, confirms; unlock on touch too; pause when the tab is hidden
   const soundButton = $('cam-sound');
   const showMuted = () => {
     soundButton.textContent = isMuted() ? '🔇' : '🔊';
@@ -976,6 +993,51 @@ void (async () => {
   });
   showMuted();
   window.addEventListener('blur', () => held.clear());
+
+  // UX: the in-match menu, How to play and the desktop shortcuts (`pauseMenu.ts`, `howto.ts`, `hotkeys.ts`). A solo match stands still while a
+  // panel is open; an online one never does (lockstep), so there the menu only overlays it.
+  const howto = initHowto(() => touchUser);
+  const menu = initPauseMenu({
+    online: () => !!online,
+    leave: () => leaveMatch(),
+    howto: howto.show,
+    muteChanged: showMuted,
+  });
+  const paused = () => !online && (menu.isOpen() || howto.isOpen());
+  /** Esc: put away the topmost panel; false when there was none. */
+  const closeTopPanel = () => {
+    if (howto.isOpen()) howto.close();
+    else if (menu.isOpen()) menu.close();
+    else if (!$('credits').hidden) $('credits').hidden = true;
+    else return false;
+    return true;
+  };
+  $('cam-menu').onclick = () => menu.toggle();
+  $('howto-btn').onclick = howto.show;
+  /** Mouse and keyboard: the Nth building the dock shows. */
+  const dockPick = (n: number) => {
+    const b = buildButtons.map(([x]) => x).filter((x) => !x.hidden)[n - 1];
+    if (b) b.click();
+  };
+  window.addEventListener('keydown', (e) => {
+    if (typing(e.target) || !started || match.winner >= 0 || menu.isOpen() || howto.isOpen() || e.repeat) return;
+    const a = keyAction(e);
+    if (!a) return;
+    e.preventDefault();
+    if (e.target instanceof HTMLButtonElement) e.target.blur(); // Space must not also press the button that has the focus
+    if (a.k === 'dock') dockPick(a.n);
+    else if (a.k === 'home') home();
+    else if (a.k === 'fit') focus(match.board.cols / 2, match.board.rows / 2, minZoom());
+    else zoomAt(window.innerWidth / 2, topBar() + viewH() / 2, a.by > 0 ? 1.25 : 0.8);
+  });
+  window.addEventListener('keydown', (e) => {
+    if (!typing(e.target) && e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey) menu.refreshSound();
+  });
+  /** The dock's buildings carry their key in the tooltip (the digits count what is shown now). */
+  const numberDock = () => {
+    let n = 0;
+    for (const [b] of buildButtons) if (!b.hidden && ++n <= 9 && !b.title.endsWith(`[${n}]`)) b.title += ` [${n}]`;
+  };
 
   // --- Drawing a match ----------------------------------------------------------------------------------------------
   /** One sprite per tower / unit, kept while it lives. */
@@ -1054,14 +1116,8 @@ void (async () => {
     }
   };
 
-  /** Attacks stay on screen a moment: a step lasts only 50 ms. */
-  const effects: { shot: Shot; age: number }[] = [];
-  const EFFECT_LIFE = 0.26;
   /** Each unit's last drawn spot, how far it has walked in all (the stride follows it, sideways steps too) and when it last moved. */
   const tracks = new Map<number, { x: number; y: number; odo: number; movedAt: number; d: number; out: boolean }>();
-  /** Blasts (a suicide unit going off) and the pay-day figures floating up over your mills and quarries. */
-  const booms: { at: [number, number]; r: number; air: boolean; age: number }[] = [];
-  const BOOM_LIFE = 0.35;
   /** When (clock seconds) each unit last struck and what it struck at, for its swing; the same for towers (and castles, at -1 - owner), for their kick. */
   const strikes = new Map<number, { at: number; to: [number, number]; melee: boolean }>();
   const kicks = new Map<number, { at: number; to: [number, number] }>();
@@ -1083,6 +1139,11 @@ void (async () => {
   const wreck = new Wreck(glowTexture);
   world.addChildAt(wreck.ground, world.getChildIndex(sortLayer));
   world.addChildAt(wreck.air, world.getChildIndex(live));
+  /** Missiles, impacts, blasts, scorch marks and the shake (`fx.ts`), and hit flashes and eased health bars (`hurt.ts`). */
+  const fx = new BattleFx(glowTexture);
+  world.addChildAt(fx.under, world.getChildIndex(corpseLayer));
+  world.addChildAt(fx.over, world.getChildIndex(live));
+  const hurt = new HurtTracker();
   /** Seconds until the end screen, while the castle that lost is still coming down. */
   let finale: number | undefined;
   const glow = (color: number) => {
@@ -1222,10 +1283,35 @@ void (async () => {
     }
   }
 
-  const bar = (x: number, y: number, w: number, frac: number, color: number) => {
-    live.rect(x - w / 2, y, w, 4).fill(0x0e1117);
-    live.rect(x - w / 2 + 0.5, y + 0.5, (w - 1) * Math.max(0, Math.min(1, frac)), 3).fill(color);
+  /** A health bar: the fill eases to the true share and a pale chip drains behind it after a hit (state kept by `hurt`, per `id`). */
+  const bar = (x: number, y: number, w: number, id: number, hp: number, max: number, color: number, now = clock) => {
+    const s = hurt.touch(id, hp, max, now, frameDt);
+    live.roundRect(x - w / 2 - 1, y - 1, w + 2, 6, 2).fill({ color: 0x0e1117, alpha: 0.75 });
+    if (s.chip > s.shown + 0.004) live.rect(x - w / 2, y, w * s.chip, 4).fill({ color: 0xffffff, alpha: 0.55 });
+    live.rect(x - w / 2, y, Math.max(0, w * s.shown), 4).fill(color);
   };
+  /** The soft shadow of a thing standing on the ground, with its seat colour as a soft pool under it (a flyer's is smaller and fainter). */
+  const groundMark = (color: number, rx: number, ry: number, faint = false) => {
+    const c = new Container();
+    const shadow = new Sprite(softEllipse());
+    shadow.anchor.set(0.5);
+    shadow.tint = 0x000000;
+    shadow.alpha = faint ? 0.2 : 0.36;
+    shadow.width = rx * 2.8;
+    shadow.height = ry * 3;
+    shadow.position.set(rx * 0.12, ry * 0.3);
+    const pool = new Sprite(softEllipse());
+    pool.anchor.set(0.5);
+    pool.tint = color;
+    pool.alpha = faint ? 0.3 : 0.62;
+    pool.width = rx * 2;
+    pool.height = ry * 2;
+    c.addChild(shadow, pool);
+    return c;
+  };
+  /** The frame's length (s) and the zoom's enlargement of units while it is far out: set at the top of each `drawLive`. */
+  let frameDt = 0.016;
+  let unitBoost = 1;
 
   /** One animated pool of sight: it grows to its circle when the source appears and shrinks away when it is gone. */
   interface Pool {
@@ -1317,6 +1403,9 @@ void (async () => {
   function drawLive(dt: number) {
     live.clear();
     areaLayer.clear();
+    frameDt = dt;
+    unitBoost = readableScale(world.scale.x);
+    hurt.begin();
     const vision = visionOf(match); // once a frame: everything below asks it what the player can see
     drawFog(vision, dt);
     const aim = selected && started ? (ghost ?? hover) : undefined; // the cell being previewed: the ghost, or the mouse
@@ -1342,7 +1431,10 @@ void (async () => {
         const cy = (aim[1] + 0.5) * CELL;
         // Before it is placed: what it shoots (white), the ground its reach would open to build on (amber) and the fog its
         // sight would push back (blue ring).
-        live.circle(cx, cy, selected.range * CELL).fill({ color: ok ? 0xffffff : 0xb82024, alpha: 0.12 });
+        live
+          .circle(cx, cy, selected.range * CELL)
+          .fill({ color: ok ? 0xffffff : 0xb82024, alpha: ok ? 0.12 : 0.16 })
+          .stroke({ color: ok ? 0xffffff : 0xe0777b, width: 2, alpha: ok ? 0.45 : 0.6 });
         if (ok) {
           if (selected.reach > 0)
             live
@@ -1425,7 +1517,9 @@ void (async () => {
       (t) => {
         const c = new Container();
         const color = colorOf(t.owner);
-        c.addChild(new Graphics().ellipse(0, 4, 19 * SIZE, 9 * SIZE).fill({ color, alpha: 0.55 })); // the owner's colour under the tower
+        const mark = groundMark(color, 19 * SIZE, 9 * SIZE); // shadow and the owner's colour under the tower
+        mark.y = 4;
+        c.addChild(mark);
         const tex = buildingTex(towerTextures, t.def.art, color);
         const sprite = new Sprite(tex);
         sprite.anchor.set(0.5, 0.78);
@@ -1443,6 +1537,8 @@ void (async () => {
         if (c.visible) {
           animateTower(t, c);
           const pic = c.children[1] as Sprite;
+          hurt.touch(1_000_000 + t.id, t.hp, t.def.hp, clock, 0);
+          pic.tint = mixColor(0xffffff, 0xff5a4a, hurt.flash(1_000_000 + t.id, clock) * 0.7);
           wreck.smoulder(t.id, c.x, c.y - pic.height * 0.78, c.y, TOWER_PX * 0.3, 1 - t.hp / t.def.hp, dt);
           const key = `${t.garrison.length}`;
           if (c.label !== key) {
@@ -1473,7 +1569,7 @@ void (async () => {
       (u) => {
         const c = new Container();
         const color = colorOf(u.owner);
-        c.addChild(new Graphics().ellipse(0, 0, 8 * unitScale(u.def), 4 * SIZE).fill({ color, alpha: 0.6 })); // under the feet (on the ground, below a flyer)
+        c.addChild(groundMark(color, 8 * unitScale(u.def) * (u.def.air ? 0.8 : 1), 4 * SIZE, !!u.def.air)); // under the feet (on the ground, below a flyer)
         const body = new Sprite(unitFrame(u.def.sheet, u.def.kind, 0, 4, color));
         body.anchor.set(0.5, feetAt(u.def.kind));
         body.scale.set(unitScale(u.def));
@@ -1533,7 +1629,9 @@ void (async () => {
         // An enemy is drawn only in sight (a cloaked one also needs a detector); cloaked is faint to its own side; poison tints green.
         c.visible = isSeen(match, YOU, u, vision);
         body.alpha = u.def.cloak ? (allied(match, u.owner, YOU) ? 0.5 : 0.75) : 1;
-        body.tint = u.dot ? 0x9be37a : (u.def.look?.tint ?? 0xffffff);
+        hurt.touch(u.id, u.hp, u.maxHp, clock, 0);
+        body.tint = mixColor(u.dot ? 0x9be37a : (u.def.look?.tint ?? 0xffffff), 0xff5a4a, hurt.flash(u.id, clock) * 0.85);
+        c.scale.set(unitBoost); // far out, armies stay readable
       },
     );
     for (const id of tracks.keys()) if (!unitSprites.has(id)) tracks.delete(id);
@@ -1543,6 +1641,9 @@ void (async () => {
     for (const [o] of castleSprites.entries()) {
       const r = Math.max(0, 1 - (clock - (kicks.get(-1 - o)?.at ?? -9)) / 0.3);
       const cs = castleSprites[o]!;
+      const castle = match.players[o]!.castle;
+      hurt.touch(-1 - o, castle.hp, castle.maxHp, clock, 0);
+      (cs.children[1] as Sprite).tint = mixColor(0xffffff, 0xff5a4a, hurt.flash(-1 - o, clock) * 0.6);
       cs.children[1]!.scale.set(castleBase(o) * (1 + 0.03 * r * r));
       const trim = castleTrim(match.players[o]!.castle.level);
       const key = trimKey(trim);
@@ -1617,14 +1718,17 @@ void (async () => {
         });
     }
     if (sent && clock - sent.at < 0.55) {
+      // An order landing: a ring that closes on the spot (and a faint fill as it lands).
       const k = (clock - sent.at) / 0.55;
-      live.circle(sent.x, sent.y + 4, 30 + 60 * k).stroke({ color: 0xffffff, width: 3, alpha: 1 - k });
+      const r = 24 + 56 * (1 - k) * (1 - k);
+      live.circle(sent.x, sent.y + 4, r).fill({ color: 0xe0777b, alpha: 0.14 * k });
+      live.circle(sent.x, sent.y + 4, r).stroke({ color: 0xffffff, width: 3, alpha: Math.min(1, (1 - k) * 2.2) });
     }
 
-    // Health bars: castles always, the rest once hurt.
+    // Health bars: castles always, the rest once hurt (and your picked group, to see how they fare). They ease, not jump.
     for (const [o, p] of match.players.entries()) {
       if (p.out || !isCastleSeen(match, YOU, o, vision) || p.castle.hp <= 0) continue;
-      bar(castleAt(o)[0] * CELL, castleAt(o)[1] * CELL - 150, 120, p.castle.hp / p.castle.maxHp, barColor(o));
+      bar(castleAt(o)[0] * CELL, castleAt(o)[1] * CELL - 150, 120, -1 - o, p.castle.hp, p.castle.maxHp, barColor(o));
     }
     for (const t of match.towers)
       if (t.hp < t.def.hp && isSeen(match, YOU, t, vision))
@@ -1632,85 +1736,29 @@ void (async () => {
           (t.col + 0.5) * CELL,
           (t.row + 0.5) * CELL + TOWER_FOOT - TOWER_PX * 0.78 - 8,
           44,
-          t.hp / t.def.hp,
+          1_000_000 + t.id,
+          t.hp,
+          t.def.hp,
           0xffb13f,
         );
+    const chosen = new Set(group.map((u) => u.id));
     for (const u of match.units) {
-      if (u.hp >= u.maxHp || !isSeen(match, YOU, u, vision)) continue;
+      if ((u.hp >= u.maxHp && !chosen.has(u.id)) || !isSeen(match, YOU, u, vision)) continue;
       const [x, y] = drawnPos(u, match.board);
+      const fig = figureOf(u.def.kind) * unitScale(u.def) * unitBoost;
       bar(
         x * CELL,
-        y * CELL - figureOf(u.def.kind) * unitScale(u.def) - 6 - (u.def.air ? FLIGHT : 0),
-        14 + figureOf(u.def.kind) * unitScale(u.def) * 0.4,
-        u.hp / u.maxHp,
-        0x6fd36f,
+        y * CELL - fig - 6 - (u.def.air ? FLIGHT * unitBoost : 0),
+        14 + fig * 0.4,
+        u.id,
+        u.hp,
+        u.maxHp,
+        u.hp / u.maxHp < 0.35 ? 0xe0777b : u.hp / u.maxHp < 0.65 ? 0xe8c15a : 0x6fd36f,
       );
     }
+    hurt.end();
 
-    for (let i = effects.length - 1; i >= 0; i--) {
-      const e = effects[i]!;
-      e.age += dt;
-      if (e.age > EFFECT_LIFE) {
-        effects.splice(i, 1);
-        continue;
-      }
-      if (!spotted(e.shot.from) && !spotted(e.shot.to)) continue; // an attack nobody of yours sees
-      const a = 1 - e.age / EFFECT_LIFE;
-      const [x0, y0, x1, y1] = [e.shot.from[0] * CELL, e.shot.from[1] * CELL, e.shot.to[0] * CELL, e.shot.to[1] * CELL];
-      const lift = e.shot.by.kind === 'tower' ? 44 : e.shot.by.kind === 'castle' ? 90 : 22;
-      if (e.shot.melee) live.circle(x1, y1 - 22, 14).fill({ color: 0xffffff, alpha: 0.5 * a });
-      else if (e.shot.multi) {
-        // One of several struck at once (a flame, a sweeping blade): a short soft arc that bows from the attacker to the target.
-        const f = Math.min(1, e.age / (EFFECT_LIFE * 0.6));
-        const [sx, sy, ex, ey] = [x0, y0 - lift, x1, y1 - 22];
-        const [nx, ny] = [-(ey - sy) * 0.3, (ex - sx) * 0.3];
-        const [mx, my] = [(sx + ex) / 2 + nx, (sy + ey) / 2 + ny];
-        const at = (t: number): [number, number] => [
-          (1 - t) * (1 - t) * sx + 2 * (1 - t) * t * mx + t * t * ex,
-          (1 - t) * (1 - t) * sy + 2 * (1 - t) * t * my + t * t * ey,
-        ];
-        const [t0, t1] = [Math.max(0, f - 0.6), f];
-        for (const [w, al] of [
-          [14, 0.22],
-          [5, 0.65],
-        ] as const) {
-          const [px, py] = at(t0);
-          live.moveTo(px, py);
-          for (let i = 1; i <= 6; i++) live.lineTo(...at(t0 + ((t1 - t0) * i) / 6));
-          live.stroke({ color: 0xff9a3c, width: w, alpha: al * a, cap: 'round', join: 'round' });
-        }
-      } else {
-        // A missile flying from the shooter to the target over the effect's life, with a short fading trail.
-        const f = Math.min(1, e.age / (EFFECT_LIFE * 0.8));
-        const [hx, hy] = [x0 + (x1 - x0) * f, y0 - lift + (y1 - 22 - (y0 - lift)) * f];
-        const [tx, ty] = [
-          x0 + (x1 - x0) * Math.max(0, f - 0.35),
-          y0 - lift + (y1 - 22 - (y0 - lift)) * Math.max(0, f - 0.35),
-        ];
-        live
-          .moveTo(tx, ty)
-          .lineTo(hx, hy)
-          .stroke({ color: 0xffb13f, width: 3, alpha: 0.9 * a });
-        live.circle(hx, hy, 3).fill({ color: 0xfff1c9, alpha: a });
-      }
-      if (e.shot.splash > 0) live.circle(x1, y1, e.shot.splash * CELL).fill({ color: 0xffb13f, alpha: 0.2 * a });
-    }
-
-    // A blast: one soft ring and glow spreading to the blast's radius, over a third of a second.
-    for (let i = booms.length - 1; i >= 0; i--) {
-      const k = booms[i]!;
-      k.age += dt;
-      if (k.age > BOOM_LIFE) {
-        booms.splice(i, 1);
-        continue;
-      }
-      if (!spotted(k.at)) continue;
-      const f = k.age / BOOM_LIFE;
-      const r = k.r * CELL * (0.3 + 0.7 * (1 - (1 - f) * (1 - f)));
-      const [x, y] = [k.at[0] * CELL, k.at[1] * CELL - (k.air ? FLIGHT : 0) - 8];
-      live.circle(x, y, r).fill({ color: 0xffa24a, alpha: 0.24 * (1 - f) });
-      live.circle(x, y, r).stroke({ color: 0xffd9a0, width: 3, alpha: 0.7 * (1 - f) });
-    }
+    fx.update(dt, spotted, world);
     floatMoney(dt);
     wreck.update(dt);
   }
@@ -2254,7 +2302,10 @@ void (async () => {
       label = `${buyN > 1 ? `<span class="times">×${buyN}</span>` : ''}${money(total)}`;
       reason = most > 0 ? '' : unitReason(d);
       const n = buyN;
-      go = () => cmd({ k: 'train', id: d.id, n });
+      go = () => {
+        cmd({ k: 'train', id: d.id, n });
+        uiConfirm();
+      };
     } else if (cardOf.kind === 'tower') {
       const d = cardOf.def;
       body = towerCard(d);
@@ -2394,8 +2445,12 @@ void (async () => {
       let holdTimer: number | undefined;
       const b = thumb(unitThumb(def, 36), money(def.cost), def.name, () => {
         if (heldOpen) return void (heldOpen = false);
-        if (maxPurchases(match, YOU, def) < 1) return showCard({ kind: 'unit', def }); // the card says why not
+        if (maxPurchases(match, YOU, def) < 1) {
+          uiRefuse();
+          return showCard({ kind: 'unit', def }); // the card says why not
+        }
         cmd({ k: 'train', id: def.id, n: 1 });
+        uiConfirm();
         b.classList.add('bought');
         window.setTimeout(() => b.classList.remove('bought'), 160);
         tipOnce(
@@ -2541,6 +2596,7 @@ void (async () => {
       b.title = `New units march: ${lane.name}, to the ${castleName(lane.to)} camp`;
     }
     renderCard();
+    numberDock();
     if (!selected) setGhost(undefined);
   }
 
@@ -2646,10 +2702,10 @@ void (async () => {
     towerSprites.clear();
     unitSprites.clear();
     tracks.clear();
-    booms.length = 0;
+    fx.clear();
+    hurt.clear();
     strikes.clear();
     kicks.clear();
-    effects.length = 0;
     fogSnap = true;
     pools.clear();
     remembered.length = 0;
@@ -2663,6 +2719,8 @@ void (async () => {
     $('end').hidden = true;
     refresh();
     home();
+    hud.reset();
+    howto.firstRun();
     if (rejoinWanted) bringBack();
   }
 
@@ -2889,6 +2947,14 @@ void (async () => {
   window.addEventListener('pagehide', () => duel.close());
 
   $('credits-btn').onclick = () => ($('credits').hidden = false);
+  /** Back to the title screen from the menu mid-match: the same teardown as "Play again" (online it closes the link; the other side sees it as a drop). */
+  function leaveMatch() {
+    stopMusic();
+    finale = undefined;
+    selection.clear();
+    closeCard();
+    $('again').click();
+  }
   $('credits-x').onclick = () => ($('credits').hidden = true);
   $('again').onclick = () => {
     duel.close();
@@ -2963,12 +3029,9 @@ void (async () => {
     const pay = match.payTimer;
     step(match, STEP);
     if (match.payTimer < pay) payDay();
-    for (const d of match.deaths) {
-      addCorpse(d);
-      if (d.boom) booms.push({ at: d.at, r: d.boom, air: !!d.def.air, age: 0 });
-    }
+    for (const d of match.deaths) addCorpse(d);
+    fx.collect(match, YOU);
     for (const shot of match.shots) {
-      effects.push({ shot, age: 0 });
       // A unit that hits several at once faces the first (the main target): its spray shots follow in the same step.
       if (shot.by.kind === 'unit') {
         if (!(shot.multi && strikes.get(shot.by.id)?.at === clock))
@@ -2989,12 +3052,21 @@ void (async () => {
     };
   }
 
+  /** The status strip, pay-day chip, minimap and alerts (`statusBar.ts`): cosmetic, read from the match; reset by `begin`. */
+  const hud = new Hud({
+    match: () => match,
+    you: () => YOU,
+    color: colorOf,
+    view: soundView,
+    go: (cx, cy) => focus(cx, cy, world.scale.x),
+  });
+
   app.ticker.add((ticker) => {
     const dt = ticker.deltaMS / 1000;
     clock += dt;
     ageCorpses(dt);
     if (started && match.winner < 0) {
-      acc += Math.min(dt, 0.25);
+      if (!paused()) acc += Math.min(dt, 0.25); // a solo match waits while a panel is open
       while (acc >= STEP && match.winner < 0) {
         if (online) {
           if (!online.lock.run(match, advance)) {
@@ -3056,6 +3128,9 @@ void (async () => {
         if (cell) setGhost(cell);
       }
     }
-    if (started) drawLive(dt);
+    if (started) {
+      drawLive(dt);
+      hud.update();
+    }
   });
 })();

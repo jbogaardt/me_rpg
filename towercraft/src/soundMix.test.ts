@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { NEAR, PAN_MAX, SILENT, loudest, mixAt, type View } from './soundMix';
+import {
+  NEAR,
+  PAN_MAX,
+  REF_HALF_W,
+  SILENT,
+  cutoffOf,
+  fightLevel,
+  loudest,
+  mixAt,
+  zoomGain,
+  type View,
+} from './soundMix';
 
 const view: View = { cx: 50, cy: 40, halfW: 20, halfH: 10 };
 
@@ -38,5 +49,28 @@ describe('where a sound is heard from', () => {
     const crowd = [0.2, 0.9, 0.1, 0.5].map((gain) => ({ gain }));
     expect(loudest(crowd, 2).map((s) => s.gain)).toEqual([0.9, 0.5]);
     expect(loudest(crowd, 9)).toBe(crowd);
+  });
+});
+
+describe('zoom and the music', () => {
+  it('is a little quieter zoomed far out, never louder than tuned, never silent', () => {
+    expect(zoomGain({ ...view, halfW: REF_HALF_W })).toBe(1);
+    expect(zoomGain({ ...view, halfW: 4 })).toBe(1);
+    const far = zoomGain({ ...view, halfW: 60 });
+    expect(far).toBeLessThan(0.8);
+    expect(far).toBeGreaterThanOrEqual(0.55);
+    expect(zoomGain({ ...view, halfW: 1e6 })).toBe(0.55);
+  });
+
+  it('opens the music with fighting or a hurt castle and settles back slowly', () => {
+    expect(fightLevel(0, 0, false)).toBe(0);
+    expect(fightLevel(0, 3, false)).toBeCloseTo(0.6);
+    expect(fightLevel(0, 50, false)).toBe(1);
+    expect(fightLevel(0, 0, true)).toBe(1);
+    const calmer = fightLevel(1, 0, false);
+    expect(calmer).toBeLessThan(1);
+    expect(calmer).toBeGreaterThan(0.95);
+    expect(cutoffOf(0)).toBeLessThan(cutoffOf(1));
+    expect(cutoffOf(5)).toBe(cutoffOf(1));
   });
 });
