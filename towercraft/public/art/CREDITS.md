@@ -25,6 +25,9 @@ made from them, must credit the artists and be shared under CC-BY-SA 3.0 (or a c
 ## Interface art (CC-BY 3.0)
 
 - `../ui/*`, the menu frames, wood and parchment, buttons and planks: "RPG GUI construction kit v1.0" by Lamoot, licensed [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/), as cut for Me RPG (`tools/ui/cut-gui.ts`).
+- `../ui/bg/title.webp`, `victory.webp`, `defeat.webp`: the paintings `wyrmsun.png`, `dwarven_victory.png` and `germanic_defeat.png` by **Jinn** (Wyrmsun, `graphics/credits.txt`: CC0), downscaled to 1600/1280 px and re-encoded as WebP; the page grades, blurs and drifts them in CSS. (`goblin_victory.png` has no licence line in Wyrmsun's credits and is not used.)
+- `../ui/fonts/*.woff2`: **Cinzel** (NDISCOVER) and **Crimson Text** (Sorkin Type), SIL Open Font License 1.1, Latin subsets from the npm packages `@fontsource/cinzel` and `@fontsource/crimson-text`; the licence texts are beside them (`OFL-*.txt`). The page used to name these fonts without loading them, so it showed Georgia unless they were installed.
+- The favicon, logo, banners, chips and buttons are CSS and an inline SVG made for the game.
 
 ## CC0 art (no credit needed, given anyway)
 

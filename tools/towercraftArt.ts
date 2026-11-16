@@ -53,6 +53,23 @@ export const ART: Item[] = [
   { source: 'tree', from: 'teuton/units/catapult', to: 'units/catapult' },
   { source: 'tree', from: 'neutral/units/bird_white', to: 'units/bird_white' },
   { source: 'tree', from: 'neutral/units/gryphon_gray_feathers', to: 'units/gryphon_gray_feathers' },
+  // Battle effects (art/fx/): missiles (5 directions across, or 3 sizes down for the lobbed ones), impacts, flames and building sites. Drawn by
+  // fx.ts and wreck.ts; the sheets' layout is in fxArt.ts.
+  { source: 'tree', from: 'missiles/arrow', to: 'fx/arrow' },
+  { source: 'tree', from: 'missiles/goblin_arrow', to: 'fx/goblin_arrow' },
+  { source: 'tree', from: 'missiles/dwarven_ballista_bolt', to: 'fx/ballista_bolt' },
+  { source: 'tree', from: 'missiles/javelin', to: 'fx/javelin' },
+  { source: 'tree', from: 'missiles/cannon_ball', to: 'fx/cannon_ball' },
+  { source: 'tree', from: 'missiles/catapult_sandstone_rock', to: 'fx/catapult_rock' },
+  { source: 'tree', from: 'missiles/slime_glob', to: 'fx/slime_glob' },
+  { source: 'tree', from: 'missiles/bullet', to: 'fx/bullet' },
+  { source: 'tree', from: 'missiles/explosion', to: 'fx/explosion' },
+  { source: 'tree', from: 'missiles/siege_projectile_impact', to: 'fx/impact' },
+  { source: 'tree', from: 'missiles/big_fire', to: 'fx/big_fire' },
+  { source: 'tree', from: 'missiles/small_fire', to: 'fx/small_fire' },
+  { source: 'tree', from: 'missiles/rock_shard', to: 'fx/rock_shard' },
+  { source: 'tree', from: 'neutral/buildings/destroyed_site', to: 'fx/destroyed_site' },
+  { source: 'tree', from: 'neutral/buildings/land_construction_site', to: 'fx/construction_site' },
   // Portraits for the buttons and the race picker.
   { source: 'pack', from: 'goblin_spearman', to: 'goblin_spearman' },
   { source: 'pack', from: 'goblin_thief', to: 'goblin_thief' },

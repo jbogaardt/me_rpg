@@ -32,6 +32,7 @@ import { DIFFICULTIES, applyDifficulty, createAi, type Ai, type Difficulty } fro
 import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
 import { Wreck } from './wreck';
 import { BattleFx, softEllipse } from './fx';
+import { loadFxArt, type FxArt } from './fxArt';
 import { HurtTracker, mixColor, readableScale } from './hurt';
 import { Hud } from './statusBar';
 import { normalizeCode } from '../../src/net/roomCode';
@@ -108,6 +109,8 @@ import {
 
 const CELL = 40;
 const STEP = 0.05;
+/** How long (s) a new building takes to rise on screen: a site, its half-built frame, then the finished one. */
+const RISE_TIME = 0.85;
 /** Which player this page is: 0 alone and for the host of an online match, 1 for the one who joined. */
 let YOU: Owner = 0;
 
@@ -226,6 +229,14 @@ void (async () => {
   /** The fields (art/maps/<id>.png) are drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts). */
   const getField = (id: BoardId) =>
     once(`f:${id}`, async () => void fieldTextures.set(id, await load(`art/maps/${id}.png`)));
+  /** The effect pictures (`fxArt.ts`): shared by every match, a hundred kB. */
+  let fxArt: FxArt | undefined;
+  const getFx = () =>
+    once('fx', async () => {
+      fxArt = await loadFxArt();
+      fx.setArt(fxArt);
+      wreck.setArt(fxArt);
+    });
   /** What one race needs on the field: its buildings, castle and unit sheets. */
   const raceJobs = (race: RaceId) =>
     [...new Set(RACES[race].towers.map((t) => t.art))]
@@ -237,7 +248,7 @@ void (async () => {
       );
   /** Wait for everything a match of these races on this map needs (calling `progress` from 0 to 1 as it arrives). */
   async function ensureAssets(races: RaceId[], map: BoardId, progress?: (done: number) => void) {
-    const all = [() => getField(map), ...[...new Set(races)].flatMap(raceJobs)];
+    const all = [() => getFx(), () => getField(map), ...[...new Set(races)].flatMap(raceJobs)];
     let n = 0;
     await Promise.all(
       all.map((j) =>
@@ -250,6 +261,7 @@ void (async () => {
   /** While the player looks at the title screen: fetch the rest, the chosen map first, a few pictures at a time. */
   async function prefetch() {
     const queue = [
+      () => getFx(),
       () => getField(chosenMap),
       ...RACE_IDS.flatMap(raceJobs),
       ...BOARD_IDS.map((id) => () => getField(id)),
@@ -289,6 +301,15 @@ void (async () => {
     const key = `${name}:${color}`;
     let t = buildings.get(key);
     if (!t) buildings.set(key, (t = squareFrame(teamTexture(`b:${name}`, raw.get(name)!, color))));
+    return t;
+  };
+  /** A building sheet's second frame (half built: scaffolding and open walls) in a seat's colour, or undefined when the sheet has none. */
+  const buildingAlt = (raw: Map<string, Texture>, name: string, color: number) => {
+    const sheet = teamTexture(`b:${name}`, raw.get(name)!, color);
+    if (sheet.height < sheet.width * 2) return undefined;
+    const key = `${name}:${color}:2`;
+    let t = buildings.get(key);
+    if (!t) buildings.set(key, (t = cut(sheet, 0, sheet.width, sheet.width, sheet.width)));
     return t;
   };
   /** One frame of a unit sheet in a seat's colour (cached): row, and column = direction. */
@@ -437,6 +458,7 @@ void (async () => {
       const sprite = new Sprite(buildingTex(castleTextures, RACES[match.players[o]!.race].castle.art, color));
       sprite.anchor.set(0.5, 0.78);
       sprite.scale.set(castleBase(o));
+      altOf.set(c, buildingAlt(castleTextures, RACES[match.players[o]!.race].castle.art, color));
       c.addChild(sprite);
       c.addChild(new Graphics()); // pennants and ring that grow with the castle level (`drawTrim`)
       c.position.set(castleAt(o)[0] * CELL, castleAt(o)[1] * CELL);
@@ -1043,6 +1065,10 @@ void (async () => {
   // --- Drawing a match ----------------------------------------------------------------------------------------------
   /** One sprite per tower / unit, kept while it lives. */
   const towerSprites = new Map<number, Container>();
+  /** A building's half-wrecked second frame (for its fall), by its container. */
+  const altOf = new WeakMap<Container, Texture | undefined>();
+  /** Buildings that went up after the start, rising for `RISE_TIME` seconds (cosmetic: the rules count them as built at once). */
+  const rising = new Map<number, { age: number; dust: number }>();
   const unitSprites = new Map<number, Container>();
   const sync = <T extends { id: number }>(
     sprites: Map<number, Container>,
@@ -1526,6 +1552,8 @@ void (async () => {
         sprite.anchor.set(0.5, 0.78);
         sprite.scale.set(TOWER_PX / tex.width); // a tower is about two and a half cells wide, whatever its sheet
         c.addChild(sprite);
+        altOf.set(c, buildingAlt(towerTextures, t.def.art, color));
+        if (match.time > 1 && fxArt) rising.set(t.id, { age: 0, dust: 0 });
         c.addChild(makeTowerFx(t.def)); // the tower's own small animation: lamp, halo or sweep (see `animateTower`)
         c.addChild(new Graphics()); // the role badge (and a bunker's slots) under its feet
         c.addChild(new Graphics()); // a smithy's pennants and ring, which grow as its owner buys upgrades (`drawTrim`)
@@ -1541,6 +1569,30 @@ void (async () => {
           hurt.touch(1_000_000 + t.id, t.hp, t.def.hp, clock, 0);
           pic.tint = mixColor(0xffffff, 0xff5a4a, hurt.flash(1_000_000 + t.id, clock) * 0.7);
           wreck.smoulder(t.id, c.x, c.y - pic.height * 0.78, c.y, TOWER_PX * 0.3, 1 - t.hp / t.def.hp, dt);
+          const rise = rising.get(t.id);
+          if (rise && fxArt) {
+            rise.age += dt;
+            const p = rise.age / RISE_TIME;
+            const full = TOWER_PX / buildingTex(towerTextures, t.def.art, colorOf(t.owner)).width;
+            if (p < 0.3) {
+              pic.texture = fxArt.site[1]!;
+              pic.scale.set((TOWER_PX * 0.85) / 64);
+            } else {
+              const done = buildingTex(towerTextures, t.def.art, colorOf(t.owner));
+              pic.texture = p < 0.65 ? (altOf.get(c) ?? done) : done;
+              pic.scale.set(full * (p < 0.65 ? 1 : 1 + 0.06 * Math.sin(Math.PI * Math.min(1, (p - 0.65) / 0.35))));
+            }
+            rise.dust += dt;
+            if (rise.dust > 0.14 && p < 0.9) {
+              rise.dust = 0;
+              wreck.rise(c.x, c.y - 2, TOWER_PX * 0.3);
+            }
+            if (p >= 1) {
+              rising.delete(t.id);
+              pic.texture = buildingTex(towerTextures, t.def.art, colorOf(t.owner));
+              pic.scale.set(full);
+            }
+          }
           const key = `${t.garrison.length}`;
           if (c.label !== key) {
             c.label = key;
@@ -1560,7 +1612,7 @@ void (async () => {
         }
       },
       (c) => {
-        wreck.collapse(c, c.children[1] as Sprite, TOWER_FALL, false, true);
+        wreck.collapse(c, c.children[1] as Sprite, TOWER_FALL, false, true, altOf.get(c));
         return true;
       },
     );
@@ -1765,7 +1817,7 @@ void (async () => {
 
     fx.update(dt, spotted, world);
     floatMoney(dt);
-    wreck.update(dt);
+    wreck.update(dt, spotted);
   }
 
   // --- The page: top bar, the dock of thumbnails, the card, the title screen -----------------------------------------------
@@ -2660,6 +2712,8 @@ void (async () => {
   async function loadArt(races: RaceId[], map: BoardId) {
     const bar = $('loading-bar');
     bar.style.width = '4%';
+    $('loading-shot').style.backgroundImage = `url(art/maps/thumbs/${map}.png)`;
+    $('loading-name').textContent = BOARDS[map]?.name.replace(/ \(.*\)/, '') ?? '';
     $('loading').hidden = false;
     try {
       await ensureAssets(races, map, (done) => (bar.style.width = `${Math.max(4, done * 100)}%`));
@@ -2803,7 +2857,7 @@ void (async () => {
       const b = document.createElement('button');
       b.className = 'map';
       b.title = board.blurb ? `${board.name}: ${board.blurb}` : board.name;
-      b.innerHTML = `<span class="shot" style="background-image:url(art/maps/thumbs/${id}.png);aspect-ratio:${board.cols} / ${board.rows}"></span>${board.seats > 2 ? `<b>${board.name.replace(/ \(.*\)/, '')}</b>` : ''}`;
+      b.innerHTML = `<span class="shot" style="background-image:url(art/maps/thumbs/${id}.png);aspect-ratio:${board.cols} / ${board.rows}"></span><b>${board.name.replace(/ \(.*\)/, '')}</b>`;
       b.onclick = () => pickMap(id);
       $('maps').append(b);
       mapButtons.set(id, b);
@@ -3058,7 +3112,23 @@ void (async () => {
     ];
     $('end-title').textContent = title;
     $('end-sub').textContent = sub;
-    $('end').hidden = false;
+    // The end screen's look (UI art): the painting follows the result; the numbers are what the match already holds.
+    const end = $('end');
+    end.classList.toggle('lose', !won && match.winner !== 2);
+    end.classList.toggle('draw', match.winner === 2);
+    const mine = teamOf(match, YOU);
+    const side = (own: boolean) => match.players.filter((pl) => (pl.team === mine) === own);
+    $('end-me').textContent = side(true).map((pl) => RACES[pl.race].name).join(' + ');
+    $('end-foe').textContent = side(false).map((pl) => RACES[pl.race].name).join(' + ');
+    const secs = Math.floor(match.time);
+    $('end-time').textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+    const hp = (own: boolean) => {
+      const c = side(own).map((pl) => pl.castle);
+      return `${Math.round((100 * c.reduce((n, k) => n + Math.max(0, k.hp), 0)) / Math.max(1, c.reduce((n, k) => n + k.maxHp, 0)))}%`;
+    };
+    $('end-hp-me').textContent = hp(true);
+    $('end-hp-foe').textContent = hp(false);
+    end.hidden = false;
   }
 
   /** The castles that fell come down (the end screen waits for them); the seconds until it should show. A draw on time shows at once. */
@@ -3067,7 +3137,7 @@ void (async () => {
     for (const o of [0, 1] as const) {
       const cs = castleSprites[o]!;
       if (match.players[o].castle.hp > 0 || wreck.has(cs)) continue;
-      wreck.collapse(cs, cs.children[1] as Sprite, CASTLE_FALL, true, false);
+      wreck.collapse(cs, cs.children[1] as Sprite, CASTLE_FALL, true, false, altOf.get(cs));
       seconds = CASTLE_FALL + 0.8;
     }
     return seconds;

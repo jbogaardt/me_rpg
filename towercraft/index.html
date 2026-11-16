@@ -4,8 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Towercraft</title>
-    <link rel="icon" href="data:," />
+    <meta name="theme-color" content="#0e1117" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fff0b8'/%3E%3Cstop offset='1' stop-color='%23b8832f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23161a22'/%3E%3Cpath d='M16 52V26h6v5h5v-5h4v-5h2v5h4v5h5v-5h6v26z' fill='url(%23g)'/%3E%3Cpath d='M27 52v-9a5 5 0 0 1 10 0v9z' fill='%23161a22'/%3E%3Cpath d='M32 10v12l9-3.5z' fill='%23d6453f'/%3E%3Crect x='31' y='9' width='2' height='16' fill='url(%23g)'/%3E%3C/svg%3E" />
+    <link rel="preload" href="./ui/fonts/cinzel-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
     <style>
+      /* Fonts, self-hosted (SIL OFL, licences in ui/fonts/): the page never asks a font service. Latin subset only. */
+      @font-face { font-family: 'Cinzel'; font-weight: 600; font-display: swap; src: url('./ui/fonts/cinzel-latin-600-normal.woff2') format('woff2'); }
+      @font-face { font-family: 'Cinzel'; font-weight: 700; font-display: swap; src: url('./ui/fonts/cinzel-latin-700-normal.woff2') format('woff2'); }
+      @font-face { font-family: 'Crimson Text'; font-weight: 400; font-display: swap; src: url('./ui/fonts/crimson-text-latin-400-normal.woff2') format('woff2'); }
+      @font-face { font-family: 'Crimson Text'; font-weight: 600; font-display: swap; src: url('./ui/fonts/crimson-text-latin-600-normal.woff2') format('woff2'); }
+      @font-face { font-family: 'Crimson Text'; font-weight: 700; font-display: swap; src: url('./ui/fonts/crimson-text-latin-700-normal.woff2') format('woff2'); }
       /* The look is Me RPG's menus: gold-railed frames over wood and parchment (Lamoot's RPG GUI kit, CC-BY 3.0, ui/), Cinzel titles, Crimson body. */
       :root {
         --bg: #0e1117; --text: #f3ead2; --dim: #c9bd9c; --gold: #f2d38a; --gold-dim: #b48a4a; --ink: #33230f; --ink-soft: #6b5434;
@@ -394,6 +402,175 @@
         #alert { top: 112px; left: 10px; transform: none; max-width: calc(100vw - 130px); }
         @keyframes alert-in { from { opacity: 0; } to { opacity: 1; } }
       }
+
+      /* ==== UI art agent: backdrop, logo, glass chips, gold buttons, banners. Later rules win on purpose; the layout rules above stay. ==== */
+      :root { --glass: linear-gradient(180deg, rgba(26, 22, 16, 0.66), rgba(14, 12, 9, 0.58)); --rail: rgba(242, 211, 138, 0.5);
+        --gold-grad: linear-gradient(180deg, #fbe7ae 0%, #e2b45e 52%, #b98631 100%); --wood-grad: linear-gradient(180deg, #54412a 0%, #2f2314 100%); }
+      @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+      .overlay:not([hidden]) { animation: fade-in 0.35s ease-out; }
+      body.playing #top, body.playing #status, body.playing #cam, body.playing #dock, body.playing #minimap { animation: fade-in 0.6s ease-out; }
+      button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+      @media (pointer: fine) { button:not(:disabled), .map, .race { cursor: pointer; } }
+
+      /* Buttons: the kit's wood is replaced by a smooth dark-bronze face with a gold rail; planks are the pill buttons of the menus. */
+      .wbtn { background: var(--wood-grad); border: 1px solid var(--rail); border-radius: 9px; filter: none;
+        box-shadow: inset 0 1px 0 rgba(255, 236, 180, 0.28), inset 0 -2px 4px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.5); transition: filter 0.12s, transform 0.08s, box-shadow 0.12s; }
+      .wbtn:hover:not(:disabled) { filter: brightness(1.2); }
+      .wbtn:active:not(:disabled) { filter: brightness(0.9); transform: translateY(1px); box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5); }
+      .wbtn:disabled { filter: grayscale(0.7) brightness(0.7); }
+      #cam button { border-radius: 12px; background: var(--glass); backdrop-filter: blur(3px); color: var(--gold); }
+      #card-x { background: var(--wood-grad); border-radius: 50%; line-height: 1; }
+      .plank { background: var(--wood-grad); border: 1px solid rgba(242, 211, 138, 0.3); border-radius: 9px; color: #cdbf9d; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase;
+        box-shadow: inset 0 1px 0 rgba(255, 236, 180, 0.2), 0 2px 5px rgba(0, 0, 0, 0.45); transition: filter 0.12s, transform 0.08s; }
+      .plank.on { background: var(--gold-grad); border-color: #fff0b8; color: #2e1c08; text-shadow: 0 1px 0 rgba(255, 244, 205, 0.6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 8px rgba(0, 0, 0, 0.5); }
+      .plank:hover:not(:disabled):not(.on) { background-image: var(--wood-grad); filter: brightness(1.25); color: var(--gold); }
+      .plank.on:hover:not(:disabled) { background-image: var(--gold-grad); color: #2e1c08; filter: brightness(1.06); }
+      .plank:active:not(:disabled) { transform: translateY(1px); filter: brightness(0.92); }
+      .plank:disabled { opacity: 0.45; }
+      #pause .plank.danger { background: linear-gradient(180deg, #6b2a2a, #3d1616); border-color: rgba(240, 150, 150, 0.5); color: #f6c9c9; }
+      @media (hover: none) { .plank:hover:not(:disabled):not(.on) { background-image: var(--wood-grad); color: #cdbf9d; filter: none; } .wbtn:hover:not(:disabled) { filter: none; } }
+
+      /* The title: a painted backdrop (Wyrmsun, CC0) softly graded and drifting, a glass menu over it, an engraved gold logo. */
+      #menu { background: #0b0d12; overflow-x: hidden; }
+      #menu::before { content: ''; position: fixed; inset: -4%; z-index: -1; background: url('./ui/bg/title.webp') center 40% / cover; filter: blur(1.5px) saturate(0.95) brightness(0.8);
+        animation: drift 48s ease-in-out infinite alternate; }
+      #menu::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+        background: radial-gradient(ellipse at 50% 45%, rgba(8, 10, 14, 0.15) 0%, rgba(8, 10, 14, 0.7) 85%), linear-gradient(180deg, rgba(8, 10, 14, 0.5), transparent 25%, transparent 70%, rgba(8, 10, 14, 0.7)); }
+      @keyframes drift { from { transform: scale(1.04) translate3d(-1.2%, 0, 0); } to { transform: scale(1.1) translate3d(1.2%, -1%, 0); } }
+      @media (prefers-reduced-motion: reduce) { #menu::before { animation: none; } .overlay:not([hidden]) { animation: none; } }
+      #menu > div.panel { border: 1px solid var(--rail); border-image: none; border-radius: 16px; background: linear-gradient(180deg, rgba(20, 17, 13, 0.56), rgba(10, 9, 8, 0.68)); backdrop-filter: blur(6px);
+        box-shadow: inset 0 1px 0 rgba(255, 236, 180, 0.18), 0 12px 40px rgba(0, 0, 0, 0.6); filter: none; width: min(860px, 100%); padding: 10px 14px 16px; }
+      h1.logo { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 2px; }
+      h1.logo::before, h1.logo::after { content: ''; flex: 0 1 90px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold-dim)); }
+      h1.logo::after { transform: scaleX(-1); }
+      h1.logo span { font: 700 46px/1.1 var(--title); letter-spacing: 0.16em; text-transform: uppercase; padding-left: 0.16em;
+        background: linear-gradient(180deg, #fff6d0 0%, #f2d38a 42%, #a8742a 52%, #f0cb7c 78%, #c18d3b 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+        filter: drop-shadow(0 1px 0 #3a2509) drop-shadow(0 3px 0 rgba(30, 18, 5, 0.8)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.7)); }
+      .tagline { margin: 0 0 10px; font: 600 15px var(--title); letter-spacing: 0.22em; text-transform: uppercase; color: #cdbf9d; }
+      .overlay h2 { font-size: 13px; letter-spacing: 0.2em; display: flex; align-items: center; justify-content: center; gap: 12px; }
+      .overlay h2::before, .overlay h2::after { content: ''; flex: 0 1 60px; height: 1px; background: linear-gradient(90deg, transparent, rgba(242, 211, 138, 0.55)); }
+      .overlay h2::after { transform: scaleX(-1); }
+      #end h2, #loading h2 { margin: 0; }
+      .map .shot { border: 2px solid rgba(242, 211, 138, 0.35); border-radius: 9px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.6); transition: transform 0.15s, border-color 0.15s; }
+      .map:hover .shot { border-color: var(--gold); transform: translateY(-2px); }
+      .map.on .shot { border-color: #fff0b8; box-shadow: 0 0 0 2px rgba(242, 211, 138, 0.7), 0 0 16px rgba(242, 211, 138, 0.35), 0 4px 12px rgba(0, 0, 0, 0.6); }
+      .map b { font-size: 12px; letter-spacing: 0.06em; margin-top: 5px; }
+      .map.on b { color: #fff0b8; }
+      /* A race is a hanging banner in its colour: the portrait in a gold ring, the name below, a notched foot. */
+      .race { border: 0; border-image: none; padding: 16px 10px 22px; gap: 8px; color: #f6ecd0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), 50% 100%, 0 calc(100% - 14px));
+        background: linear-gradient(180deg, color-mix(in srgb, var(--c) 78%, #000) 0%, color-mix(in srgb, var(--c) 42%, #15110c) 100%); transition: transform 0.15s, filter 0.15s; }
+      .race::before { top: 0; height: 4px; border-radius: 0; background: var(--gold-grad); }
+      .race::after { content: ''; position: absolute; inset: 4px 0 14px; border-inline: 2px solid rgba(255, 236, 180, 0.4); pointer-events: none; }
+      .race:hover { filter: brightness(1.18); transform: translateY(-3px); }
+      .race:active { transform: translateY(0); }
+      .race b { color: #fff4d2; font-size: 17px; letter-spacing: 0.06em; text-shadow: 0 2px 3px rgba(0, 0, 0, 0.7); }
+      .race .face { border: 2px solid #f2d38a; border-radius: 50%; background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.45)); width: 84px; max-width: 84px; aspect-ratio: 1; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55); }
+      .race .face img, .race .face > * { max-width: none; }
+      #join-row input { background: rgba(12, 10, 8, 0.7); color: var(--gold); border: 1px solid var(--rail); border-radius: 10px; }
+      #net-text.bad { color: #f09a9d; }
+      #howto-btn, #credits-btn { margin-top: 18px; }
+
+      /* Loading, with the map's picture and name. */
+      #loading { background: rgba(8, 10, 14, 0.82); backdrop-filter: blur(4px); }
+      .loadcard { display: grid; justify-items: center; gap: 8px; width: min(320px, 80vw); }
+      .loadcard .shot { width: 120px; aspect-ratio: 36 / 52; border: 2px solid var(--gold); border-radius: 10px; background: center / cover; box-shadow: 0 6px 22px rgba(0, 0, 0, 0.7); }
+      .loadcard p { margin: 0 0 4px; color: #cdbf9d; letter-spacing: 0.1em; }
+      .loadbar { width: 100%; height: 8px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--rail); box-sizing: border-box; }
+      .loadbar i { background: var(--gold-grad); }
+      @media (max-height: 560px) and (min-aspect-ratio: 1/1) { .loadcard { grid-template-columns: auto 1fr; text-align: left; justify-items: start; align-items: center; column-gap: 16px; width: 360px; }
+        .loadcard .shot { grid-row: 1 / 4; width: 70px; } .loadbar { grid-column: 2; } }
+
+      /* Menus over the match: the same glass as the title. */
+      #pause > .panel, #howto > .panel, #credits > .panel { border: 1px solid var(--rail); border-image: none; border-radius: 16px; background: linear-gradient(180deg, rgba(24, 20, 15, 0.9), rgba(12, 10, 8, 0.93));
+        box-shadow: inset 0 1px 0 rgba(255, 236, 180, 0.18), 0 12px 40px rgba(0, 0, 0, 0.6); filter: none; }
+      #howto li .pic { border-radius: 10px; background: var(--wood-grad); }
+
+      /* The in-match HUD: one family of glass chips with a gold hairline; the field shows through. */
+      #top { gap: 8px; align-items: center; }
+      #top .r, #pay, #status { background: var(--glass); border: 1px solid var(--rail); border-radius: 999px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); backdrop-filter: blur(3px); }
+      #top .r { padding: 3px 14px 3px 6px; font-size: 19px; }
+      #top .r::before { width: 26px; height: 26px; }
+      #pay { padding: 3px 12px; min-width: 52px; box-sizing: border-box; color: #cfe8b0; }
+      #pay-bar { height: 4px; background: rgba(0, 0, 0, 0.5); }
+      #pay-bar::after { background: linear-gradient(90deg, #8fc46a, #d7efb2); opacity: 1; }
+      #status { padding: 5px 14px; }
+      #status .bar { height: 9px; border-radius: 5px; background: rgba(0, 0, 0, 0.55); box-shadow: inset 0 0 0 1px rgba(255, 236, 180, 0.25); }
+      #status .bar::after { background: linear-gradient(180deg, color-mix(in srgb, var(--c, #6fd36f) 70%, #fff), var(--c, #6fd36f)); }
+      #st-clock { font-size: 17px; color: #fff0c8; } #st-units { font-size: 14px; }
+      #minimap .mm-box { border: 2px solid transparent; border-radius: 9px; background: linear-gradient(rgba(14, 19, 15, 0.45), rgba(14, 19, 15, 0.45)) padding-box, linear-gradient(180deg, #f2d38a, #8a6a35) border-box;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.55); }
+      #mm-toggle { background: var(--glass); border-radius: 7px 0 8px 0; color: var(--gold); }
+      #alert { display: flex; align-items: center; gap: 8px; padding: 6px 16px 6px 8px; border: 1px solid rgba(240, 130, 130, 0.8); border-radius: 999px; background: linear-gradient(180deg, rgba(92, 24, 26, 0.82), rgba(52, 14, 16, 0.82));
+        backdrop-filter: blur(3px); box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5); }
+      #alert::before { content: '!'; flex: none; width: 22px; height: 22px; border-radius: 50%; background: #d6453f; color: #fff; display: grid; place-items: center; font: 700 14px/1 var(--title); }
+      #alert[hidden] { display: none; }
+
+      /* The dock: a glass shelf, bronze tiles that light when you can afford them. */
+      #dock.panel { border: 1px solid var(--rail); border-image: none; border-radius: 14px; background: var(--glass); backdrop-filter: blur(4px); filter: none; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55); padding: 2px 6px 3px; }
+      #build .sec { border-color: rgba(242, 211, 138, 0.22); border-radius: 9px; background: rgba(0, 0, 0, 0.25); }
+      .tb.wbtn:not(.poor):not(.lock):not(.lane) { border-color: rgba(242, 211, 138, 0.8); }
+      .tb.poor { filter: brightness(0.72); } .tb.lock { filter: brightness(0.8); }
+      .tb em { text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+      .up { background: linear-gradient(180deg, #4b3a24, #2a1f12); }
+      .pips i { border-color: var(--gold-dim); } .pips i.on { background: var(--gold-grad); }
+
+      /* The card: parchment in a gold-railed frame, a framed portrait, a ribbon header, a clear primary button. */
+      #card.panel { border: 2px solid; border-color: #e2b45e #8a6a35 #6b5230 #b98631; border-image: none; border-radius: 14px; filter: none; padding: 8px 10px 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 244, 205, 0.35); }
+      #card header { padding-bottom: 6px; border-bottom: 1px solid rgba(107, 84, 52, 0.45); }
+      #card header .pic { border: 2px solid #8a6a35; border-radius: 10px; background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.28), rgba(51, 35, 15, 0.28)); box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.3); }
+      #card h3 { font-size: 18px; letter-spacing: 0.03em; }
+      #card .meter { height: 12px; } #card .meter::before { content: ''; position: absolute; inset: 0; border-radius: 7px; background: rgba(51, 35, 15, 0.14); box-shadow: inset 0 1px 2px rgba(51, 35, 15, 0.25); }
+      #card .meter i { background: linear-gradient(180deg, color-mix(in srgb, var(--c) 75%, #fff), var(--c)); }
+      #card .hp { height: 16px; border-radius: 8px; border: 1px solid rgba(51, 35, 15, 0.7); box-sizing: border-box; background: #2b2118; }
+      #card .hp i { background: linear-gradient(180deg, #8fe08f, #4fb04f); }
+      #card .load, #card .targets button { border-radius: 9px; background: rgba(51, 35, 15, 0.12); transition: background 0.12s, transform 0.08s; }
+      #card .load:active:not(:disabled), #card .targets button:active:not(:disabled) { transform: translateY(1px); }
+      #card .targets button.on { background: var(--gold-grad); color: #2e1c08; border-color: #8a6a35; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55); } #card .targets button.on small { color: #5a3d14; }
+      #card-act { background: var(--gold-grad); border: 1px solid #fff0b8; border-radius: 11px; color: #2e1c08; text-shadow: 0 1px 0 rgba(255, 244, 205, 0.6); filter: none;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), inset 0 -3px 6px rgba(120, 76, 14, 0.35), 0 3px 10px rgba(0, 0, 0, 0.5); transition: filter 0.12s, transform 0.08s; }
+      #card-act .times { color: #2e1c08; } #card-act i.w { color: #5b3510; } #card-act i.s { color: #2f3b47; } #card-act small { color: #7a1418; text-shadow: none; }
+      #card-act:hover:not(:disabled) { filter: brightness(1.08) saturate(1.1); }
+      #card-act:active:not(:disabled) { filter: brightness(0.93); transform: translateY(1px); }
+      #card-act:disabled { background: linear-gradient(180deg, #8a826f, #5f5948); border-color: rgba(255, 244, 205, 0.35); color: #2b2619; filter: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+      #card-act:disabled .times, #card-act:disabled i.w, #card-act:disabled i.s { color: #2b2619; }
+      #card.placing #card-act { color: #7a1418; }
+      #card-sell { background: linear-gradient(180deg, #6b2a2a, #3d1616); border: 1px solid rgba(240, 150, 150, 0.45); border-radius: 9px; filter: none; }
+      #card-sell:hover:not(:disabled) { filter: brightness(1.2); }
+      @media (hover: none) { #card-act:hover:not(:disabled), #card-sell:hover:not(:disabled) { filter: none; } #card .targets button.on:hover { background: var(--gold-grad); } }
+
+      /* The end: the paintings behind a ribbon, who fought and a few numbers. */
+      #end { background: radial-gradient(ellipse at center, rgba(8, 10, 14, 0.35), rgba(8, 10, 14, 0.8)), url('./ui/bg/victory.webp') center / cover; animation: fade-in 0.9s ease-out; }
+      #end.lose { background: radial-gradient(ellipse at center, rgba(8, 10, 14, 0.35), rgba(8, 10, 14, 0.85)), url('./ui/bg/defeat.webp') center / cover; }
+      #end.draw { background: radial-gradient(ellipse at center, rgba(8, 10, 14, 0.3), rgba(8, 10, 14, 0.85)), url('./ui/bg/title.webp') center / cover; }
+      .endcard { width: min(440px, 100%); box-sizing: border-box; padding: 0 18px 20px; border: 1px solid var(--rail); border-radius: 16px; background: linear-gradient(180deg, rgba(20, 17, 13, 0.82), rgba(10, 9, 8, 0.88)); backdrop-filter: blur(6px);
+        box-shadow: 0 14px 48px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 236, 180, 0.18); display: grid; gap: 10px; justify-items: center; }
+      .ribbon { margin: -16px -34px 0; padding: 8px 34px 10px; min-width: 60%; clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 50%, 100% 100%, 0 100%, 16px 50%);
+        background: linear-gradient(180deg, #d9a84c, #8f5f1e); box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5); }
+      #end.lose .ribbon { background: linear-gradient(180deg, #a83a36, #5c1618); } #end.draw .ribbon { background: linear-gradient(180deg, #8c93a0, #50565f); }
+      #end h1 { font-size: 34px; letter-spacing: 0.18em; text-transform: uppercase; color: #fff6d8; text-shadow: 0 2px 2px rgba(40, 20, 0, 0.8); }
+      #end-sub { margin: 0; font-size: 17px; color: #eadfc0; max-width: 34ch; }
+      .vs { display: flex; align-items: center; gap: 12px; font-family: var(--title); } .vs b { font-size: 17px; color: var(--gold); } .vs i { font: 600 13px var(--body); color: #b9ad8c; letter-spacing: 0.12em; text-transform: uppercase; }
+      .endstats { display: flex; gap: 8px; margin: 2px 0 6px; width: 100%; } .endstats div { flex: 1; padding: 8px 4px; border-radius: 10px; background: rgba(0, 0, 0, 0.32); border: 1px solid rgba(242, 211, 138, 0.25); }
+      .endstats dt { font: 600 11px var(--title); letter-spacing: 0.1em; text-transform: uppercase; color: #b9ad8c; } .endstats dd { margin: 3px 0 0; font: 700 19px var(--title); color: #fff0c8; }
+      #again { min-width: 180px; font-size: 15px; }
+      @media (max-height: 560px) { .endcard { gap: 6px; padding-bottom: 12px; } #end h1 { font-size: 26px; } #end-sub { font-size: 15px; } .endstats dd { font-size: 16px; } }
+
+      @media (max-height: 780px) { .tagline { display: none; } #menu .overlay h2, #menu h2 { margin: 10px 0 6px; } .race { padding: 12px 10px 20px; } .race .face { width: 74px; max-width: 74px; } #menu .races { margin-top: 8px; } #howto-btn, #credits-btn { margin-top: 12px; } }
+      /* Title on a small screen. */
+      @media (max-width: 760px), (max-height: 560px) {
+        #menu > div.panel { border-width: 1px; padding: 4px 6px 10px; }
+        h1.logo span { font-size: 30px; } h1.logo::before, h1.logo::after { flex-basis: 30px; }
+        .tagline { font-size: 11px; margin-bottom: 4px; }
+        .race { padding: 10px 4px 20px; } .race .face { width: 60px; max-width: 60px; } .race b { font-size: 14px; }
+        .map b { font-size: 10px; } .map .shot { border-width: 2px; }
+        #howto-btn, #credits-btn { margin-top: 10px; }
+      }
+      @media (max-height: 560px) and (min-aspect-ratio: 1/1) {
+        #menu > div.panel { width: min(860px, 100%); padding: 4px 8px 6px; }
+        h1.logo span { font-size: 24px; } .tagline { display: none; }
+        .race .face { width: 44px; max-width: 44px; } .race { padding: 8px 2px 18px; } .race b { font-size: 12px; }
+        .map { width: 56px; } .map b { display: none; }
+      }
     </style>
   </head>
   <body>
@@ -423,7 +600,8 @@
     </aside>
     <div class="overlay" id="menu">
       <div class="panel wood">
-        <h1>Towercraft</h1>
+        <h1 class="logo"><span>Towercraft</span></h1>
+        <p class="tagline">Two castles. One road. Hold it.</p>
         <div class="modes" id="modes" role="group" aria-label="How to play">
           <button class="plank on" data-mode="solo">Solo</button>
           <button class="plank" data-mode="host">Host</button>
@@ -487,7 +665,7 @@
       </div>
     </div>
     <div class="overlay" id="loading" hidden>
-      <div class="panel thin wood"><div class="loadbar"><i id="loading-bar"></i></div></div>
+      <div class="loadcard"><span class="shot" id="loading-shot"></span><h2 id="loading-name"></h2><p>Marching to the field</p><div class="loadbar"><i id="loading-bar"></i></div></div>
     </div>
     <div class="overlay" id="credits" hidden>
       <div class="panel wood">
@@ -495,15 +673,21 @@
         <p>
           Art from <a href="https://andrettin.github.io/" target="_blank" rel="noopener">Wyrmsun</a> (b_o, badbuckle, Jinn, Exidelo; units under
           <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC-BY-SA 3.0</a>, buildings CC0 except the Germanic workshop, CC-BY-SA 3.0), the Liberated Pixel Cup terrain
-          (adrix89 and others, CC-BY-SA 3.0) and Lamoot's RPG GUI kit (CC-BY 3.0). <a href="art/CREDITS.md" target="_blank" rel="noopener">Full credits</a>.
+          (adrix89 and others, CC-BY-SA 3.0) Lamoot's RPG GUI kit (CC-BY 3.0), the title and end-screen paintings by Jinn (Wyrmsun, CC0) and the fonts Cinzel and Crimson Text (SIL OFL). <a href="art/CREDITS.md" target="_blank" rel="noopener">Full credits</a>.
         </p>
         <button class="plank on" id="credits-x">Back</button>
       </div>
     </div>
     <div class="overlay" id="end" hidden>
-      <div class="panel wood">
-        <h1 id="end-title"></h1>
+      <div class="endcard">
+        <div class="ribbon"><h1 id="end-title"></h1></div>
         <p id="end-sub"></p>
+        <div class="vs"><b id="end-me"></b><i>against</i><b id="end-foe"></b></div>
+        <dl class="endstats">
+          <div><dt>Time played</dt><dd id="end-time"></dd></div>
+          <div><dt>Your castle</dt><dd id="end-hp-me"></dd></div>
+          <div><dt>Rival castle</dt><dd id="end-hp-foe"></dd></div>
+        </dl>
         <button class="plank on" id="again">Play again</button>
       </div>
     </div>
