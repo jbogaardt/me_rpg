@@ -1,0 +1,173 @@
+{
+  "music/menu-intro.ogg": {
+    "sources": [
+      {
+        "spec": "m:MenuTheme_Intro.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "stems cross-faded (1.6 s equal power), normalised to -17 LUFS integrated (peak <= -1 dBFS), stereo Ogg Vorbis 80k"
+  },
+  "music/menu-loop.ogg": {
+    "sources": [
+      {
+        "spec": "m:MenuTheme_C.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "stems cross-faded (1.6 s equal power), seam cross-faded for looping, normalised to -17 LUFS integrated (peak <= -1 dBFS), stereo Ogg Vorbis 80k"
+  },
+  "music/march.ogg": {
+    "sources": [
+      {
+        "spec": "m:GermanicTheme_A2.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      },
+      {
+        "spec": "m:GermanicTheme_B1.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      },
+      {
+        "spec": "m:GermanicTheme_B2.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "stems cross-faded (1.6 s equal power), seam cross-faded for looping, normalised to -17 LUFS integrated (peak <= -1 dBFS), stereo Ogg Vorbis 80k"
+  },
+  "music/glory.ogg": {
+    "sources": [
+      {
+        "spec": "m:GermanicTheme2_B1.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      },
+      {
+        "spec": "m:GermanicTheme2_B2.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "stems cross-faded (1.6 s equal power), seam cross-faded for looping, normalised to -17 LUFS integrated (peak <= -1 dBFS), stereo Ogg Vorbis 80k"
+  },
+  "music/siege.ogg": {
+    "sources": [
+      {
+        "spec": "m:GermanicTheme3_A1.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      },
+      {
+        "spec": "m:GermanicTheme3_B1.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      },
+      {
+        "spec": "m:GermanicTheme3_B2.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      },
+      {
+        "spec": "m:GermanicTheme3_A3.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "stems cross-faded (1.6 s equal power), seam cross-faded for looping, normalised to -17 LUFS integrated (peak <= -1 dBFS), stereo Ogg Vorbis 80k"
+  },
+  "music/stone.ogg": {
+    "sources": [
+      {
+        "spec": "m:DwarfTheme_A2.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      },
+      {
+        "spec": "m:DwarfTheme_B1.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "stems cross-faded (1.6 s equal power), seam cross-faded for looping, normalised to -17 LUFS integrated (peak <= -1 dBFS), stereo Ogg Vorbis 80k"
+  },
+  "music/deep.ogg": {
+    "sources": [
+      {
+        "spec": "m:DwarfTheme2_B1.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      },
+      {
+        "spec": "m:DwarfTheme2_R1.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "stems cross-faded (1.6 s equal power), seam cross-faded for looping, normalised to -17 LUFS integrated (peak <= -1 dBFS), stereo Ogg Vorbis 80k"
+  },
+  "sfx/win-1.ogg": {
+    "sources": [
+      {
+        "spec": "m:GermanicWin_Intro.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      },
+      {
+        "spec": "m:GermanicWin_A.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "excerpt, cross-faded, 2 s fade-out, normalised to -16.0 LUFS, stereo Ogg Vorbis 96k"
+  },
+  "sfx/lose-1.ogg": {
+    "sources": [
+      {
+        "spec": "m:GermanicLose_A.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "excerpt, cross-faded, 2 s fade-out, normalised to -17.0 LUFS, stereo Ogg Vorbis 96k"
+  }
+}

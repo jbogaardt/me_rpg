@@ -1,0 +1,251 @@
+{
+  "ambience/greenwood.ogg": {
+    "sources": [
+      {
+        "spec": "c:bb - Fans and Drones (Jul 2021)/Outside.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "w:misc/foraging/leaves_18.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "w:misc/foraging/leaves_16.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "w:misc/foraging/leaves_14.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "w:misc/foraging/leaves_11.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "w:neutral/crow/crow8.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "in the public domain) (https://archive.org/details/AmericanCrow)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:neutral/crow/crow9.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "in the public domain) (https://archive.org/details/AmericanCrow)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:neutral/crow/crow2.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "in the public domain) (https://archive.org/details/AmericanCrow)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:neutral/crow/crow1.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "in the public domain) (https://archive.org/details/AmericanCrow)",
+        "share_alike": false
+      }
+    ],
+    "processing": "filtered/looped beds with slow level drift, layered with randomly placed one-shots (seeded), 3 s tail-into-head loop cross-fade, normalised to -30 LUFS, mono Ogg Vorbis 48k"
+  },
+  "ambience/frostlands.ogg": {
+    "sources": [
+      {
+        "spec": "c:bb - Fans and Drones (Jul 2021)/Large Fan.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:bb - Fans and Drones (Jul 2021)/Outside.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "filtered/looped beds with slow level drift, layered with randomly placed one-shots (seeded), 3 s tail-into-head loop cross-fade, normalised to -30 LUFS, mono Ogg Vorbis 48k"
+  },
+  "ambience/desert.ogg": {
+    "sources": [
+      {
+        "spec": "c:bb - Fans and Drones (Jul 2021)/Outside.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:bb - Fans and Drones (Jul 2021)/Large Fan.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "w:neutral/crow/crow6.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "in the public domain) (https://archive.org/details/AmericanCrow)",
+        "share_alike": false
+      }
+    ],
+    "processing": "filtered/looped beds with slow level drift, layered with randomly placed one-shots (seeded), 3 s tail-into-head loop cross-fade, normalised to -30 LUFS, mono Ogg Vorbis 48k"
+  },
+  "ambience/mire.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-cc0-sfx-2/sfx100v2_loop_water_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-cc0-sfx-2/sfx100v2_loop_water_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-cc0-sfx-2/sfx100v2_loop_water_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:bb - Fans and Drones (Jul 2021)/Air Vent.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/bug_13.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-SFX/bug_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/bug_10.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-SFX/bug_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-SFX/bug_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/bug_08.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "filtered/looped beds with slow level drift, layered with randomly placed one-shots (seeded), 3 s tail-into-head loop cross-fade, normalised to -30 LUFS, mono Ogg Vorbis 48k"
+  },
+  "ambience/ember.ogg": {
+    "sources": [
+      {
+        "spec": "c:Maximiliano-Stradex-Ambient/Ambient_1.mp3",
+        "author": "Maximiliano Stradex (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:bb - Fans and Drones (Jul 2021)/Furnace Fan.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_fire_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_fire_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_fire_04.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_fire_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_fire_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-cc0-sfx-2/sfx100v2_thunder_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "filtered/looped beds with slow level drift, layered with randomly placed one-shots (seeded), 3 s tail-into-head loop cross-fade, normalised to -30 LUFS, mono Ogg Vorbis 48k"
+  }
+}

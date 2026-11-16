@@ -17,10 +17,14 @@ made from them, must credit the artists and be shared under CC-BY-SA 3.0 (or a c
   Wyrmsun as "GPL 2.0 and CC-BY-SA 3.0" and we take CC-BY-SA 3.0.
 - `germanic_town_hall.png` (the Germanic siege workshop): **Jinn** and **b_o**, "GPL 2.0 and CC-BY-SA 3.0", so it follows the share-alike
   terms (the other buildings below are CC0).
-- `maps/*.png`, drawn by `tools/towercraftBoard.ts` (`npm run towercraft:board`) with Me RPG's map pipeline from the "Tiled Terrains" LPC
-  terrain atlas by adrix89 and the Liberated Pixel Cup artists (full list: `art/lpc_terrain/Attribution.txt`, licence CC-BY-SA 3.0 or
-  GPL 3.0). They are adaptations of that atlas, so CC-BY-SA 3.0 too. The same pictures carry Me RPG's scenery: its trees, bushes and
-  rocks (LPC and OpenGameArt artists, credited in the root `CREDITS.md`, with the licences given there) and its lake tiles from the same atlas.
+- `maps/*.webp` and `maps/thumbs/*.png`, painted by `tools/towercraftGround.ts` (run by `npm run towercraft:board`), CC-BY-SA 3.0 overall.
+  Ground grain comes from Wyrmsun's plain terrain tiles (grass, snow, ice, dirt, desert_sand, dry_mud, mud, dry_grass, semi_dry_grass,
+  shallow_water; **Jinn** and **Exidelo**, CC0), kept in `tools/towercraftGround/` as 32 px cuts; they are recoloured, high-passed and
+  blended with noise, so only their fine grain remains. Small flat decor is cut from Wyrmsun's decorations (bones, small_rocks,
+  stalagmites, wyrm_skeleton, mushroom, log, fern_swamp; **b_o**, "GPL 2.0 and CC-BY-SA 3.0", taken as CC-BY-SA 3.0), recoloured by the
+  theme's grade. Everything else (road, water, lava, shadows, light, woods past the edge) is drawn in code. The woods, bushes and rocks on the
+  board are Me RPG's LPC art (credited in the root `CREDITS.md`), with baked shadows and light added; the old picture's LPC terrain atlas
+  (adrix89 and the Liberated Pixel Cup artists, CC-BY-SA 3.0) is no longer used for the ground.
 
 - `fx/arrow.png`, `fx/goblin_arrow.png`, `fx/ballista_bolt.png`, `fx/slime_glob.png`: missiles by **b_o** (Wyrmsun), "GPL 2.0 and CC-BY-SA 3.0", so
   CC-BY-SA 3.0 here. Copied unchanged by `tools/towercraftArt.ts`; the game turns them to their heading and scales them.

@@ -1,0 +1,47 @@
+{
+  "castle-1.ogg": {
+    "sources": [
+      {
+        "spec": "m:GermanicWin_Intro.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.7s, mono, normalised to -18 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "castle-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-SFX/bell_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/gong_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_musicjingles/Audio/Hit jingles/jingles_HIT05.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_musicjingles/Audio/Steel jingles/jingles_STEEL01.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.7s, mono, normalised to -18 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  }
+}

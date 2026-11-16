@@ -107,7 +107,7 @@ async function begin() {
   try {
     const { ctx, out } = output;
     if (goal.kind === 'battle') {
-      startAmbience(goal.theme);
+      void startAmbience(goal.theme);
       const list = PLAYLISTS[goal.theme];
       const track = BATTLE[list[rotation % list.length]!];
       const files = await decodeTrack(ctx, track);

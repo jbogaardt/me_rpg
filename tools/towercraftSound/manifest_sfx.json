@@ -1,0 +1,2551 @@
+{
+  "sword-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Slash.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "w:missiles/sword/swordhit_11.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/metalLatch.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "sword-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Slash.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "w:missiles/sword/swordhit_12b.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/metalLatch.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "sword-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Slash.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "w:missiles/sword/swordhit_15a.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/metalLatch.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "sword-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Slash.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "w:missiles/sword/swordhit_17a.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/metalLatch.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "axe-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 4.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/chop.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "w:missiles/shield_metal/shieldimpmetal_22.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "axe-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 4.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:missiles/shield_metal/shieldimpmetal_25.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "axe-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 4.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/hit_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:missiles/shield_metal/shieldimpmetal_26.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "axe-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 4.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-cc0-sfx-2/sfx100v2_wood_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:missiles/shield_metal/shieldimpmetal_212.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "spear-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 1.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Thunk 1.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -23 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "spear-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 2.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_hit_07.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Thunk 1.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -23 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "spear-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 4.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_hit_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Thunk 1.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -23 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "spear-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 6.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_wood_hit_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Thunk 1.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -23 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "dagger-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:kenney_rpgaudio/Audio/knifeSlice.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_hit_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.08s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "dagger-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:kenney_rpgaudio/Audio/knifeSlice2.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/hit_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.08s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "dagger-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Slash.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_hit_09.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.08s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "bow-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:bb - Novice Cello (Nov 2021)/A3 - Pluck 1.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 4.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "bow-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:bb - Novice Cello (Nov 2021)/A3 - Pluck 2.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 4.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "bow-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:bb - Novice Cello (Nov 2021)/D3 - Pluck 1.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 4.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "bow-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:bb - Novice Cello (Nov 2021)/D3 - Pluck 2.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 4.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "arrowhit-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_06.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Thunk 2.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.06s, mono, normalised to -27 LUFS (peak ceiling -9 dBFS), Ogg Vorbis q3"
+  },
+  "arrowhit-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Thunk 2.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.06s, mono, normalised to -27 LUFS (peak ceiling -9 dBFS), Ogg Vorbis q3"
+  },
+  "arrowhit-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_wood_hit_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Thunk 2.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.06s, mono, normalised to -27 LUFS (peak ceiling -9 dBFS), Ogg Vorbis q3"
+  },
+  "arrowhit-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_04.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Thunk 2.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.06s, mono, normalised to -27 LUFS (peak ceiling -9 dBFS), Ogg Vorbis q3"
+  },
+  "ballista-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:bb - Novice Cello (Nov 2021)/D3 - Pluck 2.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_slam_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Combo 1.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -20 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "ballista-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:bb - Novice Cello (Nov 2021)/A3 - Pluck 1.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_slam_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Combo 1.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -20 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "ballista-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:bb - Novice Cello (Nov 2021)/G2 - Pluck 1.wav",
+        "author": "Benjamin Burnes (Abstraction)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_slam_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Combo 1.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -20 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "gun-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/shot_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -18 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "gun-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/shot_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -18 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "gun-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/shot_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -18 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "gun-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-SFX/shot_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -18 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "cannon-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/cannon_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.35s, mono, normalised to -16 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "cannon-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/cannon_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.35s, mono, normalised to -16 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "cannon-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/cannon_04.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.35s, mono, normalised to -16 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "cannon-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/cannon_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.35s, mono, normalised to -16 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "catapult-1.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/onager_shooting.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/creak3.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -19 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "catapult-2.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/onager_shooting.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/creak3.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -19 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "catapult-3.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/onager_shooting.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/creak3.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -19 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "flame-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_fire_06.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.3s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "flame-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_fire_07.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.3s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "flame-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_fire_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.3s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "blast-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-SFX/explosion.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:25-CC0-bang-sfx/bang_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.5s, mono, normalised to -16 LUFS (peak ceiling -2 dBFS), Ogg Vorbis q3"
+  },
+  "blast-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/bang_06.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_rock_falling_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.5s, mono, normalised to -16 LUFS (peak ceiling -2 dBFS), Ogg Vorbis q3"
+  },
+  "blast-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/bang_09.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-cc0-sfx-2/sfx100v2_thunder_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.5s, mono, normalised to -16 LUFS (peak ceiling -2 dBFS), Ogg Vorbis q3"
+  },
+  "blast-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-SFX/explosion.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:25-CC0-bang-sfx/bang_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/stones_04.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.5s, mono, normalised to -16 LUFS (peak ceiling -2 dBFS), Ogg Vorbis q3"
+  },
+  "bat-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-SFX/bug_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 5.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -25 LUFS (peak ceiling -8 dBFS), Ogg Vorbis q3"
+  },
+  "bat-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/bug_07.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 5.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -25 LUFS (peak ceiling -8 dBFS), Ogg Vorbis q3"
+  },
+  "bat-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/bug_10.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 5.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -25 LUFS (peak ceiling -8 dBFS), Ogg Vorbis q3"
+  },
+  "bat-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/bug_12.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 5.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -25 LUFS (peak ceiling -8 dBFS), Ogg Vorbis q3"
+  },
+  "gryphon-1.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/crow/crow1.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "in the public domain) (https://archive.org/details/AmericanCrow)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 3.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "gryphon-2.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/crow/crow8.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "in the public domain) (https://archive.org/details/AmericanCrow)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 3.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "gryphon-3.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/crow/crow9.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "in the public domain) (https://archive.org/details/AmericanCrow)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 3.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "gryphon-4.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/crow/crow4.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "in the public domain) (https://archive.org/details/AmericanCrow)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 3.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "charge-1.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/horse/horse_attack1.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/stomp_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "charge-2.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/horse/horse_attack2.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/stomp_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "charge-3.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/horse/horse_attack3.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/stomp_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "spit-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-SFX/spit_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/slime_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "spit-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-SFX/spit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/slime_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "spit-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-SFX/spit_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/slime_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.12s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "hitwood-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_wood_breaking_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "hitwood-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_wood_breaking_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "hitwood-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_wood_breaking_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "hitwood-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_wood_breaking_04.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "hitstone-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_rock_hit_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -20 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "hitstone-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_rock_breaking_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -20 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "hitstone-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/item_stone_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -20 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "hitstone-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-cc0-sfx-2/sfx100v2_stones_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -20 LUFS (peak ceiling -4 dBFS), Ogg Vorbis q3"
+  },
+  "deathgoblin-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-SFX/hurt_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/cloth1.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -22 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "deathgoblin-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-SFX/hurt_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/cloth1.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -22 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "deathgoblin-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/die_04.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/cloth1.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -22 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "deathgoblin-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/creature_hurt_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/cloth1.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -22 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "deathdwarf-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/die_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/metal_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathdwarf-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/die_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/metal_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathdwarf-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/grunt_06.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/metal_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathdwarf-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/grunt_08.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/metal_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathhuman-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/human_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/dropLeather.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathhuman-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/human_07.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/dropLeather.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathhuman-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/human_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/dropLeather.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathhuman-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/human_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/dropLeather.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -21 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathbeast-1.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/horse/horse_death1.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -20 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathbeast-2.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/horse/horse_death2.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -20 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathbeast-3.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/horse/horse_death4.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -20 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathbeast-4.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/yale/yaledead.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "by the U.S. Fish and Wildlife Service, modified by b_o) (http://www.fws.gov/video/sound.htm) (in the public domain)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -20 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "deathflyer-1.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/bird/deadbird.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "by the U.S. Fish and Wildlife Service, modified by b_o) (http://www.fws.gov/video/sound.htm) (in the public domain)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 5.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -24 LUFS (peak ceiling -8 dBFS), Ogg Vorbis q3"
+  },
+  "deathflyer-2.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/crow/crow4.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "in the public domain) (https://archive.org/details/AmericanCrow)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 5.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -24 LUFS (peak ceiling -8 dBFS), Ogg Vorbis q3"
+  },
+  "deathflyer-3.ogg": {
+    "sources": [
+      {
+        "spec": "w:neutral/bird/deadbird2.wav",
+        "author": "US Fish and Wildlife Service / public domain",
+        "licence": "PD",
+        "note": "by the U.S. Fish and Wildlife Service, modified by b_o) (http://www.fws.gov/video/sound.htm) (in the public domain)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 6.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -24 LUFS (peak ceiling -8 dBFS), Ogg Vorbis q3"
+  },
+  "deathflyer-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/bug_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:Micro Pack - Organic Wooshes/Swish 6.wav",
+        "author": "Benjamin Burnes (Abstraction) and guest artists",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack _README.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -24 LUFS (peak ceiling -8 dBFS), Ogg Vorbis q3"
+  },
+  "build-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/hammer_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/hammer_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:misc/construction/con_wood_10.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -22 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "build-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/hammer_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/hammer_04.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:misc/construction/con_wood_10.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -22 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "build-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/hammer_04.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/hammer_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:misc/construction/con_wood_10.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -22 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "build-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hammer_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:misc/construction/con_stone_11.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hammer_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -22 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "build-5.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/hammer_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/tools_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "w:misc/construction/con_wood_13.wav",
+        "author": "Wildfire Games (0 A.D.)",
+        "licence": "CC-BY-SA-3.0",
+        "note": "http://www.wildfiregames.com/",
+        "share_alike": true
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -22 LUFS (peak ceiling -5 dBFS), Ogg Vorbis q3"
+  },
+  "razedSmall-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_breaking_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_wood_falling_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.35s, mono, normalised to -19 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "razedSmall-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_breaking_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_wood_falling_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.35s, mono, normalised to -19 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "razedSmall-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_falling_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_wood_breaking_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.35s, mono, normalised to -19 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "razedSmall-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_falling_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_wood_breaking_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.35s, mono, normalised to -19 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "razedLarge-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_rock_falling_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/stones_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:25-CC0-bang-sfx/bang_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.5s, mono, normalised to -17 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "razedLarge-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_rock_breaking_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/stones_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:25-CC0-bang-sfx/bang_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.5s, mono, normalised to -17 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "razedLarge-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_rock_falling_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/stones_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:25-CC0-bang-sfx/bang_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.5s, mono, normalised to -17 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "razedLarge-4.ogg": {
+    "sources": [
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_rock_breaking_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/stones_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:25-CC0-bang-sfx/bang_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.5s, mono, normalised to -17 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "fall-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/bang_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_rock_falling_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/stones_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_breaking_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/gong_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-cc0-sfx-2/sfx100v2_thunder_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 1.0s, mono, normalised to -14 LUFS (peak ceiling -1 dBFS), Ogg Vorbis q3"
+  },
+  "fall-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/bang_06.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_rock_falling_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/stones_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_breaking_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/gong_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-cc0-sfx-2/sfx100v2_thunder_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 1.0s, mono, normalised to -14 LUFS (peak ceiling -1 dBFS), Ogg Vorbis q3"
+  },
+  "fall-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:25-CC0-bang-sfx/cannon_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:75-cc0-breaking-falling-hit-sfx/bfh1_rock_falling_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/stones_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_breaking_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/gong_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-cc0-sfx-2/sfx100v2_thunder_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 1.0s, mono, normalised to -14 LUFS (peak ceiling -1 dBFS), Ogg Vorbis q3"
+  },
+  "upgrade-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/metal_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/bell_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.4s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "upgrade-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/metal_hit_04.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/bell_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.4s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "upgrade-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/metal_hit_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/bell_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-RPG-SFX/spell_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.4s, mono, normalised to -22 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "castle-1.ogg": {
+    "sources": [
+      {
+        "spec": "m:GermanicWin_Intro.ogg",
+        "author": "Marcelo Fernandez (marcelofernandezmusic.com)",
+        "licence": "CC-BY-4.0",
+        "note": "Creative Commons Attribution 4.0 International",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.7s, mono, normalised to -18 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "castle-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-SFX/bell_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/gong_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_musicjingles/Audio/Hit jingles/jingles_HIT05.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_musicjingles/Audio/Steel jingles/jingles_STEEL01.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.7s, mono, normalised to -18 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "bunker-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/chain_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/metalLatch.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/door_close_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "bunker-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/chain_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/metalLatch.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/door_close_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "bunker-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/chain_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:kenney_rpgaudio/Audio/metalLatch.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/door_close_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.15s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "alarm-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-SFX/bell_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/gong_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.8s, mono, normalised to -17 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "alarm-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-SFX/bell_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:100-CC0-SFX/gong_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.8s, mono, normalised to -17 LUFS (peak ceiling -3 dBFS), Ogg Vorbis q3"
+  },
+  "warn-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/stomp_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -24 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "warn-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_07.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      },
+      {
+        "spec": "c:80-CC0-creature-sfx-2/stomp_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -24 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "clock-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-SFX/bell_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.8s, mono, normalised to -24 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "clockLast-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-SFX/wooden_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -25 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "coin-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/item_coins_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -30 LUFS (peak ceiling -12 dBFS), Ogg Vorbis q3"
+  },
+  "coin-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/item_coins_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -30 LUFS (peak ceiling -12 dBFS), Ogg Vorbis q3"
+  },
+  "coin-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/item_coins_03.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.2s, mono, normalised to -30 LUFS (peak ceiling -12 dBFS), Ogg Vorbis q3"
+  },
+  "click-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_05.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.03s, mono, normalised to -27 LUFS (peak ceiling -9 dBFS), Ogg Vorbis q3"
+  },
+  "click-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_07.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.03s, mono, normalised to -27 LUFS (peak ceiling -9 dBFS), Ogg Vorbis q3"
+  },
+  "click-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_09.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.03s, mono, normalised to -27 LUFS (peak ceiling -9 dBFS), Ogg Vorbis q3"
+  },
+  "tick-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/wood_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.02s, mono, normalised to -31 LUFS (peak ceiling -12 dBFS), Ogg Vorbis q3"
+  },
+  "tick-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-RPG-SFX/wood_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.02s, mono, normalised to -31 LUFS (peak ceiling -12 dBFS), Ogg Vorbis q3"
+  },
+  "refuse-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:80-CC0-creature-sfx-2/stomp_01.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "refuse-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:100-CC0-wood-metal-SFX/wood_hit_02.ogg",
+        "author": "rubberduck (attribution to confirm)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0 (collection LICENSE; author not named in the collection)",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.1s, mono, normalised to -24 LUFS (peak ceiling -7 dBFS), Ogg Vorbis q3"
+  },
+  "confirm-1.ogg": {
+    "sources": [
+      {
+        "spec": "c:kenney_musicjingles/Audio/Pizzicato jingles/jingles_PIZZI00.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -23 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "confirm-2.ogg": {
+    "sources": [
+      {
+        "spec": "c:kenney_musicjingles/Audio/Pizzicato jingles/jingles_PIZZI05.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -23 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  },
+  "confirm-3.ogg": {
+    "sources": [
+      {
+        "spec": "c:kenney_musicjingles/Audio/Pizzicato jingles/jingles_PIZZI04.ogg",
+        "author": "Kenney (kenney.nl)",
+        "licence": "CC0-1.0",
+        "note": "CC0 1.0, per the pack License.txt",
+        "share_alike": false
+      }
+    ],
+    "processing": "layers trimmed, pitch/EQ per recipe, mixed, tail fade 0.25s, mono, normalised to -23 LUFS (peak ceiling -6 dBFS), Ogg Vorbis q3"
+  }
+}

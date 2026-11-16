@@ -389,7 +389,7 @@ const LOOKS: Record<string, Look> = {
     patches: [
       { mat: m([70, 112, 52], 'grass', 0.07), scale: 420, at: 0.56, soft: 0.07, seed: 3 },
       { mat: m([126, 152, 64], 'semi_dry_grass', 0.06), scale: 300, at: 0.6, soft: 0.07, seed: 5 },
-      { mat: m([138, 110, 72], 'dirt', 0.07), scale: 340, at: 0.66, soft: 0.05, seed: 9, rim: 3 },
+      { mat: m([134, 112, 72], 'dirt', 0.07), scale: 340, at: 0.7, soft: 0.06, seed: 9, rim: 3 },
     ],
     road: {
       rgb: [158, 128, 88],
