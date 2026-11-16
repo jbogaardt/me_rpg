@@ -88,8 +88,8 @@ class Grid {
     const [fx, fy] = [gx - i, gy - j];
     const o = j * this.gw + i;
     const d = this.data;
-    const top = d[o]! + (d[o + 1]! - d[o]!) * fx;
-    const bot = d[o + this.gw]! + (d[o + this.gw + 1]! - d[o + this.gw]!) * fx;
+    const top = d[o] + (d[o + 1] - d[o]) * fx;
+    const bot = d[o + this.gw] + (d[o + this.gw + 1] - d[o + this.gw]) * fx;
     return top + (bot - top) * fy;
   }
 }
@@ -105,18 +105,18 @@ function blur(a: Float32Array, w: number, h: number, r: number, passes = 3): voi
       tmp[k] = sum / win;
       sum += get(Math.min(n - 1, k + r + 1)) - get(Math.max(0, k - r));
     }
-    for (let k = 0; k < n; k++) set(k, tmp[k]!);
+    for (let k = 0; k < n; k++) set(k, tmp[k]);
   };
   for (let p = 0; p < passes; p++) {
     for (let y = 0; y < h; y++)
       run(
-        (k) => a[y * w + k]!,
+        (k) => a[y * w + k],
         (k, v) => void (a[y * w + k] = v),
         w,
       );
     for (let x = 0; x < w; x++)
       run(
-        (k) => a[k * w + x]!,
+        (k) => a[k * w + x],
         (k, v) => void (a[k * w + x] = v),
         h,
       );
@@ -134,7 +134,7 @@ class Grain {
     const img = readPng(path.join(GROUND_SRC, `${file}.png`));
     const lum = new Float32Array(32 * 32);
     for (let i = 0; i < 1024; i++)
-      lum[i] = 0.3 * img.data[i * 4]! + 0.59 * img.data[i * 4 + 1]! + 0.11 * img.data[i * 4 + 2]!;
+      lum[i] = 0.3 * img.data[i * 4] + 0.59 * img.data[i * 4 + 1] + 0.11 * img.data[i * 4 + 2];
     const soft = new Float32Array(1024);
     for (let y = 0; y < 32; y++)
       for (let x = 0; x < 32; x++) {
@@ -142,7 +142,7 @@ class Grain {
         for (let dy = -1; dy <= 1; dy++)
           for (let dx = -1; dx <= 1; dx++)
             s +=
-              lum[((y + dy + 32) & 31) * 32 + ((x + dx + 32) & 31)]! *
+              lum[((y + dy + 32) & 31) * 32 + ((x + dx + 32) & 31)] *
               (dx === 0 && dy === 0 ? 4 : dx === 0 || dy === 0 ? 2 : 1);
         soft[y * 32 + x] = s / 16;
       }
@@ -152,12 +152,12 @@ class Grain {
     let varr = 0;
     for (const v of soft) varr += (v - mean) ** 2;
     const sd = Math.sqrt(varr / 1024) || 1;
-    for (let i = 0; i < 1024; i++) this.px[i] = (soft[i]! - mean) / sd;
+    for (let i = 0; i < 1024; i++) this.px[i] = (soft[i] - mean) / sd;
   }
   private bil(u: number, v: number): number {
     const [x0, y0] = [Math.floor(u), Math.floor(v)];
     const [fx, fy] = [u - x0, v - y0];
-    const g = (x: number, y: number) => this.px[(y & 31) * 32 + (x & 31)]!;
+    const g = (x: number, y: number) => this.px[(y & 31) * 32 + (x & 31)];
     const a = g(x0, y0) + (g(x0 + 1, y0) - g(x0, y0)) * fx;
     const b = g(x0, y0 + 1) + (g(x0 + 1, y0 + 1) - g(x0, y0 + 1)) * fx;
     return a + (b - a) * fy;
@@ -204,17 +204,17 @@ function decor(name: string, k = 1): Image {
             const sx = Math.min(src.width - 1, Math.max(0, x0 + dx));
             const sy = Math.min(src.height - 1, Math.max(0, y0 + dy));
             const i = (sy * src.width + sx) * 4;
-            const al = src.data[i + 3]! / 255;
-            acc[0]! += src.data[i]! * al * wgt;
-            acc[1]! += src.data[i + 1]! * al * wgt;
-            acc[2]! += src.data[i + 2]! * al * wgt;
-            acc[3]! += al * wgt;
+            const al = src.data[i + 3] / 255;
+            acc[0] += src.data[i] * al * wgt;
+            acc[1] += src.data[i + 1] * al * wgt;
+            acc[2] += src.data[i + 2] * al * wgt;
+            acc[3] += al * wgt;
           }
           const o = (y * w + x) * 4;
-          const al = acc[3]!;
-          img.data[o] = al ? Math.round(acc[0]! / al) : 0;
-          img.data[o + 1] = al ? Math.round(acc[1]! / al) : 0;
-          img.data[o + 2] = al ? Math.round(acc[2]! / al) : 0;
+          const al = acc[3];
+          img.data[o] = al ? Math.round(acc[0] / al) : 0;
+          img.data[o + 1] = al ? Math.round(acc[1] / al) : 0;
+          img.data[o + 2] = al ? Math.round(acc[2] / al) : 0;
           img.data[o + 3] = Math.round(al * 255);
         }
     }
@@ -298,9 +298,9 @@ function put(c: Ctx, x: number, y: number, col: RGB, a: number): void {
   if (a <= 0 || x < 0 || y < 0 || x >= c.W || y >= c.H) return;
   const i = (y * c.W + x) * 3;
   const d = c.rgb;
-  d[i] = d[i]! + (col[0] - d[i]!) * a;
-  d[i + 1] = d[i + 1]! + (col[1] - d[i + 1]!) * a;
-  d[i + 2] = d[i + 2]! + (col[2] - d[i + 2]!) * a;
+  d[i] = d[i] + (col[0] - d[i]) * a;
+  d[i + 1] = d[i + 1] + (col[1] - d[i + 1]) * a;
+  d[i + 2] = d[i + 2] + (col[2] - d[i + 2]) * a;
 }
 /** A soft round dab (radius in px, anti-aliased edge). */
 function dab(c: Ctx, cx: number, cy: number, r: number, col: RGB, a: number, ry = r): void {
@@ -371,10 +371,10 @@ function stamp(c: Ctx, name: string, cx: number, cy: number, k: number, flip = f
       for (let x = 0; x < img.width; x++) {
         const sx = flip ? img.width - 1 - x : x;
         const i = (y * img.width + sx) * 4;
-        const al = img.data[i + 3]! / 255;
+        const al = img.data[i + 3] / 255;
         if (al < 0.05) continue;
         if (pass === 0) put(c, ox + x + 3, oy + y + 4, [0, 0, 0], al * shadowA);
-        else put(c, ox + x, oy + y, [img.data[i]!, img.data[i + 1]!, img.data[i + 2]!], al * a);
+        else put(c, ox + x, oy + y, [img.data[i], img.data[i + 1], img.data[i + 2]], al * a);
       }
 }
 
@@ -417,7 +417,7 @@ const LOOKS: Record<string, Look> = {
         [160, 150, 226],
       ];
       scatter(c, 90, offRoad(c, 1.6), (x, y) => {
-        const hue = hues[Math.floor(c.rnd() * hues.length)]!;
+        const hue = hues[Math.floor(c.rnd() * hues.length)];
         for (let k = 0; k < 6 + c.rnd() * 8; k++) {
           const [fx, fy] = [x + (c.rnd() - 0.5) * 34, y + (c.rnd() - 0.5) * 26];
           if (!offRoad(c, 1.4)(fx, fy)) continue;
@@ -760,8 +760,6 @@ export function paintField(inp: FieldInput): Image {
     return { edge: d2 - d1, id };
   };
 
-  const P = (x: number, y: number) => x; // (kept for symmetry with the sampling helpers)
-  void P;
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const o = (y * W + x) * 3;
@@ -773,8 +771,8 @@ export function paintField(inp: FieldInput): Image {
       let rim = 0;
       let grainNow = gb;
       for (let k = 0; k < look.patches.length; k++) {
-        const p = look.patches[k]!;
-        const nv = patchGrids[k]!.at(x, y);
+        const p = look.patches[k];
+        const nv = patchGrids[k].at(x, y);
         let s = smooth(p.at - p.soft, p.at + p.soft, nv);
         if (p.rim && s > 0) s *= smooth(p.rim - 1, p.rim + 1, roadDist.at(x, y));
         if (s > 0.002) {
@@ -782,7 +780,7 @@ export function paintField(inp: FieldInput): Image {
           r = mix(r, p.mat.rgb[0], s);
           g = mix(g, p.mat.rgb[1], s);
           b = mix(b, p.mat.rgb[2], s);
-          grainNow = mix(grainNow, patchGrains[k]!.at(x, y) * p.mat.amp, s);
+          grainNow = mix(grainNow, patchGrains[k].at(x, y) * p.mat.amp, s);
         }
       }
       // large soft variation of brightness and warmth: no flat colour anywhere
@@ -806,7 +804,7 @@ export function paintField(inp: FieldInput): Image {
       }
       const ra = roadAt(x, y);
       if (ra > 0.002) {
-        let k = 1 + roadGrain.at(x, y) * 0.05 + (tn - 0.5) * 0.22;
+        const k = 1 + roadGrain.at(x, y) * 0.05 + (tn - 0.5) * 0.22;
         // worn centre, ruts at both sides of it, patches of cobble
         const rut = Math.exp(-(((rd - 0.5) / 0.1) ** 2)) * smooth(0.3, 0.6, fbm(x / 70, y / 70, seed + 41, 2));
         const centre = smooth(0.7, 0.0, rd);
@@ -932,7 +930,7 @@ export function paintField(inp: FieldInput): Image {
   void scale; // objects are cut on the 32 px grid, as the pictures are
   const shadow = new Float32Array(W * H);
   const ao = new Float32Array(W * H);
-  const sprOf = (o: (typeof objs)[number]) => sheet(inp.data.sheets[o.s]!);
+  const sprOf = (o: (typeof objs)[number]) => sheet(inp.data.sheets[o.s]);
   const drawShadow = (img: Image, o: (typeof objs)[number], ox: number, oy: number, flip: boolean) => {
     const tall = Math.min(1.4, o.h / 96);
     const [dx, dy] = [Math.round(o.h * 0.2), Math.round(o.h * 0.12)];
@@ -952,24 +950,24 @@ export function paintField(inp: FieldInput): Image {
       for (let x = Math.floor(fx - rx - 2); x <= Math.ceil(fx + rx + 2); x++) {
         if (x < 0 || y < 0 || x >= W || y >= H) continue;
         const d = Math.hypot((x - fx) / rx, (y - fy) / ry);
-        if (d < 1.15) ao[y * W + x] = Math.max(ao[y * W + x]!, clamp01(1.15 - d) * 0.9);
+        if (d < 1.15) ao[y * W + x] = Math.max(ao[y * W + x], clamp01(1.15 - d) * 0.9);
       }
   };
   const flips = objs.map((_, i) => hash(i, 3, seed) < 0.5);
   objs.forEach((o, i) => {
     const img = sprOf(o);
-    drawShadow(img, o, o.px + B, o.py + B, flips[i]!);
+    drawShadow(img, o, o.px + B, o.py + B, flips[i]);
   });
   blur(shadow, W, H, 4, 2);
   blur(ao, W, H, 3, 2);
   const sh = look.shadow;
   for (let i = 0; i < W * H; i++) {
-    const s = clamp01(shadow[i]! * 1.25) * look.shadowK + clamp01(ao[i]!) * 0.38;
+    const s = clamp01(shadow[i] * 1.25) * look.shadowK + clamp01(ao[i]) * 0.38;
     if (s <= 0.002) continue;
     const k = Math.min(0.9, s);
-    rgb[i * 3] = rgb[i * 3]! * (1 - k + k * sh[0]);
-    rgb[i * 3 + 1] = rgb[i * 3 + 1]! * (1 - k + k * sh[1]);
-    rgb[i * 3 + 2] = rgb[i * 3 + 2]! * (1 - k + k * sh[2]);
+    rgb[i * 3] = rgb[i * 3] * (1 - k + k * sh[0]);
+    rgb[i * 3 + 1] = rgb[i * 3 + 1] * (1 - k + k * sh[1]);
+    rgb[i * 3 + 2] = rgb[i * 3 + 2] * (1 - k + k * sh[2]);
   }
 
   // The woods past the board's edge: a dark canopy underlay, then the board's own trees again, thicker. Cosmetic only.
@@ -988,12 +986,12 @@ export function paintField(inp: FieldInput): Image {
         const side = (flip ? 1 - x / o.w : x / o.w) - 0.5;
         const k = 1 + look.lift * (0.55 - t) * 1.6 - side * 0.1;
         const i = (py * W + px) * 3;
-        rgb[i] = Math.min(255, img.data[si]! * k);
-        rgb[i + 1] = Math.min(255, img.data[si + 1]! * k);
-        rgb[i + 2] = Math.min(255, img.data[si + 2]! * k);
+        rgb[i] = Math.min(255, img.data[si] * k);
+        rgb[i + 1] = Math.min(255, img.data[si + 1] * k);
+        rgb[i + 2] = Math.min(255, img.data[si + 2] * k);
       }
   };
-  objs.forEach((o, i) => lightSprite(sprOf(o), o, o.px + B, o.py + B, flips[i]!));
+  objs.forEach((o, i) => lightSprite(sprOf(o), o, o.px + B, o.py + B, flips[i]));
 
   // --- Grade, vignette, the dark beyond ---------------------------------------------------------------------------------
   const bg = FIELD_BG[inp.id] ?? 0x101010;
@@ -1006,9 +1004,9 @@ export function paintField(inp: FieldInput): Image {
       const bx = x - B;
       const i = (y * W + x) * 3;
       let [r, g, b]: [number, number, number] = [
-        rgb[i]! * look.tint[0],
-        rgb[i + 1]! * look.tint[1],
-        rgb[i + 2]! * look.tint[2],
+        rgb[i] * look.tint[0],
+        rgb[i + 1] * look.tint[1],
+        rgb[i + 2] * look.tint[2],
       ];
       const l = 0.3 * r + 0.59 * g + 0.11 * b;
       r = l + (r - l) * look.sat;
@@ -1079,13 +1077,13 @@ function paintBorder(c: Ctx, objs: MapData['objects'], data: MapData, flips: boo
       const [jx, jy] = [x + (rnd() - 0.5) * gap * 1.2, y + (rnd() - 0.5) * gap * 1.2];
       const d = dist(jx, jy);
       if (d < 18 || jx < -20 || jy < -20 || jx > W + 20 || jy > H + 80) continue;
-      placed.push({ x: jx, y: jy, e: trees[Math.floor(rnd() * trees.length)]! });
+      placed.push({ x: jx, y: jy, e: trees[Math.floor(rnd() * trees.length)] });
     }
   placed.sort((a, b) => a.y - b.y);
   for (const p of placed) {
     const o = p.e.o;
-    const img = sheet(data.sheets[o.s]!);
-    const flip = flips[p.e.i]! !== rnd() < 0.5;
+    const img = sheet(data.sheets[o.s]);
+    const flip = flips[p.e.i] !== rnd() < 0.5;
     const ox = Math.round(p.x - o.w / 2);
     const oy = Math.round(p.y - o.h);
     const depth = clamp01(dist(p.x, p.y) / (B + 20));
@@ -1101,9 +1099,9 @@ function paintBorder(c: Ctx, objs: MapData['objects'], data: MapData, flips: boo
         const t = y / o.h;
         const k = (1 + look.lift * (0.55 - t) * 1.6) * dim;
         const i = (py * W + px) * 3;
-        c.rgb[i] = Math.min(255, img.data[si]! * k);
-        c.rgb[i + 1] = Math.min(255, img.data[si + 1]! * k);
-        c.rgb[i + 2] = Math.min(255, img.data[si + 2]! * k);
+        c.rgb[i] = Math.min(255, img.data[si] * k);
+        c.rgb[i + 1] = Math.min(255, img.data[si + 1] * k);
+        c.rgb[i + 2] = Math.min(255, img.data[si + 2] * k);
       }
   }
 }
@@ -1112,7 +1110,7 @@ function paintBorder(c: Ctx, objs: MapData['objects'], data: MapData, flips: boo
 export async function writeField(file: string, img: Image, quality = 52): Promise<void> {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   try {
-    const sharp = (await import('sharp' as string)).default as (
+    const sharp = (await import('sharp')).default as (
       input: Buffer,
       opts: { raw: { width: number; height: number; channels: 4 } },
     ) => { webp(o: object): { toFile(f: string): Promise<unknown> } };
