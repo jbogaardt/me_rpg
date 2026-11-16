@@ -465,11 +465,11 @@ const LOOKS: Record<string, Look> = {
     },
   },
   desert: {
-    base: m([216, 184, 122], 'desert_sand', 0.06),
+    base: m([206, 170, 108], 'desert_sand', 0.06),
     patches: [
-      { mat: m([236, 208, 150], 'desert_sand', 0.05), scale: 460, at: 0.55, soft: 0.1, seed: 3 },
-      { mat: m([178, 130, 84], 'dry_mud', 0.07), scale: 340, at: 0.62, soft: 0.05, seed: 5, rim: 3 },
-      { mat: m([164, 150, 80], 'dry_grass', 0.06), scale: 300, at: 0.66, soft: 0.06, seed: 9, rim: 3 },
+      { mat: m([224, 192, 130], 'desert_sand', 0.05), scale: 460, at: 0.55, soft: 0.12, seed: 3 },
+      { mat: m([184, 138, 90], 'dry_mud', 0.07), scale: 340, at: 0.66, soft: 0.07, seed: 5, rim: 3 },
+      { mat: m([176, 156, 90], 'dry_grass', 0.06), scale: 300, at: 0.72, soft: 0.07, seed: 9, rim: 3 },
     ],
     road: {
       rgb: [158, 108, 70],
@@ -596,7 +596,7 @@ const LOOKS: Record<string, Look> = {
         stamp(c, `bones_${Math.floor(c.rnd() * 4)}`, x, y, 1.1, c.rnd() < 0.5, 0.9, 0.2),
       );
       // Lava cracks: glowing seams that branch and thin out, with a faint glow round them (ground only: nothing blocks).
-      scatter(c, 26, offRoad(c, 3.2), (x, y) => {
+      scatter(c, 7, offRoad(c, 3.2), (x, y) => {
         let [px, py] = [x, y];
         let ang = c.rnd() * 6.28;
         const segs = 8 + Math.floor(c.rnd() * 8);
