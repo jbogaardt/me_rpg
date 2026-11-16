@@ -14,12 +14,13 @@ import {
   Rectangle,
   Sprite,
   Text,
+  TilingSprite,
   Texture,
   TextureStyle,
 } from 'pixi.js';
 import { FIELD_BG, FIELD_BORDER, FIELD_PX } from './fieldArt';
 import { icon } from './icons';
-import { isMuted, playCues, setMuted, unlockAudio } from './audio';
+import { audioStats, isMuted, playCues, setMuted, unlockAudio } from './audio';
 import { backToTitle, stopMusic } from './music';
 import { startMatchAudio } from './matchAudio';
 import { say } from './voice';
@@ -33,9 +34,10 @@ import { recolorTeam, seatColor } from './teamColor';
 import { DIFFICULTIES, applyDifficulty, createAi, type Ai, type Difficulty } from './sim/ai';
 import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
 import { Wreck } from './wreck';
-import { BattleFx, softEllipse } from './fx';
+import { BattleFx, softEllipse, softRing } from './fx';
 import { loadFxArt, type FxArt } from './fxArt';
 import { enlarge2x } from './crisp';
+import { grainAlpha, grainTexture } from './grain';
 import { HurtTracker, mixColor, readableScale } from './hurt';
 import { Hud } from './statusBar';
 import { normalizeCode } from '../../src/net/roomCode';
@@ -180,12 +182,27 @@ const FOG_RES = 8;
 /** How fast (cells a second) a pool of sight grows when a tower goes up and shrinks when it falls: about half a second for a tower. */
 const FOG_SPEED = 14;
 /** Fog colour (a warm dark), how much it dims, and how much of the dark lifts over ground that was once yours to build on. */
-const FOG_COLOR = 'rgba(14, 17, 30, 0.78)';
+const FOG_ALPHA = 0.52;
+/** How many cells inside and outside a pool's radius the fog fades over. */
+const FOG_EDGE_IN = 1.8;
+const FOG_EDGE_OUT = 1.6;
+/** The dusk of a map: its edge colour lifted toward a cool blue, so it reads as shade on snow and does not black out dark ground. */
+const fogColorOf = (id: string) => {
+  const bg = FIELD_BG[id] ?? 0x0e1117;
+  const mix = (shift: number, blue: number) => Math.round(((bg >> shift) & 255) * 0.45 + blue * 0.55);
+  return `rgba(${mix(16, 30)}, ${mix(8, 38)}, ${mix(0, 66)}, ${FOG_ALPHA})`;
+};
 const FOG_MEMORY = 0.3;
 /** How strong the cool wash is over ground your units see (not build ground), however many of them overlap. */
 const FOG_WASH = 0.09;
 
-const ZOOM_MAX = 2.6;
+/**
+ * The most the field is enlarged: the unit sheets are small pixel pictures (72 px a frame, drawn 2 to 3.5 times), so a sprite shows
+ * at most about 2.5 to 3 screen pixels per sheet pixel on a 1x screen, a little more on a dense screen where a pixel is smaller.
+ */
+const ZOOM_MAX = Math.min(1.5, 1 + 0.25 * (Math.min(window.devicePixelRatio || 1, 3) - 1));
+/** Where the camera rests on your castle: a step under the most it can zoom, so units are drawn crisp and whole. */
+const ZOOM_HOME = ZOOM_MAX * 0.88;
 /** The smallest a cell is drawn while a finger places a tower (px), so the drag lands where it looks. */
 const PLACE_CELL_PX = 30;
 const TAP_SLOP = 8; // px a finger may move and still be a tap
@@ -326,6 +343,7 @@ void (async () => {
   // --- The scene -----------------------------------------------------------------------------------------------------
   const world = new Container();
   const field = new Sprite();
+  const grain = new TilingSprite({ texture: grainTexture(), width: 1, height: 1 }); // faint ground texture for close views
   // The fog: a canvas of shade (dark where nothing of yours sees, soft round pools cut out for every castle, tower and unit)
   // and one of tint (a cool wash where only a tower, the castle or a unit sees but you may not build), scaled up smoothly.
   const makeFogLayer = (cols: number, rows: number) => {
@@ -352,11 +370,23 @@ void (async () => {
   ghostSprite.anchor.set(0.5, 0.78);
   ghostSprite.alpha = 0.6;
   ghostSprite.visible = false;
-  world.addChild(field, fogLayer, areaLayer, corpseLayer, sortLayer, live, floatLayer, ghostSprite);
+  world.addChild(field, grain, fogLayer, areaLayer, corpseLayer, sortLayer, live, floatLayer, ghostSprite);
   app.stage.addChild(world);
   // Dev only: a handle for playtest scripts (fast-forward with `advance`, stop the ticker, read the match).
   if (import.meta.env.DEV)
-    Object.assign(window, { __tc: { app, world, advance: () => advance(), match: () => match, fx: () => fx } });
+    Object.assign(window, {
+      __tc: {
+        app,
+        world,
+        advance: () => advance(),
+        match: () => match,
+        fx: () => fx,
+        focus,
+        home: () => home(),
+        zoomMax: () => ZOOM_MAX,
+        audio: audioStats,
+      },
+    });
 
   let chosenMap: BoardId = 'frostlands'; // the menu's first pick: a meandering map (the sim's own default is the classic road)
   try {
@@ -397,6 +427,9 @@ void (async () => {
     field.position.set(-pad, -pad);
     field.width = cols * CELL + 2 * pad;
     field.height = rows * CELL + 2 * pad;
+    grain.position.copyFrom(field.position);
+    grain.width = field.width;
+    grain.height = field.height;
     app.renderer.background.color = FIELD_BG[id] ?? 0x0e1117;
     fogLayer.removeChildren();
     shade.sprite.destroy(true);
@@ -489,7 +522,8 @@ void (async () => {
     world.scale.set(z);
     const w = boardW() * z;
     const h = boardH() * z;
-    const slack = 40; // a little of the dark may show past an edge
+    // The picture reaches past the board (its woods), so the camera may too: a castle at an edge shows whole.
+    const slack = Math.max(40, (FIELD_BORDER * CELL * z) / FIELD_PX - 8);
     world.x =
       w <= window.innerWidth
         ? (window.innerWidth - w) / 2
@@ -514,7 +548,14 @@ void (async () => {
     world.y = topBar() + viewH() / 2 - cy * CELL * zoom;
     clampCamera();
   }
-  const home = () => focus(castleAt(YOU)[0] + 4, castleAt(YOU)[1] + 5, Math.max(minZoom(), Math.min(1.1, ZOOM_MAX)));
+  /** Back to your castle: zoomed a little in on a tall screen (less on a short one), the castle whole under the status strip with the road ahead of it. */
+  const home = () => {
+    const z = Math.max(minZoom(), ZOOM_HOME * Math.min(1, Math.max(0.7, viewH() / 600)));
+    const [cx, cy] = castleAt(YOU);
+    const foot = Math.min(62 + 170 * z, viewH() * 0.78); // where the castle's feet should land on screen, from the top of the field
+    const side = Math.min(3.5, window.innerWidth / (CELL * z) / 2 - 2.6); // the castle's width stays on a narrow screen
+    focus(cx + side, cy + (viewH() / 2 - foot) / (CELL * z), z);
+  };
   window.addEventListener('resize', clampCamera);
 
   const cellAt = (sx: number, sy: number): [number, number] | undefined => {
@@ -1074,7 +1115,7 @@ void (async () => {
   /** A building's half-wrecked second frame (for its fall), by its container. */
   const altOf = new WeakMap<Container, Texture | undefined>();
   /** Buildings that went up after the start, rising for `RISE_TIME` seconds (cosmetic: the rules count them as built at once). */
-  const rising = new Map<number, { age: number; dust: number }>();
+  const rising = new Map<number, { age: number; dust: number; mask?: Graphics; fin?: Sprite }>();
   const unitSprites = new Map<number, Container>();
   const sync = <T extends { id: number }>(
     sprites: Map<number, Container>,
@@ -1330,17 +1371,17 @@ void (async () => {
     const shadow = new Sprite(softEllipse());
     shadow.anchor.set(0.5);
     shadow.tint = 0x000000;
-    shadow.alpha = faint ? 0.2 : 0.44;
-    shadow.width = rx * 2.8;
-    shadow.height = ry * 3;
-    shadow.position.set(rx * 0.12, ry * 0.3);
-    const pool = new Sprite(softEllipse());
-    pool.anchor.set(0.5);
-    pool.tint = color;
-    pool.alpha = faint ? 0.26 : 0.46;
-    pool.width = rx * 2;
-    pool.height = ry * 2;
-    c.addChild(shadow, pool);
+    shadow.alpha = faint ? 0.1 : 0.26;
+    shadow.width = rx * 2.5;
+    shadow.height = ry * 2.5;
+    shadow.position.set(rx * 0.1, ry * 0.3);
+    const ring = new Sprite(softRing());
+    ring.anchor.set(0.5);
+    ring.tint = color;
+    ring.alpha = faint ? 0.3 : 0.62;
+    ring.width = rx * 2.1;
+    ring.height = ry * 2.1;
+    c.addChild(shadow, ring);
     return c;
   };
   /** The frame's length (s) and the zoom's enlargement of units while it is far out: set at the top of each `drawLive`. */
@@ -1361,14 +1402,17 @@ void (async () => {
   const remembered: { x: number; y: number; r: number }[] = [];
   let fogSnap = true;
 
-  /** Cut one soft round pool: clear to near its edge, fading out just past it (so what is inside the sight is in the clear). */
+  /** Cut one soft round pool: clear inside its sight, easing out over a couple of cells past it (a dusk, not an edge). */
   const cutPool = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => {
     if (r <= 0.02) return;
-    const [cx, cy, outer] = [x * FOG_RES, y * FOG_RES, (r + 1) * FOG_RES];
+    const [cx, cy, outer] = [x * FOG_RES, y * FOG_RES, (r + FOG_EDGE_OUT) * FOG_RES];
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, outer);
-    g.addColorStop(0, 'rgba(0, 0, 0, 1)');
-    g.addColorStop(Math.max(0, (r - 0.7) / (r + 1)), 'rgba(0, 0, 0, 1)');
-    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    const from = Math.max(0, r - FOG_EDGE_IN) / (r + FOG_EDGE_OUT);
+    for (let i = 0; i <= 6; i++) {
+      const t = i / 6;
+      g.addColorStop(from + (1 - from) * t, `rgba(0, 0, 0, ${1 - t * t * (3 - 2 * t)})`);
+    }
+    if (from > 0) g.addColorStop(0, 'rgba(0, 0, 0, 1)');
     ctx.fillStyle = g;
     ctx.fillRect(cx - outer, cy - outer, outer * 2, outer * 2);
   };
@@ -1400,7 +1444,7 @@ void (async () => {
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = FOG_COLOR;
+    ctx.fillStyle = fogColorOf(match.board.id);
     ctx.fillRect(0, 0, w, h);
     ctx.globalCompositeOperation = 'destination-out';
     ctx.globalAlpha = FOG_MEMORY;
@@ -1439,6 +1483,8 @@ void (async () => {
     areaLayer.clear();
     frameDt = dt;
     unitBoost = readableScale(world.scale.x);
+    grain.alpha = grainAlpha(world.scale.x);
+    grain.visible = grain.alpha > 0.01;
     hurt.begin();
     const vision = visionOf(match); // once a frame: everything below asks it what the player can see
     drawFog(vision, dt);
@@ -1579,25 +1625,47 @@ void (async () => {
           const rise = rising.get(t.id);
           if (rise && fxArt) {
             rise.age += dt;
-            const p = rise.age / RISE_TIME;
-            const full = TOWER_PX / buildingTex(towerTextures, t.def.art, colorOf(t.owner)).width;
-            if (p < 0.3) {
-              pic.texture = fxArt.site[1]!;
-              pic.scale.set((TOWER_PX * 0.85) / 64);
-            } else {
-              const done = buildingTex(towerTextures, t.def.art, colorOf(t.owner));
-              pic.texture = p < 0.65 ? (altOf.get(c) ?? done) : done;
-              pic.scale.set(full * (p < 0.65 ? 1 : 1 + 0.06 * Math.sin(Math.PI * Math.min(1, (p - 0.65) / 0.35))));
+            const p = Math.min(1, rise.age / RISE_TIME);
+            const done = buildingTex(towerTextures, t.def.art, colorOf(t.owner));
+            const alt = altOf.get(c);
+            const full = TOWER_PX / done.width;
+            // The building rises out of the ground: its scaffolded frame (when it has one) is uncovered from the feet up behind a
+            // moving edge, then the finished frame fades in over it. Dust is kicked up at the edge as it goes.
+            const [w, h] = [done.width * full, done.height * full];
+            const foot = 0.22 * h;
+            const up = 1 - (1 - Math.min(1, p / 0.7)) ** 2;
+            if (!rise.mask || !rise.fin) {
+              rise.mask = new Graphics();
+              rise.fin = new Sprite(done);
+              rise.fin.anchor.set(0.5, 0.78);
+              rise.fin.scale.set(full);
+              rise.fin.alpha = 0;
+              c.addChild(rise.mask, rise.fin);
+              pic.mask = rise.mask;
             }
+            const { mask, fin } = rise;
+            mask
+              .clear()
+              .rect(-w * 0.7, foot - up * h - 2, w * 1.4, up * h + 8)
+              .fill(0xffffff);
+            pic.texture = alt ?? done;
+            pic.scale.set(full);
+            pic.alpha = Math.min(1, 0.4 + p * 3);
+            fin.alpha = alt ? Math.min(1, Math.max(0, (p - 0.5) / 0.4)) : 0;
+            if (!alt) pic.texture = done;
             rise.dust += dt;
-            if (rise.dust > 0.14 && p < 0.9) {
+            if (rise.dust > 0.12 && p < 0.9) {
               rise.dust = 0;
-              wreck.rise(c.x, c.y - 2, TOWER_PX * 0.3);
+              wreck.rise(c.x + (Math.random() - 0.5) * w * 0.5, c.y - 2, TOWER_PX * 0.3);
             }
             if (p >= 1) {
               rising.delete(t.id);
-              pic.texture = buildingTex(towerTextures, t.def.art, colorOf(t.owner));
+              pic.mask = null;
+              pic.alpha = 1;
+              pic.texture = done;
               pic.scale.set(full);
+              mask.destroy();
+              fin.destroy();
             }
           }
           const key = `${t.garrison.length}`;
@@ -3106,7 +3174,7 @@ void (async () => {
     const won = match.winner === teamOf(match, YOU);
     const [title, sub] = endText ?? [
       won ? 'Victory' : match.winner === 2 ? 'Draw' : 'Defeat',
-      `${Math.floor(match.time)} seconds. ${
+      `${
         won
           ? coop()
             ? 'Every castle of the other side has fallen.'
@@ -3126,13 +3194,23 @@ void (async () => {
     end.classList.toggle('draw', match.winner === 2);
     const mine = teamOf(match, YOU);
     const side = (own: boolean) => match.players.filter((pl) => (pl.team === mine) === own);
-    $('end-me').textContent = side(true).map((pl) => RACES[pl.race].name).join(' + ');
-    $('end-foe').textContent = side(false).map((pl) => RACES[pl.race].name).join(' + ');
+    $('end-me').textContent = side(true)
+      .map((pl) => RACES[pl.race].name)
+      .join(' + ');
+    $('end-foe').textContent = side(false)
+      .map((pl) => RACES[pl.race].name)
+      .join(' + ');
     const secs = Math.floor(match.time);
     $('end-time').textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
     const hp = (own: boolean) => {
       const c = side(own).map((pl) => pl.castle);
-      return `${Math.round((100 * c.reduce((n, k) => n + Math.max(0, k.hp), 0)) / Math.max(1, c.reduce((n, k) => n + k.maxHp, 0)))}%`;
+      return `${Math.round(
+        (100 * c.reduce((n, k) => n + Math.max(0, k.hp), 0)) /
+          Math.max(
+            1,
+            c.reduce((n, k) => n + k.maxHp, 0),
+          ),
+      )}%`;
     };
     $('end-hp-me').textContent = hp(true);
     $('end-hp-foe').textContent = hp(false);

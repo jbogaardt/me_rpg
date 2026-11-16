@@ -432,13 +432,13 @@
 
       /* The title: a painted backdrop (Wyrmsun, CC0) softly graded and drifting, a glass menu over it, an engraved gold logo. */
       #menu { background: #0b0d12; overflow-x: hidden; }
-      #menu::before { content: ''; position: fixed; inset: -4%; z-index: -1; background: url('./ui/bg/title.webp') center 40% / cover; filter: blur(1.5px) saturate(0.95) brightness(0.8);
+      #menu::before { content: ''; position: fixed; inset: -4%; z-index: -1; background: url('./ui/bg/title.webp') center 40% / cover; filter: saturate(1.05) brightness(0.95);
         animation: drift 48s ease-in-out infinite alternate; }
       #menu::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-        background: radial-gradient(ellipse at 50% 45%, rgba(8, 10, 14, 0.15) 0%, rgba(8, 10, 14, 0.7) 85%), linear-gradient(180deg, rgba(8, 10, 14, 0.5), transparent 25%, transparent 70%, rgba(8, 10, 14, 0.7)); }
+        background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(8, 10, 14, 0.5) 100%), linear-gradient(180deg, rgba(8, 10, 14, 0.28), transparent 18%, transparent 78%, rgba(8, 10, 14, 0.45)); }
       @keyframes drift { from { transform: scale(1.04) translate3d(-1.2%, 0, 0); } to { transform: scale(1.1) translate3d(1.2%, -1%, 0); } }
       @media (prefers-reduced-motion: reduce) { #menu::before { animation: none; } .overlay:not([hidden]) { animation: none; } }
-      #menu > div.panel { border: 1px solid var(--rail); border-image: none; border-radius: 16px; background: linear-gradient(180deg, rgba(20, 17, 13, 0.56), rgba(10, 9, 8, 0.68)); backdrop-filter: blur(6px);
+      #menu > div.panel { border: 1px solid var(--rail); border-image: none; border-radius: 16px; background: linear-gradient(180deg, rgba(20, 17, 13, 0.5), rgba(10, 9, 8, 0.66)); backdrop-filter: blur(4px);
         box-shadow: inset 0 1px 0 rgba(255, 236, 180, 0.18), 0 12px 40px rgba(0, 0, 0, 0.6); filter: none; width: min(860px, 100%); padding: 10px 14px 16px; }
       h1.logo { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 2px; }
       h1.logo::before, h1.logo::after { content: ''; flex: 0 1 90px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold-dim)); }

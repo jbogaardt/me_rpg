@@ -46,6 +46,23 @@ export const softEllipse = (() => {
     }));
 })();
 
+/** A soft ring with a faint pool inside it: the team mark under a unit or tower (tint it). Thin and translucent, so sides tell apart without a disc. */
+export const softRing = (() => {
+  let tex: Texture | undefined;
+  return () =>
+    (tex ??= canvasTexture(96, 48, (c) => {
+      c.scale(1, 0.5);
+      const g = c.createRadialGradient(48, 48, 0, 48, 48, 48);
+      g.addColorStop(0, 'rgba(255,255,255,0.16)');
+      g.addColorStop(0.6, 'rgba(255,255,255,0.22)');
+      g.addColorStop(0.8, 'rgba(255,255,255,0.8)');
+      g.addColorStop(0.9, 'rgba(255,255,255,0.35)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = g;
+      c.fillRect(0, 0, 96, 96);
+    }));
+})();
+
 type Kind = 'missile' | 'lob' | 'anim' | 'flame' | 'glow' | 'dust';
 
 interface Item {
@@ -245,9 +262,11 @@ export class BattleFx {
     const s = this.take(art.slash[0]!, this.over);
     s.position.set(x1, y1);
     s.rotation = a + (Math.random() - 0.5) * 0.5;
-    this.fit(s, 40);
-    this.add('anim', s, 0.2, { frames: art.slash, x1, y1, size: 40 });
-    if (this.items.length < ITEMS_MAX) this.puff(x1 - Math.cos(a) * 4, y1 + 8, 40);
+    s.tint = 0xfff1d2;
+    this.fit(s, 34);
+    s.scale.x *= 0.62; // a slim cut, not a fat crescent
+    this.add('anim', s, 0.14, { frames: art.slash, x1, y1, size: 34, alpha: 0.7 });
+    if (this.items.length < ITEMS_MAX) this.puff(x1 - Math.cos(a) * 4, y1 + 8, 28);
     if (splash > 0) this.impact(x1, y1 + 14, splash * CELL, 'impact', false);
   }
 
@@ -258,8 +277,8 @@ export class BattleFx {
     s.position.set(x, y);
     s.rotation = (Math.random() - 0.5) * 0.8;
     s.tint = Math.random() < 0.5 ? 0xcdbfa6 : 0xb5aa96;
-    this.fit(s, px * 0.5);
-    this.add('dust', s, 0.55, { x1: x, y1: y, size: px, alpha: 0.5 });
+    this.fit(s, px * 0.4);
+    this.add('dust', s, 0.45, { x1: x, y1: y, size: px, alpha: 0.3 });
   }
 
   /** Flames thrown from the attacker towards a victim: a few small fires that fly out and burn down. */

@@ -41,7 +41,7 @@ let fight = 0; // 0 calm .. 1 fighting on screen or the castle hurt: opens the m
 let fightCutoff = cutoffOf(0);
 let hiddenByUs = false;
 /** Counters for tests and the dev console: what was started, so a headless run can tell cues really executed. */
-export const audioStats = { files: 0, ducks: 0, loaded: 0, failed: 0 };
+export const audioStats = { files: 0, ducks: 0, loaded: 0, failed: 0, kinds: {} as Record<string, number> };
 let voices = 0;
 let muted = readMuted();
 const unlockListeners: (() => void)[] = [];
@@ -239,6 +239,7 @@ function start(kind: FileKind, mix: Mix, pan = true): boolean {
   src.onended = () => voices--;
   src.start();
   audioStats.files++;
+  audioStats.kinds[kind] = (audioStats.kinds[kind] ?? 0) + 1;
   const d = spec.duck;
   if (d) duck(d.by, d.for);
   return true;
