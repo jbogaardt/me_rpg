@@ -17,6 +17,7 @@ import {
   Texture,
   TextureStyle,
 } from 'pixi.js';
+import { FIELD_BG, FIELD_BORDER, FIELD_PX } from './fieldArt';
 import { icon } from './icons';
 import { isMuted, playCues, setMuted, unlockAudio } from './audio';
 import { playMusic, stopMusic } from './music';
@@ -226,9 +227,9 @@ void (async () => {
     once(`s:${n}`, async () => void sheetTextures.set(n, await load(`art/units/${n}.png`)));
   const getPortrait = (n: string) =>
     once(`p:${n}`, async () => void portraitTextures.set(n, await load(`art/${n}.png`)));
-  /** The fields (art/maps/<id>.png) are drawn by Me RPG's map pipeline from its LPC terrain atlas (tools/towercraftBoard.ts). */
+  /** The fields (art/maps/<id>.webp, with a border of woods past the board: fieldArt.ts) are painted by tools/towercraftGround.ts. */
   const getField = (id: BoardId) =>
-    once(`f:${id}`, async () => void fieldTextures.set(id, await load(`art/maps/${id}.png`)));
+    once(`f:${id}`, async () => void fieldTextures.set(id, await load(`art/maps/${id}.webp`)));
   /** The effect pictures (`fxArt.ts`): shared by every match, a hundred kB. */
   let fxArt: FxArt | undefined;
   const getFx = () =>
@@ -390,8 +391,11 @@ void (async () => {
   const applyBoard = () => {
     const { cols, rows, id } = match.board;
     field.texture = fieldTextures.get(id) ?? field.texture;
-    field.width = cols * CELL;
-    field.height = rows * CELL;
+    const pad = (FIELD_BORDER * CELL) / FIELD_PX; // the picture reaches past the board; its colour is the page's there
+    field.position.set(-pad, -pad);
+    field.width = cols * CELL + 2 * pad;
+    field.height = rows * CELL + 2 * pad;
+    app.renderer.background.color = FIELD_BG[id] ?? 0x0e1117;
     fogLayer.removeChildren();
     shade.sprite.destroy(true);
     tint.sprite.destroy(true);
