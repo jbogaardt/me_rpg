@@ -77,7 +77,9 @@ class Grid {
     this.gw = Math.ceil(w / step) + 2;
     this.gh = Math.ceil(h / step) + 2;
     this.data = new Float32Array(this.gw * this.gh);
-    if (fill) for (let j = 0; j < this.gh; j++) for (let i = 0; i < this.gw; i++) this.data[j * this.gw + i] = fill(i * step, j * step);
+    if (fill)
+      for (let j = 0; j < this.gh; j++)
+        for (let i = 0; i < this.gw; i++) this.data[j * this.gw + i] = fill(i * step, j * step);
   }
   at(x: number, y: number): number {
     const gx = Math.min(this.gw - 2.001, Math.max(0, x / this.step));
@@ -106,8 +108,18 @@ function blur(a: Float32Array, w: number, h: number, r: number, passes = 3): voi
     for (let k = 0; k < n; k++) set(k, tmp[k]!);
   };
   for (let p = 0; p < passes; p++) {
-    for (let y = 0; y < h; y++) run((k) => a[y * w + k]!, (k, v) => void (a[y * w + k] = v), w);
-    for (let x = 0; x < w; x++) run((k) => a[k * w + x]!, (k, v) => void (a[k * w + x] = v), h);
+    for (let y = 0; y < h; y++)
+      run(
+        (k) => a[y * w + k]!,
+        (k, v) => void (a[y * w + k] = v),
+        w,
+      );
+    for (let x = 0; x < w; x++)
+      run(
+        (k) => a[k * w + x]!,
+        (k, v) => void (a[k * w + x] = v),
+        h,
+      );
   }
 }
 
@@ -129,7 +141,9 @@ class Grain {
         let s = 0;
         for (let dy = -1; dy <= 1; dy++)
           for (let dx = -1; dx <= 1; dx++)
-            s += lum[((y + dy + 32) & 31) * 32 + ((x + dx + 32) & 31)]! * (dx === 0 && dy === 0 ? 4 : dx === 0 || dy === 0 ? 2 : 1);
+            s +=
+              lum[((y + dy + 32) & 31) * 32 + ((x + dx + 32) & 31)]! *
+              (dx === 0 && dy === 0 ? 4 : dx === 0 || dy === 0 ? 2 : 1);
         soft[y * 32 + x] = s / 16;
       }
     let mean = 0;
@@ -312,7 +326,12 @@ const shade = (col: RGB, k: number): RGB => [col[0] * k, col[1] * k, col[2] * k]
 const lerpC = (a: RGB, b: RGB, t: number): RGB => [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
 
 /** Scatter `count` spots (per 1000 x 1000 px) over the board where `ok` allows; `draw` paints each. */
-function scatter(c: Ctx, perMega: number, ok: (x: number, y: number) => boolean, draw: (x: number, y: number) => void): void {
+function scatter(
+  c: Ctx,
+  perMega: number,
+  ok: (x: number, y: number) => boolean,
+  draw: (x: number, y: number) => void,
+): void {
   const n = Math.round(((c.bw * c.bh) / 1e6) * perMega);
   for (let k = 0; k < n; k++) {
     const x = c.B + Math.floor(c.rnd() * c.bw);
@@ -321,8 +340,10 @@ function scatter(c: Ctx, perMega: number, ok: (x: number, y: number) => boolean,
     else c.rnd(); // keep the stream steady
   }
 }
-const freeGround = (c: Ctx, margin = 0.04) => (x: number, y: number) =>
-  c.roadA(x, y) < margin && c.waterA(x, y) < margin;
+const freeGround =
+  (c: Ctx, margin = 0.04) =>
+  (x: number, y: number) =>
+    c.roadA(x, y) < margin && c.waterA(x, y) < margin;
 /** Free of the road by at least `cells` (so nothing flat reads as part of it) and not in water. */
 const offRoad = (c: Ctx, cells: number) => (x: number, y: number) => c.roadD(x, y) > cells && c.waterA(x, y) < 0.02;
 
@@ -406,7 +427,6 @@ const LOOKS: Record<string, Look> = {
         }
       });
       scatter(c, 60, offRoad(c, 2), (x, y) => pebble(c, x, y, 2 + c.rnd() * 2.5, [150, 144, 132]));
-      scatter(c, 7, offRoad(c, 3), (x, y) => stamp(c, 'fern', x, y, 0.8 + c.rnd() * 0.5, c.rnd() < 0.5, 0.95, 0.2));
     },
   },
   frostlands: {
@@ -424,7 +444,13 @@ const LOOKS: Record<string, Look> = {
       verge: [172, 164, 164],
       grain: 'dirt',
     },
-    water: { kind: 'ice', shallow: [190, 224, 244], deep: [112, 160, 204], shore: [238, 244, 252], wet: [150, 176, 204] },
+    water: {
+      kind: 'ice',
+      shallow: [190, 224, 244],
+      deep: [112, 160, 204],
+      shore: [238, 244, 252],
+      wet: [150, 176, 204],
+    },
     shadow: [0.5, 0.6, 0.86],
     shadowK: 0.7,
     tint: [0.96, 1.0, 1.06],
@@ -434,12 +460,6 @@ const LOOKS: Record<string, Look> = {
     lift: 0.1,
     decor: (c) => {
       const ok = freeGround(c);
-      // Wind-blown ridges: long, soft, lit on one side.
-      scatter(c, 260, ok, (x, y) => {
-        const l = 30 + c.rnd() * 50;
-        stroke(c, x + 1, y + 3, x + l, y + 3 + l * 0.05, 3, [150, 172, 208], 0.12);
-        stroke(c, x, y, x + l, y + l * 0.05, 2.2, [252, 254, 255], 0.4);
-      });
       scatter(c, 70, offRoad(c, 2), (x, y) => pebble(c, x, y, 2 + c.rnd() * 2.5, [124, 130, 142]));
       scatter(c, 600, ok, (x, y) => tuft(c, x, y, [128, 124, 92], 4 + c.rnd() * 3, 0.5));
     },
@@ -476,8 +496,12 @@ const LOOKS: Record<string, Look> = {
       });
       scatter(c, 520, ok, (x, y) => tuft(c, x, y, [140, 126, 66], 4 + c.rnd() * 5, 0.6));
       scatter(c, 70, offRoad(c, 2), (x, y) => pebble(c, x, y, 2 + c.rnd() * 3, [190, 166, 128]));
-      scatter(c, 4, offRoad(c, 4), (x, y) => stamp(c, `bones_${Math.floor(c.rnd() * 4)}`, x, y, 1.1, c.rnd() < 0.5, 0.95, 0.18));
-      scatter(c, 1.2, offRoad(c, 5), (x, y) => stamp(c, `wyrm_${Math.floor(c.rnd() * 3) + 1}`, x, y, 1.3, c.rnd() < 0.5, 0.95, 0.2));
+      scatter(c, 4, offRoad(c, 4), (x, y) =>
+        stamp(c, `bones_${Math.floor(c.rnd() * 4)}`, x, y, 1.1, c.rnd() < 0.5, 0.95, 0.18),
+      );
+      scatter(c, 1.2, offRoad(c, 5), (x, y) =>
+        stamp(c, `wyrm_${Math.floor(c.rnd() * 3) + 1}`, x, y, 1.3, c.rnd() < 0.5, 0.95, 0.2),
+      );
       // Cracked earth: thin dark crack networks on the dry mud.
       scatter(c, 36, offRoad(c, 3), (x, y) => {
         let [px, py] = [x, y];
@@ -487,7 +511,8 @@ const LOOKS: Record<string, Look> = {
           const l = 6 + c.rnd() * 9;
           const [nx, ny] = [px + Math.cos(ang) * l, py + Math.sin(ang) * l];
           stroke(c, px, py, nx, ny, 1.1, [86, 56, 34], 0.5);
-          if (c.rnd() < 0.3) stroke(c, nx, ny, nx + (c.rnd() - 0.5) * 16, ny + (c.rnd() - 0.5) * 16, 0.9, [86, 56, 34], 0.4);
+          if (c.rnd() < 0.3)
+            stroke(c, nx, ny, nx + (c.rnd() - 0.5) * 16, ny + (c.rnd() - 0.5) * 16, 0.9, [86, 56, 34], 0.4);
           [px, py] = [nx, ny];
         }
       });
@@ -525,8 +550,12 @@ const LOOKS: Record<string, Look> = {
         dab(c, x, y, r, [38, 46, 34], 0.55, r * 0.5);
         dab(c, x - r * 0.15, y - r * 0.1, r * 0.8, [70, 86, 70], 0.4, r * 0.35);
       });
-      scatter(c, 40, offRoad(c, 3), (x, y) => stamp(c, 'fern_swamp', x, y, 0.8 + c.rnd() * 0.5, c.rnd() < 0.5, 0.95, 0.2));
-      scatter(c, 22, offRoad(c, 3), (x, y) => stamp(c, c.rnd() < 0.5 ? 'mushroom_a' : 'mushroom_b', x, y, 0.8, false, 0.95, 0.2));
+      scatter(c, 40, offRoad(c, 3), (x, y) =>
+        stamp(c, 'fern_swamp', x, y, 0.8 + c.rnd() * 0.5, c.rnd() < 0.5, 0.95, 0.2),
+      );
+      scatter(c, 22, offRoad(c, 3), (x, y) =>
+        stamp(c, c.rnd() < 0.5 ? 'mushroom_a' : 'mushroom_b', x, y, 0.8, false, 0.95, 0.2),
+      );
       scatter(c, 3, offRoad(c, 4), (x, y) => stamp(c, 'log', x, y, 1.0, c.rnd() < 0.5, 0.95, 0.22));
       scatter(c, 50, offRoad(c, 2), (x, y) => pebble(c, x, y, 2 + c.rnd() * 2, [120, 118, 98]));
     },
@@ -560,8 +589,12 @@ const LOOKS: Record<string, Look> = {
         dab(c, x, y, r, [30, 27, 30], 0.35, r * 0.6);
       });
       scatter(c, 110, offRoad(c, 2), (x, y) => pebble(c, x, y, 2 + c.rnd() * 3, [74, 68, 70]));
-      scatter(c, 5, offRoad(c, 4), (x, y) => stamp(c, `stalag_${Math.floor(c.rnd() * 4)}`, x, y, 1.25, c.rnd() < 0.5, 0.95, 0.25));
-      scatter(c, 3, offRoad(c, 5), (x, y) => stamp(c, `bones_${Math.floor(c.rnd() * 4)}`, x, y, 1.1, c.rnd() < 0.5, 0.9, 0.2));
+      scatter(c, 5, offRoad(c, 4), (x, y) =>
+        stamp(c, `stalag_${Math.floor(c.rnd() * 4)}`, x, y, 1.25, c.rnd() < 0.5, 0.95, 0.25),
+      );
+      scatter(c, 3, offRoad(c, 5), (x, y) =>
+        stamp(c, `bones_${Math.floor(c.rnd() * 4)}`, x, y, 1.1, c.rnd() < 0.5, 0.9, 0.2),
+      );
       // Lava cracks: glowing seams that branch and thin out, with a faint glow round them (ground only: nothing blocks).
       scatter(c, 26, offRoad(c, 3.2), (x, y) => {
         let [px, py] = [x, y];
@@ -575,7 +608,8 @@ const LOOKS: Record<string, Look> = {
           stroke(c, px, py, nx, ny, 5 + 3 * fadeK, [255, 90, 20], 0.12);
           stroke(c, px, py, nx, ny, 2.4 * fadeK + 0.8, [20, 10, 8], 0.8);
           stroke(c, px, py, nx, ny, 1.5 * fadeK + 0.5, [255, 150 + 60 * fadeK, 40], 0.95);
-          if (c.rnd() < 0.25) stroke(c, nx, ny, nx + (c.rnd() - 0.5) * 22, ny + (c.rnd() - 0.5) * 22, 1, [255, 120, 30], 0.85);
+          if (c.rnd() < 0.25)
+            stroke(c, nx, ny, nx + (c.rnd() - 0.5) * 22, ny + (c.rnd() - 0.5) * 22, 1, [255, 120, 30], 0.85);
           [px, py] = [nx, ny];
         }
       });
@@ -691,14 +725,14 @@ export function paintField(inp: FieldInput): Image {
   const roadAt = (x: number, y: number): number => {
     const d = roadDist.at(x, y);
     const e = (fine.at(x, y) - 0.5) * 0.5 + (tone.at(x + 300, y) - 0.5) * 0.4;
-    const shape = smooth(R + 0.1, R - 0.16, d + e * 0.5);
+    const shape = smooth(R + 0.14, R - 0.2, d + e * 0.9);
     const cells = smooth(0.2, 0.55, roadBlur.at(x, y) + e * 0.25);
     return Math.max(shape, cells);
   };
   /** How water a pixel is: the lake cells grown a little and given a living shoreline. */
   const waterAt = (x: number, y: number): number => {
-    const e = (fine.at(x, y) - 0.5) * 0.22 + (tone.at(x + 90, y + 40) - 0.5) * 0.5;
-    return smooth(0.36, 0.5, lakeBlur.at(x, y) * 0.45 + lakeWide.at(x, y) * 0.55 + e);
+    const e = (fine.at(x, y) - 0.5) * 0.22 + (tone.at(x + 90, y + 40) - 0.5) * 0.9;
+    return smooth(0.36, 0.5, lakeBlur.at(x, y) * 0.3 + lakeWide.at(x, y) * 0.7 + e);
   };
 
   // --- Ground, road, water -----------------------------------------------------------------------------------------------
@@ -772,7 +806,7 @@ export function paintField(inp: FieldInput): Image {
       }
       const ra = roadAt(x, y);
       if (ra > 0.002) {
-        let k = 1 + roadGrain.at(x, y) * 0.09 + (tn - 0.5) * 0.22;
+        let k = 1 + roadGrain.at(x, y) * 0.05 + (tn - 0.5) * 0.22;
         // worn centre, ruts at both sides of it, patches of cobble
         const rut = Math.exp(-(((rd - 0.5) / 0.1) ** 2)) * smooth(0.3, 0.6, fbm(x / 70, y / 70, seed + 41, 2));
         const centre = smooth(0.7, 0.0, rd);
@@ -780,7 +814,7 @@ export function paintField(inp: FieldInput): Image {
         const stones = smooth(0.52, 0.62, fbm(x / 160, y / 160, seed + 43, 2)) * smooth(R - 0.3, R - 0.8, rd);
         let [rr, rg, rb]: [number, number, number] = [look.road.rgb[0], look.road.rgb[1], look.road.rgb[2]];
         const lightK = centre * 0.18 + (fine.at(x, y) - 0.5) * 0.25;
-        rr = mix(rr, look.road.light[0], clamp01(lightK + 0.1)) ;
+        rr = mix(rr, look.road.light[0], clamp01(lightK + 0.1));
         rg = mix(rg, look.road.light[1], clamp01(lightK + 0.1));
         rb = mix(rb, look.road.light[2], clamp01(lightK + 0.1));
         const dk = rut * 0.32;
@@ -908,7 +942,7 @@ export function paintField(inp: FieldInput): Image {
         if (!isArt(img, o.x + sx, o.y + y)) continue;
         // the lower the part of the crown, the nearer its shadow falls to the foot
         const lift = (1 - y / o.h) * dy * 1.6;
-        const [px, py] = [ox + x + Math.round(dx * (1 - y / o.h * 0.6)), oy + y + dy - Math.round(lift * 0.5)];
+        const [px, py] = [ox + x + Math.round(dx * (1 - (y / o.h) * 0.6)), oy + y + dy - Math.round(lift * 0.5)];
         if (px >= 0 && py >= 0 && px < W && py < H) shadow[py * W + px] = 1;
       }
     // contact shade under the foot
@@ -971,7 +1005,11 @@ export function paintField(inp: FieldInput): Image {
     for (let x = 0; x < W; x++) {
       const bx = x - B;
       const i = (y * W + x) * 3;
-      let [r, g, b]: [number, number, number] = [rgb[i]! * look.tint[0], rgb[i + 1]! * look.tint[1], rgb[i + 2]! * look.tint[2]];
+      let [r, g, b]: [number, number, number] = [
+        rgb[i]! * look.tint[0],
+        rgb[i + 1]! * look.tint[1],
+        rgb[i + 2]! * look.tint[2],
+      ];
       const l = 0.3 * r + 0.59 * g + 0.11 * b;
       r = l + (r - l) * look.sat;
       g = l + (g - l) * look.sat;
@@ -981,7 +1019,8 @@ export function paintField(inp: FieldInput): Image {
       b = mid + (b - mid) * look.contrast;
       // light falls off towards the edges of the board, then everything fades to the page's colour
       const inside = Math.min(bx, bw - 1 - bx, by, bh - 1 - by);
-      const outside = inside < 0 ? Math.hypot(Math.min(0, Math.min(bx, bw - 1 - bx)), Math.min(0, Math.min(by, bh - 1 - by))) : 0;
+      const outside =
+        inside < 0 ? Math.hypot(Math.min(0, Math.min(bx, bw - 1 - bx)), Math.min(0, Math.min(by, bh - 1 - by))) : 0;
       const vig = inside < 0 ? 0.55 : smooth(230, 0, inside) * 0.26 + smooth(60, 0, inside) * 0.1;
       const k = 1 - vig;
       r *= k;
@@ -1070,7 +1109,7 @@ function paintBorder(c: Ctx, objs: MapData['objects'], data: MapData, flips: boo
 }
 
 /** Write a field picture as WebP (through sharp when it is installed, else ImageMagick's convert). */
-export async function writeField(file: string, img: Image, quality = 78): Promise<void> {
+export async function writeField(file: string, img: Image, quality = 52): Promise<void> {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   try {
     const sharp = (await import('sharp' as string)).default as (

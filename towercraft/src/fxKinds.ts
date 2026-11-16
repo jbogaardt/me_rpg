@@ -20,7 +20,7 @@ export interface MissileSpec {
 export const MISSILES: Record<MissileId, MissileSpec> = {
   arrow: { lob: false, size: 40, impact: 'puff', arc: 0.07, arcMax: 28 },
   goblin_arrow: { lob: false, size: 36, impact: 'puff', arc: 0.07, arcMax: 28 },
-  bolt: { lob: false, size: 74, impact: 'puff', arc: 0.03, arcMax: 12 },
+  bolt: { lob: false, size: 60, impact: 'puff', arc: 0.03, arcMax: 12 },
   javelin: { lob: false, size: 60, impact: 'puff', arc: 0.09, arcMax: 30 },
   bullet: { lob: false, size: 14, impact: 'puff', arc: 0, arcMax: 0 },
   cannon: { lob: true, size: 30, impact: 'explosion', arc: 0.2, arcMax: 60 },
