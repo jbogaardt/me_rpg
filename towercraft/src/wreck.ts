@@ -160,21 +160,21 @@ export class Wreck {
       s.anchor.set(0.5, 0.88);
       const glow = new Sprite(this.glow);
       glow.anchor.set(0.5);
-      glow.tint = 0xff8a30;
+      glow.tint = 0xff6a20;
       glow.blendMode = 'add';
       this.air.addChild(glow, s);
       acc.fires.push({ s, glow, ox: between(-0.75, 0.75), oy: between(0.2, 0.62), phase: Math.random() * 10 });
     }
     const big = hurt > 0.88;
     const frames = big ? art.bigFire : art.smallFire;
-    const k = (big ? 0.95 + 0.4 * scale : 0.7 + 0.32 * scale) * (0.75 + 0.5 * hurt);
+    const k = (big ? 0.8 + 0.34 * scale : 0.58 + 0.26 * scale) * (0.75 + 0.5 * hurt);
     for (const f of acc.fires) {
       f.s.texture = frames[Math.floor((this.clock * 9 + f.phase) % frames.length)]!;
       f.s.position.set(x + f.ox * w, top + f.oy * h);
       f.s.scale.set(k * (0.85 + 0.15 * Math.sin(this.clock * 7 + f.phase)));
       f.glow.position.set(f.s.x, f.s.y - 10 * k);
       f.glow.scale.set(k * 1.5);
-      f.glow.alpha = 0.3 + 0.1 * Math.sin(this.clock * 11 + f.phase);
+      f.glow.alpha = 0.16 + 0.05 * Math.sin(this.clock * 11 + f.phase);
     }
   }
 
@@ -331,7 +331,7 @@ export class Wreck {
       }
       if (r.container.visible) {
         const n = r.big ? 1.7 : 1;
-        r.dust += (14 * n + 10 * n * (1 - p)) * dt;
+        r.dust += (9 * n + 7 * n * (1 - p)) * dt;
         while (r.dust >= 1) {
           r.dust--;
           this.puff(r, false);

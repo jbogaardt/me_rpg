@@ -20,7 +20,8 @@ import {
 import { FIELD_BG, FIELD_BORDER, FIELD_PX } from './fieldArt';
 import { icon } from './icons';
 import { isMuted, playCues, setMuted, unlockAudio } from './audio';
-import { playMusic, stopMusic } from './music';
+import { backToTitle, stopMusic } from './music';
+import { startMatchAudio } from './matchAudio';
 import { say } from './voice';
 import { keyAction, typing } from './hotkeys';
 import { initHowto } from './howto';
@@ -34,6 +35,7 @@ import { castleTrim, smithyTrim, trimKey, type Trim } from './trim';
 import { Wreck } from './wreck';
 import { BattleFx, softEllipse } from './fx';
 import { loadFxArt, type FxArt } from './fxArt';
+import { enlarge2x } from './crisp';
 import { HurtTracker, mixColor, readableScale } from './hurt';
 import { Hud } from './statusBar';
 import { normalizeCode } from '../../src/net/roomCode';
@@ -160,7 +162,7 @@ const feetAt = (kind: SheetKind) => (SHEETS[kind].frame === 72 ? 0.7 : 0.8);
 const STRIDE = 0.9; // cells walked per stride
 const FLAP = 10; // wing beats (sheet rows) a second for a flyer
 const DEATH_FRAME = 0.12; // seconds per death frame
-const CORPSE_LIFE = 1.6; // seconds a corpse stays (fading over the last half)
+const CORPSE_LIFE = 5; // seconds a corpse lies (it greys after falling, and fades over the last 1.6)
 /** How high (px) an air unit is drawn above the ground it flies over. */
 const FLIGHT = 26 * SIZE;
 /** How long (seconds) a unit's strike animation plays after it hits (its swing, shot or dive), and how far (px) a melee blow lunges. */
@@ -178,10 +180,10 @@ const FOG_RES = 8;
 /** How fast (cells a second) a pool of sight grows when a tower goes up and shrinks when it falls: about half a second for a tower. */
 const FOG_SPEED = 14;
 /** Fog colour (a warm dark), how much it dims, and how much of the dark lifts over ground that was once yours to build on. */
-const FOG_COLOR = 'rgba(18, 12, 9, 0.74)';
+const FOG_COLOR = 'rgba(14, 17, 30, 0.78)';
 const FOG_MEMORY = 0.3;
 /** How strong the cool wash is over ground your units see (not build ground), however many of them overlap. */
-const FOG_WASH = 0.16;
+const FOG_WASH = 0.09;
 
 const ZOOM_MAX = 2.6;
 /** The smallest a cell is drawn while a finger places a tower (px), so the drag lands where it looks. */
@@ -290,8 +292,8 @@ void (async () => {
       const img = cx.getImageData(0, 0, cv.width, cv.height);
       recolorTeam(img.data, color);
       cx.putImageData(img, 0, 0);
-      // Resolution 1, not the screen's: frames are cut in pixels.
-      teamSheets.set(key, (t = new Texture({ source: new CanvasSource({ resource: cv, resolution: 1 }) })));
+      // Enlarged to 2x and sharpened (`crisp.ts`), kept as a resolution-2 texture so frames are still cut in the sheet's own pixels.
+      teamSheets.set(key, (t = new Texture({ source: new CanvasSource({ resource: enlarge2x(cv), resolution: 2 }) })));
     }
     return t;
   };
@@ -1143,7 +1145,8 @@ void (async () => {
         k.col,
         colorOf(k.owner),
       );
-      k.container.alpha = Math.min(1, (CORPSE_LIFE - k.age) / (CORPSE_LIFE / 2));
+      k.container.alpha = Math.min(1, (CORPSE_LIFE - k.age) / 1.6);
+      k.sprite.tint = mixColor(0xffffff, 0x8f8a86, Math.min(1, Math.max(0, (k.age - 0.4) / 1.2)) * 0.6);
     }
   };
 
@@ -1327,14 +1330,14 @@ void (async () => {
     const shadow = new Sprite(softEllipse());
     shadow.anchor.set(0.5);
     shadow.tint = 0x000000;
-    shadow.alpha = faint ? 0.2 : 0.36;
+    shadow.alpha = faint ? 0.2 : 0.44;
     shadow.width = rx * 2.8;
     shadow.height = ry * 3;
     shadow.position.set(rx * 0.12, ry * 0.3);
     const pool = new Sprite(softEllipse());
     pool.anchor.set(0.5);
     pool.tint = color;
-    pool.alpha = faint ? 0.3 : 0.62;
+    pool.alpha = faint ? 0.26 : 0.46;
     pool.width = rx * 2;
     pool.height = ry * 2;
     c.addChild(shadow, pool);
@@ -1361,10 +1364,10 @@ void (async () => {
   /** Cut one soft round pool: clear to near its edge, fading out just past it (so what is inside the sight is in the clear). */
   const cutPool = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => {
     if (r <= 0.02) return;
-    const [cx, cy, outer] = [x * FOG_RES, y * FOG_RES, (r + 0.7) * FOG_RES];
+    const [cx, cy, outer] = [x * FOG_RES, y * FOG_RES, (r + 1) * FOG_RES];
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, outer);
     g.addColorStop(0, 'rgba(0, 0, 0, 1)');
-    g.addColorStop(Math.max(0, (r - 0.5) / (r + 0.7)), 'rgba(0, 0, 0, 1)');
+    g.addColorStop(Math.max(0, (r - 0.7) / (r + 1)), 'rgba(0, 0, 0, 1)');
     g.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = g;
     ctx.fillRect(cx - outer, cy - outer, outer * 2, outer * 2);
@@ -2780,7 +2783,7 @@ void (async () => {
     selected = undefined;
     acc = 0;
     started = true;
-    playMusic();
+    startMatchAudio(races, map); // effects for these races, the map theme's ambience and battle music (sound agent)
     document.body.classList.add('playing');
     for (const c of [...towerSprites.values(), ...unitSprites.values()]) c.destroy({ children: true });
     for (const f of floaters) f.text.destroy();
@@ -3074,6 +3077,7 @@ void (async () => {
     document.body.classList.remove('playing');
     $('end').hidden = true;
     $('menu').hidden = false;
+    backToTitle(); // the title's music again
   };
 
   // For playtest scripts (`?debug`): where a cell is on screen, and the match itself.

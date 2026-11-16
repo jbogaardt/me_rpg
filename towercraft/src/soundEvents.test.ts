@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALARM_EVERY, SoundWatch, WARN_EVERY } from './soundEvents';
 import { canSee, TIME_LIMIT, PAY_EVERY, type Shot } from './sim/sim';
-import { CLASSIC, RACES, newMatch, put, quiet } from './sim/testkit';
+import { CLASSIC, RACES, newMatch, put, quiet, spawn } from './sim/testkit';
 
 const fresh = () => quiet(newMatch(['legion', 'legion']));
 const shot = (from: readonly [number, number], melee: boolean, splash = 0): Shot => ({
@@ -18,24 +18,42 @@ describe('what a tick sounds like', () => {
     expect(new SoundWatch(m).collect(m, 0)).toEqual([]);
   });
 
-  it('plays a blow, a missile and a blast by the kind of attack', () => {
+  it('plays an attack by the weapon class of whoever made it, and where a missile lands', () => {
     const m = fresh();
     const watch = new SoundWatch(m);
     const home = CLASSIC.castles[0];
-    m.shots.push(shot(home, true), shot(home, false), shot(home, false, 2));
-    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['melee', 'shoot', 'blast']);
+    const unit = spawn(m, 0, 'legion', 'warrior', 3);
+    const by = { kind: 'unit' as const, id: unit.id };
+    m.shots.push({ ...shot(home, true), by }, { ...shot(home, false), by: { kind: 'castle', id: 0 } });
+    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['sword', 'bow', 'arrowhit']);
   });
 
-  it('plays a death, and a blast when the unit blew itself up', () => {
+  it('gives a tower’s shot its own weapon, and a catapult’s stone a landing on the wall it hits', () => {
+    const m = fresh();
+    const home = CLASSIC.castles[0];
+    const t = put(m, 0, 'legion', 'catapult', Math.round(home[0]) + 3, Math.round(home[1]));
+    const watch = new SoundWatch(m);
+    watch.collect(m, 0);
+    m.shots.push({
+      ...shot([t.col + 0.5, t.row + 0.5], false, 0.8),
+      by: { kind: 'tower', id: t.id },
+      to: [home[0], home[1]],
+    });
+    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['catapult', 'hitstone']);
+  });
+
+  it('plays a death by race and creature, and a blast when the unit blew itself up', () => {
     const m = fresh();
     const watch = new SoundWatch(m);
     const home = CLASSIC.castles[0];
-    const def = Object.values(m.races)[0]!.units[0]!;
+    const def = (id: string) => RACES.legion.units.find((u) => u.id === id)!;
     m.deaths.push(
-      { at: [home[0], home[1]], owner: 0, def, s: 0 },
-      { at: [home[0], home[1]], owner: 0, def, s: 0, boom: 2 },
+      { at: [home[0], home[1]], owner: 0, def: def('warrior'), s: 0 },
+      { at: [home[0], home[1]], owner: 0, def: def('ritter'), s: 0 },
+      { at: [home[0], home[1]], owner: 0, def: def('falcon'), s: 0 },
+      { at: [home[0], home[1]], owner: 0, def: def('sapper'), s: 0, boom: 2 },
     );
-    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['death', 'blast']);
+    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['deathhuman', 'deathbeast', 'deathflyer', 'blast']);
   });
 
   it('keeps what the player cannot see silent', () => {
@@ -74,7 +92,33 @@ describe('what a tick sounds like', () => {
     const watch = new SoundWatch(m);
     const home = CLASSIC.castles[0];
     m.razed.push({ col: Math.round(home[0]), row: Math.round(home[1]) });
-    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['razed']);
+    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['razedSmall']);
+  });
+
+  it('collapses a big building as stone and a small one as timber', () => {
+    const m = fresh();
+    const home = CLASSIC.castles[0];
+    const big = RACES.legion.towers.find((t) => t.hp >= 500)!;
+    const small = RACES.legion.towers.find((t) => t.hp < 500)!;
+    put(m, 0, 'legion', big.id, Math.round(home[0]) + 3, Math.round(home[1]));
+    put(m, 0, 'legion', small.id, Math.round(home[0]) + 6, Math.round(home[1]));
+    const watch = new SoundWatch(m);
+    m.razed.push(
+      { col: Math.round(home[0]) + 3, row: Math.round(home[1]) },
+      { col: Math.round(home[0]) + 6, row: Math.round(home[1]) },
+    );
+    expect(watch.collect(m, 0).map((c) => c.kind)).toEqual(['razedLarge', 'razedSmall']);
+  });
+
+  it('hears a unit go into a bunker', () => {
+    const m = fresh();
+    const home = CLASSIC.castles[0];
+    const bunker = RACES.legion.towers.find((t) => t.bunker)!;
+    const t = put(m, 0, 'legion', bunker.id, Math.round(home[0]) + 3, Math.round(home[1]));
+    const watch = new SoundWatch(m);
+    t.garrison.push({ def: RACES.legion.units[0]!, cooldown: 0 });
+    expect(watch.collect(m, 0).map((c) => [c.kind, c.own])).toEqual([['bunker', true]]);
+    expect(watch.collect(m, 0)).toEqual([]);
   });
 
   it('sounds the alarm when the player’s castle is hit, at most once every ALARM_EVERY seconds', () => {

@@ -1,8 +1,8 @@
-// Small sounds for the interface (`synth.ts` makes them, `audio.ts` plays them through the sfx volume): a soft click on a button,
-// a low thud when a purchase or a building is refused, a two-note confirm when a unit is trained and a light tick when a unit is
+// Small sounds for the interface (recorded wood taps and a plucked-string phrase, `soundBank.ts`; `audio.ts` plays them through the sfx volume): a soft click on a button,
+// a low thud when a purchase or a building is refused, a plucked confirm when a unit is trained and a light tick when a unit is
 // picked and its voice line does not play. Cosmetic and per page; nothing goes over the wire.
 
-import { installAudioLifecycle, playSynth } from './audio';
+import { installAudioLifecycle, playKind } from './audio';
 
 /** performance.now() of the last interface sound: one gesture makes one sound (a refusal or confirm replaces the click). */
 let lastAt = -Infinity;
@@ -10,7 +10,7 @@ const RECENT = 90;
 
 function play(kind: 'click' | 'tick' | 'refuse' | 'confirm') {
   lastAt = performance.now();
-  playSynth(kind);
+  playKind(kind);
 }
 
 export const uiClick = () => play('click');

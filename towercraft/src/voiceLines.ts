@@ -1,5 +1,5 @@
 // What each unit says, per race. `pick` plays when you select it, `go` when you send it at a foe. The lines are made into
-// audio ahead of time (ElevenLabs text-to-speech, recorded once and committed as WAV files) and played by `voice.ts`.
+// audio ahead of time (ElevenLabs text-to-speech, recorded once and committed as mono Ogg files) and played by `voice.ts`.
 // Pixi-free and cosmetic: nothing here is part of the match.
 
 import type { RaceId } from './sim/races';
@@ -41,4 +41,4 @@ export const VOICE_LINES: Record<RaceId, Record<string, Record<Line, string>>> =
 };
 
 /** Where a line's audio is, under the page (`public/audio/voice/`). Played from this one place. */
-export const voiceFile = (race: RaceId, unit: string, line: Line) => `audio/voice/${race}-${unit}-${line}.wav`;
+export const voiceFile = (race: RaceId, unit: string, line: Line) => `audio/voice/${race}-${unit}-${line}.ogg`;

@@ -6,7 +6,6 @@ Rules are in `sim/` (see `sim/CLAUDE.md`); this directory draws a `Match` and tu
 
 - **Seat colours**: a duel paints each seat in its race's hue (`RACE_HUE`); with more seats, the side's (`SIDE_HUE`). A further seat sharing a hue gets a shade (`shadeOf`), so two of one race still tell apart.
 - **Painted pictures**: Wyrmsun's buildings carry their player colour as purple. `recolor` moves only the purple pixels (wood, stone and gold stay) to the seat's hue, keeping shading. `main.ts` paints each picture once per colour (`buildingTex`; the dock and cards use `buildingUrl`).
-- A new race or side colour is a hue in `recolor.ts`; a purple picture that should not change gets another hue, not a special case.
 
 ## Sound (`soundEvents.ts`, `soundMix.ts`, `audio.ts`; layer: this game's own, nothing in the protocol)
 
@@ -20,9 +19,9 @@ Each page makes its own sounds from the same match; nothing goes over the wire.
 - **`voice.ts`** says a unit's line when you select it (`pick`) and when you send it at a foe (`go`). `voiceLines.ts` has both lines of every unit by race; files are `public/audio/voice/<race>-<unit>-<line>.wav` (ElevenLabs text-to-speech, one voice per race). A missing file is silent. A new unit needs its two lines (`voiceLines.test.ts` checks) and two WAVs.
 - A new sound: a file kind is a `FileKind`, a `SOUNDS` entry and the files; a synthesized one is a `SynthKind` and a `RECIPES` entry (and in `SoundKind` if the match raises it). Either way, add a cue in `SoundWatch.collect` (with a test). A new track: a file pair in `public/audio/music/`, a credit, then pick it in `music.ts`.
 
-## Battle effects (`fx.ts`, `hurt.ts`; cosmetic, nothing in the protocol)
+## Battle effects and art (`fx.ts`, `fxKinds.ts`, `fxArt.ts`, `wreck.ts`, `crisp.ts`, `hurt.ts`; cosmetic)
 
-`BattleFx.collect` (once a tick: `shots`, boom `deaths`, castle health, only what you can see) and `update` (each frame) draw missiles, slashes, blasts with a fading scorch and the castle-fall shake (`world.pivot`, off under `prefers-reduced-motion`) from pooled, capped sprites. `hurt.ts` (Pixi-free) finds hits from health drops: red flash, eased bars with a chip; `readableScale` enlarges units when far out; `groundMark` is their shadow. Dev only: `window.__tc` for playtest scripts.
+`art/fx/` is Wyrmsun's (copied by `tools/towercraftArt.ts`; `smoke`, `hit`, `slash` from `tools/towercraftFxArt.py`), cut by `fxArt.ts`. `fxKinds.ts` (Pixi-free) says what each shooter fires (`missileFor`, by sheet or tower art). `BattleFx.collect` (seen ground only) makes pooled, capped sprites: flat missiles turn to their heading, lobbed ones grow over a shadow, each ends in a puff, impact or fireball. `Wreck`: hurt buildings smoulder (smoke, animated fires), a falling one bursts, shows its sheet's second frame (`altOf`), sinks, leaves a scar; a new tower rises (`rising`). Sheets are enlarged 2x and sharpened once (`crisp.ts`) as resolution-2 textures, frames still cut in sheet pixels.
 
 ## Cards
 

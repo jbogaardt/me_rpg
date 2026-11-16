@@ -57,3 +57,19 @@ export function fightLevel(prev: number, hits: number, castleHurt: boolean): num
 export function cutoffOf(level: number): number {
   return 6000 + 12000 * Math.min(1, Math.max(0, level));
 }
+
+/** At most this many sounds start in one tick, whatever the kinds: a hundred-unit fight is the loudest and most important of them, not all. */
+export const TICK_BUDGET = 8;
+
+/** Keep the `limit` most important of a tick's sounds (`rank` high first; ties keep their order): big events beat a shower of small blows. */
+export function budget<T>(sounds: T[], limit: number, rank: (s: T) => number): T[] {
+  if (sounds.length <= limit) return sounds;
+  return sounds
+    .map((s, i) => ({ s, i, r: rank(s) }))
+    .sort((a, b) => b.r - a.r || a.i - b.i)
+    .slice(0, limit)
+    .map((x) => x.s);
+}
+
+/** How a sound ranks in the budget: its kind's priority first, then how loud it is where the player is. */
+export const rankOf = (prio: number, gain: number): number => prio + gain;

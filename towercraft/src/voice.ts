@@ -1,4 +1,4 @@
-// The units' spoken lines (`voiceLines.ts`, recorded as `public/audio/voice/<race>-<unit>-<line>.wav`, see
+// The units' spoken lines (`voiceLines.ts`, recorded as `public/audio/voice/<race>-<unit>-<line>.ogg`, see
 // credits in `public/audio/CREDITS.md`). Played into the sounds' output (`audio.ts`), so the mute button silences them too. Cosmetic: a
 // line that is missing or cannot load is simply not said. One line at a time: a new one cuts the last short, and a line waits
 // `GAP` seconds after the one before it, so tapping through a group does not pile up speech.
@@ -8,7 +8,7 @@ import { voiceFile, type Line } from './voiceLines';
 import type { Match, Unit } from './sim/sim';
 
 /** The lines' loudness under the sounds (0 to 1). */
-const VOLUME = 0.8;
+const VOLUME = 0.7;
 /** Seconds a new line waits after the last one started. */
 const GAP = 1.2;
 

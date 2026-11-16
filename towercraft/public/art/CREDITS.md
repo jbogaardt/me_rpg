@@ -22,6 +22,9 @@ made from them, must credit the artists and be shared under CC-BY-SA 3.0 (or a c
   GPL 3.0). They are adaptations of that atlas, so CC-BY-SA 3.0 too. The same pictures carry Me RPG's scenery: its trees, bushes and
   rocks (LPC and OpenGameArt artists, credited in the root `CREDITS.md`, with the licences given there) and its lake tiles from the same atlas.
 
+- `fx/arrow.png`, `fx/goblin_arrow.png`, `fx/ballista_bolt.png`, `fx/slime_glob.png`: missiles by **b_o** (Wyrmsun), "GPL 2.0 and CC-BY-SA 3.0", so
+  CC-BY-SA 3.0 here. Copied unchanged by `tools/towercraftArt.ts`; the game turns them to their heading and scales them.
+
 ## Interface art (CC-BY 3.0)
 
 - `../ui/*`, the menu frames, wood and parchment, buttons and planks: "RPG GUI construction kit v1.0" by Lamoot, licensed [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/), as cut for Me RPG (`tools/ui/cut-gui.ts`).
@@ -47,3 +50,13 @@ the animation rows are the ones Wyrmsun's own scripts use (`scripts/anim.lua`): 
 the bats rows 0-5 beat the wings, 6-8 dive, 9-11 fall; the catapult has four rows (roll, throw). `SHEETS` in `src/main.ts` says which rows are drawn.
 Unit portraits without a file of their own (`UnitDef.art` omitted) are cut from the front-facing standing frame of the unit's own sheet, so they carry
 the sheet's licence.
+
+## Effect art (`fx/`)
+
+- CC0, copied unchanged from Wyrmsun by `tools/towercraftArt.ts`: `javelin` (**Gregor-Mack**), `cannon_ball` and `bullet` (**Jinn**), `catapult_rock`
+  (**Vladislav "iDreamRunner"**), `explosion` (**StumpyStrust** and **Jinn**), `impact` (**Cuzco** and **Jinn**), `big_fire` and `small_fire`
+  (**Mikodrak** and **Jinn**), `rock_shard` (**Exidelo**), `destroyed_site` and `construction_site` (**Jinn**). Building sheets' second frames
+  (half built) are the sheets already listed above.
+- `fx/smoke.png`: derived from `explosion.png` (its smoke frames, enlarged, softened and lightened to white shading so the game can tint them), CC0.
+- `fx/hit.png`, `fx/slash.png`: drawn for this game by `tools/towercraftFxArt.py`, CC0.
+- Unit and building sheets are enlarged 2x and lightly sharpened in the browser when they are loaded (`src/crisp.ts`); the files are unchanged.

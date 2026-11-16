@@ -6,7 +6,10 @@ import {
   SILENT,
   cutoffOf,
   fightLevel,
+  budget,
   loudest,
+  rankOf,
+  TICK_BUDGET,
   mixAt,
   zoomGain,
   type View,
@@ -72,5 +75,22 @@ describe('zoom and the music', () => {
     expect(calmer).toBeGreaterThan(0.95);
     expect(cutoffOf(0)).toBeLessThan(cutoffOf(1));
     expect(cutoffOf(5)).toBe(cutoffOf(1));
+  });
+});
+
+describe('the tick budget', () => {
+  it('keeps everything in a small tick and the most important of a crowd, big events first', () => {
+    const small = [{ k: 1 }, { k: 2 }];
+    expect(budget(small, TICK_BUDGET, () => 1)).toBe(small);
+    const crowd = Array.from({ length: 30 }, (_, i) => ({ prio: i === 17 ? 9 : 1, gain: 0.5, i }));
+    const kept = budget(crowd, TICK_BUDGET, (s) => rankOf(s.prio, s.gain));
+    expect(kept).toHaveLength(TICK_BUDGET);
+    expect(kept[0]!.i).toBe(17);
+    expect(kept.slice(1).map((s) => s.i)).toEqual([0, 1, 2, 3, 4, 5, 6]); // ties keep their order
+  });
+
+  it('ranks a louder sound of the same priority higher', () => {
+    expect(rankOf(2, 0.9)).toBeGreaterThan(rankOf(2, 0.4));
+    expect(rankOf(5, 0.1)).toBeGreaterThan(rankOf(2, 1));
   });
 });

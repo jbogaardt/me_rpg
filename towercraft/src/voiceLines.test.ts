@@ -29,6 +29,6 @@ describe('unit voice lines', () => {
   });
 
   it('puts each line in its own file under audio/voice', () => {
-    expect(voiceFile('swarm', 'spearman', 'pick')).toBe('audio/voice/swarm-spearman-pick.wav');
+    expect(voiceFile('swarm', 'spearman', 'pick')).toBe('audio/voice/swarm-spearman-pick.ogg');
   });
 });

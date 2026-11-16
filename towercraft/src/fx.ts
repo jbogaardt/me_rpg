@@ -295,10 +295,10 @@ export class BattleFx {
     if (kind === 'splash') s.tint = 0x86e070;
     this.add('anim', s, kind === 'explosion' ? 0.75 : 0.5, { frames, x1: x, y1: y, size: px });
     const g = this.take(this.glow, this.over);
-    g.tint = kind === 'splash' ? 0x8cff6a : 0xffa24a;
+    g.tint = kind === 'splash' ? 0x6ad94a : 0xff8a30;
     g.blendMode = 'add';
     g.position.set(x, y);
-    this.add('glow', g, 0.3, { x1: x, y1: y, x0: r, alpha: 0.35 });
+    this.add('glow', g, 0.3, { x1: x, y1: y, x0: r, alpha: 0.22 });
     if (scorch && kind !== 'splash') this.scorch(x, y + 6, r);
   }
 
@@ -361,7 +361,7 @@ export class BattleFx {
           this.fit(s, it.size * Math.min(1, f * 5 + 0.3));
         } else if (art) {
           const k = lobSize(f);
-          s.texture = art.missiles[it.id!]![k]!;
+          s.texture = art.missiles[it.id!][k]!;
           s.rotation += (it.spin || (it.spin = (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 6))) * dt;
           this.fit(s, it.size * (0.7 + 0.5 * Math.sin(Math.PI * f)));
           const sh = it.shadow!;
